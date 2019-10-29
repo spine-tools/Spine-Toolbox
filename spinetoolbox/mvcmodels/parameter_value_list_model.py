@@ -64,7 +64,7 @@ class AppendEmptyChildMixin:
 class DBItem(AppendEmptyChildMixin, TreeItem):
     """An item representing a db."""
 
-    def __init__(self, db_mngr, db_map):
+    def __init__(self, db_map):
         """Init class.
 
         Args
@@ -73,13 +73,14 @@ class DBItem(AppendEmptyChildMixin, TreeItem):
         """
         super().__init__()
         self.db_map = db_map
-        self.db_mngr = db_mngr
+
+    @property
+    def db_mngr(self):
+        return self.model.db_mngr
 
     def fetch_more(self):
         children = [
-            ListItem(
-                self.db_mngr, self.db_map, value_list["id"], value_list["name"], value_list["value_list"].split(",")
-            )
+            ListItem(self.db_map, value_list["id"], value_list["name"], value_list["value_list"].split(","))
             for value_list in self.db_mngr.get_parameter_value_lists(self.db_map)
         ]
         empty_child = self.empty_child()
@@ -87,7 +88,7 @@ class DBItem(AppendEmptyChildMixin, TreeItem):
         self._fetched = True
 
     def empty_child(self):
-        return ListItem(self.db_mngr, self.db_map)
+        return ListItem(self.db_map)
 
     def data(self, column, role=Qt.DisplayRole):
         """Shows Spine icon for fun."""
@@ -100,13 +101,16 @@ class DBItem(AppendEmptyChildMixin, TreeItem):
 class ListItem(GrayFontMixin, BoldFontMixin, AppendEmptyChildMixin, EditableMixin, TreeItem):
     """A list item."""
 
-    def __init__(self, db_mngr, db_map, identifier=None, name=None, value_list=()):
+    def __init__(self, db_map, identifier=None, name=None, value_list=()):
         super().__init__()
-        self.db_mngr = db_mngr
         self.db_map = db_map
         self.id = identifier
         self.name = name or "Type new list name here..."
         self.value_list = value_list
+
+    @property
+    def db_mngr(self):
+        return self.model.db_mngr
 
     def fetch_more(self):
         children = [ValueItem(from_database(value)) for value in self.value_list]
@@ -293,11 +297,9 @@ class ParameterValueListModel(MinimalTreeModel):
     def build_tree(self):
         """Initialize the internal data structure of the model."""
         self.beginResetModel()
-        self._invisible_root_item.deleteLater()
-        self._invisible_root_item = TreeItem()
-        self.track_item(self._invisible_root_item)
+        self._invisible_root_item = TreeItem(self)
         self.endResetModel()
-        db_items = [DBItem(self.db_mngr, db_map) for db_map in self.db_maps]
+        db_items = [DBItem(db_map) for db_map in self.db_maps]
         self._invisible_root_item.append_children(*db_items)
         for item in self.visit_all():
             item.fetch_more()

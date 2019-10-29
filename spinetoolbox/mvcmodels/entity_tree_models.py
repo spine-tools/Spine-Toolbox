@@ -15,10 +15,9 @@ Models to represent entities in a tree.
 :authors: P. Vennström (VTT), M. Marin (KTH)
 :date:   11.3.2019
 """
-from PySide2.QtCore import Qt, Signal, Slot, QModelIndex
+from PySide2.QtCore import Qt, Signal, QModelIndex
 from PySide2.QtGui import QIcon
 from .entity_tree_item import (
-    TreeItem,
     ObjectTreeRootItem,
     ObjectClassItem,
     ObjectItem,
@@ -26,7 +25,7 @@ from .entity_tree_item import (
     RelationshipClassItem,
     RelationshipItem,
 )
-from .minimal_tree_model import MinimalTreeModel
+from .minimal_tree_model import MinimalTreeModel, TreeItem
 
 
 class EntityTreeModel(MinimalTreeModel):
@@ -69,21 +68,19 @@ class EntityTreeModel(MinimalTreeModel):
     def build_tree(self):
         """Builds tree."""
         self.beginResetModel()
-        self._invisible_root_item.deleteLater()
-        self._invisible_root_item = TreeItem()
+        self._invisible_root_item = TreeItem(self)
         self.endResetModel()
         self.selected_indexes.clear()
-        self.track_item(self._invisible_root_item)
-        self._root_item = self.root_item_type(self.db_mngr, dict.fromkeys(self.db_maps))
-        self._invisible_root_item.insert_children(0, self._root_item)
+        self._root_item = self.root_item_type(self, dict.fromkeys(self.db_maps))
+        self._invisible_root_item.append_children(self._root_item)
 
-    def _fill_selection_buffer(self, item, last):
+    def _fill_selection_buffer(self, item, from_pos):
         """Pops indexes out of selection dictionary and add items into buffer."""
         selected = self.selected_indexes.get(item.child_item_type)
         if not selected:
             return
         self._selection_buffer.clear()
-        for child in item.children[last:]:
+        for child in item.children[from_pos:]:
             if selected.pop(self.index_from_item(child), None) is not None:
                 self._selection_buffer.append(child)
 
@@ -93,28 +90,24 @@ class EntityTreeModel(MinimalTreeModel):
             self.select_index(self.index_from_item(item))
         self._selection_buffer.clear()
 
-    @Slot("QVariant", "int", "int", name="receive_children_about_to_be_inserted")
-    def receive_children_about_to_be_inserted(self, parent_item, row, count):
+    def beginInsertRows(self, parent, first, last):
         """Begin an operation to insert rows."""
-        super().receive_children_about_to_be_inserted(parent_item, row, count)
-        self._fill_selection_buffer(parent_item, row + count)
+        super().beginInsertRows(parent, first, last)
+        self._fill_selection_buffer(self.item_from_index(parent), last + 1)
 
-    @Slot("QVariant", name="receive_children_inserted")
-    def receive_children_inserted(self, items):
+    def endInsertRows(self):
         """End an operation to insert rows."""
-        super().receive_children_inserted(items)
+        super().endInsertRows()
         self._empty_selection_buffer()
 
-    @Slot("QVariant", "int", "int", name="receive_children_about_to_be_removed")
-    def receive_children_about_to_be_removed(self, parent_item, row, count):
+    def beginRemoveRows(self, parent, first, last):
         """Begin an operation to remove rows."""
-        super().receive_children_about_to_be_removed(parent_item, row, count)
-        self._fill_selection_buffer(parent_item, row + count)
+        super().beginRemoveRows(parent, first, last)
+        self._fill_selection_buffer(self.item_from_index(parent), last + 1)
 
-    @Slot("QVariant", name="receive_children_removed")
-    def receive_children_removed(self, items):
+    def endRemoveRows(self, items):
         """End an operation to remove rows. Stop tracking all removed items."""
-        super().receive_children_removed(items)
+        super().endRemoveRows()
         self._empty_selection_buffer()
 
     def columnCount(self, parent=QModelIndex()):

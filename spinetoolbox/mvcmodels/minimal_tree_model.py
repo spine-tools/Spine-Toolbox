@@ -15,28 +15,29 @@ Models to represent items in a tree.
 :authors: P. Vennström (VTT), M. Marin (KTH)
 :date:   11.3.2019
 """
-from PySide2.QtCore import QObject, Qt, Signal, Slot, QAbstractItemModel, QModelIndex
+from PySide2.QtCore import Qt, QAbstractItemModel, QModelIndex
 
 
-class TreeItem(QObject):
+class TreeItem:
     """A tree item that can fetch its children."""
 
-    children_about_to_be_inserted = Signal("QVariant", "int", "int", name="children_about_to_be_inserted")
-    children_about_to_be_removed = Signal("QVariant", "int", "int", name="children_about_to_be_removed")
-    children_inserted = Signal("QVariant", name="children_inserted")
-    children_removed = Signal("QVariant", name="children_removed")
-
-    def __init__(self, parent=None):
-        """Init class.
+    def __init__(self, model=None):
+        """Initializes item.
 
         Args:
-            parent (TreeItem, NoneType): the parent item or None
+            model (MinimalTreeModel, NoneType): The model where the item belongs.
         """
-        super().__init__(parent)
+        if model is None:
+            model = MinimalTreeModel()
+        self._model = model
         self._children = None
         self._parent_item = None
         self._fetched = False
         self.children = []
+
+    @property
+    def model(self):
+        return self._model
 
     @property
     def child_item_type(self):
@@ -65,6 +66,7 @@ class TreeItem(QObject):
         if not isinstance(parent_item, TreeItem) and parent_item is not None:
             raise ValueError("Parent must be instance of TreeItem or None")
         self._parent_item = parent_item
+        self._model = parent_item.model
 
     def child(self, row):
         """Returns the child at given row or None if out of bounds."""
@@ -111,6 +113,9 @@ class TreeItem(QObject):
         """Returns 1."""
         return 1
 
+    def index(self):
+        return self.model.index_from_item(self)
+
     def insert_children(self, position, *children):
         """Insert new children at given position. Returns a boolean depending on how it went.
 
@@ -123,12 +128,12 @@ class TreeItem(QObject):
             raise TypeError(f"Cand't insert children of type {bad_types} to an item of type {type(self)}")
         if position < 0 or position > self.child_count() + 1:
             return False
-        self.children_about_to_be_inserted.emit(self, position, len(children))
         children = list(children)
         for child in children:
             child.parent_item = self
+        self.model.beginInsertRows(self.index(), position, position + len(children) - 1)
         self._children[position:position] = children
-        self.children_inserted.emit(children)
+        self.model.endInsertRows()
         return True
 
     def append_children(self, *children):
@@ -141,10 +146,9 @@ class TreeItem(QObject):
             return False
         if position + count > self.child_count():
             count = self.child_count() - position
-        self.children_about_to_be_removed.emit(self, position, count)
-        children = self._children[position : position + count]
+        self.model.beginRemoveRows(self.index(), position, position + count - 1)
         del self._children[position : position + count]
-        self.children_removed.emit(children)
+        self.model.endRemoveRows()
         return True
 
     def clear_children(self):
@@ -177,7 +181,7 @@ class TreeItem(QObject):
 class MinimalTreeModel(QAbstractItemModel):
     """Base class for all tree models."""
 
-    def __init__(self, parent):
+    def __init__(self, parent=None):
         """Init class.
 
         Args:
@@ -185,46 +189,7 @@ class MinimalTreeModel(QAbstractItemModel):
         """
         super().__init__(parent)
         self._parent = parent
-        self._invisible_root_item = TreeItem()
-
-    def track_item(self, item):
-        """Tracks given TreeItem. This means we insert rows when children are inserted
-        and remove rows when children are removed."""
-        item.children_about_to_be_inserted.connect(self.receive_children_about_to_be_inserted)
-        item.children_inserted.connect(self.receive_children_inserted)
-        item.children_about_to_be_removed.connect(self.receive_children_about_to_be_removed)
-        item.children_removed.connect(self.receive_children_removed)
-
-    def stop_tracking_item(self, item):
-        """Stops tracking given TreeItem."""
-        item.children_about_to_be_inserted.disconnect(self.receive_children_about_to_be_inserted)
-        item.children_inserted.disconnect(self.receive_children_inserted)
-        item.children_about_to_be_removed.disconnect(self.receive_children_about_to_be_removed)
-        item.children_removed.disconnect(self.receive_children_removed)
-
-    @Slot("QVariant", "int", "int", name="receive_children_about_to_be_inserted")
-    def receive_children_about_to_be_inserted(self, parent_item, row, count):
-        """Begin an operation to insert rows."""
-        self.beginInsertRows(self.index_from_item(parent_item), row, row + count - 1)
-
-    @Slot("QVariant", name="receive_children_inserted")
-    def receive_children_inserted(self, items):
-        """End an operation to insert rows. Start tracking all inserted items."""
-        self.endInsertRows()
-        for item in items:
-            self.track_item(item)
-
-    @Slot("QVariant", "int", "int", name="receive_children_about_to_be_removed")
-    def receive_children_about_to_be_removed(self, parent_item, row, count):
-        """Begin an operation to remove rows."""
-        self.beginRemoveRows(self.index_from_item(parent_item), row, row + count - 1)
-
-    @Slot("QVariant", name="receive_children_removed")
-    def receive_children_removed(self, items):
-        """End an operation to remove rows. Stop tracking all removed items."""
-        self.endRemoveRows()
-        for item in items:
-            self.stop_tracking_item(item)
+        self._invisible_root_item = TreeItem(self)
 
     def visit_all(self, index=QModelIndex()):
         """Iterates all items in the model including and below the given index.
