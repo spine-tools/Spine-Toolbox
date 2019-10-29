@@ -26,18 +26,21 @@ from .toolbars import DraggableWidget
 class CustomQGraphicsScene(ShrinkingScene):
     """A scene that handles drag and drop events of DraggableWidget sources."""
 
-    files_dropped_on_dc = Signal("QGraphicsItem", "QVariant", name="files_dropped_on_dc")
-
     def __init__(self, parent, toolbox):
-        """Initialize class."""
+        """
+        Args:
+            parent (QObject): scene's parent object
+            toolbox (ToolboxUI): reference to the main window
+        """
         super().__init__(400.0, 300.0, parent)
         self._toolbox = toolbox
         self.item_shadow = None
         self.sync_selection = True
         # Set background attributes
-        grid = self._toolbox.qsettings().value("appSettings/bgGrid", defaultValue="false")
+        settings = toolbox.qsettings()
+        grid = settings.value("appSettings/bgGrid", defaultValue="false")
         self.bg_grid = grid != "false"
-        bg_color = self._toolbox.qsettings().value("appSettings/bgColor", defaultValue="false")
+        bg_color = settings.value("appSettings/bgColor", defaultValue="false")
         self.bg_color = QColor("#f5f5f5") if bg_color == "false" else bg_color
         self.connect_signals()
 

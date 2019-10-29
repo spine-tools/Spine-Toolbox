@@ -150,7 +150,7 @@ class CustomQGraphicsView(QGraphicsView):
         super().setScene(scene)
         scene.sceneRectChanged.connect(self._update_zoom_limits)
 
-    @Slot("QRectF", name="_update_zoom_limits")
+    @Slot("QRectF")
     def _update_zoom_limits(self, rect):
         """
         Updates the minimum zoom limit and the zoom level with which the entire scene fits the view.
@@ -535,39 +535,27 @@ class GraphQGraphicsView(CustomQGraphicsView):
         """
         if not super().gentle_zoom(factor, zoom_focus):
             return False
-        self.adjust_items_to_zoom(factor)
+        self.adjust_items_to_zoom()
         return True
 
     def reset_zoom(self):
         """Reset zoom to the default factor."""
         self.resetTransform()
-        self.reset_items_zoom()
         self.init_zoom()
 
     def init_zoom(self):
         """Init zoom."""
         self.resetTransform()
         self.scale(self._scene_fitting_zoom, self._scene_fitting_zoom)
-        self.adjust_items_to_zoom(self._scene_fitting_zoom)
+        self.adjust_items_to_zoom()
 
-    def adjust_items_to_zoom(self, factor):
-        """Update items geometry after performing a zoom.
-        This is so items stay the same size (that is, the zoom controls the *spread*).
-
-        Args:
-            factor (float): a scaling factor relative to the current scene scaling
+    def adjust_items_to_zoom(self):
         """
-        for item in self.items():
-            try:
-                item.adjust_to_zoom(factor)
-            except AttributeError:
-                pass
+        Update items geometry after performing a zoom.
 
-    def reset_items_zoom(self):
-        """Reset items geometry to original unzoomed state.
+        Some items (e.g. ArcItem) need this to stay the same size (that is, the zoom controls the *spread*).
         """
+        scale = self.transform().m11()
         for item in self.items():
-            try:
-                item.reset_zoom()
-            except AttributeError:
-                pass
+            if hasattr(item, "adjust_to_zoom"):
+                item.adjust_to_zoom(scale)
