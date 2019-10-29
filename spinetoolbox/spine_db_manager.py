@@ -59,7 +59,11 @@ class SpineDBManager(QObject):
     parameter_definition_tags_set = Signal("QVariant", name="parameter_definition_tags_set")
 
     def __init__(self, parent=None):
-        """Init class."""
+        """Initializes the instance.
+
+        Args:
+            parent (QObject, NoneType)
+        """
         super().__init__(parent)
         self._db_maps = {}
         self._cache = {}
@@ -71,8 +75,11 @@ class SpineDBManager(QObject):
         return set(self._db_maps.values())
 
     def get_db_map(self, url, upgrade=False, codename=None):
-        """Returns a DiffDatabaseMapping instance from url.
-        If the db is not the latest version, asks the user if they want to upgrade it.
+        """Returns a DiffDatabaseMapping instance from url if possible, None otherwise.
+        If needed, asks the user to upgrade to the latest db version.
+
+        Returns:
+            DiffDatabaseMapping, NoneType
         """
         try:
             return self.do_get_db_map(url, upgrade, codename)
@@ -101,6 +108,9 @@ class SpineDBManager(QObject):
     def do_get_db_map(self, url, upgrade, codename):
         """Returns a memoized DiffDatabaseMapping instance from url.
         Called by `get_db_map`.
+
+        Returns:
+            DiffDatabaseMapping
         """
         if url not in self._db_maps:
             self._db_maps[url] = DiffDatabaseMapping(url, upgrade=upgrade, codename=codename)
@@ -108,7 +118,7 @@ class SpineDBManager(QObject):
         return self._db_maps[url]
 
     def connect_signals(self):
-        """Connect signals."""
+        """Connects signals."""
         # Cache
         self.object_classes_added.connect(lambda db_map_data: self.cache_items("object class", db_map_data))
         self.objects_added.connect(lambda db_map_data: self.cache_items("object", db_map_data))
@@ -167,35 +177,48 @@ class SpineDBManager(QObject):
         self.parameter_tags_removed.connect(self.cascade_refresh_parameter_definitions_by_tag)
 
     def cache_items(self, item_type, db_map_data):
-        """Put items in cache.
+        """Caches data for a given type.
         It works for both insert and update operations.
 
         Args:
             item_type (str)
-            db_map_data (dict): maps DiffDatabaseMapping instances to lists of items to track
+            db_map_data (dict): lists of dictionary items keyed by DiffDatabaseMapping
         """
         for db_map, items in db_map_data.items():
             for item in items:
                 self._cache.setdefault(db_map, {}).setdefault(item_type, {}).setdefault(item["id"], {}).update(item)
 
     def uncache_items(self, item_type, db_map_data):
-        """Remove items from cache.
+        """Removes data from cache.
 
         Args:
             item_type (str)
-            db_map_data (dict): maps DiffDatabaseMapping instances to lists of items to untrack
+            db_map_data (dict): lists of dictionary items keyed by DiffDatabaseMapping
         """
         for db_map, items in db_map_data.items():
             for item in items:
                 self._cache.setdefault(db_map, {}).setdefault(item_type, {}).pop(item["id"])
 
     def update_icons(self, db_map_data):
-        """Runs when object classes are added or updated. Setup icons."""
+        """Runs when object classes are added or updated. Setups icons for those classes.
+        Args:
+            item_type (str)
+            db_map_data (dict): lists of dictionary items keyed by DiffDatabaseMapping
+        """
         object_classes = [item for db_map, data in db_map_data.items() for item in data]
         self.icon_mngr.setup_object_pixmaps(object_classes)
 
     def entity_class_icon(self, db_map, entity_type, entity_class_id):
-        """Returns entity class icon."""
+        """Returns an appropriate icon for a given entity class.
+
+        Args:
+            db_map (DiffDatabaseMapping)
+            entity_type (str): either 'object class' or 'relationship class'
+            entity_class_id (int)
+
+        Returns:
+            QIcon
+        """
         entity_class = self.get_item(db_map, entity_type, entity_class_id)
         if not entity_class:
             return None
@@ -205,12 +228,16 @@ class SpineDBManager(QObject):
             return self.icon_mngr.relationship_icon(entity_class["object_class_name_list"])
 
     def get_item(self, db_map, item_type, id_):
-        """Get item by id from cache. If not in cache then try and get it from db.
+        """Returns the item of the given type  in the given db map that has the given id.
+        If not found, an empty dictionary is returned.
 
         Args:
             db_map (DiffDatabaseMapping)
             item_type (str)
             id_ (int)
+
+        Returns:
+            dict
         """
         item = self._cache.get(db_map, {}).get(item_type, {}).get(id_)
         if item:
@@ -219,26 +246,33 @@ class SpineDBManager(QObject):
         return self._cache.get(db_map, {}).get(item_type, {}).get(id_, {})
 
     def get_item_by_field(self, db_map, item_type, field, value):
-        """Returns the cached first item of the given type that has the given value for the field.
-        If not in cache then try and get it from db.
+        """Returns the first item of the given type in the given db map
+        that has the given value for the given field
+        Returns an empty dictionary if none found.
 
         Args:
             db_map (DiffDatabaseMapping)
             item_type (str)
             field (str)
             value
+
+        Returns:
+            dict
         """
         return next(iter(self.get_items_by_field(db_map, item_type, field, value)), {})
 
     def get_items_by_field(self, db_map, item_type, field, value):
-        """Returns all cached items of the given type that have the given value for the field.
-        If not in cache then try and get them from db.
+        """Returns all items of the given type in the given db map that have the given value
+        for the given field. Returns an empty list if none found.
 
         Args:
             db_map (DiffDatabaseMapping)
             item_type (str)
             field (str)
             value
+
+        Returns:
+            list
         """
         items = [x for x in self.get_items(db_map, item_type) if x[field] == value]
         if items:
@@ -246,14 +280,24 @@ class SpineDBManager(QObject):
         return [x for x in self._get_items_from_db(db_map, item_type) if x[field] == value]
 
     def get_items(self, db_map, item_type):
-        """Get all the items of one type from the internal cache or from the db if none in cache."""
+        """Returns all the items of the given type in the given db map,
+        or an empty list if none found.
+
+        Args:
+            db_map (DiffDatabaseMapping)
+            item_type (str)
+
+        Returns:
+            list
+        """
         items = self._cache.get(db_map, {}).get(item_type, {})
         if items:
             return items.values()
         return self._get_items_from_db(db_map, item_type)
 
     def _get_items_from_db(self, db_map, item_type):
-        """Get item from database. Called by the above methods when they don't find the requested item in the cache.
+        """Returns all items of the given type in the given db map.
+        Called by the above methods whenever they don't find what they're looking for the cache.
         """
         method_name_dict = {
             "object class": "get_object_classes",
@@ -271,10 +315,13 @@ class SpineDBManager(QObject):
         return getattr(self, method_name)(db_map)
 
     def get_object_classes(self, db_map):
-        """Get object classes from database.
+        """Returns object classes from database.
 
         Args:
             db_map (DiffDatabaseMapping)
+
+        Returns:
+            list: dictionary items
         """
         qry = db_map.query(db_map.object_class_sq)
         items = [x._asdict() for x in qry]
@@ -283,11 +330,14 @@ class SpineDBManager(QObject):
         return items
 
     def get_objects(self, db_map, class_id=None):
-        """Get objects from database.
+        """Returns objects from database.
 
         Args:
             db_map (DiffDatabaseMapping)
-            class_id (int)
+            class_id (int, optional)
+
+        Returns:
+            list: dictionary items
         """
         qry = db_map.query(db_map.object_sq)
         if class_id:
@@ -297,12 +347,15 @@ class SpineDBManager(QObject):
         return items
 
     def get_relationship_classes(self, db_map, ids=None, object_class_id=None):
-        """Get relationship classes from database.
+        """Returns relationship classes from database.
 
         Args:
             db_map (DiffDatabaseMapping)
-            ids (set)
-            object_class_id (int)
+            ids (set, optional)
+            object_class_id (int, optional)
+
+        Returns:
+            list: dictionary items
         """
         qry = db_map.query(db_map.wide_relationship_class_sq)
         if ids:
@@ -315,13 +368,16 @@ class SpineDBManager(QObject):
         return items
 
     def get_relationships(self, db_map, ids=None, class_id=None, object_id=None):
-        """Get relationships from database.
+        """Returns relationships from database.
 
         Args:
             db_map (DiffDatabaseMapping)
-            ids (set)
-            class_id (int)
-            object_id (int)
+            ids (set, optional)
+            class_id (int, optional)
+            object_id (int, optional)
+
+        Returns:
+            list: dictionary items
         """
         qry = db_map.query(db_map.wide_relationship_sq)
         if ids:
@@ -336,12 +392,15 @@ class SpineDBManager(QObject):
         return items
 
     def get_object_parameter_definitions(self, db_map, ids=None, object_class_id=None):
-        """Get object parameter definitions from database.
+        """Returns object parameter definitions from database.
 
         Args:
             db_map (DiffDatabaseMapping)
-            ids (set)
-            object_class_id (int)
+            ids (set, optional)
+            object_class_id (int, optional)
+
+        Returns:
+            list: dictionary items
         """
         sq = db_map.object_parameter_definition_sq
         qry = db_map.query(sq)
@@ -354,12 +413,15 @@ class SpineDBManager(QObject):
         return items
 
     def get_relationship_parameter_definitions(self, db_map, ids=None, relationship_class_id=None):
-        """Get relationship parameter definitions from database.
+        """Returns relationship parameter definitions from database.
 
         Args:
             db_map (DiffDatabaseMapping)
-            ids (set)
-            relationship_class_id (int)
+            ids (set, optional)
+            relationship_class_id (int, optional)
+
+        Returns:
+            list: dictionary items
         """
         sq = db_map.relationship_parameter_definition_sq
         qry = db_map.query(sq)
@@ -372,12 +434,15 @@ class SpineDBManager(QObject):
         return items
 
     def get_object_parameter_values(self, db_map, ids=None, object_class_id=None):
-        """Get object parameter values from database.
+        """Returns object parameter values from database.
 
         Args:
             db_map (DiffDatabaseMapping)
             ids (set)
             object_class_id (int)
+
+        Returns:
+            list: dictionary items
         """
         sq = db_map.object_parameter_value_sq
         qry = db_map.query(sq)
@@ -390,12 +455,15 @@ class SpineDBManager(QObject):
         return items
 
     def get_relationship_parameter_values(self, db_map, ids=None, relationship_class_id=None):
-        """Get relationship parameter values from database.
+        """Returns relationship parameter values from database.
 
         Args:
             db_map (DiffDatabaseMapping)
             ids (set)
             relationship_class_id (int)
+
+        Returns:
+            list: dictionary items
         """
         sq = db_map.relationship_parameter_value_sq
         qry = db_map.query(sq)
@@ -408,22 +476,43 @@ class SpineDBManager(QObject):
         return items
 
     def get_parameter_definitions(self, db_map, ids=None, entity_class_id=None):
-        """Get both object and relationship parameter definitions."""
+        """Returns both object and relationship parameter definitions.
+
+        Args:
+            db_map (DiffDatabaseMapping)
+            ids (set, optional)
+            entity_class_id (int, optional)
+
+        Returns:
+            list: dictionary items
+        """
         return self.get_object_parameter_definitions(
             db_map, ids=ids, object_class_id=entity_class_id
         ) + self.get_relationship_parameter_definitions(db_map, ids=ids, relationship_class_id=entity_class_id)
 
     def get_parameter_values(self, db_map, ids=None, entity_class_id=None):
-        """Get both object and relationship parameter values."""
+        """Returns both object and relationship parameter values.
+
+        Args:
+            db_map (DiffDatabaseMapping)
+            ids (set, optional)
+            entity_class_id (int, optional)
+
+        Returns:
+            list: dictionary items
+        """
         return self.get_object_parameter_values(
             db_map, ids=ids, object_class_id=entity_class_id
         ) + self.get_relationship_parameter_values(db_map, ids=ids, relationship_class_id=entity_class_id)
 
     def get_parameter_value_lists(self, db_map):
-        """Get parameter value lists from database.
+        """Returns parameter value lists from database.
 
         Args:
             db_map (DiffDatabaseMapping)
+
+        Returns:
+            list: dictionary items
         """
         qry = db_map.query(db_map.wide_parameter_value_list_sq)
         items = [x._asdict() for x in qry]
@@ -435,6 +524,9 @@ class SpineDBManager(QObject):
 
         Args:
             db_map (DiffDatabaseMapping)
+
+        Returns:
+            list: dictionary items
         """
         qry = db_map.query(db_map.parameter_tag_sq)
         items = [x._asdict() for x in qry]
@@ -442,12 +534,12 @@ class SpineDBManager(QObject):
         return items
 
     def add_or_update_items(self, db_map_data, method_name, signal_name):
-        """Add or update items.
+        """Adds or updates items in db.
 
         Args:
-            db_map_data (dict): maps DiffDatabaseMapping instances to list of items to add or update
-            method_name (str): DiffDatabaseMapping method attribute to perform the operation
-            signal_name (str) : SpineDBManager signal attribute to emit with added or updated data
+            db_map_data (dict): lists of items to add or update keyed by DiffDatabaseMapping
+            method_name (str): attribute of DiffDatabaseMapping to call for performing the operation
+            signal_name (str) : signal attribute of SpineDBManager to emit if successful
         """
         db_map_data_out = dict()
         error_log = dict()
@@ -462,60 +554,146 @@ class SpineDBManager(QObject):
             getattr(self, signal_name).emit(db_map_data_out)
 
     def add_object_classes(self, db_map_data):
+        """Adds object classes to db.
+
+        Args:
+            db_map_data (dict): lists of items to add keyed by DiffDatabaseMapping
+        """
         self.add_or_update_items(db_map_data, "add_object_classes", "object_classes_added")
 
     def add_objects(self, db_map_data):
+        """Adds objects to db.
+
+        Args:
+            db_map_data (dict): lists of items to add keyed by DiffDatabaseMapping
+        """
         self.add_or_update_items(db_map_data, "add_objects", "objects_added")
 
     def add_relationship_classes(self, db_map_data):
+        """Adds relationship classes to db.
+
+        Args:
+            db_map_data (dict): lists of items to add keyed by DiffDatabaseMapping
+        """
         self.add_or_update_items(db_map_data, "add_wide_relationship_classes", "relationship_classes_added")
 
     def add_relationships(self, db_map_data):
+        """Adds relationships to db.
+
+        Args:
+            db_map_data (dict): lists of items to add keyed by DiffDatabaseMapping
+        """
         self.add_or_update_items(db_map_data, "add_wide_relationships", "relationships_added")
 
     def add_parameter_definitions(self, db_map_data):
+        """Adds parameter definitions to db.
+
+        Args:
+            db_map_data (dict): lists of items to add keyed by DiffDatabaseMapping
+        """
         self.add_or_update_items(db_map_data, "add_parameter_definitions", "parameter_definitions_added")
 
     def add_parameter_values(self, db_map_data):
+        """Adds parameter values to db.
+
+        Args:
+            db_map_data (dict): lists of items to add keyed by DiffDatabaseMapping
+        """
         self.add_or_update_items(db_map_data, "add_parameter_values", "parameter_values_added")
 
     def add_parameter_value_lists(self, db_map_data):
+        """Adds parameter value lists to db.
+
+        Args:
+            db_map_data (dict): lists of items to add keyed by DiffDatabaseMapping
+        """
         self.add_or_update_items(db_map_data, "add_wide_parameter_value_lists", "parameter_value_lists_added")
 
     def add_parameter_tags(self, db_map_data):
+        """Adds parameter tags to db.
+
+        Args:
+            db_map_data (dict): lists of items to add keyed by DiffDatabaseMapping
+        """
         self.add_or_update_items(db_map_data, "add_parameter_tags", "parameter_tags_added")
 
     def update_object_classes(self, db_map_data):
+        """Updates object classes in db.
+
+        Args:
+            db_map_data (dict): lists of items to update keyed by DiffDatabaseMapping
+        """
         self.add_or_update_items(db_map_data, "update_object_classes", "object_classes_updated")
 
     def update_objects(self, db_map_data):
+        """Updates objects in db.
+
+        Args:
+            db_map_data (dict): lists of items to update keyed by DiffDatabaseMapping
+        """
         self.add_or_update_items(db_map_data, "update_objects", "objects_updated")
 
     def update_relationship_classes(self, db_map_data):
+        """Updates relationship classes in db.
+
+        Args:
+            db_map_data (dict): lists of items to update keyed by DiffDatabaseMapping
+        """
         self.add_or_update_items(db_map_data, "update_wide_relationship_classes", "relationship_classes_updated")
 
     def update_relationships(self, db_map_data):
+        """Updates relationships in db.
+
+        Args:
+            db_map_data (dict): lists of items to update keyed by DiffDatabaseMapping
+        """
         self.add_or_update_items(db_map_data, "update_wide_relationships", "relationships_updated")
 
     def update_parameter_definitions(self, db_map_data):
+        """Updates parameter definitions in db.
+
+        Args:
+            db_map_data (dict): lists of items to update keyed by DiffDatabaseMapping
+        """
         self.add_or_update_items(db_map_data, "update_parameter_definitions", "parameter_definitions_updated")
 
     def update_parameter_values(self, db_map_data):
+        """Updates parameter values in db.
+
+        Args:
+            db_map_data (dict): lists of items to update keyed by DiffDatabaseMapping
+        """
         self.add_or_update_items(db_map_data, "update_parameter_values", "parameter_values_updated")
 
     def update_parameter_value_lists(self, db_map_data):
+        """Updates parameter value lists in db.
+
+        Args:
+            db_map_data (dict): lists of items to update keyed by DiffDatabaseMapping
+        """
         self.add_or_update_items(db_map_data, "update_wide_parameter_value_lists", "parameter_value_lists_updated")
 
     def update_parameter_tags(self, db_map_data):
+        """Updates parameter tags in db.
+
+        Args:
+            db_map_data (dict): lists of items to update keyed by DiffDatabaseMapping
+        """
         self.add_or_update_items(db_map_data, "update_parameter_tags", "parameter_tags_updated")
 
     def set_parameter_definition_tags(self, db_map_data):
+        """Sets parameter definition tags in db.
+
+        Args:
+            db_map_data (dict): lists of items to set keyed by DiffDatabaseMapping
+        """
         self.add_or_update_items(db_map_data, "set_parameter_definition_tags", "parameter_definition_tags_set")
 
     def remove_items(self, db_map_typed_data):
-        """Remove items.
+        """Removes items from database.
 
-        db_map_typed_data (dict): maps DiffDatabaseMapping instances to str item type, to list of items to remove
+        Args:
+            db_map_typed_data (dict): lists of items to remove, keyed by item type, keyed by DiffDatabaseMapping
         """
         # Removing works this way in spinedb_api, all at once, probably because of cascading?
         db_map_object_classes = dict()
@@ -583,62 +761,98 @@ class SpineDBManager(QObject):
 
     @Slot("QVariant", name="cascade_remove_objects")
     def cascade_remove_objects(self, db_map_data):
-        """Runs when removing object classes. Removes objects in cascade."""
+        """Removes objects in cascade when removing object classes.
+
+        Args:
+            db_map_data (dict): lists of removed items keyed by DiffDatabaseMapping
+        """
         db_map_cascading_data = self.find_cascading_entities(self._to_ids(db_map_data), "object")
         if any(db_map_cascading_data.values()):
             self.objects_removed.emit(db_map_cascading_data)
 
     @Slot("QVariant", name="cascade_remove_relationship_classes")
     def cascade_remove_relationship_classes(self, db_map_data):
-        """Runs when removing object classes. Removes relationship classes in cascade."""
+        """Removes relationship classes in cascade when removing object classes.
+
+        Args:
+            db_map_data (dict): lists of removed items keyed by DiffDatabaseMapping
+        """
         db_map_cascading_data = self.find_cascading_relationship_classes(self._to_ids(db_map_data))
         self.relationship_classes_removed.emit(db_map_cascading_data)
 
     @Slot("QVariant", name="cascade_remove_relationships_by_class")
     def cascade_remove_relationships_by_class(self, db_map_data):
-        """Runs when removing objects. Removes relationships in cascade."""
+        """Removes relationships in cascade when removing objects.
+
+        Args:
+            db_map_data (dict): lists of removed items keyed by DiffDatabaseMapping
+        """
         db_map_cascading_data = self.find_cascading_entities(self._to_ids(db_map_data), "relationship")
         if any(db_map_cascading_data.values()):
             self.relationships_removed.emit(db_map_cascading_data)
 
     @Slot("QVariant", name="cascade_remove_relationships_by_object")
     def cascade_remove_relationships_by_object(self, db_map_data):
-        """Runs when removing relationship classes. Removes relationships in cascade."""
+        """Removes relationships in cascade when removing relationship classes.
+
+        Args:
+            db_map_data (dict): lists of removed items keyed by DiffDatabaseMapping
+        """
         db_map_cascading_data = self.find_cascading_relationships(self._to_ids(db_map_data))
         if any(db_map_cascading_data.values()):
             self.relationships_removed.emit(db_map_cascading_data)
 
     @Slot("QVariant", name="cascade_remove_parameter_definitions")
     def cascade_remove_parameter_definitions(self, db_map_data):
-        """Runs when updating entity classes. Cascade remove parameter definitions."""
+        """Removes parameter definitions in cascade when removing entity classes.
+
+        Args:
+            db_map_data (dict): lists of removed items keyed by DiffDatabaseMapping
+        """
         db_map_cascading_data = self.find_cascading_parameter_data(self._to_ids(db_map_data), "parameter definition")
         if any(db_map_cascading_data.values()):
             self.parameter_definitions_removed.emit(db_map_cascading_data)
 
     @Slot("QVariant", name="cascade_remove_parameter_values_by_entity_class")
     def cascade_remove_parameter_values_by_entity_class(self, db_map_data):
-        """Runs when updating entity classes. Cascade remove parameter values."""
+        """Removes parameter values in cascade when removing entity classes.
+
+        Args:
+            db_map_data (dict): lists of removed items keyed by DiffDatabaseMapping
+        """
         db_map_cascading_data = self.find_cascading_parameter_data(self._to_ids(db_map_data), "parameter value")
         if any(db_map_cascading_data.values()):
             self.parameter_values_removed.emit(db_map_cascading_data)
 
     @Slot("QVariant", name="cascade_remove_parameter_values_by_entity")
     def cascade_remove_parameter_values_by_entity(self, db_map_data):
-        """Runs when updating entities. Cascade remove parameter values."""
+        """Removes parameter values in cascade when removing entity classes when removing entities.
+
+        Args:
+            db_map_data (dict): lists of removed items keyed by DiffDatabaseMapping
+        """
         db_map_cascading_data = self.find_cascading_parameter_values_by_entity(self._to_ids(db_map_data))
         if any(db_map_cascading_data.values()):
             self.parameter_values_removed.emit(db_map_cascading_data)
 
     @Slot("QVariant", name="cascade_remove_parameter_values_by_definition")
     def cascade_remove_parameter_values_by_definition(self, db_map_data):
-        """Runs when updating parameter definitions. Cascade remove parameter values."""
+        """Removes parameter values in cascade when when removing parameter definitions.
+
+        Args:
+            db_map_data (dict): lists of removed items keyed by DiffDatabaseMapping
+        """
         db_map_cascading_data = self.find_cascading_parameter_values_by_definition(self._to_ids(db_map_data))
         if any(db_map_cascading_data.values()):
             self.parameter_values_removed.emit(db_map_cascading_data)
 
     @Slot("QVariant", name="cascade_refresh_relationship_classes")
     def cascade_refresh_relationship_classes(self, db_map_data):
-        """Runs when updating object classes. Cascade refresh cached relationship classes."""
+        """Refreshes cached relationship classes when updating object classes.
+
+        Args:
+            db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
+        """
         db_map_cascading_data = self.find_cascading_relationship_classes(self._to_ids(db_map_data))
         if not any(db_map_cascading_data.values()):
             return
@@ -649,7 +863,11 @@ class SpineDBManager(QObject):
 
     @Slot("QVariant", name="cascade_refresh_relationships_by_object")
     def cascade_refresh_relationships_by_object(self, db_map_data):
-        """Runs when updating objects. Cascade refresh cached relationships."""
+        """Refreshed cached relationships in cascade when updating objects.
+
+        Args:
+            db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
+        """
         db_map_cascading_data = self.find_cascading_relationships(self._to_ids(db_map_data))
         if not any(db_map_cascading_data.values()):
             return
@@ -660,7 +878,11 @@ class SpineDBManager(QObject):
 
     @Slot("QVariant", name="cascade_refresh_parameter_definitions")
     def cascade_refresh_parameter_definitions(self, db_map_data):
-        """Runs when updating entity classes. Cascade refresh cached parameter definitions."""
+        """Refreshes cached parameter definitions in cascade when updating entity classes.
+
+        Args:
+            db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
+        """
         db_map_cascading_data = self.find_cascading_parameter_data(self._to_ids(db_map_data), "parameter definition")
         if not any(db_map_cascading_data.values()):
             return
@@ -671,7 +893,11 @@ class SpineDBManager(QObject):
 
     @Slot("QVariant", name="cascade_refresh_parameter_definitions_by_value_list")
     def cascade_refresh_parameter_definitions_by_value_list(self, db_map_data):
-        """Runs when updating parameter value lists. Cascade refresh cached parameter definitions."""
+        """Refreshes cached parameter definitions when updating parameter value lists.
+
+        Args:
+            db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
+        """
         db_map_cascading_data = self.find_cascading_parameter_definitions_by_value_list(self._to_ids(db_map_data))
         if not any(db_map_cascading_data.values()):
             return
@@ -682,7 +908,11 @@ class SpineDBManager(QObject):
 
     @Slot("QVariant", name="cascade_refresh_parameter_definitions_by_tag")
     def cascade_refresh_parameter_definitions_by_tag(self, db_map_data):
-        """Runs when updating parameter tags. Cascade refresh cached parameter definitions."""
+        """Refreshes cached parameter definitions when updating parameter tags.
+
+        Args:
+            db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
+        """
         db_map_cascading_data = self.find_cascading_parameter_definitions_by_tag(self._to_ids(db_map_data))
         if not any(db_map_cascading_data.values()):
             return
@@ -693,7 +923,11 @@ class SpineDBManager(QObject):
 
     @Slot("QVariant", name="cascade_refresh_parameter_values_by_entity_class")
     def cascade_refresh_parameter_values_by_entity_class(self, db_map_data):
-        """Runs when updating entity classes. Cascade refresh cached parameter values."""
+        """Refreshes cached parameter values in cascade when updating entity classes.
+
+        Args:
+            db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
+        """
         db_map_cascading_data = self.find_cascading_parameter_data(self._to_ids(db_map_data), "parameter value")
         if not any(db_map_cascading_data.values()):
             return
@@ -704,7 +938,11 @@ class SpineDBManager(QObject):
 
     @Slot("QVariant", name="cascade_refresh_parameter_values_by_entity")
     def cascade_refresh_parameter_values_by_entity(self, db_map_data):
-        """Runs when updating entities. Cascade refresh cached parameter values."""
+        """Refreshes cached parameter values in cascade when updating entities.
+
+        Args:
+            db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
+        """
         db_map_cascading_data = self.find_cascading_parameter_values_by_entity(self._to_ids(db_map_data))
         if not any(db_map_cascading_data.values()):
             return
@@ -715,7 +953,11 @@ class SpineDBManager(QObject):
 
     @Slot("QVariant", name="cascade_refresh_parameter_values_by_definition")
     def cascade_refresh_parameter_values_by_definition(self, db_map_data):
-        """Runs when updating parameter definitions. Cascade refresh cached parameter values."""
+        """Refreshes cached parameter values in cascade when updating parameter definitions.
+
+        Args:
+            db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
+        """
         db_map_cascading_data = self.find_cascading_parameter_values_by_definition(self._to_ids(db_map_data))
         if not any(db_map_cascading_data.values()):
             return
@@ -725,7 +967,7 @@ class SpineDBManager(QObject):
         self.parameter_values_updated.emit(db_map_cascading_data)
 
     def find_cascading_relationship_classes(self, db_map_ids):
-        """Returns cascading relationship classes given ids for object classes."""
+        """Finds and returns cascading relationship classes for the given object class ids."""
         db_map_cascading_data = dict()
         for db_map, object_class_ids in db_map_ids.items():
             object_class_ids = {str(id_) for id_ in object_class_ids}
@@ -737,7 +979,7 @@ class SpineDBManager(QObject):
         return db_map_cascading_data
 
     def find_cascading_entities(self, db_map_ids, item_type):
-        """Returns cascading entities given ids for entity classes."""
+        """Finds and returns cascading entities for the given entity class ids."""
         db_map_cascading_data = dict()
         for db_map, class_ids in db_map_ids.items():
             db_map_cascading_data[db_map] = [
@@ -746,7 +988,7 @@ class SpineDBManager(QObject):
         return db_map_cascading_data
 
     def find_cascading_relationships(self, db_map_ids):
-        """Returns cascading relationships given ids for objects."""
+        """Finds and returns cascading relationships for the given object ids."""
         db_map_cascading_data = dict()
         for db_map, object_ids in db_map_ids.items():
             object_ids = {str(id_) for id_ in object_ids}
@@ -758,7 +1000,7 @@ class SpineDBManager(QObject):
         return db_map_cascading_data
 
     def find_cascading_parameter_data(self, db_map_ids, item_type):
-        """Returns data for cascading parameter definitions or values given ids for entity classes."""
+        """Finds and returns cascading parameter definitions or values for the given entity class ids."""
         db_map_cascading_data = dict()
         for db_map, entity_class_ids in db_map_ids.items():
             db_map_cascading_data[db_map] = [
@@ -769,7 +1011,7 @@ class SpineDBManager(QObject):
         return db_map_cascading_data
 
     def find_cascading_parameter_definitions_by_value_list(self, db_map_ids):
-        """Returns data for cascading parameter definitions given ids for parameter value lists."""
+        """Finds and returns cascading parameter definitions for the given parameter value list ids."""
         db_map_cascading_data = dict()
         for db_map, value_list_ids in db_map_ids.items():
             db_map_cascading_data[db_map] = [
@@ -780,7 +1022,7 @@ class SpineDBManager(QObject):
         return db_map_cascading_data
 
     def find_cascading_parameter_definitions_by_tag(self, db_map_ids):
-        """Returns data for cascading parameter definitions given ids for parameter tags."""
+        """Finds and returns cascading parameter definitions for the given parameter tag ids."""
         db_map_cascading_data = dict()
         for db_map, tag_ids in db_map_ids.items():
             tag_ids = {str(id_) for id_ in tag_ids}
@@ -792,7 +1034,7 @@ class SpineDBManager(QObject):
         return db_map_cascading_data
 
     def find_cascading_parameter_values_by_entity(self, db_map_ids):
-        """Returns data for cascading parameter values given ids for entities."""
+        """Finds and returns cascading parameter values for the given entity ids."""
         db_map_cascading_data = dict()
         for db_map, entity_ids in db_map_ids.items():
             db_map_cascading_data[db_map] = [
@@ -803,7 +1045,7 @@ class SpineDBManager(QObject):
         return db_map_cascading_data
 
     def find_cascading_parameter_values_by_definition(self, db_map_ids):
-        """Returns data for cascading parameter values given ids for parameter definitions."""
+        """Finds and returns cascading parameter values for the given parameter definition ids."""
         db_map_cascading_data = dict()
         for db_map, definition_ids in db_map_ids.items():
             db_map_cascading_data[db_map] = [
@@ -813,33 +1055,34 @@ class SpineDBManager(QObject):
 
     @Slot("QVariant", name="refresh_parameter_definitions")
     def auto_refresh_parameter_definitions(self, db_map_data):
-        """Runs when updating parameter definitions. Refreshes parameter definitions
-        which are cached in the 'extended' form (i.e. including information about the entity, tags, value lists)
+        """Refreshes cached parameter definitions when updating parameter definitions in the db.
+        This is needed because parameter definitions are cached in a 'extended' format
+        that includes information about the entity, tags, value lists
 
         Args:
-            db_map_data (dict): maps DiffDatabaseMapping instances to parameter definition items
+            db_map_data (dict): lists of parameter definition items keyed by DiffDatabaseMapping
         """
         for db_map, items in db_map_data.items():
             self.get_parameter_definitions(db_map, ids={x["id"] for x in items})
 
     @Slot("QVariant", name="auto_refresh_parameter_values")
     def auto_refresh_parameter_values(self, db_map_data):
-        """Runs when updating parameter values. Refreshes parameter values
-        which are cached in the 'extended' form (i.e. including information about the entity, etc.)
+        """Refreshes cached parameter values when updating parameter definitions in the db.
+        This is needed because parameter values are cached in a 'extended' format
+        that includes information about the entity, etc.
 
         Args:
-            db_map_data (dict): maps DiffDatabaseMapping instances to parameter definition items
+            db_map_data (dict): lists of parameter value items keyed by DiffDatabaseMapping
         """
         for db_map, items in db_map_data.items():
             self.get_parameter_values(db_map, ids={x["id"] for x in items})
 
     @Slot("QVariant", name="cache_parameter_definition_tags")
     def cache_parameter_definition_tags(self, db_map_data):
-        """Cache parameter definition tags in the parameter definition dictionary.
-        We don't have a dedicated dict for parameter definition tags in the cache since it's just a matching table.
+        """Caches parameter definition tags in the parameter definition dictionary.
 
         Args:
-            db_map_data (dict): maps DiffDatabaseMapping instances to parameter definition tag items
+            db_map_data (dict): lists of parameter definition items keyed by DiffDatabaseMapping
         """
         for items in db_map_data.values():
             for item in items:

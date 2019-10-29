@@ -711,7 +711,6 @@ class ArcTokenItem(QGraphicsEllipseItem):
         for rank, (object_class_id, object_name) in enumerate(object_class_id_name_list):
             _ = SimpleObjectItem(self, object_extent, object_label_color, object_class_id, object_name, rank)
         rectf = self._direct_children_bounding_rect()
-        self._width_estimate = rectf.width()
         offset = -rectf.topLeft()
         for item in self.childItems():
             item.setOffset(offset)
@@ -728,6 +727,7 @@ class ArcTokenItem(QGraphicsEllipseItem):
         self.setPen(Qt.NoPen)
         self.setBrush(color)
         self._view_transform = QTransform()
+        self._width_estimate = rectf.width()
 
     def boundingRect(self):
         """Returns a rect that includes the children so they are correctly painted."""
@@ -735,7 +735,7 @@ class ArcTokenItem(QGraphicsEllipseItem):
 
     def _direct_children_bounding_rect(self):
         """Returns a rect that includes the direct children but none beyond
-        (i.e., excludes the ObjectItemLabel of children ObjectItem's.)"""
+        (i.e., excludes the ObjectItemLabel of children SimpleObjectItem.)"""
         rectf = QRectF()
         for item in self.childItems():
             rectf |= item.sceneBoundingRect()
@@ -750,11 +750,8 @@ class ArcTokenItem(QGraphicsEllipseItem):
         line_view_length = line.length() * self._view_transform.m11()
         magic_ratio = line_view_length / self._width_estimate
         for child in self.childItems():
-            child.setVisible(magic_ratio > 2)
-            child.text_item.setVisible(magic_ratio > 3)
-
-    def device_rect(self):
-        """Returns the item's rect in devices's coordinates."""
+            child.setVisible(magic_ratio > 3)
+            child.text_item.setVisible(magic_ratio > 4)
 
     def adjust_to_zoom(self, transform):
         """Adjusts the item's geometry so it stays the same size after performing a zoom.
@@ -772,7 +769,7 @@ class ArcTokenItem(QGraphicsEllipseItem):
 
 
 class SimpleObjectItem(QGraphicsPixmapItem):
-    """Simple object item to use in ArcTokenItem."""
+    """Simple item to represent objects in arc tokens."""
 
     def __init__(self, parent, extent, label_color, object_class_id, object_name, rank):
         """Initializes item.
@@ -846,7 +843,7 @@ class SimpleObjectItem(QGraphicsPixmapItem):
 
 
 class OutlinedTextItem(QGraphicsSimpleTextItem):
-    """Outlined text item to use with GraphViewForm."""
+    """Outlined text item."""
 
     def __init__(self, text="", font=QFont(), brush=QBrush(Qt.white), outline_pen=QPen(Qt.black, 3, Qt.SolidLine)):
         """Initializes item.
@@ -865,8 +862,8 @@ class OutlinedTextItem(QGraphicsSimpleTextItem):
         self.setPen(outline_pen)
 
 
-class CustomTextItem(QGraphicsTextItem):
-    """Custom text item to use with GraphViewForm."""
+class InteractiveTextItem(QGraphicsTextItem):
+    """Interactive text item to display the usage message in the graph view."""
 
     def __init__(self, html, font):
         """Initializes item.

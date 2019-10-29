@@ -30,7 +30,7 @@ from .report_plotting_failure import report_plotting_failure
 from .shrinking_scene import ShrinkingScene
 from ..mvcmodels.entity_tree_models import ObjectTreeModel
 from ..mvcmodels.entity_list_models import ObjectClassListModel, RelationshipClassListModel
-from ..graph_view_graphics_items import ObjectItem, ArcItem, CustomTextItem
+from ..graph_view_graphics_items import ObjectItem, ArcItem, InteractiveTextItem
 from ..helpers import busy_effect
 from ..plotting import plot_selection, PlottingError, GraphAndTreeViewPlottingHints
 
@@ -192,7 +192,7 @@ class GraphViewForm(DataStoreForm):
         """Makes item with usage instructions.
 
         Returns:
-            CustomTextItem
+            InteractiveTextItem
         """
         usage = """
             <html>
@@ -235,7 +235,7 @@ class GraphViewForm(DataStoreForm):
         """
         font = QApplication.font()
         font.setPointSize(64)
-        usage_item = CustomTextItem(usage, font)
+        usage_item = InteractiveTextItem(usage, font)
         usage_item.linkActivated.connect(self._handle_usage_link_activated)
         return usage_item
 
