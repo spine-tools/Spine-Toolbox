@@ -119,7 +119,7 @@ class MakeParameterTagMixin(ConvertToDBMixin):
             return None
         parameter_tag_id_list = []
         for tag in parameter_tag_list:
-            tag_item = self._db_map_value_list_lookup.get(db_map, {}).get(tag)
+            tag_item = self._db_map_tag_lookup.get(db_map, {}).get(tag)
             if not tag_item:
                 return None
             parameter_tag_id_list.append(str(tag_item["id"]))

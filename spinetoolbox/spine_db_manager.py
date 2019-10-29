@@ -170,6 +170,7 @@ class SpineDBManager(QObject):
         self.relationship_classes_updated.connect(self.cascade_refresh_parameter_values_by_entity_class)
         self.objects_updated.connect(self.cascade_refresh_relationships_by_object)
         self.objects_updated.connect(self.cascade_refresh_parameter_values_by_entity)
+        self.relationships_updated.connect(self.cascade_refresh_parameter_values_by_entity)
         self.parameter_definitions_updated.connect(self.cascade_refresh_parameter_values_by_definition)
         self.parameter_value_lists_updated.connect(self.cascade_refresh_parameter_definitions_by_value_list)
         self.parameter_value_lists_removed.connect(self.cascade_refresh_parameter_definitions_by_value_list)
@@ -889,7 +890,7 @@ class SpineDBManager(QObject):
         for db_map, data in db_map_cascading_data.items():
             ids = {x["id"] for x in data}
             self.get_parameter_definitions(db_map, ids=ids)
-        self.parameter_definitions_updated.emit(db_map_cascading_data)
+        self.auto_refresh_parameter_definitions(db_map_cascading_data)
 
     @Slot("QVariant", name="cascade_refresh_parameter_definitions_by_value_list")
     def cascade_refresh_parameter_definitions_by_value_list(self, db_map_data):
@@ -904,7 +905,7 @@ class SpineDBManager(QObject):
         for db_map, data in db_map_cascading_data.items():
             ids = {x["id"] for x in data}
             self.get_parameter_definitions(db_map, ids=ids)
-        self.parameter_definitions_updated.emit(db_map_cascading_data)
+        self.auto_refresh_parameter_definitions(db_map_cascading_data)
 
     @Slot("QVariant", name="cascade_refresh_parameter_definitions_by_tag")
     def cascade_refresh_parameter_definitions_by_tag(self, db_map_data):
@@ -919,7 +920,7 @@ class SpineDBManager(QObject):
         for db_map, data in db_map_cascading_data.items():
             ids = {x["id"] for x in data}
             self.get_parameter_definitions(db_map, ids=ids)
-        self.parameter_definitions_updated.emit(db_map_cascading_data)
+        self.auto_refresh_parameter_definitions(db_map_cascading_data)
 
     @Slot("QVariant", name="cascade_refresh_parameter_values_by_entity_class")
     def cascade_refresh_parameter_values_by_entity_class(self, db_map_data):

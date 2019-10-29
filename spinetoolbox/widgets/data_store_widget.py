@@ -180,6 +180,7 @@ class DataStoreForm(QMainWindow):
         self.db_mngr.parameter_definitions_added.connect(self.receive_parameter_definitions_added)
         self.db_mngr.parameter_values_added.connect(self.receive_parameter_values_added)
         self.db_mngr.parameter_value_lists_added.connect(self.receive_parameter_value_lists_added)
+        self.db_mngr.parameter_tags_added.connect(self.receive_parameter_tags_added)
         # Updated
         self.db_mngr.object_classes_updated.connect(self.receive_object_classes_updated)
         self.db_mngr.objects_updated.connect(self.receive_objects_updated)
@@ -188,6 +189,7 @@ class DataStoreForm(QMainWindow):
         self.db_mngr.parameter_definitions_updated.connect(self.receive_parameter_definitions_updated)
         self.db_mngr.parameter_values_updated.connect(self.receive_parameter_values_updated)
         self.db_mngr.parameter_value_lists_updated.connect(self.receive_parameter_value_lists_updated)
+        self.db_mngr.parameter_tags_updated.connect(self.receive_parameter_tags_updated)
         # Removed
         self.db_mngr.object_classes_removed.connect(self.receive_object_classes_removed)
         self.db_mngr.objects_removed.connect(self.receive_objects_removed)
@@ -196,6 +198,7 @@ class DataStoreForm(QMainWindow):
         self.db_mngr.parameter_definitions_removed.connect(self.receive_parameter_definitions_removed)
         self.db_mngr.parameter_values_removed.connect(self.receive_parameter_values_removed)
         self.db_mngr.parameter_value_lists_removed.connect(self.receive_parameter_value_lists_removed)
+        self.db_mngr.parameter_tags_removed.connect(self.receive_parameter_tags_removed)
         # Error
         self.db_mngr.msg_error.connect(self.receive_db_mngr_error_msg)
 
@@ -567,7 +570,7 @@ class DataStoreForm(QMainWindow):
     def receive_items_changed(self, action, item_type, db_map_data):
         """Enables or disables actions and informs the user about what just happened."""
         msg = f"<html> Successfully {action} {item_type} item(s)"
-        name_keys = {"parameter definition": "parameter_name", "parameter tag": "tag", "parameter value": None}
+        name_keys = {"parameter tag": "tag", "parameter value": None}
         name_key = name_keys.get(item_type, "name")
         if name_key:
             names = {item[name_key] for db_map, data in db_map_data.items() for item in data}

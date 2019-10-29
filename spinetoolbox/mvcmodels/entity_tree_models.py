@@ -105,7 +105,7 @@ class EntityTreeModel(MinimalTreeModel):
         super().beginRemoveRows(parent, first, last)
         self._fill_selection_buffer(self.item_from_index(parent), last + 1)
 
-    def endRemoveRows(self, items):
+    def endRemoveRows(self):
         """End an operation to remove rows. Stop tracking all removed items."""
         super().endRemoveRows()
         self._empty_selection_buffer()
