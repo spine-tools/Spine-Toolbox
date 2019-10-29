@@ -19,7 +19,15 @@ Custom item delegates.
 from PySide2.QtCore import Qt, Signal, QEvent, QPoint, QRect
 from PySide2.QtWidgets import QComboBox, QItemDelegate, QStyleOptionButton, QStyle, QApplication, QStyleOptionComboBox
 from PySide2.QtGui import QIcon
-from spinedb_api import from_database, DateTime, Duration, ParameterValueFormatError, TimePattern, TimeSeries
+from spinedb_api import (
+    from_database,
+    to_database,
+    DateTime,
+    Duration,
+    ParameterValueFormatError,
+    TimePattern,
+    TimeSeries,
+)
 from .custom_editors import (
     CustomComboEditor,
     CustomLineEditor,
@@ -288,6 +296,10 @@ class ParameterValueDelegate(ParameterValueOrDefaultValueDelegate):
     def _get_entity_class_id(self, index, db_map):
         return NotImplementedError()
 
+    def setModelData(self, editor, model, index):
+        """Send signal."""
+        self.data_committed.emit(index, to_database(editor.data()))
+
     def _get_value_list(self, index, db_map):
         """Returns a value list item for the given index and db_map."""
         h = index.model().header.index
@@ -311,8 +323,8 @@ class ParameterValueDelegate(ParameterValueOrDefaultValueDelegate):
             return None
         value_list = self._get_value_list(index, db_map)
         if value_list:
-            editor = SearchBarEditor(self._parent, parent, is_json=True)
-            value_list = value_list.split(",")
+            editor = SearchBarEditor(self._parent, parent)
+            value_list = [from_database(x) for x in value_list.split(",")]
             editor.set_data(index.data(Qt.DisplayRole), value_list)
             editor.data_committed.connect(lambda editor=editor, index=index: self._close_editor(editor, index))
             return editor
