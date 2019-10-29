@@ -208,11 +208,10 @@ class ParameterDelegate(QItemDelegate):
         db_mngr (SpineDBManager)
     """
 
-    data_committed = Signal("QModelIndex", "QVariant", name="data_committed")
+    data_committed = Signal("QModelIndex", "QVariant")
 
     def __init__(self, parent, db_mngr):
         super().__init__(parent)
-        self._parent = parent
         self.db_mngr = db_mngr
 
     def setModelData(self, editor, model, index):
@@ -240,7 +239,7 @@ class ParameterDelegate(QItemDelegate):
         database = index.sibling(index.row(), header.index("database")).data()
         db_map = next(iter(x for x in self.db_mngr.db_maps if x.codename == database), None)
         if not db_map:
-            self._parent.msg_error.emit("Please select database first.")
+            self.parent().msg_error.emit("Please select database first.")
         return db_map
 
 
@@ -249,7 +248,7 @@ class DatabaseNameDelegate(ParameterDelegate):
 
     def createEditor(self, parent, option, index):
         """Returns editor."""
-        editor = SearchBarEditor(self._parent, parent)
+        editor = SearchBarEditor(self.parent(), parent)
         editor.set_data(index.data(Qt.DisplayRole), [x.codename for x in self.db_mngr.db_maps])
         editor.data_committed.connect(lambda editor=editor, index=index: self._close_editor(editor, index))
         return editor
@@ -323,7 +322,7 @@ class ParameterValueDelegate(ParameterValueOrDefaultValueDelegate):
             return None
         value_list = self._get_value_list(index, db_map)
         if value_list:
-            editor = SearchBarEditor(self._parent, parent)
+            editor = SearchBarEditor(self.parent(), parent)
             value_list = [from_database(x) for x in value_list.split(",")]
             editor.set_data(index.data(Qt.DisplayRole), value_list)
             editor.data_committed.connect(lambda editor=editor, index=index: self._close_editor(editor, index))
@@ -361,7 +360,7 @@ class TagListDelegate(ParameterDelegate):
         db_map = self._get_db_map(index)
         if not db_map:
             return None
-        editor = CheckListEditor(self._parent, parent)
+        editor = CheckListEditor(self.parent(), parent)
         all_parameter_tag_list = [x["tag"] for x in self.db_mngr.get_parameter_tags(db_map)]
         try:
             parameter_tag_list = index.data(Qt.EditRole).split(",")
@@ -380,7 +379,7 @@ class ValueListDelegate(ParameterDelegate):
         db_map = self._get_db_map(index)
         if not db_map:
             return None
-        editor = SearchBarEditor(self._parent, parent)
+        editor = SearchBarEditor(self.parent(), parent)
         name_list = [x["name"] for x in self.db_mngr.get_parameter_value_lists(db_map)]
         editor.set_data(index.data(Qt.EditRole), name_list)
         editor.data_committed.connect(lambda editor=editor, index=index: self._close_editor(editor, index))
@@ -395,7 +394,7 @@ class ObjectClassNameDelegate(ParameterDelegate):
         db_map = self._get_db_map(index)
         if not db_map:
             return None
-        editor = SearchBarEditor(self._parent, parent)
+        editor = SearchBarEditor(self.parent(), parent)
         object_classes = self.db_mngr.get_object_classes(db_map)
         editor.set_data(index.data(Qt.EditRole), [x["name"] for x in object_classes])
         editor.data_committed.connect(lambda editor=editor, index=index: self._close_editor(editor, index))
@@ -410,7 +409,7 @@ class RelationshipClassNameDelegate(ParameterDelegate):
         db_map = self._get_db_map(index)
         if not db_map:
             return None
-        editor = SearchBarEditor(self._parent, parent)
+        editor = SearchBarEditor(self.parent(), parent)
         relationship_classes = self.db_mngr.get_relationship_classes(db_map)
         editor.set_data(index.data(Qt.EditRole), [x["name"] for x in relationship_classes])
         editor.data_committed.connect(lambda editor=editor, index=index: self._close_editor(editor, index))
@@ -425,7 +424,7 @@ class ObjectParameterNameDelegate(GetObjectClassIdMixin, ParameterDelegate):
         db_map = self._get_db_map(index)
         if not db_map:
             return None
-        editor = SearchBarEditor(self._parent, parent)
+        editor = SearchBarEditor(self.parent(), parent)
         object_class_id = self._get_object_class_id(index, db_map)
         parameter_definitions = self.db_mngr.get_object_parameter_definitions(db_map, object_class_id=object_class_id)
         name_list = [x["parameter_name"] for x in parameter_definitions]
@@ -442,7 +441,7 @@ class RelationshipParameterNameDelegate(GetRelationshipClassIdMixin, ParameterDe
         db_map = self._get_db_map(index)
         if not db_map:
             return None
-        editor = SearchBarEditor(self._parent, parent)
+        editor = SearchBarEditor(self.parent(), parent)
         relationship_class_id = self._get_relationship_class_id(index, db_map)
         parameter_definitions = self.db_mngr.get_relationship_parameter_definitions(
             db_map, relationship_class_id=relationship_class_id
@@ -461,7 +460,7 @@ class ObjectNameDelegate(GetObjectClassIdMixin, ParameterDelegate):
         db_map = self._get_db_map(index)
         if not db_map:
             return None
-        editor = SearchBarEditor(self._parent, parent)
+        editor = SearchBarEditor(self.parent(), parent)
         object_class_id = self._get_object_class_id(index, db_map)
         name_list = [x["name"] for x in self.db_mngr.get_objects(db_map, class_id=object_class_id)]
         editor.set_data(index.data(Qt.EditRole), name_list)
@@ -482,7 +481,7 @@ class ObjectNameListDelegate(GetRelationshipClassIdMixin, ParameterDelegate):
             editor = CustomLineEditor(parent)
             editor.set_data(index.data(Qt.EditRole))
             return editor
-        editor = MultiSearchBarEditor(self._parent, parent)
+        editor = MultiSearchBarEditor(self.parent(), parent)
         relationship_class = self.db_mngr.get_item(db_map, "relationship class", relationship_class_id)
         object_class_id_list = relationship_class.get("object_class_id_list")
         object_class_names = []
@@ -512,7 +511,6 @@ class ManageItemsDelegate(QItemDelegate):
 
     def __init__(self, parent):
         super().__init__(parent)
-        self._parent = parent
 
     def setModelData(self, editor, model, index):
         """Send signal."""
@@ -540,7 +538,7 @@ class ManageItemsDelegate(QItemDelegate):
 
     def _create_database_editor(self, parent, option, index):
         editor = CheckListEditor(parent)
-        all_databases = self._parent.all_databases(index.row())
+        all_databases = self.parent().all_databases(index.row())
         databases = index.data(Qt.DisplayRole).split(",")
         editor.set_data(all_databases, databases)
         return editor
@@ -573,7 +571,7 @@ class ManageObjectClassesDelegate(ManageItemsDelegate):
         """Get a pixmap from the index data and paint it in the middle of the cell."""
         header = index.model().horizontal_header_labels()
         if header[index.column()] == 'display icon':
-            pixmap = self._parent.create_object_pixmap(index.data(Qt.DisplayRole))
+            pixmap = self.parent().create_object_pixmap(index.data(Qt.DisplayRole))
             icon = QIcon(pixmap)
             icon.paint(painter, option.rect, Qt.AlignVCenter | Qt.AlignHCenter)
         else:
@@ -592,7 +590,7 @@ class ManageObjectsDelegate(ManageItemsDelegate):
         header = index.model().horizontal_header_labels()
         if header[index.column()] == 'object class name':
             editor = SearchBarEditor(parent)
-            object_class_name_list = self._parent.object_class_name_list(index.row())
+            object_class_name_list = self.parent().object_class_name_list(index.row())
             editor.set_data(index.data(Qt.EditRole), object_class_name_list)
         elif header[index.column()] == 'databases':
             editor = self._create_database_editor(parent, option, index)
@@ -620,7 +618,7 @@ class ManageRelationshipClassesDelegate(ManageItemsDelegate):
             editor = self._create_database_editor(parent, option, index)
         else:
             editor = SearchBarEditor(parent)
-            object_class_name_list = self._parent.object_class_name_list(index.row())
+            object_class_name_list = self.parent().object_class_name_list(index.row())
             editor.set_data(index.data(Qt.EditRole), object_class_name_list)
         self.connect_editor_signals(editor, index)
         return editor
@@ -644,7 +642,7 @@ class ManageRelationshipsDelegate(ManageItemsDelegate):
             editor = self._create_database_editor(parent, option, index)
         else:
             editor = SearchBarEditor(parent)
-            object_name_list = self._parent.object_name_list(index.row(), index.column())
+            object_name_list = self.parent().object_name_list(index.row(), index.column())
             editor.set_data(index.data(Qt.EditRole), object_name_list)
         self.connect_editor_signals(editor, index)
         return editor
@@ -702,7 +700,6 @@ class ForeignKeysDelegate(QItemDelegate):
 
     def __init__(self, parent):
         super().__init__(parent)
-        self._parent = parent
         self.datapackage = None
         self.selected_resource_name = None
 
@@ -710,14 +707,14 @@ class ForeignKeysDelegate(QItemDelegate):
         """Return editor."""
         header = index.model().horizontal_header_labels()
         if header[index.column()] == 'fields':
-            editor = CheckListEditor(self._parent, parent)
+            editor = CheckListEditor(self.parent(), parent)
             model = index.model()
             editor.data_committed.connect(lambda e=editor, i=index, m=model: self.close_field_name_list_editor(e, i, m))
             return editor
         if header[index.column()] == 'reference resource':
             return CustomComboEditor(parent)
         if header[index.column()] == 'reference fields':
-            editor = CheckListEditor(self._parent, parent)
+            editor = CheckListEditor(self.parent(), parent)
             model = index.model()
             editor.data_committed.connect(lambda e=editor, i=index, m=model: self.close_field_name_list_editor(e, i, m))
             return editor
@@ -725,8 +722,8 @@ class ForeignKeysDelegate(QItemDelegate):
 
     def setEditorData(self, editor, index):
         """Set editor data."""
-        self.datapackage = self._parent.datapackage
-        self.selected_resource_name = self._parent.selected_resource_name
+        self.datapackage = self.parent().datapackage
+        self.selected_resource_name = self.parent().selected_resource_name
         header = index.model().horizontal_header_labels()
         h = header.index
         if header[index.column()] == 'fields':

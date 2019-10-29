@@ -52,7 +52,6 @@ class GraphViewForm(DataStoreForm):
         super().__init__(project, Ui_MainWindow(), *db_maps)
         self.db_map = next(iter(db_maps))
         self.db_name = self.db_map.codename
-        self.ui.graphicsView.set_graph_view_form(self)
         self.read_only = read_only
         self.extent = 64
         self._spread = 3 * self.extent
@@ -98,7 +97,7 @@ class GraphViewForm(DataStoreForm):
         area = self.dockWidgetArea(self.ui.dockWidget_item_palette)
         self._handle_item_palette_dock_location_changed(area)
         # Override mouse press event of object tree view
-        self.ui.treeView_object.mousePressEvent = self._object_tree_view_mouse_press_event
+        self.ui.treeView_object.qsettings = self.qsettings
         # Set up dock widgets
         self.restore_dock_widgets()
         # Initialize stuff
@@ -118,6 +117,7 @@ class GraphViewForm(DataStoreForm):
     def connect_signals(self):
         """Connects signals."""
         super().connect_signals()
+        self.ui.graphicsView.context_menu_requested.connect(self.show_graph_view_context_menu)
         self.ui.graphicsView.item_dropped.connect(self._handle_item_dropped)
         self.ui.dockWidget_item_palette.dockLocationChanged.connect(self._handle_item_palette_dock_location_changed)
         self.ui.actionGraph_hide_selected.triggered.connect(self.hide_selected_items)
@@ -698,14 +698,21 @@ class GraphViewForm(DataStoreForm):
 
     def new_scene(self):
         """Replaces the current scene with a new one."""
-        old_scene = self.ui.graphicsView.scene()
-        if old_scene:
-            old_scene.deleteLater()
+        self.tear_down_scene()
         scene = ShrinkingScene(100.0, 100.0, None)
         self.ui.graphicsView.setScene(scene)
         scene.changed.connect(self._handle_scene_changed)
         scene.selectionChanged.connect(self._handle_scene_selection_changed)
         return scene
+
+    def tear_down_scene(self):
+        scene = self.ui.graphicsView.scene()
+        if not scene:
+            return
+        for item in scene.items():
+            if isinstance(item, (ObjectItem, ArcItem)):
+                del item._graph_view_form
+        scene.deleteLater()
 
     def extend_scene(self):
         """Extends the scene to show all items."""
@@ -954,6 +961,7 @@ class GraphViewForm(DataStoreForm):
             self.accept_relationship_template(template_id, relationship_id)
         return relationship_id
 
+    @Slot("QPoint")
     def show_graph_view_context_menu(self, global_pos):
         """Shows context menu for graphics view.
 
@@ -1026,7 +1034,6 @@ class GraphViewForm(DataStoreForm):
             relationship_class_id = relationship_class["id"]
             dimension = relationship_class['dimension']
             scene = self.ui.graphicsView.scene()
-            scene_pos = global_pos
             self.add_relationship_template(
                 scene, global_pos.x(), global_pos.y(), relationship_class_id, center=(main_item, dimension)
             )
@@ -1127,6 +1134,5 @@ class GraphViewForm(DataStoreForm):
             event (QEvent): Closing event if 'X' is clicked.
         """
         super().closeEvent(event)
-        scene = self.ui.graphicsView.scene()
-        if scene:
-            scene.deleteLater()
+        del self.ui.treeView_object.qsettings
+        self.tear_down_scene()

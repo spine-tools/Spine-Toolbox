@@ -225,13 +225,12 @@ class ParameterValueListModel(MinimalTreeModel):
         db_maps (iter): DiffDatabaseMapping instances
     """
 
-    remove_selection_requested = Signal(name="remove_selection_requested")
+    remove_selection_requested = Signal()
     remove_icon = QIcon(":/icons/minus.png")
 
     def __init__(self, parent, db_mngr, *db_maps):
         """Initialize class"""
         super().__init__(parent)
-        self._parent = parent
         self.db_mngr = db_mngr
         self.db_maps = db_maps
         self.connect_db_mngr_signals()

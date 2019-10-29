@@ -183,8 +183,8 @@ class DraggableWidget(QLabel):
 class ParameterTagToolBar(QToolBar):
     """A toolbar to add items using drag and drop actions."""
 
-    tag_button_toggled = Signal("QVariant", "bool", name="tag_button_toggled")
-    manage_tags_action_triggered = Signal("bool", name="manage_tags_action_triggered")
+    tag_button_toggled = Signal("QVariant", "bool")
+    manage_tags_action_triggered = Signal("bool")
 
     def __init__(self, parent, db_mngr, *db_maps):
         """
@@ -195,7 +195,6 @@ class ParameterTagToolBar(QToolBar):
             db_maps (iter): DiffDatabaseMapping instances
         """
         super().__init__("Parameter Tag Toolbar", parent=parent)
-        self._parent = parent
         self.db_mngr = db_mngr
         self.db_maps = db_maps
         label = QLabel("Parameter tag")
@@ -211,7 +210,7 @@ class ParameterTagToolBar(QToolBar):
         self.addWidget(button)
         # noinspection PyUnresolvedReferences
         # pylint: disable=unnecessary-lambda
-        button.clicked.connect(lambda checked: self.manage_tags_action_triggered.emit(checked))
+        # button.clicked.connect(lambda checked: self.manage_tags_action_triggered.emit(checked))
         self.setStyleSheet(PARAMETER_TAG_TOOLBAR_SS)
         self.setObjectName("ParameterTagToolbar")
         self.connect_db_mngr_signals()

@@ -21,7 +21,6 @@ from PySide2.QtCore import Qt, Signal, Slot, QModelIndex
 from PySide2.QtGui import QFont, QIcon
 from ..helpers import busy_effect, rows_to_row_count_tuples
 from ..mvcmodels.compound_table_model import CompoundWithEmptyTableModel
-
 from ..mvcmodels.empty_parameter_models import (
     EmptyObjectParameterDefinitionModel,
     EmptyObjectParameterValueModel,
@@ -42,7 +41,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
     and one empty parameter model.
     """
 
-    remove_selection_requested = Signal(name="remove_selection_requested")
+    remove_selection_requested = Signal()
     remove_icon = QIcon(":/icons/menu_icons/cog_minus.svg")
 
     def __init__(self, parent, db_mngr, *db_maps):
@@ -54,7 +53,6 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
             db_maps (iter): DiffDatabaseMapping instances
         """
         super().__init__(parent)
-        self._parent = parent
         self.db_mngr = db_mngr
         self.db_maps = db_maps
         self._auto_filter = dict()
@@ -112,7 +110,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         """Returns a collection of models having the given db_map."""
         return [m for m in self.single_models if m.db_map == db_map]
 
-    @Slot("QVariant", name="receive_entity_classes_removed")
+    @Slot("QVariant")
     def receive_entity_classes_removed(self, db_map_data):
         """Runs entity classes are removed. Remove submodels for those entity classes."""
         self.layoutAboutToBeChanged.emit()
@@ -126,14 +124,14 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         self.do_refresh()
         self.layoutChanged.emit()
 
-    @Slot("QVariant", name="receive_parameter_data_updated")
+    @Slot("QVariant")
     def receive_parameter_data_updated(self, db_map_data):
         """Runs when either parameter definitions or values are updated."""
         self._emit_data_changed_for_column("parameter_name")
         # TODO: parameter definition names aren't refreshed unless we emit dataChanged,
         # whereas entity and class names don't need it. Why?
 
-    @Slot("QVariant", name="receive_parameter_data_removed")
+    @Slot("QVariant")
     def receive_parameter_data_removed(self, db_map_data):
         """Runs when either parameter definitions or values are removed."""
         self.layoutAboutToBeChanged.emit()
@@ -154,7 +152,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         self.do_refresh()
         self.layoutChanged.emit()
 
-    @Slot("QVariant", name="receive_parameter_data_added")
+    @Slot("QVariant")
     def receive_parameter_data_added(self, db_map_data):
         """Runs when either parameter definitions or values are added."""
         new_models = []
@@ -241,7 +239,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
             self._auto_filter.clear()
             a = True
         b = self._settattr_if_different(
-            self, "_selected_entity_class_ids", self._parent.selected_entity_class_ids(self.entity_class_type)
+            self, "_selected_entity_class_ids", self.parent().selected_entity_class_ids(self.entity_class_type)
         )
         return a or b
 
@@ -254,9 +252,9 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         b = self._settattr_if_different(
             model,
             "_selected_param_def_ids",
-            self._parent.selected_param_def_ids[self.entity_class_type].get(
-                (model.db_map, model.entity_class_id), set()
-            ),
+            self.parent()
+            .selected_param_def_ids[self.entity_class_type]
+            .get((model.db_map, model.entity_class_id), set()),
         )
         return a or b
 
@@ -321,6 +319,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         Args:
             field (str): the column header
         """
+        return
         try:
             column = self.header.index(field)
         except ValueError:
@@ -396,7 +395,7 @@ class CompoundParameterValueMixin:
         b = self._settattr_if_different(
             model,
             "_selected_entity_ids",
-            self._parent.selected_ent_ids[self.entity_type].get((model.db_map, model.entity_class_id), set()),
+            self.parent().selected_ent_ids[self.entity_type].get((model.db_map, model.entity_class_id), set()),
         )
         return a or b
 

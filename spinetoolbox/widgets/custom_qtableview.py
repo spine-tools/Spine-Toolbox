@@ -21,14 +21,10 @@ import io
 import locale
 import numpy as np
 from PySide2.QtWidgets import QTableView, QApplication, QAbstractItemView, QMenu, QLineEdit, QWidgetAction
-from PySide2.QtCore import Qt, Signal, Slot, QItemSelectionModel, QPoint, QTimer
+from PySide2.QtCore import Qt, Signal, Slot, QItemSelectionModel, QPoint
 from PySide2.QtGui import QKeySequence
 from ..mvcmodels.table_model import TableModel
-from ..mvcmodels.auto_filter_menu_model import (
-    AutoFilterMenuValueItemModel,
-    AutoFilterMenuAllItemModel,
-    AutoFilterMenuItem,
-)
+from ..mvcmodels.auto_filter_menu_model import AutoFilterMenuValueItemModel, AutoFilterMenuAllItemModel
 from ..widgets.custom_qlistview import AutoFilterMenuView
 
 

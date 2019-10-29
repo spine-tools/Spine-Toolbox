@@ -97,10 +97,10 @@ class EditObjectClassesDialog(ShowIconColorEditorMixin, EditOrRemoveItemsDialog)
                         db_maps.append(db_map)
                         break
                 else:
-                    self._parent.msg_error.emit("Invalid database {0} at row {1}".format(database, i + 1))
+                    self.parent().msg_error.emit("Invalid database {0} at row {1}".format(database, i + 1))
                     return
             if not name:
-                self._parent.msg_error.emit("Object class name missing at row {}".format(i + 1))
+                self.parent().msg_error.emit("Object class name missing at row {}".format(i + 1))
                 return
             orig_row = self.orig_data[i]
             if [name, description, display_icon] == orig_row:
@@ -113,7 +113,7 @@ class EditObjectClassesDialog(ShowIconColorEditorMixin, EditOrRemoveItemsDialog)
                 db_item['id'] = item.db_map_id(db_map)
                 db_map_data.setdefault(db_map, []).append(db_item)
         if not db_map_data:
-            self._parent.msg_error.emit("Nothing to update")
+            self.parent().msg_error.emit("Nothing to update")
             return
         self.db_mngr.update_object_classes(db_map_data)
         super().accept()
@@ -163,10 +163,10 @@ class EditObjectsDialog(EditOrRemoveItemsDialog):
                         db_maps.append(db_map)
                         break
                 else:
-                    self._parent.msg_error.emit("Invalid database {0} at row {1}".format(database, i + 1))
+                    self.parent().msg_error.emit("Invalid database {0} at row {1}".format(database, i + 1))
                     return
             if not name:
-                self._parent.msg_error.emit("Object name missing at row {}".format(i + 1))
+                self.parent().msg_error.emit("Object name missing at row {}".format(i + 1))
                 return
             orig_row = self.orig_data[i]
             if [name, description] == orig_row:
@@ -177,7 +177,7 @@ class EditObjectsDialog(EditOrRemoveItemsDialog):
                 db_item['id'] = item.db_map_id(db_map)
                 db_map_data.setdefault(db_map, []).append(db_item)
         if not db_map_data:
-            self._parent.msg_error.emit("Nothing to update")
+            self.parent().msg_error.emit("Nothing to update")
             return
         self.db_mngr.update_objects(db_map_data)
         super().accept()
@@ -226,10 +226,10 @@ class EditRelationshipClassesDialog(EditOrRemoveItemsDialog):
                         db_maps.append(db_map)
                         break
                 else:
-                    self._parent.msg_error.emit("Invalid database {0} at row {1}".format(database, i + 1))
+                    self.parent().msg_error.emit("Invalid database {0} at row {1}".format(database, i + 1))
                     return
             if not name:
-                self._parent.msg_error.emit("Relationship class name missing at row {}".format(i + 1))
+                self.parent().msg_error.emit("Relationship class name missing at row {}".format(i + 1))
                 return
             orig_row = self.orig_data[i]
             if [name] == orig_row:
@@ -240,7 +240,7 @@ class EditRelationshipClassesDialog(EditOrRemoveItemsDialog):
                 db_item['id'] = item.db_map_id(db_map)
                 db_map_data.setdefault(db_map, []).append(db_item)
         if not db_map_data:
-            self._parent.msg_error.emit("Nothing to update")
+            self.parent().msg_error.emit("Nothing to update")
             return
         self.db_mngr.update_relationship_classes(db_map_data)
         super().accept()
@@ -306,10 +306,10 @@ class EditRelationshipsDialog(GetObjectsMixin, EditOrRemoveItemsDialog):
                         db_maps.append(db_map)
                         break
                 else:
-                    self._parent.msg_error.emit("Invalid database {0} at row {1}".format(database, i + 1))
+                    self.parent().msg_error.emit("Invalid database {0} at row {1}".format(database, i + 1))
                     return
             if not name:
-                self._parent.msg_error.emit("Relationship class name missing at row {}".format(i + 1))
+                self.parent().msg_error.emit("Relationship class name missing at row {}".format(i + 1))
                 return
             orig_row = self.orig_data[i]
             if [*object_name_list, name] == orig_row:
@@ -320,7 +320,7 @@ class EditRelationshipsDialog(GetObjectsMixin, EditOrRemoveItemsDialog):
                 # Find object_class_id_list
                 relationship_classes = self.db_map_rel_cls_lookup[db_map]
                 if (self.class_name, self.object_class_name_list) not in relationship_classes:
-                    self._parent.msg_error.emit(
+                    self.parent().msg_error.emit(
                         "Invalid relationship class '{}' for db '{}' at row {}".format(
                             self.class_name, db_map.codename, i + 1
                         )
@@ -334,7 +334,7 @@ class EditRelationshipsDialog(GetObjectsMixin, EditOrRemoveItemsDialog):
                 object_id_list = list()
                 for object_class_id, object_name in zip(object_class_id_list, object_name_list):
                     if (object_class_id, object_name) not in objects:
-                        self._parent.msg_error.emit(
+                        self.parent().msg_error.emit(
                             "Invalid object '{}' for db '{}' at row {}".format(object_name, db_map.codename, i + 1)
                         )
                         return
@@ -344,7 +344,7 @@ class EditRelationshipsDialog(GetObjectsMixin, EditOrRemoveItemsDialog):
                 db_item.update({'id': id_, 'object_id_list': object_id_list, 'name': name})
                 db_map_data.setdefault(db_map, []).append(db_item)
         if not db_map_data:
-            self._parent.msg_error.emit("Nothing to update")
+            self.parent().msg_error.emit("Nothing to update")
             return
         self.db_mngr.update_relationships(db_map_data)
         super().accept()
@@ -391,13 +391,13 @@ class RemoveEntitiesDialog(EditOrRemoveItemsDialog):
                         db_maps.append(db_map)
                         break
                 else:
-                    self._parent.msg_error.emit("Invalid database {0} at row {1}".format(database, i + 1))
+                    self.parent().msg_error.emit("Invalid database {0} at row {1}".format(database, i + 1))
                     return
             for db_map in db_maps:
                 data = item.db_map_data(db_map)
                 db_map_data.setdefault(db_map, {}).setdefault(item_type, []).append(data)
         if not db_map_data:
-            self._parent.msg_error.emit("Nothing to remove")
+            self.parent().msg_error.emit("Nothing to remove")
             return
         self.db_mngr.remove_items(db_map_data)
         super().accept()
@@ -476,7 +476,7 @@ class ManageParameterTagsDialog(ManageItemsDialog):
             try:
                 db_maps = [self.keyed_db_maps[x] for x in db_name_list]
             except KeyError as e:
-                self._parent.msg_error.emit("Invalid database {0} at row {1}".format(e, i + 1))
+                self.parent().msg_error.emit("Invalid database {0} at row {1}".format(e, i + 1))
                 return
             # Remove
             check_box = self.table_view.indexWidget(self.model.index(i, self.model.header.index('remove')))
@@ -486,7 +486,7 @@ class ManageParameterTagsDialog(ManageItemsDialog):
                     db_map_typed_data_to_rm.setdefault(db_map, {}).setdefault("parameter tag", []).append(parameter_tag)
                 continue
             if not tag:
-                self._parent.msg_error.emit("Tag missing at row {}".format(i + 1))
+                self.parent().msg_error.emit("Tag missing at row {}".format(i + 1))
                 return
             # Update
             if [tag, description] != self.orig_data[i]:
@@ -503,10 +503,10 @@ class ManageParameterTagsDialog(ManageItemsDialog):
             try:
                 db_maps = [self.keyed_db_maps[x] for x in db_name_list]
             except KeyError as e:
-                self._parent.msg_error.emit("Invalid database {0} at row {1}".format(e, offset + i + 1))
+                self.parent().msg_error.emit("Invalid database {0} at row {1}".format(e, offset + i + 1))
                 return
             if not tag:
-                self._parent.msg_error.emit("Tag missing at row {0}".format(offset + i + 1))
+                self.parent().msg_error.emit("Tag missing at row {0}".format(offset + i + 1))
                 return
             for db_map in db_maps:
                 item = {'tag': tag, 'description': description}

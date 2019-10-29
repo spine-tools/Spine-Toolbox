@@ -75,7 +75,7 @@ class EmptyParameterModel(EmptyRowModel):
         it's a definition or value model. Used by receive_parameter_data_added."""
         raise NotImplementedError()
 
-    @Slot("QVariant", name="receive_parameter_data_added")
+    @Slot("QVariant")
     def receive_parameter_data_added(self, db_map_data):
         """Runs when parameter definitions or values are added.
         Finds and removes model items that were successfully added to the db."""
@@ -516,7 +516,7 @@ class EmptyRelationshipParameterValueModel(MakeRelationshipOnTheFlyMixin, EmptyP
         super().connect_db_mngr_signals()
         self.db_mngr.relationships_added.connect(self.receive_relationships_added)
 
-    @Slot("QVariant", name="receive_relationships_added")
+    @Slot("QVariant")
     def receive_relationships_added(self, db_map_data):
         """Runs when relationships are added.
         Finds affected rows and call add_items_to_db with them."""

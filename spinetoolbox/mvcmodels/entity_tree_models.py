@@ -31,7 +31,7 @@ from .minimal_tree_model import MinimalTreeModel, TreeItem
 class EntityTreeModel(MinimalTreeModel):
     """Base class for all entity tree models."""
 
-    remove_selection_requested = Signal(name="remove_selection_requested")
+    remove_selection_requested = Signal()
 
     def __init__(self, parent, db_mngr, *db_maps):
         """Init class.

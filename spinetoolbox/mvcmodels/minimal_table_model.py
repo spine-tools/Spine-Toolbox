@@ -28,7 +28,6 @@ class MinimalTableModel(QAbstractTableModel):
             parent (QObject): the parent object
         """
         super().__init__(parent)
-        self._parent = parent
         if header is None:
             header = []
         self.header = header
@@ -38,7 +37,7 @@ class MinimalTableModel(QAbstractTableModel):
     def clear(self):
         """Clear all data in model."""
         self.beginResetModel()
-        self._main_data = list()
+        self._main_data.clear()
         self.endResetModel()
 
     def flags(self, index):
@@ -64,7 +63,7 @@ class MinimalTableModel(QAbstractTableModel):
 
     def fetch_data(self):
         """Returns data to reset the model with and call it fetched.
-        Reimplemented in subclasses if you want to populate your model automatically.
+        Reimplement in subclasses if you want to populate your model automatically.
         """
         raise NotImplementedError()
 
@@ -159,36 +158,6 @@ class MinimalTableModel(QAbstractTableModel):
         if role not in (Qt.DisplayRole, Qt.EditRole):
             return None
         return self._main_data[row]
-
-    def column_data(self, column, role=Qt.DisplayRole):
-        """Returns the data stored under the given role for the given column.
-
-        Args:
-            column (int): Item column
-            role (int): Data role
-
-        Returns:
-            Column data for given role.
-        """
-        if not 0 <= column < self.columnCount():
-            return None
-        if role not in (Qt.DisplayRole, Qt.EditRole):
-            return None
-        return [self._main_data[row][column] for row in range(self.rowCount())]
-
-    def model_data(self, role=Qt.DisplayRole):
-        """Returns the data stored under the given role in the entire model.
-
-        Args:
-            role (int): Data role
-
-        Returns:
-            Model data for given role.
-        """
-        if role in (Qt.DisplayRole, Qt.EditRole):
-            return self._main_data
-        return [self.row_data(row, role) for row in range(self.rowCount())]
-
     def setData(self, index, value, role=Qt.EditRole):
         """Set data in model."""
         if not index.isValid():

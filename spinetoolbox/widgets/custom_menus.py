@@ -18,7 +18,7 @@ Classes for custom context menus and pop-up menus.
 
 import os
 from operator import itemgetter
-from PySide2.QtWidgets import QMenu, QWidgetAction, QAction, QWidget
+from PySide2.QtWidgets import QMenu, QWidgetAction, QAction
 from PySide2.QtGui import QIcon
 from PySide2.QtCore import Qt, Signal, Slot, QPoint
 from ..helpers import fix_name_ambiguity, tuple_itemgetter
@@ -350,7 +350,6 @@ class ObjectItemContextMenu(CustomContextMenu):
             if not relationship_class_id:
                 continue
             relationship_class = parent.db_mngr.get_item(parent.db_map, "relationship class", relationship_class_id)
-            relationship_class_name = relationship_class['name']
             object_class_name_list = relationship_class["object_class_name_list"].split(",")
             fixed_object_class_name_list = object_class_name_list.copy()
             fix_name_ambiguity(fixed_object_class_name_list)

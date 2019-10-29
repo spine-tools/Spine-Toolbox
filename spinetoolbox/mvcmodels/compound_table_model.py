@@ -155,13 +155,13 @@ class CompoundWithEmptyTableModel(CompoundTableModel):
 
     @property
     def single_models(self):
-        return self.sub_models[0:-1]
+        return self.sub_models[:-1]
 
     @property
     def empty_model(self):
         return self.sub_models[-1]
 
-    @Slot("QModelIndex", "int", "int", name="_handle_empty_rows_removed")
+    @Slot("QModelIndex", "int", "int")
     def _handle_empty_rows_removed(self, parent, first, last):
         """Runs when rows are removed from the empty model.
         Update row_map, then emit rowsRemoved so the removed rows are no longer visible.
@@ -175,7 +175,7 @@ class CompoundWithEmptyTableModel(CompoundTableModel):
         empty_row_map = self._row_map_for_model(self.empty_model)
         self._append_row_map(empty_row_map)
 
-    @Slot("QModelIndex", "int", "int", name="_handle_empty_rows_inserted")
+    @Slot("QModelIndex", "int", "int")
     def _handle_empty_rows_inserted(self, parent, first, last):
         """Runs when rows are inserted to the empty model.
         Update row_map, then emit rowsInserted so the new rows become visible.

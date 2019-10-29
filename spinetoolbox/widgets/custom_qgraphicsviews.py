@@ -465,16 +465,9 @@ class DesignQGraphicsView(CustomQGraphicsView):
 class GraphQGraphicsView(CustomQGraphicsView):
     """QGraphicsView for the Graph View."""
 
-    item_dropped = Signal("QPoint", "QString", name="item_dropped")
+    item_dropped = Signal("QPoint", "QString")
 
-    def __init__(self, parent):
-        """Init GraphQGraphicsView."""
-        super().__init__(parent=parent)
-        self._graph_view_form = None
-
-    def set_graph_view_form(self, form):
-        """Sets the _graph_view_form attribute."""
-        self._graph_view_form = form
+    context_menu_requested = Signal("QPoint")
 
     def dragLeaveEvent(self, event):
         """Accept event. Then call the super class method
@@ -521,11 +514,8 @@ class GraphQGraphicsView(CustomQGraphicsView):
         super().contextMenuEvent(e)
         if e.isAccepted():
             return
-        if not self._graph_view_form:
-            e.ignore()
-            return
         e.accept()
-        self._graph_view_form.show_graph_view_context_menu(e.globalPos())
+        self.context_menu_requested.emit(e.globalPos())
 
     def gentle_zoom(self, factor, zoom_focus):
         """

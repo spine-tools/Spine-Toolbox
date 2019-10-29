@@ -188,7 +188,6 @@ class MinimalTreeModel(QAbstractItemModel):
             parent (DataStoreForm)
         """
         super().__init__(parent)
-        self._parent = parent
         self._invisible_root_item = TreeItem(self)
 
     def visit_all(self, index=QModelIndex()):

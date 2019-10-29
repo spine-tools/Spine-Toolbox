@@ -261,7 +261,7 @@ class DataStore(ProjectItem):
         if dialect == 'sqlite':
             self.enable_sqlite()
         elif dialect == 'mssql':
-            import pyodbc  # pylint: disable=import-outside-toplevel
+            import pyodbc
 
             dsns = pyodbc.dataSources()
             # Collect dsns which use the msodbcsql driver
@@ -369,6 +369,7 @@ class DataStore(ProjectItem):
     @Slot(name="tree_view_form_destroyed")
     def tree_view_form_destroyed(self):
         """Notify that tree view form has been destroyed."""
+        del self.tree_view_form
         self.tree_view_form = None
 
     @Slot(bool, name="open_graph_view")
@@ -410,6 +411,7 @@ class DataStore(ProjectItem):
     @Slot(name="graph_view_form_destroyed")
     def graph_view_form_destroyed(self):
         """Notify that graph view form has been destroyed."""
+        del self.graph_view_form
         self.graph_view_form = None
 
     @Slot(bool, name="open_tabular_view")

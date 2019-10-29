@@ -26,7 +26,6 @@ class EntityListModel(QStandardItemModel):
     def __init__(self, graph_view_form, db_mngr, db_map):
         """Initialize class"""
         super().__init__(graph_view_form)
-        self._graph_view_form = graph_view_form
         self.db_mngr = db_mngr
         self.db_map = db_map
         self.new_index = None

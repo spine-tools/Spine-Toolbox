@@ -128,32 +128,6 @@ class TestMinimalTableModel(unittest.TestCase):
             index = model.index(0, column)
             model.setData(index, data[column])
         self.assertEqual(model.row_data(0), data)
-
-    def test_column_data(self):
-        """Test the column_data() method of MinimalTableModel."""
-        model = MinimalTableModel()
-        n_rows = 3
-        model.insertRows(0, 3)
-        data = ['a', 'b', 'c']
-        for row in range(n_rows):
-            index = model.index(row, 0)
-            model.setData(index, data[row])
-        self.assertEqual(model.column_data(0), data)
-
-    def test_model_data(self):
-        """Test the model_data() method of MinimalTableModel."""
-        model = MinimalTableModel()
-        n_rows = 3
-        model.insertRows(0, n_rows)
-        n_columns = 2
-        model.insertColumns(0, n_columns - 1)
-        data = [['a', 'b'], ['c', 'd'], ['e', 'f']]
-        for row in range(n_rows):
-            for column in range(n_columns):
-                index = model.index(row, column)
-                model.setData(index, data[row][column])
-        self.assertEqual(model.model_data(), data)
-
     def test_setData(self):
         """Test the setData() method of MinimalTableModel."""
         model = MinimalTableModel()

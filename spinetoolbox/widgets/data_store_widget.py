@@ -72,9 +72,9 @@ class DataStoreForm(QMainWindow):
         db_maps (iter): DiffDatabaseMapping instances
     """
 
-    msg = Signal(str, name="msg")
-    msg_error = Signal(str, name="msg_error")
-    commit_available = Signal("bool", name="commit_available")
+    msg = Signal(str)
+    msg_error = Signal(str)
+    commit_available = Signal("bool")
 
     def __init__(self, project, ui, *db_maps):
         """Initialize class."""
@@ -143,34 +143,6 @@ class DataStoreForm(QMainWindow):
 
     def connect_signals(self):
         """Connect signals to slots."""
-        # Message signals
-        self.msg.connect(self.add_message)
-        self.msg_error.connect(self.add_error_message)
-        self.commit_available.connect(self._handle_commit_available)
-        # Menu actions
-        self.ui.actionCommit.triggered.connect(self._prompt_and_commit_session)
-        self.ui.actionRollback.triggered.connect(self.rollback_session)
-        self.ui.actionRefresh.triggered.connect(self.refresh_session)
-        self.ui.actionClose.triggered.connect(self.close)
-        # Object tree
-        self.ui.treeView_object.selectionModel().selectionChanged.connect(self._handle_object_tree_selection_changed)
-        # Parameter tags
-        self.parameter_tag_toolbar.manage_tags_action_triggered.connect(self.show_manage_parameter_tags_form)
-        self.parameter_tag_toolbar.tag_button_toggled.connect(self._handle_tag_button_toggled)
-        # Dock widgets visibility
-        self.ui.dockWidget_object_parameter_value.visibilityChanged.connect(
-            self._handle_object_parameter_value_visibility_changed
-        )
-        self.ui.dockWidget_object_parameter_definition.visibilityChanged.connect(
-            self._handle_object_parameter_definition_visibility_changed
-        )
-        self.ui.dockWidget_relationship_parameter_value.visibilityChanged.connect(
-            self._handle_relationship_parameter_value_visibility_changed
-        )
-        self.ui.dockWidget_relationship_parameter_definition.visibilityChanged.connect(
-            self._handle_relationship_parameter_definition_visibility_changed
-        )
-        self.ui.actionRestore_Dock_Widgets.triggered.connect(self.restore_dock_widgets)
         # DB manager
         # Added
         self.db_mngr.object_classes_added.connect(self.receive_object_classes_added)
@@ -201,8 +173,39 @@ class DataStoreForm(QMainWindow):
         self.db_mngr.parameter_tags_removed.connect(self.receive_parameter_tags_removed)
         # Error
         self.db_mngr.msg_error.connect(self.receive_db_mngr_error_msg)
+        # Message signals
+        self.msg.connect(self.add_message)
+        self.msg_error.connect(self.add_error_message)
+        self.commit_available.connect(self._handle_commit_available)
+        # Menu actions
+        self.ui.actionCommit.triggered.connect(self._prompt_and_commit_session)
+        self.ui.actionRollback.triggered.connect(self.rollback_session)
+        self.ui.actionRefresh.triggered.connect(self.refresh_session)
+        self.ui.actionClose.triggered.connect(self.close)
+        # Object tree
+        self.ui.treeView_object.selectionModel().selectionChanged.connect(self._handle_object_tree_selection_changed)
+        # Parameter tags
+        self.parameter_tag_toolbar.manage_tags_action_triggered.connect(self.show_manage_parameter_tags_form)
+        self.parameter_tag_toolbar.tag_button_toggled.connect(self._handle_tag_button_toggled)
+        # Dock widgets visibility
+        self.ui.dockWidget_object_parameter_value.visibilityChanged.connect(
+            self._handle_object_parameter_value_visibility_changed
+        )
+        self.ui.dockWidget_object_parameter_definition.visibilityChanged.connect(
+            self._handle_object_parameter_definition_visibility_changed
+        )
+        self.ui.dockWidget_relationship_parameter_value.visibilityChanged.connect(
+            self._handle_relationship_parameter_value_visibility_changed
+        )
+        self.ui.dockWidget_relationship_parameter_definition.visibilityChanged.connect(
+            self._handle_relationship_parameter_definition_visibility_changed
+        )
+        self.ui.actionRestore_Dock_Widgets.triggered.connect(self.restore_dock_widgets)
 
-    @Slot("QVariant", name="receive_db_mngr_error_msg")
+    def __del__(self):
+        print(self, "deleted")
+
+    @Slot("QVariant")
     def receive_db_mngr_error_msg(self, db_map_error_log):
         msg = ""
         for db_map, error_log in db_map_error_log.items():
@@ -215,7 +218,7 @@ class DataStoreForm(QMainWindow):
         """Returns the QSettings instance from ToolboxUI."""
         return self._project._toolbox._qsettings
 
-    @Slot(str, name="add_message")
+    @Slot(str)
     def add_message(self, msg):
         """Append regular message to status bar.
 
@@ -226,7 +229,7 @@ class DataStoreForm(QMainWindow):
         icon.pressed.connect(lambda icon=icon: self.ui.statusbar.removeWidget(icon))
         self.ui.statusbar.insertWidget(0, icon)
 
-    @Slot(str, name="add_error_message")
+    @Slot(str)
     def add_error_message(self, msg):
         """Show error message.
 
@@ -235,7 +238,7 @@ class DataStoreForm(QMainWindow):
         """
         self.err_msg.showMessage(msg)
 
-    @Slot("QItemSelection", "QItemSelection", name="_handle_object_tree_selection_changed")
+    @Slot("QItemSelection", "QItemSelection")
     def _handle_object_tree_selection_changed(self, selected, deselected):
         """Called when the object tree selection changes.
         Set default rows and apply filters on parameter models."""
@@ -244,27 +247,27 @@ class DataStoreForm(QMainWindow):
         for index in selected.indexes():
             self.object_tree_model.select_index(index)
 
-    @Slot("bool", name="_handle_object_parameter_value_visibility_changed")
+    @Slot("bool")
     def _handle_object_parameter_value_visibility_changed(self, visible):
         if visible:
             self.object_parameter_value_model.update_filter()
 
-    @Slot("bool", name="_handle_object_parameter_definition_visibility_changed")
+    @Slot("bool")
     def _handle_object_parameter_definition_visibility_changed(self, visible):
         if visible:
             self.object_parameter_definition_model.update_filter()
 
-    @Slot("bool", name="_handle_relationship_parameter_value_visibility_changed")
+    @Slot("bool")
     def _handle_relationship_parameter_value_visibility_changed(self, visible):
         if visible:
             self.relationship_parameter_value_model.update_filter()
 
-    @Slot("bool", name="_handle_relationship_parameter_definition_visibility_changed")
+    @Slot("bool")
     def _handle_relationship_parameter_definition_visibility_changed(self, visible):
         if visible:
             self.relationship_parameter_definition_model.update_filter()
 
-    @Slot("QVariant", "bool", name="_handle_tag_button_toggled")
+    @Slot("QVariant", "bool")
     def _handle_tag_button_toggled(self, db_map_ids, checked):
         """Called when a parameter tag button is toggled.
         Compute selected parameter definition ids per object class ids.
@@ -300,12 +303,12 @@ class DataStoreForm(QMainWindow):
                         ).add(param_def["id"])
         self.update_filter()
 
-    @Slot("bool", name="_handle_commit_available")
+    @Slot("bool")
     def _handle_commit_available(self, on):
         self.ui.actionCommit.setEnabled(on)
         self.ui.actionRollback.setEnabled(on)
 
-    @Slot("bool", name="_prompt_and_commit_session")
+    @Slot("bool")
     def _prompt_and_commit_session(self, checked=False):
         """Query user for a commit message and commit changes to source database returning False if cancelled."""
         if not any(db_map.has_pending_changes() for db_map in self.db_maps):
@@ -331,7 +334,7 @@ class DataStoreForm(QMainWindow):
         msg = "All changes committed successfully."
         self.msg.emit(msg)
 
-    @Slot("bool", name="rollback_session")
+    @Slot("bool")
     def rollback_session(self, checked=False):
         try:
             for db_map in self.db_maps:
@@ -471,14 +474,15 @@ class DataStoreForm(QMainWindow):
             default_data = dict(database=next(iter(self.db_maps)).codename)
         else:
             default_data = index.model().item_from_index(index).default_parameter_data()
-        for model in (
-            self.object_parameter_definition_model,
-            self.object_parameter_value_model,
-            self.relationship_parameter_definition_model,
-            self.relationship_parameter_value_model,
-        ):
-            model.empty_model.set_default_row(**default_data)
-            model.empty_model.set_rows_to_default(model.empty_model.rowCount() - 1)
+        self.set_and_apply_default_rows(self.object_parameter_definition_model, default_data)
+        self.set_and_apply_default_rows(self.object_parameter_value_model, default_data)
+        self.set_and_apply_default_rows(self.relationship_parameter_definition_model, default_data)
+        self.set_and_apply_default_rows(self.relationship_parameter_value_model, default_data)
+
+    @staticmethod
+    def set_and_apply_default_rows(model, default_data):
+        model.empty_model.set_default_row(**default_data)
+        model.empty_model.set_rows_to_default(model.empty_model.rowCount() - 1)
 
     def update_filter(self):
         """Update filter on parameter models."""
@@ -491,19 +495,19 @@ class DataStoreForm(QMainWindow):
         if self.ui.dockWidget_relationship_parameter_definition.isVisible():
             self.relationship_parameter_definition_model.update_filter()
 
-    @Slot("bool", name="show_add_object_classes_form")
+    @Slot("bool")
     def show_add_object_classes_form(self, checked=False):
         """Show dialog to let user select preferences for new object classes."""
         dialog = AddObjectClassesDialog(self, self.db_mngr, *self.db_maps)
         dialog.show()
 
-    @Slot("bool", "str", name="show_add_objects_form")
+    @Slot("bool")
     def show_add_objects_form(self, checked=False, class_name=""):
         """Show dialog to let user select preferences for new objects."""
         dialog = AddObjectsDialog(self, self.db_mngr, *self.db_maps, class_name=class_name)
         dialog.show()
 
-    @Slot("bool", "str", name="show_add_relationship_classes_form")
+    @Slot("bool")
     def show_add_relationship_classes_form(self, checked=False, object_class_one_name=None):
         """Show dialog to let user select preferences for new relationship class."""
         dialog = AddRelationshipClassesDialog(
@@ -511,7 +515,7 @@ class DataStoreForm(QMainWindow):
         )
         dialog.show()
 
-    @Slot("bool", "tuple", "str", "str", name="show_add_relationships_form")
+    @Slot("bool")
     def show_add_relationships_form(
         self, checked=False, relationship_class_key=(), object_class_name="", object_name=""
     ):
@@ -526,19 +530,19 @@ class DataStoreForm(QMainWindow):
         )
         dialog.show()
 
-    @Slot("bool", name="show_edit_object_classes_form")
+    @Slot("bool")
     def show_edit_object_classes_form(self, checked=False):
         selected = {ind.internalPointer() for ind in self.object_tree_model.selected_object_class_indexes}
         dialog = EditObjectClassesDialog(self, self.db_mngr, selected)
         dialog.show()
 
-    @Slot("bool", name="show_edit_objects_form")
+    @Slot("bool")
     def show_edit_objects_form(self, checked=False):
         selected = {ind.internalPointer() for ind in self.object_tree_model.selected_object_indexes}
         dialog = EditObjectsDialog(self, self.db_mngr, selected)
         dialog.show()
 
-    @Slot("bool", name="show_edit_relationship_classes_form")
+    @Slot("bool")
     def show_edit_relationship_classes_form(self, checked=False):
         selected = {
             ind.internalPointer()
@@ -548,7 +552,7 @@ class DataStoreForm(QMainWindow):
         dialog = EditRelationshipClassesDialog(self, self.db_mngr, selected)
         dialog.show()
 
-    @Slot("bool", name="show_edit_relationships_form")
+    @Slot("bool")
     def show_edit_relationships_form(self, checked=False):
         # NOTE: Only edits relationships that are in the same class
         selected = {
@@ -562,12 +566,12 @@ class DataStoreForm(QMainWindow):
         dialog = EditRelationshipsDialog(self, self.db_mngr, selected, relationship_class_key)
         dialog.show()
 
-    @Slot("bool", name="show_manage_parameter_tags_form")
+    @Slot("bool")
     def show_manage_parameter_tags_form(self, checked=False):
         dialog = ManageParameterTagsDialog(self, self.db_mngr, *self.db_maps)
         dialog.show()
 
-    def receive_items_changed(self, action, item_type, db_map_data):
+    def notify_items_changed(self, action, item_type, db_map_data):
         """Enables or disables actions and informs the user about what just happened."""
         msg = f"<html> Successfully {action} {item_type} item(s)"
         name_keys = {"parameter tag": "tag", "parameter value": None}
@@ -579,101 +583,101 @@ class DataStoreForm(QMainWindow):
         self.msg.emit(msg)
         self.commit_available.emit(True)
 
-    @Slot("QVariant", name="receive_object_classes_added")
+    @Slot("QVariant")
     def receive_object_classes_added(self, db_map_data):
-        self.receive_items_changed("added", "object class", db_map_data)
+        self.notify_items_changed("added", "object class", db_map_data)
 
-    @Slot("QVariant", name="receive_objects_added")
+    @Slot("QVariant")
     def receive_objects_added(self, db_map_data):
-        self.receive_items_changed("added", "object", db_map_data)
+        self.notify_items_changed("added", "object", db_map_data)
 
-    @Slot("QVariant", name="receive_relationship_classes_added")
+    @Slot("QVariant")
     def receive_relationship_classes_added(self, db_map_data):
-        self.receive_items_changed("added", "relationship class", db_map_data)
+        self.notify_items_changed("added", "relationship class", db_map_data)
 
-    @Slot("QVariant", name="receive_relationships_added")
+    @Slot("QVariant")
     def receive_relationships_added(self, db_map_data):
-        self.receive_items_changed("added", "relationship", db_map_data)
+        self.notify_items_changed("added", "relationship", db_map_data)
 
-    @Slot("QVariant", name="receive_parameter_definitions_added")
+    @Slot("QVariant")
     def receive_parameter_definitions_added(self, db_map_data):
-        self.receive_items_changed("added", "parameter definition", db_map_data)
+        self.notify_items_changed("added", "parameter definition", db_map_data)
 
-    @Slot("QVariant", name="receive_parameter_values_added")
+    @Slot("QVariant")
     def receive_parameter_values_added(self, db_map_data):
-        self.receive_items_changed("added", "parameter value", db_map_data)
+        self.notify_items_changed("added", "parameter value", db_map_data)
 
-    @Slot("QVariant", name="receive_parameter_value_lists_added")
+    @Slot("QVariant")
     def receive_parameter_value_lists_added(self, db_map_data):
-        self.receive_items_changed("added", "parameter value list", db_map_data)
+        self.notify_items_changed("added", "parameter value list", db_map_data)
 
-    @Slot("QVariant", name="receive_parameter_tags_added")
+    @Slot("QVariant")
     def receive_parameter_tags_added(self, db_map_data):
-        self.receive_items_changed("added", "parameter tag", db_map_data)
+        self.notify_items_changed("added", "parameter tag", db_map_data)
 
-    @Slot("QVariant", name="receive_object_classes_updated")
+    @Slot("QVariant")
     def receive_object_classes_updated(self, db_map_data):
-        self.receive_items_changed("updated", "object class", db_map_data)
+        self.notify_items_changed("updated", "object class", db_map_data)
 
-    @Slot("QVariant", name="receive_objects_updated")
+    @Slot("QVariant")
     def receive_objects_updated(self, db_map_data):
-        self.receive_items_changed("updated", "object", db_map_data)
+        self.notify_items_changed("updated", "object", db_map_data)
 
-    @Slot("QVariant", name="receive_relationship_classes_updated")
+    @Slot("QVariant")
     def receive_relationship_classes_updated(self, db_map_data):
-        self.receive_items_changed("updated", "relationship class", db_map_data)
+        self.notify_items_changed("updated", "relationship class", db_map_data)
 
-    @Slot("QVariant", name="receive_relationships_updated")
+    @Slot("QVariant")
     def receive_relationships_updated(self, db_map_data):
-        self.receive_items_changed("updated", "relationship", db_map_data)
+        self.notify_items_changed("updated", "relationship", db_map_data)
 
-    @Slot("QVariant", name="receive_parameter_definitions_updated")
+    @Slot("QVariant")
     def receive_parameter_definitions_updated(self, db_map_data):
-        self.receive_items_changed("updated", "parameter definition", db_map_data)
+        self.notify_items_changed("updated", "parameter definition", db_map_data)
 
-    @Slot("QVariant", name="receive_parameter_values_updated")
+    @Slot("QVariant")
     def receive_parameter_values_updated(self, db_map_data):
-        self.receive_items_changed("updated", "parameter value", db_map_data)
+        self.notify_items_changed("updated", "parameter value", db_map_data)
 
-    @Slot("QVariant", name="receive_parameter_value_lists_updated")
+    @Slot("QVariant")
     def receive_parameter_value_lists_updated(self, db_map_data):
-        self.receive_items_changed("updated", "parameter value list", db_map_data)
+        self.notify_items_changed("updated", "parameter value list", db_map_data)
 
-    @Slot("QVariant", name="receive_parameter_tags_updated")
+    @Slot("QVariant")
     def receive_parameter_tags_updated(self, db_map_data):
-        self.receive_items_changed("updated", "parameter tag", db_map_data)
+        self.notify_items_changed("updated", "parameter tag", db_map_data)
 
-    @Slot("QVariant", name="receive_object_classes_removed")
+    @Slot("QVariant")
     def receive_object_classes_removed(self, db_map_data):
-        self.receive_items_changed("removed", "object class", db_map_data)
+        self.notify_items_changed("removed", "object class", db_map_data)
 
-    @Slot("QVariant", name="receive_objects_removed")
+    @Slot("QVariant")
     def receive_objects_removed(self, db_map_data):
-        self.receive_items_changed("removed", "object", db_map_data)
+        self.notify_items_changed("removed", "object", db_map_data)
 
-    @Slot("QVariant", name="receive_relationship_classes_removed")
+    @Slot("QVariant")
     def receive_relationship_classes_removed(self, db_map_data):
-        self.receive_items_changed("removed", "relationship class", db_map_data)
+        self.notify_items_changed("removed", "relationship class", db_map_data)
 
-    @Slot("QVariant", name="receive_relationships_removed")
+    @Slot("QVariant")
     def receive_relationships_removed(self, db_map_data):
-        self.receive_items_changed("removed", "relationship", db_map_data)
+        self.notify_items_changed("removed", "relationship", db_map_data)
 
-    @Slot("QVariant", name="receive_parameter_definitions_removed")
+    @Slot("QVariant")
     def receive_parameter_definitions_removed(self, db_map_data):
-        self.receive_items_changed("removed", "parameter definition", db_map_data)
+        self.notify_items_changed("removed", "parameter definition", db_map_data)
 
-    @Slot("QVariant", name="receive_parameter_values_removed")
+    @Slot("QVariant")
     def receive_parameter_values_removed(self, db_map_data):
-        self.receive_items_changed("removed", "parameter value", db_map_data)
+        self.notify_items_changed("removed", "parameter value", db_map_data)
 
-    @Slot("QVariant", name="receive_parameter_value_lists_removed")
+    @Slot("QVariant")
     def receive_parameter_value_lists_removed(self, db_map_data):
-        self.receive_items_changed("removed", "parameter value list", db_map_data)
+        self.notify_items_changed("removed", "parameter value list", db_map_data)
 
-    @Slot("QVariant", name="receive_parameter_tags_removed")
+    @Slot("QVariant")
     def receive_parameter_tags_removed(self, db_map_data):
-        self.receive_items_changed("removed", "parameter tag", db_map_data)
+        self.notify_items_changed("removed", "parameter tag", db_map_data)
 
     @busy_effect
     def show_parameter_value_editor(self, index, table_view, value=None):
@@ -683,7 +687,7 @@ class DataStoreForm(QMainWindow):
         editor = ParameterValueEditor(index, value_name=value_name, value=value, parent_widget=self)
         editor.show()
 
-    @Slot("QModelIndex", "QVariant", name="set_parameter_data")
+    @Slot("QModelIndex", "QVariant")
     def set_parameter_data(self, index, new_value):  # pylint: disable=no-self-use
         """Update (object or relationship) parameter definition or value with newly edited data."""
         return index.model().setData(index, new_value)
@@ -754,17 +758,11 @@ class DataStoreForm(QMainWindow):
             self.ui.tableView_relationship_parameter_definition.horizontalHeader(),
             self.ui.tableView_relationship_parameter_value.horizontalHeader(),
         )
-        models = (
-            self.object_parameter_definition_model,
-            self.object_parameter_value_model,
-            self.relationship_parameter_definition_model,
-            self.relationship_parameter_value_model,
-        )
-        for view, model, state in zip(views, models, header_states):
+        for view, state in zip(views, header_states):
             if state:
                 curr_state = view.saveState()
                 view.restoreState(state)
-                if view.count() != model.columnCount():
+                if view.count() != view.model().columnCount():
                     # This can happen the first time the user switches to this version,
                     # because of hidden columns in past versions
                     view.restoreState(curr_state)
@@ -815,6 +813,4 @@ class DataStoreForm(QMainWindow):
                 return
         # Save UI form state
         self.save_window_state()
-        for db_map in self.db_maps:
-            db_map.connection.close()
         event.accept()

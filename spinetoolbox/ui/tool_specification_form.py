@@ -452,5 +452,5 @@ class Ui_Form(object):
         self.pushButton_cancel.setText(QtWidgets.QApplication.translate("Form", "Cancel", None, -1))
 
 from spinetoolbox.widgets.custom_qlineedit import CustomQLineEdit
-from spinetoolbox.widgets.custom_qtreeview import CustomTreeView, SourcesTreeView
+from spinetoolbox.widgets.custom_qtreeview import SourcesTreeView, CustomTreeView
 from spinetoolbox import resources_icons_rc

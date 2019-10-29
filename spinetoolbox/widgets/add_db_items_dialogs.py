@@ -116,10 +116,10 @@ class AddObjectClassesDialog(ShowIconColorEditorMixin, AddItemsDialog):
             try:
                 db_maps = [self.keyed_db_maps[x] for x in db_name_list]
             except KeyError as e:
-                self._parent.msg_error.emit("Invalid database {0} at row {1}".format(e, i + 1))
+                self.parent().msg_error.emit("Invalid database {0} at row {1}".format(e, i + 1))
                 return
             if not name:
-                self._parent.msg_error.emit("Object class name missing at row {0}".format(i + 1))
+                self.parent().msg_error.emit("Object class name missing at row {0}".format(i + 1))
                 return
             if not display_icon:
                 display_icon = self.default_display_icon
@@ -138,7 +138,7 @@ class AddObjectClassesDialog(ShowIconColorEditorMixin, AddItemsDialog):
                 item['display_order'] = display_order
                 db_map_data.setdefault(db_map, []).append(item)
         if not db_map_data:
-            self._parent.msg_error.emit("Nothing to add")
+            self.parent().msg_error.emit("Nothing to add")
             return
         self.db_mngr.add_object_classes(db_map_data)
         super().accept()
@@ -186,17 +186,17 @@ class AddObjectsDialog(GetObjectClassesMixin, AddItemsDialog):
             row_data = self.model.row_data(i)
             class_name, name, description, db_names = row_data
             if not name:
-                self._parent.msg_error.emit("Object name missing at row {}".format(i + 1))
+                self.parent().msg_error.emit("Object name missing at row {}".format(i + 1))
                 return
             pre_item = {'name': name, 'description': description}
             for db_name in db_names.split(","):
                 if db_name not in self.keyed_db_maps:
-                    self._parent.msg_error.emit("Invalid database {0} at row {1}".format(db_name, i + 1))
+                    self.parent().msg_error.emit("Invalid database {0} at row {1}".format(db_name, i + 1))
                     return
                 db_map = self.keyed_db_maps[db_name]
                 object_classes = self.db_map_obj_cls_lookup[db_map]
                 if class_name not in object_classes:
-                    self._parent.msg_error.emit(
+                    self.parent().msg_error.emit(
                         "Invalid object class '{}' for db '{}' at row {}".format(class_name, db_name, i + 1)
                     )
                     return
@@ -205,7 +205,7 @@ class AddObjectsDialog(GetObjectClassesMixin, AddItemsDialog):
                 item['class_id'] = class_id
                 db_map_data.setdefault(db_map, []).append(item)
         if not db_map_data:
-            self._parent.msg_error.emit("Nothing to add")
+            self.parent().msg_error.emit("Nothing to add")
             return
         self.db_mngr.add_objects(db_map_data)
         super().accept()
@@ -316,13 +316,13 @@ class AddRelationshipClassesDialog(GetObjectClassesMixin, AddItemsDialog):
             row_data = self.model.row_data(i)
             relationship_class_name = row_data[name_column]
             if not relationship_class_name:
-                self._parent.msg_error.emit("Relationship class name missing at row {}".format(i + 1))
+                self.parent().msg_error.emit("Relationship class name missing at row {}".format(i + 1))
                 return
             pre_item = {'name': relationship_class_name}
             db_names = row_data[db_column]
             for db_name in db_names.split(","):
                 if db_name not in self.keyed_db_maps:
-                    self._parent.msg_error.emit("Invalid database {0} at row {1}".format(db_name, i + 1))
+                    self.parent().msg_error.emit("Invalid database {0} at row {1}".format(db_name, i + 1))
                     return
                 db_map = self.keyed_db_maps[db_name]
                 object_classes = self.db_map_obj_cls_lookup[db_map]
@@ -330,7 +330,7 @@ class AddRelationshipClassesDialog(GetObjectClassesMixin, AddItemsDialog):
                 for column in range(name_column):  # Leave 'name' column outside
                     object_class_name = row_data[column]
                     if object_class_name not in object_classes:
-                        self._parent.msg_error.emit(
+                        self.parent().msg_error.emit(
                             "Invalid object class '{}' for db '{}' at row {}".format(object_class_name, db_name, i + 1)
                         )
                         return
@@ -340,7 +340,7 @@ class AddRelationshipClassesDialog(GetObjectClassesMixin, AddItemsDialog):
                 item['object_class_id_list'] = object_class_id_list
                 db_map_data.setdefault(db_map, []).append(item)
         if not db_map_data:
-            self._parent.msg_error.emit("Nothing to add")
+            self.parent().msg_error.emit("Nothing to add")
             return
         self.db_mngr.add_relationship_classes(db_map_data)
         super().accept()
@@ -469,18 +469,18 @@ class AddRelationshipsDialog(GetObjectsMixin, AddItemsDialog):
             object_name_list = [row_data[column] for column in range(name_column)]
             relationship_name = row_data[name_column]
             if not relationship_name:
-                self._parent.msg_error.emit("Relationship name missing at row {}".format(i + 1))
+                self.parent().msg_error.emit("Relationship name missing at row {}".format(i + 1))
                 return
             pre_item = {'name': relationship_name}
             db_names = row_data[db_column]
             for db_name in db_names.split(","):
                 if db_name not in self.keyed_db_maps:
-                    self._parent.msg_error.emit("Invalid database {0} at row {1}".format(db_name, i + 1))
+                    self.parent().msg_error.emit("Invalid database {0} at row {1}".format(db_name, i + 1))
                     return
                 db_map = self.keyed_db_maps[db_name]
                 relationship_classes = self.db_map_rel_cls_lookup[db_map]
                 if (self.class_name, self.object_class_name_list) not in relationship_classes:
-                    self._parent.msg_error.emit(
+                    self.parent().msg_error.emit(
                         "Invalid relationship class '{}' for db '{}' at row {}".format(self.class_name, db_name, i + 1)
                     )
                     return
@@ -492,7 +492,7 @@ class AddRelationshipsDialog(GetObjectsMixin, AddItemsDialog):
                 object_id_list = list()
                 for object_class_id, object_name in zip(object_class_id_list, object_name_list):
                     if (object_class_id, object_name) not in objects:
-                        self._parent.msg_error.emit(
+                        self.parent().msg_error.emit(
                             "Invalid object '{}' for db '{}' at row {}".format(object_name, db_name, i + 1)
                         )
                         return
@@ -502,7 +502,7 @@ class AddRelationshipsDialog(GetObjectsMixin, AddItemsDialog):
                 item.update({'object_id_list': object_id_list, 'class_id': class_id})
                 db_map_data.setdefault(db_map, []).append(item)
         if not db_map_data:
-            self._parent.msg_error.emit("Nothing to add")
+            self.parent().msg_error.emit("Nothing to add")
             return
         self.db_mngr.add_relationships(db_map_data)
         super().accept()

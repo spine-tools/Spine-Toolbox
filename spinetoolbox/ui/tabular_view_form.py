@@ -188,5 +188,5 @@ class Ui_MainWindow(object):
         self.actionClose.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+W", None, -1))
 
 from spinetoolbox.widgets.custom_qlistview import TestListView
-from spinetoolbox.widgets.custom_qtableview import SimpleCopyPasteTableView, FrozenTableView
+from spinetoolbox.widgets.custom_qtableview import FrozenTableView, SimpleCopyPasteTableView
 from spinetoolbox import resources_icons_rc

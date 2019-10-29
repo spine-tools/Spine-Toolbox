@@ -36,7 +36,6 @@ class ManageItemsDialog(QDialog):
     def __init__(self, parent, db_mngr):
         super().__init__(parent)
         self.db_mngr = db_mngr
-        self._parent = parent
         self.model = None
         self.table_view = CopyPasteTableView(self)
         self.table_view.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
