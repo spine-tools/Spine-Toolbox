@@ -19,7 +19,7 @@ Contains the TreeViewForm class.
 import os
 import time  # just to measure loading time and sqlalchemy ORM performance
 from PySide2.QtWidgets import QFileDialog, QDockWidget, QInputDialog, QTreeView, QTableView, QMessageBox, QDialog
-from PySide2.QtCore import Qt, Signal, Slot
+from PySide2.QtCore import Qt, Slot
 from spinedb_api import copy_database
 from .data_store_widget import DataStoreForm
 from .custom_menus import (
@@ -47,18 +47,6 @@ class TreeViewForm(DataStoreForm):
         db_maps (iter): DiffDatabaseMapping instances
     """
 
-    object_class_selection_available = Signal("bool")
-    object_selection_available = Signal("bool")
-    relationship_class_selection_available = Signal("bool")
-    relationship_selection_available = Signal("bool")
-    object_tree_selection_available = Signal("bool")
-    relationship_tree_selection_available = Signal("bool")
-    obj_parameter_definition_selection_available = Signal("bool")
-    obj_parameter_value_selection_available = Signal("bool")
-    rel_parameter_definition_selection_available = Signal("bool")
-    rel_parameter_value_selection_available = Signal("bool")
-    parameter_value_list_selection_available = Signal("bool")
-
     def __init__(self, project, *db_maps):
         """Initialize class."""
         from ..ui.tree_view_form import Ui_MainWindow
@@ -72,10 +60,9 @@ class TreeViewForm(DataStoreForm):
         self.ui.treeView_object.setModel(self.object_tree_model)
         self.ui.treeView_relationship.setModel(self.relationship_tree_model)
         # Others
-        self.widget_with_selection = None
-        self.paste_to_widget = None
+        self._selection_source = None
+        self._selection_locked = False
         self.settings_group = 'treeViewWidget'
-        self._selection_being_accepted = False
         self.restore_dock_widgets()
         self.restore_ui()
         # init models
@@ -95,23 +82,7 @@ class TreeViewForm(DataStoreForm):
     def connect_signals(self):
         """Connect signals to slots."""
         super().connect_signals()
-        qApp.focusChanged.connect(self.update_paste_action)  # pylint: disable=undefined-variable
-        # Action availability
-        self.object_class_selection_available.connect(self.ui.actionEdit_object_classes.setEnabled)
-        self.object_selection_available.connect(self.ui.actionEdit_objects.setEnabled)
-        self.relationship_class_selection_available.connect(self.ui.actionEdit_relationship_classes.setEnabled)
-        self.relationship_selection_available.connect(self.ui.actionEdit_relationships.setEnabled)
-        self.object_tree_selection_available.connect(self._handle_object_tree_selection_available)
-        self.relationship_tree_selection_available.connect(self._handle_relationship_tree_selection_available)
-        self.obj_parameter_definition_selection_available.connect(
-            self._handle_obj_parameter_definition_selection_available
-        )
-        self.obj_parameter_value_selection_available.connect(self._handle_obj_parameter_value_selection_available)
-        self.rel_parameter_definition_selection_available.connect(
-            self._handle_rel_parameter_definition_selection_available
-        )
-        self.rel_parameter_value_selection_available.connect(self._handle_rel_parameter_value_selection_available)
-        self.parameter_value_list_selection_available.connect(self._handle_parameter_value_list_selection_available)
+        self.ui.menuEdit.aboutToShow.connect(self._handle_menu_edit_about_to_show)
         # Menu actions
         # Import export
         self.ui.actionImport.triggered.connect(self.show_import_file_dialog)
@@ -214,138 +185,70 @@ class TreeViewForm(DataStoreForm):
         self.ui.dockWidget_object_parameter_value.raise_()
         self.ui.dockWidget_relationship_parameter_value.raise_()
 
-    def update_copy_and_remove_actions(self):
-        """Update copy and remove actions according to selections across the widgets."""
-        if not self.widget_with_selection:
-            self.ui.actionCopy.setEnabled(False)
-            self.ui.actionRemove_selection.setEnabled(False)
-        else:
-            self.ui.actionCopy.setEnabled(True)
-            self.ui.actionRemove_selection.setEnabled(True)
-            self.ui.actionRemove_selection.setIcon(self.widget_with_selection.model().remove_icon)
+    @Slot()
+    def _handle_menu_edit_about_to_show(self):
+        """Runs when the edit menu from the main menubar is about to show.
+        Enables or disables actions according to selection status."""
+        selection_available = self._selection_source is not None
+        self.ui.actionCopy.setEnabled(selection_available)
+        self.ui.actionRemove_selection.setEnabled(selection_available)
+        object_classes_selected = self._selection_source is self.ui.treeView_object and bool(
+            self._selection_source.model().selected_object_class_indexes
+        )
+        objects_selected = self._selection_source is self.ui.treeView_object and bool(
+            self._selection_source.model().selected_object_indexes
+        )
+        relationship_classes_selected = self._selection_source in (
+            self.ui.treeView_object,
+            self.ui.treeView_relationship,
+        ) and bool(self._selection_source.model().selected_relationship_class_indexes)
+        relationships_selected = self._selection_source in (
+            self.ui.treeView_object,
+            self.ui.treeView_relationship,
+        ) and bool(self._selection_source.model().selected_relationship_indexes)
+        self.ui.actionEdit_object_classes.setEnabled(object_classes_selected)
+        self.ui.actionEdit_objects.setEnabled(objects_selected)
+        self.ui.actionEdit_relationship_classes.setEnabled(relationship_classes_selected)
+        self.ui.actionEdit_relationships.setEnabled(relationships_selected)
+        self.ui.actionPaste.setEnabled(True)
+        focus_widget = self._find_focus_child()
+        self.ui.actionPaste.setEnabled(focus_widget is not None)
 
-    @Slot("bool")
-    def _handle_object_tree_selection_available(self, on):
-        if on:
-            self.widget_with_selection = self.ui.treeView_object
-        elif self.ui.treeView_object == self.widget_with_selection:
-            self.widget_with_selection = None
-        self.update_copy_and_remove_actions()
-
-    @Slot("bool")
-    def _handle_relationship_tree_selection_available(self, on):
-        if on:
-            self.widget_with_selection = self.ui.treeView_relationship
-        elif self.ui.treeView_relationship == self.widget_with_selection:
-            self.widget_with_selection = None
-        self.update_copy_and_remove_actions()
-
-    @Slot("bool")
-    def _handle_obj_parameter_definition_selection_available(self, on):
-        if on:
-            self.widget_with_selection = self.ui.tableView_object_parameter_definition
-        elif self.ui.tableView_object_parameter_definition == self.widget_with_selection:
-            self.widget_with_selection = None
-        self.update_copy_and_remove_actions()
-
-    @Slot("bool")
-    def _handle_obj_parameter_value_selection_available(self, on):
-        if on:
-            self.widget_with_selection = self.ui.tableView_object_parameter_value
-        elif self.ui.tableView_object_parameter_value == self.widget_with_selection:
-            self.widget_with_selection = None
-        self.update_copy_and_remove_actions()
-
-    @Slot("bool")
-    def _handle_rel_parameter_definition_selection_available(self, on):
-        if on:
-            self.widget_with_selection = self.ui.tableView_relationship_parameter_definition
-        elif self.ui.tableView_relationship_parameter_definition == self.widget_with_selection:
-            self.widget_with_selection = None
-        self.update_copy_and_remove_actions()
-
-    @Slot("bool")
-    def _handle_rel_parameter_value_selection_available(self, on):
-        if on:
-            self.widget_with_selection = self.ui.tableView_relationship_parameter_value
-        elif self.ui.tableView_relationship_parameter_value == self.widget_with_selection:
-            self.widget_with_selection = None
-        self.update_copy_and_remove_actions()
-
-    @Slot("bool")
-    def _handle_parameter_value_list_selection_available(self, on):
-        if on:
-            self.widget_with_selection = self.ui.treeView_parameter_value_list
-        elif self.ui.treeView_parameter_value_list == self.widget_with_selection:
-            self.widget_with_selection = None
-        self.update_copy_and_remove_actions()
-
-    @Slot("QWidget", "QWidget")
-    def update_paste_action(self, old, new):
-        self.paste_to_widget = None
-        self.ui.actionPaste.setEnabled(False)
-        try:
-            if new.canPaste():
-                self.paste_to_widget = new
-                self.ui.actionPaste.setEnabled(True)
-        except AttributeError:
-            pass
-
-    @Slot("bool")
-    def copy(self, checked=False):
-        """Copy data to clipboard."""
-        if not self.widget_with_selection:
-            return
-        self.widget_with_selection.copy()
-
-    @Slot("bool")
-    def paste(self, checked=False):
-        """Paste data from clipboard."""
-        if not self.paste_to_widget:
-            return
-        self.paste_to_widget.paste()
+    def _find_focus_child(self):
+        for child in (
+            self.ui.tableView_object_parameter_definition,
+            self.ui.tableView_object_parameter_value,
+            self.ui.tableView_relationship_parameter_definition,
+            self.ui.tableView_relationship_parameter_value,
+            self.ui.treeView_parameter_value_list,
+        ):
+            if child.hasFocus():
+                return child
 
     @Slot("bool")
     def remove_selection(self, checked=False):
         """Remove selection of items."""
-        if not self.widget_with_selection:
+        if not self._selection_source:
             return
-        self.widget_with_selection.model().remove_selection_requested.emit()
+        self._selection_source.model().remove_selection_requested.emit()
 
-    @Slot("QItemSelection", "QItemSelection")
-    def _handle_object_parameter_definition_selection_changed(self, selected, deselected):
-        """Enable/disable the option to remove rows."""
-        model = self.ui.tableView_object_parameter_definition.selectionModel()
-        self.obj_parameter_definition_selection_available.emit(model.hasSelection())
-        self._accept_selection(self.ui.tableView_object_parameter_definition)
+    @Slot("bool")
+    def copy(self, checked=False):
+        """Copy data to clipboard."""
+        if not self._selection_source:
+            return
+        self._selection_source.copy()
 
-    @Slot("QItemSelection", "QItemSelection")
-    def _handle_object_parameter_value_selection_changed(self, selected, deselected):
-        """Enable/disable the option to remove rows."""
-        model = self.ui.tableView_object_parameter_value.selectionModel()
-        self.obj_parameter_value_selection_available.emit(model.hasSelection())
-        self._accept_selection(self.ui.tableView_object_parameter_value)
-
-    @Slot("QItemSelection", "QItemSelection")
-    def _handle_relationship_parameter_definition_selection_changed(self, selected, deselected):
-        """Enable/disable the option to remove rows."""
-        model = self.ui.tableView_relationship_parameter_definition.selectionModel()
-        self.rel_parameter_definition_selection_available.emit(model.hasSelection())
-        self._accept_selection(self.ui.tableView_relationship_parameter_definition)
-
-    @Slot("QItemSelection", "QItemSelection")
-    def _handle_relationship_parameter_value_selection_changed(self, selected, deselected):
-        """Enable/disable the option to remove rows."""
-        model = self.ui.tableView_relationship_parameter_value.selectionModel()
-        self.rel_parameter_value_selection_available.emit(model.hasSelection())
-        self._accept_selection(self.ui.tableView_relationship_parameter_value)
-
-    @Slot("QItemSelection", "QItemSelection")
-    def _handle_parameter_value_list_selection_changed(self, selected, deselected):
-        """Enable/disable the option to remove rows."""
-        model = self.ui.treeView_parameter_value_list.selectionModel()
-        self.parameter_value_list_selection_available.emit(model.hasSelection())
-        self._accept_selection(self.ui.treeView_parameter_value_list)
+    @Slot("bool")
+    def paste(self, checked=False):
+        """Paste data from clipboard."""
+        focus_widget = self._find_focus_child()
+        if not focus_widget:
+            return
+        focus_widget.paste()
+        if self.err_msg.isVisible():
+            # TODO: Find out why this is needed
+            del self
 
     # TODO: nothing connected to these two below
 
@@ -379,8 +282,7 @@ class TreeViewForm(DataStoreForm):
         # assume that dialog is modal, if not use accepted, rejected signals
         if dialog.exec() == QDialog.Accepted:
             if db_map.has_pending_changes():
-                self.msg.emit("Import was successful")
-                self.commit_available.emit(True)
+                self.msg.emit("Import successful")
                 self.init_models()
 
     @Slot("bool")
@@ -468,15 +370,43 @@ class TreeViewForm(DataStoreForm):
         self.ui.treeView_object.expand(next_index)
 
     def _accept_selection(self, widget):
-        """Accept the selection from given widget, which means clearing all others."""
-        if not self._selection_being_accepted:
-            self._selection_being_accepted = True
+        """Clears selection from all widgets except the given one, so there's only one selection
+        in the form at a time. In addition, registers the given widget as the official source
+        for all operations involving selections (copy, remove, edit), but only in case it *has* a selection."""
+        if not self._selection_locked:
+            self._selection_source = widget if widget.selectionModel().hasSelection() else None
+            self._selection_locked = True
             for w in self.findChildren(QTreeView) + self.findChildren(QTableView):
                 if w != widget:
                     w.selectionModel().clearSelection()
-            self._selection_being_accepted = False
+            self._selection_locked = False
             return True
         return False
+
+    @Slot("QItemSelection", "QItemSelection")
+    def _handle_object_parameter_definition_selection_changed(self, selected, deselected):
+        """Enable/disable the option to remove rows."""
+        self._accept_selection(self.ui.tableView_object_parameter_definition)
+
+    @Slot("QItemSelection", "QItemSelection")
+    def _handle_object_parameter_value_selection_changed(self, selected, deselected):
+        """Enable/disable the option to remove rows."""
+        self._accept_selection(self.ui.tableView_object_parameter_value)
+
+    @Slot("QItemSelection", "QItemSelection")
+    def _handle_relationship_parameter_definition_selection_changed(self, selected, deselected):
+        """Enable/disable the option to remove rows."""
+        self._accept_selection(self.ui.tableView_relationship_parameter_definition)
+
+    @Slot("QItemSelection", "QItemSelection")
+    def _handle_relationship_parameter_value_selection_changed(self, selected, deselected):
+        """Enable/disable the option to remove rows."""
+        self._accept_selection(self.ui.tableView_relationship_parameter_value)
+
+    @Slot("QItemSelection", "QItemSelection")
+    def _handle_parameter_value_list_selection_changed(self, selected, deselected):
+        """Enable/disable the option to remove rows."""
+        self._accept_selection(self.ui.treeView_parameter_value_list)
 
     @Slot("QItemSelection", "QItemSelection")
     def _handle_object_tree_selection_changed(self, selected, deselected):
@@ -485,13 +415,6 @@ class TreeViewForm(DataStoreForm):
         super()._handle_object_tree_selection_changed(selected, deselected)
         if not self._accept_selection(self.ui.treeView_object):
             return
-        self.object_tree_selection_available.emit(any(v for v in self.object_tree_model.selected_indexes.values()))
-        self.object_class_selection_available.emit(bool(self.object_tree_model.selected_object_class_indexes))
-        self.object_selection_available.emit(bool(self.object_tree_model.selected_object_indexes))
-        self.relationship_class_selection_available.emit(
-            bool(self.object_tree_model.selected_relationship_class_indexes)
-        )
-        self.relationship_selection_available.emit(bool(self.object_tree_model.selected_relationship_indexes))
         self.set_default_parameter_data(self.ui.treeView_object.currentIndex())
         self._update_object_filter()
 
@@ -505,20 +428,16 @@ class TreeViewForm(DataStoreForm):
             self.relationship_tree_model.select_index(index)
         if not self._accept_selection(self.ui.treeView_relationship):
             return
-        self.object_class_selection_available.emit(False)
-        self.object_selection_available.emit(False)
-        self.relationship_tree_selection_available.emit(
-            any(v for v in self.relationship_tree_model.selected_indexes.values())
-        )
-        self.relationship_class_selection_available.emit(
-            bool(self.relationship_tree_model.selected_relationship_class_indexes)
-        )
-        self.relationship_selection_available.emit(bool(self.relationship_tree_model.selected_relationship_indexes))
         self.set_default_parameter_data(self.ui.treeView_relationship.currentIndex())
         self._update_relationship_filter()
 
     @staticmethod
     def _db_map_items(indexes):
+        """Groups items from given tree indexes by db map.
+
+        Returns:
+            dict: lists of dictionary items keyed by DiffDatabaseMapping
+        """
         d = dict()
         for index in indexes:
             item = index.model().item_from_index(index)
@@ -528,6 +447,11 @@ class TreeViewForm(DataStoreForm):
 
     @staticmethod
     def _db_map_class_ids(db_map_data):
+        """Returns a new dictionary where the class id is also part of the key.
+
+        Returns:
+            dict: lists of dictionary items keyed by tuple (DiffDatabaseMapping, integer class id)
+        """
         d = dict()
         for db_map, items in db_map_data.items():
             for item in items:
@@ -536,6 +460,11 @@ class TreeViewForm(DataStoreForm):
 
     @staticmethod
     def _merge_db_map_data(left, right):
+        """Returns a new dictionary where the values are the union of the left and right values.
+
+        Returns:
+            dict: lists of dictionary items keyed by DiffDatabaseMapping
+        """
         result = left.copy()
         for db_map, data in right.items():
             result.setdefault(db_map, []).extend(data)
@@ -738,14 +667,6 @@ class TreeViewForm(DataStoreForm):
         super().notify_items_changed(action, item_type, db_map_data)
         # NOTE: Make sure this slot is called after removing the items, so the next line works
         self.ui.actionExport.setEnabled(self.object_tree_model.root_item.has_children())
-        if action == "removed":
-            self.object_tree_selection_available.emit(any(v for v in self.object_tree_model.selected_indexes.values()))
-            self.object_class_selection_available.emit(bool(self.object_tree_model.selected_object_class_indexes))
-            self.object_selection_available.emit(bool(self.object_tree_model.selected_object_indexes))
-            self.relationship_class_selection_available.emit(
-                bool(self.object_tree_model.selected_relationship_class_indexes)
-            )
-            self.relationship_selection_available.emit(bool(self.object_tree_model.selected_relationship_indexes))
 
     @Slot("QPoint")
     def show_object_parameter_value_context_menu(self, pos):

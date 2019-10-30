@@ -249,7 +249,6 @@ class AutoFilterMenu(QMenu):
 
     def set_data(self, data):
         """Set data to show in the menu."""
-        self.n = len(data)
         self.value_item_model.reset_model(data)
 
     @Slot(name="_fix_geometry")
@@ -311,7 +310,6 @@ class AutoFilterCopyPasteTableView(CopyPasteTableView):
         header_pos = self.mapToGlobal(self.horizontalHeader().pos())
         pos_x = header_pos.x() + self.horizontalHeader().sectionViewportPosition(self.auto_filter_column)
         pos_y = header_pos.y() + self.horizontalHeader().height()
-        width = self.horizontalHeader().sectionSize(logical_index)
         menu_data = self.model().auto_filter_menu_data(logical_index)
         self.auto_filter_menu.set_data(menu_data)
         self.auto_filter_menu.popup(QPoint(pos_x, pos_y))

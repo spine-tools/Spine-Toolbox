@@ -74,7 +74,6 @@ class DataStoreForm(QMainWindow):
 
     msg = Signal(str)
     msg_error = Signal(str)
-    commit_available = Signal("bool")
 
     def __init__(self, project, ui, *db_maps):
         """Initialize class."""
@@ -175,9 +174,9 @@ class DataStoreForm(QMainWindow):
         self.db_mngr.msg_error.connect(self.receive_db_mngr_error_msg)
         # Message signals
         self.msg.connect(self.add_message)
-        self.msg_error.connect(self.add_error_message)
-        self.commit_available.connect(self._handle_commit_available)
+        self.msg_error.connect(self.err_msg.showMessage)
         # Menu actions
+        self.ui.menuSession.aboutToShow.connect(self._handle_menu_session_about_to_show)
         self.ui.actionCommit.triggered.connect(self._prompt_and_commit_session)
         self.ui.actionRollback.triggered.connect(self.rollback_session)
         self.ui.actionRefresh.triggered.connect(self.refresh_session)
@@ -202,8 +201,9 @@ class DataStoreForm(QMainWindow):
         )
         self.ui.actionRestore_Dock_Widgets.triggered.connect(self.restore_dock_widgets)
 
-    def __del__(self):
-        print(self, "deleted")
+    def qsettings(self):
+        """Returns the QSettings instance from ToolboxUI."""
+        return self._project._toolbox._qsettings
 
     @Slot("QVariant")
     def receive_db_mngr_error_msg(self, db_map_error_log):
@@ -213,10 +213,6 @@ class DataStoreForm(QMainWindow):
             formatted_log = format_string_list(error_log)
             msg += format_string_list([database, formatted_log])
         self.msg_error.emit(msg)
-
-    def qsettings(self):
-        """Returns the QSettings instance from ToolboxUI."""
-        return self._project._toolbox._qsettings
 
     @Slot(str)
     def add_message(self, msg):
@@ -228,15 +224,6 @@ class DataStoreForm(QMainWindow):
         icon = NotificationIcon(msg)
         icon.pressed.connect(lambda icon=icon: self.ui.statusbar.removeWidget(icon))
         self.ui.statusbar.insertWidget(0, icon)
-
-    @Slot(str)
-    def add_error_message(self, msg):
-        """Show error message.
-
-        Args:
-            msg (str): String to show in QErrorMessage
-        """
-        self.err_msg.showMessage(msg)
 
     @Slot("QItemSelection", "QItemSelection")
     def _handle_object_tree_selection_changed(self, selected, deselected):
@@ -303,8 +290,9 @@ class DataStoreForm(QMainWindow):
                         ).add(param_def["id"])
         self.update_filter()
 
-    @Slot("bool")
-    def _handle_commit_available(self, on):
+    @Slot()
+    def _handle_menu_session_about_to_show(self):
+        on = any(db_map.has_pending_changes() for db_map in self.db_maps)
         self.ui.actionCommit.setEnabled(on)
         self.ui.actionRollback.setEnabled(on)
 
@@ -312,22 +300,20 @@ class DataStoreForm(QMainWindow):
     def _prompt_and_commit_session(self, checked=False):
         """Query user for a commit message and commit changes to source database returning False if cancelled."""
         if not any(db_map.has_pending_changes() for db_map in self.db_maps):
-            self.msg.emit("Nothing to commit yet.")
             return
         db_names = [x.codename for x in self.db_maps]
         dialog = CommitDialog(self, *db_names)
         answer = dialog.exec_()
         if answer != QDialog.Accepted:
             return False
-        self.commit_session(dialog.commit_msg)
+        self.do_commit_session(dialog.commit_msg)
         return True
 
     @busy_effect
-    def commit_session(self, commit_msg):
+    def do_commit_session(self, commit_msg):
         try:
             for db_map in self.db_maps:
-                db_map.commit_session(commit_msg)
-            self.commit_available.emit(False)
+                db_map.do_commit_session(commit_msg)
         except SpineDBAPIError as e:
             self.msg_error.emit(e.msg)
             return
@@ -336,10 +322,11 @@ class DataStoreForm(QMainWindow):
 
     @Slot("bool")
     def rollback_session(self, checked=False):
+        if not any(db_map.has_pending_changes() for db_map in self.db_maps):
+            return
         try:
             for db_map in self.db_maps:
                 db_map.rollback_session()
-            self.commit_available.emit(False)
         except SpineDBAPIError as e:
             self.msg_error.emit(e.msg)
             return
@@ -349,9 +336,9 @@ class DataStoreForm(QMainWindow):
 
     @Slot("bool", name="refresh_session")
     def refresh_session(self, checked=False):
+        self.init_models()
         msg = "Session refreshed."
         self.msg.emit(msg)
-        self.init_models()
 
     def init_models(self):
         """Initialize models."""
@@ -581,7 +568,6 @@ class DataStoreForm(QMainWindow):
             msg += ":" + format_string_list(names)
         msg += "</html>"
         self.msg.emit(msg)
-        self.commit_available.emit(True)
 
     @Slot("QVariant")
     def receive_object_classes_added(self, db_map_data):
@@ -690,7 +676,7 @@ class DataStoreForm(QMainWindow):
     @Slot("QModelIndex", "QVariant")
     def set_parameter_data(self, index, new_value):  # pylint: disable=no-self-use
         """Update (object or relationship) parameter definition or value with newly edited data."""
-        return index.model().setData(index, new_value)
+        index.model().setData(index, new_value)
 
     def _prompt_close_and_commit(self):
         """Prompts user for window closing and commits if requested returning True if window should close."""

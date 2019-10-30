@@ -456,9 +456,7 @@ class GraphViewForm(DataStoreForm):
 
     def init_commit_rollback_actions(self):
         """Initializes commit and rollback actions."""
-        if not self.read_only:
-            self.commit_available.emit(False)
-        else:
+        if self.read_only:
             self.ui.menuSession.removeAction(self.ui.actionCommit)
             self.ui.menuSession.removeAction(self.ui.actionRollback)
 
@@ -706,6 +704,8 @@ class GraphViewForm(DataStoreForm):
         return scene
 
     def tear_down_scene(self):
+        """Removes all references to this form in graphics items and schedules
+        the scene for deletion."""
         scene = self.ui.graphicsView.scene()
         if not scene:
             return
