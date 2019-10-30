@@ -23,7 +23,7 @@ import os
 import sys
 from PySide2.QtWidgets import QApplication
 from spinetoolbox.widgets.tree_view_widget import TreeViewForm
-from spinetoolbox.widgets.custom_qdialog import AddObjectClassesDialog
+from spinetoolbox.widgets.add_db_items_dialogs import AddObjectClassesDialog
 
 
 class TestAddItemsDialog(unittest.TestCase):

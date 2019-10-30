@@ -22,8 +22,8 @@ import logging
 import sys
 from PySide2.QtWidgets import QApplication
 from PySide2.QtCore import QItemSelectionModel
-from ..spine_db_manager import SpineDBManager
-from ..widgets.tree_view_widget import TreeViewForm
+from spinetoolbox.spine_db_manager import SpineDBManager
+from spinetoolbox.widgets.tree_view_widget import TreeViewForm
 from .test_treeViewFormAdd import TestTreeViewFormAddMixin
 from .test_treeViewFormUpdate import TestTreeViewFormUpdateMixin
 from .test_treeViewFormRemove import TestTreeViewFormRemoveMixin
@@ -55,11 +55,13 @@ class TestTreeViewForm(
 
     @staticmethod
     def _object_parameter_definition(*args):
-        return dict(zip(["id", "object_class_id", "object_class_name", "parameter_name"], args))
+        d = dict(zip(["id", "object_class_id", "object_class_name", "parameter_name"], args))
+        d["name"] = d["parameter_name"]
+        return d
 
     @staticmethod
     def _relationship_parameter_definition(*args):
-        return dict(
+        d = dict(
             zip(
                 [
                     "id",
@@ -72,6 +74,8 @@ class TestTreeViewForm(
                 args,
             )
         )
+        d["name"] = d["parameter_name"]
+        return d
 
     @staticmethod
     def _object_parameter_value(*args):
