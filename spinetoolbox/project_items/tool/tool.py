@@ -46,7 +46,7 @@ class Tool(ProjectItem):
             tool (str): Name of this Tool's Tool specification
             execute_in_work (bool): Execute associated Tool specification in work (True) or source directory (False)
         """
-        super().__init__(toolbox, "Tool", name, description, x, y)
+        super().__init__(toolbox, name, description, x, y)
         self.source_file_model = QStandardItemModel()
         self.populate_source_file_model(None)
         self.input_file_model = QStandardItemModel()
@@ -78,6 +78,16 @@ class Tool(ProjectItem):
         self.basedir = None
         # Make directory for results
         self.output_dir = os.path.join(self.data_dir, TOOL_OUTPUT_DIR)
+
+    @staticmethod
+    def item_type():
+        """See base class."""
+        return "Tool"
+
+    @staticmethod
+    def category():
+        """See base class."""
+        return "Tools"
 
     def make_signal_handler_dict(self):
         """Returns a dictionary of all shared signals and their handlers.
@@ -1021,22 +1031,22 @@ class Tool(ProjectItem):
 
     def notify_destination(self, source_item):
         """See base class."""
-        if source_item.item_type == "Data Store":
+        if source_item.item_type() == "Data Store":
             self._toolbox.msg.emit(
                 "Link established. Data Store <b>{0}</b> url will "
                 "be passed to Tool <b>{1}</b> when executing.".format(source_item.name, self.name)
             )
-        elif source_item.item_type == "Data Connection":
+        elif source_item.item_type() == "Data Connection":
             self._toolbox.msg.emit(
                 "Link established. Tool <b>{0}</b> will look for input "
                 "files from <b>{1}</b>'s references and data directory.".format(self.name, source_item.name)
             )
-        elif source_item.item_type == "Gdx Export":
+        elif source_item.item_type() == "Exporter":
             self._toolbox.msg.emit(
-                "Link established. Gdx Export <b>{0}</b> exported file will "
+                "Link established. The file exported by <b>{0}</b> will "
                 "be passed to Tool <b>{1}</b> when executing.".format(source_item.name, self.name)
             )
-        elif source_item.item_type == "Tool":
+        elif source_item.item_type() == "Tool":
             self._toolbox.msg.emit("Link established.")
         else:
             super().notify_destination(source_item)

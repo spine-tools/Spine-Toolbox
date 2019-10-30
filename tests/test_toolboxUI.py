@@ -85,7 +85,7 @@ class TestToolboxUI(unittest.TestCase):
     def check_init_project_item_model(self):
         """Checks that category items are created as expected."""
         n = self.toolbox.project_item_model.rowCount()
-        # Data Stores, Data Connections, Tools, Views, Data Interfaces, Exporting
+        # Data Stores, Data Connections, Tools, Views, Importers, Exporters
         self.assertEqual(n, 6)
         # Check that there's only one column
         self.assertEqual(self.toolbox.project_item_model.columnCount(), 1)
@@ -111,12 +111,12 @@ class TestToolboxUI(unittest.TestCase):
             isinstance(item4.parent(), RootProjectItem), "Parent item of category item on row 3 should be root"
         )
         item5 = self.toolbox.project_item_model.root().child(4)
-        self.assertTrue(item5.name == "Data Interfaces", "Item on row 4 is not 'Data Interfaces'")
+        self.assertTrue(item5.name == "Importers", "Item on row 4 is not 'Importers'")
         self.assertTrue(
             isinstance(item5.parent(), RootProjectItem), "Parent item of category item on row 4 should be root"
         )
         item6 = self.toolbox.project_item_model.root().child(5)
-        self.assertTrue(item6.name == "Data Exporters", "Item on row 5 is not 'Data Exporters'")
+        self.assertTrue(item6.name == "Exporters", "Item on row 5 is not 'Exporters'")
         self.assertTrue(
             isinstance(item6.parent(), RootProjectItem), "Parent item of category item on row 5 should be root"
         )

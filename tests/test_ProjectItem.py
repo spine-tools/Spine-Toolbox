@@ -18,7 +18,7 @@ Unit tests for ProjectItem base class.
 
 from tempfile import TemporaryDirectory
 import unittest
-
+from unittest.mock import MagicMock
 from spinetoolbox.project_item import ProjectItem
 
 
@@ -48,7 +48,8 @@ class TestProjectItem(unittest.TestCase):
         with TemporaryDirectory() as project_dir:
             project = _MockProject(project_dir)
             toolbox = _MockToolbox(project)
-            item = ProjectItem(toolbox, "item_type", "name", "description", 0.0, 0.0)
+            item = ProjectItem(toolbox, "name", "description", 0.0, 0.0)
+            item.item_type = MagicMock(return_value="item_type")
             item.notify_destination(item)
             self.assertEqual(
                 toolbox.msg_warning.text,

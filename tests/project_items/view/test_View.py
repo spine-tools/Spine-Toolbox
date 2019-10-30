@@ -70,7 +70,7 @@ class TestView(unittest.TestCase):
         with TemporaryDirectory() as project_dir:
             project = _MockProject(project_dir)
             item = View(_MockToolbox(project), "name", "description", 0.0, 0.0)
-            self.assertEqual(item.item_type, "View")
+            self.assertEqual(item.item_type(), "View")
 
     def test_default_name_prefix(self):
         self.assertEqual(View.default_name_prefix(), "View")

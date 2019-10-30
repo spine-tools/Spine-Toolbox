@@ -11,15 +11,17 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - A small icon is painted next to the project items in the design view to show the order in which they will be
   executed
 - Main Window menu 'File -> Open recent'. Shortcut for opening a recent project.
-- A new project item *Gdx Export* allows a database contained in a *Data Store* to be exported as GAMS `.gdx` file.
+- A new project item *Exporter* allows a database contained in a *Data Store* to be exported as GAMS `.gdx` file.
 - It is now possible to copy, paste and duplicate project items on the Design View.
 - New Setting: *Sticky selection in Graph View*. Enables users to select if they want to use multi-selection or 
   single selection in the Graph view Object tree when selecting items with the **left-mouse button**.
 
 ### Changed
-- spinetoolbox is now a Python package.
-- spinetoolbox.py has been moved to repository root. To start the app, use command 'python -m spinetoolbox'.
+- spinetoolbox is now a Python package. To start the app, use command `python -m spinetoolbox` or
+  `python spinetoolbox.py` as spinetoolbox.py has been moved to repository root. 
 - Tool templates are now called Tool specifications
+- Renamed *Data Interface* project item to *Importer*.
+  The corresponding category *Data Importers* was renamed to *Importers*.
 
 ### Deprecated
 

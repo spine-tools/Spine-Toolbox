@@ -98,7 +98,7 @@ class TimePatternModel(IndexedValueTableModel):
 
         Column index 0 corresponds to the time periods while 1 corresponds to the values.
 
-        Attributes:
+        Args:
             index (QModelIndex): an index to the model
             value (str, float): a new time period or value
             role (int): a role

@@ -20,6 +20,7 @@ import os
 import shutil
 from tempfile import TemporaryDirectory
 import unittest
+from unittest.mock import MagicMock
 from PySide2.QtWidgets import QApplication
 from networkx import DiGraph
 from spinetoolbox.project_items.data_connection.data_connection import DataConnection
@@ -53,8 +54,7 @@ class _MockToolbox:
 
 
 class _MockItem:
-    def __init__(self, item_type, name):
-        self.item_type = item_type
+    def __init__(self, name):
         self.name = name
 
 
@@ -89,7 +89,7 @@ class TestDataConnection(unittest.TestCase):
         with TemporaryDirectory() as project_dir:
             project = _MockProject(project_dir)
             item = DataConnection(_MockToolbox(project), "name", "description", 0.0, 0.0)
-            self.assertEqual(item.item_type, "Data Connection")
+            self.assertEqual(item.item_type(), "Data Connection")
             item.data_dir_watcher.removePath(item.data_dir)
 
     def test_notify_destination(self):
@@ -97,23 +97,24 @@ class TestDataConnection(unittest.TestCase):
             project = _MockProject(project_dir)
             toolbox = _MockToolbox(project)
             item = DataConnection(toolbox, "name", "description", 0.0, 0.0)
-            source_item = _MockItem("Data Interface", "source name")
+            source_item = _MockItem("source name")
+            source_item.item_type = MagicMock(return_value="Importer")
             item.notify_destination(source_item)
             self.assertEqual(toolbox.msg.text, "Link established.")
             toolbox.reset_messages()
-            source_item.item_type = "Data Store"
+            source_item.item_type = MagicMock(return_value="Data Store")
             item.notify_destination(source_item)
             self.assertEqual(toolbox.msg.text, "Link established.")
             toolbox.reset_messages()
-            source_item.item_type = "Gdx Export"
+            source_item.item_type = MagicMock(return_value="Exporter")
             item.notify_destination(source_item)
             self.assertEqual(
                 toolbox.msg_warning.text,
                 "Link established. Interaction between a "
-                "<b>Gdx Export</b> and a <b>Data Connection</b> has not been implemented yet.",
+                "<b>Exporter</b> and a <b>Data Connection</b> has not been implemented yet.",
             )
             toolbox.reset_messages()
-            source_item.item_type = "Tool"
+            source_item.item_type = MagicMock(return_value="Tool")
             item.notify_destination(source_item)
             self.assertEqual(
                 toolbox.msg.text,
@@ -121,7 +122,7 @@ class TestDataConnection(unittest.TestCase):
                 "passed as references to item <b>name</b> after execution.",
             )
             toolbox.reset_messages()
-            source_item.item_type = "View"
+            source_item.item_type = MagicMock(return_value="View")
             item.notify_destination(source_item)
             self.assertEqual(
                 toolbox.msg_warning.text,

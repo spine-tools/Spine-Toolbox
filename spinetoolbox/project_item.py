@@ -222,11 +222,10 @@ class ProjectItem(BaseProjectItem):
 
     item_changed = Signal(name="item_changed")
 
-    def __init__(self, toolbox, item_type, name, description, x, y):
+    def __init__(self, toolbox, name, description, x, y):
         """
         Args:
             toolbox (ToolboxUI): QMainWindow instance
-            item_type (str): item type identifier
             name (str): item name
             description (str): item description
             x (float): horizontal position on the scene
@@ -234,7 +233,6 @@ class ProjectItem(BaseProjectItem):
         """
         super().__init__(name, description)
         self._toolbox = toolbox
-        self._item_type = item_type
         self._project = self._toolbox.project()
         self.x = x
         self.y = y
@@ -250,10 +248,15 @@ class ProjectItem(BaseProjectItem):
                 "[OSError] Creating directory {0} failed." " Check permissions.".format(self.data_dir)
             )
 
-    @property
-    def item_type(self):
+    @staticmethod
+    def item_type():
         """Item's type identifier string."""
-        return self._item_type
+        raise NotImplementedError()
+
+    @staticmethod
+    def category():
+        """Item's category identifier string."""
+        raise NotImplementedError()
 
     def flags(self):
         """Returns the item flags."""
@@ -433,7 +436,7 @@ class ProjectItem(BaseProjectItem):
         self._toolbox.msg_warning.emit(
             "Link established. Interaction between a "
             "<b>{0}</b> and a <b>{1}</b> has not been "
-            "implemented yet.".format(source_item.item_type, self.item_type)
+            "implemented yet.".format(source_item.item_type(), self.item_type())
         )
 
 

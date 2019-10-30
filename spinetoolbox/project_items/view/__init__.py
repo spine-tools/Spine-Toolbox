@@ -22,8 +22,8 @@ from .widgets.view_properties_widget import ViewPropertiesWidget
 from .widgets.add_view_widget import AddViewWidget
 
 item_rank = 3
-item_category = "Views"
-item_type = "View"
+item_category = View.category()
+item_type = View.item_type()
 item_icon = ":/icons/project_item_icons/binoculars.svg"
 item_maker = View
 icon_maker = ViewIcon

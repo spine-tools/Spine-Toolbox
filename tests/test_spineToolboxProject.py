@@ -57,7 +57,7 @@ class TestSpineToolboxProject(unittest.TestCase):
         found_item = self.toolbox.project_item_model.project_item(found_index)
         self.assertEqual(found_item.name, name)
         # Check that the created item is a Data Store
-        self.assertEqual(found_item.item_type, "Data Store")
+        self.assertEqual(found_item.item_type(), "Data Store")
         # Check that dag handler has this and only this node
         self.check_dag_handler(name)
 
@@ -80,7 +80,7 @@ class TestSpineToolboxProject(unittest.TestCase):
         found_item = self.toolbox.project_item_model.project_item(found_index)
         self.assertEqual(found_item.name, name)
         # Check that the created item is a Data Connection
-        self.assertEqual(found_item.item_type, "Data Connection")
+        self.assertEqual(found_item.item_type(), "Data Connection")
         # Check that dag handler has this and only this node
         self.check_dag_handler(name)
 
@@ -92,7 +92,7 @@ class TestSpineToolboxProject(unittest.TestCase):
         found_item = self.toolbox.project_item_model.project_item(found_index)
         self.assertEqual(found_item.name, name)
         # Check that the created item is a Tool
-        self.assertEqual(found_item.item_type, "Tool")
+        self.assertEqual(found_item.item_type(), "Tool")
         # Check that dag handler has this and only this node
         self.check_dag_handler(name)
 
@@ -104,7 +104,7 @@ class TestSpineToolboxProject(unittest.TestCase):
         found_item = self.toolbox.project_item_model.project_item(found_index)
         self.assertEqual(found_item.name, name)
         # Check that the created item is a View
-        self.assertEqual(found_item.item_type, "View")
+        self.assertEqual(found_item.item_type(), "View")
         # Check that dag handler has this and only this node
         self.check_dag_handler(name)
 

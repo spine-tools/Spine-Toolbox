@@ -56,7 +56,7 @@ from .project import SpineToolboxProject
 from .config import SPINE_TOOLBOX_VERSION, STATUSBAR_SS, TEXTBROWSER_SS, MAINWINDOW_SS, DOCUMENTATION_PATH
 from .helpers import project_dir, get_datetime, erase_dir, busy_effect, set_taskbar_icon, supported_img_formats
 from .project_item import RootProjectItem, CategoryProjectItem
-from .project_items import data_store, data_connection, gdx_export, tool, view, data_interface
+from .project_items import data_store, data_connection, exporter, tool, view, importer
 
 
 class ToolboxUI(QMainWindow):
@@ -190,7 +190,7 @@ class ToolboxUI(QMainWindow):
         This dict is then used to perform all project item related tasks.
         """
         self.categories.clear()
-        for module in (data_store, data_connection, tool, view, data_interface, gdx_export):
+        for module in (data_store, data_connection, tool, view, importer, exporter):
             item_rank = module.item_rank
             item_category = module.item_category
             item_type = module.item_type
@@ -592,11 +592,11 @@ class ToolboxUI(QMainWindow):
         """
         # Find tab index according to item type
         for i in range(self.ui.tabWidget_item_properties.count()):
-            if self.ui.tabWidget_item_properties.tabText(i) == item.item_type:
+            if self.ui.tabWidget_item_properties.tabText(i) == item.item_type():
                 self.ui.tabWidget_item_properties.setCurrentIndex(i)
                 break
         # Set QDockWidget title to selected item's type
-        self.ui.dockWidget_item.setWindowTitle(item.item_type + " Properties")
+        self.ui.dockWidget_item.setWindowTitle(item.item_type() + " Properties")
 
     @Slot(name="open_tool_specification")
     def open_tool_specification(self):

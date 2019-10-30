@@ -57,7 +57,7 @@ class TestExecutionInstance(unittest.TestCase):
         self.toolbox.deleteLater()
         self.toolbox = None
 
-    def test_advertising_files_from_two_data_connections_to_a_data_interface(self):
+    def test_advertising_files_from_two_data_connections_to_an_importer(self):
         """Test that advertising files from a DC to a DI works fine."""
         dc1 = mock.Mock()
         dc2 = mock.Mock()
@@ -71,7 +71,7 @@ class TestExecutionInstance(unittest.TestCase):
         inst.simulate_execution()
         self.assertEqual(inst.available_resources(di3), [resource1, resource2])
 
-    def test_advertising_file_and_reference_from_a_data_connection_to_a_data_interface(self):
+    def test_advertising_file_and_reference_from_a_data_connection_to_an_importer(self):
         """Test that the same file in dc refs and data is advertised only once."""
         dc0 = mock.Mock()
         di1 = mock.Mock()

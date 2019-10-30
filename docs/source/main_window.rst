@@ -58,8 +58,8 @@ resize the views to fit your needs and display size or resolution.
 
 Below is an example on how you can customize the main window. In the picture, a user has created a project *My First
 Project*, and created one project item from each of the six categories. A Data Store called *Database*, a Data
-Connection called *Data files*, A Tool called *Julia model*, a View called *View*, a Data Interface called *Mapper*,
-and a Data Exporter called *Gdx Exporter*. The project items are also listed in the *Project* dock widget.
+Connection called *Data files*, A Tool called *Julia model*, a View called *View*, an Importer called *Mapper*,
+and an Exporter called *Exporter*. The project items are also listed in the *Project* dock widget.
 
 .. image:: img/main_window_my_first_project_six_project_items.png
    :align: center

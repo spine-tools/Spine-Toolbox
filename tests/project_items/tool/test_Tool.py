@@ -68,8 +68,7 @@ class _MockToolbox:
 
 
 class _MockItem:
-    def __init__(self, item_type, name):
-        self.item_type = item_type
+    def __init__(self, name):
         self.name = name
 
 
@@ -104,13 +103,14 @@ class TestTool(unittest.TestCase):
         with TemporaryDirectory() as project_dir:
             toolbox = _MockToolbox(project_dir)
             item = Tool(toolbox, "name", "description", 0.0, 0.0)
-            self.assertEqual(item.item_type, "Tool")
+            self.assertEqual(item.item_type(), "Tool")
 
     def test_notify_destination(self):
         with TemporaryDirectory() as project_dir:
             toolbox = _MockToolbox(project_dir)
             item = Tool(toolbox, "name", "description", 0.0, 0.0)
-            source_item = _MockItem("Data Connection", "source name")
+            source_item = _MockItem("source name")
+            source_item.item_type = mock.MagicMock(return_value="Data Connection")
             item.notify_destination(source_item)
             self.assertEqual(
                 toolbox.msg.text,
@@ -118,15 +118,15 @@ class TestTool(unittest.TestCase):
                 "files from <b>source name</b>'s references and data directory.",
             )
             toolbox.reset_messages()
-            source_item = _MockItem("Data Interface", "source name")
+            source_item.item_type = mock.MagicMock(return_value="Importer")
             item.notify_destination(source_item)
             self.assertEqual(
                 toolbox.msg_warning.text,
                 "Link established. Interaction between a "
-                "<b>Data Interface</b> and a <b>Tool</b> has not been implemented yet.",
+                "<b>Importer</b> and a <b>Tool</b> has not been implemented yet.",
             )
             toolbox.reset_messages()
-            source_item.item_type = "Data Store"
+            source_item.item_type = mock.MagicMock(return_value="Data Store")
             item.notify_destination(source_item)
             self.assertEqual(
                 toolbox.msg.text,
@@ -134,19 +134,19 @@ class TestTool(unittest.TestCase):
                 "be passed to Tool <b>name</b> when executing.",
             )
             toolbox.reset_messages()
-            source_item.item_type = "Gdx Export"
+            source_item.item_type = mock.MagicMock(return_value="Exporter")
             item.notify_destination(source_item)
             self.assertEqual(
                 toolbox.msg.text,
-                "Link established. Gdx Export <b>source name</b> exported file will "
+                "Link established. The file exported by <b>source name</b> will "
                 "be passed to Tool <b>name</b> when executing.",
             )
             toolbox.reset_messages()
-            source_item.item_type = "Tool"
+            source_item.item_type = mock.MagicMock(return_value="Tool")
             item.notify_destination(source_item)
             self.assertEqual(toolbox.msg.text, "Link established.")
             toolbox.reset_messages()
-            source_item.item_type = "View"
+            source_item.item_type = mock.MagicMock(return_value="View")
             item.notify_destination(source_item)
             self.assertEqual(
                 toolbox.msg_warning.text,
@@ -196,7 +196,7 @@ class TestTool(unittest.TestCase):
             fake_available_resources = [os.path.join(fake_dc_dir, fname) for fname in fake_fnames]
             # Mock available_filepath_resources so that it returns a list of paths
             with mock.patch(
-                    "spinetoolbox.project_items.tool.tool.Tool.available_filepath_resources"
+                "spinetoolbox.project_items.tool.tool.Tool.available_filepath_resources"
             ) as mock_available_filepath_resources:
                 # Test with *.ini
                 mock_available_filepath_resources.return_value = fake_available_resources
@@ -530,10 +530,9 @@ class TestToolExecution(unittest.TestCase):
         work_dir = self.toolbox.project().work_dir
         # Make work directory in case it does not exist. This may be needed by Travis CI.
         os.makedirs(work_dir, exist_ok=True)
-        with tempfile.TemporaryDirectory(suffix="__toolbox",
-                                         prefix=tool.tool_specification().short_name + "__",
-                                         dir=work_dir
-                                         ) as basedir:
+        with tempfile.TemporaryDirectory(
+            suffix="__toolbox", prefix=tool.tool_specification().short_name + "__", dir=work_dir
+        ) as basedir:
             project_dir = self.toolbox.project().project_dir
             source_files = [x.text() for x in tool.source_file_model.findItems("*", Qt.MatchWildcard)]
             input_files = [x.text() for x in tool.input_file_model.findItems("*", Qt.MatchWildcard)]
@@ -583,22 +582,33 @@ class TestToolExecution(unittest.TestCase):
                     """Provides a side effect for ToolInstance execute method."""
                     # Check that source and input files were copied to the base directory
                     # Expected calls for copying source files to work dir
-                    expected_calls = [mock.call(os.path.abspath(os.path.join(src_dir, fn)),
-                                                os.path.abspath(os.path.join(basedir, fn)))
-                                      for fn in source_files]
+                    expected_calls = [
+                        mock.call(
+                            os.path.abspath(os.path.join(src_dir, fn)), os.path.abspath(os.path.join(basedir, fn))
+                        )
+                        for fn in source_files
+                    ]
                     # Expected calls for copying required input files to work dir
-                    expected_calls += [mock.call(os.path.abspath(os.path.join(dc_dir, fn)),
-                                                 os.path.abspath(os.path.join(basedir, fn)))
-                                       for fn in input_files]
+                    expected_calls += [
+                        mock.call(os.path.abspath(os.path.join(dc_dir, fn)), os.path.abspath(os.path.join(basedir, fn)))
+                        for fn in input_files
+                    ]
                     # Expected calls for copying optional input files to work dir, matching pattern 'opt/*.ini'
                     # Note: *.ini files should be copied to /opt subdirectory in work dir
-                    expected_calls += [mock.call(os.path.abspath(os.path.join(dc_dir, opt_ini_file)),
-                                                 os.path.abspath(os.path.join(basedir, "opt", opt_ini_file)))
-                                       for opt_ini_file in opt_input_ini_fnames]
+                    expected_calls += [
+                        mock.call(
+                            os.path.abspath(os.path.join(dc_dir, opt_ini_file)),
+                            os.path.abspath(os.path.join(basedir, "opt", opt_ini_file)),
+                        )
+                        for opt_ini_file in opt_input_ini_fnames
+                    ]
                     # Expected calls for copying optional input files to work dir, matching pattern '?abc.txt'
-                    expected_calls += [mock.call(os.path.abspath(os.path.join(dc_dir, opt_abc_file)),
-                                                 os.path.join(basedir, opt_abc_file))
-                                       for opt_abc_file in opt_input_txt_fnames]
+                    expected_calls += [
+                        mock.call(
+                            os.path.abspath(os.path.join(dc_dir, opt_abc_file)), os.path.join(basedir, opt_abc_file)
+                        )
+                        for opt_abc_file in opt_input_txt_fnames
+                    ]
                     mock_shutil.copyfile.assert_has_calls(expected_calls, any_order=True)
                     # Create all output files in base dir
                     output_paths = [os.path.join(basedir, fn) for fn in output_files]
@@ -614,9 +624,10 @@ class TestToolExecution(unittest.TestCase):
             self.assertEqual(tool.basedir, basedir)
             # Check that output files were copied to the output dir
             result_dir = os.path.join(tool.output_dir, "mock_timestamp")
-            expected_calls = [mock.call(os.path.abspath(os.path.join(basedir, fn)),
-                                        os.path.abspath(os.path.join(result_dir, fn)))
-                              for fn in output_files]
+            expected_calls = [
+                mock.call(os.path.abspath(os.path.join(basedir, fn)), os.path.abspath(os.path.join(result_dir, fn)))
+                for fn in output_files
+            ]
             mock_shutil.copyfile.assert_has_calls(expected_calls, any_order=True)
             # Check that output files were advertised
             expected_calls = [

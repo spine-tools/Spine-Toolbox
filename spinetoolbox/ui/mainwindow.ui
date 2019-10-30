@@ -903,13 +903,16 @@
     <string>Export project to GraphML</string>
    </property>
   </action>
-  <action name="actionAdd_Data_Interface">
+  <action name="actionAdd_Importer">
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
      <normaloff>:/icons/project_item_icons/map-solid.svg</normaloff>:/icons/project_item_icons/map-solid.svg</iconset>
    </property>
    <property name="text">
-    <string>Add Data Interface</string>
+    <string>Add Importer</string>
+   </property>
+   <property name="toolTip">
+    <string>Add Importer</string>
    </property>
   </action>
   <action name="actionGetting_started">
