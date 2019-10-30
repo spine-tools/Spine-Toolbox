@@ -20,20 +20,20 @@ These models concatenate several 'single' models and one 'empty' model.
 from PySide2.QtCore import Qt, Signal, Slot, QModelIndex
 from PySide2.QtGui import QFont, QIcon
 from ..helpers import busy_effect, rows_to_row_count_tuples
-from ..mvcmodels.compound_table_model import CompoundWithEmptyTableModel
-from ..mvcmodels.empty_parameter_models import (
+from .compound_table_model import CompoundWithEmptyTableModel
+from .empty_parameter_models import (
     EmptyObjectParameterDefinitionModel,
     EmptyObjectParameterValueModel,
     EmptyRelationshipParameterDefinitionModel,
     EmptyRelationshipParameterValueModel,
 )
-from ..mvcmodels.single_parameter_models import (
+from .single_parameter_models import (
     SingleObjectParameterDefinitionModel,
     SingleObjectParameterValueModel,
     SingleRelationshipParameterDefinitionModel,
     SingleRelationshipParameterValueModel,
 )
-from ..mvcmodels.auto_filter_menu_model import AutoFilterMenuItem
+from .auto_filter_menu_model import AutoFilterMenuItem
 
 
 class CompoundParameterModel(CompoundWithEmptyTableModel):

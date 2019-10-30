@@ -115,7 +115,7 @@ class EmptyRowModel(MinimalTableModel):
             default = self.default_row.get(field)
             default_row.append(default)
         for row in range(first, last + 1):
-            self._main_data[row] = default_row
+            self._main_data[row] = default_row.copy()
         top_left = self.index(first, 0)
         bottom_right = self.index(last, self.columnCount() - 1)
         self.dataChanged.emit(top_left, bottom_right)

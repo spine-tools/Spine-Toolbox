@@ -68,12 +68,6 @@ class CompoundTableModel(MinimalTableModel):
         self.do_refresh()
         self.layoutChanged.emit()
 
-    def _row_map_for_model(self, model):
-        """Returns row map for given model.
-        The base class implementation just returns all model rows.
-        """
-        return [(model, i) for i in range(model.rowCount())]
-
     def do_refresh(self):
         """Recomputes the row map."""
         self._row_map.clear()
@@ -84,9 +78,15 @@ class CompoundTableModel(MinimalTableModel):
 
     def _append_row_map(self, row_map):
         """Appends given row map."""
-        for model_row in row_map:
-            self._inv_row_map[model_row] = self.rowCount()
-            self._row_map.append(model_row)
+        for model_row_tup in row_map:
+            self._inv_row_map[model_row_tup] = self.rowCount()
+            self._row_map.append(model_row_tup)
+
+    def _row_map_for_model(self, model):
+        """Returns row map for given model.
+        The base class implementation just returns all model rows.
+        """
+        return [(model, i) for i in range(model.rowCount())]
 
     def canFetchMore(self, parent=QModelIndex()):
         """Returns True if any of the unfetched single models can fetch more."""
@@ -140,7 +140,7 @@ class CompoundTableModel(MinimalTableModel):
             d.setdefault(sub_model, list()).append((sub_index, value))
         for model, index_value_tuples in d.items():
             indexes, values = zip(*index_value_tuples)
-            model.batch_set_data(indexes, values)
+            model.batch_set_data(list(indexes), list(values))
         # Find square envelope of indexes to emit dataChanged
         top = min(rows)
         bottom = max(rows)
@@ -148,6 +148,17 @@ class CompoundTableModel(MinimalTableModel):
         right = max(columns)
         self.dataChanged.emit(self.index(top, left), self.index(bottom, right))
         return True
+
+    def insertRows(self, row, count, parent=QModelIndex()):
+        if row < 0 or row > self.rowCount():
+            return False
+        if count < 1:
+            return False
+        try:
+            sub_model, sub_row = self._row_map[row]
+        except IndexError:
+            sub_model, sub_row = self._row_map[-1]
+        return sub_model.insertRows(sub_row, count, self.map_to_sub(parent))
 
 
 class CompoundWithEmptyTableModel(CompoundTableModel):
@@ -166,6 +177,7 @@ class CompoundWithEmptyTableModel(CompoundTableModel):
         """Runs when rows are removed from the empty model.
         Update row_map, then emit rowsRemoved so the removed rows are no longer visible.
         """
+        # Emit signal for compound
         compound_first = self._inv_row_map[self.empty_model, first]
         compound_last = self._inv_row_map[self.empty_model, last]
         self.rowsRemoved.emit(QModelIndex(), compound_first, compound_last)
@@ -180,9 +192,15 @@ class CompoundWithEmptyTableModel(CompoundTableModel):
         """Runs when rows are inserted to the empty model.
         Update row_map, then emit rowsInserted so the new rows become visible.
         """
-        # Append row map, knowing rows are always inserted at the end
-        tail_empty_row_map = [(self.empty_model, row) for row in range(first, last + 1)]
-        self._append_row_map(tail_empty_row_map)
+        # Redo the map for the empty model entirely
+        try:
+            tip = self._inv_row_map[self.empty_model, 0]
+            self._row_map = self._row_map[:tip]
+        except KeyError:
+            pass
+        empty_row_map = self._row_map_for_model(self.empty_model)
+        self._append_row_map(empty_row_map)
+        # Emit signal for compound
         compound_first = self._inv_row_map[self.empty_model, first]
         compound_last = self._inv_row_map[self.empty_model, last]
         self.rowsInserted.emit(QModelIndex(), compound_first, compound_last)

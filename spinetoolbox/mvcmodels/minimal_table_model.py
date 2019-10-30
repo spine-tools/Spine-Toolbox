@@ -158,6 +158,7 @@ class MinimalTableModel(QAbstractTableModel):
         if role not in (Qt.DisplayRole, Qt.EditRole):
             return None
         return self._main_data[row]
+
     def setData(self, index, value, role=Qt.EditRole):
         """Set data in model."""
         if not index.isValid():
@@ -175,9 +176,11 @@ class MinimalTableModel(QAbstractTableModel):
         for index, value in zip(indexes, data):
             if not index.isValid():
                 continue
-            self._main_data[index.row()][index.column()] = value
-            rows.append(index.row())
-            columns.append(index.column())
+            row = index.row()
+            column = index.column()
+            self._main_data[row][column] = value
+            rows.append(row)
+            columns.append(column)
         # Find square envelope of indexes to emit dataChanged
         top = min(rows)
         bottom = max(rows)

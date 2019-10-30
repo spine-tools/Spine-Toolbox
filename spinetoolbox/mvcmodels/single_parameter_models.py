@@ -203,17 +203,22 @@ class SingleParameterDefinitionMixin(FillInParameterNameMixin, FillInValueListId
         self.build_lookup_dictionary({self.db_map: items})
         param_defs = list()
         param_def_tags = list()
+        error_log = list()
         for item in items:
-            param_def = self._convert_to_db(item, self.db_map)
-            param_def_tag = self._make_parameter_definition_tag(item, self.db_map)
+            param_def, err1 = self._convert_to_db(item, self.db_map)
+            param_def_tag, err2 = self._make_parameter_definition_tag(item, self.db_map)
             if param_def:
                 param_defs.append(param_def)
             if param_def_tag:
                 param_def_tags.append(param_def_tag)
+            if err1 or err2:
+                error_log += err1 + err2
         if param_def_tags:
             self.db_mngr.set_parameter_definition_tags({self.db_map: param_def_tags})
         if param_defs:
             self.db_mngr.update_parameter_definitions({self.db_map: param_defs})
+        if error_log:
+            self.db_mngr.msg_error.emit({self.db_map: error_log})
 
 
 class SingleParameterValueMixin:
