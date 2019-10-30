@@ -29,14 +29,14 @@ class SingleParameterModel(MinimalTableModel):
     to filter entities within the class.
     """
 
-    def __init__(self, parent, header, db_mngr, db_map, entity_class_id):
+    def __init__(self, parent, header, db_mngr, db_map, entity_class_id, lazy=True):
         """Init class.
 
         Args:
             parent (CompoundParameterModel): the parent object
             header (list): list of field names for the header
         """
-        super().__init__(parent, header)
+        super().__init__(parent, header, lazy=lazy)
         self.db_mngr = db_mngr
         self.db_map = db_map
         self.entity_class_id = entity_class_id
@@ -100,11 +100,11 @@ class SingleParameterModel(MinimalTableModel):
             return QGuiApplication.palette().button()
         # Display, edit, tool tip role
         if role in (Qt.DisplayRole, Qt.EditRole, Qt.ToolTipRole):
+            if field == "database":
+                return self.db_map.codename
             # TODO: Maybe Spine db manager can format the data
             id_ = self._main_data[index.row()]
             value = self.db_mngr.get_item(self.db_map, self.item_type, id_).get(field)
-            if field == "database":
-                return self.db_map.codename
             if role == Qt.DisplayRole and field in self.json_fields:
                 return format_for_DisplayRole(value)
             if role == Qt.ToolTipRole and field in self.json_fields:

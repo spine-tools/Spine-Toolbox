@@ -21,7 +21,7 @@ from PySide2.QtCore import Qt, QModelIndex, QAbstractTableModel
 
 
 class MinimalTableModel(QAbstractTableModel):
-    def __init__(self, parent=None, header=None):
+    def __init__(self, parent=None, header=None, lazy=True):
         """Table model for outlining simple tabular data.
 
         Args:
@@ -32,7 +32,7 @@ class MinimalTableModel(QAbstractTableModel):
             header = []
         self.header = header
         self._main_data = list()
-        self._fetched = False
+        self._fetched = not lazy
 
     def clear(self):
         """Clear all data in model."""

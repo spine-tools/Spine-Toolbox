@@ -164,7 +164,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
                     continue
                 grouped_ids.setdefault(entity_class_id, []).append(item["id"])
             for entity_class_id, ids in grouped_ids.items():
-                model = self._single_model_type(self, self.header, self.db_mngr, db_map, entity_class_id)
+                model = self._single_model_type(self, self.header, self.db_mngr, db_map, entity_class_id, lazy=False)
                 model.reset_model(ids)
                 self._handle_single_model_reset(model)
                 new_models.append(model)
