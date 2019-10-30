@@ -105,7 +105,7 @@ These settings affect only the project that is currently open.
 
 Project item settings / properties
 ----------------------------------
-Each project item (Data Store, Data Connection, Tool, View, and Data Interface) has its own set of properties.
+Each project item (Data Connection, Data Store, Exporter, Importer, Tool and View) has its own set of properties.
 These are saved into the project save file. You can view and edit them in project item properties on the main window.
 
 Application preferences

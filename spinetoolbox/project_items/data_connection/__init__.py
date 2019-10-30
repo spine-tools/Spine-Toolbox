@@ -22,8 +22,8 @@ from .widgets.data_connection_properties_widget import DataConnectionPropertiesW
 from .widgets.add_data_connection_widget import AddDataConnectionWidget
 
 item_rank = 1
-item_category = "Data Connections"
-item_type = "Data Connection"
+item_category = item_maker.category()
+item_type = item_maker.item_type()
 item_icon = ":/icons/project_item_icons/file-alt.svg"
 icon_maker = DataConnectionIcon
 properties_widget_maker = DataConnectionPropertiesWidget

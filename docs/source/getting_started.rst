@@ -48,7 +48,7 @@ Alongside *Design view* there are a few 'dock widgets' that provide additional f
 - *Project* provides a more concise view of your project, including:
 
    - *Items* currently in the project, grouped by category:
-     Data Stores, Data Connections, Tools, Views, and Data Interfaces.
+     Data Stores, Data Connections, Tools, Views, Importers and Exporters.
    - *Tool specifications* available in the project.
 
 - *Properties* provides an interface to interact with the currently selected project item.
@@ -142,10 +142,8 @@ Adding a Tool item to the project
 .. note:: The **Tool** item is used to run Tool specifications available in the project.
 
 Let's add a Tool item to our project, so that we're able to run the Tool specification we created above.
-To add a Tool item please do one of the following:
-
-A) From the application main menu, select **Edit -> Add Tool**.
-B) Drag-and-drop the Tool icon (|tool_icon|) from the *Drag & Drop Icon* toolbar onto the *Design View*.
+To add a Tool item drag-and-drop the Tool icon (|tool_icon|) from the *Drag & Drop Icon* toolbar
+onto the *Design View*.
 
 The *Add Tool* form will popup.
 Type 'say hello world' in the name field, select 'hello_world' from the dropdown list just below, and click **Ok**.
@@ -233,10 +231,8 @@ Adding a Data Connection item to the project
    so that other items, notably Tool items, can make use of that data.
 
 Let's add a Data Connection item to our project, so that we're able to pass the file 'input.txt' to 'say hello world'.
-To add a Data Connection item, please do one of the following:
-
-A) From the application main menu, click **Edit -> Add Data Connection**.
-B) Drag-and-drop the Data Connection icon (|dc_icon|) from the main window toolbar onto the *Design View*.
+To add a Data Connection item drag-and-drop the Data Connection icon (|dc_icon|) from the main window toolbar
+onto the *Design View*.
 
 The *Add Data Connection* form will show up.
 Type 'pass input txt' in the name field and click **Ok**.

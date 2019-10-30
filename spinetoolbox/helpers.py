@@ -205,7 +205,7 @@ def create_output_dir_timestamp():
 
 
 def create_log_file_timestamp():
-    """ Creates a new timestamp string that is used as Data Interface and Data Store error log file.
+    """ Creates a new timestamp string that is used as Importer and Data Store error log file.
 
     Returns:
         Timestamp string or empty string if failed.

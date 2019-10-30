@@ -24,14 +24,13 @@ from .custom_menus import DcRefContextMenu, DcDataContextMenu
 
 
 class DataConnectionPropertiesWidget(QWidget):
-    """Widget for the Data Connection Item Properties.
-
-    Args:
-        toolbox (ToolboxUI): The toolbox instance where this widget should be embeded
-    """
+    """Widget for the Data Connection Item Properties."""
 
     def __init__(self, toolbox):
-        """Init class."""
+        """
+        Args:
+            toolbox (ToolboxUI): The toolbox instance where this widget should be embedded
+        """
         from ..ui.data_connection_properties import Ui_Form
 
         super().__init__()

@@ -41,7 +41,7 @@ class DataConnection(ProjectItem):
             y (float): Initial Y coordinate of item icon
             references (list): List of file references
         """
-        super().__init__(toolbox, "Data Connection", name, description, x, y)
+        super().__init__(toolbox, name, description, x, y)
         self.reference_model = QStandardItemModel()  # References to files
         self.data_model = QStandardItemModel()  # Paths of project internal files. These are found in DC data directory
         self.datapackage_icon = QIcon(QPixmap(":/icons/datapkg.png"))
@@ -57,6 +57,16 @@ class DataConnection(ProjectItem):
         data_files = self.data_files()
         self.populate_data_list(data_files)
         self.spine_datapackage_form = None
+
+    @staticmethod
+    def item_type():
+        """See base class."""
+        return "Data Connection"
+
+    @staticmethod
+    def category():
+        """See base class."""
+        return "Data Connections"
 
     def make_signal_handler_dict(self):
         """Returns a dictionary of all shared signals and their handlers.
@@ -443,12 +453,12 @@ class DataConnection(ProjectItem):
 
     def notify_destination(self, source_item):
         """See base class."""
-        if source_item.item_type == "Tool":
+        if source_item.item_type() == "Tool":
             self._toolbox.msg.emit(
                 "Link established. Tool <b>{0}</b> output files will be "
                 "passed as references to item <b>{1}</b> after execution.".format(source_item.name, self.name)
             )
-        elif source_item.item_type in ["Data Store", "Data Interface"]:
+        elif source_item.item_type() in ["Data Store", "Importer"]:
             # Does this type of link do anything?
             self._toolbox.msg.emit("Link established.")
         else:

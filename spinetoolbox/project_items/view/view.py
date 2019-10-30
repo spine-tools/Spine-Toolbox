@@ -40,13 +40,23 @@ class View(ProjectItem):
             x (float): Initial X coordinate of item icon
             y (float): Initial Y coordinate of item icon
         """
-        super().__init__(toolbox, "View", name, description, x, y)
+        super().__init__(toolbox, name, description, x, y)
         self._graph_views = {}
         self._tabular_views = {}
         self._tree_views = {}
         self._references = list()
         self.reference_model = QStandardItemModel()  # References to databases
         self._spine_ref_icon = QIcon(QPixmap(":/icons/Spine_db_ref_icon.png"))
+
+    @staticmethod
+    def item_type():
+        """See base class."""
+        return "View"
+
+    @staticmethod
+    def category():
+        """See base class."""
+        return "Views"
 
     def make_signal_handler_dict(self):
         """Returns a dictionary of all shared signals and their handlers.
@@ -222,12 +232,12 @@ class View(ProjectItem):
 
     def notify_destination(self, source_item):
         """See base class."""
-        if source_item.item_type == "Tool":
+        if source_item.item_type() == "Tool":
             self._toolbox.msg.emit(
                 "Link established. You can visualize the ouput from Tool "
                 "<b>{0}</b> in View <b>{1}</b>.".format(source_item.name, self.name)
             )
-        elif source_item.item_type == "Data Store":
+        elif source_item.item_type() == "Data Store":
             self._toolbox.msg.emit(
                 "Link established. You can visualize Data Store "
                 "<b>{0}</b> in View <b>{1}</b>.".format(source_item.name, self.name)

@@ -3,7 +3,7 @@
 
 .. |data_connection| image:: ../../spinetoolbox/ui/resources/project_item_icons/file-alt.svg
    :width: 16
-.. |data_interface| image:: ../../spinetoolbox/ui/resources/project_item_icons/map-solid.svg
+.. |importer| image:: ../../spinetoolbox/ui/resources/project_item_icons/map-solid.svg
    :width: 16
 .. |data_store| image:: ../../spinetoolbox/ui/resources/project_item_icons/database.svg
    :width: 16
@@ -11,7 +11,7 @@
    :width: 16
 .. |execute-selected| image:: ../../spinetoolbox/ui/resources/project_item_icons/play-circle-regular.svg
    :width: 16
-.. |gdx_export| image:: ../../spinetoolbox/ui/resources/project_item_icons/file-export-solid.svg
+.. |exporter| image:: ../../spinetoolbox/ui/resources/project_item_icons/file-export-solid.svg
    :width: 16
 .. |tool| image:: ../../spinetoolbox/ui/resources/project_item_icons/hammer.svg
    :width: 16
@@ -63,13 +63,13 @@ Note that the data is opened in read-only mode so modifications are not possible
 
    Currently, only *Tree view* supports multiple databases.
 
-Data Interface |data_interface|
--------------------------------
+Importer |importer|
+-------------------
 
 This item provides mapping from tabulated data (comma separated values, Excel) to the Spine data model.
 
-Gdx Export |gdx_export|
------------------------
+Exporter |exporter|
+-------------------
 
 This item exports databases contained in a *Data Store* into :literal:`.gdx` format for GAMS Tools.
 See :ref:`Importing and exporting data` for more information.

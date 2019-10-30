@@ -226,6 +226,7 @@ class SpineToolboxProject(MetaObject):
         self._toolbox.msg.emit("Loading project items...")
         empty = True
         for category_name, category_dict in objects_dict.items():
+            category_name = _update_if_changed(category_name)
             items = []
             for name, item_dict in category_dict.items():
                 item_dict.pop("short name", None)
@@ -318,7 +319,7 @@ class SpineToolboxProject(MetaObject):
             # Append new node to networkx graph
             self.add_to_dag(item.name)
             if verbosity:
-                self._toolbox.msg.emit("{0} <b>{1}</b> added to project.".format(item.item_type, item.name))
+                self._toolbox.msg.emit("{0} <b>{1}</b> added to project.".format(item.item_type(), item.name))
             if set_selected:
                 self.set_item_selected(item)
 
@@ -546,3 +547,22 @@ class SpineToolboxProject(MetaObject):
             )
             return
         self.simulate_dag_execution(dag)
+
+
+def _update_if_changed(category_name):
+    """
+    Checks if category name has been changed.
+
+    This allows old project files to be loaded.
+
+    Args:
+        category_name (str): category name
+
+    Returns:
+        category's new name if it has changed or category_name
+    """
+    if category_name == "Data Interfaces":
+        return "Importers"
+    if category_name == "Data Exporters":
+        return "Exporters"
+    return category_name
