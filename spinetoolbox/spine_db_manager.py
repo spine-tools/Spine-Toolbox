@@ -35,7 +35,9 @@ class SpineDBManager(QObject):
     relationship_classes_added = Signal("QVariant")
     relationships_added = Signal("QVariant")
     parameter_definitions_added = Signal("QVariant")
+    _parameter_definitions_added = Signal("QVariant")
     parameter_values_added = Signal("QVariant")
+    _parameter_values_added = Signal("QVariant")
     parameter_value_lists_added = Signal("QVariant")
     parameter_tags_added = Signal("QVariant")
     # Removed
@@ -53,7 +55,9 @@ class SpineDBManager(QObject):
     relationship_classes_updated = Signal("QVariant")
     relationships_updated = Signal("QVariant")
     parameter_definitions_updated = Signal("QVariant")
+    _parameter_definitions_updated = Signal("QVariant")
     parameter_values_updated = Signal("QVariant")
+    _parameter_values_updated = Signal("QVariant")
     parameter_value_lists_updated = Signal("QVariant")
     parameter_tags_updated = Signal("QVariant")
     parameter_definition_tags_set = Signal("QVariant")
@@ -144,8 +148,10 @@ class SpineDBManager(QObject):
         self.relationships_updated.connect(lambda db_map_data: self.cache_items("relationship", db_map_data))
         self.parameter_definition_tags_set.connect(self.cache_parameter_definition_tags)
         # Auto refresh
-        self.parameter_definitions_updated.connect(self.auto_refresh_parameter_definitions)
-        self.parameter_values_updated.connect(self.auto_refresh_parameter_values)
+        self._parameter_definitions_added.connect(self.do_add_parameter_definitions)
+        self._parameter_definitions_updated.connect(self.do_update_parameter_definitions)
+        self._parameter_values_added.connect(self.do_add_parameter_values)
+        self._parameter_values_updated.connect(self.do_update_parameter_values)
         # Icons
         self.object_classes_added.connect(self.update_icons)
         self.object_classes_updated.connect(self.update_icons)
@@ -592,7 +598,7 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of items to add keyed by DiffDatabaseMapping
         """
-        self.add_or_update_items(db_map_data, "add_parameter_definitions", "parameter_definitions_added")
+        self.add_or_update_items(db_map_data, "add_parameter_definitions", "_parameter_definitions_added")
 
     def add_parameter_values(self, db_map_data):
         """Adds parameter values to db.
@@ -600,7 +606,7 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of items to add keyed by DiffDatabaseMapping
         """
-        self.add_or_update_items(db_map_data, "add_parameter_values", "parameter_values_added")
+        self.add_or_update_items(db_map_data, "add_parameter_values", "_parameter_values_added")
 
     def add_parameter_value_lists(self, db_map_data):
         """Adds parameter value lists to db.
@@ -656,7 +662,7 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of items to update keyed by DiffDatabaseMapping
         """
-        self.add_or_update_items(db_map_data, "update_parameter_definitions", "parameter_definitions_updated")
+        self.add_or_update_items(db_map_data, "update_parameter_definitions", "_parameter_definitions_updated")
 
     def update_parameter_values(self, db_map_data):
         """Updates parameter values in db.
@@ -664,7 +670,7 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of items to update keyed by DiffDatabaseMapping
         """
-        self.add_or_update_items(db_map_data, "update_parameter_values", "parameter_values_updated")
+        self.add_or_update_items(db_map_data, "update_parameter_values", "_parameter_values_updated")
 
     def update_parameter_value_lists(self, db_map_data):
         """Updates parameter value lists in db.
@@ -890,7 +896,7 @@ class SpineDBManager(QObject):
         for db_map, data in db_map_cascading_data.items():
             ids = {x["id"] for x in data}
             self.get_parameter_definitions(db_map, ids=ids)
-        self.auto_refresh_parameter_definitions(db_map_cascading_data)
+        self.do_update_parameter_definitions(db_map_cascading_data)
 
     @Slot("QVariant", name="cascade_refresh_parameter_definitions_by_value_list")
     def cascade_refresh_parameter_definitions_by_value_list(self, db_map_data):
@@ -905,7 +911,7 @@ class SpineDBManager(QObject):
         for db_map, data in db_map_cascading_data.items():
             ids = {x["id"] for x in data}
             self.get_parameter_definitions(db_map, ids=ids)
-        self.auto_refresh_parameter_definitions(db_map_cascading_data)
+        self.do_update_parameter_definitions(db_map_cascading_data)
 
     @Slot("QVariant", name="cascade_refresh_parameter_definitions_by_tag")
     def cascade_refresh_parameter_definitions_by_tag(self, db_map_data):
@@ -920,7 +926,7 @@ class SpineDBManager(QObject):
         for db_map, data in db_map_cascading_data.items():
             ids = {x["id"] for x in data}
             self.get_parameter_definitions(db_map, ids=ids)
-        self.auto_refresh_parameter_definitions(db_map_cascading_data)
+        self.do_update_parameter_definitions(db_map_cascading_data)
 
     @Slot("QVariant", name="cascade_refresh_parameter_values_by_entity_class")
     def cascade_refresh_parameter_values_by_entity_class(self, db_map_data):
@@ -1054,29 +1060,57 @@ class SpineDBManager(QObject):
             ]
         return db_map_cascading_data
 
-    @Slot("QVariant", name="refresh_parameter_definitions")
-    def auto_refresh_parameter_definitions(self, db_map_data):
-        """Refreshes cached parameter definitions when updating parameter definitions in the db.
-        This is needed because parameter definitions are cached in a 'extended' format
-        that includes information about the entity, tags, value lists
+    @Slot("QVariant")
+    def do_add_parameter_definitions(self, db_map_data):
+        """Adds parameter definitions in extended format given data in compact format.
 
         Args:
             db_map_data (dict): lists of parameter definition items keyed by DiffDatabaseMapping
         """
-        for db_map, items in db_map_data.items():
-            self.get_parameter_definitions(db_map, ids={x["id"] for x in items})
+        d = {
+            db_map: self.get_parameter_definitions(db_map, ids={x["id"] for x in items})
+            for db_map, items in db_map_data.items()
+        }
+        self.parameter_definitions_added.emit(d)
 
-    @Slot("QVariant", name="auto_refresh_parameter_values")
-    def auto_refresh_parameter_values(self, db_map_data):
-        """Refreshes cached parameter values when updating parameter definitions in the db.
-        This is needed because parameter values are cached in a 'extended' format
-        that includes information about the entity, etc.
+    @Slot("QVariant")
+    def do_add_parameter_values(self, db_map_data):
+        """Adds parameter values in extended format given data in compact format.
 
         Args:
             db_map_data (dict): lists of parameter value items keyed by DiffDatabaseMapping
         """
-        for db_map, items in db_map_data.items():
-            self.get_parameter_values(db_map, ids={x["id"] for x in items})
+        d = {
+            db_map: self.get_parameter_values(db_map, ids={x["id"] for x in items})
+            for db_map, items in db_map_data.items()
+        }
+        self.parameter_values_updated.emit(d)
+
+    @Slot("QVariant")
+    def do_update_parameter_definitions(self, db_map_data):
+        """Updates parameter definitions in extended format given data in compact format.
+
+        Args:
+            db_map_data (dict): lists of parameter definition items keyed by DiffDatabaseMapping
+        """
+        d = {
+            db_map: self.get_parameter_definitions(db_map, ids={x["id"] for x in items})
+            for db_map, items in db_map_data.items()
+        }
+        self.parameter_definitions_updated.emit(d)
+
+    @Slot("QVariant")
+    def do_update_parameter_values(self, db_map_data):
+        """Updates parameter values in extended format given data in compact format.
+
+        Args:
+            db_map_data (dict): lists of parameter value items keyed by DiffDatabaseMapping
+        """
+        d = {
+            db_map: self.get_parameter_values(db_map, ids={x["id"] for x in items})
+            for db_map, items in db_map_data.items()
+        }
+        self.parameter_values_updated.emit(d)
 
     @Slot("QVariant", name="cache_parameter_definition_tags")
     def cache_parameter_definition_tags(self, db_map_data):

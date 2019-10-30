@@ -41,7 +41,10 @@ class CompoundTableModel(MinimalTableModel):
             return QModelIndex()
         row = index.row()
         column = index.column()
-        sub_model, sub_row = self._row_map[row]
+        try:
+            sub_model, sub_row = self._row_map[row]
+        except IndexError:
+            return QModelIndex()
         return sub_model.index(sub_row, column)
 
     def map_from_sub(self, sub_model, sub_index):

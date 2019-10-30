@@ -561,7 +561,7 @@ class DataStoreForm(QMainWindow):
     def notify_items_changed(self, action, item_type, db_map_data):
         """Enables or disables actions and informs the user about what just happened."""
         msg = f"<html> Successfully {action} {item_type} item(s)"
-        name_keys = {"parameter tag": "tag", "parameter value": None}
+        name_keys = {"parameter tag": "tag", "parameter value": None, "parameter definition": "parameter_name"}
         name_key = name_keys.get(item_type, "name")
         if name_key:
             names = {item[name_key] for db_map, data in db_map_data.items() for item in data}
