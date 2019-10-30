@@ -313,7 +313,7 @@ class DataStoreForm(QMainWindow):
     def do_commit_session(self, commit_msg):
         try:
             for db_map in self.db_maps:
-                db_map.do_commit_session(commit_msg)
+                db_map.commit_session(commit_msg)
         except SpineDBAPIError as e:
             self.msg_error.emit(e.msg)
             return
