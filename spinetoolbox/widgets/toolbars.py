@@ -210,7 +210,7 @@ class ParameterTagToolBar(QToolBar):
         self.addWidget(button)
         # noinspection PyUnresolvedReferences
         # pylint: disable=unnecessary-lambda
-        # button.clicked.connect(lambda checked: self.manage_tags_action_triggered.emit(checked))
+        button.clicked.connect(lambda checked: self.manage_tags_action_triggered.emit(checked))
         self.setStyleSheet(PARAMETER_TAG_TOOLBAR_SS)
         self.setObjectName("ParameterTagToolbar")
         self.connect_db_mngr_signals()
