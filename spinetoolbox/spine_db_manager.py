@@ -82,6 +82,11 @@ class SpineDBManager(QObject):
         """Returns a DiffDatabaseMapping instance from url if possible, None otherwise.
         If needed, asks the user to upgrade to the latest db version.
 
+        Args:
+            url (str, URL)
+            upgrade (bool, optional)
+            codename (str, NoneType)
+
         Returns:
             DiffDatabaseMapping, NoneType
         """
@@ -113,6 +118,11 @@ class SpineDBManager(QObject):
         """Returns a memoized DiffDatabaseMapping instance from url.
         Called by `get_db_map`.
 
+        Args:
+            url (str, URL)
+            upgrade (bool, optional)
+            codename (str, NoneType)
+
         Returns:
             DiffDatabaseMapping
         """
@@ -128,6 +138,10 @@ class SpineDBManager(QObject):
         self.objects_added.connect(lambda db_map_data: self.cache_items("object", db_map_data))
         self.relationship_classes_added.connect(lambda db_map_data: self.cache_items("relationship class", db_map_data))
         self.relationships_added.connect(lambda db_map_data: self.cache_items("relationship", db_map_data))
+        self.parameter_definitions_added.connect(
+            lambda db_map_data: self.cache_items("parameter definition", db_map_data)
+        )
+        self.parameter_values_added.connect(lambda db_map_data: self.cache_items("parameter value", db_map_data))
         # Discard
         self.object_classes_removed.connect(lambda db_map_data: self.uncache_items("object class", db_map_data))
         self.objects_removed.connect(lambda db_map_data: self.uncache_items("object", db_map_data))
@@ -146,8 +160,12 @@ class SpineDBManager(QObject):
             lambda db_map_data: self.cache_items("relationship class", db_map_data)
         )
         self.relationships_updated.connect(lambda db_map_data: self.cache_items("relationship", db_map_data))
+        self.parameter_definitions_updated.connect(
+            lambda db_map_data: self.cache_items("parameter definition", db_map_data)
+        )
+        self.parameter_values_updated.connect(lambda db_map_data: self.cache_items("parameter value", db_map_data))
         self.parameter_definition_tags_set.connect(self.cache_parameter_definition_tags)
-        # Auto refresh
+        # Go from compact to extend format
         self._parameter_definitions_added.connect(self.do_add_parameter_definitions)
         self._parameter_definitions_updated.connect(self.do_update_parameter_definitions)
         self._parameter_values_added.connect(self.do_add_parameter_values)
@@ -235,8 +253,8 @@ class SpineDBManager(QObject):
             return self.icon_mngr.relationship_icon(entity_class["object_class_name_list"])
 
     def get_item(self, db_map, item_type, id_):
-        """Returns the item of the given type  in the given db map that has the given id.
-        If not found, an empty dictionary is returned.
+        """Returns the item of the given type in the given db map that has the given id,
+        or an empty dict if not found.
 
         Args:
             db_map (DiffDatabaseMapping)
@@ -304,7 +322,7 @@ class SpineDBManager(QObject):
 
     def _get_items_from_db(self, db_map, item_type):
         """Returns all items of the given type in the given db map.
-        Called by the above methods whenever they don't find what they're looking for the cache.
+        Called by the above methods whenever they don't find what they're looking for in cache.
         """
         method_name_dict = {
             "object class": "get_object_classes",
@@ -700,7 +718,7 @@ class SpineDBManager(QObject):
         """Removes items from database.
 
         Args:
-            db_map_typed_data (dict): lists of items to remove, keyed by item type, keyed by DiffDatabaseMapping
+            db_map_typed_data (dict): lists of items to remove, keyed by item type (str), keyed by DiffDatabaseMapping
         """
         # Removing works this way in spinedb_api, all at once, probably because of cascading?
         db_map_object_classes = dict()

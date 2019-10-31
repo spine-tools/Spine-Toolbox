@@ -82,7 +82,7 @@ class TestTreeViewFormUpdateMixin:
         for m in model.sub_models:
             m.fetchMore()
         self.water_parameter = self._object_parameter_definition(1, self.fish_class["id"], "fish", "fire")
-        self.db_mngr._parameter_definitions_updated.emit({self.mock_db_map: [self.water_parameter]})
+        self.db_mngr.parameter_definitions_updated.emit({self.mock_db_map: [self.water_parameter]})
         h = model.header.index
         parameters = []
         for row in range(model.rowCount()):
@@ -107,7 +107,7 @@ class TestTreeViewFormUpdateMixin:
             "fish,dog",
             "each_others_opinion",
         )
-        self.db_mngr._parameter_definitions_updated.emit({self.mock_db_map: [self.relative_speed_parameter]})
+        self.db_mngr.parameter_definitions_updated.emit({self.mock_db_map: [self.relative_speed_parameter]})
         h = model.header.index
         parameters = []
         for row in range(model.rowCount()):
@@ -134,7 +134,7 @@ class TestTreeViewFormUpdateMixin:
             "water",
             '"pepper"',
         )
-        self.db_mngr._parameter_values_updated.emit({self.mock_db_map: [self.nemo_water]})
+        self.db_mngr.parameter_values_updated.emit({self.mock_db_map: [self.nemo_water]})
         h = model.header.index
         parameters = []
         for row in range(model.rowCount()):
@@ -168,7 +168,7 @@ class TestTreeViewFormUpdateMixin:
             "relative_speed",
             100,
         )
-        self.db_mngr._parameter_values_updated.emit({self.mock_db_map: [self.nemo_pluto_relative_speed]})
+        self.db_mngr.parameter_values_updated.emit({self.mock_db_map: [self.nemo_pluto_relative_speed]})
         h = model.header.index
         parameters = []
         for row in range(model.rowCount()):

@@ -47,7 +47,7 @@ class SpineToolboxProject(MetaObject):
         self._toolbox = toolbox
         self._qsettings = self._toolbox.qsettings()
         self.dag_handler = DirectedGraphHandler(self._toolbox)
-        self.db_mngr = SpineDBManager()
+        self.db_mngr = SpineDBManager(self)
         self.db_signaller = SpineDBSignaller(self)
         self._ordered_dags = dict()  # Contains all ordered lists of items to execute in the project
         self.execution_instance = None

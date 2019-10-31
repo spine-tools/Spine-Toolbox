@@ -23,7 +23,7 @@ class SpineDBSignaller:
     """Handles signals from DB manager and channels them to listeners."""
 
     def __init__(self, project):
-        """Class constructor.
+        """Initializes the signaler object.
 
         Args:
             project (SpineToolboxProject)
@@ -33,15 +33,18 @@ class SpineDBSignaller:
         self.connect_signals()
 
     def add_listener(self, listener):
+        """Adds listener."""
         self.listeners.add(listener)
 
     def remove_listener(self, listener):
+        """Removes listener."""
         try:
             self.listeners.remove(listener)
         except KeyError:
             pass
 
     def connect_signals(self):
+        """Connects signals."""
         # Added
         self.db_mngr.object_classes_added.connect(self.receive_object_classes_added)
         self.db_mngr.objects_added.connect(self.receive_objects_added)
