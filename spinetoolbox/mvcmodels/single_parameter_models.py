@@ -20,7 +20,6 @@ from PySide2.QtCore import Qt, QModelIndex
 from PySide2.QtGui import QGuiApplication
 from ..mvcmodels.minimal_table_model import MinimalTableModel
 from ..mvcmodels.parameter_mixins import FillInParameterNameMixin, FillInValueListIdMixin, MakeParameterTagMixin
-from ..mvcmodels.parameter_value_formatting import format_for_DisplayRole, format_for_ToolTipRole
 
 
 class SingleParameterModel(MinimalTableModel):
@@ -102,14 +101,10 @@ class SingleParameterModel(MinimalTableModel):
         if role in (Qt.DisplayRole, Qt.EditRole, Qt.ToolTipRole):
             if field == "database":
                 return self.db_map.codename
-            # TODO: Maybe Spine db manager can format the data
             id_ = self._main_data[index.row()]
-            value = self.db_mngr.get_item(self.db_map, self.item_type, id_).get(field)
-            if role == Qt.DisplayRole and field in self.json_fields:
-                return format_for_DisplayRole(value)
-            if role == Qt.ToolTipRole and field in self.json_fields:
-                return format_for_ToolTipRole(value)
-            return value
+            if field in self.json_fields:
+                return self.db_mngr.get_value(self.db_map, self.item_type, id_, field, role)
+            return self.db_mngr.get_item(self.db_map, self.item_type, id_).get(field)
         # Decoration role
         entity_class_name_field = {
             "object class": "object_class_name",

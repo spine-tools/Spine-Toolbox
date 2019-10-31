@@ -12,13 +12,26 @@
 """
 The SpineDBManager class
 
-:author: P. Vennström (VTT) and M. Marin (KTH)
+:authors: P. Vennström (VTT) and M. Marin (KTH)
 :date:   2.10.2019
 """
 
-from PySide2.QtCore import QObject, Signal, Slot
+from PySide2.QtCore import Qt, QObject, Signal, Slot
 from PySide2.QtWidgets import QMessageBox
-from spinedb_api import SpineDBAPIError, SpineDBVersionError, DiffDatabaseMapping
+from spinedb_api import (
+    SpineDBAPIError,
+    SpineDBVersionError,
+    DiffDatabaseMapping,
+    from_database,
+    relativedelta_to_duration,
+    ParameterValueFormatError,
+    DateTime,
+    Duration,
+    TimePattern,
+    TimeSeries,
+    TimeSeriesFixedResolution,
+    TimeSeriesVariableResolution,
+)
 from .helpers import IconManager, busy_effect
 
 
@@ -338,6 +351,50 @@ class SpineDBManager(QObject):
         if not method_name:
             return []
         return getattr(self, method_name)(db_map)
+
+    def get_value(self, db_map, item_type, id_, field, role=Qt.DisplayRole):
+        item = self.get_item(db_map, item_type, id_)
+        if "formatted_value" not in item:
+            try:
+                parsed_value = from_database(item[field])
+            except ParameterValueFormatError as error:
+                display_data = "Error"
+                tool_tip_data = str(error)
+            else:
+                display_data = self._display_data(parsed_value)
+                tool_tip_data = self._tool_tip_data(parsed_value)
+            item["formatted_value"] = {
+                Qt.DisplayRole: display_data,
+                Qt.ToolTipRole: tool_tip_data,
+                Qt.EditRole: str(item[field]),
+            }
+        return item["formatted_value"].get(role)
+
+    @staticmethod
+    def _display_data(parsed_value):
+        """Returns the value's database representation formatted for Qt.DisplayRole."""
+        if isinstance(parsed_value, TimeSeries):
+            return "Time series"
+        if isinstance(parsed_value, DateTime):
+            return str(parsed_value.value)
+        if isinstance(parsed_value, Duration):
+            return ", ".join(relativedelta_to_duration(delta) for delta in parsed_value.value)
+        if isinstance(parsed_value, TimePattern):
+            return "Time pattern"
+        if isinstance(parsed_value, list):
+            return str(parsed_value)
+        return parsed_value
+
+    @staticmethod
+    def _tool_tip_data(parsed_value):
+        """Returns the value's database representation formatted for Qt.ToolTipRole."""
+        if isinstance(parsed_value, TimeSeriesFixedResolution):
+            resolution = [relativedelta_to_duration(r) for r in parsed_value.resolution]
+            resolution = ', '.join(resolution)
+            return "Start: {}, resolution: [{}], length: {}".format(parsed_value.start, resolution, len(parsed_value))
+        if isinstance(parsed_value, TimeSeriesVariableResolution):
+            return "Start: {}, resolution: variable, length: {}".format(parsed_value.indexes[0], len(parsed_value))
+        return None
 
     def get_object_classes(self, db_map):
         """Returns object classes from database.

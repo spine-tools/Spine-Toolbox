@@ -95,13 +95,13 @@ class CompoundTableModel(MinimalTableModel):
         return sub_model
 
     def refresh(self):
-        """Refreshes the layou by computing a new row map."""
+        """Refreshes the layout by computing a new row map."""
         self.layoutAboutToBeChanged.emit()
         self.do_refresh()
         self.layoutChanged.emit()
 
     def do_refresh(self):
-        """Recomputes the row and inverse maps."""
+        """Recomputes the row and inverse row maps."""
         self._row_map.clear()
         self._inv_row_map.clear()
         for model in self.sub_models:

@@ -22,13 +22,13 @@ from PySide2.QtCore import Slot
 class SpineDBSignaller:
     """Handles signals from DB manager and channels them to listeners."""
 
-    def __init__(self, project):
+    def __init__(self, db_mngr):
         """Initializes the signaler object.
 
         Args:
-            project (SpineToolboxProject)
+            db_mngr (SpineDBManager)
         """
-        self.db_mngr = project.db_mngr
+        self.db_mngr = db_mngr
         self.listeners = set()
         self.connect_signals()
 
