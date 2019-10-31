@@ -22,9 +22,8 @@ import unittest
 from gdx2py import GdxFile
 from PySide2.QtWidgets import QApplication
 from spinedb_api import import_functions as dbmanip
-from spinedb_api.helpers import create_new_spine_database
+from spinedb_api import create_new_spine_database, DiffDatabaseMapping
 from spinetoolbox.spine_io.exporters import gdx
-from spinetoolbox.helpers import get_db_map
 
 
 class TextGdx(unittest.TestCase):
@@ -139,7 +138,7 @@ class TextGdx(unittest.TestCase):
         database_path = Path(dir_name).joinpath(file_name)
         database_url = 'sqlite:///' + str(database_path)
         create_new_spine_database(database_url)
-        return get_db_map(database_url)
+        return DiffDatabaseMapping(database_url)
 
     def test_domains_are_read_correctly_form_database(self):
         with TemporaryDirectory() as tmp_dir_name:

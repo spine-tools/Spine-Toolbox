@@ -513,6 +513,6 @@ class Ui_MainWindow(object):
         self.actionDuplicate.setToolTip(QtWidgets.QApplication.translate("MainWindow", "Duplicate selected project item", None, -1))
         self.actionDuplicate.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+D", None, -1))
 
-from spinetoolbox.widgets.custom_qtextbrowser import CustomQTextBrowser
 from spinetoolbox.widgets.custom_qgraphicsviews import DesignQGraphicsView
+from spinetoolbox.widgets.custom_qtextbrowser import CustomQTextBrowser
 from spinetoolbox import resources_icons_rc

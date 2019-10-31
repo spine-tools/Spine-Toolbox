@@ -393,52 +393,28 @@ def format_string_list(str_list):
     return "<ul>" + "".join(["<li>" + str(x) + "</li>" for x in str_list]) + "</ul>"
 
 
-def get_db_map(url, upgrade=False):
-    """Returns a DiffDatabaseMapping instance from url.
-    If the db is not the latest version, asks the user if they want to upgrade it.
+def rows_to_row_count_tuples(rows):
+    """Breaks a list of rows into a list of (row, count) tuples corresponding
+    to chunks of successive rows.
     """
-    try:
-        db_map = do_get_db_map(url, upgrade)
-        return db_map
-    except spinedb_api.SpineDBVersionError:
-        msg = QMessageBox()
-        msg.setIcon(QMessageBox.Question)
-        msg.setWindowTitle("Incompatible database version")
-        msg.setText(
-            "The database at <b>{}</b> is from an older version of Spine "
-            "and needs to be upgraded in order to be used with the current version.".format(url)
-        )
-        msg.setInformativeText(
-            "Do you want to upgrade it now?"
-            "<p><b>WARNING</b>: After the upgrade, "
-            "the database may no longer be used "
-            "with previous versions of Spine."
-        )
-        msg.addButton(QMessageBox.Cancel)
-        msg.addButton("Upgrade", QMessageBox.YesRole)
-        ret = msg.exec_()  # Show message box
-        if ret == QMessageBox.Cancel:
-            return None
-        return get_db_map(url, upgrade=True)
-
-
-@busy_effect
-def do_get_db_map(url, upgrade):
-    """Returns a DiffDatabaseMapping instance from url.
-    Called by `get_db_map`.
-    """
-    return spinedb_api.DiffDatabaseMapping(url, upgrade=upgrade)
-
-
-def int_list_to_row_count_tuples(int_list):
-    """Breaks a list of integers into a list of tuples (row, count) corresponding
-    to chunks of successive elements.
-    """
-    sorted_list = sorted(set(int_list))
-    break_points = [k + 1 for k in range(len(sorted_list) - 1) if sorted_list[k] + 1 != sorted_list[k + 1]]
-    break_points = [0] + break_points + [len(sorted_list)]
+    if not rows:
+        return []
+    sorted_rows = sorted(set(rows))
+    break_points = [k + 1 for k in range(len(sorted_rows) - 1) if sorted_rows[k] + 1 != sorted_rows[k + 1]]
+    break_points = [0] + break_points + [len(sorted_rows)]
     ranges = [(break_points[l], break_points[l + 1]) for l in range(len(break_points) - 1)]
-    return [(sorted_list[start], stop - start) for start, stop in ranges]
+    return [(sorted_rows[start], stop - start) for start, stop in ranges]
+
+
+class Singleton(type):
+    """A singleton class from SO."""
+
+    _instances = {}
+
+    def __call__(cls, *args, **kwargs):
+        if cls not in cls._instances:
+            cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
+        return cls._instances[cls]
 
 
 class IconListManager:
@@ -514,9 +490,9 @@ class IconManager:
         Create the corresponding object pixmaps and clear obsolete entries
         from the relationship class icon cache."""
         for object_class in object_classes:
-            self.create_object_pixmap(object_class.display_icon)
-            self.obj_cls_icon_cache[object_class.name] = object_class.display_icon
-        object_class_names = [x.name for x in object_classes]
+            self.create_object_pixmap(object_class["display_icon"])
+            self.obj_cls_icon_cache[object_class["name"]] = object_class["display_icon"]
+        object_class_names = [x["name"] for x in object_classes]
         dirty_keys = [k for k in self.rel_cls_icon_cache if any(x in object_class_names for x in k)]
         for k in dirty_keys:
             del self.rel_cls_icon_cache[k]

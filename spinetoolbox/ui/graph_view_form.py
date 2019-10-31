@@ -43,7 +43,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_10.addWidget(self.graphicsView)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 944, 21))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 944, 28))
         self.menubar.setObjectName("menubar")
         self.menuGraph = QtWidgets.QMenu(self.menubar)
         self.menuGraph.setObjectName("menuGraph")
@@ -159,7 +159,7 @@ class Ui_MainWindow(object):
         self.verticalLayout.setSpacing(6)
         self.verticalLayout.setContentsMargins(0, 0, 0, 0)
         self.verticalLayout.setObjectName("verticalLayout")
-        self.treeView_object = QtWidgets.QTreeView(self.dockWidgetContents_2)
+        self.treeView_object = StickySelectionObjectTreeView(self.dockWidgetContents_2)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(1)
         sizePolicy.setVerticalStretch(0)
@@ -397,7 +397,8 @@ class Ui_MainWindow(object):
         self.actionGraph_prune_selected.setText(QtWidgets.QApplication.translate("MainWindow", "Prune selected items", None, -1))
         self.actionRestore_Dock_Widgets.setText(QtWidgets.QApplication.translate("MainWindow", "Restore Dock Widgets", None, -1))
 
-from spinetoolbox.widgets.custom_qtableview import AutoFilterCopyPasteTableView
 from spinetoolbox.widgets.custom_qlistview import DragListView
+from spinetoolbox.widgets.custom_qtableview import AutoFilterCopyPasteTableView
+from spinetoolbox.widgets.custom_qtreeview import StickySelectionObjectTreeView
 from spinetoolbox.widgets.custom_qgraphicsviews import GraphQGraphicsView
 from spinetoolbox import resources_icons_rc

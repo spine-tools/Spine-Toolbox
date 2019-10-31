@@ -18,8 +18,8 @@ Classes for custom QTreeView.
 
 import os
 from PySide2.QtWidgets import QTreeView, QApplication
-from PySide2.QtCore import Signal, Slot, Qt, QMimeData, QUrl
-from PySide2.QtGui import QDrag
+from PySide2.QtCore import Signal, Slot, Qt, QMimeData, QUrl, QEvent
+from PySide2.QtGui import QDrag, QMouseEvent
 
 
 class CopyTreeView(QTreeView):
@@ -49,13 +49,13 @@ class ObjectTreeView(CopyTreeView):
         parent (QWidget): The parent of this view
     """
 
-    edit_key_pressed = Signal("QModelIndex", name="edit_key_pressed")
+    edit_key_pressed = Signal("QModelIndex")
 
     def __init__(self, parent):
         """Initialize the view."""
         super().__init__(parent=parent)
 
-    @Slot("QModelIndex", "EditTrigger", "QEvent", name="edit")
+    @Slot("QModelIndex", "EditTrigger", "QEvent")
     def edit(self, index, trigger, event):
         """Send signal instead of editing item, so
         the TreeViewForm can catch this signal and open a custom QDialog
@@ -64,6 +64,44 @@ class ObjectTreeView(CopyTreeView):
         if trigger == QTreeView.EditKeyPressed:
             self.edit_key_pressed.emit(index)
         return False
+
+
+class StickySelectionObjectTreeView(CopyTreeView):
+    """Custom QTreeView class for object tree in TreeViewForm.
+
+    Attributes:
+        parent (QWidget): The parent of this view
+    """
+
+    def mousePressEvent(self, event):
+        """Overrides selection behaviour if the user has selected sticky
+        selection in Settings. If sticky selection is enabled, multi-selection is
+        enabled when selecting items in the Object tree. Pressing the Ctrl-button down,
+        enables single selection. If sticky selection is disabled, single selection is
+        enabled and pressing the Ctrl-button down enables multi-selection.
+
+        Args:
+            event (QMouseEvent)
+        """
+        sticky_selection = self.qsettings().value("appSettings/stickySelection", defaultValue="false")
+        if sticky_selection == "false":
+            super().mousePressEvent(event)
+            return
+        local_pos = event.localPos()
+        window_pos = event.windowPos()
+        screen_pos = event.screenPos()
+        button = event.button()
+        buttons = event.buttons()
+        modifiers = event.modifiers()
+        if modifiers & Qt.ControlModifier:
+            modifiers &= ~Qt.ControlModifier
+        else:
+            modifiers |= Qt.ControlModifier
+        source = event.source()
+        new_event = QMouseEvent(
+            QEvent.MouseButtonPress, local_pos, window_pos, screen_pos, button, buttons, modifiers, source
+        )
+        super().mousePressEvent(new_event)
 
 
 class ReferencesTreeView(QTreeView):

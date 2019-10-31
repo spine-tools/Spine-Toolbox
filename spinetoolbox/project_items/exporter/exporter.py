@@ -23,7 +23,6 @@ import pathlib
 import os.path
 from PySide2.QtCore import Slot
 from spinetoolbox.executioner import ExecutionState
-from spinetoolbox.helpers import get_db_map
 from spinetoolbox.project_item import ProjectItem, ProjectItemResource
 from spinetoolbox.spine_io.exporters import gdx
 from .widgets.gdx_export_settings import GdxExportSettings
@@ -143,7 +142,7 @@ class Exporter(ProjectItem):
                     ExecutionState.ABORT
                 )
                 return
-            database_map = get_db_map(url)
+            database_map = self._project.db_mngr.get_db_map(url)
             settings = self._settings.get(url, None)
             if settings is None:
                 settings = gdx.make_settings(database_map)
@@ -192,7 +191,7 @@ class Exporter(ProjectItem):
         """Opens the item's settings window."""
         settings = self._settings.get(database_url, None)
         if settings is None:
-            database_map = get_db_map(database_url)
+            database_map = self._project.db_mngr.get_db_map(database_url)
             settings = gdx.make_settings(database_map)
             self._settings[database_url] = settings
             database_map.connection.close()
@@ -271,7 +270,7 @@ class Exporter(ProjectItem):
     @Slot(str)
     def _refresh_settings_for_database(self, url):
         original_settings = self._settings.get(url, None)
-        database_map = get_db_map(url)
+        database_map = self._project.db_mngr.get_db_map(url)
         new_settings = gdx.make_settings(database_map)
         database_map.connection.close()
         if original_settings is None:
