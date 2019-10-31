@@ -22,6 +22,7 @@ from PySide2.QtCore import Qt, Slot
 from PySide2.QtGui import QStandardItem, QStandardItemModel, QIcon, QPixmap
 from sqlalchemy.engine.url import URL, make_url
 from spinedb_api import DiffDatabaseMapping, SpineDBAPIError, SpineDBVersionError
+from spinetoolbox.executioner import ExecutionState
 from spinetoolbox.project_item import ProjectItem
 from spinetoolbox.widgets.graph_view_widget import GraphViewForm
 from spinetoolbox.widgets.tabular_view_widget import TabularViewForm
@@ -154,7 +155,7 @@ class View(ProjectItem):
         self._toolbox.msg.emit("***")
         inst = self._toolbox.project().execution_instance
         self.update_references(inst)
-        self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(0)  # 0 success
+        self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(ExecutionState.CONTINUE)
 
     def stop_execution(self):
         """Stops executing this View."""

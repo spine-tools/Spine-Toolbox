@@ -22,6 +22,7 @@ import shutil
 from PySide2.QtCore import QObject, Signal, Slot
 from . import qsubprocess
 from .config import GAMS_EXECUTABLE, JULIA_EXECUTABLE, PYTHON_EXECUTABLE
+from .executioner import ExecutionState
 
 
 class ToolInstance(QObject):
@@ -49,7 +50,9 @@ class ToolInstance(QObject):
     def terminate_instance(self):
         """Terminates Tool instance execution."""
         if not self.tool_process:
-            self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(-2)
+            self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(
+                ExecutionState.STOP_REQUESTED
+            )
             return
         # Disconnect tool_process signals
         try:

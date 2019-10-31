@@ -23,6 +23,7 @@ import pathlib
 from PySide2.QtCore import Slot, QUrl, QFileSystemWatcher, Qt, QFileInfo
 from PySide2.QtGui import QDesktopServices, QStandardItem, QStandardItemModel, QIcon, QPixmap
 from PySide2.QtWidgets import QFileDialog, QStyle, QFileIconProvider, QInputDialog, QMessageBox
+from spinetoolbox.executioner import ExecutionState
 from spinetoolbox.project_item import ProjectItem, ProjectItemResource
 from spinetoolbox.widgets.spine_datapackage_widget import SpineDatapackageWidget
 from spinetoolbox.helpers import busy_effect
@@ -401,12 +402,14 @@ class DataConnection(ProjectItem):
         # Add data file references and data files into execution instance
         resources = self.resources_for_advertising()
         inst.advertise_resources(self.name, *resources)
-        self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(0)  # 0 success
+        self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(ExecutionState.CONTINUE)
 
     def stop_execution(self):
         """Stops executing this Data Connection."""
         self._toolbox.msg.emit("Stopping {0}".format(self.name))
-        self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(-2)
+        self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(
+            ExecutionState.STOP_REQUESTED
+        )
 
     def simulate_execution(self, inst):
         """Simulates executing this Data Connection."""

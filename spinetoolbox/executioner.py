@@ -16,8 +16,8 @@ Contains classes for handling project item execution.
 :date:   8.4.2019
 """
 
+from enum import Enum
 import logging
-import os
 import random
 from PySide2.QtCore import Signal, Slot, QObject
 import networkx as nx
@@ -310,20 +310,30 @@ class DirectedGraphHandler(QObject):
         return True
 
 
-class ExecutionInstance(QObject):
-    """Class for the graph that is being executed. Contains references to
-    files and resources advertised by project items so that project items downstream can find them.
+class ExecutionState(Enum):
+    """An enumeration to control the execution."""
 
-    Args:
-        toolbox (ToolboxUI): QMainWindow instance
-        ordered_nodes (dict): dict of nodes to execute; key is the node, value is its direct successors
+    CONTINUE = 0
+    ABORT = -1
+    STOP_REQUESTED = -2
+
+
+class ExecutionInstance(QObject):
+    """Class for the graph that is being executed
+
+    Contains references to files and resources advertised by project items
+    so that project items downstream can find them.
     """
 
-    graph_execution_finished_signal = Signal(int, name="graph_execution_finished_signal")
-    project_item_execution_finished_signal = Signal(int, name="project_item_execution_finished_signal")
+    graph_execution_finished_signal = Signal(int)
+    project_item_execution_finished_signal = Signal(int)
 
     def __init__(self, toolbox, ordered_nodes):
-        """Class constructor."""
+        """
+        Args:
+            toolbox (ToolboxUI): QMainWindow instance
+            ordered_nodes (dict): dict of nodes to execute; key is the node, value is its direct successors
+        """
         QObject.__init__(self)
         self._toolbox = toolbox
         self._ordered_nodes = ordered_nodes
@@ -345,27 +355,26 @@ class ExecutionInstance(QObject):
         self.project_item_execution_finished_signal.connect(self.item_execution_finished)
         self.running_item.execute()
 
-    @Slot(int, name="item_execution_finished")
+    @Slot(ExecutionState)
     def item_execution_finished(self, item_finish_state):
         """Pop next project item to execute or finish current graph if there are no items left.
 
         Args:
-            item_finish_state (int): 0=Continue to next project item. -2=Stop executing this graph (happens when e.g.
-                Tool does not find req. input files or something)
+            item_finish_state (ExecutionState): an enumeration to indicate if execution should continue or not
         """
         self.project_item_execution_finished_signal.disconnect()
-        if item_finish_state == -1:
+        if item_finish_state == ExecutionState.ABORT:
             # Item execution failed due to e.g. Tool did not find input files or something
-            self.graph_execution_finished_signal.emit(-1)
+            self.graph_execution_finished_signal.emit(ExecutionState.ABORT)
             return
-        if item_finish_state == -2:
+        if item_finish_state == ExecutionState.STOP_REQUESTED:
             # User pressed Stop button
-            self.graph_execution_finished_signal.emit(-2)
+            self.graph_execution_finished_signal.emit(ExecutionState.STOP_REQUESTED)
             return
         try:
             item_name = self.execution_list.pop(0)
         except IndexError:
-            self.graph_execution_finished_signal.emit(0)
+            self.graph_execution_finished_signal.emit(ExecutionState.CONTINUE)
             return
         self.execute_project_item(item_name)
 
@@ -373,7 +382,7 @@ class ExecutionInstance(QObject):
         """Stops running project item and terminates current graph execution."""
         if not self.running_item:
             self._toolbox.msg.emit("No running item")
-            self.graph_execution_finished_signal.emit(-2)
+            self.graph_execution_finished_signal.emit(ExecutionState.STOP_REQUESTED)
             return
         self.running_item.stop_execution()
         return
