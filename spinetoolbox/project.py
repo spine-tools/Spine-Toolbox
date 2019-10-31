@@ -25,7 +25,7 @@ from .metaobject import MetaObject
 from .helpers import project_dir, create_dir, copy_dir
 from .tool_specifications import JuliaTool, PythonTool, GAMSTool, ExecutableTool
 from .config import DEFAULT_WORK_DIR, INVALID_CHARS
-from .executioner import DirectedGraphHandler, ExecutionInstance
+from .executioner import DirectedGraphHandler, ExecutionInstance, ExecutionState
 from .spine_db_manager import SpineDBManager
 from .spine_db_signaller import SpineDBSignaller
 
@@ -433,22 +433,22 @@ class SpineToolboxProject(MetaObject):
         self.execution_instance.graph_execution_finished_signal.connect(self.graph_execution_finished)
         self.execution_instance.start_execution()
 
-    @Slot(int, name="graph_execution_finished")
+    @Slot(ExecutionState)
     def graph_execution_finished(self, state):
         """Releases resources from previous execution and prepares the next
         graph for execution if there are still graphs left. Otherwise,
         finishes the run.
 
         Args:
-            state (int): 0: Ended normally. -1: User pressed Stop button
+            state (ExecutionState): proposed execution state after item finished execution
         """
         self.execution_instance.graph_execution_finished_signal.disconnect()
         self.execution_instance.deleteLater()
         self.execution_instance = None
-        if state == -1:
+        if state == ExecutionState.ABORT:
             # Execution failed due to some error in executing the project item. E.g. Tool is missing an input file
             pass
-        elif state == -2:
+        elif state == ExecutionState.STOP_REQUESTED:
             self._toolbox.msg_error.emit("Execution stopped")
             self._ordered_dags.clear()
             self._invalid_graphs.clear()

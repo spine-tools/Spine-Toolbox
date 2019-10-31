@@ -29,6 +29,7 @@ from PySide2.QtCore import Qt
 from PySide2.QtGui import QStandardItem, QStandardItemModel
 from PySide2.QtWidgets import QApplication
 from networkx import DiGraph
+from spinetoolbox.executioner import ExecutionState
 from spinetoolbox.tool_specifications import ExecutableTool
 from spinetoolbox.project_items.tool.tool import Tool
 from spinetoolbox.project import SpineToolboxProject
@@ -435,7 +436,7 @@ class TestToolExecution(unittest.TestCase):
         tool = self.toolbox.project_item_model.project_item(ind)  # Find item from project item model
         mock_exec_inst = tool._project.execution_instance = mock.Mock()
         tool.execute()
-        mock_exec_inst.project_item_execution_finished_signal.emit.assert_called_with(0)
+        mock_exec_inst.project_item_execution_finished_signal.emit.assert_called_with(ExecutionState.CONTINUE)
         self.assertIsNone(tool.instance)
 
     def test_input_file_not_found_at_execution(self):
@@ -462,7 +463,7 @@ class TestToolExecution(unittest.TestCase):
             ProjectItemResource(None, "file", url=Path(input_path).as_uri())
         ]
         tool.execute()
-        mock_exec_inst.project_item_execution_finished_signal.emit.assert_called_with(-1)
+        mock_exec_inst.project_item_execution_finished_signal.emit.assert_called_with(ExecutionState.ABORT)
         self.assertIsNone(tool.instance)
         # Check that no resources are advertised
         mock_exec_inst.advertise_resources.assert_not_called()

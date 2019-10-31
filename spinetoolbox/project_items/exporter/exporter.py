@@ -22,6 +22,7 @@ import logging
 import pathlib
 import os.path
 from PySide2.QtCore import Slot
+from spinetoolbox.executioner import ExecutionState
 from spinetoolbox.project_item import ProjectItem, ProjectItemResource
 from spinetoolbox.spine_io.exporters import gdx
 from .widgets.gdx_export_settings import GdxExportSettings
@@ -132,14 +133,14 @@ class Exporter(ProjectItem):
         self._toolbox.msg.emit("")
         self._toolbox.msg.emit("Executing Exporter <b>{}</b>".format(self.name))
         self._toolbox.msg.emit("***")
-        success = 0
-        abort = -1
         gams_system_directory = self._resolve_gams_system_directory()
         for url in self._database_urls:
             file_name = self._database_to_file_name_map.get(url, None)
             if file_name is None:
                 self._toolbox.msg_error.emit("No file name given to export database {}.".format(url))
-                self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(abort)
+                self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(
+                    ExecutionState.ABORT
+                )
                 return
             database_map = self._project.db_mngr.get_db_map(url)
             settings = self._settings.get(url, None)
@@ -154,12 +155,14 @@ class Exporter(ProjectItem):
         paths = [os.path.join(self.data_dir, file_name) for file_name in self._database_to_file_name_map.values()]
         resources = [ProjectItemResource(self, "file", url=pathlib.Path(path).as_uri()) for path in paths]
         execution_instance.advertise_resources(self.name, *resources)
-        execution_instance.project_item_execution_finished_signal.emit(success)
+        execution_instance.project_item_execution_finished_signal.emit(ExecutionState.CONTINUE)
 
     def stop_execution(self):
         """Stops executing this item."""
         self._toolbox.msg.emit("Stopping {0}".format(self.name))
-        self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(-2)
+        self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(
+            ExecutionState.STOP_REQUESTED
+        )
 
     def simulate_execution(self, inst):
         """Simulates executing this item."""

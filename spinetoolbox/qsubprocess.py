@@ -18,6 +18,7 @@ Module to handle running tools in a QProcess.
 
 import logging
 from PySide2.QtCore import QObject, QProcess, Slot, Signal
+from .executioner import ExecutionState
 
 
 class QSubProcess(QObject):
@@ -190,7 +191,9 @@ class QSubProcess(QObject):
             # Delete QProcess
             self._process.deleteLater()
             self._process = None
-            self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(-2)
+            self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(
+                ExecutionState.STOP_REQUESTED
+            )
 
     @Slot(int, name="process_finished")
     def process_finished(self, exit_code):
@@ -226,7 +229,9 @@ class QSubProcess(QObject):
                     self.error_output = errout.strip()
         else:
             self._toolbox.msg.emit("*** Terminating process ***")
-            self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(-2)
+            self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(
+                ExecutionState.STOP_REQUESTED
+            )
         # Delete QProcess
         self._process.deleteLater()
         self._process = None

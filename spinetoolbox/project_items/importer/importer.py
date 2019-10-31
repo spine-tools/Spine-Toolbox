@@ -21,6 +21,7 @@ import os
 from PySide2.QtCore import Qt, Slot, QFileInfo
 from PySide2.QtGui import QStandardItem, QStandardItemModel
 from PySide2.QtWidgets import QFileIconProvider, QListWidget, QDialog, QVBoxLayout, QDialogButtonBox
+from spinetoolbox.executioner import ExecutionState
 from spinetoolbox.project_item import ProjectItem, ProjectItemResource
 from spinetoolbox.helpers import create_dir, create_log_file_timestamp
 from spinetoolbox.spine_io.importers.csv_reader import CSVConnector
@@ -296,13 +297,13 @@ class Importer(ProjectItem):
             self._toolbox.msg_error.emit(
                 "There where errors while executing <b>{0}</b>. {1}".format(self.name, logfile_anchor)
             )
-            self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(-1)
+            self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(ExecutionState.ABORT)
         if all_data:
             # Add mapped data to a dict in the execution instance.
             # If execution reaches a Data Store, the mapped data will be imported into the corresponding url
             resource = ProjectItemResource(self, "data", data=all_data, metadata=dict(for_import=True))
             inst.advertise_resources(self.name, resource)
-        self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(0)  # 0 success
+        self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(ExecutionState.CONTINUE)
 
     def stop_execution(self):
         """Stops executing this Importer."""

@@ -16,14 +16,14 @@ Module for data store class.
 :date:   18.12.2017
 """
 
-import sys
 import os
 import logging
+import spinedb_api
 from PySide2.QtCore import Slot, Qt
 from PySide2.QtWidgets import QMessageBox, QFileDialog, QApplication
 from sqlalchemy import create_engine
 from sqlalchemy.engine.url import make_url, URL
-import spinedb_api
+from spinetoolbox.executioner import ExecutionState
 from spinetoolbox.project_item import ProjectItem, ProjectItemResource
 from spinetoolbox.widgets.tree_view_widget import TreeViewForm
 from spinetoolbox.widgets.graph_view_widget import GraphViewForm
@@ -594,12 +594,14 @@ class DataStore(ProjectItem):
                         "{1}".format(self.name, logfile_anchor)
                     )
         self._toolbox.msg.emit("***")
-        self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(0)  # 0 success
+        self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(ExecutionState.CONTINUE)
 
     def stop_execution(self):
         """Stops executing this Data Store."""
         self._toolbox.msg.emit("Stopping {0}".format(self.name))
-        self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(-2)
+        self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(
+            ExecutionState.STOP_REQUESTED
+        )
 
     def simulate_execution(self, inst):
         """Simulates executing this Data Store."""
