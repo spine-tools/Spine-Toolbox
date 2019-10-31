@@ -19,7 +19,7 @@
     <x>0</x>
     <y>0</y>
     <width>400</width>
-    <height>177</height>
+    <height>203</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -96,38 +96,48 @@
           </item>
          </widget>
         </item>
-        <item row="2" column="0">
+        <item row="3" column="0">
          <widget class="QLabel" name="ignore_columns_label">
           <property name="text">
            <string>Ignore columns:</string>
           </property>
          </widget>
         </item>
-        <item row="2" column="1">
+        <item row="3" column="1">
          <widget class="QPushButton" name="ignore_columns_button">
           <property name="text">
            <string/>
           </property>
          </widget>
         </item>
-        <item row="3" column="0">
+        <item row="4" column="0">
          <widget class="QLabel" name="dimension_label">
           <property name="text">
            <string>Dimension:</string>
           </property>
          </widget>
         </item>
-        <item row="3" column="1">
+        <item row="4" column="1">
          <widget class="QSpinBox" name="dimension_spin_box">
           <property name="minimum">
            <number>1</number>
           </property>
          </widget>
         </item>
-        <item row="4" column="1">
+        <item row="5" column="1">
          <widget class="QCheckBox" name="import_objects_check_box">
           <property name="text">
            <string>Import objects</string>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="1">
+         <widget class="QSpinBox" name="start_read_row_spin_box"/>
+        </item>
+        <item row="2" column="0">
+         <widget class="QLabel" name="read_start_row_label">
+          <property name="text">
+           <string>Read data from row:</string>
           </property>
          </widget>
         </item>

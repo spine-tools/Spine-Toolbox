@@ -183,12 +183,14 @@ class MappingPreviewModel(MinimalTableModel):
             return QColor(Qt.red)
 
     def data(self, index, role=Qt.DisplayRole):
-        if index.row() > self._mapping.last_pivot_row:
+        if index.row() > max(self._mapping.last_pivot_row, self._mapping.read_start_row-1):
             if (index.row(), index.column()) in self._column_type_errors:
                 return self.data_error(index, role)
-        elif index.column() not in mapping_non_pivoted_columns(self._mapping._model, self.columnCount(), self.header) and index.column() not in self._mapping.skip_columns:
-            if (index.row(), index.column()) in self._row_type_errors:
-                return self.data_error(index, role, orientation=Qt.Vertical)
+
+        if index.row() <= self._mapping.last_pivot_row:
+            if index.column() not in mapping_non_pivoted_columns(self._mapping._model, self.columnCount(), self.header) and index.column() not in self._mapping.skip_columns:
+                if (index.row(), index.column()) in self._row_type_errors:
+                    return self.data_error(index, role, orientation=Qt.Vertical)
 
         if role == Qt.BackgroundColorRole and self._mapping:
             return self.data_color(index)
@@ -208,7 +210,7 @@ class MappingPreviewModel(MinimalTableModel):
             # parameter colors
             if mapping.is_pivoted() and mapping.parameters.parameter_type != "definition":
                 # parameter values color
-                last_row = mapping.last_pivot_row()
+                last_row = max(mapping.last_pivot_row(), mapping.read_start_row-1)
                 if (
                     last_row is not None
                     and index.row() > last_row
@@ -267,10 +269,10 @@ class MappingPreviewModel(MinimalTableModel):
             if index.column() == ref:
                 if self._mapping._model.is_pivoted():
                     # only rows below pivoted rows
-                    last_row = self._mapping._model.last_pivot_row()
+                    last_row = max(self._mapping._model.last_pivot_row(), self._mapping.read_start_row-1)
                     if last_row is not None and index.row() > last_row:
                         return True
-                else:
+                elif index.row() >= self._mapping.read_start_row:
                     return True
         if mapping.map_type == "row":
             if index.row() == mapping.value_reference:
@@ -362,6 +364,17 @@ class MappingSpecModel(QAbstractTableModel):
         if self._model:
             return self._model.is_pivoted()
         return False
+    
+    @property
+    def read_start_row(self):
+        if self._model:
+            return self._model.read_start_row
+        return 0
+    
+    def set_read_start_row(self, row):
+        if self._model:
+            self._model.read_start_row = row
+        self.dataChanged.emit(QModelIndex, QModelIndex, [])
 
     def set_import_objects(self, flag):
         self._model.import_objects = bool(flag)
