@@ -10,10 +10,10 @@
 ######################################################################################################################
 
 """
-Spine Toolbox project class.
+Spine DB Signaller class.
 
-:authors: P. Savolainen (VTT), E. Rinne (VTT)
-:date:   10.1.2018
+:authors: M. Marin (KTH)
+:date:   31.10.2019
 """
 
 from PySide2.QtCore import Slot
