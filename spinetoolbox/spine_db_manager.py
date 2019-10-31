@@ -146,7 +146,7 @@ class SpineDBManager(QObject):
 
     def connect_signals(self):
         """Connects signals."""
-        # Cache
+        # Add to cache
         self.object_classes_added.connect(lambda db_map_data: self.cache_items("object class", db_map_data))
         self.objects_added.connect(lambda db_map_data: self.cache_items("object", db_map_data))
         self.relationship_classes_added.connect(lambda db_map_data: self.cache_items("relationship class", db_map_data))
@@ -155,7 +155,7 @@ class SpineDBManager(QObject):
             lambda db_map_data: self.cache_items("parameter definition", db_map_data)
         )
         self.parameter_values_added.connect(lambda db_map_data: self.cache_items("parameter value", db_map_data))
-        # Discard
+        # Remove from cache
         self.object_classes_removed.connect(lambda db_map_data: self.uncache_items("object class", db_map_data))
         self.objects_removed.connect(lambda db_map_data: self.uncache_items("object", db_map_data))
         self.relationship_classes_removed.connect(
@@ -166,7 +166,7 @@ class SpineDBManager(QObject):
             lambda db_map_data: self.uncache_items("parameter definition", db_map_data)
         )
         self.parameter_values_removed.connect(lambda db_map_data: self.uncache_items("parameter value", db_map_data))
-        # Update cache
+        # Update in cache
         self.object_classes_updated.connect(lambda db_map_data: self.cache_items("object class", db_map_data))
         self.objects_updated.connect(lambda db_map_data: self.cache_items("object", db_map_data))
         self.relationship_classes_updated.connect(
@@ -354,7 +354,8 @@ class SpineDBManager(QObject):
 
     def get_value(self, db_map, item_type, id_, field, role=Qt.DisplayRole):
         item = self.get_item(db_map, item_type, id_)
-        if "formatted_value" not in item:
+        key = "formatted_" + field
+        if key not in item:
             try:
                 parsed_value = from_database(item[field])
             except ParameterValueFormatError as error:
@@ -363,12 +364,8 @@ class SpineDBManager(QObject):
             else:
                 display_data = self._display_data(parsed_value)
                 tool_tip_data = self._tool_tip_data(parsed_value)
-            item["formatted_value"] = {
-                Qt.DisplayRole: display_data,
-                Qt.ToolTipRole: tool_tip_data,
-                Qt.EditRole: str(item[field]),
-            }
-        return item["formatted_value"].get(role)
+            item[key] = {Qt.DisplayRole: display_data, Qt.ToolTipRole: tool_tip_data, Qt.EditRole: str(item[field])}
+        return item[key].get(role)
 
     @staticmethod
     def _display_data(parsed_value):

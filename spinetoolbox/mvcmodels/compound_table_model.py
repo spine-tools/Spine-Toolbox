@@ -224,7 +224,7 @@ class CompoundWithEmptyTableModel(CompoundTableModel):
         raise NotImplementedError()
 
     def init_model(self):
-        """Initializes the compound model. Basically populates the sub_models list attribute 
+        """Initializes the compound model. Basically populates the sub_models list attribute
         with the result of _create_single_models and _create_empty_model.
         """
         self.clear_model()
