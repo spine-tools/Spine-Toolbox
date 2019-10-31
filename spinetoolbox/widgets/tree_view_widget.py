@@ -32,7 +32,7 @@ from .custom_menus import (
 from .import_widget import ImportDialog
 from .report_plotting_failure import report_plotting_failure
 from .edit_db_items_dialogs import RemoveEntitiesDialog
-from ..mvcmodels.entity_tree_models import ObjectTreeModel, RelationshipTreeModel
+from ..mvcmodels.entity_tree_models import RelationshipTreeModel
 from ..excel_import_export import export_spine_database_to_xlsx
 from ..helpers import busy_effect
 from ..plotting import plot_selection, PlottingError, GraphAndTreeViewPlottingHints
@@ -54,10 +54,7 @@ class TreeViewForm(DataStoreForm):
         tic = time.process_time()
         super().__init__(project, Ui_MainWindow(), *db_maps)
         self.takeCentralWidget()
-        # Object tree model
-        self.object_tree_model = ObjectTreeModel(self, self.db_mngr, *db_maps)
         self.relationship_tree_model = RelationshipTreeModel(self, self.db_mngr, *db_maps)
-        self.ui.treeView_object.setModel(self.object_tree_model)
         self.ui.treeView_relationship.setModel(self.relationship_tree_model)
         # Others
         self._selection_source = None
@@ -246,9 +243,6 @@ class TreeViewForm(DataStoreForm):
         if not focus_widget:
             return
         focus_widget.paste()
-        if self.err_msg.isVisible():
-            # TODO: Find out why this is needed
-            del self
 
     # TODO: nothing connected to these two below
 
@@ -368,6 +362,30 @@ class TreeViewForm(DataStoreForm):
         self.ui.treeView_object.setCurrentIndex(next_index)
         self.ui.treeView_object.scrollTo(next_index)
         self.ui.treeView_object.expand(next_index)
+
+    def receive_relationship_classes_added(self, db_map_data):
+        super().receive_relationship_classes_added(db_map_data)
+        self.relationship_tree_model.add_relationship_classes(db_map_data)
+
+    def receive_relationships_added(self, db_map_data):
+        super().receive_relationships_added(db_map_data)
+        self.relationship_tree_model.add_relationships(db_map_data)
+
+    def receive_relationship_classes_updated(self, db_map_data):
+        super().receive_relationship_classes_updated(db_map_data)
+        self.relationship_tree_model.update_relationship_classes(db_map_data)
+
+    def receive_relationships_updated(self, db_map_data):
+        super().receive_relationships_updated(db_map_data)
+        self.relationship_tree_model.update_relationships(db_map_data)
+
+    def receive_relationship_classes_removed(self, db_map_data):
+        super().receive_relationship_classes_removed(db_map_data)
+        self.relationship_tree_model.remove_relationship_classes(db_map_data)
+
+    def receive_relationships_removed(self, db_map_data):
+        super().receive_relationships_removed(db_map_data)
+        self.relationship_tree_model.remove_relationships(db_map_data)
 
     def _accept_selection(self, widget):
         """Clears selection from all widgets except the given one, so there's only one selection

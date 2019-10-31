@@ -15,7 +15,7 @@ Empty models for parameter definitions and values.
 :authors: M. Marin (KTH)
 :date:   28.6.2019
 """
-from PySide2.QtCore import Qt, Slot
+from PySide2.QtCore import Qt
 from ..mvcmodels.empty_row_model import EmptyRowModel
 from ..mvcmodels.parameter_mixins import (
     FillInParameterNameMixin,
@@ -43,7 +43,6 @@ class EmptyParameterModel(EmptyRowModel):
         """
         super().__init__(parent, header)
         self.db_mngr = db_mngr
-        self.connect_db_mngr_signals()
 
     @property
     def entity_class_type(self):
@@ -85,7 +84,6 @@ class EmptyParameterModel(EmptyRowModel):
         it's a definition or value model. Used by receive_parameter_data_added."""
         raise NotImplementedError()
 
-    @Slot("QVariant")
     def receive_parameter_data_added(self, db_map_data):
         """Runs when parameter definitions or values are added.
         Finds and removes model items that were successfully added to the db."""
@@ -144,10 +142,6 @@ class EmptyParameterDefinitionModel(
     FillInValueListIdMixin, FillInEntityClassIdMixin, FillInParameterNameMixin, EmptyParameterModel
 ):
     """An empty parameter definition model."""
-
-    def connect_db_mngr_signals(self):
-        """Connect db mngr signals."""
-        self.db_mngr.parameter_definitions_added.connect(self.receive_parameter_data_added)
 
     def add_items_to_db(self, rows):
         """Add items to db.
@@ -233,10 +227,6 @@ class EmptyParameterValueModel(
     def entity_name_key_in_cache(self):
         return {"object": "name", "relationship": "object_name_list"}[self.entity_type]
 
-    def connect_db_mngr_signals(self):
-        """Connect db mngr signals."""
-        self.db_mngr.parameter_values_added.connect(self.receive_parameter_data_added)
-
     def _make_unique_id(self, item):
         """Returns a unique id for the given model item (name-based). Used by receive_parameter_data_added."""
         return (*super()._make_unique_id(item), item.get(self.entity_name_key))
@@ -299,12 +289,6 @@ class EmptyRelationshipParameterValueModel(MakeRelationshipOnTheFlyMixin, EmptyP
         """Returns relationship parameter values. Used by receive_parameter_data_added."""
         return self.db_mngr.get_relationship_parameter_values(db_map, ids=ids)
 
-    def connect_db_mngr_signals(self):
-        """Connect db mngr signals."""
-        super().connect_db_mngr_signals()
-        self.db_mngr.relationships_added.connect(self.receive_relationships_added)
-
-    @Slot("QVariant")
     def receive_relationships_added(self, db_map_data):
         """Runs when relationships are added.
         Finds affected rows and call add_items_to_db with them."""

@@ -17,7 +17,7 @@ These models concatenate several 'single' models and one 'empty' model.
 :date:   28.6.2019
 """
 
-from PySide2.QtCore import Qt, Signal, Slot, QModelIndex
+from PySide2.QtCore import Qt, Signal, QModelIndex
 from PySide2.QtGui import QFont, QIcon
 from ..helpers import busy_effect, rows_to_row_count_tuples
 from .compound_table_model import CompoundWithEmptyTableModel
@@ -57,7 +57,6 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         self.db_maps = db_maps
         self._auto_filter = dict()
         self._selected_entity_class_ids = {}
-        self.connect_db_mngr_signals()
 
     @property
     def entity_class_type(self):
@@ -101,16 +100,10 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
             self.entity_class_type
         ]
 
-    def connect_db_mngr_signals(self):
-        """Connect signals from database manager.
-        Reimplement in subclasses.
-        """
-
     def _models_with_db_map(self, db_map):
         """Returns a collection of models having the given db_map."""
         return [m for m in self.single_models if m.db_map == db_map]
 
-    @Slot("QVariant")
     def receive_entity_classes_removed(self, db_map_data):
         """Runs entity classes are removed. Remove submodels for those entity classes."""
         self.layoutAboutToBeChanged.emit()
@@ -124,14 +117,12 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         self.do_refresh()
         self.layoutChanged.emit()
 
-    @Slot("QVariant")
     def receive_parameter_data_updated(self, db_map_data):
         """Runs when either parameter definitions or values are updated."""
         self._emit_data_changed_for_column("parameter_name")
         # TODO: parameter definition names aren't refreshed unless we emit dataChanged,
         # whereas entity and class names don't need it. Why?
 
-    @Slot("QVariant")
     def receive_parameter_data_removed(self, db_map_data):
         """Runs when either parameter definitions or values are removed."""
         self.layoutAboutToBeChanged.emit()
@@ -152,7 +143,6 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         self.do_refresh()
         self.layoutChanged.emit()
 
-    @Slot("QVariant")
     def receive_parameter_data_added(self, db_map_data):
         """Runs when either parameter definitions or values are added."""
         new_models = []
@@ -170,6 +160,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
                 new_models.append(model)
         pos = len(self.single_models)
         self.sub_models[pos:pos] = new_models
+        self.empty_model.receive_parameter_data_added(db_map_data)
 
     def headerData(self, section, orientation=Qt.Horizontal, role=Qt.DisplayRole):
         """Use italic font for columns having an autofilter installed."""
@@ -319,13 +310,11 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         Args:
             field (str): the column header
         """
-        return
         try:
             column = self.header.index(field)
         except ValueError:
-            pass
-        else:
-            self.dataChanged.emit(self.index(0, column), self.index(self.rowCount() - 1, column), [Qt.DisplayRole])
+            return
+        self.dataChanged.emit(self.index(0, column), self.index(self.rowCount() - 1, column), [Qt.DisplayRole])
 
 
 class CompoundObjectParameterMixin:
@@ -334,11 +323,6 @@ class CompoundObjectParameterMixin:
     @property
     def entity_class_type(self):
         return "object class"
-
-    def connect_db_mngr_signals(self):
-        """Connect signals from database manager."""
-        super().connect_db_mngr_signals()
-        self.db_mngr.object_classes_removed.connect(self.receive_entity_classes_removed)
 
     def _get_entity_classes(self, db_map):
         """Returns a query of object classes to populate the model."""
@@ -352,11 +336,6 @@ class CompoundRelationshipParameterMixin:
     def entity_class_type(self):
         return "relationship class"
 
-    def connect_db_mngr_signals(self):
-        """Connect signals from database manager."""
-        super().connect_db_mngr_signals()
-        self.db_mngr.relationship_classes_removed.connect(self.receive_entity_classes_removed)
-
     def _get_entity_classes(self, db_map):
         """Returns a query of relationship classes to populate the model."""
         return self.db_mngr.get_relationship_classes(db_map)
@@ -368,13 +347,6 @@ class CompoundParameterDefinitionMixin:
     @property
     def item_type(self):
         return "parameter definition"
-
-    def connect_db_mngr_signals(self):
-        """Connect db manager signals."""
-        super().connect_db_mngr_signals()
-        self.db_mngr.parameter_definitions_updated.connect(self.receive_parameter_data_updated)
-        self.db_mngr.parameter_definitions_removed.connect(self.receive_parameter_data_removed)
-        self.db_mngr.parameter_definitions_added.connect(self.receive_parameter_data_added)
 
 
 class CompoundParameterValueMixin:
@@ -398,13 +370,6 @@ class CompoundParameterValueMixin:
             self.parent().selected_ent_ids[self.entity_type].get((model.db_map, model.entity_class_id), set()),
         )
         return a or b
-
-    def connect_db_mngr_signals(self):
-        """Connect db manager signals."""
-        super().connect_db_mngr_signals()
-        self.db_mngr.parameter_values_updated.connect(self.receive_parameter_data_updated)
-        self.db_mngr.parameter_values_removed.connect(self.receive_parameter_data_removed)
-        self.db_mngr.parameter_values_added.connect(self.receive_parameter_data_added)
 
 
 class CompoundObjectParameterDefinitionModel(
@@ -480,3 +445,6 @@ class CompoundRelationshipParameterValueModel(
     @property
     def entity_type(self):
         return "relationship"
+
+    def receive_relationships_added(self, db_map_data):
+        self.empty_model.receive_relationships_added(db_map_data)

@@ -28,7 +28,6 @@ from .custom_menus import SimpleEditableParameterValueContextMenu, ObjectItemCon
 from .custom_qwidgets import ZoomWidget
 from .report_plotting_failure import report_plotting_failure
 from .shrinking_scene import ShrinkingScene
-from ..mvcmodels.entity_tree_models import ObjectTreeModel
 from ..mvcmodels.entity_list_models import ObjectClassListModel, RelationshipClassListModel
 from ..graph_view_graphics_items import ObjectItem, ArcItem, InteractiveTextItem
 from ..helpers import busy_effect
@@ -62,9 +61,6 @@ class GraphViewForm(DataStoreForm):
         self.arc_token_color.setAlphaF(0.8)
         self.arc_color = self.palette().color(QPalette.Normal, QPalette.WindowText)
         self.arc_color.setAlphaF(0.8)
-        # Object tree model
-        self.object_tree_model = ObjectTreeModel(self, self.db_mngr, self.db_map)
-        self.ui.treeView_object.setModel(self.object_tree_model)
         # Data for ObjectItems
         self.object_ids = list()
         # Data for ArcItems
@@ -285,7 +281,31 @@ class GraphViewForm(DataStoreForm):
         self.relationship_parameter_definition_model.has_empty_row = not self.read_only
         super().init_parameter_definition_models()
 
-    @Slot("QVariant", name="receive_objects_added")
+    def receive_object_classes_added(self, db_map_data):
+        super().receive_object_classes_added(db_map_data)
+        self.object_class_list_model.receive_entity_classes_added(db_map_data)
+
+    def receive_object_classes_updated(self, db_map_data):
+        super().receive_object_classes_updated(db_map_data)
+        self.object_class_list_model.receive_entity_classes_updated(db_map_data)
+        self.refresh_object_icons(db_map_data)
+
+    def receive_object_classes_removed(self, db_map_data):
+        super().receive_object_classes_removed(db_map_data)
+        self.object_class_list_model.receive_entity_classes_removed(db_map_data)
+
+    def receive_relationship_classes_added(self, db_map_data):
+        super().receive_relationship_classes_added(db_map_data)
+        self.relationship_class_list_model.receive_entity_classes_added(db_map_data)
+
+    def receive_relationship_classes_updated(self, db_map_data):
+        super().receive_relationship_classes_updated(db_map_data)
+        self.relationship_class_list_model.receive_entity_classes_updated(db_map_data)
+
+    def receive_relationship_classes_removed(self, db_map_data):
+        super().receive_relationship_classes_removed(db_map_data)
+        self.relationship_class_list_model.receive_entity_classes_removed(db_map_data)
+
     def receive_objects_added(self, db_map_data):
         """Runs when objects are added to the db.
         Builds a lookup dictionary consumed by ``add_object``.
@@ -296,7 +316,6 @@ class GraphViewForm(DataStoreForm):
         super().receive_objects_added(db_map_data)
         self._added_objects = {(x["class_id"], x["name"]): x["id"] for x in db_map_data.get(self.db_map, [])}
 
-    @Slot("QVariant", name="receive_objects_removed")
     def receive_objects_removed(self, db_map_data):
         """Runs when objects are removed from the db. Rebuilds graph if needed.
 
@@ -309,7 +328,6 @@ class GraphViewForm(DataStoreForm):
         if object_ids.intersection(removed_ids):
             self.build_graph()
 
-    @Slot("QVariant", name="receive_objects_updated")
     def receive_objects_updated(self, db_map_data):
         """Runs when objects are updated in the db. Refreshes names of objects in graph.
 
@@ -324,22 +342,6 @@ class GraphViewForm(DataStoreForm):
         for item in object_items:
             item.refresh_name()
 
-    @Slot("QVariant", name="receive_object_classes_updated")
-    def receive_object_classes_updated(self, db_map_data):
-        """Runs when objects classes are updated in the db. Refreshes icons of objects in graph.
-
-        Args:
-            db_map_data (dict): list of dictionary-items keyed by DiffDatabaseMapping instance.
-        """
-        super().receive_object_classes_updated(db_map_data)
-        updated_ids = {x["id"] for x in db_map_data.get(self.db_map, [])}
-        object_items = [
-            x for x in self.ui.graphicsView.items() if isinstance(x, ObjectItem) and x.object_class_id in updated_ids
-        ]
-        for item in object_items:
-            item.refresh_icon()
-
-    @Slot("QVariant", name="receive_relationships_added")
     def receive_relationships_added(self, db_map_data):
         """Runs when relationships are added to the db.
         Builds a lookup dictionary consumed by ``add_relationship``.
@@ -351,6 +353,19 @@ class GraphViewForm(DataStoreForm):
         self._added_relationships = {
             (x["class_id"], x["object_id_list"]): x["id"] for x in db_map_data.get(self.db_map, [])
         }
+
+    def refresh_object_icons(self, db_map_data):
+        """Runs when objects classes are updated in the db. Refreshes icons of objects in graph.
+
+        Args:
+            db_map_data (dict): list of dictionary-items keyed by DiffDatabaseMapping instance.
+        """
+        updated_ids = {x["id"] for x in db_map_data.get(self.db_map, [])}
+        object_items = [
+            x for x in self.ui.graphicsView.items() if isinstance(x, ObjectItem) and x.object_class_id in updated_ids
+        ]
+        for item in object_items:
+            item.refresh_icon()
 
     @Slot("QModelIndex", name="_add_more_object_classes")
     def _add_more_object_classes(self, index):
@@ -709,9 +724,6 @@ class GraphViewForm(DataStoreForm):
         scene = self.ui.graphicsView.scene()
         if not scene:
             return
-        for item in scene.items():
-            if isinstance(item, (ObjectItem, ArcItem)):
-                del item._graph_view_form
         scene.deleteLater()
 
     def extend_scene(self):
@@ -1134,5 +1146,4 @@ class GraphViewForm(DataStoreForm):
             event (QEvent): Closing event if 'X' is clicked.
         """
         super().closeEvent(event)
-        del self.ui.treeView_object.qsettings
         self.tear_down_scene()

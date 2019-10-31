@@ -16,6 +16,7 @@ Contains the DataStoreForm class, parent class of TreeViewForm and GraphViewForm
 :date:   26.11.2018
 """
 
+import gc
 from PySide2.QtWidgets import QMainWindow, QHeaderView, QDialog, QMessageBox, QCheckBox, QErrorMessage
 from PySide2.QtCore import Qt, Signal, Slot
 from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QIcon
@@ -52,6 +53,7 @@ from .manage_db_items_dialog import CommitDialog
 from ..widgets.parameter_value_editor import ParameterValueEditor
 from ..widgets.toolbars import ParameterTagToolBar
 from ..widgets.custom_qwidgets import NotificationIcon
+from ..mvcmodels.entity_tree_models import ObjectTreeModel
 from ..mvcmodels.compound_parameter_models import (
     CompoundObjectParameterDefinitionModel,
     CompoundObjectParameterValueModel,
@@ -79,6 +81,7 @@ class DataStoreForm(QMainWindow):
         """Initialize class."""
         super().__init__(flags=Qt.Window)
         self._project = project
+        self._project.db_signaller.add_listener(self)
         # Setup UI from Qt Designer file
         self.ui = ui
         self.ui.setupUi(self)
@@ -102,6 +105,8 @@ class DataStoreForm(QMainWindow):
         self.parameter_tag_toolbar = ParameterTagToolBar(self, self.db_mngr, *db_maps)
         self.addToolBar(Qt.TopToolBarArea, self.parameter_tag_toolbar)
         # Models
+        self.object_tree_model = ObjectTreeModel(self, self.db_mngr, *db_maps)
+        self.ui.treeView_object.setModel(self.object_tree_model)
         self.object_parameter_value_model = CompoundObjectParameterValueModel(self, self.db_mngr, *db_maps)
         self.relationship_parameter_value_model = CompoundRelationshipParameterValueModel(self, self.db_mngr, *db_maps)
         self.object_parameter_definition_model = CompoundObjectParameterDefinitionModel(self, self.db_mngr, *db_maps)
@@ -142,36 +147,6 @@ class DataStoreForm(QMainWindow):
 
     def connect_signals(self):
         """Connect signals to slots."""
-        # DB manager
-        # Added
-        self.db_mngr.object_classes_added.connect(self.receive_object_classes_added)
-        self.db_mngr.objects_added.connect(self.receive_objects_added)
-        self.db_mngr.relationship_classes_added.connect(self.receive_relationship_classes_added)
-        self.db_mngr.relationships_added.connect(self.receive_relationships_added)
-        self.db_mngr.parameter_definitions_added.connect(self.receive_parameter_definitions_added)
-        self.db_mngr.parameter_values_added.connect(self.receive_parameter_values_added)
-        self.db_mngr.parameter_value_lists_added.connect(self.receive_parameter_value_lists_added)
-        self.db_mngr.parameter_tags_added.connect(self.receive_parameter_tags_added)
-        # Updated
-        self.db_mngr.object_classes_updated.connect(self.receive_object_classes_updated)
-        self.db_mngr.objects_updated.connect(self.receive_objects_updated)
-        self.db_mngr.relationship_classes_updated.connect(self.receive_relationship_classes_updated)
-        self.db_mngr.relationships_updated.connect(self.receive_relationships_updated)
-        self.db_mngr.parameter_definitions_updated.connect(self.receive_parameter_definitions_updated)
-        self.db_mngr.parameter_values_updated.connect(self.receive_parameter_values_updated)
-        self.db_mngr.parameter_value_lists_updated.connect(self.receive_parameter_value_lists_updated)
-        self.db_mngr.parameter_tags_updated.connect(self.receive_parameter_tags_updated)
-        # Removed
-        self.db_mngr.object_classes_removed.connect(self.receive_object_classes_removed)
-        self.db_mngr.objects_removed.connect(self.receive_objects_removed)
-        self.db_mngr.relationship_classes_removed.connect(self.receive_relationship_classes_removed)
-        self.db_mngr.relationships_removed.connect(self.receive_relationships_removed)
-        self.db_mngr.parameter_definitions_removed.connect(self.receive_parameter_definitions_removed)
-        self.db_mngr.parameter_values_removed.connect(self.receive_parameter_values_removed)
-        self.db_mngr.parameter_value_lists_removed.connect(self.receive_parameter_value_lists_removed)
-        self.db_mngr.parameter_tags_removed.connect(self.receive_parameter_tags_removed)
-        # Error
-        self.db_mngr.msg_error.connect(self.receive_db_mngr_error_msg)
         # Message signals
         self.msg.connect(self.add_message)
         self.msg_error.connect(self.err_msg.showMessage)
@@ -569,101 +544,112 @@ class DataStoreForm(QMainWindow):
         msg += "</html>"
         self.msg.emit(msg)
 
-    @Slot("QVariant")
     def receive_object_classes_added(self, db_map_data):
         self.notify_items_changed("added", "object class", db_map_data)
+        self.object_tree_model.add_object_classes(db_map_data)
 
-    @Slot("QVariant")
     def receive_objects_added(self, db_map_data):
         self.notify_items_changed("added", "object", db_map_data)
+        self.object_tree_model.add_objects(db_map_data)
 
-    @Slot("QVariant")
     def receive_relationship_classes_added(self, db_map_data):
         self.notify_items_changed("added", "relationship class", db_map_data)
+        self.object_tree_model.add_relationship_classes(db_map_data)
 
-    @Slot("QVariant")
     def receive_relationships_added(self, db_map_data):
         self.notify_items_changed("added", "relationship", db_map_data)
+        self.object_tree_model.add_relationships(db_map_data)
+        self.relationship_parameter_value_model.receive_relationships_added(db_map_data)
 
-    @Slot("QVariant")
     def receive_parameter_definitions_added(self, db_map_data):
         self.notify_items_changed("added", "parameter definition", db_map_data)
+        self.object_parameter_definition_model.receive_parameter_data_added(db_map_data)
+        self.relationship_parameter_definition_model.receive_parameter_data_added(db_map_data)
 
-    @Slot("QVariant")
     def receive_parameter_values_added(self, db_map_data):
         self.notify_items_changed("added", "parameter value", db_map_data)
+        self.object_parameter_value_model.receive_parameter_data_added(db_map_data)
+        self.relationship_parameter_value_model.receive_parameter_data_added(db_map_data)
 
-    @Slot("QVariant")
     def receive_parameter_value_lists_added(self, db_map_data):
         self.notify_items_changed("added", "parameter value list", db_map_data)
+        self.parameter_value_list_model.receive_parameter_value_lists_added(db_map_data)
 
-    @Slot("QVariant")
     def receive_parameter_tags_added(self, db_map_data):
         self.notify_items_changed("added", "parameter tag", db_map_data)
+        self.parameter_tag_toolbar.receive_parameter_tags_added(db_map_data)
 
-    @Slot("QVariant")
     def receive_object_classes_updated(self, db_map_data):
         self.notify_items_changed("updated", "object class", db_map_data)
+        self.object_tree_model.update_object_classes(db_map_data)
 
-    @Slot("QVariant")
     def receive_objects_updated(self, db_map_data):
         self.notify_items_changed("updated", "object", db_map_data)
+        self.object_tree_model.update_objects(db_map_data)
 
-    @Slot("QVariant")
     def receive_relationship_classes_updated(self, db_map_data):
         self.notify_items_changed("updated", "relationship class", db_map_data)
+        self.object_tree_model.update_relationship_classes(db_map_data)
 
-    @Slot("QVariant")
     def receive_relationships_updated(self, db_map_data):
         self.notify_items_changed("updated", "relationship", db_map_data)
+        self.object_tree_model.update_relationships(db_map_data)
 
-    @Slot("QVariant")
     def receive_parameter_definitions_updated(self, db_map_data):
         self.notify_items_changed("updated", "parameter definition", db_map_data)
+        self.object_parameter_definition_model.receive_parameter_data_updated(db_map_data)
+        self.relationship_parameter_definition_model.receive_parameter_data_updated(db_map_data)
 
-    @Slot("QVariant")
     def receive_parameter_values_updated(self, db_map_data):
         self.notify_items_changed("updated", "parameter value", db_map_data)
+        self.object_parameter_value_model.receive_parameter_data_updated(db_map_data)
+        self.relationship_parameter_value_model.receive_parameter_data_updated(db_map_data)
 
-    @Slot("QVariant")
     def receive_parameter_value_lists_updated(self, db_map_data):
         self.notify_items_changed("updated", "parameter value list", db_map_data)
+        self.parameter_value_list_model.receive_parameter_value_lists_updated(db_map_data)
 
-    @Slot("QVariant")
     def receive_parameter_tags_updated(self, db_map_data):
         self.notify_items_changed("updated", "parameter tag", db_map_data)
+        self.parameter_tag_toolbar.receive_parameter_tags_updated(db_map_data)
 
-    @Slot("QVariant")
     def receive_object_classes_removed(self, db_map_data):
         self.notify_items_changed("removed", "object class", db_map_data)
+        self.object_tree_model.remove_object_classes(db_map_data)
+        self.object_parameter_definition_model.receive_entity_classes_removed(db_map_data)
+        self.object_parameter_value_model.receive_entity_classes_removed(db_map_data)
 
-    @Slot("QVariant")
     def receive_objects_removed(self, db_map_data):
         self.notify_items_changed("removed", "object", db_map_data)
+        self.object_tree_model.remove_objects(db_map_data)
 
-    @Slot("QVariant")
     def receive_relationship_classes_removed(self, db_map_data):
         self.notify_items_changed("removed", "relationship class", db_map_data)
+        self.object_tree_model.remove_relationship_classes(db_map_data)
+        self.relationship_parameter_definition_model.receive_entity_classes_removed(db_map_data)
+        self.relationship_parameter_value_model.receive_entity_classes_removed(db_map_data)
 
-    @Slot("QVariant")
     def receive_relationships_removed(self, db_map_data):
         self.notify_items_changed("removed", "relationship", db_map_data)
+        self.object_tree_model.remove_relationships(db_map_data)
 
-    @Slot("QVariant")
     def receive_parameter_definitions_removed(self, db_map_data):
         self.notify_items_changed("removed", "parameter definition", db_map_data)
+        self.object_parameter_definition_model.receive_parameter_data_removed(db_map_data)
+        self.relationship_parameter_definition_model.receive_parameter_data_removed(db_map_data)
 
-    @Slot("QVariant")
     def receive_parameter_values_removed(self, db_map_data):
         self.notify_items_changed("removed", "parameter value", db_map_data)
+        self.object_parameter_value_model.receive_parameter_data_removed(db_map_data)
+        self.relationship_parameter_value_model.receive_parameter_data_removed(db_map_data)
 
-    @Slot("QVariant")
     def receive_parameter_value_lists_removed(self, db_map_data):
         self.notify_items_changed("removed", "parameter value list", db_map_data)
+        self.parameter_value_list_model.receive_parameter_value_lists_removed(db_map_data)
 
-    @Slot("QVariant")
     def receive_parameter_tags_removed(self, db_map_data):
         self.notify_items_changed("removed", "parameter tag", db_map_data)
+        self.parameter_tag_toolbar.receive_parameter_tags_removed(db_map_data)
 
     @busy_effect
     def show_parameter_value_editor(self, index, table_view, value=None):
@@ -799,4 +785,5 @@ class DataStoreForm(QMainWindow):
                 return
         # Save UI form state
         self.save_window_state()
+        self._project.db_signaller.remove_listener(self)
         event.accept()

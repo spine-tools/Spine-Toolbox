@@ -213,12 +213,6 @@ class ParameterTagToolBar(QToolBar):
         button.clicked.connect(lambda checked: self.manage_tags_action_triggered.emit(checked))
         self.setStyleSheet(PARAMETER_TAG_TOOLBAR_SS)
         self.setObjectName("ParameterTagToolbar")
-        self.connect_db_mngr_signals()
-
-    def connect_db_mngr_signals(self):
-        self.db_mngr.parameter_tags_added.connect(self.receive_parameter_tags_added)
-        self.db_mngr.parameter_tags_updated.connect(self.receive_parameter_tags_updated)
-        self.db_mngr.parameter_tags_removed.connect(self.receive_parameter_tags_removed)
 
     def init_toolbar(self):
         for button in self.tag_button_group.buttons():
@@ -248,7 +242,6 @@ class ParameterTagToolBar(QToolBar):
             lambda i, checked: self.tag_button_toggled.emit(self.db_map_ids[i], checked)
         )
 
-    @Slot("QVariant", name="receive_parameter_tags_added")
     def receive_parameter_tags_added(self, db_map_data):
         for db_map, parameter_tags in db_map_data.items():
             self._add_db_map_tag_actions(db_map, parameter_tags)
@@ -270,7 +263,6 @@ class ParameterTagToolBar(QToolBar):
                 self.db_map_ids.append([(db_map, parameter_tag["id"])])
                 action_texts.append(action.text())
 
-    @Slot("QVariant", name="receive_parameter_tags_removed")
     def receive_parameter_tags_removed(self, db_map_data):
         for db_map, parameter_tags in db_map_data.items():
             parameter_tag_ids = {x["id"] for x in parameter_tags}
@@ -284,7 +276,6 @@ class ParameterTagToolBar(QToolBar):
                 self.db_map_ids.pop(i)
                 self.removeAction(self.actions.pop(i))
 
-    @Slot("QVariant", name="receive_parameter_tags_updated")
     def receive_parameter_tags_updated(self, db_map_data):
         for db_map, parameter_tags in db_map_data.items():
             self._update_db_map_tag_actions(db_map, parameter_tags)

@@ -16,6 +16,7 @@ Module for data store class.
 :date:   18.12.2017
 """
 
+import sys
 import os
 import logging
 from PySide2.QtCore import Slot, Qt

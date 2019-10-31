@@ -47,7 +47,6 @@ class EntityTreeModel(MinimalTreeModel):
         self._root_item = None
         self.selected_indexes = dict()  # Maps item type to selected indexes
         self._selection_buffer = list()  # To restablish selected indexes after adding/removing rows
-        self.connect_db_mngr_signals()
 
     @property
     def root_item_type(self):
@@ -61,9 +60,6 @@ class EntityTreeModel(MinimalTreeModel):
     @property
     def root_index(self):
         return self.index_from_item(self._root_item)
-
-    def connect_db_mngr_signals(self):
-        """Connect db mngr signals to slots."""
 
     def build_tree(self):
         """Builds tree."""
@@ -167,20 +163,6 @@ class ObjectTreeModel(EntityTreeModel):
     """An 'object-oriented' tree model."""
 
     remove_icon = QIcon(":/icons/menu_icons/cube_minus.svg")
-
-    def connect_db_mngr_signals(self):
-        self.db_mngr.object_classes_added.connect(self.add_object_classes)
-        self.db_mngr.objects_added.connect(self.add_objects)
-        self.db_mngr.relationship_classes_added.connect(self.add_relationship_classes)
-        self.db_mngr.relationships_added.connect(self.add_relationships)
-        self.db_mngr.object_classes_removed.connect(self.remove_object_classes)
-        self.db_mngr.objects_removed.connect(self.remove_objects)
-        self.db_mngr.relationship_classes_removed.connect(self.remove_relationship_classes)
-        self.db_mngr.relationships_removed.connect(self.remove_relationships)
-        self.db_mngr.object_classes_updated.connect(self.update_object_classes)
-        self.db_mngr.objects_updated.connect(self.update_objects)
-        self.db_mngr.relationship_classes_updated.connect(self.update_relationship_classes)
-        self.db_mngr.relationships_updated.connect(self.update_relationships)
 
     @property
     def root_item_type(self):
@@ -352,14 +334,6 @@ class RelationshipTreeModel(EntityTreeModel):
     """A relationship-oriented tree model."""
 
     remove_icon = QIcon(":/icons/menu_icons/cubes_minus.svg")
-
-    def connect_db_mngr_signals(self):
-        self.db_mngr.relationship_classes_added.connect(self.add_relationship_classes)
-        self.db_mngr.relationships_added.connect(self.add_relationships)
-        self.db_mngr.relationship_classes_removed.connect(self.remove_relationship_classes)
-        self.db_mngr.relationships_removed.connect(self.remove_relationships)
-        self.db_mngr.relationship_classes_updated.connect(self.update_relationship_classes)
-        self.db_mngr.relationships_updated.connect(self.update_relationships)
 
     @property
     def root_item_type(self):

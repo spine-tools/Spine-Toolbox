@@ -233,15 +233,7 @@ class ParameterValueListModel(MinimalTreeModel):
         super().__init__(parent)
         self.db_mngr = db_mngr
         self.db_maps = db_maps
-        self.connect_db_mngr_signals()
 
-    def connect_db_mngr_signals(self):
-        """Connect db mngr signals."""
-        self.db_mngr.parameter_value_lists_added.connect(self.receive_parameter_value_lists_added)
-        self.db_mngr.parameter_value_lists_updated.connect(self.receive_parameter_value_lists_updated)
-        self.db_mngr.parameter_value_lists_removed.connect(self.receive_parameter_value_lists_removed)
-
-    @Slot("QVariant", name="receive_parameter_value_lists_added")
     def receive_parameter_value_lists_added(self, db_map_data):
         self.layoutAboutToBeChanged.emit()
         for db_item in self._invisible_root_item.children:
@@ -262,7 +254,6 @@ class ParameterValueListModel(MinimalTreeModel):
             db_item.insert_children(db_item.child_count() - 1, *children)
         self.layoutChanged.emit()
 
-    @Slot("QVariant", name="receive_parameter_value_lists_updated")
     def receive_parameter_value_lists_updated(self, db_map_data):
         self.layoutAboutToBeChanged.emit()
         for db_item in self._invisible_root_item.children:
@@ -277,7 +268,6 @@ class ParameterValueListModel(MinimalTreeModel):
                 list_item.handle_updated_in_db(name=item["name"], value_list=item["value_list"].split(","))
         self.layoutChanged.emit()
 
-    @Slot("QVariant", name="receive_parameter_value_lists_removed")
     def receive_parameter_value_lists_removed(self, db_map_data):
         self.layoutAboutToBeChanged.emit()
         for db_item in self._invisible_root_item.children:

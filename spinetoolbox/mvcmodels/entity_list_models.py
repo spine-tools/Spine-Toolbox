@@ -29,10 +29,6 @@ class EntityListModel(QStandardItemModel):
         self.db_mngr = db_mngr
         self.db_map = db_map
         self.new_index = None
-        self.connect_db_mngr_signals()
-
-    def connect_db_mngr_signals(self):
-        """Connect db mngr signals."""
 
     @property
     def add_more_icon(self):
@@ -73,13 +69,11 @@ class EntityListModel(QStandardItemModel):
                 return self.db_mngr.entity_class_icon(self.db_map, self.entity_type, index.data(Qt.UserRole + 1))
         return super().data(index, role)
 
-    @Slot("QVariant", name="receive_entity_classes_added")
     def receive_entity_classes_added(self, db_map_data):
         """Runs when entity classes are added."""
         for entity_class in db_map_data.get(self.db_map, []):
             self.add_entity_class(entity_class["id"])
 
-    @Slot("QVariant", name="receive_entity_classes_updated")
     def receive_entity_classes_updated(self, db_map_data):
         """Runs when entity classes are update."""
         ids = {x["id"] for x in db_map_data.get(self.db_map, [])}
@@ -87,7 +81,6 @@ class EntityListModel(QStandardItemModel):
             if item.data(Qt.UserRole + 1) in ids:
                 self.dataChanged.emit(item.index(), item.index())
 
-    @Slot("QVariant", name="receive_entity_classes_removed")
     def receive_entity_classes_removed(self, db_map_data):
         """Runs when entity classes are removed."""
         ids = {x["id"] for x in db_map_data.get(self.db_map, [])}
@@ -110,12 +103,6 @@ class ObjectClassListModel(EntityListModel):
     def _get_entity_class_ids(self):
         return [x["id"] for x in self.db_mngr.get_object_classes(self.db_map)]
 
-    def connect_db_mngr_signals(self):
-        """Connect db mngr signals."""
-        self.db_mngr.object_classes_added.connect(self.receive_entity_classes_added)
-        self.db_mngr.object_classes_updated.connect(self.receive_entity_classes_updated)
-        self.db_mngr.object_classes_removed.connect(self.receive_entity_classes_removed)
-
 
 class RelationshipClassListModel(EntityListModel):
     """A model for listing relationship classes in the GraphViewForm."""
@@ -130,9 +117,3 @@ class RelationshipClassListModel(EntityListModel):
 
     def _get_entity_class_ids(self):
         return [x["id"] for x in self.db_mngr.get_relationship_classes(self.db_map)]
-
-    def connect_db_mngr_signals(self):
-        """Connect db mngr signals."""
-        self.db_mngr.relationship_classes_added.connect(self.receive_entity_classes_added)
-        self.db_mngr.relationship_classes_updated.connect(self.receive_entity_classes_updated)
-        self.db_mngr.relationship_classes_removed.connect(self.receive_entity_classes_removed)
