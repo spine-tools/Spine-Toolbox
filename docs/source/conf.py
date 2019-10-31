@@ -88,7 +88,6 @@ autoapi_ignore = [
     '*_rc.py',
     '*/spinetoolbox/build/*',
     '*/spinetoolbox/dist/*',
-    '*/spinetoolbox/test/*',
     '*/spinetoolbox/ui/*',
     '*/spinetoolbox/setup.py',
     '*/spinetoolbox/project_items/*/ui/*',

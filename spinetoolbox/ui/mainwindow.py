@@ -382,11 +382,11 @@ class Ui_MainWindow(object):
         icon17.addPixmap(QtGui.QPixmap(":/icons/menu_icons/file-export.svg"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.actionExport_project_to_GraphML.setIcon(icon17)
         self.actionExport_project_to_GraphML.setObjectName("actionExport_project_to_GraphML")
-        self.actionAdd_Data_Interface = QtWidgets.QAction(MainWindow)
+        self.actionAdd_Importer = QtWidgets.QAction(MainWindow)
         icon18 = QtGui.QIcon()
         icon18.addPixmap(QtGui.QPixmap(":/icons/project_item_icons/map-solid.svg"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        self.actionAdd_Data_Interface.setIcon(icon18)
-        self.actionAdd_Data_Interface.setObjectName("actionAdd_Data_Interface")
+        self.actionAdd_Importer.setIcon(icon18)
+        self.actionAdd_Importer.setObjectName("actionAdd_Importer")
         self.actionGetting_started = QtWidgets.QAction(MainWindow)
         self.actionGetting_started.setIcon(icon13)
         self.actionGetting_started.setObjectName("actionGetting_started")
@@ -500,7 +500,8 @@ class Ui_MainWindow(object):
         self.actionRemove_all.setText(QtWidgets.QApplication.translate("MainWindow", "Remove all", None, -1))
         self.actionRemove_all.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Remove all items project</p></body></html>", None, -1))
         self.actionExport_project_to_GraphML.setText(QtWidgets.QApplication.translate("MainWindow", "Export project to GraphML", None, -1))
-        self.actionAdd_Data_Interface.setText(QtWidgets.QApplication.translate("MainWindow", "Add Data Interface", None, -1))
+        self.actionAdd_Importer.setText(QtWidgets.QApplication.translate("MainWindow", "Add Importer", None, -1))
+        self.actionAdd_Importer.setToolTip(QtWidgets.QApplication.translate("MainWindow", "Add Importer", None, -1))
         self.actionGetting_started.setText(QtWidgets.QApplication.translate("MainWindow", "Getting started", None, -1))
         self.actionGetting_started.setShortcut(QtWidgets.QApplication.translate("MainWindow", "F3", None, -1))
         self.actionOpen_recent.setText(QtWidgets.QApplication.translate("MainWindow", "Open recent", None, -1))
@@ -512,6 +513,6 @@ class Ui_MainWindow(object):
         self.actionDuplicate.setToolTip(QtWidgets.QApplication.translate("MainWindow", "Duplicate selected project item", None, -1))
         self.actionDuplicate.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+D", None, -1))
 
-from spinetoolbox.widgets.custom_qtextbrowser import CustomQTextBrowser
 from spinetoolbox.widgets.custom_qgraphicsviews import DesignQGraphicsView
+from spinetoolbox.widgets.custom_qtextbrowser import CustomQTextBrowser
 from spinetoolbox import resources_icons_rc

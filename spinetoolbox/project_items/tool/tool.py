@@ -26,6 +26,7 @@ import fnmatch
 from PySide2.QtCore import Slot, Qt, QUrl, QFileInfo, QTimeLine
 from PySide2.QtGui import QDesktopServices, QStandardItemModel, QStandardItem
 from PySide2.QtWidgets import QFileIconProvider
+from spinetoolbox.executioner import ExecutionState
 from spinetoolbox.project_item import ProjectItem, ProjectItemResource
 from spinetoolbox.config import TOOL_OUTPUT_DIR
 from spinetoolbox.widgets.custom_menus import ToolSpecificationOptionsPopupmenu
@@ -46,7 +47,7 @@ class Tool(ProjectItem):
             tool (str): Name of this Tool's Tool specification
             execute_in_work (bool): Execute associated Tool specification in work (True) or source directory (False)
         """
-        super().__init__(toolbox, "Tool", name, description, x, y)
+        super().__init__(toolbox, name, description, x, y)
         self.source_file_model = QStandardItemModel()
         self.populate_source_file_model(None)
         self.input_file_model = QStandardItemModel()
@@ -78,6 +79,16 @@ class Tool(ProjectItem):
         self.basedir = None
         # Make directory for results
         self.output_dir = os.path.join(self.data_dir, TOOL_OUTPUT_DIR)
+
+    @staticmethod
+    def item_type():
+        """See base class."""
+        return "Tool"
+
+    @staticmethod
+    def category():
+        """See base class."""
+        return "Tools"
 
     def make_signal_handler_dict(self):
         """Returns a dictionary of all shared signals and their handlers.
@@ -336,7 +347,7 @@ class Tool(ProjectItem):
         exec_inst = self._project.execution_instance
         if not self.tool_specification():
             self._toolbox.msg_warning.emit("Tool <b>{0}</b> has no Tool specification to execute".format(self.name))
-            exec_inst.project_item_execution_finished_signal.emit(0)  # continue
+            exec_inst.project_item_execution_finished_signal.emit(ExecutionState.CONTINUE)
             return
         self._toolbox.msg.emit("")
         self._toolbox.msg.emit("Executing Tool <b>{0}</b>".format(self.name))
@@ -362,7 +373,7 @@ class Tool(ProjectItem):
             )
             if not self.copy_program_files():
                 self._toolbox.msg_error.emit("Copying program files to base directory failed.")
-                exec_inst.project_item_execution_finished_signal.emit(-1)  # abort
+                exec_inst.project_item_execution_finished_signal.emit(ExecutionState.ABORT)
                 return
         else:
             work_or_source = "source"
@@ -392,14 +403,14 @@ class Tool(ProjectItem):
                 not_found = [k for k, v in file_paths.items() if v is None]
                 if not_found:
                     self._toolbox.msg_error.emit("Required file(s) <b>{0}</b> not found".format(", ".join(not_found)))
-                    exec_inst.project_item_execution_finished_signal.emit(-1)  # abort
+                    exec_inst.project_item_execution_finished_signal.emit(ExecutionState.ABORT)
                     return
                 # Required files and dirs should have been found at this point, so create instance
                 self._toolbox.msg.emit("*** Copying input files to {0} directory ***".format(work_or_source))
                 # Copy input files to ToolInstance work or source directory
                 if not self.copy_input_files(file_paths):
                     self._toolbox.msg_error.emit("Copying input files failed. Tool execution aborted.")
-                    exec_inst.project_item_execution_finished_signal.emit(-1)  # abort
+                    exec_inst.project_item_execution_finished_signal.emit(ExecutionState.ABORT)
                     return
             else:  # just for testing
                 # logging.debug("No input files to copy")
@@ -409,7 +420,7 @@ class Tool(ProjectItem):
                 if not self.create_input_dirs():
                     # Creating directories failed -> abort
                     self._toolbox.msg_error.emit("Creating input subdirectories failed. Tool execution aborted.")
-                    exec_inst.project_item_execution_finished_signal.emit(-1)  # abort
+                    exec_inst.project_item_execution_finished_signal.emit(ExecutionState.ABORT)
                     return
             else:  # just for testing
                 # logging.debug("No directories to create")
@@ -424,7 +435,7 @@ class Tool(ProjectItem):
                 self._toolbox.msg_warning.emit("Copying optional input files failed")
         if not self.create_output_dirs():
             self._toolbox.msg_error.emit("Creating output subdirectories failed. Tool execution aborted.")
-            exec_inst.project_item_execution_finished_signal.emit(-1)  # abort
+            exec_inst.project_item_execution_finished_signal.emit(ExecutionState.ABORT)
             return
         self.get_icon().start_animation()
         self.instance = self.tool_specification().create_tool_instance(self.basedir)
@@ -762,7 +773,7 @@ class Tool(ProjectItem):
         if not self._project.execution_instance:
             # Happens sometimes when Stop button is pressed
             return
-        self._project.execution_instance.project_item_execution_finished_signal.emit(0)
+        self._project.execution_instance.project_item_execution_finished_signal.emit(ExecutionState.CONTINUE)
 
     def handle_output_files(self, ret):
         """Creates a timestamped result directory for Tool specification output files. Starts copying Tool
@@ -1021,22 +1032,22 @@ class Tool(ProjectItem):
 
     def notify_destination(self, source_item):
         """See base class."""
-        if source_item.item_type == "Data Store":
+        if source_item.item_type() == "Data Store":
             self._toolbox.msg.emit(
                 "Link established. Data Store <b>{0}</b> url will "
                 "be passed to Tool <b>{1}</b> when executing.".format(source_item.name, self.name)
             )
-        elif source_item.item_type == "Data Connection":
+        elif source_item.item_type() == "Data Connection":
             self._toolbox.msg.emit(
                 "Link established. Tool <b>{0}</b> will look for input "
                 "files from <b>{1}</b>'s references and data directory.".format(self.name, source_item.name)
             )
-        elif source_item.item_type == "Gdx Export":
+        elif source_item.item_type() == "Exporter":
             self._toolbox.msg.emit(
-                "Link established. Gdx Export <b>{0}</b> exported file will "
+                "Link established. The file exported by <b>{0}</b> will "
                 "be passed to Tool <b>{1}</b> when executing.".format(source_item.name, self.name)
             )
-        elif source_item.item_type == "Tool":
+        elif source_item.item_type() == "Tool":
             self._toolbox.msg.emit("Link established.")
         else:
             super().notify_destination(source_item)

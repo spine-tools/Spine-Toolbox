@@ -53,8 +53,8 @@ Only parameter values with timeseries data are exported in the timeseries format
 GAMS
 ----
 
-Databases can be exported to GAMS :literal:`.gdx` files by the *Gdx Export* project item.
-When a project is executed, *Gdx Export* writes its output files to the project item's data folder
+Databases can be exported to GAMS :literal:`.gdx` files by the *Exporter* project item.
+When a project is executed, *Exporter* writes its output files to the project item's data folder
 and forwards file paths to project items downstream.
 If a *Tool* is to use such a file, remember to add the file as one of the *Tool specification*'s input files!
 
@@ -83,20 +83,20 @@ The parameters of the objects of that class will be exported as GAMS scalars.
 
 Some GAMS models need their data to be in a specific order in the :literal:`.gdx`.
 This is not directly supported by the database.
-Rather, user has to specify the desired exporting order using the *Gdx Export* item's settings.
+Rather, user has to specify the desired exporting order using the *Exporter* item's settings.
 
-Gdx Export Project Item
+Exporter Project Item
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-The image below shows the settings tab of *Gdx Export* with two *Data Sources* connected to it.
+The image below shows the settings tab of *Exporter* with two *Data Sources* connected to it.
 
-.. image:: img/gdx_export_settings.png
+.. image:: img/exporter_properties.png
    :align: center
 
 For each connected *Data Store* a box with the database's path and export file name field is shown on the tab.
 The *Settings...* buttons open *Gdx Export settings* windows to further edit database specific export parameters
 such as the order in which entities are exported from the database.
-The *Refresh* button tells *Gdx Export* to update the settings in case the database has been modified.
+The *Refresh* button tells *Exporter* to update the settings in case the database has been modified.
 
 .. image:: img/gdx_export_settings_window.png
    :align: center

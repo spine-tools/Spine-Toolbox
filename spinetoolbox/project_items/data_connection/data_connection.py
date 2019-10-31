@@ -23,6 +23,7 @@ import pathlib
 from PySide2.QtCore import Slot, QUrl, QFileSystemWatcher, Qt, QFileInfo
 from PySide2.QtGui import QDesktopServices, QStandardItem, QStandardItemModel, QIcon, QPixmap
 from PySide2.QtWidgets import QFileDialog, QStyle, QFileIconProvider, QInputDialog, QMessageBox
+from spinetoolbox.executioner import ExecutionState
 from spinetoolbox.project_item import ProjectItem, ProjectItemResource
 from spinetoolbox.widgets.spine_datapackage_widget import SpineDatapackageWidget
 from spinetoolbox.helpers import busy_effect
@@ -41,7 +42,7 @@ class DataConnection(ProjectItem):
             y (float): Initial Y coordinate of item icon
             references (list): List of file references
         """
-        super().__init__(toolbox, "Data Connection", name, description, x, y)
+        super().__init__(toolbox, name, description, x, y)
         self.reference_model = QStandardItemModel()  # References to files
         self.data_model = QStandardItemModel()  # Paths of project internal files. These are found in DC data directory
         self.datapackage_icon = QIcon(QPixmap(":/icons/datapkg.png"))
@@ -58,6 +59,16 @@ class DataConnection(ProjectItem):
         self.populate_data_list(data_files)
         self.spine_datapackage_form = None
 
+    @staticmethod
+    def item_type():
+        """See base class."""
+        return "Data Connection"
+
+    @staticmethod
+    def category():
+        """See base class."""
+        return "Data Connections"
+
     def make_signal_handler_dict(self):
         """Returns a dictionary of all shared signals and their handlers.
         This is to enable simpler connecting and disconnecting."""
@@ -73,7 +84,7 @@ class DataConnection(ProjectItem):
         s[self.data_dir_watcher.directoryChanged] = self.refresh
         s[self._properties_ui.treeView_dc_references.files_dropped] = self.add_files_to_references
         s[self._properties_ui.treeView_dc_data.files_dropped] = self.add_files_to_data_dir
-        s[self.get_icon().scene().files_dropped_on_dc] = self.receive_files_dropped_on_dc
+        s[self.get_icon().files_dropped_on_icon] = self.receive_files_dropped_on_icon
         s[self._properties_ui.treeView_dc_references.del_key_pressed] = lambda: self.remove_references()
         s[self._properties_ui.treeView_dc_data.del_key_pressed] = lambda: self.remove_files()
         return s
@@ -115,11 +126,11 @@ class DataConnection(ProjectItem):
             self.references.append(os.path.abspath(path))
         self.populate_reference_list(self.references)
 
-    @Slot("QGraphicsItem", "QVariant", name="receive_files_dropped_on_dc")
-    def receive_files_dropped_on_dc(self, item, file_paths):
+    @Slot("QGraphicsItem", list)
+    def receive_files_dropped_on_icon(self, icon, file_paths):
         """Called when files are dropped onto a data connection graphics item.
         If the item is this Data Connection's graphics item, add the files to data."""
-        if item == self.get_icon():
+        if icon == self.get_icon():
             self.add_files_to_data_dir(file_paths)
 
     @Slot("QVariant", name="add_files_to_data_dir")
@@ -391,12 +402,14 @@ class DataConnection(ProjectItem):
         # Add data file references and data files into execution instance
         resources = self.resources_for_advertising()
         inst.advertise_resources(self.name, *resources)
-        self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(0)  # 0 success
+        self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(ExecutionState.CONTINUE)
 
     def stop_execution(self):
         """Stops executing this Data Connection."""
         self._toolbox.msg.emit("Stopping {0}".format(self.name))
-        self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(-2)
+        self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(
+            ExecutionState.STOP_REQUESTED
+        )
 
     def simulate_execution(self, inst):
         """Simulates executing this Data Connection."""
@@ -443,12 +456,12 @@ class DataConnection(ProjectItem):
 
     def notify_destination(self, source_item):
         """See base class."""
-        if source_item.item_type == "Tool":
+        if source_item.item_type() == "Tool":
             self._toolbox.msg.emit(
                 "Link established. Tool <b>{0}</b> output files will be "
                 "passed as references to item <b>{1}</b> after execution.".format(source_item.name, self.name)
             )
-        elif source_item.item_type in ["Data Store", "Data Interface"]:
+        elif source_item.item_type() in ["Data Store", "Importer"]:
             # Does this type of link do anything?
             self._toolbox.msg.emit("Link established.")
         else:

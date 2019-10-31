@@ -23,11 +23,12 @@ from PySide2.QtCore import Slot, Qt
 from PySide2.QtWidgets import QMessageBox, QFileDialog, QApplication
 from sqlalchemy import create_engine
 from sqlalchemy.engine.url import make_url, URL
+from spinetoolbox.executioner import ExecutionState
 from spinetoolbox.project_item import ProjectItem, ProjectItemResource
 from spinetoolbox.widgets.tree_view_widget import TreeViewForm
 from spinetoolbox.widgets.graph_view_widget import GraphViewForm
 from spinetoolbox.widgets.tabular_view_widget import TabularViewForm
-from spinetoolbox.helpers import create_dir, busy_effect, get_db_map, create_log_file_timestamp
+from spinetoolbox.helpers import create_dir, busy_effect, create_log_file_timestamp
 from .widgets.custom_menus import DataStoreContextMenu
 
 
@@ -44,7 +45,7 @@ class DataStore(ProjectItem):
             url (str or dict): SQLAlchemy url
             reference (dict): reference, contains SQLAlchemy url (keeps compatibility with older project files)
         """
-        super().__init__(toolbox, "Data Store", name, description, x, y)
+        super().__init__(toolbox, name, description, x, y)
         if isinstance(reference, dict) and "url" in reference:
             url = reference["url"]
         self._url = self.parse_url(url)
@@ -59,6 +60,16 @@ class DataStore(ProjectItem):
             self._toolbox.msg_error.emit(
                 "[OSError] Creating directory {0} failed. Check permissions.".format(self.logs_dir)
             )
+
+    @staticmethod
+    def item_type():
+        """See base class."""
+        return "Data Store"
+
+    @staticmethod
+    def category():
+        """See base class."""
+        return "Data Stores"
 
     @staticmethod
     def parse_url(url):
@@ -261,7 +272,7 @@ class DataStore(ProjectItem):
         if dialect == 'sqlite':
             self.enable_sqlite()
         elif dialect == 'mssql':
-            import pyodbc  # pylint: disable=import-outside-toplevel
+            import pyodbc
 
             dsns = pyodbc.dataSources()
             # Collect dsns which use the msodbcsql driver
@@ -351,7 +362,7 @@ class DataStore(ProjectItem):
             self.tree_view_form.destroyed.disconnect(self.tree_view_form_destroyed)
             self.tree_view_form.close()
         try:
-            db_map = get_db_map(url)
+            db_map = self._project.db_mngr.get_db_map(url, codename=self.name)
         except spinedb_api.SpineDBAPIError as e:
             self._toolbox.msg_error.emit(e.msg)
             db_map = None
@@ -362,7 +373,7 @@ class DataStore(ProjectItem):
     @busy_effect
     def do_open_tree_view(self, db_map):
         """Open url in tree view form."""
-        self.tree_view_form = TreeViewForm(self._project, {self.name: db_map})
+        self.tree_view_form = TreeViewForm(self._project, db_map)
         self.tree_view_form.show()
         self.tree_view_form.destroyed.connect(self.tree_view_form_destroyed)
 
@@ -392,7 +403,7 @@ class DataStore(ProjectItem):
             self.graph_view_form.destroyed.disconnect(self.graph_view_form_destroyed)
             self.graph_view_form.close()
         try:
-            db_map = get_db_map(url)
+            db_map = self._project.db_mngr.get_db_map(url, codename=self.name)
         except spinedb_api.SpineDBAPIError as e:
             self._toolbox.msg_error.emit(e.msg)
             db_map = None
@@ -403,7 +414,7 @@ class DataStore(ProjectItem):
     @busy_effect
     def do_open_graph_view(self, db_map):
         """Open url in graph view form."""
-        self.graph_view_form = GraphViewForm(self._project, {self.name: db_map}, read_only=False)
+        self.graph_view_form = GraphViewForm(self._project, db_map, read_only=False)
         self.graph_view_form.show()
         self.graph_view_form.destroyed.connect(self.graph_view_form_destroyed)
 
@@ -433,7 +444,7 @@ class DataStore(ProjectItem):
             self.tabular_view_form.destroyed.disconnect(self.tabular_view_form_destroyed)
             self.tabular_view_form.close()
         try:
-            db_map = get_db_map(url)
+            db_map = self._project.db_mngr.get_db_map(url, codename=self.name)
         except spinedb_api.SpineDBAPIError as e:
             self._toolbox.msg_error.emit(e.msg)
             db_map = None
@@ -444,7 +455,7 @@ class DataStore(ProjectItem):
     @busy_effect
     def do_open_tabular_view(self, db_map, database):
         """Open url in tabular view form."""
-        self.tabular_view_form = TabularViewForm(self, db_map, database)
+        self.tabular_view_form = TabularViewForm(self, db_map)
         self.tabular_view_form.destroyed.connect(self.tabular_view_form_destroyed)
         self.tabular_view_form.show()
         self.destroyed.connect(self.tabular_view_form.close)
@@ -534,7 +545,7 @@ class DataStore(ProjectItem):
         else:
             resource = ProjectItemResource(self, "database", url=str(url))
             inst.advertise_resources(self.name, resource)
-            # Import mapped data from Data Interfaces in the execution instance
+            # Import mapped data from Importers in the execution instance
             try:
                 db_map = spinedb_api.DiffDatabaseMapping(url, upgrade=False, username="Mapper")
             except (spinedb_api.SpineDBAPIError, spinedb_api.SpineDBVersionError) as err:
@@ -583,12 +594,14 @@ class DataStore(ProjectItem):
                         "{1}".format(self.name, logfile_anchor)
                     )
         self._toolbox.msg.emit("***")
-        self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(0)  # 0 success
+        self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(ExecutionState.CONTINUE)
 
     def stop_execution(self):
         """Stops executing this Data Store."""
         self._toolbox.msg.emit("Stopping {0}".format(self.name))
-        self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(-2)
+        self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(
+            ExecutionState.STOP_REQUESTED
+        )
 
     def simulate_execution(self, inst):
         """Simulates executing this Data Store."""
@@ -670,12 +683,12 @@ class DataStore(ProjectItem):
 
     def notify_destination(self, source_item):
         """See base class."""
-        if source_item.item_type == "Data Interface":
+        if source_item.item_type() == "Importer":
             self._toolbox.msg.emit(
                 "Link established. Mappings generated by <b>{0}</b> will be "
                 "imported in <b>{1}</b> when executing.".format(source_item.name, self.name)
             )
-        elif source_item.item_type in ["Data Connection", "Tool"]:
+        elif source_item.item_type() in ["Data Connection", "Tool"]:
             # Does this type of link do anything?
             self._toolbox.msg.emit("Link established.")
         else:

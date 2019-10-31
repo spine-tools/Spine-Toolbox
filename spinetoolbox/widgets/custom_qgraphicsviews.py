@@ -150,7 +150,7 @@ class CustomQGraphicsView(QGraphicsView):
         super().setScene(scene)
         scene.sceneRectChanged.connect(self._update_zoom_limits)
 
-    @Slot("QRectF", name="_update_zoom_limits")
+    @Slot("QRectF")
     def _update_zoom_limits(self, rect):
         """
         Updates the minimum zoom limit and the zoom level with which the entire scene fits the view.
@@ -465,16 +465,9 @@ class DesignQGraphicsView(CustomQGraphicsView):
 class GraphQGraphicsView(CustomQGraphicsView):
     """QGraphicsView for the Graph View."""
 
-    item_dropped = Signal("QPoint", "QString", name="item_dropped")
+    item_dropped = Signal("QPoint", "QString")
 
-    def __init__(self, parent):
-        """Init GraphQGraphicsView."""
-        super().__init__(parent=parent)
-        self._graph_view_form = None
-
-    def set_graph_view_form(self, form):
-        """Sets the _graph_view_form attribute."""
-        self._graph_view_form = form
+    context_menu_requested = Signal("QPoint")
 
     def dragLeaveEvent(self, event):
         """Accept event. Then call the super class method
@@ -505,9 +498,11 @@ class GraphQGraphicsView(CustomQGraphicsView):
         if not isinstance(source, DragListView):
             super().dropEvent(event)
             return
+        entity_type = source.model().entity_type
         event.acceptProposedAction()
-        text = event.mimeData().text()
+        entity_class_id = event.mimeData().text()
         pos = event.pos()
+        text = entity_type + ":" + entity_class_id
         self.item_dropped.emit(pos, text)
 
     def contextMenuEvent(self, e):
@@ -519,11 +514,8 @@ class GraphQGraphicsView(CustomQGraphicsView):
         super().contextMenuEvent(e)
         if e.isAccepted():
             return
-        if not self._graph_view_form:
-            e.ignore()
-            return
         e.accept()
-        self._graph_view_form.show_graph_view_context_menu(e.globalPos())
+        self.context_menu_requested.emit(e.globalPos())
 
     def gentle_zoom(self, factor, zoom_focus):
         """
@@ -553,9 +545,8 @@ class GraphQGraphicsView(CustomQGraphicsView):
         """
         Update items geometry after performing a zoom.
 
-        Some items (e.g. ArcItem) need this to stay the same size (that is, the zoom controls the *spread*).
+        Some items (e.g. ArcItem) need this to stay the same size after a zoom.
         """
-        scale = self.transform().m11()
         for item in self.items():
             if hasattr(item, "adjust_to_zoom"):
-                item.adjust_to_zoom(scale)
+                item.adjust_to_zoom(self.transform())

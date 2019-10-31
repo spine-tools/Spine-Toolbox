@@ -23,41 +23,46 @@ from .minimal_table_model import MinimalTableModel
 class EmptyRowModel(MinimalTableModel):
     """A table model with a last empty row."""
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, header=None):
         """Init class."""
-        super().__init__(parent)
+        super().__init__(parent, header=header)
         self.default_row = {}  # A row of default values to put in any newly inserted row
         self.force_default = False  # Whether or not default values are editable
+        self._fetched = False
         self.dataChanged.connect(self._handle_data_changed)
-        self.rowsRemoved.connect(self._handle_rows_removed)
         self.rowsInserted.connect(self._handle_rows_inserted)
+
+    def canFetchMore(self, parent=QModelIndex()):
+        return not self._fetched
+
+    def fetchMore(self, parent=QModelIndex()):
+        self.insertRows(self.rowCount(), 1, parent)
+        self._fetched = True
 
     def flags(self, index):
         """Return default flags except if forcing defaults."""
-        if not index.isValid():
-            return Qt.NoItemFlags
         if self.force_default:
             try:
                 name = self.header[index.column()]
                 if name in self.default_row:
-                    return self.default_flags & ~Qt.ItemIsEditable
+                    return super().flags(index) & ~Qt.ItemIsEditable
             except IndexError:
                 pass
-        return self.default_flags
+        return super().flags(index)
 
     def set_default_row(self, **kwargs):
         """Set default row data."""
         self.default_row = kwargs
 
     def clear(self):
+        self._fetched = False
         super().clear()
-        self.insertRows(self.rowCount(), 1, QModelIndex())
 
     def reset_model(self, main_data=None):
+        self._fetched = False
         super().reset_model(main_data)
-        self.insertRows(self.rowCount(), 1, QModelIndex())
 
-    @Slot("QModelIndex", "QModelIndex", "QVector", name="_handle_data_changed")
+    @Slot("QModelIndex", "QModelIndex", "QVector<int>")
     def _handle_data_changed(self, top_left, bottom_right, roles=None):
         """Insert a new last empty row in case the previous one has been filled
         with any data other than the defaults."""
@@ -68,46 +73,49 @@ class EmptyRowModel(MinimalTableModel):
         last_row = self.rowCount() - 1
         for column in range(self.columnCount()):
             try:
-                name = self.header[column]
+                field = self.header[column]
             except IndexError:
-                name = None
+                field = None
             data = self._main_data[last_row][column]
-            default = self.default_row.get(name)
-            if not data and not default:
-                continue
-            if data != default:
+            default = self.default_row.get(field)
+            if (data or default) and data != default:
                 self.insertRows(self.rowCount(), 1)
                 break
 
-    @Slot("QModelIndex", "int", "int", name="_handle_rows_removed")
+    @Slot("QModelIndex", "int", "int")
     def _handle_rows_removed(self, parent, first, last):
         """Insert a new empty row in case it's been removed."""
         last_row = self.rowCount()
         if last_row in range(first, last + 1):
             self.insertRows(self.rowCount(), 1)
 
-    @Slot("QModelIndex", "int", "int", name="_handle_rows_inserted")
+    def removeRows(self, row, count, parent=QModelIndex()):
+        """Don't remove the last empty row."""
+        if row + count == self.rowCount():
+            count -= 1
+        return super().removeRows(row, count, parent)
+
+    @Slot("QModelIndex", "int", "int")
     def _handle_rows_inserted(self, parent, first, last):
         """Handle rowsInserted signal."""
         self.set_rows_to_default(first, last)
 
-    def set_rows_to_default(self, first, last):
+    def set_rows_to_default(self, first, last=None):
         """Set default data in newly inserted rows."""
-        left = None
-        right = None
+        if last is None:
+            last = first
+        if first >= self.rowCount() or last < 0:
+            return
+        default_row = []
         for column in range(self.columnCount()):
             try:
-                name = self.header[column]
+                field = self.header[column]
             except IndexError:
-                name = None
-            default = self.default_row.get(name)
-            if left is None:
-                left = column
-            right = column
-            for row in range(first, last + 1):
-                self._main_data[row][column] = default
-        if left is None:
-            return
-        top_left = self.index(first, left)
-        bottom_right = self.index(last, right)
+                field = None
+            default = self.default_row.get(field)
+            default_row.append(default)
+        for row in range(first, last + 1):
+            self._main_data[row] = default_row.copy()
+        top_left = self.index(first, 0)
+        bottom_right = self.index(last, self.columnCount() - 1)
         self.dataChanged.emit(top_left, bottom_right)

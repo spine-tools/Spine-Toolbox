@@ -22,14 +22,13 @@ from spinedb_api import SUPPORTED_DIALECTS
 
 
 class DataStorePropertiesWidget(QWidget):
-    """Widget for the Data Store Item Properties.
-
-    Args:
-        toolbox (ToolboxUI): The toolbox instance where this widget should be embeded
-    """
+    """Widget for the Data Store Item Properties."""
 
     def __init__(self, toolbox):
-        """Init class."""
+        """
+        Args:
+            toolbox (ToolboxUI): The toolbox instance where this widget should be embedded
+        """
         super().__init__()
         from ..ui.data_store_properties import Ui_Form
 

@@ -16,38 +16,52 @@ Contains the DataStoreForm class, parent class of TreeViewForm and GraphViewForm
 :date:   26.11.2018
 """
 
+import gc
 from PySide2.QtWidgets import QMainWindow, QHeaderView, QDialog, QMessageBox, QCheckBox, QErrorMessage
 from PySide2.QtCore import Qt, Signal, Slot
 from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QIcon
 from spinedb_api import SpineDBAPIError
 from ..config import MAINWINDOW_SS, STATUSBAR_SS
 from .custom_delegates import (
+    DatabaseNameDelegate,
+    ParameterDefaultValueDelegate,
+    TagListDelegate,
+    ValueListDelegate,
     ObjectParameterValueDelegate,
-    ObjectParameterDefinitionDelegate,
+    ObjectParameterNameDelegate,
+    ObjectClassNameDelegate,
+    ObjectNameDelegate,
     RelationshipParameterValueDelegate,
-    RelationshipParameterDefinitionDelegate,
+    RelationshipParameterNameDelegate,
+    RelationshipClassNameDelegate,
+    ObjectNameListDelegate,
 )
-from .custom_qdialog import (
+from .add_db_items_dialogs import (
     AddObjectClassesDialog,
     AddObjectsDialog,
     AddRelationshipClassesDialog,
     AddRelationshipsDialog,
+)
+from .edit_db_items_dialogs import (
     EditObjectClassesDialog,
     EditObjectsDialog,
     EditRelationshipClassesDialog,
     EditRelationshipsDialog,
     ManageParameterTagsDialog,
-    CommitDialog,
 )
-from .parameter_value_editor import ParameterValueEditor
-from .toolbars import ParameterTagToolBar
-from ..mvcmodels.object_parameter_models import ObjectParameterDefinitionModel, ObjectParameterValueModel
-from ..mvcmodels.relationship_parameter_models import (
-    RelationshipParameterDefinitionModel,
-    RelationshipParameterValueModel,
+from .manage_db_items_dialog import CommitDialog
+from ..widgets.parameter_value_editor import ParameterValueEditor
+from ..widgets.toolbars import ParameterTagToolBar
+from ..widgets.custom_qwidgets import NotificationIcon
+from ..mvcmodels.entity_tree_models import ObjectTreeModel
+from ..mvcmodels.compound_parameter_models import (
+    CompoundObjectParameterDefinitionModel,
+    CompoundObjectParameterValueModel,
+    CompoundRelationshipParameterDefinitionModel,
+    CompoundRelationshipParameterValueModel,
 )
 from ..mvcmodels.parameter_value_list_model import ParameterValueListModel
-from ..helpers import busy_effect, format_string_list, IconManager
+from ..helpers import busy_effect, format_string_list
 from ..plotting import tree_graph_view_parameter_value_name
 
 
@@ -57,17 +71,17 @@ class DataStoreForm(QMainWindow):
     Attributes:
         project (SpineToolboxProject): The project instance that owns this form
         ui: UI definition of the form that is initialized
-        db_maps (dict): named DiffDatabaseMapping instances
+        db_maps (iter): DiffDatabaseMapping instances
     """
 
-    msg = Signal(str, name="msg")
-    msg_error = Signal(str, name="msg_error")
-    commit_available = Signal("bool", name="commit_available")
+    msg = Signal(str)
+    msg_error = Signal(str)
 
-    def __init__(self, project, ui, db_maps):
+    def __init__(self, project, ui, *db_maps):
         """Initialize class."""
         super().__init__(flags=Qt.Window)
         self._project = project
+        self._project.db_signaller.add_listener(self)
         # Setup UI from Qt Designer file
         self.ui = ui
         self.ui.setupUi(self)
@@ -80,31 +94,26 @@ class DataStoreForm(QMainWindow):
         # Class attributes
         self.err_msg = QErrorMessage(self)
         # DB
-        self.db_names = list(db_maps.keys())
-        self.db_maps = list(db_maps.values())
-        self.db_name_to_map = dict(zip(self.db_names, self.db_maps))
-        self.db_map_to_name = dict(zip(self.db_maps, self.db_names))
-        self.icon_mngr = IconManager()
-        for db_map in self.db_maps:
-            self.icon_mngr.setup_object_pixmaps(db_map.object_class_list())
-        # Object tree selected indexes
-        self.selected_obj_tree_indexes = {}
-        self.selected_object_class_ids = set()
-        self.selected_object_ids = dict()
-        self.selected_relationship_class_ids = set()
-        self.selected_object_id_lists = dict()
-        # Parameter tag stuff
-        self.parameter_tag_toolbar = ParameterTagToolBar(self)
-        self.addToolBar(Qt.TopToolBarArea, self.parameter_tag_toolbar)
+        self.db_maps = db_maps
+        self.db_mngr = project.db_mngr
+        # Selected ids
+        self.selected_ent_cls_ids = {"object class": {}, "relationship class": {}}
+        self.selected_ent_ids = {"object": {}, "relationship": {}}
+        self.selected_param_def_ids = {"object class": {}, "relationship class": {}}
         self.selected_parameter_tag_ids = dict()
-        self.selected_obj_parameter_definition_ids = dict()
-        self.selected_rel_parameter_definition_ids = dict()
+        # Parameter tag toolbar
+        self.parameter_tag_toolbar = ParameterTagToolBar(self, self.db_mngr, *db_maps)
+        self.addToolBar(Qt.TopToolBarArea, self.parameter_tag_toolbar)
         # Models
-        self.object_parameter_value_model = ObjectParameterValueModel(self)
-        self.relationship_parameter_value_model = RelationshipParameterValueModel(self)
-        self.object_parameter_definition_model = ObjectParameterDefinitionModel(self)
-        self.relationship_parameter_definition_model = RelationshipParameterDefinitionModel(self)
-        self.parameter_value_list_model = ParameterValueListModel(self)
+        self.object_tree_model = ObjectTreeModel(self, self.db_mngr, *db_maps)
+        self.ui.treeView_object.setModel(self.object_tree_model)
+        self.object_parameter_value_model = CompoundObjectParameterValueModel(self, self.db_mngr, *db_maps)
+        self.relationship_parameter_value_model = CompoundRelationshipParameterValueModel(self, self.db_mngr, *db_maps)
+        self.object_parameter_definition_model = CompoundObjectParameterDefinitionModel(self, self.db_mngr, *db_maps)
+        self.relationship_parameter_definition_model = CompoundRelationshipParameterDefinitionModel(
+            self, self.db_mngr, *db_maps
+        )
+        self.parameter_value_list_model = ParameterValueListModel(self, self.db_mngr, *db_maps)
         # Setup views
         self.ui.tableView_object_parameter_value.setModel(self.object_parameter_value_model)
         self.ui.tableView_relationship_parameter_value.setModel(self.relationship_parameter_value_model)
@@ -113,7 +122,7 @@ class DataStoreForm(QMainWindow):
         self.ui.treeView_parameter_value_list.setModel(self.parameter_value_list_model)
         self.default_row_height = QFontMetrics(QFont("", 0)).lineSpacing()
         max_screen_height = max([s.availableSize().height() for s in QGuiApplication.screens()])
-        self.visible_rows = int(max_screen_height / self.default_row_height)
+        visible_rows = int(max_screen_height / self.default_row_height)
         for view in (
             self.ui.tableView_object_parameter_value,
             self.ui.tableView_relationship_parameter_value,
@@ -122,7 +131,7 @@ class DataStoreForm(QMainWindow):
         ):
             view.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
             view.verticalHeader().setDefaultSectionSize(self.default_row_height)
-            view.horizontalHeader().setResizeContentsPrecision(self.visible_rows)
+            view.horizontalHeader().setResizeContentsPrecision(visible_rows)
             view.horizontalHeader().setSectionsMovable(True)
         # Ensure this window gets garbage-collected when closed
         self.setAttribute(Qt.WA_DeleteOnClose)
@@ -140,30 +149,15 @@ class DataStoreForm(QMainWindow):
         """Connect signals to slots."""
         # Message signals
         self.msg.connect(self.add_message)
-        self.msg_error.connect(self.add_error_message)
-        self.commit_available.connect(self._handle_commit_available)
+        self.msg_error.connect(self.err_msg.showMessage)
         # Menu actions
+        self.ui.menuSession.aboutToShow.connect(self._handle_menu_session_about_to_show)
         self.ui.actionCommit.triggered.connect(self._prompt_and_commit_session)
         self.ui.actionRollback.triggered.connect(self.rollback_session)
         self.ui.actionRefresh.triggered.connect(self.refresh_session)
         self.ui.actionClose.triggered.connect(self.close)
         # Object tree
         self.ui.treeView_object.selectionModel().selectionChanged.connect(self._handle_object_tree_selection_changed)
-        # Parameter tables delegates
-        for table_view in (
-            self.ui.tableView_object_parameter_definition,
-            self.ui.tableView_relationship_parameter_definition,
-        ):
-            # pylint: disable=cell-var-from-loop
-            table_view.itemDelegate().data_committed.connect(self.set_parameter_definition_data)
-            table_view.itemDelegate().parameter_value_editor_requested.connect(
-                lambda index, value: self.show_parameter_value_editor(index, table_view, value=value)
-            )
-        for table_view in (self.ui.tableView_object_parameter_value, self.ui.tableView_relationship_parameter_value):
-            table_view.itemDelegate().data_committed.connect(self.set_parameter_value_data)
-            table_view.itemDelegate().parameter_value_editor_requested.connect(
-                lambda index, value: self.show_parameter_value_editor(index, table_view, value=value)
-            )
         # Parameter tags
         self.parameter_tag_toolbar.manage_tags_action_triggered.connect(self.show_manage_parameter_tags_form)
         self.parameter_tag_toolbar.tag_button_toggled.connect(self._handle_tag_button_toggled)
@@ -186,46 +180,56 @@ class DataStoreForm(QMainWindow):
         """Returns the QSettings instance from ToolboxUI."""
         return self._project._toolbox._qsettings
 
-    @Slot(str, name="add_message")
+    @Slot("QVariant")
+    def receive_db_mngr_error_msg(self, db_map_error_log):
+        msg = ""
+        for db_map, error_log in db_map_error_log.items():
+            database = "From " + db_map.codename + ":"
+            formatted_log = format_string_list(error_log)
+            msg += format_string_list([database, formatted_log])
+        self.msg_error.emit(msg)
+
+    @Slot(str)
     def add_message(self, msg):
         """Append regular message to status bar.
 
         Args:
             msg (str): String to show in QStatusBar
         """
-        current_msg = self.ui.statusbar.currentMessage()
-        self.ui.statusbar.showMessage("\t".join([msg, current_msg]), 5000)
+        icon = NotificationIcon(msg)
+        icon.pressed.connect(lambda icon=icon: self.ui.statusbar.removeWidget(icon))
+        self.ui.statusbar.insertWidget(0, icon)
 
-    @Slot(str, name="add_error_message")
-    def add_error_message(self, msg):
-        """Show error message.
+    @Slot("QItemSelection", "QItemSelection")
+    def _handle_object_tree_selection_changed(self, selected, deselected):
+        """Called when the object tree selection changes.
+        Set default rows and apply filters on parameter models."""
+        for index in deselected.indexes():
+            self.object_tree_model.deselect_index(index)
+        for index in selected.indexes():
+            self.object_tree_model.select_index(index)
 
-        Args:
-            msg (str): String to show in QErrorMessage
-        """
-        self.err_msg.showMessage(msg)
-
-    @Slot("bool", name="_handle_object_parameter_value_visibility_changed")
+    @Slot("bool")
     def _handle_object_parameter_value_visibility_changed(self, visible):
         if visible:
             self.object_parameter_value_model.update_filter()
 
-    @Slot("bool", name="_handle_object_parameter_definition_visibility_changed")
+    @Slot("bool")
     def _handle_object_parameter_definition_visibility_changed(self, visible):
         if visible:
             self.object_parameter_definition_model.update_filter()
 
-    @Slot("bool", name="_handle_relationship_parameter_value_visibility_changed")
+    @Slot("bool")
     def _handle_relationship_parameter_value_visibility_changed(self, visible):
         if visible:
             self.relationship_parameter_value_model.update_filter()
 
-    @Slot("bool", name="_handle_relationship_parameter_definition_visibility_changed")
+    @Slot("bool")
     def _handle_relationship_parameter_definition_visibility_changed(self, visible):
         if visible:
             self.relationship_parameter_definition_model.update_filter()
 
-    @Slot("QVariant", "bool", name="_handle_tag_button_toggled")
+    @Slot("QVariant", "bool")
     def _handle_tag_button_toggled(self, db_map_ids, checked):
         """Called when a parameter tag button is toggled.
         Compute selected parameter definition ids per object class ids.
@@ -237,40 +241,33 @@ class DataStoreForm(QMainWindow):
             else:
                 self.selected_parameter_tag_ids[db_map].remove(id_)
         if not any(v for v in self.selected_parameter_tag_ids.values()):
-            # No tags selected: set empty dict so them all pass
-            self.selected_obj_parameter_definition_ids = {}
-            self.selected_rel_parameter_definition_ids = {}
+            # No tags selected
+            self.selected_param_def_ids["object class"] = {}
+            self.selected_param_def_ids["relationship class"] = {}
         else:
-            # At least one tag selected: set non-empty dict so not all of them pass
-            self.selected_obj_parameter_definition_ids = {None: None}
-            self.selected_rel_parameter_definition_ids = {None: None}
-            for db_map, tag_ids in self.selected_parameter_tag_ids.items():
-                parameter_definition_id_list = set()
-                for item in db_map.wide_parameter_tag_definition_list():
-                    tag_id = item.parameter_tag_id if item.parameter_tag_id else 0
-                    if tag_id not in tag_ids:
-                        continue
-                    parameter_definition_id_list.update({int(x) for x in item.parameter_definition_id_list.split(",")})
-                self.selected_obj_parameter_definition_ids.update(
-                    {
-                        (db_map, x.object_class_id): {int(y) for y in x.parameter_definition_id_list.split(",")}
-                        for x in db_map.wide_object_parameter_definition_list(
-                            parameter_definition_id_list=parameter_definition_id_list
-                        )
-                    }
-                )
-                self.selected_rel_parameter_definition_ids.update(
-                    {
-                        (db_map, x.relationship_class_id): {int(y) for y in x.parameter_definition_id_list.split(",")}
-                        for x in db_map.wide_relationship_parameter_definition_list(
-                            parameter_definition_id_list=parameter_definition_id_list
-                        )
-                    }
-                )
-        self.do_update_filter()
+            # At least one tag selected: init dict like below so in case no parameter has the tag,
+            # all of them are filtered
+            self.selected_param_def_ids["object class"] = {(None, 0): set()}
+            self.selected_param_def_ids["relationship class"] = {(None, 0): set()}
+            # Find selected parameter definitions
+            selected_param_defs = self.db_mngr.find_cascading_parameter_definitions_by_tag(
+                self.selected_parameter_tag_ids
+            )
+            for db_map, param_defs in selected_param_defs.items():
+                for param_def in param_defs:
+                    if "object_class_id" in param_def:
+                        self.selected_param_def_ids["object class"].setdefault(
+                            (db_map, param_def["object_class_id"]), set()
+                        ).add(param_def["id"])
+                    elif "relationship_class_id" in param_def:
+                        self.selected_param_def_ids["relationship class"].setdefault(
+                            (db_map, param_def["relationship_class_id"]), set()
+                        ).add(param_def["id"])
+        self.update_filter()
 
-    @Slot("bool", name="_handle_commit_available")
-    def _handle_commit_available(self, on):
+    @Slot()
+    def _handle_menu_session_about_to_show(self):
+        on = any(db_map.has_pending_changes() for db_map in self.db_maps)
         self.ui.actionCommit.setEnabled(on)
         self.ui.actionRollback.setEnabled(on)
 
@@ -278,33 +275,33 @@ class DataStoreForm(QMainWindow):
     def _prompt_and_commit_session(self, checked=False):
         """Query user for a commit message and commit changes to source database returning False if cancelled."""
         if not any(db_map.has_pending_changes() for db_map in self.db_maps):
-            self.msg.emit("Nothing to commit yet.")
-            return True
-        dialog = CommitDialog(self, *self.db_names)
+            return
+        db_names = [x.codename for x in self.db_maps]
+        dialog = CommitDialog(self, *db_names)
         answer = dialog.exec_()
         if answer != QDialog.Accepted:
             return False
-        self.commit_session(dialog.commit_msg)
+        self.do_commit_session(dialog.commit_msg)
         return True
 
     @busy_effect
-    def commit_session(self, commit_msg):
+    def do_commit_session(self, commit_msg):
         try:
             for db_map in self.db_maps:
                 db_map.commit_session(commit_msg)
-            self.commit_available.emit(False)
         except SpineDBAPIError as e:
             self.msg_error.emit(e.msg)
             return
         msg = "All changes committed successfully."
         self.msg.emit(msg)
 
-    @Slot("bool", name="rollback_session")
+    @Slot("bool")
     def rollback_session(self, checked=False):
+        if not any(db_map.has_pending_changes() for db_map in self.db_maps):
+            return
         try:
             for db_map in self.db_maps:
                 db_map.rollback_session()
-            self.commit_available.emit(False)
         except SpineDBAPIError as e:
             self.msg_error.emit(e.msg)
             return
@@ -314,72 +311,45 @@ class DataStoreForm(QMainWindow):
 
     @Slot("bool", name="refresh_session")
     def refresh_session(self, checked=False):
+        self.init_models()
         msg = "Session refreshed."
         self.msg.emit(msg)
-        self.init_models()
 
     def init_models(self):
         """Initialize models."""
         self.init_object_tree_model()
         self.init_parameter_value_models()
         self.init_parameter_definition_models()
-        self.set_default_parameter_rows()
         self.init_parameter_value_list_model()
         self.init_parameter_tag_toolbar()
+        self.set_default_parameter_data()
 
     def init_object_tree_model(self):
         """Initialize object tree model."""
         self.object_tree_model.build_tree()
-        self.ui.treeView_object.expand(self.object_tree_model.indexFromItem(self.object_tree_model.root_item))
+        self.ui.treeView_object.expand(self.object_tree_model.root_index)
         self.ui.treeView_object.resizeColumnToContents(0)
 
     def init_parameter_value_models(self):
-        """Initialize parameter value models from source database."""
-        self.object_parameter_value_model.reset_model()
-        h = self.object_parameter_value_model.horizontal_header_labels().index
-        self.ui.tableView_object_parameter_value.horizontalHeader().hideSection(h('id'))
-        self.ui.tableView_object_parameter_value.horizontalHeader().hideSection(h('object_class_id'))
-        self.ui.tableView_object_parameter_value.horizontalHeader().hideSection(h('object_id'))
-        self.ui.tableView_object_parameter_value.horizontalHeader().hideSection(h('parameter_id'))
+        """Initialize parameter value models."""
+        self.object_parameter_value_model.init_model()
         self.ui.tableView_object_parameter_value.resizeColumnsToContents()
-        self.relationship_parameter_value_model.reset_model()
-        h = self.relationship_parameter_value_model.horizontal_header_labels().index
-        self.ui.tableView_relationship_parameter_value.horizontalHeader().hideSection(h('id'))
-        self.ui.tableView_relationship_parameter_value.horizontalHeader().hideSection(h('relationship_class_id'))
-        self.ui.tableView_relationship_parameter_value.horizontalHeader().hideSection(h('object_class_id_list'))
-        self.ui.tableView_relationship_parameter_value.horizontalHeader().hideSection(h('object_class_name_list'))
-        self.ui.tableView_relationship_parameter_value.horizontalHeader().hideSection(h('relationship_id'))
-        self.ui.tableView_relationship_parameter_value.horizontalHeader().hideSection(h('object_id_list'))
-        self.ui.tableView_relationship_parameter_value.horizontalHeader().hideSection(h('parameter_id'))
+        self.relationship_parameter_value_model.init_model()
         self.ui.tableView_relationship_parameter_value.resizeColumnsToContents()
 
     def init_parameter_definition_models(self):
-        """Initialize parameter (definition) models from source database."""
-        self.object_parameter_definition_model.reset_model()
-        h = self.object_parameter_definition_model.horizontal_header_labels().index
-        self.ui.tableView_object_parameter_definition.horizontalHeader().hideSection(h('id'))
-        self.ui.tableView_object_parameter_definition.horizontalHeader().hideSection(h('object_class_id'))
-        self.ui.tableView_object_parameter_definition.horizontalHeader().hideSection(h('parameter_tag_id_list'))
-        self.ui.tableView_object_parameter_definition.horizontalHeader().hideSection(h('value_list_id'))
+        """Initialize parameter (definition) models."""
+        self.object_parameter_definition_model.init_model()
         self.ui.tableView_object_parameter_definition.resizeColumnsToContents()
-        self.relationship_parameter_definition_model.reset_model()
-        h = self.relationship_parameter_definition_model.horizontal_header_labels().index
-        self.ui.tableView_relationship_parameter_definition.horizontalHeader().hideSection(h('id'))
-        self.ui.tableView_relationship_parameter_definition.horizontalHeader().hideSection(h('relationship_class_id'))
-        self.ui.tableView_relationship_parameter_definition.horizontalHeader().hideSection(h('object_class_id_list'))
-        self.ui.tableView_relationship_parameter_definition.horizontalHeader().hideSection(h('parameter_tag_id_list'))
-        self.ui.tableView_relationship_parameter_definition.horizontalHeader().hideSection(h('value_list_id'))
+        self.relationship_parameter_definition_model.init_model()
         self.ui.tableView_relationship_parameter_definition.resizeColumnsToContents()
 
     def init_parameter_value_list_model(self):
-        """Initialize parameter value_list models from source database."""
+        """Initialize parameter value_list models."""
         self.parameter_value_list_model.build_tree()
-        for i in range(self.parameter_value_list_model.rowCount()):
-            db_index = self.parameter_value_list_model.index(i, 0)
-            self.ui.treeView_parameter_value_list.expand(db_index)
-            for j in range(self.parameter_value_list_model.rowCount(db_index)):
-                list_index = self.parameter_value_list_model.index(j, 0, db_index)
-                self.ui.treeView_parameter_value_list.expand(list_index)
+        for item in self.parameter_value_list_model.visit_all():
+            index = self.parameter_value_list_model.index_from_item(item)
+            self.ui.treeView_parameter_value_list.expand(index)
         self.ui.treeView_parameter_value_list.resizeColumnToContents(0)
         self.ui.treeView_parameter_value_list.header().hide()
 
@@ -387,130 +357,97 @@ class DataStoreForm(QMainWindow):
         """Initialize parameter tag toolbar."""
         self.parameter_tag_toolbar.init_toolbar()
 
+    def _setup_delegate(self, table_view, column, delegate_class):
+        """Convenience method to setup a delegate for a view."""
+        delegate = delegate_class(self, self.db_mngr)
+        table_view.setItemDelegateForColumn(column, delegate)
+        delegate.data_committed.connect(self.set_parameter_data)
+        return delegate
+
     def setup_delegates(self):
         """Set delegates for tables."""
-        # Object parameter
-        table_view = self.ui.tableView_object_parameter_definition
-        delegate = ObjectParameterDefinitionDelegate(self)
-        table_view.setItemDelegate(delegate)
-        # Object parameter value
-        table_view = self.ui.tableView_object_parameter_value
-        delegate = ObjectParameterValueDelegate(self)
-        table_view.setItemDelegate(delegate)
-        # Relationship parameter
-        table_view = self.ui.tableView_relationship_parameter_definition
-        delegate = RelationshipParameterDefinitionDelegate(self)
-        table_view.setItemDelegate(delegate)
-        # Relationship parameter value
-        table_view = self.ui.tableView_relationship_parameter_value
-        delegate = RelationshipParameterValueDelegate(self)
-        table_view.setItemDelegate(delegate)
-
-    def all_selected_object_class_ids(self):
-        """Return object class ids selected in object tree *and* parameter tag toolbar."""
-        tree_object_class_ids = self.selected_object_class_ids
-        tag_object_class_ids = set(self.selected_obj_parameter_definition_ids.keys())
-        if not tag_object_class_ids:
-            return tree_object_class_ids
-        if not tree_object_class_ids:
-            return tag_object_class_ids
-        intersection = tree_object_class_ids.intersection(tag_object_class_ids)
-        if intersection:
-            return intersection
-        return {None}
-
-    def all_selected_relationship_class_ids(self):
-        """Return relationship class ids selected in relationship tree *and* parameter tag toolbar."""
-        tree_relationship_class_ids = self.selected_relationship_class_ids
-        tag_relationship_class_ids = set(self.selected_rel_parameter_definition_ids.keys())
-        if not tag_relationship_class_ids:
-            return tree_relationship_class_ids
-        if not tree_relationship_class_ids:
-            return tag_relationship_class_ids
-        intersection = tree_relationship_class_ids.intersection(tag_relationship_class_ids)
-        if intersection:
-            return intersection
-        return {None}
-
-    def set_default_parameter_rows(self, index=None):
-        """Set default rows for parameter models according to selection in object or relationship tree."""
-        if index is None or index.data(Qt.UserRole) == 'root':
-            db_name = self.db_names[0]
-            default_row = dict(database=db_name)
-            for model in (
-                self.object_parameter_definition_model,
-                self.object_parameter_value_model,
-                self.relationship_parameter_definition_model,
-                self.relationship_parameter_value_model,
-            ):
-                model = model.empty_row_model
-                model.set_default_row(**default_row)
-                model.set_rows_to_default(model.rowCount() - 1, model.rowCount() - 1)
-            return
-        item_type = index.data(Qt.UserRole)
-        db_map_dict = index.data(Qt.UserRole + 1)
-        db_map = list(db_map_dict.keys())[0]
-        db_name = self.db_map_to_name[db_map]
-        item = db_map_dict[db_map]
-        if item_type == 'object_class':
-            default_row = dict(object_class_id=item['id'], object_class_name=item['name'], database=db_name)
-            for model in (self.object_parameter_definition_model, self.object_parameter_value_model):
-                model = model.empty_row_model
-                model.set_default_row(**default_row)
-                model.set_rows_to_default(model.rowCount() - 1, model.rowCount() - 1)
-        elif item_type == 'object':
-            parent_index = index.parent()
-            parent_db_map_dict = parent_index.data(Qt.UserRole + 1)
-            parent_item = parent_db_map_dict[db_map]
-            default_row = dict(
-                object_class_id=parent_item['id'], object_class_name=parent_item['name'], database=db_name
-            )
-            model = self.object_parameter_definition_model.empty_row_model
-            model.set_default_row(**default_row)
-            model.set_rows_to_default(model.rowCount() - 1, model.rowCount() - 1)
-            default_row.update(dict(object_id=item['id'], object_name=item['name']))
-            model = self.object_parameter_value_model.empty_row_model
-            model.set_default_row(**default_row)
-            model.set_rows_to_default(model.rowCount() - 1, model.rowCount() - 1)
-        elif item_type == 'relationship_class':
-            default_row = dict(
-                relationship_class_id=item['id'],
-                relationship_class_name=item['name'],
-                object_class_id_list=item['object_class_id_list'],
-                object_class_name_list=item['object_class_name_list'],
-                database=db_name,
-            )
-            for model in (self.relationship_parameter_definition_model, self.relationship_parameter_value_model):
-                model = model.empty_row_model
-                model.set_default_row(**default_row)
-                model.set_rows_to_default(model.rowCount() - 1, model.rowCount() - 1)
-        elif item_type == 'relationship':
-            parent_index = index.parent()
-            parent_db_map_dict = parent_index.data(Qt.UserRole + 1)
-            parent_item = parent_db_map_dict[db_map]
-            default_row = dict(
-                relationship_class_id=parent_item['id'],
-                relationship_class_name=parent_item['name'],
-                object_class_id_list=parent_item['object_class_id_list'],
-                object_class_name_list=parent_item['object_class_name_list'],
-                database=db_name,
-            )
-            model = self.relationship_parameter_definition_model.empty_row_model
-            model.set_default_row(**default_row)
-            model.set_rows_to_default(model.rowCount() - 1, model.rowCount() - 1)
-            default_row.update(
-                dict(
-                    relationship_id=item['id'],
-                    object_id_list=item['object_id_list'],
-                    object_name_list=item['object_name_list'],
+        # Parameter definitions
+        for table_view in (
+            self.ui.tableView_object_parameter_definition,
+            self.ui.tableView_relationship_parameter_definition,
+        ):
+            h = table_view.model().header.index
+            self._setup_delegate(table_view, h("database"), DatabaseNameDelegate)
+            self._setup_delegate(table_view, h("parameter_tag_list"), TagListDelegate)
+            self._setup_delegate(table_view, h("value_list_name"), ValueListDelegate)
+            delegate = self._setup_delegate(table_view, h("default_value"), ParameterDefaultValueDelegate)
+            delegate.parameter_value_editor_requested.connect(
+                lambda index, value, table_view=table_view: self.show_parameter_value_editor(
+                    index, table_view, value=value
                 )
             )
-            model = self.relationship_parameter_value_model.empty_row_model
-            model.set_default_row(**default_row)
-            model.set_rows_to_default(model.rowCount() - 1, model.rowCount() - 1)
+        # Parameter values
+        for table_view in (self.ui.tableView_object_parameter_value, self.ui.tableView_relationship_parameter_value):
+            h = table_view.model().header.index
+            self._setup_delegate(table_view, h("database"), DatabaseNameDelegate)
+        # Object parameters
+        for table_view in (self.ui.tableView_object_parameter_value, self.ui.tableView_object_parameter_definition):
+            h = table_view.model().header.index
+            self._setup_delegate(table_view, h("object_class_name"), ObjectClassNameDelegate)
+        # Relationship parameters
+        for table_view in (
+            self.ui.tableView_relationship_parameter_value,
+            self.ui.tableView_relationship_parameter_definition,
+        ):
+            h = table_view.model().header.index
+            self._setup_delegate(table_view, h("relationship_class_name"), RelationshipClassNameDelegate)
+        # Object parameter value
+        table_view = self.ui.tableView_object_parameter_value
+        h = table_view.model().header.index
+        delegate = self._setup_delegate(table_view, h("value"), ObjectParameterValueDelegate)
+        delegate.parameter_value_editor_requested.connect(
+            lambda index, value, table_view=table_view: self.show_parameter_value_editor(index, table_view, value=value)
+        )
+        self._setup_delegate(table_view, h("parameter_name"), ObjectParameterNameDelegate)
+        self._setup_delegate(table_view, h("object_name"), ObjectNameDelegate)
+        # Relationship parameter value
+        table_view = self.ui.tableView_relationship_parameter_value
+        h = table_view.model().header.index
+        delegate = self._setup_delegate(table_view, h("value"), RelationshipParameterValueDelegate)
+        delegate.parameter_value_editor_requested.connect(
+            lambda index, value, table_view=table_view: self.show_parameter_value_editor(index, table_view, value=value)
+        )
+        self._setup_delegate(table_view, h("parameter_name"), RelationshipParameterNameDelegate)
+        self._setup_delegate(table_view, h("object_name_list"), ObjectNameListDelegate)
 
-    def do_update_filter(self):
-        """Apply filter on visible views."""
+    def selected_entity_class_ids(self, entity_class_type):
+        """Return object class ids selected in object tree *and* parameter tag toolbar."""
+        tree_class_ids = self.selected_ent_cls_ids[entity_class_type]
+        tag_class_ids = dict()
+        for db_map, class_id in self.selected_param_def_ids[entity_class_type]:
+            tag_class_ids.setdefault(db_map, set()).add(class_id)
+        if not tag_class_ids:
+            return tree_class_ids
+        if not tree_class_ids:
+            return tag_class_ids
+        return {
+            db_map: class_ids.intersection(tag_class_ids.get(db_map, {}))
+            for db_map, class_ids in tree_class_ids.items()
+        }
+
+    def set_default_parameter_data(self, index=None):
+        """Set default rows for parameter models according to selection in object or relationship tree."""
+        if index is None or not index.isValid():
+            default_data = dict(database=next(iter(self.db_maps)).codename)
+        else:
+            default_data = index.model().item_from_index(index).default_parameter_data()
+        self.set_and_apply_default_rows(self.object_parameter_definition_model, default_data)
+        self.set_and_apply_default_rows(self.object_parameter_value_model, default_data)
+        self.set_and_apply_default_rows(self.relationship_parameter_definition_model, default_data)
+        self.set_and_apply_default_rows(self.relationship_parameter_value_model, default_data)
+
+    @staticmethod
+    def set_and_apply_default_rows(model, default_data):
+        model.empty_model.set_default_row(**default_data)
+        model.empty_model.set_rows_to_default(model.empty_model.rowCount() - 1)
+
+    def update_filter(self):
+        """Update filter on parameter models."""
         if self.ui.dockWidget_object_parameter_value.isVisible():
             self.object_parameter_value_model.update_filter()
         if self.ui.dockWidget_object_parameter_definition.isVisible():
@@ -520,390 +457,201 @@ class DataStoreForm(QMainWindow):
         if self.ui.dockWidget_relationship_parameter_definition.isVisible():
             self.relationship_parameter_definition_model.update_filter()
 
-    @Slot("bool", name="show_add_object_classes_form")
+    @Slot("bool")
     def show_add_object_classes_form(self, checked=False):
         """Show dialog to let user select preferences for new object classes."""
-        dialog = AddObjectClassesDialog(self)
+        dialog = AddObjectClassesDialog(self, self.db_mngr, *self.db_maps)
         dialog.show()
 
-    @Slot("bool", "str", name="show_add_objects_form")
+    @Slot("bool")
     def show_add_objects_form(self, checked=False, class_name=""):
         """Show dialog to let user select preferences for new objects."""
-        dialog = AddObjectsDialog(self, class_name=class_name)
+        dialog = AddObjectsDialog(self, self.db_mngr, *self.db_maps, class_name=class_name)
         dialog.show()
 
-    @Slot("bool", "str", name="show_add_relationship_classes_form")
+    @Slot("bool")
     def show_add_relationship_classes_form(self, checked=False, object_class_one_name=None):
         """Show dialog to let user select preferences for new relationship class."""
-        dialog = AddRelationshipClassesDialog(self, object_class_one_name=object_class_one_name)
+        dialog = AddRelationshipClassesDialog(
+            self, self.db_mngr, *self.db_maps, object_class_one_name=object_class_one_name
+        )
         dialog.show()
 
-    @Slot("bool", "tuple", "str", "str", name="show_add_relationships_form")
+    @Slot("bool")
     def show_add_relationships_form(
         self, checked=False, relationship_class_key=(), object_class_name="", object_name=""
     ):
         """Show dialog to let user select preferences for new relationships."""
         dialog = AddRelationshipsDialog(
             self,
+            self.db_mngr,
+            *self.db_maps,
             relationship_class_key=relationship_class_key,
             object_class_name=object_class_name,
             object_name=object_name,
         )
         dialog.show()
 
-    def add_object_classes(self, object_class_d):
-        """Insert new object classes."""
-        added_names = set()
-        for db_map, items in object_class_d.items():
-            added, error_log = db_map.add_object_classes(*items)
-            if error_log:
-                self.msg_error.emit(format_string_list(error_log))
-            if not added.count():
-                continue
-            self.icon_mngr.setup_object_pixmaps(added)
-            self.add_object_classses_to_models(db_map, added)
-            added_names.update(x.name for x in added)
-        if not added_names:
-            return False
-        self.commit_available.emit(True)
-        msg = "Successfully added new object class(es) '{}'.".format("', '".join(added_names))
-        self.msg.emit(msg)
-        if self.selected_object_class_ids:
-            # Recompute self.selected_obj_tree_indexes['object_class']
-            # since some new classes might have been inserted above those indexes
-            # NOTE: This is only needed for object classes, since all other items are inserted at the bottom
-            self.selected_obj_tree_indexes['object_class'] = {}
-            is_selected = self.ui.treeView_object.selectionModel().isSelected
-            root_index = self.object_tree_model.indexFromItem(self.object_tree_model.root_item)
-            for i in range(self.object_tree_model.root_item.rowCount()):
-                obj_cls_index = self.object_tree_model.index(i, 0, root_index)
-                if is_selected(obj_cls_index):
-                    self.selected_obj_tree_indexes['object_class'][obj_cls_index] = None
-        return True
-
-    def add_object_classses_to_models(self, db_map, added):
-        self.object_tree_model.add_object_classes(db_map, added)
-
-    def add_objects(self, object_d):
-        """Insert new objects."""
-        added_names = set()
-        for db_map, items in object_d.items():
-            added, error_log = db_map.add_objects(*items)
-            if error_log:
-                self.msg_error.emit(format_string_list(error_log))
-            if not added.count():
-                continue
-            self.object_tree_model.add_objects(db_map, added)
-            added_names.update(x.name for x in added)
-        if not added_names:
-            return False
-        self.commit_available.emit(True)
-        msg = "Successfully added new object(s) '{}'.".format("', '".join(added_names))
-        self.msg.emit(msg)
-        return True
-
-    def add_relationship_classes(self, rel_cls_d):
-        """Insert new relationship classes."""
-        added_names = set()
-        for db_map, items in rel_cls_d.items():
-            added, error_log = db_map.add_wide_relationship_classes(*items)
-            if error_log:
-                self.msg_error.emit(format_string_list(error_log))
-            if not added.count():
-                continue
-            self.add_relationship_classes_to_models(db_map, added)
-            added_names.update(x.name for x in added)
-        if not added_names:
-            return False
-        self.commit_available.emit(True)
-        msg = "Successfully added new relationship class(es) '{}'.".format("', '".join(added_names))
-        self.msg.emit(msg)
-        return True
-
-    def add_relationship_classes_to_models(self, db_map, added):
-        self.object_tree_model.add_relationship_classes(db_map, added)
-        self.relationship_parameter_definition_model.add_object_class_id_lists(db_map, added)
-        self.relationship_parameter_value_model.add_object_class_id_lists(db_map, added)
-
-    def add_relationships(self, relationship_d):
-        """Insert new relationships."""
-        added_names = set()
-        for db_map, items in relationship_d.items():
-            added, error_log = db_map.add_wide_relationships(*items)
-            if error_log:
-                self.msg_error.emit(format_string_list(error_log))
-            added_names.update(x.name for x in added)
-            if not added.count():
-                continue
-            self.add_relationships_to_models(db_map, added)
-        if not added_names:
-            return False
-        self.commit_available.emit(True)
-        msg = "Successfully added new relationship(s) '{}'.".format("', '".join(added_names))
-        self.msg.emit(msg)
-        return True
-
-    def add_relationships_to_models(self, db_map, added):
-        self.object_tree_model.add_relationships(db_map, added)
-
-    @Slot("bool", name="show_edit_object_classes_form")
+    @Slot("bool")
     def show_edit_object_classes_form(self, checked=False):
-        indexes = self.selected_obj_tree_indexes.get('object_class')
-        if not indexes:
-            return
-        db_map_dicts = [ind.data(Qt.UserRole + 1) for ind in indexes]
-        dialog = EditObjectClassesDialog(self, db_map_dicts)
+        selected = {ind.internalPointer() for ind in self.object_tree_model.selected_object_class_indexes}
+        dialog = EditObjectClassesDialog(self, self.db_mngr, selected)
         dialog.show()
 
-    @Slot("bool", name="show_edit_objects_form")
+    @Slot("bool")
     def show_edit_objects_form(self, checked=False):
-        indexes = self.selected_obj_tree_indexes.get('object')
-        if not indexes:
-            return
-        db_map_dicts = [ind.data(Qt.UserRole + 1) for ind in indexes]
-        dialog = EditObjectsDialog(self, db_map_dicts)
+        selected = {ind.internalPointer() for ind in self.object_tree_model.selected_object_indexes}
+        dialog = EditObjectsDialog(self, self.db_mngr, selected)
         dialog.show()
 
-    @Slot("bool", name="show_edit_relationship_classes_form")
+    @Slot("bool")
     def show_edit_relationship_classes_form(self, checked=False):
-        if self.widget_with_selection == self.ui.treeView_object:
-            indexes = self.selected_obj_tree_indexes.get('relationship_class')
-        elif self.widget_with_selection == self.ui.treeView_relationship:
-            indexes = self.selected_rel_tree_indexes.get('relationship_class')
-        else:
-            return
-        if not indexes:
-            return
-        db_map_dicts = [ind.data(Qt.UserRole + 1) for ind in indexes]
-        dialog = EditRelationshipClassesDialog(self, db_map_dicts)
+        selected = {
+            ind.internalPointer()
+            for ind in self.object_tree_model.selected_relationship_class_indexes.keys()
+            | self.relationship_tree_model.selected_relationship_class_indexes.keys()
+        }
+        dialog = EditRelationshipClassesDialog(self, self.db_mngr, selected)
         dialog.show()
 
-    @Slot("bool", name="show_edit_relationships_form")
+    @Slot("bool")
     def show_edit_relationships_form(self, checked=False):
-        # NOTE: Only edit relationships of the same class as the one in current index, for now...
-        if self.widget_with_selection == self.ui.treeView_object:
-            current = self.ui.treeView_object.currentIndex()
-            if current.data(Qt.UserRole) != "relationship":
-                return
-            indexes = self.selected_obj_tree_indexes.get('relationship')
-        elif self.widget_with_selection == self.ui.treeView_relationship:
-            current = self.ui.treeView_relationship.currentIndex()
-            if current.data(Qt.UserRole) != "relationship":
-                return
-            indexes = self.selected_rel_tree_indexes.get('relationship')
-        ref_class_key = (current.parent().data(Qt.DisplayRole), current.parent().data(Qt.ToolTipRole))
-        db_map_dicts = []
-        for index in indexes:
-            class_key = (index.parent().data(Qt.DisplayRole), index.parent().data(Qt.ToolTipRole))
-            if class_key == ref_class_key:
-                db_map_dicts.append(index.data(Qt.UserRole + 1))
-        dialog = EditRelationshipsDialog(self, db_map_dicts, ref_class_key)
+        # NOTE: Only edits relationships that are in the same class
+        selected = {
+            ind.internalPointer()
+            for ind in self.object_tree_model.selected_relationship_indexes.keys()
+            | self.relationship_tree_model.selected_relationship_indexes.keys()
+        }
+        first_item = next(iter(selected))
+        relationship_class_key = first_item.parent_item.display_id
+        selected = {item for item in selected if item.parent_item.display_id == relationship_class_key}
+        dialog = EditRelationshipsDialog(self, self.db_mngr, selected, relationship_class_key)
         dialog.show()
 
-    @busy_effect
-    def update_object_classes(self, object_class_d):
-        """Update object classes."""
-        updated_names = set()
-        for db_map, items in object_class_d.items():
-            updated, error_log = db_map.update_object_classes(*items)
-            if error_log:
-                self.msg_error.emit(format_string_list(error_log))
-            if not updated.count():
-                continue
-            self.icon_mngr.setup_object_pixmaps(updated)
-            self.update_object_classes_in_models(db_map, updated)
-            updated_names.update(x.name for x in updated)
-        if not updated_names:
-            return False
-        self.commit_available.emit(True)
-        msg = "Successfully updated object class(es) '{}'.".format("', '".join(updated_names))
-        self.msg.emit(msg)
-        return True
-
-    def update_object_classes_in_models(self, db_map, updated):
-        self.object_tree_model.update_object_classes(db_map, updated)
-        self.object_parameter_value_model.rename_object_classes(db_map, updated)
-        self.object_parameter_definition_model.rename_object_classes(db_map, updated)
-        self.relationship_parameter_value_model.rename_object_classes(db_map, updated)
-        self.relationship_parameter_definition_model.rename_object_classes(db_map, updated)
-
-    @busy_effect
-    def update_objects(self, object_d):
-        """Update objects."""
-        updated_names = set()
-        for db_map, items in object_d.items():
-            updated, error_log = db_map.update_objects(*items)
-            if error_log:
-                self.msg_error.emit(format_string_list(error_log))
-            if not updated.count():
-                continue
-            self.update_objects_in_models(db_map, updated)
-            updated_names.update(x.name for x in updated)
-        if not updated_names:
-            return False
-        self.commit_available.emit(True)
-        msg = "Successfully updated object(s) '{}'.".format("', '".join(updated_names))
-        self.msg.emit(msg)
-        return True
-
-    def update_objects_in_models(self, db_map, updated):
-        self.object_tree_model.update_objects(db_map, updated)
-        self.object_parameter_value_model.rename_objects(db_map, updated)
-        self.relationship_parameter_value_model.rename_objects(db_map, updated)
-
-    @busy_effect
-    def update_relationship_classes(self, rel_cls_d):
-        """Update relationship classes."""
-        updated_names = set()
-        for db_map, items in rel_cls_d.items():
-            updated, error_log = db_map.update_wide_relationship_classes(*items)
-            if error_log:
-                self.msg_error.emit(format_string_list(error_log))
-            if not updated.count():
-                continue
-            self.update_relationship_classes_in_models(db_map, updated)
-            updated_names.update(x.name for x in updated)
-        if not updated_names:
-            return False
-        self.commit_available.emit(True)
-        msg = "Successfully updated relationship class(es) '{}'.".format("', '".join(updated_names))
-        self.msg.emit(msg)
-        return True
-
-    def update_relationship_classes_in_models(self, db_map, updated):
-        self.object_tree_model.update_relationship_classes(db_map, updated)
-        self.relationship_parameter_value_model.rename_relationship_classes(db_map, updated)
-        self.relationship_parameter_definition_model.rename_relationship_classes(db_map, updated)
-
-    @busy_effect
-    def update_relationships(self, relationship_d):
-        """Update relationships."""
-        updated_names = set()
-        for db_map, items in relationship_d.items():
-            updated, error_log = db_map.update_wide_relationships(*items)
-            if error_log:
-                self.msg_error.emit(format_string_list(error_log))
-            if not updated.count():
-                continue
-            self.update_relationships_in_models(db_map, updated)
-            updated_names.update(x.name for x in updated)
-        if not updated_names:
-            return False
-        self.commit_available.emit(True)
-        msg = "Successfully updated relationship(s) '{}'.".format("', '".join(updated_names))
-        self.msg.emit(msg)
-        return True
-
-    def update_relationships_in_models(self, db_map, updated):
-        self.object_tree_model.update_relationships(db_map, updated)
-
-    def add_parameter_value_lists(self, parameter_value_list_d):
-        added_names = set()
-        for db_map, items in parameter_value_list_d.items():
-            parents = []
-            for item in items:
-                parents.append(item.pop("parent"))
-            added, error_log = db_map.add_wide_parameter_value_lists(*items)
-            if error_log:
-                self.msg_error.emit(format_string_list(error_log))
-            if not added.count():
-                continue
-            for k, item in enumerate(added):
-                parents[k].internalPointer().id = item.id
-            added_names.update(x.name for x in added)
-        if not added_names:
-            return False
-        self.commit_available.emit(True)
-        msg = "Successfully added new parameter value list(s) '{}'.".format("', '".join(added_names))
-        self.msg.emit(msg)
-        return True
-
-    def update_parameter_value_lists(self, parameter_value_list_d):
-        updated_names = set()
-        for db_map, items in parameter_value_list_d.items():
-            updated, error_log = db_map.update_wide_parameter_value_lists(*items)
-            if error_log:
-                self.msg_error.emit(format_string_list(error_log))
-            if not updated.count():
-                continue
-            self.object_parameter_definition_model.rename_parameter_value_lists(db_map, updated)
-            self.relationship_parameter_definition_model.rename_parameter_value_lists(db_map, updated)
-            updated_names.update(x.name for x in updated)
-        if not updated_names:
-            return False
-        self.commit_available.emit(True)
-        msg = "Successfully updated parameter value list(s) '{}'.".format("', '".join(updated_names))
-        self.msg.emit(msg)
-        return True
-
-    @Slot("bool", name="show_manage_parameter_tags_form")
+    @Slot("bool")
     def show_manage_parameter_tags_form(self, checked=False):
-        dialog = ManageParameterTagsDialog(self)
+        dialog = ManageParameterTagsDialog(self, self.db_mngr, *self.db_maps)
         dialog.show()
 
-    @busy_effect
-    def add_parameter_tags(self, parameter_tag_d):
-        """Add parameter tags."""
-        added_tags = set()
-        for db_map, items in parameter_tag_d.items():
-            added, error_log = db_map.add_parameter_tags(*items)
-            if error_log:
-                self.msg_error.emit(format_string_list(error_log))
-            added_tags.update(x.tag for x in added)
-            if not added.count():
-                continue
-            self.parameter_tag_toolbar.add_tag_actions(db_map, added)
-        if not added_tags:
-            return False
-        self.commit_available.emit(True)
-        msg = "Successfully added new parameter tag(s) '{}'.".format("', '".join(added_tags))
+    def notify_items_changed(self, action, item_type, db_map_data):
+        """Enables or disables actions and informs the user about what just happened."""
+        msg = f"<html> Successfully {action} {item_type} item(s)"
+        name_keys = {"parameter tag": "tag", "parameter value": None, "parameter definition": "parameter_name"}
+        name_key = name_keys.get(item_type, "name")
+        if name_key:
+            names = {item[name_key] for db_map, data in db_map_data.items() for item in data}
+            msg += ":" + format_string_list(names)
+        msg += "</html>"
         self.msg.emit(msg)
-        return True
+
+    def receive_object_classes_added(self, db_map_data):
+        self.notify_items_changed("added", "object class", db_map_data)
+        self.object_tree_model.add_object_classes(db_map_data)
+
+    def receive_objects_added(self, db_map_data):
+        self.notify_items_changed("added", "object", db_map_data)
+        self.object_tree_model.add_objects(db_map_data)
+
+    def receive_relationship_classes_added(self, db_map_data):
+        self.notify_items_changed("added", "relationship class", db_map_data)
+        self.object_tree_model.add_relationship_classes(db_map_data)
+
+    def receive_relationships_added(self, db_map_data):
+        self.notify_items_changed("added", "relationship", db_map_data)
+        self.object_tree_model.add_relationships(db_map_data)
+        self.relationship_parameter_value_model.receive_relationships_added(db_map_data)
+
+    def receive_parameter_definitions_added(self, db_map_data):
+        self.notify_items_changed("added", "parameter definition", db_map_data)
+        self.object_parameter_definition_model.receive_parameter_data_added(db_map_data)
+        self.relationship_parameter_definition_model.receive_parameter_data_added(db_map_data)
+
+    def receive_parameter_values_added(self, db_map_data):
+        self.notify_items_changed("added", "parameter value", db_map_data)
+        self.object_parameter_value_model.receive_parameter_data_added(db_map_data)
+        self.relationship_parameter_value_model.receive_parameter_data_added(db_map_data)
+
+    def receive_parameter_value_lists_added(self, db_map_data):
+        self.notify_items_changed("added", "parameter value list", db_map_data)
+        self.parameter_value_list_model.receive_parameter_value_lists_added(db_map_data)
+
+    def receive_parameter_tags_added(self, db_map_data):
+        self.notify_items_changed("added", "parameter tag", db_map_data)
+        self.parameter_tag_toolbar.receive_parameter_tags_added(db_map_data)
+
+    def receive_object_classes_updated(self, db_map_data):
+        self.notify_items_changed("updated", "object class", db_map_data)
+        self.object_tree_model.update_object_classes(db_map_data)
+
+    def receive_objects_updated(self, db_map_data):
+        self.notify_items_changed("updated", "object", db_map_data)
+        self.object_tree_model.update_objects(db_map_data)
+
+    def receive_relationship_classes_updated(self, db_map_data):
+        self.notify_items_changed("updated", "relationship class", db_map_data)
+        self.object_tree_model.update_relationship_classes(db_map_data)
+
+    def receive_relationships_updated(self, db_map_data):
+        self.notify_items_changed("updated", "relationship", db_map_data)
+        self.object_tree_model.update_relationships(db_map_data)
+
+    def receive_parameter_definitions_updated(self, db_map_data):
+        self.notify_items_changed("updated", "parameter definition", db_map_data)
+        self.object_parameter_definition_model.receive_parameter_data_updated(db_map_data)
+        self.relationship_parameter_definition_model.receive_parameter_data_updated(db_map_data)
+
+    def receive_parameter_values_updated(self, db_map_data):
+        self.notify_items_changed("updated", "parameter value", db_map_data)
+        self.object_parameter_value_model.receive_parameter_data_updated(db_map_data)
+        self.relationship_parameter_value_model.receive_parameter_data_updated(db_map_data)
+
+    def receive_parameter_value_lists_updated(self, db_map_data):
+        self.notify_items_changed("updated", "parameter value list", db_map_data)
+        self.parameter_value_list_model.receive_parameter_value_lists_updated(db_map_data)
+
+    def receive_parameter_tags_updated(self, db_map_data):
+        self.notify_items_changed("updated", "parameter tag", db_map_data)
+        self.parameter_tag_toolbar.receive_parameter_tags_updated(db_map_data)
+
+    def receive_object_classes_removed(self, db_map_data):
+        self.notify_items_changed("removed", "object class", db_map_data)
+        self.object_tree_model.remove_object_classes(db_map_data)
+        self.object_parameter_definition_model.receive_entity_classes_removed(db_map_data)
+        self.object_parameter_value_model.receive_entity_classes_removed(db_map_data)
+
+    def receive_objects_removed(self, db_map_data):
+        self.notify_items_changed("removed", "object", db_map_data)
+        self.object_tree_model.remove_objects(db_map_data)
+
+    def receive_relationship_classes_removed(self, db_map_data):
+        self.notify_items_changed("removed", "relationship class", db_map_data)
+        self.object_tree_model.remove_relationship_classes(db_map_data)
+        self.relationship_parameter_definition_model.receive_entity_classes_removed(db_map_data)
+        self.relationship_parameter_value_model.receive_entity_classes_removed(db_map_data)
+
+    def receive_relationships_removed(self, db_map_data):
+        self.notify_items_changed("removed", "relationship", db_map_data)
+        self.object_tree_model.remove_relationships(db_map_data)
+
+    def receive_parameter_definitions_removed(self, db_map_data):
+        self.notify_items_changed("removed", "parameter definition", db_map_data)
+        self.object_parameter_definition_model.receive_parameter_data_removed(db_map_data)
+        self.relationship_parameter_definition_model.receive_parameter_data_removed(db_map_data)
+
+    def receive_parameter_values_removed(self, db_map_data):
+        self.notify_items_changed("removed", "parameter value", db_map_data)
+        self.object_parameter_value_model.receive_parameter_data_removed(db_map_data)
+        self.relationship_parameter_value_model.receive_parameter_data_removed(db_map_data)
+
+    def receive_parameter_value_lists_removed(self, db_map_data):
+        self.notify_items_changed("removed", "parameter value list", db_map_data)
+        self.parameter_value_list_model.receive_parameter_value_lists_removed(db_map_data)
+
+    def receive_parameter_tags_removed(self, db_map_data):
+        self.notify_items_changed("removed", "parameter tag", db_map_data)
+        self.parameter_tag_toolbar.receive_parameter_tags_removed(db_map_data)
 
     @busy_effect
-    def update_parameter_tags(self, parameter_tag_d):
-        """Update parameter tags."""
-        # TODO: update parameter value tables??
-        updated_tags = set()
-        for db_map, items in parameter_tag_d.items():
-            updated, error_log = db_map.update_parameter_tags(*items)
-            if error_log:
-                self.msg_error.emit(format_string_list(error_log))
-            if not updated.count():
-                continue
-            self.object_parameter_definition_model.rename_parameter_tags(db_map, updated)
-            self.relationship_parameter_definition_model.rename_parameter_tags(db_map, updated)
-            self.parameter_tag_toolbar.update_tag_actions(db_map, updated)
-            updated_tags.update(x.tag for x in updated)
-        if not updated_tags:
-            return False
-        self.commit_available.emit(True)
-        msg = "Successfully updated parameter tag(s) '{}'.".format("', '".join(updated_tags))
-        self.msg.emit(msg)
-        return True
-
-    @busy_effect
-    def remove_parameter_tags(self, parameter_tag_d):
-        """Remove parameter tags."""
-        # TODO: remove from parameter value tables??
-        removed = 0
-        for db_map, ids in parameter_tag_d.items():
-            try:
-                db_map.remove_items(parameter_tag_ids=ids)
-            except SpineDBAPIError as e:
-                self.msg_error.emit(e.msg)
-                continue
-            self.object_parameter_definition_model.remove_parameter_tags(db_map, ids)
-            self.relationship_parameter_definition_model.remove_parameter_tags(db_map, ids)
-            self.parameter_tag_toolbar.remove_tag_actions(db_map, ids)
-            removed += len(ids)
-        if not removed:
-            return False
-        self.commit_available.emit(True)
-        msg = "Successfully removed {} parameter tag(s).".format(removed)
-        self.msg.emit(msg)
-        return True
-
     def show_parameter_value_editor(self, index, table_view, value=None):
         """Shows the parameter value editor for the given index of given table view.
         """
@@ -911,39 +659,10 @@ class DataStoreForm(QMainWindow):
         editor = ParameterValueEditor(index, value_name=value_name, value=value, parent_widget=self)
         editor.show()
 
-    @Slot("QModelIndex", "QVariant", name="set_parameter_value_data")
-    def set_parameter_value_data(self, index, new_value):  # pylint: disable=no-self-use
-        """Update (object or relationship) parameter value with newly edited data."""
-        if new_value is None:
-            return False
+    @Slot("QModelIndex", "QVariant")
+    def set_parameter_data(self, index, new_value):  # pylint: disable=no-self-use
+        """Update (object or relationship) parameter definition or value with newly edited data."""
         index.model().setData(index, new_value)
-        return True
-
-    @Slot("QModelIndex", "QVariant", name="set_parameter_definition_data")
-    def set_parameter_definition_data(self, index, new_value):
-        """Update (object or relationship) parameter definition with newly edited data.
-        If the parameter name changed, update it in (object or relationship) parameter value.
-        """
-        if new_value is None:
-            return False
-        header = index.model().horizontal_header_labels()
-        db_column = header.index('database')
-        db_name = index.sibling(index.row(), db_column).data(Qt.DisplayRole)
-        db_map = self.db_name_to_map.get(db_name)
-        if index.model().setData(index, new_value) and header[index.column()] == 'parameter_name' and db_map:
-            parameter_id_column = header.index('id')
-            parameter_id = index.sibling(index.row(), parameter_id_column).data(Qt.DisplayRole)
-            if 'object_class_id' in header:
-                object_class_id_column = header.index('object_class_id')
-                object_class_id = index.sibling(index.row(), object_class_id_column).data(Qt.DisplayRole)
-                parameter = dict(id=parameter_id, object_class_id=object_class_id, name=new_value)
-                self.object_parameter_value_model.rename_parameter(db_map, parameter)
-            elif 'relationship_class_id' in header:
-                relationship_class_id_column = header.index('relationship_class_id')
-                relationship_class_id = index.sibling(index.row(), relationship_class_id_column).data(Qt.DisplayRole)
-                parameter = dict(id=parameter_id, relationship_class_id=relationship_class_id, name=new_value)
-                self.relationship_parameter_value_model.rename_parameter(db_map, parameter)
-        return True
 
     def _prompt_close_and_commit(self):
         """Prompts user for window closing and commits if requested returning True if window should close."""
@@ -998,19 +717,27 @@ class DataStoreForm(QMainWindow):
         window_state = qsettings.value("windowState")
         window_maximized = qsettings.value("windowMaximized", defaultValue='false')
         n_screens = qsettings.value("n_screens", defaultValue=1)
-        opd_h_state = qsettings.value("objParDefHeaderState")
-        opv_h_state = qsettings.value("objParValHeaderState")
-        rpd_h_state = qsettings.value("relParDefHeaderState")
-        rpv_h_state = qsettings.value("relParValHeaderState")
+        header_states = (
+            qsettings.value("objParDefHeaderState"),
+            qsettings.value("objParValHeaderState"),
+            qsettings.value("relParDefHeaderState"),
+            qsettings.value("relParValHeaderState"),
+        )
         qsettings.endGroup()
-        if opd_h_state:
-            self.ui.tableView_object_parameter_definition.horizontalHeader().restoreState(opd_h_state)
-        if opv_h_state:
-            self.ui.tableView_object_parameter_value.horizontalHeader().restoreState(opv_h_state)
-        if rpd_h_state:
-            self.ui.tableView_relationship_parameter_definition.horizontalHeader().restoreState(rpd_h_state)
-        if rpv_h_state:
-            self.ui.tableView_relationship_parameter_value.horizontalHeader().restoreState(rpv_h_state)
+        views = (
+            self.ui.tableView_object_parameter_definition.horizontalHeader(),
+            self.ui.tableView_object_parameter_value.horizontalHeader(),
+            self.ui.tableView_relationship_parameter_definition.horizontalHeader(),
+            self.ui.tableView_relationship_parameter_value.horizontalHeader(),
+        )
+        for view, state in zip(views, header_states):
+            if state:
+                curr_state = view.saveState()
+                view.restoreState(state)
+                if view.count() != view.model().columnCount():
+                    # This can happen the first time the user switches to this version,
+                    # because of hidden columns in past versions
+                    view.restoreState(curr_state)
         if window_size:
             self.resize(window_size)
         if window_pos:
@@ -1058,6 +785,5 @@ class DataStoreForm(QMainWindow):
                 return
         # Save UI form state
         self.save_window_state()
-        for db_map in self.db_maps:
-            db_map.connection.close()
+        self._project.db_signaller.remove_listener(self)
         event.accept()
