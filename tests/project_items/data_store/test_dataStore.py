@@ -146,7 +146,7 @@ class TestDataStore(unittest.TestCase):
         # Assert that checkbox is unchecked
         self.assertFalse(self.ds_properties_ui.checkBox_for_spine_model.isChecked())
         # Click New Spine db button. This overwrites the existing sqlite file!
-        with mock.patch("spinetoolbox.project_items.data_store.data_store.QMessageBox") as mock_qmessagebox:
+        with mock.patch("spinetoolbox.spine_db_manager.QMessageBox") as mock_qmessagebox:
             mock_qmessagebox.exec_().return_value = QMessageBox.AcceptRole
             self.ds_properties_ui.toolButton_create_new_spine_db.click()
             mock_qmessagebox.assert_called_once()
@@ -192,7 +192,7 @@ class TestDataStore(unittest.TestCase):
         self.ds_properties_ui.checkBox_for_spine_model.setChecked(True)
         self.assertTrue(self.ds_properties_ui.checkBox_for_spine_model.isChecked())
         # Click New Spine db button. This overwrites the existing sqlite file!
-        with mock.patch("spinetoolbox.project_items.data_store.data_store.QMessageBox") as mock_qmessagebox:
+        with mock.patch("spinetoolbox.spine_db_manager.QMessageBox") as mock_qmessagebox:
             mock_qmessagebox.exec_().return_value = QMessageBox.AcceptRole
             self.ds_properties_ui.toolButton_create_new_spine_db.click()
             mock_qmessagebox.assert_called_once()
