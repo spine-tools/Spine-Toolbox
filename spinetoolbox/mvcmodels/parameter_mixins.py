@@ -247,6 +247,8 @@ class FillInEntityClassIdMixin(ConvertToDBMixin):
 class FillInEntityIdsMixin(ConvertToDBMixin):
     """Fills in entity ids."""
 
+    _add_entities_on_the_fly = False
+
     def __init__(self, *args, **kwargs):
         """Initializes lookup dicts."""
         super().__init__(*args, **kwargs)
@@ -287,7 +289,7 @@ class FillInEntityIdsMixin(ConvertToDBMixin):
         name = item.pop(self.entity_name_key, None)
         items = self._db_map_ent_lookup.get(db_map, {}).get(name)
         if not items:
-            return [f"Unknow entity {name}"] if name else []
+            return [f"Unknow entity {name}"] if name and not self._add_entities_on_the_fly else []
         item["entity_ids"] = {x["class_id"]: x["id"] for x in items}
         return []
 
@@ -432,6 +434,11 @@ class MakeRelationshipOnTheFlyMixin:
         super().__init__(*args, **kwargs)
         self._db_map_obj_lookup = dict()
         self._db_map_rel_cls_lookup = dict()
+        self._db_map_existing_rels = dict()
+
+    @staticmethod
+    def _make_unique_relationship_id(item):
+        return (item["class_name"], item["object_name_list"])
 
     def build_lookup_dictionaries(self, db_map_data):
         """Build object lookup dictionary."""
@@ -441,9 +448,9 @@ class MakeRelationshipOnTheFlyMixin:
         for db_map, items in db_map_data.items():
             for item in items:
                 object_name_list = item.get("object_name_list")
-                object_name_list = self._parse_object_name_list(object_name_list)
-                if object_name_list:
-                    db_map_object_names.setdefault(db_map, set()).update(object_name_list)
+                parsed_object_name_list = self._parse_object_name_list(object_name_list)
+                if parsed_object_name_list:
+                    db_map_object_names.setdefault(db_map, set()).update(parsed_object_name_list)
                 relationship_class_name = item.get("relationship_class_name")
                 db_map_rel_cls_names.setdefault(db_map, set()).add(relationship_class_name)
         # Build lookup dicts
@@ -459,14 +466,21 @@ class MakeRelationshipOnTheFlyMixin:
                 item = self.db_mngr.get_item_by_field(db_map, "relationship class", "name", name)
                 if item:
                     self._db_map_rel_cls_lookup.setdefault(db_map, {})[name] = item
+        self._db_map_existing_rels = {
+            db_map: {self._make_unique_relationship_id(x) for x in self.db_mngr.get_items(db_map, "relationship")}
+            for db_map in self._db_map_obj_lookup.keys() | self._db_map_rel_cls_lookup.keys()
+        }
 
     def _make_relationship_on_the_fly(self, item, db_map):
         """Gets entity info from model item (name-based) into a relationship database item (id-based)."""
         relationship_class_name = item.get("relationship_class_name")
+        object_name_list = item.get("object_name_list")
+        relationships = self._db_map_existing_rels.get(db_map, set())
+        if (relationship_class_name, object_name_list) in relationships:
+            return None, []
         relationship_class = self._db_map_rel_cls_lookup.get(db_map, {}).get(relationship_class_name)
         if not relationship_class:
             return None, [f"Unknown relationship class {relationship_class_name}"] if relationship_class_name else []
-        object_name_list = item.get("object_name_list")
         parsed_object_name_list = self._parse_object_name_list(object_name_list)
         if not parsed_object_name_list:
             return None, [f"Unable to parse {object_name_list}"] if object_name_list else []
