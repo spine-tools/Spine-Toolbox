@@ -430,7 +430,7 @@ class MakeRelationshipOnTheFlyMixin:
     """Makes relationships on the fly."""
 
     def __init__(self, *args, **kwargs):
-        """Init class, create lookup dicts."""
+        """Initializes lookup dicts."""
         super().__init__(*args, **kwargs)
         self._db_map_obj_lookup = dict()
         self._db_map_rel_cls_lookup = dict()
@@ -438,10 +438,15 @@ class MakeRelationshipOnTheFlyMixin:
 
     @staticmethod
     def _make_unique_relationship_id(item):
+        """Returns a unique name-based identifier for db relationships."""
         return (item["class_name"], item["object_name_list"])
 
     def build_lookup_dictionaries(self, db_map_data):
-        """Build object lookup dictionary."""
+        """Builds a name lookup dictionary for the given data.
+
+        Args:
+            db_map_data (dict): lists of model items keyed by DiffDatabaseMapping.
+        """
         # Group data by name
         db_map_object_names = dict()
         db_map_rel_cls_names = dict()
@@ -472,7 +477,16 @@ class MakeRelationshipOnTheFlyMixin:
         }
 
     def _make_relationship_on_the_fly(self, item, db_map):
-        """Gets entity info from model item (name-based) into a relationship database item (id-based)."""
+        """Returns database relationship item (id-based) from the given model parameter value item (name-based).
+
+        Args:
+            item (dict): the model parameter value item
+            db_map (DiffDatabaseMapping): the database where the resulting item belongs
+
+        Returns:
+            dict: the db relationship item
+            list: error log
+        """
         relationship_class_name = item.get("relationship_class_name")
         object_name_list = item.get("object_name_list")
         relationships = self._db_map_existing_rels.get(db_map, set())

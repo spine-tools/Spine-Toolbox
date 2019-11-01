@@ -39,7 +39,7 @@ class TestEmptyParameterModel(unittest.TestCase):
 
     def setUp(self):
         """Overridden method. Runs before each test."""
-        self.mock_db_mngr = mock.Mock()
+        self.mock_db_mngr = mock.MagicMock()
         self.mock_db_map = mock.Mock()
         self.mock_db_map.codename = "mock_db"
         self.mock_db_mngr.db_maps = [self.mock_db_map]
