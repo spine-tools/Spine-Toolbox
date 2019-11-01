@@ -224,7 +224,7 @@ class SpineDBManager(QObject):
         """
         for db_map, items in db_map_data.items():
             for item in items:
-                self._cache.setdefault(db_map, {}).setdefault(item_type, {}).setdefault(item["id"], {}).update(item)
+                self._cache.setdefault(db_map, {}).setdefault(item_type, {}).update({item["id"]: item})
 
     def uncache_items(self, item_type, db_map_data):
         """Removes data from cache.
