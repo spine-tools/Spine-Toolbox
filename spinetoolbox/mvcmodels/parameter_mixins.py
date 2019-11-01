@@ -115,7 +115,7 @@ class FillInValueListIdMixin(ConvertToDBMixin):
         value_list_name = item.pop("value_list_name", None)
         value_list = self._db_map_value_list_lookup.get(db_map, {}).get(value_list_name)
         if not value_list:
-            return [f"Unknow value list name {value_list_name}"] if value_list_name else []
+            return [f"Unknown value list name {value_list_name}"] if value_list_name else []
         item["parameter_value_list_id"] = value_list["id"]
         return []
 
@@ -224,7 +224,7 @@ class FillInEntityClassIdMixin(ConvertToDBMixin):
         entity_class_name = item.pop(self.entity_class_name_key, None)
         entity_class = self._db_map_ent_cls_lookup.get(db_map, {}).get(entity_class_name)
         if not entity_class:
-            return [f"Unknow entity class {entity_class_name}"] if entity_class_name else []
+            return [f"Unknown entity class {entity_class_name}"] if entity_class_name else []
         item[self.entity_class_id_key] = entity_class.get("id")
         return []
 
@@ -289,7 +289,7 @@ class FillInEntityIdsMixin(ConvertToDBMixin):
         name = item.pop(self.entity_name_key, None)
         items = self._db_map_ent_lookup.get(db_map, {}).get(name)
         if not items:
-            return [f"Unknow entity {name}"] if name and not self._add_entities_on_the_fly else []
+            return [f"Unknown entity {name}"] if name and not self._add_entities_on_the_fly else []
         item["entity_ids"] = {x["class_id"]: x["id"] for x in items}
         return []
 
@@ -352,7 +352,7 @@ class FillInParameterDefinitionIdsMixin(ConvertToDBMixin):
         name = item.pop("parameter_name", None)
         items = self._db_map_param_lookup.get(db_map, {}).get(name)
         if not items:
-            return [f"Unknow parameter {name}"] if name else []
+            return [f"Unknown parameter {name}"] if name else []
         item["parameter_ids"] = {x[self.entity_class_id_key]: x["id"] for x in items}
         return []
 
