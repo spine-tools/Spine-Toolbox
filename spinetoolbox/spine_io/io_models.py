@@ -36,6 +36,11 @@ from .io_api import TYPE_CLASS_TO_STRING, TYPE_STRING_TO_CLASS
 
 Margin = namedtuple("Margin", ("left", "right", "top", "bottom"))
 
+
+_MAPPING_COLORS = {"entity": QColor(223, 194, 125), "parameter value": QColor(1, 133, 113), "parameter extra dimension": QColor(128, 205, 193), "parameter name": QColor(128, 205, 193), "entity class": QColor(166, 97, 26)}
+_ERROR_COLOR = QColor(Qt.red)
+
+
 _COLUMN_TYPE_ROLE = Qt.UserRole
 _COLUMN_NUMBER_ROLE = Qt.UserRole + 1
 _ALLOWED_TYPES = list(sorted(TYPE_STRING_TO_CLASS.keys()))
@@ -101,6 +106,8 @@ class MappingPreviewModel(MinimalTableModel):
         Arguments:
             mapping {MappingSpecModel} -- mapping model
         """
+        if not isinstance(mapping, MappingSpecModel):
+            raise TypeError(f"mapping must be instance of 'MappingSpecModel', instead got: '{type(mapping).__name__}'")
         if self._data_changed_signal is not None and self._mapping:
             self._mapping.dataChanged.disconnect(self._mapping_data_changed)
             self._data_changed_signal = None
@@ -180,14 +187,21 @@ class MappingPreviewModel(MinimalTableModel):
             type_name = self.get_type(index.column(), orientation)
             return f'Could not parse value: "{self._main_data[index.row()][index.column()]}" as a {type_name}'
         if role == Qt.BackgroundColorRole:
-            return QColor(Qt.red)
+            return _ERROR_COLOR
 
     def data(self, index, role=Qt.DisplayRole):
-        if index.row() > max(self._mapping.last_pivot_row, self._mapping.read_start_row-1):
+        if self._mapping:
+            last_pivoted_row = self._mapping.last_pivot_row
+            read_from_row = self._mapping.read_start_row
+        else:
+            last_pivoted_row = -1
+            read_from_row = 0
+
+        if index.row() > max(last_pivoted_row, read_from_row-1):
             if (index.row(), index.column()) in self._column_type_errors:
                 return self.data_error(index, role)
 
-        if index.row() <= self._mapping.last_pivot_row:
+        if index.row() <= last_pivoted_row:
             if index.column() not in mapping_non_pivoted_columns(self._mapping._model, self.columnCount(), self.header) and index.column() not in self._mapping.skip_columns:
                 if (index.row(), index.column()) in self._row_type_errors:
                     return self.data_error(index, role, orientation=Qt.Vertical)
@@ -216,20 +230,20 @@ class MappingPreviewModel(MinimalTableModel):
                     and index.row() > last_row
                     and index.column() not in self.mapping_column_ref_int_list()
                 ):
-                    return QColor(1, 133, 113)
+                    return _MAPPING_COLORS["parameter value"]
             elif self.index_in_mapping(mapping.parameters.value, index):
-                return QColor(1, 133, 113)
+                return _MAPPING_COLORS["parameter value"]
             if mapping.parameters.extra_dimensions:
                 # parameter extra dimensions color
                 for ed in mapping.parameters.extra_dimensions:
                     if self.index_in_mapping(ed, index):
-                        return QColor(128, 205, 193)
+                        return _MAPPING_COLORS["parameter extra dimension"]
             if self.index_in_mapping(mapping.parameters.name, index):
                 # parameter name colors
-                return QColor(128, 205, 193)
+                return _MAPPING_COLORS["parameter name"]
         if self.index_in_mapping(mapping.name, index):
             # class name color
-            return QColor(166, 97, 26)
+            return _MAPPING_COLORS["entity class"]
         objects = []
         classes = []
         if isinstance(mapping, ObjectClassMapping):
@@ -242,11 +256,11 @@ class MappingPreviewModel(MinimalTableModel):
         for o in objects:
             # object colors
             if self.index_in_mapping(o, index):
-                return QColor(223, 194, 125)
+                return _MAPPING_COLORS["entity"]
         for c in classes:
             # object colors
             if self.index_in_mapping(c, index):
-                return QColor(166, 97, 26)
+                return _MAPPING_COLORS["entity"]
 
     def index_in_mapping(self, mapping, index):
         """Checks if index is in mapping
