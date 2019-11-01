@@ -347,9 +347,16 @@ class DataStore(ProjectItem):
         url = self.make_url()
         if not url:
             return
+        try:
+            db_map = self._project.db_mngr.get_db_map(url, codename=self.name)
+        except spinedb_api.SpineDBAPIError as e:
+            self._toolbox.msg_error.emit(e.msg)
+            db_map = None
+        if not db_map:
+            return
         if self.tree_view_form:
-            # If the url hasn't changed, just raise the current form
-            if self.tree_view_form.db_maps[0].db_url == url:
+            # If the db_map is the same, just raise the current form
+            if self.tree_view_form.db_maps == (db_map,):
                 if self.tree_view_form.windowState() & Qt.WindowMinimized:
                     # Remove minimized status and restore window with the previous state (maximized/normal state)
                     self.tree_view_form.setWindowState(
@@ -361,13 +368,6 @@ class DataStore(ProjectItem):
                 return
             self.tree_view_form.destroyed.disconnect(self.tree_view_form_destroyed)
             self.tree_view_form.close()
-        try:
-            db_map = self._project.db_mngr.get_db_map(url, codename=self.name)
-        except spinedb_api.SpineDBAPIError as e:
-            self._toolbox.msg_error.emit(e.msg)
-            db_map = None
-        if not db_map:
-            return
         self.do_open_tree_view(db_map)
 
     @busy_effect
@@ -388,9 +388,16 @@ class DataStore(ProjectItem):
         url = self.make_url()
         if not url:
             return
+        try:
+            db_map = self._project.db_mngr.get_db_map(url, codename=self.name)
+        except spinedb_api.SpineDBAPIError as e:
+            self._toolbox.msg_error.emit(e.msg)
+            db_map = None
+        if not db_map:
+            return
         if self.graph_view_form:
-            # If the url hasn't changed, just raise the current form
-            if self.graph_view_form.db_map.db_url == url:
+            # If the db_map is the same, just raise the current form
+            if self.graph_view_form.db_maps == (db_map,):
                 if self.graph_view_form.windowState() & Qt.WindowMinimized:
                     # Remove minimized status and restore window with the previous state (maximized/normal state)
                     self.graph_view_form.setWindowState(
@@ -400,15 +407,8 @@ class DataStore(ProjectItem):
                 else:
                     self.graph_view_form.raise_()
                 return
-            self.graph_view_form.destroyed.disconnect(self.graph_view_form_destroyed)
+            self.graph_view_form.destroyed.disconnect(self.tree_view_form_destroyed)
             self.graph_view_form.close()
-        try:
-            db_map = self._project.db_mngr.get_db_map(url, codename=self.name)
-        except spinedb_api.SpineDBAPIError as e:
-            self._toolbox.msg_error.emit(e.msg)
-            db_map = None
-        if not db_map:
-            return
         self.do_open_graph_view(db_map)
 
     @busy_effect
@@ -502,27 +502,7 @@ class DataStore(ProjectItem):
             url = self.make_url(log_errors=True)
             if not url:
                 return
-        try:
-            if not spinedb_api.is_empty(url):
-                msg = QMessageBox(parent=self._toolbox)
-                msg.setIcon(QMessageBox.Question)
-                msg.setWindowTitle("Database not empty")
-                msg.setText("The database at <b>'{0}'</b> is not empty.".format(url))
-                msg.setInformativeText("Do you want to overwrite it?")
-                msg.addButton("Overwrite", QMessageBox.AcceptRole)
-                msg.addButton("Cancel", QMessageBox.RejectRole)
-                ret = msg.exec_()  # Show message box
-                if ret != QMessageBox.AcceptRole:
-                    return
-            self.do_create_new_spine_database(url, for_spine_model)
-            self._toolbox.msg_success.emit("New Spine db successfully created at '{0}'.".format(url))
-        except spinedb_api.SpineDBAPIError as e:
-            self._toolbox.msg_error.emit("Unable to create new Spine db at '{0}': {1}.".format(url, e))
-
-    @busy_effect
-    def do_create_new_spine_database(self, url, for_spine_model):  # pylint: disable=no-self-use
-        """Separate method so 'busy_effect' don't overlay any message box."""
-        spinedb_api.create_new_spine_database(url, for_spine_model=for_spine_model)
+        self._project.db_mngr.create_new_spine_database(url, for_spine_model)
 
     def update_name_label(self):
         """Update Data Store tab name label. Used only when renaming project items."""

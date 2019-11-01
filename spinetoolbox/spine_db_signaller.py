@@ -74,6 +74,10 @@ class SpineDBSignaller:
         self.db_mngr.parameter_tags_removed.connect(self.receive_parameter_tags_removed)
         # Error
         self.db_mngr.msg_error.connect(self.receive_db_mngr_error_msg)
+        # Commit, rollback
+        self.db_mngr.session_committed.connect(self.receive_session_committed)
+        self.db_mngr.session_rolled_back.connect(self.receive_session_rolled_back)
+        self.db_mngr.session_closed.connect(self.receive_session_closed)
 
     @Slot("QVariant")
     def receive_object_classes_added(self, db_map_data):
@@ -199,3 +203,18 @@ class SpineDBSignaller:
     def receive_db_mngr_error_msg(self, db_map_error_log):
         for listener in self.listeners:
             listener.receive_db_mngr_error_msg(db_map_error_log)
+
+    @Slot(set)
+    def receive_session_committed(self, db_maps):
+        for listener in self.listeners:
+            listener.receive_session_committed(db_maps)
+
+    @Slot(set)
+    def receive_session_rolled_back(self, db_maps):
+        for listener in self.listeners:
+            listener.receive_session_rolled_back(db_maps)
+
+    @Slot(set)
+    def receive_session_closed(self, db_maps):
+        for listener in self.listeners:
+            listener.receive_session_closed(db_maps)

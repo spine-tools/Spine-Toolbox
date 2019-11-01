@@ -16,11 +16,9 @@ Contains the DataStoreForm class, parent class of TreeViewForm and GraphViewForm
 :date:   26.11.2018
 """
 
-import gc
 from PySide2.QtWidgets import QMainWindow, QHeaderView, QDialog, QMessageBox, QCheckBox, QErrorMessage
-from PySide2.QtCore import Qt, Signal, Slot
+from PySide2.QtCore import Qt, Signal, Slot, QTimer
 from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QIcon
-from spinedb_api import SpineDBAPIError
 from ..config import MAINWINDOW_SS, STATUSBAR_SS
 from .custom_delegates import (
     DatabaseNameDelegate,
@@ -281,33 +279,38 @@ class DataStoreForm(QMainWindow):
         answer = dialog.exec_()
         if answer != QDialog.Accepted:
             return False
-        self.do_commit_session(dialog.commit_msg)
+        self.db_mngr.commit_session(dialog.commit_msg, *self.db_maps)
         return True
-
-    @busy_effect
-    def do_commit_session(self, commit_msg):
-        try:
-            for db_map in self.db_maps:
-                db_map.commit_session(commit_msg)
-        except SpineDBAPIError as e:
-            self.msg_error.emit(e.msg)
-            return
-        msg = "All changes committed successfully."
-        self.msg.emit(msg)
 
     @Slot("bool")
     def rollback_session(self, checked=False):
         if not any(db_map.has_pending_changes() for db_map in self.db_maps):
             return
-        try:
-            for db_map in self.db_maps:
-                db_map.rollback_session()
-        except SpineDBAPIError as e:
-            self.msg_error.emit(e.msg)
-            return
-        self.init_models()
-        msg = "All changes since last commit rolled back successfully."
-        self.msg.emit(msg)
+        self.db_mngr.rollback_session(*self.db_maps)
+
+    def receive_session_committed(self, db_maps):
+        if db_maps.intersection(self.db_maps):
+            db_names = ", ".join([x.codename for x in db_maps])
+            msg = f"All changes in {db_names} committed successfully."
+            self.msg.emit(msg)
+
+    def receive_session_rolled_back(self, db_maps):
+        if db_maps.intersection(self.db_maps):
+            self.init_models()
+            db_names = ", ".join([x.codename for x in db_maps])
+            msg = f"All changes in {db_names} rolled back successfully."
+            self.msg.emit(msg)
+
+    def receive_session_closed(self, db_maps):
+        closed = db_maps.intersection(self.db_maps)
+        if closed:
+            db_names = ", ".join([x.codename for x in closed])
+            QMessageBox.critical(
+                self,
+                "Connection closed",
+                f"The connection to {db_names} has been closed by an external action. This form will now close.",
+            )
+            QTimer.singleShot(0, self.close)
 
     @Slot("bool", name="refresh_session")
     def refresh_session(self, checked=False):

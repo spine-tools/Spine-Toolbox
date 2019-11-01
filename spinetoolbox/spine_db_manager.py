@@ -31,6 +31,8 @@ from spinedb_api import (
     TimeSeries,
     TimeSeriesFixedResolution,
     TimeSeriesVariableResolution,
+    is_empty,
+    create_new_spine_database,
 )
 from .helpers import IconManager, busy_effect
 
@@ -42,6 +44,9 @@ class SpineDBManager(QObject):
     """
 
     msg_error = Signal("QVariant")
+    session_closed = Signal(set)
+    session_committed = Signal(set)
+    session_rolled_back = Signal(set)
     # Added
     object_classes_added = Signal("QVariant")
     objects_added = Signal("QVariant")
@@ -91,6 +96,36 @@ class SpineDBManager(QObject):
     def db_maps(self):
         return set(self._db_maps.values())
 
+    def create_new_spine_database(self, url, for_spine_model=False):
+        try:
+            if not is_empty(url):
+                msg = QMessageBox(self.parent()._toolbox)
+                msg.setIcon(QMessageBox.Question)
+                msg.setWindowTitle("Database not empty")
+                msg.setText("The database at <b>'{0}'</b> is not empty.".format(url))
+                msg.setInformativeText("Do you want to overwrite it?")
+                msg.addButton("Overwrite", QMessageBox.AcceptRole)
+                msg.addButton("Cancel", QMessageBox.RejectRole)
+                ret = msg.exec_()  # Show message box
+                if ret != QMessageBox.AcceptRole:
+                    return
+            self.do_create_new_spine_database(url, for_spine_model)
+            self.close_session(url)
+            self.parent()._toolbox.msg_success.emit("New Spine db successfully created at '{0}'.".format(url))
+        except SpineDBAPIError as e:
+            self.parent()._toolbox.msg_error.emit("Unable to create new Spine db at '{0}': {1}.".format(url, e))
+
+    @busy_effect
+    def do_create_new_spine_database(self, url, for_spine_model):
+        """Creates a new spine database at the given url."""
+        create_new_spine_database(url, for_spine_model=for_spine_model)
+
+    def close_session(self, url):
+        db_map = self._db_maps.pop(url, None)
+        if db_map:
+            db_map.connection.close()
+            self.session_closed.emit({db_map})
+
     def get_db_map(self, url, upgrade=False, codename=None):
         """Returns a DiffDatabaseMapping instance from url if possible, None otherwise.
         If needed, asks the user to upgrade to the latest db version.
@@ -106,7 +141,7 @@ class SpineDBManager(QObject):
         try:
             return self.do_get_db_map(url, upgrade, codename)
         except SpineDBVersionError:
-            msg = QMessageBox()
+            msg = QMessageBox(self.parent()._toolbox)
             msg.setIcon(QMessageBox.Question)
             msg.setWindowTitle("Incompatible database version")
             msg.setText(
@@ -1195,3 +1230,33 @@ class SpineDBManager(QObject):
             for item in items:
                 item["id"] = item.pop("parameter_definition_id")
         self.cache_items("parameter definition", db_map_data)
+
+    @busy_effect
+    def commit_session(self, commit_msg, *db_maps):
+        error_log = {}
+        committed_db_maps = set()
+        for db_map in db_maps:
+            try:
+                db_map.commit_session(commit_msg)
+                committed_db_maps.add(db_map)
+            except SpineDBAPIError as e:
+                error_log[db_map] = e.msg
+        if any(error_log.values()):
+            self.msg_error.emit(error_log)
+        if committed_db_maps:
+            self.session_committed.emit(committed_db_maps)
+
+    @busy_effect
+    def rollback_session(self, *db_maps):
+        error_log = {}
+        rolled_db_maps = set()
+        for db_map in db_maps:
+            try:
+                db_map.rollback_session()
+                rolled_db_maps.add(db_map)
+            except SpineDBAPIError as e:
+                error_log[db_map] = e.msg
+        if any(error_log.values()):
+            self.msg_error.emit(error_log)
+        if rolled_db_maps:
+            self.session_rolled_back.emit(rolled_db_maps)
