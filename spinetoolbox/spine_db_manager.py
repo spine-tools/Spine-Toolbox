@@ -1156,7 +1156,7 @@ class SpineDBManager(QObject):
             db_map: self.get_parameter_values(db_map, ids={x["id"] for x in items})
             for db_map, items in db_map_data.items()
         }
-        self.parameter_values_updated.emit(d)
+        self.parameter_values_added.emit(d)
 
     @Slot("QVariant")
     def do_update_parameter_definitions(self, db_map_data):
