@@ -365,17 +365,18 @@ def rename_dir(widget, old_dir, new_dir):
     return True
 
 
-def fix_name_ambiguity(name_list, offset=0):
+def fix_name_ambiguity(input_list, offset=0):
     """Modify repeated entries in name list by appending an increasing integer."""
-    ref_name_list = name_list.copy()
+    result = []
     ocurrences = {}
-    for i, name in enumerate(name_list):
-        n_ocurrences = ref_name_list.count(name)
-        if n_ocurrences == 1:
-            continue
-        ocurrence = ocurrences.setdefault(name, 1)
-        name_list[i] = name + str(offset + ocurrence)
-        ocurrences[name] = ocurrence + 1
+    for item in input_list:
+        n_ocurrences = input_list.count(item)
+        if n_ocurrences > 1:
+            ocurrence = ocurrences.get(item, 1)
+            ocurrences[item] = ocurrence + 1
+            item += str(offset + ocurrence)
+        result.append(item)
+    return result
 
 
 def tuple_itemgetter(itemgetter_func, num_indexes):

@@ -686,7 +686,7 @@ class TabularViewForm(QMainWindow):
                     o.name for o in self.objects.values() if o.class_id == self.object_classes[oc].id
                 )
             unique_class_names = list(object_class_names)
-            fix_name_ambiguity(unique_class_names)
+            unique_class_names = fix_name_ambiguity(unique_class_names)
             tuple_entries[tuple(unique_class_names)] = set(
                 tuple(r.object_name_list.split(',')) for r in self.relationships.values()
             )
@@ -724,7 +724,7 @@ class TabularViewForm(QMainWindow):
         # make names unique
         real_names = index_names
         unique_names = list(index_names)
-        fix_name_ambiguity(unique_names)
+        unique_names = fix_name_ambiguity(unique_names)
         self.original_index_names = {u: r for u, r in zip(unique_names, real_names)}
         if self.current_class_type == RELATIONSHIP_CLASS:
             self.relationship_tuple_key = tuple(unique_names[: len(self.current_object_class_list())])
