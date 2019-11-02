@@ -286,6 +286,8 @@ class DataStoreForm(QMainWindow):
             db_names = ", ".join([x.codename for x in db_maps])
             msg = f"All changes in {db_names} committed successfully."
             self.msg.emit(msg)
+            return True
+        return False
 
     def receive_session_rolled_back(self, db_maps):
         if db_maps.intersection(self.db_maps):
@@ -293,6 +295,8 @@ class DataStoreForm(QMainWindow):
             db_names = ", ".join([x.codename for x in db_maps])
             msg = f"All changes in {db_names} rolled back successfully."
             self.msg.emit(msg)
+            return True
+        return False
 
     def receive_session_closed(self, db_maps):
         closed = db_maps.intersection(self.db_maps)

@@ -200,7 +200,7 @@ class ObjectTreeContextMenu(EntityTreeContextMenu):
 
 
 class RelationshipTreeContextMenu(EntityTreeContextMenu):
-    """Context menu class for object tree items in tree view form.
+    """Context menu class for relationship tree items in tree view form.
 
     Attributes:
         parent (QWidget): Parent for menu widget (TreeViewForm)
@@ -318,34 +318,44 @@ class GraphViewContextMenu(CustomContextMenu):
         self.add_action("Reinstate pruned items", enabled=len(parent.rejected_items) > 0)
 
 
-class ObjectItemContextMenu(CustomContextMenu):
-    """Context menu class for object graphic items in graph view.
+class EntityItemContextMenu(CustomContextMenu):
+    """Context menu class for entity graphic items in graph view."""
 
-    Attributes:
-        parent (QWidget): Parent for menu widget (GraphViewForm)
-        position (QPoint): Position on screen
-        graphics_item (ObjectItem (QGraphicsItem)): item that requested the menu
-    """
+    def __init__(self, parent, position):
+        """Class constructor.
 
-    def __init__(self, parent, position, graphics_item):
-        """Class constructor."""
+        Args:
+            parent (QWidget): Parent for menu widget (GraphViewForm)
+            position (QPoint): Position on screen
+        """
         super().__init__(parent, position)
-        self.relationship_class_dict = dict()
-        selection_count = len(parent.entity_item_selection)
+        self.selection_count = len(parent.entity_item_selection)
         self.add_action('Hide')
         self.add_action('Prune')
+
+
+class ObjectItemContextMenu(EntityItemContextMenu):
+    def __init__(self, parent, position, graphics_item):
+        """Class constructor.
+
+        Args:
+            parent (QWidget): Parent for menu widget (GraphViewForm)
+            position (QPoint): Position on screen
+            graphics_item (ObjectItem (QGraphicsItem)): item that requested the menu
+        """
+        super().__init__(parent, position)
         if parent.read_only:
             return
         self.addSeparator()
         if graphics_item.is_wip:
-            self.add_action("Set name", enabled=selection_count == 1)
+            self.add_action("Set name", enabled=self.selection_count == 1)
         else:
-            self.add_action("Rename", enabled=selection_count == 1)
-        self.addSeparator()
+            self.add_action("Rename", enabled=self.selection_count == 1)
         self.add_action("Remove")
-        self.addSeparator()
-        if graphics_item.is_wip or selection_count > 1:
+        if graphics_item.is_wip or self.selection_count > 1:
             return
+        self.addSeparator()
+        self.relationship_class_dict = dict()
         for relationship_class in parent.db_mngr.get_items(parent.db_map, "relationship class"):
             object_class_names = relationship_class["object_class_name_list"].split(",")
             fixed_object_class_names = fix_name_ambiguity(object_class_names)
@@ -357,6 +367,21 @@ class ObjectItemContextMenu(CustomContextMenu):
                     option += f" as dimension {i}"
                 self.add_action(option)
                 self.relationship_class_dict[option] = {'id': relationship_class["id"], 'dimension': i}
+
+
+class RelationshipItemContextMenu(EntityItemContextMenu):
+    def __init__(self, parent, position):
+        """Class constructor.
+
+        Args:
+            parent (QWidget): Parent for menu widget (GraphViewForm)
+            position (QPoint): Position on screen
+        """
+        super().__init__(parent, position)
+        if parent.read_only:
+            return
+        self.addSeparator()
+        self.add_action("Remove")
 
 
 class CustomPopupMenu(QMenu):

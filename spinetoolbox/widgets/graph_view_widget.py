@@ -23,7 +23,12 @@ from scipy.sparse.csgraph import dijkstra
 from PySide2.QtWidgets import QApplication, QWidgetAction
 from PySide2.QtCore import Qt, Slot
 from .data_store_widget import DataStoreForm
-from .custom_menus import SimpleEditableParameterValueContextMenu, ObjectItemContextMenu, GraphViewContextMenu
+from .custom_menus import (
+    SimpleEditableParameterValueContextMenu,
+    GraphViewContextMenu,
+    ObjectItemContextMenu,
+    RelationshipItemContextMenu,
+)
 from .custom_qwidgets import ZoomWidget
 from .report_plotting_failure import report_plotting_failure
 from .shrinking_scene import ShrinkingScene
@@ -64,9 +69,6 @@ class GraphViewForm(DataStoreForm):
         self.relationship_class_list_model = RelationshipClassListModel(self, self.db_mngr, self.db_map)
         self.ui.listView_object_class.setModel(self.object_class_list_model)
         self.ui.listView_relationship_class.setModel(self.relationship_class_list_model)
-        # Context menus
-        self.object_item_context_menu = None
-        self.graph_view_context_menu = None
         # Hidden and rejected items
         self.hidden_items = list()
         self.rejected_items = list()
@@ -871,8 +873,8 @@ class GraphViewForm(DataStoreForm):
         Args:
             global_pos (QPoint)
         """
-        self.graph_view_context_menu = GraphViewContextMenu(self, global_pos)
-        option = self.graph_view_context_menu.get_action()
+        menu = GraphViewContextMenu(self, global_pos)
+        option = menu.get_action()
         if option == "Hide selected items":
             self.hide_selected_items()
         elif option == "Show hidden items":
@@ -883,8 +885,7 @@ class GraphViewForm(DataStoreForm):
             self.reinstate_pruned_items()
         else:
             pass
-        self.graph_view_context_menu.deleteLater()
-        self.graph_view_context_menu = None
+        menu.deleteLater()
 
     @Slot("bool", name="reinstate_pruned_items")
     def hide_selected_items(self, checked=False):
@@ -915,32 +916,49 @@ class GraphViewForm(DataStoreForm):
         self.build_graph()
 
     def show_object_item_context_menu(self, global_pos, main_item):
-        """Shows context menu for object item.
+        """Shows context menu for entity item.
 
         Args:
             global_pos (QPoint)
             main_item (ObjectItem)
         """
-        self.object_item_context_menu = ObjectItemContextMenu(self, global_pos, main_item)
-        option = self.object_item_context_menu.get_action()
-        if option == 'Hide':
-            self.hide_selected_items()
-        elif option == 'Prune':
-            self.prune_selected_items()
+        menu = ObjectItemContextMenu(self, global_pos, main_item)
+        option = menu.get_action()
+        if self._apply_entity_context_menu_option(option):
+            pass
         elif option in ('Set name', 'Rename'):
             main_item.edit_name()
-        elif option == 'Remove':
-            self.remove_graph_items()
-        elif option in self.object_item_context_menu.relationship_class_dict:
-            relationship_class = self.object_item_context_menu.relationship_class_dict[option]
+        elif option in menu.relationship_class_dict:
+            relationship_class = menu.relationship_class_dict[option]
             relationship_class_id = relationship_class["id"]
             dimension = relationship_class['dimension']
             scene = self.ui.graphicsView.scene()
             self.add_wip_relationship(
                 scene, global_pos, relationship_class_id, center_item=main_item, center_dimension=dimension
             )
-        self.object_item_context_menu.deleteLater()
-        self.object_item_context_menu = None
+        menu.deleteLater()
+
+    def show_relationship_item_context_menu(self, global_pos):
+        """Shows context menu for entity item.
+
+        Args:
+            global_pos (QPoint)
+        """
+        menu = RelationshipItemContextMenu(self, global_pos)
+        option = menu.get_action()
+        self._apply_entity_context_menu_option(option)
+        menu.deleteLater()
+
+    def _apply_entity_context_menu_option(self, option):
+        if option == 'Hide':
+            self.hide_selected_items()
+        elif option == 'Prune':
+            self.prune_selected_items()
+        elif option == 'Remove':
+            self.remove_graph_items()
+        else:
+            return False
+        return True
 
     @Slot("bool", name="remove_graph_items")
     def remove_graph_items(self, checked=False):
@@ -952,7 +970,7 @@ class GraphViewForm(DataStoreForm):
             if item.is_wip:
                 item.wipe_out()
             if item.entity_id:
-                db_item = dict(class_id=item.entity_class_id, id=item.entity_id, name=item.entity_name)
+                db_item = item.db_representation
                 db_map_typed_data[self.db_map].setdefault(item.entity_type, []).append(db_item)
         self.db_mngr.remove_items(db_map_typed_data)
 

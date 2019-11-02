@@ -146,7 +146,7 @@ class EntityItem(QGraphicsPixmapItem):
         font = QFont("", 0.6 * self._extent)
         self._question_item = OutlinedTextItem("?", self, font)
         # Position question item
-        rect = self.boundingRect()
+        rect = super().boundingRect()
         question_rect = self._question_item.boundingRect()
         x = rect.center().x() - question_rect.width() / 2
         y = rect.center().y() - question_rect.height() / 2
@@ -325,7 +325,10 @@ class EntityItem(QGraphicsPixmapItem):
         if not self.isSelected() and not e.modifiers() & Qt.ControlModifier:
             self.scene().clearSelection()
         self.setSelected(True)
-        self._graph_view_form.show_object_item_context_menu(e.screenPos(), self)
+        self._show_item_context_menu_in_parent(e.screenPos())
+
+    def _show_item_context_menu_in_parent(self, pos):
+        raise NotImplementedError()
 
 
 class RelationshipItem(EntityItem):
@@ -341,8 +344,21 @@ class RelationshipItem(EntityItem):
 
     @property
     def object_name_list(self):
-        return self.db_mngr.get_item(self.db_map, "relationship", self.relationship_id).get(
+        return self.db_mngr.get_item(self.db_map, "relationship", self.entity_id).get(
             "object_name_list", ",".join(["<unnamed>" for _ in range(len(self.object_class_id_list))])
+        )
+
+    @property
+    def object_id_list(self):
+        return self.db_mngr.get_item(self.db_map, "relationship", self.entity_id).get("object_id_list")
+
+    @property
+    def db_representation(self):
+        return dict(
+            class_id=self.entity_class_id,
+            id=self.entity_id,
+            object_id_list=self.object_id_list,
+            object_name_list=self.object_name_list,
         )
 
     def _init_bg(self):
@@ -389,6 +405,9 @@ class RelationshipItem(EntityItem):
         for item in self.arc_items:
             item.become_whole()
 
+    def _show_item_context_menu_in_parent(self, pos):
+        self._graph_view_form.show_relationship_item_context_menu(pos)
+
 
 class ObjectItem(EntityItem):
     def __init__(self, graph_view_form, x, y, extent, entity_id=None, entity_class_id=None):
@@ -415,6 +434,10 @@ class ObjectItem(EntityItem):
     @property
     def entity_type(self):
         return "object"
+
+    @property
+    def db_representation(self):
+        return dict(class_id=self.entity_class_id, id=self.entity_id, name=self.entity_name)
 
     def boundingRect(self):
         return super().boundingRect() | self.childrenBoundingRect()
@@ -536,6 +559,9 @@ class ObjectItem(EntityItem):
         self.move_arc_items(self._merge_target.pos() - self.pos())
         self.scene().removeItem(self)
         return True
+
+    def _show_item_context_menu_in_parent(self, pos):
+        self._graph_view_form.show_object_item_context_menu(pos, self)
 
 
 class EntityLabelItem(QGraphicsTextItem):
