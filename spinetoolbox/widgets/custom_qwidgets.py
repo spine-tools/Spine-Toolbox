@@ -28,8 +28,9 @@ from PySide2.QtWidgets import (
     QListView,
     QLineEdit,
     QDialogButtonBox,
+    QWidgetAction,
 )
-from PySide2.QtCore import QTimer, Signal
+from PySide2.QtCore import QTimer, Signal, Slot
 from PySide2.QtGui import QPainter
 from ..mvcmodels.filter_checkbox_list_model import FilterCheckboxListModel
 
@@ -132,19 +133,49 @@ class FilterWidget(QWidget):
         self._search_timer.start(self.search_delay)
 
 
-class ZoomWidget(QWidget):
-    """A widget for a QWidgetAction providing zoom actions for a graph view.
+class ZoomWidgetAction(QWidgetAction):
+    """A zoom widget action."""
 
-    Attributes
-        parent (QWidget): the widget's parent
-    """
-
-    minus_pressed = Signal(name="minus_pressed")
-    plus_pressed = Signal(name="plus_pressed")
-    reset_pressed = Signal(name="reset_pressed")
+    minus_pressed = Signal()
+    plus_pressed = Signal()
+    reset_pressed = Signal()
 
     def __init__(self, parent=None):
-        """Init class."""
+        """Class constructor.
+
+        Args:
+            parent (QWidget): the widget's parent
+        """
+        super().__init__(parent)
+        zoom_widget = ZoomWidget(parent)
+        self.setDefaultWidget(zoom_widget)
+        zoom_widget.minus_pressed.connect(self.minus_pressed)
+        zoom_widget.plus_pressed.connect(self.plus_pressed)
+        zoom_widget.reset_pressed.connect(self.reset_pressed)
+        self.hovered.connect(self._handle_hovered)
+
+    @Slot()
+    def _handle_hovered(self):
+        """Runs when the zoom widget action is hovered. Hides other menus under the parent widget
+        which are being shown. This is the default behavior for hovering QAction,
+        but for some reason it's not the case for hovering QWidgetAction."""
+        for menu in self.parentWidget().findChildren(QMenu):
+            if menu.isVisible():
+                menu.hide()
+
+
+class ZoomWidget(QWidget):
+
+    minus_pressed = Signal()
+    plus_pressed = Signal()
+    reset_pressed = Signal()
+
+    def __init__(self, parent=None):
+        """Class constructor.
+
+        Args:
+            parent (QWidget): the widget's parent
+        """
         super().__init__(parent)
         self.option = QStyleOptionMenuItem()
         zoom_action = QAction("Zoom")

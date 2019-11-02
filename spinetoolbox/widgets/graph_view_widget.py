@@ -20,7 +20,7 @@ import time
 import numpy as np
 from numpy import atleast_1d as arr
 from scipy.sparse.csgraph import dijkstra
-from PySide2.QtWidgets import QApplication, QWidgetAction
+from PySide2.QtWidgets import QApplication, QWidgetAction, QMenu
 from PySide2.QtCore import Qt, Slot
 from .data_store_widget import DataStoreForm
 from .custom_menus import (
@@ -29,7 +29,7 @@ from .custom_menus import (
     ObjectItemContextMenu,
     RelationshipItemContextMenu,
 )
-from .custom_qwidgets import ZoomWidget
+from .custom_qwidgets import ZoomWidgetAction
 from .report_plotting_failure import report_plotting_failure
 from .shrinking_scene import ShrinkingScene
 from ..mvcmodels.entity_list_models import ObjectClassListModel, RelationshipClassListModel
@@ -60,6 +60,7 @@ class GraphViewForm(DataStoreForm):
         self.db_map = next(iter(db_maps))
         self.db_name = self.db_map.codename
         self.read_only = read_only
+        # self.tutorial = GraphViewTutorial(self)
         self._usage_item = None
         # Lookups, used for adding objects and relationships
         self._added_objects = {}
@@ -74,10 +75,8 @@ class GraphViewForm(DataStoreForm):
         self.rejected_items = list()
         # Current item selection
         self.entity_item_selection = list()
-        self.arc_item_selection = list()
         # Zoom widget and action
         self.zoom_widget_action = None
-        self.zoom_widget = None
         # Set up splitters
         area = self.dockWidgetArea(self.ui.dockWidget_item_palette)
         self._handle_item_palette_dock_location_changed(area)
@@ -89,7 +88,7 @@ class GraphViewForm(DataStoreForm):
         self.init_models()
         self.setup_delegates()
         self.add_toggle_view_actions()
-        self.setup_zoom_action()
+        self.setup_zoom_widget_action()
         self.connect_signals()
         self.settings_group = "graphViewWidget" if not self.read_only else "graphViewWidgetReadOnly"
         self.restore_ui()
@@ -124,19 +123,16 @@ class GraphViewForm(DataStoreForm):
         # Dock Widgets menu action
         self.ui.actionRestore_Dock_Widgets.triggered.connect(self.restore_dock_widgets)
         self.ui.menuGraph.aboutToShow.connect(self._handle_menu_about_to_show)
-        self.zoom_widget_action.hovered.connect(self._handle_zoom_widget_action_hovered)
-        self.zoom_widget.minus_pressed.connect(self._handle_zoom_widget_minus_pressed)
-        self.zoom_widget.plus_pressed.connect(self._handle_zoom_widget_plus_pressed)
-        self.zoom_widget.reset_pressed.connect(self._handle_zoom_widget_reset_pressed)
+        self.zoom_widget_action.minus_pressed.connect(self._handle_zoom_minus_pressed)
+        self.zoom_widget_action.plus_pressed.connect(self._handle_zoom_plus_pressed)
+        self.zoom_widget_action.reset_pressed.connect(self._handle_zoom_reset_pressed)
         # Connect Add more items in Item palette
         self.ui.listView_object_class.clicked.connect(self._add_more_object_classes)
         self.ui.listView_relationship_class.clicked.connect(self._add_more_relationship_classes)
 
-    def setup_zoom_action(self):
-        """Setups zoom action in view menu."""
-        self.zoom_widget = ZoomWidget(self)
-        self.zoom_widget_action = QWidgetAction(self)
-        self.zoom_widget_action.setDefaultWidget(self.zoom_widget)
+    def setup_zoom_widget_action(self):
+        """Setups zoom widget action in view menu."""
+        self.zoom_widget_action = ZoomWidgetAction(self.ui.menuView)
         self.ui.menuView.addSeparator()
         self.ui.menuView.addAction(self.zoom_widget_action)
 
@@ -387,27 +383,20 @@ class GraphViewForm(DataStoreForm):
         if index == index.model().new_index:
             self.show_add_relationship_classes_form()
 
-    @Slot(name="_handle_zoom_widget_minus_pressed")
-    def _handle_zoom_widget_minus_pressed(self):
+    @Slot(name="_handle_zoom_minus_pressed")
+    def _handle_zoom_minus_pressed(self):
         """Performs a zoom out on the view."""
         self.ui.graphicsView.zoom_out()
 
-    @Slot(name="_handle_zoom_widget_plus_pressed")
-    def _handle_zoom_widget_plus_pressed(self):
+    @Slot(name="_handle_zoom_plus_pressed")
+    def _handle_zoom_plus_pressed(self):
         """Performs a zoom in on the view."""
         self.ui.graphicsView.zoom_in()
 
-    @Slot(name="_handle_zoom_widget_reset_pressed")
-    def _handle_zoom_widget_reset_pressed(self):
+    @Slot(name="_handle_zoom_reset_pressed")
+    def _handle_zoom_reset_pressed(self):
         """Resets the zoom on the view."""
         self.ui.graphicsView.reset_zoom()
-
-    @Slot(name="_handle_zoom_widget_action_hovered")
-    def _handle_zoom_widget_action_hovered(self):
-        """Runs when the zoom widget action is hovered. Hides the 'Dock widgets' submenu in case
-        it's being shown. This is the default behavior for hovering 'normal' 'QAction's, but for some reason
-        it's not the case for hovering 'QWidgetAction's."""
-        self.ui.menuDock_Widgets.hide()
 
     @Slot(name="_handle_menu_about_to_show")
     def _handle_menu_about_to_show(self):
@@ -722,7 +711,6 @@ class GraphViewForm(DataStoreForm):
         scene = self.ui.graphicsView.scene()
         selected_items = scene.selectedItems()
         self.entity_item_selection = [x for x in selected_items if isinstance(x, EntityItem)]
-        self.arc_item_selection = [x for x in selected_items if isinstance(x, ArcItem)]
         self.selected_ent_cls_ids["object class"] = selected_obj_cls_ids = {}
         self.selected_ent_cls_ids["relationship class"] = selected_rel_cls_ids = {}
         self.selected_ent_ids["object"] = selected_obj_ids = {}
