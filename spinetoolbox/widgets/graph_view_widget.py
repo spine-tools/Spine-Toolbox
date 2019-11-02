@@ -33,7 +33,7 @@ from .custom_qwidgets import ZoomWidget
 from .report_plotting_failure import report_plotting_failure
 from .shrinking_scene import ShrinkingScene
 from ..mvcmodels.entity_list_models import ObjectClassListModel, RelationshipClassListModel
-from ..graph_view_graphics_items import EntityItem, ObjectItem, RelationshipItem, ArcItem, InteractiveTextItem
+from .graph_view_graphics_items import EntityItem, ObjectItem, RelationshipItem, ArcItem, InteractiveTextItem
 from ..helpers import busy_effect
 from ..plotting import plot_selection, PlottingError, GraphAndTreeViewPlottingHints
 
