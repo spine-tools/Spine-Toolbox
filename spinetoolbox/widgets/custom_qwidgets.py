@@ -28,45 +28,10 @@ from PySide2.QtWidgets import (
     QListView,
     QLineEdit,
     QDialogButtonBox,
-    QToolButton,
-    QToolTip,
 )
 from PySide2.QtCore import QTimer, Signal
-from PySide2.QtGui import QPainter, QIcon
+from PySide2.QtGui import QPainter
 from ..mvcmodels.filter_checkbox_list_model import FilterCheckboxListModel
-
-
-class NotificationIcon(QToolButton):
-    """A border-less tool button that shows a notification message when hovered."""
-
-    def __init__(self, msg):
-        """Init class.
-
-        Args
-            msg (str)
-        """
-        super().__init__()
-        self._msg = msg
-        self._notify_icon = QIcon(":/icons/menu_icons/info-circle.svg")
-        self._accept_icon = QIcon(":/icons/menu_icons/times.svg")
-        self.setIcon(self._notify_icon)
-        self.setStyleSheet("QToolButton {border: 0px;}")
-
-    def enterEvent(self, event):
-        self.show_msg(self.mapToGlobal(event.pos()))
-
-    def mouseMoveEvent(self, event):
-        self.show_msg(self.mapToGlobal(event.pos()))
-
-    def show_msg(self, pos):
-        """Show message and change icon to accept icon."""
-        QToolTip.showText(pos, self._msg)
-        self.setIcon(self._accept_icon)
-
-    def leaveEvent(self, event):
-        """Hide message and restablish notification icon."""
-        QToolTip.hideText()
-        self.setIcon(self._notify_icon)
 
 
 class FilterWidget(QWidget):

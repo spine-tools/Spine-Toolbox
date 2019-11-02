@@ -10,10 +10,10 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-# Form implementation generated from reading ui file 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\tabular_view_form.ui',
-# licensing of 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\tabular_view_form.ui' applies.
+# Form implementation generated from reading ui file '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/tabular_view_form.ui',
+# licensing of '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/tabular_view_form.ui' applies.
 #
-# Created: Fri Nov  1 13:09:11 2019
+# Created: Sat Nov  2 14:44:45 2019
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -188,6 +188,6 @@ class Ui_MainWindow(object):
         self.actionClose.setText(QtWidgets.QApplication.translate("MainWindow", "Close", None, -1))
         self.actionClose.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+W", None, -1))
 
-from spinetoolbox.widgets.custom_qtableview import SimpleCopyPasteTableView, FrozenTableView
+from spinetoolbox.widgets.custom_qtableview import FrozenTableView, SimpleCopyPasteTableView
 from spinetoolbox.widgets.custom_qlistview import TestListView
 from spinetoolbox import resources_icons_rc

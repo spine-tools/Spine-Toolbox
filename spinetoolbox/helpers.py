@@ -151,15 +151,20 @@ def project_dir(qsettings):
     return proj_dir
 
 
-def get_datetime(show):
+def get_datetime(show, date=True):
     """Returns date and time string for appending into Event Log messages.
 
     Args:
-        show (boolean): True returns date and time string. False returns empty string.
+        show (bool): True returns date and time string. False returns empty string.
+        date (bool): Whether or not the date should be included in the result
     """
     if show:
         t = datetime.datetime.now()
-        return "[{}-{:02d}-{:02d} {:02d}:{:02d}:{:02d}] ".format(t.day, t.month, t.year, t.hour, t.minute, t.second)
+        time_str = "{:02d}:{:02d}:{:02d}".format(t.hour, t.minute, t.second)
+        if not date:
+            return "[{}] ".format(time_str)
+        date_str = "{}-{:02d}-{:02d}".format(t.day, t.month, t.year)
+        return "[{} {}] ".format(date_str, time_str)
     return ""
 
 

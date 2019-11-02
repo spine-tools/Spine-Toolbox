@@ -123,7 +123,7 @@
    <addaction name="menuView"/>
    <addaction name="menuSession"/>
   </widget>
-  <widget class="QStatusBar" name="statusbar"/>
+  <widget class="NotificationStatusBar" name="statusbar"/>
   <widget class="QDockWidget" name="dockWidget_item_palette">
    <property name="windowTitle">
     <string>Item palette</string>
@@ -851,6 +851,11 @@
    <class>StickySelectionObjectTreeView</class>
    <extends>QTreeView</extends>
    <header>spinetoolbox/widgets/custom_qtreeview.h</header>
+  </customwidget>
+  <customwidget>
+   <class>NotificationStatusBar</class>
+   <extends>QStatusBar</extends>
+   <header>spinetoolbox/widgets/custom_qstatusbar.h</header>
   </customwidget>
  </customwidgets>
  <resources>

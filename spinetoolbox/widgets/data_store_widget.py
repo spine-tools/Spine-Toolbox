@@ -19,7 +19,7 @@ Contains the DataStoreForm class, parent class of TreeViewForm and GraphViewForm
 from PySide2.QtWidgets import QMainWindow, QHeaderView, QDialog, QMessageBox, QCheckBox, QErrorMessage
 from PySide2.QtCore import Qt, Signal, Slot, QTimer
 from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QIcon
-from ..config import MAINWINDOW_SS, STATUSBAR_SS
+from ..config import MAINWINDOW_SS
 from .custom_delegates import (
     DatabaseNameDelegate,
     ParameterDefaultValueDelegate,
@@ -50,7 +50,6 @@ from .edit_db_items_dialogs import (
 from .manage_db_items_dialog import CommitDialog
 from ..widgets.parameter_value_editor import ParameterValueEditor
 from ..widgets.toolbars import ParameterTagToolBar
-from ..widgets.custom_qwidgets import NotificationIcon
 from ..mvcmodels.entity_tree_models import ObjectTreeModel
 from ..mvcmodels.compound_parameter_models import (
     CompoundObjectParameterDefinitionModel,
@@ -84,10 +83,6 @@ class DataStoreForm(QMainWindow):
         self.ui = ui
         self.ui.setupUi(self)
         self.setWindowIcon(QIcon(":/symbols/app.ico"))
-        # Set up status bar and apply style sheet
-        self.ui.statusbar.setFixedHeight(20)
-        self.ui.statusbar.setSizeGripEnabled(False)
-        self.ui.statusbar.setStyleSheet(STATUSBAR_SS)
         self.setStyleSheet(MAINWINDOW_SS)
         # Class attributes
         self.err_msg = QErrorMessage(self)
@@ -194,9 +189,7 @@ class DataStoreForm(QMainWindow):
         Args:
             msg (str): String to show in QStatusBar
         """
-        icon = NotificationIcon(msg)
-        icon.pressed.connect(lambda icon=icon: self.ui.statusbar.removeWidget(icon))
-        self.ui.statusbar.insertWidget(0, icon)
+        self.ui.statusbar.add_notification(msg)
 
     @Slot("QItemSelection", "QItemSelection")
     def _handle_object_tree_selection_changed(self, selected, deselected):
@@ -538,12 +531,20 @@ class DataStoreForm(QMainWindow):
 
     def notify_items_changed(self, action, item_type, db_map_data):
         """Enables or disables actions and informs the user about what just happened."""
-        msg = f"<html> Successfully {action} {item_type} item(s)"
-        name_keys = {"parameter tag": "tag", "parameter value": None, "parameter definition": "parameter_name"}
+        msg = f"<html> Successfully {action}"
+        name_keys = {
+            "parameter tag": "tag",
+            "parameter value": None,
+            "parameter definition": "parameter_name",
+            "relationship": "object_name_list",
+        }
         name_key = name_keys.get(item_type, "name")
         if name_key:
             names = {item[name_key] for db_map, data in db_map_data.items() for item in data}
-            msg += ":" + format_string_list(names)
+            msg += f" the following {item_type} item(s):" + format_string_list(names)
+        else:
+            count = sum(len(data) for data in db_map_data.values())
+            msg += f" {count} {item_type} item(s)"
         msg += "</html>"
         self.msg.emit(msg)
 

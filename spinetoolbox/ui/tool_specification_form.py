@@ -10,10 +10,10 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-# Form implementation generated from reading ui file 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\tool_specification_form.ui',
-# licensing of 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\tool_specification_form.ui' applies.
+# Form implementation generated from reading ui file '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/tool_specification_form.ui',
+# licensing of '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/tool_specification_form.ui' applies.
 #
-# Created: Fri Nov  1 13:09:12 2019
+# Created: Sat Nov  2 14:44:44 2019
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -453,5 +453,5 @@ class Ui_Form(object):
         self.pushButton_cancel.setText(QtWidgets.QApplication.translate("Form", "Cancel", None, -1))
 
 from spinetoolbox.widgets.custom_qlineedit import CustomQLineEdit
-from spinetoolbox.widgets.custom_qtreeview import CustomTreeView, SourcesTreeView
+from spinetoolbox.widgets.custom_qtreeview import SourcesTreeView, CustomTreeView
 from spinetoolbox import resources_icons_rc

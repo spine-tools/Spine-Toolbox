@@ -20,7 +20,7 @@ import os
 from operator import itemgetter
 from PySide2.QtWidgets import QMenu, QWidgetAction, QAction
 from PySide2.QtGui import QIcon
-from PySide2.QtCore import Qt, Signal, Slot, QPoint
+from PySide2.QtCore import Signal, Slot, QPoint
 from ..helpers import fix_name_ambiguity, tuple_itemgetter
 from ..plotting import plot_pivot_column, plot_selection, PlottingError, PivotTablePlottingHints
 from .custom_qwidgets import FilterWidget

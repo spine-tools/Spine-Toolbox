@@ -10,10 +10,10 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-# Form implementation generated from reading ui file 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\tree_view_form.ui',
-# licensing of 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\tree_view_form.ui' applies.
+# Form implementation generated from reading ui file '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/tree_view_form.ui',
+# licensing of '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/tree_view_form.ui' applies.
 #
-# Created: Fri Nov  1 13:09:12 2019
+# Created: Sat Nov  2 14:44:44 2019
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -39,7 +39,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_2.setObjectName("verticalLayout_2")
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 1077, 21))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 1077, 28))
         self.menubar.setNativeMenuBar(False)
         self.menubar.setObjectName("menubar")
         self.menuSession = QtWidgets.QMenu(self.menubar)
@@ -55,7 +55,7 @@ class Ui_MainWindow(object):
         self.menuDock_Widgets = QtWidgets.QMenu(self.menuView)
         self.menuDock_Widgets.setObjectName("menuDock_Widgets")
         MainWindow.setMenuBar(self.menubar)
-        self.statusbar = QtWidgets.QStatusBar(MainWindow)
+        self.statusbar = NotificationStatusBar(MainWindow)
         self.statusbar.setObjectName("statusbar")
         MainWindow.setStatusBar(self.statusbar)
         self.dockWidget_parameter_value_list = QtWidgets.QDockWidget(MainWindow)
@@ -414,6 +414,7 @@ class Ui_MainWindow(object):
         self.actionRemove_selection.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+Del", None, -1))
         self.actionRestore_Dock_Widgets.setText(QtWidgets.QApplication.translate("MainWindow", "Restore Dock Widgets", None, -1))
 
-from spinetoolbox.widgets.custom_qtreeview import ObjectTreeView, CopyTreeView
 from spinetoolbox.widgets.custom_qtableview import AutoFilterCopyPasteTableView
+from spinetoolbox.widgets.custom_qtreeview import ObjectTreeView, CopyTreeView
+from spinetoolbox.widgets.custom_qstatusbar import NotificationStatusBar
 from spinetoolbox import resources_icons_rc

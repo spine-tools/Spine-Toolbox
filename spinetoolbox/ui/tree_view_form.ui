@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <!--
 ######################################################################################################################
 # Copyright (C) 2017 - 2019 Spine project consortium
@@ -62,7 +62,7 @@
      <x>0</x>
      <y>0</y>
      <width>1077</width>
-     <height>21</height>
+     <height>28</height>
     </rect>
    </property>
    <property name="nativeMenuBar">
@@ -131,7 +131,7 @@
    <addaction name="menuView"/>
    <addaction name="menuSession"/>
   </widget>
-  <widget class="QStatusBar" name="statusbar"/>
+  <widget class="NotificationStatusBar" name="statusbar"/>
   <widget class="QDockWidget" name="dockWidget_parameter_value_list">
    <property name="windowTitle">
     <string>Parameter value list</string>
@@ -815,6 +815,11 @@
    <class>CopyTreeView</class>
    <extends>QTreeView</extends>
    <header>spinetoolbox/widgets/custom_qtreeview.h</header>
+  </customwidget>
+  <customwidget>
+   <class>NotificationStatusBar</class>
+   <extends>QStatusBar</extends>
+   <header>spinetoolbox/widgets/custom_qstatusbar.h</header>
   </customwidget>
  </customwidgets>
  <tabstops>
