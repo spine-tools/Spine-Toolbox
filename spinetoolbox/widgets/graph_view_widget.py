@@ -42,7 +42,7 @@ class GraphViewForm(DataStoreForm):
     """A widget to show Spine databases in a graph."""
 
     _node_extent = 64
-    _arc_width = 0.2 * _node_extent
+    _arc_width = 0.25 * _node_extent
     _arc_length_hint = 3 * _node_extent
 
     def __init__(self, project, *db_maps, read_only=False):

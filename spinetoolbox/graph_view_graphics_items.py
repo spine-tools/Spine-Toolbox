@@ -70,6 +70,8 @@ class EntityItem(QGraphicsPixmapItem):
         self._question_item = None  # In case this becomes a template
         if not self.entity_id:
             self.become_wip()
+        else:
+            self.become_whole()
         self.setZValue(0)
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
         self.setFlag(QGraphicsItem.ItemIsMovable, enabled=True)
@@ -159,8 +161,9 @@ class EntityItem(QGraphicsPixmapItem):
     def become_whole(self):
         """Removes the wip status from this item."""
         self.is_wip = False
-        self.scene().removeItem(self._question_item)
-        self.setToolTip("")
+        if self._question_item:
+            self.scene().removeItem(self._question_item)
+        self.setToolTip(self.entity_class_name)
 
     def adjust_to_zoom(self, transform):
         """Saves the view's transform to determine collisions later on.
@@ -169,6 +172,8 @@ class EntityItem(QGraphicsPixmapItem):
             transform (QTransform): The view's transformation matrix after the zoom.
         """
         self._view_transform = transform
+        factor = transform.m11()
+        self.setFlag(QGraphicsItem.ItemIgnoresTransformations, enabled=factor > 1)
 
     def device_rect(self):
         """Returns the item's rect in devices's coordinates.
@@ -428,7 +433,7 @@ class ObjectItem(EntityItem):
         self.setFlag(QGraphicsItem.ItemIsFocusable, enabled=True)
         self.label_item = EntityLabelItem(self)
         self.label_item.entity_name_edited.connect(self.finish_name_editing)
-        self.label_item.setZValue(1)
+        self.setZValue(0.5)
         self.refresh_name()
 
     @property
@@ -732,6 +737,8 @@ class ArcItem(QGraphicsLineItem):
             transform (QTransform): The view's transformation matrix after the zoom.
         """
         factor = transform.m11()
+        if factor < 1:
+            return
         scaled_width = self._width / factor
         self._pen.setWidthF(scaled_width)
         self.setPen(self._pen)
