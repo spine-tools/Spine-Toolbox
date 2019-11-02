@@ -22,7 +22,6 @@ from numpy import atleast_1d as arr
 from scipy.sparse.csgraph import dijkstra
 from PySide2.QtWidgets import QApplication, QWidgetAction
 from PySide2.QtCore import Qt, Slot
-from PySide2.QtGui import QPalette
 from .data_store_widget import DataStoreForm
 from .custom_menus import SimpleEditableParameterValueContextMenu, ObjectItemContextMenu, GraphViewContextMenu
 from .custom_qwidgets import ZoomWidget
@@ -36,6 +35,10 @@ from ..plotting import plot_selection, PlottingError, GraphAndTreeViewPlottingHi
 
 class GraphViewForm(DataStoreForm):
     """A widget to show Spine databases in a graph."""
+
+    _node_extent = 64
+    _arc_width = 0.2 * _node_extent
+    _arc_length_hint = 3 * _node_extent
 
     def __init__(self, project, *db_maps, read_only=False):
         """Initializes class.
@@ -52,13 +55,7 @@ class GraphViewForm(DataStoreForm):
         self.db_map = next(iter(db_maps))
         self.db_name = self.db_map.codename
         self.read_only = read_only
-        self.extent = 64
-        self._spread = 3 * self.extent
         self._usage_item = None
-        self._label_color = self.palette().color(QPalette.Normal, QPalette.ToolTipBase)
-        self._label_color.setAlphaF(0.8)
-        self._arc_color = self.palette().color(QPalette.Normal, QPalette.WindowText)
-        self._arc_color.setAlphaF(0.8)
         # Lookups, used for adding objects and relationships
         self._added_objects = {}
         self._added_relationships = {}
@@ -562,26 +559,28 @@ class GraphViewForm(DataStoreForm):
         Returns:
             dict: Added ObjectItem instances keyed by integer object id.
         """
-        d = self.shortest_path_matrix(len(object_ids) + len(relationship_ids), src_inds, dst_inds, self._spread)
+        d = self.shortest_path_matrix(
+            len(object_ids) + len(relationship_ids), src_inds, dst_inds, self._arc_length_hint
+        )
         if d is None:
             return {}
         x, y = self.vertex_coordinates(d)
         entity_items = list()
         object_items_lookup = dict()
         for i, object_id in enumerate(object_ids):
-            object_item = ObjectItem(self, x[i], y[i], self.extent, entity_id=object_id, label_color=self._label_color)
+            object_item = ObjectItem(self, x[i], y[i], self._node_extent, entity_id=object_id)
             scene.addItem(object_item)
             entity_items.append(object_item)
             object_items_lookup[object_id] = object_item
         offset = len(entity_items)
         for i, relationship_id in enumerate(relationship_ids):
             relationship_item = RelationshipItem(
-                self, x[offset + i], y[offset + i], self.extent, entity_id=relationship_id
+                self, x[offset + i], y[offset + i], self._node_extent, entity_id=relationship_id
             )
             scene.addItem(relationship_item)
             entity_items.append(relationship_item)
         for rel_ind, obj_ind in zip(src_inds, dst_inds):
-            arc_item = ArcItem(entity_items[rel_ind], entity_items[obj_ind], 0.25 * self.extent, self._arc_color)
+            arc_item = ArcItem(entity_items[rel_ind], entity_items[obj_ind], self._arc_width)
             scene.addItem(arc_item)
         return object_items_lookup
 
@@ -765,12 +764,7 @@ class GraphViewForm(DataStoreForm):
         entity_class_id = int(entity_class_id)
         if entity_type == "object class":
             object_item = ObjectItem(
-                self,
-                scene_pos.x(),
-                scene_pos.y(),
-                self.extent,
-                label_color=self._label_color,
-                entity_class_id=entity_class_id,
+                self, scene_pos.x(), scene_pos.y(), self._node_extent, entity_class_id=entity_class_id
             )
             scene.addItem(object_item)
             self.ui.graphicsView.setFocus()
@@ -796,7 +790,7 @@ class GraphViewForm(DataStoreForm):
         dimension_count = len(object_class_id_list)
         rel_inds = [dimension_count for _ in range(dimension_count)]
         obj_inds = list(range(dimension_count))
-        d = self.shortest_path_matrix(dimension_count + 1, rel_inds, obj_inds, self._spread)
+        d = self.shortest_path_matrix(dimension_count + 1, rel_inds, obj_inds, self._arc_length_hint)
         if d is None:
             return
         x, y = self.vertex_coordinates(d)
@@ -809,15 +803,15 @@ class GraphViewForm(DataStoreForm):
             y_offset -= pos.y() - center.y()
         x += x_offset
         y += y_offset
-        relationship_item = RelationshipItem(self, x[-1], y[-1], self.extent, entity_class_id=relationship_class_id)
+        relationship_item = RelationshipItem(
+            self, x[-1], y[-1], self._node_extent, entity_class_id=relationship_class_id
+        )
         object_items = list()
         arc_items = list()
         for i, object_class_id in enumerate(object_class_id_list):
-            object_item = ObjectItem(
-                self, x[i], y[i], self.extent, entity_class_id=object_class_id, label_color=self._label_color
-            )
+            object_item = ObjectItem(self, x[i], y[i], self._node_extent, entity_class_id=object_class_id)
             object_items.append(object_item)
-            arc_item = ArcItem(relationship_item, object_item, self.extent / 4, self._arc_color, is_wip=True)
+            arc_item = ArcItem(relationship_item, object_item, self._arc_width, is_wip=True)
             arc_items.append(arc_item)
         entity_items = object_items + [relationship_item]
         for item in entity_items + arc_items:

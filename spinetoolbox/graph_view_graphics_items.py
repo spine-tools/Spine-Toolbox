@@ -21,12 +21,13 @@ from PySide2.QtWidgets import (
     QGraphicsTextItem,
     QGraphicsSimpleTextItem,
     QGraphicsRectItem,
+    QGraphicsEllipseItem,
     QGraphicsPixmapItem,
     QGraphicsLineItem,
     QStyle,
     QApplication,
 )
-from PySide2.QtGui import QPen, QBrush, QPainterPath, QFont, QTextCursor, QTransform
+from PySide2.QtGui import QPen, QBrush, QPainterPath, QFont, QTextCursor, QTransform, QPalette, QGuiApplication
 
 
 class EntityItem(QGraphicsPixmapItem):
@@ -61,7 +62,10 @@ class EntityItem(QGraphicsPixmapItem):
         self._moved_on_scene = False
         self._view_transform = QTransform()  # To determine collisions in the view
         self._views_cursor = {}
-        self._bg = self._make_bg()
+        self._bg = None
+        self._bg_brush = Qt.NoBrush
+        self._init_bg()
+        self._bg.setFlag(QGraphicsItem.ItemStacksBehindParent, enabled=True)
         self.is_wip = None
         self._question_item = None  # In case this becomes a template
         if not self.entity_id:
@@ -72,6 +76,7 @@ class EntityItem(QGraphicsPixmapItem):
         self.setFlag(QGraphicsItem.ItemIgnoresTransformations, enabled=True)
         self.setAcceptHoverEvents(True)
         self.setFlag(QGraphicsItem.ItemSendsScenePositionChanges, enabled=True)
+        self.setCursor(Qt.PointingHandCursor)
 
     @property
     def entity_type(self):
@@ -95,12 +100,9 @@ class EntityItem(QGraphicsPixmapItem):
     def entity_class_name(self):
         return self.db_mngr.get_item(self.db_map, self.entity_class_type, self.entity_class_id)["name"]
 
-    def _make_bg(self):
-        bg = QGraphicsRectItem(self.boundingRect(), self)
-        bg.setBrush(Qt.NoBrush)
-        bg.setPen(Qt.NoPen)
-        bg.setFlag(QGraphicsItem.ItemStacksBehindParent, enabled=True)
-        return bg
+    def _init_bg(self):
+        self._bg = QGraphicsRectItem(self.boundingRect(), self)
+        self._bg.setPen(Qt.NoPen)
 
     def refresh_icon(self):
         """Refreshes the icon."""
@@ -125,10 +127,10 @@ class EntityItem(QGraphicsPixmapItem):
         super().paint(painter, option, widget)
 
     def _paint_as_selected(self):
-        self._bg.setBrush(self._graph_view_form.palette().highlight())
+        self._bg.setBrush(QGuiApplication.palette().highlight())
 
     def _paint_as_deselected(self):
-        self._bg.setBrush(Qt.NoBrush)
+        self._bg.setBrush(self._bg_brush)
 
     def add_arc_item(self, arc_item):
         """Adds an item to the list of arcs.
@@ -343,6 +345,14 @@ class RelationshipItem(EntityItem):
             "object_name_list", ",".join(["<unnamed>" for _ in range(len(self.object_class_id_list))])
         )
 
+    def _init_bg(self):
+        extent = self._extent
+        self._bg = QGraphicsEllipseItem(-0.5 * extent, -0.5 * extent, extent, extent, self)
+        self._bg.setPen(Qt.NoPen)
+        bg_color = QGuiApplication.palette().color(QPalette.Normal, QPalette.Window)
+        bg_color.setAlphaF(0.8)
+        self._bg_brush = QBrush(bg_color)
+
     def validate_member_objects(self):
         """Goes through connected object items and tries to complete the relationship."""
         if not self.is_wip:
@@ -381,7 +391,7 @@ class RelationshipItem(EntityItem):
 
 
 class ObjectItem(EntityItem):
-    def __init__(self, graph_view_form, x, y, extent, entity_id=None, entity_class_id=None, label_color=Qt.transparent):
+    def __init__(self, graph_view_form, x, y, extent, entity_id=None, entity_class_id=None):
         """Initializes the item.
 
         Args:
@@ -391,15 +401,13 @@ class ObjectItem(EntityItem):
             extent (int): preferred extent
             entity_id (int, optional): object id, if not given the item becomes a template
             entity_class_id (int, optional): object class id, for template items
-            label_color (QColor): label bg color
 
         Raises:
             ValueError: in case object_id and object_class_id are both not provided
         """
         super().__init__(graph_view_form, x, y, extent, entity_id, entity_class_id)
         self.setFlag(QGraphicsItem.ItemIsFocusable, enabled=True)
-        self._label_color = label_color
-        self.label_item = EntityLabelItem(self, label_color)
+        self.label_item = EntityLabelItem(self)
         self.label_item.entity_name_edited.connect(self.finish_name_editing)
         self.label_item.setZValue(1)
         self.refresh_name()
@@ -535,12 +543,11 @@ class EntityLabelItem(QGraphicsTextItem):
 
     entity_name_edited = Signal(str)
 
-    def __init__(self, entity_item, bg_color):
+    def __init__(self, entity_item):
         """Initializes item.
 
         Args:
             entity_item (EntityItem): The parent item.
-            bg_color (QColor): Color for the label.
         """
         super().__init__(entity_item)
         self.entity_item = entity_item
@@ -548,7 +555,9 @@ class EntityLabelItem(QGraphicsTextItem):
         self._font.setPointSize(11)
         self.setFont(self._font)
         self.bg = QGraphicsRectItem(self)
-        self.set_bg_color(bg_color)
+        color = QGuiApplication.palette().color(QPalette.Normal, QPalette.ToolTipBase)
+        color.setAlphaF(0.8)
+        self.set_bg_color(color)
         self.bg.setFlag(QGraphicsItem.ItemStacksBehindParent)
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=False)
         self.setAcceptHoverEvents(False)
@@ -624,14 +633,13 @@ class EntityLabelItem(QGraphicsTextItem):
 class ArcItem(QGraphicsLineItem):
     """Arc item to use with GraphViewForm. Connects a RelationshipItem to an ObjectItem."""
 
-    def __init__(self, rel_item, obj_item, width, arc_color, is_wip=False):
+    def __init__(self, rel_item, obj_item, width, is_wip=False):
         """Initializes item.
 
         Args:
             rel_item (RelationshipItem): relationship item
             obj_item (ObjectItem): object item
             width (float): Preferred line width
-            arc_color (QColor): arc color
         """
         super().__init__()
         self.rel_item = rel_item
@@ -645,7 +653,9 @@ class ArcItem(QGraphicsLineItem):
         self.setLine(src_x, src_y, dst_x, dst_y)
         self._pen = QPen()
         self._pen.setWidth(self._width)
-        self._pen.setColor(arc_color)
+        color = QGuiApplication.palette().color(QPalette.Normal, QPalette.WindowText)
+        color.setAlphaF(0.8)
+        self._pen.setColor(color)
         self._pen.setStyle(Qt.SolidLine)
         self._pen.setCapStyle(Qt.RoundCap)
         self.setPen(self._pen)
