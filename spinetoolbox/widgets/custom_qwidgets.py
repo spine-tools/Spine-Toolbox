@@ -30,8 +30,8 @@ from PySide2.QtWidgets import (
     QDialogButtonBox,
     QWidgetAction,
 )
-from PySide2.QtCore import QTimer, Signal, Slot
-from PySide2.QtGui import QPainter
+from PySide2.QtCore import Qt, QTimer, Signal, Slot, QEvent
+from PySide2.QtGui import QPainter, QColor
 from ..mvcmodels.filter_checkbox_list_model import FilterCheckboxListModel
 
 
@@ -202,3 +202,26 @@ class ZoomWidget(QWidget):
         painter = QPainter(self)
         self.style().drawControl(QStyle.CE_MenuItem, self.option, painter)
         super().paintEvent(event)
+
+
+class OverlayWidget(QWidget):
+    def __init__(self, parent, color=QColor(100, 100, 100, 50)):
+        super().__init__(parent)
+        self.setAttribute(Qt.WA_NoSystemBackground)
+        self.setAttribute(Qt.WA_TransparentForMouseEvents)
+        self.setAttribute(Qt.WA_TranslucentBackground)
+        parent.installEventFilter(self)
+        self._color = color
+        self.raise_()
+
+    def eventFilter(self, obj, event):
+        if obj == self.parent():
+            if event.type() == QEvent.Resize:
+                self.resize(event.size())
+            elif event.type() == QEvent.ChildAdded:
+                self.raise_()
+        return super().eventFilter(obj, event)
+
+    def paintEvent(self, event):
+        p = QPainter(self)
+        p.fillRect(self.rect(), self._color)

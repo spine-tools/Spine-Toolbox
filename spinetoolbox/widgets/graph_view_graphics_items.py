@@ -761,21 +761,3 @@ class OutlinedTextItem(QGraphicsSimpleTextItem):
         self.setFont(font)
         self.setBrush(brush)
         self.setPen(outline_pen)
-
-
-class InteractiveTextItem(QGraphicsTextItem):
-    """Interactive text item to display the usage message in the graph view."""
-
-    def __init__(self, html, font):
-        """Initializes item.
-
-        Args:
-            html (str): text to show
-            font (QFont): font to display the text
-        """
-        super().__init__()
-        self.setHtml(html)
-        self.setFont(font)
-        self.adjustSize()
-        self.setTextInteractionFlags(Qt.TextBrowserInteraction)
-        self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=False)

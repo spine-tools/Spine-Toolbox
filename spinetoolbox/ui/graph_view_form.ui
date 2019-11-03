@@ -79,6 +79,8 @@
     <property name="title">
      <string>Graph</string>
     </property>
+    <addaction name="actionGraph_start_demo"/>
+    <addaction name="separator"/>
     <addaction name="actionGraph_hide_selected"/>
     <addaction name="actionGraph_show_hidden"/>
     <addaction name="separator"/>
@@ -828,6 +830,11 @@
   <action name="actionRestore_Dock_Widgets">
    <property name="text">
     <string>Restore Dock Widgets</string>
+   </property>
+  </action>
+  <action name="actionGraph_start_demo">
+   <property name="text">
+    <string>Start demo</string>
    </property>
   </action>
  </widget>

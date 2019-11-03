@@ -13,7 +13,7 @@
 # Form implementation generated from reading ui file '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/mainwindow.ui',
 # licensing of '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/mainwindow.ui' applies.
 #
-# Created: Sat Nov  2 14:44:44 2019
+# Created: Sun Nov  3 12:10:48 2019
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -514,6 +514,6 @@ class Ui_MainWindow(object):
         self.actionDuplicate.setToolTip(QtWidgets.QApplication.translate("MainWindow", "Duplicate selected project item", None, -1))
         self.actionDuplicate.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+D", None, -1))
 
-from spinetoolbox.widgets.custom_qgraphicsviews import DesignQGraphicsView
 from spinetoolbox.widgets.custom_qtextbrowser import CustomQTextBrowser
+from spinetoolbox.widgets.custom_qgraphicsviews import DesignQGraphicsView
 from spinetoolbox import resources_icons_rc
