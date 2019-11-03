@@ -101,12 +101,19 @@ class GraphViewDemo(QObject):
         dying.entered.connect(lambda: self.graphics_overlay.setAttribute(Qt.WA_TransparentForMouseEvents, True))
         running.assignProperty(self.graphics_overlay, "visible", True)
         running.entered.connect(lambda: self.graphics_overlay.setAttribute(Qt.WA_TransparentForMouseEvents, False))
-        teasing.assignProperty(self.label, "text", "First time? Try the live demo!")
+        teasing.assignProperty(self.label, "text", "<html>First time? Try the live demo!</html>")
         teasing.assignProperty(self.button_abort, "visible", False)
         teasing.assignProperty(self.button_next, "text", "Start demo")
         teasing.assignProperty(self.button_back, "visible", False)
         teasing.assignProperty(self.object_tree_overlay, "visible", False)
-        before_selecting_one.assignProperty(self.label, "text", "Select items in the object tree to see them here.")
+        text = """
+            <html>
+            <p>Selecting items in the object tree automatically triggers
+            graph generation.</b>
+            <p>Press <b>Show</b> to see it in action.</p>
+            </html>
+        """
+        before_selecting_one.assignProperty(self.label, "text", text)
         before_selecting_one.assignProperty(self.button_abort, "visible", True)
         before_selecting_one.assignProperty(self.button_next, "text", "Show")
         before_selecting_one.assignProperty(self.button_back, "visible", False)
@@ -114,17 +121,21 @@ class GraphViewDemo(QObject):
         selecting_one.assignProperty(self.graphics_overlay, "visible", False)
         selecting_one.assignProperty(self.object_tree_overlay, "visible", False)
         before_selecting_more.assignProperty(self.graphics_overlay, "visible", True)
-        text = "Select multiple items to make it more interesting."
         sticky = self.parent().qsettings().value("appSettings/stickySelection", defaultValue="false")
-        if sticky == "false":
-            text += " (Hold down the Ctrl key to extend the selection.)"
+        note = " (by holding down the <b>Ctrl</b> key)" if sticky == "false" else ""
+        text = f"""
+            <html>
+            <p>Selecting multiple items{note} makes things more interesting.</p>
+            <p>Press <b>Show</b> to see it in action.</p>
+            </html>
+        """
         before_selecting_more.assignProperty(self.label, "text", text)
         before_selecting_more.assignProperty(self.button_back, "visible", True)
         before_selecting_more.assignProperty(self.object_tree_overlay, "visible", True)
         selecting_more.assignProperty(self.graphics_overlay, "visible", False)
         selecting_more.assignProperty(self.object_tree_overlay, "visible", False)
         ending.assignProperty(self.graphics_overlay, "visible", True)
-        ending.assignProperty(self.label, "text", "That's all for now. Thanks for watching.")
+        ending.assignProperty(self.label, "text", "<html>That's all for now. Thanks for watching.</html>")
         ending.assignProperty(self.button_abort, "visible", False)
         ending.assignProperty(self.button_next, "text", "Close")
         ending.assignProperty(self.button_back, "visible", False)

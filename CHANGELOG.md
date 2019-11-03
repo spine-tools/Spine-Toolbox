@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - Changes made in the tree view are also seen in the graph view and viceversa.
 - New Setting: *Sticky selection in Graph View*. Enables users to select if they want to use multi-selection or 
   single selection in the Graph view Object tree when selecting items with the **left-mouse button**.
+- The graph view features a short live demonstration that new users can follow to discover the basic functionality.
 
 ### Changed
 - spinetoolbox is now a Python package. To start the app, use command `python -m spinetoolbox` or
@@ -23,8 +24,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - Tool templates are now called Tool specifications
 - Renamed *Data Interface* project item to *Importer*.
   The corresponding category *Data Importers* was renamed to *Importers*.
-- Status bar notification messages in tree and graph views are replaced by an icon. When hovered the icon shows 
-  the message, and it's removed when clicked.
+- The status bar of tree and graph views now has a notification icon. Click on this icon to see the list of 
+  notifications as a popup.
 
 ### Deprecated
 
