@@ -21,6 +21,7 @@ import numpy as np
 from numpy import atleast_1d as arr
 from scipy.sparse.csgraph import dijkstra
 from PySide2.QtCore import Qt, Signal, Slot
+from PySide2.QtWidgets import QGraphicsTextItem
 from .data_store_widget import DataStoreForm
 from .custom_menus import (
     SimpleEditableParameterValueContextMenu,
@@ -87,7 +88,6 @@ class GraphViewForm(DataStoreForm):
         self.demo = GraphViewDemo(self)
         # Initialize stuff
         self.init_models()
-        self.demo.init_demo()
         self.setup_delegates()
         self.add_toggle_view_actions()
         self.setup_zoom_widget_action()
@@ -175,7 +175,7 @@ class GraphViewForm(DataStoreForm):
     def show(self):
         """Shows usage message together with the form."""
         super().show()
-        self.demo.start()
+        self.demo.init_demo()
 
     def init_models(self):
         """Initializes models."""
@@ -338,6 +338,7 @@ class GraphViewForm(DataStoreForm):
         self.ui.actionGraph_show_hidden.setEnabled(bool(self.hidden_items))
         self.ui.actionGraph_prune_selected.setEnabled(bool(self.entity_item_selection))
         self.ui.actionGraph_reinstate_pruned.setEnabled(bool(self.rejected_items))
+        self.ui.actionGraph_start_demo.setEnabled(not self.demo.is_running())
 
     @Slot("Qt.DockWidgetArea", name="_handle_item_palette_dock_location_changed")
     def _handle_item_palette_dock_location_changed(self, area):
@@ -377,14 +378,16 @@ class GraphViewForm(DataStoreForm):
         wip_relationship_items = self._get_wip_relationship_items()
         scene = self.new_scene()
         if not wip_relationship_items and not object_ids and not relationship_ids:
-            return
-        object_items, relationship_items, arc_items = self._get_new_items(
-            object_ids, relationship_ids, src_inds, dst_inds
-        )
-        self._add_new_items(scene, object_items, relationship_items, arc_items)
-        self._add_wip_relationship_items(scene, wip_relationship_items, object_items)
+            item = QGraphicsTextItem("Nothing to show.")
+            scene.addItem(item)
+        else:
+            object_items, relationship_items, arc_items = self._get_new_items(
+                object_ids, relationship_ids, src_inds, dst_inds
+            )
+            self._add_new_items(scene, object_items, relationship_items, arc_items)
+            self._add_wip_relationship_items(scene, wip_relationship_items, object_items)
+            self.hidden_items.clear()
         self.extend_scene()
-        self.hidden_items.clear()
         toc = time.clock()
         _ = timeit and self.msg.emit("Graph built in {} seconds\t".format(toc - tic))
         self.graph_created.emit()
@@ -669,7 +672,7 @@ class GraphViewForm(DataStoreForm):
             text (str)
         """
         scene = self.ui.graphicsView.scene()
-        if not scene:
+        if not scene or any(isinstance(item, QGraphicsTextItem) for item in scene.items()):
             scene = self.new_scene()
         scene_pos = self.ui.graphicsView.mapToScene(pos)
         entity_type, entity_class_id = text.split(":")
@@ -829,7 +832,7 @@ class GraphViewForm(DataStoreForm):
     @Slot("bool")
     def start_demo(self, checked=False):
         self.tear_down_scene()
-        self.demo.start()
+        self.demo.init_demo()
 
     def show_object_item_context_menu(self, global_pos, main_item):
         """Shows context menu for entity item.
