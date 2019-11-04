@@ -318,10 +318,13 @@ class EntityItem(QGraphicsPixmapItem):
 
     def wipe_out(self):
         """Removes this item and all its arc items from the scene."""
-        for item in self.arc_items:
-            if item.scene():
-                item.scene().removeItem(item)
         self.scene().removeItem(self)
+        for arc_item in self.arc_items:
+            if arc_item.scene():
+                arc_item.scene().removeItem(arc_item)
+                other_item = arc_item.other_item(self)
+                if other_item.is_wip:
+                    other_item.wipe_out()
 
     def contextMenuEvent(self, e):
         """Shows context menu.
@@ -697,6 +700,9 @@ class ArcItem(QGraphicsLineItem):
         if self.is_wip:
             self.become_wip()
 
+    def other_item(self, item):
+        return {self.rel_item: self.obj_item, self.obj_item: self.rel_item}.get(item)
+
     def become_wip(self):
         """Turns this arc into a work-in-progress."""
         self.is_wip = True
@@ -741,6 +747,10 @@ class ArcItem(QGraphicsLineItem):
         scaled_width = self._width / factor
         self._pen.setWidthF(scaled_width)
         self.setPen(self._pen)
+
+    def wipe_out(self):
+        self.obj_item.arc_items.remove(self)
+        self.rel_item.arc_items.remove(self)
 
 
 class OutlinedTextItem(QGraphicsSimpleTextItem):

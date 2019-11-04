@@ -277,9 +277,9 @@ class GraphViewForm(DataStoreForm):
 
     def receive_entities_removed(self, db_map_data):
         removed_ids = {x["id"] for x in db_map_data.get(self.db_map, [])}
-        entity_ids = {x.entity_id for x in self.ui.graphicsView.items() if isinstance(x, EntityItem)}
-        if entity_ids.intersection(removed_ids):
-            self.build_graph()
+        for item in self.ui.graphicsView.items():
+            if isinstance(item, EntityItem) and item.entity_id in removed_ids:
+                item.wipe_out()
 
     def refresh_icons(self, db_map_data):
         """Runs when entity classes are updated in the db. Refreshes icons of entities in graph.
@@ -683,8 +683,11 @@ class GraphViewForm(DataStoreForm):
             text (str)
         """
         scene = self.ui.graphicsView.scene()
-        if not scene or any(isinstance(item, QGraphicsTextItem) for item in scene.items()):
+        if not scene:
             scene = self.new_scene()
+        for item in scene.items():
+            if isinstance(item, QGraphicsTextItem):
+                scene.removeItem(item)
         scene_pos = self.ui.graphicsView.mapToScene(pos)
         entity_type, entity_class_id = text.split(":")
         entity_class_id = int(entity_class_id)
@@ -899,7 +902,7 @@ class GraphViewForm(DataStoreForm):
         for item in self.entity_item_selection:
             if item.is_wip:
                 item.wipe_out()
-            if item.entity_id:
+            else:
                 db_item = item.db_representation
                 db_map_typed_data[self.db_map].setdefault(item.entity_type, []).append(db_item)
         self.db_mngr.remove_items(db_map_typed_data)
