@@ -381,28 +381,8 @@ class DataConnection(ProjectItem):
         """Returns list of references and files to advertise to the execution instance."""
         refs = self.file_references()
         f_list = [os.path.join(self.data_dir, f) for f in self.data_files()]
-        resources = [ProjectItemResource(self, "file", url=pathlib.Path(ref).as_uri()) for ref in refs]
-        resources += [ProjectItemResource(self, "file", url=pathlib.Path(path).as_uri()) for path in f_list]
+        resources = [ProjectItemResource(self, "file", url=pathlib.Path(ref).as_uri()) for ref in (refs + f_list)]
         return resources
-
-    def execute(self):
-        """Executes this Data Connection."""
-        self._toolbox.msg.emit("")
-        self._toolbox.msg.emit("Executing Data Connection <b>{0}</b>".format(self.name))
-        self._toolbox.msg.emit("***")
-        inst = self._toolbox.project().execution_instance
-        # Update Data Connection based on project items that are already executed
-        # Add previously executed Tool's output file paths to references
-        tool_output_files = [
-            r.path for r in inst.available_resources(self.name) if r.type_ == "file" and r.metadata.get("is_output")
-        ]
-        self.references += tool_output_files
-        self.populate_reference_list(self.references, emit_item_changed=False)
-        # Update execution instance for project items downstream
-        # Add data file references and data files into execution instance
-        resources = self.resources_for_advertising()
-        inst.advertise_resources(self.name, *resources)
-        self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(ExecutionState.CONTINUE)
 
     def stop_execution(self):
         """Stops executing this Data Connection."""
@@ -411,12 +391,9 @@ class DataConnection(ProjectItem):
             ExecutionState.STOP_REQUESTED
         )
 
-    def simulate_execution(self, inst):
-        """Simulates executing this Data Connection."""
-        super().simulate_execution(inst)
-        resources = self.resources_for_advertising()
-        inst.advertise_resources(self.name, *resources)
-        if not resources:
+    def _do_handle_dag_changed(self, resources_upstream):
+        """See base class."""
+        if not self.file_references() and not self.data_files():
             self.add_notification(
                 "This Data Connection does not have any references or data. "
                 "Add some in the Data Connection Properties panel."
@@ -469,5 +446,10 @@ class DataConnection(ProjectItem):
 
     @staticmethod
     def default_name_prefix():
-        """see base class"""
+        """See base class."""
         return "Data Connection"
+
+    def available_resources_downstream(self, upstream_resources):
+        """See base class."""
+        resources = self.resources_for_advertising()
+        return resources

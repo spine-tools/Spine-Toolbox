@@ -21,7 +21,7 @@ from unittest import mock
 import logging
 import sys
 from PySide2.QtWidgets import QApplication
-from .mock_helpers import create_toolboxui_with_project
+from .mock_helpers import clean_up_toolboxui_with_project, create_toolboxui_with_project
 
 
 # noinspection PyUnusedLocal
@@ -46,8 +46,7 @@ class TestSpineToolboxProject(unittest.TestCase):
 
     def tearDown(self):
         """Runs after each test. Use this to free resources after a test if needed."""
-        self.toolbox.deleteLater()
-        self.toolbox = None
+        clean_up_toolboxui_with_project(self.toolbox)
 
     def test_add_data_store(self):
         """Test adding a Data Store to project."""
@@ -180,28 +179,28 @@ class TestSpineToolboxProject(unittest.TestCase):
     def add_ds(self):
         """Helper method to add Data Store. Returns created items name."""
         item = dict(name="DS", description="", url=dict(), x=0, y=0)
-        with mock.patch("spinetoolbox.project_item.create_dir") as mock_create_dir:
+        with mock.patch("spinetoolbox.project_item.create_dir"):
             self.toolbox.project().add_project_items("Data Stores", item)
         return "DS"
 
     def add_dc(self):
         """Helper method to add Data Connection. Returns created items name."""
         item = dict(name="DC", description="", references=list(), x=0, y=0)
-        with mock.patch("spinetoolbox.project_item.create_dir") as mock_create_dir:
+        with mock.patch("spinetoolbox.project_item.create_dir"):
             self.toolbox.project().add_project_items("Data Connections", item)
         return "DC"
 
     def add_tool(self):
         """Helper method to add Tool. Returns created items name."""
         item = dict(name="tool", description="", tool="", execute_in_work=False, x=0, y=0)
-        with mock.patch("spinetoolbox.project_item.create_dir") as mock_create_dir:
+        with mock.patch("spinetoolbox.project_item.create_dir"):
             self.toolbox.project().add_project_items("Tools", item)
         return "tool"
 
     def add_view(self):
         """Helper method to add View. Returns created items name."""
         item = dict(name="view", description="", x=0, y=0)
-        with mock.patch("spinetoolbox.project_item.create_dir") as mock_create_dir:
+        with mock.patch("spinetoolbox.project_item.create_dir"):
             self.toolbox.project().add_project_items("Views", item)
         return "view"
 

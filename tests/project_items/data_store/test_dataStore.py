@@ -18,7 +18,6 @@ Unit tests for DataStore class.
 
 import unittest
 from unittest import mock
-import shutil
 import os
 import logging
 import sys
@@ -28,7 +27,7 @@ from networkx import DiGraph
 import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
 from spinetoolbox.widgets.tree_view_widget import TreeViewForm
 from spinetoolbox.project_items.data_store.data_store import DataStore
-from ...mock_helpers import create_toolboxui_with_project
+from ...mock_helpers import clean_up_toolboxui_with_project, create_toolboxui_with_project
 
 
 # noinspection PyUnusedLocal
@@ -66,32 +65,17 @@ class TestDataStore(unittest.TestCase):
         """
         ds_db_path = os.path.join(self.ds.data_dir, "DS.sqlite")
         temp_db_path = os.path.join(self.ds.data_dir, "temp_db.sqlite")
-        project_dir = self.toolbox.project().project_dir
-        project_path = self.toolbox.project().path
-        self.toolbox.deleteLater()
-        self.toolbox = None
         if os.path.exists(ds_db_path):
             try:
                 os.remove(ds_db_path)
             except OSError as os_e:
-                logging.debug("Failed to remove {0}. Error:{1}".format(ds_db_path, os_e))
-                pass
+                logging.error("Failed to remove %s. Error: %s", ds_db_path, os_e)
         if os.path.exists(temp_db_path):
             try:
                 os.remove(temp_db_path)
             except OSError as os_e:
-                logging.debug("Failed to remove {0}. Error:{1}".format(temp_db_path, os_e))
-                pass
-        try:
-            shutil.rmtree(project_dir)  # Remove project directory
-        except OSError as e:
-            # logging.debug("Failed to remove project directory. {0}".format(e))
-            pass
-        try:
-            os.remove(project_path)  # Remove project file
-        except OSError:
-            # logging.debug("Failed to remove project file")
-            pass
+                logging.error("Failed to remove %s. Error: %s", temp_db_path, os_e)
+        clean_up_toolboxui_with_project(self.toolbox)
 
     def create_temp_db(self):
         """Let's create a real db to more easily test complicated stuff (such as opening a tree view)."""

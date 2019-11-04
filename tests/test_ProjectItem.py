@@ -16,14 +16,12 @@ Unit tests for ProjectItem base class.
 :date:   4.10.2019
 """
 
-import shutil
-from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import MagicMock, NonCallableMagicMock
 from PySide2.QtWidgets import QApplication
 import spinetoolbox.resources_icons_rc # pylint: disable=unused-import
 from spinetoolbox.project_item import ProjectItem
-from .mock_helpers import create_toolboxui_with_project
+from .mock_helpers import clean_up_toolboxui_with_project, create_toolboxui_with_project
 
 
 class TestProjectItem(unittest.TestCase):
@@ -43,24 +41,18 @@ class TestProjectItem(unittest.TestCase):
     def tearDown(self):
         """Clean up."""
         self.data_connection.data_dir_watcher.removePath(self.data_connection.data_dir)
-        try:
-            shutil.rmtree(self.toolbox.project().project_dir)  # Remove project directory
-        except OSError as e:
-            print("Failed to remove project directory. {0}".format(e))
-        self.toolbox.deleteLater()
-        self.toolbox = None
+        clean_up_toolboxui_with_project(self.toolbox)
 
     def test_notify_destination(self):
-        with TemporaryDirectory() as project_dir:
-            self.toolbox.msg_warning = NonCallableMagicMock()
-            self.toolbox.msg_warning.attach_mock(MagicMock(), "emit")
-            item = ProjectItem(self.toolbox, "name", "description", 0.0, 0.0)
-            item.item_type = MagicMock(return_value="item_type")
-            item.notify_destination(item)
-            self.toolbox.msg_warning.emit.assert_called_with(
-                "Link established."
-                " Interaction between a <b>item_type</b> and a <b>item_type</b> has not been implemented yet."
-            )
+        self.toolbox.msg_warning = NonCallableMagicMock()
+        self.toolbox.msg_warning.attach_mock(MagicMock(), "emit")
+        item = ProjectItem(self.toolbox, "name", "description", 0.0, 0.0)
+        item.item_type = MagicMock(return_value="item_type")
+        item.notify_destination(item)
+        self.toolbox.msg_warning.emit.assert_called_with(
+            "Link established."
+            " Interaction between a <b>item_type</b> and a <b>item_type</b> has not been implemented yet."
+        )
 
 
 if __name__ == '__main__':
