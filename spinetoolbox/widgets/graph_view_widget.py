@@ -497,7 +497,9 @@ class GraphViewForm(DataStoreForm):
             if isinstance(item, RelationshipItem) and item.is_wip:
                 for arc_item in item.arc_items:
                     scene.removeItem(arc_item)
-                    scene.removeItem(arc_item.obj_item)
+                unique_object_items = set(arc_item.obj_item for arc_item in item.arc_items)
+                for obj_item in unique_object_items:
+                    scene.removeItem(obj_item)
                 scene.removeItem(item)
                 wip_items.append(item)
         return wip_items
@@ -524,7 +526,8 @@ class GraphViewForm(DataStoreForm):
             scene.addItem(rel_item)
             for arc_item in rel_item.arc_items:
                 scene.addItem(arc_item)
-                obj_item = arc_item.obj_item
+            unique_object_items = set(arc_item.obj_item for arc_item in rel_item.arc_items)
+            for obj_item in unique_object_items:
                 scene.addItem(obj_item)
                 obj_item._merge_target = object_items_lookup.get(obj_item.entity_id)
                 if obj_item._merge_target:

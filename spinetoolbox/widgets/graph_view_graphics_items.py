@@ -102,6 +102,9 @@ class EntityItem(QGraphicsPixmapItem):
     def entity_class_name(self):
         return self.db_mngr.get_item(self.db_map, self.entity_class_type, self.entity_class_id)["name"]
 
+    def boundingRect(self):
+        return super().boundingRect() | self.childrenBoundingRect()
+
     def _init_bg(self):
         self._bg = QGraphicsRectItem(self.boundingRect(), self)
         self._bg.setPen(Qt.NoPen)
@@ -444,9 +447,6 @@ class ObjectItem(EntityItem):
     def db_representation(self):
         return dict(class_id=self.entity_class_id, id=self.entity_id, name=self.entity_name)
 
-    def boundingRect(self):
-        return super().boundingRect() | self.childrenBoundingRect()
-
     def refresh_name(self):
         """Refreshes the name."""
         self.label_item.setPlainText(self.entity_name)
@@ -548,7 +548,7 @@ class ObjectItem(EntityItem):
         """
         if not self._is_target_valid() and not force:
             return False
-        if self._merge_target.is_wip:
+        if not self.is_wip and self._merge_target.is_wip:
             # Make sure we don't merge a non-wip into a wip item
             other = self._merge_target
             other._merge_target = self
