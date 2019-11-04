@@ -374,26 +374,28 @@ class GraphViewForm(DataStoreForm):
     def build_graph(self, timeit=False):
         """Builds the graph."""
         tic = time.clock()
-        object_ids, relationship_ids, src_inds, dst_inds = self.get_graph_data()
+        new_items = self._get_new_items()
         wip_relationship_items = self._get_wip_relationship_items()
         scene = self.new_scene()
-        if not wip_relationship_items and not object_ids and not relationship_ids:
+        if not new_items and not wip_relationship_items:
             item = QGraphicsTextItem("Nothing to show.")
             scene.addItem(item)
         else:
-            object_items, relationship_items, arc_items = self._get_new_items(
-                object_ids, relationship_ids, src_inds, dst_inds
-            )
-            self._add_new_items(scene, object_items, relationship_items, arc_items)
-            self._add_wip_relationship_items(scene, wip_relationship_items, object_items)
+            if new_items:
+                object_items = new_items[0]
+                self._add_new_items(scene, *new_items)
+            else:
+                object_items = []
+            if wip_relationship_items:
+                self._add_wip_relationship_items(scene, wip_relationship_items, object_items)
             self.hidden_items.clear()
         self.extend_scene()
         toc = time.clock()
         _ = timeit and self.msg.emit("Graph built in {} seconds\t".format(toc - tic))
         self.graph_created.emit()
 
-    def _selected_object_ids(self):
-        """Returns a set of selected object ids.
+    def _get_selected_object_ids(self):
+        """Returns a set of object ids according to selection in the object tree.
 
         Returns:
             set
@@ -413,17 +415,17 @@ class GraphViewForm(DataStoreForm):
             unique_object_ids.update(object_ids)
         return unique_object_ids
 
-    def get_graph_data(self):
+    def _get_graph_data(self):
         """Returns data for making graph according to selection in Object tree.
 
         Returns:
             list: integer object ids
             list: integer relationship ids
-            list: source indices
-            list: destination indices
+            list: arc source indices
+            list: arc destination indices
         """
         rejected_entity_ids = {x.entity_id for x in self.rejected_items}
-        object_ids = list(self._selected_object_ids() - rejected_entity_ids)
+        object_ids = list(self._get_selected_object_ids() - rejected_entity_ids)
         src_inds = list()
         dst_inds = list()
         relationship_ids = list()
@@ -449,35 +451,20 @@ class GraphViewForm(DataStoreForm):
             relationship_ind += 1
         return object_ids, relationship_ids, src_inds, dst_inds
 
-    def _get_wip_relationship_items(self):
-        """Removes and returns wip relationship items from the current scene.
-
-        Returns:
-            list
-        """
-        scene = self.ui.graphicsView.scene()
-        if not scene:
-            return []
-        wip_items = []
-        for item in scene.items():
-            if isinstance(item, RelationshipItem) and item.is_wip:
-                for arc_item in item.arc_items:
-                    scene.removeItem(arc_item)
-                    scene.removeItem(arc_item.obj_item)
-                scene.removeItem(item)
-                wip_items.append(item)
-        return wip_items
-
-    def _get_new_items(self, object_ids, relationship_ids, src_inds, dst_inds):
+    def _get_new_items(self):
         """Returns new items for the graph.
 
         Returns:
-            list: new EntityItem and ArcItem instances
-            dict: ObjectItem instances keyed by integer object id.
+            list: ObjectItem instances
+            list: RelationshipItem instances
+            list: ArcItem instances
         """
+        object_ids, relationship_ids, src_inds, dst_inds = self._get_graph_data()
         d = self.shortest_path_matrix(
             len(object_ids) + len(relationship_ids), src_inds, dst_inds, self._arc_length_hint
         )
+        if d is None:
+            return []
         x, y = self.vertex_coordinates(d)
         object_items = list()
         relationship_items = list()
@@ -496,6 +483,30 @@ class GraphViewForm(DataStoreForm):
             arc_items.append(arc_item)
         return object_items, relationship_items, arc_items
 
+    def _get_wip_relationship_items(self):
+        """Removes and returns wip relationship items from the current scene.
+
+        Returns:
+            list: RelationshipItem instances
+        """
+        scene = self.ui.graphicsView.scene()
+        if not scene:
+            return []
+        wip_items = []
+        for item in scene.items():
+            if isinstance(item, RelationshipItem) and item.is_wip:
+                for arc_item in item.arc_items:
+                    scene.removeItem(arc_item)
+                    scene.removeItem(arc_item.obj_item)
+                scene.removeItem(item)
+                wip_items.append(item)
+        return wip_items
+
+    @staticmethod
+    def _add_new_items(scene, object_items, relationship_items, arc_items):
+        for item in object_items + relationship_items + arc_items:
+            scene.addItem(item)
+
     @staticmethod
     def _add_wip_relationship_items(scene, wip_relationship_items, new_object_items):
         """Adds wip relationship items to the given scene, merging completed members with existing
@@ -504,7 +515,7 @@ class GraphViewForm(DataStoreForm):
         Args:
             scene (QGraphicsScene)
             wip_relationship_items (list)
-            new_object_items (list):
+            new_object_items (list)
         """
         object_items_lookup = dict()
         for object_item in new_object_items:
@@ -520,11 +531,6 @@ class GraphViewForm(DataStoreForm):
                     obj_item.merge_into_target(force=True)
 
     @staticmethod
-    def _add_new_items(scene, object_items, relationship_items, arc_items):
-        for item in object_items + relationship_items + arc_items:
-            scene.addItem(item)
-
-    @staticmethod
     def shortest_path_matrix(N, src_inds, dst_inds, spread):
         """Returns the shortest-path matrix.
 
@@ -534,6 +540,8 @@ class GraphViewForm(DataStoreForm):
             dst_inds (list): Destination indices
             spread (int): The desired 'distance' between neighbours
         """
+        if not N:
+            return None
         dist = np.zeros((N, N))
         src_inds = arr(src_inds)
         dst_inds = arr(dst_inds)

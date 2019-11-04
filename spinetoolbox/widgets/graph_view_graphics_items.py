@@ -694,7 +694,6 @@ class ArcItem(QGraphicsLineItem):
         self.setZValue(-2)
         rel_item.add_arc_item(self)
         obj_item.add_arc_item(self)
-        self.setAcceptHoverEvents(True)
         if self.is_wip:
             self.become_wip()
 
