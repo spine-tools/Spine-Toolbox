@@ -76,9 +76,9 @@ class EntityItem(QGraphicsPixmapItem):
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
         self.setFlag(QGraphicsItem.ItemIsMovable, enabled=True)
         self.setFlag(QGraphicsItem.ItemIgnoresTransformations, enabled=True)
-        self.setAcceptHoverEvents(True)
         self.setFlag(QGraphicsItem.ItemSendsScenePositionChanges, enabled=True)
-        self.setCursor(Qt.PointingHandCursor)
+        self.setAcceptHoverEvents(True)
+        self.setCursor(Qt.ArrowCursor)
 
     @property
     def entity_type(self):
@@ -693,12 +693,16 @@ class ArcItem(QGraphicsLineItem):
         self._pen.setStyle(Qt.SolidLine)
         self._pen.setCapStyle(Qt.RoundCap)
         self.setPen(self._pen)
-        self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=False)
         self.setZValue(-2)
         rel_item.add_arc_item(self)
         obj_item.add_arc_item(self)
         if self.is_wip:
             self.become_wip()
+        self.setCursor(Qt.ArrowCursor)
+
+    def mousePressEvent(self, event):
+        """Accepts the event so it's not propagated."""
+        event.accept()
 
     def other_item(self, item):
         return {self.rel_item: self.obj_item, self.obj_item: self.rel_item}.get(item)
@@ -751,22 +755,3 @@ class ArcItem(QGraphicsLineItem):
     def wipe_out(self):
         self.obj_item.arc_items.remove(self)
         self.rel_item.arc_items.remove(self)
-
-
-class OutlinedTextItem(QGraphicsSimpleTextItem):
-    """Outlined text item."""
-
-    def __init__(self, text, parent, font=QFont(), brush=QBrush(Qt.white), outline_pen=QPen(Qt.black, 3, Qt.SolidLine)):
-        """Initializes item.
-
-        Args:
-            text (str): text to show
-            font (QFont, optional): font to display the text
-            brush (QBrush, optional)
-            outline_pen (QPen, optional)
-        """
-        super().__init__(text, parent)
-        font.setWeight(QFont.Black)
-        self.setFont(font)
-        self.setBrush(brush)
-        self.setPen(outline_pen)

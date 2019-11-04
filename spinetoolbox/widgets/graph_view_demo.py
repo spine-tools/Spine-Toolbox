@@ -112,7 +112,7 @@ class GraphViewDemo(QObject):
         text = """
             <html>
             <p>Selecting items in the object tree automatically triggers
-            graph generation.</b>
+            graph generation.</b><br />
             <p>Press <b>Show</b> to see it in action.</p>
             </html>
         """
@@ -121,28 +121,28 @@ class GraphViewDemo(QObject):
         before_selecting_one.assignProperty(self.button_abort, "visible", True)
         before_selecting_one.assignProperty(self.button_next, "text", "Show")
         before_selecting_one.assignProperty(self.button_back, "visible", False)
-        before_selecting_one.assignProperty(self.object_tree_overlay, "visible", True)
+        before_selecting_one.assignProperty(self.object_tree_overlay, "visible", False)
         selecting_one.assignProperty(self.parent().ui.dockWidget_object_tree, "visible", True)
         selecting_one.assignProperty(self.graphics_overlay, "visible", False)
-        selecting_one.assignProperty(self.object_tree_overlay, "visible", False)
+        selecting_one.assignProperty(self.object_tree_overlay, "visible", True)
         before_selecting_more.assignProperty(self.parent().ui.dockWidget_object_tree, "visible", True)
         before_selecting_more.assignProperty(self.graphics_overlay, "visible", True)
         sticky = self.parent().qsettings().value("appSettings/stickySelection", defaultValue="false")
         note = " (by holding down the <b>Ctrl</b> key)" if sticky == "false" else ""
         text = f"""
             <html>
-            <p>Selecting multiple items{note} makes things more interesting.</p>
+            <p>Selecting multiple items{note} makes things more interesting.</p><br />
             <p>Press <b>Show</b> to see it in action.</p>
             </html>
         """
         before_selecting_more.assignProperty(self.label, "text", text)
         before_selecting_more.assignProperty(self.button_back, "visible", True)
-        before_selecting_more.assignProperty(self.object_tree_overlay, "visible", True)
+        before_selecting_more.assignProperty(self.object_tree_overlay, "visible", False)
         selecting_more.assignProperty(self.parent().ui.dockWidget_object_tree, "visible", True)
         selecting_more.assignProperty(self.graphics_overlay, "visible", False)
-        selecting_more.assignProperty(self.object_tree_overlay, "visible", False)
+        selecting_more.assignProperty(self.object_tree_overlay, "visible", True)
         ending.assignProperty(self.graphics_overlay, "visible", True)
-        ending.assignProperty(self.label, "text", "<html>That's all for now. Thanks for watching.</html>")
+        ending.assignProperty(self.label, "text", "<html>That's all for now. Hope you liked it.</html>")
         ending.assignProperty(self.button_abort, "visible", False)
         ending.assignProperty(self.button_next, "text", "Close")
         ending.assignProperty(self.button_back, "visible", False)
