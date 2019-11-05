@@ -21,10 +21,10 @@ from ..mvcmodels.minimal_table_model import MinimalTableModel
 
 
 class CompoundTableModel(MinimalTableModel):
-    """A model that vertically concatenates several sub table models together."""
+    """A model that concatenates several sub table models vertically."""
 
     def __init__(self, parent, header=None):
-        """Init class.
+        """Initializes model.
 
         Args:
             parent (QObject): the parent object
@@ -36,7 +36,14 @@ class CompoundTableModel(MinimalTableModel):
         self._fetched_count = 0
 
     def map_to_sub(self, index):
-        """Translate the index into the corresponding submodel."""
+        """Returns an equivalent submodel index.
+
+        Args:
+            index (QModelIndex): the compound model index.
+
+        Returns:
+            QModelIndex: the equivalent index in one of the submodels
+        """
         if not index.isValid():
             return QModelIndex()
         row = index.row()
@@ -48,7 +55,15 @@ class CompoundTableModel(MinimalTableModel):
         return sub_model.index(sub_row, column)
 
     def map_from_sub(self, sub_model, sub_index):
-        """Translate the index from the given submodel into this."""
+        """Returns an equivalent compound model index.
+
+        Args:
+            sub_model (MinimalTableModel): the submodel
+            sub_index (QModelIndex): the submodel index.
+
+        Returns:
+            QModelIndex: the equivalent index in the compound model
+        """
         try:
             row = self._inv_row_map[sub_model, sub_index.row()]
         except KeyError:
@@ -56,23 +71,37 @@ class CompoundTableModel(MinimalTableModel):
         return self.index(row, sub_index.column())
 
     def item_at_row(self, row):
-        """Returns the item at given row."""
+        """Returns the item at given row.
+
+        Args:
+            row (int)
+
+        Returns:
+            object
+        """
         sub_model, sub_row = self._row_map[row]
         return sub_model._main_data[sub_row]
 
     def sub_model_at_row(self, row):
-        """Returns the item at given row."""
+        """Returns the submodel corresponding to the given row in the compound model.
+
+        Args:
+            row (int):
+
+        Returns:
+            MinimalTableModel
+        """
         sub_model, _ = self._row_map[row]
         return sub_model
 
     def refresh(self):
-        """Recomputes the row map."""
+        """Refreshes the layout by computing a new row map."""
         self.layoutAboutToBeChanged.emit()
         self.do_refresh()
         self.layoutChanged.emit()
 
     def do_refresh(self):
-        """Recomputes the row map."""
+        """Recomputes the row and inverse row maps."""
         self._row_map.clear()
         self._inv_row_map.clear()
         for model in self.sub_models:
@@ -80,7 +109,11 @@ class CompoundTableModel(MinimalTableModel):
             self._append_row_map(row_map)
 
     def _append_row_map(self, row_map):
-        """Appends given row map."""
+        """Appends given row map to the tail of the model.
+
+        Args:
+            row_map (list): tuples (model, row number)
+        """
         for model_row_tup in row_map:
             self._inv_row_map[model_row_tup] = self.rowCount()
             self._row_map.append(model_row_tup)
@@ -88,18 +121,24 @@ class CompoundTableModel(MinimalTableModel):
     def _row_map_for_model(self, model):
         """Returns row map for given model.
         The base class implementation just returns all model rows.
+
+        Args:
+            model (MinimalTableModel)
+
+        Returns:
+            list: tuples (model, row number)
         """
         return [(model, i) for i in range(model.rowCount())]
 
     def canFetchMore(self, parent=QModelIndex()):
-        """Returns True if any of the unfetched single models can fetch more."""
+        """Returns True if any of the submodels that haven't been fetched yet can fetch more."""
         for model in self.sub_models[self._fetched_count :]:
             if model.canFetchMore(self.map_to_sub(parent)):
                 return True
         return False
 
     def fetchMore(self, parent=QModelIndex()):
-        """Fetches the next single model and increments the fetched counter."""
+        """Fetches the next sub model and increments the fetched counter."""
         model = self.sub_models[self._fetched_count]
         row_count_before = model.rowCount()
         model.fetchMore(self.map_to_sub(parent))
@@ -113,21 +152,19 @@ class CompoundTableModel(MinimalTableModel):
             self.layoutChanged.emit()
 
     def flags(self, index):
-        """Translate the index into the corresponding submodel and return its flags."""
         return self.map_to_sub(index).flags()
 
     def data(self, index, role=Qt.DisplayRole):
-        """Maps the index into a submodel and return its data."""
         return self.map_to_sub(index).data(role)
 
     def rowCount(self, parent=QModelIndex()):
-        """Return the sum of rows in all models."""
+        """Returns the sum of rows in all models."""
         return len(self._row_map)
 
     def batch_set_data(self, indexes, data):
-        """Set data for indexes in batch.
-        Distribute indexes and values among the different submodels
-        and call batch_set_data on each of them."""
+        """Sets data for indexes in batch.
+        Distributes indexes and values among the different submodels
+        and calls batch_set_data on each of them."""
         if not indexes or not data:
             return False
         d = {}  # Maps models to (index, value) tuples
@@ -153,6 +190,9 @@ class CompoundTableModel(MinimalTableModel):
         return True
 
     def insertRows(self, row, count, parent=QModelIndex()):
+        """Insert count rows after the given row under the given parent.
+        Localizes the appropriate submodel and calls insertRows on it.
+        """
         if row < 0 or row > self.rowCount():
             return False
         if count < 1:
@@ -175,10 +215,40 @@ class CompoundWithEmptyTableModel(CompoundTableModel):
     def empty_model(self):
         return self.sub_models[-1]
 
+    def _create_single_models(self):
+        """Returns a list of single models."""
+        raise NotImplementedError()
+
+    def _create_empty_model(self):
+        """Returns an empty model."""
+        raise NotImplementedError()
+
+    def init_model(self):
+        """Initializes the compound model. Basically populates the sub_models list attribute
+        with the result of _create_single_models and _create_empty_model.
+        """
+        self.clear_model()
+        self.sub_models = self._create_single_models()
+        self.sub_models.append(self._create_empty_model())
+        self.connect_model_signals()
+
+    def connect_model_signals(self):
+        """Connects signals so changes in the submodels are acknowledge by the compound."""
+        self.empty_model.rowsRemoved.connect(self._handle_empty_rows_removed)
+        self.empty_model.rowsInserted.connect(self._handle_empty_rows_inserted)
+        for model in self.single_models:
+            model.modelReset.connect(lambda model=model: self._handle_single_model_reset(model))
+        for model in self.sub_models:
+            model.dataChanged.connect(
+                lambda top_left, bottom_right, roles, model=model: self.dataChanged.emit(
+                    self.map_from_sub(model, top_left), self.map_from_sub(model, bottom_right), roles
+                )
+            )
+
     @Slot("QModelIndex", "int", "int")
     def _handle_empty_rows_removed(self, parent, first, last):
         """Runs when rows are removed from the empty model.
-        Update row_map, then emit rowsRemoved so the removed rows are no longer visible.
+        Updates row_map, then emits rowsRemoved so the removed rows are no longer visible.
         """
         # Emit signal for compound
         compound_first = self._inv_row_map[self.empty_model, first]
@@ -193,7 +263,7 @@ class CompoundWithEmptyTableModel(CompoundTableModel):
     @Slot("QModelIndex", "int", "int")
     def _handle_empty_rows_inserted(self, parent, first, last):
         """Runs when rows are inserted to the empty model.
-        Update row_map, then emit rowsInserted so the new rows become visible.
+        Updates row_map, then emits rowsInserted so the new rows become visible.
         """
         # Redo the map for the empty model entirely
         try:
@@ -210,7 +280,7 @@ class CompoundWithEmptyTableModel(CompoundTableModel):
 
     def _handle_single_model_reset(self, single_model):
         """Runs when one of the single models is reset.
-        Update row_map, then emit rowsInserted so the new rows become visible.
+        Updates row_map, then emits rowsInserted so the new rows become visible.
         """
         compound_first = self.rowCount() - self.empty_model.rowCount()
         compound_last = compound_first + single_model.rowCount() - 1
@@ -221,21 +291,8 @@ class CompoundWithEmptyTableModel(CompoundTableModel):
         self._append_row_map(single_row_map)
         self._append_row_map(empty_row_map)
 
-    def connect_model_signals(self):
-        """Connect model signals."""
-        self.empty_model.rowsRemoved.connect(self._handle_empty_rows_removed)
-        self.empty_model.rowsInserted.connect(self._handle_empty_rows_inserted)
-        for model in self.single_models:
-            model.modelReset.connect(lambda model=model: self._handle_single_model_reset(model))
-        for model in self.sub_models:
-            model.dataChanged.connect(
-                lambda top_left, bottom_right, roles, model=model: self.dataChanged.emit(
-                    self.map_from_sub(model, top_left), self.map_from_sub(model, bottom_right), roles
-                )
-            )
-
     def clear_model(self):
-        """Clear the model."""
+        """Clears the model."""
         if self._row_map:
             self.beginResetModel()
             self._row_map.clear()
@@ -245,18 +302,3 @@ class CompoundWithEmptyTableModel(CompoundTableModel):
             m.deleteLater()
         self.sub_models.clear()
         self._inv_row_map.clear()
-
-    def init_model(self):
-        """Initialize model."""
-        self.clear_model()
-        self.sub_models = self._create_single_models()
-        self.sub_models.append(self._create_empty_model())
-        self.connect_model_signals()
-
-    def _create_single_models(self):
-        """Returns a list of single models."""
-        raise NotImplementedError()
-
-    def _create_empty_model(self):
-        """Returns an empty model."""
-        raise NotImplementedError()

@@ -12,13 +12,28 @@
 """
 The SpineDBManager class
 
-:author: P. Vennström (VTT) and M. Marin (KTH)
+:authors: P. Vennström (VTT) and M. Marin (KTH)
 :date:   2.10.2019
 """
 
-from PySide2.QtCore import QObject, Signal, Slot
+from PySide2.QtCore import Qt, QObject, Signal, Slot
 from PySide2.QtWidgets import QMessageBox
-from spinedb_api import SpineDBAPIError, SpineDBVersionError, DiffDatabaseMapping
+from spinedb_api import (
+    SpineDBAPIError,
+    SpineDBVersionError,
+    DiffDatabaseMapping,
+    from_database,
+    relativedelta_to_duration,
+    ParameterValueFormatError,
+    DateTime,
+    Duration,
+    TimePattern,
+    TimeSeries,
+    TimeSeriesFixedResolution,
+    TimeSeriesVariableResolution,
+    is_empty,
+    create_new_spine_database,
+)
 from .helpers import IconManager, busy_effect
 
 
@@ -29,6 +44,9 @@ class SpineDBManager(QObject):
     """
 
     msg_error = Signal("QVariant")
+    session_closed = Signal(set)
+    session_committed = Signal(set)
+    session_rolled_back = Signal(set)
     # Added
     object_classes_added = Signal("QVariant")
     objects_added = Signal("QVariant")
@@ -78,9 +96,44 @@ class SpineDBManager(QObject):
     def db_maps(self):
         return set(self._db_maps.values())
 
+    def create_new_spine_database(self, url, for_spine_model=False):
+        try:
+            if not is_empty(url):
+                msg = QMessageBox(self.parent()._toolbox)
+                msg.setIcon(QMessageBox.Question)
+                msg.setWindowTitle("Database not empty")
+                msg.setText("The database at <b>'{0}'</b> is not empty.".format(url))
+                msg.setInformativeText("Do you want to overwrite it?")
+                msg.addButton("Overwrite", QMessageBox.AcceptRole)
+                msg.addButton("Cancel", QMessageBox.RejectRole)
+                ret = msg.exec_()  # Show message box
+                if ret != QMessageBox.AcceptRole:
+                    return
+            self.do_create_new_spine_database(url, for_spine_model)
+            self.close_session(url)
+            self.parent()._toolbox.msg_success.emit("New Spine db successfully created at '{0}'.".format(url))
+        except SpineDBAPIError as e:
+            self.parent()._toolbox.msg_error.emit("Unable to create new Spine db at '{0}': {1}.".format(url, e))
+
+    @busy_effect
+    def do_create_new_spine_database(self, url, for_spine_model):
+        """Creates a new spine database at the given url."""
+        create_new_spine_database(url, for_spine_model=for_spine_model)
+
+    def close_session(self, url):
+        db_map = self._db_maps.pop(url, None)
+        if db_map:
+            db_map.connection.close()
+            self.session_closed.emit({db_map})
+
     def get_db_map(self, url, upgrade=False, codename=None):
         """Returns a DiffDatabaseMapping instance from url if possible, None otherwise.
         If needed, asks the user to upgrade to the latest db version.
+
+        Args:
+            url (str, URL)
+            upgrade (bool, optional)
+            codename (str, NoneType)
 
         Returns:
             DiffDatabaseMapping, NoneType
@@ -88,7 +141,7 @@ class SpineDBManager(QObject):
         try:
             return self.do_get_db_map(url, upgrade, codename)
         except SpineDBVersionError:
-            msg = QMessageBox()
+            msg = QMessageBox(self.parent()._toolbox)
             msg.setIcon(QMessageBox.Question)
             msg.setWindowTitle("Incompatible database version")
             msg.setText(
@@ -113,6 +166,11 @@ class SpineDBManager(QObject):
         """Returns a memoized DiffDatabaseMapping instance from url.
         Called by `get_db_map`.
 
+        Args:
+            url (str, URL)
+            upgrade (bool, optional)
+            codename (str, NoneType)
+
         Returns:
             DiffDatabaseMapping
         """
@@ -123,12 +181,16 @@ class SpineDBManager(QObject):
 
     def connect_signals(self):
         """Connects signals."""
-        # Cache
+        # Add to cache
         self.object_classes_added.connect(lambda db_map_data: self.cache_items("object class", db_map_data))
         self.objects_added.connect(lambda db_map_data: self.cache_items("object", db_map_data))
         self.relationship_classes_added.connect(lambda db_map_data: self.cache_items("relationship class", db_map_data))
         self.relationships_added.connect(lambda db_map_data: self.cache_items("relationship", db_map_data))
-        # Discard
+        self.parameter_definitions_added.connect(
+            lambda db_map_data: self.cache_items("parameter definition", db_map_data)
+        )
+        self.parameter_values_added.connect(lambda db_map_data: self.cache_items("parameter value", db_map_data))
+        # Remove from cache
         self.object_classes_removed.connect(lambda db_map_data: self.uncache_items("object class", db_map_data))
         self.objects_removed.connect(lambda db_map_data: self.uncache_items("object", db_map_data))
         self.relationship_classes_removed.connect(
@@ -139,15 +201,19 @@ class SpineDBManager(QObject):
             lambda db_map_data: self.uncache_items("parameter definition", db_map_data)
         )
         self.parameter_values_removed.connect(lambda db_map_data: self.uncache_items("parameter value", db_map_data))
-        # Update cache
+        # Update in cache
         self.object_classes_updated.connect(lambda db_map_data: self.cache_items("object class", db_map_data))
         self.objects_updated.connect(lambda db_map_data: self.cache_items("object", db_map_data))
         self.relationship_classes_updated.connect(
             lambda db_map_data: self.cache_items("relationship class", db_map_data)
         )
         self.relationships_updated.connect(lambda db_map_data: self.cache_items("relationship", db_map_data))
+        self.parameter_definitions_updated.connect(
+            lambda db_map_data: self.cache_items("parameter definition", db_map_data)
+        )
+        self.parameter_values_updated.connect(lambda db_map_data: self.cache_items("parameter value", db_map_data))
         self.parameter_definition_tags_set.connect(self.cache_parameter_definition_tags)
-        # Auto refresh
+        # Go from compact to extend format
         self._parameter_definitions_added.connect(self.do_add_parameter_definitions)
         self._parameter_definitions_updated.connect(self.do_update_parameter_definitions)
         self._parameter_values_added.connect(self.do_add_parameter_values)
@@ -193,7 +259,7 @@ class SpineDBManager(QObject):
         """
         for db_map, items in db_map_data.items():
             for item in items:
-                self._cache.setdefault(db_map, {}).setdefault(item_type, {}).setdefault(item["id"], {}).update(item)
+                self._cache.setdefault(db_map, {}).setdefault(item_type, {}).update({item["id"]: item})
 
     def uncache_items(self, item_type, db_map_data):
         """Removes data from cache.
@@ -235,8 +301,8 @@ class SpineDBManager(QObject):
             return self.icon_mngr.relationship_icon(entity_class["object_class_name_list"])
 
     def get_item(self, db_map, item_type, id_):
-        """Returns the item of the given type  in the given db map that has the given id.
-        If not found, an empty dictionary is returned.
+        """Returns the item of the given type in the given db map that has the given id,
+        or an empty dict if not found.
 
         Args:
             db_map (DiffDatabaseMapping)
@@ -304,7 +370,7 @@ class SpineDBManager(QObject):
 
     def _get_items_from_db(self, db_map, item_type):
         """Returns all items of the given type in the given db map.
-        Called by the above methods whenever they don't find what they're looking for the cache.
+        Called by the above methods whenever they don't find what they're looking for in cache.
         """
         method_name_dict = {
             "object class": "get_object_classes",
@@ -320,6 +386,47 @@ class SpineDBManager(QObject):
         if not method_name:
             return []
         return getattr(self, method_name)(db_map)
+
+    def get_value(self, db_map, item_type, id_, field, role=Qt.DisplayRole):
+        item = self.get_item(db_map, item_type, id_)
+        key = "formatted_" + field
+        if key not in item:
+            try:
+                parsed_value = from_database(item[field])
+            except ParameterValueFormatError as error:
+                display_data = "Error"
+                tool_tip_data = str(error)
+            else:
+                display_data = self._display_data(parsed_value)
+                tool_tip_data = self._tool_tip_data(parsed_value)
+            item[key] = {Qt.DisplayRole: display_data, Qt.ToolTipRole: tool_tip_data, Qt.EditRole: str(item[field])}
+        return item[key].get(role)
+
+    @staticmethod
+    def _display_data(parsed_value):
+        """Returns the value's database representation formatted for Qt.DisplayRole."""
+        if isinstance(parsed_value, TimeSeries):
+            return "Time series"
+        if isinstance(parsed_value, DateTime):
+            return str(parsed_value.value)
+        if isinstance(parsed_value, Duration):
+            return ", ".join(relativedelta_to_duration(delta) for delta in parsed_value.value)
+        if isinstance(parsed_value, TimePattern):
+            return "Time pattern"
+        if isinstance(parsed_value, list):
+            return str(parsed_value)
+        return parsed_value
+
+    @staticmethod
+    def _tool_tip_data(parsed_value):
+        """Returns the value's database representation formatted for Qt.ToolTipRole."""
+        if isinstance(parsed_value, TimeSeriesFixedResolution):
+            resolution = [relativedelta_to_duration(r) for r in parsed_value.resolution]
+            resolution = ', '.join(resolution)
+            return "Start: {}, resolution: [{}], length: {}".format(parsed_value.start, resolution, len(parsed_value))
+        if isinstance(parsed_value, TimeSeriesVariableResolution):
+            return "Start: {}, resolution: variable, length: {}".format(parsed_value.indexes[0], len(parsed_value))
+        return None
 
     def get_object_classes(self, db_map):
         """Returns object classes from database.
@@ -700,7 +807,7 @@ class SpineDBManager(QObject):
         """Removes items from database.
 
         Args:
-            db_map_typed_data (dict): lists of items to remove, keyed by item type, keyed by DiffDatabaseMapping
+            db_map_typed_data (dict): lists of items to remove, keyed by item type (str), keyed by DiffDatabaseMapping
         """
         # Removing works this way in spinedb_api, all at once, probably because of cascading?
         db_map_object_classes = dict()
@@ -1084,7 +1191,7 @@ class SpineDBManager(QObject):
             db_map: self.get_parameter_values(db_map, ids={x["id"] for x in items})
             for db_map, items in db_map_data.items()
         }
-        self.parameter_values_updated.emit(d)
+        self.parameter_values_added.emit(d)
 
     @Slot("QVariant")
     def do_update_parameter_definitions(self, db_map_data):
@@ -1123,3 +1230,33 @@ class SpineDBManager(QObject):
             for item in items:
                 item["id"] = item.pop("parameter_definition_id")
         self.cache_items("parameter definition", db_map_data)
+
+    @busy_effect
+    def commit_session(self, commit_msg, *db_maps):
+        error_log = {}
+        committed_db_maps = set()
+        for db_map in db_maps:
+            try:
+                db_map.commit_session(commit_msg)
+                committed_db_maps.add(db_map)
+            except SpineDBAPIError as e:
+                error_log[db_map] = e.msg
+        if any(error_log.values()):
+            self.msg_error.emit(error_log)
+        if committed_db_maps:
+            self.session_committed.emit(committed_db_maps)
+
+    @busy_effect
+    def rollback_session(self, *db_maps):
+        error_log = {}
+        rolled_db_maps = set()
+        for db_map in db_maps:
+            try:
+                db_map.rollback_session()
+                rolled_db_maps.add(db_map)
+            except SpineDBAPIError as e:
+                error_log[db_map] = e.msg
+        if any(error_log.values()):
+            self.msg_error.emit(error_log)
+        if rolled_db_maps:
+            self.session_rolled_back.emit(rolled_db_maps)

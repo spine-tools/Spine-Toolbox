@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 ######################################################################################################################
 # Copyright (C) 2017 - 2019 Spine project consortium
 # This file is part of Spine Toolbox.
@@ -9,11 +10,11 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-# -*- coding: utf-8 -*-
-
-# Form implementation generated from reading ui file 'spinetoolbox/ui/graph_view_form.ui',
-# licensing of 'spinetoolbox/ui/graph_view_form.ui' applies.
+# Form implementation generated from reading ui file '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/graph_view_form.ui',
+# licensing of '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/graph_view_form.ui' applies.
 #
+# Created: Sun Nov  3 12:10:49 2019
+#      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -58,7 +59,7 @@ class Ui_MainWindow(object):
         self.menuFile = QtWidgets.QMenu(self.menubar)
         self.menuFile.setObjectName("menuFile")
         MainWindow.setMenuBar(self.menubar)
-        self.statusbar = QtWidgets.QStatusBar(MainWindow)
+        self.statusbar = NotificationStatusBar(MainWindow)
         self.statusbar.setObjectName("statusbar")
         MainWindow.setStatusBar(self.statusbar)
         self.dockWidget_item_palette = QtWidgets.QDockWidget(MainWindow)
@@ -339,6 +340,10 @@ class Ui_MainWindow(object):
         self.actionGraph_prune_selected.setObjectName("actionGraph_prune_selected")
         self.actionRestore_Dock_Widgets = QtWidgets.QAction(MainWindow)
         self.actionRestore_Dock_Widgets.setObjectName("actionRestore_Dock_Widgets")
+        self.actionGraph_start_demo = QtWidgets.QAction(MainWindow)
+        self.actionGraph_start_demo.setObjectName("actionGraph_start_demo")
+        self.menuGraph.addAction(self.actionGraph_start_demo)
+        self.menuGraph.addSeparator()
         self.menuGraph.addAction(self.actionGraph_hide_selected)
         self.menuGraph.addAction(self.actionGraph_show_hidden)
         self.menuGraph.addSeparator()
@@ -396,9 +401,11 @@ class Ui_MainWindow(object):
         self.actionGraph_show_hidden.setText(QtWidgets.QApplication.translate("MainWindow", "Show hidden items", None, -1))
         self.actionGraph_prune_selected.setText(QtWidgets.QApplication.translate("MainWindow", "Prune selected items", None, -1))
         self.actionRestore_Dock_Widgets.setText(QtWidgets.QApplication.translate("MainWindow", "Restore Dock Widgets", None, -1))
+        self.actionGraph_start_demo.setText(QtWidgets.QApplication.translate("MainWindow", "Start demo", None, -1))
 
 from spinetoolbox.widgets.custom_qlistview import DragListView
+from spinetoolbox.widgets.custom_qgraphicsviews import GraphQGraphicsView
+from spinetoolbox.widgets.custom_qstatusbar import NotificationStatusBar
 from spinetoolbox.widgets.custom_qtableview import AutoFilterCopyPasteTableView
 from spinetoolbox.widgets.custom_qtreeview import StickySelectionObjectTreeView
-from spinetoolbox.widgets.custom_qgraphicsviews import GraphQGraphicsView
 from spinetoolbox import resources_icons_rc

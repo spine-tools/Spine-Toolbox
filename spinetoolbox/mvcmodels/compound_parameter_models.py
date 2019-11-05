@@ -45,12 +45,12 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
     remove_icon = QIcon(":/icons/menu_icons/cog_minus.svg")
 
     def __init__(self, parent, db_mngr, *db_maps):
-        """Init class.
+        """Initializes model.
 
         Args:
-            parent (DataStoreForm): the parent QObject, an instance of TreeViewForm or GraphViewForm
-            db_mngr (SpineDBManager): a manager for the given db_maps
-            db_maps (iter): DiffDatabaseMapping instances
+            parent (TreeViewForm, GraphViewForm): the parent object
+            db_mngr (SpineDBManager): the database manager
+            *db_maps (DiffDatabaseMapping): the database maps included in the model
         """
         super().__init__(parent)
         self.db_mngr = db_mngr
@@ -60,16 +60,30 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
 
     @property
     def entity_class_type(self):
-        """Either 'object class' or 'relationship class'"""
+        """Returns the entity class type, either 'object class' or 'relationship class'.
+
+        Returns:
+            str
+        """
         raise NotImplementedError()
 
     @property
     def item_type(self):
-        """Either 'parameter definition' or 'parameter value'"""
+        """Returns the parameter item type, either 'parameter definition' or 'parameter value'.
+
+        Returns:
+            str
+        """
         raise NotImplementedError()
 
     @property
     def _single_model_type(self):
+        """
+        Returns a constructor for the single models.
+
+        Returns:
+            SingleParameterModel
+        """
         return {
             "object class": {
                 "parameter definition": SingleObjectParameterDefinitionModel,
@@ -83,6 +97,12 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
 
     @property
     def _empty_model_type(self):
+        """
+        Returns a constructor for the empty model.
+
+        Returns:
+            EmptyParameterModel
+        """
         return {
             "object class": {
                 "parameter definition": EmptyObjectParameterDefinitionModel,
@@ -96,16 +116,224 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
 
     @property
     def _entity_class_id_key(self):
+        """
+        Returns the key of the entity class id in the model items (either "object_class_id" or "relationship_class_id")
+
+        Returns:
+            str
+        """
         return {"object class": "object_class_id", "relationship class": "relationship_class_id"}[
             self.entity_class_type
         ]
 
+    def headerData(self, section, orientation=Qt.Horizontal, role=Qt.DisplayRole):
+        """Returns an italic font in case the given column has an autofilter installed."""
+        italic_font = QFont()
+        italic_font.setItalic(True)
+        if role == Qt.FontRole and orientation == Qt.Horizontal and self._auto_filter.get(section):
+            return italic_font
+        return super().headerData(section, orientation, role)
+
+    def _get_entity_classes(self, db_map):
+        """Returns a list of entity classes from the given db_map.
+
+        Args:
+            db_map (DiffDatabaseMapping)
+
+        Returns:
+            list
+        """
+        raise NotImplementedError()
+
+    def _create_single_models(self):
+        """Returns a list of single models for this compound model, one for each entity class in each database.
+
+        Returns:
+            list
+        """
+        d = dict()
+        for db_map in self.db_maps:
+            for entity_class in self._get_entity_classes(db_map):
+                d.setdefault(entity_class["name"], {}).setdefault(db_map, set()).add(entity_class["id"])
+        models = []
+        for db_map_ids in d.values():
+            for db_map, entity_class_ids in db_map_ids.items():
+                for entity_class_id in entity_class_ids:
+                    models.append(self._single_model_type(self, self.header, self.db_mngr, db_map, entity_class_id))
+        return models
+
+    def _create_empty_model(self):
+        """Returns the empty model for this compound model.
+
+        Returns:
+            EmptyParameterModel
+        """
+        return self._empty_model_type(self, self.header, self.db_mngr)
+
+    def filter_accepts_model(self, model):
+        """Returns a boolean indicating whether or not the given model should be included in this compound model.
+
+        Args:
+            model (SingleParameterModel, EmptyParameterModel)
+
+        Returns:
+            bool
+        """
+        if not model.can_be_filtered:
+            return True
+        if not self._selected_entity_class_ids:
+            return True
+        return model.entity_class_id in self._selected_entity_class_ids.get(model.db_map, set())
+
+    def accepted_single_models(self):
+        """Returns a list of accepted single models by calling filter_accepts_model
+        on each of them, just for convenience.
+
+        Returns:
+            list
+        """
+        return [m for m in self.single_models if self.filter_accepts_model(m)]
+
+    @staticmethod
+    def _settattr_if_different(obj, attr, val):
+        """Sets the given attribute of the given object to the given value if it's different
+        from the one currently stored. Used for updating filters.
+
+        Returns:
+            bool: True if the attributed was set, False otherwise
+        """
+        curr = getattr(obj, attr)
+        if curr != val:
+            setattr(obj, attr, val)
+            return True
+        return False
+
+    def update_filter(self):
+        """Updates and applies the filter."""
+        updated = self.update_compound_filter()
+        for model in self.single_models:
+            updated |= self.update_single_model_filter(model)
+        if updated:
+            self.refresh()
+
+    def update_compound_filter(self):
+        """Updates the compound filter by setting the _selected_entity_class_ids attribute.
+
+        Returns:
+            bool: True if the filter was updated, None otherwise
+        """
+        a = False
+        if self._auto_filter:
+            self._auto_filter.clear()
+            a = True
+        b = self._settattr_if_different(
+            self, "_selected_entity_class_ids", self.parent().selected_entity_class_ids(self.entity_class_type)
+        )
+        return a or b
+
+    def update_single_model_filter(self, model):
+        """Updates the filter for the given single model by setting its _selected_param_def_ids attribute.
+
+        Args:
+            model (SingleParameterModel)
+
+        Returns:
+            bool: True if the filter was updated, None otherwise
+        """
+        a = False
+        if model._auto_filter:
+            model._auto_filter.clear()
+            a = True
+        b = self._settattr_if_different(
+            model,
+            "_selected_param_def_ids",
+            self.parent()
+            .selected_param_def_ids[self.entity_class_type]
+            .get((model.db_map, model.entity_class_id), set()),
+        )
+        return a or b
+
+    def update_auto_filter(self, column, auto_filter):
+        """Updates the auto filter for given column.
+
+        Args:
+            column (int): the column number
+            auto_filter (dict): collection of filtered values keyed by entity ids (int)
+        """
+        self._auto_filter[column] = auto_filter
+        updated = False
+        for model in self.accepted_single_models():
+            updated |= self.update_single_model_auto_filter(model, column)
+        if updated:
+            self.refresh()
+
+    def update_single_model_auto_filter(self, model, column):
+        """Updates the auto-filtered values for given model and column.
+
+        Args:
+            model (SingleParameterModel): the model
+            column (int): the column number
+
+        Returns:
+            bool: True if the auto-filtered values were updated, None otherwise
+        """
+        values = self._auto_filter[column].get(model.entity_class_id, {})
+        if values == model._auto_filter.get(column, {}):
+            return False
+        model._auto_filter[column] = values
+        return True
+
+    def _row_map_for_model(self, model):
+        """Returns the row map for the given model.
+        Reimplemented to take filter status into account.
+
+        Args:
+            model (SingleParameterModel, EmptyParameterModel)
+
+        Returns:
+            list: tuples (model, row number) for each accepted row
+        """
+        if not self.filter_accepts_model(model):
+            return []
+        return [(model, i) for i in model.accepted_rows()]
+
+    @busy_effect
+    def auto_filter_menu_data(self, column):
+        """Returns auto filter menu data for the given column.
+
+        Returns:
+            list: AutoFilterMenuItem instances to populate the auto filter menu.
+        """
+        auto_filter_vals = dict()
+        for model in self.accepted_single_models():
+            for row in model.accepted_rows(ignored_columns=[column]):
+                value = model.index(row, column).data()
+                auto_filter_vals.setdefault(value, set()).add(model.entity_class_id)
+        column_auto_filter = self._auto_filter.get(column, {})
+        filtered = [val for values in column_auto_filter.values() for val in values]
+        return [
+            AutoFilterMenuItem(Qt.Checked if value not in filtered else Qt.Unchecked, value, class_ids)
+            for value, class_ids in auto_filter_vals.items()
+        ]
+
     def _models_with_db_map(self, db_map):
-        """Returns a collection of models having the given db_map."""
+        """Returns a collection of single models with given db_map.
+
+        Args:
+            db_map (DiffDatabaseMapping)
+
+        Returns:
+            list
+        """
         return [m for m in self.single_models if m.db_map == db_map]
 
     def receive_entity_classes_removed(self, db_map_data):
-        """Runs entity classes are removed. Remove submodels for those entity classes."""
+        """Runs when entity classes are removed from the dbs.
+        Removes sub-models for the given entity classes and dbs.
+
+        Args:
+            db_map_data (dict): list of removed dict-items keyed by DiffDatabaseMapping
+        """
         self.layoutAboutToBeChanged.emit()
         for db_map, data in db_map_data.items():
             ids = {x["id"] for x in data}
@@ -118,13 +346,23 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         self.layoutChanged.emit()
 
     def receive_parameter_data_updated(self, db_map_data):
-        """Runs when either parameter definitions or values are updated."""
+        """Runs when either parameter definitions or values are updated in the dbs.
+        Emits dataChanged so the parameter_name column is refreshed.
+
+        Args:
+            db_map_data (dict): list of updated dict-items keyed by DiffDatabaseMapping
+        """
         self._emit_data_changed_for_column("parameter_name")
         # TODO: parameter definition names aren't refreshed unless we emit dataChanged,
         # whereas entity and class names don't need it. Why?
 
     def receive_parameter_data_removed(self, db_map_data):
-        """Runs when either parameter definitions or values are removed."""
+        """Runs when either parameter definitions or values are removed from the dbs.
+        Removes the affected rows from the corresponding single models.
+
+        Args:
+            db_map_data (dict): list of removed dict-items keyed by DiffDatabaseMapping
+        """
         self.layoutAboutToBeChanged.emit()
         for db_map, items in db_map_data.items():
             grouped_ids = dict()
@@ -144,7 +382,13 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         self.layoutChanged.emit()
 
     def receive_parameter_data_added(self, db_map_data):
-        """Runs when either parameter definitions or values are added."""
+        """Runs when either parameter definitions or values are added to the dbs.
+        Adds necessary sub-models and initializes them with data.
+        Also notifies the empty model so it can remove rows that are already in.
+
+        Args:
+            db_map_data (dict): list of removed dict-items keyed by DiffDatabaseMapping
+        """
         new_models = []
         for db_map, items in db_map_data.items():
             grouped_ids = dict()
@@ -162,150 +406,8 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         self.sub_models[pos:pos] = new_models
         self.empty_model.receive_parameter_data_added(db_map_data)
 
-    def headerData(self, section, orientation=Qt.Horizontal, role=Qt.DisplayRole):
-        """Use italic font for columns having an autofilter installed."""
-        italic_font = QFont()
-        italic_font.setItalic(True)
-        if role == Qt.FontRole and orientation == Qt.Horizontal and self._auto_filter.get(section):
-            return italic_font
-        return super().headerData(section, orientation, role)
-
-    def _get_entity_classes(self, db_map):
-        """Returns entity classes for creating the different single models."""
-        raise NotImplementedError()
-
-    def _create_single_models(self):
-        """Returns a list of single models."""
-        d = dict()
-        for db_map in self.db_maps:
-            for entity_class in self._get_entity_classes(db_map):
-                d.setdefault(entity_class["name"], {}).setdefault(db_map, set()).add(entity_class["id"])
-        models = []
-        for db_map_ids in d.values():
-            for db_map, entity_class_ids in db_map_ids.items():
-                for entity_class_id in entity_class_ids:
-                    models.append(self._single_model_type(self, self.header, self.db_mngr, db_map, entity_class_id))
-        return models
-
-    def _create_empty_model(self):
-        """Returns an empty model."""
-        return self._empty_model_type(self, self.header, self.db_mngr)
-
-    def filter_accepts_model(self, model):
-        """Returns True if the given model should be included in the compound model, otherwise returns False.
-        """
-        if not model.can_be_filtered:
-            return True
-        if not self._selected_entity_class_ids:
-            return True
-        return model.entity_class_id in self._selected_entity_class_ids.get(model.db_map, set())
-
-    def accepted_single_models(self):
-        """Returns a list of accepted single models, for convenience."""
-        return [m for m in self.single_models if self.filter_accepts_model(m)]
-
-    @staticmethod
-    def _settattr_if_different(obj, attr, val):
-        """If the given value is different than the current one, set it and returns True.
-        Otherwise returns False. Handy for updating filters.
-        """
-        curr = getattr(obj, attr)
-        if curr != val:
-            setattr(obj, attr, val)
-            return True
-        return False
-
-    def update_filter(self):
-        """Update filter."""
-        updated = self.update_compound_filter()
-        for model in self.single_models:
-            updated |= self.update_single_model_filter(model)
-        if updated:
-            self.refresh()
-
-    def update_compound_filter(self):
-        """Update the filter."""
-        a = False
-        if self._auto_filter:
-            self._auto_filter.clear()
-            a = True
-        b = self._settattr_if_different(
-            self, "_selected_entity_class_ids", self.parent().selected_entity_class_ids(self.entity_class_type)
-        )
-        return a or b
-
-    def update_single_model_filter(self, model):
-        """Update the filter for the given model."""
-        a = False
-        if model._auto_filter:
-            model._auto_filter.clear()
-            a = True
-        b = self._settattr_if_different(
-            model,
-            "_selected_param_def_ids",
-            self.parent()
-            .selected_param_def_ids[self.entity_class_type]
-            .get((model.db_map, model.entity_class_id), set()),
-        )
-        return a or b
-
-    def update_auto_filter(self, column, auto_filter):
-        """Updates auto filter for given column.
-
-        Args:
-            column (int): the column number
-            auto_filter (dict): maps entity ids to a collection of values to be filtered for the column
-        """
-        self._auto_filter[column] = auto_filter
-        updated = False
-        for model in self.accepted_single_models():
-            updated |= self.update_single_model_auto_filter(model, column)
-        if updated:
-            self.refresh()
-
-    def update_single_model_auto_filter(self, model, column):
-        """Set auto filter values for given column.
-
-        Args:
-            model (SingleParameterModel): the model
-            column (int): the column number
-        """
-        values = self._auto_filter[column].get(model.entity_class_id, {})
-        if values == model._auto_filter.get(column, {}):
-            return False
-        model._auto_filter[column] = values
-        return True
-
-    def _row_map_for_model(self, model):
-        """Returns row map for given model.
-        Reimplemented to take filter status into account."""
-        if not self.filter_accepts_model(model):
-            return []
-        return [(model, i) for i in model.accepted_rows()]
-
-    @busy_effect
-    def auto_filter_menu_data(self, column):
-        """Returns auto filter menu data for the given column.
-
-        Returns:
-            menu_data (list): a list of AutoFilterMenuItem
-        """
-        auto_filter_vals = dict()
-        for model in self.accepted_single_models():
-            for row in model.accepted_rows(ignored_columns=[column]):
-                value = model.index(row, column).data()
-                auto_filter_vals.setdefault(value, set()).add(model.entity_class_id)
-        column_auto_filter = self._auto_filter.get(column, {})
-        filtered = [val for values in column_auto_filter.values() for val in values]
-        return [
-            AutoFilterMenuItem(Qt.Checked if value not in filtered else Qt.Unchecked, value, class_ids)
-            for value, class_ids in auto_filter_vals.items()
-        ]
-
     def _emit_data_changed_for_column(self, field):
-        """Emits data changed for an entire column.
-        Used by `rename_` and some `remove_` methods because we're too lazy
-        to find out the exact rows that changed.
+        """Lazily emits data changed for an entire column.
 
         Args:
             field (str): the column header
@@ -325,7 +427,6 @@ class CompoundObjectParameterMixin:
         return "object class"
 
     def _get_entity_classes(self, db_map):
-        """Returns a query of object classes to populate the model."""
         return self.db_mngr.get_object_classes(db_map)
 
 
@@ -337,7 +438,6 @@ class CompoundRelationshipParameterMixin:
         return "relationship class"
 
     def _get_entity_classes(self, db_map):
-        """Returns a query of relationship classes to populate the model."""
         return self.db_mngr.get_relationship_classes(db_map)
 
 
@@ -358,7 +458,12 @@ class CompoundParameterValueMixin:
 
     @property
     def entity_type(self):
-        """Either 'object' or 'relationship', used by update_single_model_filter."""
+        """Returns the entity type, either 'object' or 'relationship'
+        Used by update_single_model_filter.
+
+        Returns:
+            str
+        """
         raise NotImplementedError()
 
     def update_single_model_filter(self, model):
@@ -380,7 +485,7 @@ class CompoundObjectParameterDefinitionModel(
     """
 
     def __init__(self, parent, db_mngr, *db_maps):
-        """Init class."""
+        """Initializes model header."""
         super().__init__(parent, db_mngr, *db_maps)
         self.header = [
             "object_class_name",
@@ -400,7 +505,7 @@ class CompoundRelationshipParameterDefinitionModel(
     """
 
     def __init__(self, parent, db_mngr, *db_maps):
-        """Init class."""
+        """Initializes model header."""
         super().__init__(parent, db_mngr, *db_maps)
         self.header = [
             "relationship_class_name",
@@ -421,7 +526,7 @@ class CompoundObjectParameterValueModel(
     """
 
     def __init__(self, parent, db_mngr, *db_maps):
-        """Init class."""
+        """Initializes model header."""
         super().__init__(parent, db_mngr, *db_maps)
         self.header = ["object_class_name", "object_name", "parameter_name", "value", "database"]
 
@@ -438,7 +543,7 @@ class CompoundRelationshipParameterValueModel(
     """
 
     def __init__(self, parent, db_mngr, *db_maps):
-        """Init class."""
+        """Initializes model header."""
         super().__init__(parent, db_mngr, *db_maps)
         self.header = ["relationship_class_name", "object_name_list", "parameter_name", "value", "database"]
 
@@ -447,4 +552,10 @@ class CompoundRelationshipParameterValueModel(
         return "relationship"
 
     def receive_relationships_added(self, db_map_data):
+        """Runs when relationships are added to the dbs.
+        Notifies the empty model.
+
+        Args:
+            db_map_data (dict): list of removed dict-items keyed by DiffDatabaseMapping
+        """
         self.empty_model.receive_relationships_added(db_map_data)

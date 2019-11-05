@@ -83,12 +83,12 @@ class TestExcelIntegration(unittest.TestCase):
         oc = set(oc.id for oc in db_map_test.object_class_list().all())
         if oc:
             db_map_test.remove_items(object_class_ids=oc)
-        db_map_test.commit_session('empty database')
+            db_map_test.commit_session('empty database')
 
         oc = set(oc.id for oc in db_map.object_class_list().all())
         if oc:
             db_map.remove_items(object_class_ids=oc)
-        db_map.commit_session('empty database')
+            db_map.commit_session('empty database')
 
         # create object classes
         oc_1 = db_map.add_object_class(**{'name': 'object_class_1'})

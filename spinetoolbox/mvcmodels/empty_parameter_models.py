@@ -277,6 +277,8 @@ class EmptyObjectParameterValueModel(EmptyParameterValueModel):
 class EmptyRelationshipParameterValueModel(MakeRelationshipOnTheFlyMixin, EmptyParameterValueModel):
     """An empty relationship parameter value model."""
 
+    _add_entities_on_the_fly = True
+
     @property
     def entity_class_type(self):
         return "relationship class"
@@ -296,7 +298,7 @@ class EmptyRelationshipParameterValueModel(MakeRelationshipOnTheFlyMixin, EmptyP
         for db_map, items in db_map_data.items():
             for item in items:
                 database = db_map.codename
-                unique_id = (database, item["class_name"], item["object_name_list"])
+                unique_id = (database, *self._make_unique_relationship_id(item))
                 added_ids.add(unique_id)
         affected_rows = set()
         for row, data in enumerate(self._main_data):
@@ -305,7 +307,7 @@ class EmptyRelationshipParameterValueModel(MakeRelationshipOnTheFlyMixin, EmptyP
             unique_id = (database, item["relationship_class_name"], item["object_name_list"])
             if unique_id in added_ids:
                 affected_rows.add(row)
-        self.add_items_to_db(affected_rows)
+        super().add_items_to_db(affected_rows)
 
     def add_items_to_db(self, rows):
         """Add items to db.

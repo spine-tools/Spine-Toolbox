@@ -48,7 +48,7 @@ from .widgets.project_form_widget import NewProjectForm
 from .widgets.settings_widget import SettingsWidget
 from .widgets.tool_configuration_assistant_widget import ToolConfigurationAssistantWidget
 from .widgets.tool_specification_widget import ToolSpecificationWidget
-from .widgets.custom_qwidgets import ZoomWidget
+from .widgets.custom_qwidgets import ZoomWidgetAction
 from .widgets.julia_repl_widget import JuliaREPLWidget
 from .widgets.python_repl_widget import PythonReplWidget
 from .widgets import toolbars
@@ -111,7 +111,6 @@ class ToolboxUI(QMainWindow):
         self.tool_specification_form = None
         self.placing_item = ""
         self.add_tool_specification_popup_menu = None
-        self.zoom_widget = None
         self.zoom_widget_action = None
         self.recent_projects_menu = RecentProjectsPopupMenu(self)
         # Make and initialize toolbars
@@ -124,7 +123,7 @@ class ToolboxUI(QMainWindow):
         self.python_repl = PythonReplWidget(self)
         self.ui.dockWidgetContents_python_repl.layout().addWidget(self.python_repl)
         # Setup main window menu
-        self.setup_zoom_action()
+        self.setup_zoom_widget_action()
         self.add_toggle_view_actions()
         # Hidden QActions for debugging or testing
         self.show_properties_tabbar = QAction(self)
@@ -181,9 +180,9 @@ class ToolboxUI(QMainWindow):
         # Context-menus
         self.ui.treeView_project.customContextMenuRequested.connect(self.show_item_context_menu)
         # Main menu
-        self.zoom_widget.minus_pressed.connect(self._handle_zoom_widget_minus_pressed)
-        self.zoom_widget.plus_pressed.connect(self._handle_zoom_widget_plus_pressed)
-        self.zoom_widget.reset_pressed.connect(self._handle_zoom_widget_reset_pressed)
+        self.zoom_widget_action.minus_pressed.connect(self._handle_zoom_minus_pressed)
+        self.zoom_widget_action.plus_pressed.connect(self._handle_zoom_plus_pressed)
+        self.zoom_widget_action.reset_pressed.connect(self._handle_zoom_reset_pressed)
 
     def parse_project_item_modules(self):
         """Collects attributes from project item modules into a dict.
@@ -964,26 +963,24 @@ class ToolboxUI(QMainWindow):
             return
         self.project().export_graphs()
 
-    @Slot(name="_handle_zoom_widget_minus_pressed")
-    def _handle_zoom_widget_minus_pressed(self):
+    @Slot(name="_handle_zoom_minus_pressed")
+    def _handle_zoom_minus_pressed(self):
         """Slot for handling case when '-' button in menu is pressed."""
         self.ui.graphicsView.zoom_out()
 
-    @Slot(name="_handle_zoom_widget_plus_pressed")
-    def _handle_zoom_widget_plus_pressed(self):
+    @Slot(name="_handle_zoom_plus_pressed")
+    def _handle_zoom_plus_pressed(self):
         """Slot for handling case when '+' button in menu is pressed."""
         self.ui.graphicsView.zoom_in()
 
-    @Slot(name="_handle_zoom_widget_reset_pressed")
-    def _handle_zoom_widget_reset_pressed(self):
+    @Slot(name="_handle_zoom_reset_pressed")
+    def _handle_zoom_reset_pressed(self):
         """Slot for handling case when 'reset zoom' button in menu is pressed."""
         self.ui.graphicsView.reset_zoom()
 
-    def setup_zoom_action(self):
-        """Setup zoom action in view menu."""
-        self.zoom_widget = ZoomWidget(self)
-        self.zoom_widget_action = QWidgetAction(self)
-        self.zoom_widget_action.setDefaultWidget(self.zoom_widget)
+    def setup_zoom_widget_action(self):
+        """Setups zoom widget action in view menu."""
+        self.zoom_widget_action = ZoomWidgetAction(self.ui.menuView)
         self.ui.menuView.addSeparator()
         self.ui.menuView.addAction(self.zoom_widget_action)
 

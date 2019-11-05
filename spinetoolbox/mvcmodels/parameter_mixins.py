@@ -115,7 +115,7 @@ class FillInValueListIdMixin(ConvertToDBMixin):
         value_list_name = item.pop("value_list_name", None)
         value_list = self._db_map_value_list_lookup.get(db_map, {}).get(value_list_name)
         if not value_list:
-            return [f"Unknow value list name {value_list_name}"] if value_list_name else []
+            return [f"Unknown value list name {value_list_name}"] if value_list_name else []
         item["parameter_value_list_id"] = value_list["id"]
         return []
 
@@ -224,7 +224,7 @@ class FillInEntityClassIdMixin(ConvertToDBMixin):
         entity_class_name = item.pop(self.entity_class_name_key, None)
         entity_class = self._db_map_ent_cls_lookup.get(db_map, {}).get(entity_class_name)
         if not entity_class:
-            return [f"Unknow entity class {entity_class_name}"] if entity_class_name else []
+            return [f"Unknown entity class {entity_class_name}"] if entity_class_name else []
         item[self.entity_class_id_key] = entity_class.get("id")
         return []
 
@@ -246,6 +246,8 @@ class FillInEntityClassIdMixin(ConvertToDBMixin):
 
 class FillInEntityIdsMixin(ConvertToDBMixin):
     """Fills in entity ids."""
+
+    _add_entities_on_the_fly = False
 
     def __init__(self, *args, **kwargs):
         """Initializes lookup dicts."""
@@ -287,7 +289,7 @@ class FillInEntityIdsMixin(ConvertToDBMixin):
         name = item.pop(self.entity_name_key, None)
         items = self._db_map_ent_lookup.get(db_map, {}).get(name)
         if not items:
-            return [f"Unknow entity {name}"] if name else []
+            return [f"Unknown entity {name}"] if name and not self._add_entities_on_the_fly else []
         item["entity_ids"] = {x["class_id"]: x["id"] for x in items}
         return []
 
@@ -350,7 +352,7 @@ class FillInParameterDefinitionIdsMixin(ConvertToDBMixin):
         name = item.pop("parameter_name", None)
         items = self._db_map_param_lookup.get(db_map, {}).get(name)
         if not items:
-            return [f"Unknow parameter {name}"] if name else []
+            return [f"Unknown parameter {name}"] if name else []
         item["parameter_ids"] = {x[self.entity_class_id_key]: x["id"] for x in items}
         return []
 
@@ -428,22 +430,32 @@ class MakeRelationshipOnTheFlyMixin:
     """Makes relationships on the fly."""
 
     def __init__(self, *args, **kwargs):
-        """Init class, create lookup dicts."""
+        """Initializes lookup dicts."""
         super().__init__(*args, **kwargs)
         self._db_map_obj_lookup = dict()
         self._db_map_rel_cls_lookup = dict()
+        self._db_map_existing_rels = dict()
+
+    @staticmethod
+    def _make_unique_relationship_id(item):
+        """Returns a unique name-based identifier for db relationships."""
+        return (item["class_name"], item["object_name_list"])
 
     def build_lookup_dictionaries(self, db_map_data):
-        """Build object lookup dictionary."""
+        """Builds a name lookup dictionary for the given data.
+
+        Args:
+            db_map_data (dict): lists of model items keyed by DiffDatabaseMapping.
+        """
         # Group data by name
         db_map_object_names = dict()
         db_map_rel_cls_names = dict()
         for db_map, items in db_map_data.items():
             for item in items:
                 object_name_list = item.get("object_name_list")
-                object_name_list = self._parse_object_name_list(object_name_list)
-                if object_name_list:
-                    db_map_object_names.setdefault(db_map, set()).update(object_name_list)
+                parsed_object_name_list = self._parse_object_name_list(object_name_list)
+                if parsed_object_name_list:
+                    db_map_object_names.setdefault(db_map, set()).update(parsed_object_name_list)
                 relationship_class_name = item.get("relationship_class_name")
                 db_map_rel_cls_names.setdefault(db_map, set()).add(relationship_class_name)
         # Build lookup dicts
@@ -459,14 +471,30 @@ class MakeRelationshipOnTheFlyMixin:
                 item = self.db_mngr.get_item_by_field(db_map, "relationship class", "name", name)
                 if item:
                     self._db_map_rel_cls_lookup.setdefault(db_map, {})[name] = item
+        self._db_map_existing_rels = {
+            db_map: {self._make_unique_relationship_id(x) for x in self.db_mngr.get_items(db_map, "relationship")}
+            for db_map in self._db_map_obj_lookup.keys() | self._db_map_rel_cls_lookup.keys()
+        }
 
     def _make_relationship_on_the_fly(self, item, db_map):
-        """Gets entity info from model item (name-based) into a relationship database item (id-based)."""
+        """Returns database relationship item (id-based) from the given model parameter value item (name-based).
+
+        Args:
+            item (dict): the model parameter value item
+            db_map (DiffDatabaseMapping): the database where the resulting item belongs
+
+        Returns:
+            dict: the db relationship item
+            list: error log
+        """
         relationship_class_name = item.get("relationship_class_name")
+        object_name_list = item.get("object_name_list")
+        relationships = self._db_map_existing_rels.get(db_map, set())
+        if (relationship_class_name, object_name_list) in relationships:
+            return None, []
         relationship_class = self._db_map_rel_cls_lookup.get(db_map, {}).get(relationship_class_name)
         if not relationship_class:
             return None, [f"Unknown relationship class {relationship_class_name}"] if relationship_class_name else []
-        object_name_list = item.get("object_name_list")
         parsed_object_name_list = self._parse_object_name_list(object_name_list)
         if not parsed_object_name_list:
             return None, [f"Unable to parse {object_name_list}"] if object_name_list else []

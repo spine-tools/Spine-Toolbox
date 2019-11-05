@@ -16,12 +16,10 @@ Contains the DataStoreForm class, parent class of TreeViewForm and GraphViewForm
 :date:   26.11.2018
 """
 
-import gc
 from PySide2.QtWidgets import QMainWindow, QHeaderView, QDialog, QMessageBox, QCheckBox, QErrorMessage
-from PySide2.QtCore import Qt, Signal, Slot
+from PySide2.QtCore import Qt, Signal, Slot, QTimer
 from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QIcon
-from spinedb_api import SpineDBAPIError
-from ..config import MAINWINDOW_SS, STATUSBAR_SS
+from ..config import MAINWINDOW_SS
 from .custom_delegates import (
     DatabaseNameDelegate,
     ParameterDefaultValueDelegate,
@@ -52,7 +50,6 @@ from .edit_db_items_dialogs import (
 from .manage_db_items_dialog import CommitDialog
 from ..widgets.parameter_value_editor import ParameterValueEditor
 from ..widgets.toolbars import ParameterTagToolBar
-from ..widgets.custom_qwidgets import NotificationIcon
 from ..mvcmodels.entity_tree_models import ObjectTreeModel
 from ..mvcmodels.compound_parameter_models import (
     CompoundObjectParameterDefinitionModel,
@@ -86,10 +83,6 @@ class DataStoreForm(QMainWindow):
         self.ui = ui
         self.ui.setupUi(self)
         self.setWindowIcon(QIcon(":/symbols/app.ico"))
-        # Set up status bar and apply style sheet
-        self.ui.statusbar.setFixedHeight(20)
-        self.ui.statusbar.setSizeGripEnabled(False)
-        self.ui.statusbar.setStyleSheet(STATUSBAR_SS)
         self.setStyleSheet(MAINWINDOW_SS)
         # Class attributes
         self.err_msg = QErrorMessage(self)
@@ -196,9 +189,7 @@ class DataStoreForm(QMainWindow):
         Args:
             msg (str): String to show in QStatusBar
         """
-        icon = NotificationIcon(msg)
-        icon.pressed.connect(lambda icon=icon: self.ui.statusbar.removeWidget(icon))
-        self.ui.statusbar.insertWidget(0, icon)
+        self.ui.statusbar.add_notification(msg)
 
     @Slot("QItemSelection", "QItemSelection")
     def _handle_object_tree_selection_changed(self, selected, deselected):
@@ -281,33 +272,42 @@ class DataStoreForm(QMainWindow):
         answer = dialog.exec_()
         if answer != QDialog.Accepted:
             return False
-        self.do_commit_session(dialog.commit_msg)
+        self.db_mngr.commit_session(dialog.commit_msg, *self.db_maps)
         return True
-
-    @busy_effect
-    def do_commit_session(self, commit_msg):
-        try:
-            for db_map in self.db_maps:
-                db_map.commit_session(commit_msg)
-        except SpineDBAPIError as e:
-            self.msg_error.emit(e.msg)
-            return
-        msg = "All changes committed successfully."
-        self.msg.emit(msg)
 
     @Slot("bool")
     def rollback_session(self, checked=False):
         if not any(db_map.has_pending_changes() for db_map in self.db_maps):
             return
-        try:
-            for db_map in self.db_maps:
-                db_map.rollback_session()
-        except SpineDBAPIError as e:
-            self.msg_error.emit(e.msg)
-            return
-        self.init_models()
-        msg = "All changes since last commit rolled back successfully."
-        self.msg.emit(msg)
+        self.db_mngr.rollback_session(*self.db_maps)
+
+    def receive_session_committed(self, db_maps):
+        if db_maps.intersection(self.db_maps):
+            db_names = ", ".join([x.codename for x in db_maps])
+            msg = f"All changes in {db_names} committed successfully."
+            self.msg.emit(msg)
+            return True
+        return False
+
+    def receive_session_rolled_back(self, db_maps):
+        if db_maps.intersection(self.db_maps):
+            self.init_models()
+            db_names = ", ".join([x.codename for x in db_maps])
+            msg = f"All changes in {db_names} rolled back successfully."
+            self.msg.emit(msg)
+            return True
+        return False
+
+    def receive_session_closed(self, db_maps):
+        closed = db_maps.intersection(self.db_maps)
+        if closed:
+            db_names = ", ".join([x.codename for x in closed])
+            QMessageBox.critical(
+                self,
+                "Connection closed",
+                f"The connection to {db_names} has been closed by an external action. This form will now close.",
+            )
+            QTimer.singleShot(0, self.close)
 
     @Slot("bool", name="refresh_session")
     def refresh_session(self, checked=False):
@@ -535,12 +535,20 @@ class DataStoreForm(QMainWindow):
 
     def notify_items_changed(self, action, item_type, db_map_data):
         """Enables or disables actions and informs the user about what just happened."""
-        msg = f"<html> Successfully {action} {item_type} item(s)"
-        name_keys = {"parameter tag": "tag", "parameter value": None, "parameter definition": "parameter_name"}
+        msg = f"<html> Successfully {action}"
+        name_keys = {
+            "parameter tag": "tag",
+            "parameter value": None,
+            "parameter definition": "parameter_name",
+            "relationship": "object_name_list",
+        }
         name_key = name_keys.get(item_type, "name")
         if name_key:
             names = {item[name_key] for db_map, data in db_map_data.items() for item in data}
-            msg += ":" + format_string_list(names)
+            msg += f" the following {item_type} item(s):" + format_string_list(names)
+        else:
+            count = sum(len(data) for data in db_map_data.values())
+            msg += f" {count} {item_type} item(s)"
         msg += "</html>"
         self.msg.emit(msg)
 

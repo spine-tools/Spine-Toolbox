@@ -151,15 +151,20 @@ def project_dir(qsettings):
     return proj_dir
 
 
-def get_datetime(show):
+def get_datetime(show, date=True):
     """Returns date and time string for appending into Event Log messages.
 
     Args:
-        show (boolean): True returns date and time string. False returns empty string.
+        show (bool): True returns date and time string. False returns empty string.
+        date (bool): Whether or not the date should be included in the result
     """
     if show:
         t = datetime.datetime.now()
-        return "[{}-{:02d}-{:02d} {:02d}:{:02d}:{:02d}] ".format(t.day, t.month, t.year, t.hour, t.minute, t.second)
+        time_str = "{:02d}:{:02d}:{:02d}".format(t.hour, t.minute, t.second)
+        if not date:
+            return "[{}] ".format(time_str)
+        date_str = "{}-{:02d}-{:02d}".format(t.day, t.month, t.year)
+        return "[{} {}] ".format(date_str, time_str)
     return ""
 
 
@@ -365,17 +370,18 @@ def rename_dir(widget, old_dir, new_dir):
     return True
 
 
-def fix_name_ambiguity(name_list, offset=0):
+def fix_name_ambiguity(input_list, offset=0):
     """Modify repeated entries in name list by appending an increasing integer."""
-    ref_name_list = name_list.copy()
+    result = []
     ocurrences = {}
-    for i, name in enumerate(name_list):
-        n_ocurrences = ref_name_list.count(name)
-        if n_ocurrences == 1:
-            continue
-        ocurrence = ocurrences.setdefault(name, 1)
-        name_list[i] = name + str(offset + ocurrence)
-        ocurrences[name] = ocurrence + 1
+    for item in input_list:
+        n_ocurrences = input_list.count(item)
+        if n_ocurrences > 1:
+            ocurrence = ocurrences.get(item, 1)
+            ocurrences[item] = ocurrence + 1
+            item += str(offset + ocurrence)
+        result.append(item)
+    return result
 
 
 def tuple_itemgetter(itemgetter_func, num_indexes):
