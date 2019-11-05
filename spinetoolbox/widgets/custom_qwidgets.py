@@ -30,8 +30,8 @@ from PySide2.QtWidgets import (
     QDialogButtonBox,
     QWidgetAction,
 )
-from PySide2.QtCore import Qt, QTimer, Signal, Slot, QEvent
-from PySide2.QtGui import QPainter, QColor
+from PySide2.QtCore import Qt, QTimer, Signal, Slot, QEvent, QRect
+from PySide2.QtGui import QPainter, QColor, QPainterPath
 from ..mvcmodels.filter_checkbox_list_model import FilterCheckboxListModel
 
 
@@ -205,23 +205,68 @@ class ZoomWidget(QWidget):
 
 
 class OverlayWidget(QWidget):
-    def __init__(self, parent, color=QColor(100, 100, 100, 50)):
-        super().__init__(parent)
+    def __init__(self, target=None, color=QColor(100, 100, 100, 50), rect=QRect(0, 0, 1, 1)):
+        super().__init__(target)
+        self._target = None
+        self._color = None
+        self._rect = None
         self.setAttribute(Qt.WA_NoSystemBackground)
         self.setAttribute(Qt.WA_TransparentForMouseEvents)
         self.setAttribute(Qt.WA_TranslucentBackground)
-        parent.installEventFilter(self)
+        self.setProperty("target", target)
+        self.setProperty("color", color)
+        self.setProperty("rect", rect)
+
+    @property
+    def color(self):
+        return self._color
+
+    @color.setter
+    def color(self, color):
         self._color = color
+
+    @property
+    def target(self):
+        return self.parent()
+
+    @target.setter
+    def target(self, target):
+        if self.target:
+            self.target.removeEventFilter(self)
+        self.setParent(target)
+        if not target:
+            return
+        self.target.installEventFilter(self)
         self.raise_()
+        QTimer.singleShot(0, self.show)
 
-    def eventFilter(self, obj, event):
+    @property
+    def rectangle(self):
+        return self._rect
+
+    @rectangle.setter
+    def rectangle(self, rect):
+        self._rect = rect
+        QTimer.singleShot(0, self.repaint)
+
+    def eventFilter(self, obj, ev):
         if obj == self.parent():
-            if event.type() == QEvent.Resize:
-                self.resize(event.size())
-            elif event.type() == QEvent.ChildAdded:
+            if ev.type() == QEvent.Resize:
+                self.resize(ev.size())
+            elif ev.type() == QEvent.ChildAdded:
                 self.raise_()
-        return super().eventFilter(obj, event)
+        return super().eventFilter(obj, ev)
 
-    def paintEvent(self, event):
+    def event(self, ev):
+        if ev.type() == QEvent.DynamicPropertyChange:
+            name = ev.propertyName().data().decode()
+            setattr(self, name, self.property(name))
+        return super().event(ev)
+
+    def paintEvent(self, ev):
+        rect = self.rectangle if self.rectangle else self.rect()
         p = QPainter(self)
-        p.fillRect(self.rect(), self._color)
+        p.setRenderHint(QPainter.Antialiasing)
+        path = QPainterPath()
+        path.addRoundedRect(rect, 4, 4)
+        p.fillPath(path, self.color)

@@ -13,7 +13,7 @@
 # Form implementation generated from reading ui file '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/mainwindow.ui',
 # licensing of '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/mainwindow.ui' applies.
 #
-# Created: Sun Nov  3 12:10:48 2019
+# Created: Tue Nov  5 09:44:38 2019
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -64,7 +64,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_10.addWidget(self.graphicsView)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 862, 21))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 862, 28))
         self.menubar.setNativeMenuBar(False)
         self.menubar.setObjectName("menubar")
         self.menuFile = QtWidgets.QMenu(self.menubar)
@@ -185,7 +185,7 @@ class Ui_MainWindow(object):
         self.dockWidget_julia_repl.setWidget(self.dockWidgetContents_julia_repl)
         MainWindow.addDockWidget(QtCore.Qt.DockWidgetArea(8), self.dockWidget_julia_repl)
         self.dockWidget_project = QtWidgets.QDockWidget(MainWindow)
-        self.dockWidget_project.setMinimumSize(QtCore.QSize(135, 320))
+        self.dockWidget_project.setMinimumSize(QtCore.QSize(136, 320))
         self.dockWidget_project.setObjectName("dockWidget_project")
         self.dockWidgetContents_4 = QtWidgets.QWidget()
         self.dockWidgetContents_4.setObjectName("dockWidgetContents_4")
@@ -399,6 +399,9 @@ class Ui_MainWindow(object):
         self.actionPaste.setObjectName("actionPaste")
         self.actionDuplicate = QtWidgets.QAction(MainWindow)
         self.actionDuplicate.setObjectName("actionDuplicate")
+        self.actionLive_tutorial = QtWidgets.QAction(MainWindow)
+        self.actionLive_tutorial.setIcon(icon13)
+        self.actionLive_tutorial.setObjectName("actionLive_tutorial")
         self.menuFile.addAction(self.actionNew)
         self.menuFile.addAction(self.actionOpen)
         self.menuFile.addAction(self.actionOpen_recent)
@@ -412,6 +415,7 @@ class Ui_MainWindow(object):
         self.menuFile.addAction(self.actionQuit)
         self.menuHelp.addAction(self.actionUser_Guide)
         self.menuHelp.addAction(self.actionGetting_started)
+        self.menuHelp.addAction(self.actionLive_tutorial)
         self.menuHelp.addSeparator()
         self.menuHelp.addAction(self.actionAbout_Qt)
         self.menuHelp.addAction(self.actionAbout)
@@ -513,6 +517,8 @@ class Ui_MainWindow(object):
         self.actionDuplicate.setText(QtWidgets.QApplication.translate("MainWindow", "Duplicate", None, -1))
         self.actionDuplicate.setToolTip(QtWidgets.QApplication.translate("MainWindow", "Duplicate selected project item", None, -1))
         self.actionDuplicate.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+D", None, -1))
+        self.actionLive_tutorial.setText(QtWidgets.QApplication.translate("MainWindow", "Live tutorial", None, -1))
+        self.actionLive_tutorial.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Shift+F2", None, -1))
 
 from spinetoolbox.widgets.custom_qtextbrowser import CustomQTextBrowser
 from spinetoolbox.widgets.custom_qgraphicsviews import DesignQGraphicsView
