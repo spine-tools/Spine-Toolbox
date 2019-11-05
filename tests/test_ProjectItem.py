@@ -16,45 +16,50 @@ Unit tests for ProjectItem base class.
 :date:   4.10.2019
 """
 
+import shutil
 from tempfile import TemporaryDirectory
 import unittest
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, NonCallableMagicMock
+from PySide2.QtWidgets import QApplication
+import spinetoolbox.resources_icons_rc # pylint: disable=unused-import
 from spinetoolbox.project_item import ProjectItem
-
-
-class _MockProject:
-    def __init__(self, temp_directory):
-        self.project_dir = temp_directory
-
-
-class _MockToolbox:
-    class Message:
-        def __init__(self):
-            self.text = None
-
-        def emit(self, text):
-            self.text = text
-
-    def __init__(self, project):
-        self._project = project
-        self.msg_warning = _MockToolbox.Message()
-
-    def project(self):
-        return self._project
+from .mock_helpers import create_toolboxui_with_project
 
 
 class TestProjectItem(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        if not QApplication.instance():
+            QApplication()
+
+    def setUp(self):
+        """Set up toolbox."""
+        self.toolbox = create_toolboxui_with_project()
+        item_dict = dict(name="DC", description="", x=0, y=0)
+        self.toolbox.project().add_project_items("Data Connections", item_dict)
+        index = self.toolbox.project_item_model.find_item("DC")
+        self.data_connection = self.toolbox.project_item_model.project_item(index)
+
+    def tearDown(self):
+        """Clean up."""
+        self.data_connection.data_dir_watcher.removePath(self.data_connection.data_dir)
+        try:
+            shutil.rmtree(self.toolbox.project().project_dir)  # Remove project directory
+        except OSError as e:
+            print("Failed to remove project directory. {0}".format(e))
+        self.toolbox.deleteLater()
+        self.toolbox = None
+
     def test_notify_destination(self):
         with TemporaryDirectory() as project_dir:
-            project = _MockProject(project_dir)
-            toolbox = _MockToolbox(project)
-            item = ProjectItem(toolbox, "name", "description", 0.0, 0.0)
+            self.toolbox.msg_warning = NonCallableMagicMock()
+            self.toolbox.msg_warning.attach_mock(MagicMock(), "emit")
+            item = ProjectItem(self.toolbox, "name", "description", 0.0, 0.0)
             item.item_type = MagicMock(return_value="item_type")
             item.notify_destination(item)
-            self.assertEqual(
-                toolbox.msg_warning.text,
+            self.toolbox.msg_warning.emit.assert_called_with(
                 "Link established."
-                " Interaction between a <b>item_type</b> and a <b>item_type</b> has not been implemented yet.",
+                " Interaction between a <b>item_type</b> and a <b>item_type</b> has not been implemented yet."
             )
 
 

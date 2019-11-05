@@ -30,7 +30,6 @@ from PySide2.QtWidgets import (
     QInputDialog,
     QDockWidget,
     QAction,
-    QWidgetAction,
 )
 from PySide2.QtGui import QDesktopServices, QGuiApplication, QKeySequence, QStandardItemModel, QIcon
 from .graphics_items import ProjectItemIcon

@@ -29,6 +29,7 @@ from spinetoolbox.project import SpineToolboxProject
 from spinetoolbox.config import APPLICATION_PATH
 from spinetoolbox.graphics_items import ProjectItemIcon, Link
 from spinetoolbox.project_item import RootProjectItem
+from spinetoolbox.resources_icons_rc import qInitResources
 from .mock_helpers import create_toolboxui
 
 
@@ -37,6 +38,7 @@ class TestToolboxUI(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         """Overridden method. Runs once before all tests in this class."""
+        qInitResources()
         try:
             cls.app = QApplication().processEvents()
         except RuntimeError:

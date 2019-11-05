@@ -86,6 +86,7 @@ class DataStoreForm(QMainWindow):
         self.setStyleSheet(MAINWINDOW_SS)
         # Class attributes
         self.err_msg = QErrorMessage(self)
+        self.err_msg.setWindowTitle("Error")
         # DB
         self.db_maps = db_maps
         self.db_mngr = project.db_mngr

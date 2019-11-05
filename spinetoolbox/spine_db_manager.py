@@ -121,10 +121,17 @@ class SpineDBManager(QObject):
         create_new_spine_database(url, for_spine_model=for_spine_model)
 
     def close_session(self, url):
+        """Closes a connection to given database mapping."""
         db_map = self._db_maps.pop(url, None)
-        if db_map:
+        if db_map is not None:
             db_map.connection.close()
             self.session_closed.emit({db_map})
+
+    def close_all_sessions(self):
+        """Closes connections to all database mappings."""
+        for url, db_map in self._db_maps.items():
+            if not db_map.connection.closed:
+                db_map.connection.close()
 
     def get_db_map(self, url, upgrade=False, codename=None):
         """Returns a DiffDatabaseMapping instance from url if possible, None otherwise.
@@ -176,7 +183,6 @@ class SpineDBManager(QObject):
         """
         if url not in self._db_maps:
             self._db_maps[url] = DiffDatabaseMapping(url, upgrade=upgrade, codename=codename)
-        self._db_maps[url].reconnect()
         return self._db_maps[url]
 
     def connect_signals(self):

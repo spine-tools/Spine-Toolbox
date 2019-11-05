@@ -533,7 +533,7 @@ class DataStore(ProjectItem):
                     "<b>{0}:</b> Unable to create database mapping, all import operations will be omitted.".format(err)
                 )
                 db_map = None
-            if db_map:
+            if db_map is not None:
                 all_import_errors = []
                 import_data_resources = [
                     r for r in inst.available_resources(self.name) if r.type_ == "data" and r.metadata.get("for_import")
@@ -554,6 +554,7 @@ class DataStore(ProjectItem):
                                     self.name, import_num, len(import_errors), db_map.db_url
                                 )
                             )
+                    db_map.connection.close()
                 if all_import_errors:
                     # Log errors in a time stamped file into the logs directory
                     timestamp = create_log_file_timestamp()
