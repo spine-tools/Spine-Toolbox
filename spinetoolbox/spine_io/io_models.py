@@ -837,6 +837,10 @@ class MappingListModel(QAbstractListModel):
 
 
 class HeaderWithButton(QHeaderView):
+    """Class that reimplements the QHeaderView section paint event to draw a button
+    that is used to display and change the type of that column or row.
+    """
+    
     def __init__(self, orientation, parent=None):
         super(HeaderWithButton, self).__init__(orientation, parent)
         self.setHighlightSections(True)
@@ -900,18 +904,30 @@ class HeaderWithButton(QHeaderView):
         self.model().set_type(logical_index, action.text(), self.orientation())
 
     def widget_width(self):
+        """Width of widget
+        
+        Returns:
+            [int] -- Width of widget
+        """
         if self.orientation() == Qt.Horizontal:
             return self.height()
         else:
             return self.sectionSize(0)
     
     def widget_height(self):
+        """Height of widget
+        
+        Returns:
+            [int] -- Height of widget
+        """
         if self.orientation() == Qt.Horizontal:
             return self.height()
         else:
             return self.sectionSize(0)
 
     def mouseMoveEvent(self, mouse_event):
+        """Moves the button to the correct section so that interacting with the button works.
+        """
         log_index = self.logicalIndexAt(mouse_event.x(), mouse_event.y())
         if not self._display_all and log_index not in self._display_sections:
             self._button_logical_index = None
@@ -926,6 +942,8 @@ class HeaderWithButton(QHeaderView):
         super().mouseMoveEvent(mouse_event)
 
     def mousePressEvent(self, mouse_event):
+        """Move the button to the pressed location and show or hide it if button should not be shown.
+        """
         log_index = self.logicalIndexAt(mouse_event.x(), mouse_event.y())
         if not self._display_all and log_index not in self._display_sections:
             self._button_logical_index = None
@@ -940,11 +958,19 @@ class HeaderWithButton(QHeaderView):
         super().mousePressEvent(mouse_event)
 
     def leaveEvent(self, event):
+        """Hide button
+        """
         self._button_logical_index = None
         self._button.hide()
         super().leaveEvent(event)
 
     def _set_button_geometry(self, button, index):
+        """Sets a buttons geometry depending on the index.
+        
+        Arguments:
+            button {QWidget} -- QWidget that geometry should be set
+            index {int} -- logical_index to set position and geometry to.
+        """
         margin = self._margin
         if self.orientation() == Qt.Horizontal:
             button.setGeometry(
@@ -962,45 +988,76 @@ class HeaderWithButton(QHeaderView):
             )
 
     def _section_resize(self, i):
+        """When a section is resized.
+        
+        Arguments:
+            i {int} -- logical index to section being resized
+        """
         self._button.hide()
         if i == self._button_logical_index:
             self._set_button_geometry(self._button, self._button_logical_index)
 
     def paintSection(self, painter, rect, logical_index):
-        """move original rect a bit to the right to make room for the widget"""
+        """Paints a section of the QHeader view.
+
+        Works by drawing a pixmap of the button to the left of the orignial paint rectangle.
+        Then shifts the original rect to the right so these two doesn't paint over eachother.
+        """
         if not self._display_all and logical_index not in self._display_sections:
             super().paintSection(painter, rect, logical_index)
             return
 
+        # get the type of the section.
         type_str = self.model().get_type(logical_index, self.orientation())
         if type_str is None:
             type_str = "string"
         font_str = _TYPE_TO_FONT_AWESOME_ICON[type_str]
 
+        # set data for both interaction button and render button.
         self._button.setText(font_str)
         self._render_button.setText(font_str)
         self._set_button_geometry(self._render_button, logical_index)
 
+        # get pixmap from render button and draw into header section.
         rw = self._render_button.grab()
         if self.orientation() == Qt.Horizontal:
             painter.drawPixmap(self.sectionViewportPosition(logical_index), 0, rw)
         else:
             painter.drawPixmap(0, self.sectionViewportPosition(logical_index), rw)
 
+        # shift rect that super class should paint in to the right so it doesn't 
+        # paint over the button
         rect.adjust(self.widget_width(), 0, 0, 0)
         super().paintSection(painter, rect, logical_index)
 
     def sectionSizeFromContents(self, logical_index):
+        """Add the button width to the section so it displays right.
+        
+        Arguments:
+            logical_index {int} -- logical index of section
+        
+        Returns:
+            [QSize] -- Size of section
+        """
         org_size = super().sectionSizeFromContents(logical_index)
         org_size.setWidth(org_size.width() + self.widget_width())
         return org_size
 
     def _section_move(self, logical, old_visual_index, new_visual_index):
+        """Section beeing moved.
+        
+        Arguments:
+            logical {int} -- logical index of section beeing moved.
+            old_visual_index {int} -- old visual index of section
+            new_visual_index {int} -- new visual index of section
+        """
         self._button.hide()
         if self._button_logical_index is not None:
             self._set_button_geometry(self._button, self._button_logical_index)
 
     def fix_widget_positions(self):
+        """Update position of interaction button
+        """
         if self._button_logical_index is not None:
             self._set_button_geometry(self._button, self._button_logical_index)
 
