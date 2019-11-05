@@ -491,10 +491,10 @@ class MappingSpecModel(QAbstractTableModel):
         if isinstance(self._model, RelationshipClassMapping):
             display_name.append("Relationship class names")
             if self._model.object_classes:
-                display_name.extend([f"Object class {i+1} names" for i, oc in enumerate(self._model.object_classes)])
+                display_name.extend([f"Object class names {i+1}" for i, oc in enumerate(self._model.object_classes)])
                 mappings.extend(list(self._model.object_classes))
             if self._model.objects:
-                display_name.extend([f"Object {i+1} names" for i, oc in enumerate(self._model.objects)])
+                display_name.extend([f"Object names {i+1}" for i, oc in enumerate(self._model.objects)])
                 mappings.extend(list(self._model.objects))
         else:
             display_name.append("Object class names")
@@ -577,6 +577,22 @@ class MappingSpecModel(QAbstractTableModel):
             ]
             f = func[index.column()]
             return f()
+        if role == Qt.BackgroundColorRole and index.column() == 0:
+            return self.data_color(self._display_names[index.row()])
+
+    def data_color(self, display_name):
+        if display_name == "Relationship class names":
+            return _MAPPING_COLORS["entity class"]
+        if "Object class" in display_name:
+            return _MAPPING_COLORS["entity class"]
+        if "Object names" in display_name:
+            return _MAPPING_COLORS["entity"]
+        if display_name == "Parameter names":
+            return _MAPPING_COLORS["parameter name"]
+        if display_name in ["Parameter time index", "Parameter time pattern index"]:
+            return _MAPPING_COLORS["parameter extra dimension"]
+        if display_name == "Parameter values":
+            return _MAPPING_COLORS["parameter value"]
 
     def rowCount(self, index=None):
         if not self._model:
