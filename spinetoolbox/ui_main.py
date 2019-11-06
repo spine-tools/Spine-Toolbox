@@ -30,7 +30,6 @@ from PySide2.QtWidgets import (
     QInputDialog,
     QDockWidget,
     QAction,
-    QWidgetAction,
 )
 from PySide2.QtGui import QDesktopServices, QGuiApplication, QKeySequence, QStandardItemModel, QIcon
 from .graphics_items import ProjectItemIcon
@@ -211,19 +210,11 @@ class ToolboxUI(QMainWindow):
         # Sort categories by rank
         self.categories = dict(sorted(self.categories.items(), key=lambda kv: kv[1]["item_rank"]))
         # Create actions for Edit menu, and draggable widgets to toolbar
-        add_item_actions = list()
         category_icon = list()
         for item_category, item_dict in self.categories.items():
-            # Create action for adding items of this type
             item_icon = item_dict["item_icon"]
             item_type = item_dict["item_type"]
-            add_item_action = QAction(QIcon(item_icon), f"Add {item_type}")
-            add_item_action.triggered.connect(lambda checked=False, c=item_category: self.show_add_project_item_form(c))
-            add_item_actions.append(add_item_action)
             category_icon.append((item_type, item_category, item_icon))
-        # Add actions to Edit menu
-        remove_all_action = self.ui.menuEdit.actions()[0]
-        self.ui.menuEdit.insertActions(remove_all_action, add_item_actions)
         # Add draggable widgets to toolbar
         self.item_toolbar.add_draggable_widgets(category_icon)
 
@@ -547,7 +538,7 @@ class ToolboxUI(QMainWindow):
         proj_items = [self.project_item_model.project_item(i) for i in inds]
         # NOTE: Category items are not selectable anymore
         # Sync selection with the scene
-        if len(proj_items) > 0:
+        if proj_items:
             scene = self.ui.graphicsView.scene()
             scene.sync_selection = False  # This tells the scene not to sync back
             scene.clearSelection()
@@ -1573,6 +1564,7 @@ class ToolboxUI(QMainWindow):
             self.ui.menuEdit.insertAction(self.ui.menuEdit.actions()[0], action)
             return action
 
+        self.ui.menuEdit.insertSeparator(self.ui.menuEdit.actions()[0])
         duplicate_action = prepend_to_edit_menu(
             "Duplicate", [QKeySequence(Qt.CTRL + Qt.Key_D)], lambda checked: self._duplicate_project_item()
         )
