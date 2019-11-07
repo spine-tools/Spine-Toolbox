@@ -242,7 +242,7 @@ class ProjectItem(BaseProjectItem):
         self._icon = None
         self._sigs = None
         # Make project directory for this Item
-        self.data_dir = os.path.join(self._project.project_dir, self.short_name)
+        self.data_dir = os.path.join(self._project.project_items_dir, self.short_name)
         try:
             create_dir(self.data_dir)
         except OSError:
