@@ -23,7 +23,7 @@ class Ui_SettingsForm(object):
     def setupUi(self, SettingsForm):
         SettingsForm.setObjectName("SettingsForm")
         SettingsForm.setWindowModality(QtCore.Qt.ApplicationModal)
-        SettingsForm.resize(700, 550)
+        SettingsForm.resize(711, 560)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.MinimumExpanding)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -49,7 +49,7 @@ class Ui_SettingsForm(object):
         self.scrollArea.setWidgetResizable(True)
         self.scrollArea.setObjectName("scrollArea")
         self.scrollAreaWidgetContents = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 338, 482))
+        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 366, 492))
         self.scrollAreaWidgetContents.setAutoFillBackground(True)
         self.scrollAreaWidgetContents.setObjectName("scrollAreaWidgetContents")
         self.verticalLayout_5 = QtWidgets.QVBoxLayout(self.scrollAreaWidgetContents)
@@ -91,19 +91,6 @@ class Ui_SettingsForm(object):
         self.checkBox_delete_data = QtWidgets.QCheckBox(self.groupBox_general)
         self.checkBox_delete_data.setObjectName("checkBox_delete_data")
         self.verticalLayout.addWidget(self.checkBox_delete_data)
-        self.label = QtWidgets.QLabel(self.groupBox_general)
-        font = QtGui.QFont()
-        font.setPointSize(7)
-        self.label.setFont(font)
-        self.label.setObjectName("label")
-        self.verticalLayout.addWidget(self.label)
-        self.lineEdit_project_dir = QtWidgets.QLineEdit(self.groupBox_general)
-        self.lineEdit_project_dir.setMinimumSize(QtCore.QSize(0, 20))
-        self.lineEdit_project_dir.setMaximumSize(QtCore.QSize(16777215, 20))
-        self.lineEdit_project_dir.setFocusPolicy(QtCore.Qt.NoFocus)
-        self.lineEdit_project_dir.setReadOnly(True)
-        self.lineEdit_project_dir.setObjectName("lineEdit_project_dir")
-        self.verticalLayout.addWidget(self.lineEdit_project_dir)
         self.checkBox_use_smooth_zoom = QtWidgets.QCheckBox(self.groupBox_general)
         self.checkBox_use_smooth_zoom.setObjectName("checkBox_use_smooth_zoom")
         self.verticalLayout.addWidget(self.checkBox_use_smooth_zoom)
@@ -377,8 +364,6 @@ class Ui_SettingsForm(object):
         self.checkBox_datetime.setText(QtWidgets.QApplication.translate("SettingsForm", "Show date and time in Event Log messages", None, -1))
         self.checkBox_delete_data.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>Check this box to delete project item\'s data when a project item is removed from project. This means, that the project item directory and its contens will be deleted from your HD.</p></body></html>", None, -1))
         self.checkBox_delete_data.setText(QtWidgets.QApplication.translate("SettingsForm", "Delete data when project item is removed from project", None, -1))
-        self.label.setText(QtWidgets.QApplication.translate("SettingsForm", "Project directory", None, -1))
-        self.lineEdit_project_dir.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>Directory where Spine Toolbox projects are stored. Non-editable at the moment.</p></body></html>", None, -1))
         self.checkBox_use_smooth_zoom.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>Controls whether smooth or discete zoom is used in Design and Graph Views.</p></body></html>", None, -1))
         self.checkBox_use_smooth_zoom.setText(QtWidgets.QApplication.translate("SettingsForm", "Smooth zoom", None, -1))
         self.label_7.setText(QtWidgets.QApplication.translate("SettingsForm", "Design View background", None, -1))
@@ -421,8 +406,8 @@ class Ui_SettingsForm(object):
         self.textEdit_project_description.setHtml(QtWidgets.QApplication.translate("SettingsForm", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
 "p, li { white-space: pre-wrap; }\n"
-"</style></head><body style=\" font-family:\'MS Shell Dlg 2\'; font-size:8.25pt; font-weight:400; font-style:normal;\">\n"
-"<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><br /></p></body></html>", None, -1))
+"</style></head><body style=\" font-family:\'MS Shell Dlg 2\'; font-size:7.8pt; font-weight:400; font-style:normal;\">\n"
+"<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-size:8.25pt;\"><br /></p></body></html>", None, -1))
         self.label_6.setText(QtWidgets.QApplication.translate("SettingsForm", "Work directory", None, -1))
         self.lineEdit_work_dir.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>Work directory location. Leave empty to use default (\\work).</p></body></html>", None, -1))
         self.lineEdit_work_dir.setPlaceholderText(QtWidgets.QApplication.translate("SettingsForm", "Using default directory", None, -1))

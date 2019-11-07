@@ -20,7 +20,7 @@ import os
 import locale
 import logging
 import json
-from PySide2.QtCore import QByteArray, QMimeData, Qt, Signal, Slot, QSettings, QUrl, SIGNAL
+from PySide2.QtCore import QByteArray, QMimeData, Qt, Signal, Slot, QSettings, QUrl, SIGNAL, QSortFilterProxyModel
 from PySide2.QtWidgets import (
     QMainWindow,
     QApplication,
@@ -36,6 +36,7 @@ from PySide2.QtGui import QDesktopServices, QGuiApplication, QKeySequence, QStan
 from .graphics_items import ProjectItemIcon
 from .mvcmodels.project_item_model import ProjectItemModel
 from .mvcmodels.tool_specification_model import ToolSpecificationModel
+from .mvcmodels.project_icon_sort_model import ProjectDirectoryIconFilterProxyModel, ProjectDirectoryIconProvider
 from .widgets.about_widget import AboutWidget
 from .widgets.custom_menus import (
     ProjectItemModelContextMenu,
@@ -52,9 +53,10 @@ from .widgets.custom_qwidgets import ZoomWidget
 from .widgets.julia_repl_widget import JuliaREPLWidget
 from .widgets.python_repl_widget import PythonReplWidget
 from .widgets import toolbars
+from .widgets.open_project_widget import OpenProjectDialog
 from .project import SpineToolboxProject
 from .config import SPINE_TOOLBOX_VERSION, STATUSBAR_SS, TEXTBROWSER_SS, MAINWINDOW_SS, DOCUMENTATION_PATH
-from .helpers import project_dir, get_datetime, erase_dir, busy_effect, set_taskbar_icon, supported_img_formats
+from .helpers import DEFAULT_PROJECT_DIR, get_datetime, erase_dir, busy_effect, set_taskbar_icon, supported_img_formats
 from .project_item import RootProjectItem, CategoryProjectItem
 from .project_items import data_store, data_connection, gdx_export, tool, view, data_interface
 
@@ -78,7 +80,7 @@ class ToolboxUI(QMainWindow):
         super().__init__(flags=Qt.Window)
         self._qsettings = QSettings("SpineProject", "Spine Toolbox")
         # Set number formatting to use user's default settings
-        locale.setlocale(locale.LC_NUMERIC, '')
+        locale.setlocale(locale.LC_NUMERIC, "")
         # Setup the user interface from Qt Designer files
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
@@ -238,8 +240,8 @@ class ToolboxUI(QMainWindow):
 
     @Slot(name="init_project")
     def init_project(self):
-        """Initializes project at application start-up. Loads the last project that was open
-        when app was closed or starts without a project if app is started for the first time.
+        """Initializes project at application start-up. Opens the last project that was open
+        when app was closed (if enabled in Settings) or starts the app without a project.
         """
         open_previous_project = int(self._qsettings.value("appSettings/openPreviousProject", defaultValue="0"))
         if open_previous_project != 2:  # 2: Qt.Checked, ie. open_previous_project==True
@@ -270,7 +272,7 @@ class ToolboxUI(QMainWindow):
         self.project_form.show()
 
     def create_project(self, name, description, location=None):
-        """Create new project and set it active.
+        """Creates new project and sets it active.
 
         Args:
             name (str): Project name
@@ -290,12 +292,12 @@ class ToolboxUI(QMainWindow):
     # noinspection PyUnusedLocal
     @Slot(name="open_project")
     def open_project(self, load_path=None, clear_event_log=True):
-        """Load project from a save file (.proj) file.
+        """Opens project from a selected directory.
 
         Args:
             load_path (str): Path to project save file. If default value is used,
             a file explorer dialog is opened where the user can select the
-            project file to load.
+            project to load.
             clear_event_log (bool): True clears Event Log, False does not
 
         Returns:
@@ -304,26 +306,30 @@ class ToolboxUI(QMainWindow):
         tool_specification_paths = list()
         connections = list()
         if not load_path:
-            # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-            answer = QFileDialog.getOpenFileName(
-                self, 'Open project', project_dir(self._qsettings), 'Projects (*.proj)'
-            )
-            load_path = answer[0]
-            if load_path == '':  # Cancel button clicked
+            dialog = OpenProjectDialog(self)
+            retval = dialog.exec_()
+            if retval == 0:  # Canceled or closed
                 return False
+            load_path = dialog.selected_file()
+            if load_path.endswith(".proj"):
+                # Load project from .proj file (old style project)
+                self.msg.emit("Loading old style project")
+            elif not os.path.isdir(load_path):
+                self.msg_error.emit("Selected path '{0}' is not a directory".format(load_path))
+                return False
+            else:
+                # Load project from directory
+                load_path = os.path.abspath(os.path.join(load_path, ".spinetoolbox", "project.json"))
+        # Load project from JSON file
         if not os.path.isfile(load_path):
             self.msg_error.emit("File <b>{0}</b> not found".format(load_path))
             return False
-        if not load_path.lower().endswith('.proj'):
-            self.msg_error.emit("Selected file has unsupported extension. Only .proj files are supported")
-            return False
-        # Load project from JSON file
         try:
-            with open(load_path, 'r') as fh:
+            with open(load_path, "r") as fh:
                 try:
                     dicts = json.load(fh)
                 except json.decoder.JSONDecodeError:
-                    self.msg_error.emit("Error in file <b>{0}</b>. Not valid JSON. {0}".format(load_path))
+                    self.msg_error.emit("Error in project file <b>{0}</b>. Invalid JSON. {0}".format(load_path))
                     return False
         except OSError:
             self.msg_error.emit("[OSError] Loading project file <b>{0}</b> failed".format(load_path))
@@ -331,11 +337,11 @@ class ToolboxUI(QMainWindow):
         # Initialize UI
         self.clear_ui()
         # Parse project info
-        project_dict = dicts['project']
-        proj_name = project_dict['name']
-        proj_desc = project_dict['description']
+        project_dict = dicts["project"]
+        proj_name = project_dict["name"]
+        proj_desc = project_dict["description"]
         try:
-            work_dir = project_dict['work_dir']
+            work_dir = project_dict["work_dir"]
         except KeyError:
             work_dir = ""
         try:
@@ -346,7 +352,7 @@ class ToolboxUI(QMainWindow):
             except KeyError:
                 self.msg_warning.emit("Tool specifications not found in project file")
         try:
-            connections = project_dict['connections']
+            connections = project_dict["connections"]
         except KeyError:
             self.msg_warning.emit("No connections found in project file")
         # Create project
@@ -359,7 +365,7 @@ class ToolboxUI(QMainWindow):
         self.ui.textBrowser_process_output.clear()
         # Populate project model with items read from JSON file
         self.init_models(tool_specification_paths)
-        if not self._project.load(dicts['objects']):
+        if not self._project.load(dicts["objects"]):
             self.msg_error.emit("Loading project items failed")
             return False
         self.ui.treeView_project.expandAll()
@@ -392,8 +398,28 @@ class ToolboxUI(QMainWindow):
         tool_specifications = list()
         for i in range(self.tool_specification_model.rowCount()):
             tool_specifications.append(self.tool_specification_model.tool_specification(i).get_def_path())
-        self._project.save(tool_specifications)
-        self.msg.emit("Project saved to <b>{0}</b>".format(self._project.project_file))
+        if self._project.path:  # This happens when an old style project is in use
+            # Ask the user for a directory where to save the project
+            # noinspection PyCallByClass, PyArgumentList
+            answer = QFileDialog.getExistingDirectory(
+                self, "Select or create a new directory for this project", os.path.abspath("C:\\")
+            )
+            if answer == "":  # Canceled (american-english), cancelled (british-english)
+                return
+            # Check that it's a directory
+            if not os.path.isdir(answer):
+                msg = "Selected thing is not a directory, please try again"
+                # noinspection PyCallByClass, PyArgumentList
+                QMessageBox.warning(self, "Invalid selection", msg)
+                return
+            if not self._project.save(tool_specifications, answer):
+                self.msg_error.emit("Project saving failed")
+                return
+        else:
+            if not self._project.save(tool_specifications):
+                self.msg_error.emit("Project saving failed")
+                return
+        self.msg.emit("Project saved to <b>{0}</b>".format(self._project.project_dir))
 
     @Slot(name="save_project_as")
     def save_project_as(self):
@@ -401,22 +427,39 @@ class ToolboxUI(QMainWindow):
         if not self._project:
             self.msg.emit("Please open or create a project first")
             return
-        msg = "This creates a copy of the current project. <br/><br/>New name:"
-        # noinspection PyCallByClass
-        answer = QInputDialog.getText(
-            self, "New project name", msg, text=self._project.name, flags=Qt.WindowTitleHint | Qt.WindowCloseButtonHint
-        )
-        if not answer[1]:  # answer[str, bool]
+        # Ask for a new directory and do something like this
+        # noinspection PyCallByClass, PyArgumentList
+        answer = QFileDialog.getExistingDirectory(self, "Select new directory", os.path.abspath("C:\\"))
+        if answer == "":  # Canceled
             return
-        name = answer[0]
-        # Check if name is valid and copy project tree under a new name
-        if not self._project.rename_project(name):
+        if not os.path.isdir(answer):
+            msg = "Selected thing is not a directory, please try again"
+            # noinspection PyCallByClass, PyArgumentList
+            QMessageBox.warning(self, "Invalid selection", msg)
             return
-        # Save project into new file
-        self.save_project()
-        # Load project
-        self.open_project(self._project.project_file)
-        return
+        self.msg.emit("Saving project to directory {0}".format(answer))
+        self.msg_warning.emit("Sorry, not ready yet.")
+
+        # # Save project
+        # # self.save_project()
+        # if not self._project.save(tool_specifications, answer):
+        #     self.msg_error("Project saving failed")
+        #     return
+        # # Load project
+        # self.open_project(self._project.project_dir)  # Test!
+        # return
+
+        # msg = "This creates a copy of the current project. <br/><br/>New name:"
+        # # noinspection PyCallByClass
+        # answer = QInputDialog.getText(
+        #     self, "New project name", msg, text=self._project.name, flags=Qt.WindowTitleHint | Qt.WindowCloseButtonHint
+        # )
+        # if not answer[1]:  # answer[str, bool]
+        #     return
+        # name = answer[0]
+        # # Check if name is valid and copy project tree under a new name
+        # if not self._project.rename_project(name):
+        #     return
 
     def init_models(self, tool_specification_paths):
         """Initialize application internal data models.
@@ -455,7 +498,7 @@ class ToolboxUI(QMainWindow):
         n_tools = 0
         self.msg.emit("Loading Tool specifications...")
         for path in tool_specification_paths:
-            if path == '' or not path:
+            if path == "" or not path:
                 continue
             # Add tool specification into project
             tool_cand = self._project.load_tool_specification_from_file(path)
@@ -502,7 +545,7 @@ class ToolboxUI(QMainWindow):
         window_pos = self._qsettings.value("mainWindow/windowPosition", defaultValue="false")
         window_state = self._qsettings.value("mainWindow/windowState", defaultValue="false")
         splitter_state = self._qsettings.value("mainWindow/projectDockWidgetSplitterState", defaultValue="false")
-        window_maximized = self._qsettings.value("mainWindow/windowMaximized", defaultValue='false')  # returns str
+        window_maximized = self._qsettings.value("mainWindow/windowMaximized", defaultValue="false")  # returns str
         n_screens = self._qsettings.value("mainWindow/n_screens", defaultValue=1)  # number of screens on last exit
         # noinspection PyArgumentList
         n_screens_now = len(QGuiApplication.screens())  # Number of screens now
@@ -515,7 +558,7 @@ class ToolboxUI(QMainWindow):
             self.restoreState(window_state, version=1)  # Toolbar and dockWidget positions. Expects QByteArray
         if not splitter_state == "false":
             self.ui.splitter.restoreState(splitter_state)  # Project Dock Widget splitter position. Expects QByteArray
-        if window_maximized == 'true':
+        if window_maximized == "true":
             self.setWindowState(Qt.WindowMaximized)
         if n_screens_now < int(n_screens):
             # There are less screens available now than on previous application startup
@@ -611,7 +654,7 @@ class ToolboxUI(QMainWindow):
         answer = QFileDialog.getOpenFileName(
             self,
             "Select Tool specification file",
-            os.path.join(project_dir(self._qsettings), os.path.pardir),
+            os.path.join(DEFAULT_PROJECT_DIR, os.path.pardir),
             "JSON (*.json)",
         )
         if answer[0] == "":  # Cancel button clicked
@@ -640,28 +683,28 @@ class ToolboxUI(QMainWindow):
         self.tool_specification_model.insertRow(tool_specification)
         # Save Tool def file path to project file
         project_file = self._project.project_file  # Path to project file
-        if project_file.lower().endswith('.proj'):
+        if project_file.lower().endswith(".proj"):
             # Manipulate project file contents
             try:
-                with open(project_file, 'r') as fh:
+                with open(project_file, "r") as fh:
                     dicts = json.load(fh)
             except OSError:
                 self.msg_error.emit("OSError: Could not load file <b>{0}</b>".format(project_file))
                 return
             # Get project settings
-            project_dict = dicts['project']
-            objects_dict = dicts['objects']
+            project_dict = dicts["project"]
+            objects_dict = dicts["objects"]
             try:
-                tools = project_dict['tool_specifications']
+                tools = project_dict["tool_specifications"]
                 if def_file not in tools:
                     tools.append(def_file)
-                project_dict['tool_specifications'] = tools
+                project_dict["tool_specifications"] = tools
             except KeyError:
-                project_dict['tool_specifications'] = [def_file]
+                project_dict["tool_specifications"] = [def_file]
             # Save dictionaries back to project save file
-            dicts['project'] = project_dict
-            dicts['objects'] = objects_dict
-            with open(project_file, 'w') as fp:
+            dicts["project"] = project_dict
+            dicts["objects"] = objects_dict
+            with open(project_file, "w") as fp:
                 json.dump(dicts, fp, indent=4)
             self.msg_success.emit("Tool specification <b>{0}</b> added to project".format(tool_specification.name))
         else:
@@ -699,8 +742,8 @@ class ToolboxUI(QMainWindow):
                     )
                 )
 
-    @Slot(name="remove_selected_tool_specification")
-    def remove_selected_tool_specification(self):
+    @Slot(bool, name="remove_selected_tool_specification")
+    def remove_selected_tool_specification(self, checked=False):
         """Prepare to remove tool specification selected in QListView."""
         if not self._project:
             self.msg.emit("Please create a new project or open an existing one first")
@@ -737,27 +780,27 @@ class ToolboxUI(QMainWindow):
             return
         # Remove tool def file path from the project file
         project_file = self._project.project_file
-        if not project_file.lower().endswith('.proj'):
+        if not project_file.lower().endswith(".proj"):
             self.msg_error.emit("Project file extension not supported. Needs to be .proj.")
             return
         # Read project data from JSON file
         try:
-            with open(project_file, 'r') as fh:
+            with open(project_file, "r") as fh:
                 dicts = json.load(fh)
         except OSError:
             self.msg_error.emit("OSError: Could not load file <b>{0}</b>".format(project_file))
             return
         # Get project settings
-        project_dict = dicts['project']
-        object_dict = dicts['objects']
+        project_dict = dicts["project"]
+        object_dict = dicts["objects"]
         if not self.tool_specification_model.removeRow(index.row()):
             self.msg_error.emit("Error in removing Tool specification <b>{0}</b>".format(sel_tool.name))
             return
         try:
-            tools = project_dict['tool_specifications']
+            tools = project_dict["tool_specifications"]
             tools.remove(tool_def_path)
             # logging.debug("tools list after removal:{}".format(tools))
-            project_dict['tool_specifications'] = tools
+            project_dict["tool_specifications"] = tools
         except KeyError:
             self.msg_error.emit(
                 "This is odd. tool_specifications list not found in project file <b>{0}</b>".format(project_file)
@@ -770,9 +813,9 @@ class ToolboxUI(QMainWindow):
             )
             return
         # Save dictionaries back to JSON file
-        dicts['project'] = project_dict
-        dicts['objects'] = object_dict
-        with open(project_file, 'w') as fp:
+        dicts["project"] = project_dict
+        dicts["objects"] = object_dict
+        with open(project_file, "w") as fp:
             json.dump(dicts, fp, indent=4)
         self.msg_success.emit("Tool specification removed")
 
@@ -1520,7 +1563,7 @@ class ToolboxUI(QMainWindow):
         item_dump = json.dumps(serialized_items)
         clipboard = QApplication.clipboard()
         data = QMimeData()
-        data.setData("application/vnd.spinetoolbox.ProjectItem", QByteArray(item_dump.encode('utf-8')))
+        data.setData("application/vnd.spinetoolbox.ProjectItem", QByteArray(item_dump.encode("utf-8")))
         clipboard.setMimeData(data)
 
     @Slot()

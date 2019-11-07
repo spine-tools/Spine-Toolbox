@@ -268,10 +268,6 @@ class SettingsWidget(QWidget):
             self.ui.checkBox_commit_at_exit.setCheckState(Qt.Checked)
         if sticky_selection == "true":
             self.ui.checkBox_graph_view_sticky_selection.setCheckState(Qt.Checked)
-        proj_dir = ""  # Unused. Save/read this using QSettings, if we want to change the projects dir at some point
-        if not proj_dir:
-            proj_dir = DEFAULT_PROJECT_DIR
-        self.ui.lineEdit_project_dir.setText(proj_dir)
         self.ui.lineEdit_gams_path.setText(gams_path)
         if use_embedded_julia == "2":
             self.ui.checkBox_use_embedded_julia.setCheckState(Qt.Checked)

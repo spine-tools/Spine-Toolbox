@@ -22,7 +22,7 @@ import json
 from PySide2.QtCore import Slot
 from PySide2.QtWidgets import QMessageBox
 from .metaobject import MetaObject
-from .helpers import project_dir, create_dir, copy_dir
+from .helpers import DEFAULT_PROJECT_DIR, create_dir, copy_dir
 from .tool_specifications import JuliaTool, PythonTool, GAMSTool, ExecutableTool
 from .config import DEFAULT_WORK_DIR, INVALID_CHARS
 from .executioner import DirectedGraphHandler, ExecutionInstance
@@ -52,50 +52,38 @@ class SpineToolboxProject(MetaObject):
         self._n_graphs = 0
         self._executed_graph_index = 0
         self._invalid_graphs = list()
+        self.path = None  # Old style projects initialize this. Not in use with new style projects
+        self.filename = None
+        self.dirty = False  # TODO: Indicates if project has changed since loading
         if location == "":
             self.init_old_style_project(work_dir, ext)
         else:
-            self.project_dir = location
-            self.project_conf_dir = os.path.abspath(os.path.join(self.project_dir, ".spinetoolbox"))
-            self.project_items_dir = os.path.abspath(os.path.join(self.project_conf_dir, "items"))
-            self.project_filename = "project.proj"  # Project file
-            self.project_file = os.path.abspath(os.path.join(self.project_conf_dir, self.project_filename))
-            self.dirty = False  # TODO: Indicates if project has changed since loading
-            # Make project, project conf, and items directories
-            try:
-                create_dir(self.project_dir)
-            except OSError:
-                self._toolbox.msg_error.emit("Creating directory {0} failed".format(self.project_dir))
-            try:
-                create_dir(self.project_conf_dir)
-            except OSError:
-                self._toolbox.msg_error.emit("Creating directory {0} failed".format(self.project_dir))
-            try:
-                create_dir(self.project_items_dir)
-            except OSError:
-                self._toolbox.msg_error.emit("Creating directory {0} failed".format(self.project_dir))
-            # Make work directory
-            if not work_dir:
-                self.work_dir = DEFAULT_WORK_DIR
-            else:
-                self.work_dir = work_dir
-            try:
-                create_dir(self.work_dir)
-            except OSError:
-                self._toolbox.msg_error.emit(
-                    "[OSError] Creating work directory {0} failed. Check permissions.".format(self.work_dir)
-                )
+            self.project_dir = None
+            self.project_conf_dir = None
+            self.project_items_dir = None
+            self.project_filename = None
+            self.project_file = None
+            self.work_dir = None
+            if not self.__create_project_structure(location):
+                self._toolbox.msg_error.emit("Creating project directory "
+                                             "structure to <b>{0}</b> failed"
+                                             .format(location))
+            if not self.create_work_directory(DEFAULT_WORK_DIR):
+                self._toolbox.msg_error.emit("Creating work directory failed".format(self.project_dir))
+
+    def connect_signals(self):
+        """Connect signals to slots."""
+        self.dag_handler.dag_simulation_requested.connect(self.simulate_dag_execution)
 
     def init_old_style_project(self, work_dir, ext):
-        """Create project dir and project file the old fashioned way."""
-        self.project_dir = os.path.join(project_dir(self._qsettings), self.short_name)
+        """Initialize project from the old .proj file."""
+        self.project_dir = os.path.join(DEFAULT_PROJECT_DIR, self.short_name)
         if not work_dir:
             self.work_dir = DEFAULT_WORK_DIR
         else:
             self.work_dir = work_dir
         self.filename = self.short_name + ext
-        self.path = os.path.join(project_dir(self._qsettings), self.filename)
-        self.dirty = False  # TODO: Indicates if project has changed since loading
+        self.path = os.path.join(DEFAULT_PROJECT_DIR, self.filename)
         # Make project directory
         try:
             create_dir(self.project_dir)
@@ -111,9 +99,55 @@ class SpineToolboxProject(MetaObject):
                 "[OSError] Creating work directory {0} failed. Check permissions.".format(self.work_dir)
             )
 
-    def connect_signals(self):
-        """Connect signals to slots."""
-        self.dag_handler.dag_simulation_requested.connect(self.simulate_dag_execution)
+    def _create_project_structure(self, directory):
+        """Makes the given directory a Spine Toolbox project directory.
+        Creates directories and files that are common to all projects.
+
+        Args:
+            directory (str): Abs. path to a directory that should be made into a project directory
+        """
+        self.project_dir = directory
+        self.project_conf_dir = os.path.abspath(os.path.join(self.project_dir, ".spinetoolbox"))
+        self.project_items_dir = os.path.abspath(os.path.join(self.project_conf_dir, "items"))
+        self.project_filename = "project.json"  # Project file
+        self.project_file = os.path.abspath(os.path.join(self.project_conf_dir, self.project_filename))
+        self.path = None
+        self.filename = None
+        try:
+            create_dir(self.project_dir)  # Make project directory
+        except OSError:
+            self._toolbox.msg_error.emit("Creating directory {0} failed".format(self.project_dir))
+            return False
+        try:
+            create_dir(self.project_conf_dir)  # Make project conf directory
+        except OSError:
+            self._toolbox.msg_error.emit("Creating directory {0} failed".format(self.project_dir))
+            return False
+        try:
+            create_dir(self.project_items_dir)  # Make project items directory
+        except OSError:
+            self._toolbox.msg_error.emit("Creating directory {0} failed".format(self.project_dir))
+            return False
+        return True
+
+    def make_work_directory(self, work_dir=None):
+        """Creates work directory.
+
+        Args:
+            work_dir (str): Absolute path to a directory that should be created for a work directory
+        """
+        if not work_dir:
+            self.work_dir = DEFAULT_WORK_DIR
+        else:
+            self.work_dir = work_dir
+        try:
+            create_dir(self.work_dir)
+        except OSError:
+            self._toolbox.msg_error.emit(
+                "[OSError] Creating work directory {0} failed. Check permissions.".format(self.work_dir)
+            )
+            return False
+        return True
 
     def change_name(self, name):
         """Changes project name and updates project dir and save file name.
@@ -123,7 +157,7 @@ class SpineToolboxProject(MetaObject):
         """
         super().set_name(name)
         # Update project dir instance variable
-        self.project_dir = os.path.join(project_dir(self._qsettings), self.short_name)
+        self.project_dir = os.path.join(DEFAULT_PROJECT_DIR, self.short_name)
         # Update file name and path
         self.change_filename(self.short_name + ".proj")
 
@@ -134,7 +168,7 @@ class SpineToolboxProject(MetaObject):
             new_filename (str): Filename used in saving the project. No full path. Example 'project.proj'
         """
         self.filename = new_filename
-        self.path = os.path.join(project_dir(self._qsettings), self.filename)
+        self.path = os.path.join(DEFAULT_PROJECT_DIR, self.filename)
 
     def change_work_dir(self, new_work_path):
         """Change project work directory.
@@ -175,7 +209,7 @@ class SpineToolboxProject(MetaObject):
             QMessageBox.information(self._toolbox, "Invalid characters", msg)
             return False
         # Check that the new project name directory is not taken
-        projects_path = project_dir(self._qsettings)  # Path to directory where project files (.proj) are
+        projects_path = DEFAULT_PROJECT_DIR  # Path to directory where project files (.proj) are
         new_project_dir = os.path.join(projects_path, new_short_name)  # New project directory
         taken_dirs = list()
         dir_contents = [os.path.join(projects_path, x) for x in os.listdir(projects_path)]
@@ -195,12 +229,18 @@ class SpineToolboxProject(MetaObject):
         self.change_name(name)
         return True
 
-    def save(self, tool_def_paths):
+    def save(self, tool_def_paths, directory=None):
         """Collect project information and objects
         into a dictionary and write to a JSON file.
 
         Args:
             tool_def_paths (list): List of paths to tool definition files
+            directory (str): Abs. path to project directory. Used
+            when converting old style projects to new style, and
+            when project is saved to a new location (Save as...)
+
+        Returns:
+            bool: True or False depending on success
         """
         # Clear dictionary
         project_dict = dict()  # Dictionary for storing project info
@@ -243,11 +283,15 @@ class SpineToolboxProject(MetaObject):
             category_dict = items_dict[category] = dict()
             for item in self._toolbox.project_item_model.items(category):
                 category_dict[item.name] = item.item_dict()
-        # Save project to file
+        # Write project on disk
         saved_dict = dict(project=project_dict, objects=items_dict)
+        if directory:
+            if not self._create_project_structure(directory):
+                return False
         # Write into JSON file
         with open(self.project_file, 'w') as fp:
             json.dump(saved_dict, fp, indent=4)
+        return True
 
     def load(self, objects_dict):
         """Populate project item model with items loaded from project file.
