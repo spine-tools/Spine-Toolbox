@@ -22,6 +22,7 @@ import logging
 import sys
 from PySide2.QtWidgets import QApplication
 from PySide2.QtCore import QItemSelectionModel
+import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
 from spinetoolbox.spine_db_manager import SpineDBManager
 from spinetoolbox.spine_db_signaller import SpineDBSignaller
 from spinetoolbox.widgets.tree_view_widget import TreeViewForm

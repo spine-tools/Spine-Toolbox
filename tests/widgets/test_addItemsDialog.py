@@ -22,6 +22,7 @@ import logging
 import os
 import sys
 from PySide2.QtWidgets import QApplication
+import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
 from spinetoolbox.widgets.tree_view_widget import TreeViewForm
 from spinetoolbox.widgets.add_db_items_dialogs import AddObjectClassesDialog
 
@@ -97,6 +98,8 @@ class TestAddItemsDialog(unittest.TestCase):
     def test_do_not_add_object_classes_with_invalid_db(self):
         """Test object classes aren't added when the database is not correct."""
         dialog = AddObjectClassesDialog(self.tree_view_form, self.mock_db_mngr, self.mock_db_map)
+        self.tree_view_form.msg_error = mock.NonCallableMagicMock()
+        self.tree_view_form.msg_error.attach_mock(mock.MagicMock(), "emit")
         model = dialog.model
         header = model.header
         model.fetchMore()
@@ -106,6 +109,7 @@ class TestAddItemsDialog(unittest.TestCase):
         model.batch_set_data(indexes, values)
         dialog.accept()
         self.mock_db_mngr.add_object_classes.assert_not_called()
+        self.tree_view_form.msg_error.emit.assert_called_with("Invalid database 'gibberish' at row 1")
 
 
 if __name__ == '__main__':
