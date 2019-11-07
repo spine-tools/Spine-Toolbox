@@ -31,16 +31,16 @@ from .executioner import DirectedGraphHandler, ExecutionInstance
 class SpineToolboxProject(MetaObject):
     """Class for Spine Toolbox projects."""
 
-    def __init__(self, toolbox, name, description, work_dir=None, ext='.proj', location=""):
+    def __init__(self, toolbox, name, description, base_dir="", work_dir=None, is_old_style=False):
         """
 
         Args:
             toolbox (ToolboxUI): toolbox of this project
             name (str): Project name
             description (str): Project description
+            base_dir (str): If this is given, create a new style project
             work_dir (str): Project work directory
-            ext (str): Project save file extension(.proj)
-            location (str): If this is given, create a new style project
+            is_old_style (bool): True if opening a project from .proj file, False otherwise
         """
         super().__init__(name, description)
         self._toolbox = toolbox
@@ -54,9 +54,10 @@ class SpineToolboxProject(MetaObject):
         self._invalid_graphs = list()
         self.path = None  # Old style projects initialize this. Not in use with new style projects
         self.filename = None
+        self.is_old_style = is_old_style  # TODO: This is dumb. Make it smarter.
         self.dirty = False  # TODO: Indicates if project has changed since loading
-        if location == "":
-            self.init_old_style_project(work_dir, ext)
+        if self.is_old_style:
+            self._init_old_style_project(work_dir)
         else:
             self.project_dir = None
             self.project_conf_dir = None
@@ -64,25 +65,21 @@ class SpineToolboxProject(MetaObject):
             self.project_filename = None
             self.project_file = None
             self.work_dir = None
-            if not self.__create_project_structure(location):
+            if not self._create_project_structure(base_dir):
                 self._toolbox.msg_error.emit("Creating project directory "
                                              "structure to <b>{0}</b> failed"
-                                             .format(location))
-            if not self.create_work_directory(DEFAULT_WORK_DIR):
-                self._toolbox.msg_error.emit("Creating work directory failed".format(self.project_dir))
+                                             .format(base_dir))
+        if not self._create_work_directory(DEFAULT_WORK_DIR):
+            self._toolbox.msg_error.emit("Creating work directory failed")
 
     def connect_signals(self):
         """Connect signals to slots."""
         self.dag_handler.dag_simulation_requested.connect(self.simulate_dag_execution)
 
-    def init_old_style_project(self, work_dir, ext):
+    def _init_old_style_project(self, work_dir):
         """Initialize project from the old .proj file."""
         self.project_dir = os.path.join(DEFAULT_PROJECT_DIR, self.short_name)
-        if not work_dir:
-            self.work_dir = DEFAULT_WORK_DIR
-        else:
-            self.work_dir = work_dir
-        self.filename = self.short_name + ext
+        self.filename = self.short_name + ".proj"
         self.path = os.path.join(DEFAULT_PROJECT_DIR, self.filename)
         # Make project directory
         try:
@@ -90,13 +87,6 @@ class SpineToolboxProject(MetaObject):
         except OSError:
             self._toolbox.msg_error.emit(
                 "[OSError] Creating project directory {0} failed. Check permissions.".format(self.project_dir)
-            )
-        # Make work directory
-        try:
-            create_dir(self.work_dir)
-        except OSError:
-            self._toolbox.msg_error.emit(
-                "[OSError] Creating work directory {0} failed. Check permissions.".format(self.work_dir)
             )
 
     def _create_project_structure(self, directory):
@@ -106,6 +96,7 @@ class SpineToolboxProject(MetaObject):
         Args:
             directory (str): Abs. path to a directory that should be made into a project directory
         """
+        self.is_old_style = False  # This is dumb...
         self.project_dir = directory
         self.project_conf_dir = os.path.abspath(os.path.join(self.project_dir, ".spinetoolbox"))
         self.project_items_dir = os.path.abspath(os.path.join(self.project_conf_dir, "items"))
@@ -130,7 +121,7 @@ class SpineToolboxProject(MetaObject):
             return False
         return True
 
-    def make_work_directory(self, work_dir=None):
+    def _create_work_directory(self, work_dir=None):
         """Creates work directory.
 
         Args:

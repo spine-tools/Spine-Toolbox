@@ -49,7 +49,7 @@ class OpenProjectDialog(QDialog):
         self.go_documents_action = QAction(self)
         self.go_desktop_action = QAction(self)
         self.set_keyboard_shortcuts()
-        self.selection = ""
+        self.selected_path = ""
         self.file_model = QFileSystemModel()
         self.file_model.setFilter(QDir.AllDirs | QDir.Files | QDir.NoDotAndDotDot)
         self.file_model.setNameFilters(["*.proj"])
@@ -114,7 +114,7 @@ class OpenProjectDialog(QDialog):
             return
         selected_path = self.file_model.filePath(index)
         self.ui.lineEdit_current_path.setText(selected_path)
-        self.selection = selected_path
+        self.selected_path = selected_path
 
     def scroll_to_shortcut(self):
         self.ui.treeView_file_system.collapseAll()
@@ -124,8 +124,9 @@ class OpenProjectDialog(QDialog):
         self.ui.treeView_file_system.resizeColumnToContents(0)
         self.set_selected_path(index)
 
-    def selected_file(self):
-        return self.selection
+    def selection(self):
+        """Returns the selected path from dialog."""
+        return self.selected_path
 
     @Slot(bool, name="go_root")
     def go_root(self, checked=False):

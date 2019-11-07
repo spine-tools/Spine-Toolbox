@@ -244,25 +244,30 @@ class ToolboxUI(QMainWindow):
         when app was closed (if enabled in Settings) or starts the app without a project.
         """
         open_previous_project = int(self._qsettings.value("appSettings/openPreviousProject", defaultValue="0"))
-        if open_previous_project != 2:  # 2: Qt.Checked, ie. open_previous_project==True
-            p = os.path.join(DOCUMENTATION_PATH, "getting_started.html")
-            getting_started_anchor = (
+        p = os.path.join(DOCUMENTATION_PATH, "getting_started.html")
+        getting_started_anchor = (
                 "<a style='color:#99CCFF;' title='" + p + "' href='file:///" + p + "'>Getting Started</a>"
-            )
-            self.msg.emit(
-                "Welcome to Spine Toolbox! If you need help, please read the {0} guide.".format(getting_started_anchor)
-            )
+        )
+        wlcme_msg = "Welcome to Spine Toolbox! If you need help, please read the {0} guide."\
+            .format(getting_started_anchor)
+        if open_previous_project != 2:  # 2: Qt.Checked, ie. open_previous_project==True
+            self.msg.emit(wlcme_msg)
             return
-        # Get path to previous project file
-        project_file_path = self._qsettings.value("appSettings/previousProject", defaultValue="")
-        if not project_file_path:
+        # Get previous project (directory)
+        previous_project = self._qsettings.value("appSettings/previousProject", defaultValue="")
+        if not previous_project:
             return
-        if not os.path.isfile(project_file_path):
-            msg = "Could not load previous project. File '{0}' not found.".format(project_file_path)
-            self.ui.statusbar.showMessage(msg, 10000)
+        if os.path.isfile(previous_project) and previous_project.endswith(".proj"):
+            # Previous project was a .proj file -> Show welcome message instead
+            self.msg.emit(wlcme_msg)
             return
-        if not self.open_project(project_file_path, clear_event_log=False):
-            self.msg_error.emit("Loading project file <b>{0}</b> failed".format(project_file_path))
+        elif not os.path.isdir(previous_project):
+            self.ui.statusbar.showMessage("Opening previous project failed", 10000)
+            self.msg_error.emit("Cannot open previous project. Directory <b>{0}</b> may have been moved."
+                                .format(previous_project))
+            return
+        if not self.open_project(previous_project, clear_event_log=False):
+            self.msg_error.emit("Opening previous project <b>{0}</b> failed".format(previous_project))
         return
 
     @Slot(name="new_project")
@@ -280,7 +285,7 @@ class ToolboxUI(QMainWindow):
             location (str): Path to project directory
         """
         self.clear_ui()
-        self._project = SpineToolboxProject(self, name, description, location=location)
+        self._project = SpineToolboxProject(self, name, description, base_dir=location)
         self._project.connect_signals()
         self.init_models(tool_specification_paths=list())  # Start project with no tool specifications
         self.setWindowTitle("Spine Toolbox    -- {} --".format(self._project.name))
@@ -291,13 +296,13 @@ class ToolboxUI(QMainWindow):
 
     # noinspection PyUnusedLocal
     @Slot(name="open_project")
-    def open_project(self, load_path=None, clear_event_log=True):
+    def open_project(self, load_dir=None, clear_event_log=True):
         """Opens project from a selected directory.
 
         Args:
-            load_path (str): Path to project save file. If default value is used,
+            load_dir (str): Path to project base directory. If default value is used,
             a file explorer dialog is opened where the user can select the
-            project to load.
+            project to open.
             clear_event_log (bool): True clears Event Log, False does not
 
         Returns:
@@ -305,25 +310,32 @@ class ToolboxUI(QMainWindow):
         """
         tool_specification_paths = list()
         connections = list()
-        if not load_path:
+        old_style_project = False
+        if not load_dir:
             dialog = OpenProjectDialog(self)
             retval = dialog.exec_()
             if retval == 0:  # Canceled or closed
                 return False
-            load_path = dialog.selected_file()
-            if load_path.endswith(".proj"):
+            load_dir = dialog.selection()
+            if os.path.isfile(load_dir) and load_dir.endswith(".proj"):
                 # Load project from .proj file (old style project)
-                self.msg.emit("Loading old style project")
-            elif not os.path.isdir(load_path):
-                self.msg_error.emit("Selected path '{0}' is not a directory".format(load_path))
-                return False
+                load_path = load_dir  # already a full file path
+                old_style_project = True
+            elif os.path.isdir(load_dir):
+                load_path = os.path.abspath(os.path.join(load_dir, ".spinetoolbox", "project.json"))
+                if not os.path.isfile(load_path):
+                    self.msg_error.emit("<b>{0}</b> is not a valid Spine Toolbox project directory."
+                                        "<br/>File <b>{1}</b> not found.".format(load_dir, load_path))
+                    return False
             else:
-                # Load project from directory
-                load_path = os.path.abspath(os.path.join(load_path, ".spinetoolbox", "project.json"))
-        # Load project from JSON file
-        if not os.path.isfile(load_path):
-            self.msg_error.emit("File <b>{0}</b> not found".format(load_path))
-            return False
+                self.msg_error.emit("Selected path <b>{0}</b> is not a directory".format(load_dir))
+                return False
+        else:
+            load_path = os.path.abspath(os.path.join(load_dir, ".spinetoolbox", "project.json"))
+            if not os.path.isfile(load_path):
+                self.msg_error.emit("<b>{0}</b> is not a valid Spine Toolbox project directory."
+                                    "<br/>File <b>{1}</b> not found.".format(load_dir, load_path))
+                return False
         try:
             with open(load_path, "r") as fh:
                 try:
@@ -356,7 +368,8 @@ class ToolboxUI(QMainWindow):
         except KeyError:
             self.msg_warning.emit("No connections found in project file")
         # Create project
-        self._project = SpineToolboxProject(self, proj_name, proj_desc, work_dir)
+        self._project = SpineToolboxProject(self, proj_name, proj_desc,
+                                            base_dir=load_dir, work_dir=work_dir, is_old_style=old_style_project)
         # Init models and views
         self.setWindowTitle("Spine Toolbox    -- {} --".format(self._project.name))
         # Clear QTextBrowsers
@@ -398,7 +411,7 @@ class ToolboxUI(QMainWindow):
         tool_specifications = list()
         for i in range(self.tool_specification_model.rowCount()):
             tool_specifications.append(self.tool_specification_model.tool_specification(i).get_def_path())
-        if self._project.path:  # This happens when an old style project is in use
+        if self._project.is_old_style:
             # Ask the user for a directory where to save the project
             # noinspection PyCallByClass, PyArgumentList
             answer = QFileDialog.getExistingDirectory(
@@ -1490,8 +1503,10 @@ class ToolboxUI(QMainWindow):
         # Save settings
         if self._project is None:
             self._qsettings.setValue("appSettings/previousProject", "")
+        elif self._project.is_old_style:
+            self._qsettings.setValue("appSettings/previousProject", "")
         else:
-            self._qsettings.setValue("appSettings/previousProject", self._project.project_file)
+            self._qsettings.setValue("appSettings/previousProject", self._project.project_dir)
             # self.update_recent_projects()
             # Show save project prompt
         self._qsettings.setValue("mainWindow/windowSize", self.size())
