@@ -58,7 +58,7 @@ from .config import SPINE_TOOLBOX_VERSION, STATUSBAR_SS, TEXTBROWSER_SS, MAINWIN
 from .helpers import project_dir, get_datetime, erase_dir, busy_effect, set_taskbar_icon, supported_img_formats
 from .project_item import RootProjectItem, CategoryProjectItem
 from .project_items import data_store, data_connection, exporter, tool, view, importer
-from .live_tutorial import LiveTutorial
+from .spinetoolbox_live_tutorial import SpineToolboxLiveTutorial
 
 
 class ToolboxUI(QMainWindow):
@@ -72,7 +72,6 @@ class ToolboxUI(QMainWindow):
     msg_proc = Signal(str, name="msg_proc")
     msg_proc_error = Signal(str, name="msg_proc_error")
     tool_specification_model_changed = Signal("QVariant", name="tool_specification_model_changed")
-    project_item_added = Signal(str, float, float)
 
     def __init__(self):
         """ Initialize application and main window."""
@@ -116,7 +115,7 @@ class ToolboxUI(QMainWindow):
         self.add_tool_specification_popup_menu = None
         self.zoom_widget_action = None
         self.recent_projects_menu = RecentProjectsPopupMenu(self)
-        self.live_tutorial = LiveTutorial(self)
+        self.live_tutorial = SpineToolboxLiveTutorial(self)
         # Make and initialize toolbars
         self.item_toolbar = toolbars.ItemToolBar(self)
         self.addToolBar(Qt.TopToolBarArea, self.item_toolbar)
@@ -188,8 +187,6 @@ class ToolboxUI(QMainWindow):
         self.zoom_widget_action.minus_pressed.connect(self._handle_zoom_minus_pressed)
         self.zoom_widget_action.plus_pressed.connect(self._handle_zoom_plus_pressed)
         self.zoom_widget_action.reset_pressed.connect(self._handle_zoom_reset_pressed)
-        # Add project items
-        self.project_item_added.connect(self.show_add_project_item_form)
 
     def parse_project_item_modules(self):
         """Collects attributes from project item modules into a dict.
@@ -1106,7 +1103,6 @@ class ToolboxUI(QMainWindow):
         # noinspection PyArgumentList
         QApplication.processEvents()
 
-    @Slot(str, float, float)
     def show_add_project_item_form(self, item_category, x=0, y=0):
         """Show add project item widget."""
         if not self._project:
