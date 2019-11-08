@@ -100,16 +100,19 @@ class ProjectItemModelContextMenu(CustomContextMenu):
 
 
 class ProjectItemContextMenu(CustomContextMenu):
-    """Context menu for project items in the QTreeView and in the QGraphicsView.
-
-    Attributes:
-        parent (QWidget): Parent for menu widget (ToolboxUI)
-        position (QPoint): Position on screen
-    """
+    """Context menu for project items in the Project tree widget and in the Design View."""
 
     def __init__(self, parent, position):
-        """Class constructor."""
+        """
+        Args:
+            parent (QWidget): Parent for menu widget (ToolboxUI)
+            position (QPoint): Position on screen
+        """
         super().__init__(parent, position)
+        self.add_action("Copy")
+        self.add_action("Paste")
+        self.add_action("Duplicate")
+        self.addSeparator()
         self.add_action("Open directory...")
         self.addSeparator()
         self.add_action("Rename")
@@ -483,7 +486,6 @@ class RecentProjectsPopupMenu(CustomPopupMenu):
 
     def __init__(self, parent):
         """
-
         Args:
             parent (QWidget): Parent widget of this menu (ToolboxUI)
         """

@@ -163,9 +163,9 @@ class ToolboxUI(QMainWindow):
         self.ui.actionAbout.triggered.connect(self.show_about)
         self.ui.actionAbout_Qt.triggered.connect(lambda: QApplication.aboutQt())  # pylint: disable=unnecessary-lambda
         self.ui.actionRestore_Dock_Widgets.triggered.connect(self.restore_dock_widgets)
-        self.ui.actionCopy.triggered.connect(self._project_item_to_clipboard)
-        self.ui.actionPaste.triggered.connect(self._project_item_from_clipboard)
-        self.ui.actionDuplicate.triggered.connect(self._duplicate_project_item)
+        self.ui.actionCopy.triggered.connect(self.project_item_to_clipboard)
+        self.ui.actionPaste.triggered.connect(self.project_item_from_clipboard)
+        self.ui.actionDuplicate.triggered.connect(self.duplicate_project_item)
         # Debug QActions
         self.show_properties_tabbar.triggered.connect(self.toggle_properties_tabbar_visibility)
         self.show_supported_img_formats.triggered.connect(supported_img_formats)  # in helpers.py
@@ -1499,7 +1499,7 @@ class ToolboxUI(QMainWindow):
             self._project.add_project_items(category_name, *item_dicts, verbosity=False)
 
     @Slot()
-    def _project_item_to_clipboard(self):
+    def project_item_to_clipboard(self):
         """Copies the selected project items to system's clipboard."""
         serialized_items = self._serialize_selected_items()
         if not serialized_items:
@@ -1511,7 +1511,7 @@ class ToolboxUI(QMainWindow):
         clipboard.setMimeData(data)
 
     @Slot()
-    def _project_item_from_clipboard(self):
+    def project_item_from_clipboard(self):
         """Adds project items in system's clipboard to the current project."""
         clipboard = QApplication.clipboard()
         mime_data = clipboard.mimeData()
@@ -1523,7 +1523,7 @@ class ToolboxUI(QMainWindow):
         self._deserialize_items(serialized_items)
 
     @Slot()
-    def _duplicate_project_item(self):
+    def duplicate_project_item(self):
         """Duplicates the selected project items."""
         serialized_items = self._serialize_selected_items()
         self._deserialize_items(serialized_items)
@@ -1566,12 +1566,12 @@ class ToolboxUI(QMainWindow):
 
         self.ui.menuEdit.insertSeparator(self.ui.menuEdit.actions()[0])
         duplicate_action = prepend_to_edit_menu(
-            "Duplicate", [QKeySequence(Qt.CTRL + Qt.Key_D)], lambda checked: self._duplicate_project_item()
+            "Duplicate", [QKeySequence(Qt.CTRL + Qt.Key_D)], lambda checked: self.duplicate_project_item()
         )
         paste_action = prepend_to_edit_menu(
-            "Paste", QKeySequence.Paste, lambda checked: self._project_item_from_clipboard()
+            "Paste", QKeySequence.Paste, lambda checked: self.project_item_from_clipboard()
         )
-        copy_action = prepend_to_edit_menu("Copy", QKeySequence.Copy, lambda checked: self._project_item_to_clipboard())
+        copy_action = prepend_to_edit_menu("Copy", QKeySequence.Copy, lambda checked: self.project_item_to_clipboard())
 
         def mirror_action_to_project_tree_view(action_to_duplicate):
             action = QAction(action_to_duplicate.text(), self.ui.treeView_project)
