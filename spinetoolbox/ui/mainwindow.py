@@ -13,7 +13,7 @@
 # Form implementation generated from reading ui file '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/mainwindow.ui',
 # licensing of '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/mainwindow.ui' applies.
 #
-# Created: Tue Nov  5 09:44:38 2019
+# Created: Wed Nov  6 15:14:09 2019
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -520,6 +520,6 @@ class Ui_MainWindow(object):
         self.actionLive_tutorial.setText(QtWidgets.QApplication.translate("MainWindow", "Live tutorial", None, -1))
         self.actionLive_tutorial.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Shift+F2", None, -1))
 
-from spinetoolbox.widgets.custom_qtextbrowser import CustomQTextBrowser
 from spinetoolbox.widgets.custom_qgraphicsviews import DesignQGraphicsView
+from spinetoolbox.widgets.custom_qtextbrowser import CustomQTextBrowser
 from spinetoolbox import resources_icons_rc
