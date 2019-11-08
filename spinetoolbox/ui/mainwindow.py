@@ -13,7 +13,7 @@
 # Form implementation generated from reading ui file '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/mainwindow.ui',
 # licensing of '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/mainwindow.ui' applies.
 #
-# Created: Wed Nov  6 15:14:09 2019
+# Created: Fri Nov  8 21:30:22 2019
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -415,7 +415,6 @@ class Ui_MainWindow(object):
         self.menuFile.addAction(self.actionQuit)
         self.menuHelp.addAction(self.actionUser_Guide)
         self.menuHelp.addAction(self.actionGetting_started)
-        self.menuHelp.addAction(self.actionLive_tutorial)
         self.menuHelp.addSeparator()
         self.menuHelp.addAction(self.actionAbout_Qt)
         self.menuHelp.addAction(self.actionAbout)

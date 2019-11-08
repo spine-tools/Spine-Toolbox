@@ -58,7 +58,6 @@ from .config import SPINE_TOOLBOX_VERSION, STATUSBAR_SS, TEXTBROWSER_SS, MAINWIN
 from .helpers import project_dir, get_datetime, erase_dir, busy_effect, set_taskbar_icon, supported_img_formats
 from .project_item import RootProjectItem, CategoryProjectItem
 from .project_items import data_store, data_connection, exporter, tool, view, importer
-from .spinetoolbox_live_tutorial import SpineToolboxLiveTutorial
 
 
 class ToolboxUI(QMainWindow):
@@ -115,7 +114,6 @@ class ToolboxUI(QMainWindow):
         self.add_tool_specification_popup_menu = None
         self.zoom_widget_action = None
         self.recent_projects_menu = RecentProjectsPopupMenu(self)
-        self.live_tutorial = SpineToolboxLiveTutorial(self)
         # Make and initialize toolbars
         self.item_toolbar = toolbars.ItemToolBar(self)
         self.addToolBar(Qt.TopToolBarArea, self.item_toolbar)
@@ -164,7 +162,6 @@ class ToolboxUI(QMainWindow):
         self.ui.actionRemove_all.triggered.connect(self.remove_all_items)
         self.ui.actionUser_Guide.triggered.connect(self.show_user_guide)
         self.ui.actionGetting_started.triggered.connect(self.show_getting_started_guide)
-        self.ui.actionLive_tutorial.triggered.connect(self.show_live_tutorial)
         self.ui.actionAbout.triggered.connect(self.show_about)
         self.ui.actionAbout_Qt.triggered.connect(lambda: QApplication.aboutQt())  # pylint: disable=unnecessary-lambda
         self.ui.actionRestore_Dock_Widgets.triggered.connect(self.restore_dock_widgets)
@@ -1165,10 +1162,6 @@ class ToolboxUI(QMainWindow):
             logging.error("Failed to open editor for %s", index_url)
             self.msg_error.emit("Unable to open file <b>{0}</b>".format(getting_started_path))
 
-    @Slot(bool)
-    def show_live_tutorial(self, checked=False):
-        self.live_tutorial.show()
-
     @Slot("QPoint", name="show_item_context_menu")
     def show_item_context_menu(self, pos):
         """Context menu for project items listed in the project QTreeView.
@@ -1439,7 +1432,6 @@ class ToolboxUI(QMainWindow):
         if not exit_confirmed:
             event.ignore()
             return
-        self.live_tutorial.setFloating(True)
         # Save settings
         if self._project is None:
             self._qsettings.setValue("appSettings/previousProject", "")

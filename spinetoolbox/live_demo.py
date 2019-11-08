@@ -24,8 +24,8 @@ from .widgets.custom_qwidgets import OverlayWidget
 from .config import APPLICATION_PATH
 
 
-class LiveTutorial(QDockWidget):
-    """A widget that shows a tutorial for Spine Toolbox."""
+class LiveDemo(QDockWidget):
+    """A widget for showing live demonstrations."""
 
     _overlay_color = QColor(255, 140, 0, 128)
     _tutorial_data_path = os.path.join(APPLICATION_PATH, "../tutorial")

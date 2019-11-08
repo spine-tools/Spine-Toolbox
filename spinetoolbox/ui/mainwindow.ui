@@ -155,7 +155,6 @@
     </property>
     <addaction name="actionUser_Guide"/>
     <addaction name="actionGetting_started"/>
-    <addaction name="actionLive_tutorial"/>
     <addaction name="separator"/>
     <addaction name="actionAbout_Qt"/>
     <addaction name="actionAbout"/>

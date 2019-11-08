@@ -981,6 +981,6 @@ class GraphViewForm(DataStoreForm):
         Args:
             event (QEvent): Closing event if 'X' is clicked.
         """
-        super().closeEvent(event)
         self.live_demo.setFloating(True)
+        super().closeEvent(event)
         self.tear_down_scene()

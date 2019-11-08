@@ -13,7 +13,7 @@
 # Form implementation generated from reading ui file '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/graph_view_form.ui',
 # licensing of '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/graph_view_form.ui' applies.
 #
-# Created: Wed Nov  6 15:14:10 2019
+# Created: Fri Nov  8 21:30:23 2019
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -403,9 +403,9 @@ class Ui_MainWindow(object):
         self.actionRestore_Dock_Widgets.setText(QtWidgets.QApplication.translate("MainWindow", "Restore Dock Widgets", None, -1))
         self.actionHelp_live_demo.setText(QtWidgets.QApplication.translate("MainWindow", "Live demo", None, -1))
 
-from spinetoolbox.widgets.custom_qlistview import DragListView
-from spinetoolbox.widgets.custom_qstatusbar import NotificationStatusBar
-from spinetoolbox.widgets.custom_qgraphicsviews import GraphQGraphicsView
 from spinetoolbox.widgets.custom_qtableview import AutoFilterCopyPasteTableView
 from spinetoolbox.widgets.custom_qtreeview import StickySelectionObjectTreeView
+from spinetoolbox.widgets.custom_qgraphicsviews import GraphQGraphicsView
+from spinetoolbox.widgets.custom_qstatusbar import NotificationStatusBar
+from spinetoolbox.widgets.custom_qlistview import DragListView
 from spinetoolbox import resources_icons_rc

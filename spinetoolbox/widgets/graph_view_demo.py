@@ -19,10 +19,10 @@ Contains the GraphViewForm class.
 from random import sample
 from PySide2.QtCore import Slot, QFinalState, QState, QItemSelectionModel, QAbstractAnimation, QVariantAnimation
 from PySide2.QtGui import QColor
-from spinetoolbox.live_tutorial import LiveTutorial
+from spinetoolbox.live_demo import LiveDemo
 
 
-class GraphViewDemo(LiveTutorial):
+class GraphViewDemo(LiveDemo):
     """A widget that shows a demo for the graph view."""
 
     _overlay_color = QColor(0, 0, 255, 32)
