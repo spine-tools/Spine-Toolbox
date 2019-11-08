@@ -118,6 +118,9 @@ class View(ProjectItem):
             supports_multiple_databases (bool): True if the view supports more than one database
         """
         indexes = self._selected_indexes()
+        database_maps = self._database_maps(indexes)
+        if not database_maps:
+            return
         db_maps, databases = self._database_maps(indexes)
         # Mangle database paths to get a hashable string identifying the view window.
         view_id = ";".join(sorted(databases))
@@ -200,7 +203,7 @@ class View(ProjectItem):
             database = db_map.codename
             db_maps.append(db_map)
             databases.append(database)
-        return db_maps, databases
+        return (db_maps, databases)
 
     @staticmethod
     def _restore_existing_view_window(view_id, view_store):
