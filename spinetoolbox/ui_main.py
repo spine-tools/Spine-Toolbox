@@ -20,7 +20,9 @@ import os
 import locale
 import logging
 import json
+import numpy as np
 from PySide2.QtCore import QByteArray, QMimeData, Qt, Signal, Slot, QSettings, QUrl, SIGNAL
+from PySide2.QtGui import QCursor
 from PySide2.QtWidgets import (
     QMainWindow,
     QApplication,
@@ -1480,6 +1482,42 @@ class ToolboxUI(QMainWindow):
             category_items.append(item_dict)
         return serialized_items
 
+    def _deserialized_item_position_shifts(self, serialized_items):
+        """
+        Calculates horizontal and vertical shifts for project items being deserialized.
+
+        If the mouse cursor is on the Design view we try to place the items unders the cursor.
+        Otherwise the items will get a small shift so they don't overlap a possible item below.
+        In case the items don't fit the scene rect we clamp their coordinates within it.
+
+        Args:
+            serialized_items (dict): a dictionary of serialized items being deserialized
+        Returns:
+            a tuple of (horizontal shift, vertical shift) in scene's coordinates
+        """
+        mouse_position = self.ui.graphicsView.mapFromGlobal(QCursor.pos())
+        if self.ui.graphicsView.rect().contains(mouse_position):
+            mouse_over_design_view = self.ui.graphicsView.mapToScene(mouse_position)
+        else:
+            mouse_over_design_view = None
+        if mouse_over_design_view is not None:
+            first_item = next(iter(serialized_items.values()))[0]
+            x = first_item["x"]
+            y = first_item["y"]
+            shift_x = x - mouse_over_design_view.x()
+            shift_y = y - mouse_over_design_view.y()
+        else:
+            shift_x = -15.0
+            shift_y = -15.0
+        return shift_x, shift_y
+
+    def _set_deserialized_item_position(self, item_dict, shift_x, shift_y, scene_rect):
+        """Moves item's position by shift_x and shift_y while keeping it within the limits of scene_rect."""
+        new_x = np.clip(item_dict["x"] - shift_x, scene_rect.left(), scene_rect.right())
+        new_y = np.clip(item_dict["y"] - shift_y, scene_rect.top(), scene_rect.bottom())
+        item_dict["x"] = new_x
+        item_dict["y"] = new_y
+
     def _deserialize_items(self, serialized_items):
         """
         Deserializes project items from a dictionary and adds them to the current project.
@@ -1489,14 +1527,19 @@ class ToolboxUI(QMainWindow):
         """
         if self._project is None:
             return
+        scene = self.ui.graphicsView.scene()
+        scene.clearSelection()
+        shift_x, shift_y = self._deserialized_item_position_shifts(serialized_items)
+        scene_rect = scene.sceneRect()
         for category_name, item_dicts in serialized_items.items():
             for item in item_dicts:
                 name = item["name"]
                 if self.project_item_model.find_item(name) is not None:
                     new_name = self.propose_item_name(name)
                     item["name"] = new_name
+                self._set_deserialized_item_position(item, shift_x, shift_y, scene_rect)
                 item.pop("short name")
-            self._project.add_project_items(category_name, *item_dicts, verbosity=False)
+            self._project.add_project_items(category_name, *item_dicts, set_selected=True, verbosity=False)
 
     @Slot()
     def project_item_to_clipboard(self):

@@ -12,7 +12,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
   executed
 - Main Window menu 'File -> Open recent'. Shortcut for opening a recent project.
 - A new project item *Exporter* allows a database contained in a *Data Store* to be exported as GAMS `.gdx` file.
-- It is now possible to copy, paste and duplicate project items on the Design View.
+- It is now possible to copy and paste project items for example between projects.
+- It is now possible to duplicate project items.
 - Changes made in the tree view are also seen in the graph view and viceversa.
 - New Setting: *Sticky selection in Graph View*. Enables users to select if they want to use multi-selection or 
   single selection in the Graph view Object tree when selecting items with the **left-mouse button**.
