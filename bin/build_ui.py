@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 
 import os.path
+import argparse
+import datetime as dt
 from append_license import append_license
 
 
@@ -32,18 +34,27 @@ def fix_resources_imports(path):
         out_file.writelines(lines)
 
 
-print("""<Script for Building Spine Toolbox GUI>
+print(
+    """<Script for Building Spine Toolbox GUI>
 Copyright (C) <2017-2019>  <Spine project consortium>
 This program comes with ABSOLUTELY NO WARRANTY; for details see 'about'
 box in the application. This is free software, and you are welcome to
 redistribute it under certain conditions; See files COPYING and
-COPYING.LESSER for details.""")
+COPYING.LESSER for details."""
+)
+parser = argparse.ArgumentParser()
+parser.add_argument("-m", "--minutes", type=int, help="only build files changed in the last m minutes")
+args = parser.parse_args()
+start = dt.datetime.now() - dt.timedelta(minutes=args.minutes) if args.minutes else None
 script_dir = os.path.dirname(os.path.realpath(__file__))
 project_source_dir = os.path.join(script_dir, os.path.pardir, "spinetoolbox")
 ui_dirs = find_ui_dirs(project_source_dir)
 for ui_dir in ui_dirs:
     for entry in os.scandir(ui_dir):
         if entry.is_file():
+            modified = dt.datetime.fromtimestamp(os.stat(entry.path).st_mtime)
+            if start and modified < start:
+                continue
             base, extension = os.path.splitext(entry.name)
             if extension == ".ui":
                 output_name = base + ".py"
@@ -56,6 +67,9 @@ for ui_dir in ui_dirs:
 resources_dir = os.path.join(project_source_dir, "ui", "resources")
 for entry in os.scandir(resources_dir):
     if entry.is_file():
+        modified = dt.datetime.fromtimestamp(os.stat(entry.path).st_mtime)
+        if start and modified < start:
+            continue
         base, extension = os.path.splitext(entry.name)
         if extension == ".qrc":
             output_name = base + "_rc.py"
