@@ -845,6 +845,11 @@
    <header>spinetoolbox/widgets/custom_qtableview.h</header>
   </customwidget>
   <customwidget>
+   <class>NotificationStatusBar</class>
+   <extends>QStatusBar</extends>
+   <header>spinetoolbox/widgets/custom_qstatusbar.h</header>
+  </customwidget>
+  <customwidget>
    <class>GraphQGraphicsView</class>
    <extends>QGraphicsView</extends>
    <header>spinetoolbox/widgets/custom_qgraphicsviews.h</header>
@@ -858,11 +863,6 @@
    <class>StickySelectionObjectTreeView</class>
    <extends>QTreeView</extends>
    <header>spinetoolbox/widgets/custom_qtreeview.h</header>
-  </customwidget>
-  <customwidget>
-   <class>NotificationStatusBar</class>
-   <extends>QStatusBar</extends>
-   <header>spinetoolbox/widgets/custom_qstatusbar.h</header>
   </customwidget>
  </customwidgets>
  <resources>
