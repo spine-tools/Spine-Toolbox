@@ -1009,7 +1009,7 @@ class SpineDBManager(QObject):
         for db_map, data in db_map_cascading_data.items():
             ids = {x["id"] for x in data}
             self.get_parameter_definitions(db_map, ids=ids)
-        self.do_update_parameter_definitions(db_map_cascading_data)
+        self._parameter_definitions_updated.emit(db_map_cascading_data)
 
     @Slot("QVariant", name="cascade_refresh_parameter_definitions_by_value_list")
     def cascade_refresh_parameter_definitions_by_value_list(self, db_map_data):
@@ -1024,7 +1024,7 @@ class SpineDBManager(QObject):
         for db_map, data in db_map_cascading_data.items():
             ids = {x["id"] for x in data}
             self.get_parameter_definitions(db_map, ids=ids)
-        self.do_update_parameter_definitions(db_map_cascading_data)
+        self._parameter_definitions_updated.emit(db_map_cascading_data)
 
     @Slot("QVariant", name="cascade_refresh_parameter_definitions_by_tag")
     def cascade_refresh_parameter_definitions_by_tag(self, db_map_data):
@@ -1039,7 +1039,7 @@ class SpineDBManager(QObject):
         for db_map, data in db_map_cascading_data.items():
             ids = {x["id"] for x in data}
             self.get_parameter_definitions(db_map, ids=ids)
-        self.do_update_parameter_definitions(db_map_cascading_data)
+        self._parameter_definitions_updated.emit(db_map_cascading_data)
 
     @Slot("QVariant", name="cascade_refresh_parameter_values_by_entity_class")
     def cascade_refresh_parameter_values_by_entity_class(self, db_map_data):
@@ -1054,7 +1054,7 @@ class SpineDBManager(QObject):
         for db_map, data in db_map_cascading_data.items():
             ids = {x["id"] for x in data}
             self.get_parameter_values(db_map, ids=ids)
-        self.parameter_values_updated.emit(db_map_cascading_data)
+        self._parameter_values_updated.emit(db_map_cascading_data)
 
     @Slot("QVariant", name="cascade_refresh_parameter_values_by_entity")
     def cascade_refresh_parameter_values_by_entity(self, db_map_data):
@@ -1069,7 +1069,7 @@ class SpineDBManager(QObject):
         for db_map, data in db_map_cascading_data.items():
             ids = {x["id"] for x in data}
             self.get_parameter_values(db_map, ids=ids)
-        self.parameter_values_updated.emit(db_map_cascading_data)
+        self._parameter_values_updated.emit(db_map_cascading_data)
 
     @Slot("QVariant", name="cascade_refresh_parameter_values_by_definition")
     def cascade_refresh_parameter_values_by_definition(self, db_map_data):
@@ -1084,7 +1084,7 @@ class SpineDBManager(QObject):
         for db_map, data in db_map_cascading_data.items():
             ids = {x["id"] for x in data}
             self.get_parameter_values(db_map, ids=ids)
-        self.parameter_values_updated.emit(db_map_cascading_data)
+        self._parameter_values_updated.emit(db_map_cascading_data)
 
     def find_cascading_relationship_classes(self, db_map_ids):
         """Finds and returns cascading relationship classes for the given object class ids."""
@@ -1225,7 +1225,7 @@ class SpineDBManager(QObject):
         }
         self.parameter_values_updated.emit(d)
 
-    @Slot("QVariant", name="cache_parameter_definition_tags")
+    @Slot("QVariant")
     def cache_parameter_definition_tags(self, db_map_data):
         """Caches parameter definition tags in the parameter definition dictionary.
 
