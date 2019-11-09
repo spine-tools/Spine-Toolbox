@@ -464,7 +464,7 @@ class TreeViewForm(DataStoreForm):
         return d
 
     @staticmethod
-    def _db_map_class_ids(db_map_data):
+    def _db_map_class_id_data(db_map_data):
         """Returns a new dictionary where the class id is also part of the key.
 
         Returns:
@@ -477,15 +477,15 @@ class TreeViewForm(DataStoreForm):
         return d
 
     @staticmethod
-    def _merge_db_map_data(left, right):
-        """Returns a new dictionary where the values are the union of the left and right values.
+    def _extend_merge(left, right):
+        """Returns a new dictionary by uniting left and right.
 
         Returns:
             dict: lists of dictionary items keyed by DiffDatabaseMapping
         """
         result = left.copy()
-        for db_map, data in right.items():
-            result.setdefault(db_map, []).extend(data)
+        for key, data in right.items():
+            result.setdefault(key, []).extend(data)
         return result
 
     def _update_object_filter(self):
@@ -496,22 +496,22 @@ class TreeViewForm(DataStoreForm):
         cascading_relationship_classes = self.db_mngr.find_cascading_relationship_classes(
             self.selected_ent_cls_ids["object class"]
         )
-        selected_relationship_classes = self._merge_db_map_data(
+        selected_relationship_classes = self._extend_merge(
             selected_relationship_classes, cascading_relationship_classes
         )
         self.selected_ent_cls_ids["relationship class"] = self.db_mngr._to_ids(selected_relationship_classes)
         selected_objects = self._db_map_items(self.object_tree_model.selected_object_indexes)
         selected_relationships = self._db_map_items(self.object_tree_model.selected_relationship_indexes)
         cascading_relationships = self.db_mngr.find_cascading_relationships(self.db_mngr._to_ids(selected_objects))
-        selected_relationships = self._merge_db_map_data(selected_relationships, cascading_relationships)
+        selected_relationships = self._extend_merge(selected_relationships, cascading_relationships)
         for db_map, items in selected_objects.items():
             self.selected_ent_cls_ids["object class"].setdefault(db_map, set()).update({x["class_id"] for x in items})
         for db_map, items in selected_relationships.items():
             self.selected_ent_cls_ids["relationship class"].setdefault(db_map, set()).update(
                 {x["class_id"] for x in items}
             )
-        self.selected_ent_ids["object"] = self._db_map_class_ids(selected_objects)
-        self.selected_ent_ids["relationship"] = self._db_map_class_ids(selected_relationships)
+        self.selected_ent_ids["object"] = self._db_map_class_id_data(selected_objects)
+        self.selected_ent_ids["relationship"] = self._db_map_class_id_data(selected_relationships)
         self.update_filter()
 
     def _update_relationship_filter(self):
@@ -525,7 +525,7 @@ class TreeViewForm(DataStoreForm):
             self.selected_ent_cls_ids["relationship class"].setdefault(db_map, set()).update(
                 {x["class_id"] for x in items}
             )
-        self.selected_ent_ids["relationship"] = self._db_map_class_ids(selected_relationships)
+        self.selected_ent_ids["relationship"] = self._db_map_class_id_data(selected_relationships)
         self.update_filter()
 
     @Slot("QPoint")
