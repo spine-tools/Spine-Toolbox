@@ -288,6 +288,7 @@ class TestTreeViewForm(
         with mock.patch("spinetoolbox.widgets.tree_view_widget.TreeViewForm.save_window_state") as mock_save_w_s:
             self.tree_view_form.close()
             mock_save_w_s.assert_called_once()
+        self.db_mngr.close_all_sessions()
         self.tree_view_form.deleteLater()
         self.tree_view_form = None
 
