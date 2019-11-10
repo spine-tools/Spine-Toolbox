@@ -90,6 +90,7 @@ class DataStoreForm(QMainWindow):
         # DB
         self.db_maps = db_maps
         self.db_mngr = project.db_mngr
+        self.db_map = db_maps[0]
         # Selected ids
         self.selected_ent_cls_ids = {"object class": {}, "relationship class": {}}
         self.selected_ent_ids = {"object": {}, "relationship": {}}
@@ -686,7 +687,6 @@ class DataStoreForm(QMainWindow):
             msg.setIcon(QMessageBox.Question)
             msg.setWindowTitle("Commit Pending Changes")
             msg.setText("The current session has uncommitted changes. Do you want to commit them now?")
-            msg.setInformativeText("WARNING: If you choose not to commit, all changes will be lost.")
             msg.setStandardButtons(QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel)
             msg.button(QMessageBox.Save).setText("Commit And Close ")
             msg.button(QMessageBox.Discard).setText("Discard Changes And Close")

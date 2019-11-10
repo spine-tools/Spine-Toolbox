@@ -71,11 +71,11 @@ class TabularViewForm(QMainWindow):
     """A widget to show and edit Spine objects in a data store.
 
     Attributes:
-        data_store (DataStore): The DataStore instance that owns this form
+        project (SpineToolboxProject): The project instance that owns this form
         db_map (DatabaseMapping): The object relational database mapping
     """
 
-    def __init__(self, data_store, db_map):
+    def __init__(self, project, db_map):
         from ..ui.tabular_view_form import Ui_MainWindow
 
         super().__init__(flags=Qt.Window)
@@ -92,7 +92,7 @@ class TabularViewForm(QMainWindow):
         # database
         self.db_map = db_map
         self.database = db_map.codename
-        self._data_store = data_store
+        self._project = project
 
         # current state of ui
         self.current_class_type = ''
@@ -848,7 +848,7 @@ class TabularViewForm(QMainWindow):
 
     def _prompt_close_and_commit(self):
         """Shows the commit session message box."""
-        qsettings = self._data_store._toolbox.qsettings()
+        qsettings = self._project._toolbox.qsettings()
         commit_at_exit = int(qsettings.value("appSettings/commitAtExit", defaultValue="1"))
         if commit_at_exit == 0:
             # Don't commit session and don't show message box

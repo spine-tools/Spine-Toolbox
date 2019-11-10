@@ -20,7 +20,7 @@ import os
 import logging
 import spinedb_api
 from PySide2.QtCore import Slot, Qt
-from PySide2.QtWidgets import QMessageBox, QFileDialog, QApplication
+from PySide2.QtWidgets import QFileDialog, QApplication
 from sqlalchemy import create_engine
 from sqlalchemy.engine.url import make_url, URL
 from spinetoolbox.executioner import ExecutionState
@@ -49,9 +49,7 @@ class DataStore(ProjectItem):
         if isinstance(reference, dict) and "url" in reference:
             url = reference["url"]
         self._url = self.parse_url(url)
-        self.tree_view_form = None
-        self.graph_view_form = None
-        self.tabular_view_form = None
+        self.views = {}
         # Make logs directory for this Data Store
         self.logs_dir = os.path.join(self.data_dir, "logs")
         try:
@@ -341,108 +339,30 @@ class DataStore(ProjectItem):
         self._properties_ui.lineEdit_username.setEnabled(True)
         self._properties_ui.lineEdit_password.setEnabled(True)
 
-    @Slot(bool, name="open_tree_view")
+    @Slot(bool)
     def open_tree_view(self, checked=False):
-        """Open url in tree view form."""
-        url = self.make_url()
-        if not url:
-            return
-        try:
-            db_map = self._project.db_mngr.get_db_map(url, codename=self.name)
-        except spinedb_api.SpineDBAPIError as e:
-            self._toolbox.msg_error.emit(e.msg)
-            db_map = None
-        if not db_map:
-            return
-        if self.tree_view_form:
-            # If the db_map is the same, just raise the current form
-            if self.tree_view_form.db_maps == (db_map,):
-                if self.tree_view_form.windowState() & Qt.WindowMinimized:
-                    # Remove minimized status and restore window with the previous state (maximized/normal state)
-                    self.tree_view_form.setWindowState(
-                        self.tree_view_form.windowState() & ~Qt.WindowMinimized | Qt.WindowActive
-                    )
-                    self.tree_view_form.activateWindow()
-                else:
-                    self.tree_view_form.raise_()
-                return
-            self.tree_view_form.destroyed.disconnect(self.tree_view_form_destroyed)
-            self.tree_view_form.close()
-        self.do_open_tree_view(db_map)
+        """Opens tree view form."""
+        self.open_view("tree")
 
-    @busy_effect
-    def do_open_tree_view(self, db_map):
-        """Open url in tree view form."""
-        self.tree_view_form = TreeViewForm(self._project, db_map)
-        self.tree_view_form.show()
-        self.tree_view_form.destroyed.connect(self.tree_view_form_destroyed)
-
-    @Slot(name="tree_view_form_destroyed")
-    def tree_view_form_destroyed(self):
-        """Notify that tree view form has been destroyed."""
-        self.tree_view_form = None
-
-    @Slot(bool, name="open_graph_view")
+    @Slot(bool)
     def open_graph_view(self, checked=False):
-        """Open url in graph view form."""
-        url = self.make_url()
-        if not url:
-            return
-        try:
-            db_map = self._project.db_mngr.get_db_map(url, codename=self.name)
-        except spinedb_api.SpineDBAPIError as e:
-            self._toolbox.msg_error.emit(e.msg)
-            db_map = None
-        if not db_map:
-            return
-        if self.graph_view_form:
-            # If the db_map is the same, just raise the current form
-            if self.graph_view_form.db_maps == (db_map,):
-                if self.graph_view_form.windowState() & Qt.WindowMinimized:
-                    # Remove minimized status and restore window with the previous state (maximized/normal state)
-                    self.graph_view_form.setWindowState(
-                        self.graph_view_form.windowState() & ~Qt.WindowMinimized | Qt.WindowActive
-                    )
-                    self.graph_view_form.activateWindow()
-                else:
-                    self.graph_view_form.raise_()
-                return
-            self.graph_view_form.destroyed.disconnect(self.tree_view_form_destroyed)
-            self.graph_view_form.close()
-        self.do_open_graph_view(db_map)
+        """Opens graph view form."""
+        self.open_view("graph")
 
-    @busy_effect
-    def do_open_graph_view(self, db_map):
-        """Open url in graph view form."""
-        self.graph_view_form = GraphViewForm(self._project, db_map, read_only=False)
-        self.graph_view_form.show()
-        self.graph_view_form.destroyed.connect(self.graph_view_form_destroyed)
-
-    @Slot(name="graph_view_form_destroyed")
-    def graph_view_form_destroyed(self):
-        """Notify that graph view form has been destroyed."""
-        self.graph_view_form = None
-
-    @Slot(bool, name="open_tabular_view")
+    @Slot(bool)
     def open_tabular_view(self, checked=False):
-        """Open url in Data Store tabular view."""
+        """Opens tabular view form."""
+        self.open_view("tabular")
+
+    def open_view(self, view):
+        """Opens current url in the form given by view.
+
+        Args:
+            view (str): either "tree", "graph", or "tabular"
+        """
         url = self.make_url()
         if not url:
             return
-        if self.tabular_view_form:
-            # If the url hasn't changed, just raise the current form
-            if self.tabular_view_form.db_map.db_url == url:
-                if self.tabular_view_form.windowState() & Qt.WindowMinimized:
-                    # Remove minimized status and restore window with the previous state (maximized/normal state)
-                    self.tabular_view_form.setWindowState(
-                        self.tabular_view_form.windowState() & ~Qt.WindowMinimized | Qt.WindowActive
-                    )
-                    self.tabular_view_form.activateWindow()
-                else:
-                    self.tabular_view_form.raise_()
-                return
-            self.tabular_view_form.destroyed.disconnect(self.tabular_view_form_destroyed)
-            self.tabular_view_form.close()
         try:
             db_map = self._project.db_mngr.get_db_map(url, codename=self.name)
         except spinedb_api.SpineDBAPIError as e:
@@ -450,19 +370,36 @@ class DataStore(ProjectItem):
             db_map = None
         if not db_map:
             return
-        self.do_open_tabular_view(db_map, url.database)
+        form = self.views.get(view)
+        if form:
+            # If the db_map is the same, just raise the current form
+            if form.db_map == db_map:
+                if form.windowState() & Qt.WindowMinimized:
+                    # Remove minimized status and restore window with the previous state (maximized/normal state)
+                    form.setWindowState(form.windowState() & ~Qt.WindowMinimized | Qt.WindowActive)
+                    form.activateWindow()
+                else:
+                    form.raise_()
+                return
+            form.close()
+        self.do_open_view(view, db_map)
 
     @busy_effect
-    def do_open_tabular_view(self, db_map, database):
-        """Open url in tabular view form."""
-        self.tabular_view_form = TabularViewForm(self, db_map)
-        self.tabular_view_form.destroyed.connect(self.tabular_view_form_destroyed)
-        self.tabular_view_form.show()
-        self.destroyed.connect(self.tabular_view_form.close)
+    def do_open_view(self, view, db_map):
+        """Opens the form given by view using given db_map.
 
-    @Slot(name="tabular_view_form_destroyed")
-    def tabular_view_form_destroyed(self):
-        self.tabular_view_form = None
+        Args:
+            view (str): either "tree", "graph", or "tabular"
+            db_map (DiffDatabaseMapping)
+        """
+        make_form = {"tree": TreeViewForm, "graph": GraphViewForm, "tabular": TabularViewForm}
+        form = self.views[view] = make_form[view](self._project, db_map)
+        form.destroyed.connect(lambda view=view, form=form: self._handle_view_form_destroyed(view, form))
+        form.show()
+
+    def _handle_view_form_destroyed(self, view, form):
+        if self.views[view] == form:
+            self.views.pop(view)
 
     def data_files(self):
         """Return a list of files that are in this items data directory."""
@@ -655,12 +592,8 @@ class DataStore(ProjectItem):
         """Tears down this item. Called by toolbox just before closing.
         Closes all GraphViewForm, TreeViewForm, and TabularViewForm instances opened by this item.
         """
-        if self.tree_view_form:
-            self.tree_view_form.close()
-        if self.tabular_view_form:
-            self.tabular_view_form.close()
-        if self.graph_view_form:
-            self.graph_view_form.close()
+        for form in self.views.values():
+            form.close()
 
     def notify_destination(self, source_item):
         """See base class."""

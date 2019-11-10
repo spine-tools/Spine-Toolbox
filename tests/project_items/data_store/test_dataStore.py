@@ -243,7 +243,7 @@ class TestDataStore(unittest.TestCase):
         """
         temp_db_path = self.create_temp_db()
         self.ds.activate()
-        self.assertIsNone(self.ds.tree_view_form)
+        self.assertIsNone(self.ds.views.get("tree"))
         # Select the sqlite dialect
         self.ds_properties_ui.comboBox_dialect.activated[str].emit("sqlite")
         # Browse to an existing db file
@@ -253,11 +253,11 @@ class TestDataStore(unittest.TestCase):
             mock_qfile_dialog.getOpenFileName.assert_called_once()
         # Open treeview
         self.ds_properties_ui.pushButton_ds_tree_view.click()
-        self.assertIsInstance(self.ds.tree_view_form, TreeViewForm)
+        self.assertIsInstance(self.ds.views["tree"], TreeViewForm)
         expected_url = "sqlite:///" + temp_db_path
-        self.assertEqual(expected_url, str(self.ds.tree_view_form.db_maps[0].db_url))
-        self.ds.tree_view_form.close()
-        self.ds.tree_view_form.db_mngr.close_all_sessions()
+        self.assertEqual(expected_url, str(self.ds.views["tree"].db_map.db_url))
+        self.ds.views["tree"].close()
+        self.ds._project.db_mngr.close_all_sessions()
 
     def test_open_treeview2(self):
         """Test that selecting the 'sqlite' dialect, typing the path to an existing db file,
@@ -265,7 +265,7 @@ class TestDataStore(unittest.TestCase):
         """
         temp_db_path = self.create_temp_db()
         self.ds.activate()
-        self.assertIsNone(self.ds.tree_view_form)
+        self.assertIsNone(self.ds.views.get("tree"))
         # Select the sqlite dialect
         self.ds_properties_ui.comboBox_dialect.activated[str].emit("sqlite")
         # Type the path to an existing db file
@@ -273,11 +273,11 @@ class TestDataStore(unittest.TestCase):
         self.ds_properties_ui.lineEdit_database.editingFinished.emit()
         # Open treeview
         self.ds_properties_ui.pushButton_ds_tree_view.click()
-        self.assertIsInstance(self.ds.tree_view_form, TreeViewForm)
+        self.assertIsInstance(self.ds.views["tree"], TreeViewForm)
         expected_url = "sqlite:///" + temp_db_path
-        self.assertEqual(expected_url, str(self.ds.tree_view_form.db_maps[0].db_url))
-        self.ds.tree_view_form.close()
-        self.ds.tree_view_form.db_mngr.close_all_sessions()
+        self.assertEqual(expected_url, str(self.ds.views["tree"].db_maps[0].db_url))
+        self.ds.views["tree"].close()
+        self.ds._project.db_mngr.close_all_sessions()
 
     def test_notify_destination(self):
         self.toolbox.msg = mock.NonCallableMagicMock()
