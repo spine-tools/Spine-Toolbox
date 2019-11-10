@@ -360,20 +360,13 @@ class DataStore(ProjectItem):
         Args:
             view (str): either "tree", "graph", or "tabular"
         """
-        url = self.make_url()
-        if not url:
-            return
-        try:
-            db_map = self._project.db_mngr.get_db_map(url, codename=self.name)
-        except spinedb_api.SpineDBAPIError as e:
-            self._toolbox.msg_error.emit(e.msg)
-            db_map = None
-        if not db_map:
+        db_url = self.make_url()
+        if not db_url:
             return
         form = self.views.get(view)
         if form:
-            # If the db_map is the same, just raise the current form
-            if form.db_map == db_map:
+            # If the db_url is the same, just raise the current form
+            if form.db_url == db_url:
                 if form.windowState() & Qt.WindowMinimized:
                     # Remove minimized status and restore window with the previous state (maximized/normal state)
                     form.setWindowState(form.windowState() & ~Qt.WindowMinimized | Qt.WindowActive)
@@ -382,18 +375,23 @@ class DataStore(ProjectItem):
                     form.raise_()
                 return
             form.close()
-        self.do_open_view(view, db_map)
+        self.do_open_view(view, db_url)
 
     @busy_effect
-    def do_open_view(self, view, db_map):
-        """Opens the form given by view using given db_map.
+    def do_open_view(self, view, db_url):
+        """Opens the form given by view using given db_url.
 
         Args:
             view (str): either "tree", "graph", or "tabular"
-            db_map (DiffDatabaseMapping)
+            db_url (str)
         """
-        make_form = {"tree": TreeViewForm, "graph": GraphViewForm, "tabular": TabularViewForm}
-        form = self.views[view] = make_form[view](self._project, db_map)
+        make_form = {"tree": TreeViewForm, "graph": GraphViewForm, "tabular": TabularViewForm}[view]
+        try:
+            form = make_form(self._project, (db_url, self.name))
+        except spinedb_api.SpineDBAPIError as e:
+            self._toolbox.msg_error.emit(e.msg)
+            return
+        self.views[view] = form
         form.destroyed.connect(lambda view=view, form=form: self._handle_view_form_destroyed(view, form))
         form.show()
 

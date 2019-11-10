@@ -169,13 +169,13 @@ class CommitDialog(QDialog):
     """A dialog to query user's preferences for new commit.
 
     Attributes:
-        parent (TreeViewForm): data store widget
         db_names (Iterable): database names
     """
 
-    def __init__(self, parent, *db_names):
+    def __init__(self, *db_names):
         """Initialize class"""
-        super().__init__(parent)
+        super().__init__()
+        self.setWindowModality(Qt.ApplicationModal)
         self.commit_msg = None
         self.setWindowTitle('Commit changes to {}'.format(",".join(db_names)))
         form = QVBoxLayout(self)

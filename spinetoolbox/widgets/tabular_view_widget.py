@@ -72,15 +72,19 @@ class TabularViewForm(QMainWindow):
 
     Attributes:
         project (SpineToolboxProject): The project instance that owns this form
-        db_map (DatabaseMapping): The object relational database mapping
+        db_url (str): The url to view
     """
 
-    def __init__(self, project, db_map):
+    def __init__(self, project, db_url):
         from ..ui.tabular_view_form import Ui_MainWindow
 
         super().__init__(flags=Qt.Window)
         # TODO: change the list_select_class to something nicer
         # Setup UI from Qt Designer file
+        self.db_url = db_url
+        self.db_mngr = project.db_mngr
+        url, codename = self.db_url
+        self.db_map = self.db_mngr.get_db_map_for_listener(self, url, codename=codename)
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
         self.setWindowIcon(QIcon(":/symbols/app.ico"))
@@ -90,8 +94,7 @@ class TabularViewForm(QMainWindow):
         self.settings_key = 'tabularViewWidget'
 
         # database
-        self.db_map = db_map
-        self.database = db_map.codename
+        self.database = self.db_map.codename
         self._project = project
 
         # current state of ui
@@ -142,7 +145,7 @@ class TabularViewForm(QMainWindow):
         self.ui.table_frozen.selectionModel().selectionChanged.connect(self.change_frozen_value)
         self.ui.comboBox_value_type.currentTextChanged.connect(self.select_data)
         self.ui.list_select_class.currentItemChanged.connect(self.change_class)
-        self.ui.actionCommit.triggered.connect(self._prompt_and_commit_session)
+        self.ui.actionCommit.triggered.connect(self.commit_session)
         self.ui.actionRollback.triggered.connect(self.rollback_session)
         self.ui.actionClose.triggered.connect(self.close)
         self.ui.menuSession.aboutToShow.connect(self.set_session_menu_enable)
@@ -264,33 +267,12 @@ class TabularViewForm(QMainWindow):
         self.ui.list_select_class.addItems(oc + rc)
         self.ui.list_select_class.setCurrentItem(self.ui.list_select_class.item(0))
 
-    def _prompt_and_commit_session(self):
-        """Query user for a commit message and commit changes to source database."""
-        if not self.db_map.has_pending_changes() and not self.model_has_changes():
-            return True
-        dialog = CommitDialog(self, self.database)
-        answer = dialog.exec_()
-        if answer != QDialog.Accepted:
-            return False
-        self.commit_session(dialog.commit_msg)
-        return True
-
     def commit_session(self, commit_msg):
         self.save_model()
-        try:
-            self.db_map.commit_session(commit_msg)
-            # self.set_commit_rollback_actions_enabled(False)
-        except SpineDBAPIError:
-            # self.msg_error.emit(e.msg)
-            return
+        self.db_mngr.commit_session(self.db_map)
 
     def rollback_session(self):
-        try:
-            self.db_map.rollback_session()
-            # self.set_commit_rollback_actions_enabled(False)
-        except SpineDBAPIError:
-            # self.msg_error.emit(e.msg)
-            return
+        self.db_mngr.rollback_session(self.db_map)
         self.select_data()
 
     def model_has_changes(self):
@@ -846,50 +828,6 @@ class TabularViewForm(QMainWindow):
                 frozen_values.update(new_set)
         return sorted(frozen_values)
 
-    def _prompt_close_and_commit(self):
-        """Shows the commit session message box."""
-        qsettings = self._project._toolbox.qsettings()
-        commit_at_exit = int(qsettings.value("appSettings/commitAtExit", defaultValue="1"))
-        if commit_at_exit == 0:
-            # Don't commit session and don't show message box
-            return True
-        if commit_at_exit == 1:  # Default
-            # Show message box
-            msg = QMessageBox(self)
-            msg.setIcon(QMessageBox.Question)
-            msg.setWindowTitle("Commit Pending Changes")
-            msg.setText("The current session has uncommitted changes. Do you want to commit them now?")
-            msg.setInformativeText("WARNING: If you choose not to commit, all changes will be lost.")
-            msg.setStandardButtons(QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel)
-            msg.button(QMessageBox.Save).setText("Commit And Close ")
-            msg.button(QMessageBox.Discard).setText("Discard Changes And Close")
-            chkbox = QCheckBox()
-            chkbox.setText("Do not ask me again")
-            msg.setCheckBox(chkbox)
-            answer = msg.exec_()
-            if answer == QMessageBox.Cancel:
-                return False
-            chk = chkbox.checkState()
-            if answer == QMessageBox.Save:
-                committed = self._prompt_and_commit_session()
-                if not committed:
-                    return False
-                if chk == 2:
-                    # Save preference
-                    qsettings.setValue("appSettings/commitAtExit", "2")
-            else:
-                if chk == 2:
-                    # Save preference
-                    qsettings.setValue("appSettings/commitAtExit", "0")
-        elif commit_at_exit == 2:
-            # Commit session and don't show message box
-            committed = self._prompt_and_commit_session()
-            if not committed:
-                return False
-        else:
-            qsettings.setValue("appSettings/commitAtExit", "1")
-        return True
-
     def restore_ui(self):
         """Restore UI state from previous session."""
         window_size = self.qsettings.value("{0}/windowSize".format(self.settings_key))
@@ -933,10 +871,11 @@ class TabularViewForm(QMainWindow):
             event (QCloseEvent): Closing event if 'X' is clicked.
         """
         # show commit dialog if pending changes
-        if self.db_map.has_pending_changes() or self.model_has_changes():
-            if not self._prompt_close_and_commit():
-                event.ignore()
-                return
+        if self.model_has_changes():
+            self.save_model()
+        if not self.db_mngr.remove_db_map_listener(self.db_map, self):
+            event.ignore()
+            return
         # save ui state
         self.save_ui()
         event.accept()

@@ -40,21 +40,22 @@ from ..plotting import plot_selection, PlottingError, GraphAndTreeViewPlottingHi
 
 class TreeViewForm(DataStoreForm):
     """
-    A widget to show and edit Spine objects in a data store.
-
-    Attributes:
-        project (SpineToolboxProject): The project instance that owns this form
-        db_maps (iter): DiffDatabaseMapping instances
+    A widget to show Spine dbs in a tree.
     """
 
-    def __init__(self, project, *db_maps):
-        """Initialize class."""
+    def __init__(self, project, *db_urls):
+        """Initializes form.
+
+        Args:
+            project (SpineToolboxProject): The project instance that owns this form.
+            *db_urls (str): Database urls to view.
+        """
         from ..ui.tree_view_form import Ui_MainWindow
 
         tic = time.process_time()
-        super().__init__(project, Ui_MainWindow(), *db_maps)
+        super().__init__(project, Ui_MainWindow(), *db_urls)
         self.takeCentralWidget()
-        self.relationship_tree_model = RelationshipTreeModel(self, self.db_mngr, *db_maps)
+        self.relationship_tree_model = RelationshipTreeModel(self, self.db_mngr, *self.db_maps)
         self.ui.treeView_relationship.setModel(self.relationship_tree_model)
         # Others
         self._selection_source = None
@@ -67,7 +68,7 @@ class TreeViewForm(DataStoreForm):
         self.setup_delegates()
         self.add_toggle_view_actions()
         self.connect_signals()
-        self.setWindowTitle("Data store tree view    -- {} --".format(", ".join([x.codename for x in db_maps])))
+        self.setWindowTitle("Data store tree view    -- {} --".format(", ".join([x.codename for x in self.db_maps])))
         toc = time.process_time()
         self.msg.emit("Tree view form created in {} seconds".format(toc - tic))
 

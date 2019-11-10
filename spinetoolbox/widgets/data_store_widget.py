@@ -16,7 +16,7 @@ Contains the DataStoreForm class, parent class of TreeViewForm and GraphViewForm
 :date:   26.11.2018
 """
 
-from PySide2.QtWidgets import QMainWindow, QHeaderView, QDialog, QMessageBox, QCheckBox, QErrorMessage
+from PySide2.QtWidgets import QMainWindow, QHeaderView, QMessageBox, QErrorMessage
 from PySide2.QtCore import Qt, Signal, Slot, QTimer
 from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QIcon
 from ..config import MAINWINDOW_SS
@@ -47,7 +47,6 @@ from .edit_db_items_dialogs import (
     EditRelationshipsDialog,
     ManageParameterTagsDialog,
 )
-from .manage_db_items_dialog import CommitDialog
 from ..widgets.parameter_value_editor import ParameterValueEditor
 from ..widgets.toolbars import ParameterTagToolBar
 from ..mvcmodels.entity_tree_models import ObjectTreeModel
@@ -63,22 +62,29 @@ from ..plotting import tree_graph_view_parameter_value_name
 
 
 class DataStoreForm(QMainWindow):
-    """A widget to show and edit Spine objects in a data store.
-
-    Attributes:
-        project (SpineToolboxProject): The project instance that owns this form
-        ui: UI definition of the form that is initialized
-        db_maps (iter): DiffDatabaseMapping instances
+    """A widget to show and edit Spine dbs.
     """
 
     msg = Signal(str)
     msg_error = Signal(str)
 
-    def __init__(self, project, ui, *db_maps):
-        """Initialize class."""
+    def __init__(self, project, ui, *db_urls):
+        """Initializes form.
+
+        Args:
+            project (SpineToolboxProject): The project instance that owns this form
+            ui: UI definition of the form that is initialized
+            *db_urls (tuple): Database url, codename.
+        """
         super().__init__(flags=Qt.Window)
+        self.db_urls = list(db_urls)
+        self.db_url = self.db_urls[0]
         self._project = project
-        self._project.db_signaller.add_listener(self)
+        self.db_mngr = project.db_mngr
+        self.db_maps = [
+            self.db_mngr.get_db_map_for_listener(self, url, codename=codename) for url, codename in self.db_urls
+        ]
+        self.db_map = self.db_maps[0]
         # Setup UI from Qt Designer file
         self.ui = ui
         self.ui.setupUi(self)
@@ -87,28 +93,28 @@ class DataStoreForm(QMainWindow):
         # Class attributes
         self.err_msg = QErrorMessage(self)
         self.err_msg.setWindowTitle("Error")
-        # DB
-        self.db_maps = db_maps
-        self.db_mngr = project.db_mngr
-        self.db_map = db_maps[0]
         # Selected ids
         self.selected_ent_cls_ids = {"object class": {}, "relationship class": {}}
         self.selected_ent_ids = {"object": {}, "relationship": {}}
         self.selected_param_def_ids = {"object class": {}, "relationship class": {}}
         self.selected_parameter_tag_ids = dict()
         # Parameter tag toolbar
-        self.parameter_tag_toolbar = ParameterTagToolBar(self, self.db_mngr, *db_maps)
+        self.parameter_tag_toolbar = ParameterTagToolBar(self, self.db_mngr, *self.db_maps)
         self.addToolBar(Qt.TopToolBarArea, self.parameter_tag_toolbar)
         # Models
-        self.object_tree_model = ObjectTreeModel(self, self.db_mngr, *db_maps)
+        self.object_tree_model = ObjectTreeModel(self, self.db_mngr, *self.db_maps)
         self.ui.treeView_object.setModel(self.object_tree_model)
-        self.object_parameter_value_model = CompoundObjectParameterValueModel(self, self.db_mngr, *db_maps)
-        self.relationship_parameter_value_model = CompoundRelationshipParameterValueModel(self, self.db_mngr, *db_maps)
-        self.object_parameter_definition_model = CompoundObjectParameterDefinitionModel(self, self.db_mngr, *db_maps)
-        self.relationship_parameter_definition_model = CompoundRelationshipParameterDefinitionModel(
-            self, self.db_mngr, *db_maps
+        self.object_parameter_value_model = CompoundObjectParameterValueModel(self, self.db_mngr, *self.db_maps)
+        self.relationship_parameter_value_model = CompoundRelationshipParameterValueModel(
+            self, self.db_mngr, *self.db_maps
         )
-        self.parameter_value_list_model = ParameterValueListModel(self, self.db_mngr, *db_maps)
+        self.object_parameter_definition_model = CompoundObjectParameterDefinitionModel(
+            self, self.db_mngr, *self.db_maps
+        )
+        self.relationship_parameter_definition_model = CompoundRelationshipParameterDefinitionModel(
+            self, self.db_mngr, *self.db_maps
+        )
+        self.parameter_value_list_model = ParameterValueListModel(self, self.db_mngr, *self.db_maps)
         # Setup views
         self.ui.tableView_object_parameter_value.setModel(self.object_parameter_value_model)
         self.ui.tableView_relationship_parameter_value.setModel(self.relationship_parameter_value_model)
@@ -147,7 +153,7 @@ class DataStoreForm(QMainWindow):
         self.msg_error.connect(self.err_msg.showMessage)
         # Menu actions
         self.ui.menuSession.aboutToShow.connect(self._handle_menu_session_about_to_show)
-        self.ui.actionCommit.triggered.connect(self._prompt_and_commit_session)
+        self.ui.actionCommit.triggered.connect(self.commit_session)
         self.ui.actionRollback.triggered.connect(self.rollback_session)
         self.ui.actionRefresh.triggered.connect(self.refresh_session)
         self.ui.actionClose.triggered.connect(self.close)
@@ -174,15 +180,6 @@ class DataStoreForm(QMainWindow):
     def qsettings(self):
         """Returns the QSettings instance from ToolboxUI."""
         return self._project._toolbox._qsettings
-
-    @Slot("QVariant")
-    def receive_db_mngr_error_msg(self, db_map_error_log):
-        msg = ""
-        for db_map, error_log in db_map_error_log.items():
-            database = "From " + db_map.codename + ":"
-            formatted_log = format_string_list(error_log)
-            msg += format_string_list([database, formatted_log])
-        self.msg_error.emit(msg)
 
     @Slot(str)
     def add_message(self, msg):
@@ -265,45 +262,35 @@ class DataStoreForm(QMainWindow):
         self.ui.actionRollback.setEnabled(on)
 
     @Slot("bool")
-    def _prompt_and_commit_session(self, checked=False):
-        """Query user for a commit message and commit changes to source database returning False if cancelled."""
-        if not any(db_map.has_pending_changes() for db_map in self.db_maps):
-            return
-        db_names = [x.codename for x in self.db_maps]
-        dialog = CommitDialog(self, *db_names)
-        answer = dialog.exec_()
-        if answer != QDialog.Accepted:
-            return False
-        self.db_mngr.commit_session(dialog.commit_msg, *self.db_maps)
-        return True
+    def commit_session(self, checked=False):
+        """Commits session."""
+        self.db_mngr.commit_session(*self.db_maps)
 
     @Slot("bool")
     def rollback_session(self, checked=False):
-        if not any(db_map.has_pending_changes() for db_map in self.db_maps):
-            return
         self.db_mngr.rollback_session(*self.db_maps)
 
     def receive_session_committed(self, db_maps):
-        if db_maps.intersection(self.db_maps):
-            db_names = ", ".join([x.codename for x in db_maps])
-            msg = f"All changes in {db_names} committed successfully."
-            self.msg.emit(msg)
-            return True
-        return False
+        db_maps = set(self.db_maps) & set(db_maps)
+        if not db_maps:
+            return
+        db_names = ", ".join([x.codename for x in db_maps])
+        msg = f"All changes in {db_names} committed successfully."
+        self.msg.emit(msg)
 
     def receive_session_rolled_back(self, db_maps):
-        if db_maps.intersection(self.db_maps):
-            self.init_models()
-            db_names = ", ".join([x.codename for x in db_maps])
-            msg = f"All changes in {db_names} rolled back successfully."
-            self.msg.emit(msg)
-            return True
-        return False
+        db_maps = set(self.db_maps) & set(db_maps)
+        if not db_maps:
+            return
+        self.init_models()
+        db_names = ", ".join([x.codename for x in db_maps])
+        msg = f"All changes in {db_names} rolled back successfully."
+        self.msg.emit(msg)
 
     def receive_session_closed(self, db_maps):
-        closed = db_maps.intersection(self.db_maps)
-        if closed:
-            db_names = ", ".join([x.codename for x in closed])
+        db_maps = set(self.db_maps) & set(db_maps)
+        if db_maps:
+            db_names = ", ".join([x.codename for x in db_maps])
             QMessageBox.critical(
                 self,
                 "Connection closed",
@@ -674,49 +661,6 @@ class DataStoreForm(QMainWindow):
         """Update (object or relationship) parameter definition or value with newly edited data."""
         index.model().setData(index, new_value)
 
-    def _prompt_close_and_commit(self):
-        """Prompts user for window closing and commits if requested returning True if window should close."""
-        qsettings = self.qsettings()
-        commit_at_exit = int(qsettings.value("appSettings/commitAtExit", defaultValue="1"))
-        if commit_at_exit == 0:
-            # Don't commit session and don't show message box
-            return True
-        if commit_at_exit == 1:  # Default
-            # Show message box
-            msg = QMessageBox(self)
-            msg.setIcon(QMessageBox.Question)
-            msg.setWindowTitle("Commit Pending Changes")
-            msg.setText("The current session has uncommitted changes. Do you want to commit them now?")
-            msg.setStandardButtons(QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel)
-            msg.button(QMessageBox.Save).setText("Commit And Close ")
-            msg.button(QMessageBox.Discard).setText("Discard Changes And Close")
-            chkbox = QCheckBox()
-            chkbox.setText("Do not ask me again")
-            msg.setCheckBox(chkbox)
-            answer = msg.exec_()
-            if answer == QMessageBox.Cancel:
-                return False
-            chk = chkbox.checkState()
-            if answer == QMessageBox.Save:
-                committed = self._prompt_and_commit_session()
-                if not committed:
-                    return False
-                if chk == 2:
-                    # Save preference
-                    qsettings.setValue("appSettings/commitAtExit", "2")
-            else:
-                if chk == 2:
-                    # Save preference
-                    qsettings.setValue("appSettings/commitAtExit", "0")
-        elif commit_at_exit == 2:
-            # Commit session and don't show message box
-            committed = self._prompt_and_commit_session()
-            if not committed:
-                return False
-        else:
-            qsettings.setValue("appSettings/commitAtExit", "1")
-        return True
-
     def restore_ui(self):
         """Restore UI state from previous session."""
         qsettings = self.qsettings()
@@ -744,8 +688,7 @@ class DataStoreForm(QMainWindow):
                 curr_state = view.saveState()
                 view.restoreState(state)
                 if view.count() != view.model().columnCount():
-                    # This can happen the first time the user switches to this version,
-                    # because of hidden columns in past versions
+                    # This can happen when switching to a version where the model has a different header
                     view.restoreState(curr_state)
         if window_size:
             self.resize(window_size)
@@ -787,12 +730,10 @@ class DataStoreForm(QMainWindow):
         Args:
             event (QCloseEvent): Closing event
         """
-        if any(db_map.has_pending_changes() for db_map in self.db_maps):
-            want_to_close = self._prompt_close_and_commit()
-            if not want_to_close:
+        for db_map in self.db_maps:
+            if not self.db_mngr.remove_db_map_listener(db_map, self):
                 event.ignore()
                 return
         # Save UI form state
         self.save_window_state()
-        self._project.db_signaller.remove_listener(self)
         event.accept()
