@@ -21,7 +21,7 @@ import logging
 from PySide2.QtCore import Qt, Slot
 from PySide2.QtGui import QStandardItem, QStandardItemModel, QIcon, QPixmap
 from sqlalchemy.engine.url import URL, make_url
-from spinedb_api import DiffDatabaseMapping, SpineDBAPIError, SpineDBVersionError
+from spinedb_api import SpineDBAPIError, SpineDBVersionError
 from spinetoolbox.executioner import ExecutionState
 from spinetoolbox.project_item import ProjectItem
 from spinetoolbox.widgets.graph_view_widget import GraphViewForm
@@ -95,43 +95,46 @@ class View(ProjectItem):
         """Returns a list of url strings that are in this item as references."""
         return self._references
 
-    @Slot(bool, name="open_graph_view_btn_clicked")
+    @Slot(bool)
     def open_graph_view_btn_clicked(self, checked=False):
         """Slot for handling the signal emitted by clicking on 'Graph view' button."""
-        self._open_view(self._graph_views, supports_multiple_databases=False)
+        self._open_view("graph", supports_multiple_databases=False)
 
-    @Slot(bool, name="open_tabular_view_btn_clicked")
+    @Slot(bool)
     def open_tabular_view_btn_clicked(self, checked=False):
         """Slot for handling the signal emitted by clicking on 'Tabular view' button."""
-        self._open_view(self._tabular_views, supports_multiple_databases=False)
+        self._open_view("tabular", supports_multiple_databases=False)
 
-    @Slot(bool, name="open_tree_view_btn_clicked")
+    @Slot(bool)
     def open_tree_view_btn_clicked(self, checked=False):
         """Slot for handling the signal emitted by clicking on 'Tree view' button."""
-        self._open_view(self._tree_views, supports_multiple_databases=True)
+        self._open_view("tree", supports_multiple_databases=True)
 
-    def _open_view(self, view_store, supports_multiple_databases):
+    def _open_view(self, view, supports_multiple_databases):
         """Opens references in a view window.
 
         Args:
-            view_store (dict): a dictionary where to store the view window
+            view (str): either "tree", "graph", or "tabular"
             supports_multiple_databases (bool): True if the view supports more than one database
         """
+        view_store = {"graph": self._graph_views, "tabular": self._tabular_views, "tree": self._tree_views}[view]
         indexes = self._selected_indexes()
-        database_maps = self._database_maps(indexes)
-        if not database_maps:
+        database_urls = self._database_urls(indexes)
+        if not database_urls:
             return
-        db_maps, databases = self._database_maps(indexes)
+        db_urls = [str(x[0]) for x in database_urls]
         # Mangle database paths to get a hashable string identifying the view window.
-        view_id = ";".join(sorted(databases))
-        if not supports_multiple_databases and len(db_maps) > 1:
+        view_id = ";".join(sorted(db_urls))
+        if not supports_multiple_databases and len(database_urls) > 1:
             # Currently, Graph and Tabular views do not support multiple databases.
             # This if clause can be removed once that support has been implemented.
             self._toolbox.msg_error.emit("Selected view does not support multiple databases.")
             return
         if self._restore_existing_view_window(view_id, view_store):
             return
-        view_window = self._make_view_window(view_store, db_maps)
+        view_window = self._make_view_window(view, database_urls)
+        if not view_window:
+            return
         view_window.show()
         view_window.destroyed.connect(lambda: view_store.pop(view_id))
         view_store[view_id] = view_window
@@ -189,21 +192,9 @@ class View(ProjectItem):
             self._properties_ui.treeView_view.selectAll()
         return self._properties_ui.treeView_view.selectionModel().selectedRows()
 
-    def _database_maps(self, indexes):
-        """Returns database maps and database paths for given indexes."""
-        db_maps = list()
-        databases = list()
-        for index in indexes:
-            url, provider_name = self._references[index.row()]
-            try:
-                db_map = self._project.db_mngr.get_db_map(url, upgrade=False, codename=provider_name)
-            except (SpineDBAPIError, SpineDBVersionError) as e:
-                self._toolbox.msg_error.emit(e.msg)
-                return
-            database = db_map.codename
-            db_maps.append(db_map)
-            databases.append(database)
-        return (db_maps, databases)
+    def _database_urls(self, indexes):
+        """Returns list of tuples (url, provider) for given indexes."""
+        return [self._references[index.row()] for index in indexes]
 
     @staticmethod
     def _restore_existing_view_window(view_id, view_store):
@@ -216,14 +207,15 @@ class View(ProjectItem):
         view_window.activateWindow()
         return True
 
-    def _make_view_window(self, view_store, db_maps):
-        if view_store is self._graph_views:
-            return GraphViewForm(self._project, db_maps[0], read_only=True)
-        if view_store is self._tabular_views:
-            return TabularViewForm(self, db_maps[0])
-        if view_store is self._tree_views:
-            return TreeViewForm(self._project, *db_maps)
-        raise RuntimeError("view_store must be self._graph_views, self._tabular_views or self._tree_views")
+    def _make_view_window(self, view, db_maps):
+        make_view = {"graph": GraphViewForm, "tabular": TabularViewForm, "tree": TreeViewForm}.get(view)
+        if not make_view:
+            raise RuntimeError("view must be 'tree', 'graph', or 'tabular'")
+        kwargs = {"graph": {"read_only": True}}.get(view, {})
+        try:
+            return make_view(self._project, *db_maps, **kwargs)
+        except SpineDBAPIError as e:
+            self._toolbox.msg_error.emit(e.msg)
 
     def tear_down(self):
         """Tears down this item. Called by toolbox just before closing. Closes all view windows."""
