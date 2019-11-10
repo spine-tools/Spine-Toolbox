@@ -266,8 +266,8 @@ class TestTreeViewForm(
     def setUp(self):
         """Overridden method. Runs before each test. Makes instances of TreeViewForm and GraphViewForm classes."""
         with mock.patch("spinetoolbox.spine_db_manager.DiffDatabaseMapping") as mock_DiffDBMapping, mock.patch(
-            "spinetoolbox.spine_db_manager.QMessageBox"
-        ), mock.patch("spinetoolbox.widgets.tree_view_widget.TreeViewForm.restore_ui"):
+            "spinetoolbox.widgets.tree_view_widget.TreeViewForm.restore_ui"
+        ):
             toolbox = create_toolboxui_with_project()
             project = toolbox.project()
             self.db_mngr = project.db_mngr
@@ -285,10 +285,11 @@ class TestTreeViewForm(
         """Overridden method. Runs after each test.
         Use this to free resources after a test if needed.
         """
-        with mock.patch("spinetoolbox.widgets.tree_view_widget.TreeViewForm.save_window_state") as mock_save_w_s:
+        with mock.patch(
+            "spinetoolbox.widgets.tree_view_widget.TreeViewForm.save_window_state"
+        ) as mock_save_w_s, mock.patch("spinetoolbox.spine_db_manager.QMessageBox"):
             self.tree_view_form.close()
             mock_save_w_s.assert_called_once()
-        self.db_mngr.close_all_sessions()
         self.tree_view_form.deleteLater()
         self.tree_view_form = None
 
