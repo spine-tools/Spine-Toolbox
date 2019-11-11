@@ -18,7 +18,7 @@ Contains the GraphViewForm class.
 
 from random import sample
 from PySide2.QtCore import Slot, QFinalState, QState, QItemSelectionModel, QAbstractAnimation, QVariantAnimation
-from PySide2.QtGui import QColor
+from PySide2.QtGui import QColor, QCursor
 from spinetoolbox.live_demo import LiveDemo
 
 
@@ -51,10 +51,7 @@ class GraphViewDemo(LiveDemo):
         begin.assignProperty(self.label_msg, "text", text)
         begin.assignProperty(self.button_right, "text", "Show")
         begin.assignProperty(self.button_right, "enabled", True)
-        begin.assignProperty(self.overlay1, "visible", False)
         simulate.assignProperty(self.parent().ui.dockWidget_object_tree, "visible", True)
-        simulate.assignProperty(self.overlay1, "target", self.parent().ui.treeView_object)
-        simulate.assignProperty(self.overlay1, "visible", True)
         simulate.assignProperty(self.button_right, "enabled", False)
 
         select_one.setInitialState(begin)
@@ -81,9 +78,7 @@ class GraphViewDemo(LiveDemo):
         begin.assignProperty(self.label_msg, "text", text)
         begin.assignProperty(self.button_right, "text", "Show")
         begin.assignProperty(self.button_right, "enabled", True)
-        begin.assignProperty(self.overlay1, "visible", False)
         simulate.assignProperty(self.parent().ui.dockWidget_object_tree, "visible", True)
-        simulate.assignProperty(self.overlay1, "visible", True)
         simulate.assignProperty(self.button_right, "enabled", False)
 
         select_more.setInitialState(begin)
@@ -101,7 +96,6 @@ class GraphViewDemo(LiveDemo):
         good_bye.assignProperty(self.button_left, "visible", False)
         good_bye.assignProperty(self.button_right, "enabled", True)
         good_bye.assignProperty(self.button_right, "text", "Close")
-        good_bye.assignProperty(self.overlay1, "visible", False)
 
         good_bye.setInitialState(begin)
         begin.addTransition(self.button_right.clicked, finalize)
@@ -131,7 +125,7 @@ class GraphViewDemo(LiveDemo):
 
 
 class SelectionAnimation(QVariantAnimation):
-    def __init__(self, parent, command, duration=1000, max_steps=4):
+    def __init__(self, parent, command, duration=2000, max_steps=4):
         """
         Args:
             parent (GraphViewForm)
@@ -149,17 +143,34 @@ class SelectionAnimation(QVariantAnimation):
         sample_size = min(max_steps, population_size)
         picks = sample(range(population_size), k=sample_size)
         self._indexes = [model.index_from_item(root_item.child(k)) for k in picks]
-        self.setStartValue(0)
-        self.setEndValue(0)
+        view = parent.ui.treeView_object
+        self._positions = [view.viewport().mapToGlobal(view.visualRect(ind).center()) for ind in self._indexes]
+        self._lines = None
+        self.setStartValue(0.0)
+        self.setEndValue(1.0)
         self.setLoopCount(len(self._indexes))
+        self.setDuration(self._duration)
         self.currentLoopChanged.connect(self._handle_current_loop_changed)
+        self.valueChanged.connect(self._handle_value_changed)
+        self.finished.connect(self._handle_finished)
 
     def updateState(self, new, old):
         if new == QAbstractAnimation.Running and old == QAbstractAnimation.Stopped:
-            self.setDuration(self._duration)
             self._selection_model.clearSelection()
-            self._selection_model.select(self._indexes[0], self._command)
+            self._positions.insert(0, QCursor.pos())
+            self._lines = list(zip(self._positions[:-1], self._positions[1:]))
+
+    @Slot("QVariant")
+    def _handle_value_changed(self, value):
+        src_pos, dst_pos = self._lines[self.currentLoop()]
+        value = max(0.0, min(1.0, 4.0 * (value - 0.5)))
+        pos = src_pos + (dst_pos - src_pos) * value
+        QCursor.setPos(pos)
 
     @Slot(int)
     def _handle_current_loop_changed(self, loop):
-        self._selection_model.select(self._indexes[loop], self._command)
+        self._selection_model.select(self._indexes[loop - 1], self._command)
+
+    @Slot()
+    def _handle_finished(self):
+        self._selection_model.select(self._indexes[-1], self._command)
