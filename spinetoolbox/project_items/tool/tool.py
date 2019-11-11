@@ -967,13 +967,16 @@ class Tool(ProjectItem):
                 "Connect items that provide the required files to this Tool.".format(", ".join(not_found))
             )
             return
-        for i in range(self.output_file_model.rowCount()):
-            out_file_name = self.output_file_model.item(i, 0).data(Qt.DisplayRole)
-            out_file_path = os.path.abspath(os.path.join(self.output_dir, out_file_name))
-            resource = ProjectItemResource(
-                self, "file", url=pathlib.Path(out_file_path).as_uri(), metadata=dict(is_output=True)
-            )
-            inst.advertise_resources(self.name, resource)
+        output_files = set(
+            self.output_file_model.item(i, 0).data(Qt.DisplayRole) for i in range(self.output_file_model.rowCount())
+        )
+        for root, _, files in os.walk(self.output_dir):
+            for file_ in output_files.intersection(files):
+                file_path = os.path.join(root, file_)
+                resource = ProjectItemResource(
+                    self, "file", url=pathlib.Path(file_path).as_uri(), metadata=dict(is_output=True)
+                )
+                inst.advertise_resources(self.name, resource)
 
     def item_dict(self):
         """Returns a dictionary corresponding to this item."""
