@@ -404,6 +404,45 @@ class DataStoreForm(QMainWindow):
         self._setup_delegate(table_view, h("parameter_name"), RelationshipParameterNameDelegate)
         self._setup_delegate(table_view, h("object_name_list"), ObjectNameListDelegate)
 
+    @staticmethod
+    def _db_map_items(indexes):
+        """Groups items from given tree indexes by db map.
+
+        Returns:
+            dict: lists of dictionary items keyed by DiffDatabaseMapping
+        """
+        d = dict()
+        for index in indexes:
+            item = index.model().item_from_index(index)
+            for db_map in item.db_maps:
+                d.setdefault(db_map, []).append(item.db_map_data(db_map))
+        return d
+
+    @staticmethod
+    def _db_map_class_id_data(db_map_data):
+        """Returns a new dictionary where the class id is also part of the key.
+
+        Returns:
+            dict: lists of dictionary items keyed by tuple (DiffDatabaseMapping, integer class id)
+        """
+        d = dict()
+        for db_map, items in db_map_data.items():
+            for item in items:
+                d.setdefault((db_map, item["class_id"]), set()).add(item["id"])
+        return d
+
+    @staticmethod
+    def _extend_merge(left, right):
+        """Returns a new dictionary by uniting left and right.
+
+        Returns:
+            dict: lists of dictionary items keyed by DiffDatabaseMapping
+        """
+        result = left.copy()
+        for key, data in right.items():
+            result.setdefault(key, []).extend(data)
+        return result
+
     def selected_entity_class_ids(self, entity_class_type):
         """Return object class ids selected in object tree *and* parameter tag toolbar."""
         tree_class_ids = self.selected_ent_cls_ids[entity_class_type]

@@ -642,18 +642,23 @@ class GraphViewForm(DataStoreForm):
         """Filters parameters by selected objects in the graph."""
         scene = self.ui.graphicsView.scene()
         selected_items = scene.selectedItems()
-        self.entity_item_selection = [x for x in selected_items if isinstance(x, EntityItem)]
-        self.selected_ent_cls_ids["object class"] = selected_obj_cls_ids = {}
-        self.selected_ent_cls_ids["relationship class"] = selected_rel_cls_ids = {}
-        self.selected_ent_ids["object"] = selected_obj_ids = {}
-        self.selected_ent_ids["relationship"] = selected_rel_ids = {}
+        selected_objs = {self.db_map: []}
+        selected_rels = {self.db_map: []}
         for item in selected_items:
             if isinstance(item, ObjectItem):
-                selected_obj_cls_ids.setdefault(self.db_map, set()).add(item.entity_class_id)
-                selected_obj_ids.setdefault((self.db_map, item.entity_class_id), set()).add(item.entity_id)
+                selected_objs[self.db_map].append(item.db_representation)
             elif isinstance(item, RelationshipItem):
-                selected_rel_cls_ids.setdefault(self.db_map, set()).add(item.entity_class_id)
-                selected_rel_ids.setdefault((self.db_map, item.entity_class_id), set()).add(item.entity_id)
+                selected_rels[self.db_map].append(item.db_representation)
+        cascading_rels = self.db_mngr.find_cascading_relationships(self.db_mngr._to_ids(selected_objs))
+        selected_rels = self._extend_merge(selected_rels, cascading_rels)
+        for db_map, items in selected_objs.items():
+            self.selected_ent_cls_ids["object class"].setdefault(db_map, set()).update({x["class_id"] for x in items})
+        for db_map, items in selected_rels.items():
+            self.selected_ent_cls_ids["relationship class"].setdefault(db_map, set()).update(
+                {x["class_id"] for x in items}
+            )
+        self.selected_ent_ids["object"] = self._db_map_class_id_data(selected_objs)
+        self.selected_ent_ids["relationship"] = self._db_map_class_id_data(selected_rels)
         self.update_filter()
 
     @Slot(list)
