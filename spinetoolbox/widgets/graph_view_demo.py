@@ -16,7 +16,7 @@ Contains the GraphViewForm class.
 :date:   26.11.2018
 """
 
-from random import sample
+import random
 from PySide2.QtCore import Slot, QFinalState, QState, QItemSelectionModel, QAbstractAnimation, QVariantAnimation
 from PySide2.QtGui import QColor, QCursor
 from spinetoolbox.live_demo import LiveDemo
@@ -141,10 +141,12 @@ class SelectionAnimation(QVariantAnimation):
         root_item = model.root_item
         population_size = root_item.child_count()
         sample_size = min(max_steps, population_size)
-        picks = sample(range(population_size), k=sample_size)
+        picks = random.sample(range(population_size), k=sample_size)
         self._indexes = [model.index_from_item(root_item.child(k)) for k in picks]
         view = parent.ui.treeView_object
-        self._positions = [view.viewport().mapToGlobal(view.visualRect(ind).center()) for ind in self._indexes]
+        self._positions = [
+            view.viewport().mapToGlobal(self._random_point(view.visualRect(ind))) for ind in self._indexes
+        ]
         self._lines = None
         self.setStartValue(0.0)
         self.setEndValue(1.0)
@@ -153,6 +155,10 @@ class SelectionAnimation(QVariantAnimation):
         self.currentLoopChanged.connect(self._handle_current_loop_changed)
         self.valueChanged.connect(self._handle_value_changed)
         self.finished.connect(self._handle_finished)
+
+    @staticmethod
+    def _random_point(rect):
+        return rect.topLeft() + (rect.bottomRight() - rect.topLeft()) / random.triangular(1, 3)
 
     def updateState(self, new, old):
         if new == QAbstractAnimation.Running and old == QAbstractAnimation.Stopped:
