@@ -17,28 +17,15 @@ Contains the GraphViewForm class.
 """
 
 from random import sample
-from PySide2.QtCore import (
-    Qt,
-    QObject,
-    Signal,
-    Slot,
-    QEvent,
-    QStateMachine,
-    QFinalState,
-    QState,
-    QItemSelectionModel,
-    QAbstractAnimation,
-    QVariantAnimation,
-)
-from PySide2.QtGui import QColor, QFont
-from PySide2.QtWidgets import QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QWidget
-from .custom_qwidgets import OverlayWidget
+from PySide2.QtCore import Slot, QFinalState, QState, QItemSelectionModel, QAbstractAnimation, QVariantAnimation
+from PySide2.QtGui import QColor
+from spinetoolbox.live_demo import LiveDemo
 
 
-class GraphViewDemo(QObject):
+class GraphViewDemo(LiveDemo):
     """A widget that shows a demo for the graph view."""
 
-    drag_entered = Signal()
+    _overlay_color = QColor(0, 0, 255, 32)
 
     def __init__(self, parent):
         """Initializes class.
@@ -46,69 +33,14 @@ class GraphViewDemo(QObject):
         Args:
             parent (GraphViewForm)
         """
-        super().__init__(parent)
-        self.graphics_overlay = OverlayWidget(parent.ui.graphicsView, Qt.white)
-        self.object_tree_overlay = OverlayWidget(parent.ui.dockWidget_object_tree, QColor(0, 255, 255, 32))
-        self.graphics_overlay.setAcceptDrops(True)
-        self.graphics_overlay.installEventFilter(self)
-        self.label = QLabel(self.graphics_overlay)
-        self.label.setFont(QFont("arial,helvetica", 16))
-        self.label.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
-        self.label.setWordWrap(True)
-        self.button_abort = QPushButton("Abort", self.graphics_overlay)
-        self.button_next = QPushButton(self.graphics_overlay)
-        self.button_back = QPushButton("Back", self.graphics_overlay)
-        button_container = QWidget(self.graphics_overlay)
-        button_layout = QHBoxLayout(button_container)
-        button_layout.addStretch()
-        button_layout.addWidget(self.button_abort)
-        button_layout.addWidget(self.button_back)
-        button_layout.addWidget(self.button_next)
-        button_layout.addStretch()
-        layout = QVBoxLayout(self.graphics_overlay)
-        layout.addStretch()
-        layout.addWidget(self.label)
-        layout.addWidget(button_container)
-        layout.addStretch()
-        self.machine = QStateMachine(self)
+        super().__init__("Live demo", parent)
 
-    def eventFilter(self, obj, event):
-        if obj == self.graphics_overlay and event.type() == QEvent.DragEnter:
-            self.drag_entered.emit()
-        return False
-
-    def is_running(self):
-        return self.machine.isRunning()
-
-    def init_demo(self):
-        if self.is_running():
-            return
-        self.parent().ui.treeView_object.selectionModel().clearSelection()
-        # States
-        dead = QFinalState(self.machine)
-        dying = QState(self.machine)
-        running = QState(self.machine)
-        teasing = QState(running)
-        before_selecting_one = QState(running)
-        selecting_one = QState(running)
-        before_selecting_more = QState(running)
-        selecting_more = QState(running)
-        ending = QState(running)
-        self.machine.setInitialState(running)
-        running.setInitialState(teasing)
-        # State properties
-        dying.assignProperty(self.graphics_overlay, "visible", False)
-        dying.assignProperty(self.object_tree_overlay, "visible", False)
-        dying.entered.connect(lambda: self.graphics_overlay.setAttribute(Qt.WA_TransparentForMouseEvents, True))
-        running.assignProperty(self.parent().ui.dockWidget_object_tree, "visible", True)
-        running.assignProperty(self.graphics_overlay, "visible", True)
-        running.entered.connect(lambda: self.graphics_overlay.setAttribute(Qt.WA_TransparentForMouseEvents, False))
-        teasing.assignProperty(self.parent().ui.dockWidget_object_tree, "visible", True)
-        teasing.assignProperty(self.label, "text", "<html>First time? Try the live demo!</html>")
-        teasing.assignProperty(self.button_abort, "visible", False)
-        teasing.assignProperty(self.button_next, "text", "Start demo")
-        teasing.assignProperty(self.button_back, "visible", False)
-        teasing.assignProperty(self.object_tree_overlay, "visible", False)
+    def _make_select_one(self):
+        select_one = QState(self.run)
+        begin = QState(select_one)
+        simulate = QState(select_one)
+        finalize = QFinalState(select_one)
+        begin.assignProperty(self.parent().ui.dockWidget_object_tree, "visible", True)
         text = """
             <html>
             <p>Selecting items in the object tree automatically triggers
@@ -116,55 +48,86 @@ class GraphViewDemo(QObject):
             <p>Press <b>Show</b> to see it in action.</p>
             </html>
         """
-        before_selecting_one.assignProperty(self.parent().ui.dockWidget_object_tree, "visible", True)
-        before_selecting_one.assignProperty(self.label, "text", text)
-        before_selecting_one.assignProperty(self.button_abort, "visible", True)
-        before_selecting_one.assignProperty(self.button_next, "text", "Show")
-        before_selecting_one.assignProperty(self.button_back, "visible", False)
-        before_selecting_one.assignProperty(self.object_tree_overlay, "visible", False)
-        selecting_one.assignProperty(self.parent().ui.dockWidget_object_tree, "visible", True)
-        selecting_one.assignProperty(self.graphics_overlay, "visible", False)
-        selecting_one.assignProperty(self.object_tree_overlay, "visible", True)
-        before_selecting_more.assignProperty(self.parent().ui.dockWidget_object_tree, "visible", True)
-        before_selecting_more.assignProperty(self.graphics_overlay, "visible", True)
+        begin.assignProperty(self.label_msg, "text", text)
+        begin.assignProperty(self.button_right, "text", "Show")
+        begin.assignProperty(self.button_right, "enabled", True)
+        begin.assignProperty(self.overlay1, "visible", False)
+        simulate.assignProperty(self.parent().ui.dockWidget_object_tree, "visible", True)
+        simulate.assignProperty(self.overlay1, "target", self.parent().ui.treeView_object)
+        simulate.assignProperty(self.overlay1, "visible", True)
+        simulate.assignProperty(self.button_right, "enabled", False)
+
+        select_one.setInitialState(begin)
+        transition = begin.addTransition(self.button_right.clicked, simulate)
+        animation = SelectionAnimation(self.parent(), command=QItemSelectionModel.ClearAndSelect)
+        transition.addAnimation(animation)
+        simulate.addTransition(animation.finished, finalize)
+        return select_one
+
+    def _make_select_more(self):
+        select_more = QState(self.run)
+        begin = QState(select_more)
+        simulate = QState(select_more)
+        finalize = QFinalState(select_more)
+        begin.assignProperty(self.parent().ui.dockWidget_object_tree, "visible", True)
         sticky = self.parent().qsettings().value("appSettings/stickySelection", defaultValue="false")
         note = " (by holding down the <b>Ctrl</b> key)" if sticky == "false" else ""
         text = f"""
             <html>
-            <p>Selecting multiple items{note} makes things more interesting.</p><br />
+            <p>Selecting multiple items{note} makes things more interesting.</p>
             <p>Press <b>Show</b> to see it in action.</p>
             </html>
         """
-        before_selecting_more.assignProperty(self.label, "text", text)
-        before_selecting_more.assignProperty(self.button_back, "visible", True)
-        before_selecting_more.assignProperty(self.object_tree_overlay, "visible", False)
-        selecting_more.assignProperty(self.parent().ui.dockWidget_object_tree, "visible", True)
-        selecting_more.assignProperty(self.graphics_overlay, "visible", False)
-        selecting_more.assignProperty(self.object_tree_overlay, "visible", True)
-        ending.assignProperty(self.graphics_overlay, "visible", True)
-        ending.assignProperty(self.label, "text", "<html>That's all for now. Hope you liked it.</html>")
-        ending.assignProperty(self.button_abort, "visible", False)
-        ending.assignProperty(self.button_next, "text", "Close")
-        ending.assignProperty(self.button_back, "visible", False)
-        ending.assignProperty(self.object_tree_overlay, "visible", False)
-        # Transitions
-        dying.addTransition(dead)
-        running.addTransition(self.button_abort.clicked, dying)
-        teasing.addTransition(self.parent().graph_created, dying)
-        teasing.addTransition(self.drag_entered, dying)
-        teasing.addTransition(self.button_next.clicked, before_selecting_one)
-        transition = before_selecting_one.addTransition(self.button_next.clicked, selecting_one)
-        animation = SelectionAnimation(self.parent(), command=QItemSelectionModel.ClearAndSelect)
-        transition.addAnimation(animation)
-        selecting_one.addTransition(animation.finished, before_selecting_more)
-        before_selecting_more.addTransition(self.button_back.clicked, before_selecting_one)
-        transition = before_selecting_more.addTransition(self.button_next.clicked, selecting_more)
+        begin.assignProperty(self.label_msg, "text", text)
+        begin.assignProperty(self.button_right, "text", "Show")
+        begin.assignProperty(self.button_right, "enabled", True)
+        begin.assignProperty(self.overlay1, "visible", False)
+        simulate.assignProperty(self.parent().ui.dockWidget_object_tree, "visible", True)
+        simulate.assignProperty(self.overlay1, "visible", True)
+        simulate.assignProperty(self.button_right, "enabled", False)
+
+        select_more.setInitialState(begin)
+        transition = begin.addTransition(self.button_right.clicked, simulate)
         animation = SelectionAnimation(self.parent(), command=QItemSelectionModel.Select)
         transition.addAnimation(animation)
-        selecting_more.addTransition(animation.finished, ending)
-        ending.addTransition(self.button_next.clicked, dying)
-        # Run
-        self.machine.start()
+        simulate.addTransition(animation.finished, finalize)
+        return select_more
+
+    def _make_good_bye(self):
+        good_bye = QState(self.run)
+        begin = QState(good_bye)
+        finalize = QFinalState(good_bye)
+        good_bye.assignProperty(self.label_msg, "text", "<html>That's all for now. Hope you liked it.</html>")
+        good_bye.assignProperty(self.button_left, "visible", False)
+        good_bye.assignProperty(self.button_right, "enabled", True)
+        good_bye.assignProperty(self.button_right, "text", "Close")
+        good_bye.assignProperty(self.overlay1, "visible", False)
+
+        good_bye.setInitialState(begin)
+        begin.addTransition(self.button_right.clicked, finalize)
+        return good_bye
+
+    def _handle_welcome_entered(self):
+        welcome = self.sender()
+        select_one = self._make_select_one()
+        welcome.addTransition(welcome.finished, select_one)
+        select_one.entered.connect(self._handle_select_one_entered)
+
+    def _handle_select_one_entered(self):
+        select_one = self.sender()
+        select_more = self._make_select_more()
+        select_one.addTransition(select_one.finished, select_more)
+        select_more.entered.connect(self._handle_select_more_entered)
+
+    def _handle_select_more_entered(self):
+        select_more = self.sender()
+        good_bye = self._make_good_bye()
+        select_more.addTransition(select_more.finished, good_bye)
+        good_bye.entered.connect(self._handle_good_bye_entered)
+
+    def _handle_good_bye_entered(self):
+        good_bye = self.sender()
+        good_bye.finished.connect(self.close)
 
 
 class SelectionAnimation(QVariantAnimation):

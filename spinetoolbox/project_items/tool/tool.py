@@ -804,7 +804,7 @@ class Tool(ProjectItem):
             + "'>results directory</a>"
         )
         self._toolbox.msg.emit("*** Archiving output files to {0} ***".format(result_anchor))
-        if self.opt_input_file_model.rowCount() > 0:
+        if self.output_file_model.rowCount() > 0:
             saved_files, failed_files = self.copy_output_files(result_path)
             if not saved_files:
                 # If no files were saved

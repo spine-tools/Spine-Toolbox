@@ -148,7 +148,7 @@ class CompoundTableModel(MinimalTableModel):
         else:
             self.sub_models.pop(self._fetched_count)
         if model.rowCount() == row_count_before:
-            # fetching submodel didn't add any rows. Emit layoutChanged so we make sure we fetch the next submodel
+            # fetching submodel didn't add any rows. Emit layoutChanged so we fetch the next submodel
             self.layoutChanged.emit()
 
     def flags(self, index):
@@ -246,50 +246,51 @@ class CompoundWithEmptyTableModel(CompoundTableModel):
             )
 
     @Slot("QModelIndex", "int", "int")
-    def _handle_empty_rows_removed(self, parent, first, last):
+    def _handle_empty_rows_removed(self, parent, empty_first, empty_last):
         """Runs when rows are removed from the empty model.
         Updates row_map, then emits rowsRemoved so the removed rows are no longer visible.
         """
-        # Emit signal for compound
-        compound_first = self._inv_row_map[self.empty_model, first]
-        compound_last = self._inv_row_map[self.empty_model, last]
-        self.rowsRemoved.emit(QModelIndex(), compound_first, compound_last)
-        # Redo the map for the empty model entirely
+        first = self._inv_row_map[self.empty_model, empty_first]
+        last = self._inv_row_map[self.empty_model, empty_last]
+        # Remove the empty model from the row map
         tip = self._inv_row_map[self.empty_model, 0]
         self._row_map = self._row_map[:tip]
+        # Compute a new row map for the empty model
         empty_row_map = self._row_map_for_model(self.empty_model)
         self._append_row_map(empty_row_map)
+        self.rowsRemoved.emit(QModelIndex(), first, last)
 
     @Slot("QModelIndex", "int", "int")
-    def _handle_empty_rows_inserted(self, parent, first, last):
+    def _handle_empty_rows_inserted(self, parent, empty_first, empty_last):
         """Runs when rows are inserted to the empty model.
         Updates row_map, then emits rowsInserted so the new rows become visible.
         """
-        # Redo the map for the empty model entirely
+        # Remove the empty model from the row map
         try:
             tip = self._inv_row_map[self.empty_model, 0]
             self._row_map = self._row_map[:tip]
         except KeyError:
             pass
+        # Compute a new row map for the empty model
         empty_row_map = self._row_map_for_model(self.empty_model)
         self._append_row_map(empty_row_map)
-        # Emit signal for compound
-        compound_first = self._inv_row_map[self.empty_model, first]
-        compound_last = self._inv_row_map[self.empty_model, last]
-        self.rowsInserted.emit(QModelIndex(), compound_first, compound_last)
+        # Emit signal
+        first = self._inv_row_map[self.empty_model, empty_first]
+        last = self._inv_row_map[self.empty_model, empty_last]
+        self.rowsInserted.emit(QModelIndex(), first, last)
 
     def _handle_single_model_reset(self, single_model):
         """Runs when one of the single models is reset.
         Updates row_map, then emits rowsInserted so the new rows become visible.
         """
-        compound_first = self.rowCount() - self.empty_model.rowCount()
-        compound_last = compound_first + single_model.rowCount() - 1
-        self.rowsInserted.emit(QModelIndex(), compound_first, compound_last)
+        first = self.rowCount() - self.empty_model.rowCount()
+        last = first + single_model.rowCount() - 1
         # Take the empty row map, append the new one, and then reappend the empty
-        self._row_map, empty_row_map = self._row_map[:compound_first], self._row_map[compound_first:]
+        self._row_map, empty_row_map = self._row_map[:first], self._row_map[first:]
         single_row_map = self._row_map_for_model(single_model)
         self._append_row_map(single_row_map)
         self._append_row_map(empty_row_map)
+        self.rowsInserted.emit(QModelIndex(), first, last)
 
     def clear_model(self):
         """Clears the model."""

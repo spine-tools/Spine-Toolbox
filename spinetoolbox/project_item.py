@@ -411,7 +411,13 @@ class ProjectItem(BaseProjectItem):
             parent (QWidget): The widget that is controlling the menu
             action (str): The selected action
         """
-        if action == "Open directory...":
+        if action == "Copy":
+            self._toolbox.project_item_to_clipboard()
+        elif action == "Paste":
+            self._toolbox.project_item_from_clipboard()
+        elif action == "Duplicate":
+            self._toolbox.duplicate_project_item()
+        elif action == "Open directory...":
             self.open_directory()
         elif action == "Rename":
             # noinspection PyCallByClass

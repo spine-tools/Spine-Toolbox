@@ -48,19 +48,18 @@ class GraphViewForm(DataStoreForm):
     _arc_width = 0.25 * _node_extent
     _arc_length_hint = 3 * _node_extent
 
-    def __init__(self, project, *db_maps, read_only=False):
-        """Initializes class.
+    def __init__(self, project, *db_urls, read_only=False):
+        """Initializes form.
 
         Args:
             project (SpineToolboxProject): The project instance that owns this form.
-            *db_maps (DiffDatabaseMapping): Databases to view.
+            *db_urls (str): Database urls to view.
             read_only (bool): Whether or not the form should be editable.
         """
         from ..ui.graph_view_form import Ui_MainWindow
 
         tic = time.clock()
-        super().__init__(project, Ui_MainWindow(), *db_maps)
-        self.db_map = next(iter(db_maps))
+        super().__init__(project, Ui_MainWindow(), *db_urls)
         self.db_name = self.db_map.codename
         self.read_only = read_only
         # Lookups, used for adding objects and relationships
@@ -85,7 +84,7 @@ class GraphViewForm(DataStoreForm):
         self.ui.treeView_object.qsettings = self.qsettings
         # Set up dock widgets
         self.restore_dock_widgets()
-        self.demo = GraphViewDemo(self)
+        self.live_demo = GraphViewDemo(self)
         # Initialize stuff
         self.init_models()
         self.setup_delegates()
@@ -106,11 +105,11 @@ class GraphViewForm(DataStoreForm):
         self.ui.graphicsView.context_menu_requested.connect(self.show_graph_view_context_menu)
         self.ui.graphicsView.item_dropped.connect(self._handle_item_dropped)
         self.ui.dockWidget_item_palette.dockLocationChanged.connect(self._handle_item_palette_dock_location_changed)
-        self.ui.actionGraph_hide_selected.triggered.connect(self.hide_selected_items)
-        self.ui.actionGraph_show_hidden.triggered.connect(self.show_hidden_items)
-        self.ui.actionGraph_prune_selected.triggered.connect(self.prune_selected_items)
-        self.ui.actionGraph_reinstate_pruned.triggered.connect(self.reinstate_pruned_items)
-        self.ui.actionGraph_start_demo.triggered.connect(self.start_demo)
+        self.ui.actionView_hide_selected.triggered.connect(self.hide_selected_items)
+        self.ui.actionView_show_hidden.triggered.connect(self.show_hidden_items)
+        self.ui.actionView_prune_selected.triggered.connect(self.prune_selected_items)
+        self.ui.actionView_reinstate_pruned.triggered.connect(self.reinstate_pruned_items)
+        self.ui.actionHelp_live_demo.triggered.connect(self.show_demo)
         self.ui.tableView_object_parameter_value.customContextMenuRequested.connect(
             self.show_object_parameter_value_context_menu
         )
@@ -125,7 +124,7 @@ class GraphViewForm(DataStoreForm):
         )
         # Dock Widgets menu action
         self.ui.actionRestore_Dock_Widgets.triggered.connect(self.restore_dock_widgets)
-        self.ui.menuGraph.aboutToShow.connect(self._handle_menu_about_to_show)
+        self.ui.menuView.aboutToShow.connect(self._handle_menu_about_to_show)
         self.zoom_widget_action.minus_pressed.connect(self._handle_zoom_minus_pressed)
         self.zoom_widget_action.plus_pressed.connect(self._handle_zoom_plus_pressed)
         self.zoom_widget_action.reset_pressed.connect(self._handle_zoom_reset_pressed)
@@ -171,11 +170,6 @@ class GraphViewForm(DataStoreForm):
         )
         self.ui.dockWidget_object_parameter_value.raise_()
         self.ui.dockWidget_relationship_parameter_value.raise_()
-
-    def show(self):
-        """Shows usage message together with the form."""
-        super().show()
-        self.demo.init_demo()
 
     def init_models(self):
         """Initializes models."""
@@ -334,11 +328,11 @@ class GraphViewForm(DataStoreForm):
         """Runs when a menu from the main menubar is about to show.
         Enables or disables the menu actions according to current status of the form.
         """
-        self.ui.actionGraph_hide_selected.setEnabled(bool(self.entity_item_selection))
-        self.ui.actionGraph_show_hidden.setEnabled(bool(self.hidden_items))
-        self.ui.actionGraph_prune_selected.setEnabled(bool(self.entity_item_selection))
-        self.ui.actionGraph_reinstate_pruned.setEnabled(bool(self.rejected_items))
-        self.ui.actionGraph_start_demo.setEnabled(not self.demo.is_running())
+        self.ui.actionView_hide_selected.setEnabled(bool(self.entity_item_selection))
+        self.ui.actionView_show_hidden.setEnabled(bool(self.hidden_items))
+        self.ui.actionView_prune_selected.setEnabled(bool(self.entity_item_selection))
+        self.ui.actionView_reinstate_pruned.setEnabled(bool(self.rejected_items))
+        self.ui.actionHelp_live_demo.setEnabled(not self.live_demo.is_running())
 
     @Slot("Qt.DockWidgetArea", name="_handle_item_palette_dock_location_changed")
     def _handle_item_palette_dock_location_changed(self, area):
@@ -383,7 +377,7 @@ class GraphViewForm(DataStoreForm):
         else:
             if new_items:
                 object_items = new_items[0]
-                self._add_new_items(scene, *new_items)
+                self._add_new_items(scene, *new_items)  # pylint: disable=no-value-for-parameter
             else:
                 object_items = []
             if wip_relationship_items:
@@ -844,9 +838,8 @@ class GraphViewForm(DataStoreForm):
         self.build_graph()
 
     @Slot("bool")
-    def start_demo(self, checked=False):
-        self.tear_down_scene()
-        self.demo.init_demo()
+    def show_demo(self, checked=False):
+        self.live_demo.show()
 
     def show_object_item_context_menu(self, global_pos, main_item):
         """Shows context menu for entity item.
@@ -987,5 +980,6 @@ class GraphViewForm(DataStoreForm):
         Args:
             event (QEvent): Closing event if 'X' is clicked.
         """
+        self.live_demo.setFloating(True)
         super().closeEvent(event)
         self.tear_down_scene()

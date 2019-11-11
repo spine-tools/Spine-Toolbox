@@ -13,7 +13,7 @@
 # Form implementation generated from reading ui file '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/tabular_view_form.ui',
 # licensing of '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/tabular_view_form.ui' applies.
 #
-# Created: Sun Nov  3 12:10:49 2019
+# Created: Fri Nov  8 21:30:23 2019
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -188,6 +188,6 @@ class Ui_MainWindow(object):
         self.actionClose.setText(QtWidgets.QApplication.translate("MainWindow", "Close", None, -1))
         self.actionClose.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+W", None, -1))
 
-from spinetoolbox.widgets.custom_qtableview import FrozenTableView, SimpleCopyPasteTableView
+from spinetoolbox.widgets.custom_qtableview import SimpleCopyPasteTableView, FrozenTableView
 from spinetoolbox.widgets.custom_qlistview import TestListView
 from spinetoolbox import resources_icons_rc

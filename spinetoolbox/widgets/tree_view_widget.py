@@ -40,21 +40,22 @@ from ..plotting import plot_selection, PlottingError, GraphAndTreeViewPlottingHi
 
 class TreeViewForm(DataStoreForm):
     """
-    A widget to show and edit Spine objects in a data store.
-
-    Attributes:
-        project (SpineToolboxProject): The project instance that owns this form
-        db_maps (iter): DiffDatabaseMapping instances
+    A widget to show Spine dbs in a tree.
     """
 
-    def __init__(self, project, *db_maps):
-        """Initialize class."""
+    def __init__(self, project, *db_urls):
+        """Initializes form.
+
+        Args:
+            project (SpineToolboxProject): The project instance that owns this form.
+            *db_urls (str): Database urls to view.
+        """
         from ..ui.tree_view_form import Ui_MainWindow
 
         tic = time.process_time()
-        super().__init__(project, Ui_MainWindow(), *db_maps)
+        super().__init__(project, Ui_MainWindow(), *db_urls)
         self.takeCentralWidget()
-        self.relationship_tree_model = RelationshipTreeModel(self, self.db_mngr, *db_maps)
+        self.relationship_tree_model = RelationshipTreeModel(self, self.db_mngr, *self.db_maps)
         self.ui.treeView_relationship.setModel(self.relationship_tree_model)
         # Others
         self._selection_source = None
@@ -67,7 +68,7 @@ class TreeViewForm(DataStoreForm):
         self.setup_delegates()
         self.add_toggle_view_actions()
         self.connect_signals()
-        self.setWindowTitle("Data store tree view    -- {} --".format(", ".join([x.codename for x in db_maps])))
+        self.setWindowTitle("Data store tree view    -- {} --".format(", ".join([x.codename for x in self.db_maps])))
         toc = time.process_time()
         self.msg.emit("Tree view form created in {} seconds".format(toc - tic))
 
@@ -464,7 +465,7 @@ class TreeViewForm(DataStoreForm):
         return d
 
     @staticmethod
-    def _db_map_class_ids(db_map_data):
+    def _db_map_class_id_data(db_map_data):
         """Returns a new dictionary where the class id is also part of the key.
 
         Returns:
@@ -477,15 +478,15 @@ class TreeViewForm(DataStoreForm):
         return d
 
     @staticmethod
-    def _merge_db_map_data(left, right):
-        """Returns a new dictionary where the values are the union of the left and right values.
+    def _extend_merge(left, right):
+        """Returns a new dictionary by uniting left and right.
 
         Returns:
             dict: lists of dictionary items keyed by DiffDatabaseMapping
         """
         result = left.copy()
-        for db_map, data in right.items():
-            result.setdefault(db_map, []).extend(data)
+        for key, data in right.items():
+            result.setdefault(key, []).extend(data)
         return result
 
     def _update_object_filter(self):
@@ -496,22 +497,22 @@ class TreeViewForm(DataStoreForm):
         cascading_relationship_classes = self.db_mngr.find_cascading_relationship_classes(
             self.selected_ent_cls_ids["object class"]
         )
-        selected_relationship_classes = self._merge_db_map_data(
+        selected_relationship_classes = self._extend_merge(
             selected_relationship_classes, cascading_relationship_classes
         )
         self.selected_ent_cls_ids["relationship class"] = self.db_mngr._to_ids(selected_relationship_classes)
         selected_objects = self._db_map_items(self.object_tree_model.selected_object_indexes)
         selected_relationships = self._db_map_items(self.object_tree_model.selected_relationship_indexes)
         cascading_relationships = self.db_mngr.find_cascading_relationships(self.db_mngr._to_ids(selected_objects))
-        selected_relationships = self._merge_db_map_data(selected_relationships, cascading_relationships)
+        selected_relationships = self._extend_merge(selected_relationships, cascading_relationships)
         for db_map, items in selected_objects.items():
             self.selected_ent_cls_ids["object class"].setdefault(db_map, set()).update({x["class_id"] for x in items})
         for db_map, items in selected_relationships.items():
             self.selected_ent_cls_ids["relationship class"].setdefault(db_map, set()).update(
                 {x["class_id"] for x in items}
             )
-        self.selected_ent_ids["object"] = self._db_map_class_ids(selected_objects)
-        self.selected_ent_ids["relationship"] = self._db_map_class_ids(selected_relationships)
+        self.selected_ent_ids["object"] = self._db_map_class_id_data(selected_objects)
+        self.selected_ent_ids["relationship"] = self._db_map_class_id_data(selected_relationships)
         self.update_filter()
 
     def _update_relationship_filter(self):
@@ -525,7 +526,7 @@ class TreeViewForm(DataStoreForm):
             self.selected_ent_cls_ids["relationship class"].setdefault(db_map, set()).update(
                 {x["class_id"] for x in items}
             )
-        self.selected_ent_ids["relationship"] = self._db_map_class_ids(selected_relationships)
+        self.selected_ent_ids["relationship"] = self._db_map_class_id_data(selected_relationships)
         self.update_filter()
 
     @Slot("QPoint")
