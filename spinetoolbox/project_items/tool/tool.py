@@ -1041,11 +1041,14 @@ class Tool(ProjectItem):
     def available_resources_downstream(self, upstream_resources):
         """See base class."""
         resources = list()
-        for i in range(self.output_file_model.rowCount()):
-            out_file_name = self.output_file_model.item(i, 0).data(Qt.DisplayRole)
-            out_file_path = os.path.abspath(os.path.join(self.output_dir, out_file_name))
-            resource = ProjectItemResource(
-                self, "file", url=pathlib.Path(out_file_path).as_uri(), metadata=dict(is_output=True)
-            )
-            resources.append(resource)
+        output_files = set(
+            self.output_file_model.item(i, 0).data(Qt.DisplayRole) for i in range(self.output_file_model.rowCount())
+        )
+        for root, _, files in os.walk(self.output_dir):
+            for file_ in output_files.intersection(files):
+                file_path = os.path.join(root, file_)
+                resource = ProjectItemResource(
+                    self, "file", url=pathlib.Path(file_path).as_uri(), metadata=dict(is_output=True)
+                )
+                resources.append(resource)
         return resources

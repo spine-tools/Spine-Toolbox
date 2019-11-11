@@ -29,7 +29,7 @@ class MultiDBTreeItem(TreeItem):
         """Init class.
 
         Args:
-            db_mngr (SpineDBManager)
+            db_mngr (SpineDBManager): a database manager
             db_map_data (dict): maps instances of DiffDatabaseMapping to the id of the item in that db
         """
         super().__init__(model)
@@ -44,7 +44,7 @@ class MultiDBTreeItem(TreeItem):
 
     @property
     def child_item_type(self):
-        """Returns the type of child items. Reimplement in subclasses to return something more meaningfull."""
+        """Returns the type of child items. Reimplement in subclasses to return something more meaningful."""
         return MultiDBTreeItem
 
     @property
@@ -212,6 +212,7 @@ class MultiDBTreeItem(TreeItem):
         into several for different dbs or merging two or more children from different dbs.
 
         Examples of problems:
+
         - The user renames an object class in one db but not in the others --> we need to split
         - The user renames an object class and the new name is already 'taken' by another object class in
           another db_map --> we need to merge
@@ -503,7 +504,7 @@ class RelationshipItem(EntityItem):
     ]
 
     def __init__(self, *args, **kwargs):
-        """Overriden method to parse some data for convenience later.
+        """Overridden method to parse some data for convenience later.
         Also make sure we never try to fetch this item."""
         super().__init__(*args, **kwargs)
         self._fetched = True
