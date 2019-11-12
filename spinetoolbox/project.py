@@ -465,7 +465,9 @@ class SpineToolboxProject(MetaObject):
             self._toolbox.msg_success.emit("Execution complete")
             return
         # Execute next graph
-        self.execution_instance = ExecutionInstance(self._toolbox, execution_list)
+        resource_map = ResourceMap()
+        resource_map.update(execution_list, self._toolbox.project_item_model)
+        self.execution_instance = ExecutionInstance(self._toolbox, execution_list, resource_map)
         self._toolbox.msg.emit("")
         self._toolbox.msg.emit("---------------------------------------")
         self._toolbox.msg.emit("<b>Starting DAG {0}/{1}</b>".format(self._executed_graph_index + 1, self._n_graphs))
