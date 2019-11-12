@@ -83,188 +83,188 @@ class SpineDBSignaller:
     @Slot("QVariant")
     def receive_object_classes_added(self, db_map_data):
         for listener, db_maps in self.listeners.items():
-            db_map_data = {db_map: db_map_data[db_map] for db_map in db_maps}
-            if db_map_data:
-                listener.receive_object_classes_added(db_map_data)
+            shared_db_map_data = {db_map: db_map_data[db_map] for db_map in db_maps}
+            if shared_db_map_data:
+                listener.receive_object_classes_added(shared_db_map_data)
 
     @Slot("QVariant")
     def receive_objects_added(self, db_map_data):
         for listener, db_maps in self.listeners.items():
-            db_map_data = {db_map: db_map_data[db_map] for db_map in db_maps}
-            if db_map_data:
-                listener.receive_objects_added(db_map_data)
+            shared_db_map_data = {db_map: db_map_data[db_map] for db_map in db_maps}
+            if shared_db_map_data:
+                listener.receive_objects_added(shared_db_map_data)
 
     @Slot("QVariant")
     def receive_relationship_classes_added(self, db_map_data):
         for listener, db_maps in self.listeners.items():
-            db_map_data = {db_map: db_map_data[db_map] for db_map in db_maps}
-            if db_map_data:
-                listener.receive_relationship_classes_added(db_map_data)
+            shared_db_map_data = {db_map: db_map_data[db_map] for db_map in db_maps}
+            if shared_db_map_data:
+                listener.receive_relationship_classes_added(shared_db_map_data)
 
     @Slot("QVariant")
     def receive_relationships_added(self, db_map_data):
         for listener, db_maps in self.listeners.items():
-            db_map_data = {db_map: db_map_data[db_map] for db_map in db_maps}
-            if db_map_data:
-                listener.receive_relationships_added(db_map_data)
+            shared_db_map_data = {db_map: db_map_data[db_map] for db_map in db_maps}
+            if shared_db_map_data:
+                listener.receive_relationships_added(shared_db_map_data)
 
     @Slot("QVariant")
     def receive_parameter_definitions_added(self, db_map_data):
         for listener, db_maps in self.listeners.items():
-            db_map_data = {db_map: db_map_data[db_map] for db_map in db_maps}
-            if db_map_data:
-                listener.receive_parameter_definitions_added(db_map_data)
+            shared_db_map_data = {db_map: db_map_data[db_map] for db_map in db_maps}
+            if shared_db_map_data:
+                listener.receive_parameter_definitions_added(shared_db_map_data)
 
     @Slot("QVariant")
     def receive_parameter_values_added(self, db_map_data):
         for listener, db_maps in self.listeners.items():
-            db_map_data = {db_map: db_map_data[db_map] for db_map in db_maps}
-            if db_map_data:
-                listener.receive_parameter_values_added(db_map_data)
+            shared_db_map_data = {db_map: db_map_data[db_map] for db_map in db_maps}
+            if shared_db_map_data:
+                listener.receive_parameter_values_added(shared_db_map_data)
 
     @Slot("QVariant")
     def receive_parameter_value_lists_added(self, db_map_data):
         for listener, db_maps in self.listeners.items():
-            db_map_data = {db_map: db_map_data[db_map] for db_map in db_maps}
-            if db_map_data:
-                listener.receive_parameter_value_lists_added(db_map_data)
+            shared_db_map_data = {db_map: db_map_data[db_map] for db_map in db_maps}
+            if shared_db_map_data:
+                listener.receive_parameter_value_lists_added(shared_db_map_data)
 
     @Slot("QVariant")
     def receive_parameter_tags_added(self, db_map_data):
         for listener, db_maps in self.listeners.items():
-            db_map_data = {db_map: db_map_data[db_map] for db_map in db_maps}
-            if db_map_data:
-                listener.receive_parameter_tags_added(db_map_data)
+            shared_db_map_data = {db_map: db_map_data[db_map] for db_map in db_maps}
+            if shared_db_map_data:
+                listener.receive_parameter_tags_added(shared_db_map_data)
 
     @Slot("QVariant")
     def receive_object_classes_updated(self, db_map_data):
         for listener, db_maps in self.listeners.items():
-            db_map_data = {db_map: db_map_data[db_map] for db_map in db_maps}
-            if db_map_data:
-                listener.receive_object_classes_updated(db_map_data)
+            shared_db_map_data = {db_map: db_map_data[db_map] for db_map in db_maps}
+            if shared_db_map_data:
+                listener.receive_object_classes_updated(shared_db_map_data)
 
     @Slot("QVariant")
     def receive_objects_updated(self, db_map_data):
         for listener, db_maps in self.listeners.items():
-            db_map_data = {db_map: db_map_data[db_map] for db_map in db_maps}
-            if db_map_data:
-                listener.receive_objects_updated(db_map_data)
+            shared_db_map_data = {db_map: db_map_data[db_map] for db_map in db_maps}
+            if shared_db_map_data:
+                listener.receive_objects_updated(shared_db_map_data)
 
     @Slot("QVariant")
     def receive_relationship_classes_updated(self, db_map_data):
         for listener, db_maps in self.listeners.items():
-            db_map_data = {db_map: db_map_data[db_map] for db_map in db_maps}
-            if db_map_data:
-                listener.receive_relationship_classes_updated(db_map_data)
+            shared_db_map_data = {db_map: db_map_data[db_map] for db_map in db_maps}
+            if shared_db_map_data:
+                listener.receive_relationship_classes_updated(shared_db_map_data)
 
     @Slot("QVariant")
     def receive_relationships_updated(self, db_map_data):
         for listener, db_maps in self.listeners.items():
-            db_map_data = {db_map: db_map_data[db_map] for db_map in db_maps}
-            if db_map_data:
-                listener.receive_relationships_updated(db_map_data)
+            shared_db_map_data = {db_map: db_map_data[db_map] for db_map in db_maps}
+            if shared_db_map_data:
+                listener.receive_relationships_updated(shared_db_map_data)
 
     @Slot("QVariant")
     def receive_parameter_definitions_updated(self, db_map_data):
         for listener, db_maps in self.listeners.items():
-            db_map_data = {db_map: db_map_data[db_map] for db_map in db_maps}
-            if db_map_data:
-                listener.receive_parameter_definitions_updated(db_map_data)
+            shared_db_map_data = {db_map: db_map_data[db_map] for db_map in db_maps}
+            if shared_db_map_data:
+                listener.receive_parameter_definitions_updated(shared_db_map_data)
 
     @Slot("QVariant")
     def receive_parameter_values_updated(self, db_map_data):
         for listener, db_maps in self.listeners.items():
-            db_map_data = {db_map: db_map_data[db_map] for db_map in db_maps}
-            if db_map_data:
-                listener.receive_parameter_values_updated(db_map_data)
+            shared_db_map_data = {db_map: db_map_data[db_map] for db_map in db_maps}
+            if shared_db_map_data:
+                listener.receive_parameter_values_updated(shared_db_map_data)
 
     @Slot("QVariant")
     def receive_parameter_value_lists_updated(self, db_map_data):
         for listener, db_maps in self.listeners.items():
-            db_map_data = {db_map: db_map_data[db_map] for db_map in db_maps}
-            if db_map_data:
-                listener.receive_parameter_value_lists_updated(db_map_data)
+            shared_db_map_data = {db_map: db_map_data[db_map] for db_map in db_maps}
+            if shared_db_map_data:
+                listener.receive_parameter_value_lists_updated(shared_db_map_data)
 
     @Slot("QVariant")
     def receive_parameter_tags_updated(self, db_map_data):
         for listener, db_maps in self.listeners.items():
-            db_map_data = {db_map: db_map_data[db_map] for db_map in db_maps}
-            if db_map_data:
-                listener.receive_parameter_tags_updated(db_map_data)
+            shared_db_map_data = {db_map: db_map_data[db_map] for db_map in db_maps}
+            if shared_db_map_data:
+                listener.receive_parameter_tags_updated(shared_db_map_data)
 
     @Slot("QVariant")
     def receive_object_classes_removed(self, db_map_data):
         for listener, db_maps in self.listeners.items():
-            db_map_data = {db_map: db_map_data[db_map] for db_map in db_maps}
-            if db_map_data:
-                listener.receive_object_classes_removed(db_map_data)
+            shared_db_map_data = {db_map: db_map_data[db_map] for db_map in db_maps}
+            if shared_db_map_data:
+                listener.receive_object_classes_removed(shared_db_map_data)
 
     @Slot("QVariant")
     def receive_objects_removed(self, db_map_data):
         for listener, db_maps in self.listeners.items():
-            db_map_data = {db_map: db_map_data[db_map] for db_map in db_maps}
-            if db_map_data:
-                listener.receive_objects_removed(db_map_data)
+            shared_db_map_data = {db_map: db_map_data[db_map] for db_map in db_maps}
+            if shared_db_map_data:
+                listener.receive_objects_removed(shared_db_map_data)
 
     @Slot("QVariant")
     def receive_relationship_classes_removed(self, db_map_data):
         for listener, db_maps in self.listeners.items():
-            db_map_data = {db_map: db_map_data[db_map] for db_map in db_maps}
-            if db_map_data:
-                listener.receive_relationship_classes_removed(db_map_data)
+            shared_db_map_data = {db_map: db_map_data[db_map] for db_map in db_maps}
+            if shared_db_map_data:
+                listener.receive_relationship_classes_removed(shared_db_map_data)
 
     @Slot("QVariant")
     def receive_relationships_removed(self, db_map_data):
         for listener, db_maps in self.listeners.items():
-            db_map_data = {db_map: db_map_data[db_map] for db_map in db_maps}
-            if db_map_data:
-                listener.receive_relationships_removed(db_map_data)
+            shared_db_map_data = {db_map: db_map_data[db_map] for db_map in db_maps}
+            if shared_db_map_data:
+                listener.receive_relationships_removed(shared_db_map_data)
 
     @Slot("QVariant")
     def receive_parameter_definitions_removed(self, db_map_data):
         for listener, db_maps in self.listeners.items():
-            db_map_data = {db_map: db_map_data[db_map] for db_map in db_maps}
-            if db_map_data:
-                listener.receive_parameter_definitions_removed(db_map_data)
+            shared_db_map_data = {db_map: db_map_data[db_map] for db_map in db_maps}
+            if shared_db_map_data:
+                listener.receive_parameter_definitions_removed(shared_db_map_data)
 
     @Slot("QVariant")
     def receive_parameter_values_removed(self, db_map_data):
         for listener, db_maps in self.listeners.items():
-            db_map_data = {db_map: db_map_data[db_map] for db_map in db_maps}
-            if db_map_data:
-                listener.receive_parameter_values_removed(db_map_data)
+            shared_db_map_data = {db_map: db_map_data[db_map] for db_map in db_maps}
+            if shared_db_map_data:
+                listener.receive_parameter_values_removed(shared_db_map_data)
 
     @Slot("QVariant")
     def receive_parameter_value_lists_removed(self, db_map_data):
         for listener, db_maps in self.listeners.items():
-            db_map_data = {db_map: db_map_data[db_map] for db_map in db_maps}
-            if db_map_data:
-                listener.receive_parameter_value_lists_removed(db_map_data)
+            shared_db_map_data = {db_map: db_map_data[db_map] for db_map in db_maps}
+            if shared_db_map_data:
+                listener.receive_parameter_value_lists_removed(shared_db_map_data)
 
     @Slot("QVariant")
     def receive_parameter_tags_removed(self, db_map_data):
         for listener, db_maps in self.listeners.items():
-            db_map_data = {db_map: db_map_data[db_map] for db_map in db_maps}
-            if db_map_data:
-                listener.receive_parameter_tags_removed(db_map_data)
+            shared_db_map_data = {db_map: db_map_data[db_map] for db_map in db_maps}
+            if shared_db_map_data:
+                listener.receive_parameter_tags_removed(shared_db_map_data)
 
     @Slot(set)
     def receive_session_committed(self, db_maps):
         for listener in self.listeners:
-            db_maps = self.listeners[listener].intersection(db_maps)
-            if db_maps:
-                listener.receive_session_committed(db_maps)
+            shared_db_maps = self.listeners[listener].intersection(db_maps)
+            if shared_db_maps:
+                listener.receive_session_committed(shared_db_maps)
 
     @Slot(set)
     def receive_session_rolled_back(self, db_maps):
         for listener in self.listeners:
-            db_maps = self.listeners[listener].intersection(db_maps)
-            if db_maps:
-                listener.receive_session_rolled_back(db_maps)
+            shared_db_maps = self.listeners[listener].intersection(db_maps)
+            if shared_db_maps:
+                listener.receive_session_rolled_back(shared_db_maps)
 
     @Slot(set)
     def receive_session_closed(self, db_maps):
         for listener in self.listeners:
-            db_maps = self.listeners[listener].intersection(db_maps)
-            if db_maps:
-                listener.receive_session_closed(db_maps)
+            shared_db_maps = self.listeners[listener].intersection(db_maps)
+            if shared_db_maps:
+                listener.receive_session_closed(shared_db_maps)
