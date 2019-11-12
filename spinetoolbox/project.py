@@ -383,7 +383,7 @@ class SpineToolboxProject(MetaObject):
         # Make execution instance, connect signals and start execution
         resource_map = ResourceMap()
         resource_map.update(ordered_nodes, self._toolbox.project_item_model)
-        self.execution_instance = ExecutionInstance(self._toolbox, ordered_nodes)
+        self.execution_instance = ExecutionInstance(self._toolbox, ordered_nodes, resource_map)
         self._toolbox.msg.emit("")
         self._toolbox.msg.emit("--------------------------------------------------")
         self._toolbox.msg.emit("<b>Executing Selected Directed Acyclic Graph</b>")
