@@ -360,12 +360,15 @@ class Importer(ProjectItem):
                     db_map.rollback_session()
                     all_import_errors += import_errors
                 else:
-                    db_map.commit_session("imported with mapper")
-                    self._toolbox.msg.emit(
-                        "<b>{0}:</b> Inserted {1} data with {2} errors into {3}".format(
-                            self.name, import_num, len(import_errors), db_map.db_url
+                    try:
+                        db_map.commit_session("imported with mapper")
+                        self._toolbox.msg.emit(
+                            "<b>{0}:</b> Inserted {1} data with {2} errors into {3}".format(
+                                self.name, import_num, len(import_errors), db_map.db_url
+                            )
                         )
-                    )
+                    except spinedb_api.exception.SpineDBAPIError as error:
+                        self._toolbox.msg_warning.emit("Could not commit to database: {}".format(error))
             if all_import_errors:
                 # Log errors in a time stamped file into the logs directory
                 timestamp = create_log_file_timestamp()
