@@ -551,12 +551,15 @@ class SpineToolboxProject(MetaObject):
     def notify_items_in_same_dag_of_dag_changes(self, item):
         """Notifies items in dag containing the given item that the dag has changed."""
         dag = self.dag_handler.dag_with_node(item)
-        if not dag:
+        # Some items trigger this method while they are being initialized
+        # but before they have been added to any DAG.
+        # In those cases we don't need to notify other items.
+        if dag:
+            self.notify_items_of_dag_changes(dag)
+        elif self._toolbox.project_item_model.find_item(item) is not None:
             self._toolbox.msg_error.emit(
                 "[BUG] Could not find a graph containing {0}. " "<b>Please reopen the project.</b>".format(item)
             )
-            return
-        self.notify_items_of_dag_changes(dag)
 
 
 def _update_if_changed(category_name):
