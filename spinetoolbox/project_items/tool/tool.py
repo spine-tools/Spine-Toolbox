@@ -176,7 +176,7 @@ class Tool(ProjectItem):
             self._properties_ui.lineEdit_tool_args.setText("")
             self._properties_ui.radioButton_execute_in_work.setChecked(True)
         else:
-            self._properties_ui.lineEdit_tool_args.setText(self.tool_specification().cmdline_args)
+            self._properties_ui.lineEdit_tool_args.setText(" ".join(self.tool_specification().cmdline_args))
             if self.execute_in_work:
                 self._properties_ui.radioButton_execute_in_work.setChecked(True)
             else:
