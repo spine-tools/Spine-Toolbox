@@ -24,7 +24,7 @@ from .widgets.add_importer_widget import AddImporterWidget
 item_rank = 4
 item_category = Importer.category()
 item_type = Importer.item_type()
-item_icon = ":/icons/project_item_icons/map-solid.svg"
+item_icon = ":/icons/project_item_icons/database-import.svg"
 item_maker = Importer
 icon_maker = ImporterIcon
 properties_widget_maker = ImporterPropertiesWidget

@@ -46,7 +46,7 @@ class DataConnectionIcon(ProjectItemIcon):
             h,
             name,
             ":/icons/project_item_icons/file-alt.svg",
-            icon_color=QColor(0, 0, 255, 160),
+            icon_color=QColor(0, 0, 255),
             background_color=QColor("#e6e6ff"),
         )
         self.setAcceptDrops(True)

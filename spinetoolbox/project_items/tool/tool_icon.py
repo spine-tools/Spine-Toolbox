@@ -54,7 +54,6 @@ class ToolIcon(ProjectItemIcon):
         self.tool_animation = QGraphicsItemAnimation()
         self.tool_animation.setItem(self.svg_item)
         self.tool_animation.setTimeLine(self.timer)
-        # self.timer.frameChanged.connect(self.test)
         self.delta = 0.25 * self.svg_item.sceneBoundingRect().height()
 
     @staticmethod
