@@ -331,8 +331,8 @@ class ExecutionInstance(QObject):
     so that project items downstream can find them.
     """
 
-    graph_execution_finished_signal = Signal(int)
-    project_item_execution_finished_signal = Signal(int)
+    graph_execution_finished_signal = Signal("QVariant")
+    project_item_execution_finished_signal = Signal("QVariant")
 
     def __init__(self, toolbox, ordered_nodes, resource_map):
         """
@@ -365,7 +365,7 @@ class ExecutionInstance(QObject):
         resources_downstream = self._resource_map.available_downstream_resources(self.running_item.name)
         self.running_item.execute(resources_upstream, resources_downstream)
 
-    @Slot(ExecutionState)
+    @Slot("QVariant")
     def item_execution_finished(self, item_finish_state):
         """Pop next project item to execute or finish current graph if there are no items left.
 

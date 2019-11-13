@@ -434,7 +434,7 @@ class SpineToolboxProject(MetaObject):
         self.execution_instance.graph_execution_finished_signal.connect(self.graph_execution_finished)
         self.execution_instance.start_execution()
 
-    @Slot(ExecutionState)
+    @Slot("QVariant")
     def graph_execution_finished(self, state):
         """Releases resources from previous execution and prepares the next
         graph for execution if there are still graphs left. Otherwise,
