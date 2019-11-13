@@ -22,6 +22,7 @@ import logging
 import pathlib
 import os.path
 from PySide2.QtCore import Slot
+from spinedb_api.database_mapping import DatabaseMapping
 from spinetoolbox.executioner import ExecutionState
 from spinetoolbox.project_item import ProjectItem, ProjectItemResource
 from spinetoolbox.spine_io.exporters import gdx
@@ -144,9 +145,7 @@ class Exporter(ProjectItem):
             if file_name is None:
                 self._toolbox.msg_error.emit("No file name given to export database {}.".format(url))
                 return ExecutionState.ABORT
-            database_map = self._project.db_mngr.get_db_map(url)
-            if database_map.connection.closed:
-                database_map.reconnect()
+            database_map = DatabaseMapping(url)
             settings = self._settings.get(url, None)
             if settings is None:
                 settings = gdx.make_settings(database_map)
