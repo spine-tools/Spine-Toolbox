@@ -21,8 +21,9 @@ import os
 from PySide2.QtCore import Qt, Slot, QFileInfo
 from PySide2.QtGui import QStandardItem, QStandardItemModel
 from PySide2.QtWidgets import QFileIconProvider, QListWidget, QDialog, QVBoxLayout, QDialogButtonBox
+import spinedb_api
 from spinetoolbox.executioner import ExecutionState
-from spinetoolbox.project_item import ProjectItem, ProjectItemResource
+from spinetoolbox.project_item import ProjectItem
 from spinetoolbox.helpers import create_dir, create_log_file_timestamp
 from spinetoolbox.spine_io.importers.csv_reader import CSVConnector
 from spinetoolbox.spine_io.importers.excel_reader import ExcelConnector
@@ -244,13 +245,8 @@ class Importer(ProjectItem):
                 qitem.setData(QFileIconProvider().icon(QFileInfo(item)), Qt.DecorationRole)
                 self.file_model.appendRow(qitem)
 
-    def execute(self):
+    def _do_execute(self, resources_upstream, resources_downstream):
         """Executes this Importer."""
-        self._toolbox.msg.emit("")
-        self._toolbox.msg.emit("Executing Importer <b>{0}</b>".format(self.name))
-        self._toolbox.msg.emit("***")
-
-        inst = self._toolbox.project().execution_instance
         all_data = []
         all_errors = []
 
@@ -297,24 +293,20 @@ class Importer(ProjectItem):
             self._toolbox.msg_error.emit(
                 "There where errors while executing <b>{0}</b>. {1}".format(self.name, logfile_anchor)
             )
-            self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(ExecutionState.ABORT)
+            return ExecutionState.ABORT
         if all_data:
-            # Add mapped data to a dict in the execution instance.
-            # If execution reaches a Data Store, the mapped data will be imported into the corresponding url
-            resource = ProjectItemResource(self, "data", data=all_data, metadata=dict(for_import=True))
-            inst.advertise_resources(self.name, resource)
-        self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(ExecutionState.CONTINUE)
+            for resource in resources_downstream:
+                if resource.type_ == "database":
+                    self._import(all_data, resource.url)
+        return ExecutionState.CONTINUE
 
     def stop_execution(self):
         """Stops executing this Importer."""
         self._toolbox.msg.emit("Stopping {0}".format(self.name))
 
-    def simulate_execution(self, inst):
-        """Simulates executing this Item."""
-        super().simulate_execution(inst)
-        file_list = [
-            r.path for r in inst.available_resources(self.name) if r.type_ == "file" and not r.metadata.get("is_output")
-        ]
+    def _do_handle_dag_changed(self, resources_upstream):
+        """See base class."""
+        file_list = [r.path for r in resources_upstream if r.type_ == "file" and not r.metadata.get("is_output")]
         self.update_file_model(set(file_list))
         if not file_list:
             self.add_notification(
@@ -351,3 +343,48 @@ class Importer(ProjectItem):
         """
         for widget in self._preview_widget.values():
             widget.close()
+
+    def _import(self, all_data, url):
+        try:
+            db_map = spinedb_api.DiffDatabaseMapping(url, upgrade=False, username="Mapper")
+        except (spinedb_api.SpineDBAPIError, spinedb_api.SpineDBVersionError) as err:
+            self._toolbox.msg_error.emit(
+                "<b>{0}:</b> Unable to create database mapping, all import operations will be omitted.".format(err)
+            )
+            db_map = None
+        if db_map:
+            all_import_errors = []
+            for data in all_data:
+                import_num, import_errors = spinedb_api.import_data(db_map, **data)
+                if import_errors:
+                    db_map.rollback_session()
+                    all_import_errors += import_errors
+                else:
+                    try:
+                        db_map.commit_session("imported with mapper")
+                        self._toolbox.msg.emit(
+                            "<b>{0}:</b> Inserted {1} data with {2} errors into {3}".format(
+                                self.name, import_num, len(import_errors), db_map.db_url
+                            )
+                        )
+                    except spinedb_api.exception.SpineDBAPIError as error:
+                        self._toolbox.msg_warning.emit("Could not commit to database: {}".format(error))
+            if all_import_errors:
+                # Log errors in a time stamped file into the logs directory
+                timestamp = create_log_file_timestamp()
+                logfilepath = os.path.abspath(os.path.join(self.logs_dir, timestamp + "_error.log"))
+                with open(logfilepath, 'w') as f:
+                    for err in all_import_errors:
+                        f.write("{}\n".format(err.msg))
+                # Make error log file anchor with path as tooltip
+                logfile_anchor = (
+                    "<a style='color:#BB99FF;' title='"
+                    + logfilepath
+                    + "' href='file:///"
+                    + logfilepath
+                    + "'>error log</a>"
+                )
+                self._toolbox.msg.emit(
+                    "There where import errors while executing <b>{0}</b>, rolling back: "
+                    "{1}".format(self.name, logfile_anchor)
+                )

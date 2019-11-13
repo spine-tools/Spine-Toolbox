@@ -23,6 +23,7 @@ from urllib.request import url2pathname
 from PySide2.QtCore import Qt, Signal, QUrl
 from PySide2.QtWidgets import QInputDialog
 from PySide2.QtGui import QDesktopServices
+from .executioner import ExecutionState
 from .helpers import create_dir
 from .metaobject import MetaObject
 from .widgets.custom_menus import CategoryProjectItemContextMenu, ProjectItemContextMenu
@@ -239,6 +240,7 @@ class ProjectItem(BaseProjectItem):
         self._properties_ui = None
         self._icon = None
         self._sigs = None
+        self.item_changed.connect(lambda: self._toolbox.project().notify_items_in_same_dag_of_dag_changes(self.name))
         # Make project directory for this Item
         self.data_dir = os.path.join(self._project.project_dir, self.short_name)
         try:
@@ -262,6 +264,7 @@ class ProjectItem(BaseProjectItem):
         """Returns the item flags."""
         return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsEditable
 
+    # pylint: disable=no-self-use
     def make_signal_handler_dict(self):
         """Returns a dictionary of all shared signals and their handlers.
         This is to enable simpler connecting and disconnecting.
@@ -271,8 +274,6 @@ class ProjectItem(BaseProjectItem):
 
     def connect_signals(self):
         """Connect signals to handlers."""
-        # NOTE: item_changed is not shared with other proj. items so there's no need to disconnect it
-        self.item_changed.connect(lambda: self._toolbox.project().simulate_item_execution(self.name))
         for signal, handler in self._sigs.items():
             signal.connect(handler)
 
@@ -312,15 +313,63 @@ class ProjectItem(BaseProjectItem):
 
     def set_rank(self, rank):
         """Set rank of this item for displaying in the design view."""
-        self.get_icon().rank_icon.set_rank(rank)
+        self.get_icon().rank_icon.set_rank(rank + 1)
 
-    def execute(self):
-        """Executes this item."""
+    def execute(self, resources_upstream, resources_downstream):
+        """
+        Executes this item.
 
-    def simulate_execution(self, inst):
-        """Simulates executing this item."""
+        Subclasses should overwrite the _do_execute() method to do actual work here.
+
+        Args:
+            resources_upstream (list): a list of ProjectItemResources available from upstream items
+            resources_downstream (list): a list of ProjectItemResources available from downstream items
+        """
+        self._toolbox.msg.emit("")
+        self._toolbox.msg.emit("Executing {} <b>{}</b>".format(self.item_type(), self.name))
+        self._toolbox.msg.emit("***")
+        execution_state = self._do_execute(resources_upstream, resources_downstream)
+        self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(execution_state)
+
+    # pylint: disable=no-self-use
+    def _do_execute(self, resources_upstream, resources_downstream):
+        """
+        Does the actual work during execution.
+
+        The default implementation just returns ExecutionState.CONTINUE
+
+        Args:
+            resources_upstream (list): a list of ProjectItemResources available from upstream items
+            resources_downstream (list): a list of ProjectItemResources available from downstream items
+        Returns:
+            ExecutionState to indicate the status of the execution
+        """
+        return ExecutionState.CONTINUE
+
+    def handle_dag_changed(self, rank, resources_upstream):
+        """
+        Handles changes in the DAG.
+
+        Subclasses should reimplement the _do_handle_dag_changes() method.
+
+        Args:
+            rank (int): item's execution order
+            resources_upstream (list): resources available from upstream items
+        """
         self.clear_notifications()
-        self.set_rank(inst.rank)
+        self.set_rank(rank)
+        self._do_handle_dag_changed(resources_upstream)
+
+    def _do_handle_dag_changed(self, resources_upstream):
+        """
+        Handles changes in the DAG.
+
+        Usually this entails validating the input resources and populating file references etc.
+        The default implementation does nothing.
+
+        Args:
+            resources_upstream (list): resources available from upstream items
+        """
 
     def invalidate_workflow(self, edges):
         """Notifies that this item's workflow is not acyclic.
@@ -444,6 +493,35 @@ class ProjectItem(BaseProjectItem):
             "<b>{0}</b> and a <b>{1}</b> has not been "
             "implemented yet.".format(source_item.item_type(), self.item_type())
         )
+
+    # pylint: disable=no-self-use
+    def available_resources_downstream(self, upstream_resources):
+        """
+        Returns available resources for downstream items.
+
+        Should be reimplemented by subclasses if they want to offer resources
+        to downstream items. The default implementation returns an empty list.
+
+        Args:
+            upstream_resources (list): a list of resources available from upstream items
+
+        Returns:
+            a list of ProjectItemResources
+        """
+        return list()
+
+    # pylint: disable=no-self-use
+    def available_resources_upstream(self):
+        """
+        Returns available resources for upstream items.
+
+        Should be reimplemented by subclasses if they want to offer resources
+        to upstream items. The default implementation returns an empty list.
+
+        Returns:
+            a list of ProjectItemResources
+        """
+        return list()
 
 
 class ProjectItemResource:

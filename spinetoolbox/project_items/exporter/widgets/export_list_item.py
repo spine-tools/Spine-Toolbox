@@ -63,3 +63,7 @@ class ExportListItem(QWidget):
     def out_file_name_edit(self):
         """export file name QLineEdit"""
         return self._ui.out_file_name_edit
+
+    @property
+    def url_field(self):
+        return self._ui.url_field

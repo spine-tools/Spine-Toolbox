@@ -22,7 +22,6 @@ from PySide2.QtCore import Qt, Slot
 from PySide2.QtGui import QStandardItem, QStandardItemModel, QIcon, QPixmap
 from sqlalchemy.engine.url import URL, make_url
 from spinedb_api import SpineDBAPIError, SpineDBVersionError
-from spinetoolbox.executioner import ExecutionState
 from spinetoolbox.project_item import ProjectItem
 from spinetoolbox.widgets.graph_view_widget import GraphViewForm
 from spinetoolbox.widgets.tabular_view_widget import TabularViewForm
@@ -154,28 +153,14 @@ class View(ProjectItem):
         """Update View tab name label. Used only when renaming project items."""
         self._properties_ui.label_view_name.setText(self.name)
 
-    def execute(self):
-        """Executes this View."""
-        self._toolbox.msg.emit("")
-        self._toolbox.msg.emit("Executing View <b>{0}</b>".format(self.name))
-        self._toolbox.msg.emit("***")
-        inst = self._toolbox.project().execution_instance
-        self.update_references(inst)
-        self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(ExecutionState.CONTINUE)
-
     def stop_execution(self):
         """Stops executing this View."""
         self._toolbox.msg.emit("Stopping {0}".format(self.name))
 
-    def simulate_execution(self, inst):
+    def _do_handle_dag_changed(self, resources_upstream):
         """Update the list of references that this item is viewing."""
-        super().simulate_execution(inst)
-        self.update_references(inst)
-
-    def update_references(self, inst):
-        """Update references from the execution instance."""
         self._references.clear()
-        for resource in inst.available_resources(self.name):
+        for resource in resources_upstream:
             if resource.type_ == "database" and resource.scheme == "sqlite":
                 self._references.append((make_url(resource.url), resource.provider.name))
             elif resource.type_ == "file" and resource.metadata.get("is_output"):

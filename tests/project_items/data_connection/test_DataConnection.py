@@ -17,13 +17,12 @@ Unit tests for Data Connection project item.
 """
 
 import os
-import shutil
 import unittest
 from unittest.mock import MagicMock, NonCallableMagicMock
 from PySide2.QtWidgets import QApplication
 from networkx import DiGraph
 from spinetoolbox.project_items.data_connection.data_connection import DataConnection
-from ...mock_helpers import create_toolboxui_with_project
+from ...mock_helpers import clean_up_toolboxui_with_project, create_toolboxui_with_project
 
 
 class TestDataConnection(unittest.TestCase):
@@ -38,12 +37,7 @@ class TestDataConnection(unittest.TestCase):
     def tearDown(self):
         """Clean up."""
         self.data_connection.data_dir_watcher.removePath(self.data_connection.data_dir)
-        try:
-            shutil.rmtree(self.toolbox.project().project_dir)  # Remove project directory
-        except OSError as e:
-            print("Failed to remove project directory. {0}".format(e))
-        self.toolbox.deleteLater()
-        self.toolbox = None
+        clean_up_toolboxui_with_project(self.toolbox)
 
     @classmethod
     def setUpClass(cls):

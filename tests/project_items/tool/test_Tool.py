@@ -35,7 +35,7 @@ from spinetoolbox.project_items.tool.tool import Tool
 from spinetoolbox.project_item import ProjectItemResource
 from spinetoolbox import tool_specifications
 from spinetoolbox.config import TOOL_OUTPUT_DIR
-from ...mock_helpers import create_toolboxui_with_project
+from ...mock_helpers import clean_up_toolboxui_with_project, create_toolboxui_with_project
 
 
 class TestTool(unittest.TestCase):
@@ -49,15 +49,7 @@ class TestTool(unittest.TestCase):
 
     def tearDown(self):
         """Clean up."""
-        if not hasattr(self, "toolbox"):
-            return
-        try:
-            shutil.rmtree(self.toolbox.project().project_dir)  # Remove project directory
-        except OSError as e:
-            print("Failed to remove project directory. {0}".format(e))
-            pass
-        self.toolbox.deleteLater()
-        self.toolbox = None
+        clean_up_toolboxui_with_project(self.toolbox)
 
     @classmethod
     def setUpClass(cls):
@@ -83,14 +75,12 @@ class TestTool(unittest.TestCase):
         source_item.item_type = mock.MagicMock(return_value="Importer")
         self.tool.notify_destination(source_item)
         self.toolbox.msg_warning.emit.assert_called_with(
-            "Link established. Interaction between a "
-            "<b>Importer</b> and a <b>Tool</b> has not been implemented yet."
+            "Link established. Interaction between a " "<b>Importer</b> and a <b>Tool</b> has not been implemented yet."
         )
         source_item.item_type = mock.MagicMock(return_value="Data Store")
         self.tool.notify_destination(source_item)
         self.toolbox.msg.emit.assert_called_with(
-            "Link established. Data Store <b>source name</b> url will "
-            "be passed to Tool <b>T</b> when executing."
+            "Link established. Data Store <b>source name</b> url will " "be passed to Tool <b>T</b> when executing."
         )
         source_item.item_type = mock.MagicMock(return_value="Exporter")
         self.tool.notify_destination(source_item)
@@ -104,8 +94,7 @@ class TestTool(unittest.TestCase):
         source_item.item_type = mock.MagicMock(return_value="View")
         self.tool.notify_destination(source_item)
         self.toolbox.msg_warning.emit.assert_called_with(
-            "Link established. Interaction between a "
-            "<b>View</b> and a <b>Tool</b> has not been implemented yet."
+            "Link established. Interaction between a " "<b>View</b> and a <b>Tool</b> has not been implemented yet."
         )
 
     def test_default_name_prefix(self):
@@ -245,20 +234,7 @@ class TestToolExecution(unittest.TestCase):
         """Overridden method. Runs after each test.
         Use this to free resources after a test if needed.
         """
-        try:
-            shutil.rmtree(self.toolbox.project().work_dir)  # Remove work directory
-        except OSError:
-            pass
-        try:
-            shutil.rmtree(self.toolbox.project().project_dir)  # Remove project directory
-        except OSError:
-            pass
-        try:
-            os.remove(self.toolbox.project().path)  # Remove project file
-        except OSError:
-            pass
-        self.toolbox.deleteLater()
-        self.toolbox = None
+        clean_up_toolboxui_with_project(self.toolbox)
 
     def assert_is_simple_exec_tool(self, tool):
         """Assert that the given tool has the simple_exec specification."""
@@ -379,7 +355,7 @@ class TestToolExecution(unittest.TestCase):
         ind = self.toolbox.project_item_model.find_item("Tool")
         tool = self.toolbox.project_item_model.project_item(ind)  # Find item from project item model
         mock_exec_inst = tool._project.execution_instance = mock.Mock()
-        tool.execute()
+        tool.execute(resources_upstream=[], resources_downstream=[])
         mock_exec_inst.project_item_execution_finished_signal.emit.assert_called_with(ExecutionState.CONTINUE)
         self.assertIsNone(tool.instance)
 
@@ -401,16 +377,13 @@ class TestToolExecution(unittest.TestCase):
         input_file = input_files[0]
         input_path = os.path.join(dc_dir, input_file)
         Path(input_path).touch()
+        resources_upstream = [ProjectItemResource(None, "file", url=Path(input_path).as_uri())]
         # Create a mock execution instance and make the above one path available for the tool
         mock_exec_inst = tool._project.execution_instance = mock.Mock()
-        mock_exec_inst.available_resources.side_effect = lambda n: [
-            ProjectItemResource(None, "file", url=Path(input_path).as_uri())
-        ]
-        tool.execute()
+        tool.execute(resources_upstream, resources_downstream=[])
         mock_exec_inst.project_item_execution_finished_signal.emit.assert_called_with(ExecutionState.ABORT)
         self.assertIsNone(tool.instance)
         # Check that no resources are advertised
-        mock_exec_inst.advertise_resources.assert_not_called()
 
     def test_execute_simple_tool_in_source_dir(self):
         """Tests execution of a Tool with the 'simple_exec' specification."""
@@ -418,6 +391,7 @@ class TestToolExecution(unittest.TestCase):
         self.toolbox.project().add_project_items("Tools", item)  # Add Tool to project
         ind = self.toolbox.project_item_model.find_item("Tool")
         tool = self.toolbox.project_item_model.project_item(ind)  # Find item from project item model
+        self.toolbox.project().execution_instance = mock.NonCallableMagicMock()
         # Collect some information
         basedir = tool.tool_specification().path
         project_dir = tool._project.project_dir
@@ -430,11 +404,7 @@ class TestToolExecution(unittest.TestCase):
         input_paths = [os.path.join(dc_dir, fn) for fn in input_files]
         for filepath in input_paths:
             Path(filepath).touch()
-        # Create a mock execution instance and make the above paths available for the tool
-        mock_exec_inst = tool._project.execution_instance = mock.Mock()
-        mock_exec_inst.available_resources.side_effect = lambda n: [
-            ProjectItemResource(None, "file", url=Path(fp).as_uri()) for fp in input_paths
-        ]
+        resources_upstream = [ProjectItemResource(None, "file", url=Path(fp).as_uri()) for fp in input_paths]
         # Mock some more stuff needed and execute the tool
         with mock.patch("spinetoolbox.project_items.tool.tool.shutil") as mock_shutil, mock.patch(
             "spinetoolbox.project_items.tool.tool.create_output_dir_timestamp"
@@ -456,14 +426,17 @@ class TestToolExecution(unittest.TestCase):
                 tool.instance.instance_finished_signal.emit(-1)
 
             mock_execute_tool_instance.side_effect = mock_execute_tool_instance_side_effect
-            tool.execute()
+            resources_downstream = []
+            tool.execute(resources_upstream, resources_downstream)
+        self.toolbox.project().execution_instance.project_item_execution_finished_signal.emit.assert_called_with(
+            ExecutionState.WAIT
+        )
         self.assertEqual(tool.basedir, basedir)
         # Check that output files were copied to the output dir
         result_dir = os.path.abspath(os.path.join(tool.output_dir, "failed", "mock_timestamp"))
         expected_calls = [mock.call(os.path.join(basedir, fn), os.path.join(result_dir, fn)) for fn in output_files]
         mock_shutil.copyfile.assert_has_calls(expected_calls, any_order=True)
         # Check that no resources are advertised
-        mock_exec_inst.advertise_resources.assert_not_called()
 
     def test_execute_complex_tool_in_work_dir(self):
         """Tests execution of a Tool with the 'complex_exec' specification."""
@@ -471,6 +444,7 @@ class TestToolExecution(unittest.TestCase):
         self.toolbox.project().add_project_items("Tools", item)  # Add Tool to project
         ind = self.toolbox.project_item_model.find_item("Tool")
         tool = self.toolbox.project_item_model.project_item(ind)  # Find item from project item model
+        self.toolbox.project().execution_instance = mock.NonCallableMagicMock()
         # Collect some information
         work_dir = self.toolbox.project().work_dir
         # Make work directory in case it does not exist. This may be needed by Travis CI.
@@ -498,11 +472,7 @@ class TestToolExecution(unittest.TestCase):
                 dirname, _ = os.path.split(filepath)
                 os.makedirs(dirname, exist_ok=True)
                 Path(filepath).touch()
-            # Create a mock execution instance and make the above paths available for the tool
-            mock_exec_inst = tool._project.execution_instance = mock.Mock()
-            mock_exec_inst.available_resources.side_effect = lambda n: [
-                ProjectItemResource(None, "file", url=Path(fp).as_uri()) for fp in input_paths
-            ]
+            resources_upstream = [ProjectItemResource(None, "file", url=Path(fp).as_uri()) for fp in input_paths]
             # Create source files in tool specification source directory
             src_dir = tool.tool_specification().path
             source_paths = [os.path.join(src_dir, path) for path in source_files]
@@ -565,7 +535,10 @@ class TestToolExecution(unittest.TestCase):
                     tool.instance.instance_finished_signal.emit(0)
 
                 mock_execute_tool_instance.side_effect = mock_execute_tool_instance_side_effect
-                tool.execute()
+                tool.execute(resources_upstream, resources_downstream=[])
+            self.toolbox.project().execution_instance.project_item_execution_finished_signal.emit.assert_called_with(
+                ExecutionState.WAIT
+            )
             self.assertEqual(tool.basedir, basedir)
             # Check that output files were copied to the output dir
             result_dir = os.path.join(tool.output_dir, "mock_timestamp")
@@ -574,17 +547,6 @@ class TestToolExecution(unittest.TestCase):
                 for fn in output_files
             ]
             mock_shutil.copyfile.assert_has_calls(expected_calls, any_order=True)
-            # Check that output files were advertised
-            expected_calls = [
-                mock.call(
-                    "Tool",
-                    ProjectItemResource(
-                        tool, "file", url=Path(os.path.join(result_dir, fn)).as_uri(), metadata=dict(is_output=True)
-                    ),
-                )
-                for fn in output_files
-            ]
-            mock_exec_inst.advertise_resources.assert_has_calls(expected_calls, any_order=True)
 
 
 if __name__ == '__main__':

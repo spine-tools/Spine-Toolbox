@@ -16,6 +16,9 @@ Classes and functions that can be shared among unit test modules.
 :date:   18.4.2019
 """
 
+import os
+import os.path
+import shutil
 from unittest import mock
 from PySide2.QtWidgets import QWidget
 import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
@@ -24,9 +27,6 @@ from spinetoolbox.ui_main import ToolboxUI
 
 class MockQWidget(QWidget):
     """Dummy QWidget for mocking test_push_vars method in PythonReplWidget class."""
-
-    def __init__(self):
-        super().__init__()
 
     # noinspection PyMethodMayBeStatic
     def test_push_vars(self):
@@ -65,6 +65,20 @@ def create_toolboxui_with_project():
         toolbox = ToolboxUI()
         toolbox.create_project("UnitTest Project", "")
     return toolbox
+
+
+def clean_up_toolboxui_with_project(toolbox):
+    """Removes the directories created by the project in toolbox."""
+    project_dir = toolbox.project().project_dir
+    if os.path.exists(project_dir):
+        shutil.rmtree(project_dir)
+    project_file = toolbox.project().path
+    if os.path.exists(project_file):
+        os.remove(project_file)
+    work_dir = toolbox.project().work_dir
+    if os.path.exists(work_dir):
+        shutil.rmtree(work_dir)
+    toolbox.deleteLater()
 
 
 # noinspection PyMethodMayBeStatic, PyPep8Naming,SpellCheckingInspection

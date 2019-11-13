@@ -96,7 +96,8 @@ class Exporter(ProjectItem):
 
     def activate(self):
         """Restores selections and connects signals."""
-        self.restore_selections()
+        self._properties_ui.item_name_label.setText(self.name)
+        self.update_database_list()
         super().connect_signals()
         self._activated = True
 
@@ -112,14 +113,21 @@ class Exporter(ProjectItem):
     def save_selections(self):
         """Saves selections in shared widgets for this project item into instance variables."""
 
-    def restore_selections(self):
-        """Restores selections into shared widgets when this project item is selected."""
-        self._properties_ui.item_name_label.setText(self.name)
+    def update_database_list(self):
+        """Updates the database list in the properties tab."""
         database_list_storage = self._properties_ui.databases_list_layout
-        while not database_list_storage.isEmpty():
-            widget_to_remove = database_list_storage.takeAt(0)
-            widget_to_remove.widget().deleteLater()
+        urls_already_in_items = list()
+        for i in range(database_list_storage.count()):
+            item_url = database_list_storage.itemAt(i).widget().url_field.text()
+            if item_url not in self._database_urls:
+                widget_to_remove = database_list_storage.takeAt(i)
+                widget_to_remove.widget().file_name_changed.disconnect()
+                widget_to_remove.widget().deleteLater()
+            else:
+                urls_already_in_items.append(item_url)
         for url in self._database_urls:
+            if url in urls_already_in_items:
+                continue
             file_name = self._database_to_file_name_map.get(url, '')
             item = ExportListItem(url, file_name)
             database_list_storage.insertWidget(0, item)
@@ -128,20 +136,14 @@ class Exporter(ProjectItem):
             item.open_settings_clicked.connect(self._show_settings)
             item.file_name_changed.connect(self._update_out_file_name)
 
-    def execute(self):
+    def _do_execute(self, resources_upstream, resources_downstream):
         """Executes this item."""
-        self._toolbox.msg.emit("")
-        self._toolbox.msg.emit("Executing Exporter <b>{}</b>".format(self.name))
-        self._toolbox.msg.emit("***")
         gams_system_directory = self._resolve_gams_system_directory()
         for url in self._database_urls:
             file_name = self._database_to_file_name_map.get(url, None)
             if file_name is None:
                 self._toolbox.msg_error.emit("No file name given to export database {}.".format(url))
-                self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(
-                    ExecutionState.ABORT
-                )
-                return
+                return ExecutionState.ABORT
             database_map = self._project.db_mngr.get_db_map(url)
             settings = self._settings.get(url, None)
             if settings is None:
@@ -151,11 +153,7 @@ class Exporter(ProjectItem):
             gdx.to_gdx_file(database_map, out_path, settings, gams_system_directory)
             database_map.connection.close()
             self._toolbox.msg_success.emit("File <b>{0}</b> written".format(out_path))
-        execution_instance = self._toolbox.project().execution_instance
-        paths = [os.path.join(self.data_dir, file_name) for file_name in self._database_to_file_name_map.values()]
-        resources = [ProjectItemResource(self, "file", url=pathlib.Path(path).as_uri()) for path in paths]
-        execution_instance.advertise_resources(self.name, *resources)
-        execution_instance.project_item_execution_finished_signal.emit(ExecutionState.CONTINUE)
+        return ExecutionState.CONTINUE
 
     def stop_execution(self):
         """Stops executing this item."""
@@ -164,15 +162,13 @@ class Exporter(ProjectItem):
             ExecutionState.STOP_REQUESTED
         )
 
-    def simulate_execution(self, inst):
-        """Simulates executing this item."""
-        super().simulate_execution(inst)
-        self._database_urls.clear()
-        self._database_urls += [r.url for r in inst.available_resources(self.name) if r.type_ == "database"]
+    def _do_handle_dag_changed(self, resources_upstream):
+        """See base class."""
+        self._database_urls = [r.url for r in resources_upstream if r.type_ == "database"]
+        for mapped_database in list(self._database_to_file_name_map):
+            if mapped_database not in self._database_urls:
+                del self._database_to_file_name_map[mapped_database]
         files = self._database_to_file_name_map.values()
-        paths = [os.path.join(self.data_dir, file_name) for file_name in files]
-        resources = [ProjectItemResource(self, "file", url=pathlib.Path(path).as_uri()) for path in paths]
-        inst.advertise_resources(self.name, *resources)
         notify_about_missing_output_file = False
         if "" in files:
             notify_about_missing_output_file = True
@@ -184,7 +180,7 @@ class Exporter(ProjectItem):
         if notify_about_missing_output_file:
             self.add_notification(Exporter._missing_output_file_notification)
         if self._activated:
-            self.restore_selections()
+            self.update_database_list()
 
     @Slot(str)
     def _show_settings(self, database_url):
@@ -213,6 +209,7 @@ class Exporter(ProjectItem):
         else:
             self.add_notification(Exporter._missing_output_file_notification)
         self._database_to_file_name_map[database_path] = file_name
+        self.item_changed.emit()
 
     def item_dict(self):
         """Returns a dictionary corresponding to this item's configuration."""
@@ -269,6 +266,7 @@ class Exporter(ProjectItem):
 
     @Slot(str)
     def _refresh_settings_for_database(self, url):
+        """Refreshes database export settings after changes in database's structure/data."""
         original_settings = self._settings.get(url, None)
         database_map = self._project.db_mngr.get_db_map(url)
         new_settings = gdx.make_settings(database_map)
@@ -280,5 +278,12 @@ class Exporter(ProjectItem):
 
     @staticmethod
     def default_name_prefix():
-        """see base class"""
+        """See base class."""
         return "Exporter"
+
+    def available_resources_downstream(self, upstream_resources):
+        """See base class."""
+        files = self._database_to_file_name_map.values()
+        paths = [os.path.join(self.data_dir, file_name) for file_name in files]
+        resources = [ProjectItemResource(self, "file", url=pathlib.Path(path).as_uri()) for path in paths]
+        return resources

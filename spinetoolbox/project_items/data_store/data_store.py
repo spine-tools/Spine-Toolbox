@@ -443,75 +443,6 @@ class DataStore(ProjectItem):
         """Update Data Store tab name label. Used only when renaming project items."""
         self._properties_ui.label_ds_name.setText(self.name)
 
-    def execute(self):
-        """Executes this Data Store."""
-        self._toolbox.msg.emit("")
-        self._toolbox.msg.emit("Executing Data Store <b>{0}</b>".format(self.name))
-        self._toolbox.msg.emit("***")
-        inst = self._toolbox.project().execution_instance
-        url = self.make_url()
-        if not url:
-            # Invalid url, nothing else to do here
-            self._toolbox.msg_warning.emit(
-                "No database url set. Please provide a <i>path</i> to an "
-                "SQLite file or <i>host</i>, <i>port</i>, and <i>username</i> "
-                "& <i>password</i> for other database dialects."
-            )
-        else:
-            resource = ProjectItemResource(self, "database", url=str(url))
-            inst.advertise_resources(self.name, resource)
-            # Import mapped data from Importers in the execution instance
-            try:
-                db_map = spinedb_api.DiffDatabaseMapping(url, upgrade=False, username="Mapper")
-            except (spinedb_api.SpineDBAPIError, spinedb_api.SpineDBVersionError) as err:
-                self._toolbox.msg_error.emit(
-                    "<b>{0}:</b> Unable to create database mapping, all import operations will be omitted.".format(err)
-                )
-                db_map = None
-            if db_map is not None:
-                all_import_errors = []
-                import_data_resources = [
-                    r for r in inst.available_resources(self.name) if r.type_ == "data" and r.metadata.get("for_import")
-                ]
-                for resource in import_data_resources:
-                    provider_name = resource.provider.name
-                    all_data = resource.data
-                    self._toolbox.msg.emit("Importing data from <b>{0}</b> into '{1}'".format(provider_name, url))
-                    for data in all_data:
-                        import_num, import_errors = spinedb_api.import_data(db_map, **data)
-                        if import_errors:
-                            db_map.rollback_session()
-                            all_import_errors += import_errors
-                        else:
-                            db_map.commit_session("imported with mapper")
-                            self._toolbox.msg.emit(
-                                "<b>{0}:</b> Inserted {1} data with {2} errors into {3}".format(
-                                    self.name, import_num, len(import_errors), db_map.db_url
-                                )
-                            )
-                    db_map.connection.close()
-                if all_import_errors:
-                    # Log errors in a time stamped file into the logs directory
-                    timestamp = create_log_file_timestamp()
-                    logfilepath = os.path.abspath(os.path.join(self.logs_dir, timestamp + "_error.log"))
-                    with open(logfilepath, 'w') as f:
-                        for err in all_import_errors:
-                            f.write("{}\n".format(err.msg))
-                    # Make error log file anchor with path as tooltip
-                    logfile_anchor = (
-                        "<a style='color:#BB99FF;' title='"
-                        + logfilepath
-                        + "' href='file:///"
-                        + logfilepath
-                        + "'>error log</a>"
-                    )
-                    self._toolbox.msg.emit(
-                        "There where import errors while executing <b>{0}</b>, rolling back: "
-                        "{1}".format(self.name, logfile_anchor)
-                    )
-        self._toolbox.msg.emit("***")
-        self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(ExecutionState.CONTINUE)
-
     def stop_execution(self):
         """Stops executing this Data Store."""
         self._toolbox.msg.emit("Stopping {0}".format(self.name))
@@ -519,16 +450,12 @@ class DataStore(ProjectItem):
             ExecutionState.STOP_REQUESTED
         )
 
-    def simulate_execution(self, inst):
-        """Simulates executing this Data Store."""
-        super().simulate_execution(inst)
+    def _do_handle_dag_changed(self, resources_upstream):
+        """See base class."""
         url = self.make_url(log_errors=False)
-        if url:
-            resource = ProjectItemResource(self, "database", url=str(url))
-            inst.advertise_resources(self.name, resource)
-        else:
+        if not url:
             self.add_notification(
-                "The URL for this Data Store is not correctly set. " "Set it in the Data Store Properties panel."
+                "The URL for this Data Store is not correctly set. Set it in the Data Store Properties panel."
             )
 
     def item_dict(self):
@@ -610,3 +537,19 @@ class DataStore(ProjectItem):
     def default_name_prefix():
         """see base class"""
         return "Data Store"
+
+    def available_resources_downstream(self, upstream_resources):
+        """See base class."""
+        return self.available_resources_upstream()
+
+    def available_resources_upstream(self):
+        """See base class."""
+        url = self.make_url(log_errors=False)
+        if url:
+            resource = ProjectItemResource(self, "database", url=str(url))
+            return [resource]
+        else:
+            self.add_notification(
+                "The URL for this Data Store is not correctly set. " "Set it in the Data Store Properties panel."
+            )
+            return list()
