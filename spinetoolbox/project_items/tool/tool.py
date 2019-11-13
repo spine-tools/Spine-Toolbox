@@ -135,12 +135,12 @@ class Tool(ProjectItem):
             self._tool_specification_name = self.tool_specification().name
         self.execute_in_work = self._properties_ui.radioButton_execute_in_work.isChecked()
 
-    @Slot(bool, name="update_execution_mode")
+    @Slot(bool)
     def update_execution_mode(self, checked):
         """Slot for execute in work radio button toggled signal."""
         self.execute_in_work = checked
 
-    @Slot(int, name="update_tool_specification")
+    @Slot(int)
     def update_tool_specification(self, row):
         """Update Tool specification according to selection in the specification comboBox.
 
@@ -202,7 +202,7 @@ class Tool(ProjectItem):
             self.populate_specification_model(populate=True)
             self.execute_in_work = self.tool_specification().execute_in_work
 
-    @Slot(bool, name="open_results")
+    @Slot(bool)
     def open_results(self, checked=False):
         """Open output directory in file browser."""
         if not os.path.exists(self.output_dir):
@@ -1038,7 +1038,7 @@ class Tool(ProjectItem):
         """see base class"""
         return "Tool"
 
-    def available_resources_downstream(self, upstream_resources):
+    def available_resources_downstream(self):
         """See base class."""
         resources = list()
         output_files = set(

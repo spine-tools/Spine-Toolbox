@@ -538,7 +538,7 @@ class DataStore(ProjectItem):
         """see base class"""
         return "Data Store"
 
-    def available_resources_downstream(self, upstream_resources):
+    def available_resources_downstream(self):
         """See base class."""
         return self.available_resources_upstream()
 
@@ -548,8 +548,7 @@ class DataStore(ProjectItem):
         if url:
             resource = ProjectItemResource(self, "database", url=str(url))
             return [resource]
-        else:
-            self.add_notification(
-                "The URL for this Data Store is not correctly set. " "Set it in the Data Store Properties panel."
-            )
-            return list()
+        self.add_notification(
+            "The URL for this Data Store is not correctly set. " "Set it in the Data Store Properties panel."
+        )
+        return list()

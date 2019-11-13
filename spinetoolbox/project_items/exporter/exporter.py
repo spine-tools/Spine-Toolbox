@@ -285,7 +285,7 @@ class Exporter(ProjectItem):
         """See base class."""
         return "Exporter"
 
-    def available_resources_downstream(self, upstream_resources):
+    def available_resources_downstream(self):
         """See base class."""
         files = self._database_to_file_name_map.values()
         paths = [os.path.join(self.data_dir, file_name) for file_name in files]

@@ -221,7 +221,7 @@ class ProjectItem(BaseProjectItem):
         y (float): vertical position in the screen
     """
 
-    item_changed = Signal(name="item_changed")
+    item_changed = Signal()
 
     def __init__(self, toolbox, name, description, x, y):
         """
@@ -495,15 +495,12 @@ class ProjectItem(BaseProjectItem):
         )
 
     # pylint: disable=no-self-use
-    def available_resources_downstream(self, upstream_resources):
+    def available_resources_downstream(self):
         """
         Returns available resources for downstream items.
 
         Should be reimplemented by subclasses if they want to offer resources
         to downstream items. The default implementation returns an empty list.
-
-        Args:
-            upstream_resources (list): a list of resources available from upstream items
 
         Returns:
             a list of ProjectItemResources

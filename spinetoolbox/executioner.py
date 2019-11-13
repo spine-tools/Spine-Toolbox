@@ -30,7 +30,7 @@ class DirectedGraphHandler(QObject):
         toolbox (ToolboxUI): QMainWindow instance
     """
 
-    dag_simulation_requested = Signal("QVariant", name="dag_simulation_requested")
+    dag_simulation_requested = Signal("QVariant")
 
     def __init__(self, toolbox):
         """Class constructor."""
@@ -339,7 +339,7 @@ class ExecutionInstance(QObject):
         Args:
             toolbox (ToolboxUI): QMainWindow instance
             ordered_nodes (dict): dict of nodes to execute; key is the node, value is its direct successors
-            resource_map (ResourceMap): project's resource map
+            resource_map (ResourceFinder): project's resource map
         """
         QObject.__init__(self)
         self._toolbox = toolbox
@@ -401,41 +401,29 @@ class ExecutionInstance(QObject):
         return
 
 
-class ResourceMap:
+class ResourceFinder:
     """Enables queries about which resources are available to project items."""
 
-    def __init__(self):
-        # Key is item name, value is resource list
-        self._downstream_resources = dict()
-        self._upstream_resources = dict()
-
-    def _add_resources_downstream(self, source, resources, ordered_nodes):
-        """
-        Makes resources available to items downstream.
-
-        Resources become available only to directly connected project items.
+    def __init__(self, ordered_nodes, project_item_model):
+        """Initializes two mappings (dictionaries) to quickly find upstream and downstream items 
+        at execution time.
 
         Args:
-            source (str): the name of the resource source item
-            resources (Iterable): the resource(s) available from the source item
-        """
-        for child in ordered_nodes[source]:
-            self._downstream_resources.setdefault(child, list()).extend(resources)
-
-    def _add_resources_upstream(self, source, resources, ordered_nodes):
-        """
-        Makes resources available to items upstream.
-
-        Resources become available only to directly connected project items.
-
-        Args:
-            source (str): the name of the resource source item
-            resources (Iterable): the resource(s) available from the source item
             ordered_nodes (dict): item execution order; key is the item while value is a list of downstream items
+            project_item_model (ProjectItemModel): Toolbox's project item model
         """
+        # Key is item name, value is list of ProjectItem instances
+        self._downstream_items = dict()
+        self._upstream_items = dict()
         for upstream_node, downstream_nodes in ordered_nodes.items():
-            if source in downstream_nodes:
-                self._upstream_resources.setdefault(upstream_node, list()).extend(resources)
+            self._downstream_items[upstream_node] = list()
+            upstream_index = project_item_model.find_item(upstream_node)
+            upstream_item = project_item_model.project_item(upstream_index)
+            for downstream_node in downstream_nodes:
+                self._upstream_items.setdefault(downstream_node, list()).append(upstream_item)
+                downstream_index = project_item_model.find_item(downstream_node)
+                downstream_item = project_item_model.project_item(downstream_index)
+                self._downstream_items[upstream_node].append(downstream_item)
 
     def available_upstream_resources(self, item):
         """Returns the list of resources available to the given item from upstream items.
@@ -443,7 +431,10 @@ class ResourceMap:
         Args:
             item (str): the name of the item that asks
         """
-        return self._downstream_resources.get(item, list())
+        resources = []
+        for upstream_item in self._upstream_items.get(item, []):
+            resources += upstream_item.available_resources_downstream()
+        return resources
 
     def available_downstream_resources(self, item):
         """Returns the list of resources available to the given item from downstream items.
@@ -451,23 +442,7 @@ class ResourceMap:
         Args:
             item (str): the name of the item that asks
         """
-        return self._upstream_resources.get(item, list())
-
-    def update(self, ordered_nodes, project_item_model):
-        """
-        Updates the resource mapping.
-
-        Args:
-            ordered_nodes (dict): item execution order; key is the item while value is a list of downstream items
-            project_item_model (ProjectItemModel): Toolbox's project item model
-        """
-        for node in ordered_nodes:
-            available_upstream_resources = self.available_upstream_resources(node)
-            index = project_item_model.find_item(node)
-            project_item = project_item_model.project_item(index)
-            resources = project_item.available_resources_downstream(available_upstream_resources)
-            if resources:
-                self._add_resources_downstream(node, resources, ordered_nodes)
-            resources = project_item.available_resources_upstream()
-            if resources:
-                self._add_resources_upstream(node, resources, ordered_nodes)
+        resources = []
+        for downstream_item in self._downstream_items.get(item, []):
+            resources += downstream_item.available_resources_upstream()
+        return resources
