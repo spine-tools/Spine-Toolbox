@@ -391,6 +391,7 @@ class TestToolExecution(unittest.TestCase):
         self.toolbox.project().add_project_items("Tools", item)  # Add Tool to project
         ind = self.toolbox.project_item_model.find_item("Tool")
         tool = self.toolbox.project_item_model.project_item(ind)  # Find item from project item model
+        self.toolbox.project().execution_instance = mock.NonCallableMagicMock()
         # Collect some information
         basedir = tool.tool_specification().path
         project_dir = tool._project.project_dir
@@ -427,6 +428,9 @@ class TestToolExecution(unittest.TestCase):
             mock_execute_tool_instance.side_effect = mock_execute_tool_instance_side_effect
             resources_downstream = []
             tool.execute(resources_upstream, resources_downstream)
+        self.toolbox.project().execution_instance.project_item_execution_finished_signal.emit.assert_called_with(
+            ExecutionState.WAIT
+        )
         self.assertEqual(tool.basedir, basedir)
         # Check that output files were copied to the output dir
         result_dir = os.path.abspath(os.path.join(tool.output_dir, "failed", "mock_timestamp"))
@@ -440,6 +444,7 @@ class TestToolExecution(unittest.TestCase):
         self.toolbox.project().add_project_items("Tools", item)  # Add Tool to project
         ind = self.toolbox.project_item_model.find_item("Tool")
         tool = self.toolbox.project_item_model.project_item(ind)  # Find item from project item model
+        self.toolbox.project().execution_instance = mock.NonCallableMagicMock()
         # Collect some information
         work_dir = self.toolbox.project().work_dir
         # Make work directory in case it does not exist. This may be needed by Travis CI.
@@ -531,6 +536,9 @@ class TestToolExecution(unittest.TestCase):
 
                 mock_execute_tool_instance.side_effect = mock_execute_tool_instance_side_effect
                 tool.execute(resources_upstream, resources_downstream=[])
+            self.toolbox.project().execution_instance.project_item_execution_finished_signal.emit.assert_called_with(
+                ExecutionState.WAIT
+            )
             self.assertEqual(tool.basedir, basedir)
             # Check that output files were copied to the output dir
             result_dir = os.path.join(tool.output_dir, "mock_timestamp")

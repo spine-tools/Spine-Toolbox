@@ -314,9 +314,14 @@ class DirectedGraphHandler(QObject):
 class ExecutionState(Enum):
     """An enumeration to control the execution."""
 
+    WAIT = 1
+    """Execution should wait for another signal from the project item."""
     CONTINUE = 0
+    """Execution can continue with the next project item in the DAG."""
     ABORT = -1
+    """Execution should be aborted due to unrecoverable error."""
     STOP_REQUESTED = -2
+    """User has requested to stop the execution."""
 
 
 class ExecutionInstance(QObject):
@@ -367,6 +372,9 @@ class ExecutionInstance(QObject):
         Args:
             item_finish_state (ExecutionState): an enumeration to indicate if execution should continue or not
         """
+        if item_finish_state == ExecutionState.WAIT:
+            # Expecting another call to this function.
+            return
         self.project_item_execution_finished_signal.disconnect()
         if item_finish_state == ExecutionState.ABORT:
             # Item execution failed due to e.g. Tool did not find input files or something

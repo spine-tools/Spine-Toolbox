@@ -431,7 +431,7 @@ class Tool(ProjectItem):
             "*** Starting instance of Tool specification <b>{0}</b> ***".format(self.tool_specification().name)
         )
         self.instance.execute()
-        return None  # handle_execution_finished() will declare whether to continue or not
+        return ExecutionState.WAIT  # handle_execution_finished() will declare whether to continue or not
 
     def count_files_and_dirs(self):
         """Count the number of files and directories in required input files model.

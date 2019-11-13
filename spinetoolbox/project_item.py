@@ -329,8 +329,7 @@ class ProjectItem(BaseProjectItem):
         self._toolbox.msg.emit("Executing {} <b>{}</b>".format(self.item_type(), self.name))
         self._toolbox.msg.emit("***")
         execution_state = self._do_execute(resources_upstream, resources_downstream)
-        if execution_state is not None:
-            self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(execution_state)
+        self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(execution_state)
 
     # pylint: disable=no-self-use
     def _do_execute(self, resources_upstream, resources_downstream):
@@ -343,7 +342,7 @@ class ProjectItem(BaseProjectItem):
             resources_upstream (list): a list of ProjectItemResources available from upstream items
             resources_downstream (list): a list of ProjectItemResources available from downstream items
         Returns:
-            ExecutionState to indicate the status of the execution or None to not to notify ExecutionInstance
+            ExecutionState to indicate the status of the execution
         """
         return ExecutionState.CONTINUE
 
