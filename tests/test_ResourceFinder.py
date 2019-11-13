@@ -10,7 +10,7 @@
 ######################################################################################################################
 
 """
-Unit tests for ResourceMap class.
+Unit tests for ResourceFinder class.
 
 :author: A. Soininen (VTT)
 :date:   11.9.2019
@@ -20,12 +20,12 @@ import unittest
 from unittest.mock import NonCallableMagicMock
 from PySide2.QtCore import QModelIndex
 from PySide2.QtWidgets import QApplication
-from spinetoolbox.executioner import ResourceMap
+from spinetoolbox.executioner import ResourceFinder
 from spinetoolbox.project_item import ProjectItemResource
 from .mock_helpers import clean_up_toolboxui_with_project, create_toolboxui_with_project
 
 
-class TestResourceMap(unittest.TestCase):
+class TestResourceFinder(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         if not QApplication.instance():
@@ -59,13 +59,12 @@ class TestResourceMap(unittest.TestCase):
         """Runs after each test. Use this to free resources after a test if needed."""
         clean_up_toolboxui_with_project(self.toolbox)
 
-    def test_update(self):
+    def test_constructor(self):
         ordered_nodes = {
             self.mock_upstream_item.name: [self.mock_downstream_item.name],
             self.mock_downstream_item.name: [],
         }
-        resource_map = ResourceMap()
-        resource_map.update(ordered_nodes, self.toolbox.project_item_model)
+        resource_finder = ResourceFinder(ordered_nodes, self.toolbox.project_item_model)
 
 
 if __name__ == '__main__':
