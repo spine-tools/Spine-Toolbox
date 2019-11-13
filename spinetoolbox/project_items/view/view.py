@@ -21,11 +21,12 @@ import logging
 from PySide2.QtCore import Qt, Slot
 from PySide2.QtGui import QStandardItem, QStandardItemModel, QIcon, QPixmap
 from sqlalchemy.engine.url import URL, make_url
-from spinedb_api import SpineDBAPIError, SpineDBVersionError
+from spinedb_api import SpineDBAPIError
 from spinetoolbox.project_item import ProjectItem
 from spinetoolbox.widgets.graph_view_widget import GraphViewForm
 from spinetoolbox.widgets.tabular_view_widget import TabularViewForm
 from spinetoolbox.widgets.tree_view_widget import TreeViewForm
+from spinetoolbox.executioner import ExecutionState
 
 
 class View(ProjectItem):
@@ -158,8 +159,21 @@ class View(ProjectItem):
         """Stops executing this View."""
         self._toolbox.msg.emit("Stopping {0}".format(self.name))
 
+    def _do_execute(self, resources_upstream, resources_downstream):
+        """Executes this item."""
+        self._update_references_list(resources_upstream)
+        return ExecutionState.CONTINUE
+
     def _do_handle_dag_changed(self, resources_upstream):
         """Update the list of references that this item is viewing."""
+        self._update_references_list(resources_upstream)
+
+    def _update_references_list(self, resources_upstream):
+        """Updates the references list with resources upstream.
+
+        Args:
+            resources_upstream (list): ProjectItemResource instances
+        """
         self._references.clear()
         for resource in resources_upstream:
             if resource.type_ == "database" and resource.scheme == "sqlite":

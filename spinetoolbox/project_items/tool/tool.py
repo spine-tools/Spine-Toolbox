@@ -22,7 +22,7 @@ import shutil
 import tempfile
 import pathlib
 import glob
-from PySide2.QtCore import Slot, Qt, QUrl, QFileInfo, QTimeLine
+from PySide2.QtCore import Slot, Qt, QUrl, QFileInfo, QTimeLine, QFileSystemWatcher
 from PySide2.QtGui import QDesktopServices, QStandardItemModel, QStandardItem
 from PySide2.QtWidgets import QFileIconProvider
 from spinetoolbox.executioner import ExecutionState
@@ -78,6 +78,16 @@ class Tool(ProjectItem):
         self.basedir = None
         # Make directory for results
         self.output_dir = os.path.join(self.data_dir, TOOL_OUTPUT_DIR)
+        self.output_dir_watcher = QFileSystemWatcher(self)
+        self.watch_output_dir()
+        self.output_dir_watcher.directoryChanged.connect(lambda path: self.item_changed.emit())
+
+    def watch_output_dir(self):
+        if not os.path.isdir(self.output_dir):
+            return
+        self.output_dir_watcher.addPath(self.output_dir)
+        sub_dir_paths = [os.path.join(root, d) for root, dirs, _ in os.walk(self.output_dir) for d in dirs]
+        self.output_dir_watcher.addPaths(sub_dir_paths)
 
     @staticmethod
     def item_type():
@@ -1009,6 +1019,8 @@ class Tool(ProjectItem):
         if not ret:
             return False
         self.output_dir = os.path.join(self.data_dir, TOOL_OUTPUT_DIR)
+        self.output_dir_watcher.removePaths(self.output_dir_watcher.directories())
+        self.watch_output_dir()
         return True
 
     def notify_destination(self, source_item):

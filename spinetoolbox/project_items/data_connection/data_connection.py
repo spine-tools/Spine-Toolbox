@@ -58,6 +58,7 @@ class DataConnection(ProjectItem):
         data_files = self.data_files()
         self.populate_data_list(data_files)
         self.spine_datapackage_form = None
+        self.data_dir_watcher.directoryChanged.connect(self.refresh)
 
     @staticmethod
     def item_type():
@@ -81,7 +82,6 @@ class DataConnection(ProjectItem):
         s[self._properties_ui.pushButton_datapackage.clicked] = self.show_spine_datapackage_form
         s[self._properties_ui.treeView_dc_references.doubleClicked] = self.open_reference
         s[self._properties_ui.treeView_dc_data.doubleClicked] = self.open_data_file
-        s[self.data_dir_watcher.directoryChanged] = self.refresh
         s[self._properties_ui.treeView_dc_references.files_dropped] = self.add_files_to_references
         s[self._properties_ui.treeView_dc_data.files_dropped] = self.add_files_to_data_dir
         s[self.get_icon().files_dropped_on_icon] = self.receive_files_dropped_on_icon
@@ -331,8 +331,8 @@ class DataConnection(ProjectItem):
                     files.append(entry.path)
         return files
 
-    @Slot(name="refresh")
-    def refresh(self):
+    @Slot("QString")
+    def refresh(self, path=None):
         """Refresh data files in Data Connection Properties.
         NOTE: Might lead to performance issues."""
         d = self.data_files()
