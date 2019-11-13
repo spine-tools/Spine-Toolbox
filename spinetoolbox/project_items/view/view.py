@@ -143,8 +143,9 @@ class View(ProjectItem):
         an empty list given, the model is cleared."""
         self.reference_model.clear()
         self.reference_model.setHorizontalHeaderItem(0, QStandardItem("References"))  # Add header
-        for item in items:
-            qitem = QStandardItem(item.database)
+        sorted_dbs = sorted([item.database for item in items], reverse=True)
+        for db in sorted_dbs:
+            qitem = QStandardItem(db)
             qitem.setFlags(~Qt.ItemIsEditable)
             qitem.setData(self._spine_ref_icon, Qt.DecorationRole)
             self.reference_model.appendRow(qitem)
