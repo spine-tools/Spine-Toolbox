@@ -22,6 +22,7 @@ import logging
 import sys
 from PySide2.QtCore import QItemSelectionModel
 from PySide2.QtWidgets import QApplication
+from spinetoolbox.executioner import ExecutionState
 from .mock_helpers import clean_up_toolboxui_with_project, create_toolboxui_with_project
 
 
@@ -144,7 +145,7 @@ class TestSpineToolboxProject(unittest.TestCase):
         item_name = self.add_tool()
         item_index = self.toolbox.project_item_model.find_item(item_name)
         item = self.toolbox.project_item_model.project_item(item_index)
-        item._do_execute = mock.MagicMock()
+        item._do_execute = mock.MagicMock(return_value=ExecutionState.CONTINUE)
         self.toolbox.project().execute_project()
         item._do_execute.assert_called_with([], [])
 
@@ -152,11 +153,11 @@ class TestSpineToolboxProject(unittest.TestCase):
         item1_name = self.add_tool()
         item1_index = self.toolbox.project_item_model.find_item(item1_name)
         item1 = self.toolbox.project_item_model.project_item(item1_index)
-        item1._do_execute = mock.MagicMock()
+        item1._do_execute = mock.MagicMock(return_value=ExecutionState.CONTINUE)
         item2_name = self.add_view()
         item2_index = self.toolbox.project_item_model.find_item(item2_name)
         item2 = self.toolbox.project_item_model.project_item(item2_index)
-        item2._do_execute = mock.MagicMock()
+        item2._do_execute = mock.MagicMock(return_value=ExecutionState.CONTINUE)
         self.toolbox.project().execute_project()
         item1._do_execute.assert_called_with([], [])
         item2._do_execute.assert_called_with([], [])
@@ -165,11 +166,11 @@ class TestSpineToolboxProject(unittest.TestCase):
         item1_name = self.add_tool()
         item1_index = self.toolbox.project_item_model.find_item(item1_name)
         item1 = self.toolbox.project_item_model.project_item(item1_index)
-        item1._do_execute = mock.MagicMock()
+        item1._do_execute = mock.MagicMock(return_value=ExecutionState.CONTINUE)
         item2_name = self.add_view()
         item2_index = self.toolbox.project_item_model.find_item(item2_name)
         item2 = self.toolbox.project_item_model.project_item(item2_index)
-        item2._do_execute = mock.MagicMock()
+        item2._do_execute = mock.MagicMock(return_value=ExecutionState.CONTINUE)
         self.toolbox.ui.treeView_project.selectionModel().select(item2_index, QItemSelectionModel.Select)
         self.toolbox.project().execute_selected()
         item1._do_execute.assert_not_called()
