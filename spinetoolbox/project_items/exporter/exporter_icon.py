@@ -17,7 +17,9 @@ Icon class for the Exporter project item.
 """
 
 from PySide2.QtGui import QColor
+from PySide2.QtWidgets import QGraphicsTextItem
 from spinetoolbox.graphics_items import ProjectItemIcon
+from ..shared.import_export_animation import ImportExportAnimation
 
 
 class ExporterIcon(ProjectItemIcon):
@@ -39,7 +41,14 @@ class ExporterIcon(ProjectItemIcon):
             w,
             h,
             name,
-            ":/icons/project_item_icons/file-export-solid.svg",
+            ":/icons/project_item_icons/database-export.svg",
             icon_color=QColor("#990000"),
             background_color=QColor("#ffcccc"),
         )
+        src_item = QGraphicsTextItem("\uf1c0")
+        src_item.setDefaultTextColor("#cc33ff")
+        dst_item = QGraphicsTextItem("\uf15c")
+        dst_item.setDefaultTextColor("#0000ff")
+        self.animation = ImportExportAnimation(self, src_item, dst_item)
+        self.start_animation = self.animation.start
+        self.stop_animation = self.animation.stop
