@@ -352,12 +352,11 @@ class Tool(ProjectItem):
         self._properties_ui.label_tool_name.setText(self.name)
 
     def _update_basedir(self):
-        """Updates the path to the base directory for tool execution, depending on `execute_in_work`.
-        """
+        """Updates the path to the base directory for tool execution, depending on `execute_in_work`."""
         if self.basedir is not None:
             return
         if self.execute_in_work:
-            work_dir = self._project.work_dir
+            work_dir = self._toolbox.work_dir
             self.basedir = tempfile.mkdtemp(
                 suffix='__toolbox', prefix=self.tool_specification().short_name + '__', dir=work_dir
             )
