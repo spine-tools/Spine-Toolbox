@@ -174,8 +174,9 @@ class DataStore(ProjectItem):
     @Slot("QString", name="set_path_to_sqlite_file")
     def set_path_to_sqlite_file(self, file_path):
         """Set path to SQLite file."""
-        self._properties_ui.lineEdit_database.setText(file_path)
-        self.set_url_key("database", file_path)
+        abs_path = os.path.abspath(file_path)
+        self._properties_ui.lineEdit_database.setText(abs_path)
+        self.set_url_key("database", abs_path)
 
     @Slot(bool, name='open_sqlite_file')
     def open_sqlite_file(self, checked=False):
@@ -210,7 +211,8 @@ class DataStore(ProjectItem):
         if self._url["port"]:
             self._properties_ui.lineEdit_port.setText(str(self._url["port"]))
         if self._url["database"]:
-            self._properties_ui.lineEdit_database.setText(self._url["database"])
+            abs_db_path = os.path.abspath(self._url["database"])
+            self._properties_ui.lineEdit_database.setText(abs_db_path)
         if self._url["username"]:
             self._properties_ui.lineEdit_username.setText(self._url["username"])
         if self._url["password"]:
@@ -482,7 +484,7 @@ class DataStore(ProjectItem):
             # Set default dialect and database *manually* (both in the UI and in the self._url attribute)
             # so we don't emit `item_changed`
             dialect = "sqlite"
-            database = os.path.join(self.data_dir, self.name + ".sqlite")
+            database = os.path.abspath(os.path.join(self.data_dir, self.name + ".sqlite"))
             self._properties_ui.comboBox_dialect.setCurrentText(dialect)
             self._properties_ui.lineEdit_database.setText(database)
             self._url["dialect"] = dialect
