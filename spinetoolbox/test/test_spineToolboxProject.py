@@ -151,15 +151,6 @@ class TestSpineToolboxProject(unittest.TestCase):
     # def test_set_description(self):
     #     self.fail()
     #
-    # def test_change_filename(self):
-    #     self.fail()
-    #
-    # def test_change_work_dir(self):
-    #     self.fail()
-    #
-    # def test_rename_project(self):
-    #     self.fail()
-    #
     # def test_save(self):
     #     self.fail()
     #

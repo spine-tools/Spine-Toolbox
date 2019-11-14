@@ -55,7 +55,8 @@ from .widgets.open_project_widget import OpenProjectDialog
 from .project import SpineToolboxProject
 from .config import SPINE_TOOLBOX_VERSION, STATUSBAR_SS, \
     TEXTBROWSER_SS, MAINWINDOW_SS, DOCUMENTATION_PATH, DEFAULT_PROJECT_DIR, LATEST_PROJECT_VERSION, DEFAULT_WORK_DIR
-from .helpers import get_datetime, erase_dir, busy_effect, set_taskbar_icon, supported_img_formats, create_dir
+from .helpers import get_datetime, erase_dir, busy_effect, set_taskbar_icon, \
+    supported_img_formats, create_dir, copy_dir
 from .project_item import RootProjectItem, CategoryProjectItem
 from .project_items import data_store, data_connection, gdx_export, tool, view, data_interface
 from .project_upgrader import ProjectUpgrader
@@ -449,7 +450,7 @@ class ToolboxUI(QMainWindow):
         if not self._project.save(tool_specifications):
             self.msg_error.emit("Project saving failed")
             return
-        self.msg.emit("Project saved to <b>{0}</b>".format(self._project.project_dir))
+        self.msg.emit("Project <b>{0}</b> saved".format(self._project.name))
 
     @Slot(name="save_project_as")
     def save_project_as(self):
@@ -457,9 +458,9 @@ class ToolboxUI(QMainWindow):
         if not self._project:
             self.msg.emit("Please open or create a project first")
             return
-        # Ask for a new directory and do something like this
+        # Ask for a new directory
         # noinspection PyCallByClass, PyArgumentList
-        answer = QFileDialog.getExistingDirectory(self, "Select new directory", os.path.abspath("C:\\"))
+        answer = QFileDialog.getExistingDirectory(self, "Select new directory (Save as...)", os.path.abspath("C:\\"))
         if answer == "":  # Canceled
             return
         if not os.path.isdir(answer):
@@ -467,29 +468,34 @@ class ToolboxUI(QMainWindow):
             # noinspection PyCallByClass, PyArgumentList
             QMessageBox.warning(self, "Invalid selection", msg)
             return
+        # Abort if selected directory is not empty. #TODO: Enable overwriting an existing project
+        if len(os.listdir(answer)) > 0:
+            self.msg_error.emit("Selected directory is not empty. Please select another one.")
+            return
         self.msg.emit("Saving project to directory {0}".format(answer))
-        self.msg_warning.emit("Sorry, not ready yet.")
-
-        # # Save project
-        # # self.save_project()
-        # if not self._project.save(tool_specifications, answer):
-        #     self.msg_error("Project saving failed")
-        #     return
-        # # Load project
-        # self.open_project(self._project.project_dir)  # Test!
-        # return
-
-        # msg = "This creates a copy of the current project. <br/><br/>New name:"
-        # # noinspection PyCallByClass
-        # answer = QInputDialog.getText(
-        #     self, "New project name", msg, text=self._project.name, flags=Qt.WindowTitleHint | Qt.WindowCloseButtonHint
-        # )
-        # if not answer[1]:  # answer[str, bool]
-        #     return
-        # name = answer[0]
-        # # Check if name is valid and copy project tree under a new name
-        # if not self._project.rename_project(name):
-        #     return
+        # Hack time. Remove the directory so that copy_dir works
+        erase_dir(answer)
+        if not copy_dir(self, self._project.project_dir, answer):
+            self.msg_error.emit("Copying project data to directory {0} failed.".format(answer))
+            return
+        # Get the project info from the new directory and restore project
+        project_file_path = os.path.join(answer, ".spinetoolbox", "project.json")
+        try:
+            with open(project_file_path, "r") as fh:
+                try:
+                    proj_info = json.load(fh)
+                except json.decoder.JSONDecodeError:
+                    self.msg_error.emit("Error in project file <b>{0}</b>. Invalid JSON. {0}".format(project_file_path))
+                    return
+        except OSError:
+            self.msg_error.emit("[OSError] Opening project file <b>{0}</b> failed".format(project_file_path))
+            return
+        if not self.restore_project(proj_info, answer, clear_event_log=True):
+            return
+        # noinspection PyCallByClass, PyArgumentList
+        QMessageBox.information(self, "{0} saved to a new directory".format(self._project.name),
+                                "Your project directory is now\n\n{0}".format(answer))
+        return
 
     def init_models(self, tool_specification_paths):
         """Initialize application internal data models.

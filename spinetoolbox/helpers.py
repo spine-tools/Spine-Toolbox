@@ -208,7 +208,7 @@ def create_log_file_timestamp():
 
 @busy_effect
 def copy_files(src_dir, dst_dir, includes=None, excludes=None):
-    """Method for copying files. Does not copy folders.
+    """Function for copying files. Does not copy folders.
 
     Args:
         src_dir (str): Source directory
@@ -241,7 +241,7 @@ def copy_files(src_dir, dst_dir, includes=None, excludes=None):
 
 @busy_effect
 def erase_dir(path, verbosity=False):
-    """Delete directory and all its contents without prompt.
+    """Deletes a directory and all its contents without prompt.
 
     Args:
         path (str): Path to directory
@@ -259,7 +259,7 @@ def erase_dir(path, verbosity=False):
 
 @busy_effect
 def copy_dir(widget, src_dir, dst_dir):
-    """Make a copy of a directory. All files and folders are copied.
+    """Makes a copy of a directory. All files and folders are copied.
     Destination directory must not exist. Does not overwrite files.
 
     Args:

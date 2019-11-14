@@ -105,51 +105,6 @@ class SpineToolboxProject(MetaObject):
         self._toolbox.setWindowTitle("Spine Toolbox    -- {} --".format(self.name))
         self._toolbox.msg.emit("Project name changed to <b>{0}</b>".format(self.name))
 
-    def rename_project(self, name):
-        """Save project under a new name. Used with File->Save As... menu command.
-        Checks if given project name is valid.
-
-        Args:
-            name (str): New (long) name for project
-        """
-        # Check for illegal characters
-        if name.strip() == '' or name.lower() == self.name.lower():
-            self._toolbox.msg_warning.emit("Renaming project cancelled")
-            return False
-        # Check if new short name is the same as the current one
-        new_short_name = name.lower().replace(" ", "_")
-        if new_short_name == self.short_name:
-            msg = "<b>{0}</b> project directory already taken.".format(new_short_name)
-            # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
-            QMessageBox.information(self._toolbox, "Try again", msg)
-            return False
-        # Check that new name is legal
-        if any(True for x in name if x in INVALID_CHARS):
-            msg = "<b>{0}</b> contains invalid characters.".format(name)
-            # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
-            QMessageBox.information(self._toolbox, "Invalid characters", msg)
-            return False
-        # Check that the new project name directory is not taken
-        projects_path = DEFAULT_PROJECT_DIR  # Path to directory where project files (.proj) are
-        new_project_dir = os.path.join(projects_path, new_short_name)  # New project directory
-        taken_dirs = list()
-        dir_contents = [os.path.join(projects_path, x) for x in os.listdir(projects_path)]
-        for path in dir_contents:
-            if os.path.isdir(path):
-                taken_dirs.append(os.path.split(path)[1])
-        if new_short_name in taken_dirs:
-            msg = "Project directory <b>{0}</b> already exists.".format(new_project_dir)
-            # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
-            QMessageBox.information(self._toolbox, "Try again", msg)
-            return False
-        # Copy project directory to new project directory
-        if not copy_dir(self._toolbox, self.project_dir, new_project_dir):
-            self._toolbox.msg_error.emit("Copying project directory failed")
-            return False
-        # Change name
-        self.change_name(name)
-        return True
-
     def save(self, tool_def_paths, directory=None):
         """Collect project information and objects
         into a dictionary and write to a JSON file.
