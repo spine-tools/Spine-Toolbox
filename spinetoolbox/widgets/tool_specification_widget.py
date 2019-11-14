@@ -90,7 +90,7 @@ class ToolSpecificationWidget(QWidget):
             check_state = Qt.Checked if tool_specification.execute_in_work else Qt.Unchecked
             self.ui.checkBox_execute_in_work.setCheckState(check_state)
             self.ui.textEdit_description.setPlainText(tool_specification.description)
-            self.ui.lineEdit_args.setText(tool_specification.cmdline_args)
+            self.ui.lineEdit_args.setText(" ".join(tool_specification.cmdline_args))
             tool_types = [x.lower() for x in TOOL_TYPES]
             index = tool_types.index(tool_specification.tooltype) + 1
             self.ui.comboBox_tooltype.setCurrentIndex(index)
