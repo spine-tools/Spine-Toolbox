@@ -21,7 +21,7 @@ import os
 from PySide2.QtWidgets import QDialog, QFileSystemModel, QAbstractItemView, QAction
 from PySide2.QtCore import Qt, Slot, QDir, QStandardPaths, QTimer, QModelIndex
 from PySide2.QtGui import QKeySequence
-from spinetoolbox.mvcmodels.project_icon_sort_model import ProjectDirectoryIconProvider
+from spinetoolbox.helpers import ProjectDirectoryIconProvider
 
 
 class OpenProjectDialog(QDialog):

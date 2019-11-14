@@ -28,7 +28,7 @@ import spinedb_api
 from PySide2.QtCore import Qt, Slot, QFile, QIODevice, QSize, QRect, QPoint
 from PySide2.QtCore import __version__ as qt_version
 from PySide2.QtCore import __version_info__ as qt_version_info
-from PySide2.QtWidgets import QApplication, QMessageBox, QGraphicsScene
+from PySide2.QtWidgets import QApplication, QMessageBox, QGraphicsScene, QFileIconProvider
 from PySide2.QtGui import (
     QCursor,
     QImageReader,
@@ -41,7 +41,7 @@ from PySide2.QtGui import (
     QStandardItemModel,
     QStandardItem,
 )
-from .config import REQUIRED_SPINEDB_API_VERSION, LATEST_PROJECT_VERSION
+from .config import REQUIRED_SPINEDB_API_VERSION
 
 
 def set_taskbar_icon():
@@ -617,3 +617,33 @@ def interpret_icon_id(display_icon):
 
 def default_icon_id():
     return make_icon_id(*interpret_icon_id(None))
+
+
+class ProjectDirectoryIconProvider(QFileIconProvider):
+    """QFileIconProvider that provides a Spine icon to the
+    Open Project Dialog when a Spine Toolbox project
+    directory is encountered."""
+    def __init__(self):
+        super().__init__()
+        self.spine_icon = QIcon(":/symbols/Spine_symbol.png")
+
+    def icon(self, info):
+        """Returns an icon for the file described by info.
+
+        Args:
+            info (QFileInfo): File (or directory) info
+
+        Returns:
+            QIcon: Icon for a file system resource with the given info
+        """
+        if info.__class__() == QFileIconProvider.IconType:
+            return super().icon(info)  # Because there are two icon() methods
+        if not info.isDir():
+            return super().icon(info)
+        p = info.filePath()
+        # logging.debug("In dir:{0}".format(p))
+        if os.path.exists(os.path.join(p, ".spinetoolbox")):
+            # logging.debug("found project dir:{0}".format(p))
+            return self.spine_icon
+        else:
+            return super().icon(info)
