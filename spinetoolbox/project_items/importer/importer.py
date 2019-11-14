@@ -297,7 +297,7 @@ class Importer(ProjectItem):
 
     def _do_handle_dag_changed(self, resources_upstream):
         """See base class."""
-        file_list = [r.path for r in resources_upstream if r.type_ == "file" and not r.metadata.get("is_output")]
+        file_list = [r.path for r in resources_upstream if r.type_ == "file" and r.metadata.get("ready")]
         self.update_file_model(set(file_list))
         if not file_list:
             self.add_notification(

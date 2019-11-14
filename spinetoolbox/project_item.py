@@ -531,23 +531,20 @@ class ProjectItemResource:
     """Class to hold a resource made available by a project item
     and that may be consumed by another project item."""
 
-    def __init__(self, provider, type_, url="", data=None, metadata=None):
+    def __init__(self, provider, type_, url="", metadata=None):
         """Init class.
 
         Args:
             provider (ProjectItem): The item that provides the resource
-            type_ (str): The resource type, either "file", "database", or "data" (for now)
+            type_ (str): The resource type, either "file" or "database" (for now)
             url (str): The url of the resource
-            data (object): The data in the resource
             metadata (dict): Some metadata providing extra information about the resource. For now it has two keys:
-                - is_output (bool): whether the resource is an output from a process, e.g., a Tool ouput file
-                - for_import (bool): whether the resource is data to be imported into a Spine db
+                - ready (bool): whether the resource is ready, not the case for Tool output files
         """
         self.provider = provider
         self.type_ = type_
         self.url = url
         self.parsed_url = urlparse(url)
-        self.data = data
         if not metadata:
             metadata = dict()
         self.metadata = metadata
@@ -560,7 +557,6 @@ class ProjectItemResource:
             self.provider == other.provider
             and self.type_ == other.type_
             and self.url == other.url
-            and self.data == other.data
             and self.metadata == other.metadata
         )
 
@@ -569,7 +565,6 @@ class ProjectItemResource:
         result += f"provider={self.provider}, "
         result += f"type_={self.type_}, "
         result += f"url={self.url}, "
-        result += f"data={self.data}, "
         result += f"metadata={self.metadata})"
         return result
 

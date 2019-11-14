@@ -351,50 +351,62 @@ class Tool(ProjectItem):
         """Update Tool tab name label. Used only when renaming project items."""
         self._properties_ui.label_tool_name.setText(self.name)
 
-    def _do_execute(self, resources_upstream, resources_downstream):
-        """Executes this Tool."""
-        if not self.tool_specification():
-            self._toolbox.msg_warning.emit("Tool <b>{0}</b> has no Tool specification to execute".format(self.name))
-            return ExecutionState.CONTINUE
+    def _update_basedir(self):
+        """Updates the path to the base directory for tool execution, depending on `execute_in_work`.
+        """
+        if self.basedir is not None:
+            return
         if self.execute_in_work:
-            work_or_source = "work"
             work_dir = self._project.work_dir
             self.basedir = tempfile.mkdtemp(
                 suffix='__toolbox', prefix=self.tool_specification().short_name + '__', dir=work_dir
             )
-            # Make work directory anchor with path as tooltip
-            work_anchor = (
-                "<a style='color:#99CCFF;' title='"
-                + self.basedir
-                + "' href='file:///"
-                + self.basedir
-                + "'>work directory</a>"
+        else:
+            self.basedir = self.tool_specification().path
+
+    def _invalidate_basedir(self):
+        """Invalidates the base directory. Called after execution."""
+        self.basedir = None
+
+    def available_resources_downstream(self, upstream_resources):
+        """See base class."""
+        self._update_basedir()
+        resources = list()
+        for i in range(self.output_file_model.rowCount()):
+            filename = self.output_file_model.item(i, 0).data(Qt.DisplayRole)
+            output_file = os.path.abspath(os.path.join(self.basedir, filename))
+            resource = ProjectItemResource(
+                self, "file", url=pathlib.Path(output_file).as_uri(), metadata=dict(ready=False)
             )
-            self._toolbox.msg.emit(
-                "*** Copying Tool specification <b>{0}</b> source files to {1} ***".format(
-                    self.tool_specification().name, work_anchor
-                )
-            )
+            resources.append(resource)
+        return resources
+
+    def _do_execute(self, resources_upstream, resources_downstream):
+        """Executes this Tool."""
+        state = self._get_execution_state(resources_upstream, resources_downstream)
+        if state in (ExecutionState.CONTINUE, ExecutionState.ABORT):
+            self._invalidate_basedir()
+        return state
+
+    def _get_execution_state(self, resources_upstream, resources_downstream):
+        if not self.tool_specification():
+            self._toolbox.msg_warning.emit("Tool <b>{0}</b> has no Tool specification to execute".format(self.name))
+            return ExecutionState.CONTINUE
+        self._update_basedir()  # Not really needed, since `ResourceMap.update` calls `available_resources_downstream`
+        if self.execute_in_work:
+            work_or_source = "work"
             if not self.copy_program_files():
                 self._toolbox.msg_error.emit("Copying program files to base directory failed.")
                 return ExecutionState.ABORT
         else:
             work_or_source = "source"
-            self.basedir = self.tool_specification().path
-            # Make source directory anchor with path as tooltip
-            src_dir_anchor = (
-                "<a style='color:#99CCFF;' title='"
-                + self.basedir
-                + "' href='file:///"
-                + self.basedir
-                + "'>source directory</a>"
-            )
-            self._toolbox.msg.emit(
-                "*** Executing Tool specification <b>{0}</b> in {1} ***".format(
-                    self.tool_specification().name, src_dir_anchor
-                )
-            )
-        self._toolbox.msg.emit("*** Executing in <b>{0}</b> directory mode ***".format(work_or_source))
+        # Make source directory anchor with path as tooltip
+        anchor = "<a style='color:#99CCFF;' title='{0}' href='file:///{0}'>{1} directory</a>".format(
+            self.basedir, work_or_source
+        )
+        self._toolbox.msg.emit(
+            "*** Executing Tool specification <b>{0}</b> in {1} ***".format(self.tool_specification().name, anchor)
+        )
         # Find required input files for ToolInstance (if any)
         if self.input_file_model.rowCount() > 0:
             self._toolbox.msg.emit("*** Checking Tool specification requirements ***")
@@ -622,7 +634,14 @@ class Tool(ProjectItem):
         return True
 
     def copy_program_files(self):
-        """Copies Tool specification include files to base directory."""
+        """Copies Tool specification source files to base directory."""
+        # Make work directory anchor with path as tooltip
+        work_anchor = "<a style='color:#99CCFF;' title='{0}' href='file:///{0}'>work directory</a>".format(self.basedir)
+        self._toolbox.msg.emit(
+            "*** Copying Tool specification <b>{0}</b> program files to {1} ***".format(
+                self.tool_specification().name, work_anchor
+            )
+        )
         n_copied_files = 0
         for i in range(self.source_file_model.rowCount()):
             filepath = self.source_file_model.item(i, 0).data(Qt.DisplayRole)
@@ -701,19 +720,19 @@ class Tool(ProjectItem):
         return file_paths
 
     @staticmethod
-    def available_filepath_resources(resources_upstream):
+    def available_filepaths_upstream(resources_upstream):
         """
-        Returns available filepath resources from the given execution instance.
+        Returns filepaths from given available resources upstream.
 
         Args:
             resources_upstream (list): resources available from upstream items
         Returns:
-            a list of file paths
+            a list of file paths, possibly including patterns
         """
         filepaths = []
         for resource in resources_upstream:
             if resource.type_ == "file" or (resource.type_ == "database" and resource.scheme == "sqlite"):
-                filepaths.append(resource.path)
+                filepaths += glob.glob(resource.path)
         return filepaths
 
     def find_file(self, filename, resources_upstream):
@@ -727,7 +746,7 @@ class Tool(ProjectItem):
         Returns:
             str: Full path to file if found, None if not found
         """
-        for filepath in self.available_filepath_resources(resources_upstream):
+        for filepath in self.available_filepaths_upstream(resources_upstream):
             _, file_candidate = os.path.split(filepath)
             if file_candidate == filename:
                 # logging.debug("Found path for {0} from dc refs: {1}".format(filename, dc_ref))
@@ -744,7 +763,7 @@ class Tool(ProjectItem):
         Returns:
             list: List of (full) paths
         """
-        filepaths = self.available_filepath_resources(resources_upstream)
+        filepaths = self.available_filepaths_upstream(resources_upstream)
         # Find matches when pattern includes wildcards
         if "*" in pattern and not "?" in pattern:
             return fnmatch.filter(filepaths, pattern)  # Returns matches in list
@@ -778,6 +797,7 @@ class Tool(ProjectItem):
         else:
             self._toolbox.msg_error.emit("Tool <b>{0}</b> execution failed".format(self.name))
         self.handle_output_files(return_code)
+        self._invalidate_basedir()
         if not self._project.execution_instance:
             # Happens sometimes when Stop button is pressed
             return
@@ -806,12 +826,8 @@ class Tool(ProjectItem):
             )
             return
         # Make link to output folder
-        result_anchor = (
-            "<a style='color:#BB99FF;' title='"
-            + result_path
-            + "' href='file:///"
-            + result_path
-            + "'>results directory</a>"
+        result_anchor = "<a style='color:#BB99FF;' title='{0}' href='file:///{0}'>results directory</a>".format(
+            result_path
         )
         self._toolbox.msg.emit("*** Archiving output files to {0} ***".format(result_anchor))
         if self.output_file_model.rowCount() > 0:
@@ -888,27 +904,15 @@ class Tool(ProjectItem):
             pattern = self.output_file_model.item(i, 0).data(Qt.DisplayRole)
             # Create subdirectories if necessary
             dst_subdir, fname_pattern = os.path.split(pattern)
-            # logging.debug("pattern:{0} dst_subdir:{1} fname_pattern:{2}".format(pattern,
-            #                                                                     dst_subdir, fname_pattern))
-            if not dst_subdir:
-                # No subdirectories to create
-                # self._toolbox.msg.emit("\tCopying file <b>{0}</b>".format(fname))
-                target = target_dir
-            else:
-                # Create subdirectory structure to result directory
-                result_subdir_path = os.path.abspath(os.path.join(target_dir, dst_subdir))
-                if not os.path.exists(result_subdir_path):
-                    try:
-                        create_dir(result_subdir_path)
-                    except OSError:
-                        self._toolbox.msg_error.emit(
-                            "[OSError] Creating directory <b>{0}</b> failed.".format(result_subdir_path)
-                        )
-                        continue
-                    self._toolbox.msg.emit(
-                        "\tCreated result subdirectory <b>{0}{1}</b>".format(os.path.sep, dst_subdir)
-                    )
-                target = result_subdir_path
+            # logging.debug("pattern:{0} dst_subdir:{1} fname_pattern:{2}".format(pattern, dst_subdir, fname_pattern))
+            target = os.path.abspath(os.path.join(target_dir, dst_subdir))
+            if not os.path.exists(target):
+                try:
+                    create_dir(target)
+                except OSError:
+                    self._toolbox.msg_error.emit("[OSError] Creating directory <b>{0}</b> failed.".format(target))
+                    continue
+                self._toolbox.msg.emit("\tCreated result subdirectory <b>{0}{1}</b>".format(os.path.sep, dst_subdir))
             # Check for wildcards in pattern
             if ('*' in pattern) or ('?' in pattern):
                 for fname_path in glob.glob(os.path.abspath(os.path.join(self.basedir, pattern))):
@@ -1019,7 +1023,8 @@ class Tool(ProjectItem):
         if not ret:
             return False
         self.output_dir = os.path.join(self.data_dir, TOOL_OUTPUT_DIR)
-        self.output_dir_watcher.removePaths(self.output_dir_watcher.directories())
+        if self.output_dir_watcher.directories():
+            self.output_dir_watcher.removePaths(self.output_dir_watcher.directories())
         self.watch_output_dir()
         return True
 
@@ -1049,18 +1054,3 @@ class Tool(ProjectItem):
     def default_name_prefix():
         """see base class"""
         return "Tool"
-
-    def available_resources_downstream(self, upstream_resources):
-        """See base class."""
-        resources = list()
-        output_files = set(
-            self.output_file_model.item(i, 0).data(Qt.DisplayRole) for i in range(self.output_file_model.rowCount())
-        )
-        for root, _, files in os.walk(self.output_dir):
-            for file_ in output_files.intersection(files):
-                file_path = os.path.join(root, file_)
-                resource = ProjectItemResource(
-                    self, "file", url=pathlib.Path(file_path).as_uri(), metadata=dict(is_output=True)
-                )
-                resources.append(resource)
-        return resources

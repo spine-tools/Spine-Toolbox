@@ -49,10 +49,10 @@ class ToolInstance(QObject):
 
     def terminate_instance(self):
         """Terminates Tool instance execution."""
+        self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(
+            ExecutionState.STOP_REQUESTED
+        )
         if not self.tool_process:
-            self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(
-                ExecutionState.STOP_REQUESTED
-            )
             return
         # Disconnect tool_process signals
         try:

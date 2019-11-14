@@ -16,10 +16,8 @@ Unit tests for TreeViewForm and GraphViewForm classes.
 :date:   6.12.2018
 """
 
-import unittest
 
-@unittest.skip("Tests not properly implemented.")
-class TestTreeViewFormRemoveMixin(unittest.TestCase):
+class TestTreeViewFormRemoveMixin:
     def test_remove_object_classes_from_object_tree_model(self):
         """Test that object classes are removed from the object tree model.
         """
