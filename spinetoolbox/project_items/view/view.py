@@ -178,7 +178,7 @@ class View(ProjectItem):
         for resource in resources_upstream:
             if resource.type_ == "database" and resource.scheme == "sqlite":
                 self._references.append((make_url(resource.url), resource.provider.name))
-            elif resource.type_ == "file" and resource.metadata.get("is_output"):
+            elif resource.type_ == "file":
                 filepath = resource.path
                 if os.path.splitext(filepath)[1] == '.sqlite':
                     url = URL("sqlite", database=filepath)
