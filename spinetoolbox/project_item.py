@@ -313,7 +313,10 @@ class ProjectItem(BaseProjectItem):
 
     def set_rank(self, rank):
         """Set rank of this item for displaying in the design view."""
-        self.get_icon().rank_icon.set_rank(rank + 1)
+        if rank is not None:
+            self.get_icon().rank_icon.set_rank(rank + 1)
+        else:
+            self.get_icon().rank_icon.set_rank("X")
 
     def execute(self, resources_upstream, resources_downstream):
         """
@@ -379,7 +382,7 @@ class ProjectItem(BaseProjectItem):
         """
         edges = ["{0} -> {1}".format(*edge) for edge in edges]
         self.clear_notifications()
-        self.set_rank("x")
+        self.set_rank(None)
         self.add_notification(
             "The workflow defined for this item has loops and thus cannot be executed. "
             "Possible fix: remove link(s) {0}.".format(", ".join(edges))
