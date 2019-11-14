@@ -215,15 +215,21 @@ class ConnectionManager(QObject):
 
         # save table options if they don't already exists
         for key, table_settings in table_options.items():
-            self._table_options.setdefault(key, table_settings.get("options", {}))
+            options = table_settings.get("options", {})
+            if options is not None:
+                self._table_options.setdefault(key, options)
 
         # save table types if they don't already exists
         for key, table_settings in table_options.items():
-            self._table_types.setdefault(key, table_settings.get("types", {}))
+            types = table_settings.get("types", {})
+            if types is not None:
+                self._table_types.setdefault(key, types)
 
         # save table row types if they don't already exists
         for key, table_settings in table_options.items():
-            self._table_row_types.setdefault(key, table_settings.get("row_types", {}))
+            row_types = table_settings.get("row_types", {})
+            if row_types is not None:
+                self._table_row_types.setdefault(key, row_types)
 
         tables = {k: t.get("mapping", None) for k, t in table_options.items()}
         self.tablesReady.emit(tables)
