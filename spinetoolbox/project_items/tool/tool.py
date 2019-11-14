@@ -1019,8 +1019,7 @@ class Tool(ProjectItem):
         if not ret:
             return False
         self.output_dir = os.path.join(self.data_dir, TOOL_OUTPUT_DIR)
-        if self.output_dir_watcher.directories():
-            self.output_dir_watcher.removePaths(self.output_dir_watcher.directories())
+        self.output_dir_watcher.removePaths(self.output_dir_watcher.directories())
         self.watch_output_dir()
         return True
 

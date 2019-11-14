@@ -22,7 +22,7 @@ import logging
 import sys
 from PySide2.QtCore import QModelIndex
 from PySide2.QtWidgets import QApplication
-from spinetoolbox.executioner import ExecutionInstance, ExecutionState, ResourceFinder
+from spinetoolbox.executioner import ExecutionInstance, ExecutionState, ResourceMap
 from spinetoolbox.project_item import ProjectItemResource
 from .mock_helpers import clean_up_toolboxui_with_project, create_toolboxui_with_project
 
@@ -52,7 +52,7 @@ class TestExecutionInstance(unittest.TestCase):
         self.mock_downstream_item = self._mock_item("downstream item")
         mock_proj_item_model = mock.NonCallableMagicMock()
         mock_proj_item_model.find_item.return_value = QModelIndex()
-        mock_proj_item_model.project_item.side_effect = 3 * [self.mock_upstream_item, self.mock_downstream_item]
+        mock_proj_item_model.project_item.side_effect = 2 * [self.mock_upstream_item, self.mock_downstream_item]
         self.toolbox.project_item_model = mock_proj_item_model
 
     @staticmethod
@@ -76,8 +76,9 @@ class TestExecutionInstance(unittest.TestCase):
             self.mock_upstream_item.name: [self.mock_downstream_item.name],
             self.mock_downstream_item.name: [],
         }
-        resource_finder = ResourceFinder(ordered_nodes, self.toolbox.project_item_model)
-        execution_instance = ExecutionInstance(self.toolbox, ordered_nodes, resource_finder)
+        resource_map = ResourceMap()
+        resource_map.update(ordered_nodes, self.toolbox.project_item_model)
+        execution_instance = ExecutionInstance(self.toolbox, ordered_nodes, resource_map)
         execution_instance.start_execution()
         # Need to manually push the execution forward.
         execution_instance.project_item_execution_finished_signal.emit(ExecutionState.CONTINUE)
