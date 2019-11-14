@@ -20,8 +20,10 @@ import unittest
 from unittest import mock
 import logging
 import sys
+from PySide2.QtCore import QItemSelectionModel
 from PySide2.QtWidgets import QApplication
-from .mock_helpers import create_toolboxui_with_project
+from spinetoolbox.executioner import ExecutionState
+from .mock_helpers import clean_up_toolboxui_with_project, create_toolboxui_with_project
 
 
 # noinspection PyUnusedLocal
@@ -46,8 +48,7 @@ class TestSpineToolboxProject(unittest.TestCase):
 
     def tearDown(self):
         """Runs after each test. Use this to free resources after a test if needed."""
-        self.toolbox.deleteLater()
-        self.toolbox = None
+        clean_up_toolboxui_with_project(self.toolbox)
 
     def test_add_data_store(self):
         """Test adding a Data Store to project."""
@@ -140,6 +141,41 @@ class TestSpineToolboxProject(unittest.TestCase):
         view_graph = dag_hndlr.dag_with_node(view_name)
         self.assertIsNotNone(view_graph)
 
+    def test_execute_project_with_single_item(self):
+        item_name = self.add_tool()
+        item_index = self.toolbox.project_item_model.find_item(item_name)
+        item = self.toolbox.project_item_model.project_item(item_index)
+        item._do_execute = mock.MagicMock(return_value=ExecutionState.CONTINUE)
+        self.toolbox.project().execute_project()
+        item._do_execute.assert_called_with([], [])
+
+    def test_execute_project_with_two_dags(self):
+        item1_name = self.add_tool()
+        item1_index = self.toolbox.project_item_model.find_item(item1_name)
+        item1 = self.toolbox.project_item_model.project_item(item1_index)
+        item1._do_execute = mock.MagicMock(return_value=ExecutionState.CONTINUE)
+        item2_name = self.add_view()
+        item2_index = self.toolbox.project_item_model.find_item(item2_name)
+        item2 = self.toolbox.project_item_model.project_item(item2_index)
+        item2._do_execute = mock.MagicMock(return_value=ExecutionState.CONTINUE)
+        self.toolbox.project().execute_project()
+        item1._do_execute.assert_called_with([], [])
+        item2._do_execute.assert_called_with([], [])
+
+    def test_execute_selected(self):
+        item1_name = self.add_tool()
+        item1_index = self.toolbox.project_item_model.find_item(item1_name)
+        item1 = self.toolbox.project_item_model.project_item(item1_index)
+        item1._do_execute = mock.MagicMock(return_value=ExecutionState.CONTINUE)
+        item2_name = self.add_view()
+        item2_index = self.toolbox.project_item_model.find_item(item2_name)
+        item2 = self.toolbox.project_item_model.project_item(item2_index)
+        item2._do_execute = mock.MagicMock(return_value=ExecutionState.CONTINUE)
+        self.toolbox.ui.treeView_project.selectionModel().select(item2_index, QItemSelectionModel.Select)
+        self.toolbox.project().execute_selected()
+        item1._do_execute.assert_not_called()
+        item2._do_execute.assert_called_with([], [])
+
     # def test_add_item_to_model_in_random_order(self):
     #     """Add items to model in order DC->View->Tool->DS and check that it still works."""
     #     self.fail()
@@ -180,28 +216,28 @@ class TestSpineToolboxProject(unittest.TestCase):
     def add_ds(self):
         """Helper method to add Data Store. Returns created items name."""
         item = dict(name="DS", description="", url=dict(), x=0, y=0)
-        with mock.patch("spinetoolbox.project_item.create_dir") as mock_create_dir:
+        with mock.patch("spinetoolbox.project_item.create_dir"):
             self.toolbox.project().add_project_items("Data Stores", item)
         return "DS"
 
     def add_dc(self):
         """Helper method to add Data Connection. Returns created items name."""
         item = dict(name="DC", description="", references=list(), x=0, y=0)
-        with mock.patch("spinetoolbox.project_item.create_dir") as mock_create_dir:
+        with mock.patch("spinetoolbox.project_item.create_dir"):
             self.toolbox.project().add_project_items("Data Connections", item)
         return "DC"
 
     def add_tool(self):
         """Helper method to add Tool. Returns created items name."""
         item = dict(name="tool", description="", tool="", execute_in_work=False, x=0, y=0)
-        with mock.patch("spinetoolbox.project_item.create_dir") as mock_create_dir:
+        with mock.patch("spinetoolbox.project_item.create_dir"):
             self.toolbox.project().add_project_items("Tools", item)
         return "tool"
 
     def add_view(self):
         """Helper method to add View. Returns created items name."""
         item = dict(name="view", description="", x=0, y=0)
-        with mock.patch("spinetoolbox.project_item.create_dir") as mock_create_dir:
+        with mock.patch("spinetoolbox.project_item.create_dir"):
             self.toolbox.project().add_project_items("Views", item)
         return "view"
 

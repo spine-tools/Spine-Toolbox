@@ -22,13 +22,13 @@ import logging
 import sys
 from PySide2.QtWidgets import QApplication
 from PySide2.QtCore import QItemSelectionModel
-from spinetoolbox.spine_db_manager import SpineDBManager
-from spinetoolbox.spine_db_signaller import SpineDBSignaller
+import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
 from spinetoolbox.widgets.tree_view_widget import TreeViewForm
 from .test_treeViewFormAdd import TestTreeViewFormAddMixin
 from .test_treeViewFormUpdate import TestTreeViewFormUpdateMixin
 from .test_treeViewFormRemove import TestTreeViewFormRemoveMixin
 from .test_treeViewFormFilter import TestTreeViewFormFilterMixin
+from ..mock_helpers import create_toolboxui_with_project
 
 
 class TestTreeViewForm(
@@ -265,28 +265,30 @@ class TestTreeViewForm(
 
     def setUp(self):
         """Overridden method. Runs before each test. Makes instances of TreeViewForm and GraphViewForm classes."""
-        with mock.patch("spinetoolbox.project.SpineToolboxProject") as mock_project, mock.patch(
-            "spinetoolbox.spine_db_manager.DiffDatabaseMapping"
-        ) as mock_db_map, mock.patch("spinetoolbox.widgets.tree_view_widget.TreeViewForm.restore_ui"):
-            self.db_mngr = mock_project.db_mngr = SpineDBManager()
-            mock_project.db_signaller = SpineDBSignaller(self.db_mngr)
-            mock_db_map = self.db_mngr.get_db_map("")
-            mock_db_map.codename = "mock_db"
-            self.tree_view_form = TreeViewForm(mock_project, mock_db_map)
-            self.mock_db_map = mock_db_map
+        with mock.patch("spinetoolbox.spine_db_manager.DiffDatabaseMapping") as mock_DiffDBMapping, mock.patch(
+            "spinetoolbox.widgets.tree_view_widget.TreeViewForm.restore_ui"
+        ):
+            toolbox = create_toolboxui_with_project()
+            project = toolbox.project()
+            self.db_mngr = project.db_mngr
+
+            def DiffDBMapping_side_effect(url, upgrade=False, codename=None):
+                mock_db_map = mock.MagicMock()
+                mock_db_map.codename = codename
+                return mock_db_map
+
+            mock_DiffDBMapping.side_effect = DiffDBMapping_side_effect
+            self.tree_view_form = TreeViewForm(project, ("mock_url", "mock_db"))
+            self.mock_db_map = self.tree_view_form.db_map
 
     def tearDown(self):
         """Overridden method. Runs after each test.
         Use this to free resources after a test if needed.
         """
         with mock.patch(
-            "spinetoolbox.widgets.data_store_widget.DataStoreForm._prompt_close_and_commit"
-        ) as mock_p_c_and_c, mock.patch(
             "spinetoolbox.widgets.tree_view_widget.TreeViewForm.save_window_state"
-        ) as mock_save_w_s:
-            mock_p_c_and_c.return_value = True
+        ) as mock_save_w_s, mock.patch("spinetoolbox.spine_db_manager.QMessageBox"):
             self.tree_view_form.close()
-            mock_p_c_and_c.assert_called_once()
             mock_save_w_s.assert_called_once()
         self.tree_view_form.deleteLater()
         self.tree_view_form = None

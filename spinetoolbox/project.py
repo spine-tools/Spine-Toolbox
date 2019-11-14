@@ -25,30 +25,27 @@ from .metaobject import MetaObject
 from .helpers import project_dir, create_dir, copy_dir
 from .tool_specifications import JuliaTool, PythonTool, GAMSTool, ExecutableTool
 from .config import DEFAULT_WORK_DIR, INVALID_CHARS
-from .executioner import DirectedGraphHandler, ExecutionInstance, ExecutionState
+from .executioner import DirectedGraphHandler, ExecutionInstance, ExecutionState, ResourceFinder
 from .spine_db_manager import SpineDBManager
-from .spine_db_signaller import SpineDBSignaller
 
 
 class SpineToolboxProject(MetaObject):
-    """Class for Spine Toolbox projects.
-
-    Attributes:
-        toolbox (ToolboxUI): toolbox of this project
-        name (str): Project name
-        description (str): Project description
-        work_dir (str): Project work directory
-        ext (str): Project save file extension(.proj)
-    """
+    """Class for Spine Toolbox projects."""
 
     def __init__(self, toolbox, name, description, work_dir=None, ext='.proj'):
-        """Class constructor."""
+        """
+        Args:
+            toolbox (ToolboxUI): toolbox of this project
+            name (str): Project name
+            description (str): Project description
+            work_dir (str): Project work directory
+            ext (str): Project save file extension (.proj)
+        """
         super().__init__(name, description)
         self._toolbox = toolbox
         self._qsettings = self._toolbox.qsettings()
         self.dag_handler = DirectedGraphHandler(self._toolbox)
         self.db_mngr = SpineDBManager(self)
-        self.db_signaller = SpineDBSignaller(self.db_mngr)
         self._ordered_dags = dict()  # Contains all ordered lists of items to execute in the project
         self.execution_instance = None
         self._graph_index = 0
@@ -80,7 +77,7 @@ class SpineToolboxProject(MetaObject):
 
     def connect_signals(self):
         """Connect signals to slots."""
-        self.dag_handler.dag_simulation_requested.connect(self.simulate_dag_execution)
+        self.dag_handler.dag_simulation_requested.connect(self.notify_items_of_dag_changes)
 
     def change_name(self, name):
         """Changes project name and updates project dir and save file name.
@@ -384,7 +381,8 @@ class SpineToolboxProject(MetaObject):
             )
             return
         # Make execution instance, connect signals and start execution
-        self.execution_instance = ExecutionInstance(self._toolbox, ordered_nodes)
+        resource_finder = ResourceFinder(ordered_nodes, self._toolbox.project_item_model)
+        self.execution_instance = ExecutionInstance(self._toolbox, ordered_nodes, resource_finder)
         self._toolbox.msg.emit("")
         self._toolbox.msg.emit("--------------------------------------------------")
         self._toolbox.msg.emit("<b>Executing Selected Directed Acyclic Graph</b>")
@@ -423,7 +421,8 @@ class SpineToolboxProject(MetaObject):
         self._executed_graph_index = 0
         # Get first graph, connect signals and start executing it
         ordered_nodes = self._ordered_dags.pop(self._executed_graph_index)  # Pop first set of items to execute
-        self.execution_instance = ExecutionInstance(self._toolbox, ordered_nodes)
+        resource_finder = ResourceFinder(ordered_nodes, self._toolbox.project_item_model)
+        self.execution_instance = ExecutionInstance(self._toolbox, ordered_nodes, resource_finder)
         self._toolbox.msg.emit("")
         self._toolbox.msg.emit("---------------------------------------")
         self._toolbox.msg.emit("<b>Executing All Directed Acyclic Graphs</b>")
@@ -433,7 +432,7 @@ class SpineToolboxProject(MetaObject):
         self.execution_instance.graph_execution_finished_signal.connect(self.graph_execution_finished)
         self.execution_instance.start_execution()
 
-    @Slot(ExecutionState)
+    @Slot("QVariant")
     def graph_execution_finished(self, state):
         """Releases resources from previous execution and prepares the next
         graph for execution if there are still graphs left. Otherwise,
@@ -464,7 +463,8 @@ class SpineToolboxProject(MetaObject):
             self._toolbox.msg_success.emit("Execution complete")
             return
         # Execute next graph
-        self.execution_instance = ExecutionInstance(self._toolbox, execution_list)
+        resource_finder = ResourceFinder(execution_list, self._toolbox.project_item_model)
+        self.execution_instance = ExecutionInstance(self._toolbox, execution_list, resource_finder)
         self._toolbox.msg.emit("")
         self._toolbox.msg.emit("---------------------------------------")
         self._toolbox.msg.emit("<b>Starting DAG {0}/{1}</b>".format(self._executed_graph_index + 1, self._n_graphs))
@@ -519,9 +519,9 @@ class SpineToolboxProject(MetaObject):
                 self._toolbox.msg.emit("Graph nr. {0} exported to {1}".format(i, path))
             i += 1
 
-    @Slot("QVariant", name="simulate_dag_execution")
-    def simulate_dag_execution(self, dag):
-        """Simulates the execution of the given dag."""
+    @Slot("QVariant")
+    def notify_items_of_dag_changes(self, dag):
+        """Notifies the items in given dag that the dag has changed."""
         ordered_nodes = self.dag_handler.calc_exec_order(dag)
         if not ordered_nodes:
             # Not a dag, invalidate workflow
@@ -532,23 +532,29 @@ class SpineToolboxProject(MetaObject):
                 project_item.invalidate_workflow(edges)
             return
         # Make execution instance and run simulation
-        execution_instance = ExecutionInstance(self._toolbox, ordered_nodes)
-        execution_instance.simulate_execution()
+        resource_finder = ResourceFinder(ordered_nodes, self._toolbox.project_item_model)
+        for rank, item in enumerate(ordered_nodes):
+            ind = self._toolbox.project_item_model.find_item(item)
+            project_item = self._toolbox.project_item_model.project_item(ind)
+            project_item.handle_dag_changed(rank, resource_finder.available_upstream_resources(item))
 
-    def simulate_project_execution(self):
+    def notify_all_items_of_dag_changes(self):
         """Simulates the execution of all dags in the project."""
         for g in self.dag_handler.dags():
-            self.simulate_dag_execution(g)
+            self.notify_items_of_dag_changes(g)
 
-    def simulate_item_execution(self, item):
-        """Simulates the execution of the dag containing given item."""
+    def notify_items_in_same_dag_of_dag_changes(self, item):
+        """Notifies items in dag containing the given item that the dag has changed."""
         dag = self.dag_handler.dag_with_node(item)
-        if not dag:
+        # Some items trigger this method while they are being initialized
+        # but before they have been added to any DAG.
+        # In those cases we don't need to notify other items.
+        if dag:
+            self.notify_items_of_dag_changes(dag)
+        elif self._toolbox.project_item_model.find_item(item) is not None:
             self._toolbox.msg_error.emit(
                 "[BUG] Could not find a graph containing {0}. " "<b>Please reopen the project.</b>".format(item)
             )
-            return
-        self.simulate_dag_execution(dag)
 
 
 def _update_if_changed(category_name):

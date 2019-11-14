@@ -17,49 +17,27 @@ Unit tests for View project item.
 """
 
 import os
-import shutil
-from tempfile import TemporaryDirectory
 import unittest
+from unittest.mock import MagicMock, NonCallableMagicMock
 from PySide2.QtWidgets import QApplication
 from networkx import DiGraph
+import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
 from spinetoolbox.project_items.view.view import View
-from ...mock_helpers import create_toolboxui_with_project
-
-
-class _MockProject:
-    def __init__(self, temp_directory):
-        self.project_dir = temp_directory
-
-
-class _MockToolbox:
-    def __init__(self, project):
-        self._project = project
-
-    def project(self):
-        return self._project
+from ...mock_helpers import clean_up_toolboxui_with_project, create_toolboxui_with_project
 
 
 class TestView(unittest.TestCase):
-    def _set_up(self):
-        """Set up before test_rename()."""
+    def setUp(self):
+        """Set up."""
         self.toolbox = create_toolboxui_with_project()
+        item_dict = dict(name="V", description="", x=0, y=0)
+        self.toolbox.project().add_project_items("Views", item_dict)
+        index = self.toolbox.project_item_model.find_item("V")
+        self.view = self.toolbox.project_item_model.project_item(index)
 
     def tearDown(self):
         """Clean up."""
-        if not hasattr(self, "toolbox"):
-            return
-        try:
-            shutil.rmtree(self.toolbox.project().project_dir)  # Remove project directory
-        except OSError as e:
-            print("Failed to remove project directory. {0}".format(e))
-            pass
-        try:
-            os.remove(self.toolbox.project().path)  # Remove project file
-        except OSError:
-            print("Failed to remove project file")
-            pass
-        self.toolbox.deleteLater()
-        self.toolbox = None
+        clean_up_toolboxui_with_project(self.toolbox)
 
     @classmethod
     def setUpClass(cls):
@@ -67,39 +45,64 @@ class TestView(unittest.TestCase):
             QApplication()
 
     def test_item_type(self):
-        with TemporaryDirectory() as project_dir:
-            project = _MockProject(project_dir)
-            item = View(_MockToolbox(project), "name", "description", 0.0, 0.0)
-            self.assertEqual(item.item_type(), "View")
+        self.assertEqual(self.view.item_type(), "View")
 
     def test_default_name_prefix(self):
         self.assertEqual(View.default_name_prefix(), "View")
 
+    def test_notify_destination(self):
+        self.toolbox.msg = MagicMock()
+        self.toolbox.msg.attach_mock(MagicMock(), "emit")
+        self.toolbox.msg_warning = MagicMock()
+        self.toolbox.msg_warning.attach_mock(MagicMock(), "emit")
+        source_item = NonCallableMagicMock()
+        source_item.name = "source name"
+        source_item.item_type = MagicMock(return_value="Data Connection")
+        self.view.notify_destination(source_item)
+        self.toolbox.msg_warning.emit.assert_called_with(
+            "Link established. Interaction between a <b>Data Connection</b> and"
+            " a <b>View</b> has not been implemented yet."
+        )
+        source_item.item_type = MagicMock(return_value="Importer")
+        self.view.notify_destination(source_item)
+        self.toolbox.msg_warning.emit.assert_called_with(
+            "Link established. Interaction between a <b>Importer</b> and a <b>View</b> has not been implemented yet."
+        )
+        source_item.item_type = MagicMock(return_value="Data Store")
+        self.view.notify_destination(source_item)
+        self.toolbox.msg.emit.assert_called_with(
+            "Link established. You can visualize Data Store <b>source name</b> in View <b>V</b>."
+        )
+        source_item.item_type = MagicMock(return_value="Exporter")
+        self.view.notify_destination(source_item)
+        self.toolbox.msg_warning.emit.assert_called_with(
+            "Link established. Interaction between a <b>Exporter</b> and a <b>View</b> has not been implemented yet."
+        )
+        source_item.item_type = MagicMock(return_value="Tool")
+        self.view.notify_destination(source_item)
+        self.toolbox.msg.emit.assert_called_with(
+            "Link established. You can visualize the ouput from Tool <b>source name</b> in View <b>V</b>."
+        )
+
     def test_rename(self):
         """Tests renaming a View."""
-        self._set_up()
-        item_dict = dict(name="V", description="", x=0, y=0)
-        self.toolbox.project().add_project_items("Views", item_dict)
-        index = self.toolbox.project_item_model.find_item("V")
-        view = self.toolbox.project_item_model.project_item(index)
-        view.activate()
+        self.view.activate()
         expected_name = "ABC"
         expected_short_name = "abc"
-        ret_val = view.rename(expected_name)  # Do rename
+        ret_val = self.view.rename(expected_name)  # Do rename
         self.assertTrue(ret_val)
         # Check name
-        self.assertEqual(expected_name, view.name)  # item name
-        self.assertEqual(expected_name, view._properties_ui.label_view_name.text())  # name label in props
-        self.assertEqual(expected_name, view.get_icon().name_item.text())  # name item on Design View
+        self.assertEqual(expected_name, self.view.name)  # item name
+        self.assertEqual(expected_name, self.view._properties_ui.label_view_name.text())  # name label in props
+        self.assertEqual(expected_name, self.view.get_icon().name_item.text())  # name item on Design View
         # Check data_dir
         expected_data_dir = os.path.join(self.toolbox.project().project_dir, expected_short_name)
-        self.assertEqual(expected_data_dir, view.data_dir)  # Check data dir
+        self.assertEqual(expected_data_dir, self.view.data_dir)  # Check data dir
         # Check there's a dag containing a node with the new name and that no dag contains a node with the old name
         dag_with_new_node_name = self.toolbox.project().dag_handler.dag_with_node(expected_name)
         self.assertIsInstance(dag_with_new_node_name, DiGraph)
         dag_with_old_node_name = self.toolbox.project().dag_handler.dag_with_node("V")
         self.assertIsNone(dag_with_old_node_name)
-        self.toolbox.remove_item(index, delete_item=True)
 
 
 if __name__ == '__main__':

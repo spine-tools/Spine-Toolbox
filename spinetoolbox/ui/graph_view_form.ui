@@ -75,18 +75,6 @@
      <height>28</height>
     </rect>
    </property>
-   <widget class="QMenu" name="menuGraph">
-    <property name="title">
-     <string>Graph</string>
-    </property>
-    <addaction name="actionGraph_start_demo"/>
-    <addaction name="separator"/>
-    <addaction name="actionGraph_hide_selected"/>
-    <addaction name="actionGraph_show_hidden"/>
-    <addaction name="separator"/>
-    <addaction name="actionGraph_prune_selected"/>
-    <addaction name="actionGraph_reinstate_pruned"/>
-   </widget>
    <widget class="QMenu" name="menuView">
     <property name="title">
      <string>View</string>
@@ -105,6 +93,12 @@
     </widget>
     <addaction name="menuToolbars"/>
     <addaction name="menuDock_Widgets"/>
+    <addaction name="separator"/>
+    <addaction name="actionView_hide_selected"/>
+    <addaction name="actionView_show_hidden"/>
+    <addaction name="separator"/>
+    <addaction name="actionView_prune_selected"/>
+    <addaction name="actionView_reinstate_pruned"/>
    </widget>
    <widget class="QMenu" name="menuSession">
     <property name="title">
@@ -120,10 +114,16 @@
     </property>
     <addaction name="actionClose"/>
    </widget>
+   <widget class="QMenu" name="menuHelp">
+    <property name="title">
+     <string>Help</string>
+    </property>
+    <addaction name="actionHelp_live_demo"/>
+   </widget>
    <addaction name="menuFile"/>
-   <addaction name="menuGraph"/>
    <addaction name="menuView"/>
    <addaction name="menuSession"/>
+   <addaction name="menuHelp"/>
   </widget>
   <widget class="NotificationStatusBar" name="statusbar"/>
   <widget class="QDockWidget" name="dockWidget_item_palette">
@@ -749,7 +749,7 @@
     </layout>
    </widget>
   </widget>
-  <action name="actionGraph_reinstate_pruned">
+  <action name="actionView_reinstate_pruned">
    <property name="text">
     <string>Reinstate pruned items</string>
    </property>
@@ -812,17 +812,17 @@
     <string>Ctrl+W</string>
    </property>
   </action>
-  <action name="actionGraph_hide_selected">
+  <action name="actionView_hide_selected">
    <property name="text">
     <string>Hide selected items</string>
    </property>
   </action>
-  <action name="actionGraph_show_hidden">
+  <action name="actionView_show_hidden">
    <property name="text">
     <string>Show hidden items</string>
    </property>
   </action>
-  <action name="actionGraph_prune_selected">
+  <action name="actionView_prune_selected">
    <property name="text">
     <string>Prune selected items</string>
    </property>
@@ -832,9 +832,9 @@
     <string>Restore Dock Widgets</string>
    </property>
   </action>
-  <action name="actionGraph_start_demo">
+  <action name="actionHelp_live_demo">
    <property name="text">
-    <string>Start demo</string>
+    <string>Live demo</string>
    </property>
   </action>
  </widget>
@@ -843,6 +843,11 @@
    <class>AutoFilterCopyPasteTableView</class>
    <extends>QTableView</extends>
    <header>spinetoolbox/widgets/custom_qtableview.h</header>
+  </customwidget>
+  <customwidget>
+   <class>NotificationStatusBar</class>
+   <extends>QStatusBar</extends>
+   <header>spinetoolbox/widgets/custom_qstatusbar.h</header>
   </customwidget>
   <customwidget>
    <class>GraphQGraphicsView</class>
@@ -858,11 +863,6 @@
    <class>StickySelectionObjectTreeView</class>
    <extends>QTreeView</extends>
    <header>spinetoolbox/widgets/custom_qtreeview.h</header>
-  </customwidget>
-  <customwidget>
-   <class>NotificationStatusBar</class>
-   <extends>QStatusBar</extends>
-   <header>spinetoolbox/widgets/custom_qstatusbar.h</header>
   </customwidget>
  </customwidgets>
  <resources>

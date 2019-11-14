@@ -34,6 +34,11 @@ from PySide2.QtSvg import QGraphicsSvgItem, QSvgRenderer
 
 
 class ConnectorButton(QGraphicsRectItem):
+
+    # Regular and hover brushes
+    brush = QBrush(QColor(255, 255, 255))  # Used in filling the item
+    hover_brush = QBrush(QColor(50, 0, 50, 128))  # Used in filling the item while hovering
+
     def __init__(self, parent, toolbox, position="left"):
         """Connector button graphics item. Used for Link drawing between project items.
 
@@ -49,9 +54,6 @@ class ConnectorButton(QGraphicsRectItem):
         self.links = list()
         self.setPen(QPen(Qt.black, 0.5, Qt.SolidLine))
         # self.setPen(QPen(Qt.NoPen))
-        # Regular and hover brushes
-        self.brush = QBrush(QColor(255, 255, 255))  # Used in filling the item
-        self.hover_brush = QBrush(QColor(50, 0, 50, 128))  # Used in filling the item while hovering
         self.setBrush(self.brush)
         parent_rect = parent.rect()
         extent = 0.2 * parent_rect.width()

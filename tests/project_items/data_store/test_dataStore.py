@@ -18,16 +18,16 @@ Unit tests for DataStore class.
 
 import unittest
 from unittest import mock
-import shutil
 import os
 import logging
 import sys
 from spinedb_api import create_new_spine_database
 from PySide2.QtWidgets import QApplication, QMessageBox
 from networkx import DiGraph
-from ...mock_helpers import create_toolboxui_with_project
+import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
 from spinetoolbox.widgets.tree_view_widget import TreeViewForm
 from spinetoolbox.project_items.data_store.data_store import DataStore
+from ...mock_helpers import clean_up_toolboxui_with_project, create_toolboxui_with_project
 
 
 # noinspection PyUnusedLocal
@@ -46,11 +46,6 @@ class TestDataStore(unittest.TestCase):
             datefmt='%Y-%m-%d %H:%M:%S',
         )
 
-    @classmethod
-    def tearDownClass(cls):
-        """Remove the file path."""
-        pass
-
     def setUp(self):
         """Overridden method. Runs before each test. Makes instance of ToolboxUI class.
         Note: unittest_settings.conf is not actually saved because ui_main.closeEvent()
@@ -68,34 +63,19 @@ class TestDataStore(unittest.TestCase):
         """Overridden method. Runs after each test.
         Use this to free resources after a test if needed.
         """
-        self.ds.tear_down()
         ds_db_path = os.path.join(self.ds.data_dir, "DS.sqlite")
         temp_db_path = os.path.join(self.ds.data_dir, "temp_db.sqlite")
         if os.path.exists(ds_db_path):
             try:
                 os.remove(ds_db_path)
             except OSError as os_e:
-                # logging.debug("Failed to remove {0}. Error:{1}".format(ds_db_path, os_e))
-                pass
+                logging.error("Failed to remove %s. Error: %s", ds_db_path, os_e)
         if os.path.exists(temp_db_path):
             try:
                 os.remove(temp_db_path)
             except OSError as os_e:
-                # logging.debug("Failed to remove {0}. Error:{1}".format(temp_db_path, os_e))
-                pass
-        try:
-            shutil.rmtree(self.toolbox.project().project_dir)  # Remove project directory
-        except OSError as e:
-            # logging.debug("Failed to remove project directory. {0}".format(e))
-            pass
-        try:
-            os.remove(self.toolbox.project().path)  # Remove project file
-        except OSError:
-            # logging.debug("Failed to remove project file")
-            pass
-        self.toolbox.deleteLater()
-        self.toolbox = None
-        self.ds_properties_ui = None
+                logging.error("Failed to remove %s. Error: %s", temp_db_path, os_e)
+        clean_up_toolboxui_with_project(self.toolbox)
 
     def create_temp_db(self):
         """Let's create a real db to more easily test complicated stuff (such as opening a tree view)."""
@@ -230,11 +210,11 @@ class TestDataStore(unittest.TestCase):
         self.assertEqual(database, 'foo')
         self.assertEqual(username, 'bar')
 
-    @unittest.skip("Does not work on Travis or on Windows")
     def test_copy_db_url_to_clipboard(self):
         """Test that the database url from current selections is copied to clipboard."""
         QApplication.clipboard().clear()
         self.ds.activate()
+        self.ds_properties_ui.toolButton_create_new_spine_db.click()
         self.ds_properties_ui.toolButton_copy_url.click()
         # noinspection PyArgumentList
         clipboard_text = QApplication.clipboard().text()
@@ -247,7 +227,7 @@ class TestDataStore(unittest.TestCase):
         """
         temp_db_path = self.create_temp_db()
         self.ds.activate()
-        self.assertIsNone(self.ds.tree_view_form)
+        self.assertIsNone(self.ds.views.get("tree"))
         # Select the sqlite dialect
         self.ds_properties_ui.comboBox_dialect.activated[str].emit("sqlite")
         # Browse to an existing db file
@@ -257,11 +237,11 @@ class TestDataStore(unittest.TestCase):
             mock_qfile_dialog.getOpenFileName.assert_called_once()
         # Open treeview
         self.ds_properties_ui.pushButton_ds_tree_view.click()
-        self.assertIsInstance(self.ds.tree_view_form, TreeViewForm)
+        self.assertIsInstance(self.ds.views["tree"], TreeViewForm)
         expected_url = "sqlite:///" + temp_db_path
-        self.assertEqual(expected_url, str(self.ds.tree_view_form.db_maps[0].db_url))
-        self.ds.tree_view_form.close()
-        # TODO: self.ds.tree_view_form is not None at this point. Should it be?
+        self.assertEqual(expected_url, str(self.ds.views["tree"].db_map.db_url))
+        self.ds.views["tree"].close()
+        self.ds._project.db_mngr.close_all_sessions()
 
     def test_open_treeview2(self):
         """Test that selecting the 'sqlite' dialect, typing the path to an existing db file,
@@ -269,7 +249,7 @@ class TestDataStore(unittest.TestCase):
         """
         temp_db_path = self.create_temp_db()
         self.ds.activate()
-        self.assertIsNone(self.ds.tree_view_form)
+        self.assertIsNone(self.ds.views.get("tree"))
         # Select the sqlite dialect
         self.ds_properties_ui.comboBox_dialect.activated[str].emit("sqlite")
         # Type the path to an existing db file
@@ -277,65 +257,41 @@ class TestDataStore(unittest.TestCase):
         self.ds_properties_ui.lineEdit_database.editingFinished.emit()
         # Open treeview
         self.ds_properties_ui.pushButton_ds_tree_view.click()
-        self.assertIsInstance(self.ds.tree_view_form, TreeViewForm)
+        self.assertIsInstance(self.ds.views["tree"], TreeViewForm)
         expected_url = "sqlite:///" + temp_db_path
-        self.assertEqual(expected_url, str(self.ds.tree_view_form.db_maps[0].db_url))
-        self.ds.tree_view_form.close()
-        # TODO: self.ds.tree_view_form is not None at this point. Should it be?
+        self.assertEqual(expected_url, str(self.ds.views["tree"].db_maps[0].db_url))
+        self.ds.views["tree"].close()
+        self.ds._project.db_mngr.close_all_sessions()
 
     def test_notify_destination(self):
-        class MockToolbox:
-            class Message:
-                def __init__(self):
-                    self.text = None
-
-                def emit(self, text):
-                    self.text = text
-
-            def __init__(self):
-                self.msg = MockToolbox.Message()
-                self.msg_warning = MockToolbox.Message()
-
-            def reset_messages(self):
-                self.msg = MockToolbox.Message()
-                self.msg_warning = MockToolbox.Message()
-
-        class MockItem:
-            def __init__(self, name):
-                self.name = name
-
-        toolbox = MockToolbox()
-        self.ds._toolbox = toolbox
-        source_item = MockItem("source name")
+        self.toolbox.msg = mock.NonCallableMagicMock()
+        self.toolbox.msg.attach_mock(mock.MagicMock(), "emit")
+        self.toolbox.msg_warning = mock.NonCallableMagicMock()
+        self.toolbox.msg_warning.attach_mock(mock.MagicMock(), "emit")
+        source_item = mock.MagicMock()
+        source_item.name = "source name"
         source_item.item_type = mock.MagicMock(return_value="Data Connection")
         self.ds.notify_destination(source_item)
-        self.assertEqual(toolbox.msg.text, "Link established.")
-        toolbox.reset_messages()
+        self.toolbox.msg.emit.assert_called_with("Link established.")
         source_item.item_type = mock.MagicMock(return_value="Importer")
         self.ds.notify_destination(source_item)
-        self.assertEqual(
-            toolbox.msg.text,
-            "Link established. Mappings generated by <b>source name</b> will be imported in <b>DS</b> when executing.",
+        self.toolbox.msg.emit.assert_called_with(
+            "Link established. Mappings generated by <b>source name</b> will be imported in <b>DS</b> when executing."
         )
-        toolbox.reset_messages()
         source_item.item_type = mock.MagicMock(return_value="Exporter")
         self.ds.notify_destination(source_item)
-        self.assertEqual(
-            toolbox.msg_warning.text,
+        self.toolbox.msg_warning.emit.assert_called_with(
             "Link established. Interaction between a "
-            "<b>Exporter</b> and a <b>Data Store</b> has not been implemented yet.",
+            "<b>Exporter</b> and a <b>Data Store</b> has not been implemented yet."
         )
-        toolbox.reset_messages()
         source_item.item_type = mock.MagicMock(return_value="Tool")
         self.ds.notify_destination(source_item)
-        self.assertEqual(toolbox.msg.text, "Link established.")
-        toolbox.reset_messages()
+        self.toolbox.msg.emit.assert_called_with("Link established.")
         source_item.item_type = mock.MagicMock(return_value="View")
         self.ds.notify_destination(source_item)
-        self.assertEqual(
-            toolbox.msg_warning.text,
+        self.toolbox.msg_warning.emit.assert_called_with(
             "Link established. Interaction between a "
-            "<b>View</b> and a <b>Data Store</b> has not been implemented yet.",
+            "<b>View</b> and a <b>Data Store</b> has not been implemented yet."
         )
 
     def test_default_name_prefix(self):

@@ -579,7 +579,7 @@
   </widget>
   <action name="actionCommit">
    <property name="enabled">
-    <bool>false</bool>
+    <bool>true</bool>
    </property>
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
@@ -594,7 +594,7 @@
   </action>
   <action name="actionRollback">
    <property name="enabled">
-    <bool>false</bool>
+    <bool>true</bool>
    </property>
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
@@ -678,7 +678,7 @@
   </action>
   <action name="actionExport">
    <property name="enabled">
-    <bool>false</bool>
+    <bool>true</bool>
    </property>
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
@@ -690,7 +690,7 @@
   </action>
   <action name="actionCopy">
    <property name="enabled">
-    <bool>false</bool>
+    <bool>true</bool>
    </property>
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
@@ -705,7 +705,7 @@
   </action>
   <action name="actionPaste">
    <property name="enabled">
-    <bool>false</bool>
+    <bool>true</bool>
    </property>
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
@@ -732,7 +732,7 @@
   </action>
   <action name="actionEdit_object_classes">
    <property name="enabled">
-    <bool>false</bool>
+    <bool>true</bool>
    </property>
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
@@ -744,7 +744,7 @@
   </action>
   <action name="actionEdit_relationship_classes">
    <property name="enabled">
-    <bool>false</bool>
+    <bool>true</bool>
    </property>
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
@@ -756,7 +756,7 @@
   </action>
   <action name="actionEdit_objects">
    <property name="enabled">
-    <bool>false</bool>
+    <bool>true</bool>
    </property>
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
@@ -768,7 +768,7 @@
   </action>
   <action name="actionEdit_relationships">
    <property name="enabled">
-    <bool>false</bool>
+    <bool>true</bool>
    </property>
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
@@ -785,7 +785,7 @@
   </action>
   <action name="actionRemove_selection">
    <property name="enabled">
-    <bool>false</bool>
+    <bool>true</bool>
    </property>
    <property name="text">
     <string>Remove selection</string>

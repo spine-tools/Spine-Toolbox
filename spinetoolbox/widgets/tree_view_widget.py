@@ -40,21 +40,22 @@ from ..plotting import plot_selection, PlottingError, GraphAndTreeViewPlottingHi
 
 class TreeViewForm(DataStoreForm):
     """
-    A widget to show and edit Spine objects in a data store.
-
-    Attributes:
-        project (SpineToolboxProject): The project instance that owns this form
-        db_maps (iter): DiffDatabaseMapping instances
+    A widget to show Spine dbs in a tree.
     """
 
-    def __init__(self, project, *db_maps):
-        """Initialize class."""
+    def __init__(self, project, *db_urls):
+        """Initializes form.
+
+        Args:
+            project (SpineToolboxProject): The project instance that owns this form.
+            *db_urls (str): Database urls to view.
+        """
         from ..ui.tree_view_form import Ui_MainWindow
 
         tic = time.process_time()
-        super().__init__(project, Ui_MainWindow(), *db_maps)
+        super().__init__(project, Ui_MainWindow(), *db_urls)
         self.takeCentralWidget()
-        self.relationship_tree_model = RelationshipTreeModel(self, self.db_mngr, *db_maps)
+        self.relationship_tree_model = RelationshipTreeModel(self, self.db_mngr, *self.db_maps)
         self.ui.treeView_relationship.setModel(self.relationship_tree_model)
         # Others
         self._selection_source = None
@@ -67,7 +68,7 @@ class TreeViewForm(DataStoreForm):
         self.setup_delegates()
         self.add_toggle_view_actions()
         self.connect_signals()
-        self.setWindowTitle("Data store tree view    -- {} --".format(", ".join([x.codename for x in db_maps])))
+        self.setWindowTitle("Data store tree view    -- {} --".format(", ".join([x.codename for x in self.db_maps])))
         toc = time.process_time()
         self.msg.emit("Tree view form created in {} seconds".format(toc - tic))
 
@@ -449,83 +450,38 @@ class TreeViewForm(DataStoreForm):
         self.set_default_parameter_data(self.ui.treeView_relationship.currentIndex())
         self._update_relationship_filter()
 
-    @staticmethod
-    def _db_map_items(indexes):
-        """Groups items from given tree indexes by db map.
-
-        Returns:
-            dict: lists of dictionary items keyed by DiffDatabaseMapping
-        """
-        d = dict()
-        for index in indexes:
-            item = index.model().item_from_index(index)
-            for db_map in item.db_maps:
-                d.setdefault(db_map, []).append(item.db_map_data(db_map))
-        return d
-
-    @staticmethod
-    def _db_map_class_ids(db_map_data):
-        """Returns a new dictionary where the class id is also part of the key.
-
-        Returns:
-            dict: lists of dictionary items keyed by tuple (DiffDatabaseMapping, integer class id)
-        """
-        d = dict()
-        for db_map, items in db_map_data.items():
-            for item in items:
-                d.setdefault((db_map, item["class_id"]), set()).add(item["id"])
-        return d
-
-    @staticmethod
-    def _merge_db_map_data(left, right):
-        """Returns a new dictionary where the values are the union of the left and right values.
-
-        Returns:
-            dict: lists of dictionary items keyed by DiffDatabaseMapping
-        """
-        result = left.copy()
-        for db_map, data in right.items():
-            result.setdefault(db_map, []).extend(data)
-        return result
-
     def _update_object_filter(self):
         """Update filters on parameter models according to object tree selection."""
         selected_object_classes = self._db_map_items(self.object_tree_model.selected_object_class_indexes)
         self.selected_ent_cls_ids["object class"] = self.db_mngr._to_ids(selected_object_classes)
-        selected_relationship_classes = self._db_map_items(self.object_tree_model.selected_relationship_class_indexes)
-        cascading_relationship_classes = self.db_mngr.find_cascading_relationship_classes(
-            self.selected_ent_cls_ids["object class"]
-        )
-        selected_relationship_classes = self._merge_db_map_data(
-            selected_relationship_classes, cascading_relationship_classes
-        )
-        self.selected_ent_cls_ids["relationship class"] = self.db_mngr._to_ids(selected_relationship_classes)
-        selected_objects = self._db_map_items(self.object_tree_model.selected_object_indexes)
-        selected_relationships = self._db_map_items(self.object_tree_model.selected_relationship_indexes)
-        cascading_relationships = self.db_mngr.find_cascading_relationships(self.db_mngr._to_ids(selected_objects))
-        selected_relationships = self._merge_db_map_data(selected_relationships, cascading_relationships)
-        for db_map, items in selected_objects.items():
+        selected_rel_clss = self._db_map_items(self.object_tree_model.selected_relationship_class_indexes)
+        cascading_rel_clss = self.db_mngr.find_cascading_relationship_classes(self.selected_ent_cls_ids["object class"])
+        selected_rel_clss = self._extend_merge(selected_rel_clss, cascading_rel_clss)
+        self.selected_ent_cls_ids["relationship class"] = self.db_mngr._to_ids(selected_rel_clss)
+        selected_objs = self._db_map_items(self.object_tree_model.selected_object_indexes)
+        selected_rels = self._db_map_items(self.object_tree_model.selected_relationship_indexes)
+        cascading_rels = self.db_mngr.find_cascading_relationships(self.db_mngr._to_ids(selected_objs))
+        selected_rels = self._extend_merge(selected_rels, cascading_rels)
+        for db_map, items in selected_objs.items():
             self.selected_ent_cls_ids["object class"].setdefault(db_map, set()).update({x["class_id"] for x in items})
-        for db_map, items in selected_relationships.items():
+        for db_map, items in selected_rels.items():
             self.selected_ent_cls_ids["relationship class"].setdefault(db_map, set()).update(
                 {x["class_id"] for x in items}
             )
-        self.selected_ent_ids["object"] = self._db_map_class_ids(selected_objects)
-        self.selected_ent_ids["relationship"] = self._db_map_class_ids(selected_relationships)
+        self.selected_ent_ids["object"] = self._db_map_class_id_data(selected_objs)
+        self.selected_ent_ids["relationship"] = self._db_map_class_id_data(selected_rels)
         self.update_filter()
 
     def _update_relationship_filter(self):
         """Update filters on parameter models according to relationship tree selection."""
-        selected_relationship_classes = self._db_map_items(
-            self.relationship_tree_model.selected_relationship_class_indexes
-        )
-        self.selected_ent_cls_ids["relationship class"] = self.db_mngr._to_ids(selected_relationship_classes)
-        selected_relationships = self._db_map_items(self.relationship_tree_model.selected_relationship_indexes)
-        for db_map, items in selected_relationships.items():
+        selected_rel_clss = self._db_map_items(self.relationship_tree_model.selected_relationship_class_indexes)
+        self.selected_ent_cls_ids["relationship class"] = self.db_mngr._to_ids(selected_rel_clss)
+        selected_rels = self._db_map_items(self.relationship_tree_model.selected_relationship_indexes)
+        for db_map, items in selected_rels.items():
             self.selected_ent_cls_ids["relationship class"].setdefault(db_map, set()).update(
                 {x["class_id"] for x in items}
             )
-        self.selected_ent_ids["relationship"] = self._db_map_class_ids(selected_relationships)
+        self.selected_ent_ids["relationship"] = self._db_map_class_id_data(selected_rels)
         self.update_filter()
 
     @Slot("QPoint")

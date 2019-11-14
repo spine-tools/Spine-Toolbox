@@ -356,6 +356,15 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         # TODO: parameter definition names aren't refreshed unless we emit dataChanged,
         # whereas entity and class names don't need it. Why?
 
+    def _grouped_ids(self, items):
+        d = dict()
+        for item in items:
+            entity_class_id = item.get(self._entity_class_id_key)
+            if not entity_class_id:
+                continue
+            d.setdefault(entity_class_id, []).append(item["id"])
+        return d
+
     def receive_parameter_data_removed(self, db_map_data):
         """Runs when either parameter definitions or values are removed from the dbs.
         Removes the affected rows from the corresponding single models.
@@ -365,12 +374,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         """
         self.layoutAboutToBeChanged.emit()
         for db_map, items in db_map_data.items():
-            grouped_ids = dict()
-            for item in items:
-                entity_class_id = item.get(self._entity_class_id_key)
-                if not entity_class_id:
-                    continue
-                grouped_ids.setdefault(entity_class_id, set()).add(item["id"])
+            grouped_ids = self._grouped_ids(items)
             for model in self._models_with_db_map(db_map):
                 removed_ids = grouped_ids.get(model.entity_class_id)
                 if not removed_ids:
@@ -391,12 +395,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         """
         new_models = []
         for db_map, items in db_map_data.items():
-            grouped_ids = dict()
-            for item in items:
-                entity_class_id = item.get(self._entity_class_id_key)
-                if not entity_class_id:
-                    continue
-                grouped_ids.setdefault(entity_class_id, []).append(item["id"])
+            grouped_ids = self._grouped_ids(items)
             for entity_class_id, ids in grouped_ids.items():
                 model = self._single_model_type(self, self.header, self.db_mngr, db_map, entity_class_id, lazy=False)
                 model.reset_model(ids)

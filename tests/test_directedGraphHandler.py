@@ -23,7 +23,7 @@ from PySide2.QtWidgets import QApplication
 import networkx as nx
 from spinetoolbox.project import SpineToolboxProject
 from spinetoolbox.executioner import DirectedGraphHandler
-from .mock_helpers import create_toolboxui_with_project
+from .mock_helpers import clean_up_toolboxui_with_project, create_toolboxui_with_project
 
 
 class TestDirectedGraphHandler(unittest.TestCase):
@@ -50,8 +50,7 @@ class TestDirectedGraphHandler(unittest.TestCase):
 
     def tearDown(self):
         """Runs after each test. Use this to free resources after a test if needed."""
-        self.toolbox.deleteLater()
-        self.toolbox = None
+        clean_up_toolboxui_with_project(self.toolbox)
         self.dag_handler = None
 
     def test_project_is_open(self):
@@ -294,7 +293,6 @@ class TestDirectedGraphHandler(unittest.TestCase):
         self.dag_handler.add_graph_edge("c", "b")
         # Now, there should still be just one graph
         self.assertTrue(len(self.dag_handler.dags()) == 1)
-        g = self.dag_handler.dags()[0]
         result_d = self.dag_handler.dag_with_node("a")
         # Check that the number of nodes and edges match and they are correct
         self.assertEqual(len(result_d.nodes()), 4)

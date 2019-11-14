@@ -20,7 +20,7 @@ import os
 import logging
 import spinedb_api
 from PySide2.QtCore import Slot, Qt
-from PySide2.QtWidgets import QMessageBox, QFileDialog, QApplication
+from PySide2.QtWidgets import QFileDialog, QApplication
 from sqlalchemy import create_engine
 from sqlalchemy.engine.url import make_url, URL
 from spinetoolbox.executioner import ExecutionState
@@ -49,9 +49,7 @@ class DataStore(ProjectItem):
         if isinstance(reference, dict) and "url" in reference:
             url = reference["url"]
         self._url = self.parse_url(url)
-        self.tree_view_form = None
-        self.graph_view_form = None
-        self.tabular_view_form = None
+        self.views = {}
         # Make logs directory for this Data Store
         self.logs_dir = os.path.join(self.data_dir, "logs")
         try:
@@ -341,128 +339,65 @@ class DataStore(ProjectItem):
         self._properties_ui.lineEdit_username.setEnabled(True)
         self._properties_ui.lineEdit_password.setEnabled(True)
 
-    @Slot(bool, name="open_tree_view")
+    @Slot(bool)
     def open_tree_view(self, checked=False):
-        """Open url in tree view form."""
-        url = self.make_url()
-        if not url:
-            return
-        try:
-            db_map = self._project.db_mngr.get_db_map(url, codename=self.name)
-        except spinedb_api.SpineDBAPIError as e:
-            self._toolbox.msg_error.emit(e.msg)
-            db_map = None
-        if not db_map:
-            return
-        if self.tree_view_form:
-            # If the db_map is the same, just raise the current form
-            if self.tree_view_form.db_maps == (db_map,):
-                if self.tree_view_form.windowState() & Qt.WindowMinimized:
-                    # Remove minimized status and restore window with the previous state (maximized/normal state)
-                    self.tree_view_form.setWindowState(
-                        self.tree_view_form.windowState() & ~Qt.WindowMinimized | Qt.WindowActive
-                    )
-                    self.tree_view_form.activateWindow()
-                else:
-                    self.tree_view_form.raise_()
-                return
-            self.tree_view_form.destroyed.disconnect(self.tree_view_form_destroyed)
-            self.tree_view_form.close()
-        self.do_open_tree_view(db_map)
+        """Opens tree view form."""
+        self.open_view("tree")
 
-    @busy_effect
-    def do_open_tree_view(self, db_map):
-        """Open url in tree view form."""
-        self.tree_view_form = TreeViewForm(self._project, db_map)
-        self.tree_view_form.show()
-        self.tree_view_form.destroyed.connect(self.tree_view_form_destroyed)
-
-    @Slot(name="tree_view_form_destroyed")
-    def tree_view_form_destroyed(self):
-        """Notify that tree view form has been destroyed."""
-        self.tree_view_form = None
-
-    @Slot(bool, name="open_graph_view")
+    @Slot(bool)
     def open_graph_view(self, checked=False):
-        """Open url in graph view form."""
-        url = self.make_url()
-        if not url:
-            return
-        try:
-            db_map = self._project.db_mngr.get_db_map(url, codename=self.name)
-        except spinedb_api.SpineDBAPIError as e:
-            self._toolbox.msg_error.emit(e.msg)
-            db_map = None
-        if not db_map:
-            return
-        if self.graph_view_form:
-            # If the db_map is the same, just raise the current form
-            if self.graph_view_form.db_maps == (db_map,):
-                if self.graph_view_form.windowState() & Qt.WindowMinimized:
-                    # Remove minimized status and restore window with the previous state (maximized/normal state)
-                    self.graph_view_form.setWindowState(
-                        self.graph_view_form.windowState() & ~Qt.WindowMinimized | Qt.WindowActive
-                    )
-                    self.graph_view_form.activateWindow()
-                else:
-                    self.graph_view_form.raise_()
-                return
-            self.graph_view_form.destroyed.disconnect(self.tree_view_form_destroyed)
-            self.graph_view_form.close()
-        self.do_open_graph_view(db_map)
+        """Opens graph view form."""
+        self.open_view("graph")
 
-    @busy_effect
-    def do_open_graph_view(self, db_map):
-        """Open url in graph view form."""
-        self.graph_view_form = GraphViewForm(self._project, db_map, read_only=False)
-        self.graph_view_form.show()
-        self.graph_view_form.destroyed.connect(self.graph_view_form_destroyed)
-
-    @Slot(name="graph_view_form_destroyed")
-    def graph_view_form_destroyed(self):
-        """Notify that graph view form has been destroyed."""
-        self.graph_view_form = None
-
-    @Slot(bool, name="open_tabular_view")
+    @Slot(bool)
     def open_tabular_view(self, checked=False):
-        """Open url in Data Store tabular view."""
-        url = self.make_url()
-        if not url:
+        """Opens tabular view form."""
+        self.open_view("tabular")
+
+    def open_view(self, view):
+        """Opens current url in the form given by view.
+
+        Args:
+            view (str): either "tree", "graph", or "tabular"
+        """
+        db_url = self.make_url()
+        if not db_url:
             return
-        if self.tabular_view_form:
-            # If the url hasn't changed, just raise the current form
-            if self.tabular_view_form.db_map.db_url == url:
-                if self.tabular_view_form.windowState() & Qt.WindowMinimized:
+        form = self.views.get(view)
+        if form:
+            # If the db_url is the same, just raise the current form
+            if form.db_url == db_url:
+                if form.windowState() & Qt.WindowMinimized:
                     # Remove minimized status and restore window with the previous state (maximized/normal state)
-                    self.tabular_view_form.setWindowState(
-                        self.tabular_view_form.windowState() & ~Qt.WindowMinimized | Qt.WindowActive
-                    )
-                    self.tabular_view_form.activateWindow()
+                    form.setWindowState(form.windowState() & ~Qt.WindowMinimized | Qt.WindowActive)
+                    form.activateWindow()
                 else:
-                    self.tabular_view_form.raise_()
+                    form.raise_()
                 return
-            self.tabular_view_form.destroyed.disconnect(self.tabular_view_form_destroyed)
-            self.tabular_view_form.close()
-        try:
-            db_map = self._project.db_mngr.get_db_map(url, codename=self.name)
-        except spinedb_api.SpineDBAPIError as e:
-            self._toolbox.msg_error.emit(e.msg)
-            db_map = None
-        if not db_map:
-            return
-        self.do_open_tabular_view(db_map, url.database)
+            form.close()
+        self.do_open_view(view, db_url)
 
     @busy_effect
-    def do_open_tabular_view(self, db_map, database):
-        """Open url in tabular view form."""
-        self.tabular_view_form = TabularViewForm(self, db_map)
-        self.tabular_view_form.destroyed.connect(self.tabular_view_form_destroyed)
-        self.tabular_view_form.show()
-        self.destroyed.connect(self.tabular_view_form.close)
+    def do_open_view(self, view, db_url):
+        """Opens the form given by view using given db_url.
 
-    @Slot(name="tabular_view_form_destroyed")
-    def tabular_view_form_destroyed(self):
-        self.tabular_view_form = None
+        Args:
+            view (str): either "tree", "graph", or "tabular"
+            db_url (str)
+        """
+        make_form = {"tree": TreeViewForm, "graph": GraphViewForm, "tabular": TabularViewForm}[view]
+        try:
+            form = make_form(self._project, (db_url, self.name))
+        except spinedb_api.SpineDBAPIError as e:
+            self._toolbox.msg_error.emit(e.msg)
+            return
+        self.views[view] = form
+        form.destroyed.connect(lambda view=view, form=form: self._handle_view_form_destroyed(view, form))
+        form.show()
+
+    def _handle_view_form_destroyed(self, view, form):
+        if self.views[view] == form:
+            self.views.pop(view)
 
     def data_files(self):
         """Return a list of files that are in this items data directory."""
@@ -508,74 +443,6 @@ class DataStore(ProjectItem):
         """Update Data Store tab name label. Used only when renaming project items."""
         self._properties_ui.label_ds_name.setText(self.name)
 
-    def execute(self):
-        """Executes this Data Store."""
-        self._toolbox.msg.emit("")
-        self._toolbox.msg.emit("Executing Data Store <b>{0}</b>".format(self.name))
-        self._toolbox.msg.emit("***")
-        inst = self._toolbox.project().execution_instance
-        url = self.make_url()
-        if not url:
-            # Invalid url, nothing else to do here
-            self._toolbox.msg_warning.emit(
-                "No database url set. Please provide a <i>path</i> to an "
-                "SQLite file or <i>host</i>, <i>port</i>, and <i>username</i> "
-                "& <i>password</i> for other database dialects."
-            )
-        else:
-            resource = ProjectItemResource(self, "database", url=str(url))
-            inst.advertise_resources(self.name, resource)
-            # Import mapped data from Importers in the execution instance
-            try:
-                db_map = spinedb_api.DiffDatabaseMapping(url, upgrade=False, username="Mapper")
-            except (spinedb_api.SpineDBAPIError, spinedb_api.SpineDBVersionError) as err:
-                self._toolbox.msg_error.emit(
-                    "<b>{0}:</b> Unable to create database mapping, all import operations will be omitted.".format(err)
-                )
-                db_map = None
-            if db_map:
-                all_import_errors = []
-                import_data_resources = [
-                    r for r in inst.available_resources(self.name) if r.type_ == "data" and r.metadata.get("for_import")
-                ]
-                for resource in import_data_resources:
-                    provider_name = resource.provider.name
-                    all_data = resource.data
-                    self._toolbox.msg.emit("Importing data from <b>{0}</b> into '{1}'".format(provider_name, url))
-                    for data in all_data:
-                        import_num, import_errors = spinedb_api.import_data(db_map, **data)
-                        if import_errors:
-                            db_map.rollback_session()
-                            all_import_errors += import_errors
-                        else:
-                            db_map.commit_session("imported with mapper")
-                            self._toolbox.msg.emit(
-                                "<b>{0}:</b> Inserted {1} data with {2} errors into {3}".format(
-                                    self.name, import_num, len(import_errors), db_map.db_url
-                                )
-                            )
-                if all_import_errors:
-                    # Log errors in a time stamped file into the logs directory
-                    timestamp = create_log_file_timestamp()
-                    logfilepath = os.path.abspath(os.path.join(self.logs_dir, timestamp + "_error.log"))
-                    with open(logfilepath, 'w') as f:
-                        for err in all_import_errors:
-                            f.write("{}\n".format(err.msg))
-                    # Make error log file anchor with path as tooltip
-                    logfile_anchor = (
-                        "<a style='color:#BB99FF;' title='"
-                        + logfilepath
-                        + "' href='file:///"
-                        + logfilepath
-                        + "'>error log</a>"
-                    )
-                    self._toolbox.msg.emit(
-                        "There where import errors while executing <b>{0}</b>, rolling back: "
-                        "{1}".format(self.name, logfile_anchor)
-                    )
-        self._toolbox.msg.emit("***")
-        self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(ExecutionState.CONTINUE)
-
     def stop_execution(self):
         """Stops executing this Data Store."""
         self._toolbox.msg.emit("Stopping {0}".format(self.name))
@@ -583,16 +450,12 @@ class DataStore(ProjectItem):
             ExecutionState.STOP_REQUESTED
         )
 
-    def simulate_execution(self, inst):
-        """Simulates executing this Data Store."""
-        super().simulate_execution(inst)
+    def _do_handle_dag_changed(self, resources_upstream):
+        """See base class."""
         url = self.make_url(log_errors=False)
-        if url:
-            resource = ProjectItemResource(self, "database", url=str(url))
-            inst.advertise_resources(self.name, resource)
-        else:
+        if not url:
             self.add_notification(
-                "The URL for this Data Store is not correctly set. " "Set it in the Data Store Properties panel."
+                "The URL for this Data Store is not correctly set. Set it in the Data Store Properties panel."
             )
 
     def item_dict(self):
@@ -654,12 +517,8 @@ class DataStore(ProjectItem):
         """Tears down this item. Called by toolbox just before closing.
         Closes all GraphViewForm, TreeViewForm, and TabularViewForm instances opened by this item.
         """
-        if self.tree_view_form:
-            self.tree_view_form.close()
-        if self.tabular_view_form:
-            self.tabular_view_form.close()
-        if self.graph_view_form:
-            self.graph_view_form.close()
+        for form in self.views.values():
+            form.close()
 
     def notify_destination(self, source_item):
         """See base class."""
@@ -678,3 +537,18 @@ class DataStore(ProjectItem):
     def default_name_prefix():
         """see base class"""
         return "Data Store"
+
+    def available_resources_downstream(self):
+        """See base class."""
+        return self.available_resources_upstream()
+
+    def available_resources_upstream(self):
+        """See base class."""
+        url = self.make_url(log_errors=False)
+        if url:
+            resource = ProjectItemResource(self, "database", url=str(url))
+            return [resource]
+        self.add_notification(
+            "The URL for this Data Store is not correctly set. " "Set it in the Data Store Properties panel."
+        )
+        return list()

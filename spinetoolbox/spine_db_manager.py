@@ -17,7 +17,7 @@ The SpineDBManager class
 """
 
 from PySide2.QtCore import Qt, QObject, Signal, Slot
-from PySide2.QtWidgets import QMessageBox
+from PySide2.QtWidgets import QMessageBox, QDialog, QCheckBox, QErrorMessage
 from spinedb_api import (
     SpineDBAPIError,
     SpineDBVersionError,
@@ -34,7 +34,9 @@ from spinedb_api import (
     is_empty,
     create_new_spine_database,
 )
-from .helpers import IconManager, busy_effect
+from .helpers import IconManager, busy_effect, format_string_list
+from .spine_db_signaller import SpineDBSignaller
+from .widgets.manage_db_items_dialog import CommitDialog
 
 
 class SpineDBManager(QObject):
@@ -89,7 +91,11 @@ class SpineDBManager(QObject):
         super().__init__(parent)
         self._db_maps = {}
         self._cache = {}
+        self.signaller = SpineDBSignaller(self)
         self.icon_mngr = IconManager()
+        self.err_msg = QErrorMessage()
+        self.err_msg.setWindowModality(Qt.ApplicationModal)
+        self.err_msg.setWindowTitle("Error")
         self.connect_signals()
 
     @property
@@ -109,8 +115,8 @@ class SpineDBManager(QObject):
                 ret = msg.exec_()  # Show message box
                 if ret != QMessageBox.AcceptRole:
                     return
-            self.do_create_new_spine_database(url, for_spine_model)
             self.close_session(url)
+            self.do_create_new_spine_database(url, for_spine_model)
             self.parent()._toolbox.msg_success.emit("New Spine db successfully created at '{0}'.".format(url))
         except SpineDBAPIError as e:
             self.parent()._toolbox.msg_error.emit("Unable to create new Spine db at '{0}': {1}.".format(url, e))
@@ -120,11 +126,21 @@ class SpineDBManager(QObject):
         """Creates a new spine database at the given url."""
         create_new_spine_database(url, for_spine_model=for_spine_model)
 
-    def close_session(self, url):
+    def close_session(self, url, silent=False):
+        """Closes a connection to given database mapping."""
         db_map = self._db_maps.pop(url, None)
-        if db_map:
-            db_map.connection.close()
-            self.session_closed.emit({db_map})
+        if db_map is None:
+            return
+        db_map.connection.close()
+        if silent:
+            return
+        self.session_closed.emit({db_map})
+
+    def close_all_sessions(self):
+        """Closes connections to all database mappings."""
+        for db_map in self._db_maps.values():
+            if not db_map.connection.closed:
+                db_map.connection.close()
 
     def get_db_map(self, url, upgrade=False, codename=None):
         """Returns a DiffDatabaseMapping instance from url if possible, None otherwise.
@@ -133,7 +149,7 @@ class SpineDBManager(QObject):
         Args:
             url (str, URL)
             upgrade (bool, optional)
-            codename (str, NoneType)
+            codename (str, NoneType, optional)
 
         Returns:
             DiffDatabaseMapping, NoneType
@@ -169,18 +185,136 @@ class SpineDBManager(QObject):
         Args:
             url (str, URL)
             upgrade (bool, optional)
-            codename (str, NoneType)
+            codename (str, NoneType, optional)
 
         Returns:
             DiffDatabaseMapping
         """
         if url not in self._db_maps:
             self._db_maps[url] = DiffDatabaseMapping(url, upgrade=upgrade, codename=codename)
-        self._db_maps[url].reconnect()
         return self._db_maps[url]
+
+    def get_db_map_for_listener(self, listener, url, upgrade=False, codename=None):
+        db_map = self.get_db_map(url, upgrade=upgrade, codename=codename)
+        self.signaller.add_db_map_listener(db_map, listener)
+        return db_map
+
+    def remove_db_map_listener(self, db_map, listener):
+        listeners = self.signaller.db_map_listeners(db_map) - {listener}
+        if not listeners:
+            if not self.ok_to_close(db_map):
+                return False
+            self.close_session(db_map.db_url, silent=True)
+        self.signaller.remove_db_map_listener(db_map, listener)
+        return True
+
+    def commit_session(self, *db_maps):
+        error_log = {}
+        committed_db_maps = set()
+        for db_map in db_maps:
+            if not db_map.has_pending_changes():
+                continue
+            commit_msg = self._get_commit_msg(db_map)
+            if not commit_msg:
+                continue
+            try:
+                db_map.commit_session(commit_msg)
+                committed_db_maps.add(db_map)
+            except SpineDBAPIError as e:
+                error_log[db_map] = e.msg
+        if any(error_log.values()):
+            self.msg_error.emit(error_log)
+        if committed_db_maps:
+            self.session_committed.emit(committed_db_maps)
+
+    @staticmethod
+    def _get_commit_msg(db_map):
+        dialog = CommitDialog(db_map.codename)
+        answer = dialog.exec_()
+        if answer == QDialog.Accepted:
+            return dialog.commit_msg
+
+    def rollback_session(self, *db_maps):
+        error_log = {}
+        rolled_db_maps = set()
+        for db_map in db_maps:
+            if not db_map.has_pending_changes():
+                continue
+            try:
+                db_map.rollback_session()
+                rolled_db_maps.add(db_map)
+            except SpineDBAPIError as e:
+                error_log[db_map] = e.msg
+        if any(error_log.values()):
+            self.msg_error.emit(error_log)
+        if rolled_db_maps:
+            self.session_rolled_back.emit(rolled_db_maps)
+
+    def _commit_db_map_session(self, db_map):
+        commit_msg = self._get_commit_msg(db_map)
+        if not commit_msg:
+            return False
+        try:
+            db_map.commit_session(commit_msg)
+            return True
+        except SpineDBAPIError as e:
+            self.msg_error.emit({db_map: e.msg})
+            return False
+
+    def _rollback_db_map_session(self, db_map):
+        try:
+            db_map.rollback_session()
+            return True
+        except SpineDBAPIError as e:
+            self.msg_error.emit({db_map: e.msg})
+            return False
+
+    def ok_to_close(self, db_map):
+        """Prompts the user to commit or rollback changes to given database map.
+
+        Returns:
+            bool: True if successfully committed or rolled back, False otherwise
+        """
+        if not db_map.has_pending_changes():
+            return True
+        qsettings = self.parent()._qsettings
+        commit_at_exit = int(qsettings.value("appSettings/commitAtExit", defaultValue="1"))
+        if commit_at_exit == 0:
+            # Don't commit session and don't show message box
+            return self._rollback_db_map_session(db_map)
+        if commit_at_exit == 1:  # Default
+            # Show message box
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Question)
+            msg.setWindowTitle("Commit Pending Changes")
+            msg.setText("The current session has uncommitted changes. Do you want to commit them now?")
+            msg.setStandardButtons(QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel)
+            msg.button(QMessageBox.Save).setText("Commit And Close ")
+            msg.button(QMessageBox.Discard).setText("Discard Changes And Close")
+            chkbox = QCheckBox()
+            chkbox.setText("Do not ask me again")
+            msg.setCheckBox(chkbox)
+            answer = msg.exec_()
+            if answer == QMessageBox.Cancel:
+                return False
+            chk = chkbox.checkState()
+            if chk == 2:
+                # Save preference
+                preference = "2" if answer == QMessageBox.Save else "0"
+                qsettings.setValue("appSettings/commitAtExit", preference)
+            if answer == QMessageBox.Save:
+                return self._commit_db_map_session(db_map)
+            return self._rollback_db_map_session(db_map)
+        if commit_at_exit == 2:
+            # Commit session and don't show message box
+            return self._commit_db_map_session(db_map)
+        qsettings.setValue("appSettings/commitAtExit", "1")
+        return True
 
     def connect_signals(self):
         """Connects signals."""
+        # Error
+        self.msg_error.connect(self.receive_error_msg)
         # Add to cache
         self.object_classes_added.connect(lambda db_map_data: self.cache_items("object class", db_map_data))
         self.objects_added.connect(lambda db_map_data: self.cache_items("object", db_map_data))
@@ -248,6 +382,17 @@ class SpineDBManager(QObject):
         self.parameter_value_lists_removed.connect(self.cascade_refresh_parameter_definitions_by_value_list)
         self.parameter_tags_updated.connect(self.cascade_refresh_parameter_definitions_by_tag)
         self.parameter_tags_removed.connect(self.cascade_refresh_parameter_definitions_by_tag)
+        # Do this last, so cache is ready when listeners receive signals
+        self.signaller.connect_signals()
+
+    @Slot("QVariant")
+    def receive_error_msg(self, db_map_error_log):
+        msg = ""
+        for db_map, error_log in db_map_error_log.items():
+            database = "From " + db_map.codename + ":"
+            formatted_log = format_string_list(error_log)
+            msg += format_string_list([database, formatted_log])
+        self.err_msg.showMessage(msg)
 
     def cache_items(self, item_type, db_map_data):
         """Caches data for a given type.
@@ -1003,7 +1148,7 @@ class SpineDBManager(QObject):
         for db_map, data in db_map_cascading_data.items():
             ids = {x["id"] for x in data}
             self.get_parameter_definitions(db_map, ids=ids)
-        self.do_update_parameter_definitions(db_map_cascading_data)
+        self._parameter_definitions_updated.emit(db_map_cascading_data)
 
     @Slot("QVariant", name="cascade_refresh_parameter_definitions_by_value_list")
     def cascade_refresh_parameter_definitions_by_value_list(self, db_map_data):
@@ -1018,7 +1163,7 @@ class SpineDBManager(QObject):
         for db_map, data in db_map_cascading_data.items():
             ids = {x["id"] for x in data}
             self.get_parameter_definitions(db_map, ids=ids)
-        self.do_update_parameter_definitions(db_map_cascading_data)
+        self._parameter_definitions_updated.emit(db_map_cascading_data)
 
     @Slot("QVariant", name="cascade_refresh_parameter_definitions_by_tag")
     def cascade_refresh_parameter_definitions_by_tag(self, db_map_data):
@@ -1033,7 +1178,7 @@ class SpineDBManager(QObject):
         for db_map, data in db_map_cascading_data.items():
             ids = {x["id"] for x in data}
             self.get_parameter_definitions(db_map, ids=ids)
-        self.do_update_parameter_definitions(db_map_cascading_data)
+        self._parameter_definitions_updated.emit(db_map_cascading_data)
 
     @Slot("QVariant", name="cascade_refresh_parameter_values_by_entity_class")
     def cascade_refresh_parameter_values_by_entity_class(self, db_map_data):
@@ -1048,7 +1193,7 @@ class SpineDBManager(QObject):
         for db_map, data in db_map_cascading_data.items():
             ids = {x["id"] for x in data}
             self.get_parameter_values(db_map, ids=ids)
-        self.parameter_values_updated.emit(db_map_cascading_data)
+        self._parameter_values_updated.emit(db_map_cascading_data)
 
     @Slot("QVariant", name="cascade_refresh_parameter_values_by_entity")
     def cascade_refresh_parameter_values_by_entity(self, db_map_data):
@@ -1063,7 +1208,7 @@ class SpineDBManager(QObject):
         for db_map, data in db_map_cascading_data.items():
             ids = {x["id"] for x in data}
             self.get_parameter_values(db_map, ids=ids)
-        self.parameter_values_updated.emit(db_map_cascading_data)
+        self._parameter_values_updated.emit(db_map_cascading_data)
 
     @Slot("QVariant", name="cascade_refresh_parameter_values_by_definition")
     def cascade_refresh_parameter_values_by_definition(self, db_map_data):
@@ -1078,7 +1223,7 @@ class SpineDBManager(QObject):
         for db_map, data in db_map_cascading_data.items():
             ids = {x["id"] for x in data}
             self.get_parameter_values(db_map, ids=ids)
-        self.parameter_values_updated.emit(db_map_cascading_data)
+        self._parameter_values_updated.emit(db_map_cascading_data)
 
     def find_cascading_relationship_classes(self, db_map_ids):
         """Finds and returns cascading relationship classes for the given object class ids."""
@@ -1219,7 +1364,7 @@ class SpineDBManager(QObject):
         }
         self.parameter_values_updated.emit(d)
 
-    @Slot("QVariant", name="cache_parameter_definition_tags")
+    @Slot("QVariant")
     def cache_parameter_definition_tags(self, db_map_data):
         """Caches parameter definition tags in the parameter definition dictionary.
 
@@ -1230,33 +1375,3 @@ class SpineDBManager(QObject):
             for item in items:
                 item["id"] = item.pop("parameter_definition_id")
         self.cache_items("parameter definition", db_map_data)
-
-    @busy_effect
-    def commit_session(self, commit_msg, *db_maps):
-        error_log = {}
-        committed_db_maps = set()
-        for db_map in db_maps:
-            try:
-                db_map.commit_session(commit_msg)
-                committed_db_maps.add(db_map)
-            except SpineDBAPIError as e:
-                error_log[db_map] = e.msg
-        if any(error_log.values()):
-            self.msg_error.emit(error_log)
-        if committed_db_maps:
-            self.session_committed.emit(committed_db_maps)
-
-    @busy_effect
-    def rollback_session(self, *db_maps):
-        error_log = {}
-        rolled_db_maps = set()
-        for db_map in db_maps:
-            try:
-                db_map.rollback_session()
-                rolled_db_maps.add(db_map)
-            except SpineDBAPIError as e:
-                error_log[db_map] = e.msg
-        if any(error_log.values()):
-            self.msg_error.emit(error_log)
-        if rolled_db_maps:
-            self.session_rolled_back.emit(rolled_db_maps)

@@ -166,7 +166,6 @@ class EntityItem(QGraphicsPixmapItem):
         self.is_wip = False
         if self._question_item:
             self.scene().removeItem(self._question_item)
-        self.setToolTip(self.entity_class_name)
 
     def adjust_to_zoom(self, transform):
         """Saves the view's transform to determine collisions later on.
@@ -413,6 +412,7 @@ class RelationshipItem(EntityItem):
 
     def become_whole(self):
         super().become_whole()
+        self.setToolTip(self.object_name_list)
         for item in self.arc_items:
             item.become_whole()
 
@@ -755,3 +755,22 @@ class ArcItem(QGraphicsLineItem):
     def wipe_out(self):
         self.obj_item.arc_items.remove(self)
         self.rel_item.arc_items.remove(self)
+
+
+class OutlinedTextItem(QGraphicsSimpleTextItem):
+    """Outlined text item."""
+
+    def __init__(self, text, parent, font=QFont(), brush=QBrush(Qt.white), outline_pen=QPen(Qt.black, 3, Qt.SolidLine)):
+        """Initializes item.
+
+        Args:
+            text (str): text to show
+            font (QFont, optional): font to display the text
+            brush (QBrush, optional)
+            outline_pen (QPen, optional)
+        """
+        super().__init__(text, parent)
+        font.setWeight(QFont.Black)
+        self.setFont(font)
+        self.setBrush(brush)
+        self.setPen(outline_pen)

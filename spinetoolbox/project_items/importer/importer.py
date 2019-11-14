@@ -18,15 +18,18 @@ Contains Importer project item class.
 
 import logging
 import os
+import json
 from PySide2.QtCore import Qt, Slot, QFileInfo
 from PySide2.QtGui import QStandardItem, QStandardItemModel
 from PySide2.QtWidgets import QFileIconProvider, QListWidget, QDialog, QVBoxLayout, QDialogButtonBox
 from spinetoolbox.executioner import ExecutionState
-from spinetoolbox.project_item import ProjectItem, ProjectItemResource
-from spinetoolbox.helpers import create_dir, create_log_file_timestamp
+from spinetoolbox.project_item import ProjectItem
+from spinetoolbox.helpers import create_dir
 from spinetoolbox.spine_io.importers.csv_reader import CSVConnector
 from spinetoolbox.spine_io.importers.excel_reader import ExcelConnector
 from spinetoolbox.widgets.import_preview_window import ImportPreviewWindow
+from spinetoolbox.tool_specifications import PythonTool
+from . import importer_program
 
 
 class Importer(ProjectItem):
@@ -70,6 +73,11 @@ class Importer(ProjectItem):
         self.file_model = QStandardItemModel()
         self.all_files = []  # All source files
         self.unchecked_files = []  # Unchecked source files
+        self.basedir = os.path.dirname(os.path.abspath(importer_program.__file__))
+        self.importer_tool_spec = PythonTool(
+            self._toolbox, f"{self.name} tool", "python", self.basedir, ["importer_program.py"], execute_in_work=False
+        )
+        self.instance = None  # Instance of the above tool spec
         # connector class
         self._preview_widget = {}  # Key is the filepath, value is the ImportPreviewWindow instance
 
@@ -257,87 +265,52 @@ class Importer(ProjectItem):
                 qitem.setData(QFileIconProvider().icon(QFileInfo(item)), Qt.DecorationRole)
                 self.file_model.appendRow(qitem)
 
-    def execute(self):
+    def _do_execute(self, resources_upstream, resources_downstream):
         """Executes this Importer."""
-        self._toolbox.msg.emit("")
-        self._toolbox.msg.emit("Executing Importer <b>{0}</b>".format(self.name))
-        self._toolbox.msg.emit("***")
+        self.get_icon().start_animation()
+        args = [
+            self.name,
+            [f for f in self.all_files if f not in self.unchecked_files],
+            self.settings,
+            [r.url for r in resources_downstream if r.type_ == "database"],
+            self.logs_dir,
+        ]
+        self.importer_tool_spec.cmdline_args = [json.dumps(arg) for arg in args]
+        self.instance = self.importer_tool_spec.create_tool_instance(self.basedir)
+        self.instance.prepare()  # Make command and stuff
+        self.instance.instance_finished_signal.connect(self.handle_execution_finished)
+        self.instance.instance_finished_signal.connect(self.instance.deleteLater)
+        self.instance.execute(semisilent=True)
+        return ExecutionState.WAIT
 
-        inst = self._toolbox.project().execution_instance
-        all_data = []
-        all_errors = []
+    @Slot(int)
+    def handle_execution_finished(self, return_code):
+        """Importer thread finished.
 
-        checked_files = [f for f in self.all_files if f not in self.unchecked_files]
-        for source in checked_files:
-            settings = self.settings.get(source, None)
-            if settings is None or not settings:
-                self._toolbox.msg_warning.emit(
-                    "<b>{0}:</b> There are no mappings defined for {1}, moving on...".format(self.name, source)
-                )
-                continue
-            source_type = settings["source_type"]
-            connector = eval(source_type)()  # pylint: disable=eval-used
-            connector.connect_to_source(source)
-            table_mappings = {
-                name: mapping
-                for name, mapping in settings["table_mappings"].items()
-                if name in settings["selected_tables"]
-            }
-            table_options = {
-                name: options
-                for name, options in settings["table_options"].items()
-                if name in settings["selected_tables"]
-            }
-            table_types = {
-                name: types for name, types in settings["table_types"].items() if name in settings["selected_tables"]
-            }
-            table_row_types = {
-                name: types
-                for name, types in settings["table_row_types"].items()
-                if name in settings["selected_tables"]
-            }
-            data, errors = connector.get_mapped_data(
-                table_mappings, table_options, table_types, table_row_types, max_rows=-1
-            )
-            self._toolbox.msg.emit(
-                "<b>{0}:</b> Read {1} data from {2} with {3} errors".format(
-                    self.name, sum(len(d) for d in data.values()), source, len(errors)
-                )
-            )
-            all_data.append(data)
-            all_errors.extend(errors)
-        if all_errors:
-            # Log errors in a time stamped file into the logs directory
-            timestamp = create_log_file_timestamp()
-            logfilepath = os.path.abspath(os.path.join(self.logs_dir, timestamp + "_error.log"))
-            with open(logfilepath, 'w') as f:
-                for err in all_errors:
-                    f.write("{}\n".format(err))
-            # Make error log file anchor with path as tooltip
-            logfile_anchor = (
-                "<a style='color:#BB99FF;' title='" + logfilepath + "' href='file:///" + logfilepath + "'>error log</a>"
-            )
-            self._toolbox.msg_error.emit(
-                "There where errors while executing <b>{0}</b>. {1}".format(self.name, logfile_anchor)
-            )
-            self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(ExecutionState.ABORT)
-        if all_data:
-            # Add mapped data to a dict in the execution instance.
-            # If execution reaches a Data Store, the mapped data will be imported into the corresponding url
-            resource = ProjectItemResource(self, "data", data=all_data, metadata=dict(for_import=True))
-            inst.advertise_resources(self.name, resource)
-        self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(ExecutionState.CONTINUE)
+        Args:
+            return_code (int): Process exit code
+        """
+        self.get_icon().stop_animation()
+        if return_code == 0:
+            self._toolbox.msg_success.emit("Importer <b>{0}</b> execution finished".format(self.name))
+        else:
+            self._toolbox.msg_error.emit("Importer <b>{0}</b> execution failed".format(self.name))
+        if not self._project.execution_instance:
+            # May happen sometimes when Stop button is pressed
+            return
+        self._project.execution_instance.project_item_execution_finished_signal.emit(ExecutionState.CONTINUE)
 
     def stop_execution(self):
         """Stops executing this Importer."""
-        self._toolbox.msg.emit("Stopping {0}".format(self.name))
+        self.get_icon().stop_animation()
+        self._toolbox.msg_warning.emit("Stopping {0}".format(self.name))
+        self.instance.terminate_instance()
+        self.instance.deleteLater()
+        # Note: QSubProcess and PythonReplWidget emit project_item_execution_finished_signal
 
-    def simulate_execution(self, inst):
-        """Simulates executing this Item."""
-        super().simulate_execution(inst)
-        file_list = [
-            r.path for r in inst.available_resources(self.name) if r.type_ == "file" and not r.metadata.get("is_output")
-        ]
+    def _do_handle_dag_changed(self, resources_upstream):
+        """See base class."""
+        file_list = [r.path for r in resources_upstream if r.type_ == "file" and not r.metadata.get("is_output")]
         self.update_file_model(set(file_list))
         if not file_list:
             self.add_notification(

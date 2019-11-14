@@ -58,6 +58,7 @@ class DataConnection(ProjectItem):
         data_files = self.data_files()
         self.populate_data_list(data_files)
         self.spine_datapackage_form = None
+        self.data_dir_watcher.directoryChanged.connect(self.refresh)
 
     @staticmethod
     def item_type():
@@ -81,7 +82,6 @@ class DataConnection(ProjectItem):
         s[self._properties_ui.pushButton_datapackage.clicked] = self.show_spine_datapackage_form
         s[self._properties_ui.treeView_dc_references.doubleClicked] = self.open_reference
         s[self._properties_ui.treeView_dc_data.doubleClicked] = self.open_data_file
-        s[self.data_dir_watcher.directoryChanged] = self.refresh
         s[self._properties_ui.treeView_dc_references.files_dropped] = self.add_files_to_references
         s[self._properties_ui.treeView_dc_data.files_dropped] = self.add_files_to_data_dir
         s[self.get_icon().files_dropped_on_icon] = self.receive_files_dropped_on_icon
@@ -331,8 +331,8 @@ class DataConnection(ProjectItem):
                     files.append(entry.path)
         return files
 
-    @Slot(name="refresh")
-    def refresh(self):
+    @Slot("QString")
+    def refresh(self, path=None):
         """Refresh data files in Data Connection Properties.
         NOTE: Might lead to performance issues."""
         d = self.data_files()
@@ -377,33 +377,6 @@ class DataConnection(ProjectItem):
         """Update Data Connection tab name label. Used only when renaming project items."""
         self._properties_ui.label_dc_name.setText(self.name)
 
-    def resources_for_advertising(self):
-        """Returns list of references and files to advertise to the execution instance."""
-        refs = self.file_references()
-        f_list = [os.path.join(self.data_dir, f) for f in self.data_files()]
-        resources = [ProjectItemResource(self, "file", url=pathlib.Path(ref).as_uri()) for ref in refs]
-        resources += [ProjectItemResource(self, "file", url=pathlib.Path(path).as_uri()) for path in f_list]
-        return resources
-
-    def execute(self):
-        """Executes this Data Connection."""
-        self._toolbox.msg.emit("")
-        self._toolbox.msg.emit("Executing Data Connection <b>{0}</b>".format(self.name))
-        self._toolbox.msg.emit("***")
-        inst = self._toolbox.project().execution_instance
-        # Update Data Connection based on project items that are already executed
-        # Add previously executed Tool's output file paths to references
-        tool_output_files = [
-            r.path for r in inst.available_resources(self.name) if r.type_ == "file" and r.metadata.get("is_output")
-        ]
-        self.references += tool_output_files
-        self.populate_reference_list(self.references, emit_item_changed=False)
-        # Update execution instance for project items downstream
-        # Add data file references and data files into execution instance
-        resources = self.resources_for_advertising()
-        inst.advertise_resources(self.name, *resources)
-        self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(ExecutionState.CONTINUE)
-
     def stop_execution(self):
         """Stops executing this Data Connection."""
         self._toolbox.msg.emit("Stopping {0}".format(self.name))
@@ -411,12 +384,9 @@ class DataConnection(ProjectItem):
             ExecutionState.STOP_REQUESTED
         )
 
-    def simulate_execution(self, inst):
-        """Simulates executing this Data Connection."""
-        super().simulate_execution(inst)
-        resources = self.resources_for_advertising()
-        inst.advertise_resources(self.name, *resources)
-        if not resources:
+    def _do_handle_dag_changed(self, resources_upstream):
+        """See base class."""
+        if not self.file_references() and not self.data_files():
             self.add_notification(
                 "This Data Connection does not have any references or data. "
                 "Add some in the Data Connection Properties panel."
@@ -469,5 +439,12 @@ class DataConnection(ProjectItem):
 
     @staticmethod
     def default_name_prefix():
-        """see base class"""
+        """See base class."""
         return "Data Connection"
+
+    def available_resources_downstream(self):
+        """See base class."""
+        refs = self.file_references()
+        f_list = [os.path.join(self.data_dir, f) for f in self.data_files()]
+        resources = [ProjectItemResource(self, "file", url=pathlib.Path(ref).as_uri()) for ref in (refs + f_list)]
+        return resources

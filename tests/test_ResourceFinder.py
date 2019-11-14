@@ -10,37 +10,26 @@
 ######################################################################################################################
 
 """
-Unit tests for ExecutionInstance class.
+Unit tests for ResourceFinder class.
 
-:author: M. Marin (KTH)
+:author: A. Soininen (VTT)
 :date:   11.9.2019
 """
 
 import unittest
-from unittest import mock
-import logging
-import sys
+from unittest.mock import NonCallableMagicMock
 from PySide2.QtCore import QModelIndex
 from PySide2.QtWidgets import QApplication
-from spinetoolbox.executioner import ExecutionInstance, ExecutionState, ResourceFinder
+from spinetoolbox.executioner import ResourceFinder
 from spinetoolbox.project_item import ProjectItemResource
 from .mock_helpers import clean_up_toolboxui_with_project, create_toolboxui_with_project
 
 
-class TestExecutionInstance(unittest.TestCase):
+class TestResourceFinder(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        """Runs once before any tests in this class."""
-        try:
-            cls.app = QApplication().processEvents()
-        except RuntimeError:
-            pass
-        logging.basicConfig(
-            stream=sys.stderr,
-            level=logging.DEBUG,
-            format='%(asctime)s %(levelname)s: %(message)s',
-            datefmt='%Y-%m-%d %H:%M:%S',
-        )
+        if not QApplication.instance():
+            QApplication()
 
     def setUp(self):
         """Runs before each test. Makes an instance of ToolboxUI class.
@@ -50,17 +39,16 @@ class TestExecutionInstance(unittest.TestCase):
         # Mock `project_item_model` so `find_item()` and `project_item()` are just the identity function
         self.mock_upstream_item = self._mock_item("upstream item")
         self.mock_downstream_item = self._mock_item("downstream item")
-        mock_proj_item_model = mock.NonCallableMagicMock()
+        mock_proj_item_model = NonCallableMagicMock()
         mock_proj_item_model.find_item.return_value = QModelIndex()
-        mock_proj_item_model.project_item.side_effect = 3 * [self.mock_upstream_item, self.mock_downstream_item]
+        mock_proj_item_model.project_item.side_effect = 2 * [self.mock_upstream_item, self.mock_downstream_item]
         self.toolbox.project_item_model = mock_proj_item_model
 
     @staticmethod
     def _mock_item(name):
         """Returns a mock project item."""
-        item = mock.NonCallableMagicMock()
+        item = NonCallableMagicMock()
         item.name = name
-        item.execute = mock.MagicMock()
         resources_upstream = [ProjectItemResource(item, "type", "url")]
         resources_downstream = [ProjectItemResource(item, "type", "url")]
         item.available_resources_upstream.return_value = resources_upstream
@@ -71,20 +59,12 @@ class TestExecutionInstance(unittest.TestCase):
         """Runs after each test. Use this to free resources after a test if needed."""
         clean_up_toolboxui_with_project(self.toolbox)
 
-    def test_start_execution_with_two_items_forwards_resources_correctly(self):
+    def test_constructor(self):
         ordered_nodes = {
             self.mock_upstream_item.name: [self.mock_downstream_item.name],
             self.mock_downstream_item.name: [],
         }
         resource_finder = ResourceFinder(ordered_nodes, self.toolbox.project_item_model)
-        execution_instance = ExecutionInstance(self.toolbox, ordered_nodes, resource_finder)
-        execution_instance.start_execution()
-        # Need to manually push the execution forward.
-        execution_instance.project_item_execution_finished_signal.emit(ExecutionState.CONTINUE)
-        self.mock_upstream_item.execute.assert_called_with([], self.mock_downstream_item.available_resources_upstream())
-        self.mock_downstream_item.execute.assert_called_with(
-            self.mock_upstream_item.available_resources_downstream(), []
-        )
 
 
 if __name__ == '__main__':

@@ -16,8 +16,6 @@ Unit tests for TreeViewForm and GraphViewForm classes.
 :date:   6.12.2018
 """
 
-import unittest
-
 
 class TestTreeViewFormRemoveMixin:
     def test_remove_object_classes_from_object_tree_model(self):
