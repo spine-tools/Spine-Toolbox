@@ -343,7 +343,11 @@ class Tool(ProjectItem):
         self._toolbox.msg.emit("***")
         if self.execute_in_work:
             work_or_source = "work"
-            work_dir = self._project.work_dir
+            work_dir = self._toolbox.work_dir
+            if not work_dir:
+                self._toolbox.msg_error.emit("Work directory missing. Please check Settings.")
+                exec_inst.project_item_execution_finished_signal.emit(-1)  # abort
+                return
             self.basedir = tempfile.mkdtemp(
                 suffix='__toolbox', prefix=self.tool_specification().short_name + '__', dir=work_dir
             )

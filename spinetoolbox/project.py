@@ -24,22 +24,21 @@ from PySide2.QtWidgets import QMessageBox
 from .metaobject import MetaObject
 from .helpers import create_dir, copy_dir
 from .tool_specifications import JuliaTool, PythonTool, GAMSTool, ExecutableTool
-from .config import DEFAULT_WORK_DIR, INVALID_CHARS, DEFAULT_PROJECT_DIR, LATEST_PROJECT_VERSION
+from .config import INVALID_CHARS, DEFAULT_PROJECT_DIR, LATEST_PROJECT_VERSION
 from .executioner import DirectedGraphHandler, ExecutionInstance
 
 
 class SpineToolboxProject(MetaObject):
     """Class for Spine Toolbox projects."""
 
-    def __init__(self, toolbox, name, description, base_dir="", work_dir=None):
+    def __init__(self, toolbox, name, description, base_dir):
         """
 
         Args:
             toolbox (ToolboxUI): toolbox of this project
             name (str): Project name
             description (str): Project description
-            base_dir (str): If this is given, create a new style project
-            work_dir (str): Project work directory
+            base_dir (str): Project directory
         """
         super().__init__(name, description)
         self._toolbox = toolbox
@@ -51,39 +50,20 @@ class SpineToolboxProject(MetaObject):
         self._n_graphs = 0
         self._executed_graph_index = 0
         self._invalid_graphs = list()
-        # self.path = None  # Old style projects initialize this. Not in use with new style projects
-        # self.filename = None
         self.dirty = False  # TODO: Indicates if project has changed since loading
         self.project_dir = None
         self.project_conf_dir = None
         self.project_items_dir = None
         self.project_filename = None
         self.project_file = None
-        self.work_dir = None
         if not self._create_project_structure(base_dir):
             self._toolbox.msg_error.emit("Creating project directory "
                                          "structure to <b>{0}</b> failed"
                                          .format(base_dir))
-        # TODO: Make work_dir global instead of project based
-        if not self._create_work_directory(DEFAULT_WORK_DIR):
-            self._toolbox.msg_error.emit("Creating work directory failed")
 
     def connect_signals(self):
         """Connect signals to slots."""
         self.dag_handler.dag_simulation_requested.connect(self.simulate_dag_execution)
-
-    # def _init_old_style_project(self, work_dir):
-    #     """Initialize project from the old .proj file."""
-    #     self.project_dir = os.path.join(DEFAULT_PROJECT_DIR, self.short_name)
-    #     self.filename = self.short_name + ".proj"
-    #     self.path = os.path.join(DEFAULT_PROJECT_DIR, self.filename)
-    #     # Make project directory
-    #     try:
-    #         create_dir(self.project_dir)
-    #     except OSError:
-    #         self._toolbox.msg_error.emit(
-    #             "[OSError] Creating project directory {0} failed. Check permissions.".format(self.project_dir)
-    #         )
 
     def _create_project_structure(self, directory):
         """Makes the given directory a Spine Toolbox project directory.
@@ -97,8 +77,6 @@ class SpineToolboxProject(MetaObject):
         self.project_items_dir = os.path.abspath(os.path.join(self.project_conf_dir, "items"))
         self.project_filename = "project.json"  # Project file
         self.project_file = os.path.abspath(os.path.join(self.project_conf_dir, self.project_filename))
-        # self.path = None
-        # self.filename = None
         try:
             create_dir(self.project_dir)  # Make project directory
         except OSError:
@@ -116,59 +94,16 @@ class SpineToolboxProject(MetaObject):
             return False
         return True
 
-    def _create_work_directory(self, work_dir=None):
-        """Creates work directory.
-
-        Args:
-            work_dir (str): Absolute path to a directory that should be created for a work directory
-        """
-        if not work_dir:
-            self.work_dir = DEFAULT_WORK_DIR
-        else:
-            self.work_dir = work_dir
-        try:
-            create_dir(self.work_dir)
-        except OSError:
-            self._toolbox.msg_error.emit(
-                "[OSError] Creating work directory {0} failed. Check permissions.".format(self.work_dir)
-            )
-            return False
-        return True
-
     def change_name(self, name):
-        """Changes project name and updates project dir and save file name.
+        """Changes project name.
 
         Args:
-            name (str): Project (long) name
+            name (str): New project name
         """
         super().set_name(name)
-        # Update project dir instance variable
-        self.project_dir = os.path.join(DEFAULT_PROJECT_DIR, self.short_name)
-        # Update file name and path
-        self.change_filename(self.short_name + ".proj")
-
-    def change_filename(self, new_filename):
-        """Change the save filename associated with this project.
-
-        Args:
-            new_filename (str): Filename used in saving the project. No full path. Example 'project.proj'
-        """
-        self.filename = new_filename
-        self.path = os.path.join(DEFAULT_PROJECT_DIR, self.filename)
-
-    def change_work_dir(self, new_work_path):
-        """Change project work directory.
-
-        Args:
-            new_work_path (str): Absolute path to new work directory
-        """
-        if not new_work_path:
-            self.work_dir = DEFAULT_WORK_DIR
-            return False
-        if not create_dir(new_work_path):
-            return False
-        self.work_dir = new_work_path
-        return True
+        # Update Window Title
+        self._toolbox.setWindowTitle("Spine Toolbox    -- {} --".format(self.name))
+        self._toolbox.msg.emit("Project name changed to <b>{0}</b>".format(self.name))
 
     def rename_project(self, name):
         """Save project under a new name. Used with File->Save As... menu command.
@@ -233,7 +168,6 @@ class SpineToolboxProject(MetaObject):
         project_dict["version"] = LATEST_PROJECT_VERSION
         project_dict["name"] = self.name
         project_dict["description"] = self.description
-        project_dict["work_dir"] = self.work_dir
         project_dict["tool_specifications"] = tool_def_paths
         # Compute connections directly from Links in scene
         connections = list()

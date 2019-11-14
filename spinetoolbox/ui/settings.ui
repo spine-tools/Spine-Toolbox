@@ -114,7 +114,7 @@
         <property name="autoFillBackground">
          <bool>true</bool>
         </property>
-        <layout class="QVBoxLayout" name="verticalLayout_5" stretch="0,0,0,0">
+        <layout class="QVBoxLayout" name="verticalLayout_5" stretch="0,0,0">
          <property name="spacing">
           <number>6</number>
          </property>
@@ -297,71 +297,69 @@
               </item>
              </layout>
             </item>
-           </layout>
-          </widget>
-         </item>
-         <item>
-          <widget class="QGroupBox" name="groupBox_gams">
-           <property name="title">
-            <string>GAMS</string>
-           </property>
-           <layout class="QGridLayout" name="gridLayout">
-            <property name="spacing">
-             <number>6</number>
-            </property>
-            <item row="1" column="0">
-             <widget class="QLabel" name="label_4">
+            <item>
+             <widget class="QLabel" name="label_6">
               <property name="font">
                <font>
                 <pointsize>7</pointsize>
                </font>
               </property>
               <property name="text">
-               <string>GAMS executable</string>
+               <string>Work directory</string>
               </property>
              </widget>
             </item>
-            <item row="2" column="0">
-             <widget class="QLineEdit" name="lineEdit_gams_path">
-              <property name="minimumSize">
-               <size>
-                <width>0</width>
-                <height>20</height>
-               </size>
-              </property>
-              <property name="maximumSize">
-               <size>
-                <width>16777215</width>
-                <height>20</height>
-               </size>
-              </property>
-              <property name="toolTip">
-               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Path to GAMS executable for Tool and GAMS Python bindings. Leave blank to use system's default&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-              </property>
-              <property name="placeholderText">
-               <string>Using sytem's default GAMS</string>
-              </property>
-              <property name="clearButtonEnabled">
-               <bool>true</bool>
-              </property>
-             </widget>
-            </item>
-            <item row="2" column="1">
-             <widget class="QToolButton" name="toolButton_browse_gams">
-              <property name="maximumSize">
-               <size>
-                <width>22</width>
-                <height>22</height>
-               </size>
-              </property>
-              <property name="toolTip">
-               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Pick GAMS executable with file browser (eg. gams.exe on Windows)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-              </property>
-              <property name="icon">
-               <iconset resource="resources/resources_icons.qrc">
-                <normaloff>:/icons/menu_icons/folder-open-solid.svg</normaloff>:/icons/menu_icons/folder-open-solid.svg</iconset>
-              </property>
-             </widget>
+            <item>
+             <layout class="QHBoxLayout" name="horizontalLayout_3">
+              <item>
+               <widget class="QLineEdit" name="lineEdit_work_dir">
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>20</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>16777215</width>
+                  <height>20</height>
+                 </size>
+                </property>
+                <property name="toolTip">
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Work directory. Leave this empty to use the default (\work).&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                </property>
+                <property name="placeholderText">
+                 <string>Using default directory</string>
+                </property>
+                <property name="clearButtonEnabled">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QToolButton" name="toolButton_browse_work">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>22</width>
+                  <height>22</height>
+                 </size>
+                </property>
+                <property name="toolTip">
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Pick Work directory with file browser&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                </property>
+                <property name="icon">
+                 <iconset resource="resources/resources_icons.qrc">
+                  <normaloff>:/icons/menu_icons/folder-open-solid.svg</normaloff>:/icons/menu_icons/folder-open-solid.svg</iconset>
+                </property>
+               </widget>
+              </item>
+             </layout>
             </item>
            </layout>
           </widget>
@@ -502,7 +500,7 @@
       </widget>
      </item>
      <item>
-      <layout class="QVBoxLayout" name="verticalLayout_3" stretch="0,0,1">
+      <layout class="QVBoxLayout" name="verticalLayout_3" stretch="0,0,0,1">
        <item>
         <widget class="QGroupBox" name="groupBox_python">
          <property name="minimumSize">
@@ -564,6 +562,72 @@
             </property>
             <property name="text">
              <string>Python interpreter</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="groupBox_gams">
+         <property name="title">
+          <string>GAMS</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout">
+          <property name="spacing">
+           <number>6</number>
+          </property>
+          <item row="1" column="0">
+           <widget class="QLabel" name="label_4">
+            <property name="font">
+             <font>
+              <pointsize>7</pointsize>
+             </font>
+            </property>
+            <property name="text">
+             <string>GAMS executable</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QLineEdit" name="lineEdit_gams_path">
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>20</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>16777215</width>
+              <height>20</height>
+             </size>
+            </property>
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Path to GAMS executable for Tool and GAMS Python bindings. Leave blank to use system's default&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+            <property name="placeholderText">
+             <string>Using sytem's default GAMS</string>
+            </property>
+            <property name="clearButtonEnabled">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="QToolButton" name="toolButton_browse_gams">
+            <property name="maximumSize">
+             <size>
+              <width>22</width>
+              <height>22</height>
+             </size>
+            </property>
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Pick GAMS executable with file browser (eg. gams.exe on Windows)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+            <property name="icon">
+             <iconset resource="resources/resources_icons.qrc">
+              <normaloff>:/icons/menu_icons/folder-open-solid.svg</normaloff>:/icons/menu_icons/folder-open-solid.svg</iconset>
             </property>
            </widget>
           </item>
@@ -668,16 +732,16 @@
              </size>
             </property>
             <property name="cursor">
-             <cursorShape>ArrowCursor</cursorShape>
+             <cursorShape>IBeamCursor</cursorShape>
             </property>
             <property name="focusPolicy">
-             <enum>Qt::NoFocus</enum>
+             <enum>Qt::StrongFocus</enum>
             </property>
             <property name="toolTip">
              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;You can rename project from main window menu &lt;span style=&quot; font-weight:600;&quot;&gt;File -&amp;gt; Save As...&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="readOnly">
-             <bool>true</bool>
+             <bool>false</bool>
             </property>
             <property name="placeholderText">
              <string>No project open</string>
@@ -733,70 +797,6 @@ p, li { white-space: pre-wrap; }
              <string/>
             </property>
            </widget>
-          </item>
-          <item>
-           <widget class="QLabel" name="label_6">
-            <property name="font">
-             <font>
-              <pointsize>7</pointsize>
-             </font>
-            </property>
-            <property name="text">
-             <string>Work directory</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <layout class="QHBoxLayout" name="horizontalLayout_3">
-            <item>
-             <widget class="QLineEdit" name="lineEdit_work_dir">
-              <property name="minimumSize">
-               <size>
-                <width>0</width>
-                <height>20</height>
-               </size>
-              </property>
-              <property name="maximumSize">
-               <size>
-                <width>16777215</width>
-                <height>20</height>
-               </size>
-              </property>
-              <property name="toolTip">
-               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Work directory location. Leave empty to use default (\work).&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-              </property>
-              <property name="placeholderText">
-               <string>Using default directory</string>
-              </property>
-              <property name="clearButtonEnabled">
-               <bool>true</bool>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QToolButton" name="toolButton_browse_work">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="maximumSize">
-               <size>
-                <width>22</width>
-                <height>22</height>
-               </size>
-              </property>
-              <property name="toolTip">
-               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Pick Work directory with file browser&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-              </property>
-              <property name="icon">
-               <iconset resource="resources/resources_icons.qrc">
-                <normaloff>:/icons/menu_icons/folder-open-solid.svg</normaloff>:/icons/menu_icons/folder-open-solid.svg</iconset>
-              </property>
-             </widget>
-            </item>
-           </layout>
           </item>
          </layout>
         </widget>
@@ -914,8 +914,8 @@ p, li { white-space: pre-wrap; }
   <tabstop>radioButton_bg_grid</tabstop>
   <tabstop>radioButton_bg_solid</tabstop>
   <tabstop>toolButton_bg_color</tabstop>
-  <tabstop>lineEdit_gams_path</tabstop>
-  <tabstop>toolButton_browse_gams</tabstop>
+  <tabstop>lineEdit_work_dir</tabstop>
+  <tabstop>toolButton_browse_work</tabstop>
   <tabstop>lineEdit_julia_path</tabstop>
   <tabstop>toolButton_browse_julia</tabstop>
   <tabstop>lineEdit_julia_project_path</tabstop>
@@ -924,11 +924,12 @@ p, li { white-space: pre-wrap; }
   <tabstop>lineEdit_python_path</tabstop>
   <tabstop>toolButton_browse_python</tabstop>
   <tabstop>checkBox_use_embedded_python</tabstop>
+  <tabstop>lineEdit_gams_path</tabstop>
+  <tabstop>toolButton_browse_gams</tabstop>
   <tabstop>checkBox_commit_at_exit</tabstop>
   <tabstop>checkBox_graph_view_sticky_selection</tabstop>
+  <tabstop>lineEdit_project_name</tabstop>
   <tabstop>textEdit_project_description</tabstop>
-  <tabstop>lineEdit_work_dir</tabstop>
-  <tabstop>toolButton_browse_work</tabstop>
   <tabstop>pushButton_ok</tabstop>
   <tabstop>pushButton_cancel</tabstop>
  </tabstops>

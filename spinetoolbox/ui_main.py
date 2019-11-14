@@ -54,8 +54,8 @@ from .widgets import toolbars
 from .widgets.open_project_widget import OpenProjectDialog
 from .project import SpineToolboxProject
 from .config import SPINE_TOOLBOX_VERSION, STATUSBAR_SS, \
-    TEXTBROWSER_SS, MAINWINDOW_SS, DOCUMENTATION_PATH, DEFAULT_PROJECT_DIR, LATEST_PROJECT_VERSION
-from .helpers import get_datetime, erase_dir, busy_effect, set_taskbar_icon, supported_img_formats
+    TEXTBROWSER_SS, MAINWINDOW_SS, DOCUMENTATION_PATH, DEFAULT_PROJECT_DIR, LATEST_PROJECT_VERSION, DEFAULT_WORK_DIR
+from .helpers import get_datetime, erase_dir, busy_effect, set_taskbar_icon, supported_img_formats, create_dir
 from .project_item import RootProjectItem, CategoryProjectItem
 from .project_items import data_store, data_connection, gdx_export, tool, view, data_interface
 from .project_upgrader import ProjectUpgrader
@@ -102,6 +102,7 @@ class ToolboxUI(QMainWindow):
         self.tool_specification_model = None
         self.show_datetime = self.update_datetime()
         self.active_project_item = None
+        self.work_dir = None
         # Widget and form references
         self.settings_form = None
         self.tool_specification_context_menu = None
@@ -139,6 +140,7 @@ class ToolboxUI(QMainWindow):
         self.connect_signals()
         self.restore_ui()
         self.parse_project_item_modules()
+        self.set_work_directory()
 
     # noinspection PyArgumentList, PyUnresolvedReferences
     def connect_signals(self):
@@ -229,6 +231,30 @@ class ToolboxUI(QMainWindow):
         self.ui.menuEdit.insertActions(remove_all_action, add_item_actions)
         # Add draggable widgets to toolbar
         self.item_toolbar.add_draggable_widgets(category_icon)
+
+    def set_work_directory(self, new_work_dir=None):
+        """Creates a work directory if it does not exist or changes the current work directory to given.
+
+        Args:
+            new_work_dir (str): If given, changes the work directory to given
+            and creates the directory if it does not exist.
+        """
+        if not new_work_dir:
+            work_dir = self._qsettings.value("appSettings/workDir", defaultValue="")
+            if work_dir == "":
+                self.work_dir = DEFAULT_WORK_DIR
+            else:
+                self.work_dir = work_dir
+        else:
+            self.work_dir = new_work_dir
+            self.msg.emit("Work directory is now <b>{0}</b>".format(self.work_dir))
+        try:
+            create_dir(self.work_dir)
+        except OSError:
+            self._toolbox.msg_error.emit(
+                "[OSError] Creating work directory {0} failed. Check permissions.".format(self.work_dir)
+            )
+            self.work_dir = None
 
     def project(self):
         """Returns current project or None if no project open."""
@@ -377,11 +403,6 @@ class ToolboxUI(QMainWindow):
         tool_specification_paths = project_info["project"]["tool_specifications"]
         connections = project_info["project"]["connections"]
         project_items = project_info["objects"]
-        # TODO: Make work_dir global
-        # try:
-        #     work_dir = project_dict["work_dir"]
-        # except KeyError:
-        #     work_dir = ""
         # Create project
         self._project = SpineToolboxProject(self, name, desc, base_dir=project_dir)
         self.setWindowTitle("Spine Toolbox    -- {} --".format(self._project.name))
