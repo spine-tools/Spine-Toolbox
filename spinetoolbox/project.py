@@ -22,16 +22,16 @@ import json
 from PySide2.QtCore import Slot
 from PySide2.QtWidgets import QMessageBox
 from .metaobject import MetaObject
-from .helpers import DEFAULT_PROJECT_DIR, create_dir, copy_dir
+from .helpers import create_dir, copy_dir
 from .tool_specifications import JuliaTool, PythonTool, GAMSTool, ExecutableTool
-from .config import DEFAULT_WORK_DIR, INVALID_CHARS
+from .config import DEFAULT_WORK_DIR, INVALID_CHARS, DEFAULT_PROJECT_DIR, LATEST_PROJECT_VERSION
 from .executioner import DirectedGraphHandler, ExecutionInstance
 
 
 class SpineToolboxProject(MetaObject):
     """Class for Spine Toolbox projects."""
 
-    def __init__(self, toolbox, name, description, base_dir="", work_dir=None, is_old_style=False):
+    def __init__(self, toolbox, name, description, base_dir="", work_dir=None):
         """
 
         Args:
@@ -40,7 +40,6 @@ class SpineToolboxProject(MetaObject):
             description (str): Project description
             base_dir (str): If this is given, create a new style project
             work_dir (str): Project work directory
-            is_old_style (bool): True if opening a project from .proj file, False otherwise
         """
         super().__init__(name, description)
         self._toolbox = toolbox
@@ -52,23 +51,20 @@ class SpineToolboxProject(MetaObject):
         self._n_graphs = 0
         self._executed_graph_index = 0
         self._invalid_graphs = list()
-        self.path = None  # Old style projects initialize this. Not in use with new style projects
-        self.filename = None
-        self.is_old_style = is_old_style  # TODO: This is dumb. Make it smarter.
+        # self.path = None  # Old style projects initialize this. Not in use with new style projects
+        # self.filename = None
         self.dirty = False  # TODO: Indicates if project has changed since loading
-        if self.is_old_style:
-            self._init_old_style_project(work_dir)
-        else:
-            self.project_dir = None
-            self.project_conf_dir = None
-            self.project_items_dir = None
-            self.project_filename = None
-            self.project_file = None
-            self.work_dir = None
-            if not self._create_project_structure(base_dir):
-                self._toolbox.msg_error.emit("Creating project directory "
-                                             "structure to <b>{0}</b> failed"
-                                             .format(base_dir))
+        self.project_dir = None
+        self.project_conf_dir = None
+        self.project_items_dir = None
+        self.project_filename = None
+        self.project_file = None
+        self.work_dir = None
+        if not self._create_project_structure(base_dir):
+            self._toolbox.msg_error.emit("Creating project directory "
+                                         "structure to <b>{0}</b> failed"
+                                         .format(base_dir))
+        # TODO: Make work_dir global instead of project based
         if not self._create_work_directory(DEFAULT_WORK_DIR):
             self._toolbox.msg_error.emit("Creating work directory failed")
 
@@ -76,18 +72,18 @@ class SpineToolboxProject(MetaObject):
         """Connect signals to slots."""
         self.dag_handler.dag_simulation_requested.connect(self.simulate_dag_execution)
 
-    def _init_old_style_project(self, work_dir):
-        """Initialize project from the old .proj file."""
-        self.project_dir = os.path.join(DEFAULT_PROJECT_DIR, self.short_name)
-        self.filename = self.short_name + ".proj"
-        self.path = os.path.join(DEFAULT_PROJECT_DIR, self.filename)
-        # Make project directory
-        try:
-            create_dir(self.project_dir)
-        except OSError:
-            self._toolbox.msg_error.emit(
-                "[OSError] Creating project directory {0} failed. Check permissions.".format(self.project_dir)
-            )
+    # def _init_old_style_project(self, work_dir):
+    #     """Initialize project from the old .proj file."""
+    #     self.project_dir = os.path.join(DEFAULT_PROJECT_DIR, self.short_name)
+    #     self.filename = self.short_name + ".proj"
+    #     self.path = os.path.join(DEFAULT_PROJECT_DIR, self.filename)
+    #     # Make project directory
+    #     try:
+    #         create_dir(self.project_dir)
+    #     except OSError:
+    #         self._toolbox.msg_error.emit(
+    #             "[OSError] Creating project directory {0} failed. Check permissions.".format(self.project_dir)
+    #         )
 
     def _create_project_structure(self, directory):
         """Makes the given directory a Spine Toolbox project directory.
@@ -96,14 +92,13 @@ class SpineToolboxProject(MetaObject):
         Args:
             directory (str): Abs. path to a directory that should be made into a project directory
         """
-        self.is_old_style = False  # This is dumb...
         self.project_dir = directory
         self.project_conf_dir = os.path.abspath(os.path.join(self.project_dir, ".spinetoolbox"))
         self.project_items_dir = os.path.abspath(os.path.join(self.project_conf_dir, "items"))
         self.project_filename = "project.json"  # Project file
         self.project_file = os.path.abspath(os.path.join(self.project_conf_dir, self.project_filename))
-        self.path = None
-        self.filename = None
+        # self.path = None
+        # self.filename = None
         try:
             create_dir(self.project_dir)  # Make project directory
         except OSError:
@@ -112,12 +107,12 @@ class SpineToolboxProject(MetaObject):
         try:
             create_dir(self.project_conf_dir)  # Make project conf directory
         except OSError:
-            self._toolbox.msg_error.emit("Creating directory {0} failed".format(self.project_dir))
+            self._toolbox.msg_error.emit("Creating directory {0} failed".format(self.project_conf_dir))
             return False
         try:
             create_dir(self.project_items_dir)  # Make project items directory
         except OSError:
-            self._toolbox.msg_error.emit("Creating directory {0} failed".format(self.project_dir))
+            self._toolbox.msg_error.emit("Creating directory {0} failed".format(self.project_items_dir))
             return False
         return True
 
@@ -235,10 +230,11 @@ class SpineToolboxProject(MetaObject):
         """
         # Clear dictionary
         project_dict = dict()  # Dictionary for storing project info
-        project_dict['name'] = self.name
-        project_dict['description'] = self.description
-        project_dict['work_dir'] = self.work_dir
-        project_dict['tool_specifications'] = tool_def_paths
+        project_dict["version"] = LATEST_PROJECT_VERSION
+        project_dict["name"] = self.name
+        project_dict["description"] = self.description
+        project_dict["work_dir"] = self.work_dir
+        project_dict["tool_specifications"] = tool_def_paths
         # Compute connections directly from Links in scene
         connections = list()
         for link in self._toolbox.ui.graphicsView.links():
@@ -261,7 +257,7 @@ class SpineToolboxProject(MetaObject):
             i = item_names.index(src_name)
             j = item_names.index(dst_name)
             connections_old[i][j] = [src_anchor, dst_anchor]
-        project_dict['connections'] = connections_old
+        project_dict["connections"] = connections_old
         scene_rect = self._toolbox.ui.graphicsView.scene().sceneRect()
         project_dict["scene_y"] = scene_rect.y()
         project_dict["scene_w"] = scene_rect.width()
@@ -276,11 +272,8 @@ class SpineToolboxProject(MetaObject):
                 category_dict[item.name] = item.item_dict()
         # Write project on disk
         saved_dict = dict(project=project_dict, objects=items_dict)
-        if directory:
-            if not self._create_project_structure(directory):
-                return False
         # Write into JSON file
-        with open(self.project_file, 'w') as fp:
+        with open(self.project_file, "w") as fp:
             json.dump(saved_dict, fp, indent=4)
         return True
 
@@ -317,7 +310,7 @@ class SpineToolboxProject(MetaObject):
             Instance of a subclass if Tool
         """
         try:
-            with open(jsonfile, 'r') as fp:
+            with open(jsonfile, "r") as fp:
                 try:
                     definition = json.load(fp)
                 except ValueError:
@@ -346,7 +339,8 @@ class SpineToolboxProject(MetaObject):
             _tooltype = definition["tooltype"].lower()
         except KeyError:
             self._toolbox.msg_error.emit(
-                "No tool type defined in tool definition file. Supported types are " "'gams', 'julia' and 'executable'"
+                "No tool type defined in tool definition file. Supported types "
+                "are 'python', 'gams', 'julia' and 'executable'"
             )
             return None
         if _tooltype == "julia":

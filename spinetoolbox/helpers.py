@@ -41,7 +41,7 @@ from PySide2.QtGui import (
     QStandardItemModel,
     QStandardItem,
 )
-from .config import DEFAULT_PROJECT_DIR, REQUIRED_SPINEDB_API_VERSION
+from .config import REQUIRED_SPINEDB_API_VERSION, LATEST_PROJECT_VERSION
 
 
 def set_taskbar_icon():
@@ -260,6 +260,7 @@ def erase_dir(path, verbosity=False):
 @busy_effect
 def copy_dir(widget, src_dir, dst_dir):
     """Make a copy of a directory. All files and folders are copied.
+    Destination directory must not exist. Does not overwrite files.
 
     Args:
         widget (QWidget): Parent widget for QMessageBoxes
@@ -302,6 +303,41 @@ def copy_dir(widget, src_dir, dst_dir):
         QMessageBox.information(widget, "OS Error", msg)
         return False
     return True
+
+
+@busy_effect
+def recursive_overwrite(widget, src, dst, ignore=None, silent=True):
+    """Copies everything from source directory to destination directory recursively.
+    Overwrites existing files.
+
+    Args:
+        widget (QWidget): Enables e.g. printing to Event Log
+        src (str): Source directory
+        ignore: Ignored files
+        dst (str) Destination directory
+        silent (bool): If False, messages are sent to Event Log, If True, copying is done in silence
+    """
+    if os.path.isdir(src):
+        if not os.path.isdir(dst):
+            if not silent:
+                widget.msg.emit("Making directory <b>{0}</b>".format(dst))
+            os.makedirs(dst)
+        files = os.listdir(src)
+        if ignore is not None:
+            ignored = ignore(src, files)
+        else:
+            ignored = set()
+        for f in files:
+            if f not in ignored:
+                recursive_overwrite(widget, os.path.join(src, f),
+                                    os.path.join(dst, f),
+                                    ignore, silent)
+    else:
+        if not silent:
+            _, src_filename = os.path.split(src)
+            dst_dir, _ = os.path.split(dst)
+            widget.msg.emit("Copying <b>{0}</b> -> <b>{1}</b>".format(src_filename, dst_dir))
+        shutil.copyfile(src, dst)
 
 
 def rename_dir(widget, old_dir, new_dir):

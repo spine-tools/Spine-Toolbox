@@ -19,7 +19,7 @@ Contains a class for a widget that presents a 'Select Project Directory' dialog.
 import logging
 import os
 from PySide2.QtWidgets import QDialog, QFileSystemModel, QAbstractItemView, QAction
-from PySide2.QtCore import Qt, Slot, QDir, QStandardPaths, QTimer
+from PySide2.QtCore import Qt, Slot, QDir, QStandardPaths, QTimer, QModelIndex
 from PySide2.QtGui import QKeySequence
 from spinetoolbox.mvcmodels.project_icon_sort_model import ProjectDirectoryIconProvider
 
@@ -50,7 +50,7 @@ class OpenProjectDialog(QDialog):
         self.go_desktop_action = QAction(self)
         self.set_keyboard_shortcuts()
         self.selected_path = ""
-        self.file_model = QFileSystemModel()
+        self.file_model = CustomQFileSystemModel()
         self.file_model.setFilter(QDir.AllDirs | QDir.Files | QDir.NoDotAndDotDot)
         self.file_model.setNameFilters(["*.proj"])
         self.file_model.setNameFilterDisables(False)
@@ -63,8 +63,8 @@ class OpenProjectDialog(QDialog):
         self.ui.treeView_file_system.setCurrentIndex(root_index)
         self.ui.treeView_file_system.expand(root_index)
         self.ui.treeView_file_system.resizeColumnToContents(0)
+        self.file_model.sort(0, Qt.AscendingOrder)
         self.set_selected_path(root_index)
-        # QTimer.singleShot(300, self.scroll_to_shortcut)
         self.connect_signals()
 
     def set_keyboard_shortcuts(self):
@@ -171,3 +171,14 @@ class OpenProjectDialog(QDialog):
             event (QCloseEvent): Close event
         """
         self.close()
+
+
+class CustomQFileSystemModel(QFileSystemModel):
+    """Custom file system model."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+    def columnCount(self, parent=QModelIndex()):
+        """Returns one."""
+        return 1

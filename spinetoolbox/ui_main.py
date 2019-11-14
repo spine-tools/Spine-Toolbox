@@ -20,14 +20,13 @@ import os
 import locale
 import logging
 import json
-from PySide2.QtCore import QByteArray, QMimeData, Qt, Signal, Slot, QSettings, QUrl, SIGNAL, QSortFilterProxyModel
+from PySide2.QtCore import QByteArray, QMimeData, Qt, Signal, Slot, QSettings, QUrl, SIGNAL
 from PySide2.QtWidgets import (
     QMainWindow,
     QApplication,
     QFileDialog,
     QMessageBox,
     QCheckBox,
-    QInputDialog,
     QDockWidget,
     QAction,
     QWidgetAction,
@@ -36,7 +35,6 @@ from PySide2.QtGui import QDesktopServices, QGuiApplication, QKeySequence, QStan
 from .graphics_items import ProjectItemIcon
 from .mvcmodels.project_item_model import ProjectItemModel
 from .mvcmodels.tool_specification_model import ToolSpecificationModel
-from .mvcmodels.project_icon_sort_model import ProjectDirectoryIconFilterProxyModel, ProjectDirectoryIconProvider
 from .widgets.about_widget import AboutWidget
 from .widgets.custom_menus import (
     ProjectItemModelContextMenu,
@@ -55,10 +53,12 @@ from .widgets.python_repl_widget import PythonReplWidget
 from .widgets import toolbars
 from .widgets.open_project_widget import OpenProjectDialog
 from .project import SpineToolboxProject
-from .config import SPINE_TOOLBOX_VERSION, STATUSBAR_SS, TEXTBROWSER_SS, MAINWINDOW_SS, DOCUMENTATION_PATH
-from .helpers import DEFAULT_PROJECT_DIR, get_datetime, erase_dir, busy_effect, set_taskbar_icon, supported_img_formats
+from .config import SPINE_TOOLBOX_VERSION, STATUSBAR_SS, \
+    TEXTBROWSER_SS, MAINWINDOW_SS, DOCUMENTATION_PATH, DEFAULT_PROJECT_DIR, LATEST_PROJECT_VERSION
+from .helpers import get_datetime, erase_dir, busy_effect, set_taskbar_icon, supported_img_formats
 from .project_item import RootProjectItem, CategoryProjectItem
 from .project_items import data_store, data_connection, gdx_export, tool, view, data_interface
+from .project_upgrader import ProjectUpgrader
 
 
 class ToolboxUI(QMainWindow):
@@ -267,7 +267,7 @@ class ToolboxUI(QMainWindow):
                                 .format(previous_project))
             return
         if not self.open_project(previous_project, clear_event_log=False):
-            self.msg_error.emit("Opening previous project <b>{0}</b> failed".format(previous_project))
+            self.msg_error.emit("Opening previous project failed")
         return
 
     @Slot(name="new_project")
@@ -294,7 +294,6 @@ class ToolboxUI(QMainWindow):
         self.msg.emit("New project created")
         self.save_project()
 
-    # noinspection PyUnusedLocal
     @Slot(name="open_project")
     def open_project(self, load_dir=None, clear_event_log=True):
         """Opens project from a selected directory.
@@ -308,77 +307,92 @@ class ToolboxUI(QMainWindow):
         Returns:
             bool: True when opening the project succeeded, False otherwise
         """
-        tool_specification_paths = list()
-        connections = list()
-        old_style_project = False
         if not load_dir:
             dialog = OpenProjectDialog(self)
             retval = dialog.exec_()
             if retval == 0:  # Canceled or closed
                 return False
-            load_dir = dialog.selection()
-            if os.path.isfile(load_dir) and load_dir.endswith(".proj"):
-                # Load project from .proj file (old style project)
-                load_path = load_dir  # already a full file path
-                old_style_project = True
-            elif os.path.isdir(load_dir):
-                load_path = os.path.abspath(os.path.join(load_dir, ".spinetoolbox", "project.json"))
-                if not os.path.isfile(load_path):
-                    self.msg_error.emit("<b>{0}</b> is not a valid Spine Toolbox project directory."
-                                        "<br/>File <b>{1}</b> not found.".format(load_dir, load_path))
+            selection = dialog.selection()
+            if os.path.isfile(selection) and selection.endswith(".proj"):
+                # Convert old style (.proj) project to latest version
+                upgrader = ProjectUpgrader(self)
+                proj_dir = upgrader.get_project_directory()
+                if not proj_dir:
+                    self.msg.emit("Project upgrade canceled")
                     return False
-            else:
-                self.msg_error.emit("Selected path <b>{0}</b> is not a directory".format(load_dir))
-                return False
-        else:
-            load_path = os.path.abspath(os.path.join(load_dir, ".spinetoolbox", "project.json"))
-            if not os.path.isfile(load_path):
-                self.msg_error.emit("<b>{0}</b> is not a valid Spine Toolbox project directory."
-                                    "<br/>File <b>{1}</b> not found.".format(load_dir, load_path))
-                return False
+                proj_info = upgrader.open_proj_json(selection)
+                if not proj_info:
+                    return False
+                # Copy (project item) data from old project to new project directory
+                upgraded_proj_info = upgrader.upgrade(proj_info)
+                if not self.restore_project(upgraded_proj_info, proj_dir, clear_event_log):
+                    return False
+                if not upgrader.copy_data(selection, proj_dir):
+                    self.msg_warning.emit("Copying data to project <b>{0}</b> failed. "
+                                          "Please copy project item directories to directory <b>{1}</b> manually."
+                                          .format(proj_dir, os.path.join(proj_dir, ".spinetoolbox", "items")))
+                # Save project
+                self.save_project()
+                return True
+            load_dir = selection
+        load_path = os.path.abspath(os.path.join(load_dir, ".spinetoolbox", "project.json"))
+        if not os.path.isfile(load_path):
+            self.msg_error.emit("<b>{0}</b> is not a valid Spine Toolbox project directory."
+                                "<br/>File <b>{1}</b> not found.".format(load_dir, load_path))
+            return False
         try:
             with open(load_path, "r") as fh:
                 try:
-                    dicts = json.load(fh)
+                    proj_info = json.load(fh)
                 except json.decoder.JSONDecodeError:
                     self.msg_error.emit("Error in project file <b>{0}</b>. Invalid JSON. {0}".format(load_path))
                     return False
         except OSError:
             self.msg_error.emit("[OSError] Loading project file <b>{0}</b> failed".format(load_path))
             return False
-        # Initialize UI
+        if not self.restore_project(proj_info, load_dir, clear_event_log):
+            return False
+        return True
+
+    def restore_project(self, project_info, project_dir, clear_event_log):
+        """Initializes UI, Creates project, models, connections, etc., when opening a project.
+
+        Args:
+            project_info (dict): Project information dictionary
+            project_dir (str): Project directory
+            clear_event_log (bool): True clears Event Log, False does not
+
+        Returns:
+            bool: True when restoring project succeeded, False otherwise
+        """
+        version = project_info["project"]["version"]
+        # Upgrade project dictionary if needed
+        if version < LATEST_PROJECT_VERSION:
+            project_info = ProjectUpgrader(self).upgrade(project_info)
+        # Make room for a new project
         self.clear_ui()
         # Parse project info
-        project_dict = dicts["project"]
-        proj_name = project_dict["name"]
-        proj_desc = project_dict["description"]
-        try:
-            work_dir = project_dict["work_dir"]
-        except KeyError:
-            work_dir = ""
-        try:
-            tool_specification_paths = project_dict["tool_specifications"]
-        except KeyError:
-            try:
-                tool_specification_paths = project_dict["tool_templates"]
-            except KeyError:
-                self.msg_warning.emit("Tool specifications not found in project file")
-        try:
-            connections = project_dict["connections"]
-        except KeyError:
-            self.msg_warning.emit("No connections found in project file")
+        name = project_info["project"]["name"]  # Project name
+        desc = project_info["project"]["description"]  # Project description
+        tool_specification_paths = project_info["project"]["tool_specifications"]
+        connections = project_info["project"]["connections"]
+        project_items = project_info["objects"]
+        # TODO: Make work_dir global
+        # try:
+        #     work_dir = project_dict["work_dir"]
+        # except KeyError:
+        #     work_dir = ""
         # Create project
-        self._project = SpineToolboxProject(self, proj_name, proj_desc,
-                                            base_dir=load_dir, work_dir=work_dir, is_old_style=old_style_project)
-        # Init models and views
+        self._project = SpineToolboxProject(self, name, desc, base_dir=project_dir)
         self.setWindowTitle("Spine Toolbox    -- {} --".format(self._project.name))
-        # Clear QTextBrowsers
+        # Clear text browsers
         if clear_event_log:
             self.ui.textBrowser_eventlog.clear()
         self.ui.textBrowser_process_output.clear()
-        # Populate project model with items read from JSON file
+        # Init models
         self.init_models(tool_specification_paths)
-        if not self._project.load(dicts["objects"]):
+        # Populate project model with project items
+        if not self._project.load(project_items):
             self.msg_error.emit("Loading project items failed")
             return False
         self.ui.treeView_project.expandAll()
@@ -388,7 +402,7 @@ class ToolboxUI(QMainWindow):
         # Simulate project execution after restoring links
         self._project.simulate_project_execution()
         self._project.connect_signals()
-        # Initialize Design View scene
+        # Initialize scene on Design View
         self.ui.graphicsView.init_scene()
         # self.update_recent_projects()
         self.msg.emit("Project <b>{0}</b> is now open".format(self._project.name))
@@ -396,7 +410,7 @@ class ToolboxUI(QMainWindow):
 
     @Slot(name="show_recent_projects_menu")
     def show_recent_projects_menu(self):
-        """Updates and sets up the recent projects menu to File-Open recent action."""
+        """Updates and sets up the recent projects menu to File-Open recent menu item."""
         if not self.recent_projects_menu.isVisible():
             self.recent_projects_menu = RecentProjectsPopupMenu(self)
             self.ui.actionOpen_recent.setMenu(self.recent_projects_menu)
@@ -411,27 +425,9 @@ class ToolboxUI(QMainWindow):
         tool_specifications = list()
         for i in range(self.tool_specification_model.rowCount()):
             tool_specifications.append(self.tool_specification_model.tool_specification(i).get_def_path())
-        if self._project.is_old_style:
-            # Ask the user for a directory where to save the project
-            # noinspection PyCallByClass, PyArgumentList
-            answer = QFileDialog.getExistingDirectory(
-                self, "Select or create a new directory for this project", os.path.abspath("C:\\")
-            )
-            if answer == "":  # Canceled (american-english), cancelled (british-english)
-                return
-            # Check that it's a directory
-            if not os.path.isdir(answer):
-                msg = "Selected thing is not a directory, please try again"
-                # noinspection PyCallByClass, PyArgumentList
-                QMessageBox.warning(self, "Invalid selection", msg)
-                return
-            if not self._project.save(tool_specifications, answer):
-                self.msg_error.emit("Project saving failed")
-                return
-        else:
-            if not self._project.save(tool_specifications):
-                self.msg_error.emit("Project saving failed")
-                return
+        if not self._project.save(tool_specifications):
+            self.msg_error.emit("Project saving failed")
+            return
         self.msg.emit("Project saved to <b>{0}</b>".format(self._project.project_dir))
 
     @Slot(name="save_project_as")
@@ -1502,8 +1498,6 @@ class ToolboxUI(QMainWindow):
             return
         # Save settings
         if self._project is None:
-            self._qsettings.setValue("appSettings/previousProject", "")
-        elif self._project.is_old_style:
             self._qsettings.setValue("appSettings/previousProject", "")
         else:
             self._qsettings.setValue("appSettings/previousProject", self._project.project_dir)
