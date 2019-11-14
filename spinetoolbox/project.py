@@ -25,7 +25,7 @@ from .metaobject import MetaObject
 from .helpers import project_dir, create_dir, copy_dir
 from .tool_specifications import JuliaTool, PythonTool, GAMSTool, ExecutableTool
 from .config import DEFAULT_WORK_DIR, INVALID_CHARS
-from .executioner import DirectedGraphHandler, ExecutionInstance, ExecutionState, ResourceFinder
+from .executioner import DirectedGraphHandler, ExecutionInstance, ExecutionState, ResourceMap
 from .spine_db_manager import SpineDBManager
 
 
@@ -381,8 +381,9 @@ class SpineToolboxProject(MetaObject):
             )
             return
         # Make execution instance, connect signals and start execution
-        resource_finder = ResourceFinder(ordered_nodes, self._toolbox.project_item_model)
-        self.execution_instance = ExecutionInstance(self._toolbox, ordered_nodes, resource_finder)
+        resource_map = ResourceMap()
+        resource_map.update(ordered_nodes, self._toolbox.project_item_model)
+        self.execution_instance = ExecutionInstance(self._toolbox, ordered_nodes, resource_map)
         self._toolbox.msg.emit("")
         self._toolbox.msg.emit("--------------------------------------------------")
         self._toolbox.msg.emit("<b>Executing Selected Directed Acyclic Graph</b>")
@@ -421,8 +422,9 @@ class SpineToolboxProject(MetaObject):
         self._executed_graph_index = 0
         # Get first graph, connect signals and start executing it
         ordered_nodes = self._ordered_dags.pop(self._executed_graph_index)  # Pop first set of items to execute
-        resource_finder = ResourceFinder(ordered_nodes, self._toolbox.project_item_model)
-        self.execution_instance = ExecutionInstance(self._toolbox, ordered_nodes, resource_finder)
+        resource_map = ResourceMap()
+        resource_map.update(ordered_nodes, self._toolbox.project_item_model)
+        self.execution_instance = ExecutionInstance(self._toolbox, ordered_nodes, resource_map)
         self._toolbox.msg.emit("")
         self._toolbox.msg.emit("---------------------------------------")
         self._toolbox.msg.emit("<b>Executing All Directed Acyclic Graphs</b>")
@@ -463,8 +465,9 @@ class SpineToolboxProject(MetaObject):
             self._toolbox.msg_success.emit("Execution complete")
             return
         # Execute next graph
-        resource_finder = ResourceFinder(execution_list, self._toolbox.project_item_model)
-        self.execution_instance = ExecutionInstance(self._toolbox, execution_list, resource_finder)
+        resource_map = ResourceMap()
+        resource_map.update(execution_list, self._toolbox.project_item_model)
+        self.execution_instance = ExecutionInstance(self._toolbox, execution_list, resource_map)
         self._toolbox.msg.emit("")
         self._toolbox.msg.emit("---------------------------------------")
         self._toolbox.msg.emit("<b>Starting DAG {0}/{1}</b>".format(self._executed_graph_index + 1, self._n_graphs))
@@ -532,11 +535,13 @@ class SpineToolboxProject(MetaObject):
                 project_item.invalidate_workflow(edges)
             return
         # Make execution instance and run simulation
-        resource_finder = ResourceFinder(ordered_nodes, self._toolbox.project_item_model)
+        resource_map = ResourceMap()
+        project_item_model = self._toolbox.project_item_model
+        resource_map.update(ordered_nodes, project_item_model)
         for rank, item in enumerate(ordered_nodes):
-            ind = self._toolbox.project_item_model.find_item(item)
-            project_item = self._toolbox.project_item_model.project_item(ind)
-            project_item.handle_dag_changed(rank, resource_finder.available_upstream_resources(item))
+            ind = project_item_model.find_item(item)
+            project_item = project_item_model.project_item(ind)
+            project_item.handle_dag_changed(rank, resource_map.available_upstream_resources(item))
 
     def notify_all_items_of_dag_changes(self):
         """Simulates the execution of all dags in the project."""

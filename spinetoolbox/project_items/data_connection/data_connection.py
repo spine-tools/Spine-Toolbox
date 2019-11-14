@@ -377,6 +377,13 @@ class DataConnection(ProjectItem):
         """Update Data Connection tab name label. Used only when renaming project items."""
         self._properties_ui.label_dc_name.setText(self.name)
 
+    def resources_for_advertising(self):
+        """Returns list of references and files to advertise to the execution instance."""
+        refs = self.file_references()
+        f_list = [os.path.join(self.data_dir, f) for f in self.data_files()]
+        resources = [ProjectItemResource(self, "file", url=pathlib.Path(ref).as_uri()) for ref in (refs + f_list)]
+        return resources
+
     def stop_execution(self):
         """Stops executing this Data Connection."""
         self._toolbox.msg.emit("Stopping {0}".format(self.name))
@@ -442,9 +449,7 @@ class DataConnection(ProjectItem):
         """See base class."""
         return "Data Connection"
 
-    def available_resources_downstream(self):
+    def available_resources_downstream(self, upstream_resources):
         """See base class."""
-        refs = self.file_references()
-        f_list = [os.path.join(self.data_dir, f) for f in self.data_files()]
-        resources = [ProjectItemResource(self, "file", url=pathlib.Path(ref).as_uri()) for ref in (refs + f_list)]
+        resources = self.resources_for_advertising()
         return resources
