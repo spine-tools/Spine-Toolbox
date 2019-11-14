@@ -317,7 +317,7 @@ class ToolboxUI(QMainWindow):
         self.init_models(tool_specification_paths=list())  # Start project with no tool specifications
         self.setWindowTitle("Spine Toolbox    -- {} --".format(self._project.name))
         self.ui.graphicsView.init_scene(empty=True)
-        # self.update_recent_projects()
+        self.update_recent_projects()
         self.msg.emit("New project created")
         self.save_project()
 
@@ -426,7 +426,7 @@ class ToolboxUI(QMainWindow):
         self._project.connect_signals()
         # Initialize scene on Design View
         self.ui.graphicsView.init_scene()
-        # self.update_recent_projects()
+        self.update_recent_projects()
         self.msg.emit("Project <b>{0}</b> is now open".format(self._project.name))
         return True
 
@@ -1472,7 +1472,7 @@ class ToolboxUI(QMainWindow):
         """Removes entry that contains given path from the recent project files list in QSettings.
 
         Args:
-            p (str): Full path to a project file (.proj)
+            p (str): Full path to a project directory
         """
         recents = self._qsettings.value("appSettings/recentProjects", defaultValue=None)
         if not recents:
@@ -1493,7 +1493,7 @@ class ToolboxUI(QMainWindow):
     def update_recent_projects(self):
         """Adds a new entry to QSettings variable that remembers the five most recent project paths."""
         recents = self._qsettings.value("appSettings/recentProjects", defaultValue=None)
-        entry = self.project().name + "<>" + self.project().path
+        entry = self.project().name + "<>" + self.project().project_dir
         if not recents:
             updated_recents = entry
         else:
@@ -1528,7 +1528,7 @@ class ToolboxUI(QMainWindow):
             self._qsettings.setValue("appSettings/previousProject", "")
         else:
             self._qsettings.setValue("appSettings/previousProject", self._project.project_dir)
-            # self.update_recent_projects()
+            self.update_recent_projects()
             # Show save project prompt
         self._qsettings.setValue("mainWindow/windowSize", self.size())
         self._qsettings.setValue("mainWindow/windowPosition", self.pos())

@@ -20,11 +20,10 @@ import os
 import logging
 import json
 from PySide2.QtCore import Slot
-from PySide2.QtWidgets import QMessageBox
 from .metaobject import MetaObject
-from .helpers import create_dir, copy_dir
+from .helpers import create_dir
 from .tool_specifications import JuliaTool, PythonTool, GAMSTool, ExecutableTool
-from .config import INVALID_CHARS, DEFAULT_PROJECT_DIR, LATEST_PROJECT_VERSION
+from .config import LATEST_PROJECT_VERSION
 from .executioner import DirectedGraphHandler, ExecutionInstance
 
 
