@@ -354,6 +354,8 @@ class Tool(ProjectItem):
     def _update_basedir(self):
         """Updates the path to the base directory for tool execution, depending on `execute_in_work`.
         """
+        if not self.tool_specification():
+            return
         if self.basedir is not None:
             return
         if self.execute_in_work:
