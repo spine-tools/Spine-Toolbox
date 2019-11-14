@@ -64,7 +64,11 @@ class ToolSpecification(MetaObject):
         else:
             self.path = path
         self.includes = includes
-        self.cmdline_args = cmdline_args
+        # TODO: Deal with cmdline arguments that have spaces. They should be stored in a list in the definition file
+        if (cmdline_args is not None) and (cmdline_args != ''):
+            self.cmdline_args = cmdline_args.split(" ")
+        else:
+            self.cmdline_args = []
         self.inputfiles = set(inputfiles) if inputfiles else set()
         self.inputfiles_opt = set(inputfiles_opt) if inputfiles_opt else set()
         self.outputfiles = set(outputfiles) if outputfiles else set()
@@ -125,11 +129,7 @@ class ToolSpecification(MetaObject):
 
     def get_cmdline_args(self):
         """Returns tool specification args as list."""
-        # TODO: Deal with cmdline arguments that have spaces. They should be stored in a list in the definition file
-        if (self.cmdline_args is not None) and (self.cmdline_args != ''):
-            # Tool spec cmdline args is a space delimited string. Return them as a list.
-            return self.cmdline_args.split(" ")
-        return []
+        return self.cmdline_args
 
     def create_tool_instance(self, basedir):
         """Returns an instance of the tool specification configured to run in the given directory.

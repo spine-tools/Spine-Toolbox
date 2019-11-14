@@ -18,9 +18,9 @@ Classes for custom context menus and pop-up menus.
 
 import os
 from operator import itemgetter
-from PySide2.QtWidgets import QMenu, QWidgetAction, QAction, QWidget
+from PySide2.QtWidgets import QMenu, QWidgetAction, QAction
 from PySide2.QtGui import QIcon
-from PySide2.QtCore import Qt, Signal, Slot, QPoint
+from PySide2.QtCore import Signal, Slot, QPoint
 from ..helpers import fix_name_ambiguity, tuple_itemgetter
 from ..plotting import plot_pivot_column, plot_selection, PlottingError, PivotTablePlottingHints
 from .custom_qwidgets import FilterWidget
@@ -100,16 +100,19 @@ class ProjectItemModelContextMenu(CustomContextMenu):
 
 
 class ProjectItemContextMenu(CustomContextMenu):
-    """Context menu for project items in the QTreeView and in the QGraphicsView.
-
-    Attributes:
-        parent (QWidget): Parent for menu widget (ToolboxUI)
-        position (QPoint): Position on screen
-    """
+    """Context menu for project items in the Project tree widget and in the Design View."""
 
     def __init__(self, parent, position):
-        """Class constructor."""
+        """
+        Args:
+            parent (QWidget): Parent for menu widget (ToolboxUI)
+            position (QPoint): Position on screen
+        """
         super().__init__(parent, position)
+        self.add_action("Copy")
+        self.add_action("Paste")
+        self.add_action("Duplicate")
+        self.addSeparator()
         self.add_action("Open directory...")
         self.addSeparator()
         self.add_action("Rename")
@@ -157,7 +160,7 @@ class ToolSpecificationContextMenu(CustomContextMenu):
         self.add_action("Remove Tool specification")
 
 
-class ObjectTreeContextMenu(CustomContextMenu):
+class EntityTreeContextMenu(CustomContextMenu):
     """Context menu class for object tree items in tree view form.
 
     Attributes:
@@ -171,48 +174,17 @@ class ObjectTreeContextMenu(CustomContextMenu):
         super().__init__(parent, position)
         if not index.isValid():
             return
-        copy_icon = self._parent.ui.actionCopy.icon()
-        plus_object_icon = self._parent.ui.actionAdd_objects.icon()
-        plus_relationship_icon = self._parent.ui.actionAdd_relationships.icon()
-        edit_object_icon = self._parent.ui.actionEdit_objects.icon()
-        edit_relationship_icon = self._parent.ui.actionEdit_relationships.icon()
-        remove_icon = QIcon(":/icons/menu_icons/cube_minus.svg")
-        fully_expand_icon = self._parent.fully_expand_icon
-        fully_collapse_icon = self._parent.fully_collapse_icon
-        find_next_icon = self._parent.find_next_icon
-        item_type = index.data(Qt.UserRole)
-        self.add_action("Copy text", copy_icon)
+        item = index.model().item_from_index(index)
+        self.add_action("Copy text", QIcon(":/icons/menu_icons/copy.svg"))
         self.addSeparator()
-        if index.model().hasChildren(index):
-            self.add_action("Fully expand", fully_expand_icon)
-            self.add_action("Fully collapse", fully_collapse_icon)
-        if item_type == 'relationship':
-            self.add_action("Find next", find_next_icon)
-        self.addSeparator()
-        if item_type == 'root':
-            self.add_action("Add object classes", plus_object_icon)
-        elif item_type == 'object_class':
-            self.add_action("Add relationship classes", plus_relationship_icon)
-            self.add_action("Add objects", plus_object_icon)
+        for action_block in item.context_menu_actions:
+            for text, icon in action_block.items():
+                self.add_action(text, icon)
             self.addSeparator()
-            self.add_action("Edit object classes", edit_object_icon)
-        elif item_type == 'object':
-            self.addSeparator()
-            self.add_action("Edit objects", edit_object_icon)
-        elif item_type == 'relationship_class':
-            self.add_action("Add relationships", plus_relationship_icon)
-            self.addSeparator()
-            self.add_action("Edit relationship classes", edit_relationship_icon)
-        elif item_type == 'relationship':
-            self.addSeparator()
-            self.add_action("Edit relationships", edit_relationship_icon)
-        if item_type != 'root':
-            self.addSeparator()
-            self.add_action("Remove selection", remove_icon)
 
 
-class RelationshipTreeContextMenu(CustomContextMenu):
-    """Context menu class for relationship tree items in tree view form.
+class ObjectTreeContextMenu(EntityTreeContextMenu):
+    """Context menu class for object tree items in tree view form.
 
     Attributes:
         parent (QWidget): Parent for menu widget (TreeViewForm)
@@ -222,27 +194,22 @@ class RelationshipTreeContextMenu(CustomContextMenu):
 
     def __init__(self, parent, position, index):
         """Class constructor."""
-        super().__init__(parent, position)
-        if not index.isValid():
-            return
-        copy_icon = self._parent.ui.actionCopy.icon()
-        plus_relationship_icon = self._parent.ui.actionAdd_relationships.icon()
-        edit_relationship_icon = self._parent.ui.actionEdit_relationships.icon()
-        remove_icon = QIcon(":/icons/menu_icons/cubes_minus.svg")
-        item_type = index.data(Qt.UserRole)
-        self.add_action("Copy text", copy_icon)
-        self.addSeparator()
-        if item_type == 'root':
-            self.add_action("Add relationship classes", plus_relationship_icon)
-        elif item_type == 'relationship_class':
-            self.add_action("Add relationships", plus_relationship_icon)
+        super().__init__(parent, position, index)
+        item = index.model().item_from_index(index)
+        if item.has_children():
             self.addSeparator()
-            self.add_action("Edit relationship classes", edit_relationship_icon)
-        elif item_type == 'relationship':
-            self.add_action("Edit relationships", edit_relationship_icon)
-        if item_type != 'root':
-            self.addSeparator()
-            self.add_action("Remove selection", remove_icon)
+            self.add_action("Fully expand", QIcon(":/icons/menu_icons/angle-double-right.svg"))
+            self.add_action("Fully collapse", QIcon(":/icons/menu_icons/angle-double-left.svg"))
+
+
+class RelationshipTreeContextMenu(EntityTreeContextMenu):
+    """Context menu class for relationship tree items in tree view form.
+
+    Attributes:
+        parent (QWidget): Parent for menu widget (TreeViewForm)
+        position (QPoint): Position on screen
+        index (QModelIndex): Index of item that requested the context-menu
+    """
 
 
 class ParameterContextMenu(CustomContextMenu):
@@ -347,66 +314,77 @@ class GraphViewContextMenu(CustomContextMenu):
     def __init__(self, parent, position):
         """Class constructor."""
         super().__init__(parent, position)
-        self.add_action("Hide selected items", enabled=len(parent.object_item_selection) > 0)
+        self.add_action("Hide selected items", enabled=len(parent.entity_item_selection) > 0)
         self.add_action("Show hidden items", enabled=len(parent.hidden_items) > 0)
         self.addSeparator()
-        self.add_action("Prune selected items", enabled=len(parent.object_item_selection) > 0)
+        self.add_action("Prune selected items", enabled=len(parent.entity_item_selection) > 0)
         self.add_action("Reinstate pruned items", enabled=len(parent.rejected_items) > 0)
 
 
-class ObjectItemContextMenu(CustomContextMenu):
-    """Context menu class for object graphic items in graph view.
+class EntityItemContextMenu(CustomContextMenu):
+    """Context menu class for entity graphic items in graph view."""
 
-    Attributes:
-        parent (QWidget): Parent for menu widget (GraphViewForm)
-        position (QPoint): Position on screen
-        graphics_item (ObjectItem (QGraphicsItem)): item that requested the menu
-    """
+    def __init__(self, parent, position):
+        """Class constructor.
 
-    def __init__(self, parent, position, graphics_item):
-        """Class constructor."""
+        Args:
+            parent (QWidget): Parent for menu widget (GraphViewForm)
+            position (QPoint): Position on screen
+        """
         super().__init__(parent, position)
-        self.relationship_class_dict = dict()
-        object_item_selection_length = len(parent.object_item_selection)
+        self.selection_count = len(parent.entity_item_selection)
         self.add_action('Hide')
         self.add_action('Prune')
+
+
+class ObjectItemContextMenu(EntityItemContextMenu):
+    def __init__(self, parent, position, graphics_item):
+        """Class constructor.
+
+        Args:
+            parent (QWidget): Parent for menu widget (GraphViewForm)
+            position (QPoint): Position on screen
+            graphics_item (ObjectItem (QGraphicsItem)): item that requested the menu
+        """
+        super().__init__(parent, position)
         if parent.read_only:
             return
         self.addSeparator()
-        if graphics_item.is_template:
-            self.add_action("Set name", enabled=object_item_selection_length == 1)
+        if graphics_item.is_wip:
+            self.add_action("Set name", enabled=self.selection_count == 1)
         else:
-            self.add_action("Rename", enabled=object_item_selection_length == 1)
+            self.add_action("Rename", enabled=self.selection_count == 1)
         self.add_action("Remove")
-        self.addSeparator()
-        if graphics_item.is_template or object_item_selection_length > 1:
+        if graphics_item.is_wip or self.selection_count > 1:
             return
-        for item in parent.relationship_class_list_model.findItems('*', Qt.MatchWildcard):
-            relationship_class = item.data(Qt.UserRole + 1)
-            if not relationship_class:
-                continue
-            relationship_class_id = relationship_class['id']
-            relationship_class_name = relationship_class['name']
-            object_class_id_list = [int(x) for x in relationship_class["object_class_id_list"].split(",")]
-            object_class_name_list = relationship_class["object_class_name_list"].split(",")
-            fixed_object_class_name_list = object_class_name_list.copy()
-            fix_name_ambiguity(fixed_object_class_name_list)
-            for i, object_class_name in enumerate(object_class_name_list):
-                if object_class_name != graphics_item.object_class_name:
+        self.addSeparator()
+        self.relationship_class_dict = dict()
+        for relationship_class in parent.db_mngr.get_items(parent.db_map, "relationship class"):
+            object_class_names = relationship_class["object_class_name_list"].split(",")
+            fixed_object_class_names = fix_name_ambiguity(object_class_names)
+            for i, object_class_name in enumerate(object_class_names):
+                if object_class_name != graphics_item.entity_class_name:
                     continue
                 option = "Add '{}' relationship".format(relationship_class['name'])
-                fixed_object_class_name = fixed_object_class_name_list[i]
-                if object_class_name != fixed_object_class_name:
-                    option += " as '{}'".format(fixed_object_class_name)
+                if object_class_name != fixed_object_class_names[i]:
+                    option += f" as dimension {i}"
                 self.add_action(option)
-                self.relationship_class_dict[option] = {
-                    'id': relationship_class_id,
-                    'name': relationship_class_name,
-                    'object_class_id_list': object_class_id_list,
-                    'object_class_name_list': object_class_name_list,
-                    'object_name_list': fixed_object_class_name_list,
-                    'dimension': i,
-                }
+                self.relationship_class_dict[option] = {'id': relationship_class["id"], 'dimension': i}
+
+
+class RelationshipItemContextMenu(EntityItemContextMenu):
+    def __init__(self, parent, position):
+        """Class constructor.
+
+        Args:
+            parent (QWidget): Parent for menu widget (GraphViewForm)
+            position (QPoint): Position on screen
+        """
+        super().__init__(parent, position)
+        if parent.read_only:
+            return
+        self.addSeparator()
+        self.add_action("Remove")
 
 
 class CustomPopupMenu(QMenu):
@@ -508,7 +486,6 @@ class RecentProjectsPopupMenu(CustomPopupMenu):
 
     def __init__(self, parent):
         """
-
         Args:
             parent (QWidget): Parent widget of this menu (ToolboxUI)
         """

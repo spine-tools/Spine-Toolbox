@@ -22,6 +22,7 @@ import shutil
 from PySide2.QtCore import QObject, Signal, Slot
 from . import qsubprocess
 from .config import GAMS_EXECUTABLE, JULIA_EXECUTABLE, PYTHON_EXECUTABLE
+from .executioner import ExecutionState
 
 
 class ToolInstance(QObject):
@@ -49,7 +50,9 @@ class ToolInstance(QObject):
     def terminate_instance(self):
         """Terminates Tool instance execution."""
         if not self.tool_process:
-            self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(-2)
+            self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(
+                ExecutionState.STOP_REQUESTED
+            )
             return
         # Disconnect tool_process signals
         try:
@@ -72,7 +75,7 @@ class ToolInstance(QObject):
         """
         raise NotImplementedError
 
-    def execute(self):
+    def execute(self, **kwargs):
         """Executes a prepared instance. Implement in subclasses."""
         raise NotImplementedError
 
@@ -107,9 +110,9 @@ class GAMSToolInstance(ToolInstance):
         self.args.append("logoption=3")  # TODO: This should be an option in Settings
         self.append_cmdline_args()  # Append Tool specific cmd line args into args list
 
-    def execute(self):
+    def execute(self, **kwargs):
         """Executes a prepared instance."""
-        self.tool_process = qsubprocess.QSubProcess(self._toolbox, self.program, self.args)
+        self.tool_process = qsubprocess.QSubProcess(self._toolbox, self.program, self.args, **kwargs)
         self.tool_process.subprocess_finished_signal.connect(self.handle_execution_finished)
         # self.tool_process.start_process(workdir=os.path.split(self.program)[0])
         # TODO: Check if this sets the curDir argument. Is the curDir arg now useless?
@@ -188,7 +191,7 @@ class JuliaToolInstance(ToolInstance):
             self.args.append(script_path)
             self.append_cmdline_args()
 
-    def execute(self):
+    def execute(self, **kwargs):
         """Executes a prepared instance."""
         if self._toolbox.qsettings().value("appSettings/useEmbeddedJulia", defaultValue="2") == "2":
             self.tool_process = self._toolbox.julia_repl
@@ -196,7 +199,7 @@ class JuliaToolInstance(ToolInstance):
             # self._toolbox.msg.emit("\tCommand:<b>{0}</b>".format(self.julia_repl_command))
             self.tool_process.execute_instance(self.julia_repl_command)
         else:
-            self.tool_process = qsubprocess.QSubProcess(self._toolbox, self.program, self.args)
+            self.tool_process = qsubprocess.QSubProcess(self._toolbox, self.program, self.args, **kwargs)
             self.tool_process.subprocess_finished_signal.connect(self.handle_execution_finished)
             # On Julia the Qprocess workdir must be set to the path where the main script is
             # Otherwise it doesn't find input files in subdirectories
@@ -276,7 +279,7 @@ class PythonToolInstance(ToolInstance):
             # 1st cmd: Change current work directory
             # 2nd cmd: Run script with given args
             # Cast args in list to strings and combine them to a single string
-            args = " ".join([str(x) for x in self.tool_specification.get_cmdline_args()])
+            args = " ".join([repr(x) for x in self.tool_specification.get_cmdline_args()])
             cd_work_dir_cmd = "%cd -q {0} ".format(work_dir)  # -q: quiet
             run_script_cmd = "%run \"{0}\" {1}".format(self.tool_specification.main_prgm, args)
             # Populate FIFO command queue
@@ -294,7 +297,7 @@ class PythonToolInstance(ToolInstance):
             self.args.append(script_path)  # TODO: Why are we doing this?
             self.append_cmdline_args()
 
-    def execute(self):
+    def execute(self, **kwargs):
         """Executes a prepared instance."""
         if self._toolbox.qsettings().value("appSettings/useEmbeddedPython", defaultValue="0") == "2":
             self.tool_process = self._toolbox.python_repl
@@ -313,7 +316,7 @@ class PythonToolInstance(ToolInstance):
                 self.tool_process.commands = self.ipython_command_list
                 self.tool_process.launch_kernel(kern_name, kern_display_name)
         else:
-            self.tool_process = qsubprocess.QSubProcess(self._toolbox, self.program, self.args)
+            self.tool_process = qsubprocess.QSubProcess(self._toolbox, self.program, self.args, **kwargs)
             self.tool_process.subprocess_finished_signal.connect(self.handle_execution_finished)
             self.tool_process.start_process(workdir=self.basedir)
 
@@ -381,9 +384,9 @@ class ExecutableToolInstance(ToolInstance):
             self.program = batch_path
         self.append_cmdline_args()  # Append Tool specific cmd line args into args list
 
-    def execute(self):
+    def execute(self, **kwargs):
         """Executes a prepared instance."""
-        self.tool_process = qsubprocess.QSubProcess(self._toolbox, self.program, self.args)
+        self.tool_process = qsubprocess.QSubProcess(self._toolbox, self.program, self.args, **kwargs)
         self.tool_process.subprocess_finished_signal.connect(self.handle_execution_finished)
         self.tool_process.start_process(workdir=self.basedir)
 

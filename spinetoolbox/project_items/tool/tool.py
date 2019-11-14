@@ -22,10 +22,10 @@ import shutil
 import tempfile
 import pathlib
 import glob
-import fnmatch
-from PySide2.QtCore import Slot, Qt, QUrl, QFileInfo, QTimeLine
+from PySide2.QtCore import Slot, Qt, QUrl, QFileInfo, QTimeLine, QFileSystemWatcher
 from PySide2.QtGui import QDesktopServices, QStandardItemModel, QStandardItem
 from PySide2.QtWidgets import QFileIconProvider
+from spinetoolbox.executioner import ExecutionState
 from spinetoolbox.project_item import ProjectItem, ProjectItemResource
 from spinetoolbox.config import TOOL_OUTPUT_DIR
 from spinetoolbox.widgets.custom_menus import ToolSpecificationOptionsPopupmenu
@@ -46,7 +46,7 @@ class Tool(ProjectItem):
             tool (str): Name of this Tool's Tool specification
             execute_in_work (bool): Execute associated Tool specification in work (True) or source directory (False)
         """
-        super().__init__(toolbox, "Tool", name, description, x, y)
+        super().__init__(toolbox, name, description, x, y)
         self.source_file_model = QStandardItemModel()
         self.populate_source_file_model(None)
         self.input_file_model = QStandardItemModel()
@@ -78,6 +78,26 @@ class Tool(ProjectItem):
         self.basedir = None
         # Make directory for results
         self.output_dir = os.path.join(self.data_dir, TOOL_OUTPUT_DIR)
+        self.output_dir_watcher = QFileSystemWatcher(self)
+        self.watch_output_dir()
+        self.output_dir_watcher.directoryChanged.connect(lambda path: self.item_changed.emit())
+
+    def watch_output_dir(self):
+        if not os.path.isdir(self.output_dir):
+            return
+        self.output_dir_watcher.addPath(self.output_dir)
+        sub_dir_paths = [os.path.join(root, d) for root, dirs, _ in os.walk(self.output_dir) for d in dirs]
+        self.output_dir_watcher.addPaths(sub_dir_paths)
+
+    @staticmethod
+    def item_type():
+        """See base class."""
+        return "Tool"
+
+    @staticmethod
+    def category():
+        """See base class."""
+        return "Tools"
 
     def make_signal_handler_dict(self):
         """Returns a dictionary of all shared signals and their handlers.
@@ -125,12 +145,12 @@ class Tool(ProjectItem):
             self._tool_specification_name = self.tool_specification().name
         self.execute_in_work = self._properties_ui.radioButton_execute_in_work.isChecked()
 
-    @Slot(bool, name="update_execution_mode")
+    @Slot(bool)
     def update_execution_mode(self, checked):
         """Slot for execute in work radio button toggled signal."""
         self.execute_in_work = checked
 
-    @Slot(int, name="update_tool_specification")
+    @Slot(int)
     def update_tool_specification(self, row):
         """Update Tool specification according to selection in the specification comboBox.
 
@@ -166,7 +186,7 @@ class Tool(ProjectItem):
             self._properties_ui.lineEdit_tool_args.setText("")
             self._properties_ui.radioButton_execute_in_work.setChecked(True)
         else:
-            self._properties_ui.lineEdit_tool_args.setText(self.tool_specification().cmdline_args)
+            self._properties_ui.lineEdit_tool_args.setText(" ".join(self.tool_specification().cmdline_args))
             if self.execute_in_work:
                 self._properties_ui.radioButton_execute_in_work.setChecked(True)
             else:
@@ -192,7 +212,7 @@ class Tool(ProjectItem):
             self.populate_specification_model(populate=True)
             self.execute_in_work = self.tool_specification().execute_in_work
 
-    @Slot(bool, name="open_results")
+    @Slot(bool)
     def open_results(self, checked=False):
         """Open output directory in file browser."""
         if not os.path.exists(self.output_dir):
@@ -331,16 +351,11 @@ class Tool(ProjectItem):
         """Update Tool tab name label. Used only when renaming project items."""
         self._properties_ui.label_tool_name.setText(self.name)
 
-    def execute(self):
+    def _do_execute(self, resources_upstream, resources_downstream):
         """Executes this Tool."""
-        exec_inst = self._project.execution_instance
         if not self.tool_specification():
             self._toolbox.msg_warning.emit("Tool <b>{0}</b> has no Tool specification to execute".format(self.name))
-            exec_inst.project_item_execution_finished_signal.emit(0)  # continue
-            return
-        self._toolbox.msg.emit("")
-        self._toolbox.msg.emit("Executing Tool <b>{0}</b>".format(self.name))
-        self._toolbox.msg.emit("***")
+            return ExecutionState.CONTINUE
         if self.execute_in_work:
             work_or_source = "work"
             work_dir = self._toolbox.work_dir
@@ -366,8 +381,7 @@ class Tool(ProjectItem):
             )
             if not self.copy_program_files():
                 self._toolbox.msg_error.emit("Copying program files to base directory failed.")
-                exec_inst.project_item_execution_finished_signal.emit(-1)  # abort
-                return
+                return ExecutionState.ABORT
         else:
             work_or_source = "source"
             self.basedir = self.tool_specification().path
@@ -392,19 +406,17 @@ class Tool(ProjectItem):
             # logging.debug("Tool requires {0} dirs and {1} files".format(n_dirs, n_files))
             if n_files > 0:
                 self._toolbox.msg.emit("*** Searching for required input files ***")
-                file_paths = self.find_input_files(exec_inst)
+                file_paths = self.find_input_files(resources_upstream)
                 not_found = [k for k, v in file_paths.items() if v is None]
                 if not_found:
                     self._toolbox.msg_error.emit("Required file(s) <b>{0}</b> not found".format(", ".join(not_found)))
-                    exec_inst.project_item_execution_finished_signal.emit(-1)  # abort
-                    return
+                    return ExecutionState.ABORT
                 # Required files and dirs should have been found at this point, so create instance
                 self._toolbox.msg.emit("*** Copying input files to {0} directory ***".format(work_or_source))
                 # Copy input files to ToolInstance work or source directory
                 if not self.copy_input_files(file_paths):
                     self._toolbox.msg_error.emit("Copying input files failed. Tool execution aborted.")
-                    exec_inst.project_item_execution_finished_signal.emit(-1)  # abort
-                    return
+                    return ExecutionState.ABORT
             else:  # just for testing
                 # logging.debug("No input files to copy")
                 pass
@@ -413,23 +425,18 @@ class Tool(ProjectItem):
                 if not self.create_input_dirs():
                     # Creating directories failed -> abort
                     self._toolbox.msg_error.emit("Creating input subdirectories failed. Tool execution aborted.")
-                    exec_inst.project_item_execution_finished_signal.emit(-1)  # abort
-                    return
-            else:  # just for testing
-                # logging.debug("No directories to create")
-                pass
+                    return ExecutionState.ABORT
         # Check if there are any optional input files to copy
         if self.opt_input_file_model.rowCount() > 0:
             self._toolbox.msg.emit("*** Searching for optional input files ***")
-            optional_file_paths = self.find_optional_input_files(exec_inst)
+            optional_file_paths = self.find_optional_input_files(resources_upstream)
             for k, v in optional_file_paths.items():
                 self._toolbox.msg.emit("\tFound <b>{0}</b> files matching pattern <b>{1}</b>".format(len(v), k))
             if not self.copy_optional_input_files(optional_file_paths):
                 self._toolbox.msg_warning.emit("Copying optional input files failed")
         if not self.create_output_dirs():
             self._toolbox.msg_error.emit("Creating output subdirectories failed. Tool execution aborted.")
-            exec_inst.project_item_execution_finished_signal.emit(-1)  # abort
-            return
+            return ExecutionState.ABORT
         self.get_icon().start_animation()
         self.instance = self.tool_specification().create_tool_instance(self.basedir)
         self.instance.prepare()  # Make command and stuff
@@ -438,6 +445,7 @@ class Tool(ProjectItem):
             "*** Starting instance of Tool specification <b>{0}</b> ***".format(self.tool_specification().name)
         )
         self.instance.execute()
+        return ExecutionState.WAIT  # handle_execution_finished() will declare whether to continue or not
 
     def count_files_and_dirs(self):
         """Count the number of files and directories in required input files model.
@@ -651,11 +659,11 @@ class Tool(ProjectItem):
             self._toolbox.msg.emit("\tCopied <b>{0}</b> file(s)".format(n_copied_files))
         return True
 
-    def find_input_files(self, exec_inst):
-        """Iterates files in required input files model and looks for them from execution instance.
+    def find_input_files(self, resources_upstream):
+        """Iterates files in required input files model and looks for them from upstream items.
 
         Args:
-            exec_inst (ExecutionInstance): Look for files in this execution instance.
+            resources_upstream (list): resources available from upstream items
 
         Returns:
             Dictionary mapping required files to path where they are found, or to None if not found
@@ -668,14 +676,14 @@ class Tool(ProjectItem):
             if not filename:
                 # It's a directory
                 continue
-            file_paths[req_file_path] = self.find_file(filename, exec_inst)
+            file_paths[req_file_path] = self.find_file(filename, resources_upstream)
         return file_paths
 
-    def find_optional_input_files(self, exec_inst):
+    def find_optional_input_files(self, resources_upstream):
         """Tries to find optional input files from previous project items in the DAG. Returns found paths.
 
         Args:
-            exec_inst (ExecutionInstance): Look for files in this execution instance.
+            resources_upstream (list): resources available from upstream items
 
         Returns:
             Dictionary of optional input file paths or an empty dictionary if no files found. Key is the
@@ -689,51 +697,62 @@ class Tool(ProjectItem):
             if not pattern:
                 # It's a directory -> skip
                 continue
-            found_files = self.find_optional_files(pattern, exec_inst)
+            found_files = self.find_optional_files(pattern, resources_upstream)
             if not found_files:
                 self._toolbox.msg_warning.emit("\tNo files matching pattern <b>{0}</b> found".format(pattern))
             else:
                 file_paths[file_path] = found_files
         return file_paths
 
-    def available_filepath_resources(self, exec_inst):
-        """Returns available filepath resources from the given execution instance."""
+    @staticmethod
+    def available_filepath_resources(resources_upstream):
+        """
+        Returns available filepath resources from the given execution instance.
+
+        Args:
+            resources_upstream (list): resources available from upstream items
+        Returns:
+            a list of file paths
+        """
         filepaths = []
-        for resource in exec_inst.available_resources(self.name):
+        for resource in resources_upstream:
             if resource.type_ == "file" or (resource.type_ == "database" and resource.scheme == "sqlite"):
                 filepaths.append(resource.path)
         return filepaths
 
-    def find_file(self, filename, exec_inst):
+    def find_file(self, filename, resources_upstream):
         """Returns the first occurrence of full path to given file name in files available
         from the execution instance, or None if file was not found.
 
         Args:
             filename (str): Searched file name (no path) TODO: Change to pattern
-            exec_inst (ExecutionInstance): execution instance
+            resources_upstream (list): list of resources available from upstream items
 
         Returns:
             str: Full path to file if found, None if not found
         """
-        for filepath in self.available_filepath_resources(exec_inst):
+        for filepath in self.available_filepath_resources(resources_upstream):
             _, file_candidate = os.path.split(filepath)
             if file_candidate == filename:
                 # logging.debug("Found path for {0} from dc refs: {1}".format(filename, dc_ref))
                 return filepath
         return None
 
-    def find_optional_files(self, pattern, exec_inst):
+    def find_optional_files(self, pattern, resources_upstream):
         """Returns a list of found paths to files that match the given pattern in files available
         from the execution instance.
 
+        Args:
+            pattern (str): file pattern
+            resources_upstream (list): list of resources available from upstream items
         Returns:
             list: List of (full) paths
         """
-        filepaths = self.available_filepath_resources(exec_inst)
+        filepaths = self.available_filepath_resources(resources_upstream)
         # Find matches when pattern includes wildcards
         if "*" in pattern and not "?" in pattern:
             return fnmatch.filter(filepaths, pattern)  # Returns matches in list
-        elif "?" in pattern:
+        if "?" in pattern:
             # Separate file names from paths
             matches = list()
             for filepath in filepaths:
@@ -743,7 +762,7 @@ class Tool(ProjectItem):
                     matches.append(filepath)
             return matches
         # Pattern is an exact filename (no wildcards)
-        match = self.find_file(pattern, exec_inst)
+        match = self.find_file(pattern, resources_upstream)
         if match is not None:
             return [match]
         return []
@@ -766,7 +785,7 @@ class Tool(ProjectItem):
         if not self._project.execution_instance:
             # Happens sometimes when Stop button is pressed
             return
-        self._project.execution_instance.project_item_execution_finished_signal.emit(0)
+        self._project.execution_instance.project_item_execution_finished_signal.emit(ExecutionState.CONTINUE)
 
     def handle_output_files(self, ret):
         """Creates a timestamped result directory for Tool specification output files. Starts copying Tool
@@ -776,7 +795,6 @@ class Tool(ProjectItem):
         Args:
             ret (int): Tool specification process return value
         """
-        exec_inst = self._project.execution_instance
         output_dir_timestamp = create_output_dir_timestamp()  # Get timestamp when tool finished
         # Create an output folder with timestamp and copy output directly there
         if ret != 0:
@@ -800,7 +818,7 @@ class Tool(ProjectItem):
             + "'>results directory</a>"
         )
         self._toolbox.msg.emit("*** Archiving output files to {0} ***".format(result_anchor))
-        if self.opt_input_file_model.rowCount() > 0:
+        if self.output_file_model.rowCount() > 0:
             saved_files, failed_files = self.copy_output_files(result_path)
             if not saved_files:
                 # If no files were saved
@@ -808,17 +826,10 @@ class Tool(ProjectItem):
             else:
                 # If there are saved files
                 # Split list into filenames and their paths
-                filenames, paths = zip(*saved_files)
+                filenames, _ = zip(*saved_files)
                 self._toolbox.msg.emit("\tThe following output files were saved to results directory")
                 for filename in filenames:
                     self._toolbox.msg.emit("\t\t<b>{0}</b>".format(filename))
-                if ret == 0:
-                    # Advertise paths
-                    for path in paths:
-                        resource = ProjectItemResource(
-                            self, "file", url=pathlib.Path(path).as_uri(), metadata=dict(is_output=True)
-                        )
-                        exec_inst.advertise_resources(self.name, resource)
             if failed_files:
                 # If saving some or all files failed
                 self._toolbox.msg_warning.emit("\tThe following output files were not found")
@@ -944,29 +955,20 @@ class Tool(ProjectItem):
         self.instance.terminate_instance()
         # Note: QSubProcess, PythonReplWidget, and JuliaREPLWidget emit project_item_execution_finished_signal
 
-    def simulate_execution(self, inst):
-        """Simulates executing this Tool."""
-        super().simulate_execution(inst)
+    def _do_handle_dag_changed(self, resources_upstream):
+        """See base class."""
         if not self.tool_specification():
             self.add_notification(
                 "This Tool is not connected to a Tool specification. Set it in the Tool Properties Panel."
             )
             return
-        file_paths = self.find_input_files(inst)
+        file_paths = self.find_input_files(resources_upstream)
         not_found = [k for k, v in file_paths.items() if v is None]
         if not_found:
             self.add_notification(
                 "File(s) {0} needed to execute this Tool are not provided by any input item. "
                 "Connect items that provide the required files to this Tool.".format(", ".join(not_found))
             )
-            return
-        for i in range(self.output_file_model.rowCount()):
-            out_file_name = self.output_file_model.item(i, 0).data(Qt.DisplayRole)
-            out_file_path = os.path.abspath(os.path.join(self.output_dir, out_file_name))
-            resource = ProjectItemResource(
-                self, "file", url=pathlib.Path(out_file_path).as_uri(), metadata=dict(is_output=True)
-            )
-            inst.advertise_resources(self.name, resource)
 
     def item_dict(self):
         """Returns a dictionary corresponding to this item."""
@@ -1021,26 +1023,29 @@ class Tool(ProjectItem):
         if not ret:
             return False
         self.output_dir = os.path.join(self.data_dir, TOOL_OUTPUT_DIR)
+        if self.output_dir_watcher.directories():
+            self.output_dir_watcher.removePaths(self.output_dir_watcher.directories())
+        self.watch_output_dir()
         return True
 
     def notify_destination(self, source_item):
         """See base class."""
-        if source_item.item_type == "Data Store":
+        if source_item.item_type() == "Data Store":
             self._toolbox.msg.emit(
                 "Link established. Data Store <b>{0}</b> url will "
                 "be passed to Tool <b>{1}</b> when executing.".format(source_item.name, self.name)
             )
-        elif source_item.item_type == "Data Connection":
+        elif source_item.item_type() == "Data Connection":
             self._toolbox.msg.emit(
                 "Link established. Tool <b>{0}</b> will look for input "
                 "files from <b>{1}</b>'s references and data directory.".format(self.name, source_item.name)
             )
-        elif source_item.item_type == "Gdx Export":
+        elif source_item.item_type() == "Exporter":
             self._toolbox.msg.emit(
-                "Link established. Gdx Export <b>{0}</b> exported file will "
+                "Link established. The file exported by <b>{0}</b> will "
                 "be passed to Tool <b>{1}</b> when executing.".format(source_item.name, self.name)
             )
-        elif source_item.item_type == "Tool":
+        elif source_item.item_type() == "Tool":
             self._toolbox.msg.emit("Link established.")
         else:
             super().notify_destination(source_item)
@@ -1049,3 +1054,18 @@ class Tool(ProjectItem):
     def default_name_prefix():
         """see base class"""
         return "Tool"
+
+    def available_resources_downstream(self):
+        """See base class."""
+        resources = list()
+        output_files = set(
+            self.output_file_model.item(i, 0).data(Qt.DisplayRole) for i in range(self.output_file_model.rowCount())
+        )
+        for root, _, files in os.walk(self.output_dir):
+            for file_ in output_files.intersection(files):
+                file_path = os.path.join(root, file_)
+                resource = ProjectItemResource(
+                    self, "file", url=pathlib.Path(file_path).as_uri(), metadata=dict(is_output=True)
+                )
+                resources.append(resource)
+        return resources

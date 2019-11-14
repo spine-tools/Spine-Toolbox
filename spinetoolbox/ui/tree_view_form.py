@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 ######################################################################################################################
 # Copyright (C) 2017 - 2019 Spine project consortium
 # This file is part of Spine Toolbox.
@@ -9,11 +10,11 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-# -*- coding: utf-8 -*-
-
-# Form implementation generated from reading ui file 'spinetoolbox/ui/tree_view_form.ui',
-# licensing of 'spinetoolbox/ui/tree_view_form.ui' applies.
+# Form implementation generated from reading ui file 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\ui\tree_view_form.ui',
+# licensing of 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\ui\tree_view_form.ui' applies.
 #
+# Created: Thu Nov 14 16:05:02 2019
+#      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -38,7 +39,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_2.setObjectName("verticalLayout_2")
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 1077, 21))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 1077, 28))
         self.menubar.setNativeMenuBar(False)
         self.menubar.setObjectName("menubar")
         self.menuSession = QtWidgets.QMenu(self.menubar)
@@ -54,7 +55,7 @@ class Ui_MainWindow(object):
         self.menuDock_Widgets = QtWidgets.QMenu(self.menuView)
         self.menuDock_Widgets.setObjectName("menuDock_Widgets")
         MainWindow.setMenuBar(self.menubar)
-        self.statusbar = QtWidgets.QStatusBar(MainWindow)
+        self.statusbar = NotificationStatusBar(MainWindow)
         self.statusbar.setObjectName("statusbar")
         MainWindow.setStatusBar(self.statusbar)
         self.dockWidget_parameter_value_list = QtWidgets.QDockWidget(MainWindow)
@@ -233,13 +234,13 @@ class Ui_MainWindow(object):
         self.dockWidget_relationship_tree.setWidget(self.dockWidgetContents_7)
         MainWindow.addDockWidget(QtCore.Qt.DockWidgetArea(1), self.dockWidget_relationship_tree)
         self.actionCommit = QtWidgets.QAction(MainWindow)
-        self.actionCommit.setEnabled(False)
+        self.actionCommit.setEnabled(True)
         icon = QtGui.QIcon()
         icon.addPixmap(QtGui.QPixmap(":/icons/menu_icons/check.svg"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.actionCommit.setIcon(icon)
         self.actionCommit.setObjectName("actionCommit")
         self.actionRollback = QtWidgets.QAction(MainWindow)
-        self.actionRollback.setEnabled(False)
+        self.actionRollback.setEnabled(True)
         icon1 = QtGui.QIcon()
         icon1.addPixmap(QtGui.QPixmap(":/icons/menu_icons/undo.svg"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.actionRollback.setIcon(icon1)
@@ -271,19 +272,19 @@ class Ui_MainWindow(object):
         self.actionImport.setIcon(icon5)
         self.actionImport.setObjectName("actionImport")
         self.actionExport = QtWidgets.QAction(MainWindow)
-        self.actionExport.setEnabled(False)
+        self.actionExport.setEnabled(True)
         icon6 = QtGui.QIcon()
         icon6.addPixmap(QtGui.QPixmap(":/icons/menu_icons/file-export.svg"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.actionExport.setIcon(icon6)
         self.actionExport.setObjectName("actionExport")
         self.actionCopy = QtWidgets.QAction(MainWindow)
-        self.actionCopy.setEnabled(False)
+        self.actionCopy.setEnabled(True)
         icon7 = QtGui.QIcon()
         icon7.addPixmap(QtGui.QPixmap(":/icons/menu_icons/copy.svg"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.actionCopy.setIcon(icon7)
         self.actionCopy.setObjectName("actionCopy")
         self.actionPaste = QtWidgets.QAction(MainWindow)
-        self.actionPaste.setEnabled(False)
+        self.actionPaste.setEnabled(True)
         icon8 = QtGui.QIcon()
         icon8.addPixmap(QtGui.QPixmap(":/icons/menu_icons/paste.svg"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.actionPaste.setIcon(icon8)
@@ -294,29 +295,29 @@ class Ui_MainWindow(object):
         self.actionRefresh.setIcon(icon9)
         self.actionRefresh.setObjectName("actionRefresh")
         self.actionEdit_object_classes = QtWidgets.QAction(MainWindow)
-        self.actionEdit_object_classes.setEnabled(False)
+        self.actionEdit_object_classes.setEnabled(True)
         icon10 = QtGui.QIcon()
         icon10.addPixmap(QtGui.QPixmap(":/icons/menu_icons/cube_pen.svg"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.actionEdit_object_classes.setIcon(icon10)
         self.actionEdit_object_classes.setObjectName("actionEdit_object_classes")
         self.actionEdit_relationship_classes = QtWidgets.QAction(MainWindow)
-        self.actionEdit_relationship_classes.setEnabled(False)
+        self.actionEdit_relationship_classes.setEnabled(True)
         icon11 = QtGui.QIcon()
         icon11.addPixmap(QtGui.QPixmap(":/icons/menu_icons/cubes_pen.svg"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.actionEdit_relationship_classes.setIcon(icon11)
         self.actionEdit_relationship_classes.setObjectName("actionEdit_relationship_classes")
         self.actionEdit_objects = QtWidgets.QAction(MainWindow)
-        self.actionEdit_objects.setEnabled(False)
+        self.actionEdit_objects.setEnabled(True)
         self.actionEdit_objects.setIcon(icon10)
         self.actionEdit_objects.setObjectName("actionEdit_objects")
         self.actionEdit_relationships = QtWidgets.QAction(MainWindow)
-        self.actionEdit_relationships.setEnabled(False)
+        self.actionEdit_relationships.setEnabled(True)
         self.actionEdit_relationships.setIcon(icon11)
         self.actionEdit_relationships.setObjectName("actionEdit_relationships")
         self.actionManage_parameter_tags = QtWidgets.QAction(MainWindow)
         self.actionManage_parameter_tags.setObjectName("actionManage_parameter_tags")
         self.actionRemove_selection = QtWidgets.QAction(MainWindow)
-        self.actionRemove_selection.setEnabled(False)
+        self.actionRemove_selection.setEnabled(True)
         self.actionRemove_selection.setObjectName("actionRemove_selection")
         self.actionRestore_Dock_Widgets = QtWidgets.QAction(MainWindow)
         self.actionRestore_Dock_Widgets.setObjectName("actionRestore_Dock_Widgets")
@@ -414,5 +415,6 @@ class Ui_MainWindow(object):
         self.actionRestore_Dock_Widgets.setText(QtWidgets.QApplication.translate("MainWindow", "Restore Dock Widgets", None, -1))
 
 from spinetoolbox.widgets.custom_qtableview import AutoFilterCopyPasteTableView
-from spinetoolbox.widgets.custom_qtreeview import ObjectTreeView, CopyTreeView
+from spinetoolbox.widgets.custom_qstatusbar import NotificationStatusBar
+from spinetoolbox.widgets.custom_qtreeview import CopyTreeView, ObjectTreeView
 from spinetoolbox import resources_icons_rc

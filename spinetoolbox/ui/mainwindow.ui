@@ -1,14 +1,14 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <!--
 ######################################################################################################################
 # Copyright (C) 2017 - 2019 Spine project consortium
 # This file is part of Spine Toolbox.
-# Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
+# Spine Toolbox is free software: you can redistribute it and\/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
 # any later version. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
 # without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General
 # Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
-# this program. If not, see <http://www.gnu.org/licenses/>.
+# this program. If not, see <http:\/\/www.gnu.org\/licenses\/>.
 ######################################################################################################################
 -->
 <ui version="4.0">
@@ -127,7 +127,7 @@
      <x>0</x>
      <y>0</y>
      <width>862</width>
-     <height>21</height>
+     <height>28</height>
     </rect>
    </property>
    <property name="nativeMenuBar">
@@ -425,7 +425,7 @@
   <widget class="QDockWidget" name="dockWidget_project">
    <property name="minimumSize">
     <size>
-     <width>135</width>
+     <width>136</width>
      <height>320</height>
     </size>
    </property>
@@ -903,13 +903,16 @@
     <string>Export project to GraphML</string>
    </property>
   </action>
-  <action name="actionAdd_Data_Interface">
+  <action name="actionAdd_Importer">
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
      <normaloff>:/icons/project_item_icons/map-solid.svg</normaloff>:/icons/project_item_icons/map-solid.svg</iconset>
    </property>
    <property name="text">
-    <string>Add Data Interface</string>
+    <string>Add Importer</string>
+   </property>
+   <property name="toolTip">
+    <string>Add Importer</string>
    </property>
   </action>
   <action name="actionGetting_started">
@@ -954,6 +957,18 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+D</string>
+   </property>
+  </action>
+  <action name="actionLive_tutorial">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/menu_icons/question-circle.svg</normaloff>:/icons/menu_icons/question-circle.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Live tutorial</string>
+   </property>
+   <property name="shortcut">
+    <string>Shift+F2</string>
    </property>
   </action>
  </widget>

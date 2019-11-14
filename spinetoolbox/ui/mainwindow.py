@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 ######################################################################################################################
 # Copyright (C) 2017 - 2019 Spine project consortium
 # This file is part of Spine Toolbox.
@@ -9,11 +10,11 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-# -*- coding: utf-8 -*-
-
-# Form implementation generated from reading ui file 'spinetoolbox/ui/mainwindow.ui',
-# licensing of 'spinetoolbox/ui/mainwindow.ui' applies.
+# Form implementation generated from reading ui file 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\ui\mainwindow.ui',
+# licensing of 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\ui\mainwindow.ui' applies.
 #
+# Created: Thu Nov 14 16:04:47 2019
+#      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -63,7 +64,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_10.addWidget(self.graphicsView)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 862, 21))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 862, 28))
         self.menubar.setNativeMenuBar(False)
         self.menubar.setObjectName("menubar")
         self.menuFile = QtWidgets.QMenu(self.menubar)
@@ -184,7 +185,7 @@ class Ui_MainWindow(object):
         self.dockWidget_julia_repl.setWidget(self.dockWidgetContents_julia_repl)
         MainWindow.addDockWidget(QtCore.Qt.DockWidgetArea(8), self.dockWidget_julia_repl)
         self.dockWidget_project = QtWidgets.QDockWidget(MainWindow)
-        self.dockWidget_project.setMinimumSize(QtCore.QSize(135, 320))
+        self.dockWidget_project.setMinimumSize(QtCore.QSize(136, 320))
         self.dockWidget_project.setObjectName("dockWidget_project")
         self.dockWidgetContents_4 = QtWidgets.QWidget()
         self.dockWidgetContents_4.setObjectName("dockWidgetContents_4")
@@ -382,11 +383,11 @@ class Ui_MainWindow(object):
         icon17.addPixmap(QtGui.QPixmap(":/icons/menu_icons/file-export.svg"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.actionExport_project_to_GraphML.setIcon(icon17)
         self.actionExport_project_to_GraphML.setObjectName("actionExport_project_to_GraphML")
-        self.actionAdd_Data_Interface = QtWidgets.QAction(MainWindow)
+        self.actionAdd_Importer = QtWidgets.QAction(MainWindow)
         icon18 = QtGui.QIcon()
         icon18.addPixmap(QtGui.QPixmap(":/icons/project_item_icons/map-solid.svg"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        self.actionAdd_Data_Interface.setIcon(icon18)
-        self.actionAdd_Data_Interface.setObjectName("actionAdd_Data_Interface")
+        self.actionAdd_Importer.setIcon(icon18)
+        self.actionAdd_Importer.setObjectName("actionAdd_Importer")
         self.actionGetting_started = QtWidgets.QAction(MainWindow)
         self.actionGetting_started.setIcon(icon13)
         self.actionGetting_started.setObjectName("actionGetting_started")
@@ -398,6 +399,9 @@ class Ui_MainWindow(object):
         self.actionPaste.setObjectName("actionPaste")
         self.actionDuplicate = QtWidgets.QAction(MainWindow)
         self.actionDuplicate.setObjectName("actionDuplicate")
+        self.actionLive_tutorial = QtWidgets.QAction(MainWindow)
+        self.actionLive_tutorial.setIcon(icon13)
+        self.actionLive_tutorial.setObjectName("actionLive_tutorial")
         self.menuFile.addAction(self.actionNew)
         self.menuFile.addAction(self.actionOpen)
         self.menuFile.addAction(self.actionOpen_recent)
@@ -500,7 +504,8 @@ class Ui_MainWindow(object):
         self.actionRemove_all.setText(QtWidgets.QApplication.translate("MainWindow", "Remove all", None, -1))
         self.actionRemove_all.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Remove all items project</p></body></html>", None, -1))
         self.actionExport_project_to_GraphML.setText(QtWidgets.QApplication.translate("MainWindow", "Export project to GraphML", None, -1))
-        self.actionAdd_Data_Interface.setText(QtWidgets.QApplication.translate("MainWindow", "Add Data Interface", None, -1))
+        self.actionAdd_Importer.setText(QtWidgets.QApplication.translate("MainWindow", "Add Importer", None, -1))
+        self.actionAdd_Importer.setToolTip(QtWidgets.QApplication.translate("MainWindow", "Add Importer", None, -1))
         self.actionGetting_started.setText(QtWidgets.QApplication.translate("MainWindow", "Getting started", None, -1))
         self.actionGetting_started.setShortcut(QtWidgets.QApplication.translate("MainWindow", "F3", None, -1))
         self.actionOpen_recent.setText(QtWidgets.QApplication.translate("MainWindow", "Open recent", None, -1))
@@ -511,6 +516,8 @@ class Ui_MainWindow(object):
         self.actionDuplicate.setText(QtWidgets.QApplication.translate("MainWindow", "Duplicate", None, -1))
         self.actionDuplicate.setToolTip(QtWidgets.QApplication.translate("MainWindow", "Duplicate selected project item", None, -1))
         self.actionDuplicate.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+D", None, -1))
+        self.actionLive_tutorial.setText(QtWidgets.QApplication.translate("MainWindow", "Live tutorial", None, -1))
+        self.actionLive_tutorial.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Shift+F2", None, -1))
 
 from spinetoolbox.widgets.custom_qtextbrowser import CustomQTextBrowser
 from spinetoolbox.widgets.custom_qgraphicsviews import DesignQGraphicsView

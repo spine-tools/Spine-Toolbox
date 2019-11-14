@@ -25,18 +25,18 @@ from .import_preview_widget import ImportPreviewWidget
 
 class ImportPreviewWindow(QMainWindow):
     """
-    A QMainWindow to let users define Mappings for a Data Interface item.
+    A QMainWindow to let users define Mappings for an Importer item.
     """
 
     settings_updated = Signal(dict)
     connection_failed = Signal(str)
 
-    def __init__(self, data_interface, filepath, connector, settings, parent):
+    def __init__(self, importer, filepath, connector, settings, parent):
         super().__init__(parent=parent, flags=Qt.Window)
-        self._data_interface = data_interface
+        self._importer = importer
         self.setAttribute(Qt.WA_DeleteOnClose)
-        self.setWindowTitle("Import Editor    -- {} --".format(data_interface.name))
-        self._qsettings = data_interface._toolbox._qsettings
+        self.setWindowTitle("Import Editor    -- {} --".format(importer.name))
+        self._qsettings = importer._toolbox._qsettings
 
         self._connection_manager = ConnectionManager(connector)
         self._connection_manager.source = filepath

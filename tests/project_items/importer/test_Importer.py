@@ -1,0 +1,108 @@
+######################################################################################################################
+# Copyright (C) 2017 - 2019 Spine project consortium
+# This file is part of Spine Toolbox.
+# Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
+# Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
+# any later version. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General
+# Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
+# this program. If not, see <http://www.gnu.org/licenses/>.
+######################################################################################################################
+
+"""
+Unit tests for Importer project item.
+
+:author: A. Soininen (VTT)
+:date:   4.10.2019
+"""
+
+import os
+import unittest
+from unittest.mock import MagicMock, NonCallableMagicMock
+from PySide2.QtWidgets import QApplication
+from networkx import DiGraph
+from spinetoolbox.project_items.importer.importer import Importer
+from ...mock_helpers import clean_up_toolboxui_with_project, create_toolboxui_with_project
+
+
+class TestImporter(unittest.TestCase):
+    def setUp(self):
+        """Set up."""
+        self.toolbox = create_toolboxui_with_project()
+        item_dict = dict(name="importer", description="", mappings=dict(), x=0, y=0)
+        self.toolbox.project().add_project_items("Importers", item_dict)
+        index = self.toolbox.project_item_model.find_item("importer")
+        self.importer = self.toolbox.project_item_model.project_item(index)
+
+    def tearDown(self):
+        """Clean up."""
+        clean_up_toolboxui_with_project(self.toolbox)
+
+    @classmethod
+    def setUpClass(cls):
+        if not QApplication.instance():
+            QApplication()
+
+    def test_item_type(self):
+        self.assertEqual(self.importer.item_type(), "Importer")
+
+    def test_notify_destination(self):
+        self.toolbox.msg = MagicMock()
+        self.toolbox.msg.attach_mock(MagicMock(), "emit")
+        self.toolbox.msg_warning = MagicMock()
+        self.toolbox.msg_warning.attach_mock(MagicMock(), "emit")
+        source_item = NonCallableMagicMock()
+        source_item.name = "source name"
+        source_item.item_type = MagicMock(return_value="Data Connection")
+        self.importer.notify_destination(source_item)
+        self.toolbox.msg.emit.assert_called_with(
+            "Link established. You can define mappings on data from <b>source name</b> using item <b>importer</b>."
+        )
+        source_item.item_type = MagicMock(return_value="Data Store")
+        self.importer.notify_destination(source_item)
+        self.toolbox.msg.emit.assert_called_with("Link established.")
+        source_item.item_type = MagicMock(return_value="Exporter")
+        self.importer.notify_destination(source_item)
+        self.toolbox.msg_warning.emit.assert_called_with(
+            "Link established. Interaction between a "
+            "<b>Exporter</b> and a <b>Importer</b> has not been implemented yet."
+        )
+        source_item.item_type = MagicMock(return_value="Tool")
+        self.importer.notify_destination(source_item)
+        self.toolbox.msg_warning.emit.assert_called_with(
+            "Link established. Interaction between a "
+            "<b>Tool</b> and a <b>Importer</b> has not been implemented yet."
+        )
+        source_item.item_type = MagicMock(return_value="View")
+        self.importer.notify_destination(source_item)
+        self.toolbox.msg_warning.emit.assert_called_with(
+            "Link established. Interaction between a "
+            "<b>View</b> and a <b>Importer</b> has not been implemented yet."
+        )
+
+    def test_default_name_prefix(self):
+        self.assertEqual(Importer.default_name_prefix(), "Importer")
+
+    def test_rename(self):
+        """Tests renaming an Importer."""
+        self.importer.activate()
+        expected_name = "ABC"
+        expected_short_name = "abc"
+        ret_val = self.importer.rename(expected_name)  # Do rename
+        self.assertTrue(ret_val)
+        # Check name
+        self.assertEqual(expected_name, self.importer.name)  # item name
+        self.assertEqual(expected_name, self.importer._properties_ui.label_name.text())  # name label in props
+        self.assertEqual(expected_name, self.importer.get_icon().name_item.text())  # name item on Design View
+        # Check data_dir
+        expected_data_dir = os.path.join(self.toolbox.project().project_dir, expected_short_name)
+        self.assertEqual(expected_data_dir, self.importer.data_dir)  # Check data dir
+        # Check there's a dag containing a node with the new name and that no dag contains a node with the old name
+        dag_with_new_node_name = self.toolbox.project().dag_handler.dag_with_node(expected_name)
+        self.assertIsInstance(dag_with_new_node_name, DiGraph)
+        dag_with_old_node_name = self.toolbox.project().dag_handler.dag_with_node("DI")
+        self.assertIsNone(dag_with_old_node_name)
+
+
+if __name__ == '__main__':
+    unittest.main()

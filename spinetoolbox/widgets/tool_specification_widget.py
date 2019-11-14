@@ -90,7 +90,7 @@ class ToolSpecificationWidget(QWidget):
             check_state = Qt.Checked if tool_specification.execute_in_work else Qt.Unchecked
             self.ui.checkBox_execute_in_work.setCheckState(check_state)
             self.ui.textEdit_description.setPlainText(tool_specification.description)
-            self.ui.lineEdit_args.setText(tool_specification.cmdline_args)
+            self.ui.lineEdit_args.setText(" ".join(tool_specification.cmdline_args))
             tool_types = [x.lower() for x in TOOL_TYPES]
             index = tool_types.index(tool_specification.tooltype) + 1
             self.ui.comboBox_tooltype.setCurrentIndex(index)
@@ -216,79 +216,34 @@ class ToolSpecificationWidget(QWidget):
         self.ui.lineEdit_main_program.setText(file_path)
         self.ui.label_mainpath.setText(self.program_path)
 
-    @Slot(name="new_main_program_file")
+    @Slot()
     def new_main_program_file(self):
-        """Create a new blank main program file. Let user decide the file name and location."""
-        msg = "Main program file name?"
-        # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-        answer = QInputDialog.getText(
-            self, "New main program", msg, flags=Qt.WindowTitleHint | Qt.WindowCloseButtonHint
-        )
-        file_name = answer[0]
-        if not file_name:  # Cancel button clicked
+        """Creates a new blank main program file. Let's user decide the file name and path.
+         Alternative version using only one getSaveFileName dialog.
+         """
+        # noinspection PyCallByClass
+        answer = QFileDialog.getSaveFileName(self, "Create new main program", APPLICATION_PATH)
+        file_path = answer[0]
+        if not file_path:  # Cancel button clicked
             return
-        if file_name.strip() == "":
-            return
-        # Check that file name has no invalid chars
-        if any(True for x in file_name if x in INVALID_FILENAME_CHARS):
-            msg = "File name <b>{0}</b> contains invalid characters.".format(file_name)
-            # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
-            QMessageBox.information(self, "Creating file failed", msg)
-            return
-        # Let user select the directory where the new main program is saved.
-        dir_msg = "Please choose a directory where the main program file is saved"
-        # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
-        main_dir = QFileDialog.getExistingDirectory(self, dir_msg, APPLICATION_PATH, QFileDialog.ShowDirsOnly)
-        if not main_dir:  # Cancel button clicked
-            return
-        # Make new file
-        file_path = os.path.abspath(os.path.join(main_dir, file_name))
-        if os.path.exists(file_path):
-            msg = "File <b>{0}</b> already exists.".format(file_name)
-            # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
-            QMessageBox.information(self, "Creating file failed", msg)
-            return
+        # Remove file if it exists. getSaveFileName has asked confirmation for us.
+        try:
+            os.remove(file_path)
+        except OSError:
+            pass
         try:
             with open(file_path, "w"):
-                self.statusbar.showMessage("New main program file {0} now available".format(file_path), 8000)
+                pass
         except OSError:
             msg = "Please check directory permissions."
             # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
             QMessageBox.information(self, "Creating file failed", msg)
             return
+        main_dir = os.path.dirname(file_path)
         self.program_path = os.path.abspath(main_dir)
         # Update UI
         self.ui.lineEdit_main_program.setText(file_path)
         self.ui.label_mainpath.setText(self.program_path)
-
-    # @Slot(name="new_main_program_file")
-    # def new_main_program_file(self):
-    #     """Creates a new blank main program file. Let's user decide the file name and path.
-    #     Alternative version using only one getSaveFileName dialog.
-    #     """
-    #     # noinspection PyCallByClass
-    #     answer = QFileDialog.getSaveFileName(self, "Create new main program", APPLICATION_PATH)
-    #     file_path = answer[0]
-    #     if not file_path:  # Cancel button clicked
-    #         return
-    #     # Remove file if it exists. getSaveFileName has asked confirmation for us.
-    #     try:
-    #         os.remove(file_path)
-    #     except OSError:
-    #         pass
-    #     try:
-    #         with open(file_path, "w"):
-    #             pass
-    #     except OSError:
-    #         msg = "Please check directory permissions."
-    #         # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
-    #         QMessageBox.information(self, "Creating file failed", msg)
-    #         return
-    #     main_dir = os.path.dirname(file_path)
-    #     self.program_path = os.path.abspath(main_dir)
-    #     # Update UI
-    #     self.ui.lineEdit_main_program.setText(file_path)
-    #     self.ui.label_mainpath.setText(self.program_path)
 
     @Slot(name="new_source_file")
     def new_source_file(self):

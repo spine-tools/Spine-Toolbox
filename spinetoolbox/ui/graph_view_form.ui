@@ -1,14 +1,14 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <!--
 ######################################################################################################################
 # Copyright (C) 2017 - 2019 Spine project consortium
 # This file is part of Spine Toolbox.
-# Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
+# Spine Toolbox is free software: you can redistribute it and\/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
 # any later version. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
 # without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General
 # Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
-# this program. If not, see <http://www.gnu.org/licenses/>.
+# this program. If not, see <http:\/\/www.gnu.org\/licenses\/>.
 ######################################################################################################################
 -->
 <ui version="4.0">
@@ -72,19 +72,9 @@
      <x>0</x>
      <y>0</y>
      <width>944</width>
-     <height>21</height>
+     <height>28</height>
     </rect>
    </property>
-   <widget class="QMenu" name="menuGraph">
-    <property name="title">
-     <string>Graph</string>
-    </property>
-    <addaction name="actionGraph_hide_selected"/>
-    <addaction name="actionGraph_show_hidden"/>
-    <addaction name="separator"/>
-    <addaction name="actionGraph_prune_selected"/>
-    <addaction name="actionGraph_reinstate_pruned"/>
-   </widget>
    <widget class="QMenu" name="menuView">
     <property name="title">
      <string>View</string>
@@ -103,6 +93,12 @@
     </widget>
     <addaction name="menuToolbars"/>
     <addaction name="menuDock_Widgets"/>
+    <addaction name="separator"/>
+    <addaction name="actionView_hide_selected"/>
+    <addaction name="actionView_show_hidden"/>
+    <addaction name="separator"/>
+    <addaction name="actionView_prune_selected"/>
+    <addaction name="actionView_reinstate_pruned"/>
    </widget>
    <widget class="QMenu" name="menuSession">
     <property name="title">
@@ -118,12 +114,18 @@
     </property>
     <addaction name="actionClose"/>
    </widget>
+   <widget class="QMenu" name="menuHelp">
+    <property name="title">
+     <string>Help</string>
+    </property>
+    <addaction name="actionHelp_live_demo"/>
+   </widget>
    <addaction name="menuFile"/>
-   <addaction name="menuGraph"/>
    <addaction name="menuView"/>
    <addaction name="menuSession"/>
+   <addaction name="menuHelp"/>
   </widget>
-  <widget class="QStatusBar" name="statusbar"/>
+  <widget class="NotificationStatusBar" name="statusbar"/>
   <widget class="QDockWidget" name="dockWidget_item_palette">
    <property name="windowTitle">
     <string>Item palette</string>
@@ -394,7 +396,7 @@
       <number>0</number>
      </property>
      <item>
-      <widget class="QTreeView" name="treeView_object">
+      <widget class="StickySelectionObjectTreeView" name="treeView_object">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
          <horstretch>1</horstretch>
@@ -747,7 +749,7 @@
     </layout>
    </widget>
   </widget>
-  <action name="actionGraph_reinstate_pruned">
+  <action name="actionView_reinstate_pruned">
    <property name="text">
     <string>Reinstate pruned items</string>
    </property>
@@ -810,17 +812,17 @@
     <string>Ctrl+W</string>
    </property>
   </action>
-  <action name="actionGraph_hide_selected">
+  <action name="actionView_hide_selected">
    <property name="text">
     <string>Hide selected items</string>
    </property>
   </action>
-  <action name="actionGraph_show_hidden">
+  <action name="actionView_show_hidden">
    <property name="text">
     <string>Show hidden items</string>
    </property>
   </action>
-  <action name="actionGraph_prune_selected">
+  <action name="actionView_prune_selected">
    <property name="text">
     <string>Prune selected items</string>
    </property>
@@ -828,6 +830,11 @@
   <action name="actionRestore_Dock_Widgets">
    <property name="text">
     <string>Restore Dock Widgets</string>
+   </property>
+  </action>
+  <action name="actionHelp_live_demo">
+   <property name="text">
+    <string>Live demo</string>
    </property>
   </action>
  </widget>
@@ -838,6 +845,11 @@
    <header>spinetoolbox/widgets/custom_qtableview.h</header>
   </customwidget>
   <customwidget>
+   <class>NotificationStatusBar</class>
+   <extends>QStatusBar</extends>
+   <header>spinetoolbox/widgets/custom_qstatusbar.h</header>
+  </customwidget>
+  <customwidget>
    <class>GraphQGraphicsView</class>
    <extends>QGraphicsView</extends>
    <header>spinetoolbox/widgets/custom_qgraphicsviews.h</header>
@@ -846,6 +858,11 @@
    <class>DragListView</class>
    <extends>QListView</extends>
    <header>spinetoolbox/widgets/custom_qlistview.h</header>
+  </customwidget>
+  <customwidget>
+   <class>StickySelectionObjectTreeView</class>
+   <extends>QTreeView</extends>
+   <header>spinetoolbox/widgets/custom_qtreeview.h</header>
   </customwidget>
  </customwidgets>
  <resources>

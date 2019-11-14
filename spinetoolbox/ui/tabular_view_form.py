@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 ######################################################################################################################
 # Copyright (C) 2017 - 2019 Spine project consortium
 # This file is part of Spine Toolbox.
@@ -9,11 +10,11 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-# -*- coding: utf-8 -*-
-
-# Form implementation generated from reading ui file 'spinetoolbox/ui/tabular_view_form.ui',
-# licensing of 'spinetoolbox/ui/tabular_view_form.ui' applies.
+# Form implementation generated from reading ui file 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\ui\tabular_view_form.ui',
+# licensing of 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\ui\tabular_view_form.ui' applies.
 #
+# Created: Thu Nov 14 16:04:55 2019
+#      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -187,6 +188,6 @@ class Ui_MainWindow(object):
         self.actionClose.setText(QtWidgets.QApplication.translate("MainWindow", "Close", None, -1))
         self.actionClose.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+W", None, -1))
 
-from spinetoolbox.widgets.custom_qlistview import TestListView
 from spinetoolbox.widgets.custom_qtableview import FrozenTableView, SimpleCopyPasteTableView
+from spinetoolbox.widgets.custom_qlistview import TestListView
 from spinetoolbox import resources_icons_rc

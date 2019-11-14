@@ -21,30 +21,51 @@ from PySide2.QtCore import Qt, QModelIndex, QAbstractTableModel
 
 
 class MinimalTableModel(QAbstractTableModel):
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, header=None, lazy=True):
         """Table model for outlining simple tabular data.
 
         Args:
-            parent (QMainWindow): the parent widget, usually an instance of TreeViewForm
+            parent (QObject): the parent object
         """
         super().__init__(parent)
-        self._parent = parent
-        self._main_data = list()  # DisplayRole and EditRole
-        self.default_flags = Qt.ItemIsEditable | Qt.ItemIsEnabled | Qt.ItemIsSelectable
-        self.header = list()  # DisplayRole and EditRole
-        self.aux_header = list()  # All the other roles, each entry in the list is a dict
+        if header is None:
+            header = []
+        self.header = header
+        self._main_data = list()
+        self._fetched = not lazy
 
     def clear(self):
         """Clear all data in model."""
         self.beginResetModel()
-        self._main_data = list()
+        self._main_data.clear()
         self.endResetModel()
 
     def flags(self, index):
         """Return index flags."""
         if not index.isValid():
             return Qt.NoItemFlags
-        return self.default_flags
+        return Qt.ItemIsEditable | Qt.ItemIsEnabled | Qt.ItemIsSelectable
+
+    def canFetchMore(self, parent=None):
+        """Return True if the model hasn't been fetched."""
+        return not self._fetched
+
+    def fetchMore(self, parent=None):
+        """Fetch data and use it to reset the model."""
+        try:
+            data = self.fetch_data()
+        except NotImplementedError:
+            pass
+        else:
+            self.reset_model(data)
+        finally:
+            self._fetched = True
+
+    def fetch_data(self):
+        """Returns data to reset the model with and call it fetched.
+        Reimplement in subclasses if you want to populate your model automatically.
+        """
+        raise NotImplementedError()
 
     def rowCount(self, parent=QModelIndex()):
         """Number of rows in the model."""
@@ -52,21 +73,11 @@ class MinimalTableModel(QAbstractTableModel):
 
     def columnCount(self, parent=QModelIndex()):
         """Number of columns in the model."""
-        try:
-            return len(self._main_data[0])
-        except IndexError:
-            return len(self.header)
+        return len(self.header) or len(next(iter(self._main_data), []))
 
     def headerData(self, section, orientation=Qt.Horizontal, role=Qt.DisplayRole):
-        """Get headers."""
+        """Returns headers."""
         if role != Qt.DisplayRole:
-            if orientation == Qt.Horizontal:
-                try:
-                    return self.aux_header[section][role]
-                except IndexError:
-                    return None
-                except KeyError:
-                    return None
             return None
         if orientation == Qt.Horizontal:
             try:
@@ -81,7 +92,6 @@ class MinimalTableModel(QAbstractTableModel):
         if not labels:
             return
         self.header = labels
-        self.aux_header = [{} for _ in range(len(labels))]
         self.headerDataChanged.emit(Qt.Horizontal, 0, len(labels) - 1)
 
     def insert_horizontal_header_labels(self, section, labels):
@@ -91,10 +101,8 @@ class MinimalTableModel(QAbstractTableModel):
         for j, value in enumerate(labels):
             if section + j >= self.columnCount():
                 self.header.append(value)
-                self.aux_header.append({})
             else:
                 self.header.insert(section + j, value)
-                self.aux_header.insert(section + j, {})
         self.headerDataChanged.emit(Qt.Horizontal, section, section + len(labels) - 1)
 
     def horizontal_header_labels(self):
@@ -107,12 +115,7 @@ class MinimalTableModel(QAbstractTableModel):
         if orientation != Qt.Horizontal:
             return False
         if role != Qt.EditRole:
-            try:
-                self.aux_header[section][role] = value
-                self.headerDataChanged.emit(orientation, section, section)
-                return True
-            except IndexError:
-                return False
+            return False
         try:
             self.header[section] = value
             self.headerDataChanged.emit(orientation, section, section)
@@ -156,35 +159,6 @@ class MinimalTableModel(QAbstractTableModel):
             return None
         return self._main_data[row]
 
-    def column_data(self, column, role=Qt.DisplayRole):
-        """Returns the data stored under the given role for the given column.
-
-        Args:
-            column (int): Item column
-            role (int): Data role
-
-        Returns:
-            Column data for given role.
-        """
-        if not 0 <= column < self.columnCount():
-            return None
-        if role not in (Qt.DisplayRole, Qt.EditRole):
-            return None
-        return [self._main_data[row][column] for row in range(self.rowCount())]
-
-    def model_data(self, role=Qt.DisplayRole):
-        """Returns the data stored under the given role in the entire model.
-
-        Args:
-            role (int): Data role
-
-        Returns:
-            Model data for given role.
-        """
-        if role in (Qt.DisplayRole, Qt.EditRole):
-            return self._main_data
-        return [self.row_data(row, role) for row in range(self.rowCount())]
-
     def setData(self, index, value, role=Qt.EditRole):
         """Set data in model."""
         if not index.isValid():
@@ -202,9 +176,11 @@ class MinimalTableModel(QAbstractTableModel):
         for index, value in zip(indexes, data):
             if not index.isValid():
                 continue
-            self._main_data[index.row()][index.column()] = value
-            rows.append(index.row())
-            columns.append(index.column())
+            row = index.row()
+            column = index.column()
+            self._main_data[row][column] = value
+            rows.append(row)
+            columns.append(column)
         # Find square envelope of indexes to emit dataChanged
         top = min(rows)
         bottom = max(rows)
@@ -276,7 +252,7 @@ class MinimalTableModel(QAbstractTableModel):
         Returns:
             True if rows were removed successfully, False otherwise
         """
-        if row < 0 or row + count - 1 >= self.rowCount():
+        if row < 0 or count < 1 or row + count > self.rowCount():
             return False
         self.beginRemoveRows(parent, row, row + count - 1)
         for i in reversed(range(row, row + count)):

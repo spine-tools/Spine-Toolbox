@@ -16,8 +16,8 @@ Contains classes for handling project item execution.
 :date:   8.4.2019
 """
 
+from enum import Enum
 import logging
-import os
 import random
 from PySide2.QtCore import Signal, Slot, QObject
 import networkx as nx
@@ -30,7 +30,7 @@ class DirectedGraphHandler(QObject):
         toolbox (ToolboxUI): QMainWindow instance
     """
 
-    dag_simulation_requested = Signal("QVariant", name="dag_simulation_requested")
+    dag_simulation_requested = Signal("QVariant")
 
     def __init__(self, toolbox):
         """Class constructor."""
@@ -206,7 +206,8 @@ class DirectedGraphHandler(QObject):
         logging.error("Graph containing edge %s->%s not found. Something is wrong.", src_node, dst_node)
         return None
 
-    def calc_exec_order(self, g):
+    @staticmethod
+    def calc_exec_order(g):
         """Returns a dict of nodes in the given graph in topological sort order.
         Key is the node, value is a list of its direct successors
         (the successors are important to do the advertising).
@@ -310,20 +311,36 @@ class DirectedGraphHandler(QObject):
         return True
 
 
-class ExecutionInstance(QObject):
-    """Class for the graph that is being executed. Contains references to
-    files and resources advertised by project items so that project items downstream can find them.
+class ExecutionState(Enum):
+    """An enumeration to control the execution."""
 
-    Args:
-        toolbox (ToolboxUI): QMainWindow instance
-        ordered_nodes (dict): dict of nodes to execute; key is the node, value is its direct successors
+    WAIT = 1
+    """Execution should wait for another signal from the project item."""
+    CONTINUE = 0
+    """Execution can continue with the next project item in the DAG."""
+    ABORT = -1
+    """Execution should be aborted due to unrecoverable error."""
+    STOP_REQUESTED = -2
+    """User has requested to stop the execution."""
+
+
+class ExecutionInstance(QObject):
+    """Class for the graph that is being executed
+
+    Contains references to files and resources advertised by project items
+    so that project items downstream can find them.
     """
 
-    graph_execution_finished_signal = Signal(int, name="graph_execution_finished_signal")
-    project_item_execution_finished_signal = Signal(int, name="project_item_execution_finished_signal")
+    graph_execution_finished_signal = Signal("QVariant")
+    project_item_execution_finished_signal = Signal("QVariant")
 
-    def __init__(self, toolbox, ordered_nodes):
-        """Class constructor."""
+    def __init__(self, toolbox, ordered_nodes, resource_map):
+        """
+        Args:
+            toolbox (ToolboxUI): QMainWindow instance
+            ordered_nodes (dict): dict of nodes to execute; key is the node, value is its direct successors
+            resource_map (ResourceFinder): project's resource map
+        """
         QObject.__init__(self)
         self._toolbox = toolbox
         self._ordered_nodes = ordered_nodes
@@ -332,6 +349,7 @@ class ExecutionInstance(QObject):
         # Resources available to project items
         self.resources = dict()  # Key is item name, value is resource list
         self.rank = 0  # The number in the list of the item currently simulated
+        self._resource_map = resource_map
 
     def start_execution(self):
         """Pops the next item from the execution list and starts executing it."""
@@ -343,29 +361,33 @@ class ExecutionInstance(QObject):
         item_ind = self._toolbox.project_item_model.find_item(item_name)
         self.running_item = self._toolbox.project_item_model.project_item(item_ind)
         self.project_item_execution_finished_signal.connect(self.item_execution_finished)
-        self.running_item.execute()
+        resources_upstream = self._resource_map.available_upstream_resources(self.running_item.name)
+        resources_downstream = self._resource_map.available_downstream_resources(self.running_item.name)
+        self.running_item.execute(resources_upstream, resources_downstream)
 
-    @Slot(int, name="item_execution_finished")
+    @Slot("QVariant")
     def item_execution_finished(self, item_finish_state):
         """Pop next project item to execute or finish current graph if there are no items left.
 
         Args:
-            item_finish_state (int): 0=Continue to next project item. -2=Stop executing this graph (happens when e.g.
-                Tool does not find req. input files or something)
+            item_finish_state (ExecutionState): an enumeration to indicate if execution should continue or not
         """
-        self.project_item_execution_finished_signal.disconnect()
-        if item_finish_state == -1:
-            # Item execution failed due to e.g. Tool did not find input files or something
-            self.graph_execution_finished_signal.emit(-1)
+        if item_finish_state == ExecutionState.WAIT:
+            # Expecting another call to this function.
             return
-        if item_finish_state == -2:
+        self.project_item_execution_finished_signal.disconnect()
+        if item_finish_state == ExecutionState.ABORT:
+            # Item execution failed due to e.g. Tool did not find input files or something
+            self.graph_execution_finished_signal.emit(ExecutionState.ABORT)
+            return
+        if item_finish_state == ExecutionState.STOP_REQUESTED:
             # User pressed Stop button
-            self.graph_execution_finished_signal.emit(-2)
+            self.graph_execution_finished_signal.emit(ExecutionState.STOP_REQUESTED)
             return
         try:
             item_name = self.execution_list.pop(0)
         except IndexError:
-            self.graph_execution_finished_signal.emit(0)
+            self.graph_execution_finished_signal.emit(ExecutionState.CONTINUE)
             return
         self.execute_project_item(item_name)
 
@@ -373,45 +395,54 @@ class ExecutionInstance(QObject):
         """Stops running project item and terminates current graph execution."""
         if not self.running_item:
             self._toolbox.msg.emit("No running item")
-            self.graph_execution_finished_signal.emit(-2)
+            self.graph_execution_finished_signal.emit(ExecutionState.STOP_REQUESTED)
             return
         self.running_item.stop_execution()
         return
 
-    def simulate_execution(self):
-        """Simulates execution of all items in the execution list.
-        """
-        for self.rank, item in enumerate(self.execution_list):
-            ind = self._toolbox.project_item_model.find_item(item)
-            project_item = self._toolbox.project_item_model.project_item(ind)
-            project_item.simulate_execution(self)
 
-    def advertise_resources(self, advertiser, *resources):
-        """
-        Advertises resources. The general rule is that the given resources become available to the advertiser's
-        direct children.
+class ResourceFinder:
+    """Enables queries about which resources are available to project items."""
+
+    def __init__(self, ordered_nodes, project_item_model):
+        """Initializes two mappings (dictionaries) to quickly find upstream and downstream items 
+        at execution time.
 
         Args:
-            advertiser (str): the name of the item that does the advertising
-            resources (ProjectItemResource): the resources being advertised
+            ordered_nodes (dict): item execution order; key is the item while value is a list of downstream items
+            project_item_model (ProjectItemModel): Toolbox's project item model
         """
-        for child in self._ordered_nodes[advertiser]:
-            self.resources.setdefault(child, list()).extend(list(resources))
+        # Key is item name, value is list of ProjectItem instances
+        self._downstream_items = dict()
+        self._upstream_items = dict()
+        for upstream_node, downstream_nodes in ordered_nodes.items():
+            self._downstream_items[upstream_node] = list()
+            upstream_index = project_item_model.find_item(upstream_node)
+            upstream_item = project_item_model.project_item(upstream_index)
+            for downstream_node in downstream_nodes:
+                self._upstream_items.setdefault(downstream_node, list()).append(upstream_item)
+                downstream_index = project_item_model.find_item(downstream_node)
+                downstream_item = project_item_model.project_item(downstream_index)
+                self._downstream_items[upstream_node].append(downstream_item)
 
-    def available_resources(self, item):
-        """Returns the list of resources available to the given item.
+    def available_upstream_resources(self, item):
+        """Returns the list of resources available to the given item from upstream items.
 
         Args:
             item (str): the name of the item that asks
         """
-        return self.resources.get(item, list())
+        resources = []
+        for upstream_item in self._upstream_items.get(item, []):
+            resources += upstream_item.available_resources_downstream()
+        return resources
 
-    def propagate_data(self, item):
-        """Advartise data seen by given item to its output items.
-        NOTE: Not in use at the moment.
+    def available_downstream_resources(self, item):
+        """Returns the list of resources available to the given item from downstream items.
 
         Args:
-            item (str): Project item name whose data needs to be propagated
+            item (str): the name of the item that asks
         """
-        resources = self.available_resources(item)
-        self.advertise_resources(item, *resources)
+        resources = []
+        for downstream_item in self._downstream_items.get(item, []):
+            resources += downstream_item.available_resources_upstream()
+        return resources

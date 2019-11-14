@@ -28,9 +28,10 @@ from PySide2.QtWidgets import (
     QListView,
     QLineEdit,
     QDialogButtonBox,
+    QWidgetAction,
 )
-from PySide2.QtCore import QTimer, Signal
-from PySide2.QtGui import QPainter
+from PySide2.QtCore import Qt, QTimer, Signal, Slot, QEvent, QRect
+from PySide2.QtGui import QPainter, QColor, QPainterPath
 from ..mvcmodels.filter_checkbox_list_model import FilterCheckboxListModel
 
 
@@ -132,19 +133,49 @@ class FilterWidget(QWidget):
         self._search_timer.start(self.search_delay)
 
 
-class ZoomWidget(QWidget):
-    """A widget for a QWidgetAction providing zoom actions for a graph view.
+class ZoomWidgetAction(QWidgetAction):
+    """A zoom widget action."""
 
-    Attributes
-        parent (QWidget): the widget's parent
-    """
-
-    minus_pressed = Signal(name="minus_pressed")
-    plus_pressed = Signal(name="plus_pressed")
-    reset_pressed = Signal(name="reset_pressed")
+    minus_pressed = Signal()
+    plus_pressed = Signal()
+    reset_pressed = Signal()
 
     def __init__(self, parent=None):
-        """Init class."""
+        """Class constructor.
+
+        Args:
+            parent (QWidget): the widget's parent
+        """
+        super().__init__(parent)
+        zoom_widget = ZoomWidget(parent)
+        self.setDefaultWidget(zoom_widget)
+        zoom_widget.minus_pressed.connect(self.minus_pressed)
+        zoom_widget.plus_pressed.connect(self.plus_pressed)
+        zoom_widget.reset_pressed.connect(self.reset_pressed)
+        self.hovered.connect(self._handle_hovered)
+
+    @Slot()
+    def _handle_hovered(self):
+        """Runs when the zoom widget action is hovered. Hides other menus under the parent widget
+        which are being shown. This is the default behavior for hovering QAction,
+        but for some reason it's not the case for hovering QWidgetAction."""
+        for menu in self.parentWidget().findChildren(QMenu):
+            if menu.isVisible():
+                menu.hide()
+
+
+class ZoomWidget(QWidget):
+
+    minus_pressed = Signal()
+    plus_pressed = Signal()
+    reset_pressed = Signal()
+
+    def __init__(self, parent=None):
+        """Class constructor.
+
+        Args:
+            parent (QWidget): the widget's parent
+        """
         super().__init__(parent)
         self.option = QStyleOptionMenuItem()
         zoom_action = QAction("Zoom")
@@ -171,3 +202,71 @@ class ZoomWidget(QWidget):
         painter = QPainter(self)
         self.style().drawControl(QStyle.CE_MenuItem, self.option, painter)
         super().paintEvent(event)
+
+
+class OverlayWidget(QWidget):
+    def __init__(self, target=None, color=QColor(100, 100, 100, 50), rect=QRect(0, 0, 1, 1)):
+        super().__init__(target)
+        self._target = None
+        self._color = None
+        self._rect = None
+        self.setAttribute(Qt.WA_NoSystemBackground)
+        self.setAttribute(Qt.WA_TransparentForMouseEvents)
+        self.setAttribute(Qt.WA_TranslucentBackground)
+        self.setProperty("target", target)
+        self.setProperty("color", color)
+        self.setProperty("rect", rect)
+
+    @property
+    def color(self):
+        return self._color
+
+    @color.setter
+    def color(self, color):
+        self._color = color
+
+    @property
+    def target(self):
+        return self.parent()
+
+    @target.setter
+    def target(self, target):
+        if self.target:
+            self.target.removeEventFilter(self)
+        self.setParent(target)
+        if not target:
+            return
+        self.target.installEventFilter(self)
+        self.raise_()
+        QTimer.singleShot(0, self.show)
+
+    @property
+    def rectangle(self):
+        return self._rect
+
+    @rectangle.setter
+    def rectangle(self, rect):
+        self._rect = rect
+        QTimer.singleShot(0, self.repaint)
+
+    def eventFilter(self, obj, ev):
+        if obj == self.parent():
+            if ev.type() == QEvent.Resize:
+                self.resize(ev.size())
+            elif ev.type() == QEvent.ChildAdded:
+                self.raise_()
+        return super().eventFilter(obj, ev)
+
+    def event(self, ev):
+        if ev.type() == QEvent.DynamicPropertyChange:
+            name = ev.propertyName().data().decode()
+            setattr(self, name, self.property(name))
+        return super().event(ev)
+
+    def paintEvent(self, ev):
+        rect = self.rectangle if self.rectangle else self.rect()
+        p = QPainter(self)
+        p.setRenderHint(QPainter.Antialiasing)
+        path = QPainterPath()
+        path.addRoundedRect(rect, 4, 4)
+        p.fillPath(path, self.color)

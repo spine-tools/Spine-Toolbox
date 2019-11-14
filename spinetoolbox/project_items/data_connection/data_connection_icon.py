@@ -18,16 +18,20 @@ Module for data connection icon class.
 
 import os
 from PySide2.QtGui import QColor
-from PySide2.QtCore import Qt, QTimer
+from PySide2.QtCore import QObject, Qt, QTimer, Signal
 from spinetoolbox.graphics_items import ProjectItemIcon
 
 
 class DataConnectionIcon(ProjectItemIcon):
+    class _SignalHolder(QObject):
+        files_dropped_on_icon = Signal("QGraphicsItem", list)
+        """A signal that it triggered when files are dragged and dropped on the item."""
+
     def __init__(self, toolbox, x, y, w, h, name):
         """Data Connection icon for the Design View.
 
         Args:
-            toolbox (ToolBoxUI): QMainWindow instance
+            toolbox (ToolboxUI): main window instance
             x (float): Icon x coordinate
             y (float): Icon y coordinate
             w (float): Width of master icon
@@ -42,11 +46,13 @@ class DataConnectionIcon(ProjectItemIcon):
             h,
             name,
             ":/icons/project_item_icons/file-alt.svg",
-            icon_color=QColor(0, 0, 255, 160),
+            icon_color=QColor(0, 0, 255),
             background_color=QColor("#e6e6ff"),
         )
         self.setAcceptDrops(True)
         self._drag_over = False
+        self._signal_holder = DataConnectionIcon._SignalHolder()
+        self.files_dropped_on_icon = self._signal_holder.files_dropped_on_icon
 
     def dragEnterEvent(self, event):
         """Drag and drop action enters.
@@ -86,7 +92,7 @@ class DataConnectionIcon(ProjectItemIcon):
     def dropEvent(self, event):
         """Emit files_dropped_on_dc signal from scene,
         with this instance, and a list of files for each dropped url."""
-        self.scene().files_dropped_on_dc.emit(self, [url.toLocalFile() for url in event.mimeData().urls()])
+        self.files_dropped_on_icon.emit(self, [url.toLocalFile() for url in event.mimeData().urls()])
 
     def select_on_drag_over(self):
         """Called when the timer started in drag_enter_event is elapsed.

@@ -29,10 +29,10 @@
     <file>project_item_icons/stop-circle-regular.svg</file>
     <file>project_item_icons/play-circle-regular.svg</file>
     <file>project_item_icons/play-circle-solid.svg</file>
-    <file>project_item_icons/tree.svg</file>
-    <file>project_item_icons/map-solid.svg</file>
     <file>project_item_icons/binoculars.svg</file>
     <file>project_item_icons/database.svg</file>
+    <file>project_item_icons/database-export.svg</file>
+    <file>project_item_icons/database-import.svg</file>
     <file>project_item_icons/file-alt.svg</file>
     <file>project_item_icons/hammer.svg</file>
     <file>project_item_icons/exclamation-circle.svg</file>
@@ -63,6 +63,7 @@
     <file>menu_icons/paste.svg</file>
     <file>menu_icons/sync.svg</file>
     <file>menu_icons/trash-alt.svg</file>
+    <file>menu_icons/times.svg</file>
     <file>menu_icons/undo.svg</file>
     <file>project_item_icons/file-export-solid.svg</file>
   </qresource>

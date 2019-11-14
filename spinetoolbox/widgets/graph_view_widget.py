@@ -10,111 +10,86 @@
 ######################################################################################################################
 
 """
-Contains the TreeViewForm class.
+Contains the GraphViewForm class.
 
 :author: M. Marin (KTH)
 :date:   26.11.2018
 """
 
-import time  # just to measure loading time and sqlalchemy ORM performance
-import logging
+import time
 import numpy as np
 from numpy import atleast_1d as arr
 from scipy.sparse.csgraph import dijkstra
-from PySide2.QtWidgets import QApplication, QGraphicsScene, QWidgetAction, QTreeView
-from PySide2.QtCore import Qt, Slot, QPointF, QRectF, QEvent
-from PySide2.QtGui import QPalette, QMouseEvent
-from spinedb_api import SpineDBAPIError, SpineIntegrityError
+from PySide2.QtCore import Qt, Signal, Slot
+from PySide2.QtWidgets import QGraphicsTextItem
 from .data_store_widget import DataStoreForm
-from .custom_menus import SimpleEditableParameterValueContextMenu, ObjectItemContextMenu, GraphViewContextMenu
-from .custom_qwidgets import ZoomWidget
+from .custom_menus import (
+    SimpleEditableParameterValueContextMenu,
+    GraphViewContextMenu,
+    ObjectItemContextMenu,
+    RelationshipItemContextMenu,
+)
+from .custom_qwidgets import ZoomWidgetAction
 from .report_plotting_failure import report_plotting_failure
 from .shrinking_scene import ShrinkingScene
-from ..mvcmodels.object_relationship_models import ObjectTreeModel, ObjectClassListModel, RelationshipClassListModel
-from ..graphics_items import ObjectItem, ArcItem, CustomTextItem
-from ..helpers import busy_effect, fix_name_ambiguity
+from .graph_view_graphics_items import EntityItem, ObjectItem, RelationshipItem, ArcItem
+from .graph_view_demo import GraphViewDemo
+from ..mvcmodels.entity_list_models import ObjectClassListModel, RelationshipClassListModel
+from ..helpers import busy_effect
 from ..plotting import plot_selection, PlottingError, GraphAndTreeViewPlottingHints
 
 
 class GraphViewForm(DataStoreForm):
-    """A widget to show the graph view.
+    """A widget to show Spine databases in a graph."""
 
-    Attributes:
-        project (SpineToolboxProject): The project instance that owns this form
-        db_maps (dict): named DiffDatabaseMapping instances
-        read_only (bool): Whether or not the form should be editable
-    """
+    graph_created = Signal()
 
-    def __init__(self, project, db_maps, read_only=False):
-        """Initialize class."""
+    _node_extent = 64
+    _arc_width = 0.25 * _node_extent
+    _arc_length_hint = 3 * _node_extent
+
+    def __init__(self, project, *db_urls, read_only=False):
+        """Initializes form.
+
+        Args:
+            project (SpineToolboxProject): The project instance that owns this form.
+            *db_urls (str): Database urls to view.
+            read_only (bool): Whether or not the form should be editable.
+        """
         from ..ui.graph_view_form import Ui_MainWindow
 
         tic = time.clock()
-        super().__init__(project, Ui_MainWindow(), db_maps)
-        self.db_map = self.db_maps[0]
-        self.db_name = self.db_names[0]
-        self.ui.graphicsView.set_graph_view_form(self)
+        super().__init__(project, Ui_MainWindow(), *db_urls)
+        self.db_name = self.db_map.codename
         self.read_only = read_only
-        self._has_graph = False
-        self.extent = 64
-        self._spread = 3 * self.extent
-        self.object_label_color = self.palette().color(QPalette.Normal, QPalette.ToolTipBase)
-        self.object_label_color.setAlphaF(0.8)
-        self.arc_token_color = self.palette().color(QPalette.Normal, QPalette.Window)
-        self.arc_token_color.setAlphaF(0.8)
-        self.arc_color = self.palette().color(QPalette.Normal, QPalette.WindowText)
-        self.arc_color.setAlphaF(0.8)
-        # Object tree model
-        self.object_tree_model = ObjectTreeModel(self, flat=True)
-        self.ui.treeView_object.setModel(self.object_tree_model)
-        # Data for ObjectItems
-        self.object_ids = list()
-        self.object_names = list()
-        self.object_class_ids = list()
-        self.object_class_names = list()
-        # Data for ArcItems
-        self.arc_object_id_lists = list()
-        self.arc_relationship_class_ids = list()
-        self.arc_token_object_name_tuple_lists = list()
-        self.src_ind_list = list()
-        self.dst_ind_list = list()
-        # Data for template ObjectItems and ArcItems (these are persisted across graph builds)
-        self.heavy_positions = {}
-        self.is_template = {}
-        self.template_id_dims = {}
-        self.arc_template_ids = {}
-        # Data of relationship templates
-        self.template_id = 1
-        self.relationship_class_dict = {}  # template_id => relationship_class_name, relationship_class_id
+        # Lookups, used for adding objects and relationships
+        self._added_objects = {}
+        self._added_relationships = {}
         # Item palette models
-        self.object_class_list_model = ObjectClassListModel(self)
-        self.relationship_class_list_model = RelationshipClassListModel(self)
+        self.object_class_list_model = ObjectClassListModel(self, self.db_mngr, self.db_map)
+        self.relationship_class_list_model = RelationshipClassListModel(self, self.db_mngr, self.db_map)
         self.ui.listView_object_class.setModel(self.object_class_list_model)
         self.ui.listView_relationship_class.setModel(self.relationship_class_list_model)
-        # Context menus
-        self.object_item_context_menu = None
-        self.graph_view_context_menu = None
         # Hidden and rejected items
         self.hidden_items = list()
         self.rejected_items = list()
         # Current item selection
-        self.object_item_selection = list()
-        self.arc_item_selection = list()
+        self.entity_item_selection = list()
         # Zoom widget and action
         self.zoom_widget_action = None
-        self.zoom_widget = None
         # Set up splitters
         area = self.dockWidgetArea(self.ui.dockWidget_item_palette)
         self._handle_item_palette_dock_location_changed(area)
         # Override mouse press event of object tree view
-        self.ui.treeView_object.mousePressEvent = self._object_tree_view_mouse_press_event
+        self.ui.treeView_object.qsettings = self.qsettings
         # Set up dock widgets
         self.restore_dock_widgets()
+        self.live_demo = GraphViewDemo(self)
         # Initialize stuff
         self.init_models()
         self.setup_delegates()
         self.add_toggle_view_actions()
-        self.setup_zoom_action()
+        self.setup_zoom_widget_action()
         self.connect_signals()
         self.settings_group = "graphViewWidget" if not self.read_only else "graphViewWidgetReadOnly"
         self.restore_ui()
@@ -124,46 +99,17 @@ class GraphViewForm(DataStoreForm):
         toc = time.clock()
         self.msg.emit("Graph view form created in {} seconds\t".format(toc - tic))
 
-    def show(self):
-        """Show usage message together with the form."""
-        super().show()
-        self.show_usage_msg()
-
-    def init_models(self):
-        """Initialize models."""
-        super().init_models()
-        self.object_class_list_model.populate_list()
-        self.relationship_class_list_model.populate_list()
-
-    def init_parameter_value_models(self):
-        """Initialize parameter value models from source database."""
-        self.object_parameter_value_model.has_empty_row = not self.read_only
-        self.relationship_parameter_value_model.has_empty_row = not self.read_only
-        super().init_parameter_value_models()
-
-    def init_parameter_definition_models(self):
-        """Initialize parameter (definition) models from source database."""
-        self.object_parameter_definition_model.has_empty_row = not self.read_only
-        self.relationship_parameter_definition_model.has_empty_row = not self.read_only
-        super().init_parameter_definition_models()
-
-    def setup_zoom_action(self):
-        """Setup zoom action in view menu."""
-        self.zoom_widget = ZoomWidget(self)
-        self.zoom_widget_action = QWidgetAction(self)
-        self.zoom_widget_action.setDefaultWidget(self.zoom_widget)
-        self.ui.menuView.addSeparator()
-        self.ui.menuView.addAction(self.zoom_widget_action)
-
     def connect_signals(self):
-        """Connect signals."""
+        """Connects signals."""
         super().connect_signals()
+        self.ui.graphicsView.context_menu_requested.connect(self.show_graph_view_context_menu)
         self.ui.graphicsView.item_dropped.connect(self._handle_item_dropped)
         self.ui.dockWidget_item_palette.dockLocationChanged.connect(self._handle_item_palette_dock_location_changed)
-        self.ui.actionGraph_hide_selected.triggered.connect(self.hide_selected_items)
-        self.ui.actionGraph_show_hidden.triggered.connect(self.show_hidden_items)
-        self.ui.actionGraph_prune_selected.triggered.connect(self.prune_selected_items)
-        self.ui.actionGraph_reinstate_pruned.triggered.connect(self.reinstate_pruned_items)
+        self.ui.actionView_hide_selected.triggered.connect(self.hide_selected_items)
+        self.ui.actionView_show_hidden.triggered.connect(self.show_hidden_items)
+        self.ui.actionView_prune_selected.triggered.connect(self.prune_selected_items)
+        self.ui.actionView_reinstate_pruned.triggered.connect(self.reinstate_pruned_items)
+        self.ui.actionHelp_live_demo.triggered.connect(self.show_demo)
         self.ui.tableView_object_parameter_value.customContextMenuRequested.connect(
             self.show_object_parameter_value_context_menu
         )
@@ -178,61 +124,23 @@ class GraphViewForm(DataStoreForm):
         )
         # Dock Widgets menu action
         self.ui.actionRestore_Dock_Widgets.triggered.connect(self.restore_dock_widgets)
-        self.ui.menuGraph.aboutToShow.connect(self._handle_menu_about_to_show)
-        self.zoom_widget_action.hovered.connect(self._handle_zoom_widget_action_hovered)
-        self.zoom_widget.minus_pressed.connect(self._handle_zoom_widget_minus_pressed)
-        self.zoom_widget.plus_pressed.connect(self._handle_zoom_widget_plus_pressed)
-        self.zoom_widget.reset_pressed.connect(self._handle_zoom_widget_reset_pressed)
+        self.ui.menuView.aboutToShow.connect(self._handle_menu_about_to_show)
+        self.zoom_widget_action.minus_pressed.connect(self._handle_zoom_minus_pressed)
+        self.zoom_widget_action.plus_pressed.connect(self._handle_zoom_plus_pressed)
+        self.zoom_widget_action.reset_pressed.connect(self._handle_zoom_reset_pressed)
         # Connect Add more items in Item palette
         self.ui.listView_object_class.clicked.connect(self._add_more_object_classes)
         self.ui.listView_relationship_class.clicked.connect(self._add_more_relationship_classes)
 
-    @Slot("QModelIndex", name="_add_more_object_classes")
-    def _add_more_object_classes(self, ind):
-        """Opens the add more object classes form when clicking on Add more... item
-        in Item palette Object class view."""
-        clicked_item = self.object_class_list_model.itemFromIndex(ind)
-        if clicked_item.data(Qt.UserRole + 2) == "Add More":
-            self.show_add_object_classes_form()
-
-    @Slot("QModelIndex", name="_add_more_relationship_classes")
-    def _add_more_relationship_classes(self, ind):
-        """Opens the add more relationship classes form when clicking on Add more... item
-        in Item palette Relationship class view."""
-        clicked_item = self.relationship_class_list_model.itemFromIndex(ind)
-        if clicked_item.data(Qt.UserRole + 2) == "Add More":
-            self.show_add_relationship_classes_form()
-
-    def _object_tree_view_mouse_press_event(self, event):
-        """Overrides mousePressEvent of ui.treeView_object if the user has selected sticky
-        selection in Settings. If sticky selection is enabled, multi-selection is
-        enabled when selecting items in the Object tree. Pressing the Ctrl-button down,
-        enables single selection. If sticky selection is disabled, single selection is
-        enabled and pressing the Ctrl-button down enables multi-selection.
-        """
-        sticky_selection = self.qsettings().value("appSettings/stickySelection", defaultValue="false")
-        if sticky_selection == "false":
-            QTreeView.mousePressEvent(self.ui.treeView_object, event)
-            return
-        local_pos = event.localPos()
-        window_pos = event.windowPos()
-        screen_pos = event.screenPos()
-        button = event.button()
-        buttons = event.buttons()
-        modifiers = event.modifiers()
-        if modifiers & Qt.ControlModifier:
-            modifiers &= ~Qt.ControlModifier
-        else:
-            modifiers |= Qt.ControlModifier
-        source = event.source()
-        new_event = QMouseEvent(
-            QEvent.MouseButtonPress, local_pos, window_pos, screen_pos, button, buttons, modifiers, source
-        )
-        QTreeView.mousePressEvent(self.ui.treeView_object, new_event)
+    def setup_zoom_widget_action(self):
+        """Setups zoom widget action in view menu."""
+        self.zoom_widget_action = ZoomWidgetAction(self.ui.menuView)
+        self.ui.menuView.addSeparator()
+        self.ui.menuView.addAction(self.zoom_widget_action)
 
     @Slot(name="restore_dock_widgets")
     def restore_dock_widgets(self):
-        """Dock all floating and or hidden QDockWidgets back to the window at 'factory' positions."""
+        """Docks all floating and or hidden QDockWidgets back to the window at 'factory' positions."""
         # Place docks
         self.ui.dockWidget_object_parameter_value.setVisible(True)
         self.ui.dockWidget_object_parameter_value.setFloating(False)
@@ -263,44 +171,180 @@ class GraphViewForm(DataStoreForm):
         self.ui.dockWidget_object_parameter_value.raise_()
         self.ui.dockWidget_relationship_parameter_value.raise_()
 
-    @Slot(name="_handle_zoom_widget_minus_pressed")
-    def _handle_zoom_widget_minus_pressed(self):
+    def init_models(self):
+        """Initializes models."""
+        super().init_models()
+        self.object_class_list_model.populate_list()
+        self.relationship_class_list_model.populate_list()
+
+    def init_parameter_value_models(self):
+        """Initializes parameter value models from source database."""
+        # FIXME:
+        self.object_parameter_value_model.has_empty_row = not self.read_only
+        self.relationship_parameter_value_model.has_empty_row = not self.read_only
+        super().init_parameter_value_models()
+
+    def init_parameter_definition_models(self):
+        """Initializes parameter (definition) models from source database."""
+        # FIXME:
+        self.object_parameter_definition_model.has_empty_row = not self.read_only
+        self.relationship_parameter_definition_model.has_empty_row = not self.read_only
+        super().init_parameter_definition_models()
+
+    def receive_object_classes_added(self, db_map_data):
+        super().receive_object_classes_added(db_map_data)
+        self.object_class_list_model.receive_entity_classes_added(db_map_data)
+
+    def receive_object_classes_updated(self, db_map_data):
+        super().receive_object_classes_updated(db_map_data)
+        self.object_class_list_model.receive_entity_classes_updated(db_map_data)
+        self.refresh_icons(db_map_data)
+
+    def receive_object_classes_removed(self, db_map_data):
+        super().receive_object_classes_removed(db_map_data)
+        self.object_class_list_model.receive_entity_classes_removed(db_map_data)
+
+    def receive_relationship_classes_added(self, db_map_data):
+        super().receive_relationship_classes_added(db_map_data)
+        self.relationship_class_list_model.receive_entity_classes_added(db_map_data)
+
+    def receive_relationship_classes_updated(self, db_map_data):
+        super().receive_relationship_classes_updated(db_map_data)
+        self.relationship_class_list_model.receive_entity_classes_updated(db_map_data)
+        self.refresh_icons(db_map_data)
+
+    def receive_relationship_classes_removed(self, db_map_data):
+        super().receive_relationship_classes_removed(db_map_data)
+        self.relationship_class_list_model.receive_entity_classes_removed(db_map_data)
+
+    def receive_objects_added(self, db_map_data):
+        """Runs when objects are added to the db.
+        Builds a lookup dictionary consumed by ``add_object``.
+
+        Args:
+            db_map_data (dict): list of dictionary-items keyed by DiffDatabaseMapping instance.
+        """
+        super().receive_objects_added(db_map_data)
+        self._added_objects = {(x["class_id"], x["name"]): x["id"] for x in db_map_data.get(self.db_map, [])}
+
+    def receive_objects_updated(self, db_map_data):
+        """Runs when objects are updated in the db. Refreshes names of objects in graph.
+
+        Args:
+            db_map_data (dict): list of dictionary-items keyed by DiffDatabaseMapping instance.
+        """
+        super().receive_objects_updated(db_map_data)
+        updated_ids = {x["id"] for x in db_map_data.get(self.db_map, [])}
+        for item in self.ui.graphicsView.items():
+            if isinstance(item, ObjectItem) and item.entity_id in updated_ids:
+                item.refresh_name()
+
+    def receive_objects_removed(self, db_map_data):
+        """Runs when objects are removed from the db. Rebuilds graph if needed.
+
+        Args:
+            db_map_data (dict): list of dictionary-items keyed by DiffDatabaseMapping instance.
+        """
+        super().receive_objects_removed(db_map_data)
+        self.receive_entities_removed(db_map_data)
+
+    def receive_relationships_added(self, db_map_data):
+        """Runs when relationships are added to the db.
+        Builds a lookup dictionary consumed by ``add_relationship``.
+
+        Args:
+            db_map_data (dict): list of dictionary-items keyed by DiffDatabaseMapping instance.
+        """
+        super().receive_relationships_added(db_map_data)
+        self._added_relationships = {
+            (x["class_id"], x["object_id_list"]): x["id"] for x in db_map_data.get(self.db_map, [])
+        }
+
+    def receive_relationships_removed(self, db_map_data):
+        """Runs when relationships are removed from the db. Rebuilds graph if needed.
+
+        Args:
+            db_map_data (dict): list of dictionary-items keyed by DiffDatabaseMapping instance.
+        """
+        super().receive_relationships_removed(db_map_data)
+        self.receive_entities_removed(db_map_data)
+
+    def receive_entities_removed(self, db_map_data):
+        removed_ids = {x["id"] for x in db_map_data.get(self.db_map, [])}
+        for item in self.ui.graphicsView.items():
+            if isinstance(item, EntityItem) and item.entity_id in removed_ids:
+                item.wipe_out()
+
+    def refresh_icons(self, db_map_data):
+        """Runs when entity classes are updated in the db. Refreshes icons of entities in graph.
+
+        Args:
+            db_map_data (dict): list of dictionary-items keyed by DiffDatabaseMapping instance.
+        """
+        updated_ids = {x["id"] for x in db_map_data.get(self.db_map, [])}
+        for item in self.ui.graphicsView.items():
+            if isinstance(item, EntityItem) and item.entity_class_id in updated_ids:
+                item.refresh_icon()
+
+    @Slot("QModelIndex", name="_add_more_object_classes")
+    def _add_more_object_classes(self, index):
+        """Runs when the user clicks on the Item palette Object class view.
+        Opens the form  to add more object classes if the index is the one that sayes 'New...'.
+
+        Args:
+            index (QModelIndex): The clicked index.
+        """
+        if index == index.model().new_index:
+            self.show_add_object_classes_form()
+
+    @Slot("QModelIndex", name="_add_more_relationship_classes")
+    def _add_more_relationship_classes(self, index):
+        """Runs when the user clicks on the Item palette Relationship class view.
+        Opens the form to add more relationship classes if the index is the one that sayes 'New...'.
+
+        Args:
+            index (QModelIndex): The clicked index.
+        """
+        if index == index.model().new_index:
+            self.show_add_relationship_classes_form()
+
+    @Slot(name="_handle_zoom_minus_pressed")
+    def _handle_zoom_minus_pressed(self):
+        """Performs a zoom out on the view."""
         self.ui.graphicsView.zoom_out()
 
-    @Slot(name="_handle_zoom_widget_plus_pressed")
-    def _handle_zoom_widget_plus_pressed(self):
+    @Slot(name="_handle_zoom_plus_pressed")
+    def _handle_zoom_plus_pressed(self):
+        """Performs a zoom in on the view."""
         self.ui.graphicsView.zoom_in()
 
-    @Slot(name="_handle_zoom_widget_reset_pressed")
-    def _handle_zoom_widget_reset_pressed(self):
+    @Slot(name="_handle_zoom_reset_pressed")
+    def _handle_zoom_reset_pressed(self):
+        """Resets the zoom on the view."""
         self.ui.graphicsView.reset_zoom()
-
-    @Slot(name="_handle_zoom_widget_action_hovered")
-    def _handle_zoom_widget_action_hovered(self):
-        """Called when the zoom widget action is hovered. Hide the 'Dock widgets' submenu in case
-        it's being shown. This is the default behavior for hovering 'normal' 'QAction's, but for some reason
-        it's not the case for hovering 'QWidgetAction's."""
-        self.ui.menuDock_Widgets.hide()
 
     @Slot(name="_handle_menu_about_to_show")
     def _handle_menu_about_to_show(self):
-        """Called when a menu from the menubar is about to show."""
-        self.ui.actionGraph_hide_selected.setEnabled(bool(self.object_item_selection))
-        self.ui.actionGraph_show_hidden.setEnabled(bool(self.hidden_items))
-        self.ui.actionGraph_prune_selected.setEnabled(bool(self.object_item_selection))
-        self.ui.actionGraph_reinstate_pruned.setEnabled(bool(self.rejected_items))
+        """Runs when a menu from the main menubar is about to show.
+        Enables or disables the menu actions according to current status of the form.
+        """
+        self.ui.actionView_hide_selected.setEnabled(bool(self.entity_item_selection))
+        self.ui.actionView_show_hidden.setEnabled(bool(self.hidden_items))
+        self.ui.actionView_prune_selected.setEnabled(bool(self.entity_item_selection))
+        self.ui.actionView_reinstate_pruned.setEnabled(bool(self.rejected_items))
+        self.ui.actionHelp_live_demo.setEnabled(not self.live_demo.is_running())
 
     @Slot("Qt.DockWidgetArea", name="_handle_item_palette_dock_location_changed")
     def _handle_item_palette_dock_location_changed(self, area):
-        """Called when the item palette dock widget location changes.
-        Adjust splitter orientation accordingly."""
+        """Runs when the item palette dock widget location changes.
+        Adjusts splitter orientation accordingly."""
         if area & (Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea):
             self.ui.splitter_object_relationship_class.setOrientation(Qt.Vertical)
         else:
             self.ui.splitter_object_relationship_class.setOrientation(Qt.Horizontal)
 
     def add_toggle_view_actions(self):
-        """Add toggle view actions to View menu."""
+        """Adds toggle view actions to View menu."""
         super().add_toggle_view_actions()
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_object_tree.toggleViewAction())
         if not self.read_only:
@@ -309,173 +353,197 @@ class GraphViewForm(DataStoreForm):
             self.ui.dockWidget_item_palette.hide()
 
     def init_commit_rollback_actions(self):
-        if not self.read_only:
-            self.commit_available.emit(False)
-        else:
+        """Initializes commit and rollback actions."""
+        if self.read_only:
             self.ui.menuSession.removeAction(self.ui.actionCommit)
             self.ui.menuSession.removeAction(self.ui.actionRollback)
 
-    @busy_effect
-    # @Slot("bool", name="build_graph")
-    def build_graph(self):
-        """Initialize graph data and build graph."""
-        tic = time.clock()
-        self.init_graph_data()
-        self._has_graph = self.make_graph()
-        if self._has_graph:
-            self.extend_scene()
-            toc = time.clock()
-            self.msg.emit("Graph built in {} seconds\t".format(toc - tic))
-        else:
-            self.show_usage_msg()
-        self.hidden_items = list()
-
     @Slot("QItemSelection", "QItemSelection", name="_handle_object_tree_selection_changed")
     def _handle_object_tree_selection_changed(self, selected, deselected):
-        """Build_graph."""
+        """Builds graph."""
+        super()._handle_object_tree_selection_changed(selected, deselected)
         self.build_graph()
 
-    def init_graph_data(self):
-        """Initialize graph data."""
-        rejected_object_names = [x.object_name for x in self.rejected_items]
-        self.object_ids = list()
-        self.object_names = list()
-        self.object_class_ids = list()
-        self.object_class_names = list()
-        root_item = self.object_tree_model.root_item
-        index = self.object_tree_model.indexFromItem(root_item)
-        is_root_selected = self.ui.treeView_object.selectionModel().isSelected(index)
-        for i in range(root_item.rowCount()):
-            object_class_item = root_item.child(i, 0)
-            object_class_id = object_class_item.data(Qt.UserRole + 1)[self.db_map]['id']
-            object_class_name = object_class_item.data(Qt.UserRole + 1)[self.db_map]['name']
-            index = self.object_tree_model.indexFromItem(object_class_item)
-            is_object_class_selected = self.ui.treeView_object.selectionModel().isSelected(index)
-            # Fetch object class if needed
-            if is_root_selected or is_object_class_selected and self.object_tree_model.canFetchMore(index):
-                self.object_tree_model.fetchMore(index)
-            for j in range(object_class_item.rowCount()):
-                object_item = object_class_item.child(j, 0)
-                object_id = object_item.data(Qt.UserRole + 1)[self.db_map]["id"]
-                object_name = object_item.data(Qt.UserRole + 1)[self.db_map]["name"]
-                if object_name in rejected_object_names:
-                    continue
-                index = self.object_tree_model.indexFromItem(object_item)
-                is_object_selected = self.ui.treeView_object.selectionModel().isSelected(index)
-                if is_root_selected or is_object_class_selected or is_object_selected:
-                    self.object_ids.append(object_id)
-                    self.object_names.append(object_name)
-                    self.object_class_ids.append(object_class_id)
-                    self.object_class_names.append(object_class_name)
-        self.arc_object_id_lists = list()
-        self.arc_relationship_class_ids = list()
-        self.arc_token_object_name_tuple_lists = list()
-        self.src_ind_list = list()
-        self.dst_ind_list = list()
-        relationship_class_dict = {
-            x.id: {"name": x.name, "object_class_name_list": x.object_class_name_list}
-            for x in self.db_map.wide_relationship_class_list()
-        }
-        for relationship in self.db_map.wide_relationship_list():
-            object_class_name_list = relationship_class_dict[relationship.class_id]["object_class_name_list"]
-            split_object_class_name_list = object_class_name_list.split(",")
-            object_id_list = relationship.object_id_list
-            split_object_id_list = [int(x) for x in object_id_list.split(",")]
-            split_object_name_list = relationship.object_name_list.split(",")
-            for i, src_object_id in enumerate(split_object_id_list):
+    @busy_effect
+    def build_graph(self, timeit=False):
+        """Builds the graph."""
+        tic = time.clock()
+        new_items = self._get_new_items()
+        wip_relationship_items = self._get_wip_relationship_items()
+        scene = self.new_scene()
+        if not new_items and not wip_relationship_items:
+            item = QGraphicsTextItem("Nothing to show.")
+            scene.addItem(item)
+        else:
+            if new_items:
+                object_items = new_items[0]
+                self._add_new_items(scene, *new_items)  # pylint: disable=no-value-for-parameter
+            else:
+                object_items = []
+            if wip_relationship_items:
+                self._add_wip_relationship_items(scene, wip_relationship_items, object_items)
+            self.hidden_items.clear()
+        self.extend_scene()
+        toc = time.clock()
+        _ = timeit and self.msg.emit("Graph built in {} seconds\t".format(toc - tic))
+        self.graph_created.emit()
+
+    def _get_selected_object_ids(self):
+        """Returns a set of object ids according to selection in the object tree.
+
+        Returns:
+            set
+        """
+        root_index = self.object_tree_model.root_index
+        if self.ui.treeView_object.selectionModel().isSelected(root_index):
+            return {x["id"] for x in self.db_mngr.get_objects(self.db_map)}
+        unique_object_ids = set()
+        for index in self.object_tree_model.selected_object_indexes:
+            item = index.model().item_from_index(index)
+            object_id = item.db_map_id(self.db_map)
+            unique_object_ids.add(object_id)
+        for index in self.object_tree_model.selected_object_class_indexes:
+            item = index.model().item_from_index(index)
+            object_class_id = item.db_map_id(self.db_map)
+            object_ids = {x["id"] for x in self.db_mngr.get_objects(self.db_map, class_id=object_class_id)}
+            unique_object_ids.update(object_ids)
+        return unique_object_ids
+
+    def _get_graph_data(self):
+        """Returns data for making graph according to selection in Object tree.
+
+        Returns:
+            list: integer object ids
+            list: integer relationship ids
+            list: arc source indices
+            list: arc destination indices
+        """
+        rejected_entity_ids = {x.entity_id for x in self.rejected_items}
+        object_ids = list(self._get_selected_object_ids() - rejected_entity_ids)
+        src_inds = list()
+        dst_inds = list()
+        relationship_ids = list()
+        relationship_ind = len(object_ids)
+        for relationship in self.db_mngr.get_relationships(self.db_map):
+            if relationship["id"] in rejected_entity_ids:
+                continue
+            object_id_list = relationship["object_id_list"]
+            object_id_list = [int(x) for x in object_id_list.split(",")]
+            object_inds = list()
+            for object_id in object_id_list:
                 try:
-                    dst_object_id = split_object_id_list[i + 1]
-                except IndexError:
-                    dst_object_id = split_object_id_list[0]
-                try:
-                    src_ind = self.object_ids.index(src_object_id)
-                    dst_ind = self.object_ids.index(dst_object_id)
+                    object_ind = object_ids.index(object_id)
+                    object_inds.append(object_ind)
                 except ValueError:
-                    continue
-                self.src_ind_list.append(src_ind)
-                self.dst_ind_list.append(dst_ind)
-                src_object_name = self.object_names[src_ind]
-                dst_object_name = self.object_names[dst_ind]
-                self.arc_object_id_lists.append(object_id_list)
-                self.arc_relationship_class_ids.append(relationship.class_id)
-                # Add label items
-                arc_token_object_name_tuple_list = list()
-                for object_name, object_class_name in zip(split_object_name_list, split_object_class_name_list):
-                    if object_name in (src_object_name, dst_object_name):
-                        continue
-                    arc_token_object_name_tuple_list.append((object_class_name, object_name))
-                self.arc_token_object_name_tuple_lists.append(arc_token_object_name_tuple_list)
-        # Add template items hanging around
+                    pass
+            if len(object_inds) < 2:
+                continue
+            relationship_ids.append(relationship["id"])
+            for object_ind in object_inds:
+                src_inds.append(relationship_ind)
+                dst_inds.append(object_ind)
+            relationship_ind += 1
+        return object_ids, relationship_ids, src_inds, dst_inds
+
+    def _get_new_items(self):
+        """Returns new items for the graph.
+
+        Returns:
+            list: ObjectItem instances
+            list: RelationshipItem instances
+            list: ArcItem instances
+        """
+        object_ids, relationship_ids, src_inds, dst_inds = self._get_graph_data()
+        d = self.shortest_path_matrix(
+            len(object_ids) + len(relationship_ids), src_inds, dst_inds, self._arc_length_hint
+        )
+        if d is None:
+            return []
+        x, y = self.vertex_coordinates(d)
+        object_items = list()
+        relationship_items = list()
+        arc_items = list()
+        for i, object_id in enumerate(object_ids):
+            object_item = ObjectItem(self, x[i], y[i], self._node_extent, entity_id=object_id)
+            object_items.append(object_item)
+        offset = len(object_items)
+        for i, relationship_id in enumerate(relationship_ids):
+            relationship_item = RelationshipItem(
+                self, x[offset + i], y[offset + i], self._node_extent, entity_id=relationship_id
+            )
+            relationship_items.append(relationship_item)
+        for rel_ind, obj_ind in zip(src_inds, dst_inds):
+            arc_item = ArcItem(relationship_items[rel_ind - offset], object_items[obj_ind], self._arc_width)
+            arc_items.append(arc_item)
+        return object_items, relationship_items, arc_items
+
+    def _get_wip_relationship_items(self):
+        """Removes and returns wip relationship items from the current scene.
+
+        Returns:
+            list: RelationshipItem instances
+        """
         scene = self.ui.graphicsView.scene()
         if not scene:
-            return
-        self.heavy_positions = {}
-        template_object_items = [x for x in scene.items() if isinstance(x, ObjectItem) and x.template_id_dim]
-        object_ind = len(self.object_ids)
-        self.template_id_dims = {}
-        self.is_template = {}
-        object_ind_dict = {}  # Dict of object indexes added from this point
-        object_ids_copy = self.object_ids.copy()  # Object ids added until this point
-        for item in template_object_items:
-            object_id = item.object_id
-            object_name = item.object_name
-            try:
-                found_ind = object_ids_copy.index(object_id)
-                # Object id is already in list; complete its template information and make it heavy
-                self.template_id_dims[found_ind] = item.template_id_dim
-                self.is_template[found_ind] = False
-                self.heavy_positions[found_ind] = item.pos()
-            except ValueError:
-                # Object id is not in list; add it together with its template info, and make it heavy
-                object_class_id = item.object_class_id
-                object_class_name = item.object_class_name
-                self.object_ids.append(object_id)
-                self.object_names.append(object_name)
-                self.object_class_ids.append(object_class_id)
-                self.object_class_names.append(object_class_name)
-                self.template_id_dims[object_ind] = item.template_id_dim
-                self.is_template[object_ind] = item.is_template
-                self.heavy_positions[object_ind] = item.pos()
-                object_ind_dict[item] = object_ind
-                object_ind += 1
-        template_arc_items = [x for x in scene.items() if isinstance(x, ArcItem) and x.is_template]
-        arc_ind = len(self.arc_token_object_name_tuple_lists)
-        self.arc_template_ids = {}
-        for item in template_arc_items:
-            src_item = item.src_item
-            dst_item = item.dst_item
-            try:
-                src_ind = object_ind_dict[src_item]
-            except KeyError:
-                src_object_id = src_item.object_id
-                src_ind = self.object_ids.index(src_object_id)
-            try:
-                dst_ind = object_ind_dict[dst_item]
-            except KeyError:
-                dst_object_id = dst_item.object_id
-                dst_ind = self.object_ids.index(dst_object_id)
-            self.src_ind_list.append(src_ind)
-            self.dst_ind_list.append(dst_ind)
-            # NOTE: These arcs correspond to template arcs.
-            relationship_class_id = item.relationship_class_id
-            self.arc_object_id_lists.append("")  # TODO: is this one filled when creating the relationship?
-            self.arc_relationship_class_ids.append(relationship_class_id)
-            # Label don't matter
-            self.arc_token_object_name_tuple_lists.append(("", ""))
-            self.arc_template_ids[arc_ind] = item.template_id
-            arc_ind += 1
+            return []
+        wip_items = []
+        for item in scene.items():
+            if isinstance(item, RelationshipItem) and item.is_wip:
+                for arc_item in item.arc_items:
+                    scene.removeItem(arc_item)
+                unique_object_items = set(arc_item.obj_item for arc_item in item.arc_items)
+                for obj_item in unique_object_items:
+                    scene.removeItem(obj_item)
+                scene.removeItem(item)
+                wip_items.append(item)
+        return wip_items
 
     @staticmethod
-    def shortest_path_matrix(object_name_list, src_ind_list, dst_ind_list, spread):
-        """Return the shortest-path matrix."""
-        N = len(object_name_list)
+    def _add_new_items(scene, object_items, relationship_items, arc_items):
+        for item in object_items + relationship_items + arc_items:
+            scene.addItem(item)
+
+    @staticmethod
+    def _add_wip_relationship_items(scene, wip_relationship_items, new_object_items):
+        """Adds wip relationship items to the given scene, merging completed members with existing
+        object items by entity id.
+
+        Args:
+            scene (QGraphicsScene)
+            wip_relationship_items (list)
+            new_object_items (list)
+        """
+        object_items_lookup = dict()
+        for object_item in new_object_items:
+            object_items_lookup[object_item.entity_id] = object_item
+        for rel_item in wip_relationship_items:
+            scene.addItem(rel_item)
+            for arc_item in rel_item.arc_items:
+                scene.addItem(arc_item)
+            unique_object_items = set(arc_item.obj_item for arc_item in rel_item.arc_items)
+            for obj_item in unique_object_items:
+                scene.addItem(obj_item)
+                obj_item._merge_target = object_items_lookup.get(obj_item.entity_id)
+                if obj_item._merge_target:
+                    obj_item.merge_into_target(force=True)
+
+    @staticmethod
+    def shortest_path_matrix(N, src_inds, dst_inds, spread):
+        """Returns the shortest-path matrix.
+
+        Args:
+            N (int): The number of nodes in the graph.
+            src_inds (list): Source indices
+            dst_inds (list): Destination indices
+            spread (int): The desired 'distance' between neighbours
+        """
         if not N:
             return None
         dist = np.zeros((N, N))
-        src_ind = arr(src_ind_list)
-        dst_ind = arr(dst_ind_list)
+        src_inds = arr(src_inds)
+        dst_inds = arr(dst_inds)
         try:
-            dist[src_ind, dst_ind] = dist[dst_ind, src_ind] = spread
+            dist[src_inds, dst_inds] = dist[dst_inds, src_inds] = spread
         except IndexError:
             pass
         d = dijkstra(dist, directed=False)
@@ -486,7 +554,11 @@ class GraphViewForm(DataStoreForm):
 
     @staticmethod
     def sets(N):
-        """Return sets of vertex pairs indices."""
+        """Returns sets of vertex pairs indices.
+
+        Args:
+            N (int)
+        """
         sets = []
         for n in range(1, N):
             pairs = np.zeros((N - n, 2), int)  # pairs on diagonal n
@@ -503,7 +575,7 @@ class GraphViewForm(DataStoreForm):
 
     @staticmethod
     def vertex_coordinates(matrix, heavy_positions=None, iterations=10, weight_exp=-2, initial_diameter=1000):
-        """Return x and y coordinates for each vertex in the graph, computed using VSGD-MS."""
+        """Returns x and y coordinates for each vertex in the graph, computed using VSGD-MS."""
         if heavy_positions is None:
             heavy_positions = dict()
         N = len(matrix)
@@ -542,108 +614,56 @@ class GraphViewForm(DataStoreForm):
                     layout[heavy_ind, :] = heavy_pos
         return layout[:, 0], layout[:, 1]
 
-    def make_graph(self):
-        """Make graph."""
-        d = self.shortest_path_matrix(self.object_names, self.src_ind_list, self.dst_ind_list, self._spread)
-        if d is None:
-            return False
-        scene = self.new_scene()
-        x, y = self.vertex_coordinates(d, self.heavy_positions)
-        object_items = list()
-        for i in range(len(self.object_names)):
-            object_id = self.object_ids[i]
-            object_name = self.object_names[i]
-            object_class_id = self.object_class_ids[i]
-            object_class_name = self.object_class_names[i]
-            object_item = ObjectItem(
-                self,
-                object_name,
-                object_class_id,
-                object_class_name,
-                x[i],
-                y[i],
-                self.extent,
-                object_id=object_id,
-                label_color=self.object_label_color,
-            )
-            try:
-                template_id_dim = self.template_id_dims[i]
-                object_item.template_id_dim = template_id_dim
-                if self.is_template[i]:
-                    object_item.make_template()
-            except KeyError:
-                pass
-            scene.addItem(object_item)
-            object_items.append(object_item)
-        for k in range(len(self.src_ind_list)):
-            i = self.src_ind_list[k]
-            j = self.dst_ind_list[k]
-            object_id_list = self.arc_object_id_lists[k]
-            relationship_class_id = self.arc_relationship_class_ids[k]
-            token_object_name_tuple_list = self.arc_token_object_name_tuple_lists[k]
-            arc_item = ArcItem(
-                self,
-                relationship_class_id,
-                object_items[i],
-                object_items[j],
-                0.25 * self.extent,
-                self.arc_color,
-                object_id_list=object_id_list,
-                token_color=self.arc_token_color,
-                token_object_extent=0.75 * self.extent,
-                token_object_label_color=self.object_label_color,
-                token_object_name_tuple_list=token_object_name_tuple_list,
-            )
-            try:
-                template_id = self.arc_template_ids[k]
-                arc_item.template_id = template_id
-                arc_item.make_template()
-            except KeyError:
-                pass
-            scene.addItem(arc_item)
-        return True
-
     def new_scene(self):
         """Replaces the current scene with a new one."""
-        old_scene = self.ui.graphicsView.scene()
-        if old_scene:
-            old_scene.deleteLater()
+        self.tear_down_scene()
         scene = ShrinkingScene(100.0, 100.0, None)
         self.ui.graphicsView.setScene(scene)
         scene.changed.connect(self._handle_scene_changed)
         scene.selectionChanged.connect(self._handle_scene_selection_changed)
         return scene
 
+    def tear_down_scene(self):
+        """Removes all references to this form in graphics items and schedules
+        the scene for deletion."""
+        scene = self.ui.graphicsView.scene()
+        if not scene:
+            return
+        scene.deleteLater()
+
     def extend_scene(self):
-        """Make scene rect the size of the scene to show all items."""
+        """Extends the scene to show all items."""
         bounding_rect = self.ui.graphicsView.scene().itemsBoundingRect()
         self.ui.graphicsView.scene().setSceneRect(bounding_rect)
         self.ui.graphicsView.init_zoom()
 
     @Slot(name="_handle_scene_selection_changed")
     def _handle_scene_selection_changed(self):
-        """Show parameters for selected items."""
-        scene = self.ui.graphicsView.scene()  # TODO: should we use sender() here?
+        """Filters parameters by selected objects in the graph."""
+        scene = self.ui.graphicsView.scene()
         selected_items = scene.selectedItems()
-        self.object_item_selection = [x for x in selected_items if isinstance(x, ObjectItem)]
-        self.arc_item_selection = [x for x in selected_items if isinstance(x, ArcItem)]
-        self.selected_object_class_ids = set()
-        self.selected_object_ids = dict()
-        self.selected_relationship_class_ids = set()
-        self.selected_object_id_lists = dict()
+        selected_objs = {self.db_map: []}
+        selected_rels = {self.db_map: []}
         for item in selected_items:
             if isinstance(item, ObjectItem):
-                self.selected_object_class_ids.add(item.object_class_id)
-                self.selected_object_ids.setdefault(item.object_class_id, set()).add(item.object_id)
-            elif isinstance(item, ArcItem):
-                self.selected_relationship_class_ids.add(item.relationship_class_id)
-                self.selected_object_id_lists.setdefault(item.relationship_class_id, set()).add(item.object_id_list)
-        self.do_update_filter()
+                selected_objs[self.db_map].append(item.db_representation)
+            elif isinstance(item, RelationshipItem):
+                selected_rels[self.db_map].append(item.db_representation)
+        cascading_rels = self.db_mngr.find_cascading_relationships(self.db_mngr._to_ids(selected_objs))
+        selected_rels = self._extend_merge(selected_rels, cascading_rels)
+        for db_map, items in selected_objs.items():
+            self.selected_ent_cls_ids["object class"].setdefault(db_map, set()).update({x["class_id"] for x in items})
+        for db_map, items in selected_rels.items():
+            self.selected_ent_cls_ids["relationship class"].setdefault(db_map, set()).update(
+                {x["class_id"] for x in items}
+            )
+        self.selected_ent_ids["object"] = self._db_map_class_id_data(selected_objs)
+        self.selected_ent_ids["relationship"] = self._db_map_class_id_data(selected_rels)
+        self.update_filter()
 
-    @Slot(list, name="_handle_scene_changed")
+    @Slot(list)
     def _handle_scene_changed(self, region):
-        """Handle scene changed. Show usage message if no items other than the bg.
-        """
+        """Enlarges the scene rect if needed."""
         scene_rect = self.ui.graphicsView.scene().sceneRect()
         if all(scene_rect.contains(rect) for rect in region):
             return
@@ -652,256 +672,136 @@ class GraphViewForm(DataStoreForm):
             extended_rect = extended_rect.united(rect)
         self.ui.graphicsView.scene().setSceneRect(extended_rect)
 
-    def show_usage_msg(self):
-        """Show usage instructions in new scene.
-        """
-        scene = self.new_scene()
-        usage = """
-            <html>
-            <head>
-            <style type="text/css">
-            ol {
-                margin-left: 80px;
-                padding-left: 0px;
-            }
-            ul {
-                margin-left: 40px;
-                padding-left: 0px;
-            }
-            </style>
-            </head>
-            <h3>Usage:</h3>
-            <ol>
-            <li>Select items in <a href="Object tree">Object tree</a> to show objects here.
-                <ul>
-                <li>Ctrl + click starts a new selection.</li>
-                <li>Selected objects become vertices in the graph,
-                while relationships between those objects become edges.
-                </ul>
-            </li>
-            <li>Select items here to show their parameters in <a href="Parameters">Parameters</a>.
-                <ul>
-                <li>Hold down 'Ctrl' to add multiple items to the selection.</li>
-                <li> Hold down 'Ctrl' and drag your mouse to perform a rubber band selection.</li>
-                </ul>
-            </li>
-        """
-        if not self.read_only:
-            usage += """
-                <li>Drag icons from <a href="Item palette">Item palette</a>
-                and drop them here to create new items.</li>
-            """
-        usage += """
-            </ol>
-            </html>
-        """
-        font = QApplication.font()
-        font.setPointSize(64)
-        usage_item = CustomTextItem(usage, font)
-        usage_item.linkActivated.connect(self._handle_usage_link_activated)
-        scene.addItem(usage_item)
-        self._has_graph = False
-        self.extend_scene()
-
-    @Slot("QString", name="_handle_usage_link_activated")
-    def _handle_usage_link_activated(self, link):
-        if link == "Object tree":
-            self.ui.dockWidget_object_tree.show()
-        elif link == "Parameters":
-            self.ui.dockWidget_object_parameter_value.show()
-            self.ui.dockWidget_object_parameter_definition.show()
-            self.ui.dockWidget_relationship_parameter_value.show()
-            self.ui.dockWidget_relationship_parameter_definition.show()
-        elif link == "Item palette":
-            self.ui.dockWidget_item_palette.show()
-
     @Slot("QPoint", "QString", name="_handle_item_dropped")
     def _handle_item_dropped(self, pos, text):
-        if self._has_graph:
-            scene = self.ui.graphicsView.scene()
-        else:
+        """Runs when an item is dropped from Item palette onto the view.
+        Creates the object or relationship template.
+
+        Args:
+            pos (QPoint)
+            text (str)
+        """
+        scene = self.ui.graphicsView.scene()
+        if not scene:
             scene = self.new_scene()
+        for item in scene.items():
+            if isinstance(item, QGraphicsTextItem):
+                scene.removeItem(item)
         scene_pos = self.ui.graphicsView.mapToScene(pos)
-        data = eval(text)  # pylint: disable=eval-used
-        if data["type"] == "object_class":
-            class_id = data["id"]
-            class_name = data["name"]
-            name = class_name
+        entity_type, entity_class_id = text.split(":")
+        entity_class_id = int(entity_class_id)
+        if entity_type == "object class":
             object_item = ObjectItem(
-                self,
-                name,
-                class_id,
-                class_name,
-                scene_pos.x(),
-                scene_pos.y(),
-                self.extent,
-                label_color=self.object_label_color,
+                self, scene_pos.x(), scene_pos.y(), self._node_extent, entity_class_id=entity_class_id
             )
             scene.addItem(object_item)
-            object_item.make_template()
-        elif data["type"] == "relationship_class":
-            relationship_class_id = data["id"]
-            object_class_id_list = [int(x) for x in data["object_class_id_list"].split(',')]
-            object_class_name_list = data["object_class_name_list"].split(',')
-            object_name_list = object_class_name_list.copy()
-            fix_name_ambiguity(object_name_list)
-            relationship_items = self.relationship_items(
-                object_name_list,
-                object_class_name_list,
-                self.extent,
-                self._spread,
-                label_color=self.object_label_color,
-                object_class_id_list=object_class_id_list,
-                relationship_class_id=relationship_class_id,
-            )
-            self.add_relationship_template(scene, scene_pos.x(), scene_pos.y(), *relationship_items)
-            self.relationship_class_dict[self.template_id] = {"id": data["id"], "name": data["name"]}
-            self.template_id += 1
-        self._has_graph = True
+            self.ui.graphicsView.setFocus()
+            object_item.edit_name()
+        elif entity_type == "relationship class":
+            self.add_wip_relationship(scene, scene_pos, entity_class_id)
         self.extend_scene()
+        self.graph_created.emit()
 
-    def relationship_items(
-        self,
-        object_name_list,
-        object_class_name_list,
-        extent,
-        spread,
-        label_color,
-        object_class_id_list=None,
-        relationship_class_id=None,
-    ):
-        """Lists of object and arc items that form a relationship."""
-        if object_class_id_list is None:
-            object_class_id_list = list()
+    def add_wip_relationship(self, scene, pos, relationship_class_id, center_item=None, center_dimension=None):
+        """Makes items for a wip relationship and adds them to the scene at the given coordinates.
+
+        Args:
+            scene (QGraphicsScene)
+            pos (QPointF)
+            relationship_class_id (int)
+            center_item_dimension (tuple, optional): A tuple of (ObjectItem, dimension) to put at the center of the wip item.
+
+        """
+        relationship_class = self.db_mngr.get_item(self.db_map, "relationship class", relationship_class_id)
+        if not relationship_class:
+            return
+        object_class_id_list = [int(id_) for id_ in relationship_class["object_class_id_list"].split(",")]
+        dimension_count = len(object_class_id_list)
+        rel_inds = [dimension_count for _ in range(dimension_count)]
+        obj_inds = list(range(dimension_count))
+        d = self.shortest_path_matrix(dimension_count + 1, rel_inds, obj_inds, self._arc_length_hint)
+        if d is None:
+            return
+        x, y = self.vertex_coordinates(d)
+        # Fix position
+        x_offset = pos.x()
+        y_offset = pos.y()
+        if center_item:
+            center = center_item.sceneBoundingRect().center()
+            x_offset -= pos.x() - center.x()
+            y_offset -= pos.y() - center.y()
+        x += x_offset
+        y += y_offset
+        relationship_item = RelationshipItem(
+            self, x[-1], y[-1], self._node_extent, entity_class_id=relationship_class_id
+        )
         object_items = list()
         arc_items = list()
-        src_ind_list = list(range(len(object_name_list)))
-        dst_ind_list = src_ind_list[1:] + src_ind_list[:1]
-        d = self.shortest_path_matrix(object_name_list, src_ind_list, dst_ind_list, spread)
-        if d is None:
-            return [], []
-        x, y = self.vertex_coordinates(d)
-        for i, object_name in enumerate(object_name_list):
-            x_ = x[i]
-            y_ = y[i]
-            object_class_name = object_class_name_list[i]
-            try:
-                object_class_id = object_class_id_list[i]
-            except IndexError:
-                object_class_id = None
-            object_item = ObjectItem(
-                self, object_name, object_class_id, object_class_name, x_, y_, extent, label_color=label_color
-            )
+        for i, object_class_id in enumerate(object_class_id_list):
+            object_item = ObjectItem(self, x[i], y[i], self._node_extent, entity_class_id=object_class_id)
             object_items.append(object_item)
-        for i, src_item in enumerate(object_items):
-            try:
-                dst_item = object_items[i + 1]
-            except IndexError:
-                dst_item = object_items[0]
-            arc_item = ArcItem(self, relationship_class_id, src_item, dst_item, extent / 4, self.arc_color)
+            arc_item = ArcItem(relationship_item, object_item, self._arc_width, is_wip=True)
             arc_items.append(arc_item)
-        return object_items, arc_items
-
-    def add_relationship_template(self, scene, x, y, object_items, arc_items, dimension_at_origin=None):
-        """Add relationship parts into the scene to form a 'relationship template'."""
-        for item in object_items + arc_items:
+        entity_items = object_items + [relationship_item]
+        for item in entity_items + arc_items:
             scene.addItem(item)
-        # Make template
-        for dimension, object_item in enumerate(object_items):
-            object_item.template_id_dim[self.template_id] = dimension
-            object_item.make_template()
-        for arc_item in arc_items:
-            arc_item.template_id = self.template_id
-            arc_item.make_template()
-        # Move
-        try:
-            rectf = object_items[dimension_at_origin].sceneBoundingRect()
-        except (IndexError, TypeError):
-            rectf = QRectF()
-            for object_item in object_items:
-                rectf |= object_item.sceneBoundingRect()
-        center = rectf.center()
-        for object_item in object_items:
-            object_item.moveBy(x - center.x(), y - center.y())
-            object_item.move_related_items_by(QPointF(x, y) - center)
+        if center_item and center_dimension is not None:
+            center_item._merge_target = object_items[center_dimension]
+            center_item.merge_into_target()
 
-    def add_object(self, object_item, name):
-        """Try and add object given an object item and a name."""
-        item = dict(class_id=object_item.object_class_id, name=name)
-        object_d = {self.db_map: (item,)}
-        if self.add_objects(object_d):
-            object_item.object_name = name
-            object_ = self.db_map.query(self.db_map.object_sq).filter_by(name=name).one()
-            object_item.object_id = object_.id
-            if object_item.template_id_dim:
-                object_item.add_into_relationship()
-            object_item.remove_template()
+    def add_object(self, object_class_id, name):
+        """Adds object to the database.
 
-    def update_object(self, object_item, name):
-        """Try and update object given an object item and a name."""
-        item = dict(id=object_item.object_id, name=name)
-        object_d = {self.db_map: (item,)}
-        if self.update_objects(object_d):
-            object_item.object_name = name
+        Args:
+            object_class_id (int)
+            name (str)
 
-    @busy_effect
-    def add_relationship(self, template_id, object_items):
-        """Try and add relationship given a template id and a list of object items."""
-        object_id_list = list()
-        object_name_list = list()
-        object_dimensions = [x.template_id_dim[template_id] for x in object_items]
-        for dimension in sorted(object_dimensions):
-            ind = object_dimensions.index(dimension)
-            item = object_items[ind]
-            object_name = item.object_name
-            if not object_name:
-                logging.debug("can't find name %s", object_name)
-                return False
-            object_ = self.db_map.query(self.db_map.object_sq).filter_by(name=object_name).one_or_none()
-            if not object_:
-                logging.debug("can't find object %s", object_name)
-                return False
-            object_id_list.append(object_.id)
-            object_name_list.append(object_name)
-        if len(object_id_list) < 2:
-            logging.debug("too short %s", len(object_id_list))
-            return False
-        name = self.relationship_class_dict[template_id]["name"] + "_" + "__".join(object_name_list)
-        class_id = self.relationship_class_dict[template_id]["id"]
-        item = {'name': name, 'object_id_list': object_id_list, 'class_id': class_id}
-        try:
-            wide_relationships, _ = self.db_map.add_wide_relationships(item, strict=True)
-            for item in object_items:
-                del item.template_id_dim[template_id]
-            items = self.ui.graphicsView.scene().items()
-            arc_items = [x for x in items if isinstance(x, ArcItem) and x.template_id == template_id]
-            for item in arc_items:
-                item.remove_template()
-                item.template_id = None
-                item.object_id_list = ",".join([str(x) for x in object_id_list])
-            self.commit_available.emit(True)
-            msg = "Successfully added new relationship '{}'.".format(wide_relationships.one().name)
-            self.msg.emit(msg)
-            return True
-        except (SpineIntegrityError, SpineDBAPIError) as e:
-            self.msg_error.emit(e.msg)
-            return False
+        Returns:
+            int, NoneType: The id of the added object if successful, None otherwise.
+        """
+        item = dict(class_id=object_class_id, name=name)
+        db_map_data = {self.db_map: [item]}
+        self.db_mngr.add_objects(db_map_data)
+        object_id = self._added_objects.get((object_class_id, name))
+        self._added_objects.clear()
+        return object_id
 
-    def add_object_classses_to_models(self, db_map, added):
-        super().add_object_classses_to_models(db_map, added)
-        for object_class in added:
-            self.object_class_list_model.add_object_class(object_class)
+    def update_object(self, object_id, name):
+        """Updates object in the db.
 
-    def add_relationship_classes_to_models(self, db_map, added):
-        """Insert new relationship classes."""
-        super().add_relationship_classes_to_models(db_map, added)
-        for relationship_class in added:
-            self.relationship_class_list_model.add_relationship_class(relationship_class)
+        Args:
+            object_id (int)
+            name (str)
+        """
+        item = dict(id=object_id, name=name)
+        db_map_data = {self.db_map: [item]}
+        self.db_mngr.update_objects(db_map_data)
 
+    def add_relationship(self, class_id, object_id_list, object_name_list):
+        """Adds relationship to the db.
+
+        Args:
+            class_id (int)
+            object_id_list (list)
+        """
+        class_name = self.db_mngr.get_item(self.db_map, "relationship class", class_id)["name"]
+        name = class_name + "_" + "__".join(object_name_list)
+        relationship = {'name': name, 'object_id_list': object_id_list, 'class_id': class_id}
+        self.db_mngr.add_relationships({self.db_map: [relationship]})
+        object_id_list = ",".join([str(id_) for id_ in object_id_list])
+        relationship_id = self._added_relationships.get((class_id, object_id_list))
+        self._added_relationships.clear()
+        return relationship_id
+
+    @Slot("QPoint")
     def show_graph_view_context_menu(self, global_pos):
-        """Show context menu for graphics view."""
-        self.graph_view_context_menu = GraphViewContextMenu(self, global_pos)
-        option = self.graph_view_context_menu.get_action()
+        """Shows context menu for graphics view.
+
+        Args:
+            global_pos (QPoint)
+        """
+        menu = GraphViewContextMenu(self, global_pos)
+        option = menu.get_action()
         if option == "Hide selected items":
             self.hide_selected_items()
         elif option == "Show hidden items":
@@ -912,97 +812,133 @@ class GraphViewForm(DataStoreForm):
             self.reinstate_pruned_items()
         else:
             pass
-        self.graph_view_context_menu.deleteLater()
-        self.graph_view_context_menu = None
+        menu.deleteLater()
 
     @Slot("bool", name="reinstate_pruned_items")
     def hide_selected_items(self, checked=False):
-        """Hide selected items."""
-        self.hidden_items.extend(self.object_item_selection)
-        for item in self.object_item_selection:
+        """Hides selected items."""
+        self.hidden_items.extend(self.entity_item_selection)
+        for item in self.entity_item_selection:
             item.set_all_visible(False)
 
     @Slot("bool", name="reinstate_pruned_items")
     def show_hidden_items(self, checked=False):
-        """Show hidden items."""
-        scene = self.ui.graphicsView.scene()
-        if not scene:
+        """Shows hidden items."""
+        if not self.ui.graphicsView.scene():
             return
         for item in self.hidden_items:
             item.set_all_visible(True)
-            self.hidden_items = list()
+        self.hidden_items.clear()
 
     @Slot("bool", name="reinstate_pruned_items")
     def prune_selected_items(self, checked=False):
-        """Prune selected items."""
-        self.rejected_items.extend(self.object_item_selection)
+        """Prunes selected items."""
+        self.rejected_items.extend(self.entity_item_selection)
         self.build_graph()
 
     @Slot("bool", name="reinstate_pruned_items")
     def reinstate_pruned_items(self, checked=False):
-        """Reinstate pruned items."""
-        self.rejected_items = list()
+        """Reinstates pruned items."""
+        self.rejected_items.clear()
         self.build_graph()
 
-    def show_object_item_context_menu(self, e, main_item):
-        """Show context menu for object_item."""
-        global_pos = e.screenPos()
-        self.object_item_context_menu = ObjectItemContextMenu(self, global_pos, main_item)
-        option = self.object_item_context_menu.get_action()
+    @Slot("bool")
+    def show_demo(self, checked=False):
+        self.live_demo.show()
+
+    def show_object_item_context_menu(self, global_pos, main_item):
+        """Shows context menu for entity item.
+
+        Args:
+            global_pos (QPoint)
+            main_item (ObjectItem)
+        """
+        menu = ObjectItemContextMenu(self, global_pos, main_item)
+        option = menu.get_action()
+        if self._apply_entity_context_menu_option(option):
+            pass
+        elif option in ('Set name', 'Rename'):
+            main_item.edit_name()
+        elif option in menu.relationship_class_dict:
+            relationship_class = menu.relationship_class_dict[option]
+            relationship_class_id = relationship_class["id"]
+            dimension = relationship_class['dimension']
+            scene = self.ui.graphicsView.scene()
+            self.add_wip_relationship(
+                scene, global_pos, relationship_class_id, center_item=main_item, center_dimension=dimension
+            )
+        menu.deleteLater()
+
+    def show_relationship_item_context_menu(self, global_pos):
+        """Shows context menu for entity item.
+
+        Args:
+            global_pos (QPoint)
+        """
+        menu = RelationshipItemContextMenu(self, global_pos)
+        option = menu.get_action()
+        self._apply_entity_context_menu_option(option)
+        menu.deleteLater()
+
+    def _apply_entity_context_menu_option(self, option):
         if option == 'Hide':
             self.hide_selected_items()
         elif option == 'Prune':
             self.prune_selected_items()
-        elif option in ('Set name', 'Rename'):
-            main_item.edit_name()
         elif option == 'Remove':
             self.remove_graph_items()
-        elif option in self.object_item_context_menu.relationship_class_dict:
-            relationship_class = self.object_item_context_menu.relationship_class_dict[option]
-            relationship_class_id = relationship_class["id"]
-            relationship_class_name = relationship_class["name"]
-            object_class_id_list = relationship_class["object_class_id_list"]
-            object_class_name_list = relationship_class['object_class_name_list']
-            object_name_list = relationship_class['object_name_list']
-            dimension = relationship_class['dimension']
-            object_items, arc_items = self.relationship_items(
-                object_name_list,
-                object_class_name_list,
-                self.extent,
-                self._spread,
-                label_color=self.object_label_color,
-                object_class_id_list=object_class_id_list,
-                relationship_class_id=relationship_class_id,
-            )
-            scene = self.ui.graphicsView.scene()
-            scene_pos = e.scenePos()
-            self.add_relationship_template(
-                scene, scene_pos.x(), scene_pos.y(), object_items, arc_items, dimension_at_origin=dimension
-            )
-            object_items[dimension].merge_item(main_item)
-            self._has_graph = True
-            self.relationship_class_dict[self.template_id] = {
-                "id": relationship_class_id,
-                "name": relationship_class_name,
-            }
-            self.template_id += 1
-        self.object_item_context_menu.deleteLater()
-        self.object_item_context_menu = None
+        else:
+            return False
+        return True
+
+    @Slot("bool", name="remove_graph_items")
+    def remove_graph_items(self, checked=False):
+        """Removes all selected items in the graph."""
+        if not self.entity_item_selection:
+            return
+        db_map_typed_data = {self.db_map: {}}
+        for item in self.entity_item_selection:
+            if item.is_wip:
+                item.wipe_out()
+            else:
+                db_item = item.db_representation
+                db_map_typed_data[self.db_map].setdefault(item.entity_type, []).append(db_item)
+        self.db_mngr.remove_items(db_map_typed_data)
 
     @Slot("QPoint", name="show_object_parameter_value_context_menu")
     def show_object_parameter_value_context_menu(self, pos):
+        """Shows context menu for object parameter value table.
+
+        Args:
+            pos (QPoint)
+        """
         self._show_table_context_menu(pos, self.ui.tableView_object_parameter_value, 'value')
 
     @Slot("QPoint", name="show_object_parameter_definition_context_menu")
     def show_object_parameter_definition_context_menu(self, pos):
+        """Shows context menu for object parameter definition table.
+
+        Args:
+            pos (QPoint)
+        """
         self._show_table_context_menu(pos, self.ui.tableView_object_parameter_definition, 'default_value')
 
     @Slot("QPoint", name="show_relationship_parameter_value_context_menu")
     def show_relationship_parameter_value_context_menu(self, pos):
+        """Shows context menu for relationship parameter value table.
+
+        Args:
+            pos (QPoint)
+        """
         self._show_table_context_menu(pos, self.ui.tableView_relationship_parameter_value, 'value')
 
     @Slot("QPoint", name="show_relationship_parameter_definition_context_menu")
     def show_relationship_parameter_definition_context_menu(self, pos):
+        """Shows context menu for relationship parameter definition table.
+
+        Args:
+            pos (QPoint)
+        """
         self._show_table_context_menu(pos, self.ui.tableView_relationship_parameter_definition, 'default_value')
 
     def _show_table_context_menu(self, position, table_view, column_name):
@@ -1043,37 +979,12 @@ class GraphViewForm(DataStoreForm):
             plot_widget.show()
         menu.deleteLater()
 
-    @busy_effect
-    @Slot("bool", name="remove_graph_items")
-    def remove_graph_items(self, checked=False):
-        """Remove all selected items in the graph."""
-        if not self.object_item_selection:
-            return
-        removed_objects = list(
-            dict(class_id=x.object_class_id, id=x.object_id) for x in self.object_item_selection if x.object_id
-        )
-        object_ids = set(x['id'] for x in removed_objects)
-        try:
-            self.db_map.remove_items(object_ids=object_ids)
-            self.object_tree_model.remove_objects(self.db_map, object_ids)
-            # Parameter models
-            self.object_parameter_value_model.remove_objects(self.db_map, removed_objects)
-            self.relationship_parameter_value_model.remove_objects(self.db_map, removed_objects)
-            self.commit_available.emit(True)
-            for item in self.object_item_selection:
-                item.wipe_out()
-            self.ui.graphicsView.scene().shrink_if_needed()
-            self.msg.emit("Successfully removed items.")
-        except SpineDBAPIError as e:
-            self.msg_error.emit(e.msg)
-
     def closeEvent(self, event=None):
-        """Handle close window.
+        """Handles close window event.
 
         Args:
             event (QEvent): Closing event if 'X' is clicked.
         """
+        self.live_demo.setFloating(True)
         super().closeEvent(event)
-        scene = self.ui.graphicsView.scene()
-        if scene:
-            scene.deleteLater()
+        self.tear_down_scene()

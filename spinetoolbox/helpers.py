@@ -137,15 +137,20 @@ def busy_effect(func):
     return new_function
 
 
-def get_datetime(show):
+def get_datetime(show, date=True):
     """Returns date and time string for appending into Event Log messages.
 
     Args:
-        show (boolean): True returns date and time string. False returns empty string.
+        show (bool): True returns date and time string. False returns empty string.
+        date (bool): Whether or not the date should be included in the result
     """
     if show:
         t = datetime.datetime.now()
-        return "[{}-{:02d}-{:02d} {:02d}:{:02d}:{:02d}] ".format(t.day, t.month, t.year, t.hour, t.minute, t.second)
+        time_str = "{:02d}:{:02d}:{:02d}".format(t.hour, t.minute, t.second)
+        if not date:
+            return "[{}] ".format(time_str)
+        date_str = "{}-{:02d}-{:02d}".format(t.day, t.month, t.year)
+        return "[{} {}] ".format(date_str, time_str)
     return ""
 
 
@@ -191,7 +196,7 @@ def create_output_dir_timestamp():
 
 
 def create_log_file_timestamp():
-    """ Creates a new timestamp string that is used as Data Interface and Data Store error log file.
+    """ Creates a new timestamp string that is used as Importer and Data Store error log file.
 
     Returns:
         Timestamp string or empty string if failed.
@@ -387,17 +392,18 @@ def rename_dir(widget, old_dir, new_dir):
     return True
 
 
-def fix_name_ambiguity(name_list, offset=0):
+def fix_name_ambiguity(input_list, offset=0):
     """Modify repeated entries in name list by appending an increasing integer."""
-    ref_name_list = name_list.copy()
+    result = []
     ocurrences = {}
-    for i, name in enumerate(name_list):
-        n_ocurrences = ref_name_list.count(name)
-        if n_ocurrences == 1:
-            continue
-        ocurrence = ocurrences.setdefault(name, 1)
-        name_list[i] = name + str(offset + ocurrence)
-        ocurrences[name] = ocurrence + 1
+    for item in input_list:
+        n_ocurrences = input_list.count(item)
+        if n_ocurrences > 1:
+            ocurrence = ocurrences.get(item, 1)
+            ocurrences[item] = ocurrence + 1
+            item += str(offset + ocurrence)
+        result.append(item)
+    return result
 
 
 def tuple_itemgetter(itemgetter_func, num_indexes):
@@ -415,52 +421,28 @@ def format_string_list(str_list):
     return "<ul>" + "".join(["<li>" + str(x) + "</li>" for x in str_list]) + "</ul>"
 
 
-def get_db_map(url, upgrade=False):
-    """Returns a DiffDatabaseMapping instance from url.
-    If the db is not the latest version, asks the user if they want to upgrade it.
+def rows_to_row_count_tuples(rows):
+    """Breaks a list of rows into a list of (row, count) tuples corresponding
+    to chunks of successive rows.
     """
-    try:
-        db_map = do_get_db_map(url, upgrade)
-        return db_map
-    except spinedb_api.SpineDBVersionError:
-        msg = QMessageBox()
-        msg.setIcon(QMessageBox.Question)
-        msg.setWindowTitle("Incompatible database version")
-        msg.setText(
-            "The database at <b>{}</b> is from an older version of Spine "
-            "and needs to be upgraded in order to be used with the current version.".format(url)
-        )
-        msg.setInformativeText(
-            "Do you want to upgrade it now?"
-            "<p><b>WARNING</b>: After the upgrade, "
-            "the database may no longer be used "
-            "with previous versions of Spine."
-        )
-        msg.addButton(QMessageBox.Cancel)
-        msg.addButton("Upgrade", QMessageBox.YesRole)
-        ret = msg.exec_()  # Show message box
-        if ret == QMessageBox.Cancel:
-            return None
-        return get_db_map(url, upgrade=True)
-
-
-@busy_effect
-def do_get_db_map(url, upgrade):
-    """Returns a DiffDatabaseMapping instance from url.
-    Called by `get_db_map`.
-    """
-    return spinedb_api.DiffDatabaseMapping(url, upgrade=upgrade)
-
-
-def int_list_to_row_count_tuples(int_list):
-    """Breaks a list of integers into a list of tuples (row, count) corresponding
-    to chunks of successive elements.
-    """
-    sorted_list = sorted(set(int_list))
-    break_points = [k + 1 for k in range(len(sorted_list) - 1) if sorted_list[k] + 1 != sorted_list[k + 1]]
-    break_points = [0] + break_points + [len(sorted_list)]
+    if not rows:
+        return []
+    sorted_rows = sorted(set(rows))
+    break_points = [k + 1 for k in range(len(sorted_rows) - 1) if sorted_rows[k] + 1 != sorted_rows[k + 1]]
+    break_points = [0] + break_points + [len(sorted_rows)]
     ranges = [(break_points[l], break_points[l + 1]) for l in range(len(break_points) - 1)]
-    return [(sorted_list[start], stop - start) for start, stop in ranges]
+    return [(sorted_rows[start], stop - start) for start, stop in ranges]
+
+
+class Singleton(type):
+    """A singleton class from SO."""
+
+    _instances = {}
+
+    def __call__(cls, *args, **kwargs):
+        if cls not in cls._instances:
+            cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
+        return cls._instances[cls]
 
 
 class IconListManager:
@@ -536,9 +518,9 @@ class IconManager:
         Create the corresponding object pixmaps and clear obsolete entries
         from the relationship class icon cache."""
         for object_class in object_classes:
-            self.create_object_pixmap(object_class.display_icon)
-            self.obj_cls_icon_cache[object_class.name] = object_class.display_icon
-        object_class_names = [x.name for x in object_classes]
+            self.create_object_pixmap(object_class["display_icon"])
+            self.obj_cls_icon_cache[object_class["name"]] = object_class["display_icon"]
+        object_class_names = [x["name"] for x in object_classes]
         dirty_keys = [k for k in self.rel_cls_icon_cache if any(x in object_class_names for x in k)]
         for k in dirty_keys:
             del self.rel_cls_icon_cache[k]

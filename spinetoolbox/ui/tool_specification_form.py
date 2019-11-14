@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 ######################################################################################################################
 # Copyright (C) 2017 - 2019 Spine project consortium
 # This file is part of Spine Toolbox.
@@ -9,11 +10,11 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-# -*- coding: utf-8 -*-
-
-# Form implementation generated from reading ui file 'spinetoolbox/ui/tool_specification_form.ui',
-# licensing of 'spinetoolbox/ui/tool_specification_form.ui' applies.
+# Form implementation generated from reading ui file 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\ui\tool_specification_form.ui',
+# licensing of 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\ui\tool_specification_form.ui' applies.
 #
+# Created: Thu Nov 14 16:05:00 2019
+#      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -451,6 +452,6 @@ class Ui_Form(object):
         self.pushButton_ok.setText(QtWidgets.QApplication.translate("Form", "Ok", None, -1))
         self.pushButton_cancel.setText(QtWidgets.QApplication.translate("Form", "Cancel", None, -1))
 
-from spinetoolbox.widgets.custom_qtreeview import SourcesTreeView, CustomTreeView
 from spinetoolbox.widgets.custom_qlineedit import CustomQLineEdit
+from spinetoolbox.widgets.custom_qtreeview import CustomTreeView, SourcesTreeView
 from spinetoolbox import resources_icons_rc

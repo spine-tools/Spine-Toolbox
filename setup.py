@@ -65,5 +65,5 @@ setup(
     classifiers=[
     ],
     install_requires=requirements,
-    test_suite='spinetoolbox.test',
+    test_suite='tests',
 )

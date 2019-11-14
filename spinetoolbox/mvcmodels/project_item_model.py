@@ -144,7 +144,6 @@ class ProjectItemModel(QAbstractItemModel):
              QModelIndex: index of a category item or None if it was not found
         """
         category_names = [category.name for category in self.root().children()]
-        # logging.debug("Category names:{0}".format(category_names))
         try:
             row = category_names.index(category_name)
         except ValueError:
@@ -319,38 +318,6 @@ class ProjectItemModel(QAbstractItemModel):
             obj:'list' of obj:'str': Item names
         """
         return [item.name for item in self.items()]
-
-    def new_item_index(self, category):
-        """Returns the index where a new item can be appended according
-        to category. This is needed for appending the connection model.
-
-        Args:
-            category (str): Display Role of the parent
-
-        Returns:
-            int: Number of items according to category
-        """
-        n_data_stores = self.rowCount(self.find_category("Data Stores"))
-        n_data_connections = self.rowCount(self.find_category("Data Connections"))
-        n_tools = self.rowCount(self.find_category("Tools"))
-        n_views = self.rowCount(self.find_category("Views"))
-        if category == "Data Stores":
-            # Return number of data stores
-            return n_data_stores - 1
-        if category == "Data Connections":
-            # Return number of data stores + data connections - 1
-            return n_data_stores + n_data_connections - 1
-        if category == "Tools":
-            # Return number of data stores + data connections + tools - 1
-            return n_data_stores + n_data_connections + n_tools - 1
-        if category == "Views":
-            # Return number of data stores + data connections + tools + views - 1
-            return n_data_stores + n_data_connections + n_tools + n_views - 1
-        if category == "Data Interfaces":
-            # Return total number of items - 1
-            return self.n_items() - 1
-        logging.error("Unknown category: %s", category)
-        return 0
 
     def short_name_reserved(self, short_name):
         """Checks if the directory name derived from the name of the given item is in use.

@@ -20,7 +20,9 @@ import os
 import locale
 import logging
 import json
+import numpy as np
 from PySide2.QtCore import QByteArray, QMimeData, Qt, Signal, Slot, QSettings, QUrl, SIGNAL
+from PySide2.QtGui import QCursor
 from PySide2.QtWidgets import (
     QMainWindow,
     QApplication,
@@ -29,7 +31,6 @@ from PySide2.QtWidgets import (
     QCheckBox,
     QDockWidget,
     QAction,
-    QWidgetAction,
 )
 from PySide2.QtGui import QDesktopServices, QGuiApplication, QKeySequence, QStandardItemModel, QIcon
 from .graphics_items import ProjectItemIcon
@@ -47,7 +48,7 @@ from .widgets.project_form_widget import NewProjectForm
 from .widgets.settings_widget import SettingsWidget
 from .widgets.tool_configuration_assistant_widget import ToolConfigurationAssistantWidget
 from .widgets.tool_specification_widget import ToolSpecificationWidget
-from .widgets.custom_qwidgets import ZoomWidget
+from .widgets.custom_qwidgets import ZoomWidgetAction
 from .widgets.julia_repl_widget import JuliaREPLWidget
 from .widgets.python_repl_widget import PythonReplWidget
 from .widgets import toolbars
@@ -58,8 +59,8 @@ from .config import SPINE_TOOLBOX_VERSION, STATUSBAR_SS, \
 from .helpers import get_datetime, erase_dir, busy_effect, set_taskbar_icon, \
     supported_img_formats, create_dir, copy_dir
 from .project_item import RootProjectItem, CategoryProjectItem
-from .project_items import data_store, data_connection, gdx_export, tool, view, data_interface
 from .project_upgrader import ProjectUpgrader
+from .project_items import data_store, data_connection, exporter, tool, view, importer
 
 
 class ToolboxUI(QMainWindow):
@@ -115,7 +116,6 @@ class ToolboxUI(QMainWindow):
         self.tool_specification_form = None
         self.placing_item = ""
         self.add_tool_specification_popup_menu = None
-        self.zoom_widget = None
         self.zoom_widget_action = None
         self.recent_projects_menu = RecentProjectsPopupMenu(self)
         # Make and initialize toolbars
@@ -128,7 +128,7 @@ class ToolboxUI(QMainWindow):
         self.python_repl = PythonReplWidget(self)
         self.ui.dockWidgetContents_python_repl.layout().addWidget(self.python_repl)
         # Setup main window menu
-        self.setup_zoom_action()
+        self.setup_zoom_widget_action()
         self.add_toggle_view_actions()
         # Hidden QActions for debugging or testing
         self.show_properties_tabbar = QAction(self)
@@ -170,9 +170,9 @@ class ToolboxUI(QMainWindow):
         self.ui.actionAbout.triggered.connect(self.show_about)
         self.ui.actionAbout_Qt.triggered.connect(lambda: QApplication.aboutQt())  # pylint: disable=unnecessary-lambda
         self.ui.actionRestore_Dock_Widgets.triggered.connect(self.restore_dock_widgets)
-        self.ui.actionCopy.triggered.connect(self._project_item_to_clipboard)
-        self.ui.actionPaste.triggered.connect(self._project_item_from_clipboard)
-        self.ui.actionDuplicate.triggered.connect(self._duplicate_project_item)
+        self.ui.actionCopy.triggered.connect(self.project_item_to_clipboard)
+        self.ui.actionPaste.triggered.connect(self.project_item_from_clipboard)
+        self.ui.actionDuplicate.triggered.connect(self.duplicate_project_item)
         # Debug QActions
         self.show_properties_tabbar.triggered.connect(self.toggle_properties_tabbar_visibility)
         self.show_supported_img_formats.triggered.connect(supported_img_formats)  # in helpers.py
@@ -186,16 +186,16 @@ class ToolboxUI(QMainWindow):
         # Context-menus
         self.ui.treeView_project.customContextMenuRequested.connect(self.show_item_context_menu)
         # Main menu
-        self.zoom_widget.minus_pressed.connect(self._handle_zoom_widget_minus_pressed)
-        self.zoom_widget.plus_pressed.connect(self._handle_zoom_widget_plus_pressed)
-        self.zoom_widget.reset_pressed.connect(self._handle_zoom_widget_reset_pressed)
+        self.zoom_widget_action.minus_pressed.connect(self._handle_zoom_minus_pressed)
+        self.zoom_widget_action.plus_pressed.connect(self._handle_zoom_plus_pressed)
+        self.zoom_widget_action.reset_pressed.connect(self._handle_zoom_reset_pressed)
 
     def parse_project_item_modules(self):
         """Collects attributes from project item modules into a dict.
         This dict is then used to perform all project item related tasks.
         """
         self.categories.clear()
-        for module in (data_store, data_connection, tool, view, data_interface, gdx_export):
+        for module in (data_store, data_connection, tool, view, importer, exporter):
             item_rank = module.item_rank
             item_category = module.item_category
             item_type = module.item_type
@@ -217,19 +217,11 @@ class ToolboxUI(QMainWindow):
         # Sort categories by rank
         self.categories = dict(sorted(self.categories.items(), key=lambda kv: kv[1]["item_rank"]))
         # Create actions for Edit menu, and draggable widgets to toolbar
-        add_item_actions = list()
         category_icon = list()
         for item_category, item_dict in self.categories.items():
-            # Create action for adding items of this type
             item_icon = item_dict["item_icon"]
             item_type = item_dict["item_type"]
-            add_item_action = QAction(QIcon(item_icon), f"Add {item_type}")
-            add_item_action.triggered.connect(lambda checked=False, c=item_category: self.show_add_project_item_form(c))
-            add_item_actions.append(add_item_action)
             category_icon.append((item_type, item_category, item_icon))
-        # Add actions to Edit menu
-        remove_all_action = self.ui.menuEdit.actions()[0]
-        self.ui.menuEdit.insertActions(remove_all_action, add_item_actions)
         # Add draggable widgets to toolbar
         self.item_toolbar.add_draggable_widgets(category_icon)
 
@@ -422,7 +414,7 @@ class ToolboxUI(QMainWindow):
         self.msg.emit("Restoring connections...")
         self.ui.graphicsView.restore_links(connections)
         # Simulate project execution after restoring links
-        self._project.simulate_project_execution()
+        self._project.notify_all_items_of_dag_changes()
         self._project.connect_signals()
         # Initialize scene on Design View
         self.ui.graphicsView.init_scene()
@@ -628,7 +620,7 @@ class ToolboxUI(QMainWindow):
         proj_items = [self.project_item_model.project_item(i) for i in inds]
         # NOTE: Category items are not selectable anymore
         # Sync selection with the scene
-        if len(proj_items) > 0:
+        if proj_items:
             scene = self.ui.graphicsView.scene()
             scene.sync_selection = False  # This tells the scene not to sync back
             scene.clearSelection()
@@ -672,11 +664,11 @@ class ToolboxUI(QMainWindow):
         """
         # Find tab index according to item type
         for i in range(self.ui.tabWidget_item_properties.count()):
-            if self.ui.tabWidget_item_properties.tabText(i) == item.item_type:
+            if self.ui.tabWidget_item_properties.tabText(i) == item.item_type():
                 self.ui.tabWidget_item_properties.setCurrentIndex(i)
                 break
         # Set QDockWidget title to selected item's type
-        self.ui.dockWidget_item.setWindowTitle(item.item_type + " Properties")
+        self.ui.dockWidget_item.setWindowTitle(item.item_type() + " Properties")
 
     @Slot(name="open_tool_specification")
     def open_tool_specification(self):
@@ -1044,26 +1036,24 @@ class ToolboxUI(QMainWindow):
             return
         self.project().export_graphs()
 
-    @Slot(name="_handle_zoom_widget_minus_pressed")
-    def _handle_zoom_widget_minus_pressed(self):
+    @Slot(name="_handle_zoom_minus_pressed")
+    def _handle_zoom_minus_pressed(self):
         """Slot for handling case when '-' button in menu is pressed."""
         self.ui.graphicsView.zoom_out()
 
-    @Slot(name="_handle_zoom_widget_plus_pressed")
-    def _handle_zoom_widget_plus_pressed(self):
+    @Slot(name="_handle_zoom_plus_pressed")
+    def _handle_zoom_plus_pressed(self):
         """Slot for handling case when '+' button in menu is pressed."""
         self.ui.graphicsView.zoom_in()
 
-    @Slot(name="_handle_zoom_widget_reset_pressed")
-    def _handle_zoom_widget_reset_pressed(self):
+    @Slot(name="_handle_zoom_reset_pressed")
+    def _handle_zoom_reset_pressed(self):
         """Slot for handling case when 'reset zoom' button in menu is pressed."""
         self.ui.graphicsView.reset_zoom()
 
-    def setup_zoom_action(self):
-        """Setup zoom action in view menu."""
-        self.zoom_widget = ZoomWidget(self)
-        self.zoom_widget_action = QWidgetAction(self)
-        self.zoom_widget_action.setDefaultWidget(self.zoom_widget)
+    def setup_zoom_widget_action(self):
+        """Setups zoom widget action in view menu."""
+        self.zoom_widget_action = ZoomWidgetAction(self.ui.menuView)
         self.ui.menuView.addSeparator()
         self.ui.menuView.addAction(self.zoom_widget_action)
 
@@ -1190,7 +1180,6 @@ class ToolboxUI(QMainWindow):
         # noinspection PyArgumentList
         QApplication.processEvents()
 
-    @Slot("str", "float", "float", name="show_add_project_item_form")
     def show_add_project_item_form(self, item_category, x=0, y=0):
         """Show add project item widget."""
         if not self._project:
@@ -1572,6 +1561,42 @@ class ToolboxUI(QMainWindow):
             category_items.append(item_dict)
         return serialized_items
 
+    def _deserialized_item_position_shifts(self, serialized_items):
+        """
+        Calculates horizontal and vertical shifts for project items being deserialized.
+
+        If the mouse cursor is on the Design view we try to place the items unders the cursor.
+        Otherwise the items will get a small shift so they don't overlap a possible item below.
+        In case the items don't fit the scene rect we clamp their coordinates within it.
+
+        Args:
+            serialized_items (dict): a dictionary of serialized items being deserialized
+        Returns:
+            a tuple of (horizontal shift, vertical shift) in scene's coordinates
+        """
+        mouse_position = self.ui.graphicsView.mapFromGlobal(QCursor.pos())
+        if self.ui.graphicsView.rect().contains(mouse_position):
+            mouse_over_design_view = self.ui.graphicsView.mapToScene(mouse_position)
+        else:
+            mouse_over_design_view = None
+        if mouse_over_design_view is not None:
+            first_item = next(iter(serialized_items.values()))[0]
+            x = first_item["x"]
+            y = first_item["y"]
+            shift_x = x - mouse_over_design_view.x()
+            shift_y = y - mouse_over_design_view.y()
+        else:
+            shift_x = -15.0
+            shift_y = -15.0
+        return shift_x, shift_y
+
+    def _set_deserialized_item_position(self, item_dict, shift_x, shift_y, scene_rect):
+        """Moves item's position by shift_x and shift_y while keeping it within the limits of scene_rect."""
+        new_x = np.clip(item_dict["x"] - shift_x, scene_rect.left(), scene_rect.right())
+        new_y = np.clip(item_dict["y"] - shift_y, scene_rect.top(), scene_rect.bottom())
+        item_dict["x"] = new_x
+        item_dict["y"] = new_y
+
     def _deserialize_items(self, serialized_items):
         """
         Deserializes project items from a dictionary and adds them to the current project.
@@ -1581,17 +1606,22 @@ class ToolboxUI(QMainWindow):
         """
         if self._project is None:
             return
+        scene = self.ui.graphicsView.scene()
+        scene.clearSelection()
+        shift_x, shift_y = self._deserialized_item_position_shifts(serialized_items)
+        scene_rect = scene.sceneRect()
         for category_name, item_dicts in serialized_items.items():
             for item in item_dicts:
                 name = item["name"]
                 if self.project_item_model.find_item(name) is not None:
                     new_name = self.propose_item_name(name)
                     item["name"] = new_name
+                self._set_deserialized_item_position(item, shift_x, shift_y, scene_rect)
                 item.pop("short name")
-            self._project.add_project_items(category_name, *item_dicts, verbosity=False)
+            self._project.add_project_items(category_name, *item_dicts, set_selected=True, verbosity=False)
 
     @Slot()
-    def _project_item_to_clipboard(self):
+    def project_item_to_clipboard(self):
         """Copies the selected project items to system's clipboard."""
         serialized_items = self._serialize_selected_items()
         if not serialized_items:
@@ -1603,7 +1633,7 @@ class ToolboxUI(QMainWindow):
         clipboard.setMimeData(data)
 
     @Slot()
-    def _project_item_from_clipboard(self):
+    def project_item_from_clipboard(self):
         """Adds project items in system's clipboard to the current project."""
         clipboard = QApplication.clipboard()
         mime_data = clipboard.mimeData()
@@ -1615,7 +1645,7 @@ class ToolboxUI(QMainWindow):
         self._deserialize_items(serialized_items)
 
     @Slot()
-    def _duplicate_project_item(self):
+    def duplicate_project_item(self):
         """Duplicates the selected project items."""
         serialized_items = self._serialize_selected_items()
         self._deserialize_items(serialized_items)
@@ -1656,13 +1686,14 @@ class ToolboxUI(QMainWindow):
             self.ui.menuEdit.insertAction(self.ui.menuEdit.actions()[0], action)
             return action
 
+        self.ui.menuEdit.insertSeparator(self.ui.menuEdit.actions()[0])
         duplicate_action = prepend_to_edit_menu(
-            "Duplicate", [QKeySequence(Qt.CTRL + Qt.Key_D)], lambda checked: self._duplicate_project_item()
+            "Duplicate", [QKeySequence(Qt.CTRL + Qt.Key_D)], lambda checked: self.duplicate_project_item()
         )
         paste_action = prepend_to_edit_menu(
-            "Paste", QKeySequence.Paste, lambda checked: self._project_item_from_clipboard()
+            "Paste", QKeySequence.Paste, lambda checked: self.project_item_from_clipboard()
         )
-        copy_action = prepend_to_edit_menu("Copy", QKeySequence.Copy, lambda checked: self._project_item_to_clipboard())
+        copy_action = prepend_to_edit_menu("Copy", QKeySequence.Copy, lambda checked: self.project_item_to_clipboard())
 
         def mirror_action_to_project_tree_view(action_to_duplicate):
             action = QAction(action_to_duplicate.text(), self.ui.treeView_project)

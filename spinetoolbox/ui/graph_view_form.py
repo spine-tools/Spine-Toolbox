@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 ######################################################################################################################
 # Copyright (C) 2017 - 2019 Spine project consortium
 # This file is part of Spine Toolbox.
@@ -9,11 +10,11 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-# -*- coding: utf-8 -*-
-
-# Form implementation generated from reading ui file 'spinetoolbox/ui/graph_view_form.ui',
-# licensing of 'spinetoolbox/ui/graph_view_form.ui' applies.
+# Form implementation generated from reading ui file 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\ui\graph_view_form.ui',
+# licensing of 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\ui\graph_view_form.ui' applies.
 #
+# Created: Thu Nov 14 16:04:40 2019
+#      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -43,10 +44,8 @@ class Ui_MainWindow(object):
         self.verticalLayout_10.addWidget(self.graphicsView)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 944, 21))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 944, 28))
         self.menubar.setObjectName("menubar")
-        self.menuGraph = QtWidgets.QMenu(self.menubar)
-        self.menuGraph.setObjectName("menuGraph")
         self.menuView = QtWidgets.QMenu(self.menubar)
         self.menuView.setObjectName("menuView")
         self.menuDock_Widgets = QtWidgets.QMenu(self.menuView)
@@ -57,8 +56,10 @@ class Ui_MainWindow(object):
         self.menuSession.setObjectName("menuSession")
         self.menuFile = QtWidgets.QMenu(self.menubar)
         self.menuFile.setObjectName("menuFile")
+        self.menuHelp = QtWidgets.QMenu(self.menubar)
+        self.menuHelp.setObjectName("menuHelp")
         MainWindow.setMenuBar(self.menubar)
-        self.statusbar = QtWidgets.QStatusBar(MainWindow)
+        self.statusbar = NotificationStatusBar(MainWindow)
         self.statusbar.setObjectName("statusbar")
         MainWindow.setStatusBar(self.statusbar)
         self.dockWidget_item_palette = QtWidgets.QDockWidget(MainWindow)
@@ -159,7 +160,7 @@ class Ui_MainWindow(object):
         self.verticalLayout.setSpacing(6)
         self.verticalLayout.setContentsMargins(0, 0, 0, 0)
         self.verticalLayout.setObjectName("verticalLayout")
-        self.treeView_object = QtWidgets.QTreeView(self.dockWidgetContents_2)
+        self.treeView_object = StickySelectionObjectTreeView(self.dockWidgetContents_2)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(1)
         sizePolicy.setVerticalStretch(0)
@@ -305,8 +306,8 @@ class Ui_MainWindow(object):
         self.verticalLayout_9.addWidget(self.tableView_relationship_parameter_definition)
         self.dockWidget_relationship_parameter_definition.setWidget(self.dockWidgetContents_8)
         MainWindow.addDockWidget(QtCore.Qt.DockWidgetArea(8), self.dockWidget_relationship_parameter_definition)
-        self.actionGraph_reinstate_pruned = QtWidgets.QAction(MainWindow)
-        self.actionGraph_reinstate_pruned.setObjectName("actionGraph_reinstate_pruned")
+        self.actionView_reinstate_pruned = QtWidgets.QAction(MainWindow)
+        self.actionView_reinstate_pruned.setObjectName("actionView_reinstate_pruned")
         self.actionDock_widgets = QtWidgets.QAction(MainWindow)
         self.actionDock_widgets.setObjectName("actionDock_widgets")
         self.actiontodos = QtWidgets.QAction(MainWindow)
@@ -331,43 +332,47 @@ class Ui_MainWindow(object):
         icon3.addPixmap(QtGui.QPixmap(":/icons/menu_icons/window-close.svg"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.actionClose.setIcon(icon3)
         self.actionClose.setObjectName("actionClose")
-        self.actionGraph_hide_selected = QtWidgets.QAction(MainWindow)
-        self.actionGraph_hide_selected.setObjectName("actionGraph_hide_selected")
-        self.actionGraph_show_hidden = QtWidgets.QAction(MainWindow)
-        self.actionGraph_show_hidden.setObjectName("actionGraph_show_hidden")
-        self.actionGraph_prune_selected = QtWidgets.QAction(MainWindow)
-        self.actionGraph_prune_selected.setObjectName("actionGraph_prune_selected")
+        self.actionView_hide_selected = QtWidgets.QAction(MainWindow)
+        self.actionView_hide_selected.setObjectName("actionView_hide_selected")
+        self.actionView_show_hidden = QtWidgets.QAction(MainWindow)
+        self.actionView_show_hidden.setObjectName("actionView_show_hidden")
+        self.actionView_prune_selected = QtWidgets.QAction(MainWindow)
+        self.actionView_prune_selected.setObjectName("actionView_prune_selected")
         self.actionRestore_Dock_Widgets = QtWidgets.QAction(MainWindow)
         self.actionRestore_Dock_Widgets.setObjectName("actionRestore_Dock_Widgets")
-        self.menuGraph.addAction(self.actionGraph_hide_selected)
-        self.menuGraph.addAction(self.actionGraph_show_hidden)
-        self.menuGraph.addSeparator()
-        self.menuGraph.addAction(self.actionGraph_prune_selected)
-        self.menuGraph.addAction(self.actionGraph_reinstate_pruned)
+        self.actionHelp_live_demo = QtWidgets.QAction(MainWindow)
+        self.actionHelp_live_demo.setObjectName("actionHelp_live_demo")
         self.menuDock_Widgets.addAction(self.actionRestore_Dock_Widgets)
         self.menuDock_Widgets.addSeparator()
         self.menuView.addAction(self.menuToolbars.menuAction())
         self.menuView.addAction(self.menuDock_Widgets.menuAction())
+        self.menuView.addSeparator()
+        self.menuView.addAction(self.actionView_hide_selected)
+        self.menuView.addAction(self.actionView_show_hidden)
+        self.menuView.addSeparator()
+        self.menuView.addAction(self.actionView_prune_selected)
+        self.menuView.addAction(self.actionView_reinstate_pruned)
         self.menuSession.addAction(self.actionRefresh)
         self.menuSession.addAction(self.actionCommit)
         self.menuSession.addAction(self.actionRollback)
         self.menuFile.addAction(self.actionClose)
+        self.menuHelp.addAction(self.actionHelp_live_demo)
         self.menubar.addAction(self.menuFile.menuAction())
-        self.menubar.addAction(self.menuGraph.menuAction())
         self.menubar.addAction(self.menuView.menuAction())
         self.menubar.addAction(self.menuSession.menuAction())
+        self.menubar.addAction(self.menuHelp.menuAction())
 
         self.retranslateUi(MainWindow)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
     def retranslateUi(self, MainWindow):
         MainWindow.setWindowTitle(QtWidgets.QApplication.translate("MainWindow", "MainWindow", None, -1))
-        self.menuGraph.setTitle(QtWidgets.QApplication.translate("MainWindow", "Graph", None, -1))
         self.menuView.setTitle(QtWidgets.QApplication.translate("MainWindow", "View", None, -1))
         self.menuDock_Widgets.setTitle(QtWidgets.QApplication.translate("MainWindow", "Dock Widgets", None, -1))
         self.menuToolbars.setTitle(QtWidgets.QApplication.translate("MainWindow", "Toolbars", None, -1))
         self.menuSession.setTitle(QtWidgets.QApplication.translate("MainWindow", "Session", None, -1))
         self.menuFile.setTitle(QtWidgets.QApplication.translate("MainWindow", "File", None, -1))
+        self.menuHelp.setTitle(QtWidgets.QApplication.translate("MainWindow", "Help", None, -1))
         self.dockWidget_item_palette.setWindowTitle(QtWidgets.QApplication.translate("MainWindow", "Item palette", None, -1))
         self.label.setText(QtWidgets.QApplication.translate("MainWindow", "Object class", None, -1))
         self.label_2.setText(QtWidgets.QApplication.translate("MainWindow", "Relationship class", None, -1))
@@ -381,7 +386,7 @@ class Ui_MainWindow(object):
         self.tableView_relationship_parameter_value.setAccessibleName(QtWidgets.QApplication.translate("MainWindow", "relationship parameter value", None, -1))
         self.dockWidget_relationship_parameter_definition.setWindowTitle(QtWidgets.QApplication.translate("MainWindow", "Relationship parameter definition", None, -1))
         self.tableView_relationship_parameter_definition.setAccessibleName(QtWidgets.QApplication.translate("MainWindow", "relationship parameter definition", None, -1))
-        self.actionGraph_reinstate_pruned.setText(QtWidgets.QApplication.translate("MainWindow", "Reinstate pruned items", None, -1))
+        self.actionView_reinstate_pruned.setText(QtWidgets.QApplication.translate("MainWindow", "Reinstate pruned items", None, -1))
         self.actionDock_widgets.setText(QtWidgets.QApplication.translate("MainWindow", "Dock Widgets", None, -1))
         self.actiontodos.setText(QtWidgets.QApplication.translate("MainWindow", "todos", None, -1))
         self.actionRefresh.setText(QtWidgets.QApplication.translate("MainWindow", "Refresh", None, -1))
@@ -392,12 +397,15 @@ class Ui_MainWindow(object):
         self.actionRollback.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+Backspace", None, -1))
         self.actionClose.setText(QtWidgets.QApplication.translate("MainWindow", "Close", None, -1))
         self.actionClose.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+W", None, -1))
-        self.actionGraph_hide_selected.setText(QtWidgets.QApplication.translate("MainWindow", "Hide selected items", None, -1))
-        self.actionGraph_show_hidden.setText(QtWidgets.QApplication.translate("MainWindow", "Show hidden items", None, -1))
-        self.actionGraph_prune_selected.setText(QtWidgets.QApplication.translate("MainWindow", "Prune selected items", None, -1))
+        self.actionView_hide_selected.setText(QtWidgets.QApplication.translate("MainWindow", "Hide selected items", None, -1))
+        self.actionView_show_hidden.setText(QtWidgets.QApplication.translate("MainWindow", "Show hidden items", None, -1))
+        self.actionView_prune_selected.setText(QtWidgets.QApplication.translate("MainWindow", "Prune selected items", None, -1))
         self.actionRestore_Dock_Widgets.setText(QtWidgets.QApplication.translate("MainWindow", "Restore Dock Widgets", None, -1))
+        self.actionHelp_live_demo.setText(QtWidgets.QApplication.translate("MainWindow", "Live demo", None, -1))
 
-from spinetoolbox.widgets.custom_qgraphicsviews import GraphQGraphicsView
-from spinetoolbox.widgets.custom_qlistview import DragListView
 from spinetoolbox.widgets.custom_qtableview import AutoFilterCopyPasteTableView
+from spinetoolbox.widgets.custom_qgraphicsviews import GraphQGraphicsView
+from spinetoolbox.widgets.custom_qstatusbar import NotificationStatusBar
+from spinetoolbox.widgets.custom_qlistview import DragListView
+from spinetoolbox.widgets.custom_qtreeview import StickySelectionObjectTreeView
 from spinetoolbox import resources_icons_rc

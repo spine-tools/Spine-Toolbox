@@ -21,11 +21,12 @@ import logging
 from PySide2.QtCore import Qt, Slot
 from PySide2.QtGui import QStandardItem, QStandardItemModel, QIcon, QPixmap
 from sqlalchemy.engine.url import URL, make_url
-from spinedb_api import DiffDatabaseMapping, SpineDBAPIError, SpineDBVersionError
+from spinedb_api import SpineDBAPIError
 from spinetoolbox.project_item import ProjectItem
 from spinetoolbox.widgets.graph_view_widget import GraphViewForm
 from spinetoolbox.widgets.tabular_view_widget import TabularViewForm
 from spinetoolbox.widgets.tree_view_widget import TreeViewForm
+from spinetoolbox.executioner import ExecutionState
 
 
 class View(ProjectItem):
@@ -40,13 +41,23 @@ class View(ProjectItem):
             x (float): Initial X coordinate of item icon
             y (float): Initial Y coordinate of item icon
         """
-        super().__init__(toolbox, "View", name, description, x, y)
+        super().__init__(toolbox, name, description, x, y)
         self._graph_views = {}
         self._tabular_views = {}
         self._tree_views = {}
         self._references = list()
         self.reference_model = QStandardItemModel()  # References to databases
         self._spine_ref_icon = QIcon(QPixmap(":/icons/Spine_db_ref_icon.png"))
+
+    @staticmethod
+    def item_type():
+        """See base class."""
+        return "View"
+
+    @staticmethod
+    def category():
+        """See base class."""
+        return "Views"
 
     def make_signal_handler_dict(self):
         """Returns a dictionary of all shared signals and their handlers.
@@ -84,40 +95,46 @@ class View(ProjectItem):
         """Returns a list of url strings that are in this item as references."""
         return self._references
 
-    @Slot(bool, name="open_graph_view_btn_clicked")
+    @Slot(bool)
     def open_graph_view_btn_clicked(self, checked=False):
         """Slot for handling the signal emitted by clicking on 'Graph view' button."""
-        self._open_view(self._graph_views, supports_multiple_databases=False)
+        self._open_view("graph", supports_multiple_databases=False)
 
-    @Slot(bool, name="open_tabular_view_btn_clicked")
+    @Slot(bool)
     def open_tabular_view_btn_clicked(self, checked=False):
         """Slot for handling the signal emitted by clicking on 'Tabular view' button."""
-        self._open_view(self._tabular_views, supports_multiple_databases=False)
+        self._open_view("tabular", supports_multiple_databases=False)
 
-    @Slot(bool, name="open_tree_view_btn_clicked")
+    @Slot(bool)
     def open_tree_view_btn_clicked(self, checked=False):
         """Slot for handling the signal emitted by clicking on 'Tree view' button."""
-        self._open_view(self._tree_views, supports_multiple_databases=True)
+        self._open_view("tree", supports_multiple_databases=True)
 
-    def _open_view(self, view_store, supports_multiple_databases):
+    def _open_view(self, view, supports_multiple_databases):
         """Opens references in a view window.
 
         Args:
-            view_store (dict): a dictionary where to store the view window
+            view (str): either "tree", "graph", or "tabular"
             supports_multiple_databases (bool): True if the view supports more than one database
         """
+        view_store = {"graph": self._graph_views, "tabular": self._tabular_views, "tree": self._tree_views}[view]
         indexes = self._selected_indexes()
-        db_maps, databases = self._database_maps(indexes)
+        database_urls = self._database_urls(indexes)
+        if not database_urls:
+            return
+        db_urls = [str(x[0]) for x in database_urls]
         # Mangle database paths to get a hashable string identifying the view window.
-        view_id = ";".join(sorted(databases))
-        if not supports_multiple_databases and len(db_maps) > 1:
+        view_id = ";".join(sorted(db_urls))
+        if not supports_multiple_databases and len(database_urls) > 1:
             # Currently, Graph and Tabular views do not support multiple databases.
             # This if clause can be removed once that support has been implemented.
             self._toolbox.msg_error.emit("Selected view does not support multiple databases.")
             return
         if self._restore_existing_view_window(view_id, view_store):
             return
-        view_window = self._make_view_window(view_store, db_maps, databases)
+        view_window = self._make_view_window(view, database_urls)
+        if not view_window:
+            return
         view_window.show()
         view_window.destroyed.connect(lambda: view_store.pop(view_id))
         view_store[view_id] = view_window
@@ -127,8 +144,9 @@ class View(ProjectItem):
         an empty list given, the model is cleared."""
         self.reference_model.clear()
         self.reference_model.setHorizontalHeaderItem(0, QStandardItem("References"))  # Add header
-        for item in items:
-            qitem = QStandardItem(item.database)
+        sorted_dbs = sorted([item.database for item in items], reverse=True)
+        for db in sorted_dbs:
+            qitem = QStandardItem(db)
             qitem.setFlags(~Qt.ItemIsEditable)
             qitem.setData(self._spine_ref_icon, Qt.DecorationRole)
             self.reference_model.appendRow(qitem)
@@ -137,36 +155,35 @@ class View(ProjectItem):
         """Update View tab name label. Used only when renaming project items."""
         self._properties_ui.label_view_name.setText(self.name)
 
-    def execute(self):
-        """Executes this View."""
-        self._toolbox.msg.emit("")
-        self._toolbox.msg.emit("Executing View <b>{0}</b>".format(self.name))
-        self._toolbox.msg.emit("***")
-        inst = self._toolbox.project().execution_instance
-        self.update_references(inst)
-        self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(0)  # 0 success
-
     def stop_execution(self):
         """Stops executing this View."""
         self._toolbox.msg.emit("Stopping {0}".format(self.name))
 
-    def simulate_execution(self, inst):
-        """Update the list of references that this item is viewing."""
-        super().simulate_execution(inst)
-        self.update_references(inst)
+    def _do_execute(self, resources_upstream, resources_downstream):
+        """Executes this item."""
+        self._update_references_list(resources_upstream)
+        return ExecutionState.CONTINUE
 
-    def update_references(self, inst):
-        """Update references from the execution instance."""
+    def _do_handle_dag_changed(self, resources_upstream):
+        """Update the list of references that this item is viewing."""
+        self._update_references_list(resources_upstream)
+
+    def _update_references_list(self, resources_upstream):
+        """Updates the references list with resources upstream.
+
+        Args:
+            resources_upstream (list): ProjectItemResource instances
+        """
         self._references.clear()
-        for resource in inst.available_resources(self.name):
+        for resource in resources_upstream:
             if resource.type_ == "database" and resource.scheme == "sqlite":
-                self._references.append(make_url(resource.url))
+                self._references.append((make_url(resource.url), resource.provider.name))
             elif resource.type_ == "file" and resource.metadata.get("is_output"):
                 filepath = resource.path
                 if os.path.splitext(filepath)[1] == '.sqlite':
                     url = URL("sqlite", database=filepath)
-                    self._references.append(url)
-        self.populate_reference_list(self._references)
+                    self._references.append((url, resource.provider.name))
+        self.populate_reference_list([url for url, _ in self._references])
 
     def _selected_indexes(self):
         """Returns selected indexes."""
@@ -175,21 +192,9 @@ class View(ProjectItem):
             self._properties_ui.treeView_view.selectAll()
         return self._properties_ui.treeView_view.selectionModel().selectedRows()
 
-    def _database_maps(self, indexes):
-        """Returns database maps and database paths for given indexes."""
-        db_maps = dict()
-        databases = list()
-        for index in indexes:
-            url = self._references[index.row()]
-            try:
-                db_map = DiffDatabaseMapping(url, url.username)
-            except (SpineDBAPIError, SpineDBVersionError) as e:
-                self._toolbox.msg_error.emit(e.msg)
-                return
-            database = url.database
-            db_maps[database] = db_map
-            databases.append(database)
-        return db_maps, databases
+    def _database_urls(self, indexes):
+        """Returns list of tuples (url, provider) for given indexes."""
+        return [self._references[index.row()] for index in indexes]
 
     @staticmethod
     def _restore_existing_view_window(view_id, view_store):
@@ -202,14 +207,15 @@ class View(ProjectItem):
         view_window.activateWindow()
         return True
 
-    def _make_view_window(self, view_store, db_maps, databases):
-        if view_store is self._graph_views:
-            return GraphViewForm(self, db_maps, read_only=True)
-        if view_store is self._tabular_views:
-            return TabularViewForm(self, db_maps[databases[0]], databases[0])
-        if view_store is self._tree_views:
-            return TreeViewForm(self._project, db_maps)
-        raise RuntimeError("view_store must be self._graph_views, self._tabular_views or self._tree_views")
+    def _make_view_window(self, view, db_maps):
+        make_view = {"graph": GraphViewForm, "tabular": TabularViewForm, "tree": TreeViewForm}.get(view)
+        if not make_view:
+            raise RuntimeError("view must be 'tree', 'graph', or 'tabular'")
+        kwargs = {"graph": {"read_only": True}}.get(view, {})
+        try:
+            return make_view(self._project, *db_maps, **kwargs)
+        except SpineDBAPIError as e:
+            self._toolbox.msg_error.emit(e.msg)
 
     def tear_down(self):
         """Tears down this item. Called by toolbox just before closing. Closes all view windows."""
@@ -222,12 +228,12 @@ class View(ProjectItem):
 
     def notify_destination(self, source_item):
         """See base class."""
-        if source_item.item_type == "Tool":
+        if source_item.item_type() == "Tool":
             self._toolbox.msg.emit(
                 "Link established. You can visualize the ouput from Tool "
                 "<b>{0}</b> in View <b>{1}</b>.".format(source_item.name, self.name)
             )
-        elif source_item.item_type == "Data Store":
+        elif source_item.item_type() == "Data Store":
             self._toolbox.msg.emit(
                 "Link established. You can visualize Data Store "
                 "<b>{0}</b> in View <b>{1}</b>.".format(source_item.name, self.name)

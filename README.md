@@ -177,6 +177,15 @@ It is advisable to run [`pylint`](https://pylint.readthedocs.io/en/latest/) regu
 The project root includes a configuration file for `pylint`.
 `pylint`'s user guide includes instructions on how to [integrate the tool in IDEs](https://pylint.readthedocs.io/en/latest/user_guide/ide-integration.html#pylint-in-pycharm).
 
+### Unit Tests
+
+Unit tests are located in the `tests` directory.
+You can run the entire test suite from project root by
+
+```shell
+python -m unittest
+```
+
 ### Reporting bugs
 If you think you have found a bug, please check the following before creating a new 
 issue:
