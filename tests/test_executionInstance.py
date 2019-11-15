@@ -51,8 +51,16 @@ class TestExecutionInstance(unittest.TestCase):
         self.mock_upstream_item = self._mock_item("upstream item")
         self.mock_downstream_item = self._mock_item("downstream item")
         mock_proj_item_model = mock.NonCallableMagicMock()
-        mock_proj_item_model.find_item.return_value = QModelIndex()
-        mock_proj_item_model.project_item.side_effect = 2 * [self.mock_upstream_item, self.mock_downstream_item]
+        mock_upstream_index = mock.NonCallableMagicMock()
+        mock_downstream_index = mock.NonCallableMagicMock()
+        mock_proj_item_model.find_item.side_effect = lambda name: {
+            "upstream item": mock_upstream_index,
+            "downstream item": mock_downstream_index,
+        }[name]
+        mock_proj_item_model.project_item.side_effect = lambda index: {
+            mock_upstream_index: self.mock_upstream_item,
+            mock_downstream_index: self.mock_downstream_item,
+        }[index]
         self.toolbox.project_item_model = mock_proj_item_model
 
     @staticmethod
