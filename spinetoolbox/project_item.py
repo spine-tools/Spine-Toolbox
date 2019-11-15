@@ -242,7 +242,7 @@ class ProjectItem(BaseProjectItem):
         self._sigs = None
         self.item_changed.connect(lambda: self._toolbox.project().notify_items_in_same_dag_of_dag_changes(self.name))
         # Make project directory for this Item
-        self.data_dir = os.path.join(self._project.project_items_dir, self.short_name)
+        self.data_dir = os.path.join(self._project.items_dir, self.short_name)
         try:
             create_dir(self.data_dir)
         except OSError:

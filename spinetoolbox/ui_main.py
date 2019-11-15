@@ -55,7 +55,7 @@ from .widgets import toolbars
 from .widgets.open_project_widget import OpenProjectDialog
 from .project import SpineToolboxProject
 from .config import SPINE_TOOLBOX_VERSION, STATUSBAR_SS, \
-    TEXTBROWSER_SS, MAINWINDOW_SS, DOCUMENTATION_PATH, DEFAULT_PROJECT_DIR, LATEST_PROJECT_VERSION, DEFAULT_WORK_DIR
+    TEXTBROWSER_SS, MAINWINDOW_SS, DOCUMENTATION_PATH, _program_root, LATEST_PROJECT_VERSION, DEFAULT_WORK_DIR
 from .helpers import get_datetime, erase_dir, busy_effect, set_taskbar_icon, \
     supported_img_formats, create_dir, copy_dir
 from .project_item import RootProjectItem, CategoryProjectItem
@@ -295,7 +295,7 @@ class ToolboxUI(QMainWindow):
         self.project_form = NewProjectForm(self)
         self.project_form.show()
 
-    def create_project(self, name, description, location=None):
+    def create_project(self, name, description, location):
         """Creates new project and sets it active.
 
         Args:
@@ -304,7 +304,7 @@ class ToolboxUI(QMainWindow):
             location (str): Path to project directory
         """
         self.clear_ui()
-        self._project = SpineToolboxProject(self, name, description, base_dir=location)
+        self._project = SpineToolboxProject(self, name, description, location)
         self._project.connect_signals()
         self.init_models(tool_specification_paths=list())  # Start project with no tool specifications
         self.setWindowTitle("Spine Toolbox    -- {} --".format(self._project.name))
@@ -397,7 +397,7 @@ class ToolboxUI(QMainWindow):
         connections = project_info["project"]["connections"]
         project_items = project_info["objects"]
         # Create project
-        self._project = SpineToolboxProject(self, name, desc, base_dir=project_dir)
+        self._project = SpineToolboxProject(self, name, desc, project_dir)
         self.setWindowTitle("Spine Toolbox    -- {} --".format(self._project.name))
         # Clear text browsers
         if clear_event_log:
@@ -471,16 +471,16 @@ class ToolboxUI(QMainWindow):
             self.msg_error.emit("Copying project data to directory {0} failed.".format(answer))
             return
         # Get the project info from the new directory and restore project
-        project_file_path = os.path.join(answer, ".spinetoolbox", "project.json")
+        config_file_path = os.path.join(answer, ".spinetoolbox", "project.json")
         try:
-            with open(project_file_path, "r") as fh:
+            with open(config_file_path, "r") as fh:
                 try:
                     proj_info = json.load(fh)
                 except json.decoder.JSONDecodeError:
-                    self.msg_error.emit("Error in project file <b>{0}</b>. Invalid JSON. {0}".format(project_file_path))
+                    self.msg_error.emit("Error in project file <b>{0}</b>. Invalid JSON. {0}".format(config_file_path))
                     return
         except OSError:
-            self.msg_error.emit("[OSError] Opening project file <b>{0}</b> failed".format(project_file_path))
+            self.msg_error.emit("[OSError] Opening project file <b>{0}</b> failed".format(config_file_path))
             return
         if not self.restore_project(proj_info, answer, clear_event_log=True):
             return
@@ -679,12 +679,7 @@ class ToolboxUI(QMainWindow):
             self.msg.emit("Please create a new project or open an existing one first")
             return
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-        answer = QFileDialog.getOpenFileName(
-            self,
-            "Select Tool specification file",
-            os.path.join(DEFAULT_PROJECT_DIR, os.path.pardir),
-            "JSON (*.json)",
-        )
+        answer = QFileDialog.getOpenFileName(self, "Select Tool specification file", _program_root, "JSON (*.json)")
         if answer[0] == "":  # Cancel button clicked
             return
         def_file = os.path.abspath(answer[0])
@@ -711,13 +706,13 @@ class ToolboxUI(QMainWindow):
         # Insert tool specification into model
         self.tool_specification_model.insertRow(tool_specification)
         # Save Tool def file path to project file
-        project_file = self._project.project_file  # Path to project file
+        conf_file = self._project.config_file  # Path to project file
         # Manipulate project file contents
         try:
-            with open(project_file, "r") as fh:
+            with open(conf_file, "r") as fh:
                 dicts = json.load(fh)
         except OSError:
-            self.msg_error.emit("Loading file <b>{0}</b> failed".format(project_file))
+            self.msg_error.emit("Loading file <b>{0}</b> failed".format(conf_file))
             return
         # Get project settings
         project_dict = dicts["project"]
@@ -732,7 +727,7 @@ class ToolboxUI(QMainWindow):
         # Save dictionaries back to project save file
         dicts["project"] = project_dict
         dicts["objects"] = objects_dict
-        with open(project_file, "w") as fp:
+        with open(conf_file, "w") as fp:
             json.dump(dicts, fp, indent=4)
         self.msg_success.emit("Tool specification <b>{0}</b> added to project".format(tool_specification.name))
 
@@ -808,13 +803,13 @@ class ToolboxUI(QMainWindow):
         if answer != QMessageBox.Ok:
             return
         # Remove tool def file path from the project file
-        project_file = self._project.project_file
+        conf_file = self._project.config_file
         # Read project data from project.json file
         try:
-            with open(project_file, "r") as fh:
+            with open(conf_file, "r") as fh:
                 dicts = json.load(fh)
         except OSError:
-            self.msg_error.emit("Loading file <b>{0}</b> failed".format(project_file))
+            self.msg_error.emit("Loading file <b>{0}</b> failed".format(conf_file))
             return
         # Get project settings
         project_dict = dicts["project"]
@@ -829,19 +824,19 @@ class ToolboxUI(QMainWindow):
             project_dict["tool_specifications"] = tool_spec_paths
         except KeyError:
             self.msg_error.emit(
-                "This is odd. tool_specifications list not found in project file <b>{0}</b>".format(project_file)
+                "This is odd. tool_specifications list not found in project file <b>{0}</b>".format(conf_file)
             )
             return
         except ValueError:
             self.msg_error.emit(
                 "This is odd. Tool specification file path <b>{0}</b> not found "
-                "in project file <b>{1}</b>".format(tool_def_path, project_file)
+                "in project file <b>{1}</b>".format(tool_def_path, conf_file)
             )
             return
         # Save dictionaries back to project.json file
         dicts["project"] = project_dict
         dicts["objects"] = object_dict
-        with open(project_file, "w") as fp:
+        with open(conf_file, "w") as fp:
             json.dump(dicts, fp, indent=4)
         self.msg_success.emit("Tool specification removed")
 

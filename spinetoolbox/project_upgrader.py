@@ -187,15 +187,15 @@ class ProjectUpgrader:
             return False
         self._toolbox.msg.emit("Copying data to new project directory")
         # Make items directory to new project directory
-        project_conf_dir = os.path.join(project_dir, ".spinetoolbox")
-        project_items_dir = os.path.join(project_conf_dir, "items")
+        config_dir = os.path.join(project_dir, ".spinetoolbox")
+        items_dir = os.path.join(config_dir, "items")
         try:
-            create_dir(project_items_dir)
+            create_dir(items_dir)
         except OSError:
-            self._toolbox.msg_error.emit("Creating directory {0} failed".format(project_items_dir))
+            self._toolbox.msg_error.emit("Creating directory {0} failed".format(items_dir))
             return False
         src_dir = os.path.abspath(old_project_dir)
-        dst_dir = os.path.abspath(project_items_dir)
+        dst_dir = os.path.abspath(items_dir)
         recursive_overwrite(self._toolbox, src_dir, dst_dir, ignore=None, silent=False)
         return True
 

@@ -36,7 +36,6 @@ _frozen = getattr(sys, "frozen", False)
 _path_to_executable = os.path.dirname(sys.executable if _frozen else __file__)
 APPLICATION_PATH = os.path.realpath(_path_to_executable)
 _program_root = APPLICATION_PATH if _frozen else os.path.join(APPLICATION_PATH, os.path.pardir)
-DEFAULT_PROJECT_DIR = os.path.abspath(os.path.join(_program_root, "projects"))
 DEFAULT_WORK_DIR = os.path.abspath(os.path.join(_program_root, "work"))
 if _frozen:
     DOCUMENTATION_PATH = os.path.abspath(os.path.join(_program_root, "docs", "html"))
@@ -86,6 +85,9 @@ LIST_REQUIRED_KEYS = ['includes', 'inputfiles', 'inputfiles_opt', 'outputfiles']
 # Julia REPL constants
 JL_REPL_TIME_TO_DEAD = 5.0
 JL_REPL_RESTART_LIMIT = 3
+
+# Project constants
+PROJECT_FILENAME = "project.json"
 
 # Stylesheets
 STATUSBAR_SS = (

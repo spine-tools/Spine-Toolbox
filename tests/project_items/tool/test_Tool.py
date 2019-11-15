@@ -112,7 +112,7 @@ class TestTool(unittest.TestCase):
         self.assertEqual(expected_name, self.tool._properties_ui.label_tool_name.text())  # name label in props
         self.assertEqual(expected_name, self.tool.get_icon().name_item.text())  # name item on Design View
         # Check data_dir
-        expected_data_dir = os.path.join(self.toolbox.project().project_items_dir, expected_short_name)
+        expected_data_dir = os.path.join(self.toolbox.project().items_dir, expected_short_name)
         self.assertEqual(expected_data_dir, self.tool.data_dir)  # Check data dir
         # Check there's a dag containing a node with the new name and that no dag contains a node with the old name
         dag_with_new_node_name = self.toolbox.project().dag_handler.dag_with_node(expected_name)

@@ -23,14 +23,14 @@ from ..config import INVALID_CHARS
 
 
 class NewProjectForm(QWidget):
-    """Class for a new project widget.
-
-    Attributes:
-        toolbox (ToolboxUI): Parent widget.
-    """
+    """Class for a new project widget."""
 
     def __init__(self, toolbox):
-        """Initialize class."""
+        """
+
+        Args:
+            toolbox (ToolboxUI): Parent widget.
+        """
         from ..ui import project_form
 
         super().__init__(parent=toolbox, f=Qt.Window)  # Inherits stylesheet from parent
@@ -109,7 +109,7 @@ class NewProjectForm(QWidget):
 
     def call_create_project(self):
         """Call ToolboxUI method create_project()."""
-        self._toolbox.create_project(self.name, self.description, location=self.dir)
+        self._toolbox.create_project(self.name, self.description, self.dir)
 
     def keyPressEvent(self, e):
         """Close project form when escape key is pressed.

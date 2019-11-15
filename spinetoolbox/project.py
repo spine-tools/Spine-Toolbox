@@ -23,7 +23,7 @@ from PySide2.QtCore import Slot
 from .metaobject import MetaObject
 from .helpers import create_dir
 from .tool_specifications import JuliaTool, PythonTool, GAMSTool, ExecutableTool
-from .config import LATEST_PROJECT_VERSION
+from .config import LATEST_PROJECT_VERSION, PROJECT_FILENAME
 from .executioner import DirectedGraphHandler, ExecutionInstance, ExecutionState, ResourceMap
 from .spine_db_manager import SpineDBManager
 
@@ -31,14 +31,14 @@ from .spine_db_manager import SpineDBManager
 class SpineToolboxProject(MetaObject):
     """Class for Spine Toolbox projects."""
 
-    def __init__(self, toolbox, name, description, base_dir):
+    def __init__(self, toolbox, name, description, p_dir):
         """
 
         Args:
             toolbox (ToolboxUI): toolbox of this project
             name (str): Project name
             description (str): Project description
-            base_dir (str): Project directory
+            p_dir (str): Project directory
         """
         super().__init__(name, description)
         self._toolbox = toolbox
@@ -52,15 +52,14 @@ class SpineToolboxProject(MetaObject):
         self._executed_graph_index = 0
         self._invalid_graphs = list()
         self.dirty = False  # TODO: Indicates if project has changed since loading
-        self.project_dir = None
-        self.project_conf_dir = None
-        self.project_items_dir = None
-        self.project_filename = None
-        self.project_file = None
-        if not self._create_project_structure(base_dir):
+        self.project_dir = None  # Full path to project directory
+        self.config_dir = None  # Full path to .spinetoolbox directory
+        self.items_dir = None  # Full path to items directory
+        self.config_file = None  # Full path to project.json file
+        if not self._create_project_structure(p_dir):
             self._toolbox.msg_error.emit("Creating project directory "
                                          "structure to <b>{0}</b> failed"
-                                         .format(base_dir))
+                                         .format(p_dir))
 
     def connect_signals(self):
         """Connect signals to slots."""
@@ -74,24 +73,23 @@ class SpineToolboxProject(MetaObject):
             directory (str): Abs. path to a directory that should be made into a project directory
         """
         self.project_dir = directory
-        self.project_conf_dir = os.path.abspath(os.path.join(self.project_dir, ".spinetoolbox"))
-        self.project_items_dir = os.path.abspath(os.path.join(self.project_conf_dir, "items"))
-        self.project_filename = "project.json"  # Project file
-        self.project_file = os.path.abspath(os.path.join(self.project_conf_dir, self.project_filename))
+        self.config_dir = os.path.abspath(os.path.join(self.project_dir, ".spinetoolbox"))
+        self.items_dir = os.path.abspath(os.path.join(self.config_dir, "items"))
+        self.config_file = os.path.abspath(os.path.join(self.config_dir, PROJECT_FILENAME))
         try:
             create_dir(self.project_dir)  # Make project directory
         except OSError:
             self._toolbox.msg_error.emit("Creating directory {0} failed".format(self.project_dir))
             return False
         try:
-            create_dir(self.project_conf_dir)  # Make project conf directory
+            create_dir(self.config_dir)  # Make project config directory
         except OSError:
-            self._toolbox.msg_error.emit("Creating directory {0} failed".format(self.project_conf_dir))
+            self._toolbox.msg_error.emit("Creating directory {0} failed".format(self.config_dir))
             return False
         try:
-            create_dir(self.project_items_dir)  # Make project items directory
+            create_dir(self.items_dir)  # Make project items directory
         except OSError:
-            self._toolbox.msg_error.emit("Creating directory {0} failed".format(self.project_items_dir))
+            self._toolbox.msg_error.emit("Creating directory {0} failed".format(self.items_dir))
             return False
         return True
 
@@ -163,7 +161,7 @@ class SpineToolboxProject(MetaObject):
         # Write project on disk
         saved_dict = dict(project=project_dict, objects=items_dict)
         # Write into JSON file
-        with open(self.project_file, "w") as fp:
+        with open(self.config_file, "w") as fp:
             json.dump(saved_dict, fp, indent=4)
         return True
 

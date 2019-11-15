@@ -26,7 +26,7 @@ from spinetoolbox.project_item import CategoryProjectItem, ProjectItem, RootProj
 class _MockProject:
     def __init__(self, temp_directory):
         self.project_dir = temp_directory
-        self.project_items_dir = temp_directory
+        self.items_dir = temp_directory
 
 
 class _MockToolbox:
