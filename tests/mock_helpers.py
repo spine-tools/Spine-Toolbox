@@ -63,7 +63,8 @@ def create_toolboxui_with_project():
         mock_python_repl.return_value = MockQWidget()
         mock_qsettings_value.side_effect = qsettings_value_side_effect
         toolbox = ToolboxUI()
-        toolbox.create_project("UnitTest Project", "")
+        project_dir = os.path.abspath(os.path.join(os.curdir, "tests", "project_files", "This dir should not exist"))
+        toolbox.create_project("UnitTest Project", "", project_dir)
     return toolbox
 
 
@@ -72,10 +73,10 @@ def clean_up_toolboxui_with_project(toolbox):
     project_dir = toolbox.project().project_dir
     if os.path.exists(project_dir):
         shutil.rmtree(project_dir)
-    project_file = toolbox.project().path
+    project_file = toolbox.project().project_file
     if os.path.exists(project_file):
         os.remove(project_file)
-    work_dir = toolbox.project().work_dir
+    work_dir = toolbox.work_dir
     if os.path.exists(work_dir):
         shutil.rmtree(work_dir)
     toolbox.deleteLater()

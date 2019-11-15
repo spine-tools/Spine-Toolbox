@@ -79,7 +79,8 @@ class TestToolboxUI(unittest.TestCase):
         with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project") as mock_save_project, mock.patch(
             "spinetoolbox.project.create_dir"
         ) as mock_create_dir:
-            self.toolbox.create_project("UnitTest Project", "Project for unit tests.")
+            project_dir = os.path.abspath(os.path.join(os.curdir, "tests", "project_files", "Fake Directory"))
+            self.toolbox.create_project("UnitTest Project", "Project for unit tests.", project_dir)
         self.assertIsInstance(self.toolbox.project(), SpineToolboxProject)  # Check that a project is open
         self.toolbox.init_project_item_model()
         self.check_init_project_item_model()
@@ -155,31 +156,31 @@ class TestToolboxUI(unittest.TestCase):
 
     def test_create_project(self):
         """Test that create_project method makes a SpineToolboxProject instance.
-        Skips creating a .proj file and creating directories.
+        Does not actually create a project directory nor project.json file.
         """
         with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project") as mock_save_project, mock.patch(
             "spinetoolbox.project.create_dir"
         ) as mock_create_dir:
-            self.toolbox.create_project("UnitTest Project", "Project for unit tests.")
+            project_dir = os.path.abspath(os.path.join(os.curdir, "tests", "project_files", "Fake Directory"))
+            self.toolbox.create_project("UnitTest Project", "Project for unit tests.", project_dir)
         self.assertIsInstance(self.toolbox.project(), SpineToolboxProject)  # Check that a project is open
 
     def test_open_project(self):
-        """Test that opening a project file works.
+        """Test that opening a project directory works.
+        This test uses an actual Spine Toolbox project.
         The project should contain four items. Data Store 'a',
         Data Connection 'b', Tool 'c', and View 'd'. The items are connected
         a->b->c->d.
         """
-        test_project_path = os.path.join(
-            APPLICATION_PATH, os.path.pardir, "tests", "project_files", "unit_test_project.proj"
-        )
-        if not os.path.exists(test_project_path):
-            self.skipTest("Test project file not found in path:'{0}'".format(test_project_path))
+        project_dir = os.path.abspath(os.path.join(os.curdir, "tests", "project_files", "Project Directory"))
+        if not os.path.exists(project_dir):
+            self.skipTest("Test project directory not found from:'{0}'".format(project_dir))
             return
         self.assertIsNone(self.toolbox.project())
         with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project") as mock_save_project, mock.patch(
             "spinetoolbox.project.create_dir"
         ) as mock_create_dir, mock.patch("spinetoolbox.project_item.create_dir") as mock_create_dir:
-            self.toolbox.open_project(test_project_path)
+            self.toolbox.open_project(project_dir)
         self.assertIsInstance(self.toolbox.project(), SpineToolboxProject)
         # Check that project contains four items
         self.assertEqual(self.toolbox.project_item_model.n_items(), 4)
@@ -239,7 +240,8 @@ class TestToolboxUI(unittest.TestCase):
         with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project") as mock_save_project, mock.patch(
             "spinetoolbox.project.create_dir"
         ) as mock_create_dir:
-            self.toolbox.create_project("UnitTest Project", "")
+            project_dir = os.path.abspath(os.path.join(os.curdir, "tests", "project_files", "Fake Directory"))
+            self.toolbox.create_project("UnitTest Project", "", project_dir)
         ds1 = "DS1"
         self.add_ds(ds1)
         n_items = self.toolbox.project_item_model.n_items()
@@ -265,7 +267,11 @@ class TestToolboxUI(unittest.TestCase):
         """Test item selection in treeView_project. Simulates mouse clicks on a Data Store items.
         Click on a project item and then on another project item.
         """
-        self.toolbox.create_project("UnitTest Project", "")
+        with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project") as mock_save_project, mock.patch(
+            "spinetoolbox.project.create_dir"
+        ) as mock_create_dir:
+            project_dir = os.path.abspath(os.path.join(os.curdir, "tests", "project_files", "Fake Directory"))
+            self.toolbox.create_project("UnitTest Project", "", project_dir)
         ds1 = "DS1"
         ds2 = "DS2"
         self.add_ds(ds1)
@@ -295,7 +301,11 @@ class TestToolboxUI(unittest.TestCase):
         """Test item selection in treeView_project. Simulates mouse clicks on a Data Store items.
         Test multiple selection (Ctrl-pressed) with two Data Store items.
         """
-        self.toolbox.create_project("UnitTest Project", "")
+        with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project") as mock_save_project, mock.patch(
+            "spinetoolbox.project.create_dir"
+        ) as mock_create_dir:
+            project_dir = os.path.abspath(os.path.join(os.curdir, "tests", "project_files", "Fake Directory"))
+            self.toolbox.create_project("UnitTest Project", "", project_dir)
         ds1 = "DS1"
         ds2 = "DS2"
         self.add_ds(ds1)
@@ -330,7 +340,11 @@ class TestToolboxUI(unittest.TestCase):
         """Test item selection in Design View. Simulates mouse click on a Data Connection item.
         Test a single item selection.
         """
-        self.toolbox.create_project("UnitTest Project", "")
+        with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project") as mock_save_project, mock.patch(
+            "spinetoolbox.project.create_dir"
+        ) as mock_create_dir:
+            project_dir = os.path.abspath(os.path.join(os.curdir, "tests", "project_files", "Fake Directory"))
+            self.toolbox.create_project("UnitTest Project", "", project_dir)
         dc1 = "DC1"
         self.add_dc(dc1, x=0, y=0)
         n_items = self.toolbox.project_item_model.n_items()
@@ -353,7 +367,11 @@ class TestToolboxUI(unittest.TestCase):
         """Test item selection in Design View.
         First mouse click on project item. Second mouse click on a project item.
         """
-        self.toolbox.create_project("UnitTest Project", "")
+        with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project") as mock_save_project, mock.patch(
+            "spinetoolbox.project.create_dir"
+        ) as mock_create_dir:
+            project_dir = os.path.abspath(os.path.join(os.curdir, "tests", "project_files", "Fake Directory"))
+            self.toolbox.create_project("UnitTest Project", "", project_dir)
         dc1 = "DC1"
         dc2 = "DC2"
         self.add_dc(dc1, x=0, y=0)
@@ -383,7 +401,11 @@ class TestToolboxUI(unittest.TestCase):
         """Test item selection in Design View.
         First mouse click on project item. Second mouse click on design view.
         """
-        self.toolbox.create_project("UnitTest Project", "")
+        with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project") as mock_save_project, mock.patch(
+            "spinetoolbox.project.create_dir"
+        ) as mock_create_dir:
+            project_dir = os.path.abspath(os.path.join(os.curdir, "tests", "project_files", "Fake Directory"))
+            self.toolbox.create_project("UnitTest Project", "", project_dir)
         dc1 = "DC1"
         self.add_dc(dc1, x=0, y=0)
         dc1_index = self.toolbox.project_item_model.find_item(dc1)
@@ -406,7 +428,11 @@ class TestToolboxUI(unittest.TestCase):
         """Test item selection in Design View.
         Mouse click on a link. Check that Link is selected.
         """
-        self.toolbox.create_project("UnitTest Project", "")
+        with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project") as mock_save_project, mock.patch(
+            "spinetoolbox.project.create_dir"
+        ) as mock_create_dir:
+            project_dir = os.path.abspath(os.path.join(os.curdir, "tests", "project_files", "Fake Directory"))
+            self.toolbox.create_project("UnitTest Project", "", project_dir)
         dc1 = "DC1"
         dc2 = "DC2"
         self.add_dc(dc1, x=0, y=0)
@@ -448,7 +474,11 @@ class TestToolboxUI(unittest.TestCase):
         """Test item selection in Design View.
         First mouse click on project item, then mouse click on a Link.
         """
-        self.toolbox.create_project("UnitTest Project", "")
+        with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project") as mock_save_project, mock.patch(
+            "spinetoolbox.project.create_dir"
+        ) as mock_create_dir:
+            project_dir = os.path.abspath(os.path.join(os.curdir, "tests", "project_files", "Fake Directory"))
+            self.toolbox.create_project("UnitTest Project", "", project_dir)
         dc1 = "DC1"
         dc2 = "DC2"
         self.add_dc(dc1, x=0, y=0)
@@ -494,7 +524,11 @@ class TestToolboxUI(unittest.TestCase):
         First mouse click on project item (Ctrl-key pressed).
         Second mouse click on a project item (Ctrl-key pressed).
         """
-        self.toolbox.create_project("UnitTest Project", "")
+        with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project") as mock_save_project, mock.patch(
+            "spinetoolbox.project.create_dir"
+        ) as mock_create_dir:
+            project_dir = os.path.abspath(os.path.join(os.curdir, "tests", "project_files", "Fake Directory"))
+            self.toolbox.create_project("UnitTest Project", "", project_dir)
         dc1 = "DC1"
         dc2 = "DC2"
         self.add_dc(dc1, x=0, y=0)
@@ -523,7 +557,11 @@ class TestToolboxUI(unittest.TestCase):
 
     def test_remove_item(self):
         """Test removing a single project item."""
-        self.toolbox.create_project("UnitTest Project", "")
+        with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project") as mock_save_project, mock.patch(
+            "spinetoolbox.project.create_dir"
+        ) as mock_create_dir:
+            project_dir = os.path.abspath(os.path.join(os.curdir, "tests", "project_files", "Fake Directory"))
+            self.toolbox.create_project("UnitTest Project", "", project_dir)
         dc1 = "DC1"
         self.add_dc(dc1)
         dc1_index = self.toolbox.project_item_model.find_item(dc1)
@@ -660,7 +698,11 @@ class TestToolboxUI(unittest.TestCase):
         self.assertEqual(name, "prefix 3")
 
     def test_copy_project_item_to_clipboard(self):
-        self.toolbox.create_project("UnitTest Project", "Project for test_project_item_to_clipboard()")
+        with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project") as mock_save_project, mock.patch(
+            "spinetoolbox.project.create_dir"
+        ) as mock_create_dir:
+            project_dir = os.path.abspath(os.path.join(os.curdir, "tests", "project_files", "Fake Directory"))
+            self.toolbox.create_project("UnitTest Project", "", project_dir)
         self.add_dc("data_connection")
         item_index = self.toolbox.project_item_model.find_item("data_connection")
         self.toolbox.ui.treeView_project.selectionModel().select(item_index, QItemSelectionModel.Select)
@@ -674,7 +716,11 @@ class TestToolboxUI(unittest.TestCase):
         self.assertTrue(item_dump)
 
     def test_paste_project_item_from_clipboard(self):
-        self.toolbox.create_project("UnitTest Project", "Project for test_project_item_to_clipboard()")
+        with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project") as mock_save_project, mock.patch(
+            "spinetoolbox.project.create_dir"
+        ) as mock_create_dir:
+            project_dir = os.path.abspath(os.path.join(os.curdir, "tests", "project_files", "Fake Directory"))
+            self.toolbox.create_project("UnitTest Project", "", project_dir)
         self.add_dc("data_connection")
         self.assertEqual(self.toolbox.project_item_model.n_items(), 1)
         item_index = self.toolbox.project_item_model.find_item("data_connection")
@@ -686,7 +732,11 @@ class TestToolboxUI(unittest.TestCase):
         self.assertIsNotNone(new_item_index)
 
     def test_duplicate_project_item(self):
-        self.toolbox.create_project("UnitTest Project", "Project for test_project_item_to_clipboard()")
+        with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project") as mock_save_project, mock.patch(
+            "spinetoolbox.project.create_dir"
+        ) as mock_create_dir:
+            project_dir = os.path.abspath(os.path.join(os.curdir, "tests", "project_files", "Fake Directory"))
+            self.toolbox.create_project("UnitTest Project", "", project_dir)
         self.add_dc("data_connection")
         self.assertEqual(self.toolbox.project_item_model.n_items(), 1)
         item_index = self.toolbox.project_item_model.find_item("data_connection")
