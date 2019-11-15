@@ -30,7 +30,7 @@ class DirectedGraphHandler(QObject):
         toolbox (ToolboxUI): QMainWindow instance
     """
 
-    dag_simulation_requested = Signal("QVariant", name="dag_simulation_requested")
+    dag_simulation_requested = Signal("QVariant")
 
     def __init__(self, toolbox):
         """Class constructor."""

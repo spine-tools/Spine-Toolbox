@@ -19,9 +19,11 @@ Unit tests for Importer project item.
 import os
 import unittest
 from unittest.mock import MagicMock, NonCallableMagicMock
+from PySide2.QtCore import Qt
 from PySide2.QtWidgets import QApplication
 from networkx import DiGraph
 from spinetoolbox.project_items.importer.importer import Importer
+from spinetoolbox.project_item import ProjectItemResource
 from ...mock_helpers import clean_up_toolboxui_with_project, create_toolboxui_with_project
 
 
@@ -70,14 +72,12 @@ class TestImporter(unittest.TestCase):
         source_item.item_type = MagicMock(return_value="Tool")
         self.importer.notify_destination(source_item)
         self.toolbox.msg_warning.emit.assert_called_with(
-            "Link established. Interaction between a "
-            "<b>Tool</b> and a <b>Importer</b> has not been implemented yet."
+            "Link established. Interaction between a " "<b>Tool</b> and a <b>Importer</b> has not been implemented yet."
         )
         source_item.item_type = MagicMock(return_value="View")
         self.importer.notify_destination(source_item)
         self.toolbox.msg_warning.emit.assert_called_with(
-            "Link established. Interaction between a "
-            "<b>View</b> and a <b>Importer</b> has not been implemented yet."
+            "Link established. Interaction between a " "<b>View</b> and a <b>Importer</b> has not been implemented yet."
         )
 
     def test_default_name_prefix(self):
@@ -102,6 +102,17 @@ class TestImporter(unittest.TestCase):
         self.assertIsInstance(dag_with_new_node_name, DiGraph)
         dag_with_old_node_name = self.toolbox.project().dag_handler.dag_with_node("DI")
         self.assertIsNone(dag_with_old_node_name)
+
+    def test_handle_dag_changed(self):
+        """Tests that upstream resource files from are listed in the Importer view."""
+        self.importer.activate()
+        item = NonCallableMagicMock()
+        expected_file_list = ["url1", "url2"]
+        resources = [ProjectItemResource(item, "file", url) for url in expected_file_list]
+        self.importer._do_handle_dag_changed(resources)
+        model = self.importer._properties_ui.treeView_files.model()
+        file_list = [model.index(row, 0).data(Qt.DisplayRole) for row in range(model.rowCount())]
+        self.assertEqual(file_list, expected_file_list)
 
 
 if __name__ == '__main__':

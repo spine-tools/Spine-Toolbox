@@ -77,7 +77,7 @@ class SpineToolboxProject(MetaObject):
 
     def connect_signals(self):
         """Connect signals to slots."""
-        self.dag_handler.dag_simulation_requested.connect(self.notify_items_of_dag_changes)
+        self.dag_handler.dag_simulation_requested.connect(self.notify_changes_in_dag)
 
     def change_name(self, name):
         """Changes project name and updates project dir and save file name.
@@ -523,7 +523,7 @@ class SpineToolboxProject(MetaObject):
             i += 1
 
     @Slot("QVariant")
-    def notify_items_of_dag_changes(self, dag):
+    def notify_changes_in_dag(self, dag):
         """Notifies the items in given dag that the dag has changed."""
         ordered_nodes = self.dag_handler.calc_exec_order(dag)
         if not ordered_nodes:
@@ -543,19 +543,19 @@ class SpineToolboxProject(MetaObject):
             project_item = project_item_model.project_item(ind)
             project_item.handle_dag_changed(rank, resource_map.available_upstream_resources(item))
 
-    def notify_all_items_of_dag_changes(self):
-        """Simulates the execution of all dags in the project."""
+    def notify_changes_in_all_dags(self):
+        """Notifies all items of changes in all dags in the project."""
         for g in self.dag_handler.dags():
-            self.notify_items_of_dag_changes(g)
+            self.notify_changes_in_dag(g)
 
-    def notify_items_in_same_dag_of_dag_changes(self, item):
+    def notify_changes_in_containing_dag(self, item):
         """Notifies items in dag containing the given item that the dag has changed."""
         dag = self.dag_handler.dag_with_node(item)
         # Some items trigger this method while they are being initialized
         # but before they have been added to any DAG.
         # In those cases we don't need to notify other items.
         if dag:
-            self.notify_items_of_dag_changes(dag)
+            self.notify_changes_in_dag(dag)
         elif self._toolbox.project_item_model.find_item(item) is not None:
             self._toolbox.msg_error.emit(
                 "[BUG] Could not find a graph containing {0}. " "<b>Please reopen the project.</b>".format(item)

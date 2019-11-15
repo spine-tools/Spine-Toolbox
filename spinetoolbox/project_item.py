@@ -240,7 +240,7 @@ class ProjectItem(BaseProjectItem):
         self._properties_ui = None
         self._icon = None
         self._sigs = None
-        self.item_changed.connect(lambda: self._toolbox.project().notify_items_in_same_dag_of_dag_changes(self.name))
+        self.item_changed.connect(lambda: self._toolbox.project().notify_changes_in_containing_dag(self.name))
         # Make project directory for this Item
         self.data_dir = os.path.join(self._project.project_dir, self.short_name)
         try:
@@ -538,7 +538,7 @@ class ProjectItemResource:
             provider (ProjectItem): The item that provides the resource
             type_ (str): The resource type, either "file" or "database" (for now)
             url (str): The url of the resource
-            metadata (dict): Some metadata providing extra information about the resource. For now it has two keys:
+            metadata (dict): Some metadata providing extra information about the resource. For now it has one key:
                 - future (bool): whether the resource is from the future, e.g. Tool output files advertised beforehand
         """
         self.provider = provider

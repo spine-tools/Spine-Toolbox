@@ -20,7 +20,6 @@ import unittest
 from unittest import mock
 import logging
 import sys
-from PySide2.QtCore import QModelIndex
 from PySide2.QtWidgets import QApplication
 from spinetoolbox.executioner import ExecutionInstance, ExecutionState, ResourceMap
 from spinetoolbox.project_item import ProjectItemResource
