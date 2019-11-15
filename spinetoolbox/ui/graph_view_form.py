@@ -10,10 +10,10 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-# Form implementation generated from reading ui file '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/graph_view_form.ui',
-# licensing of '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/graph_view_form.ui' applies.
+# Form implementation generated from reading ui file 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\graph_view_form.ui',
+# licensing of 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\graph_view_form.ui' applies.
 #
-# Created: Sat Nov  9 09:40:51 2019
+# Created: Tue Nov 12 12:56:53 2019
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -404,8 +404,8 @@ class Ui_MainWindow(object):
         self.actionHelp_live_demo.setText(QtWidgets.QApplication.translate("MainWindow", "Live demo", None, -1))
 
 from spinetoolbox.widgets.custom_qstatusbar import NotificationStatusBar
-from spinetoolbox.widgets.custom_qgraphicsviews import GraphQGraphicsView
 from spinetoolbox.widgets.custom_qtreeview import StickySelectionObjectTreeView
-from spinetoolbox.widgets.custom_qtableview import AutoFilterCopyPasteTableView
 from spinetoolbox.widgets.custom_qlistview import DragListView
+from spinetoolbox.widgets.custom_qtableview import AutoFilterCopyPasteTableView
+from spinetoolbox.widgets.custom_qgraphicsviews import GraphQGraphicsView
 from spinetoolbox import resources_icons_rc

@@ -10,10 +10,10 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-# Form implementation generated from reading ui file '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/spine_datapackage_form.ui',
-# licensing of '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/spine_datapackage_form.ui' applies.
+# Form implementation generated from reading ui file 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\spine_datapackage_form.ui',
+# licensing of 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\spine_datapackage_form.ui' applies.
 #
-# Created: Wed Nov  6 15:14:09 2019
+# Created: Tue Nov 12 12:56:55 2019
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!

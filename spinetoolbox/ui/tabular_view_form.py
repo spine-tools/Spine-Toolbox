@@ -10,10 +10,10 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-# Form implementation generated from reading ui file '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/tabular_view_form.ui',
-# licensing of '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/tabular_view_form.ui' applies.
+# Form implementation generated from reading ui file 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\tabular_view_form.ui',
+# licensing of 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\tabular_view_form.ui' applies.
 #
-# Created: Fri Nov  8 21:30:23 2019
+# Created: Tue Nov 12 12:56:55 2019
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -76,7 +76,7 @@ class Ui_MainWindow(object):
         self.label = QtWidgets.QLabel(self.horizontalLayoutWidget)
         self.label.setObjectName("label")
         self.verticalLayout_2.addWidget(self.label)
-        self.list_index = TestListView(self.horizontalLayoutWidget)
+        self.list_index = PivotListWidget(self.horizontalLayoutWidget)
         self.list_index.setObjectName("list_index")
         self.verticalLayout_2.addWidget(self.list_index)
         self.horizontalLayout.addLayout(self.verticalLayout_2)
@@ -85,7 +85,7 @@ class Ui_MainWindow(object):
         self.label_2 = QtWidgets.QLabel(self.horizontalLayoutWidget)
         self.label_2.setObjectName("label_2")
         self.verticalLayout_3.addWidget(self.label_2)
-        self.list_column = TestListView(self.horizontalLayoutWidget)
+        self.list_column = PivotListWidget(self.horizontalLayoutWidget)
         self.list_column.setObjectName("list_column")
         self.verticalLayout_3.addWidget(self.list_column)
         self.horizontalLayout.addLayout(self.verticalLayout_3)
@@ -94,7 +94,7 @@ class Ui_MainWindow(object):
         self.label_3 = QtWidgets.QLabel(self.horizontalLayoutWidget)
         self.label_3.setObjectName("label_3")
         self.verticalLayout_4.addWidget(self.label_3)
-        self.list_frozen = TestListView(self.horizontalLayoutWidget)
+        self.list_frozen = PivotListWidget(self.horizontalLayoutWidget)
         self.list_frozen.setObjectName("list_frozen")
         self.verticalLayout_4.addWidget(self.list_frozen)
         self.horizontalLayout.addLayout(self.verticalLayout_4)
@@ -123,7 +123,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_7.addWidget(self.splitter_3)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 800, 28))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 800, 21))
         self.menubar.setObjectName("menubar")
         self.menuSession = QtWidgets.QMenu(self.menubar)
         self.menuSession.setObjectName("menuSession")
@@ -188,6 +188,6 @@ class Ui_MainWindow(object):
         self.actionClose.setText(QtWidgets.QApplication.translate("MainWindow", "Close", None, -1))
         self.actionClose.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+W", None, -1))
 
-from spinetoolbox.widgets.custom_qtableview import SimpleCopyPasteTableView, FrozenTableView
-from spinetoolbox.widgets.custom_qlistview import TestListView
+from spinetoolbox.widgets.custom_qlistview import PivotListWidget
+from spinetoolbox.widgets.custom_qtableview import FrozenTableView, SimpleCopyPasteTableView
 from spinetoolbox import resources_icons_rc
