@@ -240,7 +240,7 @@ class ProjectItem(BaseProjectItem):
         self._properties_ui = None
         self._icon = None
         self._sigs = None
-        self.item_changed.connect(lambda: self._toolbox.project().notify_items_in_same_dag_of_dag_changes(self.name))
+        self.item_changed.connect(lambda: self._toolbox.project().notify_changes_in_containing_dag(self.name))
         # Make project directory for this Item
         self.data_dir = os.path.join(self._project.items_dir, self.short_name)
         try:
@@ -318,6 +318,14 @@ class ProjectItem(BaseProjectItem):
         else:
             self.get_icon().rank_icon.set_rank("X")
 
+    def prepare_for_resource_discovery(self):
+        """
+        Prepares this item for resource discovery. 
+        Called by the execution instance before collecting resources for this item.
+
+        The default implementation does nothing.
+        """
+
     def execute(self, resources_upstream, resources_downstream):
         """
         Executes this item.
@@ -353,7 +361,7 @@ class ProjectItem(BaseProjectItem):
         """
         Handles changes in the DAG.
 
-        Subclasses should reimplement the _do_handle_dag_changes() method.
+        Subclasses should reimplement the _do_handle_dag_changed() method.
 
         Args:
             rank (int): item's execution order
@@ -500,7 +508,7 @@ class ProjectItem(BaseProjectItem):
     # pylint: disable=no-self-use
     def available_resources_downstream(self, upstream_resources):
         """
-        Returns available resources for downstream items.
+        Returns resources available to downstream items.
 
         Should be reimplemented by subclasses if they want to offer resources
         to downstream items. The default implementation returns an empty list.
@@ -516,7 +524,7 @@ class ProjectItem(BaseProjectItem):
     # pylint: disable=no-self-use
     def available_resources_upstream(self):
         """
-        Returns available resources for upstream items.
+        Returns resources available to upstream items.
 
         Should be reimplemented by subclasses if they want to offer resources
         to upstream items. The default implementation returns an empty list.
@@ -538,7 +546,7 @@ class ProjectItemResource:
             provider (ProjectItem): The item that provides the resource
             type_ (str): The resource type, either "file" or "database" (for now)
             url (str): The url of the resource
-            metadata (dict): Some metadata providing extra information about the resource. For now it has two keys:
+            metadata (dict): Some metadata providing extra information about the resource. For now it has one key:
                 - future (bool): whether the resource is from the future, e.g. Tool output files advertised beforehand
         """
         self.provider = provider

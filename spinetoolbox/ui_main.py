@@ -414,7 +414,7 @@ class ToolboxUI(QMainWindow):
         self.msg.emit("Restoring connections...")
         self.ui.graphicsView.restore_links(connections)
         # Simulate project execution after restoring links
-        self._project.notify_all_items_of_dag_changes()
+        self._project.notify_changes_in_all_dags()
         self._project.connect_signals()
         # Initialize scene on Design View
         self.ui.graphicsView.init_scene()

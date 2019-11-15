@@ -63,7 +63,7 @@ class SpineToolboxProject(MetaObject):
 
     def connect_signals(self):
         """Connect signals to slots."""
-        self.dag_handler.dag_simulation_requested.connect(self.notify_items_of_dag_changes)
+        self.dag_handler.dag_simulation_requested.connect(self.notify_changes_in_dag)
 
     def _create_project_structure(self, directory):
         """Makes the given directory a Spine Toolbox project directory.
@@ -334,9 +334,7 @@ class SpineToolboxProject(MetaObject):
             )
             return
         # Make execution instance, connect signals and start execution
-        resource_map = ResourceMap()
-        resource_map.update(ordered_nodes, self._toolbox.project_item_model)
-        self.execution_instance = ExecutionInstance(self._toolbox, ordered_nodes, resource_map)
+        self.execution_instance = ExecutionInstance(self._toolbox, ordered_nodes)
         self._toolbox.msg.emit("")
         self._toolbox.msg.emit("--------------------------------------------------")
         self._toolbox.msg.emit("<b>Executing Selected Directed Acyclic Graph</b>")
@@ -360,11 +358,11 @@ class SpineToolboxProject(MetaObject):
         self._n_graphs = len(self.dag_handler.dags())
         i = 0  # Key for self._ordered_dags dictionary
         for g in self.dag_handler.dags():
-            bfs_ordered_nodes = self.dag_handler.calc_exec_order(g)
-            if not bfs_ordered_nodes:
+            ordered_nodes = self.dag_handler.calc_exec_order(g)
+            if not ordered_nodes:
                 self._invalid_graphs.append(g)
                 continue
-            self._ordered_dags[i] = bfs_ordered_nodes
+            self._ordered_dags[i] = ordered_nodes
             i += 1
         if not self._ordered_dags.keys():
             self._toolbox.msg_error.emit(
@@ -375,9 +373,7 @@ class SpineToolboxProject(MetaObject):
         self._executed_graph_index = 0
         # Get first graph, connect signals and start executing it
         ordered_nodes = self._ordered_dags.pop(self._executed_graph_index)  # Pop first set of items to execute
-        resource_map = ResourceMap()
-        resource_map.update(ordered_nodes, self._toolbox.project_item_model)
-        self.execution_instance = ExecutionInstance(self._toolbox, ordered_nodes, resource_map)
+        self.execution_instance = ExecutionInstance(self._toolbox, ordered_nodes)
         self._toolbox.msg.emit("")
         self._toolbox.msg.emit("---------------------------------------")
         self._toolbox.msg.emit("<b>Executing All Directed Acyclic Graphs</b>")
@@ -396,7 +392,7 @@ class SpineToolboxProject(MetaObject):
         Args:
             state (ExecutionState): proposed execution state after item finished execution
         """
-        self.execution_instance.graph_execution_finished_signal.disconnect()
+        self.execution_instance.graph_execution_finished_signal.disconnect(self.graph_execution_finished)
         self.execution_instance.deleteLater()
         self.execution_instance = None
         if state == ExecutionState.ABORT:
@@ -410,21 +406,19 @@ class SpineToolboxProject(MetaObject):
         self._toolbox.msg.emit("<b>DAG {0}/{1} finished</b>".format(self._executed_graph_index + 1, self._n_graphs))
         self._executed_graph_index += 1
         # Pop next graph
-        execution_list = self._ordered_dags.pop(self._executed_graph_index, None)  # Pop next graph
-        if not execution_list:
+        ordered_nodes = self._ordered_dags.pop(self._executed_graph_index, None)  # Pop next graph
+        if not ordered_nodes:
             # All valid DAGs have been executed. Check if there are invalid DAGs and report these to user
             self.handle_invalid_graphs()
             # No more graphs to execute
             self._toolbox.msg_success.emit("Execution complete")
             return
         # Execute next graph
-        resource_map = ResourceMap()
-        resource_map.update(execution_list, self._toolbox.project_item_model)
-        self.execution_instance = ExecutionInstance(self._toolbox, execution_list, resource_map)
+        self.execution_instance = ExecutionInstance(self._toolbox, ordered_nodes)
         self._toolbox.msg.emit("")
         self._toolbox.msg.emit("---------------------------------------")
         self._toolbox.msg.emit("<b>Starting DAG {0}/{1}</b>".format(self._executed_graph_index + 1, self._n_graphs))
-        self._toolbox.msg.emit("Order: {0}".format(" -> ".join(execution_list)))
+        self._toolbox.msg.emit("Order: {0}".format(" -> ".join(ordered_nodes)))
         self._toolbox.msg.emit("---------------------------------------")
         self.execution_instance.graph_execution_finished_signal.connect(self.graph_execution_finished)
         self.execution_instance.start_execution()
@@ -476,7 +470,7 @@ class SpineToolboxProject(MetaObject):
             i += 1
 
     @Slot("QVariant")
-    def notify_items_of_dag_changes(self, dag):
+    def notify_changes_in_dag(self, dag):
         """Notifies the items in given dag that the dag has changed."""
         ordered_nodes = self.dag_handler.calc_exec_order(dag)
         if not ordered_nodes:
@@ -487,28 +481,28 @@ class SpineToolboxProject(MetaObject):
                 project_item = self._toolbox.project_item_model.project_item(ind)
                 project_item.invalidate_workflow(edges)
             return
-        # Make execution instance and run simulation
-        resource_map = ResourceMap()
+        # Make resource map and run simulation
         project_item_model = self._toolbox.project_item_model
-        resource_map.update(ordered_nodes, project_item_model)
+        resource_map = ResourceMap(ordered_nodes, project_item_model)
+        resource_map.update()
         for rank, item in enumerate(ordered_nodes):
             ind = project_item_model.find_item(item)
             project_item = project_item_model.project_item(ind)
             project_item.handle_dag_changed(rank, resource_map.available_upstream_resources(item))
 
-    def notify_all_items_of_dag_changes(self):
-        """Simulates the execution of all dags in the project."""
+    def notify_changes_in_all_dags(self):
+        """Notifies all items of changes in all dags in the project."""
         for g in self.dag_handler.dags():
-            self.notify_items_of_dag_changes(g)
+            self.notify_changes_in_dag(g)
 
-    def notify_items_in_same_dag_of_dag_changes(self, item):
+    def notify_changes_in_containing_dag(self, item):
         """Notifies items in dag containing the given item that the dag has changed."""
         dag = self.dag_handler.dag_with_node(item)
         # Some items trigger this method while they are being initialized
         # but before they have been added to any DAG.
         # In those cases we don't need to notify other items.
         if dag:
-            self.notify_items_of_dag_changes(dag)
+            self.notify_changes_in_dag(dag)
         elif self._toolbox.project_item_model.find_item(item) is not None:
             self._toolbox.msg_error.emit(
                 "[BUG] Could not find a graph containing {0}. " "<b>Please reopen the project.</b>".format(item)
