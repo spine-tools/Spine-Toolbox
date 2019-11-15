@@ -406,68 +406,82 @@ class ResourceMap:
 
     def __init__(self):
         # Key is item name, value is resource list
-        self._downstream_resources = dict()
-        self._upstream_resources = dict()
+        self._available_upstream_resources = dict()
+        self._available_downstream_resources = dict()
 
-    def _add_resources_downstream(self, source, resources, ordered_nodes):
+    @staticmethod
+    def _project_item_from_name(name, project_item_model):
+        """Returns a ProjectItem instance from name."""
+        index = project_item_model.find_item(name)
+        return project_item_model.project_item(index)
+
+    @staticmethod
+    def _inverted(source):
+        """Inverts a dictionary that maps keys to a list of values.
+        The result maps values to a list of keys in the original dictionary that include the value.
         """
-        Makes resources available to items downstream.
-
-        Resources become available only to directly connected project items.
-
-        Args:
-            source (str): the name of the resource source item
-            resources (Iterable): the resource(s) available from the source item
-        """
-        for child in ordered_nodes[source]:
-            self._downstream_resources.setdefault(child, list()).extend(resources)
-
-    def _add_resources_upstream(self, source, resources, ordered_nodes):
-        """
-        Makes resources available to items upstream.
-
-        Resources become available only to directly connected project items.
-
-        Args:
-            source (str): the name of the resource source item
-            resources (Iterable): the resource(s) available from the source item
-            ordered_nodes (dict): item execution order; key is the item while value is a list of downstream items
-        """
-        for upstream_node, downstream_nodes in ordered_nodes.items():
-            if source in downstream_nodes:
-                self._upstream_resources.setdefault(upstream_node, list()).extend(resources)
-
-    def available_upstream_resources(self, item):
-        """Returns the list of resources available to the given item from upstream items.
-
-        Args:
-            item (str): the name of the item that asks
-        """
-        return self._downstream_resources.get(item, list())
-
-    def available_downstream_resources(self, item):
-        """Returns the list of resources available to the given item from downstream items.
-
-        Args:
-            item (str): the name of the item that asks
-        """
-        return self._upstream_resources.get(item, list())
+        result = dict()
+        for key, value_list in source.items():
+            for value in value_list:
+                result.setdefault(value, list()).append(key)
+        return result
 
     def update(self, ordered_nodes, project_item_model):
         """
         Updates the resource mapping.
 
         Args:
-            ordered_nodes (dict): item execution order; key is the item while value is a list of downstream items
+            ordered_nodes (dict): item execution order; key is the *upstream* item, while value is a list of downstream items
             project_item_model (ProjectItemModel): Toolbox's project item model
         """
-        for node in ordered_nodes:
-            available_upstream_resources = self.available_upstream_resources(node)
-            index = project_item_model.find_item(node)
-            project_item = project_item_model.project_item(index)
+        # Pass resources downstream
+        for upstream_node, downstream_nodes in ordered_nodes.items():
+            project_item = self._project_item_from_name(upstream_node, project_item_model)
+            available_upstream_resources = self.available_upstream_resources(upstream_node)
             resources = project_item.available_resources_downstream(available_upstream_resources)
             if resources:
-                self._add_resources_downstream(node, resources, ordered_nodes)
+                self._pass_upstream_resources(downstream_nodes, resources)
+        # Pass resources upstream
+        for downstream_node, upstream_nodes in self._inverted(ordered_nodes).items():
+            project_item = self._project_item_from_name(downstream_node, project_item_model)
             resources = project_item.available_resources_upstream()
             if resources:
-                self._add_resources_upstream(node, resources, ordered_nodes)
+                self._pass_downstream_resources(upstream_nodes, resources)
+
+    def _pass_upstream_resources(self, downstream_nodes, upstream_resources):
+        """
+        Makes upstream resources available to downstream nodes.
+
+        Args:
+            downstream_nodes (Iterable): the nodes to which the resources should be available
+            upstream_resources (Iterable): the upstream resource(s) to make available
+        """
+        for node in downstream_nodes:
+            self._available_upstream_resources.setdefault(node, list()).extend(upstream_resources)
+
+    def _pass_downstream_resources(self, upstream_nodes, downstream_resources):
+        """
+        Makes downstream resources available to upstream nodes.
+
+        Args:
+            upstream_nodes (Iterable): the nodes to which the resources should be available
+            downstream_resources (Iterable): the downstream resource(s) to make available
+        """
+        for node in upstream_nodes:
+            self._available_downstream_resources.setdefault(node, list()).extend(downstream_resources)
+
+    def available_upstream_resources(self, item):
+        """Returns the list of upstream resources available to the given item.
+
+        Args:
+            item (str): the name of the item that asks
+        """
+        return self._available_upstream_resources.get(item, list())
+
+    def available_downstream_resources(self, item):
+        """Returns the list of downstream resources available to the given item.
+
+        Args:
+            item (str): the name of the item that asks
+        """
+        return self._available_downstream_resources.get(item, list())
