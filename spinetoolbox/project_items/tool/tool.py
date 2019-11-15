@@ -400,8 +400,9 @@ class Tool(ProjectItem):
             if not work_dir:
                 self._toolbox.msg_error.emit("Work directory missing. Please check Settings.")
                 return ExecutionState.ABORT
-            self.basedir = tempfile.mkdtemp(
-                suffix='__toolbox', prefix=self.tool_specification().short_name + '__', dir=work_dir
+            if not self.basedir:
+                self.basedir = tempfile.mkdtemp(
+                    suffix='__toolbox', prefix=self.tool_specification().short_name + '__', dir=work_dir
             )
             # Make work directory anchor with path as tooltip
             work_anchor = (
