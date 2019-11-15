@@ -672,8 +672,8 @@ class ToolboxUI(QMainWindow):
 
     @Slot(name="open_tool_specification")
     def open_tool_specification(self):
-        """Open a file dialog so the user can select an existing tool specification .json file.
-        Continue loading the tool specification into the Project if successful.
+        """Opens a file dialog where the user can select an existing tool specification
+        definition file (.json). If file is valid, calls add_tool_specification().
         """
         if not self._project:
             self.msg.emit("Please create a new project or open an existing one first")
@@ -701,46 +701,43 @@ class ToolboxUI(QMainWindow):
         self.add_tool_specification(tool_specification)
 
     def add_tool_specification(self, tool_specification):
-        """Add a ToolSpecification instance to project, which then can be added to a Tool item.
-        Add tool specification file path into project file (.proj)
+        """Adds a ToolSpecification instance to project, which then can be added to a Tool item.
+        Adds the tool specification file path into project file (project.json)
 
-        tool_specification (ToolSpecification): Tool specification that is added to project
+        Args:
+            tool_specification (ToolSpecification): Tool specification that is added to project
         """
         def_file = tool_specification.get_def_path()  # Definition file path (.json)
         # Insert tool specification into model
         self.tool_specification_model.insertRow(tool_specification)
         # Save Tool def file path to project file
         project_file = self._project.project_file  # Path to project file
-        if project_file.lower().endswith(".proj"):
-            # Manipulate project file contents
-            try:
-                with open(project_file, "r") as fh:
-                    dicts = json.load(fh)
-            except OSError:
-                self.msg_error.emit("OSError: Could not load file <b>{0}</b>".format(project_file))
-                return
-            # Get project settings
-            project_dict = dicts["project"]
-            objects_dict = dicts["objects"]
-            try:
-                tools = project_dict["tool_specifications"]
-                if def_file not in tools:
-                    tools.append(def_file)
-                project_dict["tool_specifications"] = tools
-            except KeyError:
-                project_dict["tool_specifications"] = [def_file]
-            # Save dictionaries back to project save file
-            dicts["project"] = project_dict
-            dicts["objects"] = objects_dict
-            with open(project_file, "w") as fp:
-                json.dump(dicts, fp, indent=4)
-            self.msg_success.emit("Tool specification <b>{0}</b> added to project".format(tool_specification.name))
-        else:
-            self.msg_error.emit("Unsupported project filename {0}. Extension should be .proj.".format(project_file))
+        # Manipulate project file contents
+        try:
+            with open(project_file, "r") as fh:
+                dicts = json.load(fh)
+        except OSError:
+            self.msg_error.emit("Loading file <b>{0}</b> failed".format(project_file))
             return
+        # Get project settings
+        project_dict = dicts["project"]
+        objects_dict = dicts["objects"]
+        try:
+            tools = project_dict["tool_specifications"]
+            if def_file not in tools:
+                tools.append(def_file)
+            project_dict["tool_specifications"] = tools
+        except KeyError:
+            project_dict["tool_specifications"] = [def_file]
+        # Save dictionaries back to project save file
+        dicts["project"] = project_dict
+        dicts["objects"] = objects_dict
+        with open(project_file, "w") as fp:
+            json.dump(dicts, fp, indent=4)
+        self.msg_success.emit("Tool specification <b>{0}</b> added to project".format(tool_specification.name))
 
     def update_tool_specification(self, row, tool_specification):
-        """Update a Tool specification and refresh Tools that use it.
+        """Updates a Tool specification and refreshes all Tools that use it.
 
         Args:
             row (int): Row of tool specification in ToolSpecificationModel
@@ -772,7 +769,7 @@ class ToolboxUI(QMainWindow):
 
     @Slot(bool, name="remove_selected_tool_specification")
     def remove_selected_tool_specification(self, checked=False):
-        """Prepare to remove tool specification selected in QListView."""
+        """Prepares to remove tool specification selected in QListView."""
         if not self._project:
             self.msg.emit("Please create a new project or open an existing one first")
             return
@@ -788,10 +785,14 @@ class ToolboxUI(QMainWindow):
 
     @Slot("QModelIndex", name="remove_tool_specification")
     def remove_tool_specification(self, index):
-        """Remove tool specification from ToolSpecificationModel
+        """Removes tool specification from ToolSpecificationModel
         and tool specification file path from project file.
         Removes also Tool specifications from all Tool items
-        that use this specification."""
+        that use this specification.
+
+        Args:
+            index (QModelIndex): Index of selected Tool specification in ToolSpecificationModel
+        """
         sel_tool = self.tool_specification_model.tool_specification(index.row())
         tool_def_path = sel_tool.def_file_path
         message = "Remove Tool Specification <b>{0}</b> from Project?".format(sel_tool.name)
@@ -808,15 +809,12 @@ class ToolboxUI(QMainWindow):
             return
         # Remove tool def file path from the project file
         project_file = self._project.project_file
-        if not project_file.lower().endswith(".proj"):
-            self.msg_error.emit("Project file extension not supported. Needs to be .proj.")
-            return
-        # Read project data from JSON file
+        # Read project data from project.json file
         try:
             with open(project_file, "r") as fh:
                 dicts = json.load(fh)
         except OSError:
-            self.msg_error.emit("OSError: Could not load file <b>{0}</b>".format(project_file))
+            self.msg_error.emit("Loading file <b>{0}</b> failed".format(project_file))
             return
         # Get project settings
         project_dict = dicts["project"]
@@ -825,10 +823,10 @@ class ToolboxUI(QMainWindow):
             self.msg_error.emit("Error in removing Tool specification <b>{0}</b>".format(sel_tool.name))
             return
         try:
-            tools = project_dict["tool_specifications"]
-            tools.remove(tool_def_path)
+            tool_spec_paths = project_dict["tool_specifications"]
+            tool_spec_paths.remove(tool_def_path)
             # logging.debug("tools list after removal:{}".format(tools))
-            project_dict["tool_specifications"] = tools
+            project_dict["tool_specifications"] = tool_spec_paths
         except KeyError:
             self.msg_error.emit(
                 "This is odd. tool_specifications list not found in project file <b>{0}</b>".format(project_file)
@@ -840,15 +838,16 @@ class ToolboxUI(QMainWindow):
                 "in project file <b>{1}</b>".format(tool_def_path, project_file)
             )
             return
-        # Save dictionaries back to JSON file
+        # Save dictionaries back to project.json file
         dicts["project"] = project_dict
         dicts["objects"] = object_dict
         with open(project_file, "w") as fp:
             json.dump(dicts, fp, indent=4)
         self.msg_success.emit("Tool specification removed")
 
+    @Slot(name="remove_all_items")
     def remove_all_items(self):
-        """Slot for Remove All button."""
+        """Removes all items from project. Slot for Remove All button."""
         if not self._project:
             self.msg.emit("No project items to remove")
             return
