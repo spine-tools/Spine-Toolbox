@@ -144,7 +144,7 @@ class ProjectUpgrader:
         answer = QFileDialog.getExistingDirectory(
             self._toolbox, "Select a project directory", os.path.abspath("C:\\")
         )
-        if answer == "":  # Canceled (american-english), cancelled (british-english)
+        if not answer:  # Canceled (american-english), cancelled (british-english)
             return ""
         if not os.path.isdir(answer):  # Check that it's a directory
             msg = "Selection is not a directory, please try again"

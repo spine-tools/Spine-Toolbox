@@ -453,7 +453,7 @@ class ToolboxUI(QMainWindow):
         # Ask for a new directory
         # noinspection PyCallByClass, PyArgumentList
         answer = QFileDialog.getExistingDirectory(self, "Select new directory (Save as...)", os.path.abspath("C:\\"))
-        if answer == "":  # Canceled
+        if not answer:  # Canceled
             return
         if not os.path.isdir(answer):
             msg = "Selected thing is not a directory, please try again"

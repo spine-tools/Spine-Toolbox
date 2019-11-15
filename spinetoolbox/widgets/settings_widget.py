@@ -138,7 +138,7 @@ class SettingsWidget(QWidget):
     def browse_julia_project_path(self, checked=False):
         """Open file browser where user can select a Julia project path."""
         answer = QFileDialog.getExistingDirectory(self, "Select Julia project directory", os.path.abspath("C:\\"))
-        if answer == "":  # Canceled (american-english), cancelled (british-english)
+        if not answer:  # Canceled (american-english), cancelled (british-english)
             return
         self.ui.lineEdit_julia_project_path.setText(answer)
 

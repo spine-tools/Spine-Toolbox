@@ -61,7 +61,7 @@ class NewProjectForm(QWidget):
         answer = QFileDialog.getExistingDirectory(
             self, "Select a project directory", os.path.abspath("C:\\")
         )
-        if answer == "":  # Canceled (american-english), cancelled (british-english)
+        if not answer:  # Canceled (american-english), cancelled (british-english)
             return
         # Check that it's a directory
         if not os.path.isdir(answer):
