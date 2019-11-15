@@ -112,7 +112,7 @@ class TestImporter(unittest.TestCase):
         self.importer._do_handle_dag_changed(resources)
         model = self.importer._properties_ui.treeView_files.model()
         file_list = [model.index(row, 0).data(Qt.DisplayRole) for row in range(model.rowCount())]
-        self.assertEqual(file_list, expected_file_list)
+        self.assertEqual(sorted(file_list), sorted(expected_file_list))
 
 
 if __name__ == '__main__':
