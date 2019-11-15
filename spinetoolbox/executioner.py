@@ -334,12 +334,11 @@ class ExecutionInstance(QObject):
     graph_execution_finished_signal = Signal("QVariant")
     project_item_execution_finished_signal = Signal("QVariant")
 
-    def __init__(self, toolbox, ordered_nodes, resource_map):
+    def __init__(self, toolbox, ordered_nodes):
         """
         Args:
             toolbox (ToolboxUI): QMainWindow instance
             ordered_nodes (dict): dict of nodes to execute; key is the node, value is its direct successors
-            resource_map (ResourceMap): project's resource map
         """
         QObject.__init__(self)
         self._toolbox = toolbox
@@ -349,10 +348,15 @@ class ExecutionInstance(QObject):
         # Resources available to project items
         self.resources = dict()  # Key is item name, value is resource list
         self.rank = 0  # The number in the list of the item currently simulated
-        self._resource_map = resource_map
+        self._resource_map = ResourceMap(ordered_nodes, toolbox.project_item_model)
 
     def start_execution(self):
         """Pops the next item from the execution list and starts executing it."""
+        for node in self._ordered_nodes:
+            index = self._toolbox.project_item_model.find_item(node)
+            item = self._toolbox.project_item_model.project_item(index)
+            item.prepare_for_resource_discovery()
+        self._resource_map.update()
         item_name = self.execution_list.pop(0)
         self.execute_project_item(item_name)
 
@@ -394,7 +398,6 @@ class ExecutionInstance(QObject):
     def stop(self):
         """Stops running project item and terminates current graph execution."""
         if not self.running_item:
-            self._toolbox.msg.emit("No running item")
             self.graph_execution_finished_signal.emit(ExecutionState.STOP_REQUESTED)
             return
         self.running_item.stop_execution()
@@ -404,16 +407,24 @@ class ExecutionInstance(QObject):
 class ResourceMap:
     """Enables queries about which resources are available to project items."""
 
-    def __init__(self):
+    def __init__(self, ordered_nodes, project_item_model):
+        """Inits map.
+
+        Args:
+            ordered_nodes (dict): item execution order; key is the *upstream* item, while value is a list of downstream items
+            project_item_model (ProjectItemModel): Toolbox's project item model
+        """
         # Key is item name, value is resource list
+        self._ordered_nodes = ordered_nodes
+        self._inv_ordered_nodes = self._inverted(ordered_nodes)
+        self._project_item_model = project_item_model
         self._available_upstream_resources = dict()
         self._available_downstream_resources = dict()
 
-    @staticmethod
-    def _project_item_from_name(name, project_item_model):
+    def _project_item_from_name(self, name):
         """Returns a ProjectItem instance from name."""
-        index = project_item_model.find_item(name)
-        return project_item_model.project_item(index)
+        index = self._project_item_model.find_item(name)
+        return self._project_item_model.project_item(index)
 
     @staticmethod
     def _inverted(source):
@@ -426,24 +437,20 @@ class ResourceMap:
                 result.setdefault(value, list()).append(key)
         return result
 
-    def update(self, ordered_nodes, project_item_model):
+    def update(self):
         """
         Updates the resource mapping.
-
-        Args:
-            ordered_nodes (dict): item execution order; key is the *upstream* item, while value is a list of downstream items
-            project_item_model (ProjectItemModel): Toolbox's project item model
         """
         # Pass resources downstream
-        for upstream_node, downstream_nodes in ordered_nodes.items():
-            project_item = self._project_item_from_name(upstream_node, project_item_model)
+        for upstream_node, downstream_nodes in self._ordered_nodes.items():
+            project_item = self._project_item_from_name(upstream_node)
             available_upstream_resources = self.available_upstream_resources(upstream_node)
             resources = project_item.available_resources_downstream(available_upstream_resources)
             if resources:
                 self._pass_upstream_resources(downstream_nodes, resources)
         # Pass resources upstream
-        for downstream_node, upstream_nodes in self._inverted(ordered_nodes).items():
-            project_item = self._project_item_from_name(downstream_node, project_item_model)
+        for downstream_node, upstream_nodes in self._inv_ordered_nodes.items():
+            project_item = self._project_item_from_name(downstream_node)
             resources = project_item.available_resources_upstream()
             if resources:
                 self._pass_downstream_resources(upstream_nodes, resources)

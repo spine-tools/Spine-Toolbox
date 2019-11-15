@@ -104,7 +104,7 @@ class TestImporter(unittest.TestCase):
         self.assertIsNone(dag_with_old_node_name)
 
     def test_handle_dag_changed(self):
-        """Tests that upstream resource files from are listed in the Importer view."""
+        """Tests that upstream resource files are listed in the Importer view."""
         self.importer.activate()
         item = NonCallableMagicMock()
         expected_file_list = ["url1", "url2"]

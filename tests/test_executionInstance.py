@@ -21,7 +21,7 @@ from unittest import mock
 import logging
 import sys
 from PySide2.QtWidgets import QApplication
-from spinetoolbox.executioner import ExecutionInstance, ExecutionState, ResourceMap
+from spinetoolbox.executioner import ExecutionInstance, ExecutionState
 from spinetoolbox.project_item import ProjectItemResource
 from .mock_helpers import clean_up_toolboxui_with_project, create_toolboxui_with_project
 
@@ -83,9 +83,7 @@ class TestExecutionInstance(unittest.TestCase):
             self.mock_upstream_item.name: [self.mock_downstream_item.name],
             self.mock_downstream_item.name: [],
         }
-        resource_map = ResourceMap()
-        resource_map.update(ordered_nodes, self.toolbox.project_item_model)
-        execution_instance = ExecutionInstance(self.toolbox, ordered_nodes, resource_map)
+        execution_instance = ExecutionInstance(self.toolbox, ordered_nodes)
         execution_instance.start_execution()
         # Need to manually push the execution forward.
         execution_instance.project_item_execution_finished_signal.emit(ExecutionState.CONTINUE)

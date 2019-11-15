@@ -351,12 +351,11 @@ class Tool(ProjectItem):
         """Update Tool tab name label. Used only when renaming project items."""
         self._properties_ui.label_tool_name.setText(self.name)
 
-    def _update_basedir(self):
-        """Updates the path to the base directory for tool execution, depending on `execute_in_work`.
+    def prepare_for_resource_discovery(self):
+        """Updates the path to the base directory, depending on `execute_in_work`.
         """
         if not self.tool_specification():
-            return
-        if self.basedir is not None:
+            # Don't worry, execution will handle this eventually
             return
         if self.execute_in_work:
             work_dir = self._project.work_dir
@@ -366,13 +365,10 @@ class Tool(ProjectItem):
         else:
             self.basedir = self.tool_specification().path
 
-    def _invalidate_basedir(self):
-        """Invalidates the base directory. Called after execution."""
-        self.basedir = None
-
     def available_resources_downstream(self, upstream_resources):
         """See base class."""
-        self._update_basedir()
+        if not self.basedir:
+            return []
         resources = list()
         for i in range(self.output_file_model.rowCount()):
             filename = self.output_file_model.item(i, 0).data(Qt.DisplayRole)
@@ -384,17 +380,9 @@ class Tool(ProjectItem):
         return resources
 
     def _do_execute(self, resources_upstream, resources_downstream):
-        """Executes this Tool."""
-        state = self._get_execution_state(resources_upstream, resources_downstream)
-        if state in (ExecutionState.CONTINUE, ExecutionState.ABORT):
-            self._invalidate_basedir()
-        return state
-
-    def _get_execution_state(self, resources_upstream, resources_downstream):
         if not self.tool_specification():
             self._toolbox.msg_warning.emit("Tool <b>{0}</b> has no Tool specification to execute".format(self.name))
             return ExecutionState.CONTINUE
-        self._update_basedir()  # Not really needed, since `ResourceMap.update` calls `available_resources_downstream`
         if self.execute_in_work:
             work_or_source = "work"
             if not self.copy_program_files():
@@ -799,7 +787,6 @@ class Tool(ProjectItem):
         else:
             self._toolbox.msg_error.emit("Tool <b>{0}</b> execution failed".format(self.name))
         self.handle_output_files(return_code)
-        self._invalidate_basedir()
         if not self._project.execution_instance:
             # Happens sometimes when Stop button is pressed
             return

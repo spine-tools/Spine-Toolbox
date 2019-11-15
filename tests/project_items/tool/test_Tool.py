@@ -427,12 +427,12 @@ class TestToolExecution(unittest.TestCase):
 
             mock_execute_tool_instance.side_effect = mock_execute_tool_instance_side_effect
             resources_downstream = []
-            self.assertEqual(tool.basedir, basedir)
+            tool.prepare_for_resource_discovery()
             tool.execute(resources_upstream, resources_downstream)
         self.toolbox.project().execution_instance.project_item_execution_finished_signal.emit.assert_called_with(
             ExecutionState.WAIT
         )
-        self.assertIsNone(tool.basedir)
+        self.assertEqual(tool.basedir, basedir)
         # Check that output files were copied to the output dir
         result_dir = os.path.abspath(os.path.join(tool.output_dir, "failed", "mock_timestamp"))
         expected_calls = [mock.call(os.path.join(basedir, fn), os.path.join(result_dir, fn)) for fn in output_files]
@@ -449,7 +449,6 @@ class TestToolExecution(unittest.TestCase):
         ind = self.toolbox.project_item_model.find_item("Tool")
         tool = self.toolbox.project_item_model.project_item(ind)  # Find item from project item model
         self.toolbox.project().execution_instance = mock.NonCallableMagicMock()
-        basedir = tool.basedir
         project_dir = self.toolbox.project().project_dir
         source_files = [x.text() for x in tool.source_file_model.findItems("*", Qt.MatchWildcard)]
         input_files = [x.text() for x in tool.input_file_model.findItems("*", Qt.MatchWildcard)]
@@ -532,15 +531,15 @@ class TestToolExecution(unittest.TestCase):
                 tool.instance.instance_finished_signal.emit(0)
 
             mock_execute_tool_instance.side_effect = mock_execute_tool_instance_side_effect
+            tool.prepare_for_resource_discovery()
             tool.execute(resources_upstream, resources_downstream=[])
         self.toolbox.project().execution_instance.project_item_execution_finished_signal.emit.assert_called_with(
             ExecutionState.WAIT
         )
-        self.assertIsNone(tool.basedir)
         # Check that output files were copied to the output dir
         result_dir = os.path.join(tool.output_dir, "mock_timestamp")
         expected_calls = [
-            mock.call(os.path.abspath(os.path.join(basedir, fn)), os.path.abspath(os.path.join(result_dir, fn)))
+            mock.call(os.path.abspath(os.path.join(tool.basedir, fn)), os.path.abspath(os.path.join(result_dir, fn)))
             for fn in output_files
         ]
         mock_shutil.copyfile.assert_has_calls(expected_calls, any_order=True)

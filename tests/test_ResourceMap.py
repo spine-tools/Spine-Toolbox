@@ -64,8 +64,8 @@ class TestResourceMap(unittest.TestCase):
             self.mock_upstream_item.name: [self.mock_downstream_item.name],
             self.mock_downstream_item.name: [],
         }
-        resource_map = ResourceMap()
-        resource_map.update(ordered_nodes, self.toolbox.project_item_model)
+        resource_map = ResourceMap(ordered_nodes, self.toolbox.project_item_model)
+        resource_map.update()
 
 
 if __name__ == '__main__':
