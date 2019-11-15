@@ -349,7 +349,7 @@ class TabularViewForm(QMainWindow):
         else:
             obj_ind = [0]
         par_ind = len(obj_ind)
-        index_ind = par_ind + 1
+        index_ind = par_ind
         for k in delete_values.keys():
             obj_id = tuple(self.objects[k[i]].id for i in obj_ind)
             if self.current_class_type == self._OBJECT_CLASS:

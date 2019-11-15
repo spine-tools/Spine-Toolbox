@@ -668,7 +668,7 @@ class PivotModel:
             if not deleted_entries:
                 # deleted entries not in index, do nothing:
                 continue
-            # uppdate existing entries
+            # update existing entries
             self.index_entries[k].difference_update(deleted_entries)
             k_unique = [u for u, v in self._unique_name_2_name.items() if v == k]
             for u in k_unique:
