@@ -377,7 +377,7 @@ class Tool(ProjectItem):
             filename = self.output_file_model.item(i, 0).data(Qt.DisplayRole)
             output_file = os.path.abspath(os.path.join(self.basedir, filename))
             resource = ProjectItemResource(
-                self, "file", url=pathlib.Path(output_file).as_uri(), metadata=dict(ready=False)
+                self, "file", url=pathlib.Path(output_file).as_uri(), metadata=dict(future=True)
             )
             resources.append(resource)
         return resources

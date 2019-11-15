@@ -539,7 +539,7 @@ class ProjectItemResource:
             type_ (str): The resource type, either "file" or "database" (for now)
             url (str): The url of the resource
             metadata (dict): Some metadata providing extra information about the resource. For now it has two keys:
-                - ready (bool): whether the resource is ready, not the case for Tool output files
+                - future (bool): whether the resource is from the future, e.g. Tool output files advertised beforehand
         """
         self.provider = provider
         self.type_ = type_
