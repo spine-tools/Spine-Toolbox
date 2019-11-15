@@ -636,7 +636,7 @@ class ProjectDirectoryIconProvider(QFileIconProvider):
         Returns:
             QIcon: Icon for a file system resource with the given info
         """
-        if info.__class__() == QFileIconProvider.IconType:
+        if isinstance(info, QFileIconProvider.IconType):
             return super().icon(info)  # Because there are two icon() methods
         if not info.isDir():
             return super().icon(info)
