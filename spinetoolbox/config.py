@@ -128,6 +128,7 @@ ICON_TOOLBAR_SS = (
     "border-style: inset;"
     "border-color: darkslategray;"
     "border-radius: 2px;}"
+    "QToolButton:pressed {background-color: lightGray;}"
     "QLabel{color:black;"
     "padding: 3px;}"
 )
