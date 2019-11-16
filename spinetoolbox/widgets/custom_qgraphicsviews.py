@@ -270,7 +270,7 @@ class DesignQGraphicsView(CustomQGraphicsView):
             event (QGraphicsSceneMouseEvent): Mouse event
         """
         if self.link_drawer and self.link_drawer.drawing:
-            self.link_drawer.dst = self.mapToScene(event.pos())
+            self.link_drawer.tip = self.mapToScene(event.pos())
             self.link_drawer.update_geometry()
         super().mouseMoveEvent(event)
 
@@ -286,7 +286,7 @@ class DesignQGraphicsView(CustomQGraphicsView):
         Args:
             empty (boolean): True when creating a new project
         """
-        self.link_drawer = LinkDrawer()
+        self.link_drawer = LinkDrawer(self._toolbox)
         self.scene().addItem(self.link_drawer)
         if len(self.scene().items()) == 1:
             # Loaded project has no project items
@@ -356,7 +356,7 @@ class DesignQGraphicsView(CustomQGraphicsView):
         self.remove_link(link)
         self.draw_links(link.src_connector)
         # noinspection PyArgumentList
-        self.link_drawer.dst = self.mapToScene(self.mapFromGlobal(QCursor.pos()))
+        self.link_drawer.tip = self.mapToScene(self.mapFromGlobal(QCursor.pos()))
         self.link_drawer.update_geometry()
 
     def restore_links(self, connections):
@@ -435,7 +435,7 @@ class DesignQGraphicsView(CustomQGraphicsView):
         if not self.link_drawer.drawing:
             # start drawing and remember source connector
             self.link_drawer.drawing = True
-            self.link_drawer.start_drawing_at(connector.sceneBoundingRect())
+            self.link_drawer.start_drawing_at(connector)
             self.src_connector = connector
         else:
             # stop drawing and make connection

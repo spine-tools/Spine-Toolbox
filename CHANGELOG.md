@@ -18,6 +18,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - New Setting: *Sticky selection in Graph View*. Enables users to select if they want to use multi-selection or 
   single selection in the Graph view Object tree when selecting items with the **left-mouse button**.
 - The graph view features a short live demonstration that new users can follow to discover the basic functionality.
+- New Setting: *Smooth links*. When active, links on the Design View follow a smooth curve rather than a straight line.
 
 ### Changed
 - spinetoolbox is now a Python package. To start the app, use command `python -m spinetoolbox` or

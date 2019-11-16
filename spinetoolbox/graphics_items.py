@@ -16,7 +16,7 @@ Classes for drawing graphics items on QGraphicsScene.
 :date:   4.4.2018
 """
 
-from math import atan2, degrees, sin, cos, pi
+from math import atan2, sin, cos, pi
 from PySide2.QtCore import Qt, QPointF, QLineF, QRectF
 from PySide2.QtWidgets import (
     QGraphicsItem,
@@ -457,49 +457,215 @@ class ProjectItemIcon(QGraphicsRectItem):
         self._toolbox.ui.treeView_project.setCurrentIndex(ind)
 
 
-class Link(QGraphicsPathItem):
+class LinkBase(QGraphicsPathItem):
+    """Base class for Link and LinkDrawer.
+
+    Mainly provides the `update_geometry` method for 'drawing' the link on the scene.
+    """
+
+    def __init__(self, toolbox):
+        """Initializes the instance.
+
+        Args:
+            toolbox (ToolboxUI): main UI class instance
+        """
+        super().__init__()
+        self._toolbox = toolbox
+        self.arrow_angle = pi / 4
+        self.magic_number = None
+
+    @property
+    def src_rect(self):
+        """Returns the scene rectangle of the source connector."""
+        return self.src_connector.sceneBoundingRect()
+
+    @property
+    def src_center(self):
+        """Returns the center point of the source rectangle."""
+        return self.src_rect.center()
+
+    @property
+    def dst_rect(self):
+        """Returns the scene rectangle of the destination connector."""
+        return self.dst_connector.sceneBoundingRect()
+
+    @property
+    def dst_center(self):
+        """Returns the center point of the destination rectangle."""
+        return self.dst_rect.center()
+
+    def update_geometry(self):
+        """Updates geometry."""
+        self.prepareGeometryChange()
+        qsettings = self._toolbox.qsettings()
+        smooth_links = qsettings.value("appSettings/smoothLinks", defaultValue="false") == "true"
+        self.do_update_geometry(smooth_links)
+
+    def do_update_geometry(self, smooth_links):
+        """Sets the path for this item.
+
+        Args:
+            smooth_links (bool): Whether the path should follow a smooth curve or just a straight line
+        """
+        ellipse_path = self._make_ellipse_path()
+        guide_path = self._make_guide_path(smooth_links)
+        connecting_path = self._make_connecting_path(guide_path)
+        arrow_path = self._make_arrow_path(guide_path)
+        path = ellipse_path + connecting_path + arrow_path
+        self.setPath(path.simplified())
+
+    def _make_ellipse_path(self):
+        """Returns an ellipse path for the link's base.
+
+        Returns:
+            QPainterPath
+        """
+        ellipse_path = QPainterPath()
+        rect = QRectF(0, 0, 1.5 * self.magic_number, 1.5 * self.magic_number)
+        rect.moveCenter(self.src_center)
+        ellipse_path.addEllipse(rect)
+        return ellipse_path
+
+    def _get_src_offset(self):
+        if self.src_connector == self.dst_connector:
+            return {"left": QPointF(0, 1), "bottom": QPointF(1, 0), "right": QPointF(0, -1)}[
+                self.src_connector.position
+            ]
+        return {"left": QPointF(-1, 0), "bottom": QPointF(0, 1), "right": QPointF(1, 0)}[self.src_connector.position]
+
+    def _get_dst_offset(self):
+        if not self.dst_connector:
+            return QPointF(0, 0)
+        return {"left": QPointF(-1, 0), "bottom": QPointF(0, 1), "right": QPointF(1, 0)}[self.dst_connector.position]
+
+    def _make_guide_path(self, smooth_links):
+        """
+        Returns a 'narrow' path conneting this item's source and destination.
+
+        Args:
+            smooth_links (bool): Whether the path should follow a smooth curve or just a straight line
+
+        Returns:
+            QPainterPath
+        """
+        smooth_links |= self.dst_connector == self.src_connector
+        path = QPainterPath(self.src_center)
+        if not smooth_links:
+            path.lineTo(self.dst_center)
+            return path
+        c_factor = 8 * self.magic_number
+        src_offset = self._get_src_offset()
+        dst_offset = self._get_dst_offset()
+        c1 = self.src_center + c_factor * src_offset
+        c2 = self.dst_center + c_factor * dst_offset
+        path.cubicTo(c1, c2, self.dst_center)
+        return path
+
+    def _make_connecting_path(self, guide_path):
+        """Returns a 'thick' path connecting source and destination, by following the given 'guide' path.
+
+        Args:
+            guide_path (QPainterPath)
+
+        Returns:
+            QPainterPath
+        """
+        length = guide_path.length() - self.src_rect.width() / 2
+        points = list()
+        i = 0.0
+        max_incr = 10.0
+        min_incr = 0.1
+        s_change_tol = 0.5
+        while i < length:
+            t0 = guide_path.percentAtLength(i)
+            p0 = guide_path.pointAtPercent(t0)
+            s0 = guide_path.slopeAtPercent(t0)
+            points.append(p0)
+            incr = max_incr
+            while incr > min_incr:
+                t1 = guide_path.percentAtLength(i + incr)
+                s1 = guide_path.slopeAtPercent(t1)
+                try:
+                    s_change = abs((s1 - s0) / s0)
+                except ZeroDivisionError:
+                    incr = min_incr
+                    break
+                if s_change < s_change_tol:
+                    break
+                incr /= 2
+            i += incr
+        t = guide_path.percentAtLength(length)
+        points.append(guide_path.pointAtPercent(t))
+        points.append(guide_path.pointAtPercent(1.0))
+        off = self._get_normal_offset(points[0], points[1])
+        lower_points = [points[0] + off]
+        upper_points = [points[0] - off]
+        for src, dst in zip(points[:-1], points[1:]):
+            off = self._get_normal_offset(src, dst)
+            lower_points.append(src + off)
+            upper_points.append(src - off)
+        all_points = lower_points + list(reversed(upper_points))
+        p0 = all_points.pop(0)
+        curve_path = QPainterPath(p0)
+        curve_path.setFillRule(Qt.WindingFill)
+        for p in all_points:
+            curve_path.lineTo(p)
+        curve_path.lineTo(p0)
+        return curve_path
+
+    def _get_normal_offset(self, src, dst):
+        normal = QLineF(src, dst).normalVector()
+        normal.setLength(self.magic_number / 2)
+        return QPointF(normal.dx(), normal.dy())
+
+    def _make_arrow_path(self, guide_path):
+        """Returns an arrow path for the link's tip.
+
+        Args:
+            guide_path (QPainterPath): A narrow path connecting source and destination,
+                for determining the arrow orientation.
+
+        Returns:
+            QPainterPath
+        """
+        angle = self._get_join_angle(guide_path)
+        arrow_p0 = self.dst_center
+        d1 = QPointF(sin(angle + self.arrow_angle), cos(angle + self.arrow_angle))
+        d2 = QPointF(sin(angle + (pi - self.arrow_angle)), cos(angle + (pi - self.arrow_angle)))
+        arrow_diag = self.magic_number / sin(self.arrow_angle)
+        arrow_p1 = arrow_p0 - d1 * arrow_diag
+        arrow_p2 = arrow_p0 - d2 * arrow_diag
+        arrow_path = QPainterPath(arrow_p1)
+        arrow_path.lineTo(arrow_p0)
+        arrow_path.lineTo(arrow_p2)
+        arrow_path.closeSubpath()
+        return arrow_path
+
+    @staticmethod
+    def _get_join_angle(guide_path):
+        src = guide_path.pointAtPercent(0.99)
+        dst = guide_path.pointAtPercent(1.0)
+        line = QLineF(src, dst)
+        return atan2(-line.dy(), line.dx())
+
+
+class Link(LinkBase):
     def __init__(self, toolbox, src_connector, dst_connector):
-        """An item that represents a connection between project items.
+        """An item that connects two project items.
 
         Args:
             toolbox (ToolboxUI): main UI class instance
             src_connector (ConnectorButton): Source connector button
             dst_connector (ConnectorButton): Destination connector button
         """
-        super().__init__()
-        self._toolbox = toolbox
+        super().__init__(toolbox)
         self.src_connector = src_connector  # QGraphicsRectItem
         self.dst_connector = dst_connector
         self.src_icon = src_connector._parent
         self.dst_icon = dst_connector._parent
         self.setZValue(1)
-        self.conn_width = 1.25 * self.src_connector.rect().width()
-        self.arrow_angle = pi / 4  # In rads
-        self.ellipse_angle = 30  # In degrees
-        self.feedback_size = 12
         # Path parameters
-        self.ellipse_rect = QRectF(0, 0, self.conn_width, self.conn_width)
-        self.line_width = self.conn_width / 2
-        self.arrow_length = self.line_width
-        self.arrow_diag = self.arrow_length / sin(self.arrow_angle)
-        arrow_base = 2 * self.arrow_diag * cos(self.arrow_angle)
-        self.t1 = (arrow_base - self.line_width) / arrow_base / 2
-        self.t2 = 1.0 - self.t1
-        # Inner rect of feedback link
-        self.inner_rect = QRectF(0, 0, 7.5 * self.feedback_size, 6 * self.feedback_size - self.line_width)
-        inner_shift_x = self.arrow_length / 2
-        angle = atan2(self.conn_width, self.inner_rect.height())
-        inner_shift_y = (self.inner_rect.height() * cos(angle) + self.line_width) / 2
-        self.inner_shift = QPointF(inner_shift_x, inner_shift_y)
-        self.inner_angle = degrees(atan2(inner_shift_x + self.conn_width / 2, inner_shift_y - self.line_width / 2))
-        # Outer rect of feedback link
-        self.outer_rect = QRectF(0, 0, 8 * self.feedback_size, 6 * self.feedback_size + self.line_width)
-        outer_shift_x = self.arrow_length / 2
-        angle = atan2(self.conn_width, self.outer_rect.height())
-        outer_shift_y = (self.outer_rect.height() * cos(angle) - self.line_width) / 2
-        self.outer_shift = QPointF(outer_shift_x, outer_shift_y)
-        self.outer_angle = degrees(atan2(outer_shift_x + self.conn_width / 2, outer_shift_y + self.line_width / 2))
-        # Tooltip
+        self.magic_number = 0.625 * self.src_rect.width()
         self.setToolTip(
             "<html><p>Connection from <b>{0}</b>'s output "
             "to <b>{1}</b>'s input</html>".format(self.src_icon.name(), self.dst_icon.name())
@@ -561,49 +727,6 @@ class Link(QGraphicsPathItem):
         if event.key() == Qt.Key_Delete and self.isSelected():
             self._toolbox.ui.graphicsView.remove_link(self)
 
-    def update_geometry(self):
-        """Update path."""
-        self.prepareGeometryChange()
-        src_rect = self.src_connector.sceneBoundingRect()
-        dst_rect = self.dst_connector.sceneBoundingRect()
-        src_center = src_rect.center()
-        dst_center = dst_rect.center()
-        # Angle between connector centers
-        if self.src_connector == self.dst_connector:  # feedback link
-            arrow_p0 = QPointF(dst_rect.left(), dst_rect.center().y())  # arrow tip is the center left side of button
-            angle = 0
-        else:  # normal link
-            line = QLineF(src_center, dst_center)
-            arrow_p0 = dst_center
-            angle = atan2(-line.dy(), line.dx())
-        # Path coordinates. We just need to draw the arrow and the ellipse, lines are drawn automatically
-        d1 = QPointF(sin(angle + self.arrow_angle), cos(angle + self.arrow_angle))
-        d2 = QPointF(sin(angle + (pi - self.arrow_angle)), cos(angle + (pi - self.arrow_angle)))
-        arrow_p1 = arrow_p0 - d1 * self.arrow_diag
-        arrow_p2 = arrow_p0 - d2 * self.arrow_diag
-        line = QLineF(arrow_p1, arrow_p2)
-        p1 = line.pointAt(self.t1)
-        p2 = line.pointAt(self.t2)
-        path = QPainterPath()
-        path.setFillRule(Qt.WindingFill)
-        path.moveTo(p2)
-        path.lineTo(arrow_p2)
-        path.lineTo(arrow_p0)
-        path.lineTo(arrow_p1)
-        path.lineTo(p1)
-        # Draw inner part of feedback link
-        if self.src_connector == self.dst_connector:
-            self.inner_rect.moveCenter(dst_center - self.inner_shift)
-            path.arcTo(self.inner_rect, 270 - self.inner_angle, 2 * self.inner_angle - 360)
-        self.ellipse_rect.moveCenter(src_rect.center())
-        path.arcTo(self.ellipse_rect, degrees(angle) + self.ellipse_angle, 360 - 2 * self.ellipse_angle)
-        # Draw outer part of feedback link
-        if self.src_connector == self.dst_connector:
-            self.outer_rect.moveCenter(dst_center - self.outer_shift)
-            path.arcTo(self.outer_rect, 270 + self.outer_angle, 360 - 2 * self.outer_angle)
-        path.closeSubpath()
-        self.setPath(path)
-
     def paint(self, painter, option, widget):
         """Set pen according to selection state."""
         if option.state & QStyle.State_Selected:
@@ -624,106 +747,47 @@ class Link(QGraphicsPathItem):
         return super().itemChange(change, value)
 
 
-class LinkDrawer(QGraphicsPathItem):
-    def __init__(self):
-        """An item that allows one to draw links between slot buttons in QGraphicsView."""
-        super().__init__()
-        self.src = None  # source point
-        self.dst = None  # destination point
-        self.drawing = False
-        self.arrow_angle = pi / 4
-        self.ellipse_angle = 30
-        self.feedback_size = 12
-        # Path parameters
-        self.ellipse_width = None
-        self.line_width = None
-        self.arrow_length = None
-        self.arrow_diag = None
-        self.src_rect = None
-        self.ellipse_rect = None
-        self.t1 = None
-        self.t2 = None
-        self.inner_rect = None
-        self.outer_rect = None
-        self.inner_angle = None
-        self.outer_angle = None
-        self.inner_shift = None
-        self.outer_shift = None
-        self.setBrush(QBrush(QColor(255, 0, 255, 204)))
-        self.setPen(QPen(Qt.black, 0.5))
-        self.setZValue(2)  # TODO: is this better than stackBefore?
-        self.hide()
-
-    def start_drawing_at(self, src_rect):
-        """Start drawing from the center point of the clicked button.
+class LinkDrawer(LinkBase):
+    def __init__(self, toolbox):
+        """An item for drawing links between project items.
 
         Args:
-            src_rect (QRecF): Rectangle of the clicked button
+            toolbox (ToolboxUI): main UI class instance
         """
-        self.src_rect = src_rect
-        self.src = self.src_rect.center()
-        self.dst = self.src
-        # Path parameters
-        conn_width = self.src_rect.width()
-        self.ellipse_width = conn_width
-        self.line_width = self.ellipse_width / 2
-        self.arrow_length = self.line_width
-        self.arrow_diag = self.arrow_length / sin(self.arrow_angle)
-        self.ellipse_rect = QRectF(0, 0, self.ellipse_width, self.ellipse_width)
-        self.ellipse_rect.moveCenter(self.src)
-        arrow_base = 2 * self.arrow_diag * cos(self.arrow_angle)
-        self.t1 = (arrow_base - self.line_width) / arrow_base / 2
-        self.t2 = 1.0 - self.t1
-        # Inner rect of feedback link
-        self.inner_rect = QRectF(0, 0, 7.5 * self.feedback_size, 6 * self.feedback_size - self.line_width)
-        inner_shift_x = self.arrow_length / 2
-        angle = atan2(self.ellipse_width, self.inner_rect.height())
-        inner_shift_y = (self.inner_rect.height() * cos(angle) + self.line_width) / 2
-        self.inner_shift = QPointF(inner_shift_x, inner_shift_y)
-        self.inner_angle = degrees(atan2(inner_shift_x + self.ellipse_width / 2, inner_shift_y - self.line_width / 2))
-        # Outer rect of feedback link
-        self.outer_rect = QRectF(0, 0, 8 * self.feedback_size, 6 * self.feedback_size + self.line_width)
-        outer_shift_x = self.arrow_length / 2
-        angle = atan2(self.ellipse_width, self.outer_rect.height())
-        outer_shift_y = (self.outer_rect.height() * cos(angle) - self.line_width) / 2
-        self.outer_shift = QPointF(outer_shift_x, outer_shift_y)
-        self.outer_angle = degrees(atan2(outer_shift_x + self.ellipse_width / 2, outer_shift_y + self.line_width / 2))
+        super().__init__(toolbox)
+        self.src_connector = None  # source connector
+        self.tip = None
+        self.drawing = False
+        self.setBrush(QBrush(QColor(255, 0, 255, 204)))
+        self.setPen(QPen(Qt.black, 0.5))
+        self.setZValue(2)
+        self.hide()
+
+    def start_drawing_at(self, src_connector):
+        """Starts drawing a link from the given connector.
+
+        Args:
+            src_connector (ConnectorButton)
+        """
+        self.src_connector = src_connector
+        self.tip = self.src_center
+        self.magic_number = 0.625 * self.src_rect.width()
         self.update_geometry()
         self.show()
 
-    def update_geometry(self):
-        """Update path."""
-        self.prepareGeometryChange()
-        # Angle between connector centers
-        if self.src_rect.contains(self.dst):
-            angle = 0
-            arrow_p0 = QPointF(self.src_rect.left(), self.src_rect.center().y())
-        else:
-            angle = atan2(self.src.y() - self.dst.y(), self.dst.x() - self.src.x())
-            arrow_p0 = self.dst
-        # Path coordinates
-        d1 = QPointF(sin(angle + self.arrow_angle), cos(angle + self.arrow_angle))
-        d2 = QPointF(sin(angle + (pi - self.arrow_angle)), cos(angle + (pi - self.arrow_angle)))
-        arrow_p1 = arrow_p0 - d1 * self.arrow_diag
-        arrow_p2 = arrow_p0 - d2 * self.arrow_diag
-        line = QLineF(arrow_p1, arrow_p2)
-        p1 = line.pointAt(self.t1)
-        p2 = line.pointAt(self.t2)
-        path = QPainterPath()
-        path.setFillRule(Qt.WindingFill)
-        path.moveTo(p2)
-        path.lineTo(arrow_p2)
-        path.lineTo(arrow_p0)
-        path.lineTo(arrow_p1)
-        path.lineTo(p1)
-        # Draw inner part of feedback link
-        if self.src_rect.contains(self.dst):
-            self.inner_rect.moveCenter(self.src - self.inner_shift)
-            path.arcTo(self.inner_rect, 270 - self.inner_angle, 2 * self.inner_angle - 360)
-        path.arcTo(self.ellipse_rect, (180 / pi) * angle + self.ellipse_angle, 360 - 2 * self.ellipse_angle)
-        # Draw outer part of feedback link
-        if self.src_rect.contains(self.dst):
-            self.outer_rect.moveCenter(self.src - self.outer_shift)
-            path.arcTo(self.outer_rect, 270 + self.outer_angle, 360 - 2 * self.outer_angle)
-        path.closeSubpath()
-        self.setPath(path)
+    @property
+    def dst_connector(self):
+        items = self.scene().items(self.tip)
+        return next(iter(x for x in items if isinstance(x, ConnectorButton)), None)
+
+    @property
+    def dst_rect(self):
+        if not self.dst_connector:
+            return QRectF()
+        return self.dst_connector.sceneBoundingRect()
+
+    @property
+    def dst_center(self):
+        if not self.dst_connector:
+            return self.tip
+        return self.dst_rect.center()
