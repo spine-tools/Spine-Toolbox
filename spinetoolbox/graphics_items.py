@@ -561,30 +561,30 @@ class LinkBase(QGraphicsPathItem):
         path.cubicTo(c1, c2, self.dst_center)
         return path
 
-    def _make_connecting_path(self, guide_path):
-        """Returns a 'thick' path connecting source and destination, by following the given 'guide' path.
+    def _path_to_points(self, path):
+        """Returns a list of representative points from given path.
 
         Args:
-            guide_path (QPainterPath)
+            path (QPainterPath)
 
         Returns:
-            QPainterPath
+            list(QPointF)
         """
-        length = guide_path.length() - self.src_rect.width() / 2
+        length = path.length() - self.src_rect.width() / 2
         points = list()
         i = 0.0
         max_incr = 10.0
         min_incr = 0.1
         s_change_tol = 0.5
         while i < length:
-            t0 = guide_path.percentAtLength(i)
-            p0 = guide_path.pointAtPercent(t0)
-            s0 = guide_path.slopeAtPercent(t0)
+            t0 = path.percentAtLength(i)
+            p0 = path.pointAtPercent(t0)
+            s0 = path.slopeAtPercent(t0)
             points.append(p0)
             incr = max_incr
             while incr > min_incr:
-                t1 = guide_path.percentAtLength(i + incr)
-                s1 = guide_path.slopeAtPercent(t1)
+                t1 = path.percentAtLength(i + incr)
+                s1 = path.slopeAtPercent(t1)
                 try:
                     s_change = abs((s1 - s0) / s0)
                 except ZeroDivisionError:
@@ -594,9 +594,21 @@ class LinkBase(QGraphicsPathItem):
                     break
                 incr /= 2
             i += incr
-        t = guide_path.percentAtLength(length)
-        points.append(guide_path.pointAtPercent(t))
-        points.append(guide_path.pointAtPercent(1.0))
+        t = path.percentAtLength(length)
+        points.append(path.pointAtPercent(t))
+        points.append(path.pointAtPercent(1.0))
+        return points
+
+    def _make_connecting_path(self, guide_path):
+        """Returns a 'thick' path connecting source and destination, by following the given 'guide' path.
+
+        Args:
+            guide_path (QPainterPath)
+
+        Returns:
+            QPainterPath
+        """
+        points = self._path_to_points(guide_path)
         off = self._get_normal_offset(points[0], points[1])
         lower_points = [points[0] + off]
         upper_points = [points[0] - off]
@@ -623,7 +635,7 @@ class LinkBase(QGraphicsPathItem):
 
         Args:
             guide_path (QPainterPath): A narrow path connecting source and destination,
-                for determining the arrow orientation.
+                used to determine the arrow orientation.
 
         Returns:
             QPainterPath
