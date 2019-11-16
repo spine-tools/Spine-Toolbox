@@ -13,7 +13,7 @@
 # Form implementation generated from reading ui file '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/settings.ui',
 # licensing of '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/settings.ui' applies.
 #
-# Created: Sat Nov 16 10:25:04 2019
+# Created: Sat Nov 16 18:03:45 2019
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -385,7 +385,7 @@ class Ui_SettingsForm(object):
         self.checkBox_use_smooth_zoom.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>Controls whether smooth or discete zoom is used in Design and Graph Views.</p></body></html>", None, -1))
         self.checkBox_use_smooth_zoom.setText(QtWidgets.QApplication.translate("SettingsForm", "Smooth zoom", None, -1))
         self.checkBox_use_smooth_links.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>Controls whether smooth or straight connectors are used in Design View.</p></body></html>", None, -1))
-        self.checkBox_use_smooth_links.setText(QtWidgets.QApplication.translate("SettingsForm", "Smooth connectors", None, -1))
+        self.checkBox_use_smooth_links.setText(QtWidgets.QApplication.translate("SettingsForm", "Smooth links", None, -1))
         self.label_7.setText(QtWidgets.QApplication.translate("SettingsForm", "Design View background", None, -1))
         self.radioButton_bg_grid.setText(QtWidgets.QApplication.translate("SettingsForm", "Grid", None, -1))
         self.radioButton_bg_solid.setText(QtWidgets.QApplication.translate("SettingsForm", "Solid", None, -1))
