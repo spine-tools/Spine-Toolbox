@@ -203,7 +203,7 @@ class SettingsWidget(QWidget):
         self._toolbox.ui.graphicsView.scene().update()
 
     @Slot(bool, name="update_scene_bg")
-    def update_scene_bg(self, checked):
+    def update_scene_bg(self, checked=False):
         """Draw background on scene depending on radiobutton states.
 
         Args:
@@ -443,6 +443,20 @@ class SettingsWidget(QWidget):
         Args:
             event (QEvent): Closing event if 'X' is clicked.
         """
+        smooth_links = self._qsettings.value("appSettings/smoothLinks", defaultValue="false")
+        bg_grid = self._qsettings.value("appSettings/bgGrid", defaultValue="false")
+        bg_color = self._qsettings.value("appSettings/bgColor", defaultValue="false")
+        self.update_links_geometry(smooth_links == "true")
+        if bg_grid == "true":
+            self.ui.radioButton_bg_grid.setChecked(True)
+        else:
+            self.ui.radioButton_bg_solid.setChecked(True)
+        self.update_scene_bg()
+        if bg_color == "false":
+            pass
+        else:
+            self.bg_color = bg_color
+        self.update_bg_color()
         if event:
             event.accept()
 
