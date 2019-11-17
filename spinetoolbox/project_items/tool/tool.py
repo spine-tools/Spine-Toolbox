@@ -307,7 +307,7 @@ class Tool(ProjectItem):
             populate (bool): False to clear model, True to populate.
         """
         self.specification_model.clear()
-        self.specification_model.setHorizontalHeaderItem(0, QStandardItem("Template specification"))  # Add header
+        self.specification_model.setHorizontalHeaderItem(0, QStandardItem("Tool specification"))  # Add header
         # Add category items
         source_file_category_item = QStandardItem("Source files")
         input_category_item = QStandardItem("Input files")
