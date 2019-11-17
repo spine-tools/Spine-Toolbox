@@ -9,7 +9,11 @@
     <file>fontawesome5-searchterms.json</file>
   </qresource>
   <qresource prefix="icons">
+    <file>eye.svg</file>
+    <file>sliders-h.svg</file>
+    <file>tools.svg</file>
     <file>wrench.svg</file>
+    <file>project-diagram.svg</file>
     <file>wrench_minus.svg</file>
     <file>wrench_plus.svg</file>
     <file>datapkg.png</file>
@@ -60,6 +64,5 @@
     <file>menu_icons/trash-alt.svg</file>
     <file>menu_icons/times.svg</file>
     <file>menu_icons/undo.svg</file>
-    <file>project_item_icons/file-export-solid.svg</file>
   </qresource>
 </RCC>
