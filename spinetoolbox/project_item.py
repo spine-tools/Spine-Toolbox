@@ -20,7 +20,7 @@ import os
 import logging
 from urllib.parse import urlparse
 from urllib.request import url2pathname
-from PySide2.QtCore import Qt, Signal, QUrl
+from PySide2.QtCore import Qt, Signal, QUrl, QParallelAnimationGroup
 from PySide2.QtWidgets import QInputDialog
 from PySide2.QtGui import QDesktopServices
 from .executioner import ExecutionState
@@ -221,7 +221,7 @@ class ProjectItem(BaseProjectItem):
         y (float): vertical position in the screen
     """
 
-    item_changed = Signal(name="item_changed")
+    item_changed = Signal()
 
     def __init__(self, toolbox, name, description, x, y):
         """
@@ -320,7 +320,7 @@ class ProjectItem(BaseProjectItem):
 
     def prepare_for_resource_discovery(self):
         """
-        Prepares this item for resource discovery. 
+        Prepares this item for resource discovery.
         Called by the execution instance before collecting resources for this item.
 
         The default implementation does nothing.
@@ -381,6 +381,20 @@ class ProjectItem(BaseProjectItem):
         Args:
             resources_upstream (list): resources available from upstream items
         """
+
+    def make_execution_leave_animation(self):
+        """
+        Returns animation to play when execution leaves this item.
+
+        Returns:
+            QParallelAnimationGroup
+        """
+        icon = self.get_icon()
+        links = set(link for conn in icon.connectors.values() for link in conn.links if link.src_connector == conn)
+        anim_group = QParallelAnimationGroup(self)
+        for link in links:
+            anim_group.addAnimation(link.make_execution_animation())
+        return anim_group
 
     def invalidate_workflow(self, edges):
         """Notifies that this item's workflow is not acyclic.

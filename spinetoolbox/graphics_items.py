@@ -17,7 +17,7 @@ Classes for drawing graphics items on QGraphicsScene.
 """
 
 from math import atan2, sin, cos, pi
-from PySide2.QtCore import Qt, QPointF, QLineF, QRectF
+from PySide2.QtCore import Qt, Slot, QPointF, QLineF, QRectF, QVariantAnimation
 from PySide2.QtWidgets import (
     QGraphicsItem,
     QGraphicsPathItem,
@@ -29,7 +29,17 @@ from PySide2.QtWidgets import (
     QGraphicsDropShadowEffect,
     QApplication,
 )
-from PySide2.QtGui import QColor, QPen, QBrush, QPainterPath, QTextCursor, QTransform, QPalette, QTextBlockFormat
+from PySide2.QtGui import (
+    QColor,
+    QPen,
+    QBrush,
+    QPainterPath,
+    QTextCursor,
+    QTransform,
+    QPalette,
+    QTextBlockFormat,
+    QLinearGradient,
+)
 from PySide2.QtSvg import QGraphicsSvgItem, QSvgRenderer
 
 
@@ -690,6 +700,28 @@ class Link(LinkBase):
         self.setFlag(QGraphicsItem.ItemIsFocusable, enabled=True)
         self.setCursor(Qt.PointingHandCursor)
         self.update_geometry()
+
+    def make_execution_animation(self):
+        """Returns an animation to play when execution 'passes' through this link.
+
+        Returns:
+            QVariantAnimation
+        """
+        animation = QVariantAnimation()
+        animation.setStartValue(0.0)
+        animation.setEndValue(1.0)
+        animation.valueChanged.connect(self._handle_execution_animation_value_changed)
+        animation.finished.connect(lambda: self.setBrush(QColor(255, 255, 0, 204)))
+        animation.finished.connect(animation.deleteLater)
+        return animation
+
+    @Slot("QVariant")
+    def _handle_execution_animation_value_changed(self, step):
+        gradient = QLinearGradient(self.src_center, self.dst_center)
+        gradient.setColorAt(0, QColor(255, 255, 0, 204))
+        gradient.setColorAt(step, QColor(255, 0, 0, 204))
+        gradient.setColorAt(1, QColor(255, 255, 0, 204))
+        self.setBrush(gradient)
 
     def find_parallel_link(self):
         """Find parallel link."""
