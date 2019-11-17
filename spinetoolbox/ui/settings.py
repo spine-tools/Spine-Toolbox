@@ -13,7 +13,7 @@
 # Form implementation generated from reading ui file '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/settings.ui',
 # licensing of '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/settings.ui' applies.
 #
-# Created: Sun Nov 17 17:52:56 2019
+# Created: Sun Nov 17 21:50:53 2019
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -45,18 +45,19 @@ class Ui_SettingsForm(object):
         self.horizontalLayout_2.setContentsMargins(9, 9, 9, 9)
         self.horizontalLayout_2.setObjectName("horizontalLayout_2")
         self.listWidget = QtWidgets.QListWidget(SettingsForm)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
-        sizePolicy.setHorizontalStretch(1)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Expanding)
+        sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.listWidget.sizePolicy().hasHeightForWidth())
         self.listWidget.setSizePolicy(sizePolicy)
+        self.listWidget.setMaximumSize(QtCore.QSize(112, 16777215))
         self.listWidget.setSizeAdjustPolicy(QtWidgets.QAbstractScrollArea.AdjustIgnored)
         self.listWidget.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
         self.listWidget.setProperty("showDropIndicator", True)
         self.listWidget.setDragDropMode(QtWidgets.QAbstractItemView.NoDragDrop)
-        self.listWidget.setDefaultDropAction(QtCore.Qt.IgnoreAction)
+        self.listWidget.setDefaultDropAction(QtCore.Qt.CopyAction)
         self.listWidget.setAlternatingRowColors(False)
-        self.listWidget.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectItems)
+        self.listWidget.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
         self.listWidget.setMovement(QtWidgets.QListView.Static)
         self.listWidget.setFlow(QtWidgets.QListView.LeftToRight)
         self.listWidget.setProperty("isWrapping", True)
@@ -64,7 +65,7 @@ class Ui_SettingsForm(object):
         self.listWidget.setSpacing(0)
         self.listWidget.setViewMode(QtWidgets.QListView.ListMode)
         self.listWidget.setUniformItemSizes(False)
-        self.listWidget.setSelectionRectVisible(False)
+        self.listWidget.setSelectionRectVisible(True)
         self.listWidget.setObjectName("listWidget")
         icon = QtGui.QIcon()
         icon.addPixmap(QtGui.QPixmap(":/icons/sliders-h.svg"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
@@ -86,7 +87,7 @@ class Ui_SettingsForm(object):
         self.horizontalLayout_2.addWidget(self.listWidget)
         self.stackedWidget = QtWidgets.QStackedWidget(SettingsForm)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
-        sizePolicy.setHorizontalStretch(5)
+        sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.stackedWidget.sizePolicy().hasHeightForWidth())
         self.stackedWidget.setSizePolicy(sizePolicy)
@@ -326,6 +327,7 @@ class Ui_SettingsForm(object):
         self.toolButton_browse_julia_project.setObjectName("toolButton_browse_julia_project")
         self.gridLayout_5.addWidget(self.toolButton_browse_julia_project, 4, 1, 1, 1)
         self.lineEdit_julia_project_path = QtWidgets.QLineEdit(self.groupBox_julia)
+        self.lineEdit_julia_project_path.setMinimumSize(QtCore.QSize(0, 20))
         self.lineEdit_julia_project_path.setMaximumSize(QtCore.QSize(16777215, 20))
         self.lineEdit_julia_project_path.setText("")
         self.lineEdit_julia_project_path.setClearButtonEnabled(True)
@@ -364,6 +366,8 @@ class Ui_SettingsForm(object):
         self.label_13.setObjectName("label_13")
         self.gridLayout_6.addWidget(self.label_13, 0, 0, 1, 1)
         self.lineEdit_python_path = QtWidgets.QLineEdit(self.groupBox_python)
+        self.lineEdit_python_path.setMinimumSize(QtCore.QSize(0, 20))
+        self.lineEdit_python_path.setMaximumSize(QtCore.QSize(16777215, 20))
         self.lineEdit_python_path.setClearButtonEnabled(True)
         self.lineEdit_python_path.setObjectName("lineEdit_python_path")
         self.gridLayout_6.addWidget(self.lineEdit_python_path, 1, 0, 1, 1)

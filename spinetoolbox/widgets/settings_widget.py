@@ -18,7 +18,7 @@ Widget for controlling user settings.
 
 import os
 from PySide2.QtWidgets import QWidget, QFileDialog, QMessageBox, QColorDialog
-from PySide2.QtCore import Slot, Qt
+from PySide2.QtCore import Slot, Qt, QSize
 from PySide2.QtGui import QPixmap
 from ..config import DEFAULT_PROJECT_DIR, DEFAULT_WORK_DIR, SETTINGS_SS
 
@@ -48,6 +48,8 @@ class SettingsWidget(QWidget):
         self.ui = settings.Ui_SettingsForm()
         self.ui.setupUi(self)
         self.setWindowFlags(Qt.Window | Qt.CustomizeWindowHint)
+        for item in self.ui.listWidget.findItems("*", Qt.MatchWildcard):
+            item.setSizeHint(QSize(128, 44))
         # Ensure this window gets garbage-collected when closed
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setStyleSheet(SETTINGS_SS)
