@@ -16,9 +16,9 @@ Animation class for the Exporter and Importer items.
 :date:   12.11.2019
 """
 
-from PySide2.QtGui import QColor, QFont
-from PySide2.QtCore import Slot, QTimeLine, QPointF
-from PySide2.QtWidgets import QGraphicsItemAnimation, QGraphicsOpacityEffect, QGraphicsTextItem
+from PySide2.QtGui import QFont
+from PySide2.QtCore import Slot, QTimeLine
+from PySide2.QtWidgets import QGraphicsItemAnimation, QGraphicsOpacityEffect
 
 
 class ImportExportAnimation:
@@ -63,17 +63,21 @@ class ImportExportAnimation:
     def start(self):
         """Starts the animation."""
         rect = self._parent_item.rect()
-        anchor = rect.topLeft() + QPointF(-rect.width() / 4, rect.height() / 4)
+        dx = self.src_item.boundingRect().width()
+        dy = self.dst_item.boundingRect().height()
+        rect.adjust(0, 0, -dx, -dy)
+        src, dst = rect.topLeft(), rect.bottomRight()
+        vec = dst - src
         self.src_item.setParentItem(self._parent_item)
         self.dst_item.setParentItem(self._parent_item)
-        self.src_item.setPos(anchor)
-        self.dst_item.setPos(anchor)
+        self.src_item.setPos(src)
+        self.dst_item.setPos(src)
         self.src_opacity_effect.setOpacity(0.0)
         self.dst_opacity_effect.setOpacity(0.0)
         for i in range(100):
             step = i / 100.0
-            self.src_animation.setPosAt(step, anchor + QPointF(rect.width() * step, 0))
-            self.dst_animation.setPosAt(step, anchor + QPointF(rect.width() * step, 0))
+            self.src_animation.setPosAt(step, src + vec * step)
+            self.dst_animation.setPosAt(step, src + vec * step)
         self.timer.start()
 
     def stop(self):
