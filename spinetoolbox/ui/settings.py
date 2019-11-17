@@ -13,7 +13,7 @@
 # Form implementation generated from reading ui file '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/settings.ui',
 # licensing of '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/settings.ui' applies.
 #
-# Created: Sun Nov 17 21:50:53 2019
+# Created: Sun Nov 17 22:54:04 2019
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -184,14 +184,14 @@ class Ui_SettingsForm(object):
         self.verticalLayout_3.setObjectName("verticalLayout_3")
         self.horizontalLayout_5 = QtWidgets.QHBoxLayout()
         self.horizontalLayout_5.setObjectName("horizontalLayout_5")
-        self.label_8 = QtWidgets.QLabel(self.groupBox_general)
-        self.label_8.setObjectName("label_8")
-        self.horizontalLayout_5.addWidget(self.label_8)
-        spacerItem1 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
-        self.horizontalLayout_5.addItem(spacerItem1)
         self.label_5 = QtWidgets.QLabel(self.groupBox_general)
         self.label_5.setObjectName("label_5")
         self.horizontalLayout_5.addWidget(self.label_5)
+        spacerItem1 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        self.horizontalLayout_5.addItem(spacerItem1)
+        self.label_8 = QtWidgets.QLabel(self.groupBox_general)
+        self.label_8.setObjectName("label_8")
+        self.horizontalLayout_5.addWidget(self.label_8)
         self.verticalLayout_3.addLayout(self.horizontalLayout_5)
         self.horizontalSlider_data_flow_animation_duration = QtWidgets.QSlider(self.groupBox_general)
         self.horizontalSlider_data_flow_animation_duration.setStyleSheet("")
@@ -202,7 +202,7 @@ class Ui_SettingsForm(object):
         self.horizontalSlider_data_flow_animation_duration.setSliderPosition(100)
         self.horizontalSlider_data_flow_animation_duration.setTracking(False)
         self.horizontalSlider_data_flow_animation_duration.setOrientation(QtCore.Qt.Horizontal)
-        self.horizontalSlider_data_flow_animation_duration.setInvertedAppearance(False)
+        self.horizontalSlider_data_flow_animation_duration.setInvertedAppearance(True)
         self.horizontalSlider_data_flow_animation_duration.setInvertedControls(False)
         self.horizontalSlider_data_flow_animation_duration.setObjectName("horizontalSlider_data_flow_animation_duration")
         self.verticalLayout_3.addWidget(self.horizontalSlider_data_flow_animation_duration)
@@ -498,8 +498,8 @@ class Ui_SettingsForm(object):
         self.radioButton_bg_solid.setText(QtWidgets.QApplication.translate("SettingsForm", "Solid", None, -1))
         self.toolButton_bg_color.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>Pick solid background color</p></body></html>", None, -1))
         self.label_4.setText(QtWidgets.QApplication.translate("SettingsForm", "Data flow animation speed", None, -1))
-        self.label_8.setText(QtWidgets.QApplication.translate("SettingsForm", "Fast", None, -1))
         self.label_5.setText(QtWidgets.QApplication.translate("SettingsForm", "Slow", None, -1))
+        self.label_8.setText(QtWidgets.QApplication.translate("SettingsForm", "Fast", None, -1))
         self.groupBox_project.setTitle(QtWidgets.QApplication.translate("SettingsForm", "Project", None, -1))
         self.label_2.setText(QtWidgets.QApplication.translate("SettingsForm", "Name", None, -1))
         self.lineEdit_project_name.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>You can rename project from main window menu <span style=\" font-weight:600;\">File -&gt; Save As...</span></p></body></html>", None, -1))

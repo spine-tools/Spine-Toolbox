@@ -444,9 +444,9 @@
               <item>
                <layout class="QHBoxLayout" name="horizontalLayout_5">
                 <item>
-                 <widget class="QLabel" name="label_8">
+                 <widget class="QLabel" name="label_5">
                   <property name="text">
-                   <string>Fast</string>
+                   <string>Slow</string>
                   </property>
                  </widget>
                 </item>
@@ -464,9 +464,9 @@
                  </spacer>
                 </item>
                 <item>
-                 <widget class="QLabel" name="label_5">
+                 <widget class="QLabel" name="label_8">
                   <property name="text">
-                   <string>Slow</string>
+                   <string>Fast</string>
                   </property>
                  </widget>
                 </item>
@@ -499,7 +499,7 @@
                  <enum>Qt::Horizontal</enum>
                 </property>
                 <property name="invertedAppearance">
-                 <bool>false</bool>
+                 <bool>true</bool>
                 </property>
                 <property name="invertedControls">
                  <bool>false</bool>
