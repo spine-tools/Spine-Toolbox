@@ -80,6 +80,12 @@ class ConnectorButton(QGraphicsRectItem):
         self.setAcceptHoverEvents(True)
         self.setCursor(Qt.PointingHandCursor)
 
+    def outgoing_links(self):
+        return [l for l in self.links if l.src_connector == self]
+
+    def incoming_links(self):
+        return [l for l in self.links if l.dst_connector == self]
+
     def parent_name(self):
         """Returns project item name owning this connector button."""
         return self._parent.name()
@@ -358,6 +364,12 @@ class ProjectItemIcon(QGraphicsRectItem):
     def conn_button(self, position="left"):
         """Returns items connector button (QWidget)."""
         return self.connectors.get(position, self.connectors["left"])
+
+    def outgoing_links(self):
+        return [l for conn in self.connectors.values() for l in conn.outgoing_links()]
+
+    def incoming_links(self):
+        return [l for conn in self.connectors.values() for l in conn.incoming_links()]
 
     def hoverEnterEvent(self, event):
         """Sets a drop shadow effect to icon when mouse enters its boundaries.
@@ -789,6 +801,15 @@ class Link(LinkBase):
                 item.stackBefore(self)
             return value
         return super().itemChange(change, value)
+
+    def wipe_out(self):
+        """Removes any trace of this item from the system."""
+        self.src_connector.links.remove(self)
+        if self.src_connector != self.dst_connector:
+            self.dst_connector.links.remove(self)
+        scene = self.scene()
+        if scene:
+            scene.removeItem(self)
 
 
 class LinkDrawer(LinkBase):

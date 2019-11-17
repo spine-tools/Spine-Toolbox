@@ -330,6 +330,10 @@ class DesignQGraphicsView(CustomQGraphicsView):
             src_connector (ConnectorButton): Source connector button
             dst_connector (ConnectorButton): Destination connector button
         """
+        # Remove existing links betwen the same items
+        for link in src_connector._parent.outgoing_links():
+            if link.dst_connector._parent == dst_connector._parent:
+                link.wipe_out()
         link = Link(self._toolbox, src_connector, dst_connector)
         self.scene().addItem(link)
         # Store Link in connectors, so it can be found *from* the Project Item
@@ -340,12 +344,9 @@ class DesignQGraphicsView(CustomQGraphicsView):
         dst_name = link.dst_icon.name()
         self._toolbox.project().dag_handler.add_graph_edge(src_name, dst_name)
 
-    def remove_link(self, link, from_dag=True):
+    def remove_link(self, link):
         """Removes link from scene."""
-        self.scene().removeItem(link)
-        # Remove Link from connectors
-        link.src_connector.links.remove(link)
-        link.dst_connector.links.remove(link)
+        link.wipe_out()
         # Remove edge (connection link) from dag
         src_name = link.src_icon.name()
         dst_name = link.dst_icon.name()
