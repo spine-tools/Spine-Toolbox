@@ -738,23 +738,21 @@ class Link(LinkBase):
         gradient.setColorAt(1, QColor(255, 255, 0, 204))
         self.setBrush(gradient)
 
-    def find_parallel_link(self):
-        """Find parallel link."""
-        self.parallel_link = None
-        for item in self.collidingItems():
-            if not isinstance(item, Link):
-                continue
-            if item.src_icon == self.dst_icon and item.dst_icon == self.src_icon:
-                self.parallel_link = item
-                break
+    def has_parallel_link(self):
+        """Returns whether or not this link entirely overlaps another."""
+        self.parallel_link = next(
+            iter(l for l in self.dst_connector.outgoing_links() if l.dst_connector == self.src_connector), None
+        )
+        return self.parallel_link is not None
 
     def send_to_bottom(self):
-        """Send link behind other links."""
+        """Stacks this link before the parallel one if any."""
         if self.parallel_link:
             self.stackBefore(self.parallel_link)
 
     def mousePressEvent(self, e):
-        """Trigger slot button if it is underneath.
+        """Ignores event if there's a connector button underneath,
+        to allow creation of new links.
 
         Args:
             e (QGraphicsSceneMouseEvent): Mouse event
@@ -765,29 +763,28 @@ class Link(LinkBase):
             e.ignore()
 
     def mouseDoubleClickEvent(self, e):
-        """Accept event to prevent unwanted feedback links to be created when propagating this event
-        to connector buttons underneath.
+        """Accepts event if there's a connector button underneath,
+        to prevent unwanted creation of feedback links.
         """
         if any(isinstance(x, ConnectorButton) for x in self.scene().items(e.scenePos())):
             e.accept()
 
     def contextMenuEvent(self, e):
-        """Show context menu unless mouse is over one of the slot buttons.
+        """Selects the link and shows context menu.
 
         Args:
             e (QGraphicsSceneMouseEvent): Mouse event
         """
         self.setSelected(True)
-        self.find_parallel_link()
         self._toolbox.show_link_context_menu(e.screenPos(), self)
 
     def keyPressEvent(self, event):
-        """Remove associated connection if this is selected and delete is pressed."""
+        """Removes this link if delete is pressed."""
         if event.key() == Qt.Key_Delete and self.isSelected():
             self._toolbox.ui.graphicsView.remove_link(self)
 
     def paint(self, painter, option, widget):
-        """Set pen according to selection state."""
+        """Sets a dashed pen if selected."""
         if option.state & QStyle.State_Selected:
             option.state &= ~QStyle.State_Selected
             self.setPen(self.selected_pen)
@@ -796,7 +793,7 @@ class Link(LinkBase):
         super().paint(painter, option, widget)
 
     def itemChange(self, change, value):
-        """Bring selected link to top."""
+        """Brings selected link to top."""
         if change == QGraphicsItem.GraphicsItemChange.ItemSelectedChange and value == 1:
             for item in self.collidingItems():  # TODO: try using scene().collidingItems() which is ordered
                 if not isinstance(item, Link):
