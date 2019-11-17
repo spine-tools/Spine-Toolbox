@@ -719,9 +719,12 @@ class Link(LinkBase):
         Returns:
             QVariantAnimation
         """
+        qsettings = self._toolbox.qsettings()
+        duration = int(qsettings.value("appSettings/dataFlowAnimationDuration", defaultValue="100"))
         animation = QVariantAnimation()
         animation.setStartValue(0.0)
         animation.setEndValue(1.0)
+        animation.setDuration(duration)
         animation.valueChanged.connect(self._handle_execution_animation_value_changed)
         animation.finished.connect(lambda: self.setBrush(QColor(255, 255, 0, 204)))
         animation.finished.connect(animation.deleteLater)

@@ -235,6 +235,7 @@ class SettingsWidget(QWidget):
         delete_data = int(self._qsettings.value("appSettings/deleteData", defaultValue="0"))
         smooth_zoom = self._qsettings.value("appSettings/smoothZoom", defaultValue="false")
         smooth_links = self._qsettings.value("appSettings/smoothLinks", defaultValue="false")
+        data_flow_anim_dur = int(self._qsettings.value("appSettings/dataFlowAnimationDuration", defaultValue="100"))
         bg_grid = self._qsettings.value("appSettings/bgGrid", defaultValue="false")
         bg_color = self._qsettings.value("appSettings/bgColor", defaultValue="false")
         gams_path = self._qsettings.value("appSettings/gamsPath", defaultValue="")
@@ -263,6 +264,7 @@ class SettingsWidget(QWidget):
             self.ui.checkBox_use_smooth_zoom.setCheckState(Qt.Checked)
         if smooth_links == "true":
             self.ui.checkBox_use_smooth_links.setCheckState(Qt.Checked)
+        self.ui.horizontalSlider_data_flow_animation_duration.setValue(data_flow_anim_dur)
         if bg_grid == "true":
             self.ui.radioButton_bg_grid.setChecked(True)
         else:
@@ -328,6 +330,8 @@ class SettingsWidget(QWidget):
         self._qsettings.setValue("appSettings/smoothZoom", smooth_zoom)
         smooth_links = "true" if int(self.ui.checkBox_use_smooth_links.checkState()) else "false"
         self._qsettings.setValue("appSettings/smoothLinks", smooth_links)
+        data_flow_anim_dur = str(self.ui.horizontalSlider_data_flow_animation_duration.value())
+        self._qsettings.setValue("appSettings/dataFlowAnimationDuration", data_flow_anim_dur)
         bg_grid = "true" if self.ui.radioButton_bg_grid.isChecked() else "false"
         self._qsettings.setValue("appSettings/bgGrid", bg_grid)
         self._qsettings.setValue("appSettings/bgColor", self.bg_color)
