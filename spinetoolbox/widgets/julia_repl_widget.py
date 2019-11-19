@@ -430,6 +430,7 @@ class JuliaREPLWidget(RichJupyterWidget):
         super()._handle_error(msg)
         if self.running:
             self.running = False
+            self.command = None
             self.execution_finished_signal.emit(-9999)  # any error code
 
     def execute_instance(self, command):
