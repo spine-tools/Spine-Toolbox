@@ -496,6 +496,7 @@ class TabularViewForm(QMainWindow):
 
     def save_model(self):
         db_edited = False
+        self.db_mngr.remove_db_map_listener(self.db_map, self)
         if self.current_value_type == self._DATA_SET:
             db_edited = self.save_model_set()
             delete_indexes = self.model.model._deleted_index_entries
@@ -539,10 +540,12 @@ class TabularViewForm(QMainWindow):
         if db_edited:
             self.load_class_data()
             self.load_objects()
+        self.db_mngr.signaller.add_db_map_listener(self.db_map, self)
 
     def save_parameter_values(self, data, data_value):
         new_data = []
         update_data = []
+
         # index to object classes
         if self.current_class_type == self._RELATIONSHIP_CLASS:
             obj_ind = range(len(self.current_object_class_list()))
