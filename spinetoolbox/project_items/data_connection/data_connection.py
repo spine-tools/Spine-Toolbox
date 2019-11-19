@@ -52,7 +52,9 @@ class DataConnection(ProjectItem):
         # Populate references model
         if references is None:
             references = list()
-        self.references = references
+        # Convert relative paths to absolute
+        absolute_refs = [os.path.abspath(os.path.join(self._project.project_dir, r)) for r in references]
+        self.references = absolute_refs
         self.populate_reference_list(self.references)
         # Populate data (files) model
         data_files = self.data_files()
@@ -402,7 +404,8 @@ class DataConnection(ProjectItem):
     def item_dict(self):
         """Returns a dictionary corresponding to this item."""
         d = super().item_dict()
-        d["references"] = self.file_references()
+        # Convert paths to relative before saving
+        d["references"] = [os.path.relpath(f, self._toolbox.project().project_dir) for f in self.file_references()]
         return d
 
     def rename(self, new_name):

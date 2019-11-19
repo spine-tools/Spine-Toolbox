@@ -109,7 +109,7 @@ class SpineToolboxProject(MetaObject):
         into a dictionary and write to a JSON file.
 
         Args:
-            tool_def_paths (list): List of paths to tool definition files
+            tool_def_paths (list): List of absolute paths to tool definition files
             directory (str): Abs. path to project directory. Used
             when converting old style projects to new style, and
             when project is saved to a new location (Save as...)
@@ -117,12 +117,14 @@ class SpineToolboxProject(MetaObject):
         Returns:
             bool: True or False depending on success
         """
-        # Clear dictionary
+
         project_dict = dict()  # Dictionary for storing project info
         project_dict["version"] = LATEST_PROJECT_VERSION
         project_dict["name"] = self.name
         project_dict["description"] = self.description
-        project_dict["tool_specifications"] = tool_def_paths
+        # Convert Tool definition paths to relative
+        relative_tool_def_paths = [os.path.relpath(p, self.project_dir) for p in tool_def_paths]
+        project_dict["tool_specifications"] = relative_tool_def_paths
         # Compute connections directly from Links in scene
         connections = list()
         for link in self._toolbox.ui.graphicsView.links():
@@ -157,6 +159,8 @@ class SpineToolboxProject(MetaObject):
             category = category_item.name
             category_dict = items_dict[category] = dict()
             for item in self._toolbox.project_item_model.items(category):
+                # for key, value in item.item_dict().items():
+                #     logging.debug("{0} - key:{1} value:{2}".format(item.name, key, value))
                 category_dict[item.name] = item.item_dict()
         # Write project on disk
         saved_dict = dict(project=project_dict, objects=items_dict)

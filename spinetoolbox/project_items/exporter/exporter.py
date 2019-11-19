@@ -59,7 +59,7 @@ class Exporter(ProjectItem):
             description (str): item description
             database_urls (list): a list of connected database urls
             database_to_file_name_map (dict): mapping from database path (str) to an output file name (str)
-            settings_file_names (dict): mapping from database path (str) to export settings file name (str)
+            settings_file_names (list): mapping from database path (str) to export settings file name (str)
             x (float): initial X coordinate of item icon
             y (float): initial Y coordinate of item icon
         """
@@ -67,9 +67,20 @@ class Exporter(ProjectItem):
         self._settings_windows = dict()
         self._settings = dict()
         self._database_urls = database_urls if database_urls is not None else list()
-        self._database_to_file_name_map = database_to_file_name_map if database_to_file_name_map is not None else dict()
-        if settings_file_names is not None:
-            for file_name in settings_file_names:
+        # Convert sqlite paths from rela to abs
+        # self._database_to_file_name_map = database_to_file_name_map if database_to_file_name_map is not None else dict()
+        if not database_to_file_name_map:
+            self._database_to_file_name_map = dict()
+        else:
+            for key, value in database_to_file_name_map.items():
+                if key.endswith(".sqlite"):
+                    new_key = os.path.abspath(os.path.join("sqlite:///", self._project.project_dir, key))
+                    database_to_file_name_map[new_key] = database_to_file_name_map.pop(key)
+            self._database_to_file_name_map = database_to_file_name_map
+        # Convert settings file paths to absolute
+        abs_settings_paths = [os.path.abspath(os.path.join(self._project.project_dir, s)) for s in settings_file_names]
+        if abs_settings_paths is not None:
+            for file_name in abs_settings_paths:
                 try:
                     with open(file_name) as input_file:
                         data = json.load(input_file)
@@ -141,8 +152,9 @@ class Exporter(ProjectItem):
         """Executes this item."""
         gams_system_directory = self._resolve_gams_system_directory()
         if gams_system_directory is None:
-            self._toolbox.msg.error("<b>{}</b>: Cannot proceed. No GAMS installation found.")
-            self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(ExecutionState.ABORT)
+            self._toolbox.msg_error.emit("<b>{}</b>: Cannot proceed. No GAMS installation found.".format(self.name))
+            if self._toolbox.project().execution_instance is not None:
+                self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(ExecutionState.ABORT)
         for url in self._database_urls:
             file_name = self._database_to_file_name_map.get(url, None)
             if file_name is None:
@@ -218,9 +230,17 @@ class Exporter(ProjectItem):
     def item_dict(self):
         """Returns a dictionary corresponding to this item's configuration."""
         d = super().item_dict()
+        # Convert input db paths to relative
+        # db_to_file_name_map = [os.path.relpath(d, self._project.project_dir) for d in self._database_to_file_name_map]
+        for key, value in self._database_to_file_name_map.items():
+            # key is something like 'sqlite:///c:\temp\db.sqlite. Convert to relative
+            new_key = os.path.relpath(key, self._project.project_dir)
+            self._database_to_file_name_map[new_key] = self._database_to_file_name_map.pop(key)
         d["database_to_file_name_map"] = self._database_to_file_name_map
         settings_file_names = self._save_settings()
-        d["settings_file_names"] = settings_file_names
+        # Convert settings file paths to relative
+        settings_files_relpath = [os.path.relpath(s, self._project.project_dir) for s in settings_file_names]
+        d["settings_file_names"] = settings_files_relpath
         return d
 
     def _update_settings_from_settings_window(self, database_path):

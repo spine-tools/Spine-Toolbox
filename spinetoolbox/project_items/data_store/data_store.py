@@ -69,16 +69,20 @@ class DataStore(ProjectItem):
         """See base class."""
         return "Data Stores"
 
-    @staticmethod
-    def parse_url(url):
+    def parse_url(self, url):
         """Return a complete url dictionary from the given dict or string"""
         base_url = dict(dialect=None, username=None, password=None, host=None, port=None, database=None)
         if isinstance(url, dict):
+            if url["database"].lower().endswith(".sqlite"):
+                # Convert relative database path back to absolute
+                abs_db_path = os.path.abspath(os.path.join(self._toolbox.project().project_dir, url["database"]))
+                url["database"] = abs_db_path
             base_url.update(url)
-        elif isinstance(url, str):
-            sa_url = make_url(url)
-            base_url["dialect"] = sa_url.get_dialect().name
-            base_url.update(sa_url.translate_connect_args())
+        # elif isinstance(url, str):
+        #     logging.debug("I'm here")
+        #     sa_url = make_url(url)
+        #     base_url["dialect"] = sa_url.get_dialect().name
+        #     base_url.update(sa_url.translate_connect_args())
         return base_url
 
     def make_signal_handler_dict(self):
@@ -159,6 +163,7 @@ class DataStore(ProjectItem):
                 )
             return None
         # Small hack to make sqlite file paths relative to this DS directory
+        # TODO: Check if this is still needed
         if dialect == "sqlite" and not os.path.isabs(url.database):
             url.database = os.path.join(self.data_dir, url.database)
             self._properties_ui.lineEdit_database.setText(url.database)
@@ -464,6 +469,14 @@ class DataStore(ProjectItem):
         """Returns a dictionary corresponding to this item."""
         d = super().item_dict()
         d["url"] = self.url()
+        db = d["url"]["database"]
+        # If database key is a file, change the path to relative
+        if os.path.isfile(db):
+            # logging.debug("Found file database:{0}".format(db))
+            rela_db = os.path.relpath(db, self._toolbox.project().project_dir)
+            # logging.debug("database as relative path:{0}".format(rela_db))
+            # Overwrite database key
+            d["url"]["database"] = rela_db
         return d
 
     def custom_context_menu(self, parent, pos):

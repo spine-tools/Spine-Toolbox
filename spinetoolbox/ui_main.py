@@ -393,7 +393,7 @@ class ToolboxUI(QMainWindow):
         # Parse project info
         name = project_info["project"]["name"]  # Project name
         desc = project_info["project"]["description"]  # Project description
-        tool_specification_paths = project_info["project"]["tool_specifications"]
+        tool_spec_paths = project_info["project"]["tool_specifications"]
         connections = project_info["project"]["connections"]
         project_items = project_info["objects"]
         # Create project
@@ -404,7 +404,9 @@ class ToolboxUI(QMainWindow):
             self.ui.textBrowser_eventlog.clear()
         self.ui.textBrowser_process_output.clear()
         # Init models
-        self.init_models(tool_specification_paths)
+        # Convert relative paths to absolute
+        abs_tool_spec_paths = [os.path.abspath(os.path.join(self._project.project_dir, p)) for p in tool_spec_paths]
+        self.init_models(abs_tool_spec_paths)
         # Populate project model with project items
         if not self._project.load(project_items):
             self.msg_error.emit("Loading project items failed")
