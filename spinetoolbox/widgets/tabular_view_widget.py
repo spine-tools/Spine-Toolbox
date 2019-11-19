@@ -341,7 +341,7 @@ class TabularViewForm(QMainWindow):
         return packed_data, empty_keys
 
     def delete_parameter_values(self, delete_values):
-        delete_ids = set()
+        values_to_delete = set()
         update_data = []
         # index to object classes
         if self.current_class_type == self._RELATIONSHIP_CLASS:
@@ -362,25 +362,24 @@ class TabularViewForm(QMainWindow):
             if key in self.parameter_values:
                 if self.current_value_type == self._DATA_VALUE:
                     # only delete values where only one field is populated
-                    delete_ids.add(self.parameter_values[key])
+                    values_to_delete.append(self.parameter_values[key]._asdict())
                 else:
                     # remove value from parameter_value field but not entire row
                     update_data.append({"id": self.parameter_values[key], self.current_value_type: None})
-        if delete_ids:
-            self.db_map.remove_items(parameter_value_ids=delete_ids)
+        if values_to_delete:
+            self.db_mngr.remove_items({self.db_map: {"parameter value list": values_to_delete}})
         if update_data:
-            self.db_map.update_parameter_values(*update_data)
+            self.db_mngr.update_parameter_values({self.db_map: update_data})
 
     def delete_relationships(self, delete_relationships):
-        delete_ids = set()
+        relationships_to_delete = list()
         for del_rel in delete_relationships:
             if all(n in self.objects for n in del_rel):
                 obj_ids = tuple(self.objects[n].id for n in del_rel)
                 if obj_ids in self.relationships:
-                    delete_ids.add(self.relationships[obj_ids].id)
-                    self.relationships.pop(obj_ids)
-        if delete_ids:
-            self.db_map.remove_items(relationship_ids=delete_ids)
+                    relationships_to_delete.append(self.relationships.pop(obj_ids)._asdict())
+        if relationships_to_delete:
+            self.db_mngr.remove_items({self.db_map: {"relationship": relationships_to_delete}})
 
     def delete_index_values_from_db(self, delete_indexes):
         if not delete_indexes:
@@ -394,20 +393,23 @@ class TabularViewForm(QMainWindow):
             elif k != self._JSON_TIME_NAME:
                 object_names += on
         # find ids
-        delete_obj_ids = set()
+        delete_objects = list()
         for on in object_names:
             if on in self.objects:
-                delete_obj_ids.add(self.objects[on].id)
+                delete_objects.append(self.objects[on]._asdict())
                 self.objects.pop(on)
-        delete_par_ids = set()
+        delete_parameters = list()
         for pn in parameter_names:
             if pn in self.parameters:
-                delete_par_ids.add(self.parameters[pn].id)
+                # Need to convert the parameter definition structs to something the other data store views understand.
+                parameter = self.parameters[pn]._asdict()
+                parameter["parameter_name"] = parameter.pop("name")
+                delete_parameters.append(parameter)
                 self.parameters.pop(pn)
-        if delete_obj_ids:
-            self.db_map.remove_items(object_ids=delete_obj_ids)
-        if delete_par_ids:
-            self.db_map.remove_items(parameter_definition_ids=delete_par_ids)
+        if delete_objects:
+            self.db_mngr.remove_items({self.db_map: {"object": delete_objects}})
+        if delete_parameters:
+            self.db_mngr.remove_items({self.db_map: {"parameter definition": delete_parameters}})
 
     def add_index_values_to_db(self, add_indexes):
         db_edited = False
@@ -429,10 +431,10 @@ class TabularViewForm(QMainWindow):
             elif k != self._JSON_TIME_NAME:
                 new_objects += [{"name": n, "class_id": self.object_classes[k].id} for n in on]
         if new_objects:
-            self.db_map.add_objects(*new_objects)
+            self.db_mngr.add_objects({self.db_map: new_objects})
             db_edited = True
         if new_parameters:
-            self.db_map.add_parameter_definitions(*new_parameters)
+            self.db_mngr.add_parameter_definitions({self.db_map: new_parameters})
             db_edited = True
         return db_edited
 
@@ -454,15 +456,17 @@ class TabularViewForm(QMainWindow):
                 new = [n for n in new if n in new_data_set]
                 add_objects.extend([{'name': n, 'class_id': self.object_classes[name].id} for n in new])
             if add_objects:
-                self.db_map.add_objects(*add_objects)
+                self.db_mngr.add_objects({self.db_map: add_objects})
                 self.load_objects()
             if delete_relationships:
                 ids = [tuple(self.objects[i].id for i in rel) for rel in delete_relationships]
-                delete_ids = set(self.relationships[r].id for r in ids if r in self.relationships)
-                for r in delete_ids:
-                    self.relationships.pop(r, None)
-                if delete_ids:
-                    self.db_map.remove_items(relationship_ids=delete_ids)
+                relationships_to_delete = list()
+                for deletable_id in ids:
+                    if deletable_id in self.relationships:
+                        deletable = self.relationships.pop(deletable_id)._asdict()
+                        relationships_to_delete.append(deletable)
+                if relationships_to_delete:
+                    self.db_mngr.remove_items({self.db_map: {"relationship": relationships_to_delete}})
             if add_relationships:
                 ids = [(tuple(self.objects[i].id for i in rel), '_'.join(rel)) for rel in delete_relationships]
                 c_id = self.relationship_classes[self.current_class_name].id
@@ -470,20 +474,23 @@ class TabularViewForm(QMainWindow):
                     {'object_id_list': r[0], 'name': r[1], 'class_id': c_id} for r in ids if r not in self.relationships
                 ]
                 if insert_rels:
-                    self.db_map.add_wide_relationships(*insert_rels)
+                    self.db_mngr.add_relationships({self.db_map: insert_rels})
                     db_edited = True
         elif self.current_class_type == self._OBJECT_CLASS:
             # find removed and new objects, only keep indexes in data
             delete_objects = set(index[0] for index in self.model.model._deleted_data)
             add_objects = set(index[0] for index, value in self.model.model._edit_data.items() if value is None)
             if delete_objects:
-                delete_ids = set(self.objects[name].id for name in delete_objects)
-                self.db_map.remove_items(object_ids=delete_ids)
+                objects_to_delete = list()
+                for name in delete_objects:
+                    deletable = self.objects[name]._asdict()
+                    objects_to_delete.append(deletable)
+                self.db_mngr.remove_items({self.db_map: {"object": objects_to_delete}})
                 db_edited = True
             if add_objects:
                 class_id = self.object_classes[self.current_class_name].id
                 add_objects = [{"name": o, "class_id": class_id} for o in add_objects]
-                self.db_map.add_objects(*add_objects)
+                self.db_mngr.add_objects({self.db_map: add_objects})
                 db_edited = True
         return db_edited
 
@@ -587,7 +594,7 @@ class TabularViewForm(QMainWindow):
                         )
         # save relationships
         if new_rels:
-            self.db_map.add_wide_relationships(*new_rels)
+            self.db_mngr.add_relationships({self.db_map: new_rels})
             db_edited = True
         return db_edited
 
