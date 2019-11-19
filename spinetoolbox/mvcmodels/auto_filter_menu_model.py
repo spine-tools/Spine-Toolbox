@@ -242,7 +242,8 @@ class AutoFilterMenuValueItemModel(AutoFilterMenuItemModel):
             return {}
         d = dict()
         for row in range(self.rowCount()):
-            item = self.index(row, 0).internalPointer()
+            mapped_row = self._row_map[row]
+            item = self.index(mapped_row, 0).internalPointer()
             if not item.checked:
                 continue
             for class_ in item.classes:
