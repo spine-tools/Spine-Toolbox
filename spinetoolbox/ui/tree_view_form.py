@@ -13,7 +13,7 @@
 # Form implementation generated from reading ui file 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\tree_view_form.ui',
 # licensing of 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\tree_view_form.ui' applies.
 #
-# Created: Tue Nov 12 12:56:56 2019
+# Created: Tue Nov 19 10:55:26 2019
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -414,7 +414,7 @@ class Ui_MainWindow(object):
         self.actionRemove_selection.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+Del", None, -1))
         self.actionRestore_Dock_Widgets.setText(QtWidgets.QApplication.translate("MainWindow", "Restore Dock Widgets", None, -1))
 
-from spinetoolbox.widgets.custom_qstatusbar import NotificationStatusBar
-from spinetoolbox.widgets.custom_qtreeview import CopyTreeView, ObjectTreeView
+from spinetoolbox.widgets.custom_qtreeview import ObjectTreeView, CopyTreeView
 from spinetoolbox.widgets.custom_qtableview import AutoFilterCopyPasteTableView
+from spinetoolbox.widgets.custom_qstatusbar import NotificationStatusBar
 from spinetoolbox import resources_icons_rc

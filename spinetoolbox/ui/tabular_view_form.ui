@@ -60,20 +60,6 @@
         <item>
          <widget class="QListWidget" name="list_select_class"/>
         </item>
-        <item>
-         <widget class="QPushButton" name="pushButton_add_object_class">
-          <property name="text">
-           <string>Add object class</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QPushButton" name="pushButton_add_relationship_class">
-          <property name="text">
-           <string>Add relationship class</string>
-          </property>
-         </widget>
-        </item>
        </layout>
       </widget>
       <widget class="QSplitter" name="splitter_2">

@@ -13,7 +13,7 @@
 # Form implementation generated from reading ui file 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\tabular_view_form.ui',
 # licensing of 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\tabular_view_form.ui' applies.
 #
-# Created: Tue Nov 12 12:56:55 2019
+# Created: Tue Nov 19 10:55:25 2019
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -53,12 +53,6 @@ class Ui_MainWindow(object):
         self.list_select_class = QtWidgets.QListWidget(self.verticalLayoutWidget)
         self.list_select_class.setObjectName("list_select_class")
         self.verticalLayout.addWidget(self.list_select_class)
-        self.pushButton_add_object_class = QtWidgets.QPushButton(self.verticalLayoutWidget)
-        self.pushButton_add_object_class.setObjectName("pushButton_add_object_class")
-        self.verticalLayout.addWidget(self.pushButton_add_object_class)
-        self.pushButton_add_relationship_class = QtWidgets.QPushButton(self.verticalLayoutWidget)
-        self.pushButton_add_relationship_class.setObjectName("pushButton_add_relationship_class")
-        self.verticalLayout.addWidget(self.pushButton_add_relationship_class)
         self.splitter_2 = QtWidgets.QSplitter(self.splitter_3)
         self.splitter_2.setOrientation(QtCore.Qt.Vertical)
         self.splitter_2.setOpaqueResize(True)
@@ -171,8 +165,6 @@ class Ui_MainWindow(object):
         MainWindow.setWindowTitle(QtWidgets.QApplication.translate("MainWindow", "MainWindow", None, -1))
         self.label_6.setText(QtWidgets.QApplication.translate("MainWindow", "Select input type:", None, -1))
         self.label_5.setText(QtWidgets.QApplication.translate("MainWindow", "Select object/relationship class:", None, -1))
-        self.pushButton_add_object_class.setText(QtWidgets.QApplication.translate("MainWindow", "Add object class", None, -1))
-        self.pushButton_add_relationship_class.setText(QtWidgets.QApplication.translate("MainWindow", "Add relationship class", None, -1))
         self.label.setText(QtWidgets.QApplication.translate("MainWindow", "Rows:", None, -1))
         self.label_2.setText(QtWidgets.QApplication.translate("MainWindow", "Columns:", None, -1))
         self.label_3.setText(QtWidgets.QApplication.translate("MainWindow", "Frozen:", None, -1))
@@ -189,5 +181,5 @@ class Ui_MainWindow(object):
         self.actionClose.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+W", None, -1))
 
 from spinetoolbox.widgets.custom_qlistview import PivotListWidget
-from spinetoolbox.widgets.custom_qtableview import FrozenTableView, SimpleCopyPasteTableView
+from spinetoolbox.widgets.custom_qtableview import SimpleCopyPasteTableView, FrozenTableView
 from spinetoolbox import resources_icons_rc
