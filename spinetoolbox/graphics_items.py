@@ -733,9 +733,14 @@ class Link(LinkBase):
     @Slot("QVariant")
     def _handle_execution_animation_value_changed(self, step):
         gradient = QLinearGradient(self.src_center, self.dst_center)
-        gradient.setColorAt(0, QColor(255, 255, 0, 204))
-        gradient.setColorAt(step, QColor(255, 0, 0, 204))
-        gradient.setColorAt(1, QColor(255, 255, 0, 204))
+        yellow = QColor(255, 255, 0, 204)
+        red = QColor(255, 0, 0, 204)
+        delta = 8 * self.magic_number / QLineF(self.src_center, self.dst_center).length()
+        gradient.setColorAt(0, yellow)
+        gradient.setColorAt(max(0.0, step - delta), yellow)
+        gradient.setColorAt(step, red)
+        gradient.setColorAt(min(1.0, step + delta), yellow)
+        gradient.setColorAt(1.0, yellow)
         self.setBrush(gradient)
 
     def has_parallel_link(self):
