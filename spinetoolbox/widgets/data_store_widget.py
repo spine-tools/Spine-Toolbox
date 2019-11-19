@@ -572,7 +572,7 @@ class DataStoreForm(QMainWindow):
         }
         name_key = name_keys.get(item_type, "name")
         if name_key:
-            names = {item[name_key] for db_map, data in db_map_data.items() for item in data}
+            names = {item[name_key] for data in db_map_data.values() for item in data}
             msg += f" the following {item_type} item(s):" + format_string_list(names)
         else:
             count = sum(len(data) for data in db_map_data.values())

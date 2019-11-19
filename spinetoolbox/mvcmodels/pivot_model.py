@@ -298,7 +298,7 @@ class PivotModel:
     def set_frozen_value(self, value):
         """Sets the value of the frozen indexes"""
         if len(value) != len(self.pivot_frozen):
-            raise ValueError("'value' must have same lenght as 'self.pivot_frozen'")
+            raise ValueError("'value' must have same length as 'self.pivot_frozen'")
         if value == self.frozen_value:
             # same as previous do nothing
             return
@@ -355,7 +355,7 @@ class PivotModel:
         """gets data from current pivot with indexes in row_mask and col_mask"""
         if not self._row_data_header and not self._column_data_header:
             if self.pivot_frozen and len(self.pivot_frozen) == len(self.index_names):
-                # special case when all indexes are in pivot forzen
+                # special case when all indexes are in pivot frozen
                 return [[self._data.get(self._key_getter(self.frozen_value), None)]]
             # no data
             return []
@@ -668,7 +668,7 @@ class PivotModel:
             if not deleted_entries:
                 # deleted entries not in index, do nothing:
                 continue
-            # uppdate existing entries
+            # update existing entries
             self.index_entries[k].difference_update(deleted_entries)
             k_unique = [u for u, v in self._unique_name_2_name.items() if v == k]
             for u in k_unique:
