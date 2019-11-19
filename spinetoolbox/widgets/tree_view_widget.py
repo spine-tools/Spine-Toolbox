@@ -251,17 +251,17 @@ class TreeViewForm(DataStoreForm):
     def _handle_object_parameter_tab_changed(self, index):
         """Update filter."""
         if index == 0:
-            self.object_parameter_value_model.update_filter()
+            self.object_parameter_value_model.update_main_filter()
         else:
-            self.object_parameter_definition_model.update_filter()
+            self.object_parameter_definition_model.update_main_filter()
 
     @Slot("int")
     def _handle_relationship_parameter_tab_changed(self, index):
         """Update filter."""
         if index == 0:
-            self.relationship_parameter_value_model.update_filter()
+            self.relationship_parameter_value_model.update_main_filter()
         else:
-            self.relationship_parameter_definition_model.update_filter()
+            self.relationship_parameter_definition_model.update_main_filter()
 
     @Slot("bool")
     def show_import_file_dialog(self, checked=False):

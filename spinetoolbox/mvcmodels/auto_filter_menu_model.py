@@ -23,21 +23,24 @@ from PySide2.QtCore import Qt, Signal, Slot, QStringListModel, QModelIndex
 class AutoFilterMenuItem:
     """An item for the auto filter menu."""
 
-    def __init__(self, checked, value, in_classes=()):
+    def __init__(self, checked, value, classes=()):
         """Init class.
 
         Args:
             checked (int): the checked status, checked if not filtered
             value: the value
-            in_classes (tuple): the entity classes where the value is found
+            classes (tuple): the entity classes where the value is found
         """
         self.checked = checked
         self.value = value
-        self.in_classes = in_classes
+        self.classes = classes
+
+    def __repr__(self):
+        return str(self.__dict__)
 
 
 class AutoFilterMenuItemModel(QStringListModel):
-    """Base class for models for the filter menu widget."""
+    """Base class for filter menu widget models."""
 
     def __init__(self, parent=None, fetch_step=32):
         """Init class."""
@@ -146,14 +149,14 @@ class AutoFilterMenuValueItemModel(AutoFilterMenuItemModel):
         self.build_row_map()
         self.emit_all_checked_state_changed()
 
-    def map_index(self, index):
+    def map_to_src(self, index):
         """Maps an index using the row map."""
         mapped_row = self._row_map[index.row()]
         return self.index(mapped_row, index.column())
 
     def data(self, index, role=Qt.DisplayRole):
         """Returns the data from the mapped index, as in a filter."""
-        return super().data(self.map_index(index), role)
+        return super().data(self.map_to_src(index), role)
 
     def rowCount(self, parent=QModelIndex()):
         """Returns the length of the row map."""
@@ -162,7 +165,7 @@ class AutoFilterMenuValueItemModel(AutoFilterMenuItemModel):
     def filter_accepts_row(self, row):
         """Returns whether or not the row passes the filter, and update the checked count
         so we know how many items are checked for emitting all_checked_state_changed."""
-        item = self.index(row, 0).internalPointer()
+        item = super().index(row, 0).internalPointer()
         if not re.search(self._filter_reg_exp, item.value):
             return False
         if item.checked == Qt.Checked:
@@ -195,11 +198,11 @@ class AutoFilterMenuValueItemModel(AutoFilterMenuItemModel):
             item = self.index(row, 0).internalPointer()
             item.checked = state
         self.dataChanged.emit(self.index(0, 0), self.index(self.rowCount() - 1, 0), [Qt.CheckStateRole])
-        self._checked_count = self.rowCount()
+        self._checked_count = self.rowCount() if state else 0
 
     def toggle_checked_state(self, index):
         """Toggle checked state of given index."""
-        item = index.internalPointer()
+        item = self.map_to_src(index).internalPointer()
         if item.checked in (Qt.Unchecked, Qt.PartiallyChecked):
             item.checked = Qt.Checked
             self._checked_count += 1
@@ -222,17 +225,26 @@ class AutoFilterMenuValueItemModel(AutoFilterMenuItemModel):
     def reset_model(self, data=None):
         """Resets model."""
         self._checked_count = 0
+        self._filter_reg_exp = ""
         self._row_map.clear()
         super().reset_model(data)
 
     def get_auto_filter(self):
-        """Returns autofilter.
+        """Returns the output of the auto filter.
+
+        Returns:
+            dict, NoneType: An empty dictionary if *all* values are accepted; None if *no* values are accepted;
+                and a dictionary mapping tuples (db_map, class_id) to a set of values if *some* are accepted.
         """
+        if self._checked_count == 0:
+            return None
+        if self._checked_count == super().rowCount():
+            return {}
         d = dict()
         for row in range(self.rowCount()):
             item = self.index(row, 0).internalPointer()
-            if item.checked:
+            if not item.checked:
                 continue
-            for class_id in item.in_classes:
-                d.setdefault(class_id, set()).add(item.value)
+            for class_ in item.classes:
+                d.setdefault(class_, set()).add(item.value)
         return d

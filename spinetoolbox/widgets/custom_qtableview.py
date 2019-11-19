@@ -213,9 +213,9 @@ class AutoFilterMenu(QMenu):
         parent (QTableView): the parent widget.
     """
 
-    asc_sort_triggered = Signal(name="asc_sort_triggered")
-    desc_sort_triggered = Signal(name="desc_sort_triggered")
-    filter_triggered = Signal(name="filter_triggered")
+    asc_sort_triggered = Signal()
+    desc_sort_triggered = Signal()
+    filter_triggered = Signal(dict)
 
     def __init__(self, parent):
         """Initialize class."""
@@ -264,8 +264,8 @@ class AutoFilterMenu(QMenu):
         """Called when user presses Ok.
         Collect selections and emit signal.
         """
-        self.auto_filter = self.value_item_model.get_auto_filter()
-        self.filter_triggered.emit()
+        auto_filter = self.value_item_model.get_auto_filter()
+        self.filter_triggered.emit(auto_filter)
 
 
 class AutoFilterCopyPasteTableView(CopyPasteTableView):
@@ -275,10 +275,12 @@ class AutoFilterCopyPasteTableView(CopyPasteTableView):
         parent (QWidget): The parent of this view
     """
 
-    filter_changed = Signal("QObject", "int", "QStringList", name="filter_changed")
-
     def __init__(self, parent):
-        """Initialize the class."""
+        """Initializes the view.
+
+        Args:
+            parent (QObject)
+        """
         super().__init__(parent=parent)
         self.auto_filter_column = None
         self.auto_filter_menu = AutoFilterMenu(self)
@@ -288,7 +290,11 @@ class AutoFilterCopyPasteTableView(CopyPasteTableView):
         self.horizontalHeader().sectionClicked.connect(self.show_auto_filter_menu)
 
     def keyPressEvent(self, event):
-        """Show the autofilter menu if the user presses Alt + Down"""
+        """Shows the autofilter menu if the user presses Alt + Down.
+
+        Args:
+            event (QEvent)
+        """
         if event.modifiers() == Qt.AltModifier and event.key() == Qt.Key_Down:
             column = self.currentIndex().column()
             self.show_auto_filter_menu(column)
@@ -297,15 +303,23 @@ class AutoFilterCopyPasteTableView(CopyPasteTableView):
             super().keyPressEvent(event)
 
     def setModel(self, model):
-        """Disconnect sectionPressed signal which seems to be connected by the super method.
-        Otherwise the column is selected when pressing on the header."""
+        """Disconnects the sectionPressed signal which seems to be connected by the super method.
+        Otherwise pressing the header just selects the column.
+
+        Args:
+            model (QAbstractItemModel)
+        """
         super().setModel(model)
         self.horizontalHeader().sectionPressed.disconnect()
 
     @Slot(int, name="show_filter_menu")
     def show_auto_filter_menu(self, logical_index):
         """Called when user clicks on a horizontal section header.
-        Show/hide the auto filter widget."""
+        Shows/hides the auto filter widget.
+
+        Args:
+            logical_index (int)
+        """
         self.auto_filter_column = logical_index
         header_pos = self.mapToGlobal(self.horizontalHeader().pos())
         pos_x = header_pos.x() + self.horizontalHeader().sectionViewportPosition(self.auto_filter_column)
@@ -314,11 +328,15 @@ class AutoFilterCopyPasteTableView(CopyPasteTableView):
         self.auto_filter_menu.set_data(menu_data)
         self.auto_filter_menu.popup(QPoint(pos_x, pos_y))
 
-    @Slot(name="update_auto_filter")
-    def update_auto_filter(self):
+    @Slot(dict)
+    def update_auto_filter(self, auto_filter):
         """Called when the user selects Ok in the auto filter menu.
-        Set auto filter in model."""
-        self.model().update_auto_filter(self.auto_filter_column, self.auto_filter_menu.auto_filter)
+        Sets auto filter in model.
+
+        Args:
+            auto_filter (dict)
+        """
+        self.model().update_auto_filter(self.auto_filter_column, auto_filter)
 
     @Slot(name="sort_model_ascending")
     def sort_model_ascending(self):

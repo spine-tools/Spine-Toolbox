@@ -132,35 +132,27 @@ class SingleParameterModel(MinimalTableModel):
         """Update items in db. Required by batch_set_data"""
         raise NotImplementedError()
 
-    def _filter_accepts_item(self, item, ignored_columns=None):
-        return self._main_filter_accepts_item(item) and self._auto_filter_accepts_item(
-            item, ignored_columns=ignored_columns
-        )
+    def _filter_accepts_item(self, item):
+        return self._main_filter_accepts_item(item) and self._auto_filter_accepts_item(item)
 
     def _main_filter_accepts_item(self, item):
         """Applies the main filter, defined by the selections in the grand parent."""
-        if self._selected_param_def_ids:
-            return item[self.parameter_definition_id_key] in self._selected_param_def_ids
-        return True
+        if self._selected_param_def_ids is None:
+            return False
+        if self._selected_param_def_ids == set():
+            return True
+        return item[self.parameter_definition_id_key] in self._selected_param_def_ids
 
-    def _auto_filter_accepts_item(self, item, ignored_columns=None):
+    def _auto_filter_accepts_item(self, item):
         """Applies the autofilter, defined by the autofilter drop down menu."""
-        if ignored_columns is None:
-            ignored_columns = []
         for column, values in self._auto_filter.items():
-            if column in ignored_columns:
-                continue
-            if item[self.header[column]] in values:
+            if values and item[self.header[column]] not in values:
                 return False
         return True
 
-    def accepted_rows(self, ignored_columns=None):
+    def accepted_rows(self):
         """Returns a list of accepted rows, for convenience."""
-        return [
-            row
-            for row in range(self.rowCount())
-            if self._filter_accepts_item(self._db_item_at_row(row), ignored_columns=ignored_columns)
-        ]
+        return [row for row in range(self.rowCount()) if self._filter_accepts_item(self._db_item_at_row(row))]
 
     def _db_item_at_row(self, row):
         return self.db_mngr.get_item(self.db_map, self.item_type, self._main_data[row])
