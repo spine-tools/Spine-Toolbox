@@ -132,30 +132,30 @@ class SingleParameterModel(MinimalTableModel):
         """Update items in db. Required by batch_set_data"""
         raise NotImplementedError()
 
-    def _filter_accepts_item(self, item):
-        return self._main_filter_accepts_item(item) and self._auto_filter_accepts_item(item)
+    def _filter_accepts_row(self, row):
+        return self._main_filter_accepts_row(row) and self._auto_filter_accepts_row(row)
 
-    def _main_filter_accepts_item(self, item):
+    def _main_filter_accepts_row(self, row):
         """Applies the main filter, defined by the selections in the grand parent."""
         if self._selected_param_def_ids is None:
             return False
         if self._selected_param_def_ids == set():
             return True
-        return item[self.parameter_definition_id_key] in self._selected_param_def_ids
+        param_def_id = self.db_mngr.get_value(
+            self.db_map, self.item_type, self._main_data[row], self.parameter_definition_id_key
+        )
+        return param_def_id in self._selected_param_def_ids
 
-    def _auto_filter_accepts_item(self, item):
+    def _auto_filter_accepts_row(self, row):
         """Applies the autofilter, defined by the autofilter drop down menu."""
         for column, values in self._auto_filter.items():
-            if values and item[self.header[column]] not in values:
+            if values and self.index(row, column).data() not in values:
                 return False
         return True
 
     def accepted_rows(self):
         """Returns a list of accepted rows, for convenience."""
-        return [row for row in range(self.rowCount()) if self._filter_accepts_item(self._db_item_at_row(row))]
-
-    def _db_item_at_row(self, row):
-        return self.db_mngr.get_item(self.db_map, self.item_type, self._main_data[row])
+        return [row for row in range(self.rowCount()) if self._filter_accepts_row(row)]
 
 
 class SingleObjectParameterMixin:

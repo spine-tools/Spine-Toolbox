@@ -166,7 +166,7 @@ class AutoFilterMenuValueItemModel(AutoFilterMenuItemModel):
         """Returns whether or not the row passes the filter, and update the checked count
         so we know how many items are checked for emitting all_checked_state_changed."""
         item = super().index(row, 0).internalPointer()
-        if not re.search(self._filter_reg_exp, item.value):
+        if not re.search(self._filter_reg_exp, str(item.value)):
             return False
         if item.checked == Qt.Checked:
             self._checked_count += 1

@@ -330,7 +330,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
             if not self._main_filter_accepts_model(model):
                 continue
             for row in range(model.rowCount()):
-                if not model._main_filter_accepts_item(model._db_item_at_row(row)):
+                if not model._main_filter_accepts_row(row):
                     continue
                 value = model.index(row, column).data()
                 auto_filter_vals.setdefault(value, set()).add((model.db_map, model.entity_class_id))
