@@ -62,8 +62,8 @@ class ConnectorButton(QGraphicsRectItem):
         self._toolbox = toolbox
         self.position = position
         self.links = list()
-        self.setPen(QPen(Qt.black, 0.5, Qt.SolidLine))
-        # self.setPen(QPen(Qt.NoPen))
+        pen = QPen(Qt.black, 0.5, Qt.SolidLine)
+        self.setPen(pen)
         self.setBrush(self.brush)
         parent_rect = parent.rect()
         extent = 0.2 * parent_rect.width()
@@ -71,11 +71,11 @@ class ConnectorButton(QGraphicsRectItem):
         if position == "top":
             rect.moveCenter(QPointF(parent_rect.center().x(), parent_rect.top() + extent / 2))
         elif position == "left":
-            rect.moveCenter(QPointF(parent_rect.left() + extent / 2 + 1, parent_rect.center().y()))
+            rect.moveCenter(QPointF(parent_rect.left() + extent / 2, parent_rect.center().y()))
         elif position == "bottom":
-            rect.moveCenter(QPointF(parent_rect.center().x(), parent_rect.bottom() - extent / 2 - 1))
+            rect.moveCenter(QPointF(parent_rect.center().x(), parent_rect.bottom() - extent / 2))
         elif position == "right":
-            rect.moveCenter(QPointF(parent_rect.right() - extent / 2 - 1, parent_rect.center().y()))
+            rect.moveCenter(QPointF(parent_rect.right() - extent / 2, parent_rect.center().y()))
         self.setRect(rect)
         self.setAcceptHoverEvents(True)
         self.setCursor(Qt.PointingHandCursor)
@@ -543,7 +543,7 @@ class LinkBase(QGraphicsPathItem):
             QPainterPath
         """
         ellipse_path = QPainterPath()
-        rect = QRectF(0, 0, 1.5 * self.magic_number, 1.5 * self.magic_number)
+        rect = QRectF(0, 0, 1.6 * self.magic_number, 1.6 * self.magic_number)
         rect.moveCenter(self.src_center)
         ellipse_path.addEllipse(rect)
         return ellipse_path
@@ -685,7 +685,7 @@ class LinkBase(QGraphicsPathItem):
 
 class Link(LinkBase):
     def __init__(self, toolbox, src_connector, dst_connector):
-        """An item that connects two project items.
+        """A graphics item to represent the connection between two project items.
 
         Args:
             toolbox (ToolboxUI): main UI class instance
