@@ -73,10 +73,12 @@ class DataStore(ProjectItem):
         """Return a complete url dictionary from the given dict or string"""
         base_url = dict(dialect=None, username=None, password=None, host=None, port=None, database=None)
         if isinstance(url, dict):
-            if url["database"].lower().endswith(".sqlite"):
-                # Convert relative database path back to absolute
-                abs_db_path = os.path.abspath(os.path.join(self._toolbox.project().project_dir, url["database"]))
-                url["database"] = abs_db_path
+            if url is not None:
+                if "database" in url and url["database"] is not None:
+                    if url["database"].lower().endswith(".sqlite"):
+                        # Convert relative database path back to absolute
+                        abs_path = os.path.abspath(os.path.join(self._toolbox.project().project_dir, url["database"]))
+                        url["database"] = abs_path
             base_url.update(url)
         # elif isinstance(url, str):
         #     logging.debug("I'm here")
@@ -471,12 +473,13 @@ class DataStore(ProjectItem):
         d["url"] = self.url()
         db = d["url"]["database"]
         # If database key is a file, change the path to relative
-        if os.path.isfile(db):
-            # logging.debug("Found file database:{0}".format(db))
-            rela_db = os.path.relpath(db, self._toolbox.project().project_dir)
-            # logging.debug("database as relative path:{0}".format(rela_db))
-            # Overwrite database key
-            d["url"]["database"] = rela_db
+        if db is not None:
+            if os.path.isfile(db):
+                # logging.debug("Found file database:{0}".format(db))
+                rela_db = os.path.relpath(db, self._toolbox.project().project_dir)
+                # logging.debug("database as relative path:{0}".format(rela_db))
+                # Overwrite database key
+                d["url"]["database"] = rela_db
         return d
 
     def custom_context_menu(self, parent, pos):
