@@ -76,9 +76,9 @@ class Exporter(ProjectItem):
                 file_path = os.path.relpath(file_path, self.data_dir)
                 normalized_db_to_file_name_map[db_path] = file_path
             self._database_to_file_name_map = normalized_db_to_file_name_map
-        # Convert settings file paths to absolute
-        abs_settings_paths = [os.path.abspath(os.path.join(self._project.project_dir, s)) for s in settings_file_names]
-        if abs_settings_paths is not None:
+        # Convert settings file paths to absolute (if available)
+        if settings_file_names is not None:
+            abs_settings_paths = [os.path.abspath(os.path.join(self._project.project_dir, s)) for s in settings_file_names]
             for file_name in abs_settings_paths:
                 try:
                     with open(file_name) as input_file:
