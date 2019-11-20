@@ -67,16 +67,15 @@ class Exporter(ProjectItem):
         self._settings_windows = dict()
         self._settings = dict()
         self._database_urls = database_urls if database_urls is not None else list()
-        # Convert sqlite paths from rela to abs
-        # self._database_to_file_name_map = database_to_file_name_map if database_to_file_name_map is not None else dict()
         if not database_to_file_name_map:
             self._database_to_file_name_map = dict()
         else:
-            for key, value in database_to_file_name_map.items():
-                if key.endswith(".sqlite"):
-                    new_key = os.path.abspath(os.path.join("sqlite:///", self._project.project_dir, key))
-                    database_to_file_name_map[new_key] = database_to_file_name_map.pop(key)
-            self._database_to_file_name_map = database_to_file_name_map
+            normalized_db_to_file_name_map = dict()
+            for db_path, rel_output_file_path in database_to_file_name_map.items():
+                file_path = os.path.abspath(os.path.join(self._project.project_dir, rel_output_file_path))
+                file_path = os.path.relpath(file_path, self.data_dir)
+                normalized_db_to_file_name_map[db_path] = file_path
+            self._database_to_file_name_map = normalized_db_to_file_name_map
         # Convert settings file paths to absolute
         abs_settings_paths = [os.path.abspath(os.path.join(self._project.project_dir, s)) for s in settings_file_names]
         if abs_settings_paths is not None:
@@ -154,7 +153,9 @@ class Exporter(ProjectItem):
         if gams_system_directory is None:
             self._toolbox.msg_error.emit("<b>{}</b>: Cannot proceed. No GAMS installation found.".format(self.name))
             if self._toolbox.project().execution_instance is not None:
-                self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(ExecutionState.ABORT)
+                self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(
+                    ExecutionState.ABORT
+                )
         for url in self._database_urls:
             file_name = self._database_to_file_name_map.get(url, None)
             if file_name is None:
@@ -231,12 +232,12 @@ class Exporter(ProjectItem):
         """Returns a dictionary corresponding to this item's configuration."""
         d = super().item_dict()
         # Convert input db paths to relative
-        # db_to_file_name_map = [os.path.relpath(d, self._project.project_dir) for d in self._database_to_file_name_map]
-        for key, value in self._database_to_file_name_map.items():
-            # key is something like 'sqlite:///c:\temp\db.sqlite. Convert to relative
-            new_key = os.path.relpath(key, self._project.project_dir)
-            self._database_to_file_name_map[new_key] = self._database_to_file_name_map.pop(key)
-        d["database_to_file_name_map"] = self._database_to_file_name_map
+        db_to_rel_file_name_map = dict()
+        for db, output_file_name in self._database_to_file_name_map.items():
+            db_to_rel_file_name_map[db] = os.path.relpath(
+                os.path.join(self.data_dir, output_file_name), self._project.project_dir
+            )
+        d["database_to_file_name_map"] = db_to_rel_file_name_map
         settings_file_names = self._save_settings()
         # Convert settings file paths to relative
         settings_files_relpath = [os.path.relpath(s, self._project.project_dir) for s in settings_file_names]

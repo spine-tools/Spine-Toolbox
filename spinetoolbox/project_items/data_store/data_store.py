@@ -476,7 +476,7 @@ class DataStore(ProjectItem):
         if db is not None:
             if os.path.isfile(db):
                 # logging.debug("Found file database:{0}".format(db))
-                rela_db = os.path.relpath(db, self._toolbox.project().project_dir)
+                rela_db = os.path.relpath(db, self._project.project_dir)
                 # logging.debug("database as relative path:{0}".format(rela_db))
                 # Overwrite database key
                 d["url"]["database"] = rela_db
