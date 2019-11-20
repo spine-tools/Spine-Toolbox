@@ -270,7 +270,7 @@ class DesignQGraphicsView(CustomQGraphicsView):
             event (QGraphicsSceneMouseEvent): Mouse event
         """
         if self.link_drawer and self.link_drawer.drawing:
-            self.link_drawer.dst = self.mapToScene(event.pos())
+            self.link_drawer.tip = self.mapToScene(event.pos())
             self.link_drawer.update_geometry()
         super().mouseMoveEvent(event)
 
@@ -286,7 +286,7 @@ class DesignQGraphicsView(CustomQGraphicsView):
         Args:
             empty (boolean): True when creating a new project
         """
-        self.link_drawer = LinkDrawer()
+        self.link_drawer = LinkDrawer(self._toolbox)
         self.scene().addItem(self.link_drawer)
         if len(self.scene().items()) == 1:
             # Loaded project has no project items
@@ -330,6 +330,10 @@ class DesignQGraphicsView(CustomQGraphicsView):
             src_connector (ConnectorButton): Source connector button
             dst_connector (ConnectorButton): Destination connector button
         """
+        # Remove existing links betwen the same items
+        for link in src_connector._parent.outgoing_links():
+            if link.dst_connector._parent == dst_connector._parent:
+                link.wipe_out()
         link = Link(self._toolbox, src_connector, dst_connector)
         self.scene().addItem(link)
         # Store Link in connectors, so it can be found *from* the Project Item
@@ -340,12 +344,9 @@ class DesignQGraphicsView(CustomQGraphicsView):
         dst_name = link.dst_icon.name()
         self._toolbox.project().dag_handler.add_graph_edge(src_name, dst_name)
 
-    def remove_link(self, link, from_dag=True):
+    def remove_link(self, link):
         """Removes link from scene."""
-        self.scene().removeItem(link)
-        # Remove Link from connectors
-        link.src_connector.links.remove(link)
-        link.dst_connector.links.remove(link)
+        link.wipe_out()
         # Remove edge (connection link) from dag
         src_name = link.src_icon.name()
         dst_name = link.dst_icon.name()
@@ -356,7 +357,7 @@ class DesignQGraphicsView(CustomQGraphicsView):
         self.remove_link(link)
         self.draw_links(link.src_connector)
         # noinspection PyArgumentList
-        self.link_drawer.dst = self.mapToScene(self.mapFromGlobal(QCursor.pos()))
+        self.link_drawer.tip = self.mapToScene(self.mapFromGlobal(QCursor.pos()))
         self.link_drawer.update_geometry()
 
     def restore_links(self, connections):
@@ -435,7 +436,7 @@ class DesignQGraphicsView(CustomQGraphicsView):
         if not self.link_drawer.drawing:
             # start drawing and remember source connector
             self.link_drawer.drawing = True
-            self.link_drawer.start_drawing_at(connector.sceneBoundingRect())
+            self.link_drawer.start_drawing_at(connector)
             self.src_connector = connector
         else:
             # stop drawing and make connection

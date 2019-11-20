@@ -19,7 +19,7 @@ Contains classes for handling project item execution.
 from enum import Enum
 import logging
 import random
-from PySide2.QtCore import Signal, Slot, QObject
+from PySide2.QtCore import Signal, Slot, QObject, QTimer
 import networkx as nx
 
 
@@ -334,12 +334,11 @@ class ExecutionInstance(QObject):
     graph_execution_finished_signal = Signal("QVariant")
     project_item_execution_finished_signal = Signal("QVariant")
 
-    def __init__(self, toolbox, ordered_nodes, resource_map):
+    def __init__(self, toolbox, ordered_nodes):
         """
         Args:
             toolbox (ToolboxUI): QMainWindow instance
             ordered_nodes (dict): dict of nodes to execute; key is the node, value is its direct successors
-            resource_map (ResourceFinder): project's resource map
         """
         QObject.__init__(self)
         self._toolbox = toolbox
@@ -349,10 +348,15 @@ class ExecutionInstance(QObject):
         # Resources available to project items
         self.resources = dict()  # Key is item name, value is resource list
         self.rank = 0  # The number in the list of the item currently simulated
-        self._resource_map = resource_map
+        self._resource_map = ResourceMap(ordered_nodes, toolbox.project_item_model)
 
     def start_execution(self):
         """Pops the next item from the execution list and starts executing it."""
+        for node in self._ordered_nodes:
+            index = self._toolbox.project_item_model.find_item(node)
+            item = self._toolbox.project_item_model.project_item(index)
+            item.prepare_for_resource_discovery()
+        self._resource_map.update()
         item_name = self.execution_list.pop(0)
         self.execute_project_item(item_name)
 
@@ -360,13 +364,13 @@ class ExecutionInstance(QObject):
         """Starts executing project item."""
         item_ind = self._toolbox.project_item_model.find_item(item_name)
         self.running_item = self._toolbox.project_item_model.project_item(item_ind)
-        self.project_item_execution_finished_signal.connect(self.item_execution_finished)
+        self.project_item_execution_finished_signal.connect(self.receive_item_execution_finished)
         resources_upstream = self._resource_map.available_upstream_resources(self.running_item.name)
         resources_downstream = self._resource_map.available_downstream_resources(self.running_item.name)
         self.running_item.execute(resources_upstream, resources_downstream)
 
     @Slot("QVariant")
-    def item_execution_finished(self, item_finish_state):
+    def receive_item_execution_finished(self, item_finish_state):
         """Pop next project item to execute or finish current graph if there are no items left.
 
         Args:
@@ -375,7 +379,7 @@ class ExecutionInstance(QObject):
         if item_finish_state == ExecutionState.WAIT:
             # Expecting another call to this function.
             return
-        self.project_item_execution_finished_signal.disconnect()
+        self.project_item_execution_finished_signal.disconnect(self.receive_item_execution_finished)
         if item_finish_state == ExecutionState.ABORT:
             # Item execution failed due to e.g. Tool did not find input files or something
             self.graph_execution_finished_signal.emit(ExecutionState.ABORT)
@@ -384,6 +388,12 @@ class ExecutionInstance(QObject):
             # User pressed Stop button
             self.graph_execution_finished_signal.emit(ExecutionState.STOP_REQUESTED)
             return
+        anim = self.running_item.make_execution_leave_animation()
+        anim.finished.connect(lambda: QTimer.singleShot(0, self._execute_next_item))
+        anim.start()
+
+    @Slot()
+    def _execute_next_item(self):
         try:
             item_name = self.execution_list.pop(0)
         except IndexError:
@@ -394,55 +404,97 @@ class ExecutionInstance(QObject):
     def stop(self):
         """Stops running project item and terminates current graph execution."""
         if not self.running_item:
-            self._toolbox.msg.emit("No running item")
             self.graph_execution_finished_signal.emit(ExecutionState.STOP_REQUESTED)
             return
         self.running_item.stop_execution()
         return
 
 
-class ResourceFinder:
+class ResourceMap:
     """Enables queries about which resources are available to project items."""
 
     def __init__(self, ordered_nodes, project_item_model):
-        """Initializes two mappings (dictionaries) to quickly find upstream and downstream items 
-        at execution time.
+        """Inits map.
 
         Args:
-            ordered_nodes (dict): item execution order; key is the item while value is a list of downstream items
+            ordered_nodes (dict): item execution order; key is the *upstream* item, while value is a list of downstream items
             project_item_model (ProjectItemModel): Toolbox's project item model
         """
-        # Key is item name, value is list of ProjectItem instances
-        self._downstream_items = dict()
-        self._upstream_items = dict()
-        for upstream_node, downstream_nodes in ordered_nodes.items():
-            self._downstream_items[upstream_node] = list()
-            upstream_index = project_item_model.find_item(upstream_node)
-            upstream_item = project_item_model.project_item(upstream_index)
-            for downstream_node in downstream_nodes:
-                self._upstream_items.setdefault(downstream_node, list()).append(upstream_item)
-                downstream_index = project_item_model.find_item(downstream_node)
-                downstream_item = project_item_model.project_item(downstream_index)
-                self._downstream_items[upstream_node].append(downstream_item)
+        # Key is item name, value is resource list
+        self._ordered_nodes = ordered_nodes
+        self._inv_ordered_nodes = self._inverted(ordered_nodes)
+        self._project_item_model = project_item_model
+        self._available_upstream_resources = dict()
+        self._available_downstream_resources = dict()
+
+    def _project_item_from_name(self, name):
+        """Returns a ProjectItem instance from name."""
+        index = self._project_item_model.find_item(name)
+        return self._project_item_model.project_item(index)
+
+    @staticmethod
+    def _inverted(source):
+        """Inverts a dictionary that maps keys to a list of values.
+        The result maps values to a list of keys in the original dictionary that include the value.
+        """
+        result = dict()
+        for key, value_list in source.items():
+            for value in value_list:
+                result.setdefault(value, list()).append(key)
+        return result
+
+    def update(self):
+        """
+        Updates the resource mapping.
+        """
+        # Pass resources downstream
+        for upstream_node, downstream_nodes in self._ordered_nodes.items():
+            project_item = self._project_item_from_name(upstream_node)
+            available_upstream_resources = self.available_upstream_resources(upstream_node)
+            resources = project_item.available_resources_downstream(available_upstream_resources)
+            if resources:
+                self._pass_upstream_resources(downstream_nodes, resources)
+        # Pass resources upstream
+        for downstream_node, upstream_nodes in self._inv_ordered_nodes.items():
+            project_item = self._project_item_from_name(downstream_node)
+            resources = project_item.available_resources_upstream()
+            if resources:
+                self._pass_downstream_resources(upstream_nodes, resources)
+
+    def _pass_upstream_resources(self, downstream_nodes, upstream_resources):
+        """
+        Makes upstream resources available to downstream nodes.
+
+        Args:
+            downstream_nodes (Iterable): the nodes to which the resources should be available
+            upstream_resources (Iterable): the upstream resource(s) to make available
+        """
+        for node in downstream_nodes:
+            self._available_upstream_resources.setdefault(node, list()).extend(upstream_resources)
+
+    def _pass_downstream_resources(self, upstream_nodes, downstream_resources):
+        """
+        Makes downstream resources available to upstream nodes.
+
+        Args:
+            upstream_nodes (Iterable): the nodes to which the resources should be available
+            downstream_resources (Iterable): the downstream resource(s) to make available
+        """
+        for node in upstream_nodes:
+            self._available_downstream_resources.setdefault(node, list()).extend(downstream_resources)
 
     def available_upstream_resources(self, item):
-        """Returns the list of resources available to the given item from upstream items.
+        """Returns the list of upstream resources available to the given item.
 
         Args:
             item (str): the name of the item that asks
         """
-        resources = []
-        for upstream_item in self._upstream_items.get(item, []):
-            resources += upstream_item.available_resources_downstream()
-        return resources
+        return self._available_upstream_resources.get(item, list())
 
     def available_downstream_resources(self, item):
-        """Returns the list of resources available to the given item from downstream items.
+        """Returns the list of downstream resources available to the given item.
 
         Args:
             item (str): the name of the item that asks
         """
-        resources = []
-        for downstream_item in self._downstream_items.get(item, []):
-            resources += downstream_item.available_resources_upstream()
-        return resources
+        return self._available_downstream_resources.get(item, list())

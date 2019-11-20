@@ -20,7 +20,7 @@ import os
 import logging
 from urllib.parse import urlparse
 from urllib.request import url2pathname
-from PySide2.QtCore import Qt, Signal, QUrl
+from PySide2.QtCore import Qt, Signal, QUrl, QParallelAnimationGroup
 from PySide2.QtWidgets import QInputDialog
 from PySide2.QtGui import QDesktopServices
 from .executioner import ExecutionState
@@ -240,7 +240,7 @@ class ProjectItem(BaseProjectItem):
         self._properties_ui = None
         self._icon = None
         self._sigs = None
-        self.item_changed.connect(lambda: self._toolbox.project().notify_items_in_same_dag_of_dag_changes(self.name))
+        self.item_changed.connect(lambda: self._toolbox.project().notify_changes_in_containing_dag(self.name))
         # Make project directory for this Item
         self.data_dir = os.path.join(self._project.project_dir, self.short_name)
         try:
@@ -318,6 +318,14 @@ class ProjectItem(BaseProjectItem):
         else:
             self.get_icon().rank_icon.set_rank("X")
 
+    def prepare_for_resource_discovery(self):
+        """
+        Prepares this item for resource discovery.
+        Called by the execution instance before collecting resources for this item.
+
+        The default implementation does nothing.
+        """
+
     def execute(self, resources_upstream, resources_downstream):
         """
         Executes this item.
@@ -353,7 +361,7 @@ class ProjectItem(BaseProjectItem):
         """
         Handles changes in the DAG.
 
-        Subclasses should reimplement the _do_handle_dag_changes() method.
+        Subclasses should reimplement the _do_handle_dag_changed() method.
 
         Args:
             rank (int): item's execution order
@@ -373,6 +381,20 @@ class ProjectItem(BaseProjectItem):
         Args:
             resources_upstream (list): resources available from upstream items
         """
+
+    def make_execution_leave_animation(self):
+        """
+        Returns animation to play when execution leaves this item.
+
+        Returns:
+            QParallelAnimationGroup
+        """
+        icon = self.get_icon()
+        links = set(link for conn in icon.connectors.values() for link in conn.links if link.src_connector == conn)
+        anim_group = QParallelAnimationGroup(self)
+        for link in links:
+            anim_group.addAnimation(link.make_execution_animation())
+        return anim_group
 
     def invalidate_workflow(self, edges):
         """Notifies that this item's workflow is not acyclic.
@@ -498,12 +520,15 @@ class ProjectItem(BaseProjectItem):
         )
 
     # pylint: disable=no-self-use
-    def available_resources_downstream(self):
+    def available_resources_downstream(self, upstream_resources):
         """
-        Returns available resources for downstream items.
+        Returns resources available to downstream items.
 
         Should be reimplemented by subclasses if they want to offer resources
         to downstream items. The default implementation returns an empty list.
+
+        Args:
+            upstream_resources (list): a list of resources available from upstream items
 
         Returns:
             a list of ProjectItemResources
@@ -513,7 +538,7 @@ class ProjectItem(BaseProjectItem):
     # pylint: disable=no-self-use
     def available_resources_upstream(self):
         """
-        Returns available resources for upstream items.
+        Returns resources available to upstream items.
 
         Should be reimplemented by subclasses if they want to offer resources
         to upstream items. The default implementation returns an empty list.
@@ -528,23 +553,20 @@ class ProjectItemResource:
     """Class to hold a resource made available by a project item
     and that may be consumed by another project item."""
 
-    def __init__(self, provider, type_, url="", data=None, metadata=None):
+    def __init__(self, provider, type_, url="", metadata=None):
         """Init class.
 
         Args:
             provider (ProjectItem): The item that provides the resource
-            type_ (str): The resource type, either "file", "database", or "data" (for now)
+            type_ (str): The resource type, either "file" or "database" (for now)
             url (str): The url of the resource
-            data (object): The data in the resource
-            metadata (dict): Some metadata providing extra information about the resource. For now it has two keys:
-                - is_output (bool): whether the resource is an output from a process, e.g., a Tool ouput file
-                - for_import (bool): whether the resource is data to be imported into a Spine db
+            metadata (dict): Some metadata providing extra information about the resource. For now it has one key:
+                - future (bool): whether the resource is from the future, e.g. Tool output files advertised beforehand
         """
         self.provider = provider
         self.type_ = type_
         self.url = url
         self.parsed_url = urlparse(url)
-        self.data = data
         if not metadata:
             metadata = dict()
         self.metadata = metadata
@@ -557,7 +579,6 @@ class ProjectItemResource:
             self.provider == other.provider
             and self.type_ == other.type_
             and self.url == other.url
-            and self.data == other.data
             and self.metadata == other.metadata
         )
 
@@ -566,7 +587,6 @@ class ProjectItemResource:
         result += f"provider={self.provider}, "
         result += f"type_={self.type_}, "
         result += f"url={self.url}, "
-        result += f"data={self.data}, "
         result += f"metadata={self.metadata})"
         return result
 

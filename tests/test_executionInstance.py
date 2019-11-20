@@ -20,9 +20,9 @@ import unittest
 from unittest import mock
 import logging
 import sys
-from PySide2.QtCore import QModelIndex
+from PySide2.QtCore import QVariantAnimation
 from PySide2.QtWidgets import QApplication
-from spinetoolbox.executioner import ExecutionInstance, ExecutionState, ResourceFinder
+from spinetoolbox.executioner import ExecutionInstance, ExecutionState
 from spinetoolbox.project_item import ProjectItemResource
 from .mock_helpers import clean_up_toolboxui_with_project, create_toolboxui_with_project
 
@@ -51,8 +51,16 @@ class TestExecutionInstance(unittest.TestCase):
         self.mock_upstream_item = self._mock_item("upstream item")
         self.mock_downstream_item = self._mock_item("downstream item")
         mock_proj_item_model = mock.NonCallableMagicMock()
-        mock_proj_item_model.find_item.return_value = QModelIndex()
-        mock_proj_item_model.project_item.side_effect = 3 * [self.mock_upstream_item, self.mock_downstream_item]
+        mock_upstream_index = mock.NonCallableMagicMock()
+        mock_downstream_index = mock.NonCallableMagicMock()
+        mock_proj_item_model.find_item.side_effect = lambda name: {
+            "upstream item": mock_upstream_index,
+            "downstream item": mock_downstream_index,
+        }[name]
+        mock_proj_item_model.project_item.side_effect = lambda index: {
+            mock_upstream_index: self.mock_upstream_item,
+            mock_downstream_index: self.mock_downstream_item,
+        }[index]
         self.toolbox.project_item_model = mock_proj_item_model
 
     @staticmethod
@@ -65,6 +73,8 @@ class TestExecutionInstance(unittest.TestCase):
         resources_downstream = [ProjectItemResource(item, "type", "url")]
         item.available_resources_upstream.return_value = resources_upstream
         item.available_resources_downstream.return_value = resources_downstream
+        item.make_execution_leave_animation.return_value = leave_anim = QVariantAnimation()
+        leave_anim.setDuration(0)
         return item
 
     def tearDown(self):
@@ -76,12 +86,12 @@ class TestExecutionInstance(unittest.TestCase):
             self.mock_upstream_item.name: [self.mock_downstream_item.name],
             self.mock_downstream_item.name: [],
         }
-        resource_finder = ResourceFinder(ordered_nodes, self.toolbox.project_item_model)
-        execution_instance = ExecutionInstance(self.toolbox, ordered_nodes, resource_finder)
+        execution_instance = ExecutionInstance(self.toolbox, ordered_nodes)
         execution_instance.start_execution()
         # Need to manually push the execution forward.
         execution_instance.project_item_execution_finished_signal.emit(ExecutionState.CONTINUE)
         self.mock_upstream_item.execute.assert_called_with([], self.mock_downstream_item.available_resources_upstream())
+        qApp.processEvents()
         self.mock_downstream_item.execute.assert_called_with(
             self.mock_upstream_item.available_resources_downstream(), []
         )

@@ -18,7 +18,7 @@ Widget for controlling user settings.
 
 import os
 from PySide2.QtWidgets import QWidget, QFileDialog, QMessageBox, QColorDialog
-from PySide2.QtCore import Slot, Qt
+from PySide2.QtCore import Slot, Qt, QSize
 from PySide2.QtGui import QPixmap
 from ..config import DEFAULT_PROJECT_DIR, DEFAULT_WORK_DIR, SETTINGS_SS
 
@@ -48,6 +48,8 @@ class SettingsWidget(QWidget):
         self.ui = settings.Ui_SettingsForm()
         self.ui.setupUi(self)
         self.setWindowFlags(Qt.Window | Qt.CustomizeWindowHint)
+        for item in self.ui.listWidget.findItems("*", Qt.MatchWildcard):
+            item.setSizeHint(QSize(128, 44))
         # Ensure this window gets garbage-collected when closed
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setStyleSheet(SETTINGS_SS)
@@ -71,6 +73,7 @@ class SettingsWidget(QWidget):
         self.ui.toolButton_bg_color.clicked.connect(self.show_color_dialog)
         self.ui.radioButton_bg_grid.clicked.connect(self.update_scene_bg)
         self.ui.radioButton_bg_solid.clicked.connect(self.update_scene_bg)
+        self.ui.checkBox_use_smooth_links.clicked.connect(self.update_links_geometry)
 
     @Slot(bool, name="browse_gams_path")
     def browse_gams_path(self, checked=False):
@@ -202,7 +205,7 @@ class SettingsWidget(QWidget):
         self._toolbox.ui.graphicsView.scene().update()
 
     @Slot(bool, name="update_scene_bg")
-    def update_scene_bg(self, checked):
+    def update_scene_bg(self, checked=False):
         """Draw background on scene depending on radiobutton states.
 
         Args:
@@ -215,6 +218,14 @@ class SettingsWidget(QWidget):
             self._toolbox.ui.graphicsView.scene().set_bg_grid(False)
             self._toolbox.ui.graphicsView.scene().update()
 
+    @Slot(bool)
+    def update_links_geometry(self, checked=False):
+        from ..graphics_items import Link
+
+        for item in self._toolbox.ui.graphicsView.items():
+            if isinstance(item, Link):
+                item.do_update_geometry(checked)
+
     def read_settings(self):
         """Read saved settings from app QSettings instance and update UI to display them."""
         # checkBox check state 0: unchecked, 1: partially checked, 2: checked
@@ -225,6 +236,8 @@ class SettingsWidget(QWidget):
         datetime = int(self._qsettings.value("appSettings/dateTime", defaultValue="2"))
         delete_data = int(self._qsettings.value("appSettings/deleteData", defaultValue="0"))
         smooth_zoom = self._qsettings.value("appSettings/smoothZoom", defaultValue="false")
+        smooth_links = self._qsettings.value("appSettings/smoothLinks", defaultValue="false")
+        data_flow_anim_dur = int(self._qsettings.value("appSettings/dataFlowAnimationDuration", defaultValue="100"))
         bg_grid = self._qsettings.value("appSettings/bgGrid", defaultValue="false")
         bg_color = self._qsettings.value("appSettings/bgColor", defaultValue="false")
         gams_path = self._qsettings.value("appSettings/gamsPath", defaultValue="")
@@ -251,6 +264,9 @@ class SettingsWidget(QWidget):
             self.ui.checkBox_delete_data.setCheckState(Qt.Checked)
         if smooth_zoom == "true":
             self.ui.checkBox_use_smooth_zoom.setCheckState(Qt.Checked)
+        if smooth_links == "true":
+            self.ui.checkBox_use_smooth_links.setCheckState(Qt.Checked)
+        self.ui.horizontalSlider_data_flow_animation_duration.setValue(data_flow_anim_dur)
         if bg_grid == "true":
             self.ui.radioButton_bg_grid.setChecked(True)
         else:
@@ -314,6 +330,10 @@ class SettingsWidget(QWidget):
         self._qsettings.setValue("appSettings/deleteData", delete_data)
         smooth_zoom = "true" if int(self.ui.checkBox_use_smooth_zoom.checkState()) else "false"
         self._qsettings.setValue("appSettings/smoothZoom", smooth_zoom)
+        smooth_links = "true" if int(self.ui.checkBox_use_smooth_links.checkState()) else "false"
+        self._qsettings.setValue("appSettings/smoothLinks", smooth_links)
+        data_flow_anim_dur = str(self.ui.horizontalSlider_data_flow_animation_duration.value())
+        self._qsettings.setValue("appSettings/dataFlowAnimationDuration", data_flow_anim_dur)
         bg_grid = "true" if self.ui.radioButton_bg_grid.isChecked() else "false"
         self._qsettings.setValue("appSettings/bgGrid", bg_grid)
         self._qsettings.setValue("appSettings/bgColor", self.bg_color)
@@ -429,6 +449,20 @@ class SettingsWidget(QWidget):
         Args:
             event (QEvent): Closing event if 'X' is clicked.
         """
+        smooth_links = self._qsettings.value("appSettings/smoothLinks", defaultValue="false")
+        bg_grid = self._qsettings.value("appSettings/bgGrid", defaultValue="false")
+        bg_color = self._qsettings.value("appSettings/bgColor", defaultValue="false")
+        self.update_links_geometry(smooth_links == "true")
+        if bg_grid == "true":
+            self.ui.radioButton_bg_grid.setChecked(True)
+        else:
+            self.ui.radioButton_bg_solid.setChecked(True)
+        self.update_scene_bg()
+        if bg_color == "false":
+            pass
+        else:
+            self.bg_color = bg_color
+        self.update_bg_color()
         if event:
             event.accept()
 

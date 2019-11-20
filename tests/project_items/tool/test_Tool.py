@@ -127,19 +127,19 @@ class TestTool(unittest.TestCase):
         """Tests finding optional input file paths that match a pattern with '*' or a '?' character."""
         fake_dc_dir = os.path.join("C:", os.path.sep, "fake_dc")
         fake_fnames = ["a.ini", "bc.ini", "xyz.txt", "123.txt"]
-        fake_available_resources = [os.path.join(fake_dc_dir, fname) for fname in fake_fnames]
+        fake_available_filepaths = [os.path.join(fake_dc_dir, fname) for fname in fake_fnames]
         # Mock available_filepath_resources so that it returns a list of paths
         with mock.patch(
-            "spinetoolbox.project_items.tool.tool.Tool.available_filepath_resources"
-        ) as mock_available_filepath_resources:
+            "spinetoolbox.project_items.tool.tool.Tool.available_filepaths_upstream"
+        ) as mock_available_filepaths_upstream:
             # Test with *.ini
-            mock_available_filepath_resources.return_value = fake_available_resources
+            mock_available_filepaths_upstream.return_value = fake_available_filepaths
             matches = self.tool.find_optional_files("*.ini", mock.MagicMock())
             expected_matches = [os.path.join(fake_dc_dir, fn) for fn in ("a.ini", "bc.ini")]
             self.assertEqual(expected_matches, matches)
             # Test with *
             matches = self.tool.find_optional_files("*", mock.MagicMock())
-            expected_matches = fake_available_resources
+            expected_matches = fake_available_filepaths
             self.assertEqual(expected_matches, matches)
             # Test with ?.ini
             matches = self.tool.find_optional_files("?.ini", mock.MagicMock())
@@ -389,9 +389,9 @@ class TestToolExecution(unittest.TestCase):
         """Tests execution of a Tool with the 'simple_exec' specification."""
         item = dict(name="Tool", description="", x=0, y=0, tool="simple_exec")
         self.toolbox.project().add_project_items("Tools", item)  # Add Tool to project
+        self.toolbox.project().execution_instance = mock.NonCallableMagicMock()
         ind = self.toolbox.project_item_model.find_item("Tool")
         tool = self.toolbox.project_item_model.project_item(ind)  # Find item from project item model
-        self.toolbox.project().execution_instance = mock.NonCallableMagicMock()
         # Collect some information
         basedir = tool.tool_specification().path
         project_dir = tool._project.project_dir
@@ -427,6 +427,7 @@ class TestToolExecution(unittest.TestCase):
 
             mock_execute_tool_instance.side_effect = mock_execute_tool_instance_side_effect
             resources_downstream = []
+            tool.prepare_for_resource_discovery()
             tool.execute(resources_upstream, resources_downstream)
         self.toolbox.project().execution_instance.project_item_execution_finished_signal.emit.assert_called_with(
             ExecutionState.WAIT
@@ -440,113 +441,108 @@ class TestToolExecution(unittest.TestCase):
 
     def test_execute_complex_tool_in_work_dir(self):
         """Tests execution of a Tool with the 'complex_exec' specification."""
+        # Make work directory in case it does not exist. This may be needed by Travis CI.
+        work_dir = self.toolbox.project().work_dir
+        os.makedirs(work_dir, exist_ok=True)
         item = dict(name="Tool", description="", x=0, y=0, tool="complex_exec")
         self.toolbox.project().add_project_items("Tools", item)  # Add Tool to project
         ind = self.toolbox.project_item_model.find_item("Tool")
         tool = self.toolbox.project_item_model.project_item(ind)  # Find item from project item model
         self.toolbox.project().execution_instance = mock.NonCallableMagicMock()
-        # Collect some information
-        work_dir = self.toolbox.project().work_dir
-        # Make work directory in case it does not exist. This may be needed by Travis CI.
-        os.makedirs(work_dir, exist_ok=True)
-        with tempfile.TemporaryDirectory(
-            suffix="__toolbox", prefix=tool.tool_specification().short_name + "__", dir=work_dir
-        ) as basedir:
-            project_dir = self.toolbox.project().project_dir
-            source_files = [x.text() for x in tool.source_file_model.findItems("*", Qt.MatchWildcard)]
-            input_files = [x.text() for x in tool.input_file_model.findItems("*", Qt.MatchWildcard)]
-            output_files = [x.text() for x in tool.output_file_model.findItems("*", Qt.MatchWildcard)]
-            # Create a mock data connection directory in the project
-            dc_dir = os.path.join(project_dir, "input_dc")
-            # Create input files in the above dir
-            # Start with mandatory input files
-            input_paths = [os.path.join(dc_dir, fn) for fn in input_files]
-            # Add some optional input files that match "opt/*.ini"
-            opt_input_ini_fnames = ["a.ini", "b.ini", "c.ini"]
-            input_paths += [os.path.join(dc_dir, ini_fname) for ini_fname in opt_input_ini_fnames]
-            # Add some optional input files that match "?abc.txt"
-            opt_input_txt_fnames = ["1abc.txt", "2abc.txt", "3abc.txt"]
-            input_paths += [os.path.join(dc_dir, txt_fname) for txt_fname in opt_input_txt_fnames]
-            # Make all input files
-            for filepath in input_paths:
-                dirname, _ = os.path.split(filepath)
-                os.makedirs(dirname, exist_ok=True)
-                Path(filepath).touch()
-            resources_upstream = [ProjectItemResource(None, "file", url=Path(fp).as_uri()) for fp in input_paths]
-            # Create source files in tool specification source directory
-            src_dir = tool.tool_specification().path
-            source_paths = [os.path.join(src_dir, path) for path in source_files]
-            for filepath in source_paths:
-                dirname, _ = os.path.split(filepath)
-                os.makedirs(dirname, exist_ok=True)
-                Path(filepath).touch()
-            # Mock some more stuff needed and execute the tool
-            with mock.patch("spinetoolbox.project_items.tool.tool.shutil") as mock_shutil, mock.patch(
-                "spinetoolbox.project_items.tool.tool.tempfile"
-            ) as mock_tempfile, mock.patch(
-                "spinetoolbox.project_items.tool.tool.create_output_dir_timestamp"
-            ) as mock_create_output_dir_timestamp, mock.patch.object(
-                tool_specifications.ExecutableToolInstance, "execute"
-            ) as mock_execute_tool_instance, mock.patch(
-                "spinetoolbox.project_items.tool.tool.create_dir"
-            ) as mock_create_dir:
-                mock_create_output_dir_timestamp.return_value = "mock_timestamp"
-                mock_tempfile.mkdtemp.return_value = basedir
+        project_dir = self.toolbox.project().project_dir
+        source_files = [x.text() for x in tool.source_file_model.findItems("*", Qt.MatchWildcard)]
+        input_files = [x.text() for x in tool.input_file_model.findItems("*", Qt.MatchWildcard)]
+        output_files = [x.text() for x in tool.output_file_model.findItems("*", Qt.MatchWildcard)]
+        # Create a mock data connection directory in the project
+        dc_dir = os.path.join(project_dir, "input_dc")
+        # Create input files in the above dir
+        # Start with mandatory input files
+        input_paths = [os.path.join(dc_dir, fn) for fn in input_files]
+        # Add some optional input files that match "opt/*.ini"
+        opt_input_ini_fnames = ["a.ini", "b.ini", "c.ini"]
+        input_paths += [os.path.join(dc_dir, ini_fname) for ini_fname in opt_input_ini_fnames]
+        # Add some optional input files that match "?abc.txt"
+        opt_input_txt_fnames = ["1abc.txt", "2abc.txt", "3abc.txt"]
+        input_paths += [os.path.join(dc_dir, txt_fname) for txt_fname in opt_input_txt_fnames]
+        # Make all input files
+        for filepath in input_paths:
+            dirname, _ = os.path.split(filepath)
+            os.makedirs(dirname, exist_ok=True)
+            Path(filepath).touch()
+        resources_upstream = [ProjectItemResource(None, "file", url=Path(fp).as_uri()) for fp in input_paths]
+        # Create source files in tool specification source directory
+        src_dir = tool.tool_specification().path
+        source_paths = [os.path.join(src_dir, path) for path in source_files]
+        for filepath in source_paths:
+            dirname, _ = os.path.split(filepath)
+            os.makedirs(dirname, exist_ok=True)
+            Path(filepath).touch()
+        # Mock some more stuff needed and execute the tool
+        with mock.patch("spinetoolbox.project_items.tool.tool.shutil") as mock_shutil, mock.patch(
+            "spinetoolbox.project_items.tool.tool.create_output_dir_timestamp"
+        ) as mock_create_output_dir_timestamp, mock.patch.object(
+            tool_specifications.ExecutableToolInstance, "execute"
+        ) as mock_execute_tool_instance, mock.patch(
+            "spinetoolbox.project_items.tool.tool.create_dir"
+        ) as mock_create_dir:
+            mock_create_output_dir_timestamp.return_value = "mock_timestamp"
 
-                def mock_execute_tool_instance_side_effect():
-                    """Provides a side effect for ToolInstance execute method."""
-                    # Check that source and input files were copied to the base directory
-                    # Expected calls for copying source files to work dir
-                    expected_calls = [
-                        mock.call(
-                            os.path.abspath(os.path.join(src_dir, fn)), os.path.abspath(os.path.join(basedir, fn))
-                        )
-                        for fn in source_files
-                    ]
-                    # Expected calls for copying required input files to work dir
-                    expected_calls += [
-                        mock.call(os.path.abspath(os.path.join(dc_dir, fn)), os.path.abspath(os.path.join(basedir, fn)))
-                        for fn in input_files
-                    ]
-                    # Expected calls for copying optional input files to work dir, matching pattern 'opt/*.ini'
-                    # Note: *.ini files should be copied to /opt subdirectory in work dir
-                    expected_calls += [
-                        mock.call(
-                            os.path.abspath(os.path.join(dc_dir, opt_ini_file)),
-                            os.path.abspath(os.path.join(basedir, "opt", opt_ini_file)),
-                        )
-                        for opt_ini_file in opt_input_ini_fnames
-                    ]
-                    # Expected calls for copying optional input files to work dir, matching pattern '?abc.txt'
-                    expected_calls += [
-                        mock.call(
-                            os.path.abspath(os.path.join(dc_dir, opt_abc_file)), os.path.join(basedir, opt_abc_file)
-                        )
-                        for opt_abc_file in opt_input_txt_fnames
-                    ]
-                    mock_shutil.copyfile.assert_has_calls(expected_calls, any_order=True)
-                    # Create all output files in base dir
-                    output_paths = [os.path.join(basedir, fn) for fn in output_files]
-                    for output_filepath in output_paths:
-                        output_dirname, _ = os.path.split(output_filepath)
-                        os.makedirs(output_dirname, exist_ok=True)
-                        Path(output_filepath).touch()
-                    # Emit signal as if the tool had succeeded
-                    tool.instance.instance_finished_signal.emit(0)
+            def mock_execute_tool_instance_side_effect():
+                """Provides a side effect for ToolInstance execute method."""
+                # Check that source and input files were copied to the base directory
+                # Expected calls for copying source files to work dir
+                expected_calls = [
+                    mock.call(
+                        os.path.abspath(os.path.join(src_dir, fn)), os.path.abspath(os.path.join(tool.basedir, fn))
+                    )
+                    for fn in source_files
+                ]
+                # Expected calls for copying required input files to work dir
+                expected_calls += [
+                    mock.call(
+                        os.path.abspath(os.path.join(dc_dir, fn)), os.path.abspath(os.path.join(tool.basedir, fn))
+                    )
+                    for fn in input_files
+                ]
+                # Expected calls for copying optional input files to work dir, matching pattern 'opt/*.ini'
+                # Note: *.ini files should be copied to /opt subdirectory in work dir
+                expected_calls += [
+                    mock.call(
+                        os.path.abspath(os.path.join(dc_dir, opt_ini_file)),
+                        os.path.abspath(os.path.join(tool.basedir, "opt", opt_ini_file)),
+                    )
+                    for opt_ini_file in opt_input_ini_fnames
+                ]
+                # Expected calls for copying optional input files to work dir, matching pattern '?abc.txt'
+                expected_calls += [
+                    mock.call(
+                        os.path.abspath(os.path.join(dc_dir, opt_abc_file)), os.path.join(tool.basedir, opt_abc_file)
+                    )
+                    for opt_abc_file in opt_input_txt_fnames
+                ]
+                mock_shutil.copyfile.assert_has_calls(expected_calls, any_order=True)
+                # Create all output files in base dir
+                output_paths = [os.path.join(tool.basedir, fn) for fn in output_files]
+                for output_filepath in output_paths:
+                    output_dirname, _ = os.path.split(output_filepath)
+                    os.makedirs(output_dirname, exist_ok=True)
+                    Path(output_filepath).touch()
+                # Emit signal as if the tool had succeeded
+                tool.instance.instance_finished_signal.emit(0)
 
-                mock_execute_tool_instance.side_effect = mock_execute_tool_instance_side_effect
-                tool.execute(resources_upstream, resources_downstream=[])
-            self.toolbox.project().execution_instance.project_item_execution_finished_signal.emit.assert_called_with(
-                ExecutionState.WAIT
-            )
-            self.assertEqual(tool.basedir, basedir)
-            # Check that output files were copied to the output dir
-            result_dir = os.path.join(tool.output_dir, "mock_timestamp")
-            expected_calls = [
-                mock.call(os.path.abspath(os.path.join(basedir, fn)), os.path.abspath(os.path.join(result_dir, fn)))
-                for fn in output_files
-            ]
-            mock_shutil.copyfile.assert_has_calls(expected_calls, any_order=True)
+            mock_execute_tool_instance.side_effect = mock_execute_tool_instance_side_effect
+            tool.prepare_for_resource_discovery()
+            tool.execute(resources_upstream, resources_downstream=[])
+        self.toolbox.project().execution_instance.project_item_execution_finished_signal.emit.assert_called_with(
+            ExecutionState.WAIT
+        )
+        # Check that output files were copied to the output dir
+        result_dir = os.path.join(tool.output_dir, "mock_timestamp")
+        expected_calls = [
+            mock.call(os.path.abspath(os.path.join(tool.basedir, fn)), os.path.abspath(os.path.join(result_dir, fn)))
+            for fn in output_files
+        ]
+        mock_shutil.copyfile.assert_has_calls(expected_calls, any_order=True)
 
 
 if __name__ == '__main__':

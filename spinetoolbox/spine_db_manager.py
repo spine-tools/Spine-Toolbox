@@ -415,7 +415,13 @@ class SpineDBManager(QObject):
         """
         for db_map, items in db_map_data.items():
             for item in items:
-                self._cache.setdefault(db_map, {}).setdefault(item_type, {}).pop(item["id"])
+                if db_map in self._cache:
+                    cached_map = self._cache[db_map]
+                    if item_type in cached_map:
+                        cached_items = cached_map[item_type]
+                        item_id = item["id"]
+                        if item_id in cached_items:
+                            del cached_items[item_id]
 
     def update_icons(self, db_map_data):
         """Runs when object classes are added or updated. Setups icons for those classes.

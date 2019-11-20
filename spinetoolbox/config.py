@@ -114,6 +114,10 @@ SETTINGS_SS = (
     "QPushButton:focus{background-color: #637683; border: 1px solid #148CD2;}"
     "QPushButton:hover{border: 1px solid #148CD2; color: #F0F0F0;}"
     "QPushButton:pressed{background-color: #19232D; border: 1px solid #19232D;}"
+    "QSlider::groove:horizontal{background: #e1e1e1; border: 1px solid #a4a4a4; height: 5px; margin: 2px 0; border-radius: 2px;}"
+    "QSlider::handle:horizontal{background: #fafafa; border: 1px solid #a4a4a4; width: 12px; margin: -5px 0; border-radius: 2px;}"
+    "QSlider::add-page:horizontal{background: transparent;}"
+    "QSlider::sub-page:horizontal{background: transparent;}"
 )
 
 # NOTE: border-style property needs to be set for QToolBar so the lineargradient works on GNOME desktop environment
@@ -128,6 +132,7 @@ ICON_TOOLBAR_SS = (
     "border-style: inset;"
     "border-color: darkslategray;"
     "border-radius: 2px;}"
+    "QToolButton:pressed {background-color: lightGray;}"
     "QLabel{color:black;"
     "padding: 3px;}"
 )

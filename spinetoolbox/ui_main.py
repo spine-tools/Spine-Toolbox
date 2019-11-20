@@ -358,7 +358,7 @@ class ToolboxUI(QMainWindow):
         self.msg.emit("Restoring connections...")
         self.ui.graphicsView.restore_links(connections)
         # Simulate project execution after restoring links
-        self._project.notify_all_items_of_dag_changes()
+        self._project.notify_changes_in_all_dags()
         self._project.connect_signals()
         # Initialize Design View scene
         self.ui.graphicsView.init_scene()
@@ -1220,7 +1220,7 @@ class ToolboxUI(QMainWindow):
             pos (QPoint): Mouse position
             link (Link(QGraphicsPathItem)): The concerned link
         """
-        self.link_context_menu = LinkContextMenu(self, pos, link.parallel_link)
+        self.link_context_menu = LinkContextMenu(self, pos, link)
         option = self.link_context_menu.get_action()
         if option == "Remove connection":
             self.ui.graphicsView.remove_link(link)
