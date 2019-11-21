@@ -340,8 +340,8 @@ class DesignQGraphicsView(CustomQGraphicsView):
         src_connector.links.append(link)
         dst_connector.links.append(link)
         # Add edge (connection link) to a dag as well
-        src_name = link.src_icon.name()
-        dst_name = link.dst_icon.name()
+        src_name = link.src_icon._project_item.name
+        dst_name = link.dst_icon._project_item.name
         self._toolbox.project().dag_handler.add_graph_edge(src_name, dst_name)
 
     def remove_link(self, link):

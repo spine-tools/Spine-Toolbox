@@ -21,11 +21,12 @@ import logging
 import json
 from PySide2.QtCore import Slot
 from PySide2.QtWidgets import QMessageBox
+from spine_engine import SpineEngine
 from .metaobject import MetaObject
-from .helpers import project_dir, create_dir, copy_dir
+from .helpers import project_dir, create_dir, copy_dir, inverted
 from .tool_specifications import JuliaTool, PythonTool, GAMSTool, ExecutableTool
 from .config import DEFAULT_WORK_DIR, INVALID_CHARS
-from .executioner import DirectedGraphHandler, ExecutionInstance, ExecutionState, ResourceMap
+from .executioner import DirectedGraphHandler
 from .spine_db_manager import SpineDBManager
 
 
@@ -46,12 +47,8 @@ class SpineToolboxProject(MetaObject):
         self._qsettings = self._toolbox.qsettings()
         self.dag_handler = DirectedGraphHandler(self._toolbox)
         self.db_mngr = SpineDBManager(self)
-        self._ordered_dags = dict()  # Contains all ordered lists of items to execute in the project
-        self.execution_instance = None
-        self._graph_index = 0
-        self._n_graphs = 0
-        self._executed_graph_index = 0
-        self._invalid_graphs = list()
+        self.running_item = None
+        self._execution_stopped = False
         self.project_dir = os.path.join(project_dir(self._qsettings), self.short_name)
         if not work_dir:
             self.work_dir = DEFAULT_WORK_DIR
@@ -335,6 +332,40 @@ class SpineToolboxProject(MetaObject):
         ind = self._toolbox.project_item_model.find_item(item.name)
         self._toolbox.ui.treeView_project.setCurrentIndex(ind)
 
+    def execute_dags(self, dags):
+        for i, dag in enumerate(dags):
+            self.execute_dag(dag, i + 1, len(dags))
+
+    def execute_dag(self, dag, graph_index, graph_count):
+        ordered_nodes = self.dag_handler.calc_exec_order(dag)
+        if not ordered_nodes:
+            self._toolbox.msg.emit("")
+            self._toolbox.msg.emit("---------------------------------------")
+            self._toolbox.msg_warning.emit(
+                "<b>Graph {0}/{1} is not a Directed Acyclic Graph</b>".format(graph_index, graph_count)
+            )
+            self._toolbox.msg.emit("Items in graph: {0}".format(", ".join(dag.nodes())))
+            edges = ["{0} -> {1}".format(*edge) for edge in self.dag_handler.edges_causing_loops(dag)]
+            self._toolbox.msg.emit(
+                "Please edit connections in Design View to execute it. "
+                "Possible fix: remove connection(s) {0}.".format(", ".join(edges))
+            )
+            self._toolbox.msg.emit("---------------------------------------")
+            return
+        # Make execution instance, connect signals and start execution
+        items = [self._toolbox.project_item_model.get_item(name) for name in ordered_nodes]
+        engine = SpineEngine(items, ordered_nodes)
+        self._toolbox.msg.emit("")
+        self._toolbox.msg.emit("---------------------------------------")
+        self._toolbox.msg.emit("<b>Starting DAG {0}/{1}</b>".format(graph_index, graph_count))
+        self._toolbox.msg.emit("Order: {0}".format(" -> ".join(list(ordered_nodes))))
+        self._toolbox.msg.emit("--------------------------------------------------")
+        self._toolbox.msg.emit("")
+        for self.running_item in engine.run():
+            if self._execution_stopped:
+                break
+        self._toolbox.msg.emit("<b>DAG {0}/{1} finished</b>".format(graph_index, graph_count))
+
     def execute_selected(self):
         """Starts executing selected directed acyclic graph. Selected graph is
         determined by the selected project item(s). Aborts, if items from multiple
@@ -350,46 +381,23 @@ class SpineToolboxProject(MetaObject):
         if not selected_indexes:
             self._toolbox.msg_warning.emit("Please select a project item and try again")
             return
-        if len(selected_indexes) == 1:
-            selected_item = self._toolbox.project_item_model.project_item(selected_indexes[0])
-        else:
-            # More than one item selected. Make sure they part of the same graph or abort
-            selected_item = self._toolbox.project_item_model.project_item(selected_indexes.pop())
-            selected_item_graph = self.dag_handler.dag_with_node(selected_item.name)
-            for ind in selected_indexes:
-                # Check that other selected nodes are in the same graph
-                i = self._toolbox.project_item_model.project_item(ind)
-                if not self.dag_handler.dag_with_node(i.name) == selected_item_graph:
-                    self._toolbox.msg_warning.emit("Please select items from only one graph")
-                    return
-        self._executed_graph_index = 0  # Needed in execute_selected() just for printing the number
-        self._n_graphs = 1
-        # Calculate bfs-ordered list of project items to execute
-        dag = self.dag_handler.dag_with_node(selected_item.name)
-        if not dag:
-            self._toolbox.msg_error.emit(
-                "[BUG] Could not find a graph containing {0}. "
-                "<b>Please reopen the project.</b>".format(selected_item.name)
-            )
-            return
-        ordered_nodes = self.dag_handler.calc_exec_order(dag)
-        if not ordered_nodes:
-            self._toolbox.msg.emit("")
-            self._toolbox.msg_warning.emit(
-                "Selected graph is not a directed acyclic graph. "
-                "Please edit connections in Design View and try again."
-            )
-            return
-        # Make execution instance, connect signals and start execution
-        self.execution_instance = ExecutionInstance(self._toolbox, ordered_nodes)
+        dags = set()
+        for ind in selected_indexes:
+            item = self._toolbox.project_item_model.project_item(ind)
+            dag = self.dag_handler.dag_with_node(item.name)
+            if not dag:
+                self._toolbox.msg_error.emit(
+                    "[BUG] Could not find a graph containing {0}. "
+                    "<b>Please reopen the project.</b>".format(item.name)
+                )
+                continue
+            dags.add(dag)
         self._toolbox.msg.emit("")
         self._toolbox.msg.emit("--------------------------------------------------")
-        self._toolbox.msg.emit("<b>Executing Selected Directed Acyclic Graph</b>")
-        self._toolbox.msg.emit("Order: {0}".format(" -> ".join(list(ordered_nodes))))
+        self._toolbox.msg.emit("<b>Executing Selected Directed Acyclic Graphs</b>")
         self._toolbox.msg.emit("--------------------------------------------------")
-        self.execution_instance.graph_execution_finished_signal.connect(self.graph_execution_finished)
-        self.execution_instance.start_execution()
-        return
+        self._toolbox.msg.emit("")
+        self.execute_dags(dags)
 
     def execute_project(self):
         """Determines the number of directed acyclic graphs to execute in the project.
@@ -399,107 +407,26 @@ class SpineToolboxProject(MetaObject):
         self._toolbox.ui.textBrowser_eventlog.verticalScrollBar().setValue(
             self._toolbox.ui.textBrowser_eventlog.verticalScrollBar().maximum()
         )
-        if not self.dag_handler.dags():
+        dags = self.dag_handler.dags()
+        if not dags:
             self._toolbox.msg_warning.emit("Project has no items to execute")
             return
-        self._n_graphs = len(self.dag_handler.dags())
-        i = 0  # Key for self._ordered_dags dictionary
-        for g in self.dag_handler.dags():
-            ordered_nodes = self.dag_handler.calc_exec_order(g)
-            if not ordered_nodes:
-                self._invalid_graphs.append(g)
-                continue
-            self._ordered_dags[i] = ordered_nodes
-            i += 1
-        if not self._ordered_dags.keys():
-            self._toolbox.msg_error.emit(
-                "There are no valid Directed Acyclic Graphs to execute. Please modify connections."
-            )
-            self._invalid_graphs.clear()
-            return
-        self._executed_graph_index = 0
-        # Get first graph, connect signals and start executing it
-        ordered_nodes = self._ordered_dags.pop(self._executed_graph_index)  # Pop first set of items to execute
-        self.execution_instance = ExecutionInstance(self._toolbox, ordered_nodes)
         self._toolbox.msg.emit("")
         self._toolbox.msg.emit("---------------------------------------")
         self._toolbox.msg.emit("<b>Executing All Directed Acyclic Graphs</b>")
-        self._toolbox.msg.emit("<b>Starting DAG {0}/{1}</b>".format(self._executed_graph_index + 1, self._n_graphs))
-        self._toolbox.msg.emit("Order: {0}".format(" -> ".join(list(ordered_nodes))))
-        self._toolbox.msg.emit("---------------------------------------")
-        self.execution_instance.graph_execution_finished_signal.connect(self.graph_execution_finished)
-        self.execution_instance.start_execution()
-
-    @Slot("QVariant")
-    def graph_execution_finished(self, state):
-        """Releases resources from previous execution and prepares the next
-        graph for execution if there are still graphs left. Otherwise,
-        finishes the run.
-
-        Args:
-            state (ExecutionState): proposed execution state after item finished execution
-        """
-        self.execution_instance.graph_execution_finished_signal.disconnect(self.graph_execution_finished)
-        self.execution_instance.deleteLater()
-        self.execution_instance = None
-        if state == ExecutionState.ABORT:
-            # Execution failed due to some error in executing the project item. E.g. Tool is missing an input file
-            pass
-        elif state == ExecutionState.STOP_REQUESTED:
-            self._toolbox.msg_error.emit("Execution stopped")
-            self._ordered_dags.clear()
-            self._invalid_graphs.clear()
-            return
-        self._toolbox.msg.emit("<b>DAG {0}/{1} finished</b>".format(self._executed_graph_index + 1, self._n_graphs))
-        self._executed_graph_index += 1
-        # Pop next graph
-        ordered_nodes = self._ordered_dags.pop(self._executed_graph_index, None)  # Pop next graph
-        if not ordered_nodes:
-            # All valid DAGs have been executed. Check if there are invalid DAGs and report these to user
-            self.handle_invalid_graphs()
-            # No more graphs to execute
-            self._toolbox.msg_success.emit("Execution complete")
-            return
-        # Execute next graph
-        self.execution_instance = ExecutionInstance(self._toolbox, ordered_nodes)
+        self._toolbox.msg.emit("--------------------------------------------------")
         self._toolbox.msg.emit("")
-        self._toolbox.msg.emit("---------------------------------------")
-        self._toolbox.msg.emit("<b>Starting DAG {0}/{1}</b>".format(self._executed_graph_index + 1, self._n_graphs))
-        self._toolbox.msg.emit("Order: {0}".format(" -> ".join(ordered_nodes)))
-        self._toolbox.msg.emit("---------------------------------------")
-        self.execution_instance.graph_execution_finished_signal.connect(self.graph_execution_finished)
-        self.execution_instance.start_execution()
+        self.execute_dags(dags)
 
     def stop(self):
         """Stops execution of the current DAG. Slot for the main window Stop tool button
         in the toolbar."""
-        if not self.execution_instance:
+        if not self.running_item:
             self._toolbox.msg.emit("No execution in progress")
             return
         self._toolbox.msg.emit("Stopping...")
-        self.execution_instance.stop()
-
-    def handle_invalid_graphs(self):
-        """Prints messages to Event Log if there are invalid DAGs (e.g. contain self-loops) in the project."""
-        if self._invalid_graphs:
-            for g in self._invalid_graphs:
-                # Some graphs in the project are not DAGs. Report to user that these will not be executed.
-                self._toolbox.msg.emit("")
-                self._toolbox.msg.emit("---------------------------------------")
-                self._toolbox.msg_warning.emit(
-                    "<b>Graph {0}/{1} is not a Directed Acyclic Graph</b>".format(
-                        self._executed_graph_index + 1, self._n_graphs
-                    )
-                )
-                self._toolbox.msg.emit("Items in graph: {0}".format(", ".join(g.nodes())))
-                edges = ["{0} -> {1}".format(*edge) for edge in self.dag_handler.edges_causing_loops(g)]
-                self._toolbox.msg.emit(
-                    "Please edit connections in Design View to execute it. "
-                    "Possible fix: remove connection(s) {0}.".format(", ".join(edges))
-                )
-                self._toolbox.msg.emit("---------------------------------------")
-                self._executed_graph_index += 1
-        self._invalid_graphs.clear()
+        self._execution_stopped = True
+        self.running_item.stop_execution()
 
     def export_graphs(self):
         """Export all valid directed acyclic graphs in project to GraphML files."""
@@ -529,13 +456,13 @@ class SpineToolboxProject(MetaObject):
                 project_item.invalidate_workflow(edges)
             return
         # Make resource map and run simulation
-        project_item_model = self._toolbox.project_item_model
-        resource_map = ResourceMap(ordered_nodes, project_item_model)
-        resource_map.update()
-        for rank, item in enumerate(ordered_nodes):
-            ind = project_item_model.find_item(item)
-            project_item = project_item_model.project_item(ind)
-            project_item.handle_dag_changed(rank, resource_map.available_upstream_resources(item))
+        for rank, (item_name, parent_names) in enumerate(inverted(ordered_nodes).items()):
+            item = self._toolbox.project_item_model.get_item(item_name)
+            resources = []
+            for parent_name in parent_names:
+                parent_item = self._toolbox.project_item_model.get_item(parent_name)
+                resources += parent_item.output_resources_forward()
+            item.handle_dag_changed(rank, resources)
 
     def notify_changes_in_all_dags(self):
         """Notifies all items of changes in all dags in the project."""

@@ -22,7 +22,6 @@ import shutil
 from PySide2.QtCore import QObject, Signal, Slot
 from . import qsubprocess
 from .config import GAMS_EXECUTABLE, JULIA_EXECUTABLE, PYTHON_EXECUTABLE
-from .executioner import ExecutionState
 
 
 class ToolInstance(QObject):
@@ -47,11 +46,11 @@ class ToolInstance(QObject):
         self.program = None  # Program to start in the subprocess
         self.args = list()  # List of command line arguments for the program
 
+    def is_running(self):
+        return self.tool_process is not None
+
     def terminate_instance(self):
         """Terminates Tool instance execution."""
-        self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(
-            ExecutionState.STOP_REQUESTED
-        )
         if not self.tool_process:
             return
         # Disconnect tool_process signals

@@ -27,7 +27,6 @@ from .toolbars import DraggableWidget
 from ..helpers import busy_effect
 from ..config import PYTHON_EXECUTABLE
 from .. import qsubprocess
-from ..executioner import ExecutionState
 
 
 class PythonReplWidget(RichJupyterWidget):
@@ -412,10 +411,6 @@ class PythonReplWidget(RichJupyterWidget):
     def terminate_process(self):
         """Send interrupt signal to kernel."""
         self.kernel_manager.interrupt_kernel()
-        # TODO: Block execution until kernel has been interrupted and then emit the signal
-        self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(
-            ExecutionState.STOP_REQUESTED
-        )
 
     def shutdown_kernel(self, hush=False):
         """Shut down Python kernel."""

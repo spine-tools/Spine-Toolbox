@@ -23,7 +23,6 @@ from PySide2.QtCore import Slot, Qt
 from PySide2.QtWidgets import QFileDialog, QApplication
 from sqlalchemy import create_engine
 from sqlalchemy.engine.url import make_url, URL
-from spinetoolbox.executioner import ExecutionState
 from spinetoolbox.project_item import ProjectItem, ProjectItemResource
 from spinetoolbox.widgets.tree_view_widget import TreeViewForm
 from spinetoolbox.widgets.graph_view_widget import GraphViewForm
@@ -443,13 +442,6 @@ class DataStore(ProjectItem):
         """Update Data Store tab name label. Used only when renaming project items."""
         self._properties_ui.label_ds_name.setText(self.name)
 
-    def stop_execution(self):
-        """Stops executing this Data Store."""
-        self._toolbox.msg.emit("Stopping {0}".format(self.name))
-        self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(
-            ExecutionState.STOP_REQUESTED
-        )
-
     def _do_handle_dag_changed(self, resources_upstream):
         """See base class."""
         url = self.make_url(log_errors=False)
@@ -538,18 +530,17 @@ class DataStore(ProjectItem):
         """see base class"""
         return "Data Store"
 
-    def available_resources_downstream(self, upstream_resources):
+    def output_resources_backward(self):
         """See base class."""
-        return self.available_resources_upstream()
+        return self.output_resources_forward()
 
-    def available_resources_upstream(self):
+    def output_resources_forward(self):
         """See base class."""
         url = self.make_url(log_errors=False)
         if url:
             resource = ProjectItemResource(self, "database", url=str(url))
             return [resource]
-        else:
-            self.add_notification(
-                "The URL for this Data Store is not correctly set. " "Set it in the Data Store Properties panel."
-            )
-            return list()
+        self.add_notification(
+            "The URL for this Data Store is not correctly set. " "Set it in the Data Store Properties panel."
+        )
+        return list()

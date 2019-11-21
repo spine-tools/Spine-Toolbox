@@ -23,7 +23,6 @@ from qtconsole.rich_jupyter_widget import RichJupyterWidget
 from qtconsole.manager import QtKernelManager, QtKernelRestarter
 from jupyter_client.kernelspec import find_kernel_specs, NoSuchKernel
 from ..config import JULIA_EXECUTABLE, JL_REPL_TIME_TO_DEAD, JL_REPL_RESTART_LIMIT
-from ..executioner import ExecutionState
 from .toolbars import DraggableWidget
 from spinetoolbox import qsubprocess
 from ..helpers import busy_effect
@@ -456,10 +455,6 @@ class JuliaREPLWidget(RichJupyterWidget):
         """Send interrupt signal to kernel."""
         # logging.debug("interrupt exec")
         self.kernel_manager.interrupt_kernel()
-        # TODO: Block execution until kernel has been interrupted and then emit the signal
-        self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(
-            ExecutionState.STOP_REQUESTED
-        )
 
     def shutdown_jupyter_kernel(self):
         """Shut down the jupyter kernel."""

@@ -412,6 +412,17 @@ def rows_to_row_count_tuples(rows):
     return [(sorted_rows[start], stop - start) for start, stop in ranges]
 
 
+def inverted(input_):
+    """Inverts a dictionary that maps keys to a list of values.
+    The output maps values to a list of keys that include the value in the input.
+    """
+    output = dict()
+    for key, value_list in input_.items():
+        for value in value_list:
+            output.setdefault(value, list()).append(key)
+    return output
+
+
 class Singleton(type):
     """A singleton class from SO."""
 
