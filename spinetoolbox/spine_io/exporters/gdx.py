@@ -24,8 +24,15 @@ to_gdx_file() that does basically everything needed for exporting is provided fo
 :date:   30.8.2019
 """
 
+from copy import copy
+import os
+import os.path
+import sys
 from gdx2py import GAMSSet, GAMSScalar, GAMSParameter, GdxFile
-from spinedb_api import from_database, ParameterValueFormatError
+from spinedb_api import from_database, IndexedValue, ParameterValueFormatError
+
+if sys.platform == 'win32':
+    import winreg
 
 
 class GdxExportException(Exception):
@@ -58,19 +65,32 @@ class DomainSet:
         records (list): domain's elements as a list of DomainRecord objects
     """
 
-    def __init__(self, object_class):
+    def __init__(self, name, description=""):
         """
         Args:
-            object_class (namedtuple): an object class row from the database
+            name (str): domain's name
+            description (str): domain's explanatory text
         """
-        self.description = object_class.description if object_class.description is not None else ""
-        self.name = object_class.name
+        self.description = description
+        self.name = name
         self.records = list()
 
     @property
     def dimensions(self):
         """The dimensions of this DomainSet which is always 1"""
         return 1
+
+    @staticmethod
+    def from_object_class(object_class):
+        """
+        Constructs a DomainSet from database's object class row.
+
+        Args:
+            object_class (namedtuple): an object class row from the database
+        """
+        name = object_class.name
+        description = object_class.description if object_class.description is not None else ""
+        return DomainSet(name, description)
 
 
 class Set:
@@ -84,67 +104,211 @@ class Set:
         records (list): set's elements as a list of SetRecord objects
     """
 
-    def __init__(self, relationship_class):
+    def __init__(self, name, domain_names):
         """
+        Args:
+            name (str): set's name
+            domain_names (list): a list of indexing domain names
+        """
+        self.domain_names = domain_names
+        self.name = name
+        self.dimensions = len(self.domain_names)
+        self.records = list()
+
+    @staticmethod
+    def from_relationship_class(relationship_class):
+        """
+        Constructs a Set from database's relationship class row.
+
         Args:
             relationship_class (namedtuple): a relationship class row from the database
         """
-        self.domain_names = [name.strip() for name in relationship_class.object_class_name_list.split(',')]
-        self.dimensions = len(self.domain_names)
-        self.name = relationship_class.name
-        self.records = list()
+        name = relationship_class.name
+        domain_names = [name.strip() for name in relationship_class.object_class_name_list.split(',')]
+        return Set(name, domain_names)
 
 
 class Record:
     """
-    Represents a GAMS set element in a DomainSet.
+    Represents a GAMS set element in a Set or DomainSet.
 
     Parameters:
         keys (list): a list  of record's keys
-        parameters: record's parameters as a list of Parameter objects
+        parameters (list): record's parameters as a list of Parameter objects
     """
 
-    def __init__(self, object_or_relationship):
+    def __init__(self, keys):
         """
         Args:
-            object_or_relationship (namedtuple): an object or relationship row from the database
+            keys (list): a list  of record's keys
         """
-        if hasattr(object_or_relationship, "object_name_list"):
-            self.keys = [name.strip() for name in object_or_relationship.object_name_list.split(',')]
-        else:
-            self.keys = [object_or_relationship.name]
+        self.keys = keys
         self.parameters = list()
+
+    @property
+    def name(self):
+        """Record's 'name' as a comma separated list of its keys."""
+        return ",".join(self.keys)
+
+    @staticmethod
+    def from_object(object_):
+        """
+        Constructs a record from database's object row.
+
+        Args:
+            object_ (namedtuple): an object or relationship row from the database
+        """
+        keys = [object_.name]
+        return Record(keys)
+
+    @staticmethod
+    def from_relationship(relationship):
+        """
+        Constructs a record from database's relationship row.
+
+        Args:
+            relationship (namedtuple): a relationship row from the database
+        """
+        keys = [name.strip() for name in relationship.object_name_list.split(',')]
+        return Record(keys)
 
 
 class Parameter:
     """
     Represents a GAMS parameter.
 
-    Supports only plain values. Does not support time series, time patterns etc.
-
     Attributes:
         name (str): parameter's name
-        value (float or None): parameter's value
+        value (float or IndexedValue or None): parameter's value
     """
 
-    def __init__(self, object_parameter):
+    def __init__(self, name, value):
         """
+        Args:
+            name (str): parameter's name
+            value (float or IndexedValue or None): parameter's value
+        """
+        self.name = name
+        self.value = value
+
+    def is_complex(self):
+        """Returns True if this parameter is not a plain number."""
+        return not isinstance(self.value, float)
+
+    @staticmethod
+    def from_parameter(object_parameter):
+        """
+        Constructs a GAMS parameter from database's parameter row
+
         Args:
             object_parameter (namedtuple): a parameter row from the database
         """
-        self.name = object_parameter.parameter_name
+        name = object_parameter.parameter_name
         try:
             value = from_database(object_parameter.value)
         except ParameterValueFormatError:
             value = None
-        self.value = float(value) if isinstance(value, (int, float)) else None
+        if isinstance(value, int):
+            value = float(value)
+        return Parameter(name, value)
+
+
+def _python_interpreter_bitness():
+    """Returns 64 for 64bit Python interpreter or 32 for 32bit interpreter."""
+    # As recommended in Python's docs:
+    # https://docs.python.org/3/library/platform.html#cross-platform
+    return 64 if sys.maxsize > 2 ** 32 else 32
+
+
+def _windows_dlls_exist(gams_path):
+    """Returns True if requred DLL files exist in given GAMS installation path."""
+    bitness = _python_interpreter_bitness()
+    # This DLL must exist on Windows installation
+    dll_name = "gdxdclib{}.dll".format(bitness)
+    dll_path = os.path.join(gams_path, dll_name)
+    return os.path.isfile(dll_path)
+
+
+def find_gams_directory():
+    """
+    Returns GAMS installation directory or None if not found.
+
+    On Windows systems, this function looks for `gams.location` in registry;
+    on other systems the `PATH` environment variable is checked.
+
+    Returns:
+        a path to GAMS installation directory or None if not found.
+    """
+    if sys.platform == "win32":
+        try:
+            with winreg.OpenKey(winreg.HKEY_CLASSES_ROOT, "gams.location") as gams_location_key:
+                gams_path, _ = winreg.QueryValueEx(gams_location_key, None)
+                if not _windows_dlls_exist(gams_path):
+                    return None
+                return gams_path
+        except FileNotFoundError:
+            return None
+    executable_paths = os.get_exec_path()
+    for path in executable_paths:
+        if "gams" in path.casefold():
+            return path
+    return None
+
+
+def make_index_domain(name, entry_count):
+    """Returns a domain set containing indexes for indexed parameter values."""
+    domain = DomainSet(name)
+    domain.records += [Record([f"T{index:04d}"]) for index in range(entry_count)]
+    return domain
+
+
+def expand_domains_indexed_parameter_values(domains, index_domains):
+    """
+    Expands indexed parameter values by creating sets with 2 dimensions.
+
+    Args:
+        domains (list): a list of DomainSets.
+        index_domains (dict): a mapping from domain name, record name and parameter name to a DomainSet
+            used to index the expanded values
+    Returns:
+        a tuple containing a list of the expanded sets and a list of domains left non-expanded.
+    """
+    expanded_sets = list()
+    nonexpanded_domains = list()
+    for domain_index, domain in enumerate(domains):
+        nonexpanded_records = list()
+        for record_index, record in enumerate(domain.records):
+            nonexpanded_parameters = list()
+            for parameter_index, parameter in enumerate(list(record.parameters)):
+                if parameter.is_complex():
+                    if not isinstance(parameter.value, IndexedValue):
+                        raise GdxExportException("Support for non-indexed parameter values not yet implemented.")
+                    index_domain = index_domains[domain.name][record.name][parameter.name]
+                    expanded_set = Set(domain.name, [index_domain.name])
+                    for value_index, single_value in enumerate(parameter.value.values):
+                        expanded_record = Record(record.keys + index_domain.records[value_index].keys)
+                        expanded_parameter = Parameter(parameter.name, single_value)
+                        expanded_record.parameters.append(expanded_parameter)
+                        expanded_set.records.append(expanded_record)
+                    expanded_sets.append(expanded_set)
+                else:
+                    nonexpanded_parameters.append(parameter)
+            if nonexpanded_parameters:
+                new_record = copy(record)
+                new_record.parameters = nonexpanded_parameters
+                nonexpanded_records.append(new_record)
+        if nonexpanded_records:
+            new_domain = copy(domain)
+            new_domain.records = nonexpanded_records
+            nonexpanded_domains.append(new_domain)
+    return expanded_sets, nonexpanded_domains
 
 
 def domains_to_gams(gdx_file, domains):
     """
     Writes DomainSet objects to .gdx file as universal (index '*') one-dimensional sets.
 
-    Records and Parameters contained within the DomainSets will be written as well.
+    Records and non-complex Parameters contained within the DomainSets will be written as well.
 
     Args:
         gdx_file (GdxFile): a target file
@@ -232,17 +396,17 @@ def object_classes_to_domains(db_map):
     domains = list()
     object_parameter_value_query = db_map.object_parameter_value_list()
     for object_class in class_list:
-        domain = DomainSet(object_class)
+        domain = DomainSet.from_object_class(object_class)
         domains.append(domain)
         object_list = db_map.object_list(class_id=object_class.id)
         for set_object in object_list:
-            record = Record(set_object)
+            record = Record.from_object(set_object)
             domain.records.append(record)
             parameter_values = object_parameter_value_query.filter(
                 db_map.object_parameter_value_sq.c.object_id == set_object.id
             ).all()
             for parameter in parameter_values:
-                parameter = Parameter(parameter)
+                parameter = Parameter.from_parameter(parameter)
                 if parameter.value is not None:
                     record.parameters.append(parameter)
     return domains
@@ -266,17 +430,17 @@ def relationship_classes_to_sets(db_map):
     sets = list()
     relationship_parameter_value_query = db_map.relationship_parameter_value_list()
     for relationship_class in class_list:
-        current_set = Set(relationship_class)
+        current_set = Set.from_relationship_class(relationship_class)
         sets.append(current_set)
         relationship_list = db_map.wide_relationship_list(class_id=relationship_class.id).all()
         for relationship in relationship_list:
-            record = Record(relationship)
+            record = Record.from_relationship(relationship)
             current_set.records.append(record)
             parameter_values = relationship_parameter_value_query.filter(
                 db_map.relationship_parameter_value_sq.c.relationship_id == relationship.id
             ).all()
             for parameter in parameter_values:
-                parameter = Parameter(parameter)
+                parameter = Parameter.from_parameter(parameter)
                 if parameter.value is not None:
                     record.parameters.append(parameter)
     return sets

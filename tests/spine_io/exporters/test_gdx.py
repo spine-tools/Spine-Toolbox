@@ -23,6 +23,7 @@ from gdx2py import GdxFile
 from PySide2.QtWidgets import QApplication
 from spinedb_api import import_functions as dbmanip
 from spinedb_api import create_new_spine_database, DiffDatabaseMapping
+from spinedb_api.parameter_value import TimeSeriesFixedResolution
 from spinetoolbox.spine_io import gdx_utils
 from spinetoolbox.spine_io.exporters import gdx
 
@@ -60,26 +61,55 @@ class TextGdx(unittest.TestCase):
             QApplication()
 
     def test_DomainSet_construction(self):
-        domain = gdx.DomainSet(self._MockObjectClass())
+        domain = gdx.DomainSet("name", "description")
+        self.assertEqual(domain.description, "description")
+        self.assertEqual(domain.dimensions, 1)
+        self.assertEqual(domain.name, "name")
+        self.assertEqual(domain.records, [])
+
+    def test_DomainSet_from_object_class(self):
+        domain = gdx.DomainSet.from_object_class(self._MockObjectClass())
         self.assertEqual(domain.description, self._MockObjectClass.description)
         self.assertEqual(domain.dimensions, 1)
         self.assertEqual(domain.name, self._MockObjectClass.name)
         self.assertEqual(domain.records, [])
 
     def test_Set_construction(self):
-        regular_set = gdx.Set(self._MockRelationshipClass())
+        regular_set = gdx.Set("name", ["domain1", "domain2"])
+        self.assertEqual(regular_set.domain_names, ["domain1", "domain2"])
+        self.assertEqual(regular_set.dimensions, 2)
+        self.assertEqual(regular_set.name, "name")
+        self.assertEqual(regular_set.records, [])
+
+    def test_Set_from_relationship_class(self):
+        regular_set = gdx.Set.from_relationship_class(self._MockRelationshipClass())
         self.assertEqual(regular_set.domain_names, ["mock_object_class_name"])
         self.assertEqual(regular_set.dimensions, 1)
         self.assertEqual(regular_set.name, self._MockRelationshipClass.name)
         self.assertEqual(regular_set.records, [])
 
     def test_Record_construction(self):
-        record = gdx.Record(self._MockObject())
+        record = gdx.Record(["key1", "key2"])
+        self.assertEqual(record.keys, ["key1", "key2"])
+        self.assertEqual(record.parameters, [])
+
+    def test_Record_from_object(self):
+        record = gdx.Record.from_object(self._MockObject())
         self.assertEqual(record.keys, [self._MockObject.name])
         self.assertEqual(record.parameters, [])
 
+    def test_Record_from_relationship(self):
+        record = gdx.Record.from_relationship(self._MockRelationship())
+        self.assertEqual(record.keys, [self._MockRelationship.object_name_list])
+        self.assertEqual(record.parameters, [])
+
     def test_Parameter_construction(self):
-        parameter = gdx.Parameter(self._MockParameter())
+        parameter = gdx.Parameter("name", 5.5)
+        self.assertEqual(parameter.name, "name")
+        self.assertEqual(parameter.value, 5.5)
+
+    def test_Parameter_from_parameter(self):
+        parameter = gdx.Parameter.from_parameter(self._MockParameter())
         self.assertEqual(parameter.name, self._MockParameter.parameter_name)
         self.assertEqual(parameter.value, 2.3)
 
@@ -190,9 +220,9 @@ class TextGdx(unittest.TestCase):
 
     @unittest.skipIf(gdx_utils.find_gams_directory() is None, "No working GAMS installation found.")
     def test_domains_to_gams(self):
-        domain = gdx.DomainSet(self._MockObjectClass())
-        record = gdx.Record(self._MockObject())
-        parameter = gdx.Parameter(self._MockParameter())
+        domain = gdx.DomainSet.from_object_class(self._MockObjectClass())
+        record = gdx.Record.from_object(self._MockObject())
+        parameter = gdx.Parameter.from_parameter(self._MockParameter())
         record.parameters.append(parameter)
         domain.records.append(record)
         gams_directory = gdx_utils.find_gams_directory()
@@ -213,13 +243,13 @@ class TextGdx(unittest.TestCase):
 
     @unittest.skipIf(gdx_utils.find_gams_directory() is None, "No working GAMS installation found.")
     def test_sets_to_gams(self):
-        domain = gdx.DomainSet(self._MockObjectClass())
-        record = gdx.Record(self._MockObject())
+        domain = gdx.DomainSet.from_object_class(self._MockObjectClass())
+        record = gdx.Record.from_object(self._MockObject())
         domain.records.append(record)
-        set_item = gdx.Set(self._MockRelationshipClass())
-        record = gdx.Record(self._MockRelationship())
+        set_item = gdx.Set.from_relationship_class(self._MockRelationshipClass())
+        record = gdx.Record.from_relationship(self._MockRelationship())
         set_item.records.append(record)
-        parameter = gdx.Parameter(self._MockParameter())
+        parameter = gdx.Parameter.from_parameter(self._MockParameter())
         record.parameters.append(parameter)
         gams_directory = gdx_utils.find_gams_directory()
         with TemporaryDirectory() as temp_directory:
@@ -243,10 +273,10 @@ class TextGdx(unittest.TestCase):
 
     @unittest.skipIf(gdx_utils.find_gams_directory() is None, "No working GAMS installation found.")
     def test_domain_parameters_to_gams(self):
-        domain = gdx.DomainSet(self._MockObjectClass())
-        record = gdx.Record(self._MockObject())
+        domain = gdx.DomainSet.from_object_class(self._MockObjectClass())
+        record = gdx.Record.from_object(self._MockObject())
         domain.records.append(record)
-        parameter = gdx.Parameter(self._MockParameter())
+        parameter = gdx.Parameter.from_parameter(self._MockParameter())
         record.parameters.append(parameter)
         gams_directory = gdx_utils.find_gams_directory()
         with TemporaryDirectory() as temp_directory:
@@ -467,6 +497,67 @@ class TextGdx(unittest.TestCase):
         self.assertEqual(base_settings.sorted_record_key_lists('b'), ['BB', 'BBB'])
         self.assertEqual(base_settings.sorted_record_key_lists('c'), ['CC', 'CCC'])
         self.assertEqual(base_settings.sorted_record_key_lists('d'), ['D'])
+
+    def test_expand_domains_indexed_parameter_values(self):
+        domain = gdx.DomainSet("domain name")
+        record = gdx.Record(["element"])
+        domain.records.append(record)
+        parameter = gdx.Parameter(
+            "time series", TimeSeriesFixedResolution("2019-01-01T12:15", "1D", [3.3, 4.4], False, False)
+        )
+        record.parameters.append(parameter)
+        index_domain = gdx.DomainSet("indexes")
+        index_domain.records.append(gdx.Record(["stamp1"]))
+        index_domain.records.append(gdx.Record(["stamp2"]))
+        index_domains = {"domain name": {"element": {"time series": index_domain}}}
+        expanded, nonexpanded = gdx.expand_domains_indexed_parameter_values([domain], index_domains)
+        self.assertFalse(nonexpanded)
+        self.assertEqual(len(expanded), 1)
+        self.assertEqual(expanded[0].name, "domain name")
+        self.assertEqual(len(expanded[0].records), 2)
+        self.assertEqual(expanded[0].records[0].keys, ["element", "stamp1"])
+        self.assertEqual(expanded[0].records[1].keys, ["element", "stamp2"])
+        self.assertEqual(len(expanded[0].records[0].parameters), 1)
+        self.assertEqual(expanded[0].records[0].parameters[0].name, "time series")
+        self.assertEqual(expanded[0].records[0].parameters[0].value, 3.3)
+        self.assertEqual(len(expanded[0].records[1].parameters), 1)
+        self.assertEqual(expanded[0].records[1].parameters[0].name, "time series")
+        self.assertEqual(expanded[0].records[1].parameters[0].value, 4.4)
+
+    def test_expand_domains_indexed_parameter_values_keeps_nonindexed_parameter_intact(self):
+        domain = gdx.DomainSet("domain name")
+        record = gdx.Record(["element"])
+        domain.records.append(record)
+        scalar_parameter = gdx.Parameter("scalar", 2.2)
+        record.parameters.append(scalar_parameter)
+        indexed_parameter = gdx.Parameter(
+            "time series", TimeSeriesFixedResolution("2019-01-01T12:15", "1D", [3.3, 4.4], False, False)
+        )
+        record.parameters.append(indexed_parameter)
+        index_domain = gdx.DomainSet("indexes")
+        index_domain.records.append(gdx.Record(["stamp1"]))
+        index_domain.records.append(gdx.Record(["stamp2"]))
+        index_domains = {"domain name": {"element": {"time series": index_domain}}}
+        expanded, nonexpanded = gdx.expand_domains_indexed_parameter_values([domain], index_domains)
+        self.assertTrue(nonexpanded)
+        self.assertEqual(len(nonexpanded), 1)
+        self.assertEqual(nonexpanded[0].name, "domain name")
+        self.assertEqual(len(nonexpanded[0].records), 1)
+        self.assertEqual(nonexpanded[0].records[0].keys, ["element"])
+        self.assertEqual(len(nonexpanded[0].records[0].parameters), 1)
+        self.assertEqual(nonexpanded[0].records[0].parameters[0].name, "scalar")
+        self.assertEqual(nonexpanded[0].records[0].parameters[0].value, 2.2)
+        self.assertEqual(len(expanded), 1)
+        self.assertEqual(expanded[0].name, "domain name")
+        self.assertEqual(len(expanded[0].records), 2)
+        self.assertEqual(expanded[0].records[0].keys, ["element", "stamp1"])
+        self.assertEqual(expanded[0].records[1].keys, ["element", "stamp2"])
+        self.assertEqual(len(expanded[0].records[0].parameters), 1)
+        self.assertEqual(expanded[0].records[0].parameters[0].name, "time series")
+        self.assertEqual(expanded[0].records[0].parameters[0].value, 3.3)
+        self.assertEqual(len(expanded[0].records[1].parameters), 1)
+        self.assertEqual(expanded[0].records[1].parameters[0].name, "time series")
+        self.assertEqual(expanded[0].records[1].parameters[0].value, 4.4)
 
 
 if __name__ == '__main__':
