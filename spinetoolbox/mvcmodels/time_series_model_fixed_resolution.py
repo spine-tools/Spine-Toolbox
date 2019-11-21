@@ -102,11 +102,11 @@ class TimeSeriesModelFixedResolution(IndexedValueTableModel):
         Returns:
             True if the operation was successful.
         """
-        if len(self._value) == 2:
+        if len(self._value) == 1:
             return False
         if count == len(self._value):
-            count = len(self._value) - 2
-            row = 2
+            count = len(self._value) - 1
+            row = 1
         self.beginRemoveRows(parent, row, row + count - 1)
         old_values = self._value.values
         remove_indexes = range(row, row + count) if count > 1 else row

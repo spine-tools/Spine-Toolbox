@@ -60,6 +60,16 @@ class TestTimeSeriesModelFixedStep(unittest.TestCase):
             ),
         )
 
+    def test_insertRows_at_the_beginning_with_only_one_value(self):
+        model = TimeSeriesModelVariableResolution(
+            TimeSeriesVariableResolution(["2019-07-05T12:00"], [-5.0], True, False)
+        )
+        self.assertTrue(model.insertRows(0, 1))
+        self.assertEqual(
+            model.value,
+            TimeSeriesVariableResolution(["2019-07-05T11:00", "2019-07-05T12:00"], [0.0, -5.0], True, False),
+        )
+
     def test_insertRows_single_row_in_the_middle(self):
         model = TimeSeriesModelVariableResolution(
             TimeSeriesVariableResolution(["2019-07-05T12:00", "2019-07-21T12:00"], [-5.0, 7.0], True, False)
@@ -97,6 +107,16 @@ class TestTimeSeriesModelFixedStep(unittest.TestCase):
             TimeSeriesVariableResolution(
                 ["2019-07-05T12:00", "2019-07-21T12:00", "2019-08-06T12:00"], [-5.0, 7.0, 0.0], True, False
             ),
+        )
+
+    def test_insertRows_in_the_end_with_only_one_value(self):
+        model = TimeSeriesModelVariableResolution(
+            TimeSeriesVariableResolution(["2019-07-05T12:00"], [-5.0], True, False)
+        )
+        self.assertTrue(model.insertRows(1, 1))
+        self.assertEqual(
+            model.value,
+            TimeSeriesVariableResolution(["2019-07-05T12:00", "2019-07-05T13:00"], [-5.0, 0.0], True, False),
         )
 
     def test_removeRows_from_the_beginning(self):
@@ -141,16 +161,13 @@ class TestTimeSeriesModelFixedStep(unittest.TestCase):
             )
         )
         self.assertTrue(model.removeRows(0, 3))
-        self.assertEqual(
-            model.value,
-            TimeSeriesVariableResolution(["2019-07-05T12:00", "2019-07-21T08:15"], [2.3, -5.0], True, False),
-        )
+        self.assertEqual(model.value, TimeSeriesVariableResolution(["2019-07-05T12:00"], [2.3], True, False))
 
-    def test_removing_last_rows_fails(self):
+    def test_removing_last_row_fails(self):
         model = TimeSeriesModelVariableResolution(
-            TimeSeriesVariableResolution(["2019-07-05T12:00", "2019-07-21T08:15"], [2.3, -5.0], True, False)
+            TimeSeriesVariableResolution(["2019-07-05T12:00"], [2.3], True, False)
         )
-        self.assertFalse(model.removeRows(0, 2))
+        self.assertFalse(model.removeRows(0, 1))
 
     def test_reset_updates_indexes(self):
         model = TimeSeriesModelVariableResolution(
