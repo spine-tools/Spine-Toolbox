@@ -111,6 +111,10 @@ class IntegerSequenceDateTimeConvertSpec(ConvertSpec):
     RETURN_TYPE = DateTime
 
     def __init__(self, start_datetime, start_int, duration):
+        if not isinstance(start_datetime, DateTime):
+            start_datetime = DateTime(start_datetime)
+        if not isinstance(duration, Duration):
+            duration = Duration(duration)
         self.start_datetime = start_datetime
         self.start_int = start_int
         self.duration = duration

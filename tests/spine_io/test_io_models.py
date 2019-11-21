@@ -18,6 +18,7 @@ import os.path
 from tempfile import TemporaryDirectory
 import unittest
 from spinetoolbox.spine_io.io_models import MappingPreviewModel, MappingSpecModel, _MAPPING_COLORS
+from spinetoolbox.spine_io.type_conversion import value_to_convert_spec
 from spinedb_api import Duration, DateTime, dict_to_map
 from PySide2.QtCore import Qt
 
@@ -26,13 +27,13 @@ class TestMappingPreviewModel(unittest.TestCase):
     def test_column_type_checking(self):
         model = MappingPreviewModel()
         model.reset_model([["1", "0h", "2018-01-01 00:00"], ["2", "1h", "2018-01-01 00:00"]])
-        model.set_type(0, 'float')
+        model.set_type(0, value_to_convert_spec('float'))
         self.assertEqual(model._column_type_errors, {})
         self.assertEqual(model._row_type_errors, {})
-        model.set_type(1, 'duration')
+        model.set_type(1, value_to_convert_spec('duration'))
         self.assertEqual(model._column_type_errors, {})
         self.assertEqual(model._row_type_errors, {})
-        model.set_type(2, 'datetime')
+        model.set_type(2, value_to_convert_spec('datetime'))
         self.assertEqual(model._column_type_errors, {})
         self.assertEqual(model._row_type_errors, {})
 
@@ -41,20 +42,20 @@ class TestMappingPreviewModel(unittest.TestCase):
         model.reset_model(
             [["1", "1", "1.1"], ["2h", "1h", "2h"], ["2018-01-01 00:00", "2018-01-01 00:00", "2018-01-01 00:00"]]
         )
-        model.set_type(0, 'float', orientation=Qt.Vertical)
+        model.set_type(0, value_to_convert_spec('float'), orientation=Qt.Vertical)
         self.assertEqual(model._column_type_errors, {})
         self.assertEqual(model._row_type_errors, {})
-        model.set_type(1, 'duration', orientation=Qt.Vertical)
+        model.set_type(1, value_to_convert_spec('duration'), orientation=Qt.Vertical)
         self.assertEqual(model._column_type_errors, {})
         self.assertEqual(model._row_type_errors, {})
-        model.set_type(2, 'datetime', orientation=Qt.Vertical)
+        model.set_type(2, value_to_convert_spec('datetime'), orientation=Qt.Vertical)
         self.assertEqual(model._column_type_errors, {})
         self.assertEqual(model._row_type_errors, {})
 
     def test_column_type_checking_produces_error(self):
         model = MappingPreviewModel()
         model.reset_model([["Not a valid number", "2.4"], ["1", "3"]])
-        model.set_type(0, 'float')
+        model.set_type(0, value_to_convert_spec('float'))
         error_index = (0, 0)
         self.assertEqual(len(model._column_type_errors), 1)
         self.assertEqual(model._row_type_errors, {})
@@ -76,7 +77,7 @@ class TestMappingPreviewModel(unittest.TestCase):
     def test_row_type_checking_produces_error(self):
         model = MappingPreviewModel()
         model.reset_model([["1", "2.4"], ["Not a valid number", "3"]])
-        model.set_type(1, 'float', orientation=Qt.Vertical)
+        model.set_type(1, value_to_convert_spec('float'), orientation=Qt.Vertical)
         error_index = (1, 0)
         self.assertEqual(len(model._row_type_errors), 1)
         self.assertEqual(model._column_type_errors, {})
