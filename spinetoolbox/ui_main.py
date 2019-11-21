@@ -384,6 +384,10 @@ class ToolboxUI(QMainWindow):
         Returns:
             bool: True when restoring project succeeded, False otherwise
         """
+        # Check that project info is valid
+        if not ProjectUpgrader(self).is_valid(project_info):
+            self.msg_error.emit("Opening project in directory {0} failed".format(project_dir))
+            return False
         version = project_info["project"]["version"]
         # Upgrade project dictionary if needed
         if version < LATEST_PROJECT_VERSION:
