@@ -40,22 +40,28 @@ def run(args):
         connector = eval(source_type)()  # pylint: disable=eval-used
         connector.connect_to_source(source)
         table_mappings = {
-            name: mapping for name, mapping in settings.get("table_mappings", {}).items() if name in settings["selected_tables"]
+            name: mapping
+            for name, mapping in settings.get("table_mappings", {}).items()
+            if name in settings["selected_tables"]
         }
         table_options = {
-            name: options for name, options in settings.get("table_options", {}).items() if name in settings["selected_tables"]
+            name: options
+            for name, options in settings.get("table_options", {}).items()
+            if name in settings["selected_tables"]
         }
+
         table_types = {
-                name: types for name, types in settings.get("table_types", {}).items() if name in settings["selected_tables"]
+            tn: {int(col): value_to_convert_spec(spec) for col, spec in cols.items()}
+            for tn, cols in settings.get("table_types", {}).items()
         }
         table_row_types = {
-                name: types
-                for name, types in settings.get("table_row_types", {}).items()
-                if name in settings["selected_tables"]
+            tn: {int(col): value_to_convert_spec(spec) for col, spec in cols.items()}
+            for tn, cols in settings.get("table_row_types", {}).items()
         }
         data, errors = connector.get_mapped_data(
-                table_mappings, table_options, table_types, table_row_types, max_rows=-1
-            )
+            table_mappings, table_options, table_types, table_row_types, max_rows=-1
+        )
+        print(data)
         print(
             "<b>{0}:</b> Read {1} data from {2} with {3} errors".format(
                 importer_name, sum(len(d) for d in data.values()), source, len(errors)
