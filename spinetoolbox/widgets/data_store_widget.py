@@ -202,22 +202,22 @@ class DataStoreForm(QMainWindow):
     @Slot("bool")
     def _handle_object_parameter_value_visibility_changed(self, visible):
         if visible:
-            self.object_parameter_value_model.update_filter()
+            self.object_parameter_value_model.update_main_filter()
 
     @Slot("bool")
     def _handle_object_parameter_definition_visibility_changed(self, visible):
         if visible:
-            self.object_parameter_definition_model.update_filter()
+            self.object_parameter_definition_model.update_main_filter()
 
     @Slot("bool")
     def _handle_relationship_parameter_value_visibility_changed(self, visible):
         if visible:
-            self.relationship_parameter_value_model.update_filter()
+            self.relationship_parameter_value_model.update_main_filter()
 
     @Slot("bool")
     def _handle_relationship_parameter_definition_visibility_changed(self, visible):
         if visible:
-            self.relationship_parameter_definition_model.update_filter()
+            self.relationship_parameter_definition_model.update_main_filter()
 
     @Slot("QVariant", "bool")
     def _handle_tag_button_toggled(self, db_map_ids, checked):
@@ -230,19 +230,16 @@ class DataStoreForm(QMainWindow):
                 self.selected_parameter_tag_ids.setdefault(db_map, set()).add(id_)
             else:
                 self.selected_parameter_tag_ids[db_map].remove(id_)
-        if not any(v for v in self.selected_parameter_tag_ids.values()):
-            # No tags selected
+        selected_param_defs = self.db_mngr.find_cascading_parameter_definitions_by_tag(self.selected_parameter_tag_ids)
+        if any(v for v in self.selected_parameter_tag_ids.values()) and not any(
+            v for v in selected_param_defs.values()
+        ):
+            # There are tags selected but no matching parameter definitions ~> we need to reject them all
+            self.selected_param_def_ids["object class"] = None
+            self.selected_param_def_ids["relationship class"] = None
+        else:
             self.selected_param_def_ids["object class"] = {}
             self.selected_param_def_ids["relationship class"] = {}
-        else:
-            # At least one tag selected: init dict like below so in case no parameter has the tag,
-            # all of them are filtered
-            self.selected_param_def_ids["object class"] = {(None, 0): set()}
-            self.selected_param_def_ids["relationship class"] = {(None, 0): set()}
-            # Find selected parameter definitions
-            selected_param_defs = self.db_mngr.find_cascading_parameter_definitions_by_tag(
-                self.selected_parameter_tag_ids
-            )
             for db_map, param_defs in selected_param_defs.items():
                 for param_def in param_defs:
                     if "object_class_id" in param_def:
@@ -446,11 +443,11 @@ class DataStoreForm(QMainWindow):
     def selected_entity_class_ids(self, entity_class_type):
         """Return object class ids selected in object tree *and* parameter tag toolbar."""
         tree_class_ids = self.selected_ent_cls_ids[entity_class_type]
+        if self.selected_param_def_ids[entity_class_type] is None:
+            return tree_class_ids
         tag_class_ids = dict()
         for db_map, class_id in self.selected_param_def_ids[entity_class_type]:
             tag_class_ids.setdefault(db_map, set()).add(class_id)
-        if not tag_class_ids:
-            return tree_class_ids
         if not tree_class_ids:
             return tag_class_ids
         return {
@@ -477,13 +474,13 @@ class DataStoreForm(QMainWindow):
     def update_filter(self):
         """Update filter on parameter models."""
         if self.ui.dockWidget_object_parameter_value.isVisible():
-            self.object_parameter_value_model.update_filter()
+            self.object_parameter_value_model.update_main_filter()
         if self.ui.dockWidget_object_parameter_definition.isVisible():
-            self.object_parameter_definition_model.update_filter()
+            self.object_parameter_definition_model.update_main_filter()
         if self.ui.dockWidget_relationship_parameter_value.isVisible():
-            self.relationship_parameter_value_model.update_filter()
+            self.relationship_parameter_value_model.update_main_filter()
         if self.ui.dockWidget_relationship_parameter_definition.isVisible():
-            self.relationship_parameter_definition_model.update_filter()
+            self.relationship_parameter_definition_model.update_main_filter()
 
     @Slot("bool")
     def show_add_object_classes_form(self, checked=False):
@@ -572,7 +569,7 @@ class DataStoreForm(QMainWindow):
         }
         name_key = name_keys.get(item_type, "name")
         if name_key:
-            names = {item[name_key] for db_map, data in db_map_data.items() for item in data}
+            names = {item[name_key] for data in db_map_data.values() for item in data}
             msg += f" the following {item_type} item(s):" + format_string_list(names)
         else:
             count = sum(len(data) for data in db_map_data.values())

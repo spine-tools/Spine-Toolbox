@@ -20,6 +20,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - Projects can be saved to any directory
 - Project name can be changed in Settings
 - The graph view features a short live demonstration that new users can follow to discover the basic functionality.
+- New Setting: *Smooth links*. When active, links on the Design View follow a smooth curve rather than a straight line.
+- When execution traverses a link, a small animation is played to denote the flow of data. Users can set how quick
+  they want this animation to be in Settings. The fastest setting effectively disables the animation.
 
 ### Changed
 - spinetoolbox is now a Python package. To start the app, use command `python -m spinetoolbox` or

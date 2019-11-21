@@ -792,6 +792,8 @@ class TestToolboxUI(unittest.TestCase):
         Returns:
             (QPoint): Center point of the Link in graphics view viewport coordinates.
         """
+        # Make sure the boundingRect's center point is *on* the link
+        link.do_update_geometry(smooth_links=False)
         # We need to map item coordinates to scene coordinates to graphics view viewport coordinates
         # Get project item icon rectangle
         qrectf = link.boundingRect()  # Returns a rectangle in item coordinate system
@@ -805,7 +807,7 @@ class TestToolboxUI(unittest.TestCase):
     def _tasks_before_exit_scenario_1(key, defaultValue="2"):
         if key == "appSettings/showExitPrompt":
             return "0"
-        elif key == "appSettings/saveAtExit":
+        if key == "appSettings/saveAtExit":
             return "0"
 
     @staticmethod

@@ -20,7 +20,7 @@ import sys
 import os
 
 SPINE_TOOLBOX_VERSION = "0.3.2"
-REQUIRED_SPINEDB_API_VERSION = "0.1.5"
+REQUIRED_SPINEDB_API_VERSION = "0.1.8"
 LATEST_PROJECT_VERSION = 1
 # SPINE GREEN HTML: #99cc33 RGBa: 153, 204, 51, 255
 # SPINE BLUE HTML: #004ac2 RGBa: 0, 74, 194, 255
@@ -117,6 +117,10 @@ SETTINGS_SS = (
     "QPushButton:focus{background-color: #637683; border: 1px solid #148CD2;}"
     "QPushButton:hover{border: 1px solid #148CD2; color: #F0F0F0;}"
     "QPushButton:pressed{background-color: #19232D; border: 1px solid #19232D;}"
+    "QSlider::groove:horizontal{background: #e1e1e1; border: 1px solid #a4a4a4; height: 5px; margin: 2px 0; border-radius: 2px;}"
+    "QSlider::handle:horizontal{background: #fafafa; border: 1px solid #a4a4a4; width: 12px; margin: -5px 0; border-radius: 2px;}"
+    "QSlider::add-page:horizontal{background: transparent;}"
+    "QSlider::sub-page:horizontal{background: transparent;}"
 )
 
 # NOTE: border-style property needs to be set for QToolBar so the lineargradient works on GNOME desktop environment
@@ -131,6 +135,7 @@ ICON_TOOLBAR_SS = (
     "border-style: inset;"
     "border-color: darkslategray;"
     "border-radius: 2px;}"
+    "QToolButton:pressed {background-color: lightGray;}"
     "QLabel{color:black;"
     "padding: 3px;}"
 )

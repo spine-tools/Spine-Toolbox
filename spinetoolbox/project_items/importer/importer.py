@@ -33,7 +33,7 @@ from . import importer_program
 
 
 class Importer(ProjectItem):
-    def __init__(self, toolbox, name, description, mappings, x, y):
+    def __init__(self, toolbox, name, description, mappings, x, y, cancel_on_error=True):
         """Importer class.
 
         Args:
@@ -57,6 +57,7 @@ class Importer(ProjectItem):
         if mappings is None:
             mappings = dict()
         self.settings = mappings
+        self.cancel_on_error = cancel_on_error
         self.file_model = QStandardItemModel()
         self.all_files = []  # All source files
         self.unchecked_files = []  # Unchecked source files
@@ -101,7 +102,9 @@ class Importer(ProjectItem):
         return s
 
     def activate(self):
-        """Restores selections and connects signals."""
+        """Restores selections, cancel on error checkbox and connects signals."""
+        # set cancel on error checkbox state
+        self._properties_ui.cancel_on_error_checkBox.setCheckState(Qt.Checked if self.cancel_on_error else Qt.Unchecked)
         self.restore_selections()
         super().connect_signals()
 
@@ -261,6 +264,7 @@ class Importer(ProjectItem):
             self.settings,
             [r.url for r in resources_downstream if r.type_ == "database"],
             self.logs_dir,
+            self._properties_ui.cancel_on_error_checkBox.isChecked(),
         ]
         self.importer_tool_spec.cmdline_args = [json.dumps(arg) for arg in args]
         self.instance = self.importer_tool_spec.create_tool_instance(self.basedir)
@@ -309,6 +313,7 @@ class Importer(ProjectItem):
         """Returns a dictionary corresponding to this item."""
         d = super().item_dict()
         d["mappings"] = self.settings
+        d["cancel_on_error"] = self._properties_ui.cancel_on_error_checkBox.isChecked()
         return d
 
     def notify_destination(self, source_item):

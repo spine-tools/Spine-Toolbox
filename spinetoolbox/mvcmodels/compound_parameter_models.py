@@ -56,7 +56,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         self.db_mngr = db_mngr
         self.db_maps = db_maps
         self._auto_filter = dict()
-        self._selected_entity_class_ids = {}
+        self._accepted_entity_class_ids = {}  # Accepted by main filter
 
     @property
     def entity_class_type(self):
@@ -181,9 +181,26 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         """
         if not model.can_be_filtered:
             return True
-        if not self._selected_entity_class_ids:
+        if not self._auto_filter_accepts_model(model):
+            return False
+        if not self._main_filter_accepts_model(model):
+            return False
+        return True
+
+    def _main_filter_accepts_model(self, model):
+        if self._accepted_entity_class_ids == {}:
             return True
-        return model.entity_class_id in self._selected_entity_class_ids.get(model.db_map, set())
+        return model.entity_class_id in self._accepted_entity_class_ids.get(model.db_map, set())
+
+    def _auto_filter_accepts_model(self, model):
+        if None in [value for column, value in self._auto_filter.items()]:
+            return False
+        for auto_filter in self._auto_filter.values():
+            if not auto_filter:
+                continue
+            if (model.db_map, model.entity_class_id) not in auto_filter.keys():
+                return False
+        return True
 
     def accepted_single_models(self):
         """Returns a list of accepted single models by calling filter_accepts_model
@@ -208,31 +225,29 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
             return True
         return False
 
-    def update_filter(self):
-        """Updates and applies the filter."""
-        updated = self.update_compound_filter()
+    def update_main_filter(self):
+        """Updates and applies the main filter."""
+        updated = self.update_compound_main_filter()
         for model in self.single_models:
-            updated |= self.update_single_model_filter(model)
+            updated |= self.update_single_main_filter(model)
         if updated:
             self.refresh()
 
-    def update_compound_filter(self):
-        """Updates the compound filter by setting the _selected_entity_class_ids attribute.
+    def update_compound_main_filter(self):
+        """Updates the main filter in the compound model by setting the _accepted_entity_class_ids attribute.
 
         Returns:
             bool: True if the filter was updated, None otherwise
         """
-        a = False
-        if self._auto_filter:
-            self._auto_filter.clear()
-            a = True
+        a = bool(self._auto_filter)
+        self._auto_filter = dict()
         b = self._settattr_if_different(
-            self, "_selected_entity_class_ids", self.parent().selected_entity_class_ids(self.entity_class_type)
+            self, "_accepted_entity_class_ids", self.parent().selected_entity_class_ids(self.entity_class_type)
         )
         return a or b
 
-    def update_single_model_filter(self, model):
-        """Updates the filter for the given single model by setting its _selected_param_def_ids attribute.
+    def update_single_main_filter(self, model):
+        """Updates the filter in the given single model by setting its _selected_param_def_ids attribute.
 
         Args:
             model (SingleParameterModel)
@@ -240,35 +255,41 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         Returns:
             bool: True if the filter was updated, None otherwise
         """
-        a = False
-        if model._auto_filter:
-            model._auto_filter.clear()
-            a = True
-        b = self._settattr_if_different(
-            model,
-            "_selected_param_def_ids",
-            self.parent()
-            .selected_param_def_ids[self.entity_class_type]
-            .get((model.db_map, model.entity_class_id), set()),
-        )
+        a = bool(model._auto_filter)
+        model._auto_filter.clear()
+        selected_param_def_ids = self.parent().selected_param_def_ids[self.entity_class_type]
+        if selected_param_def_ids is not None:
+            selected_param_def_ids = selected_param_def_ids.get((model.db_map, model.entity_class_id), set())
+        b = self._settattr_if_different(model, "_selected_param_def_ids", selected_param_def_ids)
         return a or b
 
     def update_auto_filter(self, column, auto_filter):
-        """Updates the auto filter for given column.
+        """Updates and applies the auto filter.
 
         Args:
             column (int): the column number
-            auto_filter (dict): collection of filtered values keyed by entity ids (int)
+            auto_filter (dict): list of accepted values for the column keyed by tuple (database map, entity class id)
         """
-        self._auto_filter[column] = auto_filter
-        updated = False
+        updated = self.update_compound_auto_filter(column, auto_filter)
         for model in self.accepted_single_models():
-            updated |= self.update_single_model_auto_filter(model, column)
+            updated |= self.update_single_auto_filter(model, column)
         if updated:
             self.refresh()
 
-    def update_single_model_auto_filter(self, model, column):
-        """Updates the auto-filtered values for given model and column.
+    def update_compound_auto_filter(self, column, auto_filter):
+        """Updates the auto filter for given column in the compound model.
+
+        Args:
+            column (int): the column number
+            auto_filter (dict): list of accepted values for the column keyed by tuple (database map, entity class id)
+        """
+        if self._auto_filter.setdefault(column, {}) == auto_filter:
+            return False
+        self._auto_filter[column] = auto_filter
+        return True
+
+    def update_single_auto_filter(self, model, column):
+        """Updates the auto filter for given column in the given single model.
 
         Args:
             model (SingleParameterModel): the model
@@ -277,7 +298,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         Returns:
             bool: True if the auto-filtered values were updated, None otherwise
         """
-        values = self._auto_filter[column].get(model.entity_class_id, {})
+        values = self._auto_filter[column].get((model.db_map, model.entity_class_id), {})
         if values == model._auto_filter.get(column, {}):
             return False
         model._auto_filter[column] = values
@@ -305,15 +326,26 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
             list: AutoFilterMenuItem instances to populate the auto filter menu.
         """
         auto_filter_vals = dict()
-        for model in self.accepted_single_models():
-            for row in model.accepted_rows(ignored_columns=[column]):
+        for model in self.single_models:
+            if not self._main_filter_accepts_model(model):
+                continue
+            for row in range(model.rowCount()):
+                if not model._main_filter_accepts_row(row):
+                    continue
                 value = model.index(row, column).data()
-                auto_filter_vals.setdefault(value, set()).add(model.entity_class_id)
+                auto_filter_vals.setdefault(value, set()).add((model.db_map, model.entity_class_id))
         column_auto_filter = self._auto_filter.get(column, {})
-        filtered = [val for values in column_auto_filter.values() for val in values]
+        if column_auto_filter is None:
+            return [AutoFilterMenuItem(Qt.Unchecked, value, classes) for value, classes in auto_filter_vals.items()]
+        if column_auto_filter == {}:
+            return [AutoFilterMenuItem(Qt.Checked, value, classes) for value, classes in auto_filter_vals.items()]
         return [
-            AutoFilterMenuItem(Qt.Checked if value not in filtered else Qt.Unchecked, value, class_ids)
-            for value, class_ids in auto_filter_vals.items()
+            AutoFilterMenuItem(
+                Qt.Checked if any(value in values for values in column_auto_filter.values()) else Qt.Unchecked,
+                value,
+                classes,
+            )
+            for value, classes in auto_filter_vals.items()
         ]
 
     def _models_with_db_map(self, db_map):
@@ -356,13 +388,21 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         # TODO: parameter definition names aren't refreshed unless we emit dataChanged,
         # whereas entity and class names don't need it. Why?
 
-    def _grouped_ids(self, items):
+    def _entity_ids_per_class_id(self, items):
+        """Returns a dict mapping entity class ids to a set of entity ids.
+
+        Args:
+            items (list)
+
+        Returns:
+            dict
+        """
         d = dict()
         for item in items:
             entity_class_id = item.get(self._entity_class_id_key)
             if not entity_class_id:
                 continue
-            d.setdefault(entity_class_id, []).append(item["id"])
+            d.setdefault(entity_class_id, list()).append(item["id"])
         return d
 
     def receive_parameter_data_removed(self, db_map_data):
@@ -374,9 +414,9 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         """
         self.layoutAboutToBeChanged.emit()
         for db_map, items in db_map_data.items():
-            grouped_ids = self._grouped_ids(items)
+            entity_ids_per_class_id = self._entity_ids_per_class_id(items)
             for model in self._models_with_db_map(db_map):
-                removed_ids = grouped_ids.get(model.entity_class_id)
+                removed_ids = entity_ids_per_class_id.get(model.entity_class_id)
                 if not removed_ids:
                     continue
                 removed_rows = [row for row in range(model.rowCount()) if model._main_data[row] in removed_ids]
@@ -395,8 +435,8 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         """
         new_models = []
         for db_map, items in db_map_data.items():
-            grouped_ids = self._grouped_ids(items)
-            for entity_class_id, ids in grouped_ids.items():
+            entity_ids_per_class_id = self._entity_ids_per_class_id(items)
+            for entity_class_id, ids in entity_ids_per_class_id.items():
                 model = self._single_model_type(self, self.header, self.db_mngr, db_map, entity_class_id, lazy=False)
                 model.reset_model(ids)
                 self._handle_single_model_reset(model)
@@ -458,16 +498,16 @@ class CompoundParameterValueMixin:
     @property
     def entity_type(self):
         """Returns the entity type, either 'object' or 'relationship'
-        Used by update_single_model_filter.
+        Used by update_single_main_filter.
 
         Returns:
             str
         """
         raise NotImplementedError()
 
-    def update_single_model_filter(self, model):
+    def update_single_main_filter(self, model):
         """Update the filter for the given model."""
-        a = super().update_single_model_filter(model)
+        a = super().update_single_main_filter(model)
         b = self._settattr_if_different(
             model,
             "_selected_entity_ids",

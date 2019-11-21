@@ -73,11 +73,11 @@ class ToolInstance(QObject):
         """Prepares this instance for execution.
         Implement in subclasses to perform specific initialization.
         """
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def execute(self, **kwargs):
         """Executes a prepared instance. Implement in subclasses."""
-        raise NotImplementedError
+        raise NotImplementedError()
 
     @Slot(int, name="handle_execution_finished")
     def handle_execution_finished(self, ret):
@@ -86,7 +86,7 @@ class ToolInstance(QObject):
         Args:
             ret (int)
         """
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def append_cmdline_args(self):
         """Appends Tool specification command line args into instance args list."""
