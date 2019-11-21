@@ -24,6 +24,7 @@ from spinetoolbox.helpers import create_log_file_timestamp
 from spinetoolbox.executioner import ExecutionState
 from spinetoolbox.spine_io.importers.csv_reader import CSVConnector
 from spinetoolbox.spine_io.importers.excel_reader import ExcelConnector
+from spinetoolbox.spine_io.type_conversion import value_to_convert_spec
 
 
 def run(args):
