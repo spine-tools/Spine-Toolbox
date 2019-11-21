@@ -10,13 +10,12 @@
 ######################################################################################################################
 
 """
-Contains classes for handling project item execution.
+Contains classes for handling DAGs.
 
 :author: P. Savolainen (VTT)
 :date:   8.4.2019
 """
 
-from enum import Enum
 import logging
 import random
 from PySide2.QtCore import Signal, Slot, QObject, QTimer
@@ -207,30 +206,29 @@ class DirectedGraphHandler(QObject):
         return None
 
     @staticmethod
-    def calc_exec_order(g):
-        """Returns a dict of nodes in the given graph in topological sort order.
-        Key is the node, value is a list of its direct successors
-        (the successors are important to do the advertising).
-        A topological sort is a nonunique permutation of the nodes such that an edge from u to v
-        implies that u appears before v in the topological sort order.
+    def node_successors(g):
+        """Returns a dict mapping nodes in the given graph to a list of its direct successors.
+        The nodes are in topological sort order.
+        Topological sort in the words of networkx:
+        "a nonunique permutation of the nodes, such that an edge from u to v
+        implies that u appears before v in the topological sort order."
 
         Args:
             g (DiGraph): Directed graph to process
 
         Returns:
-            dict: key is the node name, value is its direct successors
+            dict: key is the node name, value is list of successor names
             Empty dict if given graph is not a DAG.
         """
         if not nx.is_directed_acyclic_graph(g):
             return {}
         return {n: list(g.successors(n)) for n in nx.topological_sort(g)}
 
-    def calc_exec_order_to_node(self, g, node):
-        # NOTE: Not in use at the moment
-        """Like calc_exec_order but only until node,
+    def successors_until_node(self, g, node):
+        """Like node_successors but only until the given node,
         and ignoring all nodes that are not its ancestors."""
         bunch = list(nx.ancestors(g, node)) + [node]
-        return self.calc_exec_order(g.subgraph(bunch))
+        return self.node_successors(g.subgraph(bunch))
 
     def node_is_isolated(self, node, allow_self_loop=False):
         """Checks if the project item with the given name has any connections.

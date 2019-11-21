@@ -26,7 +26,7 @@ from .metaobject import MetaObject
 from .helpers import project_dir, create_dir, copy_dir, inverted
 from .tool_specifications import JuliaTool, PythonTool, GAMSTool, ExecutableTool
 from .config import DEFAULT_WORK_DIR, INVALID_CHARS
-from .executioner import DirectedGraphHandler
+from .dag_handler import DirectedGraphHandler
 from .spine_db_manager import SpineDBManager
 
 
@@ -337,8 +337,8 @@ class SpineToolboxProject(MetaObject):
             self.execute_dag(dag, i + 1, len(dags))
 
     def execute_dag(self, dag, graph_index, graph_count):
-        ordered_nodes = self.dag_handler.calc_exec_order(dag)
-        if not ordered_nodes:
+        node_successors = self.dag_handler.node_successors(dag)
+        if not node_successors:
             self._toolbox.msg.emit("")
             self._toolbox.msg.emit("---------------------------------------")
             self._toolbox.msg_warning.emit(
@@ -353,12 +353,12 @@ class SpineToolboxProject(MetaObject):
             self._toolbox.msg.emit("---------------------------------------")
             return
         # Make execution instance, connect signals and start execution
-        items = [self._toolbox.project_item_model.get_item(name) for name in ordered_nodes]
-        engine = SpineEngine(items, ordered_nodes)
+        items = [self._toolbox.project_item_model.get_item(name) for name in node_successors]
+        engine = SpineEngine(items, node_successors)
         self._toolbox.msg.emit("")
         self._toolbox.msg.emit("---------------------------------------")
         self._toolbox.msg.emit("<b>Starting DAG {0}/{1}</b>".format(graph_index, graph_count))
-        self._toolbox.msg.emit("Order: {0}".format(" -> ".join(list(ordered_nodes))))
+        self._toolbox.msg.emit("Order: {0}".format(" -> ".join(list(node_successors))))
         self._toolbox.msg.emit("--------------------------------------------------")
         self._toolbox.msg.emit("")
         for self.running_item in engine.run():
@@ -446,8 +446,8 @@ class SpineToolboxProject(MetaObject):
     @Slot("QVariant")
     def notify_changes_in_dag(self, dag):
         """Notifies the items in given dag that the dag has changed."""
-        ordered_nodes = self.dag_handler.calc_exec_order(dag)
-        if not ordered_nodes:
+        node_successors = self.dag_handler.node_successors(dag)
+        if not node_successors:
             # Not a dag, invalidate workflow
             edges = self.dag_handler.edges_causing_loops(dag)
             for node in dag.nodes():
@@ -456,7 +456,7 @@ class SpineToolboxProject(MetaObject):
                 project_item.invalidate_workflow(edges)
             return
         # Make resource map and run simulation
-        for rank, (item_name, parent_names) in enumerate(inverted(ordered_nodes).items()):
+        for rank, (item_name, parent_names) in enumerate(inverted(node_successors).items()):
             item = self._toolbox.project_item_model.get_item(item_name)
             resources = []
             for parent_name in parent_names:
