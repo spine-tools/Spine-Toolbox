@@ -90,10 +90,8 @@ class SourceConnection:
         }
         errors = []
         for table, mapping in tables_mappings.items():
-            types = {col: TYPE_STRING_TO_CLASS[type_name] for col, type_name in table_types.get(table, {}).items()}
-            row_types = {
-                row: TYPE_STRING_TO_CLASS[type_name] for row, type_name in table_row_types.get(table, {}).items()
-            }
+            types = {col: spec.convert_function() for col, spec in table_types.get(table, {}).items()}
+            row_types = {row: spec.convert_function() for row, spec in table_row_types.get(table, {}).items()}
             opt = options.get(table, {})
             data, header, num_cols = self.get_data_iterator(table, opt, max_rows)
             data, t_errors = read_with_mapping(data, mapping, num_cols, header, types, row_types)

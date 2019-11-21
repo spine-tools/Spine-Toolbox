@@ -21,6 +21,7 @@ from PySide2.QtWidgets import QWidget, QVBoxLayout, QMenu, QListWidgetItem, QErr
 from PySide2.QtCore import Signal, Qt, QItemSelectionModel, QPoint
 from .mapping_widget import MappingWidget
 from ..spine_io.io_models import MappingPreviewModel, MappingListModel
+from ..spine_io.type_conversion import value_to_convert_spec, ConvertSpec
 
 
 class ImportPreviewWidget(QWidget):
@@ -230,9 +231,9 @@ class ImportPreviewWidget(QWidget):
             row_types = self.connector.table_row_types.get(self.connector.current_table)
             for col in range(len(header)):
                 col_type = types.get(col, "string")
-                self.table.set_type(col, col_type, orientation=Qt.Horizontal)
+                self.table.set_type(col, value_to_convert_spec(col_type), orientation=Qt.Horizontal)
             for row, row_type in row_types.items():
-                self.table.set_type(row, row_type, orientation=Qt.Vertical)
+                self.table.set_type(row, value_to_convert_spec(row_type), orientation=Qt.Vertical)
         else:
             self.table.reset_model()
             self.table.set_horizontal_header_labels([])
@@ -243,9 +244,19 @@ class ImportPreviewWidget(QWidget):
             table: MappingListModel([dict_to_map(m) for m in mappings])
             for table, mappings in settings.get("table_mappings", {}).items()
         }
+
+        table_types = {
+            tn: {int(col): value_to_convert_spec(spec) for col, spec in cols.items()}
+            for tn, cols in settings.get("table_types", {}).items()
+        }
+        table_row_types = {
+            tn: {int(col): value_to_convert_spec(spec) for col, spec in cols.items()}
+            for tn, cols in settings.get("table_row_types", {}).items()
+        }
+
         self.connector.set_table_options(settings.get("table_options", {}))
-        self.connector.set_table_types(settings.get("table_types", {}))
-        self.connector.set_table_row_types(settings.get("table_row_types", {}))
+        self.connector.set_table_types(table_types)
+        self.connector.set_table_row_types(table_row_types)
         self.selected_source_tables.update(set(settings.get("selected_tables", [])))
         if self._ui.source_list.selectedItems():
             self.select_table(self._ui.source_list.selectedItems()[0])
@@ -261,11 +272,22 @@ class ImportPreviewWidget(QWidget):
             t: [m.to_dict() for m in mappings.get_mappings()] for t, mappings in self.table_mappings.items()
         }
 
+        table_types = {
+            tn: {col: spec.to_json_value() for col, spec in cols.items()}
+            for tn, cols in self.connector.table_types.items()
+            if cols
+        }
+        table_row_types = {
+            tn: {col: spec.to_json_value() for col, spec in cols.items()}
+            for tn, cols in self.connector.table_row_types.items()
+            if cols
+        }
+
         settings = {
             "table_mappings": table_mappings,
             "table_options": self.connector.table_options,
-            "table_types": self.connector.table_types,
-            "table_row_types": self.connector.table_row_types,
+            "table_types": table_types,
+            "table_row_types": table_row_types,
             "selected_tables": list(self.selected_source_tables),
             "source_type": self.connector.source_type,
         }

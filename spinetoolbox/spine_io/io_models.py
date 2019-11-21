@@ -33,6 +33,7 @@ from PySide2.QtCore import QModelIndex, Qt, QAbstractTableModel, QAbstractListMo
 from PySide2.QtGui import QColor, QBrush, QRegion, QPixmap, QFont
 from ..mvcmodels.minimal_table_model import MinimalTableModel
 from .io_api import TYPE_CLASS_TO_STRING, TYPE_STRING_TO_CLASS
+from .type_conversion import value_to_convert_spec, NewIntegerSequenceDateTimeConvertSpecDialog, ConvertSpec
 
 Margin = namedtuple("Margin", ("left", "right", "top", "bottom"))
 
@@ -44,8 +45,10 @@ _ERROR_COLOR = QColor(Qt.red)
 _COLUMN_TYPE_ROLE = Qt.UserRole
 _COLUMN_NUMBER_ROLE = Qt.UserRole + 1
 _ALLOWED_TYPES = list(sorted(TYPE_STRING_TO_CLASS.keys()))
+_ALLOWED_TYPES.append("integer sequence datetime")
 
 _TYPE_TO_FONT_AWESOME_ICON = {
+    "integer sequence datetime": unichr(int('f073', 16)),
     "string": unichr(int('f031', 16)),
     "datetime": unichr(int('f073', 16)),
     "duration": unichr(int('f017', 16)),
@@ -128,7 +131,7 @@ class MappingPreviewModel(MinimalTableModel):
             other_orientation_count = self.columnCount()
             correct_index_order = lambda x: (x[0], x[1])
             error_dict = self._row_type_errors
-        type_class = TYPE_STRING_TO_CLASS[type_class]
+        converter = type_class.convert_function()
         for other_index in range(other_orientation_count):
             index_tuple = correct_index_order((section, other_index))
             index = self.index(*index_tuple)
@@ -138,7 +141,7 @@ class MappingPreviewModel(MinimalTableModel):
                 if isinstance(data, str) and not data:
                     data = None
                 if data is not None:
-                    type_class(data)
+                    converter(data)
             except (ValueError, ParameterValueFormatError) as e:
                 error_dict[index_tuple] = e
         data_changed_start = correct_index_order((section, 0))
@@ -148,7 +151,7 @@ class MappingPreviewModel(MinimalTableModel):
     def get_type(self, section, orientation=Qt.Horizontal):
         if orientation == Qt.Horizontal:
             return self._column_types.get(section, None)
-        return self._row_types.get(section, None) 
+        return self._row_types.get(section, None)
 
     def get_types(self, orientation=Qt.Horizontal):
         if orientation == Qt.Horizontal:
@@ -164,9 +167,8 @@ class MappingPreviewModel(MinimalTableModel):
             count = self.rowCount()
             emit_signal = self.rowTypesUpdated
             type_dict = self._row_types
-
-        if section_type not in _ALLOWED_TYPES:
-            raise ValueError(f"section_type must be a value in {_ALLOWED_TYPES}, instead got {section_type}")
+        if not isinstance(section_type, ConvertSpec):
+            raise TypeError(f"section_type must be a instance of ConvertSpec, instead got {type(section_type).__name__}")
         if section < 0 or section > count:
             raise ValueError(f"section must be within model data")
         type_dict[section] = section_type
@@ -867,7 +869,6 @@ class HeaderWithButton(QHeaderView):
         self._render_button.setFont(self._font)
         self._render_button.hide()
 
-        self._menu.triggered.connect(self._menu_pressed)
         self._button_logical_index = None
         self.setMinimumSectionSize(self.minimumSectionSize() + self.widget_width())
 
@@ -900,8 +901,18 @@ class HeaderWithButton(QHeaderView):
         return menu
 
     def _menu_pressed(self, action):
+        type_str = action.text()
+        if type_str == "integer sequence datetime":
+            dialog = NewIntegerSequenceDateTimeConvertSpecDialog()
+            if dialog.exec_():
+                convert_spec = dialog.get_spec()
+            else:
+                return
+        else:
+            convert_spec = value_to_convert_spec(type_str)
+
         logical_index = self._button_logical_index
-        self.model().set_type(logical_index, action.text(), self.orientation())
+        self.model().set_type(logical_index, convert_spec, self.orientation())
 
     def widget_width(self):
         """Width of widget
@@ -1008,10 +1019,12 @@ class HeaderWithButton(QHeaderView):
             return
 
         # get the type of the section.
-        type_str = self.model().get_type(logical_index, self.orientation())
-        if type_str is None:
-            type_str = "string"
-        font_str = _TYPE_TO_FONT_AWESOME_ICON[type_str]
+        type_spec = self.model().get_type(logical_index, self.orientation())
+        if type_spec is None:
+            type_spec = "string"
+        else:
+            type_spec = type_spec.DISPLAY_NAME
+        font_str = _TYPE_TO_FONT_AWESOME_ICON[type_spec]
 
         # set data for both interaction button and render button.
         self._button.setText(font_str)
