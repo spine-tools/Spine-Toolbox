@@ -209,22 +209,6 @@ def create_output_dir_timestamp():
     return extension
 
 
-def create_log_file_timestamp():
-    """ Creates a new timestamp string that is used as Importer and Data Store error log file.
-
-    Returns:
-        Timestamp string or empty string if failed.
-    """
-    try:
-        # Create timestamp
-        stamp = datetime.datetime.fromtimestamp(time.time())
-    except OverflowError:
-        logging.error('Timestamp out of range.')
-        return ''
-    extension = stamp.strftime('%Y%m%dT%H%M%S')
-    return extension
-
-
 @busy_effect
 def copy_files(src_dir, dst_dir, includes=None, excludes=None):
     """Method for copying files. Does not copy folders.

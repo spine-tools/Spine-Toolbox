@@ -27,7 +27,7 @@ from spinetoolbox.project_item import ProjectItem, ProjectItemResource
 from spinetoolbox.widgets.tree_view_widget import TreeViewForm
 from spinetoolbox.widgets.graph_view_widget import GraphViewForm
 from spinetoolbox.widgets.tabular_view_widget import TabularViewForm
-from spinetoolbox.helpers import create_dir, busy_effect, create_log_file_timestamp
+from spinetoolbox.helpers import create_dir, busy_effect
 from .widgets.custom_menus import DataStoreContextMenu
 
 
