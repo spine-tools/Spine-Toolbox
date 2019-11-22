@@ -37,6 +37,52 @@ class ProjectUpgrader:
         """
         self._toolbox = toolbox
 
+    def is_valid(self, p):
+        """Checks that the given project JSON dictionary contains
+        a valid version 1 Spine Toolbox project. Valid meaning, that
+        it contains all required keys and values are of the correct
+        type.
+
+        Args:
+            p (dict): Project information JSON
+
+        Returns:
+            bool: True if project is a valid version 1 project, False if it is not
+        """
+        if "project" not in p.keys():
+            self._toolbox.msg_error.emit("Invalid project.json file. Key 'project' not found.")
+            return False
+        if "objects" not in p.keys():
+            self._toolbox.msg_error.emit("Invalid project.json file. Key 'objects' not found.")
+            return False
+        required_project_keys = ["version", "name", "description", "tool_specifications", "connections"]
+        project = p["project"]
+        objects = p["objects"]
+        if not isinstance(project, dict):
+            self._toolbox.msg_error.emit("Invalid project.json file. 'project' must be a dict.")
+            return False
+        if not isinstance(objects, dict):
+            self._toolbox.msg_error.emit("Invalid project.json file. 'objects' must be a dict.")
+            return False
+        for req_key in required_project_keys:
+            if req_key not in project:
+                self._toolbox.msg_error.emit("Invalid project.json file. Key {0} not found.".format(req_key))
+                return False
+        # Check types in project dict
+        if not project["version"] == 1:
+            self._toolbox.msg_error.emit("Invalid project version")
+            return False
+        if not isinstance(project["name"], str) or not isinstance(project["description"], str):
+            self._toolbox.msg_error.emit("Invalid project.json file. 'name' and 'description' must be strings.")
+            return False
+        if not isinstance(project["tool_specifications"], list):
+            self._toolbox.msg_error.emit("Invalid project.json file. 'tool_specifications' must be a list.")
+            return False
+        if not isinstance(project["connections"], list):
+            self._toolbox.msg_error.emit("Invalid project.json file. 'connections' must be a list.")
+            return False
+        return True
+
     def upgrade(self, project_dict):
         """Converts the project described in given project description file to the latest version.
 

@@ -108,13 +108,12 @@ class DragListView(QListView):
         self.mime_data = None
 
 
-# TODO: rename this class to something better
-class TestListView(QListWidget):
-    afterDrop = Signal(object, QDropEvent)
+class PivotListWidget(QListWidget):
+    afterDrop = Signal(QListWidget, QDropEvent)
     allowedDragLists = []
 
     def __init__(self, parent=None):
-        super(TestListView, self).__init__(parent)
+        super().__init__(parent)
         self.setDragDropMode(QAbstractItemView.DragDrop)
         self.setDefaultDropAction(Qt.MoveAction)
         self.setDragDropOverwriteMode(False)
@@ -128,5 +127,5 @@ class TestListView(QListWidget):
 
     def dropEvent(self, event):
         if event.source() == self or event.source() in self.allowedDragLists:
-            super(TestListView, self).dropEvent(event)
+            super(PivotListWidget, self).dropEvent(event)
             self.afterDrop.emit(self, event)

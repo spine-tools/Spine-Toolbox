@@ -28,7 +28,7 @@ from spinetoolbox.spine_io.importers.excel_reader import ExcelConnector
 
 def run(args):
     args = [json.loads(arg) for arg in args[1:]]
-    importer_name, checked_files, all_settings, urls_downstream, logs_dir = args
+    importer_name, checked_files, all_settings, urls_downstream, logs_dir, cancel_on_error = args
     all_data = []
     all_errors = []
     for source in checked_files:
@@ -64,15 +64,17 @@ def run(args):
         logfile_anchor = (
             "<a style='color:#BB99FF;' title='" + logfilepath + "' href='file:///" + logfilepath + "'>error log</a>"
         )
+
         print("There where errors while executing <b>{0}</b>. {1}".format(importer_name, logfile_anchor))
-        return ExecutionState.ABORT
+        if cancel_on_error:
+            return ExecutionState.ABORT
     if all_data:
         for url in urls_downstream:
-            _import(all_data, url, importer_name, logs_dir)
+            _import(all_data, url, importer_name, logs_dir, cancel_on_error)
     return ExecutionState.CONTINUE
 
 
-def _import(all_data, url, importer_name, logs_dir):
+def _import(all_data, url, importer_name, logs_dir, cancel_on_error):
     try:
         db_map = spinedb_api.DiffDatabaseMapping(url, upgrade=False, username="Mapper")
     except (spinedb_api.SpineDBAPIError, spinedb_api.SpineDBVersionError) as err:
@@ -81,9 +83,9 @@ def _import(all_data, url, importer_name, logs_dir):
     all_import_errors = []
     for data in all_data:
         import_num, import_errors = spinedb_api.import_data(db_map, **data)
-        if import_errors:
+        all_import_errors += import_errors
+        if import_errors and cancel_on_error:
             db_map.rollback_session()
-            all_import_errors += import_errors
         elif import_num:
             db_map.commit_session("imported with mapper")
             print(
@@ -103,9 +105,11 @@ def _import(all_data, url, importer_name, logs_dir):
         logfile_anchor = (
             "<a style='color:#BB99FF;' title='" + logfilepath + "' href='file:///" + logfilepath + "'>error log</a>"
         )
+        rollback_text = ", rolling back: " if cancel_on_error else ":"
+
         print(
-            "There where import errors while executing <b>{0}</b>, rolling back: "
-            "{1}".format(importer_name, logfile_anchor)
+            "There where import errors while executing <b>{0}</b>{1}"
+            "{2}".format(importer_name, rollback_text, logfile_anchor)
         )
 
 

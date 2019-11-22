@@ -384,6 +384,10 @@ class ToolboxUI(QMainWindow):
         Returns:
             bool: True when restoring project succeeded, False otherwise
         """
+        # Check that project info is valid
+        if not ProjectUpgrader(self).is_valid(project_info):
+            self.msg_error.emit("Opening project in directory {0} failed".format(project_dir))
+            return False
         version = project_info["project"]["version"]
         # Upgrade project dictionary if needed
         if version < LATEST_PROJECT_VERSION:
@@ -1296,7 +1300,7 @@ class ToolboxUI(QMainWindow):
             pos (QPoint): Mouse position
             link (Link(QGraphicsPathItem)): The concerned link
         """
-        self.link_context_menu = LinkContextMenu(self, pos, link.parallel_link)
+        self.link_context_menu = LinkContextMenu(self, pos, link)
         option = self.link_context_menu.get_action()
         if option == "Remove connection":
             self.ui.graphicsView.remove_link(link)

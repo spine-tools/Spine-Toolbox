@@ -13,7 +13,7 @@
 # Form implementation generated from reading ui file 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\project_items\importer\ui\importer_properties.ui',
 # licensing of 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\project_items\importer\ui\importer_properties.ui' applies.
 #
-# Created: Thu Nov 14 16:04:31 2019
+# Created: Thu Nov 21 19:48:08 2019
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -69,6 +69,10 @@ class Ui_Form(object):
         self.verticalLayout_21.addWidget(self.treeView_files)
         spacerItem = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
         self.verticalLayout_21.addItem(spacerItem)
+        self.cancel_on_error_checkBox = QtWidgets.QCheckBox(self.scrollAreaWidgetContents_5)
+        self.cancel_on_error_checkBox.setChecked(True)
+        self.cancel_on_error_checkBox.setObjectName("cancel_on_error_checkBox")
+        self.verticalLayout_21.addWidget(self.cancel_on_error_checkBox)
         self.pushButton_import_editor = QtWidgets.QPushButton(self.scrollAreaWidgetContents_5)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
@@ -111,6 +115,8 @@ class Ui_Form(object):
     def retranslateUi(self, Form):
         Form.setWindowTitle(QtWidgets.QApplication.translate("Form", "Form", None, -1))
         self.label_name.setText(QtWidgets.QApplication.translate("Form", "Name", None, -1))
+        self.cancel_on_error_checkBox.setToolTip(QtWidgets.QApplication.translate("Form", "If there are any errors when trying to import data cancel the whole import.", None, -1))
+        self.cancel_on_error_checkBox.setText(QtWidgets.QApplication.translate("Form", "Cancel import on error", None, -1))
         self.pushButton_import_editor.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Open selected file in Import Editor</p></body></html>", None, -1))
         self.pushButton_import_editor.setText(QtWidgets.QApplication.translate("Form", "Import Editor...", None, -1))
         self.toolButton_open_dir.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Open this Importer\'s project directory in file browser</p></body></html>", None, -1))

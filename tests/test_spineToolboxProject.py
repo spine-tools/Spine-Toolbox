@@ -20,7 +20,7 @@ import unittest
 from unittest import mock
 import logging
 import sys
-from PySide2.QtCore import QItemSelectionModel
+from PySide2.QtCore import QItemSelectionModel, QVariantAnimation
 from PySide2.QtWidgets import QApplication
 from spinetoolbox.executioner import ExecutionState
 from .mock_helpers import clean_up_toolboxui_with_project, create_toolboxui_with_project
@@ -146,7 +146,11 @@ class TestSpineToolboxProject(unittest.TestCase):
         item_index = self.toolbox.project_item_model.find_item(item_name)
         item = self.toolbox.project_item_model.project_item(item_index)
         item._do_execute = mock.MagicMock(return_value=ExecutionState.CONTINUE)
+        anim = QVariantAnimation()
+        anim.setDuration(0)
+        item.make_execution_leave_animation = mock.MagicMock(return_value=anim)
         self.toolbox.project().execute_project()
+        qApp.processEvents()
         item._do_execute.assert_called_with([], [])
 
     def test_execute_project_with_two_dags(self):
@@ -158,7 +162,14 @@ class TestSpineToolboxProject(unittest.TestCase):
         item2_index = self.toolbox.project_item_model.find_item(item2_name)
         item2 = self.toolbox.project_item_model.project_item(item2_index)
         item2._do_execute = mock.MagicMock(return_value=ExecutionState.CONTINUE)
+        anim = QVariantAnimation()
+        anim.setDuration(0)
+        item1.make_execution_leave_animation = mock.MagicMock(return_value=anim)
+        item2.make_execution_leave_animation = mock.MagicMock(return_value=anim)
         self.toolbox.project().execute_project()
+        # We have to process events for each item that gets executed
+        qApp.processEvents()
+        qApp.processEvents()
         item1._do_execute.assert_called_with([], [])
         item2._do_execute.assert_called_with([], [])
 
@@ -171,8 +182,13 @@ class TestSpineToolboxProject(unittest.TestCase):
         item2_index = self.toolbox.project_item_model.find_item(item2_name)
         item2 = self.toolbox.project_item_model.project_item(item2_index)
         item2._do_execute = mock.MagicMock(return_value=ExecutionState.CONTINUE)
+        anim = QVariantAnimation()
+        anim.setDuration(0)
+        item1.make_execution_leave_animation = mock.MagicMock(return_value=anim)
+        item2.make_execution_leave_animation = mock.MagicMock(return_value=anim)
         self.toolbox.ui.treeView_project.selectionModel().select(item2_index, QItemSelectionModel.Select)
         self.toolbox.project().execute_selected()
+        qApp.processEvents()
         item1._do_execute.assert_not_called()
         item2._do_execute.assert_called_with([], [])
 

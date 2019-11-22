@@ -20,6 +20,7 @@ import unittest
 from unittest import mock
 import logging
 import sys
+from PySide2.QtCore import QVariantAnimation
 from PySide2.QtWidgets import QApplication
 from spinetoolbox.executioner import ExecutionInstance, ExecutionState
 from spinetoolbox.project_item import ProjectItemResource
@@ -72,6 +73,8 @@ class TestExecutionInstance(unittest.TestCase):
         resources_downstream = [ProjectItemResource(item, "type", "url")]
         item.available_resources_upstream.return_value = resources_upstream
         item.available_resources_downstream.return_value = resources_downstream
+        item.make_execution_leave_animation.return_value = leave_anim = QVariantAnimation()
+        leave_anim.setDuration(0)
         return item
 
     def tearDown(self):
@@ -88,6 +91,7 @@ class TestExecutionInstance(unittest.TestCase):
         # Need to manually push the execution forward.
         execution_instance.project_item_execution_finished_signal.emit(ExecutionState.CONTINUE)
         self.mock_upstream_item.execute.assert_called_with([], self.mock_downstream_item.available_resources_upstream())
+        qApp.processEvents()
         self.mock_downstream_item.execute.assert_called_with(
             self.mock_upstream_item.available_resources_downstream(), []
         )

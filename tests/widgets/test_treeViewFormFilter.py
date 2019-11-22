@@ -56,7 +56,7 @@ class TestTreeViewFormFilterMixin:
             data = self._parameter_data(model, *fields)
             values = filtered_values[model]
             self.assertTrue(all(value in data for value in values))
-            model.update_filter()
+            model.update_main_filter()
             data = self._parameter_data(model, *fields)
             self.assertTrue(all(value not in data for value in values))
 

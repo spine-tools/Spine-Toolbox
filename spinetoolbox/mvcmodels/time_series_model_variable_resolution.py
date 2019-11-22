@@ -17,6 +17,7 @@ A model for variable resolution time series, used by the parameter value editors
 """
 
 import numpy as np
+
 from PySide2.QtCore import QModelIndex, Qt, Slot
 from spinedb_api import TimeSeriesVariableResolution
 from .indexed_value_table_model import IndexedValueTableModel
@@ -84,8 +85,13 @@ class TimeSeriesModelVariableResolution(IndexedValueTableModel):
         new_indexes = np.empty(len(old_indexes) + count, dtype=old_indexes.dtype)
         if row == len(old_values):
             # Append to the end
+            # find time step, default 1h
             last_time_stamp = old_indexes[-1]
-            last_time_step = last_time_stamp - old_indexes[-2]
+            if len(old_indexes) > 1:
+                last_time_step = last_time_stamp - old_indexes[-2]
+            else:
+                last_time_step = np.timedelta64(1, 'h')
+
             new_indexes[: len(old_indexes)] = old_indexes
             for i in range(count):
                 new_indexes[len(old_indexes) + i] = last_time_stamp + (i + 1) * last_time_step
@@ -96,7 +102,11 @@ class TimeSeriesModelVariableResolution(IndexedValueTableModel):
                 # If inserting in the beginning
                 # the time step is the first step in the old series
                 first_time_stamp = old_indexes[0]
-                time_step = old_indexes[1] - first_time_stamp
+                if len(old_indexes) > 1:
+                    time_step = old_indexes[1] - first_time_stamp
+                    print(time_step)
+                else:
+                    time_step = np.timedelta64(1, 'h')
                 for i in range(count):
                     new_indexes[i] = first_time_stamp - (count - i) * time_step
                 new_indexes[count:] = old_indexes
@@ -125,11 +135,11 @@ class TimeSeriesModelVariableResolution(IndexedValueTableModel):
         Returns:
             True if the operation was successful.
         """
-        if len(self._value) == 2:
+        if len(self._value) == 1:
             return False
         if count == len(self._value):
-            count = len(self._value) - 2
-            row = 2
+            count = len(self._value) - 1
+            row = 1
         self.beginRemoveRows(parent, row, row + count - 1)
         old_indexes = self._value.indexes
         old_values = self._value.values
