@@ -26,7 +26,7 @@ from PySide2.QtWidgets import QFileDialog, QStyle, QFileIconProvider, QInputDial
 from spinetoolbox.executioner import ExecutionState
 from spinetoolbox.project_item import ProjectItem, ProjectItemResource
 from spinetoolbox.widgets.spine_datapackage_widget import SpineDatapackageWidget
-from spinetoolbox.helpers import busy_effect
+from spinetoolbox.helpers import busy_effect, deserialize_path, serialize_path
 from spinetoolbox.config import APPLICATION_PATH, INVALID_FILENAME_CHARS
 
 
@@ -53,7 +53,7 @@ class DataConnection(ProjectItem):
         if references is None:
             references = list()
         # Convert relative paths to absolute
-        absolute_refs = [os.path.abspath(os.path.join(self._project.project_dir, r)) for r in references]
+        absolute_refs = [deserialize_path(r, self._project.project_dir) for r in references]
         self.references = absolute_refs
         self.populate_reference_list(self.references)
         # Populate data (files) model
@@ -405,7 +405,7 @@ class DataConnection(ProjectItem):
         """Returns a dictionary corresponding to this item."""
         d = super().item_dict()
         # Convert paths to relative before saving
-        d["references"] = [os.path.relpath(f, self._toolbox.project().project_dir) for f in self.file_references()]
+        d["references"] = [serialize_path(f, self._project.project_dir) for f in self.file_references()]
         return d
 
     def rename(self, new_name):
