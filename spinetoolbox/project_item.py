@@ -548,6 +548,23 @@ class ProjectItem(BaseProjectItem):
         """
         return list()
 
+    @staticmethod
+    def upgrade_from_no_version_to_version_1(item_name, old_item_dict, old_project_dir):
+        """
+        Upgrades item's dictionary from no version to version 1.
+
+        Subclasses should reimplement this method if their JSON format changed between no version
+        and version 1 .proj files.
+
+        Args:
+            item_name (str): item's name
+            old_item_dict (str): no version item dictionary
+            old_project_dir (str): path to the previous project dir
+
+        Returns:
+            version 1 item dictionary
+        """
+        return old_item_dict
 
 class ProjectItemResource:
     """Class to hold a resource made available by a project item

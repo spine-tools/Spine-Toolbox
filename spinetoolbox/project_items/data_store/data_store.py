@@ -45,7 +45,9 @@ class DataStore(ProjectItem):
             url (str or dict): SQLAlchemy url
         """
         super().__init__(toolbox, name, description, x, y)
-        if not isinstance(url["database"], str):
+        if url is None:
+            url = dict()
+        if url and not isinstance(url["database"], str):
             url["database"] = deserialize_path(url["database"], self._project.project_dir)
         self._url = self.parse_url(url)
         self.views = {}
@@ -469,6 +471,28 @@ class DataStore(ProjectItem):
         if d["url"]["dialect"] == "sqlite" and db is not None:
             d["url"]["database"] = serialize_path(db, self._project.project_dir)
         return d
+
+    @staticmethod
+    def upgrade_from_no_version_to_version_1(item_name, old_item_dict, old_project_dir):
+        """See base class."""
+        new_data_store = dict(old_item_dict)
+        if "reference" in new_data_store:
+            url_path = new_data_store["reference"]
+            url = {
+                "dialect": "sqlite",
+                "username": None,
+                "host": None,
+                "port": None,
+            }
+        else:
+            url = new_data_store["url"]
+            url_path = url["database"]
+        serialized_url_path = serialize_path(url_path, old_project_dir)
+        if serialized_url_path["relative"]:
+            serialized_url_path["path"] = os.path.join(".spinetoolbox", "items", serialized_url_path["path"])
+        url["database"] = serialized_url_path
+        new_data_store["url"] = url
+        return new_data_store
 
     def custom_context_menu(self, parent, pos):
         """Returns the context menu for this item.

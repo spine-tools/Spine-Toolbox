@@ -258,6 +258,24 @@ class Exporter(ProjectItem):
         d["settings_file_names"] = settings_files_relpath
         return d
 
+    @staticmethod
+    def upgrade_from_no_version_to_version_1(item_name, old_item_dict, old_project_dir):
+        """See base class."""
+        database_urls = list()
+        new_exporter = dict(old_item_dict)
+        new_exporter["database_to_file_name_map"] = dict()
+        for old_db_url, output_path in old_item_dict["database_to_file_name_map"].items():
+            serialized_old_db_path = serialize_url(old_db_url, old_project_dir)
+            database_urls.append(serialized_old_db_path)
+            if serialized_old_db_path["relative"]:
+                serialized_old_db_path["path"] = os.path.join(".spinetoolbox", serialized_old_db_path["path"])
+            new_exporter["database_to_file_name_map"][serialized_old_db_path["path"]] = os.path.join(
+                ".spinetoolbox", "items", item_name, output_path
+            )
+        new_exporter["database_urls"] = database_urls
+        return new_exporter
+
+
     def _update_settings_from_settings_window(self, database_path):
         """Updates the export settings for given database from the settings window."""
         settings_window = self._settings_windows[database_path]

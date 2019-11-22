@@ -54,7 +54,7 @@ class TestDataStore(unittest.TestCase):
         self.toolbox = create_toolboxui_with_project()
         self.ds_properties_ui = self.toolbox.categories["Data Stores"]["properties_ui"]
         # Let's add a Data Store to the project here since all tests in this class need it
-        item_dict = dict(name="DS", description="", x=0, y=0, url=None, reference=None)
+        item_dict = dict(name="DS", description="", x=0, y=0, url=None)
         self.toolbox.project().add_project_items("Data Stores", item_dict)
         self.ds_index = self.toolbox.project_item_model.find_item("DS")
         self.ds = self.toolbox.project_item_model.project_item(self.ds_index)
