@@ -133,6 +133,8 @@ class ImportPreviewWidget(QWidget):
         Set selected table and request data from connector
         """
         if selection:
+            if selection.text() not in self.table_mappings:
+                self.table_mappings[selection.text()] = MappingListModel([ObjectClassMapping()])
             self._ui_mapper.set_model(self.table_mappings[selection.text()])
             # request new data
             self.connector.set_table(selection.text())
@@ -218,7 +220,7 @@ class ImportPreviewWidget(QWidget):
             try:
                 data = _sanitize_data(data, header)
             except RuntimeError as error:
-                self._ui_error.showMessage("".format(error))
+                self._ui_error.showMessage("{0}".format(error))
                 self.table.reset_model()
                 self.table.set_horizontal_header_labels([])
                 self.previewDataUpdated.emit()
@@ -240,6 +242,7 @@ class ImportPreviewWidget(QWidget):
         self.previewDataUpdated.emit()
 
     def use_settings(self, settings):
+
         self.table_mappings = {
             table: MappingListModel([dict_to_map(m) for m in mappings])
             for table, mappings in settings.get("table_mappings", {}).items()
@@ -258,6 +261,10 @@ class ImportPreviewWidget(QWidget):
         self.connector.set_table_types(table_types)
         self.connector.set_table_row_types(table_row_types)
         self.selected_source_tables.update(set(settings.get("selected_tables", [])))
+        for i in range(self._ui.source_list.count()):
+            item = self._ui.source_list.item(i)
+            selected = Qt.Checked if item.text() in self.selected_source_tables else Qt.Unchecked
+            item.setCheckState(selected)
         if self._ui.source_list.selectedItems():
             self.select_table(self._ui.source_list.selectedItems()[0])
 
@@ -268,27 +275,35 @@ class ImportPreviewWidget(QWidget):
         Returns:
             [Dict] -- dict with settings
         """
+
+        tables = set(self._ui.source_list.item(i).text() for i in range(self._ui.source_list.count()))
+
         table_mappings = {
-            t: [m.to_dict() for m in mappings.get_mappings()] for t, mappings in self.table_mappings.items()
+            t: [m.to_dict() for m in mappings.get_mappings()]
+            for t, mappings in self.table_mappings.items()
+            if t in tables
         }
 
         table_types = {
             tn: {col: spec.to_json_value() for col, spec in cols.items()}
             for tn, cols in self.connector.table_types.items()
             if cols
+            if tn in tables
         }
         table_row_types = {
             tn: {col: spec.to_json_value() for col, spec in cols.items()}
             for tn, cols in self.connector.table_row_types.items()
-            if cols
+            if cols and tn in tables
         }
+
+        table_options = {t: o for t, o in self.connector.table_options.items() if t in tables}
 
         settings = {
             "table_mappings": table_mappings,
-            "table_options": self.connector.table_options,
+            "table_options": table_options,
             "table_types": table_types,
             "table_row_types": table_row_types,
-            "selected_tables": list(self.selected_source_tables),
+            "selected_tables": list(tables.intersection(self.selected_source_tables)),
             "source_type": self.connector.source_type,
         }
         return settings
