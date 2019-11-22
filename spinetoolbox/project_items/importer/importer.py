@@ -257,6 +257,7 @@ class Importer(ProjectItem):
         self.importer_process.readyReadStandardError.connect(self._forward_importer_program_stderr)
         loop = QEventLoop()
         self.importer_process.finished.connect(loop.quit)
+        self.importer_process.finished.connect(self.importer_process.deleteLater)
         program_path = os.path.abspath(importer_program.__file__)
         args.insert(0, program_path)
         self.importer_process.start(sys.executable, args)
@@ -288,34 +289,16 @@ class Importer(ProjectItem):
         args = [json.dumps(arg) for arg in args]
         exit_code = self._run_importer_program(args)
         self.get_icon().stop_animation()
-        if exit_code == -1:
-            return ExecutionState.ABORT
-        return ExecutionState.CONTINUE
-
-    @Slot(int)
-    def handle_execution_finished(self, return_code):
-        """Importer thread finished.
-
-        Args:
-            return_code (int): Process exit code
-        """
-        self.get_icon().stop_animation()
-        if return_code == 0:
-            self._toolbox.msg_success.emit("Importer <b>{0}</b> execution finished".format(self.name))
-        else:
-            self._toolbox.msg_error.emit("Importer <b>{0}</b> execution failed".format(self.name))
-        if not self._project.execution_instance:
-            # May happen sometimes when Stop button is pressed
-            return
-        self._project.execution_instance.project_item_execution_finished_signal.emit(ExecutionState.CONTINUE)
+        if exit_code == 0:
+            return ExecutionState.CONTINUE
+        return ExecutionState.ABORT
 
     def stop_execution(self):
         """Stops executing this Importer."""
-        self.get_icon().stop_animation()
         self._toolbox.msg_warning.emit("Stopping {0}".format(self.name))
-        self.instance.terminate_instance()
-        self.instance.deleteLater()
-        # Note: QSubProcess and PythonReplWidget emit project_item_execution_finished_signal
+        if not self.importer_process:
+            return
+        self.importer_process.kill()
 
     def _do_handle_dag_changed(self, resources_upstream):
         """See base class."""
