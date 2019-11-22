@@ -18,7 +18,7 @@ Contains Importer project item class.
 
 import sys
 import os
-import json
+import pickle
 import datetime
 import time
 import spinedb_api
@@ -41,8 +41,10 @@ def _create_log_file_timestamp():
     return extension
 
 
-def run(args):
-    args = [json.loads(arg) for arg in args[1:]]
+def run(_program_path, string_args):
+    int_args = int(string_args)
+    pickled_args = int_args.to_bytes((int_args.bit_length() + 7) // 8, byteorder='big')
+    args = pickle.loads(pickled_args)
     checked_files, all_settings, urls_downstream, logs_dir, cancel_on_error = args
     all_data = []
     all_errors = []
@@ -116,4 +118,4 @@ def _import(all_data, url, logs_dir, cancel_on_error):
 
 
 if __name__ == "__main__":
-    run(sys.argv)
+    run(*sys.argv)

@@ -18,8 +18,8 @@ Contains Importer project item class.
 
 import sys
 import os
-import logging
-import json
+import pickle
+import sys
 from PySide2.QtCore import Qt, Slot, QFileInfo, QEventLoop, QProcess
 from PySide2.QtGui import QStandardItem, QStandardItemModel
 from PySide2.QtWidgets import QFileIconProvider, QListWidget, QDialog, QVBoxLayout, QDialogButtonBox
@@ -253,26 +253,27 @@ class Importer(ProjectItem):
 
     def _run_importer_program(self, args):
         self.importer_process = QProcess()
-        self.importer_process.readyReadStandardOutput.connect(self._forward_importer_program_stdout)
-        self.importer_process.readyReadStandardError.connect(self._forward_importer_program_stderr)
+        self.importer_process.readyReadStandardOutput.connect(self._log_importer_process_stdout)
+        self.importer_process.readyReadStandardError.connect(self._log_importer_process_stderr)
         loop = QEventLoop()
         self.importer_process.finished.connect(loop.quit)
         self.importer_process.finished.connect(self.importer_process.deleteLater)
         program_path = os.path.abspath(importer_program.__file__)
-        args.insert(0, program_path)
-        self.importer_process.start(sys.executable, args)
+        pickled_args = pickle.dumps(args)
+        string_args = str(int.from_bytes(pickled_args, byteorder='big'))
+        self.importer_process.start(sys.executable, [program_path, string_args])
         self.importer_process.waitForStarted()
         if self.importer_process.state() == QProcess.Running:
             loop.exec_()
         return self.importer_process.exitCode()
 
     @Slot()
-    def _forward_importer_program_stdout(self):
+    def _log_importer_process_stdout(self):
         output = str(self.importer_process.readAllStandardOutput().data(), "utf-8").strip()
         self._toolbox.msg.emit("<b>{0}</b>: {1}".format(self.name, output))
 
     @Slot()
-    def _forward_importer_program_stderr(self):
+    def _log_importer_process_stderr(self):
         output = str(self.importer_process.readAllStandardError().data(), "utf-8").strip()
         self._toolbox.msg_error.emit("<b>{0}</b>: {1}".format(self.name, output))
 
@@ -291,7 +292,6 @@ class Importer(ProjectItem):
             self.logs_dir,
             self._properties_ui.cancel_on_error_checkBox.isChecked(),
         ]
-        args = [json.dumps(arg) for arg in args]
         exit_code = self._run_importer_program(args)
         self.get_icon().stop_animation()
         return exit_code == 0
