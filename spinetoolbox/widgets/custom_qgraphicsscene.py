@@ -138,7 +138,7 @@ class CustomQGraphicsScene(ShrinkingScene):
         x = pos.x() - w / 2
         y = pos.y() - h / 2
         icon_maker = self._toolbox.categories[category]["icon_maker"]
-        self.item_shadow = icon_maker(self._toolbox, x, y, w, h, "...")
+        self.item_shadow = icon_maker(self._toolbox, x, y, w, h, None)
         self._toolbox.show_add_project_item_form(category, pos.x(), pos.y())
 
     def drawBackground(self, painter, rect):

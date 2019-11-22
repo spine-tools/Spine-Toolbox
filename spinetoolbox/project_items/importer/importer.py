@@ -16,10 +16,10 @@ Contains Importer project item class.
 :date:   10.6.2019
 """
 
-import logging
-import os
-import json
 import sys
+import os
+import logging
+import json
 from PySide2.QtCore import Qt, Slot, QFileInfo, QEventLoop, QProcess
 from PySide2.QtGui import QStandardItem, QStandardItemModel
 from PySide2.QtWidgets import QFileIconProvider, QListWidget, QDialog, QVBoxLayout, QDialogButtonBox
@@ -287,7 +287,7 @@ class Importer(ProjectItem):
         args = [
             [f for f in self.all_files if f not in self.unchecked_files],
             self.settings,
-            [r.url for r in resources_downstream if r.type_ == "database"],
+            [r.url for r in self.resources_from_downstream if r.type_ == "database"],
             self.logs_dir,
             self._properties_ui.cancel_on_error_checkBox.isChecked(),
         ]
@@ -303,9 +303,9 @@ class Importer(ProjectItem):
             return
         self.importer_process.kill()
 
-    def _do_handle_dag_changed(self, resources_upstream):
+    def _do_handle_dag_changed(self, resources):
         """See base class."""
-        file_list = [r.path for r in resources_upstream if r.type_ == "file" and not r.metadata.get("future")]
+        file_list = [r.path for r in resources if r.type_ == "file" and not r.metadata.get("future")]
         self.update_file_model(set(file_list))
         if not file_list:
             self.add_notification(

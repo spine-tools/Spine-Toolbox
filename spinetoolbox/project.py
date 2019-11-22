@@ -362,6 +362,7 @@ class SpineToolboxProject(MetaObject):
         self._toolbox.msg.emit("--------------------------------------------------")
         self._toolbox.msg.emit("")
         for self.running_item in engine.run():
+            print(self.running_item.name)
             if self._execution_stopped:
                 break
         self._toolbox.msg.emit("<b>DAG {0}/{1} finished</b>".format(graph_index, graph_count))

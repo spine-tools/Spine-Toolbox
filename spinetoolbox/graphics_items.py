@@ -272,7 +272,8 @@ class ProjectItemIcon(QGraphicsRectItem):
         self.setRect(QRectF(x, y, w, h))  # Set ellipse coordinates and size
         self.text_font_size = 10  # point size
         # Make item name graphics item.
-        self.name_item = QGraphicsSimpleTextItem(project_item.name)
+        name = project_item.name if project_item else ""
+        self.name_item = QGraphicsSimpleTextItem(name)
         shadow_effect = QGraphicsDropShadowEffect()
         shadow_effect.setOffset(1)
         shadow_effect.setEnabled(False)
