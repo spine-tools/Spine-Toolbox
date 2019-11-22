@@ -24,6 +24,7 @@ import time
 import shutil
 import glob
 import json
+import urllib.parse
 import spinedb_api
 from PySide2.QtCore import Qt, Slot, QFile, QIODevice, QSize, QRect, QPoint
 from PySide2.QtCore import __version__ as qt_version
@@ -334,9 +335,7 @@ def recursive_overwrite(widget, src, dst, ignore=None, silent=True):
             ignored = set()
         for f in files:
             if f not in ignored:
-                recursive_overwrite(widget, os.path.join(src, f),
-                                    os.path.join(dst, f),
-                                    ignore, silent)
+                recursive_overwrite(widget, os.path.join(src, f), os.path.join(dst, f), ignore, silent)
     else:
         if not silent:
             _, src_filename = os.path.split(src)
@@ -623,6 +622,7 @@ class ProjectDirectoryIconProvider(QFileIconProvider):
     """QFileIconProvider that provides a Spine icon to the
     Open Project Dialog when a Spine Toolbox project
     directory is encountered."""
+
     def __init__(self):
         super().__init__()
         self.spine_icon = QIcon(":/symbols/Spine_symbol.png")
@@ -647,3 +647,89 @@ class ProjectDirectoryIconProvider(QFileIconProvider):
             return self.spine_icon
         else:
             return super().icon(info)
+
+
+def path_in_dir(path, directory):
+    """Returns True if the given path is in the given directory."""
+    return os.path.samefile(os.path.commonpath((path, directory)), directory)
+
+
+def serialize_path(path, project_dir):
+    """
+    Returns a dict representation of the given path.
+
+    If path is in project_dir, converts the path to relative.
+
+    Args:
+        path (str): path to serialize
+        project_dir (str): path to the project directory
+    Returns:
+        a dict representing the given path
+    """
+    is_relative = path_in_dir(path, project_dir)
+    serialized = {
+        "type": "path",
+        "relative": is_relative,
+        "path": os.path.relpath(path, project_dir) if is_relative else path,
+    }
+    return serialized
+
+
+def serialize_url(url, project_dir):
+    """
+    Return a dict representation of the given URL.
+
+    If the URL is a file that is in project dir, the URL is converted to a relative path.
+
+    Args:
+        url (str): a URL to serialize
+        project_dir (str): path to the project directory
+    Returns:
+        a dict representing the URL
+    """
+    parsed = urllib.parse.urlparse(url)
+    path = urllib.parse.unquote(parsed.path)
+    if sys.platform == "win32":
+        path = path[1:]  # Remove extra '/' from the beginning
+    if os.path.isfile(path):
+        is_relative = path_in_dir(path, project_dir)
+        serialized = {
+            "type": "file_url",
+            "relative": is_relative,
+            "path": os.path.relpath(path, project_dir) if is_relative else path,
+            "scheme": parsed.scheme,
+        }
+    else:
+        serialized = {"type": "url", "relative": False, "path": url}
+    return serialized
+
+
+def deserialize_path(serialized, project_dir):
+    """
+    Returns a deserialized path or URL.
+
+    Args:
+        serialized (dict): a serialized path or URL
+        project_dir (str): path to the project directory
+    Returns:
+        a path or URL as string
+    """
+    if not isinstance(serialized, dict):
+        return serialized
+    try:
+        path_type = serialized["type"]
+        if path_type == "path":
+            path = serialized["path"]
+            return os.path.normpath(os.path.join(project_dir, path)) if serialized["relative"] else path
+        if path_type == "file_url":
+            path = serialized["path"]
+            if sys.platform == "win32":
+                path = "/" + serialized["path"]
+            if serialized["relative"]:
+                path = os.path.normpath(os.path.join(project_dir, path))
+            return serialized["scheme"] + "://" + path
+        if path_type == "url":
+            return serialized["path"]
+    except KeyError as error:
+        raise RuntimeError("Key missing from serialized path: {}".format(error))
+    raise RuntimeError("Cannot deserialize: unknown path type '{}'.".format(path_type))

@@ -19,8 +19,8 @@ and project dicts from earlier versions to the latest version.
 
 import logging
 import os
-import shutil
 import json
+import sys
 from PySide2.QtWidgets import QFileDialog, QMessageBox
 from .config import LATEST_PROJECT_VERSION
 from .helpers import recursive_overwrite, create_dir
@@ -66,8 +66,11 @@ class ProjectUpgrader:
         Returns:
             dict: Upgraded project information JSON
         """
-        logging.debug("Implementation of upgrading project JSON from version {0}->{1} is missing"
-                      .format(v, LATEST_PROJECT_VERSION))
+        logging.debug(
+            "Implementation of upgrading project JSON from version {0}->{1} is missing".format(
+                v, LATEST_PROJECT_VERSION
+            )
+        )
         raise NotImplementedError
 
     @staticmethod
@@ -102,7 +105,22 @@ class ProjectUpgrader:
         new["scene_y"] = old["project"]["scene_y"]
         new["scene_w"] = old["project"]["scene_w"]
         new["scene_h"] = old["project"]["scene_h"]
-        return dict(project=new, objects=old["objects"])
+        new_objects = old["objects"]
+        for name, exporter in old["objects"]["Exporters"].items():
+            database_paths = list()
+            new_exporter = exporter
+            new_exporter["database_to_file_name_map"] = dict()
+            for old_db_path, output_path in exporter["database_to_file_name_map"].items():
+                if sys.platform == "win32":
+                    new_db_path = "sqlite:///" + old_db_path
+                else:
+                    new_db_path = "sqlite://" + old_db_path
+                new_exporter["database_to_file_name_map"][new_db_path] = os.path.join(
+                    ".spinetoolbox", "items", name, output_path
+                )
+                database_paths.append({"type": "url", "relative": False, "path": new_db_path})
+            new_objects["Exporters"][name] = new_exporter
+        return dict(project=new, objects=new_objects)
 
     def open_proj_json(self, proj_file_path):
         """Opens an old style project file (.proj) for reading,
@@ -119,7 +137,8 @@ class ProjectUpgrader:
                     proj_info = json.load(fh)
                 except json.decoder.JSONDecodeError:
                     self._toolbox.msg_error.emit(
-                        "Error in project file <b>{0}</b>. Invalid JSON. {0}".format(proj_file_path))
+                        "Error in project file <b>{0}</b>. Invalid JSON. {0}".format(proj_file_path)
+                    )
                     return None
         except OSError:
             self._toolbox.msg_error.emit("Opening project file <b>{0}</b> failed".format(proj_file_path))
@@ -134,16 +153,16 @@ class ProjectUpgrader:
         Returns:
             str: Path to project directory or an empty string if operation is canceled.
         """
-        msg = "Please select a directory for the upgraded project." \
-              "\n\nProject item data will be copied to the new project directory." \
-              "\n\nNote that you may need to manually update some project items " \
-              "to accommodate for the new project structure. E.g. Data Store Database paths " \
-              "are not updated automatically."
+        msg = (
+            "Please select a directory for the upgraded project."
+            "\n\nProject item data will be copied to the new project directory."
+            "\n\nNote that you may need to manually update some project items "
+            "to accommodate for the new project structure. E.g. Data Store Database paths "
+            "are not updated automatically."
+        )
         QMessageBox.information(self._toolbox, "Project needs to be upgraded", msg)
         # Ask user for a new directory where to save the project
-        answer = QFileDialog.getExistingDirectory(
-            self._toolbox, "Select a project directory", os.path.abspath("C:\\")
-        )
+        answer = QFileDialog.getExistingDirectory(self._toolbox, "Select a project directory", os.path.abspath("C:\\"))
         if not answer:  # Canceled (american-english), cancelled (british-english)
             return ""
         if not os.path.isdir(answer):  # Check that it's a directory
@@ -153,12 +172,16 @@ class ProjectUpgrader:
             return ""
         # Check if the selected directory is already a project directory and ask if overwrite is ok
         if os.path.isdir(os.path.join(answer, ".spinetoolbox")):
-            msg = "Directory \n\n{0}\n\nalready contains a Spine Toolbox project." \
-                  "\n\nWould you like to overwrite it?".format(answer)
+            msg = (
+                "Directory \n\n{0}\n\nalready contains a Spine Toolbox project."
+                "\n\nWould you like to overwrite it?".format(answer)
+            )
             message_box = QMessageBox(
                 QMessageBox.Question,
-                "Overwrite?", msg, buttons=QMessageBox.Ok | QMessageBox.Cancel,
-                parent=self._toolbox
+                "Overwrite?",
+                msg,
+                buttons=QMessageBox.Ok | QMessageBox.Cancel,
+                parent=self._toolbox,
             )
             message_box.button(QMessageBox.Ok).setText("Overwrite")
             msgbox_answer = message_box.exec_()
@@ -198,5 +221,3 @@ class ProjectUpgrader:
         dst_dir = os.path.abspath(items_dir)
         recursive_overwrite(self._toolbox, src_dir, dst_dir, ignore=None, silent=False)
         return True
-
-

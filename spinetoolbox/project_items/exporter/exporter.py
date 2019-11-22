@@ -25,6 +25,7 @@ from PySide2.QtCore import Slot
 from spinedb_api.database_mapping import DatabaseMapping
 from spinetoolbox.executioner import ExecutionState
 from spinetoolbox.project_item import ProjectItem, ProjectItemResource
+from spinetoolbox.helpers import deserialize_path, serialize_path, serialize_url
 from spinetoolbox.spine_io.exporters import gdx
 from .widgets.gdx_export_settings import GdxExportSettings
 from .widgets.export_list_item import ExportListItem
@@ -57,7 +58,7 @@ class Exporter(ProjectItem):
             toolbox (ToolboxUI): a ToolboxUI instance
             name (str): item name
             description (str): item description
-            database_urls (list): a list of connected database urls
+            database_urls (list): a list of serialized connected database urls
             database_to_file_name_map (dict): mapping from database path (str) to an output file name (str)
             settings_file_names (list): mapping from database path (str) to export settings file name (str)
             x (float): initial X coordinate of item icon
@@ -66,19 +67,29 @@ class Exporter(ProjectItem):
         super().__init__(toolbox, name, description, x, y)
         self._settings_windows = dict()
         self._settings = dict()
-        self._database_urls = database_urls if database_urls is not None else list()
-        if not database_to_file_name_map:
+        if database_urls is None:
+            database_urls = list()
+        self._database_urls = [deserialize_path(path, self._project.project_dir) for path in database_urls]
+        if database_to_file_name_map is None:
             self._database_to_file_name_map = dict()
         else:
+            path_to_url_map = {
+                serialized["path"]: deserialized for serialized, deserialized in zip(database_urls, self._database_urls)
+            }
             normalized_db_to_file_name_map = dict()
             for db_path, rel_output_file_path in database_to_file_name_map.items():
                 file_path = os.path.abspath(os.path.join(self._project.project_dir, rel_output_file_path))
                 file_path = os.path.relpath(file_path, self.data_dir)
-                normalized_db_to_file_name_map[db_path] = file_path
+                try:
+                    normalized_db_to_file_name_map[path_to_url_map[db_path]] = file_path
+                except KeyError as error:
+                    self._toolbox.msg_warning.emit("Could not resolve export file name for database {}".format(error))
             self._database_to_file_name_map = normalized_db_to_file_name_map
         # Convert settings file paths to absolute (if available)
         if settings_file_names is not None:
-            abs_settings_paths = [os.path.abspath(os.path.join(self._project.project_dir, s)) for s in settings_file_names]
+            abs_settings_paths = [
+                os.path.abspath(os.path.join(self._project.project_dir, s)) for s in settings_file_names
+            ]
             for file_name in abs_settings_paths:
                 try:
                     with open(file_name) as input_file:
@@ -87,7 +98,9 @@ class Exporter(ProjectItem):
                         settings = gdx.Settings.from_dict(data)
                         self._settings[database_path] = settings
                 except FileNotFoundError:
-                    self._toolbox.msg_error.emit("{} not found. Skipping.".format(file_name))
+                    self._toolbox.msg_warning.emit(
+                        "{} not found. Using default settings for exporting.".format(file_name)
+                    )
         self._activated = False
 
     @staticmethod
@@ -233,8 +246,9 @@ class Exporter(ProjectItem):
         d = super().item_dict()
         # Convert input db paths to relative
         db_to_rel_file_name_map = dict()
-        for db, output_file_name in self._database_to_file_name_map.items():
-            db_to_rel_file_name_map[db] = os.path.relpath(
+        d["database_urls"] = [serialize_url(url, self._project.project_dir) for url in self._database_to_file_name_map]
+        for serialized_db, (db, output_file_name) in zip(d["database_urls"], self._database_to_file_name_map.items()):
+            db_to_rel_file_name_map[serialized_db["path"]] = os.path.relpath(
                 os.path.join(self.data_dir, output_file_name), self._project.project_dir
             )
         d["database_to_file_name_map"] = db_to_rel_file_name_map
