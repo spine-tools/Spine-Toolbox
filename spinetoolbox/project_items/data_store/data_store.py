@@ -50,6 +50,7 @@ class DataStore(ProjectItem):
             url = reference["url"]
         self._url = self.parse_url(url)
         self.views = {}
+        self._for_spine_model_checkbox_state = Qt.Unchecked
         # Make logs directory for this Data Store
         self.logs_dir = os.path.join(self.data_dir, "logs")
         try:
@@ -104,11 +105,13 @@ class DataStore(ProjectItem):
     def activate(self):
         """Load url into selections and connect signals."""
         self._properties_ui.label_ds_name.setText(self.name)
+        self._properties_ui.checkBox_for_spine_model.setCheckState(self._for_spine_model_checkbox_state)
         self.load_url_into_selections()  # Do this before connecting signals or funny things happen
         super().connect_signals()
 
     def deactivate(self):
         """Disconnect signals."""
+        self._for_spine_model_checkbox_state = self._properties_ui.checkBox_for_spine_model.checkState()
         if not super().disconnect_signals():
             logging.error("Item %s deactivation failed", self.name)
             return False
