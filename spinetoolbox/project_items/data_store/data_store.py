@@ -22,18 +22,18 @@ import spinedb_api
 from PySide2.QtCore import Slot, Qt
 from PySide2.QtWidgets import QFileDialog, QApplication
 from sqlalchemy import create_engine
-from sqlalchemy.engine.url import make_url, URL
+from sqlalchemy.engine.url import URL
 from spinetoolbox.executioner import ExecutionState
 from spinetoolbox.project_item import ProjectItem, ProjectItemResource
 from spinetoolbox.widgets.tree_view_widget import TreeViewForm
 from spinetoolbox.widgets.graph_view_widget import GraphViewForm
 from spinetoolbox.widgets.tabular_view_widget import TabularViewForm
-from spinetoolbox.helpers import create_dir, busy_effect, create_log_file_timestamp
+from spinetoolbox.helpers import busy_effect, create_dir, deserialize_path, serialize_path
 from .widgets.custom_menus import DataStoreContextMenu
 
 
 class DataStore(ProjectItem):
-    def __init__(self, toolbox, name, description, x, y, url=None, reference=None):
+    def __init__(self, toolbox, name, description, x, y, url=None):
         """Data Store class.
 
         Args:
@@ -43,11 +43,10 @@ class DataStore(ProjectItem):
             x (float): Initial X coordinate of item icon
             y (float): Initial Y coordinate of item icon
             url (str or dict): SQLAlchemy url
-            reference (dict): reference, contains SQLAlchemy url (keeps compatibility with older project files)
         """
         super().__init__(toolbox, name, description, x, y)
-        if isinstance(reference, dict) and "url" in reference:
-            url = reference["url"]
+        if not isinstance(url["database"], str):
+            url["database"] = deserialize_path(url["database"], self._project.project_dir)
         self._url = self.parse_url(url)
         self.views = {}
         # Make logs directory for this Data Store
@@ -73,18 +72,12 @@ class DataStore(ProjectItem):
         """Return a complete url dictionary from the given dict or string"""
         base_url = dict(dialect=None, username=None, password=None, host=None, port=None, database=None)
         if isinstance(url, dict):
-            if url is not None:
-                if "database" in url and url["database"] is not None:
-                    if url["database"].lower().endswith(".sqlite"):
-                        # Convert relative database path back to absolute
-                        abs_path = os.path.abspath(os.path.join(self._toolbox.project().project_dir, url["database"]))
-                        url["database"] = abs_path
+            if "database" in url and url["database"] is not None:
+                if url["database"].lower().endswith(".sqlite"):
+                    # Convert relative database path back to absolute
+                    abs_path = os.path.abspath(os.path.join(self._project.project_dir, url["database"]))
+                    url["database"] = abs_path
             base_url.update(url)
-        # elif isinstance(url, str):
-        #     logging.debug("I'm here")
-        #     sa_url = make_url(url)
-        #     base_url["dialect"] = sa_url.get_dialect().name
-        #     base_url.update(sa_url.translate_connect_args())
         return base_url
 
     def make_signal_handler_dict(self):
@@ -470,16 +463,11 @@ class DataStore(ProjectItem):
     def item_dict(self):
         """Returns a dictionary corresponding to this item."""
         d = super().item_dict()
-        d["url"] = self.url()
+        d["url"] = dict(self.url())
         db = d["url"]["database"]
         # If database key is a file, change the path to relative
-        if db is not None:
-            if os.path.isfile(db):
-                # logging.debug("Found file database:{0}".format(db))
-                rela_db = os.path.relpath(db, self._project.project_dir)
-                # logging.debug("database as relative path:{0}".format(rela_db))
-                # Overwrite database key
-                d["url"]["database"] = rela_db
+        if d["url"]["dialect"] == "sqlite" and db is not None:
+            d["url"]["database"] = serialize_path(db, self._project.project_dir)
         return d
 
     def custom_context_menu(self, parent, pos):

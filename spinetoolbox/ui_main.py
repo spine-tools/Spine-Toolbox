@@ -343,7 +343,8 @@ class ToolboxUI(QMainWindow):
                 if not proj_info:
                     return False
                 # Copy (project item) data from old project to new project directory
-                upgraded_proj_info = upgrader.upgrade(proj_info)
+                old_project_dir = os.path.normpath(os.path.join(os.path.dirname(selection), selection[:-5]))
+                upgraded_proj_info = upgrader.upgrade(proj_info, proj_dir, old_project_dir)
                 if not self.restore_project(upgraded_proj_info, proj_dir, clear_event_log):
                     return False
                 if not upgrader.copy_data(selection, proj_dir):

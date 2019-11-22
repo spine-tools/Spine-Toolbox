@@ -23,7 +23,7 @@ import json
 import sys
 from PySide2.QtWidgets import QFileDialog, QMessageBox
 from .config import LATEST_PROJECT_VERSION
-from .helpers import recursive_overwrite, create_dir
+from .helpers import  create_dir, recursive_overwrite, serialize_path, serialize_url
 
 
 class ProjectUpgrader:
@@ -83,11 +83,13 @@ class ProjectUpgrader:
             return False
         return True
 
-    def upgrade(self, project_dict):
+    def upgrade(self, project_dict, new_project_dir, old_project_dir):
         """Converts the project described in given project description file to the latest version.
 
         Args:
             project_dict (dict): Full path to project description file, ie. .proj or .json
+            new_project_dir (str): Path to the upgraded project directory
+            old_project_dir (str): Path to the original project directory
 
         Returns:
             dict: Latest version of the project info dictionary
@@ -95,11 +97,11 @@ class ProjectUpgrader:
         try:
             v = project_dict["project"]["version"]
         except KeyError:
-            return self.upgrade_from_no_version_to_version_1(project_dict)
+            return self.upgrade_from_no_version_to_version_1(project_dict, new_project_dir, old_project_dir)
         return self.upgrade_to_latest(v, project_dict)
 
     @staticmethod
-    def upgrade_to_latest(v, project_dict):
+    def upgrade_to_latest(v):
         """Upgrades the given project dictionary to the latest version.
 
         NOTE: Implement this when the structure of the project file needs
@@ -117,14 +119,16 @@ class ProjectUpgrader:
                 v, LATEST_PROJECT_VERSION
             )
         )
-        raise NotImplementedError
+        raise NotImplementedError()
 
     @staticmethod
-    def upgrade_from_no_version_to_version_1(old):
+    def upgrade_from_no_version_to_version_1(old, new_project_dir, old_project_dir):
         """Converts project information dictionaries without 'version' to version 1.
 
         Args:
             old (dict): Project information JSON
+            new_project_dir (str): Path to new project directory
+            old_project_dir (str): Path to old project directory
 
         Returns:
              dict: Project information JSON upgraded to version 1
@@ -153,19 +157,37 @@ class ProjectUpgrader:
         new["scene_h"] = old["project"]["scene_h"]
         new_objects = old["objects"]
         for name, exporter in old["objects"]["Exporters"].items():
-            database_paths = list()
-            new_exporter = exporter
+            database_urls = list()
+            new_exporter = dict(exporter)
             new_exporter["database_to_file_name_map"] = dict()
-            for old_db_path, output_path in exporter["database_to_file_name_map"].items():
-                if sys.platform == "win32":
-                    new_db_path = "sqlite:///" + old_db_path
-                else:
-                    new_db_path = "sqlite://" + old_db_path
-                new_exporter["database_to_file_name_map"][new_db_path] = os.path.join(
+            for old_db_url, output_path in exporter["database_to_file_name_map"].items():
+                serialized_old_db_path = serialize_url(old_db_url, old_project_dir)
+                database_urls.append(serialized_old_db_path)
+                if serialized_old_db_path["relative"]:
+                    serialized_old_db_path["path"] = os.path.join(".spinetoolbox", serialized_old_db_path["path"])
+                new_exporter["database_to_file_name_map"][serialized_old_db_path["path"]] = os.path.join(
                     ".spinetoolbox", "items", name, output_path
                 )
-                database_paths.append({"type": "url", "relative": False, "path": new_db_path})
+            new_exporter["database_urls"] = database_urls
             new_objects["Exporters"][name] = new_exporter
+        for name, data_store in old["objects"]["Data Stores"].items():
+            new_data_store = dict(data_store)
+            if "reference" in new_data_store:
+                url_path = new_data_store["reference"]
+                url = {
+                    "dialect": "sqlite",
+                    "username": None,
+                    "host": None,
+                    "port": None,
+                }
+            else:
+                url = new_data_store["url"]
+                url_path = url["database"]
+            serialized_url_path = serialize_path(url_path, old_project_dir)
+            if serialized_url_path["relative"]:
+                serialized_url_path["path"] = os.path.join(".spinetoolbox", "items", serialized_url_path["path"])
+            url["database"] = serialized_url_path
+            new_data_store["url"] = url
         return dict(project=new, objects=new_objects)
 
     def open_proj_json(self, proj_file_path):
