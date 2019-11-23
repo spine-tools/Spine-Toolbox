@@ -326,7 +326,7 @@ class ProjectItem(BaseProjectItem):
         Executes this item in the given direction using the given resources and returns a boolean
         indicating the outcome.
 
-        Subclasses need to implement execute_forward and execute_backward to do the appropriate work 
+        Subclasses need to implement execute_forward and execute_backward to do the appropriate work
         in each direction.
 
         Args:
@@ -335,11 +335,11 @@ class ProjectItem(BaseProjectItem):
         Returns:
             bool: True if execution succeeded, False otherwise
         """
-        if direction == "backward":
-            result = self.execute_backward(resources)
-        elif direction == "forward":
-            result = self.execute_forward(resources)
+        result = {"backward": self.execute_backward, "forward": self.execute_forward}[direction](resources)
+        if direction == "forward" and result:
             self.run_leave_animation()
+        if self._project._execution_stopped:
+            return False
         return result
 
     def run_leave_animation(self):
@@ -390,10 +390,7 @@ class ProjectItem(BaseProjectItem):
         Returns:
             a list of ProjectItemResources
         """
-        if direction == "backward":
-            return self.output_resources_backward()
-        if direction == "forward":
-            return self.output_resources_forward()
+        return {"backward": self.output_resources_backward, "forward": self.output_resources_forward}[direction]()
 
     # pylint: disable=no-self-use
     def output_resources_forward(self):

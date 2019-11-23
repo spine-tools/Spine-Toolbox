@@ -47,7 +47,7 @@ class ToolInstance(QObject):
         self.args = list()  # List of command line arguments for the program
 
     def is_running(self):
-        return self.tool_process is not None
+        return self.exec_mngr is not None
 
     def terminate_instance(self):
         """Terminates Tool instance execution."""
@@ -306,7 +306,7 @@ class PythonToolInstance(ToolInstance):
         if ret != 0:
             try:
                 return_msg = self.tool_specification.return_codes[ret]
-                self._toolbox.msg_error.emit("\t<b>{0}</b> [exit code:{1}]".format(return_msg, ret))
+                self._toolbox.msg_error.emit("\t<b>{0}</b> [exit code: {1}]".format(return_msg, ret))
             except KeyError:
                 self._toolbox.msg_error.emit("\tUnknown return code ({0})".format(ret))
         else:

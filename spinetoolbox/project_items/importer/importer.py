@@ -19,7 +19,7 @@ Contains Importer project item class.
 import sys
 import os
 import pickle
-import sys
+import logging
 from PySide2.QtCore import Qt, Slot, QFileInfo, QEventLoop, QProcess
 from PySide2.QtGui import QStandardItem, QStandardItemModel
 from PySide2.QtWidgets import QFileIconProvider, QListWidget, QDialog, QVBoxLayout, QDialogButtonBox
@@ -298,7 +298,7 @@ class Importer(ProjectItem):
 
     def stop_execution(self):
         """Stops executing this Importer."""
-        self._toolbox.msg_warning.emit("Stopping {0}".format(self.name))
+        super().stop_execution()
         if not self.importer_process:
             return
         self.importer_process.kill()

@@ -334,13 +334,13 @@ class SpineToolboxProject(MetaObject):
 
     def execute_dags(self, dags):
         for i, dag in enumerate(dags):
+            if self._execution_stopped:
+                break
             self.execute_dag(dag, i + 1, len(dags))
 
     def execute_dag(self, dag, graph_index, graph_count):
         node_successors = self.dag_handler.node_successors(dag)
         if not node_successors:
-            self._toolbox.msg.emit("")
-            self._toolbox.msg.emit("---------------------------------------")
             self._toolbox.msg_warning.emit(
                 "<b>Graph {0}/{1} is not a Directed Acyclic Graph</b>".format(graph_index, graph_count)
             )
@@ -350,22 +350,20 @@ class SpineToolboxProject(MetaObject):
                 "Please edit connections in Design View to execute it. "
                 "Possible fix: remove connection(s) {0}.".format(", ".join(edges))
             )
-            self._toolbox.msg.emit("---------------------------------------")
             return
         # Make execution instance, connect signals and start execution
         items = [self._toolbox.project_item_model.get_item(name) for name in node_successors]
         engine = SpineEngine(items, node_successors)
-        self._toolbox.msg.emit("")
-        self._toolbox.msg.emit("---------------------------------------")
         self._toolbox.msg.emit("<b>Starting DAG {0}/{1}</b>".format(graph_index, graph_count))
         self._toolbox.msg.emit("Order: {0}".format(" -> ".join(list(node_successors))))
-        self._toolbox.msg.emit("--------------------------------------------------")
-        self._toolbox.msg.emit("")
         for self.running_item in engine.run():
-            print(self.running_item.name)
-            if self._execution_stopped:
+            if not self.running_item:
+                self._toolbox.msg.emit("<b>DAG {0}/{1} stopped</b>".format(graph_index, graph_count))
+                self._execution_stopped = False
                 break
-        self._toolbox.msg.emit("<b>DAG {0}/{1} finished</b>".format(graph_index, graph_count))
+        else:
+            self.running_item = None
+            self._toolbox.msg.emit("<b>DAG {0}/{1} finished</b>".format(graph_index, graph_count))
 
     def execute_selected(self):
         """Starts executing selected directed acyclic graph. Selected graph is
@@ -397,7 +395,6 @@ class SpineToolboxProject(MetaObject):
         self._toolbox.msg.emit("--------------------------------------------------")
         self._toolbox.msg.emit("<b>Executing Selected Directed Acyclic Graphs</b>")
         self._toolbox.msg.emit("--------------------------------------------------")
-        self._toolbox.msg.emit("")
         self.execute_dags(dags)
 
     def execute_project(self):
@@ -416,7 +413,6 @@ class SpineToolboxProject(MetaObject):
         self._toolbox.msg.emit("---------------------------------------")
         self._toolbox.msg.emit("<b>Executing All Directed Acyclic Graphs</b>")
         self._toolbox.msg.emit("--------------------------------------------------")
-        self._toolbox.msg.emit("")
         self.execute_dags(dags)
 
     def stop(self):

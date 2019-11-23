@@ -446,6 +446,7 @@ class Tool(ProjectItem):
         self.instance.execute()
         if self.instance.is_running():
             loop.exec_()
+        self.get_icon().stop_animation()
         return self.last_return_code == 0
 
     def count_files_and_dirs(self):
@@ -782,7 +783,6 @@ class Tool(ProjectItem):
             return_code (int): Process exit code
         """
         self.last_return_code = return_code
-        self.get_icon().stop_animation()
         # Disconnect instance finished signal
         self.instance.instance_finished_signal.disconnect(self.handle_execution_finished)
         if return_code == 0:
@@ -937,8 +937,8 @@ class Tool(ProjectItem):
 
     def stop_execution(self):
         """Stops executing this Tool."""
+        super().stop_execution()
         self.get_icon().stop_animation()
-        self._toolbox.msg_warning.emit("Stopping Tool <b>{0}</b>".format(self.name))
         self.instance.terminate_instance()
 
     def _do_handle_dag_changed(self, resources):

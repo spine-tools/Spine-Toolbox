@@ -18,7 +18,6 @@ Class for a custom RichJupyterWidget that can run tool instances.
 
 from PySide2.QtCore import Signal
 from qtconsole.rich_jupyter_widget import RichJupyterWidget
-from ..executioner import ExecutionState
 
 
 class SpineConsoleWidget(RichJupyterWidget):
@@ -49,9 +48,3 @@ class SpineConsoleWidget(RichJupyterWidget):
         if not self.kernel_manager:
             return
         self.kernel_manager.interrupt_kernel()
-        # TODO: Block execution until kernel has been interrupted and then emit the signal
-        if not self._toolbox.project().execution_instance:
-            return
-        self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(
-            ExecutionState.STOP_REQUESTED
-        )
