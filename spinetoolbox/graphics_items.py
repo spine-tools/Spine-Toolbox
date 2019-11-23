@@ -522,17 +522,17 @@ class LinkBase(QGraphicsPathItem):
         """Updates geometry."""
         self.prepareGeometryChange()
         qsettings = self._toolbox.qsettings()
-        smooth_links = qsettings.value("appSettings/smoothLinks", defaultValue="false") == "true"
-        self.do_update_geometry(smooth_links)
+        curved_links = qsettings.value("appSettings/curvedLinks", defaultValue="false") == "true"
+        self.do_update_geometry(curved_links)
 
-    def do_update_geometry(self, smooth_links):
+    def do_update_geometry(self, curved_links):
         """Sets the path for this item.
 
         Args:
-            smooth_links (bool): Whether the path should follow a smooth curve or just a straight line
+            curved_links (bool): Whether the path should follow a smooth curve or just a straight line
         """
         ellipse_path = self._make_ellipse_path()
-        guide_path = self._make_guide_path(smooth_links)
+        guide_path = self._make_guide_path(curved_links)
         connecting_path = self._make_connecting_path(guide_path)
         arrow_path = self._make_arrow_path(guide_path)
         path = ellipse_path + connecting_path + arrow_path
@@ -557,36 +557,37 @@ class LinkBase(QGraphicsPathItem):
             ]
         return {"left": QPointF(-1, 0), "bottom": QPointF(0, 1), "right": QPointF(1, 0)}[self.src_connector.position]
 
-    def _get_dst_offset(self):
+    def _get_dst_offset(self, c1):
         if not self.dst_connector:
-            return QPointF(0, 0)
+            guide_path = QPainterPath(self.src_center)
+            guide_path.quadTo(c1, self.dst_center)
+            line = self._get_joint_line(guide_path).unitVector()
+            return QPointF(-line.dx(), -line.dy())
         return {"left": QPointF(-1, 0), "bottom": QPointF(0, 1), "right": QPointF(1, 0)}[self.dst_connector.position]
 
-    def _make_guide_path(self, smooth_links):
+    def _make_guide_path(self, curved_links):
         """
         Returns a 'narrow' path conneting this item's source and destination.
 
         Args:
-            smooth_links (bool): Whether the path should follow a smooth curve or just a straight line
+            curved_links (bool): Whether the path should follow a smooth curve or just a straight line
 
         Returns:
             QPainterPath
         """
-        smooth_links |= self.dst_connector == self.src_connector
+        curved_links |= self.dst_connector == self.src_connector
         path = QPainterPath(self.src_center)
-        if not smooth_links:
+        if not curved_links:
             path.lineTo(self.dst_center)
             return path
         c_factor = 8 * self.magic_number
-        src_offset = self._get_src_offset()
-        dst_offset = self._get_dst_offset()
-        c1 = self.src_center + c_factor * src_offset
-        c2 = self.dst_center + c_factor * dst_offset
+        c1 = self.src_center + c_factor * self._get_src_offset()
+        c2 = self.dst_center + c_factor * self._get_dst_offset(c1)
         path.cubicTo(c1, c2, self.dst_center)
         return path
 
-    def _path_to_points(self, path):
-        """Returns a list of representative points from given path.
+    def _points_and_angles_from_path(self, path):
+        """Returns a list of representative points and angles from given path.
 
         Args:
             path (QPainterPath)
@@ -594,34 +595,42 @@ class LinkBase(QGraphicsPathItem):
         Returns:
             list(QPointF)
         """
-        length = path.length() - self.src_rect.width() / 2
-        points = list()
-        i = 0.0
-        max_incr = 10.0
-        min_incr = 0.1
-        s_change_tol = 0.5
-        while i < length:
-            t0 = path.percentAtLength(i)
-            p0 = path.pointAtPercent(t0)
-            s0 = path.slopeAtPercent(t0)
-            points.append(p0)
+        max_incr = self.magic_number / 2
+        min_incr = self.magic_number / 10
+        max_angle_change = self.magic_number / 1000
+        percents = list()
+        angles = list()
+        i = self.src_rect.width() / 2
+        t = path.percentAtLength(i)
+        a = path.angleAtPercent(t)
+        while t < 0.5:
+            percents.append(t)
+            angles.append(a)
+            a_ref = a
             incr = max_incr
             while incr > min_incr:
-                t1 = path.percentAtLength(i + incr)
-                s1 = path.slopeAtPercent(t1)
+                t = path.percentAtLength(i + incr)
+                a = path.angleAtPercent(t)
                 try:
-                    s_change = abs((s1 - s0) / s0)
+                    angle_change = abs((a - a_ref) / (a_ref + a) / 2)
                 except ZeroDivisionError:
                     incr = min_incr
                     break
-                if s_change < s_change_tol:
+                if angle_change < max_angle_change:
                     break
                 incr /= 2
             i += incr
-        t = path.percentAtLength(length)
-        points.append(path.pointAtPercent(t))
-        points.append(path.pointAtPercent(1.0))
-        return points
+        t = 0.5
+        a = path.angleAtPercent(t)
+        percents.append(t)
+        angles.append(a)
+        points = [path.pointAtPercent(t) for t in percents]
+        for t in reversed(percents):
+            p = path.pointAtPercent(1.0 - t)
+            a = path.angleAtPercent(1.0 - t)
+            points.append(p)
+            angles.append(a)
+        return points, angles
 
     def _make_connecting_path(self, guide_path):
         """Returns a 'thick' path connecting source and destination, by following the given 'guide' path.
@@ -632,25 +641,37 @@ class LinkBase(QGraphicsPathItem):
         Returns:
             QPainterPath
         """
-        points = self._path_to_points(guide_path)
-        off = self._get_normal_offset(points[0], points[1])
-        lower_points = [points[0] + off]
-        upper_points = [points[0] - off]
-        for src, dst in zip(points[:-1], points[1:]):
-            off = self._get_normal_offset(src, dst)
-            lower_points.append(src + off)
-            upper_points.append(src - off)
-        all_points = lower_points + list(reversed(upper_points))
-        p0 = all_points.pop(0)
-        curve_path = QPainterPath(p0)
+        points, angles = self._points_and_angles_from_path(guide_path)
+        outgoing_points = []
+        incoming_points = []
+        for point, angle in zip(points, angles):
+            off = self._radius_from_point_and_angle(point, angle)
+            outgoing_points.append(point + off)
+            incoming_points.insert(0, point - off)
+        p0 = guide_path.pointAtPercent(0)
+        a0 = guide_path.angleAtPercent(0)
+        off0 = self._radius_from_point_and_angle(p0, a0)
+        curve_path = QPainterPath(p0 + off0)
+        self._follow_points(curve_path, outgoing_points)
+        curve_path.lineTo(incoming_points[0])
+        self._follow_points(curve_path, incoming_points)
+        curve_path.lineTo(p0 - off0)
+        curve_path.closeSubpath()
         curve_path.setFillRule(Qt.WindingFill)
-        for p in all_points:
-            curve_path.lineTo(p)
-        curve_path.lineTo(p0)
-        return curve_path
+        return curve_path.simplified()
 
-    def _get_normal_offset(self, src, dst):
-        normal = QLineF(src, dst).normalVector()
+    @staticmethod
+    def _follow_points(curve_path, points):
+        points = iter(points)
+        for p0 in points:
+            p1 = next(points)
+            curve_path.quadTo(p0, p1)
+
+    def _radius_from_point_and_angle(self, point, angle):
+        line = QLineF()
+        line.setP1(point)
+        line.setAngle(angle)
+        normal = line.normalVector()
         normal.setLength(self.magic_number / 2)
         return QPointF(normal.dx(), normal.dy())
 
@@ -664,7 +685,7 @@ class LinkBase(QGraphicsPathItem):
         Returns:
             QPainterPath
         """
-        angle = self._get_join_angle(guide_path)
+        angle = self._get_joint_angle(guide_path)
         arrow_p0 = self.dst_center
         d1 = QPointF(sin(angle + self.arrow_angle), cos(angle + self.arrow_angle))
         d2 = QPointF(sin(angle + (pi - self.arrow_angle)), cos(angle + (pi - self.arrow_angle)))
@@ -678,10 +699,13 @@ class LinkBase(QGraphicsPathItem):
         return arrow_path
 
     @staticmethod
-    def _get_join_angle(guide_path):
+    def _get_joint_line(guide_path):
         src = guide_path.pointAtPercent(0.99)
         dst = guide_path.pointAtPercent(1.0)
-        line = QLineF(src, dst)
+        return QLineF(src, dst)
+
+    def _get_joint_angle(self, guide_path):
+        line = self._get_joint_line(guide_path)
         return atan2(-line.dy(), line.dx())
 
 
