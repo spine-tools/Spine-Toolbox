@@ -39,7 +39,7 @@ class ToolConfigurationAssistantWidget(QWidget):
         super().__init__(parent=toolbox, f=Qt.Window)
         self._toolbox = toolbox  # QWidget parent
         self.spine_model_config_asst = SpineModelConfigurationAssistant(toolbox)
-        self.q_process = None
+        self.prox_exec_mngr = None
         self.py_call_installed = False  # Whether or not PyCall has been installed
         # Set up the ui from Qt Designer files
         self.ui = tool_configuration_assistant.Ui_PackagesForm()
@@ -106,16 +106,16 @@ class ToolConfigurationAssistantWidget(QWidget):
             )
             QApplication.restoreOverrideCursor()
         else:
-            self.q_process = self.spine_model_config_asst.spine_model_version_check()
-            self.q_process.subprocess_finished_signal.connect(self._handle_spine_model_version_check_finished)
-            self.q_process.start_process()
+            self.prox_exec_mngr = self.spine_model_config_asst.spine_model_version_check()
+            self.prox_exec_mngr.subprocess_finished_signal.connect(self._handle_spine_model_version_check_finished)
+            self.prox_exec_mngr.start_execution()
 
     @Slot(int, name="_handle_spine_model_version_check_finished")
     def _handle_spine_model_version_check_finished(self, ret):
         """Run when the Spine Model configuration assistant has finished checking SpineModel version.
         Install SpineModel if not found, otherwise check the python program used by PyCall.
         """
-        if self.q_process.process_failed_to_start:
+        if self.prox_exec_mngr.process_failed_to_start:
             self.add_spine_model_error_msg("Check failed. Make sure that Julia is correctly installed and try again.")
             QApplication.restoreOverrideCursor()
         elif ret != 0:
@@ -124,30 +124,30 @@ class ToolConfigurationAssistantWidget(QWidget):
                 QApplication.restoreOverrideCursor()
             else:
                 self.add_spine_model_msg("Installing SpineModel. This operation can take a few moments...")
-                self.q_process = self.spine_model_config_asst.install_spine_model()
-                self.q_process.subprocess_finished_signal.connect(self._handle_spine_model_installation_finished)
-                self.q_process.start_process()
+                self.prox_exec_mngr = self.spine_model_config_asst.install_spine_model()
+                self.prox_exec_mngr.subprocess_finished_signal.connect(self._handle_spine_model_installation_finished)
+                self.prox_exec_mngr.start_execution()
         else:
             self.add_spine_model_msg("SpineModel is correctly installed.")
-            self.q_process = self.spine_model_config_asst.py_call_program_check()
-            self.q_process.subprocess_finished_signal.connect(self._handle_py_call_program_check_finished)
-            self.q_process.start_process()
+            self.prox_exec_mngr = self.spine_model_config_asst.py_call_program_check()
+            self.prox_exec_mngr.subprocess_finished_signal.connect(self._handle_py_call_program_check_finished)
+            self.prox_exec_mngr.start_execution()
 
     @Slot(int, name="_handle_spine_model_installation_finished")
     def _handle_spine_model_installation_finished(self, ret):
         """Run when the Spine Model configuration assistant has finished installing SpineModel.
         Check the python program used by PyCall.
         """
-        if self.q_process.process_failed_to_start or ret != 0:
+        if self.prox_exec_mngr.process_failed_to_start or ret != 0:
             self.add_spine_model_error_msg(
                 "Spine Model installation failed. Make sure that Julia is correctly installed and try again."
             )
             QApplication.restoreOverrideCursor()
         else:
             self.add_spine_model_success_msg("SpineModel successfully installed.")
-            self.q_process = self.spine_model_config_asst.py_call_program_check()
-            self.q_process.subprocess_finished_signal.connect(self._handle_py_call_program_check_finished)
-            self.q_process.start_process()
+            self.prox_exec_mngr = self.spine_model_config_asst.py_call_program_check()
+            self.prox_exec_mngr.subprocess_finished_signal.connect(self._handle_py_call_program_check_finished)
+            self.prox_exec_mngr.start_execution()
 
     @Slot(int, name="_handle_py_call_program_check_finished")
     def _handle_py_call_program_check_finished(self, ret):
@@ -155,13 +155,13 @@ class ToolConfigurationAssistantWidget(QWidget):
         Install PyCall if not found, otherwise reconfigure PyCall to use same python as Spine Toolbox if it's not
         the case.
         """
-        if self.q_process.process_failed_to_start:
+        if self.prox_exec_mngr.process_failed_to_start:
             self.add_spine_model_error_msg("Check failed. Make sure that Julia is correctly installed and try again.")
             QApplication.restoreOverrideCursor()
         elif ret != 0:
             if self.py_call_installed:
                 self.py_call_installed = False
-                py_call_program_check_err = self.q_process.error_output
+                py_call_program_check_err = self.prox_exec_mngr.error_output
                 self.add_spine_model_error_msg(
                     "Unable to determine the python program used by PyCall: {}.".format(py_call_program_check_err)
                 )
@@ -171,11 +171,11 @@ class ToolConfigurationAssistantWidget(QWidget):
                 QApplication.restoreOverrideCursor()
             else:
                 self.add_spine_model_msg("Installing PyCall. This operation can take a few moments...")
-                self.q_process = self.spine_model_config_asst.install_py_call()
-                self.q_process.subprocess_finished_signal.connect(self._handle_py_call_installation_finished)
-                self.q_process.start_process()
+                self.prox_exec_mngr = self.spine_model_config_asst.install_py_call()
+                self.prox_exec_mngr.subprocess_finished_signal.connect(self._handle_py_call_installation_finished)
+                self.prox_exec_mngr.start_execution()
         else:
-            py_call_python_program = self.q_process.output
+            py_call_python_program = self.prox_exec_mngr.output
             self.add_spine_model_msg(
                 "PyCall is configured to use the python program at " "<b>{0}</b>".format(py_call_python_program)
             )
@@ -190,9 +190,11 @@ class ToolConfigurationAssistantWidget(QWidget):
                         "Reconfiguring PyCall to use the python program at {0}. "
                         "This operation can take a few moments...".format(sys.executable)
                     )
-                    self.q_process = self.spine_model_config_asst.reconfigure_py_call(sys.executable)
-                    self.q_process.subprocess_finished_signal.connect(self._handle_py_call_reconfiguration_finished)
-                    self.q_process.start_process()
+                    self.prox_exec_mngr = self.spine_model_config_asst.reconfigure_py_call(sys.executable)
+                    self.prox_exec_mngr.subprocess_finished_signal.connect(
+                        self._handle_py_call_reconfiguration_finished
+                    )
+                    self.prox_exec_mngr.start_execution()
             else:
                 self.add_spine_model_success_msg("<b>SpineModel is ready to use.</b>")
                 QApplication.restoreOverrideCursor()
@@ -202,7 +204,7 @@ class ToolConfigurationAssistantWidget(QWidget):
         """Run when the Spine Model configuration assistant has finished installing PyCall.
         Check the python program used by PyCall.
         """
-        if self.q_process.process_failed_to_start or ret != 0:
+        if self.prox_exec_mngr.process_failed_to_start or ret != 0:
             self.py_call_installed = False
             self.add_spine_model_error_msg(
                 "PyCall installation failed. Make sure that Julia is correctly installed and try again."
@@ -211,16 +213,16 @@ class ToolConfigurationAssistantWidget(QWidget):
         else:
             self.py_call_installed = True
             self.add_spine_model_success_msg("PyCall successfully installed.")
-            self.q_process = self.spine_model_config_asst.py_call_program_check()
-            self.q_process.subprocess_finished_signal.connect(self._handle_py_call_program_check_finished)
-            self.q_process.start_process()
+            self.prox_exec_mngr = self.spine_model_config_asst.py_call_program_check()
+            self.prox_exec_mngr.subprocess_finished_signal.connect(self._handle_py_call_program_check_finished)
+            self.prox_exec_mngr.start_execution()
 
     @Slot(int, name="_handle_py_call_reconfiguration_finished")
     def _handle_py_call_reconfiguration_finished(self, ret):
         """Run when the Spine Model configuration assistant has finished reconfiguring PyCall.
         End Spine Model configuration.
         """
-        if self.q_process.process_failed_to_start or ret != 0:
+        if self.prox_exec_mngr.process_failed_to_start or ret != 0:
             self.add_spine_model_error_msg("PyCall reconfiguration failed.")
         else:
             self.add_spine_model_success_msg("PyCall successfully reconfigured.")

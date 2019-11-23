@@ -10,7 +10,7 @@
 ######################################################################################################################
 
 """
-Module to handle running tools in a QProcess.
+Classes to manage tool instance execution in various forms.
 
 :author: P. Savolainen (VTT)
 :date:   1.2.2018
@@ -20,10 +20,78 @@ import logging
 from PySide2.QtCore import QObject, QProcess, Slot, Signal
 
 
-class QSubProcess(QObject):
-    """Class to handle starting, running, and finishing PySide2 QProcesses."""
+class ExecutionManager(QObject):
+    """Base class for all tool instance execution managers."""
 
-    subprocess_finished_signal = Signal(int, name="subprocess_finished_signal")
+    execution_finished = Signal(int)
+
+    def __init__(self, toolbox):
+        """Class constructor.
+
+        Args:
+            toolbox (ToolboxUI): Instance of Main UI class.
+        """
+        super().__init__()
+        self._toolbox = toolbox
+
+    # noinspection PyUnresolvedReferences
+    def start_execution(self, workdir=None):
+        """Starts the execution.
+
+        Args:
+            workdir (str): Work directory
+        """
+
+    def stop_execution(self):
+        """Stops the execution."""
+        raise NotImplementedError()
+
+
+class ConsoleExecutionManager(ExecutionManager):
+    """Class to manage tool instance execution using a SpineConsoleWidget."""
+
+    def __init__(self, toolbox, console, commands):
+        """Class constructor.
+
+        Args:
+            toolbox (ToolboxUI): Instance of Main UI class.
+            console (SpineConsoleWidget): Console widget where execution happens
+            commands (list): List of commands to execute in the console
+        """
+        super().__init__(toolbox)
+        self._console = console
+        self._commands = commands
+        self._stopped = False
+        self._started = False
+
+    def start_execution(self, workdir=None):
+        """See base class."""
+        self._console.ready_to_execute.connect(self._execute_next_command)
+        self._console.execution_failed.connect(self.execution_finished)
+        self._console.wake_up()
+
+    @Slot()
+    def _execute_next_command(self):
+        """Executes next command in the buffer."""
+        if self._stopped:
+            return
+        if not self._started:
+            self._toolbox.msg_warning.emit(f"\tExecution started. See <b>{self._console.name}</b> for messages.")
+            self._started = True
+        try:
+            command = self._commands.pop(0)
+            self._console.execute(command)
+        except IndexError:
+            self.execution_finished.emit(0)
+
+    def stop_execution(self):
+        """See base class."""
+        self._stopped = True
+        self._console.interrupt()
+
+
+class QProcessExecutionManager(ExecutionManager):
+    """Class to manage tool instance execution using a PySide2 QProcess."""
 
     def __init__(self, toolbox, program=None, args=None, silent=False, semisilent=False):
         """Class constructor.
@@ -34,8 +102,7 @@ class QSubProcess(QObject):
             args (list): List of argument for the program (e.g. path to script file)
             silent (bool): Whether or not to emit toolbox msg signals
         """
-        super().__init__()
-        self._toolbox = toolbox
+        super().__init__(toolbox)
         self._program = program
         self._args = args
         self._silent = silent  # Do not show Event Log nor Process Log messages
@@ -44,7 +111,7 @@ class QSubProcess(QObject):
         self.process_failed_to_start = False
         self._user_stopped = False
         self._process = QProcess(self)
-        self.output = None  # stdout when running silent
+        self.process_output = None  # stdout when running silent
         self.error_output = None  # stderr when running silent
 
     def program(self):
@@ -56,16 +123,16 @@ class QSubProcess(QObject):
         return self._args
 
     # noinspection PyUnresolvedReferences
-    def start_process(self, workdir=None):
-        """Start the execution of a command in a QProcess.
+    def start_execution(self, workdir=None):
+        """Starts the execution of a command in a QProcess.
 
         Args:
-            workdir (str): Script directory
+            workdir (str): Work directory
         """
         if workdir is not None:
             self._process.setWorkingDirectory(workdir)
         self._process.started.connect(self.process_started)
-        self._process.finished.connect(self.process_finished)
+        self._process.finished.connect(self.on_process_finished)
         if not self._silent and not self._semisilent:  # Loud
             self._process.readyReadStandardOutput.connect(self.on_ready_stdout)
             self._process.readyReadStandardError.connect(self.on_ready_stderr)
@@ -81,9 +148,9 @@ class QSubProcess(QObject):
             self.process_failed_to_start = True
             self._process.deleteLater()
             self._process = None
-            self.subprocess_finished_signal.emit(-9998)
+            self.execution_finished.emit(-9998)
 
-    def wait_for_finished(self, msecs=30000):
+    def wait_for_process_finished(self, msecs=30000):
         """Wait for subprocess to finish.
 
         Return:
@@ -154,11 +221,11 @@ class QSubProcess(QObject):
         else:
             self._toolbox.msg_error.emit("Unspecified error in process: {0}".format(process_error))
 
-    def terminate_process(self):
-        """Shutdown simulation in a QProcess."""
+    def stop_execution(self):
+        """See base class."""
         self._toolbox.msg_error.emit("Terminating process")
         try:
-            self._process.finished.disconnect(self.process_finished)
+            self._process.finished.disconnect(self.on_process_finished)
         except (AttributeError, RuntimeError):
             pass
         try:
@@ -188,12 +255,13 @@ class QSubProcess(QObject):
             logging.exception("Exception in closing QProcess: %s", ex)
         finally:
             # Delete QProcess
-            self._process.deleteLater()
-            self._process = None
+            if self._process:
+                self._process.deleteLater()
+                self._process = None
 
-    @Slot(int, name="process_finished")
-    def process_finished(self, exit_code):
-        """Run when subprocess has finished.
+    @Slot(int)
+    def on_process_finished(self, exit_code):
+        """Runs when subprocess has finished.
 
         Args:
             exit_code (int): Return code from external program (only valid for normal exits)
@@ -221,14 +289,14 @@ class QSubProcess(QObject):
                 if not self._silent:
                     self._toolbox.msg_proc.emit(out.strip())
                 else:
-                    self.output = out.strip()
+                    self.process_output = out.strip()
                     self.error_output = errout.strip()
         else:
             self._toolbox.msg.emit("*** Terminating process ***")
         # Delete QProcess
         self._process.deleteLater()
         self._process = None
-        self.subprocess_finished_signal.emit(exit_code)
+        self.execution_finished.emit(exit_code)
 
     @Slot(name="on_ready_stdout")
     def on_ready_stdout(self):

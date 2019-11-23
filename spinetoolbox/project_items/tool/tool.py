@@ -938,7 +938,6 @@ class Tool(ProjectItem):
     def stop_execution(self):
         """Stops executing this Tool."""
         self.get_icon().stop_animation()
-        self.instance.instance_finished_signal.disconnect(self.handle_execution_finished)
         self._toolbox.msg_warning.emit("Stopping Tool <b>{0}</b>".format(self.name))
         self.instance.terminate_instance()
 
