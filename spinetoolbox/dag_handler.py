@@ -224,7 +224,7 @@ class DirectedGraphHandler(QObject):
             return {}
         return {n: list(g.successors(n)) for n in nx.topological_sort(g)}
 
-    def successors_until_node(self, g, node):
+    def successors_til_node(self, g, node):
         """Like node_successors but only until the given node,
         and ignoring all nodes that are not its ancestors."""
         bunch = list(nx.ancestors(g, node)) + [node]

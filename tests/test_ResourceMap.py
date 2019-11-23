@@ -20,7 +20,6 @@ import unittest
 from unittest.mock import NonCallableMagicMock
 from PySide2.QtCore import QModelIndex
 from PySide2.QtWidgets import QApplication
-from spinetoolbox.executioner import ResourceMap
 from spinetoolbox.project_item import ProjectItemResource
 from .mock_helpers import clean_up_toolboxui_with_project, create_toolboxui_with_project
 
@@ -59,6 +58,7 @@ class TestResourceMap(unittest.TestCase):
         """Runs after each test. Use this to free resources after a test if needed."""
         clean_up_toolboxui_with_project(self.toolbox)
 
+    @unittest.skip("This test needs to be moved to the spine_engine module.")
     def test_update(self):
         ordered_nodes = {
             self.mock_upstream_item.name: [self.mock_downstream_item.name],

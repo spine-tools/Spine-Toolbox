@@ -22,7 +22,6 @@ import logging
 import sys
 from PySide2.QtCore import QVariantAnimation
 from PySide2.QtWidgets import QApplication
-from spinetoolbox.executioner import ExecutionInstance, ExecutionState
 from spinetoolbox.project_item import ProjectItemResource
 from .mock_helpers import clean_up_toolboxui_with_project, create_toolboxui_with_project
 
@@ -81,6 +80,7 @@ class TestExecutionInstance(unittest.TestCase):
         """Runs after each test. Use this to free resources after a test if needed."""
         clean_up_toolboxui_with_project(self.toolbox)
 
+    @unittest.skip("This test needs to be moved to the spine_engine module.")
     def test_start_execution_with_two_items_forwards_resources_correctly(self):
         ordered_nodes = {
             self.mock_upstream_item.name: [self.mock_downstream_item.name],
