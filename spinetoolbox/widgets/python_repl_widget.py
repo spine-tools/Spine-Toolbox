@@ -26,7 +26,6 @@ from .toolbars import DraggableWidget
 from ..helpers import busy_effect
 from ..config import PYTHON_EXECUTABLE
 from ..execution_managers import QProcessExecutionManager
-from ..executioner import ExecutionState
 from .spine_console_widget import SpineConsoleWidget
 
 
@@ -41,8 +40,7 @@ class PythonReplWidget(SpineConsoleWidget):
 
     def __init__(self, toolbox):
         """Class constructor."""
-        super().__init__()
-        self._toolbox = toolbox
+        super().__init__(toolbox)
         self._kernel_starting = False  # Warning: Do not use self._starting (protected class variable in JupyterWidget)
         self.kernel_name = None
         self.kernel_display_name = ""
@@ -394,14 +392,6 @@ class PythonReplWidget(SpineConsoleWidget):
                     self._toolbox.msg_error.emit(
                         "Unhandled execution_state '{0}' after " "execute_request".format(execution_state)
                     )
-
-    def terminate_process(self):
-        """Send interrupt signal to kernel."""
-        self.kernel_manager.interrupt_kernel()
-        # TODO: Block execution until kernel has been interrupted and then emit the signal
-        self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(
-            ExecutionState.STOP_REQUESTED
-        )
 
     def shutdown_kernel(self, hush=False):
         """Shut down Python kernel."""

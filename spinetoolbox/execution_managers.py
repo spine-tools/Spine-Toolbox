@@ -57,7 +57,6 @@ class ConsoleExecutionManager(ExecutionManager):
         self._stopped = False
 
     def start_process(self):
-        self._stopped = False
         self._console.ready_to_work.connect(self._execute_next_command)
         self._console.unable_to_work.connect(self.execution_finished)
         self._console.wake_up()
@@ -76,6 +75,7 @@ class ConsoleExecutionManager(ExecutionManager):
     def stop_execution(self):
         """See base class."""
         self._stopped = True
+        self._console.interrupt()
 
 
 class QProcessExecutionManager(ExecutionManager):
@@ -243,11 +243,13 @@ class QProcessExecutionManager(ExecutionManager):
             logging.exception("Exception in closing QProcess: %s", ex)
         finally:
             # Delete QProcess
-            self._process.deleteLater()
-            self._process = None
-            self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(
-                ExecutionState.STOP_REQUESTED
-            )
+            if self._process:
+                self._process.deleteLater()
+                self._process = None
+            if self._toolbox.project().execution_instance:
+                self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(
+                    ExecutionState.STOP_REQUESTED
+                )
 
     @Slot(int)
     def on_process_finished(self, exit_code):

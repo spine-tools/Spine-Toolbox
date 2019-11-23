@@ -80,8 +80,7 @@ class JuliaREPLWidget(SpineConsoleWidget):
         Args:
             toolbox (ToolboxUI): QMainWindow instance
         """
-        super().__init__(parent=toolbox)
-        self._toolbox = toolbox
+        super().__init__(toolbox)
         self.custom_restart = True
         self.kernel_name = None  # The name of the Julia kernel from settings last checked
         self.kernel_manager = None
@@ -403,11 +402,6 @@ class JuliaREPLWidget(SpineConsoleWidget):
             self.ready_to_work.emit()
             return
         self.start_jupyter_kernel()
-
-    def terminate_process(self):
-        """Send interrupt signal to kernel."""
-        # logging.debug("interrupt exec")
-        self.kernel_manager.interrupt_kernel()
 
     def shutdown_jupyter_kernel(self):
         """Shut down the jupyter kernel."""
