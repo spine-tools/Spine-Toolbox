@@ -29,7 +29,6 @@ from PySide2.QtCore import Qt
 from PySide2.QtGui import QStandardItem, QStandardItemModel
 from PySide2.QtWidgets import QApplication
 from networkx import DiGraph
-from spinetoolbox.executioner import ExecutionState
 from spinetoolbox.tool_specifications import ExecutableTool
 from spinetoolbox.project_items.tool.tool import Tool
 from spinetoolbox.project_item import ProjectItemResource
@@ -130,10 +129,10 @@ class TestTool(unittest.TestCase):
         fake_available_filepaths = [os.path.join(fake_dc_dir, fname) for fname in fake_fnames]
         # Mock available_filepath_resources so that it returns a list of paths
         with mock.patch(
-            "spinetoolbox.project_items.tool.tool.Tool.available_filepaths_upstream"
-        ) as mock_available_filepaths_upstream:
+            "spinetoolbox.project_items.tool.tool.Tool.filepaths_from_resources"
+        ) as mock_filepaths_from_resources:
             # Test with *.ini
-            mock_available_filepaths_upstream.return_value = fake_available_filepaths
+            mock_filepaths_from_resources.return_value = fake_available_filepaths
             matches = self.tool.find_optional_files("*.ini", mock.MagicMock())
             expected_matches = [os.path.join(fake_dc_dir, fn) for fn in ("a.ini", "bc.ini")]
             self.assertEqual(expected_matches, matches)
@@ -354,10 +353,7 @@ class TestToolExecution(unittest.TestCase):
         self.toolbox.project().add_project_items("Tools", item)  # Add Tool to project
         ind = self.toolbox.project_item_model.find_item("Tool")
         tool = self.toolbox.project_item_model.project_item(ind)  # Find item from project item model
-        mock_exec_inst = tool._project.execution_instance = mock.Mock()
-        tool.execute(resources_upstream=[], resources_downstream=[])
-        mock_exec_inst.project_item_execution_finished_signal.emit.assert_called_with(ExecutionState.CONTINUE)
-        self.assertIsNone(tool.instance)
+        self.assertFalse(tool.execute_forward(resources=[]))
 
     def test_input_file_not_found_at_execution(self):
         """Tests that execution fails if one input file is not found."""
@@ -377,11 +373,9 @@ class TestToolExecution(unittest.TestCase):
         input_file = input_files[0]
         input_path = os.path.join(dc_dir, input_file)
         Path(input_path).touch()
-        resources_upstream = [ProjectItemResource(None, "file", url=Path(input_path).as_uri())]
+        resources = [ProjectItemResource(None, "file", url=Path(input_path).as_uri())]
         # Create a mock execution instance and make the above one path available for the tool
-        mock_exec_inst = tool._project.execution_instance = mock.Mock()
-        tool.execute(resources_upstream, resources_downstream=[])
-        mock_exec_inst.project_item_execution_finished_signal.emit.assert_called_with(ExecutionState.ABORT)
+        self.assertFalse(tool.execute_forward(resources))
         self.assertIsNone(tool.instance)
         # Check that no resources are advertised
 
@@ -404,7 +398,7 @@ class TestToolExecution(unittest.TestCase):
         input_paths = [os.path.join(dc_dir, fn) for fn in input_files]
         for filepath in input_paths:
             Path(filepath).touch()
-        resources_upstream = [ProjectItemResource(None, "file", url=Path(fp).as_uri()) for fp in input_paths]
+        resources = [ProjectItemResource(None, "file", url=Path(fp).as_uri()) for fp in input_paths]
         # Mock some more stuff needed and execute the tool
         with mock.patch("spinetoolbox.project_items.tool.tool.shutil") as mock_shutil, mock.patch(
             "spinetoolbox.project_items.tool.tool.create_output_dir_timestamp"
@@ -426,12 +420,7 @@ class TestToolExecution(unittest.TestCase):
                 tool.instance.instance_finished_signal.emit(-1)
 
             mock_execute_tool_instance.side_effect = mock_execute_tool_instance_side_effect
-            resources_downstream = []
-            tool.prepare_for_resource_discovery()
-            tool.execute(resources_upstream, resources_downstream)
-        self.toolbox.project().execution_instance.project_item_execution_finished_signal.emit.assert_called_with(
-            ExecutionState.WAIT
-        )
+            self.assertFalse(tool.execute_forward(resources))
         self.assertEqual(tool.basedir, basedir)
         # Check that output files were copied to the output dir
         result_dir = os.path.abspath(os.path.join(tool.output_dir, "failed", "mock_timestamp"))
@@ -469,7 +458,7 @@ class TestToolExecution(unittest.TestCase):
             dirname, _ = os.path.split(filepath)
             os.makedirs(dirname, exist_ok=True)
             Path(filepath).touch()
-        resources_upstream = [ProjectItemResource(None, "file", url=Path(fp).as_uri()) for fp in input_paths]
+        resources = [ProjectItemResource(None, "file", url=Path(fp).as_uri()) for fp in input_paths]
         # Create source files in tool specification source directory
         src_dir = tool.tool_specification().path
         source_paths = [os.path.join(src_dir, path) for path in source_files]
@@ -484,7 +473,7 @@ class TestToolExecution(unittest.TestCase):
             tool_specifications.ExecutableToolInstance, "execute"
         ) as mock_execute_tool_instance, mock.patch(
             "spinetoolbox.project_items.tool.tool.create_dir"
-        ) as mock_create_dir:
+        ):
             mock_create_output_dir_timestamp.return_value = "mock_timestamp"
 
             def mock_execute_tool_instance_side_effect():
@@ -531,11 +520,7 @@ class TestToolExecution(unittest.TestCase):
                 tool.instance.instance_finished_signal.emit(0)
 
             mock_execute_tool_instance.side_effect = mock_execute_tool_instance_side_effect
-            tool.prepare_for_resource_discovery()
-            tool.execute(resources_upstream, resources_downstream=[])
-        self.toolbox.project().execution_instance.project_item_execution_finished_signal.emit.assert_called_with(
-            ExecutionState.WAIT
-        )
+            self.assertTrue(tool.execute_forward(resources))
         # Check that output files were copied to the output dir
         result_dir = os.path.join(tool.output_dir, "mock_timestamp")
         expected_calls = [
