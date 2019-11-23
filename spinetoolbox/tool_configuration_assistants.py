@@ -55,7 +55,7 @@ class SpineModelConfigurationAssistant(QObject):
         args.append("-e")
         args.append("println(VERSION)")
         exec_mngr = QProcessExecutionManager(self._toolbox, self.julia_exe, args, silent=True)
-        exec_mngr.start_process()
+        exec_mngr.start_execution()
         if exec_mngr.wait_for_process_finished(msecs=5000):
             self._julia_version = exec_mngr.process_output
         args = list()
@@ -63,7 +63,7 @@ class SpineModelConfigurationAssistant(QObject):
         args.append("-e")
         args.append("println(Base.active_project())")
         exec_mngr = QProcessExecutionManager(self._toolbox, self.julia_exe, args, silent=True)
-        exec_mngr.start_process()
+        exec_mngr.start_execution()
         if exec_mngr.wait_for_process_finished(msecs=5000):
             self._julia_active_project = exec_mngr.process_output
 

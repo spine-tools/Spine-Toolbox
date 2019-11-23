@@ -35,13 +35,21 @@ class ExecutionManager(QObject):
         super().__init__()
         self._toolbox = toolbox
 
+    # noinspection PyUnresolvedReferences
+    def start_execution(self, workdir=None):
+        """Starts the execution.
+
+        Args:
+            workdir (str): Work directory
+        """
+
     def stop_execution(self):
-        """Terminates the execution."""
+        """Stops the execution."""
         raise NotImplementedError()
 
 
 class ConsoleExecutionManager(ExecutionManager):
-    """Class to manage instances execution using a SpineConsoleWidget."""
+    """Class to manage tool instance execution using a SpineConsoleWidget."""
 
     def __init__(self, toolbox, console, commands):
         """Class constructor.
@@ -55,17 +63,22 @@ class ConsoleExecutionManager(ExecutionManager):
         self._console = console
         self._commands = commands
         self._stopped = False
+        self._started = False
 
-    def start_process(self):
-        self._console.ready_to_work.connect(self._execute_next_command)
-        self._console.unable_to_work.connect(self.execution_finished)
+    def start_execution(self, workdir=None):
+        """See base class."""
+        self._console.ready_to_execute.connect(self._execute_next_command)
+        self._console.execution_failed.connect(self.execution_finished)
         self._console.wake_up()
 
     @Slot()
     def _execute_next_command(self):
+        """Executes next command in the buffer."""
         if self._stopped:
             return
-        self._toolbox.msg_warning.emit(f"\tExecution in progress. See <b>{self._console.name}</b> for messages.")
+        if not self._started:
+            self._toolbox.msg_warning.emit(f"\tExecution started. See <b>{self._console.name}</b> for messages.")
+            self._started = True
         try:
             command = self._commands.pop(0)
             self._console.execute(command)
@@ -79,7 +92,7 @@ class ConsoleExecutionManager(ExecutionManager):
 
 
 class QProcessExecutionManager(ExecutionManager):
-    """Class to manage tool instances execution using PySide2 QProcess."""
+    """Class to manage tool instance execution using a PySide2 QProcess."""
 
     def __init__(self, toolbox, program=None, args=None, silent=False, semisilent=False):
         """Class constructor.
@@ -111,11 +124,11 @@ class QProcessExecutionManager(ExecutionManager):
         return self._args
 
     # noinspection PyUnresolvedReferences
-    def start_process(self, workdir=None):
-        """Start the execution of a command in a QProcess.
+    def start_execution(self, workdir=None):
+        """Starts the execution of a command in a QProcess.
 
         Args:
-            workdir (str): Script directory
+            workdir (str): Work directory
         """
         if workdir is not None:
             self._process.setWorkingDirectory(workdir)

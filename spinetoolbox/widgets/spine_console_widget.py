@@ -24,8 +24,8 @@ from ..executioner import ExecutionState
 class SpineConsoleWidget(RichJupyterWidget):
     """Base class for all console widgets that can run tool instances."""
 
-    ready_to_work = Signal()
-    unable_to_work = Signal(int)
+    ready_to_execute = Signal()
+    execution_failed = Signal(int)
     name = "Unnamed console"
 
     def __init__(self, toolbox):
@@ -37,10 +37,15 @@ class SpineConsoleWidget(RichJupyterWidget):
         self._toolbox = toolbox
 
     def wake_up(self):
+        """Wakes up the console in preparation for execution.
+
+        Subclasses need to emit either ready_to_execute or execution_failed as a consequence of calling
+        this function.
+        """
         raise NotImplementedError()
 
     def interrupt(self):
-        """Send interrupt signal to kernel."""
+        """Sends interrupt signal to kernel."""
         if not self.kernel_manager:
             return
         self.kernel_manager.interrupt_kernel()

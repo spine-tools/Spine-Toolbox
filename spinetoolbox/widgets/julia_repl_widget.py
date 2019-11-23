@@ -18,7 +18,7 @@ Class for a custom SpineConsoleWidget to use as julia REPL.
 
 import logging
 from PySide2.QtWidgets import QMessageBox, QAction, QApplication
-from PySide2.QtCore import Slot, Signal, Qt
+from PySide2.QtCore import Slot, Signal, Qt, QTimer
 from qtconsole.manager import QtKernelManager, QtKernelRestarter
 from jupyter_client.kernelspec import find_kernel_specs, NoSuchKernel
 from ..execution_managers import QProcessExecutionManager
@@ -127,7 +127,7 @@ class JuliaREPLWidget(SpineConsoleWidget):
         args.append("-e")
         args.append("println(VERSION)")
         exec_mngr = QProcessExecutionManager(self._toolbox, program, args, silent=True)
-        exec_mngr.start_process()
+        exec_mngr.start_execution()
         if not exec_mngr.wait_for_process_finished(msecs=5000):
             self._toolbox.msg_error.emit(
                 "\tCouldn't find out Julia version. Make sure that Julia is correctly installed and try again."
@@ -146,14 +146,14 @@ class JuliaREPLWidget(SpineConsoleWidget):
         """Starts a Julia Jupyter kernel if available."""
         kernel_name = self.julia_kernel_name()
         if not kernel_name:
-            self.unable_to_work.emit(-1)
+            self.execution_failed.emit(-1)
             return
         julia_project_path = self._toolbox.qsettings().value("appSettings/juliaProjectPath", defaultValue="")
         if julia_project_path == "":
             julia_project_path = "@."
         if self.kernel_manager and kernel_name == self.kernel_name and julia_project_path == self.julia_project_path:
             self._toolbox.msg.emit("*** Using previously started Julia Console ***")
-            self.ready_to_work.emit()
+            self.ready_to_execute.emit()
             return
         self.julia_project_path = julia_project_path
         self.kernel_execution_state = None
@@ -202,13 +202,13 @@ class JuliaREPLWidget(SpineConsoleWidget):
         args.append("True")
         args.append("False")
         exec_mngr = QProcessExecutionManager(self._toolbox, program, args, silent=True)
-        exec_mngr.start_process()
+        exec_mngr.start_execution()
         if not exec_mngr.wait_for_process_finished(msecs=5000):
             self._toolbox.msg_error.emit(
                 "\tCouldn't start Julia to check IJulia status. "
                 "Please make sure that Julia is correctly installed and try again."
             )
-            self.unable_to_work.emit(-1)
+            self.execution_failed.emit(-1)
             return
         if exec_mngr.process_output == "True":
             self._toolbox.msg.emit("\tIJulia is installed")
@@ -226,13 +226,13 @@ class JuliaREPLWidget(SpineConsoleWidget):
         args.append("-e")
         args.append("println(Base.active_project())")
         exec_mngr = QProcessExecutionManager(self._toolbox, program, args, silent=True)
-        exec_mngr.start_process()
+        exec_mngr.start_execution()
         if not exec_mngr.wait_for_process_finished(msecs=5000):
             self._toolbox.msg_error.emit(
                 "\tCouldn't find out Julia active project. "
                 "Make sure that Julia is correctly installed and try again."
             )
-            self.unable_to_work.emit(-1)
+            self.execution_failed.emit(-1)
             return
         julia_active_project = exec_mngr.process_output
         msg = QMessageBox(parent=self._toolbox)
@@ -248,7 +248,7 @@ class JuliaREPLWidget(SpineConsoleWidget):
         if msg.clickedButton() != allow_button:
             self.starting = False
             self._control.viewport().setCursor(self.normal_cursor)
-            self.unable_to_work.emit(-1)
+            self.execution_failed.emit(-1)
             return
         self._do_try_installing_ijulia()
 
@@ -261,7 +261,7 @@ class JuliaREPLWidget(SpineConsoleWidget):
         args.append("IJulia")
         self.ijulia_proc_exec_mngr = QProcessExecutionManager(self._toolbox, command, args)
         self.ijulia_proc_exec_mngr.execution_finished.connect(self.handle_ijulia_installation_finished)
-        self.ijulia_proc_exec_mngr.start_process()
+        self.ijulia_proc_exec_mngr.start_execution()
         self._toolbox.msg.emit("*** Installing <b>IJulia</b> ***")
         self._toolbox.msg_warning.emit("<b>Depending on your system, this process can take a few minutes...</b>")
 
@@ -274,7 +274,7 @@ class JuliaREPLWidget(SpineConsoleWidget):
         args.append("IJulia")
         self.ijulia_proc_exec_mngr = QProcessExecutionManager(self._toolbox, command, args)
         self.ijulia_proc_exec_mngr.execution_finished.connect(self.handle_ijulia_rebuild_finished)
-        self.ijulia_proc_exec_mngr.start_process()
+        self.ijulia_proc_exec_mngr.start_execution()
         self._toolbox.msg.emit("*** Re-building <b>IJulia</b> ***")
         self._toolbox.msg_warning.emit("<b>Depending on your system, this process can take a few minutes...</b>")
 
@@ -356,7 +356,7 @@ class JuliaREPLWidget(SpineConsoleWidget):
                 )
             else:
                 self._toolbox.msg_error.emit("Julia failed [exit code:{0}]".format(ret))
-            self.unable_to_work.emit(-1)
+            self.execution_failed.emit(-1)
         else:
             self._toolbox.msg.emit(f"IJulia {process} successful.")
             self._do_start_jupyter_kernel()
@@ -370,9 +370,9 @@ class JuliaREPLWidget(SpineConsoleWidget):
         if content['execution_count'] == 0:
             return  # This is not in response to commands, this is just the kernel saying hello
         if content['status'] != 'ok':
-            self.unable_to_work.emit(-1)
+            self.execution_failed.emit(-1)
         else:
-            self.ready_to_work.emit()
+            self.ready_to_execute.emit()
 
     @Slot(dict)
     def _handle_status(self, msg):
@@ -388,18 +388,19 @@ class JuliaREPLWidget(SpineConsoleWidget):
                     "\tJulia REPL successfully started using kernel specification {}".format(self.kernel_name)
                 )
                 self._control.viewport().setCursor(self.normal_cursor)
-            self.ready_to_work.emit()
+            else:
+                self.ready_to_execute.emit()
 
     @Slot("dict", name="_handle_error")
     def _handle_error(self, msg):
         """Handle error messages."""
         super()._handle_error(msg)
-        self.unable_to_work.emit(-1)
+        self.execution_failed.emit(-1)
 
     def wake_up(self):
         """See base class."""
         if self.kernel_execution_state == 'idle':
-            self.ready_to_work.emit()
+            self.ready_to_execute.emit()
             return
         self.start_jupyter_kernel()
 

@@ -86,7 +86,7 @@ class PythonReplWidget(SpineConsoleWidget):
         args = list()
         args.append("-V")
         proc_exec_mngr = QProcessExecutionManager(self._toolbox, program, args, silent=True)
-        proc_exec_mngr.start_process()
+        proc_exec_mngr.start_execution()
         if not proc_exec_mngr.wait_for_process_finished(msecs=5000):
             self._toolbox.msg_error.emit(
                 "Couldn't determine Python version. Please check " "the <b>Python interpreter</b> option in Settings."
@@ -224,7 +224,7 @@ class PythonReplWidget(SpineConsoleWidget):
         args.append(package_name)
         self.install_proc_exec_mngr = QProcessExecutionManager(self._toolbox, program, args, semisilent=True)
         self.install_proc_exec_mngr.execution_finished.connect(self.handle_package_install_process_finished)
-        self.install_proc_exec_mngr.start_process()
+        self.install_proc_exec_mngr.start_execution()
 
     @Slot(int)
     def handle_package_install_process_finished(self, retval):
@@ -259,7 +259,7 @@ class PythonReplWidget(SpineConsoleWidget):
         args.append(self.kernel_display_name)
         self.install_proc_exec_mngr = QProcessExecutionManager(self._toolbox, program, args, semisilent=True)
         self.install_proc_exec_mngr.execution_finished.connect(self.handle_kernelspec_install_process_finished)
-        self.install_proc_exec_mngr.start_process()
+        self.install_proc_exec_mngr.start_execution()
 
     @Slot(int)
     def handle_kernelspec_install_process_finished(self, retval):
@@ -305,12 +305,12 @@ class PythonReplWidget(SpineConsoleWidget):
         """See base class."""
         k_tuple = self.python_kernel_name()
         if not k_tuple:
-            self.unable_to_work.emit(-1)
+            self.execution_failed.emit(-1)
             return
         # Check if this kernel is already running
         kernel_name, kernel_display_name = k_tuple
         if self.kernel_manager and self.kernel_name == kernel_name:
-            self.ready_to_work.emit()
+            self.ready_to_execute.emit()
         else:
             self.launch_kernel(kernel_name, kernel_display_name)
 
@@ -337,10 +337,10 @@ class PythonReplWidget(SpineConsoleWidget):
         self._control.viewport().setCursor(self.normal_cursor)
         if msg['content']['status'] == 'ok':
             # TODO: If user Stops execution, it should be handled here
-            self.ready_to_work.emit()
+            self.ready_to_execute.emit()
         else:
             # TODO: if status='error' you can get the exception and more info from msg
-            self.unable_to_work.emit(-1)
+            self.execution_failed.emit(-1)
 
     @Slot(dict)
     def receive_iopub_msg(self, msg):
@@ -386,7 +386,7 @@ class PythonReplWidget(SpineConsoleWidget):
                         # Kernel is idle after starting up -> execute pending command
                         self._kernel_starting = False
                         # Start executing the first command (if available) from the command buffer immediately
-                    self.ready_to_work.emit()
+                    self.ready_to_execute.emit()
                 else:
                     # This should probably happen when _kernel_state is 'starting' but it doesn't seem to show up
                     self._toolbox.msg_error.emit(

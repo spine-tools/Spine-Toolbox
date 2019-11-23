@@ -108,7 +108,7 @@ class GAMSToolInstance(ToolInstance):
         self.exec_mngr = QProcessExecutionManager(self._toolbox, self.program, self.args, **kwargs)
         self.exec_mngr.execution_finished.connect(self.handle_execution_finished)
         # TODO: Check if this sets the curDir argument. Is the curDir arg now useless?
-        self.exec_mngr.start_process(workdir=self.basedir)
+        self.exec_mngr.start_execution(workdir=self.basedir)
 
     @Slot(int)
     def handle_execution_finished(self, ret):
@@ -188,13 +188,13 @@ class JuliaToolInstance(ToolInstance):
         if self._toolbox.qsettings().value("appSettings/useEmbeddedJulia", defaultValue="2") == "2":
             self.exec_mngr = ConsoleExecutionManager(self._toolbox, self._toolbox.julia_repl, self.ijulia_command_list)
             self.exec_mngr.execution_finished.connect(self.handle_repl_execution_finished)
-            self.exec_mngr.start_process()
+            self.exec_mngr.start_execution()
         else:
             self.exec_mngr = QProcessExecutionManager(self._toolbox, self.program, self.args, **kwargs)
             self.exec_mngr.execution_finished.connect(self.handle_execution_finished)
             # On Julia the Qprocess workdir must be set to the path where the main script is
             # Otherwise it doesn't find input files in subdirectories
-            self.exec_mngr.start_process(workdir=self.basedir)
+            self.exec_mngr.start_execution(workdir=self.basedir)
 
     @Slot(int)
     def handle_repl_execution_finished(self, ret):
@@ -290,11 +290,11 @@ class PythonToolInstance(ToolInstance):
                 self._toolbox, self._toolbox.python_repl, self.ipython_command_list
             )
             self.exec_mngr.execution_finished.connect(self.handle_console_execution_finished)
-            self.exec_mngr.start_process()
+            self.exec_mngr.start_execution()
         else:
             self.exec_mngr = QProcessExecutionManager(self._toolbox, self.program, self.args, **kwargs)
             self.exec_mngr.execution_finished.connect(self.handle_execution_finished)
-            self.exec_mngr.start_process(workdir=self.basedir)
+            self.exec_mngr.start_execution(workdir=self.basedir)
 
     @Slot(int)
     def handle_console_execution_finished(self, ret):
@@ -359,7 +359,7 @@ class ExecutableToolInstance(ToolInstance):
         """Executes a prepared instance."""
         self.exec_mngr = QProcessExecutionManager(self._toolbox, self.program, self.args, **kwargs)
         self.exec_mngr.execution_finished.connect(self.handle_execution_finished)
-        self.exec_mngr.start_process(workdir=self.basedir)
+        self.exec_mngr.start_execution(workdir=self.basedir)
 
     @Slot(int)
     def handle_execution_finished(self, ret):
