@@ -520,17 +520,17 @@ class LinkBase(QGraphicsPathItem):
         """Updates geometry."""
         self.prepareGeometryChange()
         qsettings = self._toolbox.qsettings()
-        smooth_links = qsettings.value("appSettings/smoothLinks", defaultValue="false") == "true"
-        self.do_update_geometry(smooth_links)
+        curved_links = qsettings.value("appSettings/curvedLinks", defaultValue="false") == "true"
+        self.do_update_geometry(curved_links)
 
-    def do_update_geometry(self, smooth_links):
+    def do_update_geometry(self, curved_links):
         """Sets the path for this item.
 
         Args:
-            smooth_links (bool): Whether the path should follow a smooth curve or just a straight line
+            curved_links (bool): Whether the path should follow a smooth curve or just a straight line
         """
         ellipse_path = self._make_ellipse_path()
-        guide_path = self._make_guide_path(smooth_links)
+        guide_path = self._make_guide_path(curved_links)
         connecting_path = self._make_connecting_path(guide_path)
         arrow_path = self._make_arrow_path(guide_path)
         path = ellipse_path + connecting_path + arrow_path
@@ -563,19 +563,19 @@ class LinkBase(QGraphicsPathItem):
             return QPointF(-line.dx(), -line.dy())
         return {"left": QPointF(-1, 0), "bottom": QPointF(0, 1), "right": QPointF(1, 0)}[self.dst_connector.position]
 
-    def _make_guide_path(self, smooth_links):
+    def _make_guide_path(self, curved_links):
         """
         Returns a 'narrow' path conneting this item's source and destination.
 
         Args:
-            smooth_links (bool): Whether the path should follow a smooth curve or just a straight line
+            curved_links (bool): Whether the path should follow a smooth curve or just a straight line
 
         Returns:
             QPainterPath
         """
-        smooth_links |= self.dst_connector == self.src_connector
+        curved_links |= self.dst_connector == self.src_connector
         path = QPainterPath(self.src_center)
-        if not smooth_links:
+        if not curved_links:
             path.lineTo(self.dst_center)
             return path
         c_factor = 8 * self.magic_number
