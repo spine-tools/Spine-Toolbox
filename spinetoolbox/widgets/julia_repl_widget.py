@@ -370,7 +370,7 @@ class JuliaREPLWidget(SpineConsoleWidget):
         content = msg['content']
         if content['execution_count'] == 0:
             return  # This is not in response to commands, this is just the kernel saying hello
-        if content['status'] == 'ok':
+        if content['status'] != 'ok':
             self.unable_to_work.emit(-1)
         else:
             self.ready_to_work.emit()

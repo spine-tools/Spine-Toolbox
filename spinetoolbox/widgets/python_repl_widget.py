@@ -105,7 +105,7 @@ class PythonReplWidget(SpineConsoleWidget):
         self.may_need_restart = False
         return kernel_name, kernel_display_name
 
-    @Slot(name="setup_python_kernel")
+    @Slot()
     def setup_python_kernel(self):
         """Context menu Start action handler."""
         k_tuple = self.python_kernel_name()

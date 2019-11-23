@@ -63,7 +63,7 @@ class SettingsWidget(QWidget):
 
     def connect_signals(self):
         """Connect signals."""
-        self.ui.pushButton_ok.clicked.connect(self.ok_clicked)
+        self.ui.pushButton_ok.clicked.connect(self.handle_ok_clicked)
         self.ui.pushButton_cancel.clicked.connect(self.close)
         self.ui.toolButton_browse_gams.clicked.connect(self.browse_gams_path)
         self.ui.toolButton_browse_julia.clicked.connect(self.browse_julia_path)
@@ -308,8 +308,8 @@ class SettingsWidget(QWidget):
         self.ui.lineEdit_work_dir.setText(work_dir)
         self.orig_work_dir = work_dir
 
-    @Slot(name="ok_clicked")
-    def ok_clicked(self):
+    @Slot()
+    def handle_ok_clicked(self):
         """Get selections and save them to persistent memory.
         Note: On Linux, True and False are saved as boolean values into QSettings.
         On Windows, booleans and integers are saved as strings. To make it consistent,
@@ -400,10 +400,8 @@ class SettingsWidget(QWidget):
     def check_if_python_env_changed(self, new_path):
         """Checks if Python environment was changed.
         This indicates that the Python Console may need a restart."""
-        if not self.orig_python_env == new_path:
+        if self.orig_python_env != new_path:
             self._toolbox.python_repl.may_need_restart = True
-        else:
-            self._toolbox.python_repl.may_need_restart = False
 
     def file_is_valid(self, file_path, msgbox_title):
         """Checks that given path is not a directory and it's a file that actually exists.
