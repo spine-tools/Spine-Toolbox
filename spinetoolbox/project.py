@@ -21,7 +21,7 @@ import logging
 import json
 from PySide2.QtCore import Slot
 from PySide2.QtWidgets import QMessageBox
-from spine_engine import SpineEngine
+from spine_engine import SpineEngine, SpineEngineEventType
 from .metaobject import MetaObject
 from .helpers import project_dir, create_dir, copy_dir, inverted
 from .tool_specifications import JuliaTool, PythonTool, GAMSTool, ExecutableTool
@@ -356,12 +356,15 @@ class SpineToolboxProject(MetaObject):
         engine = SpineEngine(items, node_successors)
         self._toolbox.msg.emit("<b>Starting DAG {0}/{1}</b>".format(graph_index, graph_count))
         self._toolbox.msg.emit("Order: {0}".format(" -> ".join(list(node_successors))))
-        for self.running_item in engine.run():
-            if not self.running_item:
-                self._toolbox.msg.emit("<b>DAG {0}/{1} stopped</b>".format(graph_index, graph_count))
-                self._execution_stopped = False
+        for event in engine.run():
+            if event.type_ == SpineEngineEventType.ITEM_EXECUTION_START:
+                self.running_item = event.item
+            elif event.type_ == SpineEngineEventType.ITEM_EXECUTION_FAILURE:
+                if self._execution_stopped:
+                    self._execution_stopped = False
+                    self._toolbox.msg.emit("<b>DAG {0}/{1} stopped</b>".format(graph_index, graph_count))
                 break
-        else:
+        else:  # nobreak
             self.running_item = None
             self._toolbox.msg.emit("<b>DAG {0}/{1} finished</b>".format(graph_index, graph_count))
 
@@ -392,9 +395,9 @@ class SpineToolboxProject(MetaObject):
                 continue
             dags.add(dag)
         self._toolbox.msg.emit("")
-        self._toolbox.msg.emit("--------------------------------------------------")
+        self._toolbox.msg.emit("-------------------------------------------------")
         self._toolbox.msg.emit("<b>Executing Selected Directed Acyclic Graphs</b>")
-        self._toolbox.msg.emit("--------------------------------------------------")
+        self._toolbox.msg.emit("-------------------------------------------------")
         self.execute_dags(dags)
 
     def execute_project(self):
@@ -410,9 +413,9 @@ class SpineToolboxProject(MetaObject):
             self._toolbox.msg_warning.emit("Project has no items to execute")
             return
         self._toolbox.msg.emit("")
-        self._toolbox.msg.emit("---------------------------------------")
+        self._toolbox.msg.emit("--------------------------------------------")
         self._toolbox.msg.emit("<b>Executing All Directed Acyclic Graphs</b>")
-        self._toolbox.msg.emit("--------------------------------------------------")
+        self._toolbox.msg.emit("--------------------------------------------")
         self.execute_dags(dags)
 
     def stop(self):
