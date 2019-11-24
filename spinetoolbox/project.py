@@ -102,6 +102,9 @@ class SpineToolboxProject(MetaObject):
 
         Args:
             new_work_path (str): Absolute path to new work directory
+
+        Returns:
+            bool: True if successfull, False otherwise
         """
         if not new_work_path:
             self.work_dir = DEFAULT_WORK_DIR
@@ -112,11 +115,14 @@ class SpineToolboxProject(MetaObject):
         return True
 
     def rename_project(self, name):
-        """Save project under a new name. Used with File->Save As... menu command.
+        """Saves project under a new name. Used with File->Save As... menu command.
         Checks if given project name is valid.
 
         Args:
             name (str): New (long) name for project
+
+        Returns:
+            bool: True if successfull, False otherwise
         """
         # Check for illegal characters
         if name.strip() == '' or name.lower() == self.name.lower():
@@ -157,8 +163,8 @@ class SpineToolboxProject(MetaObject):
         return True
 
     def save(self, tool_def_paths):
-        """Collect project information and objects
-        into a dictionary and write to a JSON file.
+        """Collects project information and objects
+        into a dictionary and writes it to a JSON file.
 
         Args:
             tool_def_paths (list): List of paths to tool definition files
@@ -211,13 +217,13 @@ class SpineToolboxProject(MetaObject):
             json.dump(saved_dict, fp, indent=4)
 
     def load(self, objects_dict):
-        """Populate project item model with items loaded from project file.
+        """Populates project item model with items loaded from project file.
 
         Args:
             objects_dict (dict): Dictionary containing all project items in JSON format
 
         Returns:
-            Boolean value depending on operation success.
+            bool: True if successfull, False otherwise
         """
         self._toolbox.msg.emit("Loading project items...")
         empty = True
@@ -235,7 +241,7 @@ class SpineToolboxProject(MetaObject):
         return True
 
     def load_tool_specification_from_file(self, jsonfile):
-        """Create a Tool specification according to a tool definition file.
+        """Returns a Tool specification from a definition file.
 
         Args:
             jsonfile (str): Path of the tool specification definition file
@@ -260,14 +266,14 @@ class SpineToolboxProject(MetaObject):
         return self.load_tool_specification_from_dict(definition, path)
 
     def load_tool_specification_from_dict(self, definition, path):
-        """Create a Tool specification according to a dictionary.
+        """Returns a Tool specification from a definition dictionary.
 
         Args:
             definition (dict): Dictionary with the tool definition
             path (str): Folder of the main program file
 
         Returns:
-            Instance of a subclass if Tool
+            ToolSpecification, NoneType
         """
         try:
             _tooltype = definition["tooltype"].lower()
@@ -320,7 +326,7 @@ class SpineToolboxProject(MetaObject):
                 self.set_item_selected(item)
 
     def add_to_dag(self, item_name):
-        """Add new directed graph object."""
+        """Adds new directed graph object."""
         self.dag_handler.add_dag_node(item_name)
 
     def set_item_selected(self, item):
@@ -333,13 +339,25 @@ class SpineToolboxProject(MetaObject):
         self._toolbox.ui.treeView_project.setCurrentIndex(ind)
 
     def execute_dags(self, dags):
+        """Executes given dags.
+
+        Args:
+            dags (Sequence(DiGraph))
+        """
         self._execution_stopped = False
         for i, dag in enumerate(dags):
             if self._execution_stopped:
                 break
             self.execute_dag(dag, i + 1, len(dags))
 
-    def execute_dag(self, dag, graph_index, graph_count):
+    def execute_dag(self, dag, graph_index=1, graph_count=1):
+        """Executes given dag.
+
+        Args:
+            dag (DiGraph)
+            graph_index (str)
+            graph_count (str)
+        """
         node_successors = self.dag_handler.node_successors(dag)
         if not node_successors:
             self._toolbox.msg_warning.emit(
@@ -352,7 +370,6 @@ class SpineToolboxProject(MetaObject):
                 "Possible fix: remove connection(s) {0}.".format(", ".join(edges))
             )
             return
-        # Make execution instance, connect signals and start execution
         items = [self._toolbox.project_item_model.get_item(name) for name in node_successors]
         self.engine = SpineEngine(items, node_successors)
         self._toolbox.msg.emit("<b>Starting DAG {0}/{1}</b>".format(graph_index, graph_count))
@@ -366,9 +383,8 @@ class SpineToolboxProject(MetaObject):
         self._toolbox.msg.emit("<b>DAG {0}/{1} {2}</b>".format(graph_index, graph_count, outcome))
 
     def execute_selected(self):
-        """Starts executing selected directed acyclic graph. Selected graph is
-        determined by the selected project item(s). Aborts, if items from multiple
-        graphs are selected."""
+        """Executes DAGs corresponding to all selected project items.
+        """
         self._toolbox.ui.textBrowser_eventlog.verticalScrollBar().setValue(
             self._toolbox.ui.textBrowser_eventlog.verticalScrollBar().maximum()
         )
@@ -398,9 +414,7 @@ class SpineToolboxProject(MetaObject):
         self.execute_dags(dags)
 
     def execute_project(self):
-        """Determines the number of directed acyclic graphs to execute in the project.
-        Determines the execution order of project items in each graph. Creates an
-        instance for executing the first graph and starts executing it.
+        """Executes all dags in the project.
         """
         self._toolbox.ui.textBrowser_eventlog.verticalScrollBar().setValue(
             self._toolbox.ui.textBrowser_eventlog.verticalScrollBar().maximum()
@@ -416,8 +430,7 @@ class SpineToolboxProject(MetaObject):
         self.execute_dags(dags)
 
     def stop(self):
-        """Stops execution of the current DAG. Slot for the main window Stop tool button
-        in the toolbar."""
+        """Stops execution. Slot for the main window Stop tool button in the toolbar."""
         if self._execution_stopped:
             self._toolbox.msg.emit("No execution in progress")
             return
@@ -425,10 +438,9 @@ class SpineToolboxProject(MetaObject):
         self._execution_stopped = True
         if self.engine:
             self.engine.stop()
-            return
 
     def export_graphs(self):
-        """Export all valid directed acyclic graphs in project to GraphML files."""
+        """Exports all valid directed acyclic graphs in project to GraphML files."""
         if not self.dag_handler.dags():
             self._toolbox.msg_warning.emit("Project has no graphs to export")
             return
