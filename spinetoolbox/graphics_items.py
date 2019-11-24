@@ -591,7 +591,8 @@ class LinkBase(QGraphicsPathItem):
             path (QPainterPath)
 
         Returns:
-            list(QPointF)
+            list(QPointF): points
+            list(float): angles
         """
         max_incr = self.magic_number / 2
         min_incr = self.magic_number / 10
