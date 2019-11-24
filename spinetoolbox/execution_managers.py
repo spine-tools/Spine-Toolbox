@@ -224,40 +224,18 @@ class QProcessExecutionManager(ExecutionManager):
     def stop_execution(self):
         """See base class."""
         self._toolbox.msg_error.emit("Terminating process")
-        try:
-            self._process.finished.disconnect(self.on_process_finished)
-        except (AttributeError, RuntimeError):
-            pass
-        try:
-            self._process.readyReadStandardOutput.disconnect(self.on_ready_stdout)
-        except (AttributeError, RuntimeError):
-            pass
-        try:
-            self._process.readyReadStandardError.disconnect(self.on_ready_stderr)
-        except (AttributeError, RuntimeError):
-            pass
-        try:
-            self._process.error.disconnect(self.on_process_error)  # errorOccurred available in Qt 5.6
-        except (AttributeError, RuntimeError):
-            pass
-        try:
-            self._process.stateChanged.disconnect(self.on_state_changed)
-        except (AttributeError, RuntimeError):
-            pass
-        # logging.debug("Terminating QProcess nr.{0}. ProcessState:{1} and ProcessError:{2}"
-        #               .format(self._process.processId(), self._process.state(), self._process.error()))
         self._user_stopped = True
         self.process_failed = True
+        if not self._process:
+            return
         try:
             self._process.terminate()
         except Exception as ex:  # pylint: disable=broad-except
             self._toolbox.msg_error.emit("[{0}] exception when terminating process".format(ex))
             logging.exception("Exception in closing QProcess: %s", ex)
         finally:
-            # Delete QProcess
-            if self._process:
-                self._process.deleteLater()
-                self._process = None
+            self._process.deleteLater()
+            self._process = None
 
     @Slot(int)
     def on_process_finished(self, exit_code):

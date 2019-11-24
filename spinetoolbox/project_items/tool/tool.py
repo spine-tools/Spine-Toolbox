@@ -938,8 +938,9 @@ class Tool(ProjectItem):
     def stop_execution(self):
         """Stops executing this Tool."""
         super().stop_execution()
-        self.get_icon().stop_animation()
-        self.instance.terminate_instance()
+        if self.instance and self.instance.is_running():
+            self.get_icon().stop_animation()
+            self.instance.terminate_instance()
 
     def _do_handle_dag_changed(self, resources):
         """See base class."""

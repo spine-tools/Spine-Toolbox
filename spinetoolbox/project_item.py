@@ -338,8 +338,6 @@ class ProjectItem(BaseProjectItem):
         result = {"backward": self.execute_backward, "forward": self.execute_forward}[direction](resources)
         if direction == "forward" and result:
             self.run_leave_animation()
-        if self._project._execution_stopped:
-            return False
         return result
 
     def run_leave_animation(self):

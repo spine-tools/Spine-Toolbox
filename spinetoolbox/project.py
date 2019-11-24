@@ -21,7 +21,7 @@ import logging
 import json
 from PySide2.QtCore import Slot
 from PySide2.QtWidgets import QMessageBox
-from spine_engine import SpineEngine, SpineEngineEventType
+from spine_engine import SpineEngine, SpineEngineState
 from .metaobject import MetaObject
 from .helpers import project_dir, create_dir, copy_dir, inverted
 from .tool_specifications import JuliaTool, PythonTool, GAMSTool, ExecutableTool
@@ -47,8 +47,7 @@ class SpineToolboxProject(MetaObject):
         self._qsettings = self._toolbox.qsettings()
         self.dag_handler = DirectedGraphHandler(self._toolbox)
         self.db_mngr = SpineDBManager(self)
-        self.running_item = None
-        self._execution_stopped = False
+        self.engine = None
         self.project_dir = os.path.join(project_dir(self._qsettings), self.short_name)
         if not work_dir:
             self.work_dir = DEFAULT_WORK_DIR
@@ -57,6 +56,7 @@ class SpineToolboxProject(MetaObject):
         self.filename = self.short_name + ext
         self.path = os.path.join(project_dir(self._qsettings), self.filename)
         self.dirty = False  # TODO: Indicates if project has changed since loading
+        self._execution_stopped = True
         # Make project directory
         try:
             create_dir(self.project_dir)
@@ -333,6 +333,7 @@ class SpineToolboxProject(MetaObject):
         self._toolbox.ui.treeView_project.setCurrentIndex(ind)
 
     def execute_dags(self, dags):
+        self._execution_stopped = False
         for i, dag in enumerate(dags):
             if self._execution_stopped:
                 break
@@ -353,20 +354,16 @@ class SpineToolboxProject(MetaObject):
             return
         # Make execution instance, connect signals and start execution
         items = [self._toolbox.project_item_model.get_item(name) for name in node_successors]
-        engine = SpineEngine(items, node_successors)
+        self.engine = SpineEngine(items, node_successors)
         self._toolbox.msg.emit("<b>Starting DAG {0}/{1}</b>".format(graph_index, graph_count))
         self._toolbox.msg.emit("Order: {0}".format(" -> ".join(list(node_successors))))
-        for event in engine.run():
-            if event.type_ == SpineEngineEventType.ITEM_EXECUTION_START:
-                self.running_item = event.item
-            elif event.type_ == SpineEngineEventType.ITEM_EXECUTION_FAILURE:
-                if self._execution_stopped:
-                    self._execution_stopped = False
-                    self._toolbox.msg.emit("<b>DAG {0}/{1} stopped</b>".format(graph_index, graph_count))
-                break
-        else:  # nobreak
-            self.running_item = None
-            self._toolbox.msg.emit("<b>DAG {0}/{1} finished</b>".format(graph_index, graph_count))
+        self.engine.run()
+        outcome = {
+            SpineEngineState.USER_STOPPED: "stopped by the user",
+            SpineEngineState.FAILED: "failed",
+            SpineEngineState.COMPLETED: "completed successfully",
+        }[self.engine.state()]
+        self._toolbox.msg.emit("<b>DAG {0}/{1} {2}</b>".format(graph_index, graph_count, outcome))
 
     def execute_selected(self):
         """Starts executing selected directed acyclic graph. Selected graph is
@@ -421,12 +418,14 @@ class SpineToolboxProject(MetaObject):
     def stop(self):
         """Stops execution of the current DAG. Slot for the main window Stop tool button
         in the toolbar."""
-        if not self.running_item:
+        if self._execution_stopped:
             self._toolbox.msg.emit("No execution in progress")
             return
         self._toolbox.msg.emit("Stopping...")
         self._execution_stopped = True
-        self.running_item.stop_execution()
+        if self.engine:
+            self.engine.stop()
+            return
 
     def export_graphs(self):
         """Export all valid directed acyclic graphs in project to GraphML files."""
