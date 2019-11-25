@@ -594,7 +594,7 @@ class LinkBase(QGraphicsPathItem):
             list(QPointF): points
             list(float): angles
         """
-        max_incr = 0.1
+        max_incr = 0.05
         min_incr = 0.01
         max_angle_change = 0.001
         percents = list()
