@@ -55,65 +55,45 @@ class GdxExportException(Exception):
         return self._message
 
 
-class DomainSet:
+class Set:
     """
-    Represents a one-dimensional universal GAMS set.
+    Represents a GAMS domain, set or a subset.
 
     Attributes:
-        description (str): explanatory text describing the domain
-        name (str): domain's name
-        records (list): domain's elements as a list of DomainRecord objects
+        description (str): set's explanatory text
+        domain_names (list): a list of superset (domain) names, None if the Set is a domain
+        name (str): set's name
+        records (list): set's elements as a list of SetRecord objects
     """
 
-    def __init__(self, name, description=""):
+    def __init__(self, name, description="", domain_names=None):
         """
         Args:
-            name (str): domain's name
-            description (str): domain's explanatory text
+            name (str): set's name
+            description (str): set's explanatory text
+            domain_names (list): a list of indexing domain names
         """
-        self.description = description
+        self.description=description
+        self.domain_names = domain_names if domain_names is not None else [None]
         self.name = name
         self.records = list()
 
     @property
     def dimensions(self):
-        """The dimensions of this DomainSet which is always 1"""
-        return 1
+        """Number of dimensions of this Set."""
+        return len(self.domain_names)
 
     @staticmethod
     def from_object_class(object_class):
         """
-        Constructs a DomainSet from database's object class row.
+        Constructs a Set from database's object class row.
 
         Args:
             object_class (namedtuple): an object class row from the database
         """
         name = object_class.name
         description = object_class.description if object_class.description is not None else ""
-        return DomainSet(name, description)
-
-
-class Set:
-    """
-    Represents a (non-domain) GAMS set or a subset.
-
-    Attributes:
-        domain_names (list): a list of superset (DomainSet) names
-        dimensions (int): number of set's dimensions
-        name (str): set's name
-        records (list): set's elements as a list of SetRecord objects
-    """
-
-    def __init__(self, name, domain_names):
-        """
-        Args:
-            name (str): set's name
-            domain_names (list): a list of indexing domain names
-        """
-        self.domain_names = domain_names
-        self.name = name
-        self.dimensions = len(self.domain_names)
-        self.records = list()
+        return Set(name, description)
 
     @staticmethod
     def from_relationship_class(relationship_class):
@@ -125,7 +105,7 @@ class Set:
         """
         name = relationship_class.name
         domain_names = [name.strip() for name in relationship_class.object_class_name_list.split(',')]
-        return Set(name, domain_names)
+        return Set(name, domain_names=domain_names)
 
 
 class Record:
@@ -257,34 +237,34 @@ def find_gams_directory():
 
 def make_index_domain(name, entry_count):
     """Returns a domain set containing indexes for indexed parameter values."""
-    domain = DomainSet(name)
+    domain = Set(name)
     domain.records += [Record([f"T{index:04d}"]) for index in range(entry_count)]
     return domain
 
 
-def expand_domains_indexed_parameter_values(domains, index_domains):
+def expand_sets_indexed_parameter_values(sets, index_domains):
     """
-    Expands indexed parameter values by creating sets with 2 dimensions.
+    Expands indexed parameter values by creating sets with n+1 dimensions.
 
     Args:
-        domains (list): a list of DomainSets.
-        index_domains (dict): a mapping from domain name, record name and parameter name to a DomainSet
+        sets (list): a list of Sets.
+        index_domains (dict): a mapping from set name, record name and parameter name to a Set
             used to index the expanded values
     Returns:
-        a tuple containing a list of the expanded sets and a list of domains left non-expanded.
+        a tuple containing a list of the expanded sets and a list of sets left non-expanded.
     """
     expanded_sets = list()
-    nonexpanded_domains = list()
-    for domain_index, domain in enumerate(domains):
+    nonexpanded_sets = list()
+    for domain_index, current_set in enumerate(sets):
         nonexpanded_records = list()
-        for record_index, record in enumerate(domain.records):
+        for record_index, record in enumerate(current_set.records):
             nonexpanded_parameters = list()
             for parameter_index, parameter in enumerate(list(record.parameters)):
                 if parameter.is_complex():
                     if not isinstance(parameter.value, IndexedValue):
                         raise GdxExportException("Support for non-indexed parameter values not yet implemented.")
-                    index_domain = index_domains[domain.name][record.name][parameter.name]
-                    expanded_set = Set(domain.name, [index_domain.name])
+                    index_domain = index_domains[current_set.name][record.name][parameter.name]
+                    expanded_set = Set(current_set.name, current_set.description, current_set.domain_names + [index_domain.name])
                     for value_index, single_value in enumerate(parameter.value.values):
                         expanded_record = Record(record.keys + index_domain.records[value_index].keys)
                         expanded_parameter = Parameter(parameter.name, single_value)
@@ -298,40 +278,10 @@ def expand_domains_indexed_parameter_values(domains, index_domains):
                 new_record.parameters = nonexpanded_parameters
                 nonexpanded_records.append(new_record)
         if nonexpanded_records:
-            new_domain = copy(domain)
-            new_domain.records = nonexpanded_records
-            nonexpanded_domains.append(new_domain)
-    return expanded_sets, nonexpanded_domains
-
-
-def domains_to_gams(gdx_file, domains):
-    """
-    Writes DomainSet objects to .gdx file as universal (index '*') one-dimensional sets.
-
-    Records and non-complex Parameters contained within the DomainSets will be written as well.
-
-    Args:
-        gdx_file (GdxFile): a target file
-        domains (list): a list of DomainSet objects
-     """
-    for domain in domains:
-        domain_parameters = dict()
-        record_keys = list()
-        for record in domain.records:
-            record_key = record.keys[0]
-            record_keys.append((record_key,))
-            for parameter in record.parameters:
-                index_and_value = domain_parameters.setdefault(parameter.name, (list(), list()))
-                index_and_value[0].append((record_key,))
-                index_and_value[1].append(parameter.value)
-        gams_set = GAMSSet(record_keys, expl_text=domain.description)
-        gdx_file[domain.name] = gams_set
-        for parameter_name, parameter_data in domain_parameters.items():
-            parameter_dict = dict()
-            for parameter_key, parameter_value in zip(parameter_data[0], parameter_data[1]):
-                parameter_dict[parameter_key] = parameter_value
-            gams_parameter = GAMSParameter(parameter_dict, domain=[domain.name])
-            gdx_file[parameter_name] = gams_parameter
+            new_set = copy(current_set)
+            new_set.records = nonexpanded_records
+            nonexpanded_sets.append(new_set)
+    return expanded_sets, nonexpanded_sets
 
 
 def sets_to_gams(gdx_file, sets):
@@ -354,7 +304,7 @@ def sets_to_gams(gdx_file, sets):
                 index_and_value = set_parameters.setdefault(parameter.name, (list(), list()))
                 index_and_value[0].append(record_key)
                 index_and_value[1].append(parameter.value)
-        gams_set = GAMSSet(record_keys, current_set.domain_names)
+        gams_set = GAMSSet(record_keys, current_set.domain_names, expl_text=current_set.description)
         gdx_file[current_set.name] = gams_set
         for parameter_name, parameter_data in set_parameters.items():
             parameter_dict = dict()
@@ -370,7 +320,7 @@ def domain_parameters_to_gams(gdx_file, domain):
 
     Args:
         gdx_file (GdxFile): a target file
-        domain (DomainSet): a domain that holds the parameters
+        domain (Set): a domain that holds the parameters
     """
     for record in domain.records:
         for parameter in record.parameters:
@@ -396,7 +346,7 @@ def object_classes_to_domains(db_map):
     domains = list()
     object_parameter_value_query = db_map.object_parameter_value_list()
     for object_class in class_list:
-        domain = DomainSet.from_object_class(object_class)
+        domain = Set.from_object_class(object_class)
         domains.append(domain)
         object_list = db_map.object_list(class_id=object_class.id)
         for set_object in object_list:
@@ -508,11 +458,11 @@ def extract_domain(domains, name_to_extract):
     Extracts the domain with given name from a list of domains.
 
     Args:
-        domains (list): a list of DomainSet objects
+        domains (list): a list of Set objects
         name_to_extract (str): name of the domain to be extracted
 
     Returns:
-        a tuple (list, DomainSet) of the modified domains list and the extracted DomainSet object
+        a tuple (list, Set) of the modified domains list and the extracted Set object
     """
     for index, domain in enumerate(domains):
         if domain.name == name_to_extract:
@@ -538,7 +488,7 @@ def to_gdx_file(database_map, file_name, settings, gams_system_directory=None):
     sets = filter_and_sort_sets(sets, settings.sorted_set_names, settings.set_exportable_flags)
     sort_records_inplace(sets, settings)
     with GdxFile(file_name, mode='w', gams_dir=gams_system_directory) as output_file:
-        domains_to_gams(output_file, domains)
+        sets_to_gams(output_file, domains)
         sets_to_gams(output_file, sets)
         if global_parameters_domain is not None:
             domain_parameters_to_gams(output_file, global_parameters_domain)

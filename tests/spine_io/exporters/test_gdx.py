@@ -1,5 +1,5 @@
 ######################################################################################################################
-# Copyright (C) 2017-2020 Spine project consortium
+# Copyright (C) 2017 - 2019 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -60,26 +60,21 @@ class TextGdx(unittest.TestCase):
         if not QApplication.instance():
             QApplication()
 
-    def test_DomainSet_construction(self):
-        domain = gdx.DomainSet("name", "description")
-        self.assertEqual(domain.description, "description")
-        self.assertEqual(domain.dimensions, 1)
-        self.assertEqual(domain.name, "name")
-        self.assertEqual(domain.records, [])
-
-    def test_DomainSet_from_object_class(self):
-        domain = gdx.DomainSet.from_object_class(self._MockObjectClass())
-        self.assertEqual(domain.description, self._MockObjectClass.description)
-        self.assertEqual(domain.dimensions, 1)
-        self.assertEqual(domain.name, self._MockObjectClass.name)
-        self.assertEqual(domain.records, [])
-
     def test_Set_construction(self):
-        regular_set = gdx.Set("name", ["domain1", "domain2"])
+        regular_set = gdx.Set("name", "description", ["domain1", "domain2"])
+        self.assertEqual(regular_set.description, "description")
         self.assertEqual(regular_set.domain_names, ["domain1", "domain2"])
         self.assertEqual(regular_set.dimensions, 2)
         self.assertEqual(regular_set.name, "name")
         self.assertEqual(regular_set.records, [])
+
+    def test_DomainSet_from_object_class(self):
+        domain = gdx.Set.from_object_class(self._MockObjectClass())
+        self.assertEqual(domain.description, self._MockObjectClass.description)
+        self.assertEqual(domain.domain_names, [None])
+        self.assertEqual(domain.dimensions, 1)
+        self.assertEqual(domain.name, self._MockObjectClass.name)
+        self.assertEqual(domain.records, [])
 
     def test_Set_from_relationship_class(self):
         regular_set = gdx.Set.from_relationship_class(self._MockRelationshipClass())
@@ -219,8 +214,8 @@ class TextGdx(unittest.TestCase):
         self.assertEqual(parameter.value, 3.14)
 
     @unittest.skipIf(gdx_utils.find_gams_directory() is None, "No working GAMS installation found.")
-    def test_domains_to_gams(self):
-        domain = gdx.DomainSet.from_object_class(self._MockObjectClass())
+    def test_sets_to_gams_with_domain_sets(self):
+        domain = gdx.Set.from_object_class(self._MockObjectClass())
         record = gdx.Record.from_object(self._MockObject())
         parameter = gdx.Parameter.from_parameter(self._MockParameter())
         record.parameters.append(parameter)
@@ -229,7 +224,7 @@ class TextGdx(unittest.TestCase):
         with TemporaryDirectory() as temp_directory:
             path_to_gdx = Path(temp_directory).joinpath("test_domains_to_gams.gdx")
             with GdxFile(path_to_gdx, 'w', gams_directory) as gdx_file:
-                gdx.domains_to_gams(gdx_file, [domain])
+                gdx.sets_to_gams(gdx_file, [domain])
             with GdxFile(path_to_gdx, 'r', gams_directory) as gdx_file:
                 self.assertEqual(len(gdx_file), 2)
                 gams_set = gdx_file["mock_object_class_name"]
@@ -243,7 +238,7 @@ class TextGdx(unittest.TestCase):
 
     @unittest.skipIf(gdx_utils.find_gams_directory() is None, "No working GAMS installation found.")
     def test_sets_to_gams(self):
-        domain = gdx.DomainSet.from_object_class(self._MockObjectClass())
+        domain = gdx.Set.from_object_class(self._MockObjectClass())
         record = gdx.Record.from_object(self._MockObject())
         domain.records.append(record)
         set_item = gdx.Set.from_relationship_class(self._MockRelationshipClass())
@@ -255,7 +250,7 @@ class TextGdx(unittest.TestCase):
         with TemporaryDirectory() as temp_directory:
             path_to_gdx = Path(temp_directory).joinpath("test_sets_to_gams.gdx")
             with GdxFile(path_to_gdx, 'w', gams_directory) as gdx_file:
-                gdx.domains_to_gams(gdx_file, [domain])
+                gdx.sets_to_gams(gdx_file, [domain])
                 gdx.sets_to_gams(gdx_file, [set_item])
             with GdxFile(path_to_gdx, 'r', gams_directory) as gdx_file:
                 self.assertEqual(len(gdx_file), 3)
@@ -273,7 +268,7 @@ class TextGdx(unittest.TestCase):
 
     @unittest.skipIf(gdx_utils.find_gams_directory() is None, "No working GAMS installation found.")
     def test_domain_parameters_to_gams(self):
-        domain = gdx.DomainSet.from_object_class(self._MockObjectClass())
+        domain = gdx.Set.from_object_class(self._MockObjectClass())
         record = gdx.Record.from_object(self._MockObject())
         domain.records.append(record)
         parameter = gdx.Parameter.from_parameter(self._MockParameter())
@@ -498,22 +493,23 @@ class TextGdx(unittest.TestCase):
         self.assertEqual(base_settings.sorted_record_key_lists('c'), ['CC', 'CCC'])
         self.assertEqual(base_settings.sorted_record_key_lists('d'), ['D'])
 
-    def test_expand_domains_indexed_parameter_values(self):
-        domain = gdx.DomainSet("domain name")
+    def test_expand_sets_indexed_parameter_values_for_domains(self):
+        domain = gdx.Set("domain name")
         record = gdx.Record(["element"])
         domain.records.append(record)
         parameter = gdx.Parameter(
             "time series", TimeSeriesFixedResolution("2019-01-01T12:15", "1D", [3.3, 4.4], False, False)
         )
         record.parameters.append(parameter)
-        index_domain = gdx.DomainSet("indexes")
+        index_domain = gdx.Set("indexes")
         index_domain.records.append(gdx.Record(["stamp1"]))
         index_domain.records.append(gdx.Record(["stamp2"]))
         index_domains = {"domain name": {"element": {"time series": index_domain}}}
-        expanded, nonexpanded = gdx.expand_domains_indexed_parameter_values([domain], index_domains)
+        expanded, nonexpanded = gdx.expand_sets_indexed_parameter_values([domain], index_domains)
         self.assertFalse(nonexpanded)
         self.assertEqual(len(expanded), 1)
         self.assertEqual(expanded[0].name, "domain name")
+        self.assertEqual(expanded[0].domain_names, [None, "indexes"])
         self.assertEqual(len(expanded[0].records), 2)
         self.assertEqual(expanded[0].records[0].keys, ["element", "stamp1"])
         self.assertEqual(expanded[0].records[1].keys, ["element", "stamp2"])
@@ -524,8 +520,8 @@ class TextGdx(unittest.TestCase):
         self.assertEqual(expanded[0].records[1].parameters[0].name, "time series")
         self.assertEqual(expanded[0].records[1].parameters[0].value, 4.4)
 
-    def test_expand_domains_indexed_parameter_values_keeps_nonindexed_parameter_intact(self):
-        domain = gdx.DomainSet("domain name")
+    def test_expand_sets_indexed_parameter_values_keeps_nonindexed_parameter_intact(self):
+        domain = gdx.Set("domain name")
         record = gdx.Record(["element"])
         domain.records.append(record)
         scalar_parameter = gdx.Parameter("scalar", 2.2)
@@ -534,11 +530,11 @@ class TextGdx(unittest.TestCase):
             "time series", TimeSeriesFixedResolution("2019-01-01T12:15", "1D", [3.3, 4.4], False, False)
         )
         record.parameters.append(indexed_parameter)
-        index_domain = gdx.DomainSet("indexes")
+        index_domain = gdx.Set("indexes")
         index_domain.records.append(gdx.Record(["stamp1"]))
         index_domain.records.append(gdx.Record(["stamp2"]))
         index_domains = {"domain name": {"element": {"time series": index_domain}}}
-        expanded, nonexpanded = gdx.expand_domains_indexed_parameter_values([domain], index_domains)
+        expanded, nonexpanded = gdx.expand_sets_indexed_parameter_values([domain], index_domains)
         self.assertTrue(nonexpanded)
         self.assertEqual(len(nonexpanded), 1)
         self.assertEqual(nonexpanded[0].name, "domain name")
@@ -549,9 +545,39 @@ class TextGdx(unittest.TestCase):
         self.assertEqual(nonexpanded[0].records[0].parameters[0].value, 2.2)
         self.assertEqual(len(expanded), 1)
         self.assertEqual(expanded[0].name, "domain name")
+        self.assertEqual(expanded[0].domain_names, [None, "indexes"])
         self.assertEqual(len(expanded[0].records), 2)
         self.assertEqual(expanded[0].records[0].keys, ["element", "stamp1"])
         self.assertEqual(expanded[0].records[1].keys, ["element", "stamp2"])
+        self.assertEqual(len(expanded[0].records[0].parameters), 1)
+        self.assertEqual(expanded[0].records[0].parameters[0].name, "time series")
+        self.assertEqual(expanded[0].records[0].parameters[0].value, 3.3)
+        self.assertEqual(len(expanded[0].records[1].parameters), 1)
+        self.assertEqual(expanded[0].records[1].parameters[0].name, "time series")
+        self.assertEqual(expanded[0].records[1].parameters[0].value, 4.4)
+
+
+    def test_expand_sets_indexed_parameter_values_with_multidimensional_sets(self):
+        original_set = gdx.Set("set name", domain_names=["domain1", "domain2"])
+        record = gdx.Record(["domain1_element", "domain2_element"])
+        original_set.records.append(record)
+        indexed_parameter = gdx.Parameter(
+            "time series", TimeSeriesFixedResolution("2019-01-01T12:15", "1D", [3.3, 4.4], False, False)
+        )
+        record.parameters.append(indexed_parameter)
+        index_domain = gdx.Set("indexes")
+        index_domain.records.append(gdx.Record(["stamp1"]))
+        index_domain.records.append(gdx.Record(["stamp2"]))
+        index_domains = {original_set.name: {record.name: {"time series": index_domain}}}
+        expanded, nonexpanded = gdx.expand_sets_indexed_parameter_values([original_set], index_domains)
+        self.assertFalse(nonexpanded)
+        self.assertTrue(expanded)
+        self.assertEqual(len(expanded), 1)
+        self.assertEqual(expanded[0].name, "set name")
+        self.assertEqual(expanded[0].domain_names, ["domain1", "domain2", "indexes"])
+        self.assertEqual(len(expanded[0].records), 2)
+        self.assertEqual(expanded[0].records[0].keys, ["domain1_element", "domain2_element", "stamp1"])
+        self.assertEqual(expanded[0].records[1].keys, ["domain1_element", "domain2_element", "stamp2"])
         self.assertEqual(len(expanded[0].records[0].parameters), 1)
         self.assertEqual(expanded[0].records[0].parameters[0].name, "time series")
         self.assertEqual(expanded[0].records[0].parameters[0].value, 3.3)
