@@ -18,7 +18,7 @@ Contains Importer project item class.
 
 import logging
 import os
-import pickle
+import json
 import sys
 from PySide2.QtCore import Qt, Slot, QFileInfo, QEventLoop, QProcess
 from PySide2.QtGui import QStandardItem, QStandardItemModel
@@ -255,15 +255,16 @@ class Importer(ProjectItem):
         self.importer_process = QProcess()
         self.importer_process.readyReadStandardOutput.connect(self._log_importer_process_stdout)
         self.importer_process.readyReadStandardError.connect(self._log_importer_process_stderr)
-        loop = QEventLoop()
-        self.importer_process.finished.connect(loop.quit)
         self.importer_process.finished.connect(self.importer_process.deleteLater)
         program_path = os.path.abspath(importer_program.__file__)
-        pickled_args = pickle.dumps(args)
-        string_args = str(int.from_bytes(pickled_args, byteorder='big'))
-        self.importer_process.start(sys.executable, [program_path, string_args])
+        self.importer_process.start(sys.executable, [program_path])
         self.importer_process.waitForStarted()
+        self.importer_process.write(json.dumps(args).encode("utf-8"))
+        self.importer_process.write(b'\n')
+        self.importer_process.closeWriteChannel()
         if self.importer_process.state() == QProcess.Running:
+            loop = QEventLoop()
+            self.importer_process.finished.connect(loop.quit)
             loop.exec_()
         return self.importer_process.exitCode()
 
