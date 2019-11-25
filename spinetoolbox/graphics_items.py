@@ -593,23 +593,24 @@ class LinkBase(QGraphicsPathItem):
             path (QPainterPath)
 
         Returns:
-            list(QPointF)
+            list(QPointF): points
+            list(float): angles
         """
-        max_incr = self.magic_number / 2
-        min_incr = self.magic_number / 10
-        max_angle_change = self.magic_number / 1000
+        max_incr = 0.05
+        min_incr = 0.01
+        max_angle_change = 0.001
         percents = list()
         angles = list()
-        i = self.src_rect.width() / 2
-        t = path.percentAtLength(i)
+        t = path.percentAtLength(self.src_rect.width() / 2)
         a = path.angleAtPercent(t)
         while t < 0.5:
             percents.append(t)
             angles.append(a)
+            t_ref = t
             a_ref = a
             incr = max_incr
             while incr > min_incr:
-                t = path.percentAtLength(i + incr)
+                t = t_ref + incr
                 a = path.angleAtPercent(t)
                 try:
                     angle_change = abs((a - a_ref) / (a_ref + a) / 2)
@@ -619,7 +620,7 @@ class LinkBase(QGraphicsPathItem):
                 if angle_change < max_angle_change:
                     break
                 incr /= 2
-            i += incr
+            t += incr
         t = 0.5
         a = path.angleAtPercent(t)
         percents.append(t)
