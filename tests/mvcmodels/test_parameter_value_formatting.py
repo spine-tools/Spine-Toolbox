@@ -135,7 +135,7 @@ class TestParameterValueFormatting(unittest.TestCase):
         value = TimeSeriesVariableResolution(["2019-07-12T08:00", "2019-07-12T16:00"], [0.0, 100.0], False, False)
         value_in_database = to_database(value)
         formatted = format_for_ToolTipRole(value_in_database)
-        self.assertEqual(formatted, "Start: 2019-07-12T08:00:00.000000, resolution: variable, length: 2")
+        self.assertEqual(formatted, "Start: 2019-07-12T08:00:00, resolution: variable, length: 2")
 
     def test_broken_value_in_display_role(self):
         formatted = format_for_DisplayRole("dubbidubbidu")
