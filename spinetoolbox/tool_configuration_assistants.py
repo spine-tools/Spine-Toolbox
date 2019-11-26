@@ -19,7 +19,7 @@ Classes for tool configuration assistants.
 from PySide2.QtCore import QObject, Signal
 from .config import JULIA_EXECUTABLE
 from .helpers import busy_effect
-from . import qsubprocess
+from .execution_managers import QProcessExecutionManager
 
 
 class SpineModelConfigurationAssistant(QObject):
@@ -54,18 +54,18 @@ class SpineModelConfigurationAssistant(QObject):
         args = list()
         args.append("-e")
         args.append("println(VERSION)")
-        q_process = qsubprocess.QSubProcess(self._toolbox, self.julia_exe, args, silent=True)
-        q_process.start_process()
-        if q_process.wait_for_finished(msecs=5000):
-            self._julia_version = q_process.output
+        exec_mngr = QProcessExecutionManager(self._toolbox, self.julia_exe, args, silent=True)
+        exec_mngr.start_execution()
+        if exec_mngr.wait_for_process_finished(msecs=5000):
+            self._julia_version = exec_mngr.process_output
         args = list()
         args.append(f"--project={self.julia_project_path}")
         args.append("-e")
         args.append("println(Base.active_project())")
-        q_process = qsubprocess.QSubProcess(self._toolbox, self.julia_exe, args, silent=True)
-        q_process.start_process()
-        if q_process.wait_for_finished(msecs=5000):
-            self._julia_active_project = q_process.output
+        exec_mngr = QProcessExecutionManager(self._toolbox, self.julia_exe, args, silent=True)
+        exec_mngr.start_execution()
+        if exec_mngr.wait_for_process_finished(msecs=5000):
+            self._julia_active_project = exec_mngr.process_output
 
     def julia_version(self):
         """Return current julia version."""
@@ -76,26 +76,27 @@ class SpineModelConfigurationAssistant(QObject):
         return self._julia_active_project
 
     def spine_model_version_check(self):
-        """Return qsubprocess that checks current version of SpineModel.
+        """Returns execution manager for process that checks current version of SpineModel.
         """
         args = list()
         args.append(f"--project={self.julia_project_path}")
         args.append("-e")
         args.append("using Pkg; Pkg.update(ARGS[1]);")
         args.append("SpineModel")
-        return qsubprocess.QSubProcess(self._toolbox, self.julia_exe, args, silent=True)
+        return QProcessExecutionManager(self._toolbox, self.julia_exe, args, silent=True)
 
     def py_call_program_check(self):
-        """Return qsubprocess that checks the python program used by PyCall in current julia version.
+        """Returns execution manager for process that checks the python program used by PyCall
+        in current julia version.
         """
         args = list()
         args.append(f"--project={self.julia_project_path}")
         args.append("-e")
         args.append("using PyCall; println(PyCall.pyprogramname);")
-        return qsubprocess.QSubProcess(self._toolbox, self.julia_exe, args, silent=True)
+        return QProcessExecutionManager(self._toolbox, self.julia_exe, args, silent=True)
 
     def install_spine_model(self):
-        """Return qsubprocess that installs SpineModel in current julia version.
+        """Returns execution manager for process that installs SpineModel in current julia version.
         """
         args = list()
         args.append(f"--project={self.julia_project_path}")
@@ -103,20 +104,20 @@ class SpineModelConfigurationAssistant(QObject):
         args.append("using Pkg; Pkg.add(PackageSpec(url=ARGS[1])); Pkg.add(PackageSpec(url=ARGS[2]));")
         args.append("https://github.com/Spine-project/SpineInterface.jl.git")
         args.append("https://github.com/Spine-project/Spine-Model.git")
-        return qsubprocess.QSubProcess(self._toolbox, self.julia_exe, args, silent=False)
+        return QProcessExecutionManager(self._toolbox, self.julia_exe, args, silent=False)
 
     def install_py_call(self):
-        """Return qsubprocess that installs PyCall in current julia version.
+        """Returns execution manager for process that installs PyCall in current julia version.
         """
         args = list()
         args.append(f"--project={self.julia_project_path}")
         args.append("-e")
         args.append("using Pkg; Pkg.add(ARGS[1]);")
         args.append("PyCall")
-        return qsubprocess.QSubProcess(self._toolbox, self.julia_exe, args, silent=False)
+        return QProcessExecutionManager(self._toolbox, self.julia_exe, args, silent=False)
 
     def reconfigure_py_call(self, pyprogramname):
-        """Return qsubprocess that reconfigure PyCall to use given python program.
+        """Returns execution manager for process that reconfigures PyCall to use given python program.
         """
         args = list()
         args.append(f"--project={self.julia_project_path}")
@@ -125,4 +126,4 @@ class SpineModelConfigurationAssistant(QObject):
         args.append("PYTHON")
         args.append(pyprogramname)
         args.append("PyCall")
-        return qsubprocess.QSubProcess(self._toolbox, self.julia_exe, args, silent=True)
+        return QProcessExecutionManager(self._toolbox, self.julia_exe, args, silent=True)

@@ -350,12 +350,12 @@
              </widget>
             </item>
             <item>
-             <widget class="QCheckBox" name="checkBox_use_smooth_links">
+             <widget class="QCheckBox" name="checkBox_use_curved_links">
               <property name="toolTip">
                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Controls whether smooth or straight connectors are used in Design View.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="text">
-               <string>Smooth links</string>
+               <string>Curved links</string>
               </property>
              </widget>
             </item>
@@ -775,7 +775,7 @@ p, li { white-space: pre-wrap; }
                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Path to GAMS executable for Tool and GAMS Python bindings. Leave blank to use system's default&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="placeholderText">
-               <string>Using sytem's default GAMS</string>
+               <string>Using system's default GAMS</string>
               </property>
               <property name="clearButtonEnabled">
                <bool>true</bool>
@@ -1201,7 +1201,7 @@ p, li { white-space: pre-wrap; }
   <tabstop>checkBox_datetime</tabstop>
   <tabstop>checkBox_delete_data</tabstop>
   <tabstop>checkBox_use_smooth_zoom</tabstop>
-  <tabstop>checkBox_use_smooth_links</tabstop>
+  <tabstop>checkBox_use_curved_links</tabstop>
   <tabstop>radioButton_bg_grid</tabstop>
   <tabstop>radioButton_bg_solid</tabstop>
   <tabstop>toolButton_bg_color</tabstop>

@@ -141,7 +141,7 @@ class Exporter(ProjectItem):
         """Executes this item."""
         gams_system_directory = self._resolve_gams_system_directory()
         if gams_system_directory is None:
-            self._toolbox.msg.error("<b>{}</b>: Cannot proceed. No GAMS installation found.")
+            self._toolbox.msg_error.emit("<b>{}</b>: Cannot proceed. No GAMS installation found.")
             self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(ExecutionState.ABORT)
         for url in self._database_urls:
             file_name = self._database_to_file_name_map.get(url, None)

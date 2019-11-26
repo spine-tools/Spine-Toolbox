@@ -340,6 +340,9 @@ class ProjectItem(BaseProjectItem):
         self._toolbox.msg.emit("Executing {} <b>{}</b>".format(self.item_type(), self.name))
         self._toolbox.msg.emit("***")
         execution_state = self._do_execute(resources_upstream, resources_downstream)
+        if not self._toolbox.project().execution_instance:
+            # Happens when pressing stop
+            return
         self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(execution_state)
 
     # pylint: disable=no-self-use

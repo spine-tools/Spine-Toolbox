@@ -10,10 +10,10 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-# Form implementation generated from reading ui file 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\settings.ui',
-# licensing of 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\settings.ui' applies.
+# Form implementation generated from reading ui file '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/settings.ui',
+# licensing of '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/settings.ui' applies.
 #
-# Created: Tue Nov 19 12:23:19 2019
+# Created: Sat Nov 23 21:32:53 2019
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -147,9 +147,9 @@ class Ui_SettingsForm(object):
         self.checkBox_use_smooth_zoom = QtWidgets.QCheckBox(self.groupBox_general)
         self.checkBox_use_smooth_zoom.setObjectName("checkBox_use_smooth_zoom")
         self.verticalLayout.addWidget(self.checkBox_use_smooth_zoom)
-        self.checkBox_use_smooth_links = QtWidgets.QCheckBox(self.groupBox_general)
-        self.checkBox_use_smooth_links.setObjectName("checkBox_use_smooth_links")
-        self.verticalLayout.addWidget(self.checkBox_use_smooth_links)
+        self.checkBox_use_curved_links = QtWidgets.QCheckBox(self.groupBox_general)
+        self.checkBox_use_curved_links.setObjectName("checkBox_use_curved_links")
+        self.verticalLayout.addWidget(self.checkBox_use_curved_links)
         self.label_7 = QtWidgets.QLabel(self.groupBox_general)
         font = QtGui.QFont()
         font.setPointSize(7)
@@ -445,8 +445,8 @@ class Ui_SettingsForm(object):
         SettingsForm.setTabOrder(self.checkBox_save_at_exit, self.checkBox_datetime)
         SettingsForm.setTabOrder(self.checkBox_datetime, self.checkBox_delete_data)
         SettingsForm.setTabOrder(self.checkBox_delete_data, self.checkBox_use_smooth_zoom)
-        SettingsForm.setTabOrder(self.checkBox_use_smooth_zoom, self.checkBox_use_smooth_links)
-        SettingsForm.setTabOrder(self.checkBox_use_smooth_links, self.radioButton_bg_grid)
+        SettingsForm.setTabOrder(self.checkBox_use_smooth_zoom, self.checkBox_use_curved_links)
+        SettingsForm.setTabOrder(self.checkBox_use_curved_links, self.radioButton_bg_grid)
         SettingsForm.setTabOrder(self.radioButton_bg_grid, self.radioButton_bg_solid)
         SettingsForm.setTabOrder(self.radioButton_bg_solid, self.toolButton_bg_color)
         SettingsForm.setTabOrder(self.toolButton_bg_color, self.textEdit_project_description)
@@ -491,8 +491,8 @@ class Ui_SettingsForm(object):
         self.lineEdit_project_dir.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>Directory where Spine Toolbox projects are stored. Non-editable at the moment.</p></body></html>", None, -1))
         self.checkBox_use_smooth_zoom.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>Controls whether smooth or discete zoom is used in Design and Graph Views.</p></body></html>", None, -1))
         self.checkBox_use_smooth_zoom.setText(QtWidgets.QApplication.translate("SettingsForm", "Smooth zoom", None, -1))
-        self.checkBox_use_smooth_links.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>Controls whether smooth or straight connectors are used in Design View.</p></body></html>", None, -1))
-        self.checkBox_use_smooth_links.setText(QtWidgets.QApplication.translate("SettingsForm", "Smooth links", None, -1))
+        self.checkBox_use_curved_links.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>Controls whether smooth or straight connectors are used in Design View.</p></body></html>", None, -1))
+        self.checkBox_use_curved_links.setText(QtWidgets.QApplication.translate("SettingsForm", "Curved links", None, -1))
         self.label_7.setText(QtWidgets.QApplication.translate("SettingsForm", "Design View background", None, -1))
         self.radioButton_bg_grid.setText(QtWidgets.QApplication.translate("SettingsForm", "Grid", None, -1))
         self.radioButton_bg_solid.setText(QtWidgets.QApplication.translate("SettingsForm", "Solid", None, -1))
@@ -518,7 +518,7 @@ class Ui_SettingsForm(object):
         self.groupBox_gams.setTitle(QtWidgets.QApplication.translate("SettingsForm", "GAMS", None, -1))
         self.label_11.setText(QtWidgets.QApplication.translate("SettingsForm", "GAMS executable", None, -1))
         self.lineEdit_gams_path.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>Path to GAMS executable for Tool and GAMS Python bindings. Leave blank to use system\'s default</p></body></html>", None, -1))
-        self.lineEdit_gams_path.setPlaceholderText(QtWidgets.QApplication.translate("SettingsForm", "Using sytem\'s default GAMS", None, -1))
+        self.lineEdit_gams_path.setPlaceholderText(QtWidgets.QApplication.translate("SettingsForm", "Using system\'s default GAMS", None, -1))
         self.toolButton_browse_gams.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>Pick GAMS executable with file browser (eg. gams.exe on Windows)</p></body></html>", None, -1))
         self.groupBox_julia.setTitle(QtWidgets.QApplication.translate("SettingsForm", "Julia", None, -1))
         self.toolButton_browse_julia_project.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>Pick Julia project with file browser</p></body></html>", None, -1))

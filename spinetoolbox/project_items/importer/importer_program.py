@@ -42,9 +42,7 @@ def _create_log_file_timestamp():
     return extension
 
 
-def run(args):
-    args = [json.loads(arg) for arg in args[1:]]
-    checked_files, all_settings, urls_downstream, logs_dir, cancel_on_error = args
+def run(checked_files, all_settings, urls_downstream, logs_dir, cancel_on_error):
     all_data = []
     all_errors = []
     for source in checked_files:
@@ -132,4 +130,4 @@ def _import(all_data, url, logs_dir, cancel_on_error):
 
 
 if __name__ == "__main__":
-    run(sys.argv)
+    run(*json.loads(input()))
