@@ -213,20 +213,21 @@ class SingleParameterValueMixin:
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._selected_entity_ids = {}
+        self._selected_entity_ids = set()
 
     @property
     def item_type(self):
         return "parameter value"
 
-    def _main_filter_accepts_item(self, item):
+    def _main_filter_accepts_row(self, row):
         """Reimplemented to filter objects."""
-        if not super()._main_filter_accepts_item(item):
+        if not super()._main_filter_accepts_row(row):
             return False
-        if self._selected_entity_ids:
-            entity_key = {"object class": "object_id", "relationship class": "relationship_id"}[self.entity_class_type]
-            return item[entity_key] in self._selected_entity_ids
-        return True
+        if self._selected_entity_ids == set():
+            return True
+        entity_id_key = {"object class": "object_id", "relationship class": "relationship_id"}[self.entity_class_type]
+        entity_id = self.db_mngr.get_value(self.db_map, self.item_type, self._main_data[row], entity_id_key)
+        return entity_id in self._selected_entity_ids
 
     def update_items_in_db(self, items):
         """Update items in db.
