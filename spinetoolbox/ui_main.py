@@ -761,8 +761,8 @@ class ToolboxUI(QMainWindow):
             if not tool_item.tool_specification():
                 continue
             if tool_item.tool_specification().name == tool_specification.name:
+                tool_item.update_execution_mode(specification.execute_in_work)
                 tool_item.set_tool_specification(specification)
-                tool_item.execute_in_work = specification.execute_in_work
                 self.msg.emit(
                     "Tool specification <b>{0}</b> reattached to Tool <b>{1}</b>".format(
                         specification.name, tool_item.name

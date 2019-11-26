@@ -51,6 +51,7 @@ class DataStore(ProjectItem):
             url["database"] = deserialize_path(url["database"], self._project.project_dir)
         self._url = self.parse_url(url)
         self.views = {}
+        self._for_spine_model_checkbox_state = Qt.Unchecked
         # Make logs directory for this Data Store
         self.logs_dir = os.path.join(self.data_dir, "logs")
         try:
@@ -105,11 +106,13 @@ class DataStore(ProjectItem):
     def activate(self):
         """Load url into selections and connect signals."""
         self._properties_ui.label_ds_name.setText(self.name)
+        self._properties_ui.checkBox_for_spine_model.setCheckState(self._for_spine_model_checkbox_state)
         self.load_url_into_selections()  # Do this before connecting signals or funny things happen
         super().connect_signals()
 
     def deactivate(self):
         """Disconnect signals."""
+        self._for_spine_model_checkbox_state = self._properties_ui.checkBox_for_spine_model.checkState()
         if not super().disconnect_signals():
             logging.error("Item %s deactivation failed", self.name)
             return False
@@ -391,7 +394,7 @@ class DataStore(ProjectItem):
         """
         make_form = {"tree": TreeViewForm, "graph": GraphViewForm, "tabular": TabularViewForm}[view]
         try:
-            form = make_form(self._project, (db_url, self.name))
+            form = make_form(self._project.db_mngr, (db_url, self.name))
         except spinedb_api.SpineDBAPIError as e:
             self._toolbox.msg_error.emit(e.msg)
             return

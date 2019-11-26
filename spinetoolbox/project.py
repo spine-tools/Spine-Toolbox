@@ -431,6 +431,8 @@ class SpineToolboxProject(MetaObject):
             self._toolbox.msg.emit("No execution in progress")
             return
         self._toolbox.msg.emit("Stopping...")
+        if not self.execution_instance:
+            return
         self.execution_instance.stop()
 
     def handle_invalid_graphs(self):

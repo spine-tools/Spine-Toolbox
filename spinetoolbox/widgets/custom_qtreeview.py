@@ -83,7 +83,7 @@ class StickySelectionObjectTreeView(CopyTreeView):
         Args:
             event (QMouseEvent)
         """
-        sticky_selection = self.qsettings().value("appSettings/stickySelection", defaultValue="false")
+        sticky_selection = self.qsettings.value("appSettings/stickySelection", defaultValue="false")
         if sticky_selection == "false":
             super().mousePressEvent(event)
             return

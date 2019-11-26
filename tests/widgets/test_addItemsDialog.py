@@ -25,7 +25,6 @@ from PySide2.QtWidgets import QApplication
 import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
 from spinetoolbox.widgets.tree_view_widget import TreeViewForm
 from spinetoolbox.widgets.add_db_items_dialogs import AddObjectClassesDialog
-from ..mock_helpers import create_toolboxui_with_project
 
 
 class TestAddItemsDialog(unittest.TestCase):
@@ -48,9 +47,7 @@ class TestAddItemsDialog(unittest.TestCase):
         with mock.patch("spinetoolbox.spine_db_manager.QMessageBox"), mock.patch(
             "spinetoolbox.widgets.tree_view_widget.TreeViewForm.restore_ui"
         ):
-            toolbox = create_toolboxui_with_project()
-            project = toolbox.project()
-            self.mock_db_mngr = project.db_mngr = mock.MagicMock()
+            self.mock_db_mngr = mock.MagicMock()
 
             def get_db_map_for_listener_side_effect(listener, url, codename=None):
                 mock_db_map = mock.MagicMock()
@@ -58,7 +55,7 @@ class TestAddItemsDialog(unittest.TestCase):
                 return mock_db_map
 
             self.mock_db_mngr.get_db_map_for_listener.side_effect = get_db_map_for_listener_side_effect
-            self.tree_view_form = TreeViewForm(project, ("mock_url", "mock_db"))
+            self.tree_view_form = TreeViewForm(self.mock_db_mngr, ("mock_url", "mock_db"))
             self.mock_db_map = self.tree_view_form.db_map
 
     def tearDown(self):

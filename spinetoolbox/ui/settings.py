@@ -13,7 +13,7 @@
 # Form implementation generated from reading ui file 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\ui\settings.ui',
 # licensing of 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\ui\settings.ui' applies.
 #
-# Created: Thu Nov 21 19:48:28 2019
+# Created: Tue Nov 26 18:12:31 2019
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -161,9 +161,9 @@ class Ui_SettingsForm(object):
         self.checkBox_use_smooth_zoom = QtWidgets.QCheckBox(self.groupBox_general)
         self.checkBox_use_smooth_zoom.setObjectName("checkBox_use_smooth_zoom")
         self.gridLayout.addWidget(self.checkBox_use_smooth_zoom, 7, 0, 1, 1)
-        self.checkBox_use_smooth_links = QtWidgets.QCheckBox(self.groupBox_general)
-        self.checkBox_use_smooth_links.setObjectName("checkBox_use_smooth_links")
-        self.gridLayout.addWidget(self.checkBox_use_smooth_links, 8, 0, 1, 1)
+        self.checkBox_use_curved_links = QtWidgets.QCheckBox(self.groupBox_general)
+        self.checkBox_use_curved_links.setObjectName("checkBox_use_curved_links")
+        self.gridLayout.addWidget(self.checkBox_use_curved_links)
         self.label_7 = QtWidgets.QLabel(self.groupBox_general)
         font = QtGui.QFont()
         font.setPointSize(7)
@@ -434,8 +434,8 @@ class Ui_SettingsForm(object):
         SettingsForm.setTabOrder(self.checkBox_delete_data, self.lineEdit_work_dir)
         SettingsForm.setTabOrder(self.lineEdit_work_dir, self.toolButton_browse_work)
         SettingsForm.setTabOrder(self.toolButton_browse_work, self.checkBox_use_smooth_zoom)
-        SettingsForm.setTabOrder(self.checkBox_use_smooth_zoom, self.checkBox_use_smooth_links)
-        SettingsForm.setTabOrder(self.checkBox_use_smooth_links, self.radioButton_bg_grid)
+        SettingsForm.setTabOrder(self.checkBox_use_smooth_zoom, self.checkBox_use_curved_links)
+        SettingsForm.setTabOrder(self.checkBox_use_curved_links, self.radioButton_bg_grid)
         SettingsForm.setTabOrder(self.radioButton_bg_grid, self.radioButton_bg_solid)
         SettingsForm.setTabOrder(self.radioButton_bg_solid, self.toolButton_bg_color)
         SettingsForm.setTabOrder(self.toolButton_bg_color, self.horizontalSlider_data_flow_animation_duration)
@@ -482,8 +482,8 @@ class Ui_SettingsForm(object):
         self.toolButton_browse_work.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>Pick Work directory with file browser</p></body></html>", None, -1))
         self.checkBox_use_smooth_zoom.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>Controls whether smooth or discete zoom is used in Design and Graph Views.</p></body></html>", None, -1))
         self.checkBox_use_smooth_zoom.setText(QtWidgets.QApplication.translate("SettingsForm", "Smooth zoom", None, -1))
-        self.checkBox_use_smooth_links.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>Controls whether smooth or straight connectors are used in Design View.</p></body></html>", None, -1))
-        self.checkBox_use_smooth_links.setText(QtWidgets.QApplication.translate("SettingsForm", "Smooth links", None, -1))
+        self.checkBox_use_curved_links.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>Controls whether smooth or straight connectors are used in Design View.</p></body></html>", None, -1))
+        self.checkBox_use_curved_links.setText(QtWidgets.QApplication.translate("SettingsForm", "Curved links", None, -1))
         self.label_7.setText(QtWidgets.QApplication.translate("SettingsForm", "Design View background", None, -1))
         self.radioButton_bg_grid.setText(QtWidgets.QApplication.translate("SettingsForm", "Grid", None, -1))
         self.radioButton_bg_solid.setText(QtWidgets.QApplication.translate("SettingsForm", "Solid", None, -1))

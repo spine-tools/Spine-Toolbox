@@ -41,7 +41,7 @@ requirements = [
     'python-dateutil >= 2.8.0',
     'pandas >= 0.24.0',
     'jsonschema == 2.6',
-    'gdx2py >= 2.*',
+    'gdx2py == 2.*',
 ]
 
 setup(

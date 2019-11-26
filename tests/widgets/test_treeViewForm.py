@@ -24,11 +24,11 @@ from PySide2.QtWidgets import QApplication
 from PySide2.QtCore import QItemSelectionModel
 import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
 from spinetoolbox.widgets.tree_view_widget import TreeViewForm
+from spinetoolbox.spine_db_manager import SpineDBManager
 from .test_treeViewFormAdd import TestTreeViewFormAddMixin
 from .test_treeViewFormUpdate import TestTreeViewFormUpdateMixin
 from .test_treeViewFormRemove import TestTreeViewFormRemoveMixin
 from .test_treeViewFormFilter import TestTreeViewFormFilterMixin
-from ..mock_helpers import create_toolboxui_with_project
 
 
 class TestTreeViewForm(
@@ -268,9 +268,7 @@ class TestTreeViewForm(
         with mock.patch("spinetoolbox.spine_db_manager.DiffDatabaseMapping") as mock_DiffDBMapping, mock.patch(
             "spinetoolbox.widgets.tree_view_widget.TreeViewForm.restore_ui"
         ):
-            toolbox = create_toolboxui_with_project()
-            project = toolbox.project()
-            self.db_mngr = project.db_mngr
+            self.db_mngr = SpineDBManager()
 
             def DiffDBMapping_side_effect(url, upgrade=False, codename=None):
                 mock_db_map = mock.MagicMock()
@@ -278,7 +276,7 @@ class TestTreeViewForm(
                 return mock_db_map
 
             mock_DiffDBMapping.side_effect = DiffDBMapping_side_effect
-            self.tree_view_form = TreeViewForm(project, ("mock_url", "mock_db"))
+            self.tree_view_form = TreeViewForm(self.db_mngr, ("mock_url", "mock_db"))
             self.mock_db_map = self.tree_view_form.db_map
 
     def tearDown(self):

@@ -66,6 +66,8 @@ class Tool(ProjectItem):
                 "Tool <b>{0}</b> should have a Tool "
                 "specification <b>{1}</b> but it was not found".format(self.name, tool)
             )
+        if self._tool_specification:
+            self.execute_in_work = self._tool_specification.execute_in_work
         self.set_tool_specification(self._tool_specification)
         if not self._tool_specification:
             self._tool_specification_name = ""
@@ -126,6 +128,7 @@ class Tool(ProjectItem):
         """Restore selections into shared widgets when this project item is selected."""
         self._properties_ui.label_tool_name.setText(self.name)
         self._properties_ui.treeView_specification.setModel(self.specification_model)
+        self._properties_ui.radioButton_execute_in_work.setChecked(self.execute_in_work)
         if self._tool_specification_name == "":
             self._properties_ui.comboBox_tool.setCurrentIndex(-1)
             self.set_tool_specification(None)
@@ -143,14 +146,13 @@ class Tool(ProjectItem):
             self._tool_specification_name = ""
         else:
             self._tool_specification_name = self.tool_specification().name
-        self.execute_in_work = self._properties_ui.radioButton_execute_in_work.isChecked()
 
-    @Slot(bool, name="update_execution_mode")
+    @Slot(bool)
     def update_execution_mode(self, checked):
         """Slot for execute in work radio button toggled signal."""
         self.execute_in_work = checked
 
-    @Slot(int, name="update_tool_specification")
+    @Slot(int)
     def update_tool_specification(self, row):
         """Update Tool specification according to selection in the specification comboBox.
 
@@ -162,6 +164,7 @@ class Tool(ProjectItem):
             self.set_tool_specification(None)
         else:
             new_tool = self._toolbox.tool_specification_model.tool_specification(row)
+            self.execute_in_work = new_tool.execute_in_work
             self.set_tool_specification(new_tool)
 
     def set_tool_specification(self, tool_specification):
@@ -176,7 +179,7 @@ class Tool(ProjectItem):
         self.item_changed.emit()
 
     def update_tool_ui(self):
-        """Update Tool UI to show Tool specification details. Used when Tool specification is changed.
+        """Updates Tool UI to show Tool specification details. Used when Tool specification is changed.
         Overrides execution mode (work or source) with the specification default."""
         if not self._properties_ui:
             # This happens when calling self.set_tool_specification() in the __init__ method,
@@ -210,7 +213,6 @@ class Tool(ProjectItem):
             self.populate_opt_input_file_model(self.tool_specification().inputfiles_opt)
             self.populate_output_file_model(self.tool_specification().outputfiles)
             self.populate_specification_model(populate=True)
-            self.execute_in_work = self.tool_specification().execute_in_work
 
     @Slot(bool, name="open_results")
     def open_results(self, checked=False):
@@ -794,7 +796,7 @@ class Tool(ProjectItem):
 
     @Slot(int, name="handle_execution_finished")
     def handle_execution_finished(self, return_code):
-        """Tool specification execution finished.
+        """Handles Tool specification execution finished.
 
         Args:
             return_code (int): Process exit code
@@ -813,9 +815,7 @@ class Tool(ProjectItem):
         self._project.execution_instance.project_item_execution_finished_signal.emit(ExecutionState.CONTINUE)
 
     def handle_output_files(self, ret):
-        """Creates a timestamped result directory for Tool specification output files. Starts copying Tool
-        specification output files from work directory to result directory and print messages to Event
-        Log depending on how the operation went.
+        """Copies Tool specification output files from work directory to result directory.
 
         Args:
             ret (int): Tool specification process return value
@@ -959,7 +959,6 @@ class Tool(ProjectItem):
     def stop_execution(self):
         """Stops executing this Tool."""
         self.get_icon().stop_animation()
-        self.instance.instance_finished_signal.disconnect(self.handle_execution_finished)
         self._toolbox.msg_warning.emit("Stopping Tool <b>{0}</b>".format(self.name))
         self.instance.terminate_instance()
         # Note: QSubProcess, PythonReplWidget, and JuliaREPLWidget emit project_item_execution_finished_signal

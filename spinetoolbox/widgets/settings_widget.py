@@ -63,7 +63,7 @@ class SettingsWidget(QWidget):
 
     def connect_signals(self):
         """Connect signals."""
-        self.ui.pushButton_ok.clicked.connect(self.ok_clicked)
+        self.ui.pushButton_ok.clicked.connect(self.handle_ok_clicked)
         self.ui.pushButton_cancel.clicked.connect(self.close)
         self.ui.toolButton_browse_gams.clicked.connect(self.browse_gams_path)
         self.ui.toolButton_browse_julia.clicked.connect(self.browse_julia_path)
@@ -73,7 +73,7 @@ class SettingsWidget(QWidget):
         self.ui.toolButton_bg_color.clicked.connect(self.show_color_dialog)
         self.ui.radioButton_bg_grid.clicked.connect(self.update_scene_bg)
         self.ui.radioButton_bg_solid.clicked.connect(self.update_scene_bg)
-        self.ui.checkBox_use_smooth_links.clicked.connect(self.update_links_geometry)
+        self.ui.checkBox_use_curved_links.clicked.connect(self.update_links_geometry)
 
     @Slot(bool, name="browse_gams_path")
     def browse_gams_path(self, checked=False):
@@ -236,7 +236,7 @@ class SettingsWidget(QWidget):
         datetime = int(self._qsettings.value("appSettings/dateTime", defaultValue="2"))
         delete_data = int(self._qsettings.value("appSettings/deleteData", defaultValue="0"))
         smooth_zoom = self._qsettings.value("appSettings/smoothZoom", defaultValue="false")
-        smooth_links = self._qsettings.value("appSettings/smoothLinks", defaultValue="false")
+        curved_links = self._qsettings.value("appSettings/curvedLinks", defaultValue="false")
         data_flow_anim_dur = int(self._qsettings.value("appSettings/dataFlowAnimationDuration", defaultValue="100"))
         bg_grid = self._qsettings.value("appSettings/bgGrid", defaultValue="false")
         bg_color = self._qsettings.value("appSettings/bgColor", defaultValue="false")
@@ -265,8 +265,8 @@ class SettingsWidget(QWidget):
             self.ui.checkBox_delete_data.setCheckState(Qt.Checked)
         if smooth_zoom == "true":
             self.ui.checkBox_use_smooth_zoom.setCheckState(Qt.Checked)
-        if smooth_links == "true":
-            self.ui.checkBox_use_smooth_links.setCheckState(Qt.Checked)
+        if curved_links == "true":
+            self.ui.checkBox_use_curved_links.setCheckState(Qt.Checked)
         self.ui.horizontalSlider_data_flow_animation_duration.setValue(data_flow_anim_dur)
         if bg_grid == "true":
             self.ui.radioButton_bg_grid.setChecked(True)
@@ -303,8 +303,8 @@ class SettingsWidget(QWidget):
             self.ui.lineEdit_project_name.setText(self._project.name)
             self.ui.textEdit_project_description.setText(self._project.description)
 
-    @Slot(name="ok_clicked")
-    def ok_clicked(self):
+    @Slot()
+    def handle_ok_clicked(self):
         """Get selections and save them to persistent memory.
         Note: On Linux, True and False are saved as boolean values into QSettings.
         On Windows, booleans and integers are saved as strings. To make it consistent,
@@ -325,8 +325,8 @@ class SettingsWidget(QWidget):
         self._qsettings.setValue("appSettings/deleteData", delete_data)
         smooth_zoom = "true" if int(self.ui.checkBox_use_smooth_zoom.checkState()) else "false"
         self._qsettings.setValue("appSettings/smoothZoom", smooth_zoom)
-        smooth_links = "true" if int(self.ui.checkBox_use_smooth_links.checkState()) else "false"
-        self._qsettings.setValue("appSettings/smoothLinks", smooth_links)
+        curved_links = "true" if int(self.ui.checkBox_use_curved_links.checkState()) else "false"
+        self._qsettings.setValue("appSettings/curvedLinks", curved_links)
         data_flow_anim_dur = str(self.ui.horizontalSlider_data_flow_animation_duration.value())
         self._qsettings.setValue("appSettings/dataFlowAnimationDuration", data_flow_anim_dur)
         bg_grid = "true" if self.ui.radioButton_bg_grid.isChecked() else "false"
@@ -393,10 +393,8 @@ class SettingsWidget(QWidget):
     def check_if_python_env_changed(self, new_path):
         """Checks if Python environment was changed.
         This indicates that the Python Console may need a restart."""
-        if not self.orig_python_env == new_path:
+        if self.orig_python_env != new_path:
             self._toolbox.python_repl.may_need_restart = True
-        else:
-            self._toolbox.python_repl.may_need_restart = False
 
     def check_if_work_dir_changed(self, new_work_dir):
         """Checks if work directory was changed.
@@ -454,10 +452,10 @@ class SettingsWidget(QWidget):
         Args:
             event (QEvent): Closing event if 'X' is clicked.
         """
-        smooth_links = self._qsettings.value("appSettings/smoothLinks", defaultValue="false")
+        curved_links = self._qsettings.value("appSettings/curvedLinks", defaultValue="false")
         bg_grid = self._qsettings.value("appSettings/bgGrid", defaultValue="false")
         bg_color = self._qsettings.value("appSettings/bgColor", defaultValue="false")
-        self.update_links_geometry(smooth_links == "true")
+        self.update_links_geometry(curved_links == "true")
         if bg_grid == "true":
             self.ui.radioButton_bg_grid.setChecked(True)
         else:

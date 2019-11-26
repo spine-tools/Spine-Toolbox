@@ -48,18 +48,18 @@ class GraphViewForm(DataStoreForm):
     _arc_width = 0.25 * _node_extent
     _arc_length_hint = 3 * _node_extent
 
-    def __init__(self, project, *db_urls, read_only=False):
+    def __init__(self, db_mngr, *db_urls, read_only=False):
         """Initializes form.
 
         Args:
-            project (SpineToolboxProject): The project instance that owns this form.
+            db_mngr (SpineDBManager): The manager to use
             *db_urls (str): Database urls to view.
             read_only (bool): Whether or not the form should be editable.
         """
         from ..ui.graph_view_form import Ui_MainWindow
 
         tic = time.clock()
-        super().__init__(project, Ui_MainWindow(), *db_urls)
+        super().__init__(db_mngr, Ui_MainWindow(), *db_urls)
         self.db_name = self.db_map.codename
         self.read_only = read_only
         # Lookups, used for adding objects and relationships

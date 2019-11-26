@@ -36,6 +36,7 @@ from ..mvcmodels.entity_tree_models import RelationshipTreeModel
 from ..excel_import_export import export_spine_database_to_xlsx
 from ..helpers import busy_effect
 from ..plotting import plot_selection, PlottingError, GraphAndTreeViewPlottingHints
+from ..config import DEFAULT_PROJECT_DIR
 
 
 class TreeViewForm(DataStoreForm):
@@ -43,17 +44,17 @@ class TreeViewForm(DataStoreForm):
     A widget to show Spine dbs in a tree.
     """
 
-    def __init__(self, project, *db_urls):
+    def __init__(self, db_mngr, *db_urls):
         """Initializes form.
 
         Args:
-            project (SpineToolboxProject): The project instance that owns this form.
+            db_mngr (SpineDBManager): The manager to use.
             *db_urls (str): Database urls to view.
         """
         from ..ui.tree_view_form import Ui_MainWindow
 
         tic = time.process_time()
-        super().__init__(project, Ui_MainWindow(), *db_urls)
+        super().__init__(db_mngr, Ui_MainWindow(), *db_urls)
         self.takeCentralWidget()
         self.relationship_tree_model = RelationshipTreeModel(self, self.db_mngr, *self.db_maps)
         self.ui.treeView_relationship.setModel(self.relationship_tree_model)
@@ -288,7 +289,7 @@ class TreeViewForm(DataStoreForm):
         if db_map is None:  # Database selection cancelled
             return
         file_path, selected_filter = QFileDialog.getSaveFileName(
-            self, "Export to file", self._project.project_dir, "Excel file (*.xlsx);;SQlite database (*.sqlite *.db)"
+            self, "Export to file", DEFAULT_PROJECT_DIR, "Excel file (*.xlsx);;SQlite database (*.sqlite *.db)"
         )
         if not file_path:  # File selection cancelled
             return
