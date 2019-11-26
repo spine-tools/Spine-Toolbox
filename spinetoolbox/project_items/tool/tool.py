@@ -66,6 +66,8 @@ class Tool(ProjectItem):
                 "Tool <b>{0}</b> should have a Tool "
                 "specification <b>{1}</b> but it was not found".format(self.name, tool)
             )
+        if self._tool_specification:
+            self.execute_in_work = self._tool_specification.execute_in_work
         self.set_tool_specification(self._tool_specification)
         if not self._tool_specification:
             self._tool_specification_name = ""
@@ -162,8 +164,8 @@ class Tool(ProjectItem):
             self.set_tool_specification(None)
         else:
             new_tool = self._toolbox.tool_specification_model.tool_specification(row)
+            self.execute_in_work = new_tool.execute_in_work
             self.set_tool_specification(new_tool)
-            self.execute_in_work = self.tool_specification().execute_in_work
 
     def set_tool_specification(self, tool_specification):
         """Sets Tool specification for this Tool. Removes Tool specification if None given as argument.
