@@ -442,18 +442,23 @@ class DataStoreForm(QMainWindow):
 
     def selected_entity_class_ids(self, entity_class_type):
         """Return object class ids selected in object tree *and* parameter tag toolbar."""
-        tree_class_ids = self.selected_ent_cls_ids[entity_class_type]
         if self.selected_param_def_ids[entity_class_type] is None:
-            return tree_class_ids
+            return None
+        tree_class_ids = self.selected_ent_cls_ids[entity_class_type]
         tag_class_ids = dict()
         for db_map, class_id in self.selected_param_def_ids[entity_class_type]:
             tag_class_ids.setdefault(db_map, set()).add(class_id)
-        if not tree_class_ids:
-            return tag_class_ids
-        return {
-            db_map: class_ids.intersection(tag_class_ids.get(db_map, {}))
-            for db_map, class_ids in tree_class_ids.items()
-        }
+        result = dict()
+        for db_map in tree_class_ids.keys() | tag_class_ids.keys():
+            tree_cls_ids = tree_class_ids.get(db_map, set())
+            tag_cls_ids = tag_class_ids.get(db_map, set())
+            if tree_cls_ids == set():
+                result[db_map] = tag_cls_ids
+            elif tag_cls_ids == set():
+                result[db_map] = tree_cls_ids
+            else:
+                result[db_map] = tree_cls_ids & tag_cls_ids
+        return result
 
     def set_default_parameter_data(self, index=None):
         """Set default rows for parameter models according to selection in object or relationship tree."""
