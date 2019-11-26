@@ -275,7 +275,6 @@ class Exporter(ProjectItem):
         new_exporter["database_urls"] = database_urls
         return new_exporter
 
-
     def _update_settings_from_settings_window(self, database_path):
         """Updates the export settings for given database from the settings window."""
         settings_window = self._settings_windows[database_path]

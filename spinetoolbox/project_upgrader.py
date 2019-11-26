@@ -100,7 +100,7 @@ class ProjectUpgrader:
         return self.upgrade_to_latest(v, project_dict)
 
     @staticmethod
-    def upgrade_to_latest(v):
+    def upgrade_to_latest(v, project_dict):
         """Upgrades the given project dictionary to the latest version.
 
         NOTE: Implement this when the structure of the project file needs

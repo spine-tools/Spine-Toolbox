@@ -43,7 +43,7 @@ class TestSpineToolboxProject(unittest.TestCase):
         )
 
     def setUp(self):
-        """Runs before each test. Makes an instance of ToolboxUI class."""
+        """Makes a ToolboxUI instance and opens a project before each test."""
         self.toolbox = create_toolboxui_with_project()
 
     def tearDown(self):
@@ -192,19 +192,24 @@ class TestSpineToolboxProject(unittest.TestCase):
         item1._do_execute.assert_not_called()
         item2._do_execute.assert_called_with([], [])
 
-    # def test_add_item_to_model_in_random_order(self):
-    #     """Add items to model in order DC->View->Tool->DS and check that it still works."""
-    #     self.fail()
-    #
-    # def test_change_name(self):
-    #     self.fail()
-    #
-    # def test_set_description(self):
-    #     self.fail()
-    #
-    # def test_save(self):
-    #     self.fail()
-    #
+    def test_change_name(self):
+        """Tests renaming a project."""
+        new_name = "New Project Name"
+        new_short_name = "new_project_name"
+        self.toolbox.project().change_name(new_name)
+        self.assertEqual(self.toolbox.project().name, new_name)
+        self.assertEqual(self.toolbox.project().short_name, new_short_name)
+
+    def test_set_description(self):
+        """Tests updating the description for a project."""
+        desc = "Project Description"
+        self.toolbox.project().set_description(desc)
+        self.assertEqual(self.toolbox.project().description, desc)
+
+    def test_save(self):
+
+        self.fail()
+
     # def test_load(self):
     #     self.fail()
     #
@@ -212,9 +217,6 @@ class TestSpineToolboxProject(unittest.TestCase):
     #     self.fail()
     #
     # def test_load_tool_specification_from_dict(self):
-    #     self.fail()
-    #
-    # def test_append_connection_model(self):
     #     self.fail()
     #
     # def test_set_item_selected(self):

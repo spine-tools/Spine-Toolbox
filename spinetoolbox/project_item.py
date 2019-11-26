@@ -566,6 +566,7 @@ class ProjectItem(BaseProjectItem):
         """
         return old_item_dict
 
+
 class ProjectItemResource:
     """Class to hold a resource made available by a project item
     and that may be consumed by another project item."""

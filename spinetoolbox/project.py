@@ -55,7 +55,7 @@ class SpineToolboxProject(MetaObject):
         self.project_dir = None  # Full path to project directory
         self.config_dir = None  # Full path to .spinetoolbox directory
         self.items_dir = None  # Full path to items directory
-        self.config_file = None  # Full path to project.json file
+        self.config_file = None  # Full path to .spinetoolbox/project.json file
         if not self._create_project_structure(p_dir):
             self._toolbox.msg_error.emit("Creating project directory "
                                          "structure to <b>{0}</b> failed"
@@ -71,6 +71,9 @@ class SpineToolboxProject(MetaObject):
 
         Args:
             directory (str): Abs. path to a directory that should be made into a project directory
+
+        Returns:
+            bool: True if project structure was created successfully, False otherwise
         """
         self.project_dir = directory
         self.config_dir = os.path.abspath(os.path.join(self.project_dir, ".spinetoolbox"))
@@ -104,20 +107,16 @@ class SpineToolboxProject(MetaObject):
         self._toolbox.setWindowTitle("Spine Toolbox    -- {} --".format(self.name))
         self._toolbox.msg.emit("Project name changed to <b>{0}</b>".format(self.name))
 
-    def save(self, tool_def_paths, directory=None):
-        """Collect project information and objects
+    def save(self, tool_def_paths):
+        """Collect project information and project items
         into a dictionary and write to a JSON file.
 
         Args:
-            tool_def_paths (list): List of absolute paths to tool definition files
-            directory (str): Abs. path to project directory. Used
-            when converting old style projects to new style, and
-            when project is saved to a new location (Save as...)
+            tool_def_paths (list): List of absolute paths to tool specification files
 
         Returns:
             bool: True or False depending on success
         """
-
         project_dict = dict()  # Dictionary for storing project info
         project_dict["version"] = LATEST_PROJECT_VERSION
         project_dict["name"] = self.name
@@ -125,7 +124,7 @@ class SpineToolboxProject(MetaObject):
         # Convert Tool definition paths to relative
         relative_tool_def_paths = [os.path.relpath(p, self.project_dir) for p in tool_def_paths]
         project_dict["tool_specifications"] = relative_tool_def_paths
-        # Compute connections directly from Links in scene
+        # Compute connections directly from Links on scene
         connections = list()
         for link in self._toolbox.ui.graphicsView.links():
             src_connector = link.src_connector
@@ -138,16 +137,16 @@ class SpineToolboxProject(MetaObject):
             connections.append(conn)
         # Save connections in old format, to keep compatibility with old toolbox versions
         # If and when we're ready to adopt the new format, this can be removed
-        item_names = [item.name for item in self._toolbox.project_item_model.items()]
-        n_items = len(item_names)
-        connections_old = [[False for _ in range(n_items)] for __ in range(n_items)]
-        for conn in connections:
-            src_name, src_anchor = conn["from"]
-            dst_name, dst_anchor = conn["to"]
-            i = item_names.index(src_name)
-            j = item_names.index(dst_name)
-            connections_old[i][j] = [src_anchor, dst_anchor]
-        project_dict["connections"] = connections_old
+        # item_names = [item.name for item in self._toolbox.project_item_model.items()]
+        # n_items = len(item_names)
+        # connections_old = [[False for _ in range(n_items)] for __ in range(n_items)]
+        # for conn in connections:
+        #     src_name, src_anchor = conn["from"]
+        #     dst_name, dst_anchor = conn["to"]
+        #     i = item_names.index(src_name)
+        #     j = item_names.index(dst_name)
+        #     connections_old[i][j] = [src_anchor, dst_anchor]
+        project_dict["connections"] = connections
         scene_rect = self._toolbox.ui.graphicsView.scene().sceneRect()
         project_dict["scene_y"] = scene_rect.y()
         project_dict["scene_w"] = scene_rect.width()
@@ -159,8 +158,6 @@ class SpineToolboxProject(MetaObject):
             category = category_item.name
             category_dict = items_dict[category] = dict()
             for item in self._toolbox.project_item_model.items(category):
-                # for key, value in item.item_dict().items():
-                #     logging.debug("{0} - key:{1} value:{2}".format(item.name, key, value))
                 category_dict[item.name] = item.item_dict()
         # Write project on disk
         saved_dict = dict(project=project_dict, objects=items_dict)
@@ -200,7 +197,7 @@ class SpineToolboxProject(MetaObject):
             jsonfile (str): Path of the tool specification definition file
 
         Returns:
-            Instance of a subclass if Tool
+            ToolInstance or None if reading the file failed
         """
         try:
             with open(jsonfile, "r") as fp:
@@ -223,10 +220,10 @@ class SpineToolboxProject(MetaObject):
 
         Args:
             definition (dict): Dictionary with the tool definition
-            path (str): Folder of the main program file
+            path (str): Directory where main program file is located
 
         Returns:
-            Instance of a subclass if Tool
+            ToolInstance: Instance of a Tool subclass or None if something went wrong
         """
         try:
             _tooltype = definition["tooltype"].lower()
@@ -280,7 +277,7 @@ class SpineToolboxProject(MetaObject):
                 self.set_item_selected(item)
 
     def add_to_dag(self, item_name):
-        """Add new directed graph object."""
+        """Add new node (project item) to the directed graph."""
         self.dag_handler.add_dag_node(item_name)
 
     def set_item_selected(self, item):
@@ -520,10 +517,10 @@ def _update_if_changed(category_name):
     This allows old project files to be loaded.
 
     Args:
-        category_name (str): category name
+        category_name (str): Category name
 
     Returns:
-        category's new name if it has changed or category_name
+        str: New category name if it has changed or category_name
     """
     if category_name == "Data Interfaces":
         return "Importers"

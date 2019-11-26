@@ -351,7 +351,7 @@ class ToolboxUI(QMainWindow):
                     self.msg_warning.emit("Copying data to project <b>{0}</b> failed. "
                                           "Please copy project item directories to directory <b>{1}</b> manually."
                                           .format(proj_dir, os.path.join(proj_dir, ".spinetoolbox", "items")))
-                # Save project
+                # Save project to finish the upgrade process
                 self.save_project()
                 return True
             load_dir = selection
