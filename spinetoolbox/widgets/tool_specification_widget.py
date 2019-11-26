@@ -64,16 +64,6 @@ class ToolSpecificationWidget(QWidget):
         self.statusbar.setStyleSheet(STATUSBAR_SS)
         self.ui.horizontalLayout_statusbar_placeholder.addWidget(self.statusbar)
         # init ui
-        # NOTE: Trying out fontawesome icons
-        # self.ui.toolButton_add_source_files.setIcon(self.style().standardIcon(QStyle.SP_FileLinkIcon))
-        # self.ui.toolButton_add_source_dirs.setIcon(self.style().standardIcon(QStyle.SP_FileDialogNewFolder))
-        # self.ui.toolButton_minus_source_files.setIcon(self.style().standardIcon(QStyle.SP_DialogDiscardButton))
-        # self.ui.toolButton_plus_inputfiles.setIcon(self.style().standardIcon(QStyle.SP_FileLinkIcon))
-        # self.ui.toolButton_minus_inputfiles.setIcon(self.style().standardIcon(QStyle.SP_DialogDiscardButton))
-        # self.ui.toolButton_plus_inputfiles_opt.setIcon(self.style().standardIcon(QStyle.SP_FileLinkIcon))
-        # self.ui.toolButton_minus_inputfiles_opt.setIcon(self.style().standardIcon(QStyle.SP_DialogDiscardButton))
-        # self.ui.toolButton_plus_outputfiles.setIcon(self.style().standardIcon(QStyle.SP_FileLinkIcon))
-        # self.ui.toolButton_minus_outputfiles.setIcon(self.style().standardIcon(QStyle.SP_DialogDiscardButton))
         self.ui.treeView_sourcefiles.setModel(self.sourcefiles_model)
         self.ui.treeView_inputfiles.setModel(self.inputfiles_model)
         self.ui.treeView_inputfiles_opt.setModel(self.inputfiles_opt_model)
@@ -140,7 +130,7 @@ class ToolSpecificationWidget(QWidget):
         self.ui.toolButton_minus_inputfiles_opt.clicked.connect(self.remove_inputfiles_opt)
         self.ui.toolButton_plus_outputfiles.clicked.connect(self.add_outputfiles)
         self.ui.toolButton_minus_outputfiles.clicked.connect(self.remove_outputfiles)
-        self.ui.pushButton_ok.clicked.connect(self.ok_clicked)
+        self.ui.pushButton_ok.clicked.connect(self.handle_ok_clicked)
         self.ui.pushButton_cancel.clicked.connect(self.close)
         # Enable removing items from QTreeViews by pressing the Delete key
         self.ui.treeView_sourcefiles.del_key_pressed.connect(self.remove_source_files_with_del)
@@ -494,9 +484,9 @@ class ToolSpecificationWidget(QWidget):
                 self.outputfiles_model.removeRow(row)
             self.statusbar.showMessage("Selected output files removed", 3000)
 
-    @Slot(name="ok_clicked")
-    def ok_clicked(self):
-        """Check that everything is valid, create Tool spec definition dictionary and add Tool spec to project."""
+    @Slot()
+    def handle_ok_clicked(self):
+        """Checks that everything is valid, creates Tool spec definition dictionary and adds Tool spec to project."""
         # Check that tool type is selected
         if self.ui.comboBox_tooltype.currentIndex() == 0:
             self.statusbar.showMessage("Tool type not selected", 3000)
@@ -533,10 +523,10 @@ class ToolSpecificationWidget(QWidget):
             self.close()
 
     def call_add_tool_specification(self):
-        """Add or update Tool specification according to user's selections.
+        """Adds or updates Tool specification according to user's selections.
         If the name is the same as an existing tool specification, it is updated and
         auto-saved to the definition file. (User is editing an existing
-        tool specification.) If the name is not in the tool specification model, create
+        tool specification.) If the name is not in the tool specification model, creates
         a new tool specification and offer to save the definition file. (User is
         creating a new tool specification from scratch or spawning from an existing one).
         """

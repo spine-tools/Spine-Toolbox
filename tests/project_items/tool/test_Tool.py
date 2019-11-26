@@ -24,7 +24,6 @@ import logging
 import os
 import sys
 import shutil
-import tempfile
 from PySide2.QtCore import Qt
 from PySide2.QtGui import QStandardItem, QStandardItemModel
 from PySide2.QtWidgets import QApplication
