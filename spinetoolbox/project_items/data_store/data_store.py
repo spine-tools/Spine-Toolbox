@@ -390,7 +390,7 @@ class DataStore(ProjectItem):
         """
         make_form = {"tree": TreeViewForm, "graph": GraphViewForm, "tabular": TabularViewForm}[view]
         try:
-            form = make_form(self._project, (db_url, self.name))
+            form = make_form(self._project.db_mngr, (db_url, self.name))
         except spinedb_api.SpineDBAPIError as e:
             self._toolbox.msg_error.emit(e.msg)
             return
