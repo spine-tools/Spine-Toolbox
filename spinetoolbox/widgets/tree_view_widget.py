@@ -36,7 +36,7 @@ from ..mvcmodels.entity_tree_models import RelationshipTreeModel
 from ..excel_import_export import export_spine_database_to_xlsx
 from ..helpers import busy_effect
 from ..plotting import plot_selection, PlottingError, GraphAndTreeViewPlottingHints
-from ..config import DEFAULT_PROJECT_DIR
+from ..config import APPLICATION_PATH
 
 
 class TreeViewForm(DataStoreForm):
@@ -289,7 +289,7 @@ class TreeViewForm(DataStoreForm):
         if db_map is None:  # Database selection cancelled
             return
         file_path, selected_filter = QFileDialog.getSaveFileName(
-            self, "Export to file", DEFAULT_PROJECT_DIR, "Excel file (*.xlsx);;SQlite database (*.sqlite *.db)"
+            self, "Export to file", APPLICATION_PATH, "Excel file (*.xlsx);;SQlite database (*.sqlite *.db)"
         )
         if not file_path:  # File selection cancelled
             return

@@ -143,7 +143,6 @@ class ToolboxUI(QMainWindow):
         self.parse_project_item_modules()
         self.set_work_directory()
 
-    # noinspection PyArgumentList, PyUnresolvedReferences
     def connect_signals(self):
         """Connect signals."""
         # Event log signals
@@ -168,6 +167,7 @@ class ToolboxUI(QMainWindow):
         self.ui.actionUser_Guide.triggered.connect(self.show_user_guide)
         self.ui.actionGetting_started.triggered.connect(self.show_getting_started_guide)
         self.ui.actionAbout.triggered.connect(self.show_about)
+        # noinspection PyArgumentList
         self.ui.actionAbout_Qt.triggered.connect(lambda: QApplication.aboutQt())  # pylint: disable=unnecessary-lambda
         self.ui.actionRestore_Dock_Widgets.triggered.connect(self.restore_dock_widgets)
         self.ui.actionCopy.triggered.connect(self.project_item_to_clipboard)
