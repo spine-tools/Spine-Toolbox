@@ -1541,7 +1541,7 @@ class ToolboxUI(QMainWindow):
         Serializes selected project items into a dictionary.
 
         The serialization protocol tries to imitate the format in which projects are saved.
-        The format of the dictonary is following:
+        The format of the dictionary is following:
         `{"item_category_1": [{"name": "item_1_name", ...}, ...], ...}`
 
         Returns:

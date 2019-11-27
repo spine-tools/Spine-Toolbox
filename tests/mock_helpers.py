@@ -63,8 +63,10 @@ def create_toolboxui_with_project():
         mock_python_repl.return_value = MockQWidget()
         mock_qsettings_value.side_effect = qsettings_value_side_effect
         toolbox = ToolboxUI()
-        project_dir = os.path.abspath(os.path.join(os.curdir, "tests", "project_files", "This dir should be removed after tests"))
+        project_dir = os.path.abspath(os.path.join(os.curdir, "tests", "test_resources",
+                                                   "This dir should not exist after tests"))
         toolbox.create_project("UnitTest Project", "", project_dir)
+        print("mock_create_dir called {0} times".format(mock_create_dir.call_count))
     return toolbox
 
 

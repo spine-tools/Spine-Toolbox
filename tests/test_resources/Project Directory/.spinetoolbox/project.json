@@ -5,39 +5,36 @@
         "description": "Project for testing open_project() method in ToolboxUI.",
         "tool_specifications": [],
         "connections": [
-            [
-                false,
-                [
-                    "right",
-                    "left"
+            {
+                "from": [
+                    "a",
+                    "right"
                 ],
-                false,
-                false
-            ],
-            [
-                false,
-                false,
-                [
-                    "right",
-                    "left"
-                ],
-                false
-            ],
-            [
-                false,
-                false,
-                false,
-                [
-                    "right",
+                "to": [
+                    "b",
                     "left"
                 ]
-            ],
-            [
-                false,
-                false,
-                false,
-                false
-            ]
+            },
+            {
+                "from": [
+                    "b",
+                    "right"
+                ],
+                "to": [
+                    "c",
+                    "left"
+                ]
+            },
+            {
+                "from": [
+                    "c",
+                    "right"
+                ],
+                "to": [
+                    "d",
+                    "left"
+                ]
+            }
         ],
         "scene_x": -14.5,
         "scene_y": -23.0,

@@ -26,7 +26,6 @@ from PySide2.QtWidgets import QApplication
 from PySide2.QtCore import SIGNAL, Qt, QPoint, QItemSelectionModel
 from PySide2.QtTest import QTest
 from spinetoolbox.project import SpineToolboxProject
-from spinetoolbox.config import APPLICATION_PATH
 from spinetoolbox.graphics_items import ProjectItemIcon, Link
 from spinetoolbox.project_item import RootProjectItem
 from spinetoolbox.resources_icons_rc import qInitResources
@@ -79,7 +78,7 @@ class TestToolboxUI(unittest.TestCase):
         with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project") as mock_save_project, mock.patch(
             "spinetoolbox.project.create_dir"
         ) as mock_create_dir:
-            project_dir = os.path.abspath(os.path.join(os.curdir, "tests", "project_files", "Fake Directory"))
+            project_dir = os.path.abspath(os.path.join(os.curdir, "tests", "test_resources", "Fake Directory"))
             self.toolbox.create_project("UnitTest Project", "Project for unit tests.", project_dir)
         self.assertIsInstance(self.toolbox.project(), SpineToolboxProject)  # Check that a project is open
         self.toolbox.init_project_item_model()
@@ -161,7 +160,7 @@ class TestToolboxUI(unittest.TestCase):
         with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project") as mock_save_project, mock.patch(
             "spinetoolbox.project.create_dir"
         ) as mock_create_dir:
-            project_dir = os.path.abspath(os.path.join(os.curdir, "tests", "project_files", "Fake Directory"))
+            project_dir = os.path.abspath(os.path.join(os.curdir, "tests", "test_resources", "Fake Directory"))
             self.toolbox.create_project("UnitTest Project", "Project for unit tests.", project_dir)
         self.assertIsInstance(self.toolbox.project(), SpineToolboxProject)  # Check that a project is open
 
@@ -172,9 +171,9 @@ class TestToolboxUI(unittest.TestCase):
         Data Connection 'b', Tool 'c', and View 'd'. The items are connected
         a->b->c->d.
         """
-        project_dir = os.path.abspath(os.path.join(os.curdir, "tests", "project_files", "Project Directory"))
+        project_dir = os.path.abspath(os.path.join(os.curdir, "tests", "test_resources", "Project Directory"))
         if not os.path.exists(project_dir):
-            self.skipTest("Test project directory not found from:'{0}'".format(project_dir))
+            self.skipTest("Test project directory '{0}' does not exist".format(project_dir))
             return
         self.assertIsNone(self.toolbox.project())
         with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project") as mock_save_project, mock.patch(
@@ -240,7 +239,7 @@ class TestToolboxUI(unittest.TestCase):
         with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project") as mock_save_project, mock.patch(
             "spinetoolbox.project.create_dir"
         ) as mock_create_dir:
-            project_dir = os.path.abspath(os.path.join(os.curdir, "tests", "project_files", "Fake Directory"))
+            project_dir = os.path.abspath(os.path.join(os.curdir, "tests", "test_resources", "Fake Directory"))
             self.toolbox.create_project("UnitTest Project", "", project_dir)
         ds1 = "DS1"
         self.add_ds(ds1)
@@ -270,7 +269,7 @@ class TestToolboxUI(unittest.TestCase):
         with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project") as mock_save_project, mock.patch(
             "spinetoolbox.project.create_dir"
         ) as mock_create_dir:
-            project_dir = os.path.abspath(os.path.join(os.curdir, "tests", "project_files", "Fake Directory"))
+            project_dir = os.path.abspath(os.path.join(os.curdir, "tests", "test_resources", "Fake Directory"))
             self.toolbox.create_project("UnitTest Project", "", project_dir)
         ds1 = "DS1"
         ds2 = "DS2"
@@ -304,7 +303,7 @@ class TestToolboxUI(unittest.TestCase):
         with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project") as mock_save_project, mock.patch(
             "spinetoolbox.project.create_dir"
         ) as mock_create_dir:
-            project_dir = os.path.abspath(os.path.join(os.curdir, "tests", "project_files", "Fake Directory"))
+            project_dir = os.path.abspath(os.path.join(os.curdir, "tests", "test_resources", "Fake Directory"))
             self.toolbox.create_project("UnitTest Project", "", project_dir)
         ds1 = "DS1"
         ds2 = "DS2"
@@ -343,7 +342,7 @@ class TestToolboxUI(unittest.TestCase):
         with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project") as mock_save_project, mock.patch(
             "spinetoolbox.project.create_dir"
         ) as mock_create_dir:
-            project_dir = os.path.abspath(os.path.join(os.curdir, "tests", "project_files", "Fake Directory"))
+            project_dir = os.path.abspath(os.path.join(os.curdir, "tests", "test_resources", "Fake Directory"))
             self.toolbox.create_project("UnitTest Project", "", project_dir)
         dc1 = "DC1"
         self.add_dc(dc1, x=0, y=0)
@@ -370,7 +369,7 @@ class TestToolboxUI(unittest.TestCase):
         with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project") as mock_save_project, mock.patch(
             "spinetoolbox.project.create_dir"
         ) as mock_create_dir:
-            project_dir = os.path.abspath(os.path.join(os.curdir, "tests", "project_files", "Fake Directory"))
+            project_dir = os.path.abspath(os.path.join(os.curdir, "tests", "test_resources", "Fake Directory"))
             self.toolbox.create_project("UnitTest Project", "", project_dir)
         dc1 = "DC1"
         dc2 = "DC2"
@@ -404,7 +403,7 @@ class TestToolboxUI(unittest.TestCase):
         with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project") as mock_save_project, mock.patch(
             "spinetoolbox.project.create_dir"
         ) as mock_create_dir:
-            project_dir = os.path.abspath(os.path.join(os.curdir, "tests", "project_files", "Fake Directory"))
+            project_dir = os.path.abspath(os.path.join(os.curdir, "tests", "test_resources", "Fake Directory"))
             self.toolbox.create_project("UnitTest Project", "", project_dir)
         dc1 = "DC1"
         self.add_dc(dc1, x=0, y=0)
@@ -431,7 +430,7 @@ class TestToolboxUI(unittest.TestCase):
         with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project") as mock_save_project, mock.patch(
             "spinetoolbox.project.create_dir"
         ) as mock_create_dir:
-            project_dir = os.path.abspath(os.path.join(os.curdir, "tests", "project_files", "Fake Directory"))
+            project_dir = os.path.abspath(os.path.join(os.curdir, "tests", "test_resources", "Fake Directory"))
             self.toolbox.create_project("UnitTest Project", "", project_dir)
         dc1 = "DC1"
         dc2 = "DC2"
@@ -477,7 +476,7 @@ class TestToolboxUI(unittest.TestCase):
         with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project") as mock_save_project, mock.patch(
             "spinetoolbox.project.create_dir"
         ) as mock_create_dir:
-            project_dir = os.path.abspath(os.path.join(os.curdir, "tests", "project_files", "Fake Directory"))
+            project_dir = os.path.abspath(os.path.join(os.curdir, "tests", "test_resources", "Fake Directory"))
             self.toolbox.create_project("UnitTest Project", "", project_dir)
         dc1 = "DC1"
         dc2 = "DC2"
@@ -527,7 +526,7 @@ class TestToolboxUI(unittest.TestCase):
         with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project") as mock_save_project, mock.patch(
             "spinetoolbox.project.create_dir"
         ) as mock_create_dir:
-            project_dir = os.path.abspath(os.path.join(os.curdir, "tests", "project_files", "Fake Directory"))
+            project_dir = os.path.abspath(os.path.join(os.curdir, "tests", "test_resources", "Fake Directory"))
             self.toolbox.create_project("UnitTest Project", "", project_dir)
         dc1 = "DC1"
         dc2 = "DC2"
@@ -560,7 +559,7 @@ class TestToolboxUI(unittest.TestCase):
         with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project") as mock_save_project, mock.patch(
             "spinetoolbox.project.create_dir"
         ) as mock_create_dir:
-            project_dir = os.path.abspath(os.path.join(os.curdir, "tests", "project_files", "Fake Directory"))
+            project_dir = os.path.abspath(os.path.join(os.curdir, "tests", "test_resources", "Fake Directory"))
             self.toolbox.create_project("UnitTest Project", "", project_dir)
         dc1 = "DC1"
         self.add_dc(dc1)
@@ -701,7 +700,7 @@ class TestToolboxUI(unittest.TestCase):
         with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project") as mock_save_project, mock.patch(
             "spinetoolbox.project.create_dir"
         ) as mock_create_dir:
-            project_dir = os.path.abspath(os.path.join(os.curdir, "tests", "project_files", "Fake Directory"))
+            project_dir = os.path.abspath(os.path.join(os.curdir, "tests", "test_resources", "Fake Directory"))
             self.toolbox.create_project("UnitTest Project", "", project_dir)
         self.add_dc("data_connection")
         item_index = self.toolbox.project_item_model.find_item("data_connection")
@@ -719,14 +718,15 @@ class TestToolboxUI(unittest.TestCase):
         with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project") as mock_save_project, mock.patch(
             "spinetoolbox.project.create_dir"
         ) as mock_create_dir:
-            project_dir = os.path.abspath(os.path.join(os.curdir, "tests", "project_files", "Fake Directory"))
+            project_dir = os.path.abspath(os.path.join(os.curdir, "tests", "test_resources", "Fake Directory"))
             self.toolbox.create_project("UnitTest Project", "", project_dir)
         self.add_dc("data_connection")
         self.assertEqual(self.toolbox.project_item_model.n_items(), 1)
         item_index = self.toolbox.project_item_model.find_item("data_connection")
         self.toolbox.ui.treeView_project.selectionModel().select(item_index, QItemSelectionModel.Select)
-        self.toolbox.ui.actionCopy.triggered.emit()
-        self.toolbox.ui.actionPaste.triggered.emit()
+        with mock.patch("spinetoolbox.project_item.create_dir") as mock_create_dir:
+            self.toolbox.ui.actionCopy.triggered.emit()
+            self.toolbox.ui.actionPaste.triggered.emit()
         self.assertEqual(self.toolbox.project_item_model.n_items(), 2)
         new_item_index = self.toolbox.project_item_model.find_item("data_connection 1")
         self.assertIsNotNone(new_item_index)
@@ -735,13 +735,14 @@ class TestToolboxUI(unittest.TestCase):
         with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project") as mock_save_project, mock.patch(
             "spinetoolbox.project.create_dir"
         ) as mock_create_dir:
-            project_dir = os.path.abspath(os.path.join(os.curdir, "tests", "project_files", "Fake Directory"))
+            project_dir = os.path.abspath(os.path.join(os.curdir, "tests", "test_resources", "Fake Directory"))
             self.toolbox.create_project("UnitTest Project", "", project_dir)
         self.add_dc("data_connection")
         self.assertEqual(self.toolbox.project_item_model.n_items(), 1)
         item_index = self.toolbox.project_item_model.find_item("data_connection")
         self.toolbox.ui.treeView_project.selectionModel().select(item_index, QItemSelectionModel.Select)
-        self.toolbox.ui.actionDuplicate.triggered.emit()
+        with mock.patch("spinetoolbox.project_item.create_dir") as mock_create_dir:
+            self.toolbox.ui.actionDuplicate.triggered.emit()
         self.assertEqual(self.toolbox.project_item_model.n_items(), 2)
         new_item_index = self.toolbox.project_item_model.find_item("data_connection 1")
         self.assertIsNotNone(new_item_index)
@@ -749,8 +750,9 @@ class TestToolboxUI(unittest.TestCase):
     def add_ds(self, name, x=0, y=0):
         """Helper method to create a Data Store with the given name and coordinates."""
         item = dict(name=name, description="", url=dict(), x=x, y=y)
-        # TODO: Mocking create_dir does not work here since DataStore class was moved to project_items directory
-        with mock.patch("spinetoolbox.project_item.create_dir") as mock_create_dir:
+        # This mocks create_dir in both project_item.py and in data_store.py
+        with mock.patch("spinetoolbox.project_item.create_dir") as mock_create_dir, \
+                mock.patch("spinetoolbox.project_items.data_store.data_store.create_dir") as mock_create_dir2:
             self.toolbox.project().add_project_items("Data Stores", item)
         return
 
