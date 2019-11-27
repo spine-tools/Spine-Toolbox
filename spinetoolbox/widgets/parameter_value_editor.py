@@ -94,8 +94,8 @@ class ParameterValueEditor(QDialog):
         if value is None:
             try:
                 value = from_database(self._parent_model.data(parent_index, Qt.EditRole))
-            except ParameterValueFormatError as error:
-                self._warn_and_select_default_view("Failed to load value: {}".format(error))
+            except ParameterValueFormatError:
+                self._select_default_view()
                 return
         self._select_editor(value)
 
@@ -180,10 +180,9 @@ class ParameterValueEditor(QDialog):
             self._ui.editor_stack.setCurrentIndex(_Editor.DURATION.value)
             self._duration_editor.set_value(value)
         else:
-            self._warn_and_select_default_view("Unknown parameter type. Opening an empty editor.")
+            self._select_default_view()
 
-    def _warn_and_select_default_view(self, message):
-        """Displays a warning dialog and opens the default editor widget after user clicks OK."""
-        QMessageBox.warning(self, "Warning", message)
+    def _select_default_view(self):
+        """Opens the default editor widget."""
         self._ui.parameter_type_selector.setCurrentIndex(_Editor.PLAIN_VALUE.value)
         self._ui.editor_stack.setCurrentIndex(_Editor.PLAIN_VALUE.value)
