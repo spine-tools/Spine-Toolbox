@@ -19,7 +19,7 @@ Spine Toolbox project class.
 import os
 import logging
 import json
-from PySide2.QtCore import Slot
+from PySide2.QtCore import Slot, Signal
 from PySide2.QtWidgets import QMessageBox
 from spine_engine import SpineEngine, SpineEngineState
 from .metaobject import MetaObject
@@ -32,6 +32,8 @@ from .spine_db_manager import SpineDBManager
 
 class SpineToolboxProject(MetaObject):
     """Class for Spine Toolbox projects."""
+
+    dag_execution_finished = Signal()
 
     def __init__(self, toolbox, name, description, work_dir=None, ext='.proj'):
         """
@@ -48,6 +50,8 @@ class SpineToolboxProject(MetaObject):
         self.dag_handler = DirectedGraphHandler(self._toolbox)
         self.db_mngr = SpineDBManager(self)
         self.engine = None
+        self._dag_execution_list = None
+        self._dag_execution_index = None
         self.project_dir = os.path.join(project_dir(self._qsettings), self.short_name)
         if not work_dir:
             self.work_dir = DEFAULT_WORK_DIR
@@ -75,6 +79,7 @@ class SpineToolboxProject(MetaObject):
     def connect_signals(self):
         """Connect signals to slots."""
         self.dag_handler.dag_simulation_requested.connect(self.notify_changes_in_dag)
+        self.dag_execution_finished.connect(self.execute_next_dag)
 
     def change_name(self, name):
         """Changes project name and updates project dir and save file name.
@@ -345,24 +350,35 @@ class SpineToolboxProject(MetaObject):
             dags (Sequence(DiGraph))
         """
         self._execution_stopped = False
-        for i, dag in enumerate(dags):
-            if self._execution_stopped:
-                break
-            self.execute_dag(dag, i + 1, len(dags))
+        self._dag_execution_list = list(dags)
+        self._dag_execution_index = 0
+        self.execute_next_dag()
 
-    def execute_dag(self, dag, graph_index=1, graph_count=1):
+    @Slot()
+    def execute_next_dag(self):
+        """Executes a dag from a list.
+        """
+        if self._execution_stopped:
+            return
+        try:
+            dag = self._dag_execution_list[self._dag_execution_index]
+        except IndexError:
+            return
+        dag_identifier = f"{self._dag_execution_index + 1}/{len(self._dag_execution_list)}"
+        self.execute_dag(dag, dag_identifier)
+        self._dag_execution_index += 1
+        self.dag_execution_finished.emit()
+
+    def execute_dag(self, dag, dag_identifier):
         """Executes given dag.
 
         Args:
             dag (DiGraph)
-            graph_index (str)
-            graph_count (str)
+            dag_identifier (str)
         """
         node_successors = self.dag_handler.node_successors(dag)
         if not node_successors:
-            self._toolbox.msg_warning.emit(
-                "<b>Graph {0}/{1} is not a Directed Acyclic Graph</b>".format(graph_index, graph_count)
-            )
+            self._toolbox.msg_warning.emit("<b>Graph {0} is not a Directed Acyclic Graph</b>".format(dag_identifier))
             self._toolbox.msg.emit("Items in graph: {0}".format(", ".join(dag.nodes())))
             edges = ["{0} -> {1}".format(*edge) for edge in self.dag_handler.edges_causing_loops(dag)]
             self._toolbox.msg.emit(
@@ -372,7 +388,7 @@ class SpineToolboxProject(MetaObject):
             return
         items = [self._toolbox.project_item_model.get_item(name) for name in node_successors]
         self.engine = SpineEngine(items, node_successors)
-        self._toolbox.msg.emit("<b>Starting DAG {0}/{1}</b>".format(graph_index, graph_count))
+        self._toolbox.msg.emit("<b>Starting DAG {0}</b>".format(dag_identifier))
         self._toolbox.msg.emit("Order: {0}".format(" -> ".join(list(node_successors))))
         self.engine.run()
         outcome = {
@@ -380,7 +396,7 @@ class SpineToolboxProject(MetaObject):
             SpineEngineState.FAILED: "failed",
             SpineEngineState.COMPLETED: "completed successfully",
         }[self.engine.state()]
-        self._toolbox.msg.emit("<b>DAG {0}/{1} {2}</b>".format(graph_index, graph_count, outcome))
+        self._toolbox.msg.emit("<b>DAG {0} {1}</b>".format(dag_identifier, outcome))
 
     def execute_selected(self):
         """Executes DAGs corresponding to all selected project items.
