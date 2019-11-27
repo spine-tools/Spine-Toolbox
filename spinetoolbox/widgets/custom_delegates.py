@@ -259,6 +259,24 @@ class ParameterValueOrDefaultValueDelegate(ParameterDelegate):
 
     parameter_value_editor_requested = Signal("QModelIndex", "QVariant", name="parameter_value_editor_requested")
 
+    def setModelData(self, editor, model, index):
+        """Emits the data_committed signal with new data."""
+        if isinstance(editor, NumberParameterInlineEditor):
+            self.data_committed.emit(index, to_database(editor.data()))
+            return
+        value = self._str_to_int_or_float(editor.data())
+        self.data_committed.emit(index, to_database(value))
+
+    @staticmethod
+    def _str_to_int_or_float(string):
+        try:
+            return int(string)
+        except ValueError:
+            try:
+                return float(string)
+            except ValueError:
+                return string
+
     def _create_or_request_parameter_value_editor(self, parent, option, index, db_map):
         """Returns a CustomLineEditor or NumberParameterInlineEditor if the data from index is not of special type.
         Otherwise, emit the signal to request a standalone `ParameterValueEditor` from parent widget.
@@ -294,10 +312,6 @@ class ParameterValueDelegate(ParameterValueOrDefaultValueDelegate):
 
     def _get_entity_class_id(self, index, db_map):
         return NotImplementedError()
-
-    def setModelData(self, editor, model, index):
-        """Send signal."""
-        self.data_committed.emit(index, to_database(editor.data()))
 
     def _get_value_list(self, index, db_map):
         """Returns a value list item for the given index and db_map."""
