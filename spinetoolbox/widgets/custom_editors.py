@@ -557,4 +557,4 @@ class NumberParameterInlineEditor(QDoubleSpinBox):
             self.setValue(float(data))
 
     def data(self):
-        return str(self.value())
+        return self.value()
