@@ -335,10 +335,15 @@ class ProjectItem(BaseProjectItem):
         Returns:
             bool: True if execution succeeded, False otherwise
         """
-        result = {"backward": self.execute_backward, "forward": self.execute_forward}[direction](resources)
-        if direction == "forward" and result:
-            self.run_leave_animation()
-        return result
+        if direction == "forward":
+            self._toolbox.msg.emit("")
+            self._toolbox.msg.emit("Executing {0} <b>{1}</b>".format(self.item_type(), self.name))
+            self._toolbox.msg.emit("***")
+            if self.execute_forward(resources):
+                self.run_leave_animation()
+                return True
+            return False
+        return self.execute_backward(resources)
 
     def run_leave_animation(self):
         """
