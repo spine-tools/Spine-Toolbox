@@ -55,10 +55,10 @@ class TabularViewForm(QMainWindow):
     _JSON_TIME_NAME = "json time"
     _PARAMETER_NAME = "db parameter"
 
-    def __init__(self, project, db_url):
+    def __init__(self, db_mngr, db_url):
         """
         Args:
-            project (SpineToolboxProject): The project instance that owns this form
+            db_mngr (SpineDBManager): The manager to use
             db_url (str): The url to view
         """
         from ..ui.tabular_view_form import Ui_MainWindow
@@ -67,7 +67,7 @@ class TabularViewForm(QMainWindow):
         # TODO: change the list_select_class to something nicer
         # Setup UI from Qt Designer file
         self.db_url = db_url
-        self.db_mngr = project.db_mngr
+        self.db_mngr = db_mngr
         url, codename = self.db_url
         self.db_map = self.db_mngr.get_db_map_for_listener(self, url, codename=codename)
         self.ui = Ui_MainWindow()
@@ -80,7 +80,6 @@ class TabularViewForm(QMainWindow):
 
         # database
         self.database = self.db_map.codename
-        self._project = project
 
         # current state of ui
         self.current_class_type = ''

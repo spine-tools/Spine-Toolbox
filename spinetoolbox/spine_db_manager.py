@@ -16,7 +16,7 @@ The SpineDBManager class
 :date:   2.10.2019
 """
 
-from PySide2.QtCore import Qt, QObject, Signal, Slot
+from PySide2.QtCore import Qt, QObject, Signal, Slot, QSettings
 from PySide2.QtWidgets import QMessageBox, QDialog, QCheckBox, QErrorMessage
 from spinedb_api import (
     SpineDBAPIError,
@@ -91,6 +91,7 @@ class SpineDBManager(QObject):
         super().__init__(parent)
         self._db_maps = {}
         self._cache = {}
+        self.qsettings = QSettings("SpineProject", "Spine Toolbox")
         self.signaller = SpineDBSignaller(self)
         self.icon_mngr = IconManager()
         self.err_msg = QErrorMessage()
@@ -277,8 +278,7 @@ class SpineDBManager(QObject):
         """
         if not db_map.has_pending_changes():
             return True
-        qsettings = self.parent()._qsettings
-        commit_at_exit = int(qsettings.value("appSettings/commitAtExit", defaultValue="1"))
+        commit_at_exit = int(self.qsettings.value("appSettings/commitAtExit", defaultValue="1"))
         if commit_at_exit == 0:
             # Don't commit session and don't show message box
             return self._rollback_db_map_session(db_map)
@@ -301,14 +301,14 @@ class SpineDBManager(QObject):
             if chk == 2:
                 # Save preference
                 preference = "2" if answer == QMessageBox.Save else "0"
-                qsettings.setValue("appSettings/commitAtExit", preference)
+                self.qsettings.setValue("appSettings/commitAtExit", preference)
             if answer == QMessageBox.Save:
                 return self._commit_db_map_session(db_map)
             return self._rollback_db_map_session(db_map)
         if commit_at_exit == 2:
             # Commit session and don't show message box
             return self._commit_db_map_session(db_map)
-        qsettings.setValue("appSettings/commitAtExit", "1")
+        self.qsettings.setValue("appSettings/commitAtExit", "1")
         return True
 
     def connect_signals(self):

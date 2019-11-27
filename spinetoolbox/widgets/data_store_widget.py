@@ -17,7 +17,7 @@ Contains the DataStoreForm class, parent class of TreeViewForm and GraphViewForm
 """
 
 from PySide2.QtWidgets import QMainWindow, QHeaderView, QMessageBox, QErrorMessage
-from PySide2.QtCore import Qt, Signal, Slot, QTimer
+from PySide2.QtCore import Qt, Signal, Slot, QTimer, QSettings
 from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QIcon
 from ..config import MAINWINDOW_SS
 from .custom_delegates import (
@@ -68,19 +68,18 @@ class DataStoreForm(QMainWindow):
     msg = Signal(str)
     msg_error = Signal(str)
 
-    def __init__(self, project, ui, *db_urls):
+    def __init__(self, db_mngr, ui, *db_urls):
         """Initializes form.
 
         Args:
-            project (SpineToolboxProject): The project instance that owns this form
+            db_mngr (SpineDBManager): The manager to use
             ui: UI definition of the form that is initialized
             *db_urls (tuple): Database url, codename.
         """
         super().__init__(flags=Qt.Window)
         self.db_urls = list(db_urls)
         self.db_url = self.db_urls[0]
-        self._project = project
-        self.db_mngr = project.db_mngr
+        self.db_mngr = db_mngr
         self.db_maps = [
             self.db_mngr.get_db_map_for_listener(self, url, codename=codename) for url, codename in self.db_urls
         ]
@@ -90,6 +89,7 @@ class DataStoreForm(QMainWindow):
         self.ui.setupUi(self)
         self.setWindowIcon(QIcon(":/symbols/app.ico"))
         self.setStyleSheet(MAINWINDOW_SS)
+        self.qsettings = QSettings("SpineProject", "Spine Toolbox")
         # Class attributes
         self.err_msg = QErrorMessage(self)
         self.err_msg.setWindowTitle("Error")
@@ -176,10 +176,6 @@ class DataStoreForm(QMainWindow):
             self._handle_relationship_parameter_definition_visibility_changed
         )
         self.ui.actionRestore_Dock_Widgets.triggered.connect(self.restore_dock_widgets)
-
-    def qsettings(self):
-        """Returns the QSettings instance from ToolboxUI."""
-        return self._project._toolbox._qsettings
 
     @Slot(str)
     def add_message(self, msg):
@@ -442,18 +438,23 @@ class DataStoreForm(QMainWindow):
 
     def selected_entity_class_ids(self, entity_class_type):
         """Return object class ids selected in object tree *and* parameter tag toolbar."""
-        tree_class_ids = self.selected_ent_cls_ids[entity_class_type]
         if self.selected_param_def_ids[entity_class_type] is None:
-            return tree_class_ids
+            return None
+        tree_class_ids = self.selected_ent_cls_ids[entity_class_type]
         tag_class_ids = dict()
         for db_map, class_id in self.selected_param_def_ids[entity_class_type]:
             tag_class_ids.setdefault(db_map, set()).add(class_id)
-        if not tree_class_ids:
-            return tag_class_ids
-        return {
-            db_map: class_ids.intersection(tag_class_ids.get(db_map, {}))
-            for db_map, class_ids in tree_class_ids.items()
-        }
+        result = dict()
+        for db_map in tree_class_ids.keys() | tag_class_ids.keys():
+            tree_cls_ids = tree_class_ids.get(db_map, set())
+            tag_cls_ids = tag_class_ids.get(db_map, set())
+            if tree_cls_ids == set():
+                result[db_map] = tag_cls_ids
+            elif tag_cls_ids == set():
+                result[db_map] = tree_cls_ids
+            else:
+                result[db_map] = tree_cls_ids & tag_cls_ids
+        return result
 
     def set_default_parameter_data(self, index=None):
         """Set default rows for parameter models according to selection in object or relationship tree."""
@@ -699,20 +700,19 @@ class DataStoreForm(QMainWindow):
 
     def restore_ui(self):
         """Restore UI state from previous session."""
-        qsettings = self.qsettings()
-        qsettings.beginGroup(self.settings_group)
-        window_size = qsettings.value("windowSize")
-        window_pos = qsettings.value("windowPosition")
-        window_state = qsettings.value("windowState")
-        window_maximized = qsettings.value("windowMaximized", defaultValue='false')
-        n_screens = qsettings.value("n_screens", defaultValue=1)
+        self.qsettings.beginGroup(self.settings_group)
+        window_size = self.qsettings.value("windowSize")
+        window_pos = self.qsettings.value("windowPosition")
+        window_state = self.qsettings.value("windowState")
+        window_maximized = self.qsettings.value("windowMaximized", defaultValue='false')
+        n_screens = self.qsettings.value("n_screens", defaultValue=1)
         header_states = (
-            qsettings.value("objParDefHeaderState"),
-            qsettings.value("objParValHeaderState"),
-            qsettings.value("relParDefHeaderState"),
-            qsettings.value("relParValHeaderState"),
+            self.qsettings.value("objParDefHeaderState"),
+            self.qsettings.value("objParValHeaderState"),
+            self.qsettings.value("relParDefHeaderState"),
+            self.qsettings.value("relParValHeaderState"),
         )
-        qsettings.endGroup()
+        self.qsettings.endGroup()
         views = (
             self.ui.tableView_object_parameter_definition.horizontalHeader(),
             self.ui.tableView_object_parameter_value.horizontalHeader(),
@@ -741,24 +741,23 @@ class DataStoreForm(QMainWindow):
 
     def save_window_state(self):
         """Save window state parameters (size, position, state) via QSettings."""
-        qsettings = self.qsettings()
-        qsettings.beginGroup(self.settings_group)
-        qsettings.setValue("windowSize", self.size())
-        qsettings.setValue("windowPosition", self.pos())
-        qsettings.setValue("windowState", self.saveState(version=1))
+        self.qsettings.beginGroup(self.settings_group)
+        self.qsettings.setValue("windowSize", self.size())
+        self.qsettings.setValue("windowPosition", self.pos())
+        self.qsettings.setValue("windowState", self.saveState(version=1))
         h = self.ui.tableView_object_parameter_definition.horizontalHeader()
-        qsettings.setValue("objParDefHeaderState", h.saveState())
+        self.qsettings.setValue("objParDefHeaderState", h.saveState())
         h = self.ui.tableView_object_parameter_value.horizontalHeader()
-        qsettings.setValue("objParValHeaderState", h.saveState())
+        self.qsettings.setValue("objParValHeaderState", h.saveState())
         h = self.ui.tableView_relationship_parameter_definition.horizontalHeader()
-        qsettings.setValue("relParDefHeaderState", h.saveState())
+        self.qsettings.setValue("relParDefHeaderState", h.saveState())
         h = self.ui.tableView_relationship_parameter_value.horizontalHeader()
-        qsettings.setValue("relParValHeaderState", h.saveState())
+        self.qsettings.setValue("relParValHeaderState", h.saveState())
         if self.windowState() == Qt.WindowMaximized:
-            qsettings.setValue("windowMaximized", True)
+            self.qsettings.setValue("windowMaximized", True)
         else:
-            qsettings.setValue("windowMaximized", False)
-        qsettings.endGroup()
+            self.qsettings.setValue("windowMaximized", False)
+        self.qsettings.endGroup()
 
     def closeEvent(self, event):
         """Handle close window.

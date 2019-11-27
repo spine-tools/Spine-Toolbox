@@ -188,6 +188,8 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         return True
 
     def _main_filter_accepts_model(self, model):
+        if self._accepted_entity_class_ids is None:
+            return False
         if self._accepted_entity_class_ids == {}:
             return True
         return model.entity_class_id in self._accepted_entity_class_ids.get(model.db_map, set())

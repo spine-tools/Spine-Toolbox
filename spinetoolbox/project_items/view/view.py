@@ -208,7 +208,7 @@ class View(ProjectItem):
             raise RuntimeError("view must be 'tree', 'graph', or 'tabular'")
         kwargs = {"graph": {"read_only": True}}.get(view, {})
         try:
-            return make_view(self._project, *db_maps, **kwargs)
+            return make_view(self._project.db_mngr, *db_maps, **kwargs)
         except SpineDBAPIError as e:
             self._toolbox.msg_error.emit(e.msg)
 
