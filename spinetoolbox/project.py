@@ -356,7 +356,7 @@ class SpineToolboxProject(MetaObject):
 
     @Slot()
     def execute_next_dag(self):
-        """Executes a dag from a list.
+        """Executes next dag in the execution list.
         """
         if self._execution_stopped:
             return
