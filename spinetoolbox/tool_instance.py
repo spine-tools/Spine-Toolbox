@@ -27,7 +27,7 @@ from .execution_managers import ConsoleExecutionManager, QProcessExecutionManage
 class ToolInstance(QObject):
     """Tool instance base class."""
 
-    instance_finished_signal = Signal(int, name="instance_finished_signal")
+    instance_finished = Signal(int)
     """Signal to emit when a Tool instance has finished processing"""
 
     def __init__(self, toolbox, tool_specification, basedir):
@@ -115,7 +115,7 @@ class GAMSToolInstance(ToolInstance):
         Args:
             ret (int)
         """
-        self.exec_mngr.deleteLater()
+        self.exec_mngr.execution_finished.disconnect(self.handle_execution_finished)
         if self.exec_mngr.process_failed:  # process_failed should be True if ret != 0
             if self.exec_mngr.process_failed_to_start:
                 self._toolbox.msg_error.emit(
@@ -131,8 +131,9 @@ class GAMSToolInstance(ToolInstance):
                     self._toolbox.msg_error.emit("\tUnknown return code ({0})".format(ret))
         else:  # Return code 0: success
             self._toolbox.msg.emit("\tTool specification execution finished")
+        self.exec_mngr.deleteLater()
         self.exec_mngr = None
-        self.instance_finished_signal.emit(ret)
+        self.instance_finished.emit(ret)
 
 
 class JuliaToolInstance(ToolInstance):
@@ -200,7 +201,7 @@ class JuliaToolInstance(ToolInstance):
         Args:
             ret (int): Tool specification process return value
         """
-        self.exec_mngr.deleteLater()
+        self.exec_mngr.execution_finished.disconnect(self.handle_repl_execution_finished)
         if ret != 0:
             try:
                 return_msg = self.tool_specification.return_codes[ret]
@@ -209,8 +210,9 @@ class JuliaToolInstance(ToolInstance):
                 self._toolbox.msg_error.emit("\tUnknown return code ({0})".format(ret))
         else:
             self._toolbox.msg.emit("\tTool specification execution finished")
+        self.exec_mngr.deleteLater()
         self.exec_mngr = None
-        self.instance_finished_signal.emit(ret)
+        self.instance_finished.emit(ret)
 
     @Slot(int)
     def handle_execution_finished(self, ret):
@@ -219,7 +221,7 @@ class JuliaToolInstance(ToolInstance):
         Args:
             ret (int): Tool specification process return value
         """
-        self.exec_mngr.deleteLater()
+        self.exec_mngr.execution_finished.disconnect(self.handle_execution_finished)
         if self.exec_mngr.process_failed:  # process_failed should be True if ret != 0
             if self.exec_mngr.process_failed_to_start:
                 self._toolbox.msg_error.emit(
@@ -234,8 +236,9 @@ class JuliaToolInstance(ToolInstance):
                     self._toolbox.msg_error.emit("\tUnknown return code ({0})".format(ret))
         else:  # Return code 0: success
             self._toolbox.msg.emit("\tTool specification execution finished")
+        self.exec_mngr.deleteLater()
         self.exec_mngr = None
-        self.instance_finished_signal.emit(ret)
+        self.instance_finished.emit(ret)
 
 
 class PythonToolInstance(ToolInstance):
@@ -299,7 +302,7 @@ class PythonToolInstance(ToolInstance):
         Args:
             ret (int): Tool specification process return value
         """
-        self.exec_mngr.deleteLater()
+        self.exec_mngr.execution_finished.disconnect(self.handle_console_execution_finished)
         if ret != 0:
             try:
                 return_msg = self.tool_specification.return_codes[ret]
@@ -308,8 +311,9 @@ class PythonToolInstance(ToolInstance):
                 self._toolbox.msg_error.emit("\tUnknown return code ({0})".format(ret))
         else:
             self._toolbox.msg.emit("\tTool specification execution finished")
+        self.exec_mngr.deleteLater()
         self.exec_mngr = None
-        self.instance_finished_signal.emit(ret)
+        self.instance_finished.emit(ret)
 
     @Slot(int)
     def handle_execution_finished(self, ret):
@@ -318,7 +322,7 @@ class PythonToolInstance(ToolInstance):
         Args:
             ret (int): Tool specification process return value
         """
-        self.exec_mngr.deleteLater()
+        self.exec_mngr.execution_finished.disconnect(self.handle_execution_finished)
         if self.exec_mngr.process_failed:  # process_failed should be True if ret != 0
             if self.exec_mngr.process_failed_to_start:
                 self._toolbox.msg_error.emit(
@@ -335,7 +339,7 @@ class PythonToolInstance(ToolInstance):
             self._toolbox.msg.emit("\tTool specification execution finished")
         self.exec_mngr.deleteLater()
         self.exec_mngr = None
-        self.instance_finished_signal.emit(ret)
+        self.instance_finished.emit(ret)
 
 
 class ExecutableToolInstance(ToolInstance):
@@ -364,7 +368,7 @@ class ExecutableToolInstance(ToolInstance):
         Args:
             ret (int): Tool specification process return value
         """
-        self.exec_mngr.deleteLater()
+        self.exec_mngr.execution_finished.disconnect(self.handle_execution_finished)
         if self.exec_mngr.process_failed:  # process_failed should be True if ret != 0
             if self.exec_mngr.process_failed_to_start:
                 self._toolbox.msg_error.emit("\t<b>{0}</b> failed to start.".format(self.exec_mngr.program()))
@@ -378,4 +382,4 @@ class ExecutableToolInstance(ToolInstance):
             self._toolbox.msg.emit("\tTool specification execution finished")
         self.exec_mngr.deleteLater()
         self.exec_mngr = None
-        self.instance_finished_signal.emit(ret)
+        self.instance_finished.emit(ret)

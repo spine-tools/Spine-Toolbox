@@ -438,13 +438,13 @@ class Tool(ProjectItem):
         self.get_icon().start_animation()
         self.instance = self.tool_specification().create_tool_instance(self.basedir)
         self.instance.prepare()  # Make command and stuff
-        self.instance.instance_finished_signal.connect(self.handle_execution_finished)
+        self.instance.instance_finished.connect(self.handle_execution_finished)
         self._toolbox.msg.emit(
             "*** Starting instance of Tool specification <b>{0}</b> ***".format(self.tool_specification().name)
         )
         # Wait for finished right here
         loop = QEventLoop()
-        self.instance.instance_finished_signal.connect(loop.quit)
+        self.instance.instance_finished.connect(loop.quit)
         self.instance.execute()
         if self.instance.is_running():
             loop.exec_()
@@ -786,7 +786,7 @@ class Tool(ProjectItem):
         """
         self.last_return_code = return_code
         # Disconnect instance finished signal
-        self.instance.instance_finished_signal.disconnect(self.handle_execution_finished)
+        self.instance.instance_finished.disconnect(self.handle_execution_finished)
         if return_code == 0:
             self._toolbox.msg_success.emit("Tool <b>{0}</b> execution finished".format(self.name))
         else:
