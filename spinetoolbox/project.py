@@ -483,10 +483,11 @@ class SpineToolboxProject(MetaObject):
                 project_item.invalidate_workflow(edges)
             return
         # Make resource map and run simulation
-        for rank, (item_name, parent_names) in enumerate(inverted(node_successors).items()):
+        node_predecessors = inverted(node_successors)
+        for rank, item_name in enumerate(node_successors):
             item = self._toolbox.project_item_model.get_item(item_name)
             resources = []
-            for parent_name in parent_names:
+            for parent_name in node_predecessors.get(item_name, set()):
                 parent_item = self._toolbox.project_item_model.get_item(parent_name)
                 resources += parent_item.output_resources_forward()
             item.handle_dag_changed(rank, resources)
