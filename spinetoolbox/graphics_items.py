@@ -837,8 +837,7 @@ class Link(LinkBase):
     def wipe_out(self):
         """Removes any trace of this item from the system."""
         self.src_connector.links.remove(self)
-        if self.src_connector != self.dst_connector:
-            self.dst_connector.links.remove(self)
+        self.dst_connector.links.remove(self)
         scene = self.scene()
         if scene:
             scene.removeItem(self)
