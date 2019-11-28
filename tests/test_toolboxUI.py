@@ -22,7 +22,7 @@ from unittest import mock
 import logging
 import os
 import sys
-from PySide2.QtWidgets import QApplication
+from PySide2.QtWidgets import QApplication, QMessageBox
 from PySide2.QtCore import SIGNAL, Qt, QPoint, QItemSelectionModel
 from PySide2.QtTest import QTest
 from spinetoolbox.project import SpineToolboxProject
@@ -536,13 +536,30 @@ class TestToolboxUI(unittest.TestCase):
         n_items_in_design_view = len([item for item in items_in_design_view if isinstance(item, ProjectItemIcon)])
         self.assertEqual(n_items_in_design_view, 0)
 
-    @unittest.skip("TODO")
-    def test_add_tool_specification(self):
-        self.fail()
-
-    @unittest.skip("TODO")
-    def test_remove_tool_specification(self):
-        self.fail()
+    def test_add_and_remove_tool_specification(self):
+        """Tests that adding and removing a tool specification
+        to project works from a valid tool specification file."""
+        create_project(self.toolbox)
+        # Hack to use an actual project.json file, so that this actually tests something
+        self.toolbox.project().config_file = os.path.abspath(os.path.join(os.curdir, "tests", "test_resources",
+                                                                          "Project Directory", ".spinetoolbox",
+                                                                          "project.json"))
+        self.assertEqual(0, self.toolbox.tool_specification_model.rowCount())  # Tool spec model is empty
+        tool_spec_path = os.path.abspath(os.path.join(os.curdir, "tests", "test_resources", "test_tool_spec.json"))
+        with mock.patch("spinetoolbox.ui_main.QFileDialog.getOpenFileName") as mock_filename:
+            mock_filename.return_value = [tool_spec_path]
+            self.toolbox.open_tool_specification()
+        self.assertEqual(1, self.toolbox.tool_specification_model.rowCount())  # Tool spec model has one entry now
+        # Find tool spec on row 0 from model and check that the name matches
+        tool_spec = self.toolbox.tool_specification_model.tool_specification(0)
+        self.assertEqual("Python Tool Specification", tool_spec.name)
+        # Now remove the Tool Specification
+        index = self.toolbox.tool_specification_model.tool_specification_index("Python Tool Specification")
+        self.assertTrue(index.isValid())
+        with mock.patch("spinetoolbox.ui_main.QMessageBox.exec_") as mock_msgbox:
+            mock_msgbox.return_value = QMessageBox.Ok
+            self.toolbox.remove_tool_specification(index)
+        self.assertEqual(0, self.toolbox.tool_specification_model.rowCount())  # Tool spec model is empty again
 
     def test_tasks_before_exit_without_open_project(self):
         """_tasks_before_exit is called with every possible combination of the two QSettings values that it uses.
