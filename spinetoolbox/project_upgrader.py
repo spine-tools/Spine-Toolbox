@@ -22,7 +22,7 @@ import os
 import json
 from PySide2.QtWidgets import QFileDialog, QMessageBox
 from .config import LATEST_PROJECT_VERSION
-from .helpers import  create_dir, recursive_overwrite
+from .helpers import create_dir, recursive_overwrite, serialize_path
 
 
 class ProjectUpgrader:
@@ -82,12 +82,13 @@ class ProjectUpgrader:
             return False
         return True
 
-    def upgrade(self, project_dict, old_project_dir):
+    def upgrade(self, project_dict, old_project_dir, new_project_dir):
         """Converts the project described in given project description file to the latest version.
 
         Args:
             project_dict (dict): Full path to project description file, ie. .proj or .json
             old_project_dir (str): Path to the original project directory
+            new_project_dir (str): New project directory
 
         Returns:
             dict: Latest version of the project info dictionary
@@ -95,7 +96,7 @@ class ProjectUpgrader:
         try:
             v = project_dict["project"]["version"]
         except KeyError:
-            return self.upgrade_from_no_version_to_version_1(project_dict, old_project_dir)
+            return self.upgrade_from_no_version_to_version_1(project_dict, old_project_dir, new_project_dir)
         return self.upgrade_to_latest(v, project_dict)
 
     @staticmethod
@@ -119,12 +120,13 @@ class ProjectUpgrader:
         )
         raise NotImplementedError()
 
-    def upgrade_from_no_version_to_version_1(self, old, old_project_dir):
+    def upgrade_from_no_version_to_version_1(self, old, old_project_dir, new_project_dir):
         """Converts project information dictionaries without 'version' to version 1.
 
         Args:
             old (dict): Project information JSON
             old_project_dir (str): Path to old project directory
+            new_project_dir (str): Path tol new project directory
 
         Returns:
              dict: Project information JSON upgraded to version 1
@@ -134,16 +136,15 @@ class ProjectUpgrader:
         new["name"] = old["project"]["name"]
         new["description"] = old["project"]["description"]
         new["work_dir"] = old["project"]["work_dir"]
-        new["tool_specifications"] = old["project"]["tool_specifications"]
         try:
-            new["tool_specifications"] = old["project"]["tool_specifications"]
+            spec_paths = old["project"]["tool_specifications"]
         except KeyError:
             try:
-                new["tool_specifications"] = old["project"]["tool_templates"]
+                spec_paths = old["project"]["tool_templates"]
             except KeyError:
-                new["tool_specifications"] = list()
-
-        # Get all item names to a list from old project dict
+                spec_paths = list()
+        new["tool_specifications"] = self.upgrade_tool_specification_paths(spec_paths, new_project_dir)
+        # Get all item names to a list from old project dict. Needed for upgrading connections.
         item_names = list()
         for category_name in old["objects"]:
             if category_name not in self._toolbox.categories:
@@ -157,8 +158,7 @@ class ProjectUpgrader:
             new["connections"] = list()
         else:
             # old connections maybe of two types, convert them to the newer format
-            new["connections"] = self.convert_connections(item_names, old_connections)
-
+            new["connections"] = self.upgrade_connections(item_names, old_connections)
         new["scene_x"] = old["project"]["scene_x"]
         new["scene_y"] = old["project"]["scene_y"]
         new["scene_w"] = old["project"]["scene_w"]
@@ -176,7 +176,7 @@ class ProjectUpgrader:
                 new_objects[category_name][item_name] = new_item_dict
         return dict(project=new, objects=new_objects)
 
-    def convert_connections(self, item_names, connections_old):
+    def upgrade_connections(self, item_names, connections_old):
         """Upgrades connections from old format to the new format.
 
         - Old format. List of lists, e.g.
@@ -225,6 +225,18 @@ class ProjectUpgrader:
                 entry_new = {"from": [src_item, src_anchor], "to": [dst_item, dst_anchor]}
                 connections.append(entry_new)
         return connections
+
+    def upgrade_tool_specification_paths(self, spec_paths, new_project_dir):
+        """Upgrades a list of tool specifications paths to new format.
+        Paths in project directory are converted to relative, others as absolute.
+        """
+        if not spec_paths:
+            return list()
+        new_paths = list()
+        for p in spec_paths:
+            ser_path = serialize_path(p, new_project_dir)
+            new_paths.append(ser_path)
+        return new_paths
 
     def open_proj_json(self, proj_file_path):
         """Opens an old style project file (.proj) for reading,

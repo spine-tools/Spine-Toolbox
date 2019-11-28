@@ -538,12 +538,18 @@ class TestToolboxUI(unittest.TestCase):
 
     def test_add_and_remove_tool_specification(self):
         """Tests that adding and removing a tool specification
-        to project works from a valid tool specification file."""
-        create_project(self.toolbox)
-        # Hack to use an actual project.json file, so that this actually tests something
-        self.toolbox.project().config_file = os.path.abspath(os.path.join(os.curdir, "tests", "test_resources",
-                                                                          "Project Directory", ".spinetoolbox",
-                                                                          "project.json"))
+        to project works from a valid tool specification file.
+        Uses an actual Spine Toolbox Project in order to actually
+        test something."""
+        project_dir = os.path.abspath(os.path.join(os.curdir, "tests", "test_resources", "Project Directory"))
+        if not os.path.exists(project_dir):
+            self.skipTest("Test project directory '{0}' does not exist".format(project_dir))
+            return
+        self.assertIsNone(self.toolbox.project())
+        with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project") as mock_save_project, mock.patch(
+            "spinetoolbox.project.create_dir"
+        ) as mock_create_dir, mock.patch("spinetoolbox.project_item.create_dir") as mock_create_dir:
+            self.toolbox.open_project(project_dir)
         self.assertEqual(0, self.toolbox.tool_specification_model.rowCount())  # Tool spec model is empty
         tool_spec_path = os.path.abspath(os.path.join(os.curdir, "tests", "test_resources", "test_tool_spec.json"))
         with mock.patch("spinetoolbox.ui_main.QFileDialog.getOpenFileName") as mock_filename:

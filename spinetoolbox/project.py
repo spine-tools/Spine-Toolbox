@@ -121,9 +121,7 @@ class SpineToolboxProject(MetaObject):
         project_dict["version"] = LATEST_PROJECT_VERSION
         project_dict["name"] = self.name
         project_dict["description"] = self.description
-        # Convert Tool definition paths to relative
-        relative_tool_def_paths = [os.path.relpath(p, self.project_dir) for p in tool_def_paths]
-        project_dict["tool_specifications"] = relative_tool_def_paths
+        project_dict["tool_specifications"] = tool_def_paths
         # Compute connections directly from Links on scene
         connections = list()
         for link in self._toolbox.ui.graphicsView.links():

@@ -240,37 +240,6 @@ class TestSpineToolboxProject(unittest.TestCase):
         tool_spec = self.toolbox.project().load_tool_specification_from_file(spec_path)
         self.assertIsInstance(tool_spec, PythonTool)
 
-    # def test_set_item_selected(self):
-    #     self.fail()
-
-    # def add_ds(self):
-    #     """Helper method to add Data Store. Returns created items name."""
-    #     item = dict(name="DS", description="", url=dict(), x=0, y=0)
-    #     with mock.patch("spinetoolbox.project_item.create_dir"):
-    #         self.toolbox.project().add_project_items("Data Stores", item)
-    #     return "DS"
-
-    # def add_dc(self):
-    #     """Helper method to add Data Connection. Returns created items name."""
-    #     item = dict(name="DC", description="", references=list(), x=0, y=0)
-    #     with mock.patch("spinetoolbox.project_item.create_dir"):
-    #         self.toolbox.project().add_project_items("Data Connections", item)
-    #     return "DC"
-
-    # def add_tool(self):
-    #     """Helper method to add Tool. Returns created items name."""
-    #     item = dict(name="tool", description="", tool="", execute_in_work=False, x=0, y=0)
-    #     with mock.patch("spinetoolbox.project_item.create_dir"):
-    #         self.toolbox.project().add_project_items("Tools", item)
-    #     return "tool"
-    #
-    # def add_view(self):
-    #     """Helper method to add View. Returns created items name."""
-    #     item = dict(name="view", description="", x=0, y=0)
-    #     with mock.patch("spinetoolbox.project_item.create_dir"):
-    #         self.toolbox.project().add_project_items("Views", item)
-    #     return "view"
-
 
 if __name__ == '__main__':
     unittest.main()

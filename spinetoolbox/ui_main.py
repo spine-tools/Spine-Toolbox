@@ -57,7 +57,7 @@ from .project import SpineToolboxProject
 from .config import SPINE_TOOLBOX_VERSION, STATUSBAR_SS, \
     TEXTBROWSER_SS, MAINWINDOW_SS, DOCUMENTATION_PATH, _program_root, LATEST_PROJECT_VERSION, DEFAULT_WORK_DIR
 from .helpers import get_datetime, erase_dir, busy_effect, set_taskbar_icon, \
-    supported_img_formats, create_dir, copy_dir
+    supported_img_formats, create_dir, copy_dir, serialize_path, deserialize_path
 from .project_item import RootProjectItem, CategoryProjectItem
 from .project_upgrader import ProjectUpgrader
 from .project_items import data_store, data_connection, exporter, tool, view, importer
@@ -344,7 +344,11 @@ class ToolboxUI(QMainWindow):
                     return False
                 # Copy (project item) data from old project to new project directory
                 old_project_dir = os.path.normpath(os.path.join(os.path.dirname(selection), selection[:-5]))
-                upgraded_proj_info = upgrader.upgrade(proj_info, old_project_dir)
+                if not os.path.isdir(old_project_dir):
+                    self.msg_error.emit("Upgrade Failed")
+                    self.msg_warning.emit("Project directory <b>{0}</b> does not exist")
+                    return False
+                upgraded_proj_info = upgrader.upgrade(proj_info, old_project_dir, proj_dir)
                 if not self.restore_project(upgraded_proj_info, proj_dir, clear_event_log):
                     return False
                 if not upgrader.copy_data(selection, proj_dir):
@@ -392,7 +396,7 @@ class ToolboxUI(QMainWindow):
         version = project_info["project"]["version"]
         # Upgrade project dictionary if needed
         if version < LATEST_PROJECT_VERSION:
-            project_info = ProjectUpgrader(self).upgrade(project_info, project_dir)
+            project_info = ProjectUpgrader(self).upgrade(project_info, project_dir, project_dir)
         # Make room for a new project
         self.clear_ui()
         # Parse project info
@@ -409,9 +413,9 @@ class ToolboxUI(QMainWindow):
             self.ui.textBrowser_eventlog.clear()
         self.ui.textBrowser_process_output.clear()
         # Init models
-        # Convert relative paths to absolute
-        abs_tool_spec_paths = [os.path.abspath(os.path.join(self._project.project_dir, p)) for p in tool_spec_paths]
-        self.init_models(abs_tool_spec_paths)
+        # Deserialize tool spec paths
+        deserialized_paths = [deserialize_path(spec, self._project.project_dir) for spec in tool_spec_paths]
+        self.init_models(deserialized_paths)
         # Populate project model with project items
         if not self._project.load(project_items):
             self.msg_error.emit("Loading project items failed")
@@ -446,7 +450,9 @@ class ToolboxUI(QMainWindow):
         tool_specifications = list()
         for i in range(self.tool_specification_model.rowCount()):
             tool_specifications.append(self.tool_specification_model.tool_specification(i).get_def_path())
-        if not self._project.save(tool_specifications):
+        # Serialize tool spec paths
+        serialized_tool_spec_paths = [serialize_path(spec, self._project.project_dir) for spec in tool_specifications]
+        if not self._project.save(serialized_tool_spec_paths):
             self.msg_error.emit("Project saving failed")
             return
         self.msg.emit("Project <b>{0}</b> saved".format(self._project.name))
@@ -713,7 +719,7 @@ class ToolboxUI(QMainWindow):
         # Insert tool specification into model
         self.tool_specification_model.insertRow(tool_specification)
         # Save Tool def file path to project file
-        conf_file = self._project.config_file  # Path to project file
+        conf_file = self._project.config_file  # Path to project.json file
         # Manipulate project file contents
         try:
             with open(conf_file, "r") as fh:
@@ -724,13 +730,12 @@ class ToolboxUI(QMainWindow):
         # Get project settings
         project_dict = dicts["project"]
         objects_dict = dicts["objects"]
-        try:
-            tools = project_dict["tool_specifications"]
-            if def_file not in tools:
-                tools.append(def_file)
-            project_dict["tool_specifications"] = tools
-        except KeyError:
-            project_dict["tool_specifications"] = [def_file]
+        tool_specs = project_dict["tool_specifications"]
+        deserialized_tool_specs = [deserialize_path(spec, self._project.project_dir) for spec in tool_specs]
+        if def_file not in deserialized_tool_specs:
+            deserialized_tool_specs.append(def_file)
+        serialized_tool_specs = [serialize_path(p, self._project.project_dir) for p in deserialized_tool_specs]
+        project_dict["tool_specifications"] = serialized_tool_specs
         # Save dictionaries back to project save file
         dicts["project"] = project_dict
         dicts["objects"] = objects_dict
@@ -809,14 +814,13 @@ class ToolboxUI(QMainWindow):
         answer = message_box.exec_()
         if answer != QMessageBox.Ok:
             return
-        # Remove tool def file path from the project file
+        # Remove tool def file path from the project.json file
         conf_file = self._project.config_file
-        # Read project data from project.json file
         try:
             with open(conf_file, "r") as fh:
                 dicts = json.load(fh)
         except OSError:
-            self.msg_error.emit("Loading file <b>{0}</b> failed".format(conf_file))
+            self.msg_error.emit("Opening file <b>{0}</b> failed".format(conf_file))
             return
         # Get project settings
         project_dict = dicts["project"]
@@ -826,9 +830,11 @@ class ToolboxUI(QMainWindow):
             return
         try:
             tool_spec_paths = project_dict["tool_specifications"]
-            tool_spec_paths.remove(tool_def_path)
-            # logging.debug("tools list after removal:{}".format(tools))
-            project_dict["tool_specifications"] = tool_spec_paths
+            # Deserialize paths, remove tool spec path, serialize paths again
+            des_paths = [deserialize_path(p, self._project.project_dir) for p in tool_spec_paths]
+            des_paths.remove(tool_def_path)
+            ser_paths = [serialize_path(pa, self._project.project_dir) for pa in des_paths]
+            project_dict["tool_specifications"] = ser_paths
         except KeyError:
             self.msg_error.emit(
                 "This is odd. tool_specifications list not found in project file <b>{0}</b>".format(conf_file)

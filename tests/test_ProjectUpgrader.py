@@ -17,7 +17,6 @@ Unit tests for ProjectUpgrader class.
 """
 
 import unittest
-from unittest import mock
 import logging
 import os
 import sys
@@ -77,8 +76,7 @@ class TestProjectUpgrader(unittest.TestCase):
     def test_upgrade(self):
         """Tests that reading an old project file (.proj) and
         upgrading it produces a valid project information dictionary."""
-        old_project_file = os.path.abspath(os.path.join(os.curdir, "tests", "test_resources",
-                                                           "unit_test_project.proj"))
+        old_project_file = os.path.abspath(os.path.join(os.curdir, "tests", "test_resources", "unit_test_project.proj"))
         pu = ProjectUpgrader(self.toolbox)
         old_project_dict = pu.open_proj_json(old_project_file)
         with TemporaryDirectory() as old_project_dir:
@@ -91,6 +89,6 @@ class TestProjectUpgrader(unittest.TestCase):
             create_dir(b_dir)
             create_dir(c_dir)
             create_dir(d_dir)
-            udgraded_project_dict = pu.upgrade(old_project_dict, old_project_dir)
+            udgraded_project_dict = pu.upgrade(old_project_dict, old_project_dir, "dummy_project_dir")
         retval = pu.is_valid(udgraded_project_dict)
         self.assertTrue(retval)
