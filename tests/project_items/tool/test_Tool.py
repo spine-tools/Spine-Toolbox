@@ -416,7 +416,7 @@ class TestToolExecution(unittest.TestCase):
                 for filepath in output_paths:
                     Path(filepath).touch()
                 # Emit signal as if the tool had failed
-                tool.instance.instance_finished_signal.emit(-1)
+                tool.instance.instance_finished.emit(-1)
 
             mock_execute_tool_instance.side_effect = mock_execute_tool_instance_side_effect
             self.assertFalse(tool.execute_forward(resources))
@@ -516,7 +516,7 @@ class TestToolExecution(unittest.TestCase):
                     os.makedirs(output_dirname, exist_ok=True)
                     Path(output_filepath).touch()
                 # Emit signal as if the tool had succeeded
-                tool.instance.instance_finished_signal.emit(0)
+                tool.instance.instance_finished.emit(0)
 
             mock_execute_tool_instance.side_effect = mock_execute_tool_instance_side_effect
             self.assertTrue(tool.execute_forward(resources))
