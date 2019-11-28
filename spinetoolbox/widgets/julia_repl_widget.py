@@ -376,8 +376,7 @@ class JuliaREPLWidget(SpineConsoleWidget):
 
     @Slot(dict)
     def _handle_status(self, msg):
-        """Handle status message. If we have a command in line
-        and the kernel reports status 'idle', execute that command.
+        """Handles status message.
         """
         super()._handle_status(msg)
         self.kernel_execution_state = msg['content'].get('execution_state', '')
@@ -388,7 +387,6 @@ class JuliaREPLWidget(SpineConsoleWidget):
                     "\tJulia REPL successfully started using kernel specification {}".format(self.kernel_name)
                 )
                 self._control.viewport().setCursor(self.normal_cursor)
-            else:
                 self.ready_to_execute.emit()
 
     @Slot("dict", name="_handle_error")

@@ -42,6 +42,7 @@ class ExecutionManager(QObject):
         Args:
             workdir (str): Work directory
         """
+        raise NotImplementedError()
 
     def stop_execution(self):
         """Stops the execution."""
@@ -63,22 +64,26 @@ class ConsoleExecutionManager(ExecutionManager):
         self._console = console
         self._commands = commands
         self._stopped = False
-        self._started = False
 
     def start_execution(self, workdir=None):
         """See base class."""
-        self._console.ready_to_execute.connect(self._execute_next_command)
+        self._console.ready_to_execute.connect(self._start_execution)
         self._console.execution_failed.connect(self.execution_finished)
         self._console.wake_up()
+
+    @Slot()
+    def _start_execution(self):
+        """Starts execution."""
+        self._toolbox.msg_warning.emit(f"\tExecution started. See <b>{self._console.name}</b> for messages.")
+        self._console.ready_to_execute.disconnect(self._start_execution)
+        self._console.ready_to_execute.connect(self._execute_next_command)
+        self._execute_next_command()
 
     @Slot()
     def _execute_next_command(self):
         """Executes next command in the buffer."""
         if self._stopped:
             return
-        if not self._started:
-            self._toolbox.msg_warning.emit(f"\tExecution started. See <b>{self._console.name}</b> for messages.")
-            self._started = True
         try:
             command = self._commands.pop(0)
             self._console.execute(command)
