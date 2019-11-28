@@ -56,7 +56,9 @@ class ManageItemsDialog(QDialog):
         self.model.dataChanged.connect(self._handle_model_data_changed)
         self.model.modelReset.connect(self._handle_model_reset)
 
-    def resize_window_to_columns(self):
+    def resize_window_to_columns(self, height=None):
+        if height is None:
+            height = self.sizeHint().height()
         margins = self.layout().contentsMargins()
         self.resize(
             margins.left()
@@ -64,7 +66,7 @@ class ManageItemsDialog(QDialog):
             + self.table_view.frameWidth() * 2
             + self.table_view.verticalHeader().width()
             + self.table_view.horizontalHeader().length(),
-            400,
+            height,
         )
 
     @Slot("QModelIndex", "QModelIndex", "QVector", name="_handle_model_data_changed")

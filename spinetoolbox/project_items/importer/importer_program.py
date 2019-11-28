@@ -47,7 +47,7 @@ def run(checked_files, all_settings, urls_downstream, logs_dir, cancel_on_error)
     for source in checked_files:
         settings = all_settings.get(source, None)
         if settings is None or not settings:
-            print("There are no mappings defined for {1}, moving on...".format(source))
+            print("There are no mappings defined for {0}, moving on...".format(source))
             continue
         source_type = settings["source_type"]
         connector = {"CSVConnector": CSVConnector, "ExcelConnector": ExcelConnector}[source_type]()
@@ -68,7 +68,7 @@ def run(checked_files, all_settings, urls_downstream, logs_dir, cancel_on_error)
         logfilepath = os.path.abspath(os.path.join(logs_dir, timestamp + "_error.log"))
         with open(logfilepath, 'w') as f:
             for err in all_errors:
-                f.write("{}\n".format(err))
+                f.write("{0}\n".format(err))
         # Make error log file anchor with path as tooltip
         logfile_anchor = (
             "<a style='color:#BB99FF;' title='" + logfilepath + "' href='file:///" + logfilepath + "'>error log</a>"
