@@ -48,6 +48,7 @@ class DataStore(ProjectItem):
         if isinstance(reference, dict) and "url" in reference:
             url = reference["url"]
         self._url = self.parse_url(url)
+        self._sa_url = None
         self.views = {}
         self._for_spine_model_checkbox_state = Qt.Unchecked
         # Make logs directory for this Data Store
@@ -120,9 +121,12 @@ class DataStore(ProjectItem):
         """Return the url attribute, for saving the project."""
         return self._url
 
+    def _update_sa_url(self, log_errors=True):
+        self._sa_url = self._make_url(log_errors=log_errors)
+
     @busy_effect
-    def make_url(self, log_errors=True):
-        """Return a sqlalchemy url from the current url attribute or None if not valid."""
+    def _make_url(self, log_errors=True):
+        """Returns a sqlalchemy url from the current url attribute or None if not valid."""
         if not self._url:
             if log_errors:
                 self._toolbox.msg_error.emit(
@@ -362,13 +366,13 @@ class DataStore(ProjectItem):
         Args:
             view (str): either "tree", "graph", or "tabular"
         """
-        db_url = self.make_url()
-        if not db_url:
+        self._update_sa_url()
+        if not self._sa_url:
             return
         form = self.views.get(view)
         if form:
             # If the db_url is the same, just raise the current form
-            if form.db_url == db_url:
+            if form.db_url == self._sa_url:
                 if form.windowState() & Qt.WindowMinimized:
                     # Remove minimized status and restore window with the previous state (maximized/normal state)
                     form.setWindowState(form.windowState() & ~Qt.WindowMinimized | Qt.WindowActive)
@@ -377,19 +381,18 @@ class DataStore(ProjectItem):
                     form.raise_()
                 return
             form.close()
-        self.do_open_view(view, db_url)
+        self.do_open_view(view)
 
     @busy_effect
-    def do_open_view(self, view, db_url):
-        """Opens the form given by view using given db_url.
+    def do_open_view(self, view):
+        """Opens the form given by view.
 
         Args:
             view (str): either "tree", "graph", or "tabular"
-            db_url (str)
         """
         make_form = {"tree": TreeViewForm, "graph": GraphViewForm, "tabular": TabularViewForm}[view]
         try:
-            form = make_form(self._project.db_mngr, (db_url, self.name))
+            form = make_form(self._project.db_mngr, (self._sa_url, self.name))
         except spinedb_api.SpineDBAPIError as e:
             self._toolbox.msg_error.emit(e.msg)
             return
@@ -410,36 +413,31 @@ class DataStore(ProjectItem):
     @Slot(bool, name="copy_url")
     def copy_url(self, checked=False):
         """Copy db url to clipboard."""
-        url = self.make_url()
-        if not url:
+        self._update_sa_url()
+        if not self._sa_url:
             return
-        url.password = None
-        QApplication.clipboard().setText(str(url))
-        self._toolbox.msg.emit("Database url <b>{0}</b> copied to clipboard".format(url))
+        self._sa_url.password = None
+        QApplication.clipboard().setText(str(self._sa_url))
+        self._toolbox.msg.emit("Database url <b>{0}</b> copied to clipboard".format(self._sa_url))
 
     @Slot(bool, name="create_new_spine_database")
     def create_new_spine_database(self, checked=False):
         """Create new (empty) Spine database."""
         for_spine_model = self._properties_ui.checkBox_for_spine_model.isChecked()
         # Try to make an url from the current status
-        url = self.make_url(log_errors=False)
-        if not url:
+        self._update_sa_url(log_errors=False)
+        if not self._sa_url:
             self._toolbox.msg_warning.emit(
                 "Unable to generate URL from <b>{0}</b> selections. Defaults will be used...".format(self.name)
             )
-            # Set default dialect and database *manually* (both in the UI and in the self._url attribute)
-            # so we don't emit `item_changed`
             dialect = "sqlite"
             database = os.path.join(self.data_dir, self.name + ".sqlite")
             self._properties_ui.comboBox_dialect.setCurrentText(dialect)
             self._properties_ui.lineEdit_database.setText(database)
             self._url["dialect"] = dialect
             self._url["database"] = database
-            # Try to make the url again --should work
-            url = self.make_url(log_errors=True)
-            if not url:
-                return
-        self._project.db_mngr.create_new_spine_database(url, for_spine_model)
+            self.item_changed.emit()
+        self._project.db_mngr.create_new_spine_database(self._sa_url, for_spine_model)
 
     def update_name_label(self):
         """Update Data Store tab name label. Used only when renaming project items."""
@@ -447,8 +445,8 @@ class DataStore(ProjectItem):
 
     def _do_handle_dag_changed(self, resources_upstream):
         """See base class."""
-        url = self.make_url(log_errors=False)
-        if not url:
+        self._update_sa_url(log_errors=False)
+        if not self._sa_url:
             self.add_notification(
                 "The URL for this Data Store is not correctly set. Set it in the Data Store Properties panel."
             )
@@ -539,11 +537,11 @@ class DataStore(ProjectItem):
 
     def output_resources_forward(self):
         """See base class."""
-        url = self.make_url(log_errors=False)
-        if url:
-            resource = ProjectItemResource(self, "database", url=str(url))
+        self._update_sa_url(log_errors=False)
+        if self._sa_url:
+            resource = ProjectItemResource(self, "database", url=str(self._sa_url))
             return [resource]
         self.add_notification(
-            "The URL for this Data Store is not correctly set. " "Set it in the Data Store Properties panel."
+            "The URL for this Data Store is not correctly set. Set it in the Data Store Properties panel."
         )
         return list()
