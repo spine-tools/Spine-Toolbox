@@ -51,7 +51,14 @@
                 "description": "",
                 "x": 38.0,
                 "y": 100.0,
-                "url": null
+                "url": {
+                    "dialect": null,
+                    "username": null,
+                    "password": null,
+                    "host": null,
+                    "port": null,
+                    "database": null
+                }
             }
         },
         "Data Connections": {

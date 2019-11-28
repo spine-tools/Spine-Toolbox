@@ -20,10 +20,9 @@ and project dicts from earlier versions to the latest version.
 import logging
 import os
 import json
-import sys
 from PySide2.QtWidgets import QFileDialog, QMessageBox
 from .config import LATEST_PROJECT_VERSION
-from .helpers import  create_dir, recursive_overwrite, serialize_path, serialize_url
+from .helpers import  create_dir, recursive_overwrite
 
 
 class ProjectUpgrader:
@@ -134,7 +133,7 @@ class ProjectUpgrader:
         new["version"] = 1
         new["name"] = old["project"]["name"]
         new["description"] = old["project"]["description"]
-        new["work_dir"] = old["project"]["work_dir"]  # TODO: Make work_dir global
+        new["work_dir"] = old["project"]["work_dir"]
         new["tool_specifications"] = old["project"]["tool_specifications"]
         try:
             new["tool_specifications"] = old["project"]["tool_specifications"]
@@ -143,11 +142,24 @@ class ProjectUpgrader:
                 new["tool_specifications"] = old["project"]["tool_templates"]
             except KeyError:
                 new["tool_specifications"] = list()
-        new["connections"] = old["project"]["connections"]
+
+        # Get all item names to a list from old project dict
+        item_names = list()
+        for category_name in old["objects"]:
+            if category_name not in self._toolbox.categories:
+                continue
+            for item_name, item_dict in old["objects"][category_name].items():
+                item_names.append(item_name)
+        print(item_names)
+        # Parse connections
         try:
-            new["connections"] = old["project"]["connections"]
+            old_connections = old["project"]["connections"]
         except KeyError:
             new["connections"] = list()
+        else:
+            # old connections maybe of two types, convert them to the newer format
+            new["connections"] = self.convert_connections(item_names, old_connections)
+
         new["scene_x"] = old["project"]["scene_x"]
         new["scene_y"] = old["project"]["scene_y"]
         new["scene_w"] = old["project"]["scene_w"]
@@ -156,7 +168,7 @@ class ProjectUpgrader:
         for category_name in old["objects"]:
             if category_name not in self._toolbox.categories:
                 self._toolbox.msg_error.emit(
-                    "Error in project file. Unknown object {}".format(category_name)
+                    "Upgrading project item's to category '{}' failed. Unknown category.".format(category_name)
                 )
                 continue
             item_class = self._toolbox.categories[category_name]["item_maker"]
@@ -164,6 +176,56 @@ class ProjectUpgrader:
                 new_item_dict = item_class.upgrade_from_no_version_to_version_1(item_name, item_dict, old_project_dir)
                 new_objects[category_name][item_name] = new_item_dict
         return dict(project=new, objects=new_objects)
+
+    def convert_connections(self, item_names, connections_old):
+        """Upgrades connections from old format to the new format.
+
+        - Old format. List of lists, e.g.
+
+        .. code-block::
+
+            [
+                [False, False, ["right", "left"], False],
+                [False, ["bottom", "left"], False, False],
+                ...
+            ]
+
+        - New format. List of dicts, e.g.
+
+        .. code-block::
+
+            [
+                {"from": ["DC1", "right"], "to": ["Tool1", "left"]},
+                ...
+            ]
+        """
+        if not connections_old:
+            return list()
+        if not isinstance(connections_old[0], list):
+            # Connections are already in new format. Return as-is
+            return connections_old
+        # Convert from old format to new format
+        connections = list()
+        for i, row in enumerate(connections_old):
+            for j, entry in enumerate(row):
+                if entry is False:
+                    continue
+                try:
+                    src_item = item_names[i]
+                    dst_item = item_names[j]
+                except IndexError:
+                    # Might happen when e.g. the project file contains project items
+                    # that couldn't be restored because the corresponding project item plugin wasn't found
+                    self._toolbox.msg_warning.emit("Restoring a connection failed")
+                    continue
+                try:
+                    src_anchor, dst_anchor = entry
+                except TypeError:
+                    # Happens when first loading a project that wasn't saved with the current version
+                    src_anchor = dst_anchor = "bottom"
+                entry_new = {"from": [src_item, src_anchor], "to": [dst_item, dst_anchor]}
+                connections.append(entry_new)
+        return connections
 
     def open_proj_json(self, proj_file_path):
         """Opens an old style project file (.proj) for reading,

@@ -490,10 +490,13 @@ class DataStore(ProjectItem):
         else:
             url = new_data_store["url"]
             url_path = url["database"]
-        serialized_url_path = serialize_path(url_path, old_project_dir)
-        if serialized_url_path["relative"]:
-            serialized_url_path["path"] = os.path.join(".spinetoolbox", "items", serialized_url_path["path"])
-        url["database"] = serialized_url_path
+        if not url_path:
+            url["database"] = None
+        else:
+            serialized_url_path = serialize_path(url_path, old_project_dir)
+            if serialized_url_path["relative"]:
+                serialized_url_path["path"] = os.path.join(".spinetoolbox", "items", serialized_url_path["path"])
+            url["database"] = serialized_url_path
         new_data_store["url"] = url
         return new_data_store
 
