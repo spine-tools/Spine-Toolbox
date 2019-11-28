@@ -82,13 +82,6 @@ class EmptyRowModel(MinimalTableModel):
                 self.insertRows(self.rowCount(), 1)
                 break
 
-    @Slot("QModelIndex", "int", "int")
-    def _handle_rows_removed(self, parent, first, last):
-        """Insert a new empty row in case it's been removed."""
-        last_row = self.rowCount()
-        if last_row in range(first, last + 1):
-            self.insertRows(self.rowCount(), 1)
-
     def removeRows(self, row, count, parent=QModelIndex()):
         """Don't remove the last empty row."""
         if row + count == self.rowCount():
