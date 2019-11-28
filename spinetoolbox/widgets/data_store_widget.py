@@ -34,6 +34,7 @@ from .custom_delegates import (
     RelationshipClassNameDelegate,
     ObjectNameListDelegate,
 )
+from .object_name_list_editor import ObjectNameListEditor
 from .add_db_items_dialogs import (
     AddObjectClassesDialog,
     AddObjectsDialog,
@@ -395,7 +396,36 @@ class DataStoreForm(QMainWindow):
             lambda index, value, table_view=table_view: self.show_parameter_value_editor(index, table_view, value=value)
         )
         self._setup_delegate(table_view, h("parameter_name"), RelationshipParameterNameDelegate)
-        self._setup_delegate(table_view, h("object_name_list"), ObjectNameListDelegate)
+        delegate = self._setup_delegate(table_view, h("object_name_list"), ObjectNameListDelegate)
+        delegate.object_name_list_editor_requested.connect(self.show_object_name_list_editor)
+
+    @Slot("QModelIndex", int, "QVariant")
+    def show_object_name_list_editor(self, index, rel_cls_id, db_map):
+        """Shows the object names list editor.
+
+        Args:
+            index (QModelIndex)
+            rel_cls_id (int)
+            db_map (DiffDatabaseMapping)
+        """
+        relationship_class = self.db_mngr.get_item(db_map, "relationship class", rel_cls_id)
+        object_class_id_list = relationship_class.get("object_class_id_list")
+        object_class_names = []
+        object_names_lists = []
+        for id_ in object_class_id_list.split(","):
+            id_ = int(id_)
+            object_class_name = self.db_mngr.get_item(db_map, "object class", id_).get("name")
+            object_names_list = [x["name"] for x in self.db_mngr.get_objects(db_map, class_id=id_)]
+            object_class_names.append(object_class_name)
+            object_names_lists.append(object_names_list)
+        object_name_list = index.data(Qt.EditRole)
+        try:
+            current_object_names = object_name_list.split(",")
+        except AttributeError:
+            # Gibberish
+            current_object_names = []
+        editor = ObjectNameListEditor(self, index, object_class_names, object_names_lists, current_object_names)
+        editor.show()
 
     @staticmethod
     def _db_map_items(indexes):

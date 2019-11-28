@@ -24,7 +24,6 @@ from PySide2.QtCore import (
     Signal,
     QItemSelectionModel,
     QSortFilterProxyModel,
-    QTimer,
     QEvent,
     QCoreApplication,
     QModelIndex,
@@ -53,9 +52,6 @@ from ..helpers import IconListManager, interpret_icon_id, make_icon_id
 
 class CustomLineEditor(QLineEdit):
     """A custom QLineEdit to handle data from models.
-
-    Attributes:
-        parent (QWidget): the widget that wants to edit the data
     """
 
     def set_data(self, data):
@@ -68,19 +64,16 @@ class CustomLineEditor(QLineEdit):
         return self.text()
 
     def keyPressEvent(self, event):
-        """Don't allow shift key to clear the contents."""
+        """Prevents shift key press to clear the contents."""
         if event.key() != Qt.Key_Shift:
             super().keyPressEvent(event)
 
 
 class CustomComboEditor(QComboBox):
     """A custom QComboBox to handle data from models.
-
-    Attributes:
-        parent (QWidget): the widget that wants to edit the data
     """
 
-    data_committed = Signal(name="data_committed")
+    data_committed = Signal()
 
     def set_data(self, current_text, items):
         self.addItems(items)
@@ -97,16 +90,9 @@ class CustomComboEditor(QComboBox):
 
 class CustomLineEditDelegate(QItemDelegate):
     """A delegate for placing a CustomLineEditor on the first row of SearchBarEditor.
-
-    Attributes:
-        parent (SearchBarEditor): search bar editor
     """
 
-    text_edited = Signal("QString", name="text_edited")
-
-    def __init__(self, parent):
-        """Init class."""
-        super().__init__(parent)
+    text_edited = Signal("QString")
 
     def setModelData(self, editor, model, index):
         model.setData(index, editor.data())
@@ -138,18 +124,19 @@ class CustomLineEditDelegate(QItemDelegate):
 
 class SearchBarEditor(QTableView):
     """A Google-like search bar, implemented as a QTableView with a CustomLineEditDelegate in the first row.
-
-    Attributes:
-        parent (QWidget): the parent for this widget
-        elder_sibling (QWidget or NoneType): another widget which is used to find this widget's position.
     """
 
-    data_committed = Signal(name="data_committed")
+    data_committed = Signal()
 
-    def __init__(self, parent, elder_sibling=None):
-        """Initialize class."""
+    def __init__(self, parent, tutor=None):
+        """Initializes instance.
+
+        Args:
+            parent (QWidget): parent widget
+            tutor (QWidget, NoneType): another widget used for positioning.
+        """
         super().__init__(parent)
-        self._elder_sibling = elder_sibling
+        self._tutor = tutor
         self._base_size = None
         self._original_text = None
         self._orig_pos = None
@@ -168,11 +155,16 @@ class SearchBarEditor(QTableView):
         delegate.text_edited.connect(self._handle_delegate_text_edited)
         self.setItemDelegateForRow(0, delegate)
 
-    def set_data(self, current, all_data):
-        """Populate model and initialize first index."""
+    def set_data(self, current, items):
+        """Populates model.
+
+        Args:
+            current (str)
+            items (Sequence(str))
+        """
         item_list = [QStandardItem(current)]
-        for name in all_data:
-            qitem = QStandardItem(name)
+        for item in items:
+            qitem = QStandardItem(item)
             item_list.append(qitem)
             qitem.setFlags(~Qt.ItemIsEditable)
         self.model.invisibleRootItem().appendRows(item_list)
@@ -182,18 +174,16 @@ class SearchBarEditor(QTableView):
         self._base_size = size
 
     def update_geometry(self):
-        """Update geometry. Resize the widget to optimal size, then adjust its position.
+        """Updates geometry.
         """
         self.horizontalHeader().setDefaultSectionSize(self._base_size.width())
         self.verticalHeader().setDefaultSectionSize(self._base_size.height())
         self._orig_pos = self.pos()
-        if self._elder_sibling:
-            self._orig_pos += self._elder_sibling.mapTo(self.parent(), self._elder_sibling.parent().pos())
+        if self._tutor:
+            self._orig_pos += self._tutor.mapTo(self.parent(), self._tutor.parent().pos())
         self.refit()
 
     def refit(self):
-        """Resize to optimal size.
-        """
         self.move(self._orig_pos)
         table_height = self.verticalHeader().length()
         size = QSize(self._base_size.width(), table_height + 2).boundedTo(self.parent().size())
@@ -209,23 +199,23 @@ class SearchBarEditor(QTableView):
         data = self.first_index.data(Qt.EditRole)
         return data
 
-    @Slot("QString", name="_handle_delegate_text_edited")
+    @Slot("QString")
     def _handle_delegate_text_edited(self, text):
-        """Filter model as the first row is being edited."""
+        """Filters model as the first row is being edited."""
         self._original_text = text
         self.proxy_model.setFilterRegExp("^" + text)
         self.proxy_model.setData(self.first_index, text)
         self.refit()
 
     def _proxy_model_filter_accepts_row(self, source_row, source_parent):
-        """Overridden method to always accept first row.
+        """Always accept first row.
         """
         if source_row == 0:
             return True
         return QSortFilterProxyModel.filterAcceptsRow(self.proxy_model, source_row, source_parent)
 
     def keyPressEvent(self, event):
-        """Set data from current index into first index as the user navigates
+        """Sets data from current index into first index as the user navigates
         through the table using the up and down keys.
         """
         super().keyPressEvent(event)
@@ -247,7 +237,7 @@ class SearchBarEditor(QTableView):
         self.edit_first_index()
 
     def edit_first_index(self):
-        """Edit first index if valid and not already being edited.
+        """Edits first index if valid and not already being edited.
         """
         if not self.first_index.isValid():
             return
@@ -256,7 +246,7 @@ class SearchBarEditor(QTableView):
         self.edit(self.first_index)
 
     def mouseMoveEvent(self, event):
-        """Make hovered index the current index."""
+        """Sets the current index to the one hovered by the mouse."""
         if not self.currentIndex().isValid():
             return
         index = self.indexAt(event.pos())
@@ -265,7 +255,7 @@ class SearchBarEditor(QTableView):
         self.setCurrentIndex(index)
 
     def mousePressEvent(self, event):
-        """Commit data."""
+        """Commits data."""
         index = self.indexAt(event.pos())
         if index.row() == 0:
             return
@@ -273,117 +263,13 @@ class SearchBarEditor(QTableView):
         self.data_committed.emit()
 
 
-class SearchBarDelegate(QItemDelegate):
-    """A custom delegate to place a SearchBarEditor on each cell of a MultiSearchBarEditor.
-
-    Attributes:
-        parent (MultiSearchBarEditor): multi search bar editor
-    """
-
-    data_committed = Signal("QModelIndex", "QVariant", name="data_committed")
-
-    def __init__(self, parent):
-        super().__init__(parent)
-
-    def setModelData(self, editor, model, index):
-        model.setData(index, editor.data())
-
-    def createEditor(self, parent, option, index):
-        editor = SearchBarEditor(parent)
-        editor.set_data(index.data(), self.parent().alls[index.column()])
-        model = index.model()
-        editor.data_committed.connect(lambda e=editor, i=index, m=model: self.close_editor(e, i, m))
-        return editor
-
-    def updateEditorGeometry(self, editor, option, index):
-        super().updateEditorGeometry(editor, option, index)
-        size = option.rect.size()
-        editor.set_base_size(size)
-        editor.update_geometry()
-
-    def close_editor(self, editor, index, model):
-        self.closeEditor.emit(editor)
-        self.setModelData(editor, model, index)
-
-    def eventFilter(self, editor, event):
-        if event.type() == QEvent.FocusOut:
-            super().eventFilter(editor, event)
-            return QCoreApplication.sendEvent(self.parent(), event)
-        return super().eventFilter(editor, event)
-
-
-class MultiSearchBarEditor(QTableView):
-    """A table view made of several Google-like search bars."""
-
-    def __init__(self, parent, elder_sibling=None):
-        """Initialize class."""
-        super().__init__(parent)
-        self._elder_sibling = elder_sibling
-        self.alls = None
-        self._max_item_count = None
-        self._base_size = None
-        self.model = QStandardItemModel(self)
-        self.setModel(self.model)
-        delegate = SearchBarDelegate(self)
-        self.setItemDelegate(delegate)
-        self.verticalHeader().hide()
-        self.horizontalHeader().setStretchLastSection(True)
-
-    def set_data(self, header, currents, alls):
-        self.model.setHorizontalHeaderLabels(header)
-        self.alls = alls
-        self._max_item_count = max(len(x) for x in alls)
-        item_list = []
-        for k in range(len(header)):
-            try:
-                current = currents[k]
-            except IndexError:
-                current = None
-            qitem = QStandardItem(current)
-            item_list.append(qitem)
-        self.model.invisibleRootItem().appendRow(item_list)
-        QTimer.singleShot(0, self.start_editing)
-
-    def data(self):
-        return ",".join(self.model.index(0, j).data() for j in range(self.model.columnCount()))
-
-    def set_base_size(self, size):
-        self._base_size = size
-
-    def update_geometry(self):
-        """Update geometry.
-        """
-        self.horizontalHeader().setDefaultSectionSize(self._base_size.width() / self.model.columnCount())
-        self.horizontalHeader().setMaximumHeight(self._base_size.height())
-        self.verticalHeader().setDefaultSectionSize(self._base_size.height())
-        size = QSize(self._base_size.width(), self._base_size.height() * (self._max_item_count + 2) + 2).boundedTo(
-            self.parent().size()
-        )
-        self.resize(size)
-        if self._elder_sibling:
-            self.move(self.pos() + self._elder_sibling.mapTo(self.parent(), self._elder_sibling.parent().pos()))
-        # Adjust position if widget is outside parent's limits
-        bottom_right = self.mapToGlobal(self.rect().bottomRight())
-        parent_bottom_right = self.parent().mapToGlobal(self.parent().rect().bottomRight())
-        x_offset = max(0, bottom_right.x() - parent_bottom_right.x())
-        y_offset = max(0, bottom_right.y() - parent_bottom_right.y())
-        self.move(self.pos() - QPoint(x_offset, y_offset))
-
-    def start_editing(self):
-        """Start editing first item.
-        """
-        index = self.model.index(0, 0)
-        self.setCurrentIndex(index)
-        self.edit(index)
-
-
 class CheckListEditor(QTableView):
     """A check list editor."""
 
-    def __init__(self, parent, elder_sibling=None):
+    def __init__(self, parent, tutor=None):
         """Initialize class."""
         super().__init__(parent)
-        self._elder_sibling = elder_sibling
+        self._tutor = tutor
         self._base_size = None
         self.model = QStandardItemModel(self)
         self.setModel(self.model)
@@ -393,13 +279,18 @@ class CheckListEditor(QTableView):
         self.setMouseTracking(True)
 
     def keyPressEvent(self, event):
-        """Toggle checked state."""
+        """Toggles checked state if the user presses space."""
         super().keyPressEvent(event)
         if event.key() == Qt.Key_Space:
             index = self.currentIndex()
             self.toggle_checked_state(index)
 
     def toggle_checked_state(self, index):
+        """Toggles checked state of given index.
+
+        Args:
+            index (QModelIndex)
+        """
         item = self.model.itemFromIndex(index)
         if item.checkState() == Qt.Checked:
             item.setCheckState(Qt.Unchecked)
@@ -407,20 +298,25 @@ class CheckListEditor(QTableView):
             item.setCheckState(Qt.Checked)
 
     def mouseMoveEvent(self, event):
-        """Highlight current row."""
+        """Sets the current index to the one under mouse."""
         index = self.indexAt(event.pos())
         self.setCurrentIndex(index)
 
     def mousePressEvent(self, event):
-        """Toggle checked state."""
+        """Toggles checked state of pressed index."""
         index = self.indexAt(event.pos())
         self.toggle_checked_state(index)
 
-    def set_data(self, item_names, current_item_names):
-        """Set data and update geometry."""
-        for name in item_names:
-            qitem = QStandardItem(name)
-            if name in current_item_names:
+    def set_data(self, items, checked_items):
+        """Sets data and updates geometry.
+
+        Args:
+            items (Sequence(str)): All items.
+            checked_items (Sequence(str)): Initially checked items.
+        """
+        for item in items:
+            qitem = QStandardItem(item)
+            if item in checked_items:
                 qitem.setCheckState(Qt.Checked)
             else:
                 qitem.setCheckState(Qt.Unchecked)
@@ -430,6 +326,11 @@ class CheckListEditor(QTableView):
         self.selectionModel().select(self.model.index(0, 0), QItemSelectionModel.Select)
 
     def data(self):
+        """Returns a comma separated list of checked items.
+
+        Returns
+            str
+        """
         data = []
         for q in self.model.findItems('*', Qt.MatchWildcard):
             if q.checkState() == Qt.Checked:
@@ -440,15 +341,15 @@ class CheckListEditor(QTableView):
         self._base_size = size
 
     def update_geometry(self):
-        """Update geometry.
+        """Updates geometry.
         """
         self.horizontalHeader().setDefaultSectionSize(self._base_size.width())
         self.verticalHeader().setDefaultSectionSize(self._base_size.height())
         total_height = self.verticalHeader().length() + 2
         size = QSize(self._base_size.width(), total_height).boundedTo(self.parent().size())
         self.resize(size)
-        if self._elder_sibling:
-            self.move(self.pos() + self._elder_sibling.mapTo(self.parent(), self._elder_sibling.parent().pos()))
+        if self._tutor:
+            self.move(self.pos() + self._tutor.mapTo(self.parent(), self._tutor.parent().pos()))
         # Adjust position if widget is outside parent's limits
         bottom_right = self.mapToGlobal(self.rect().bottomRight())
         parent_bottom_right = self.parent().mapToGlobal(self.parent().rect().bottomRight())
@@ -461,7 +362,7 @@ class IconPainterDelegate(QItemDelegate):
     """A delegate to highlight decorations in a QListWidget."""
 
     def paint(self, painter, option, index):
-        """Highlight selected items."""
+        """Paints selected items using the highlight brush."""
         if option.state & QStyle.State_Selected:
             painter.fillRect(option.rect, qApp.palette().highlight())  # pylint: disable=undefined-variable
         super().paint(painter, option, index)

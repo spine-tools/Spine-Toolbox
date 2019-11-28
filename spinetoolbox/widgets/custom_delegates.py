@@ -32,7 +32,6 @@ from .custom_editors import (
     CustomComboEditor,
     CustomLineEditor,
     SearchBarEditor,
-    MultiSearchBarEditor,
     CheckListEditor,
     NumberParameterInlineEditor,
 )
@@ -220,7 +219,7 @@ class ParameterDelegate(QItemDelegate):
 
     def updateEditorGeometry(self, editor, option, index):
         super().updateEditorGeometry(editor, option, index)
-        if isinstance(editor, (SearchBarEditor, CheckListEditor, MultiSearchBarEditor)):
+        if isinstance(editor, (SearchBarEditor, CheckListEditor)):
             size = option.rect.size()
             if index.data(Qt.DecorationRole):
                 size.setWidth(size.width() - 22)  # FIXME
@@ -257,7 +256,7 @@ class DatabaseNameDelegate(ParameterDelegate):
 class ParameterValueOrDefaultValueDelegate(ParameterDelegate):
     """A delegate for the either the value or the default value."""
 
-    parameter_value_editor_requested = Signal("QModelIndex", "QVariant", name="parameter_value_editor_requested")
+    parameter_value_editor_requested = Signal("QModelIndex", "QVariant")
 
     def setModelData(self, editor, model, index):
         """Emits the data_committed signal with new data."""
@@ -485,6 +484,8 @@ class ObjectNameDelegate(GetObjectClassIdMixin, ParameterDelegate):
 class ObjectNameListDelegate(GetRelationshipClassIdMixin, ParameterDelegate):
     """A delegate for the object name list."""
 
+    object_name_list_editor_requested = Signal("QModelIndex", int, "QVariant")
+
     def createEditor(self, parent, option, index):
         """Returns editor."""
         db_map = self._get_db_map(index)
@@ -495,23 +496,7 @@ class ObjectNameListDelegate(GetRelationshipClassIdMixin, ParameterDelegate):
             editor = CustomLineEditor(parent)
             editor.set_data(index.data(Qt.EditRole))
             return editor
-        editor = MultiSearchBarEditor(self.parent(), parent)
-        relationship_class = self.db_mngr.get_item(db_map, "relationship class", relationship_class_id)
-        object_class_id_list = relationship_class.get("object_class_id_list")
-        object_class_names = []
-        object_names_per_class = []
-        for id_ in object_class_id_list.split(","):
-            id_ = int(id_)
-            object_class_names.append(self.db_mngr.get_item(db_map, "object class", id_).get("name"))
-            object_names_per_class.append([x["name"] for x in self.db_mngr.get_objects(db_map, class_id=id_)])
-        object_name_list = index.data(Qt.EditRole)
-        try:
-            current_object_names = object_name_list.split(",")
-        except AttributeError:
-            # Gibberish
-            current_object_names = []
-        editor.set_data(object_class_names, current_object_names, object_names_per_class)
-        return editor
+        self.object_name_list_editor_requested.emit(index, relationship_class_id, db_map)
 
 
 class ManageItemsDelegate(QItemDelegate):
