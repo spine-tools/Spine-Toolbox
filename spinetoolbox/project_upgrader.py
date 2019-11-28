@@ -150,7 +150,6 @@ class ProjectUpgrader:
                 continue
             for item_name, item_dict in old["objects"][category_name].items():
                 item_names.append(item_name)
-        print(item_names)
         # Parse connections
         try:
             old_connections = old["project"]["connections"]
