@@ -13,7 +13,7 @@
 # Form implementation generated from reading ui file 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\ui\project_form.ui',
 # licensing of 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\ui\project_form.ui' applies.
 #
-# Created: Tue Nov 26 18:12:29 2019
+# Created: Fri Nov 29 13:06:56 2019
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -55,6 +55,22 @@ class Ui_Form(object):
         self.textEdit_description.setAcceptRichText(False)
         self.textEdit_description.setObjectName("textEdit_description")
         self.verticalLayout.addWidget(self.textEdit_description)
+        self.label = QtWidgets.QLabel(Form)
+        font = QtGui.QFont()
+        font.setPointSize(7)
+        font.setItalic(True)
+        self.label.setFont(font)
+        self.label.setAlignment(QtCore.Qt.AlignCenter)
+        self.label.setObjectName("label")
+        self.verticalLayout.addWidget(self.label)
+        self.label_2 = QtWidgets.QLabel(Form)
+        font = QtGui.QFont()
+        font.setPointSize(7)
+        font.setItalic(True)
+        self.label_2.setFont(font)
+        self.label_2.setAlignment(QtCore.Qt.AlignCenter)
+        self.label_2.setObjectName("label_2")
+        self.verticalLayout.addWidget(self.label_2)
         self.horizontalLayout = QtWidgets.QHBoxLayout()
         self.horizontalLayout.setSpacing(0)
         self.horizontalLayout.setContentsMargins(-1, 6, -1, 6)
@@ -77,11 +93,11 @@ class Ui_Form(object):
 
         self.retranslateUi(Form)
         QtCore.QMetaObject.connectSlotsByName(Form)
-        Form.setTabOrder(self.lineEdit_project_dir, self.toolButton_select_project_dir)
         Form.setTabOrder(self.toolButton_select_project_dir, self.lineEdit_project_name)
         Form.setTabOrder(self.lineEdit_project_name, self.textEdit_description)
         Form.setTabOrder(self.textEdit_description, self.pushButton_ok)
         Form.setTabOrder(self.pushButton_ok, self.pushButton_cancel)
+        Form.setTabOrder(self.pushButton_cancel, self.lineEdit_project_dir)
 
     def retranslateUi(self, Form):
         Form.setWindowTitle(QtWidgets.QApplication.translate("Form", "New Project", None, -1))
@@ -92,6 +108,8 @@ class Ui_Form(object):
         self.lineEdit_project_name.setPlaceholderText(QtWidgets.QApplication.translate("Form", "Type project name here...", None, -1))
         self.textEdit_description.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Project description (Optional)</p></body></html>", None, -1))
         self.textEdit_description.setPlaceholderText(QtWidgets.QApplication.translate("Form", "Type project description here...", None, -1))
+        self.label.setText(QtWidgets.QApplication.translate("Form", "1. Select project directory", None, -1))
+        self.label_2.setText(QtWidgets.QApplication.translate("Form", "2. Type project name and description (optional)", None, -1))
         self.pushButton_ok.setText(QtWidgets.QApplication.translate("Form", "Ok", None, -1))
         self.pushButton_cancel.setText(QtWidgets.QApplication.translate("Form", "Cancel", None, -1))
 

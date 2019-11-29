@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <!--
 ######################################################################################################################
 # Copyright (C) 2017 - 2019 Spine project consortium
@@ -114,6 +114,38 @@
     </widget>
    </item>
    <item>
+    <widget class="QLabel" name="label">
+     <property name="font">
+      <font>
+       <pointsize>7</pointsize>
+       <italic>true</italic>
+      </font>
+     </property>
+     <property name="text">
+      <string>1. Select project directory</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignCenter</set>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QLabel" name="label_2">
+     <property name="font">
+      <font>
+       <pointsize>7</pointsize>
+       <italic>true</italic>
+      </font>
+     </property>
+     <property name="text">
+      <string>2. Type project name and description (optional)</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignCenter</set>
+     </property>
+    </widget>
+   </item>
+   <item>
     <layout class="QHBoxLayout" name="horizontalLayout">
      <property name="spacing">
       <number>0</number>
@@ -188,12 +220,12 @@
   </layout>
  </widget>
  <tabstops>
-  <tabstop>lineEdit_project_dir</tabstop>
   <tabstop>toolButton_select_project_dir</tabstop>
   <tabstop>lineEdit_project_name</tabstop>
   <tabstop>textEdit_description</tabstop>
   <tabstop>pushButton_ok</tabstop>
   <tabstop>pushButton_cancel</tabstop>
+  <tabstop>lineEdit_project_dir</tabstop>
  </tabstops>
  <resources>
   <include location="resources/resources_icons.qrc"/>

@@ -44,7 +44,6 @@ class NewProjectForm(QWidget):
         self.description = ""  # Project description
         self.connect_signals()
         self.ui.pushButton_ok.setDefault(True)
-        self.ui.lineEdit_project_name.setFocus()
         # Ensure this window gets garbage-collected when closed
         self.setAttribute(Qt.WA_DeleteOnClose)
 
@@ -73,6 +72,11 @@ class NewProjectForm(QWidget):
             QMessageBox.warning(self, "Invalid selection", msg)
             return
         self.ui.lineEdit_project_dir.setText(answer)
+        # Set a suggested name for the project
+        _, suggested_name = os.path.split(answer)
+        self.ui.lineEdit_project_name.setText(suggested_name)
+        self.ui.lineEdit_project_name.selectAll()
+        self.ui.lineEdit_project_name.setFocus()
 
     @Slot(name="ok_clicked")
     def ok_clicked(self):

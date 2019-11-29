@@ -13,7 +13,7 @@
 # Form implementation generated from reading ui file 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\ui\open_project_dialog.ui',
 # licensing of 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\ui\open_project_dialog.ui' applies.
 #
-# Created: Tue Nov 26 18:12:23 2019
+# Created: Fri Nov 29 13:06:53 2019
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -97,6 +97,6 @@ class Ui_Dialog(object):
         self.toolButton_documents.setToolTip(QtWidgets.QApplication.translate("Dialog", "<html><head/><body><p>Documents</p></body></html>", None, -1))
         self.toolButton_desktop.setToolTip(QtWidgets.QApplication.translate("Dialog", "<html><head/><body><p>Desktop</p></body></html>", None, -1))
         self.lineEdit_current_path.setPlaceholderText(QtWidgets.QApplication.translate("Dialog", "Selected path", None, -1))
-        self.label.setText(QtWidgets.QApplication.translate("Dialog", "Choose a .proj file or a Project Directory", None, -1))
+        self.label.setText(QtWidgets.QApplication.translate("Dialog", "Select a .proj file or a project directory", None, -1))
 
 from spinetoolbox import resources_icons_rc
