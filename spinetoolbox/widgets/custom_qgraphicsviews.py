@@ -20,7 +20,7 @@ import logging
 import math
 from PySide2.QtWidgets import QGraphicsView
 from PySide2.QtGui import QCursor
-from PySide2.QtCore import Signal, Slot, Qt, QRectF, QTimeLine, QMarginsF
+from PySide2.QtCore import Signal, Slot, Qt, QRectF, QTimeLine, QMarginsF, QSettings
 from ..graphics_items import LinkDrawer, Link
 from .custom_qlistview import DragListView
 from .custom_qgraphicsscene import CustomQGraphicsScene
@@ -43,6 +43,7 @@ class CustomQGraphicsView(QGraphicsView):
         self._scene_fitting_zoom = 1.0
         self._max_zoom = 10.0
         self._min_zoom = 0.1
+        self._qsettings = QSettings("SpineProject", "Spine Toolbox")
 
     def keyPressEvent(self, event):
         """Overridden method. Enable zooming with plus and minus keys (comma resets zoom).
@@ -101,9 +102,7 @@ class CustomQGraphicsView(QGraphicsView):
             event.ignore()
             return
         event.accept()
-        ui = self.parent().parent()
-        qsettings = ui.qsettings()
-        smooth_zoom = qsettings.value("appSettings/smoothZoom", defaultValue="false")
+        smooth_zoom = self._qsettings.value("appSettings/smoothZoom", defaultValue="false")
         if smooth_zoom == "true":
             num_degrees = event.delta() / 8
             num_steps = num_degrees / 15
