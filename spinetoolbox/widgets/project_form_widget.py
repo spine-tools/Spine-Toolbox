@@ -18,8 +18,8 @@ Widget shown to user when a new project is created.
 
 import os
 from PySide2.QtWidgets import QWidget, QFileDialog, QMessageBox
-from PySide2.QtCore import Slot, Qt
-from ..config import INVALID_CHARS
+from PySide2.QtCore import Slot, Qt, QStandardPaths
+from ..config import INVALID_CHARS, APPLICATION_PATH
 
 
 class NewProjectForm(QWidget):
@@ -58,8 +58,11 @@ class NewProjectForm(QWidget):
     def select_project_dir(self, checked=False):
         """Opens a file browser, where user can select a directory for the new project."""
         # noinspection PyCallByClass, PyArgumentList
+        start_dir = QStandardPaths.writableLocation(QStandardPaths.DocumentsLocation)
+        if not start_dir:
+            start_dir = APPLICATION_PATH
         answer = QFileDialog.getExistingDirectory(
-            self, "Select a project directory", os.path.abspath("C:\\")
+            self, "Select a project directory", start_dir
         )
         if not answer:  # Canceled (american-english), cancelled (british-english)
             return
