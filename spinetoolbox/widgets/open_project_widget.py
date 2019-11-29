@@ -17,7 +17,6 @@ Contains a class for a widget that presents a 'Select Project Directory' dialog.
 """
 
 import logging
-import os
 from PySide2.QtWidgets import QDialog, QFileSystemModel, QAbstractItemView, QAction
 from PySide2.QtCore import Qt, Slot, QDir, QStandardPaths, QTimer, QModelIndex
 from PySide2.QtGui import QKeySequence
@@ -164,13 +163,14 @@ class OpenProjectDialog(QDialog):
         self.ui.treeView_file_system.setCurrentIndex(desktop_index)
         QTimer.singleShot(150, self.scroll_to_shortcut)
 
-    def closeEvent(self, event):
+    def closeEvent(self, event=None):
         """Handles dialog closing.
 
         Args:
             event (QCloseEvent): Close event
         """
-        self.close()
+        if event:
+            event.accept()
 
 
 class CustomQFileSystemModel(QFileSystemModel):
