@@ -21,8 +21,7 @@ import locale
 import logging
 import json
 import numpy as np
-from PySide2.QtCore import QByteArray, QMimeData, Qt, Signal, Slot, QSettings, QUrl, SIGNAL
-from PySide2.QtGui import QCursor
+from PySide2.QtCore import QByteArray, QMimeData, Qt, Signal, Slot, QSettings, QUrl, SIGNAL, QStandardPaths
 from PySide2.QtWidgets import (
     QMainWindow,
     QApplication,
@@ -32,7 +31,7 @@ from PySide2.QtWidgets import (
     QDockWidget,
     QAction,
 )
-from PySide2.QtGui import QDesktopServices, QGuiApplication, QKeySequence, QStandardItemModel, QIcon
+from PySide2.QtGui import QDesktopServices, QGuiApplication, QKeySequence, QStandardItemModel, QIcon, QCursor
 from .graphics_items import ProjectItemIcon
 from .mvcmodels.project_item_model import ProjectItemModel
 from .mvcmodels.tool_specification_model import ToolSpecificationModel
@@ -285,15 +284,51 @@ class ToolboxUI(QMainWindow):
             self.msg_error.emit("Cannot open previous project. Directory <b>{0}</b> may have been moved."
                                 .format(previous_project))
             return
-        if not self.open_project(previous_project, clear_event_log=False):
-            self.msg_error.emit("Opening previous project failed")
-        return
+        self.open_project(previous_project, clear_event_log=False)
 
-    @Slot(name="new_project")
+    @Slot()
     def new_project(self):
-        """Shows new project form."""
-        self.project_form = NewProjectForm(self)
-        self.project_form.show()
+        """Opens a file dialog where user can select a directory where a project is created.
+        Pops up a question box if selected directory is not empty or if it already contains
+        a Spine Toolbox project. Initial project name is the directory name.
+        """
+        initial_path = QStandardPaths.writableLocation(QStandardPaths.DocumentsLocation)  # Documents
+        if not initial_path:
+            initial_path = _program_root
+        # noinspection PyCallByClass
+        project_dir = QFileDialog.getExistingDirectory(self, "Select directory for a new project", initial_path)
+        if not project_dir:
+            return
+        if not os.path.isdir(project_dir):  # Just to be sure, probably not needed
+            self.msg_error.emit("Selection is not a directory, please try again")
+            return
+        # Check if directory is empty and/or a project directory
+        is_project_dir = os.path.isdir(os.path.join(project_dir, ".spinetoolbox"))
+        empty = False if len(os.listdir(project_dir)) > 0 else True
+        if not empty:
+            if is_project_dir:
+                msg1 = "Directory <b>{0}</b> already contains a Spine Toolbox project.<br/><br/>" \
+                       "Would you like to overwrite the existing project?".format(project_dir)
+                box1 = QMessageBox(
+                    QMessageBox.Question, "Overwrite?", msg1, buttons=QMessageBox.Ok | QMessageBox.Cancel, parent=self
+                )
+                box1.button(QMessageBox.Ok).setText("Overwrite")
+                answer1 = box1.exec_()
+                if answer1 != QMessageBox.Ok:
+                    return
+            else:
+                msg2 = "Directory <b>{0}</b> is not empty.<br/><br/>" \
+                       "Would you like to make this directory into a Spine Toolbox project?".format(project_dir)
+                box2 = QMessageBox(
+                    QMessageBox.Question, "Not empty", msg2,
+                        buttons=QMessageBox.Ok | QMessageBox.Cancel, parent=self
+                )
+                box2.button(QMessageBox.Ok).setText("Go ahead")
+                answer2 = box2.exec_()
+                if answer2 != QMessageBox.Ok:
+                    return
+        _, project_name = os.path.split(project_dir)
+        self.create_project(project_name, "", project_dir)
 
     def create_project(self, name, description, location):
         """Creates new project and sets it active.
@@ -310,7 +345,7 @@ class ToolboxUI(QMainWindow):
         self.setWindowTitle("Spine Toolbox    -- {} --".format(self._project.name))
         self.ui.graphicsView.init_scene(empty=True)
         self.update_recent_projects()
-        self.msg.emit("New project created")
+        # self.msg.emit("New project created")
         self.save_project()
 
     @Slot(name="open_project")
@@ -361,8 +396,7 @@ class ToolboxUI(QMainWindow):
             load_dir = selection
         load_path = os.path.abspath(os.path.join(load_dir, ".spinetoolbox", "project.json"))
         if not os.path.isfile(load_path):
-            self.msg_error.emit("<b>{0}</b> is not a valid Spine Toolbox project directory."
-                                "<br/>File <b>{1}</b> not found.".format(load_dir, load_path))
+            self.msg_error.emit("Opening project failed. File <b>{0}</b> not found.".format(load_path))
             return False
         try:
             with open(load_path, "r") as fh:
@@ -465,7 +499,8 @@ class ToolboxUI(QMainWindow):
             return
         # Ask for a new directory
         # noinspection PyCallByClass, PyArgumentList
-        answer = QFileDialog.getExistingDirectory(self, "Select new directory (Save as...)", os.path.abspath("C:\\"))
+        answer = QFileDialog.getExistingDirectory(self, "Select new directory (Save as...)",
+                                                  os.path.abspath(self._project.project_dir, os.path.pardir))
         if not answer:  # Canceled
             return
         if not os.path.isdir(answer):
