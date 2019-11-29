@@ -303,30 +303,8 @@ class ToolboxUI(QMainWindow):
             self.msg_error.emit("Selection is not a directory, please try again")
             return
         # Check if directory is empty and/or a project directory
-        is_project_dir = os.path.isdir(os.path.join(project_dir, ".spinetoolbox"))
-        empty = False if len(os.listdir(project_dir)) > 0 else True
-        if not empty:
-            if is_project_dir:
-                msg1 = "Directory <b>{0}</b> already contains a Spine Toolbox project.<br/><br/>" \
-                       "Would you like to overwrite the existing project?".format(project_dir)
-                box1 = QMessageBox(
-                    QMessageBox.Question, "Overwrite?", msg1, buttons=QMessageBox.Ok | QMessageBox.Cancel, parent=self
-                )
-                box1.button(QMessageBox.Ok).setText("Overwrite")
-                answer1 = box1.exec_()
-                if answer1 != QMessageBox.Ok:
-                    return
-            else:
-                msg2 = "Directory <b>{0}</b> is not empty.<br/><br/>" \
-                       "Would you like to make this directory into a Spine Toolbox project?".format(project_dir)
-                box2 = QMessageBox(
-                    QMessageBox.Question, "Not empty", msg2,
-                        buttons=QMessageBox.Ok | QMessageBox.Cancel, parent=self
-                )
-                box2.button(QMessageBox.Ok).setText("Go ahead")
-                answer2 = box2.exec_()
-                if answer2 != QMessageBox.Ok:
-                    return
+        if not self.overwrite_check(project_dir):
+            return
         _, project_name = os.path.split(project_dir)
         self.create_project(project_name, "", project_dir)
 
@@ -664,6 +642,46 @@ class ToolboxUI(QMainWindow):
         self.ui.textBrowser_eventlog.clear()
         self.ui.textBrowser_process_output.clear()
         self.ui.graphicsView.scene().clear()  # Clear all items from scene
+
+    def overwrite_check(self, project_dir):
+        """Checks if given directory is a project directory and/or empty
+        And asks the user what to do in that case.
+
+        Args:
+            project_dir (str): Abs. path to a directory
+
+        Returns:
+            bool: True if user wants to overwrite an existing project or
+            if the directory is not empty and the user wants to make it
+            into a Spine Toolbox project directory anyway. False if user
+            cancels the action.
+        """
+        # Check if directory is empty and/or a project directory
+        is_project_dir = os.path.isdir(os.path.join(project_dir, ".spinetoolbox"))
+        empty = False if len(os.listdir(project_dir)) > 0 else True
+        if not empty:
+            if is_project_dir:
+                msg1 = "Directory <b>{0}</b> already contains a Spine Toolbox project.<br/><br/>" \
+                       "Would you like to overwrite the existing project?".format(project_dir)
+                box1 = QMessageBox(
+                    QMessageBox.Question, "Overwrite?", msg1, buttons=QMessageBox.Ok | QMessageBox.Cancel, parent=self
+                )
+                box1.button(QMessageBox.Ok).setText("Overwrite")
+                answer1 = box1.exec_()
+                if answer1 != QMessageBox.Ok:
+                    return False
+            else:
+                msg2 = "Directory <b>{0}</b> is not empty.<br/><br/>" \
+                       "Would you like to make this directory into a Spine Toolbox project?".format(project_dir)
+                box2 = QMessageBox(
+                    QMessageBox.Question, "Not empty", msg2,
+                        buttons=QMessageBox.Ok | QMessageBox.Cancel, parent=self
+                )
+                box2.button(QMessageBox.Ok).setText("Go ahead")
+                answer2 = box2.exec_()
+                if answer2 != QMessageBox.Ok:
+                    return False
+        return True
 
     @Slot("QItemSelection", "QItemSelection", name="item_selection_changed")
     def item_selection_changed(self, selected, deselected):
