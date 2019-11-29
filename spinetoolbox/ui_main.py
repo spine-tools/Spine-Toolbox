@@ -497,10 +497,15 @@ class ToolboxUI(QMainWindow):
         if not self._project:
             self.msg.emit("Please open or create a project first")
             return
+        self.msg.emit("Not Implemented. Please try again later.")
+        return
         # Ask for a new directory
         # noinspection PyCallByClass, PyArgumentList
-        answer = QFileDialog.getExistingDirectory(self, "Select new directory (Save as...)",
-                                                  os.path.abspath(self._project.project_dir, os.path.pardir))
+        answer = QFileDialog.getExistingDirectory(
+                self,
+                "Select new directory (Save as...)",
+                os.path.abspath(os.path.join(self._project.project_dir, os.path.pardir))
+        )
         if not answer:  # Canceled
             return
         if not os.path.isdir(answer):
@@ -509,12 +514,14 @@ class ToolboxUI(QMainWindow):
             QMessageBox.warning(self, "Invalid selection", msg)
             return
         # Abort if selected directory is not empty. #TODO: Enable overwriting an existing project
+        # if not self.overwrite_check(answer):
+        #     return
         if len(os.listdir(answer)) > 0:
             self.msg_error.emit("Selected directory is not empty. Please select another one.")
             return
         self.msg.emit("Saving project to directory {0}".format(answer))
         # Hack time. Remove the directory so that copy_dir works
-        erase_dir(answer)
+        # erase_dir(answer)  # TODO: This is probably a bit dangerous!
         if not copy_dir(self, self._project.project_dir, answer):
             self.msg_error.emit("Copying project data to directory {0} failed.".format(answer))
             return
