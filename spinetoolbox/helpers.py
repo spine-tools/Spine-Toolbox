@@ -303,8 +303,8 @@ def recursive_overwrite(widget, src, dst, ignore=None, silent=True):
     Args:
         widget (QWidget): Enables e.g. printing to Event Log
         src (str): Source directory
+        dst (str): Destination directory
         ignore: Ignored files
-        dst (str) Destination directory
         silent (bool): If False, messages are sent to Event Log, If True, copying is done in silence
     """
     if os.path.isdir(src):

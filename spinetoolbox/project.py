@@ -184,7 +184,7 @@ class SpineToolboxProject(MetaObject):
             jsonfile (str): Path of the tool specification definition file
 
         Returns:
-            ToolInstance or None if reading the file failed
+            ToolSpecification or None if reading the file failed
         """
         try:
             with open(jsonfile, "r") as fp:
@@ -210,7 +210,7 @@ class SpineToolboxProject(MetaObject):
             path (str): Directory where main program file is located
 
         Returns:
-            ToolInstance: Instance of a Tool subclass or None if something went wrong
+            ToolSpecification or None if something went wrong
         """
         try:
             _tooltype = definition["tooltype"].lower()
