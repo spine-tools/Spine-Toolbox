@@ -26,6 +26,7 @@ from PySide2.QtGui import QKeySequence
 from ..mvcmodels.table_model import TableModel
 from ..mvcmodels.auto_filter_menu_model import AutoFilterMenuValueItemModel, AutoFilterMenuAllItemModel
 from ..widgets.custom_qlistview import AutoFilterMenuView
+from ..helpers import busy_effect
 
 
 class CopyPasteTableView(QTableView):
@@ -53,6 +54,7 @@ class CopyPasteTableView(QTableView):
         indexes = [ind for ind in selection.indexes() if ind.flags() & Qt.ItemIsEditable]
         return self.model().batch_set_data(indexes, [None for _ in indexes])
 
+    @busy_effect
     def copy(self):
         """Copy current selection to clipboard in excel format."""
         selection = self.selectionModel().selection()
@@ -89,6 +91,7 @@ class CopyPasteTableView(QTableView):
     def canPaste(self):  # pylint: disable=no-self-use
         return True
 
+    @busy_effect
     def paste(self):
         """Paste data from clipboard."""
         selection = self.selectionModel().selection()
@@ -110,7 +113,8 @@ class CopyPasteTableView(QTableView):
             reader = csv.reader(input_stream, delimiter='\t')
             rows = list()
             for row in reader:
-                rows.append([locale.delocalize(element) for element in row])
+                rows.append([element for element in row])
+                # rows.append([locale.delocalize(element) for element in row])
             return rows
 
     def paste_on_selection(self):
