@@ -1,4 +1,5 @@
 import sys
+import locale
 from PySide2.QtWidgets import QApplication
 from spinetoolbox.spine_db_manager import SpineDBManager
 from spinetoolbox.widgets.tree_view_widget import TreeViewForm
@@ -15,11 +16,12 @@ def main(argv):
         return 0
     if not spinedb_api_version_check():
         return 0
-    app = QApplication(argv)
     try:
         path = argv[1]
     except IndexError:
         return 0
+    app = QApplication(argv)
+    locale.setlocale(locale.LC_NUMERIC, 'C')
     url = f"sqlite:///{path}"
     db_mngr = SpineDBManager()
     tree = TreeViewForm(db_mngr, (url, "main"))

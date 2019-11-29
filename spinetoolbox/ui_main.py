@@ -79,7 +79,7 @@ class ToolboxUI(QMainWindow):
         super().__init__(flags=Qt.Window)
         self._qsettings = QSettings("SpineProject", "Spine Toolbox")
         # Set number formatting to use user's default settings
-        locale.setlocale(locale.LC_NUMERIC, '')
+        locale.setlocale(locale.LC_NUMERIC, 'C')
         # Setup the user interface from Qt Designer files
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)

@@ -113,8 +113,7 @@ class CopyPasteTableView(QTableView):
             reader = csv.reader(input_stream, delimiter='\t')
             rows = list()
             for row in reader:
-                rows.append([element for element in row])
-                # rows.append([locale.delocalize(element) for element in row])
+                rows.append([locale.delocalize(element) for element in row])
             return rows
 
     def paste_on_selection(self):
