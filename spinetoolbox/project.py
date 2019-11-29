@@ -51,7 +51,6 @@ class SpineToolboxProject(MetaObject):
         self._n_graphs = 0
         self._executed_graph_index = 0
         self._invalid_graphs = list()
-        self.dirty = False  # TODO: Indicates if project has changed since loading
         self.project_dir = None  # Full path to project directory
         self.config_dir = None  # Full path to .spinetoolbox directory
         self.items_dir = None  # Full path to items directory
