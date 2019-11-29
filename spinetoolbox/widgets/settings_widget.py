@@ -402,8 +402,8 @@ class SettingsWidget(QWidget):
         Args:
             new_work_dir (str): Possibly a new work directory
         """
-        if not self.orig_work_dir == new_work_dir:
-            if new_work_dir == "":  # Happens when clearing the work dir line edit
+        if self.orig_work_dir != new_work_dir:
+            if not new_work_dir:  # Happens when clearing the work dir line edit
                 # This is here because I don't want to see this message every time app is started
                 self._toolbox.msg.emit("Work directory is now <b>{0}</b>".format(DEFAULT_WORK_DIR))
             self._toolbox.set_work_directory(new_work_dir)
