@@ -100,7 +100,7 @@ class TestParameterValueEditor(unittest.TestCase):
         self._check_parent_model_updated_when_closed(time_series)
 
     def test_editor_sets_variable_resolution_time_series_in_parent_model(self):
-        indexes = np.array([np.datetime64("2019-07-03T12:22:00.000000"), np.datetime64("2019-07-03T12:23:00.000000")])
+        indexes = np.array([np.datetime64("2019-07-03T12:22:00"), np.datetime64("2019-07-03T12:23:00")])
         values = np.array([23.0, 5.0])
         time_series = TimeSeriesVariableResolution(indexes, values, True, False)
         self._check_parent_model_updated_when_closed(time_series)
