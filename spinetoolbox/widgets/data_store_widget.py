@@ -16,8 +16,8 @@ Contains the DataStoreForm class, parent class of TreeViewForm and GraphViewForm
 :date:   26.11.2018
 """
 
-from PySide2.QtWidgets import QMainWindow, QHeaderView, QMessageBox, QErrorMessage
-from PySide2.QtCore import Qt, Signal, Slot, QTimer, QSettings
+from PySide2.QtWidgets import QMainWindow, QHeaderView, QErrorMessage
+from PySide2.QtCore import Qt, Signal, Slot, QSettings
 from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QIcon
 from ..config import MAINWINDOW_SS
 from .custom_delegates import (
@@ -104,7 +104,6 @@ class DataStoreForm(QMainWindow):
         self.addToolBar(Qt.TopToolBarArea, self.parameter_tag_toolbar)
         # Models
         self.object_tree_model = ObjectTreeModel(self, self.db_mngr, *self.db_maps)
-        self.ui.treeView_object.setModel(self.object_tree_model)
         self.object_parameter_value_model = CompoundObjectParameterValueModel(self, self.db_mngr, *self.db_maps)
         self.relationship_parameter_value_model = CompoundRelationshipParameterValueModel(
             self, self.db_mngr, *self.db_maps
@@ -117,6 +116,7 @@ class DataStoreForm(QMainWindow):
         )
         self.parameter_value_list_model = ParameterValueListModel(self, self.db_mngr, *self.db_maps)
         # Setup views
+        self.ui.treeView_object.setModel(self.object_tree_model)
         self.ui.tableView_object_parameter_value.setModel(self.object_parameter_value_model)
         self.ui.tableView_relationship_parameter_value.setModel(self.relationship_parameter_value_model)
         self.ui.tableView_object_parameter_definition.setModel(self.object_parameter_definition_model)
@@ -280,17 +280,6 @@ class DataStoreForm(QMainWindow):
         db_names = ", ".join([x.codename for x in db_maps])
         msg = f"All changes in {db_names} rolled back successfully."
         self.msg.emit(msg)
-
-    def receive_session_closed(self, db_maps):
-        db_maps = set(self.db_maps) & set(db_maps)
-        if db_maps:
-            db_names = ", ".join([x.codename for x in db_maps])
-            QMessageBox.critical(
-                self,
-                "Connection closed",
-                f"The connection to {db_names} has been closed by an external action. This form will now close.",
-            )
-            QTimer.singleShot(0, self.close)
 
     @Slot("bool", name="refresh_session")
     def refresh_session(self, checked=False):

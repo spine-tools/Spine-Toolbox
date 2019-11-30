@@ -46,7 +46,6 @@ class SpineDBManager(QObject):
     """
 
     msg_error = Signal("QVariant")
-    session_closed = Signal(set)
     session_committed = Signal(set)
     session_rolled_back = Signal(set)
     # Added
@@ -104,6 +103,10 @@ class SpineDBManager(QObject):
         return set(self._db_maps.values())
 
     def create_new_spine_database(self, url, for_spine_model=False):
+        if url in self._db_maps:
+            message = f"The url <b>{url}</b> is being viewed. Please close all windows viewing this url and try again."
+            QMessageBox.critical(self.parent()._toolbox, "Error", message)
+            return
         try:
             if not is_empty(url):
                 msg = QMessageBox(self.parent()._toolbox)
@@ -116,7 +119,6 @@ class SpineDBManager(QObject):
                 ret = msg.exec_()  # Show message box
                 if ret != QMessageBox.AcceptRole:
                     return
-            self.close_session(url)
             self.do_create_new_spine_database(url, for_spine_model)
             self.parent()._toolbox.msg_success.emit("New Spine db successfully created at '{0}'.".format(url))
         except SpineDBAPIError as e:
@@ -127,15 +129,16 @@ class SpineDBManager(QObject):
         """Creates a new spine database at the given url."""
         create_new_spine_database(url, for_spine_model=for_spine_model)
 
-    def close_session(self, url, silent=False):
-        """Closes a connection to given database mapping."""
+    def close_session(self, url):
+        """Pops any db map on the given url and closes its connection.
+
+        Args:
+            url (str)
+        """
         db_map = self._db_maps.pop(url, None)
         if db_map is None:
             return
         db_map.connection.close()
-        if silent:
-            return
-        self.session_closed.emit({db_map})
 
     def close_all_sessions(self):
         """Closes connections to all database mappings."""
@@ -205,7 +208,7 @@ class SpineDBManager(QObject):
         if not listeners:
             if not self.ok_to_close(db_map):
                 return False
-            self.close_session(db_map.db_url, silent=True)
+            self.close_session(db_map.db_url)
         self.signaller.remove_db_map_listener(db_map, listener)
         return True
 

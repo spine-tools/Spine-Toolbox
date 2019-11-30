@@ -19,8 +19,8 @@ Contains TabularViewForm class and some related constants.
 import json
 import operator
 from collections import namedtuple
-from PySide2.QtWidgets import QListWidget, QMainWindow, QMessageBox, QPushButton, QTableView
-from PySide2.QtCore import QItemSelection, Qt, QTimer, QSettings, Slot
+from PySide2.QtWidgets import QListWidget, QMainWindow, QPushButton, QTableView
+from PySide2.QtCore import QItemSelection, Qt, QSettings, Slot
 from PySide2.QtGui import QDropEvent, QIcon, QGuiApplication
 from sqlalchemy.sql import literal_column
 from spinedb_api import from_database, DateTime, Duration, ParameterValueFormatError, TimePattern, TimeSeries
@@ -59,7 +59,7 @@ class TabularViewForm(QMainWindow):
         """
         Args:
             db_mngr (SpineDBManager): The manager to use
-            db_url (str): The url to view
+            db_url (tuple(str,str)): The url and the codename
         """
         from ..ui.tabular_view_form import Ui_MainWindow
 
@@ -1034,14 +1034,3 @@ class TabularViewForm(QMainWindow):
         self.update_class_list()
         self.ui.list_select_class.blockSignals(False)
         self.select_data()
-
-    def receive_session_closed(self, db_maps):
-        """Reacts to session closed event."""
-        if self.db_map in db_maps:
-            QMessageBox.critical(
-                self,
-                "Connection closed",
-                f"The connection to {self.db_map.codename} has been closed by an external action."
-                f" This form will now close.",
-            )
-            QTimer.singleShot(0, self.close)
