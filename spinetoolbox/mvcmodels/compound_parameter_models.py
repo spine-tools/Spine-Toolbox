@@ -441,7 +441,8 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
             for entity_class_id, ids in entity_ids_per_class_id.items():
                 model = self._single_model_type(self, self.header, self.db_mngr, db_map, entity_class_id, lazy=False)
                 model.reset_model(ids)
-                self._handle_single_model_reset(model)
+                single_row_map = super()._row_map_for_model(model)  # NOTE: super() prevents filtering
+                self._insert_single_row_map(single_row_map)
                 new_models.append(model)
         pos = len(self.single_models)
         self.sub_models[pos:pos] = new_models
