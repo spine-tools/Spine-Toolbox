@@ -233,7 +233,7 @@ class SpineDBManager(QObject):
 
     @staticmethod
     def _get_commit_msg(db_map):
-        dialog = CommitDialog(db_map.codename)
+        dialog = CommitDialog(qApp.activeWindow(), db_map.codename)
         answer = dialog.exec_()
         if answer == QDialog.Accepted:
             return dialog.commit_msg
@@ -287,7 +287,7 @@ class SpineDBManager(QObject):
             return self._rollback_db_map_session(db_map)
         if commit_at_exit == 1:  # Default
             # Show message box
-            msg = QMessageBox()
+            msg = QMessageBox(qApp.activeWindow())
             msg.setIcon(QMessageBox.Question)
             msg.setWindowTitle("Commit Pending Changes")
             msg.setText("The current session has uncommitted changes. Do you want to commit them now?")

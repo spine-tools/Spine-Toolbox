@@ -189,6 +189,6 @@ class ParameterValueEditor(QDialog):
             message (str, optional)
         """
         if message is not None:
-            QMessageBox.warning(self, "Warning", message)
+            QMessageBox.warning(self.parent(), "Warning", message)
         self._ui.parameter_type_selector.setCurrentIndex(_Editor.PLAIN_VALUE.value)
         self._ui.editor_stack.setCurrentIndex(_Editor.PLAIN_VALUE.value)

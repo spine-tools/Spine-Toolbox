@@ -174,9 +174,9 @@ class CommitDialog(QDialog):
         db_names (Iterable): database names
     """
 
-    def __init__(self, *db_names):
+    def __init__(self, parent, *db_names):
         """Initialize class"""
-        super().__init__()
+        super().__init__(parent)
         self.setWindowModality(Qt.ApplicationModal)
         self.commit_msg = None
         self.setWindowTitle('Commit changes to {}'.format(",".join(db_names)))
