@@ -104,7 +104,6 @@ class TimeSeriesModelVariableResolution(IndexedValueTableModel):
                 first_time_stamp = old_indexes[0]
                 if len(old_indexes) > 1:
                     time_step = old_indexes[1] - first_time_stamp
-                    print(time_step)
                 else:
                     time_step = np.timedelta64(1, 'h')
                 for i in range(count):
