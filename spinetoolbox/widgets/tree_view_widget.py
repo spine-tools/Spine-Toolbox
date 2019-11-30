@@ -581,8 +581,8 @@ class TreeViewForm(DataStoreForm):
         item = index.internalPointer()
         relationship_class_key = item.display_id
         try:
-            object_name = item._parent.display_name
-            object_class_name = item._parent._parent.display_name
+            object_name = item.parent_item.display_name
+            object_class_name = item.parent_item.parent_item.display_name
         except AttributeError:
             object_name = object_class_name = None
         self.show_add_relationships_form(
