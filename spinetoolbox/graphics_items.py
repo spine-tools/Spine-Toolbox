@@ -153,7 +153,6 @@ class ExclamationIcon(QGraphicsSvgItem):
         self.setScale(0.2 * rect_w / dim_max)
         self.setGraphicsEffect(self.colorizer)
         self._notification_list_item = NotificationListItem()
-        self._notification_list_item.setZValue(2)
         self.setAcceptHoverEvents(True)
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=False)
         self.hide()
@@ -201,6 +200,7 @@ class NotificationListItem(QGraphicsTextItem):
         self.bg.setBrush(bg_brush)
         self.bg.setFlag(QGraphicsItem.ItemStacksBehindParent)
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=False)
+        self.setZValue(2)
 
     def setHtml(self, html):
         super().setHtml(html)
@@ -348,7 +348,6 @@ class ProjectItemIcon(QGraphicsRectItem):
 
     def set_name_attributes(self):
         """Set name QGraphicsSimpleTextItem attributes (font, size, position, etc.)"""
-        self.name_item.setZValue(3)
         # Set font size and style
         font = self.name_item.font()
         font.setPointSize(self.text_font_size)
@@ -573,12 +572,23 @@ class LinkBase(QGraphicsPathItem):
         Returns:
             QPainterPath
         """
-        curved_links |= self.dst_connector == self.src_connector
+        try:
+            feedback = self.dst_connector.parentItem() == self.src_connector.parentItem()
+        except AttributeError:
+            feedback = False
+        curved_links |= feedback
         path = QPainterPath(self.src_center)
         if not curved_links:
             path.lineTo(self.dst_center)
             return path
-        c_factor = 8 * self.magic_number
+        c_min = 2 * self.magic_number
+        c_max = 8 * self.magic_number
+        if not feedback:
+            c_factor = QLineF(self.src_center, self.dst_center).length() / 2
+            c_factor = min(c_factor, c_max)
+            c_factor = max(c_factor, c_min)
+        else:
+            c_factor = c_max
         c1 = self.src_center + c_factor * self._get_src_offset()
         c2 = self.dst_center + c_factor * self._get_dst_offset(c1)
         path.cubicTo(c1, c2, self.dst_center)
@@ -697,10 +707,10 @@ class LinkBase(QGraphicsPathItem):
         arrow_path.closeSubpath()
         return arrow_path
 
-    @staticmethod
-    def _get_joint_line(guide_path):
-        src = guide_path.pointAtPercent(0.99)
-        dst = guide_path.pointAtPercent(1.0)
+    def _get_joint_line(self, guide_path):
+        t = 1.0 - guide_path.percentAtLength(self.src_rect.width() / 2)
+        src = guide_path.pointAtPercent(t - 0.01)
+        dst = guide_path.pointAtPercent(t)
         return QLineF(src, dst)
 
     def _get_joint_angle(self, guide_path):
@@ -722,7 +732,6 @@ class Link(LinkBase):
         self.dst_connector = dst_connector
         self.src_icon = src_connector._parent
         self.dst_icon = dst_connector._parent
-        self.setZValue(1)
         # Path parameters
         self.magic_number = 0.625 * self.src_rect.width()
         self.setToolTip(
@@ -854,7 +863,6 @@ class LinkDrawer(LinkBase):
         self.drawing = False
         self.setBrush(QBrush(QColor(255, 0, 255, 204)))
         self.setPen(QPen(Qt.black, 0.5))
-        self.setZValue(2)
         self.hide()
 
     def start_drawing_at(self, src_connector):
