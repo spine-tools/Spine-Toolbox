@@ -24,6 +24,7 @@ import time
 import spinedb_api
 from spinetoolbox.spine_io.importers.csv_reader import CSVConnector
 from spinetoolbox.spine_io.importers.excel_reader import ExcelConnector
+from spinetoolbox.spine_io.type_conversion import value_to_convert_spec
 
 
 def _create_log_file_timestamp():
@@ -53,12 +54,27 @@ def run(checked_files, all_settings, urls_downstream, logs_dir, cancel_on_error)
         connector = {"CSVConnector": CSVConnector, "ExcelConnector": ExcelConnector}[source_type]()
         connector.connect_to_source(source)
         table_mappings = {
-            name: mapping for name, mapping in settings["table_mappings"].items() if name in settings["selected_tables"]
+            name: mapping
+            for name, mapping in settings.get("table_mappings", {}).items()
+            if name in settings["selected_tables"]
         }
         table_options = {
-            name: options for name, options in settings["table_options"].items() if name in settings["selected_tables"]
+            name: options
+            for name, options in settings.get("table_options", {}).items()
+            if name in settings["selected_tables"]
         }
-        data, errors = connector.get_mapped_data(table_mappings, table_options, max_rows=-1)
+
+        table_types = {
+            tn: {int(col): value_to_convert_spec(spec) for col, spec in cols.items()}
+            for tn, cols in settings.get("table_types", {}).items()
+        }
+        table_row_types = {
+            tn: {int(col): value_to_convert_spec(spec) for col, spec in cols.items()}
+            for tn, cols in settings.get("table_row_types", {}).items()
+        }
+        data, errors = connector.get_mapped_data(
+            table_mappings, table_options, table_types, table_row_types, max_rows=-1
+        )
         print("Read {0} data from {1} with {2} errors".format(sum(len(d) for d in data.values()), source, len(errors)))
         all_data.append(data)
         all_errors.extend(errors)

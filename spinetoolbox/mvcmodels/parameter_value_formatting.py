@@ -40,7 +40,7 @@ def format_for_DisplayRole(value_in_database):
     if isinstance(value, DateTime):
         return str(value.value)
     if isinstance(value, Duration):
-        return ", ".join(relativedelta_to_duration(delta) for delta in value.value)
+        return value.to_text()
     if isinstance(value, TimePattern):
         return "Time pattern"
     if isinstance(value, list):

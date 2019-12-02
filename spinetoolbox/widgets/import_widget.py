@@ -134,9 +134,11 @@ class ImportDialog(QDialog):
 
     @busy_effect
     def import_data(self, data, errors):
-        del errors  # Unused parameter
+        errors = [f"{table_name}: {error_message}" for table_name, error_message in errors]
         try:
             import_num, import_errors = spinedb_api.import_data(self._db_map, **data)
+            import_errors = [f"{e.db_type}: {e.msg}" for e in import_errors]
+            errors.extend(import_errors)
         except spinedb_api.SpineIntegrityError as err:
             self._db_map.rollback_session()
             self._error_widget.set_import_state(0, [err.msg])
@@ -145,12 +147,11 @@ class ImportDialog(QDialog):
             self._db_map.rollback_session()
             self._error_widget.set_import_state(0, ["Unable to import Data: %s", err.msg])
             self.set_error_widget_as_main_widget()
-        else:
-            if import_errors:
-                self._error_widget.set_import_state(import_num, [f"{e.db_type}: {e.msg}" for e in import_errors])
-                self.set_error_widget_as_main_widget()
-                return False
-            return True
+        if errors:
+            self._error_widget.set_import_state(import_num, errors)
+            self.set_error_widget_as_main_widget()
+            return False
+        return True
 
     def data_ready(self, data, errors):
         if self.import_data(data, errors):

@@ -56,6 +56,19 @@ class Importer(ProjectItem):
         # Variables for saving selections when item is (de)activated
         if mappings is None:
             mappings = dict()
+        else:
+            # convert table_types and table_row_types keys to int since json always has strings as keys.
+            for table_settings in mappings.values():
+                table_types = table_settings.get("table_types", {})
+                table_settings["table_types"] = {
+                    table_name: {int(col): t for col, t in col_types.items()}
+                    for table_name, col_types in table_types.items()
+                }
+                table_row_types = table_settings.get("table_row_types", {})
+                table_settings["table_row_types"] = {
+                    table_name: {int(row): t for row, t in row_types.items()}
+                    for table_name, row_types in table_row_types.items()
+                }
         self.settings = mappings
         self.cancel_on_error = cancel_on_error
         self.file_model = QStandardItemModel()

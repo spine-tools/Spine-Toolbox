@@ -48,7 +48,7 @@ class Ui_ImportPreview(object):
         self.table_page.setObjectName("table_page")
         self.verticalLayout_2 = QtWidgets.QVBoxLayout(self.table_page)
         self.verticalLayout_2.setObjectName("verticalLayout_2")
-        self.source_data_table = QtWidgets.QTableView(self.table_page)
+        self.source_data_table = TableViewWithButtonHeader(self.table_page)
         self.source_data_table.setObjectName("source_data_table")
         self.verticalLayout_2.addWidget(self.source_data_table)
         self.source_preview_widget_stack.addWidget(self.table_page)
@@ -82,3 +82,4 @@ class Ui_ImportPreview(object):
         self.waiting_label.setText(QtWidgets.QApplication.translate("ImportPreview", "Loading preview...", None, -1))
         self.mappings_box.setTitle(QtWidgets.QApplication.translate("ImportPreview", "Mappings", None, -1))
 
+from spinetoolbox.spine_io.io_models import TableViewWithButtonHeader

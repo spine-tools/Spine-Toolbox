@@ -149,6 +149,7 @@ class MappingOptionsWidget(QWidget):
         self._ui.parameter_type_combo_box.currentTextChanged.connect(self.change_parameter)
         self._ui.import_objects_check_box.stateChanged.connect(self.change_import_objects)
         self._ui_ignore_columns_filtermenu.filterChanged.connect(self.change_skip_columns)
+        self._ui.start_read_row_spin_box.valueChanged.connect(self.change_read_start_row)
 
         self._model_reset_signal = None
         self._model_data_signal = None
@@ -221,6 +222,8 @@ class MappingOptionsWidget(QWidget):
             skip_text = skip_text[:20] + "..."
         self._ui.ignore_columns_button.setText(skip_text)
 
+        self._ui.start_read_row_spin_box.setValue(self._model.read_start_row)
+
         self.block_signals = False
 
     def change_class(self, new_class):
@@ -238,3 +241,7 @@ class MappingOptionsWidget(QWidget):
     def change_import_objects(self, state):
         if self._model and not self.block_signals:
             self._model.set_import_objects(state)
+
+    def change_read_start_row(self, row):
+        if self._model and not self.block_signals:
+            self._model.set_read_start_row(row)

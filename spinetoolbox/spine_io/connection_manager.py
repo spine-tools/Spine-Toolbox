@@ -29,7 +29,7 @@ class ConnectionManager(QObject):
 
     startTableGet = Signal()
     startDataGet = Signal(str, dict, int)
-    startMappedDataGet = Signal(dict, dict, int)
+    startMappedDataGet = Signal(dict, dict, dict, dict, int)
 
     # Signal with error message if connection fails
     connectionFailed = Signal(str)
@@ -62,10 +62,16 @@ class ConnectionManager(QObject):
         self._source = None
         self._current_table = None
         self._table_options = {}
+        self._table_types = {}
+        self._table_row_types = {}
         self._connection = connection
         self._options_widget = OptionsWidget(self._connection.OPTIONS)
         self._options_widget.optionsChanged.connect(self._new_options)
         self._is_connected = False
+
+    @property
+    def current_table(self):
+        return self._current_table
 
     @property
     def is_connected(self):
@@ -74,6 +80,14 @@ class ConnectionManager(QObject):
     @property
     def table_options(self):
         return self._table_options
+
+    @property
+    def table_types(self):
+        return self._table_types
+
+    @property
+    def table_row_types(self):
+        return self._table_row_types
 
     @property
     def source(self):
@@ -124,6 +138,7 @@ class ConnectionManager(QObject):
         """
         if self.is_connected:
             options = self._options_widget.get_options()
+            types = self.table_types.get(table, {})
             self.fetchingData.emit()
             self.startDataGet.emit(table, options, max_rows)
 
@@ -138,14 +153,18 @@ class ConnectionManager(QObject):
         """
         if self.is_connected:
             options = {}
+            types = {}
+            row_types = {}
             self._table_options[self._current_table] = self._options_widget.get_options()
             for table_name in table_mappings:
                 if table_name in self._table_options:
                     options[table_name] = self._table_options[table_name]
                 else:
                     options[table_name] = {}
+                types.setdefault(table_name, self._table_types.get(table_name, {}))
+                row_types.setdefault(table_name, self._table_row_types.get(table_name, {}))
             self.fetchingData.emit()
-            self.startMappedDataGet.emit(table_mappings, options, max_rows)
+            self.startMappedDataGet.emit(table_mappings, options, types, row_types, max_rows)
 
     def connection_ui(self):
         """
@@ -200,6 +219,18 @@ class ConnectionManager(QObject):
             if options is not None:
                 self._table_options.setdefault(key, options)
 
+        # save table types if they don't already exists
+        for key, table_settings in table_options.items():
+            types = table_settings.get("types", {})
+            if types is not None:
+                self._table_types.setdefault(key, types)
+
+        # save table row types if they don't already exists
+        for key, table_settings in table_options.items():
+            row_types = table_settings.get("row_types", {})
+            if row_types is not None:
+                self._table_row_types.setdefault(key, row_types)
+
         tables = {k: t.get("mapping", None) for k, t in table_options.items()}
         self.tablesReady.emit(tables)
         # update options if a sheet is selected
@@ -221,6 +252,22 @@ class ConnectionManager(QObject):
         self._table_options.update(options)
         if self._current_table:
             self._options_widget.set_options(options=self._table_options.get(self._current_table, {}))
+
+    def set_table_types(self, types):
+        """Sets connection manager types for current connector
+
+        Arguments:
+            types {dict} -- Dict with types settings, column (int) as key, type as value
+        """
+        self._table_types.update(types)
+
+    def set_table_row_types(self, types):
+        """Sets connection manager types for current connector
+
+        Arguments:
+            types {dict} -- Dict with types settings, row (int) as key, type as value
+        """
+        self._table_row_types.update(types)
 
     def option_widget(self):
         """
@@ -297,9 +344,9 @@ class ConnectionWorker(QObject):
             self.error.emit(f"Could not get data from source: {error}")
             raise error
 
-    def mapped_data(self, table_mappings, options, max_rows):
+    def mapped_data(self, table_mappings, options, types, table_row_types, max_rows):
         try:
-            data, errors = self._connection.get_mapped_data(table_mappings, options, max_rows)
+            data, errors = self._connection.get_mapped_data(table_mappings, options, types, table_row_types, max_rows)
             self.mappedDataReady.emit(data, errors)
         except Exception as error:
             self.error.emit(f"Could not get mapped data from source: {error}")

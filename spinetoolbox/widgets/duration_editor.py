@@ -21,11 +21,6 @@ from PySide2.QtWidgets import QWidget
 from spinedb_api import Duration, duration_to_relativedelta, ParameterValueFormatError, relativedelta_to_duration
 
 
-def _to_text(value):
-    """Converts a Duration object to a string of comma separated time durations."""
-    return ", ".join(relativedelta_to_duration(delta) for delta in value.value)
-
-
 class DurationEditor(QWidget):
     """
     An editor widget for Duration type parameter values.
@@ -42,7 +37,7 @@ class DurationEditor(QWidget):
         self._ui = Ui_DurationEditor()
         self._ui.setupUi(self)
         self._ui.duration_edit.editingFinished.connect(self._change_duration)
-        self._ui.duration_edit.setText(_to_text(self._value))
+        self._ui.duration_edit.setText(self._value.to_text())
 
     @Slot(name="_change_duration")
     def _change_duration(self):
@@ -52,14 +47,14 @@ class DurationEditor(QWidget):
         try:
             durations = [duration_to_relativedelta(token.strip()) for token in tokens]
         except ParameterValueFormatError:
-            self._ui.duration_edit.setText(_to_text(self._value))
+            self._ui.duration_edit.setText(self._value.to_text())
             return
         self._value = Duration(durations)
 
     def set_value(self, value):
         """Sets the value for editing."""
         self._value = value
-        self._ui.duration_edit.setText(_to_text(value))
+        self._ui.duration_edit.setText(self._value.to_text())
 
     def value(self):
         """Returns the current Duration."""
