@@ -20,7 +20,6 @@ import os
 from PySide2.QtCore import Qt, QStateMachine, QFinalState, QState, QEventTransition, QEvent
 from PySide2.QtGui import QColor, QFont
 from PySide2.QtWidgets import QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QDockWidget, QWidget
-from .widgets.custom_qwidgets import OverlayWidget
 from .config import APPLICATION_PATH
 
 
@@ -58,8 +57,6 @@ class LiveDemo(QDockWidget):
         layout.addStretch()
         layout.addWidget(button_container)
         self.setWidget(widget)
-        self.overlay1 = OverlayWidget(color=self._overlay_color)
-        self.overlay2 = OverlayWidget(color=self._overlay_color)
         self.hide()
         self.machine = None
         self.run = None
