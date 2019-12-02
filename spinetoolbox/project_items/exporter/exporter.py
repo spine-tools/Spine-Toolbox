@@ -23,6 +23,7 @@ import pathlib
 import os.path
 from PySide2.QtCore import Slot
 from spinedb_api.database_mapping import DatabaseMapping
+from spinedb_api.parameter_value import from_database
 from spinetoolbox.project_item import ProjectItem, ProjectItemResource
 from spinetoolbox.spine_io import gdx_utils
 from spinetoolbox.spine_io.exporters import gdx
@@ -66,18 +67,48 @@ class Exporter(ProjectItem):
         super().__init__(toolbox, name, description, x, y)
         self._settings_windows = dict()
         self._settings = dict()
+        self._parameter_indexing_settings = dict()
+        self._additional_parameter_indexing_domains = dict()
         self._database_urls = database_urls if database_urls is not None else list()
         self._database_to_file_name_map = database_to_file_name_map if database_to_file_name_map is not None else dict()
         if settings_file_names is not None:
             for file_name in settings_file_names:
                 try:
                     with open(file_name) as input_file:
-                        data = json.load(input_file)
-                        database_path = data["database path"]
-                        settings = gdx.Settings.from_dict(data)
-                        self._settings[database_path] = settings
+                        try:
+                            data = json.load(input_file)
+                            settings = data["settings"]
+                            database_path = settings["database path"]
+                            settings = gdx.Settings.from_dict(settings)
+                            self._settings[database_path] = settings
+                            parameter_indexing_settings = data.get("indexing settings", None)
+                            if parameter_indexing_settings is not None:
+                                database_map = DatabaseMapping(database_path)
+                                for entity_class_name, entity in parameter_indexing_settings.items():
+                                    entity_class = database_map.object_class_list.filter(
+                                        database_map.object_class_sq.c.name == entity_class_name
+                                    ).all()
+                                    is_object = bool(entity_class)
+                                    for entity_name, parameter in entity.items():
+                                        for parameter_name, data in parameter.items():
+                                            if is_object:
+                                                data["value"] = from_database(
+                                                    database_map.object_parameter_value_list(parameter_name).all()[0]
+                                                )
+                                            else:
+                                                data["value"] = from_database(
+                                                    database_map.relationship_parameter_value_list(
+                                                        parameter_name
+                                                    ).all()[0]
+                                                )
+                                database_map.connection.close()
+                                self._parameter_indexing_settings[database_path] = parameter_indexing_settings
+                        except (KeyError, json.JSONDecodeError):
+                            self._toolbox.msg_warning.emit(
+                                "Couldn't parse Exporter settings file {}. Skipping.".format(file_name)
+                            )
                 except FileNotFoundError:
-                    self._toolbox.msg_error.emit("{} not found. Skipping.".format(file_name))
+                    self._toolbox.msg_error.emit("Exporter settings file {} not found. Skipping.".format(file_name))
         self._activated = False
 
     @staticmethod
@@ -147,15 +178,22 @@ class Exporter(ProjectItem):
         for url in self._database_urls:
             file_name = self._database_to_file_name_map.get(url, None)
             if file_name is None:
-                self._toolbox.msg_error.emit("No file name given to export database {}.".format(url))
+                self._toolbox.msg_error.emit(
+                    "<b>{}</b>: No file name given to export database {}.".format(self.name, url)
+                )
                 return False
             database_map = DatabaseMapping(url)
-            settings = self._settings.get(url, None)
-            if settings is None:
-                settings = gdx.make_settings(database_map)
-                self._settings[url] = settings
+            settings = self._settings.setdefault(url, gdx.make_settings(database_map))
             out_path = os.path.join(self.data_dir, file_name)
-            gdx.to_gdx_file(database_map, out_path, settings, gams_system_directory)
+            indexing_settings = self._parameter_indexing_settings.get(url, dict())
+            additional_domains = self._additional_parameter_indexing_domains.get(url, dict())
+            try:
+                gdx.to_gdx_file(database_map, out_path, additional_domains, settings, indexing_settings, gams_system_directory)
+            except gdx.UnexpandedIndexedParameterException:
+                self._toolbox.msg_error.emit(
+                    "<b>{}</b>: Cannot proceed. Specify parameter indexing in Gdx Export Settings.".format(self.name)
+                )
+                return False
             database_map.connection.close()
             self._toolbox.msg_success.emit("File <b>{0}</b> written".format(out_path))
         return True
@@ -184,17 +222,23 @@ class Exporter(ProjectItem):
     def _show_settings(self, database_url):
         """Opens the item's settings window."""
         settings = self._settings.get(database_url, None)
-        if settings is None:
-            database_map = self._project.db_mngr.get_db_map(database_url)
-            settings = gdx.make_settings(database_map)
-            self._settings[database_url] = settings
+        indexing_settings = self._parameter_indexing_settings.get(database_url, None)
+        self._additional_parameter_indexing_domains.setdefault(database_url, list())
+        if None in (settings, indexing_settings):
+            database_map = DatabaseMapping(database_url)
+            if settings is None:
+                settings = gdx.make_settings(database_map)
+                self._settings[database_url] = settings
+            if indexing_settings is None:
+                indexing_settings = gdx.make_indexing_settings(database_map)
+                self._parameter_indexing_settings[database_url] = indexing_settings
             database_map.connection.close()
-        # Give window its own settings so Cancel doesn't change anything here.
+        # Give window its own settings and indexing domains so Cancel doesn't change anything here.
         settings = deepcopy(settings)
-        settings_window = self._settings_windows.get(database_url, None)
-        if settings_window is None:
-            settings_window = GdxExportSettings(settings, database_url, self._toolbox)
-            self._settings_windows[database_url] = settings_window
+        indexing_settings = deepcopy(indexing_settings)
+        settings_window = self._settings_windows.setdefault(
+            database_url, GdxExportSettings(settings, indexing_settings, database_url, self._toolbox)
+        )
         settings_window.button_box.accepted.connect(lambda: self._update_settings_from_settings_window(database_url))
         settings_window.window_closing.connect(lambda: self._discard_settings_window(database_url))
         settings_window.show()
@@ -221,6 +265,9 @@ class Exporter(ProjectItem):
         """Updates the export settings for given database from the settings window."""
         settings_window = self._settings_windows[database_path]
         self._settings[database_path] = settings_window.settings
+        self._parameter_indexing_settings[database_path] = settings_window.indexing_settings
+        self._additional_parameter_indexing_domains[database_path] = settings_window.new_domains
+
         settings_window.close()
 
     def _discard_settings_window(self, database_path):
@@ -231,11 +278,25 @@ class Exporter(ProjectItem):
         """Saves all export settings to .json files in the item's data directory."""
         file_names = list()
         for index, (database_path, settings) in enumerate(self._settings.items()):
+            setting_set = dict()
             settings_dictionary = settings.to_dict()
             settings_dictionary["database path"] = database_path
+            setting_set["settings"] = settings_dictionary
+            indexing_domains = self._parameter_indexing_settings.get(database_path, None)
+            if indexing_domains is not None:
+                indexing_domains_dictionary = dict()
+                for entity_class_name, entity in indexing_domains.items():
+                    entity_dictionary = dict()
+                    for entity_name, parameter in entity.items():
+                        parameter_dictionary = dict()
+                        for parameter_name, data in parameter.items():
+                            parameter_dictionary[parameter_name] = {"indexing domain": data["indexing domain"]}
+                        entity_dictionary[entity_class_name] = parameter_dictionary
+                    indexing_domains_dictionary[entity_class_name] = entity_dictionary
+                setting_set["indexing domains"] = indexing_domains_dictionary
             file_name = os.path.join(self.data_dir, "export_settings_{}.json".format(index + 1))
             with open(file_name, "w") as output_file:
-                json.dump(settings_dictionary, output_file, sort_keys=True, indent=4)
+                json.dump(setting_set, output_file, sort_keys=True, indent=4)
                 file_names.append(file_name)
         return file_names
 
@@ -266,9 +327,11 @@ class Exporter(ProjectItem):
     def _refresh_settings_for_database(self, url):
         """Refreshes database export settings after changes in database's structure/data."""
         original_settings = self._settings.get(url, None)
-        database_map = self._project.db_mngr.get_db_map(url)
+        database_map = DatabaseMapping(url)
         new_settings = gdx.make_settings(database_map)
         database_map.connection.close()
+        if url in self._parameter_indexing_settings:
+            del self._parameter_indexing_settings[url]
         if original_settings is None:
             self._settings[url] = new_settings
             return

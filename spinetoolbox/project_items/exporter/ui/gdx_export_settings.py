@@ -13,7 +13,7 @@
 # Form implementation generated from reading ui file 'C:\data\src\toolbox\bin\..\spinetoolbox\project_items\exporter\ui\gdx_export_settings.ui',
 # licensing of 'C:\data\src\toolbox\bin\..\spinetoolbox\project_items\exporter\ui\gdx_export_settings.ui' applies.
 #
-# Created: Wed Jan 15 13:11:30 2020
+# Created: Wed Jan 15 14:21:55 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -24,7 +24,7 @@ class Ui_Form(object):
     def setupUi(self, Form):
         Form.setObjectName("Form")
         Form.setWindowModality(QtCore.Qt.WindowModal)
-        Form.resize(603, 325)
+        Form.resize(603, 367)
         self.verticalLayout_4 = QtWidgets.QVBoxLayout(Form)
         self.verticalLayout_4.setObjectName("verticalLayout_4")
         self.splitter = QtWidgets.QSplitter(Form)
@@ -74,6 +74,14 @@ class Ui_Form(object):
         self.verticalLayout_2.addItem(spacerItem3)
         self.horizontalLayout_2.addLayout(self.verticalLayout_2)
         self.verticalLayout_4.addWidget(self.splitter)
+        self.horizontalLayout_4 = QtWidgets.QHBoxLayout()
+        self.horizontalLayout_4.setObjectName("horizontalLayout_4")
+        self.open_indexed_parameter_settings_button = QtWidgets.QPushButton(Form)
+        self.open_indexed_parameter_settings_button.setObjectName("open_indexed_parameter_settings_button")
+        self.horizontalLayout_4.addWidget(self.open_indexed_parameter_settings_button)
+        spacerItem4 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        self.horizontalLayout_4.addItem(spacerItem4)
+        self.verticalLayout_4.addLayout(self.horizontalLayout_4)
         self.horizontalLayout_3 = QtWidgets.QHBoxLayout()
         self.horizontalLayout_3.setObjectName("horizontalLayout_3")
         self.groupBox_3 = QtWidgets.QGroupBox(Form)
@@ -95,8 +103,8 @@ class Ui_Form(object):
         self.formLayout.setWidget(0, QtWidgets.QFormLayout.FieldRole, self.global_parameters_object_class_line_edit)
         self.verticalLayout_3.addLayout(self.formLayout)
         self.horizontalLayout_3.addWidget(self.groupBox_3)
-        spacerItem4 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
-        self.horizontalLayout_3.addItem(spacerItem4)
+        spacerItem5 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        self.horizontalLayout_3.addItem(spacerItem5)
         self.verticalLayout_4.addLayout(self.horizontalLayout_3)
         self.button_box = QtWidgets.QDialogButtonBox(Form)
         self.button_box.setStandardButtons(QtWidgets.QDialogButtonBox.Cancel|QtWidgets.QDialogButtonBox.Ok)
@@ -115,6 +123,7 @@ class Ui_Form(object):
         self.groupBox_2.setTitle(QtWidgets.QApplication.translate("Form", "Set Contents", None, -1))
         self.record_move_up_button.setText(QtWidgets.QApplication.translate("Form", "Move Up", None, -1))
         self.record_move_down_button.setText(QtWidgets.QApplication.translate("Form", "Move Down", None, -1))
+        self.open_indexed_parameter_settings_button.setText(QtWidgets.QApplication.translate("Form", "Indexed parameters...", None, -1))
         self.groupBox_3.setTitle(QtWidgets.QApplication.translate("Form", "Global Parameters", None, -1))
         self.label.setText(QtWidgets.QApplication.translate("Form", "Object Class:", None, -1))
 

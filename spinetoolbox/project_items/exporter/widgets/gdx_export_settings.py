@@ -19,32 +19,7 @@ Export item's settings window for .gdx export.
 from PySide2.QtCore import QAbstractListModel, QModelIndex, Qt, Signal, Slot
 from PySide2.QtGui import QColor
 from PySide2.QtWidgets import QWidget
-
-
-def _move_selected_elements_by(list_view, delta):
-    """
-    Moves selected items in a QListView by given delta.
-
-    Args:
-        list_view (QListView): a list view
-        delta (int): positive values move the items up, negative down
-    """
-    selection_model = list_view.selectionModel()
-    selected_rows = sorted(selection_model.selectedRows())
-    if not selected_rows:
-        return
-    first_row = selected_rows[0].row()
-    contiguous_selections = [[first_row, 1]]
-    current_contiguous_chunk = contiguous_selections[0]
-    for row in selected_rows[1:]:
-        if row == current_contiguous_chunk[0] + 1:
-            current_contiguous_chunk[1] += 1
-        else:
-            contiguous_selections.append((row, 1))
-            current_contiguous_chunk = contiguous_selections[-1]
-    model = list_view.model()
-    for chunk in contiguous_selections:
-        model.moveRows(QModelIndex(), chunk[0], chunk[1], QModelIndex(), chunk[0] + delta)
+from .parameter_index_settings_window import ParameterIndexSettingsWindow
 
 
 class GdxExportSettings(QWidget):
@@ -57,20 +32,22 @@ class GdxExportSettings(QWidget):
 
     window_closing = Signal()
 
-    def __init__(self, settings, database_path, parent):
+    def __init__(self, settings, indexing_settings, database_path, parent):
         """
         Args:
             settings (Settings): export settings
+            indexing_settings (dict): indexing domain information for indexed parameter values
+            database_path (str): database URL
             parent (QWidget): a parent widget
         """
         from ..ui.gdx_export_settings import Ui_Form
 
-        # super().__init__(parent)
         super().__init__(parent=parent, f=Qt.Window)
         self._ui = Ui_Form()
         self._ui.setupUi(self)
         self.setWindowTitle("Gdx Export settings    -- {} --".format(database_path))
         self.setAttribute(Qt.WA_DeleteOnClose, True)
+        self._database_path = database_path
         self._ui.button_box.rejected.connect(self.close)
         self._ui.set_move_up_button.clicked.connect(self._move_sets_up)
         self._ui.set_move_down_button.clicked.connect(self._move_sets_down)
@@ -90,11 +67,23 @@ class GdxExportSettings(QWidget):
         self._ui.record_list_view.setModel(record_list_model)
         self._ui.set_list_view.selectionModel().selectionChanged.connect(self._populate_set_contents)
         self._ui.set_list_view.selectionModel().currentChanged.connect(self._update_as_global_button_enabled_state)
+        self._ui.open_indexed_parameter_settings_button.clicked.connect(self._show_indexed_parameter_settings)
+        self._indexing_settings = indexing_settings
+        self._new_domains_for_indexing = list()
+        self._indexed_parameter_settings_window = None
 
     @property
     def settings(self):
         """the settings object"""
         return self._settings
+
+    @property
+    def indexing_settings(self):
+        return self._indexing_settings
+
+    @property
+    def new_domains(self):
+        return self._new_domains_for_indexing
 
     @property
     def button_box(self):
@@ -159,9 +148,78 @@ class GdxExportSettings(QWidget):
         record_model = self._ui.record_list_view.model()
         record_model.reset(record_keys)
 
+    @Slot(bool)
+    def _show_indexed_parameter_settings(self, _):
+        if self._indexed_parameter_settings_window is None:
+            available_domains = dict()
+            for domain_name, exportable in zip(
+                self._settings.sorted_domain_names, self._settings.domain_exportable_flags
+            ):
+                if exportable:
+                    record_keys = self._settings.sorted_record_key_lists(domain_name)
+                    keys = list()
+                    for key_list in record_keys:
+                        keys.append(key_list[0])
+                    available_domains.update({domain_name: keys})
+            self._indexed_parameter_settings_window = ParameterIndexSettingsWindow(
+                self._indexing_settings, available_domains, self._database_path, self
+            )
+            self._indexed_parameter_settings_window.settings_approved.connect(self._parameter_settings_approved)
+        self._indexed_parameter_settings_window.show()
+
+    @Slot()
+    def _parameter_settings_approved(self):
+        self._indexing_settings = self._indexed_parameter_settings_window.indexing_settings
+        new_domains = self._indexed_parameter_settings_window.new_domains
+        for old_domain in self._new_domains_for_indexing:
+            model = self._ui.set_list_view.model()
+            domain_found = False
+            for new_domain in new_domains:
+                if old_domain.name == new_domain.name:
+                    model.update_domain(new_domain)
+                    domain_found = True
+                    break
+            if not domain_found:
+                model.drop_domain(old_domain)
+        for new_domain in new_domains:
+            domain_found = False
+            for old_domain in self._new_domains_for_indexing:
+                if new_domain.name == old_domain.name:
+                    domain_found = True
+                    break
+            if not domain_found:
+                self._ui.set_list_view.model().add_domain(new_domain)
+        self._new_domains_for_indexing = list(new_domains)
+
     def closeEvent(self, event):
         self.window_closing.emit()
         super().closeEvent(event)
+
+
+def _move_selected_elements_by(list_view, delta):
+    """
+    Moves selected items in a QListView by given delta.
+
+    Args:
+        list_view (QListView): a list view
+        delta (int): positive values move the items up, negative down
+    """
+    selection_model = list_view.selectionModel()
+    selected_rows = sorted(selection_model.selectedRows())
+    if not selected_rows:
+        return
+    first_row = selected_rows[0].row()
+    contiguous_selections = [[first_row, 1]]
+    current_contiguous_chunk = contiguous_selections[0]
+    for row in selected_rows[1:]:
+        if row == current_contiguous_chunk[0] + 1:
+            current_contiguous_chunk[1] += 1
+        else:
+            contiguous_selections.append((row, 1))
+            current_contiguous_chunk = contiguous_selections[-1]
+    model = list_view.model()
+    for chunk in contiguous_selections:
+        model.moveRows(QModelIndex(), chunk[0], chunk[1], QModelIndex(), chunk[0] + delta)
 
 
 def _move_list_elements(originals, first, last, target):
@@ -203,6 +261,25 @@ class GAMSSetListModel(QAbstractListModel):
         """
         super().__init__()
         self._settings = settings
+
+    def add_domain(self, domain):
+        first = len(self._settings.sorted_domain_names)
+        last = first
+        self.beginInsertRows(QModelIndex(), first, last)
+        self._settings.add_domain(domain)
+        self.endInsertRows()
+
+    def drop_domain(self, domain):
+        index = self._settings.domain_index(domain)
+        self.beginRemoveRows(QModelIndex(), index, index)
+        self._settings.del_domain_at(index)
+        self.endRemoveRows()
+
+    def update_domain(self, domain):
+        index = self._settings.domain_index(domain)
+        self._settings.update_domain(domain)
+        cell = self.index(index, 0)
+        self.dataChanged.emit(cell, cell, [Qt.DisplayRole])
 
     def data(self, index, role=Qt.DisplayRole):
         """

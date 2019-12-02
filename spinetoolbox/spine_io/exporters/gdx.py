@@ -55,6 +55,11 @@ class GdxExportException(Exception):
         return self._message
 
 
+class UnexpandedIndexedParameterException(GdxExportException):
+    def __init__(self, message):
+        super().__init__(message)
+
+
 class Set:
     """
     Represents a GAMS domain, set or a subset.
@@ -63,7 +68,7 @@ class Set:
         description (str): set's explanatory text
         domain_names (list): a list of superset (domain) names, None if the Set is a domain
         name (str): set's name
-        records (list): set's elements as a list of SetRecord objects
+        records (list): set's elements as a list of Record objects
     """
 
     def __init__(self, name, description="", domain_names=None):
@@ -73,7 +78,7 @@ class Set:
             description (str): set's explanatory text
             domain_names (list): a list of indexing domain names
         """
-        self.description=description
+        self.description = description
         self.domain_names = domain_names if domain_names is not None else [None]
         self.name = name
         self.records = list()
@@ -82,6 +87,10 @@ class Set:
     def dimensions(self):
         """Number of dimensions of this Set."""
         return len(self.domain_names)
+
+    def is_domain(self):
+        """Returns True if this set is a domain set."""
+        return self.domain_names[0] is None
 
     @staticmethod
     def from_object_class(object_class):
@@ -110,20 +119,18 @@ class Set:
 
 class Record:
     """
-    Represents a GAMS set element in a Set or DomainSet.
+    Represents a GAMS set element in a Set.
 
     Parameters:
-        keys (list): a list  of record's keys
-        parameters (list): record's parameters as a list of Parameter objects
+        keys (tuple): a list  of record's keys
     """
 
     def __init__(self, keys):
         """
         Args:
-            keys (list): a list  of record's keys
+            keys (tuple): a list  of record's keys
         """
         self.keys = keys
-        self.parameters = list()
 
     @property
     def name(self):
@@ -138,7 +145,7 @@ class Record:
         Args:
             object_ (namedtuple): an object or relationship row from the database
         """
-        keys = [object_.name]
+        keys = (object_.name,)
         return Record(keys)
 
     @staticmethod
@@ -149,7 +156,7 @@ class Record:
         Args:
             relationship (namedtuple): a relationship row from the database
         """
-        keys = [name.strip() for name in relationship.object_name_list.split(',')]
+        keys = tuple(name.strip() for name in relationship.object_name_list.split(','))
         return Record(keys)
 
 
@@ -158,39 +165,112 @@ class Parameter:
     Represents a GAMS parameter.
 
     Attributes:
-        name (str): parameter's name
-        value (float or IndexedValue or None): parameter's value
+        domain_names (list): indexing domain names (currently Parameters can be indexed by domains only)
+        indexes (list): parameter's indexes
+        values (list): parameter's values
     """
 
-    def __init__(self, name, value):
+    def __init__(self, domain_names, indexes, values):
         """
         Args:
-            name (str): parameter's name
-            value (float or IndexedValue or None): parameter's value
+            domain_names (list): indexing domain names (currently Parameters can be indexed by domains only)
+            indexes (list): parameter's indexes
+            values (list): parameter's values
         """
-        self.name = name
-        self.value = value
+        if len(domain_names) != len(indexes[0]):
+            raise GdxExportException("Different number of parameter indexing domains and index keys.")
+        self.domain_names = domain_names
+        if len(indexes) != len(values):
+            raise GdxExportException("Parameter index and value length mismatch.")
+        self.indexes = indexes
+        if not all([isinstance(value, type(values[0])) for value in values]):
+            raise GdxExportException("Not all values are of the same type.")
+        self.values = values
 
-    def is_complex(self):
+    def __bool__(self):
+        return bool(self.values)
+
+    def append_value(self, index, value):
+        self.indexes.append(index)
+        self.values.append(value)
+
+    def append_object_parameter(self, object_parameter):
+        index = object_parameter.object_name,
+        value = from_database(object_parameter.value)
+        if isinstance(value, int):
+            value = float(value)
+        self.append_value(index, value)
+
+    def append_relationship_parameter(self, relationship_parameter):
+        index = tuple(name.strip() for name in relationship_parameter.object_name_list.split(","))
+        value = from_database(relationship_parameter.value)
+        if isinstance(value, int):
+            value = float(value)
+        self.append_value(index, value)
+
+    def slurp(self, parameter):
+        self.indexes += parameter.indexes
+        self.values += parameter.values
+
+    def is_scalar(self):
+        return bool(self.values) and isinstance(self.values[0], float)
+
+    def is_indexed(self):
         """Returns True if this parameter is not a plain number."""
-        return not isinstance(self.value, float)
+        return bool(self.values) and isinstance(self.values[0], IndexedValue)
+
+    def expand_indexes(self, indexing_setting):
+        index_position = indexing_setting.index_position
+        indexing_domain = indexing_setting.indexing_domain
+        self.domain_names.insert(index_position, indexing_domain.name)
+        new_values = list()
+        new_indexes = list()
+        for parameter_index, parameter_value in zip(self.indexes, self.values):
+            for new_index in indexing_domain.indexes:
+                expanded_index = tuple(parameter_index[:index_position] + (new_index,) + parameter_index[index_position:])
+                new_indexes.append(expanded_index)
+            new_values += list(parameter_value.values)
+        self.indexes = new_indexes
+        self.values = new_values
 
     @staticmethod
-    def from_parameter(object_parameter):
+    def from_object_parameter(object_parameter):
         """
-        Constructs a GAMS parameter from database's parameter row
+        Constructs a GAMS parameter from database's object parameter row
 
         Args:
             object_parameter (namedtuple): a parameter row from the database
         """
-        name = object_parameter.parameter_name
-        try:
-            value = from_database(object_parameter.value)
-        except ParameterValueFormatError:
-            value = None
+        domain_names = [object_parameter.object_class_name]
+        index = object_parameter.object_name,
+        value = from_database(object_parameter.value)
         if isinstance(value, int):
             value = float(value)
-        return Parameter(name, value)
+        return Parameter(domain_names, [index], [value])
+
+    @staticmethod
+    def from_relationship_parameter(relationship_parameter):
+        """
+        Constructs a GAMS parameter from database's relationship parameter row
+
+        Args:
+            relationship_parameter (namedtuple): a parameter row from the database
+        """
+        domain_names = [name.strip() for name in relationship_parameter.object_class_name_list.split(",")]
+        index = tuple(name.strip() for name in relationship_parameter.object_name_list.split(","))
+        value = from_database(relationship_parameter.value)
+        if isinstance(value, int):
+            value = float(value)
+        return Parameter(domain_names, [index], [value])
+
+
+class IndexingDomain:
+    def __init__(self, base_domain, pick_list):
+        self.name = base_domain.name
+        self.indexes = list()
+        for record, pick in zip(base_domain.records, pick_list):
+            if pick:
+                self.indexes.append(record.keys[0])
 
 
 def _python_interpreter_bitness():
@@ -235,56 +315,42 @@ def find_gams_directory():
     return None
 
 
-def make_index_domain(name, entry_count):
-    """Returns a domain set containing indexes for indexed parameter values."""
-    domain = Set(name)
-    domain.records += [Record([f"T{index:04d}"]) for index in range(entry_count)]
-    return domain
-
-
-def expand_sets_indexed_parameter_values(sets, index_domains):
+def expand_indexed_parameter_values(parameters, indexing_settings):
     """
-    Expands indexed parameter values by creating sets with n+1 dimensions.
+    Expands the dimensions of indexed parameter values.
 
     Args:
-        sets (list): a list of Sets.
-        index_domains (dict): a mapping from set name, record name and parameter name to a Set
-            used to index the expanded values
-    Returns:
-        a tuple containing a list of the expanded sets and a list of sets left non-expanded.
+        parameters (dict): a map from parameter names to Parameters.
+        indexing_settings (dict): mapping from parameter name to IndexingSetting
     """
-    expanded_sets = list()
-    nonexpanded_sets = list()
-    for domain_index, current_set in enumerate(sets):
-        nonexpanded_records = list()
-        for record_index, record in enumerate(current_set.records):
-            nonexpanded_parameters = list()
-            for parameter_index, parameter in enumerate(list(record.parameters)):
-                if parameter.is_complex():
-                    if not isinstance(parameter.value, IndexedValue):
-                        raise GdxExportException("Support for non-indexed parameter values not yet implemented.")
-                    index_domain = index_domains[current_set.name][record.name][parameter.name]
-                    expanded_set = Set(current_set.name, current_set.description, current_set.domain_names + [index_domain.name])
-                    for value_index, single_value in enumerate(parameter.value.values):
-                        expanded_record = Record(record.keys + index_domain.records[value_index].keys)
-                        expanded_parameter = Parameter(parameter.name, single_value)
-                        expanded_record.parameters.append(expanded_parameter)
-                        expanded_set.records.append(expanded_record)
-                    expanded_sets.append(expanded_set)
-                else:
-                    nonexpanded_parameters.append(parameter)
-            if nonexpanded_parameters:
-                new_record = copy(record)
-                new_record.parameters = nonexpanded_parameters
-                nonexpanded_records.append(new_record)
-        if nonexpanded_records:
-            new_set = copy(current_set)
-            new_set.records = nonexpanded_records
-            nonexpanded_sets.append(new_set)
-    return expanded_sets, nonexpanded_sets
+    for parameter_name, parameter in parameters.items():
+        try:
+            indexing_setting = indexing_settings[parameter_name]
+        except KeyError:
+            continue
+        parameter.expand_indexes(indexing_setting)
 
 
-def sets_to_gams(gdx_file, sets):
+def extract_index_domain(parameter_value, domain_name, description):
+    """
+    Extracts the indexes of an indexed parameter into a Set.
+
+
+    Args:
+        parameter_value (IndexedValue): an indexed parameter
+        domain_name(str): domain's name
+        description (str): domain's explanatory text
+    Returns:
+        a domain Set containing the indices of the given parameter as records
+    """
+    indexes = parameter_value.indexes
+    index_domain = Set(domain_name, description)
+    for index in indexes:
+        index_domain.records.append(Record((str(index),)))
+    return index_domain
+
+
+def sets_to_gams(gdx_file, sets, omitted_set=None):
     """
     Writes Set objects to .gdx file as GAMS sets.
 
@@ -295,55 +361,74 @@ def sets_to_gams(gdx_file, sets):
         sets (list): a list of Set objects
     """
     for current_set in sets:
-        set_parameters = dict()
+        if omitted_set is not None and current_set.name == omitted_set.name:
+            continue
         record_keys = list()
         for record in current_set.records:
-            record_key = tuple(record.keys)
-            record_keys.append(record_key)
-            for parameter in record.parameters:
-                index_and_value = set_parameters.setdefault(parameter.name, (list(), list()))
-                index_and_value[0].append(record_key)
-                index_and_value[1].append(parameter.value)
+            record_keys.append(record.keys)
+        if not record_keys:
+            continue
         gams_set = GAMSSet(record_keys, current_set.domain_names, expl_text=current_set.description)
         gdx_file[current_set.name] = gams_set
-        for parameter_name, parameter_data in set_parameters.items():
-            parameter_dict = dict()
-            for parameter_key, parameter_value in zip(parameter_data[0], parameter_data[1]):
-                parameter_dict[parameter_key] = parameter_value
-            gams_parameter = GAMSParameter(parameter_dict, domain=current_set.domain_names)
-            gdx_file[parameter_name] = gams_parameter
 
 
-def domain_parameters_to_gams(gdx_file, domain):
+def parameters_to_gams(gdx_file, parameters):
     """
-    Adds the parameters from given domain as scalars to .gdx file.
+    Writes parameters to .gdx file as GAMS parameters.
 
     Args:
         gdx_file (GdxFile): a target file
-        domain (Set): a domain that holds the parameters
+        parameters (dict): a list of Parameter objects
     """
-    for record in domain.records:
-        for parameter in record.parameters:
-            gams_scalar = GAMSScalar(parameter.value)
-            gdx_file[parameter.name] = gams_scalar
+    for parameter_name, parameter in parameters.items():
+        indexed_values = dict()
+        for index, value in zip(parameter.indexes, parameter.values):
+            indexed_values[tuple(index)] = value
+        gams_parameter = GAMSParameter(indexed_values, domain=parameter.domain_names)
+        gdx_file[parameter_name] = gams_parameter
+
+
+def domain_parameters_to_gams_scalars(gdx_file, parameters, domain_name):
+    """
+    Adds the parameter from given domain as a scalar to .gdx file.
+
+    The added parameters are erased from parameters.
+
+    Args:
+        gdx_file (GdxFile): a target file
+        parameters (dict): a map from parameter name to Parameter object
+        domain_name (str): name of domain whose parameters to add
+    Returns:
+        a list of non-scalar parameters
+    """
+    erase_parameters = list()
+    for parameter_name, parameter in parameters.items():
+        if parameter.domain_names == [domain_name]:
+            if len(parameter.values) != 1 or not parameter.is_scalar():
+                raise GdxExportException("Parameter {} is not suitable as GAMS scalar.")
+            gams_scalar = GAMSScalar(parameter.values[0])
+            gdx_file[parameter_name] = gams_scalar
+            erase_parameters.append(parameter_name)
+    return erase_parameters
 
 
 def object_classes_to_domains(db_map):
     """
     Converts object classes, objects and object parameters from a database to the intermediate format.
 
-    Object classes get converted to DomainSet objects
+    Object classes get converted to Set objects
     while objects are stored as Records in corresponding DomainSets.
-    Lastly, object parameters are read into Records as Parameter objects.
+    Lastly, object parameters are read into Parameter objects.
 
     Args:
         db_map (spinedb_api.DatabaseMapping): a database map
 
     Returns:
-         a list of DomainSet objects
+         a tuple containing list of Set objects and a dict of Parameter objects
     """
     class_list = db_map.object_class_list().all()
     domains = list()
+    parameters = dict()
     object_parameter_value_query = db_map.object_parameter_value_list()
     for object_class in class_list:
         domain = Set.from_object_class(object_class)
@@ -355,11 +440,14 @@ def object_classes_to_domains(db_map):
             parameter_values = object_parameter_value_query.filter(
                 db_map.object_parameter_value_sq.c.object_id == set_object.id
             ).all()
-            for parameter in parameter_values:
-                parameter = Parameter.from_parameter(parameter)
-                if parameter.value is not None:
-                    record.parameters.append(parameter)
-    return domains
+            for object_parameter in parameter_values:
+                name = object_parameter.parameter_name
+                parameter = parameters.get(name, None)
+                if parameter is None:
+                    parameters[name] = Parameter.from_object_parameter(object_parameter)
+                else:
+                    parameter.append_object_parameter(object_parameter)
+    return domains, parameters
 
 
 def relationship_classes_to_sets(db_map):
@@ -368,16 +456,17 @@ def relationship_classes_to_sets(db_map):
 
     Relationship classes get converted to Set objects
     while relationships are stored as SetRecords in corresponding Sets.
-    Lastly, relationship parameters are read into SetRecords as Parameter objects.
+    Lastly, relationship parameters are read into Parameter objects.
 
     Args:
         db_map (spinedb_api.DatabaseMapping): a database map
 
     Returns:
-         a list of Set objects
+         a tuple containing a list of Set objects and a dict of Parameter objects
     """
     class_list = db_map.wide_relationship_class_list().all()
     sets = list()
+    parameters = dict()
     relationship_parameter_value_query = db_map.relationship_parameter_value_list()
     for relationship_class in class_list:
         current_set = Set.from_relationship_class(relationship_class)
@@ -389,11 +478,111 @@ def relationship_classes_to_sets(db_map):
             parameter_values = relationship_parameter_value_query.filter(
                 db_map.relationship_parameter_value_sq.c.relationship_id == relationship.id
             ).all()
-            for parameter in parameter_values:
-                parameter = Parameter.from_parameter(parameter)
-                if parameter.value is not None:
-                    record.parameters.append(parameter)
-    return sets
+            for relationship_parameter in parameter_values:
+                name = relationship_parameter.parameter_name
+                parameter = parameters.get(name, None)
+                if parameter is None:
+                    parameters[name] = Parameter.from_relationship_parameter(relationship_parameter)
+                else:
+                    parameter.append_relationship_parameter(relationship_parameter)
+    return sets, parameters
+
+
+def domain_names_and_records(db_map):
+    """
+    Returns a list of domain names and a map from a name to list of record keys.
+
+    Args:
+        db_map (spinedb_api.DatabaseMapping): a database map
+
+    Returns:
+         a tuple containing list of domain names and a dict from domain name to its records
+    """
+    domain_names = list()
+    domain_records = dict()
+    class_list = db_map.object_class_list().all()
+    for object_class in class_list:
+        domain_name = object_class.name
+        domain_names.append(domain_name)
+        object_list = db_map.object_list(class_id=object_class.id).all()
+        records = list()
+        for set_object in object_list:
+            records.append((set_object.name,))
+        domain_records[domain_name] = records
+    return domain_names, domain_records
+
+
+def set_names_and_records(db_map):
+    """
+    Returns a list of set names and a map from a name to list of record keys.
+
+    Args:
+        db_map (spinedb_api.DatabaseMapping): a database map
+
+    Returns:
+         a tuple containing list of set names and a dict from set name to its records
+    """
+    names = list()
+    set_records = dict()
+    class_list = db_map.wide_relationship_class_list().all()
+    for relationship_class in class_list:
+        set_name = relationship_class.name
+        names.append(set_name)
+        relationship_list = db_map.wide_relationship_list(class_id=relationship_class.id).all()
+        records = list()
+        for relationship in relationship_list:
+            records.append(tuple(name.strip() for name in relationship.object_name_list.split(",")))
+        set_records[set_name] = records
+    return names, set_records
+
+
+class IndexingSetting:
+    def __init__(self, indexed_parameter):
+        self.parameter = indexed_parameter
+        self.indexing_domain = None
+        self.index_position = len(indexed_parameter.domain_names)
+
+    def append_parameter(self, parameter):
+        self.parameter.slurp(parameter)
+
+
+def make_indexing_settings(db_map):
+    settings = dict()
+    object_parameter_value_query = db_map.object_parameter_value_list()
+    for object_parameter in object_parameter_value_query.all():
+        parameter = Parameter.from_object_parameter(object_parameter)
+        if not parameter.is_indexed():
+            continue
+        setting = settings.get(object_parameter.parameter_name, None)
+        if setting is not None :
+            setting.append_parameter(parameter)
+        else:
+            settings[object_parameter.parameter_name] = IndexingSetting(parameter)
+    relationship_parameter_value_query = db_map.relationship_parameter_value_list()
+    for relationship_parameter in relationship_parameter_value_query.all():
+        parameter = Parameter.from_relationship_parameter(relationship_parameter)
+        if not parameter.is_indexed():
+            continue
+        setting = settings.get(relationship_parameter.parameter_name, None)
+        if setting is not None :
+            setting.append_parameter(parameter)
+        else:
+            settings[relationship_parameter.parameter_name] = IndexingSetting(parameter)
+    return settings
+
+
+def extract_new_indexing_domains(indexing_settings, existing_domains):
+    new_domains = list()
+    for setting in indexing_settings:
+        indexing_domain = setting.indexing_domain
+        if indexing_domain is not None:
+            domain_exists = False
+            for domain in existing_domains:
+                if indexing_domain.name == domain.name:
+                    domain_exists = True
+                    break
+            if not domain_exists:
+                new_domains.append(indexing_domain)
 
 
 def filter_and_sort_sets(sets, sorted_set_names, filter_flags):
@@ -471,35 +660,38 @@ def extract_domain(domains, name_to_extract):
     return domains, None
 
 
-def to_gdx_file(database_map, file_name, settings, gams_system_directory=None):
+def to_gdx_file(database_map, file_name, additional_domains, settings, indexing_settings, gams_system_directory=None):
     """
     Exports given database map into .gdx file.
 
     Args:
         database_map (spinedb_api.DatabaseMapping): a database to export
+        file_name (str): output file name
+        additional_domains (list): a list of extra domains not in the database
         settings (Settings): export settings
+        indexing_settings (dict): a dictionary containing settings for indexed parameter expansion
         gams_system_directory (str): path to GAMS system directory or None to let GAMS choose one for you
     """
-    domains = object_classes_to_domains(database_map)
+    domains, domain_parameters = object_classes_to_domains(database_map)
     domains, global_parameters_domain = extract_domain(domains, settings.global_parameters_domain_name)
+    domains += additional_domains
     domains = filter_and_sort_sets(domains, settings.sorted_domain_names, settings.domain_exportable_flags)
     sort_records_inplace(domains, settings)
-    sets = relationship_classes_to_sets(database_map)
+    expand_indexed_parameter_values(domain_parameters, indexing_settings)
+    sets, set_parameters = relationship_classes_to_sets(database_map)
     sets = filter_and_sort_sets(sets, settings.sorted_set_names, settings.set_exportable_flags)
     sort_records_inplace(sets, settings)
+    expand_indexed_parameter_values(set_parameters, indexing_settings)
+    parameters = {**domain_parameters, **set_parameters}
     with GdxFile(file_name, mode='w', gams_dir=gams_system_directory) as output_file:
-        sets_to_gams(output_file, domains)
+        sets_to_gams(output_file, domains, global_parameters_domain)
         sets_to_gams(output_file, sets)
+        deletable_parameter_names = list()
         if global_parameters_domain is not None:
-            domain_parameters_to_gams(output_file, global_parameters_domain)
-
-
-def set_records(sets):
-    """Returns a dictionary mapping set name to its records' keys."""
-    records = dict()
-    for set_item in sets:
-        records[set_item.name] = [record.keys for record in set_item.records]
-    return records
+            deletable_parameter_names = domain_parameters_to_gams_scalars(output_file, domain_parameters, global_parameters_domain.name)
+        for name in deletable_parameter_names:
+            del parameters[name]
+        parameters_to_gams(output_file, parameters)
 
 
 def make_settings(database_map):
@@ -512,18 +704,16 @@ def make_settings(database_map):
     Returns:
         a Settings object useful for exporting the given `database_map`
     """
-    domains = object_classes_to_domains(database_map)
-    sets = relationship_classes_to_sets(database_map)
-    domain_names = [element.name for element in domains]
-    set_names = [element.name for element in sets]
-    records = set_records(domains)
-    records.update(set_records(sets))
+    domain_names, domain_records = domain_names_and_records(database_map)
+    set_names, set_records = set_names_and_records(database_map)
+    records = domain_records
+    records.update(set_records)
     return Settings(domain_names, set_names, records)
 
 
 class Settings:
     """
-    This class holds some settings needed by `to_gams_workspace()` for .gdx export.
+    This class holds some settings needed by `to_gdx_file()` for .gdx export.
 
     Settings is mostly concerned about the order in which domains, sets and records are exported into the .gdx file.
     This order is paramount for some models, like TIMES.
@@ -542,12 +732,12 @@ class Settings:
         Constructs a new Settings object.
 
         Args:
-            domain_names (list): a list of DomainSet names
+            domain_names (list): a list of Set names
             set_names (list): a list of Set names
-            records (dict): a mapping from DomainSet or Set names to record names
+            records (dict): a mapping from Set names to record key tuples
             domain_exportable_flags (list): a boolean for each name in domain_names indicating if it should be exported
             set_exportable_flags (list): a boolean for each name in set_names indicating if it should be exported
-            global_parameters_domain_name (str): name of the DomainSet whose parameters to export as GAMS scalars
+            global_parameters_domain_name (str): name of the Set whose parameters to export as GAMS scalars
         """
         self._domain_names = domain_names
         self._set_names = set_names
@@ -586,6 +776,31 @@ class Settings:
         """
         return self._set_exportable_flags
 
+    @property
+    def global_parameters_domain_name(self):
+        """the name of the domain, parameters of which should be exported as GAMS scalars"""
+        return self._global_parameters_domain_name
+
+    @global_parameters_domain_name.setter
+    def global_parameters_domain_name(self, name):
+        """Sets the global parameters domain name to given name."""
+        self._global_parameters_domain_name = name
+
+    def add_domain(self, domain):
+        self._domain_names.append(domain.name)
+        self._records[domain.name] = [record.keys for record in domain.records]
+        self._domain_exportable_flags.append(True)
+
+    def domain_index(self, domain):
+        return self._domain_names.index(domain.name)
+
+    def del_domain_at(self, index):
+        del self._domain_names[index]
+        del self._domain_exportable_flags[index]
+
+    def update_domain(self, domain):
+        self._records[domain.name] = [record.keys for record in domain.records]
+
     def sorted_record_key_lists(self, name):
         """
         Returns a list of record keys for given domain or set name.
@@ -599,16 +814,6 @@ class Settings:
             an ordered list of record key lists
         """
         return self._records[name]
-
-    @property
-    def global_parameters_domain_name(self):
-        """the name of the domain, parameters of which should be exported as GAMS scalars"""
-        return self._global_parameters_domain_name
-
-    @global_parameters_domain_name.setter
-    def global_parameters_domain_name(self, name):
-        """Sets the global parameters domain name to given name."""
-        self._global_parameters_domain_name = name
 
     def update(self, updating_settings):
         """
