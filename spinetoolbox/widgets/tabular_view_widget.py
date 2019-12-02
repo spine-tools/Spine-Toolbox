@@ -495,7 +495,7 @@ class TabularViewForm(QMainWindow):
 
     def save_model(self):
         db_edited = False
-        self.db_mngr.remove_db_map_listener(self.db_map, self)
+        self.db_mngr.signaller.listeners[self].remove(self.db_map)
         if self.current_value_type == self._DATA_SET:
             db_edited = self.save_model_set()
             delete_indexes = self.model.model._deleted_index_entries
@@ -539,7 +539,7 @@ class TabularViewForm(QMainWindow):
         if db_edited:
             self.load_class_data()
             self.load_objects()
-        self.db_mngr.signaller.add_db_map_listener(self.db_map, self)
+        self.db_mngr.signaller.listeners[self].add(self.db_map)
 
     def save_parameter_values(self, data, data_value):
         new_data = []
