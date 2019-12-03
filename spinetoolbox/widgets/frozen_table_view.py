@@ -17,7 +17,7 @@ Custom QTableView classes that support copy-paste and the like.
 """
 
 from PySide2.QtWidgets import QTableView, QAbstractItemView
-from PySide2.QtCore import Qt, Signal
+from PySide2.QtCore import Signal
 from ..mvcmodels.table_model import TableModel
 from .tabular_view_header_widget import TabularViewHeaderWidget
 
