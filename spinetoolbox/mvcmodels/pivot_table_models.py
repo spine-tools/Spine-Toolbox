@@ -26,6 +26,8 @@ from ..config import PIVOT_TABLE_HEADER_COLOR
 class PivotTableModel(QAbstractTableModel):
     index_entries_changed = Signal(dict, dict)
 
+    _V_HEADER_WIDTH = 6
+
     def __init__(self, parent=None):
         super(PivotTableModel, self).__init__(parent)
         self.model = PivotModel()
@@ -453,7 +455,7 @@ class PivotTableModel(QAbstractTableModel):
                 return "(X)"
             return None
         if role == Qt.DisplayRole and orientation == Qt.Vertical:
-            return 8 * " "
+            return self._V_HEADER_WIDTH * " "
         return None
 
     def data_color(self, index):

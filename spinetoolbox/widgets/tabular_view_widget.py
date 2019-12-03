@@ -651,7 +651,6 @@ class TabularViewForm(QMainWindow):
             widget = self.create_header_widget(proxy_index.data(Qt.DisplayRole), "rows")
             self.ui.pivot_table.setIndexWidget(proxy_index, widget)
             self.ui.pivot_table.resizeColumnToContents(index.column())
-        self.ui.pivot_table.verticalHeader().setVisible(not top_indexes)
 
     def make_frozen_headers(self):
         """

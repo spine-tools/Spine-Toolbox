@@ -44,7 +44,6 @@ class TabularViewHeaderWidget(QFrame):
         layout = QHBoxLayout(self)
         button = QToolButton(self)
         button.setPopupMode(QToolButton.InstantPopup)
-        button.setArrowType(Qt.DownArrow)
         button.setStyleSheet("QToolButton {border: none;}")
         button.setEnabled(menu is not None)
         if menu:
@@ -59,9 +58,11 @@ class TabularViewHeaderWidget(QFrame):
         if area == "rows":
             h_alignment = Qt.AlignLeft
             self.layout().insertSpacing(1, self._SPACING)
+            button.setArrowType(Qt.DownArrow)
         elif area == "columns":
             h_alignment = Qt.AlignRight
             self.layout().insertSpacing(0, self._SPACING)
+            button.setArrowType(Qt.RightArrow)
         elif area == "frozen":
             h_alignment = Qt.AlignHCenter
         label.setAlignment(h_alignment | Qt.AlignVCenter)

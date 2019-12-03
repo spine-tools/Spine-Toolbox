@@ -580,7 +580,11 @@ class FilterMenu(QMenu):
 
     def event(self, event):
         if event.type() == QEvent.Show and self.anchor is not None:
-            self.move(self.anchor.mapToGlobal(QPoint(0, 0)) + QPoint(0, self.anchor.height()))
+            if self.anchor.area == "rows":
+                pos = self.anchor.mapToGlobal(QPoint(0, 0)) + QPoint(0, self.anchor.height())
+            elif self.anchor.area == "columns":
+                pos = self.anchor.mapToGlobal(QPoint(0, 0)) + QPoint(self.anchor.width(), 0)
+            self.move(pos)
         return super().event(event)
 
 

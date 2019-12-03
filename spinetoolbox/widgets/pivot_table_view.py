@@ -43,7 +43,6 @@ class PivotTableView(QTableView):
         self.setHorizontalHeader(h_header)
         self.setVerticalHeader(v_header)
         h_header.setContextMenuPolicy(Qt.CustomContextMenu)
-        v_header.hide()
 
     @Slot(name="clipboard_data_changed")
     def clipboard_data_changed(self):
