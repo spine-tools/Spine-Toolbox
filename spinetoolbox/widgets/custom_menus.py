@@ -399,17 +399,20 @@ class CustomPopupMenu(QMenu):
         super().__init__(parent=parent)
         self._parent = parent
 
-    def add_action(self, text, slot, enabled=True):
+    def add_action(self, text, slot, enabled=True, tooltip=None):
         """Adds an action to the popup menu.
 
         Args:
             text (str): Text description of the action
             slot (method): Method to connect to action's triggered signal
             enabled (bool): Is action enabled?
+            tooltip (str): Tool tip for the action
         """
         action = self.addAction(text)
         action.setEnabled(enabled)
         action.triggered.connect(slot)
+        if tooltip is not None:
+            action.setToolTip(tooltip)
 
 
 class AddToolSpecificationPopupMenu(CustomPopupMenu):
@@ -491,6 +494,7 @@ class RecentProjectsPopupMenu(CustomPopupMenu):
         """
         super().__init__(parent=parent)
         self._parent = parent
+        self.setToolTipsVisible(True)
         self.add_recent_projects()
 
     def add_recent_projects(self):
@@ -502,7 +506,9 @@ class RecentProjectsPopupMenu(CustomPopupMenu):
             for entry in recents_list:
                 name, filepath = entry.split("<>")
                 self.add_action(
-                    name, lambda checked=False, filepath=filepath: self.call_open_project(checked, filepath)
+                        name,
+                        lambda checked=False, filepath=filepath: self.call_open_project(checked, filepath),
+                        tooltip=filepath
                 )
 
     @Slot(bool, str, name="call_open_project")
