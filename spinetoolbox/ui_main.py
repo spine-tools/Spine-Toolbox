@@ -1544,7 +1544,6 @@ class ToolboxUI(QMainWindow):
         # Save updated recent paths
         self._qsettings.setValue("appSettings/recentProjects", updated_recents)
         self._qsettings.sync()  # Commit change immediately
-        self.msg_error.emit("Opening selected project failed. Project file <b>{0}</b> may have been removed.".format(p))
 
     def update_recent_projects(self):
         """Adds a new entry to QSettings variable that remembers the five most recent project paths."""
@@ -1561,7 +1560,7 @@ class ToolboxUI(QMainWindow):
                 if len(recents_list) > 5:
                     recents_list.pop()
             else:
-                # If path was on the list, move it as the first item
+                # If entry was on the list, move it as the first item
                 recents_list.insert(0, recents_list.pop(recents_list.index(entry)))
             updated_recents = "\n".join(recents_list)
         # Save updated recent paths

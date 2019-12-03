@@ -522,6 +522,9 @@ class RecentProjectsPopupMenu(CustomPopupMenu):
         if not os.path.exists(p):
             # Project has been removed, remove it from recent projects list
             self._parent.remove_path_from_recent_projects(p)
+            self._parent.msg_error.emit(
+                    "Opening selected project failed. Project file <b>{0}</b> may have been removed.".format(p)
+            )
             return
         # Check if the same project is already open
         if self._parent.project():

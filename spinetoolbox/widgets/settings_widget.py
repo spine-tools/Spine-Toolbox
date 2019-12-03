@@ -379,10 +379,12 @@ class SettingsWidget(QWidget):
         new_name = self.ui.lineEdit_project_name.text().strip()
         if self._project.name != new_name:
             # Change project name
-            # TODO: Update new name to recent projects list and check that the name is changed to File->Open Recent...
-            #  immediately.
             if not new_name == "":
                 self._project.change_name(new_name)
+                # Remove entry with the old name from File->Open recent menu
+                self._toolbox.remove_path_from_recent_projects(self._project.project_dir)
+                # Add entry with the new name back to File->Open recent menu
+                self._toolbox.update_recent_projects()
                 save = True
         if not self._project.description == self.ui.textEdit_project_description.toPlainText():
             # Set new project description
