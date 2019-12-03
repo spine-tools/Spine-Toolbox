@@ -20,6 +20,7 @@ import os
 import locale
 import logging
 import json
+import pathlib
 import numpy as np
 from PySide2.QtCore import QByteArray, QMimeData, Qt, Signal, Slot, QSettings, QUrl, SIGNAL, QStandardPaths
 from PySide2.QtWidgets import (
@@ -43,7 +44,6 @@ from .widgets.custom_menus import (
     AddToolSpecificationPopupMenu,
     RecentProjectsPopupMenu,
 )
-from .widgets.project_form_widget import NewProjectForm
 from .widgets.settings_widget import SettingsWidget
 from .widgets.tool_configuration_assistant_widget import ToolConfigurationAssistantWidget
 from .widgets.tool_specification_widget import ToolSpecificationWidget
@@ -56,7 +56,7 @@ from .project import SpineToolboxProject
 from .config import SPINE_TOOLBOX_VERSION, STATUSBAR_SS, \
     TEXTBROWSER_SS, MAINWINDOW_SS, DOCUMENTATION_PATH, _program_root, LATEST_PROJECT_VERSION, DEFAULT_WORK_DIR
 from .helpers import get_datetime, erase_dir, busy_effect, set_taskbar_icon, \
-    supported_img_formats, create_dir, copy_dir, serialize_path, deserialize_path
+    supported_img_formats, create_dir, recursive_overwrite, serialize_path, deserialize_path
 from .project_item import RootProjectItem, CategoryProjectItem
 from .project_upgrader import ProjectUpgrader
 from .project_items import data_store, data_connection, exporter, tool, view, importer
@@ -284,7 +284,7 @@ class ToolboxUI(QMainWindow):
             self.msg_error.emit("Cannot open previous project. Directory <b>{0}</b> may have been moved."
                                 .format(previous_project))
             return
-        self.open_project(previous_project, clear_event_log=False)
+        self.open_project(previous_project, clear_logs=False)
 
     @Slot()
     def new_project(self):
@@ -296,7 +296,7 @@ class ToolboxUI(QMainWindow):
         if not initial_path:
             initial_path = _program_root
         # noinspection PyCallByClass
-        project_dir = QFileDialog.getExistingDirectory(self, "Select directory for a new project", initial_path)
+        project_dir = QFileDialog.getExistingDirectory(self, "Select project directory (New project...)", initial_path)
         if not project_dir:
             return
         if not os.path.isdir(project_dir):  # Just to be sure, probably not needed
@@ -323,18 +323,17 @@ class ToolboxUI(QMainWindow):
         self.setWindowTitle("Spine Toolbox    -- {} --".format(self._project.name))
         self.ui.graphicsView.init_scene(empty=True)
         self.update_recent_projects()
-        # self.msg.emit("New project created")
         self.save_project()
 
     @Slot(name="open_project")
-    def open_project(self, load_dir=None, clear_event_log=True):
+    def open_project(self, load_dir=None, clear_logs=True):
         """Opens project from a selected directory.
 
         Args:
             load_dir (str): Path to project base directory. If default value is used,
             a file explorer dialog is opened where the user can select the
             project to open.
-            clear_event_log (bool): True clears Event Log, False does not
+            clear_logs (bool): True clears Event and Process Log, False does not
 
         Returns:
             bool: True when opening the project succeeded, False otherwise
@@ -362,7 +361,7 @@ class ToolboxUI(QMainWindow):
                     self.msg_warning.emit("Project directory <b>{0}</b> does not exist")
                     return False
                 upgraded_proj_info = upgrader.upgrade(proj_info, old_project_dir, proj_dir)
-                if not self.restore_project(upgraded_proj_info, proj_dir, clear_event_log):
+                if not self.restore_project(upgraded_proj_info, proj_dir, clear_logs):
                     return False
                 if not upgrader.copy_data(selection, proj_dir):
                     self.msg_warning.emit("Copying data to project <b>{0}</b> failed. "
@@ -386,17 +385,17 @@ class ToolboxUI(QMainWindow):
         except OSError:
             self.msg_error.emit("[OSError] Loading project file <b>{0}</b> failed".format(load_path))
             return False
-        if not self.restore_project(proj_info, load_dir, clear_event_log):
+        if not self.restore_project(proj_info, load_dir, clear_logs):
             return False
         return True
 
-    def restore_project(self, project_info, project_dir, clear_event_log):
+    def restore_project(self, project_info, project_dir, clear_logs):
         """Initializes UI, Creates project, models, connections, etc., when opening a project.
 
         Args:
             project_info (dict): Project information dictionary
             project_dir (str): Project directory
-            clear_event_log (bool): True clears Event Log, False does not
+            clear_logs (bool): True clears Event and Process Log, False does not
 
         Returns:
             bool: True when restoring project succeeded, False otherwise
@@ -421,9 +420,9 @@ class ToolboxUI(QMainWindow):
         self._project = SpineToolboxProject(self, name, desc, project_dir)
         self.setWindowTitle("Spine Toolbox    -- {} --".format(self._project.name))
         # Clear text browsers
-        if clear_event_log:
+        if clear_logs:
             self.ui.textBrowser_eventlog.clear()
-        self.ui.textBrowser_process_output.clear()
+            self.ui.textBrowser_process_output.clear()
         # Init models
         # Deserialize tool spec paths
         deserialized_paths = [deserialize_path(spec, self._project.project_dir) for spec in tool_spec_paths]
@@ -475,34 +474,25 @@ class ToolboxUI(QMainWindow):
         if not self._project:
             self.msg.emit("Please open or create a project first")
             return
-        self.msg.emit("Not Implemented. Please try again later.")
-        return
         # Ask for a new directory
         # noinspection PyCallByClass, PyArgumentList
         answer = QFileDialog.getExistingDirectory(
                 self,
-                "Select new directory (Save as...)",
+                "Select new project directory (Save as...)",
                 os.path.abspath(os.path.join(self._project.project_dir, os.path.pardir))
         )
         if not answer:  # Canceled
             return
-        if not os.path.isdir(answer):
-            msg = "Selected thing is not a directory, please try again"
-            # noinspection PyCallByClass, PyArgumentList
-            QMessageBox.warning(self, "Invalid selection", msg)
+        # Just do regular save if selected directory is the same as the current project directory
+        if pathlib.Path(answer) == pathlib.Path(self._project.project_dir):
+            self.msg_warning.emit("Project directory unchanged")
+            self.save_project()
             return
-        # Abort if selected directory is not empty. #TODO: Enable overwriting an existing project
-        # if not self.overwrite_check(answer):
-        #     return
-        if len(os.listdir(answer)) > 0:
-            self.msg_error.emit("Selected directory is not empty. Please select another one.")
+        # Check and ask what to do if selected directory is not empty
+        if not self.overwrite_check(answer):
             return
         self.msg.emit("Saving project to directory {0}".format(answer))
-        # Hack time. Remove the directory so that copy_dir works
-        # erase_dir(answer)  # TODO: This is probably a bit dangerous!
-        if not copy_dir(self, self._project.project_dir, answer):
-            self.msg_error.emit("Copying project data to directory {0} failed.".format(answer))
-            return
+        recursive_overwrite(self, self._project.project_dir, answer, silent=False)
         # Get the project info from the new directory and restore project
         config_file_path = os.path.join(answer, ".spinetoolbox", "project.json")
         try:
@@ -515,11 +505,11 @@ class ToolboxUI(QMainWindow):
         except OSError:
             self.msg_error.emit("[OSError] Opening project file <b>{0}</b> failed".format(config_file_path))
             return
-        if not self.restore_project(proj_info, answer, clear_event_log=True):
+        if not self.restore_project(proj_info, answer, clear_logs=False):
             return
         # noinspection PyCallByClass, PyArgumentList
-        QMessageBox.information(self, "{0} saved to a new directory".format(self._project.name),
-                                "Your project directory is now\n\n{0}".format(answer))
+        QMessageBox.information(self, "Project saved".format(self._project.name),
+                                "Project directory is now\n\n{0}".format(answer))
         return
 
     def init_models(self, tool_specification_paths):
@@ -639,8 +629,6 @@ class ToolboxUI(QMainWindow):
             self._project.deleteLater()
         self._project = None
         self.tool_specification_model = None
-        self.ui.textBrowser_eventlog.clear()
-        self.ui.textBrowser_process_output.clear()
         self.ui.graphicsView.scene().clear()  # Clear all items from scene
 
     def overwrite_check(self, project_dir):
@@ -996,7 +984,7 @@ class ToolboxUI(QMainWindow):
                         self.msg_error.emit("Directory does not exist")
                 except OSError:
                     self.msg_error.emit("[OSError] Removing directory failed. Check directory permissions.")
-        self.msg.emit("Item <b>{0}</b> removed from project".format(name))
+            self.msg.emit("Item <b>{0}</b> removed from project".format(name))
 
     @Slot("QUrl", name="open_anchor")
     def open_anchor(self, qurl):

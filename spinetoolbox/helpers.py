@@ -304,13 +304,13 @@ def recursive_overwrite(widget, src, dst, ignore=None, silent=True):
         widget (QWidget): Enables e.g. printing to Event Log
         src (str): Source directory
         dst (str): Destination directory
-        ignore: Ignored files
+        ignore: Ignore function
         silent (bool): If False, messages are sent to Event Log, If True, copying is done in silence
     """
     if os.path.isdir(src):
         if not os.path.isdir(dst):
             if not silent:
-                widget.msg.emit("Making directory <b>{0}</b>".format(dst))
+                widget.msg.emit("Creating directory <b>{0}</b>".format(dst))
             os.makedirs(dst)
         files = os.listdir(src)
         if ignore is not None:
