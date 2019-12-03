@@ -516,6 +516,12 @@ class PivotTableSortFilterProxy(QSortFilterProxyModel):
         self.index_filters = {}
 
     def set_filter(self, index_name, filter_value):
+        """Sets filter for a given index (object class) name.
+
+        Args:
+            index_name (str): disambiguated index name
+            filter_value (set, None): A set of accepted values, or None if no filter (all pass)
+        """
         self.index_filters[index_name] = filter_value
         self.invalidateFilter()  # trigger filter update
 
@@ -525,7 +531,8 @@ class PivotTableSortFilterProxy(QSortFilterProxyModel):
 
     def accept_index(self, index, index_names):
         for i, n in zip(index, index_names):
-            if n in self.index_filters and i not in self.index_filters[n]:
+            valid = self.index_filters.get(n)
+            if valid is not None and i not in valid:
                 return False
         return True
 

@@ -534,12 +534,14 @@ class FilterMenu(QMenu):
     def __init__(self, parent=None, show_empty=True):
         super().__init__(parent)
         self.object_class_name = None
+        self.unique_name = None
         self._remove_filter = QAction('Remove filters', None)
         self._filter = FilterWidget(show_empty=show_empty)
         self._filter_action = QWidgetAction(parent)
         self._filter_action.setDefaultWidget(self._filter)
         self.addAction(self._remove_filter)
         self.addAction(self._filter_action)
+        self.anchor = parent
 
         # add connections
         self.aboutToHide.connect(self._cancel_filter)
@@ -577,8 +579,8 @@ class FilterMenu(QMenu):
         self.hide()
 
     def event(self, event):
-        if event.type() == QEvent.Show:
-            self.move(self.parent().mapToGlobal(QPoint(0, 0)) + QPoint(0, self.parent().height()))
+        if event.type() == QEvent.Show and self.anchor is not None:
+            self.move(self.anchor.mapToGlobal(QPoint(0, 0)) + QPoint(0, self.anchor.height()))
         return super().event(event)
 
 

@@ -26,14 +26,14 @@ class TabularViewHeaderWidget(QFrame):
 
     header_dropped = Signal(object, object, str)
 
-    def __init__(self, name, menu, area, parent=None):
+    def __init__(self, name, area, menu=None, parent=None):
         """
 
         Args:
             name (str)
-            menu (FilterMenu)
             area (str): either "rows", "columns", or "frozen"
-            parent (QWidget, NoneType): Parent widget
+            menu (FilterMenu, optional)
+            parent (QWidget, optional): Parent widget
         """
         super().__init__(parent=parent)
         self._name = name
@@ -43,9 +43,11 @@ class TabularViewHeaderWidget(QFrame):
         button.setPopupMode(QToolButton.InstantPopup)
         button.setArrowType(Qt.DownArrow)
         button.setStyleSheet("QToolButton {border: none;}")
-        self.menu = menu
-        button.setMenu(self.menu)
-        self.menu.setParent(self, self.menu.windowFlags())
+        button.setEnabled(menu is not None)
+        if menu:
+            self.menu = menu
+            button.setMenu(self.menu)
+            self.menu.anchor = self
         self.drag_start_pos = None
         label = QLabel(name)
         layout.addWidget(label)
@@ -68,7 +70,7 @@ class TabularViewHeaderWidget(QFrame):
         self.setFrameShape(QFrame.Panel)
         self.setBackgroundRole(QPalette.Window)
         self.setAcceptDrops(True)
-        # TODO: self.setToolTip("<p>Drag-and-drop this ...</p>")
+        self.setToolTip("<p>Drag-and-drop this onto any header to pivot the table.</p>")
 
     @property
     def name(self):

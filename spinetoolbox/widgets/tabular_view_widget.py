@@ -619,7 +619,6 @@ class TabularViewForm(QMainWindow):
         self.update_filter_menus()
         self.update_frozen_table_to_model()
         self.make_pivot_headers()
-        # TODO: self.ui.list_frozen.clear()
 
     @Slot(dict, dict)
     def table_index_entries_changed(self, added_entries, deleted_entries):
@@ -634,6 +633,7 @@ class TabularViewForm(QMainWindow):
         for unique_name, object_class_name in self.model.model._unique_name_2_name.items():
             self.filter_menus[unique_name] = menu = FilterMenu()
             menu.set_filter_list(self.model.model.index_entries[object_class_name])
+            menu.unique_name = unique_name
             menu.object_class_name = object_class_name
             menu.filterChanged.connect(self.change_filter)
 
@@ -659,21 +659,24 @@ class TabularViewForm(QMainWindow):
         """
         for column in range(self.ui.frozen_table.model.columnCount()):
             index = self.ui.frozen_table.model.index(0, column)
-            widget = self.create_header_widget(index.data(Qt.DisplayRole), "frozen")
-            # TODO: disable filter?
+            widget = self.create_header_widget(index.data(Qt.DisplayRole), "frozen", with_menu=False)
             self.ui.frozen_table.setIndexWidget(index, widget)
             self.ui.frozen_table.resizeColumnToContents(column)
 
-    def create_header_widget(self, unique_name, area):
+    def create_header_widget(self, unique_name, area, with_menu=True):
         """
         Returns a TabularViewHeaderWidget with given name.
 
         Args:
             unique_name (str)
             area (str)
+            with_menu (bool)
         """
-        menu = self.filter_menus[unique_name]
-        widget = TabularViewHeaderWidget(unique_name, menu, area, parent=self)
+        if with_menu:
+            menu = self.filter_menus[unique_name]
+        else:
+            menu = None
+        widget = TabularViewHeaderWidget(unique_name, area, menu=menu, parent=self)
         widget.header_dropped.connect(self.handle_header_dropped)
         return widget
 
@@ -724,11 +727,10 @@ class TabularViewForm(QMainWindow):
 
     @Slot(object, set, bool)
     def change_filter(self, menu, valid, has_filter):
-        checked_items = set()
-        name = menu.object_class_name
         if has_filter:
-            checked_items = valid
-        self.proxy_model.set_filter(name, checked_items)
+            self.proxy_model.set_filter(menu.unique_name, valid)
+        else:
+            self.proxy_model.set_filter(menu.unique_name, None)  # None means everything passes
 
     def update_frozen_table_to_model(self):
         frozen = self.model.model.pivot_frozen
