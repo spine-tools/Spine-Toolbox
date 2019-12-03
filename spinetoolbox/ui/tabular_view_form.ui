@@ -107,7 +107,7 @@
     </sizepolicy>
    </property>
    <property name="windowTitle">
-    <string>Frozen entity table</string>
+    <string>Frozen table</string>
    </property>
    <attribute name="dockWidgetArea">
     <number>2</number>
@@ -146,7 +146,7 @@
     <set>QDockWidget::NoDockWidgetFeatures</set>
    </property>
    <property name="windowTitle">
-    <string>Value</string>
+    <string>Pivot table</string>
    </property>
    <attribute name="dockWidgetArea">
     <number>2</number>

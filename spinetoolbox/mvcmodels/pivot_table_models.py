@@ -18,7 +18,6 @@ Provides pivot table models for the Tabular View.
 
 from PySide2.QtCore import QAbstractTableModel, Qt, QModelIndex, Signal, QSortFilterProxyModel
 from PySide2.QtGui import QColor, QFont
-from .parameter_value_formatting import format_for_DisplayRole, format_for_EditRole, format_for_ToolTipRole
 from .pivot_model import PivotModel
 from ..config import PIVOT_TABLE_HEADER_COLOR
 
@@ -28,8 +27,14 @@ class PivotTableModel(QAbstractTableModel):
 
     _V_HEADER_WIDTH = 6
 
-    def __init__(self, parent=None):
-        super(PivotTableModel, self).__init__(parent)
+    def __init__(self, parent):
+        """
+        Args:
+            parent (TabularViewForm)
+        """
+        super().__init__(parent)
+        self.db_mngr = parent.db_mngr
+        self.db_map = parent.db_map
         self.model = PivotModel()
         self._data_header = [[]]
         self._num_headers_row = 0
@@ -403,7 +408,7 @@ class PivotTableModel(QAbstractTableModel):
         return False
 
     def data(self, index, role=Qt.DisplayRole):
-        if role in (Qt.DisplayRole, Qt.EditRole):
+        if role in (Qt.DisplayRole, Qt.EditRole, Qt.ToolTipRole):
             if self.index_in_data(index):
                 # get values
                 data = self.model.get_pivoted_data(
@@ -411,14 +416,13 @@ class PivotTableModel(QAbstractTableModel):
                 )
                 if not data or data[0][0] is None:
                     return ''
-                data = data[0][0]
-                if role == Qt.EditRole:
-                    return format_for_EditRole(data)
-                return format_for_DisplayRole(data)
+                if self.parent().current_value_type == self.parent()._DATA_SET:
+                    return data[0][0]
+                return self.db_mngr.get_value(self.db_map, "parameter value", data[0][0], "value", role)
             if self.index_in_column_headers(index):
                 # draw column header values
                 if not self.model.pivot_rows:
-                    # when special case when no pivot_index, no empty line padding
+                    # special case where there is no pivot_index, no empty line padding
                     return self.model._column_data_header[index.column() - self._num_headers_column][index.row()]
                 if index.row() < self._num_headers_row - 1:
                     return self.model._column_data_header[index.column() - self._num_headers_column][index.row()]
@@ -437,15 +441,6 @@ class PivotTableModel(QAbstractTableModel):
                 return font
         elif role == Qt.BackgroundColorRole:
             return self.data_color(index)
-        elif role == Qt.ToolTipRole:
-            if self.index_in_data(index):
-                data = self.model.get_pivoted_data(
-                    [index.row() - self._num_headers_row], [index.column() - self._num_headers_column]
-                )
-                if not data or data[0][0] is None:
-                    return None
-                data = data[0][0]
-                return format_for_ToolTipRole(data)
         else:
             return None
 

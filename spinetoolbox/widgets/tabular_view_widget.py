@@ -24,7 +24,7 @@ from PySide2.QtGui import QIcon, QGuiApplication
 from .custom_menus import PivotTableModelMenu, PivotTableHorizontalHeaderMenu
 from .tabular_view_header_widget import TabularViewHeaderWidget
 from .custom_menus import FilterMenu
-from ..helpers import fix_name_ambiguity, tuple_itemgetter
+from ..helpers import fix_name_ambiguity, tuple_itemgetter, busy_effect
 from ..mvcmodels.pivot_table_models import PivotTableSortFilterProxy, PivotTableModel
 from ..config import MAINWINDOW_SS
 
@@ -90,7 +90,7 @@ class TabularViewForm(QMainWindow):
 
         # pivot model and filterproxy
         self.proxy_model = PivotTableSortFilterProxy()
-        self.model = PivotTableModel()
+        self.model = PivotTableModel(self)
         self.proxy_model.setSourceModel(self.model)
         self.ui.pivot_table.setModel(self.proxy_model)
         self.ui.pivot_table.setContextMenuPolicy(Qt.CustomContextMenu)
@@ -133,7 +133,6 @@ class TabularViewForm(QMainWindow):
         self.ui.actionCommit.setEnabled(enabled)
         self.ui.actionRollback.setEnabled(enabled)
 
-    # TODO: Load all data using SpineDBManager
     def load_class_data(self):
         self.object_classes = {oc["name"]: oc for oc in self.db_mngr.get_items(self.db_map, "object class")}
         self.relationship_classes = {rc["name"]: rc for rc in self.db_mngr.get_items(self.db_map, "relationship class")}
@@ -158,9 +157,14 @@ class TabularViewForm(QMainWindow):
             data = self.db_mngr.get_items_by_field(
                 self.db_map, "parameter value", "relationship_class_name", self.current_class_name
             )
-            parameter_values = {(r["object_id_list"], r["parameter_id"]): r["id"] for r in data}
+            # TODO: Which is consistently faster?
+            # relationship_class_id = self.relationship_classes[self.current_class_name]["id"]
+            # data = self.db_mngr.get_relationship_parameter_values(
+            #    self.db_map, relationship_class_id=relationship_class_id
+            # )
+            parameter_values = {(d["object_id_list"], d["parameter_id"]): d["id"] for d in data}
             data = [
-                d["object_name_list"].split(',') + [d["parameter_name"], d["value"]]
+                d["object_name_list"].split(',') + [d["parameter_name"], d["id"]]
                 for d in data
                 if d["value"] is not None
             ]
@@ -170,8 +174,11 @@ class TabularViewForm(QMainWindow):
             data = self.db_mngr.get_items_by_field(
                 self.db_map, "parameter value", "object_class_name", self.current_class_name
             )
-            parameter_values = {(r["object_id"], r["parameter_id"]): r["id"] for r in data}
-            data = [[d["object_name"], d["parameter_name"], d["value"]] for d in data if d["value"] is not None]
+            # TODO: Which is consistently faster?
+            # object_class_id = self.object_classes[self.current_class_name]["id"]
+            # data = self.db_mngr.get_object_parameter_values(self.db_map, object_class_id=object_class_id)
+            parameter_values = {(d["object_id"], d["parameter_id"]): d["id"] for d in data}
+            data = [[d["object_name"], d["parameter_name"], d["id"]] for d in data if d["value"] is not None]
             index_names = [self.current_class_name]
             index_types = [str]
         index_names.extend([self._PARAMETER_NAME])
@@ -188,7 +195,7 @@ class TabularViewForm(QMainWindow):
             index_types = [str for _ in index_names]
         else:
             data = [
-                [o.name, 'x']
+                [o["name"], 'x']
                 for o in self.objects.values()
                 if o["class_id"] == self.object_classes[self.current_class_name]["id"]
             ]
@@ -284,7 +291,7 @@ class TabularViewForm(QMainWindow):
             if key in self.parameter_values:
                 if self.current_value_type == self._DATA_VALUE:
                     # only delete values where only one field is populated
-                    values_to_delete.append(self.parameter_values[key]._asdict())
+                    values_to_delete.append(self.parameter_values[key])
                 else:
                     # remove value from parameter_value field but not entire row
                     update_data.append({"id": self.parameter_values[key], self.current_value_type: None})
@@ -323,9 +330,7 @@ class TabularViewForm(QMainWindow):
         delete_parameters = list()
         for pn in parameter_names:
             if pn in self.parameters:
-                # Need to convert the parameter definition structs to something the other data store views understand.
-                parameter = self.parameters[pn]._asdict()
-                parameter["parameter_name"] = parameter.pop("name")
+                parameter = self.parameters[pn]
                 delete_parameters.append(parameter)
                 self.parameters.pop(pn)
         if delete_objects:
@@ -520,6 +525,7 @@ class TabularViewForm(QMainWindow):
             db_edited = True
         return db_edited
 
+    @busy_effect
     @Slot("QListWidgetItem", "QListWidgetItem")
     def change_class(self, current, previous):
         self.save_model()

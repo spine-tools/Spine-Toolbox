@@ -27,7 +27,7 @@ class TabularViewHeaderWidget(QFrame):
 
     header_dropped = Signal(object, object, str)
     _H_MARGIN = 3
-    _SPACING = 32
+    _SPACING = 16
 
     def __init__(self, name, area, menu=None, parent=None):
         """

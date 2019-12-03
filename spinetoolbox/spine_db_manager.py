@@ -544,6 +544,15 @@ class SpineDBManager(QObject):
         return getattr(self, method_name)(db_map)
 
     def get_value(self, db_map, item_type, id_, field, role=Qt.DisplayRole):
+        """Returns the value or default value of a parameter.
+
+        Args:
+            db_map (DiffDatabaseMapping)
+            item_type (str): either "parameter definition" or "parameter value"
+            id_ (int)
+            field (str): either "value" or "default_value"
+            role (int, optional)
+        """
         item = self.get_item(db_map, item_type, id_)
         key = "formatted_" + field
         if key not in item:
