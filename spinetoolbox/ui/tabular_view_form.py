@@ -10,10 +10,10 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-# Form implementation generated from reading ui file 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\ui\tabular_view_form.ui',
-# licensing of 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\ui\tabular_view_form.ui' applies.
+# Form implementation generated from reading ui file '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/tabular_view_form.ui',
+# licensing of '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/tabular_view_form.ui' applies.
 #
-# Created: Fri Nov 22 18:44:28 2019
+# Created: Tue Dec  3 08:59:59 2019
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -108,16 +108,13 @@ class Ui_MainWindow(object):
         self.verticalLayout_6 = QtWidgets.QVBoxLayout(self.verticalLayoutWidget_6)
         self.verticalLayout_6.setContentsMargins(0, 0, 0, 0)
         self.verticalLayout_6.setObjectName("verticalLayout_6")
-        self.h_layout_filter = QtWidgets.QHBoxLayout()
-        self.h_layout_filter.setObjectName("h_layout_filter")
-        self.verticalLayout_6.addLayout(self.h_layout_filter)
-        self.pivot_table = SimpleCopyPasteTableView(self.verticalLayoutWidget_6)
+        self.pivot_table = PivotTableView(self.verticalLayoutWidget_6)
         self.pivot_table.setObjectName("pivot_table")
         self.verticalLayout_6.addWidget(self.pivot_table)
         self.verticalLayout_7.addWidget(self.splitter_3)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 800, 21))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 800, 28))
         self.menubar.setObjectName("menubar")
         self.menuSession = QtWidgets.QMenu(self.menubar)
         self.menuSession.setObjectName("menuSession")
@@ -180,6 +177,7 @@ class Ui_MainWindow(object):
         self.actionClose.setText(QtWidgets.QApplication.translate("MainWindow", "Close", None, -1))
         self.actionClose.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+W", None, -1))
 
-from spinetoolbox.widgets.custom_qtableview import FrozenTableView, SimpleCopyPasteTableView
 from spinetoolbox.widgets.custom_qlistview import PivotListWidget
+from spinetoolbox.widgets.pivot_table_view import PivotTableView
+from spinetoolbox.widgets.custom_qtableview import FrozenTableView
 from spinetoolbox import resources_icons_rc

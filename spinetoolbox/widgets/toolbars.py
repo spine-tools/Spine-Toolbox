@@ -143,7 +143,7 @@ class DraggableWidget(QLabel):
             item_type (str): Item type (e.g. Data Store, Data Connection, etc...)
             category (str): Item category (e.g. Data Stores, Data Connetions, etc...)
         """
-        super().__init__(parent=parent)  # Parent passed to QFrame constructor. Inherits stylesheet from ToolboxUI.
+        super().__init__(parent=parent)  # Parent passed to QLabel constructor. Inherits stylesheet from ToolboxUI.
         self.category = category
         self.setPixmap(pixmap)
         self.drag_start_pos = None

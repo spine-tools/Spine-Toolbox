@@ -137,10 +137,7 @@
        <widget class="QWidget" name="verticalLayoutWidget_6">
         <layout class="QVBoxLayout" name="verticalLayout_6">
          <item>
-          <layout class="QHBoxLayout" name="h_layout_filter"/>
-         </item>
-         <item>
-          <widget class="SimpleCopyPasteTableView" name="pivot_table"/>
+          <widget class="PivotTableView" name="pivot_table"/>
          </item>
         </layout>
        </widget>
@@ -155,7 +152,7 @@
      <x>0</x>
      <y>0</y>
      <width>800</width>
-     <height>21</height>
+     <height>28</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuSession">
@@ -237,9 +234,9 @@
  </widget>
  <customwidgets>
   <customwidget>
-   <class>SimpleCopyPasteTableView</class>
+   <class>PivotTableView</class>
    <extends>QTableView</extends>
-   <header>spinetoolbox/widgets/custom_qtableview.h</header>
+   <header>spinetoolbox/widgets/pivot_table_view.h</header>
   </customwidget>
   <customwidget>
    <class>FrozenTableView</class>

@@ -371,74 +371,17 @@ class FrozenTableView(QTableView):
             return ()
         if self.model.rowCount() == 0:
             return tuple(None for _ in range(self.model.columnCount()))
-        index = self.selectedIndexes()
-        if not index:
+        indexes = self.selectedIndexes()
+        if not indexes:
             return tuple(None for _ in range(self.model.columnCount()))
-        index = self.selectedIndexes()[0]
+        index = indexes[0]
         return self.model.row(index)
 
-    def set_data(self, headers, values):
+    def set_data(self, values, headers):
         self.selectionModel().blockSignals(True)  # prevent selectionChanged signal when updating
         self.model.set_data(values, headers)
         self.selectRow(0)
         self.selectionModel().blockSignals(False)
-
-
-class SimpleCopyPasteTableView(QTableView):
-    """Custom QTableView class that copies and paste data in response to key press events.
-
-    Attributes:
-        parent (QWidget): The parent of this view
-    """
-
-    def __init__(self, parent=None):
-        """Initialize the class."""
-        super().__init__(parent)
-        # self.editing = False
-        self.clipboard = QApplication.clipboard()
-        self.clipboard_text = self.clipboard.text()
-        self.clipboard.dataChanged.connect(self.clipboard_data_changed)
-
-    @Slot(name="clipboard_data_changed")
-    def clipboard_data_changed(self):
-        self.clipboard_text = self.clipboard.text()
-
-    def keyPressEvent(self, event):
-        """Copy and paste to and from clipboard in Excel-like format."""
-        if event.matches(QKeySequence.Copy):
-            selection = self.selectionModel().selection()
-            if not selection:
-                super().keyPressEvent(event)
-                return
-            # Take only the first selection in case of multiple selection.
-            first = selection.first()
-            content = ""
-            v_header = self.verticalHeader()
-            h_header = self.horizontalHeader()
-            for i in range(first.top(), first.bottom() + 1):
-                if v_header.isSectionHidden(i):
-                    continue
-                row = list()
-                for j in range(first.left(), first.right() + 1):
-                    if h_header.isSectionHidden(j):
-                        continue
-                    row.append(str(self.model().index(i, j).data(Qt.DisplayRole)))
-                content += "\t".join(row)
-                content += "\n"
-            self.clipboard.setText(content)
-        elif event.matches(QKeySequence.Paste):
-            if not self.clipboard_text:
-                super().keyPressEvent(event)
-                return
-            top_left_index = self.currentIndex()
-            if not top_left_index.isValid():
-                super().keyPressEvent(event)
-                return
-            data = [line.split('\t') for line in self.clipboard_text.split('\n')[0:-1]]
-            self.selectionModel().select(top_left_index, QItemSelectionModel.Select)
-            self.model().paste_data(top_left_index, data)
-        else:
-            super().keyPressEvent(event)
 
 
 class IndexedParameterValueTableViewBase(CopyPasteTableView):
