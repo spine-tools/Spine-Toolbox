@@ -198,13 +198,17 @@ class TabularViewForm(QMainWindow):
 
     def update_class_list(self):
         """update entity_class_list with all object classes and relationship classes"""
-        for name in sorted(self.object_classes):
+        for name, obj_cls in sorted(self.object_classes.items()):
             item = QListWidgetItem(name)
+            icon = self.db_mngr.entity_class_icon(self.db_map, "object class", obj_cls["id"])
+            item.setData(Qt.DecorationRole, icon)
             item.setData(Qt.UserRole, self._OBJECT_CLASS)
             self.ui.entity_class_list.addItem(item)
-        for name in sorted(self.relationship_classes):
+        for name, rel_cls in sorted(self.relationship_classes.items()):
             item = QListWidgetItem(name)
+            icon = self.db_mngr.entity_class_icon(self.db_map, "relationship class", rel_cls["id"])
             item.setData(Qt.UserRole, self._RELATIONSHIP_CLASS)
+            item.setData(Qt.DecorationRole, icon)
             self.ui.entity_class_list.addItem(item)
         self.ui.entity_class_list.setCurrentItem(self.ui.entity_class_list.item(0))
 
