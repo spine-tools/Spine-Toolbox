@@ -418,13 +418,15 @@ class SpineDBManager(QObject):
         """
         for db_map, items in db_map_data.items():
             for item in items:
-                if db_map in self._cache:
-                    cached_map = self._cache[db_map]
-                    if item_type in cached_map:
-                        cached_items = cached_map[item_type]
-                        item_id = item["id"]
-                        if item_id in cached_items:
-                            del cached_items[item_id]
+                if db_map not in self._cache:
+                    continue
+                cached_map = self._cache[db_map]
+                if item_type not in cached_map:
+                    continue
+                cached_items = cached_map[item_type]
+                item_id = item["id"]
+                if item_id in cached_items:
+                    del cached_items[item_id]
 
     def update_icons(self, db_map_data):
         """Runs when object classes are added or updated. Setups icons for those classes.
@@ -501,10 +503,10 @@ class SpineDBManager(QObject):
         Returns:
             list
         """
-        items = [x for x in self.get_items(db_map, item_type) if x[field] == value]
+        items = [x for x in self.get_items(db_map, item_type) if x.get(field) == value]
         if items:
             return items
-        return [x for x in self._get_items_from_db(db_map, item_type) if x[field] == value]
+        return [x for x in self._get_items_from_db(db_map, item_type) if x.get(field) == value]
 
     def get_items(self, db_map, item_type):
         """Returns all the items of the given type in the given db map,

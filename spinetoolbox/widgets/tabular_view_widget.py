@@ -18,10 +18,9 @@ Contains TabularViewForm class and some related constants.
 
 import operator
 from collections import namedtuple
-from PySide2.QtWidgets import QMainWindow, QComboBox
+from PySide2.QtWidgets import QMainWindow, QComboBox, QListWidgetItem
 from PySide2.QtCore import QItemSelection, Qt, QSettings, Slot
 from PySide2.QtGui import QIcon, QGuiApplication
-from sqlalchemy.sql import literal_column
 from .custom_menus import PivotTableModelMenu, PivotTableHorizontalHeaderMenu
 from .tabular_view_header_widget import TabularViewHeaderWidget
 from .custom_menus import FilterMenu
@@ -37,8 +36,8 @@ class TabularViewForm(QMainWindow):
     _RELATIONSHIP_CLASS = "relationship"
     _OBJECT_CLASS = "object"
 
-    _DATA_VALUE = "Value"
-    _DATA_SET = "Set"
+    _DATA_VALUE = "Parameter value"
+    _DATA_SET = "Relationship"
 
     _JSON_TIME_NAME = "json time"
     _PARAMETER_NAME = "parameter"
@@ -66,18 +65,15 @@ class TabularViewForm(QMainWindow):
         self.qsettings = QSettings("SpineProject", "Spine Toolbox")
         self.settings_group = 'tabularViewWidget'
 
-        # database
-        self.database = self.db_map.codename
-
         # current state of ui
         self.current_class_type = ''
         self.current_class_name = ''
         self.current_value_type = ''
-        self.relationships = []
-        self.relationship_classes = []
-        self.object_classes = []
-        self.objects = []
-        self.parameters = []
+        self.relationships = {}
+        self.relationship_classes = {}
+        self.object_classes = {}
+        self.objects = {}
+        self.parameters = {}
         self.parameter_values = {}
         self.relationship_tuple_key = ()
         self.original_index_names = {}
@@ -126,7 +122,7 @@ class TabularViewForm(QMainWindow):
         self.load_objects()
         self.update_class_list()
 
-        self.setWindowTitle("Data store tabular view    -- {} --".format(self.database))
+        self.setWindowTitle("Data store tabular view    -- {} --".format(self.db_map.codename))
         self.restore_ui()
         self.setAttribute(Qt.WA_DeleteOnClose)
 
@@ -139,39 +135,43 @@ class TabularViewForm(QMainWindow):
 
     # TODO: Load all data using SpineDBManager
     def load_class_data(self):
-        self.object_classes = {oc.name: oc for oc in self.db_map.object_class_list().all()}
-        self.relationship_classes = {rc.name: rc for rc in self.db_map.wide_relationship_class_list().all()}
-        self.parameters = {p.name: p for p in self.db_map.parameter_definition_list().all()}
+        self.object_classes = {oc["name"]: oc for oc in self.db_mngr.get_items(self.db_map, "object class")}
+        self.relationship_classes = {rc["name"]: rc for rc in self.db_mngr.get_items(self.db_map, "relationship class")}
+        self.parameters = {p["parameter_name"]: p for p in self.db_mngr.get_items(self.db_map, "parameter definition")}
 
     def load_objects(self):
-        self.objects = {o.name: o for o in self.db_map.object_list().all()}
+        self.objects = {o["name"]: o for o in self.db_mngr.get_items(self.db_map, "object")}
 
     def load_relationships(self):
         if self.current_class_type == self._RELATIONSHIP_CLASS:
-            class_id = self.relationship_classes[self.current_class_name].id
+            class_id = self.relationship_classes[self.current_class_name]["id"]
             self.relationships = {
-                tuple(int(i) for i in r.object_id_list.split(",")): r
-                for r in self.db_map.wide_relationship_list(class_id=class_id).all()
+                tuple(int(i) for i in r["object_id_list"].split(",")): r
+                for r in self.db_mngr.get_items_by_field(self.db_map, "relationship", "class_id", class_id)
             }
             self.relationship_tuple_key = tuple(
-                self.relationship_classes[self.current_class_name].object_class_name_list.split(',')
+                self.relationship_classes[self.current_class_name]["object_class_name_list"].split(',')
             )
 
     def load_parameter_values(self):
         if self.current_class_type == self._RELATIONSHIP_CLASS:
-            query = self.db_map.relationship_parameter_value_list()
-            query = query.filter(literal_column("relationship_class_name") == self.current_class_name)
-            data = query.all()
-            parameter_values = {(r.object_id_list, r.parameter_id): r.id for r in data}
-            data = [d.object_name_list.split(',') + [d.parameter_name, d.value] for d in data if d.value is not None]
+            data = self.db_mngr.get_items_by_field(
+                self.db_map, "parameter value", "relationship_class_name", self.current_class_name
+            )
+            parameter_values = {(r["object_id_list"], r["parameter_id"]): r["id"] for r in data}
+            data = [
+                d["object_name_list"].split(',') + [d["parameter_name"], d["value"]]
+                for d in data
+                if d["value"] is not None
+            ]
             index_names = self.current_object_class_list()
             index_types = [str] * len(index_names)
         else:
-            sq = self.db_map.object_parameter_value_sq
-            query = self.db_map.query(sq).filter(sq.c.object_class_name == self.current_class_name)
-            data = query.all()
-            parameter_values = {(r.object_id, r.parameter_id): r.id for r in data}
-            data = [[d.object_name, d.parameter_name, d.value] for d in data if d.value is not None]
+            data = self.db_mngr.get_items_by_field(
+                self.db_map, "parameter value", "object_class_name", self.current_class_name
+            )
+            parameter_values = {(r["object_id"], r["parameter_id"]): r["id"] for r in data}
+            data = [[d["object_name"], d["parameter_name"], d["value"]] for d in data if d["value"] is not None]
             index_names = [self.current_class_name]
             index_types = [str]
         index_names.extend([self._PARAMETER_NAME])
@@ -179,18 +179,18 @@ class TabularViewForm(QMainWindow):
         return data, index_names, index_types, parameter_values
 
     def current_object_class_list(self):
-        return self.relationship_classes[self.current_class_name].object_class_name_list.split(',')
+        return self.relationship_classes[self.current_class_name]["object_class_name_list"].split(',')
 
     def get_set_data(self):
         if self.current_class_type == self._RELATIONSHIP_CLASS:
-            data = [r.object_name_list.split(',') + ['x'] for r in self.relationships.values()]
+            data = [r["object_name_list"].split(',') + ['x'] for r in self.relationships.values()]
             index_names = self.current_object_class_list()
             index_types = [str for _ in index_names]
         else:
             data = [
                 [o.name, 'x']
                 for o in self.objects.values()
-                if o.class_id == self.object_classes[self.current_class_name].id
+                if o["class_id"] == self.object_classes[self.current_class_name]["id"]
             ]
             index_names = [self.current_class_name]
             index_types = [str]
@@ -198,9 +198,14 @@ class TabularViewForm(QMainWindow):
 
     def update_class_list(self):
         """update entity_class_list with all object classes and relationship classes"""
-        oc = sorted(set(self._OBJECT_CLASS + ': ' + oc.name for oc in self.object_classes.values()))
-        rc = sorted(set(self._RELATIONSHIP_CLASS + ': ' + oc.name for oc in self.relationship_classes.values()))
-        self.ui.entity_class_list.addItems(oc + rc)
+        for name in sorted(self.object_classes):
+            item = QListWidgetItem(name)
+            item.setData(Qt.UserRole, self._OBJECT_CLASS)
+            self.ui.entity_class_list.addItem(item)
+        for name in sorted(self.relationship_classes):
+            item = QListWidgetItem(name)
+            item.setData(Qt.UserRole, self._RELATIONSHIP_CLASS)
+            self.ui.entity_class_list.addItem(item)
         self.ui.entity_class_list.setCurrentItem(self.ui.entity_class_list.item(0))
 
     @Slot(bool)
@@ -248,8 +253,8 @@ class TabularViewForm(QMainWindow):
         """Returns the type and name of the currently selected object/relationship class."""
         selected = self.ui.entity_class_list.currentItem()
         if selected:
-            text = selected.text()
-            class_type, class_name = text.split(': ')
+            class_name = selected.text()
+            class_type = selected.data(Qt.UserRole)
             return class_type, class_name
         return None, None
 
@@ -264,12 +269,12 @@ class TabularViewForm(QMainWindow):
         par_ind = len(obj_ind)
         index_ind = par_ind
         for k in delete_values.keys():
-            obj_id = tuple(self.objects[k[i]].id for i in obj_ind)
+            obj_id = tuple(self.objects[k[i]]["id"] for i in obj_ind)
             if self.current_class_type == self._OBJECT_CLASS:
                 obj_id = obj_id[0]
             else:
                 obj_id = ",".join(map(str, obj_id))
-            par_id = self.parameters[k[par_ind]].id
+            par_id = self.parameters[k[par_ind]]["id"]
             index = k[index_ind]
             key = (obj_id, par_id, index)
             if key in self.parameter_values:
@@ -288,9 +293,9 @@ class TabularViewForm(QMainWindow):
         relationships_to_delete = list()
         for del_rel in delete_relationships:
             if all(n in self.objects for n in del_rel):
-                obj_ids = tuple(self.objects[n].id for n in del_rel)
+                obj_ids = tuple(self.objects[n]["id"] for n in del_rel)
                 if obj_ids in self.relationships:
-                    relationships_to_delete.append(self.relationships.pop(obj_ids)._asdict())
+                    relationships_to_delete.append(self.relationships.pop(obj_ids))
         if relationships_to_delete:
             self.db_mngr.remove_items({self.db_map: {"relationship": relationships_to_delete}})
 
@@ -309,7 +314,7 @@ class TabularViewForm(QMainWindow):
         delete_objects = list()
         for on in object_names:
             if on in self.objects:
-                delete_objects.append(self.objects[on]._asdict())
+                delete_objects.append(self.objects[on])
                 self.objects.pop(on)
         delete_parameters = list()
         for pn in parameter_names:
@@ -334,15 +339,15 @@ class TabularViewForm(QMainWindow):
         for k, on in add_indexes.items():
             if k == self._PARAMETER_NAME:
                 if self.current_class_type == self._OBJECT_CLASS:
-                    class_id = self.object_classes[self.current_class_name].id
+                    class_id = self.object_classes[self.current_class_name]["id"]
                     new_parameters += [{"name": n, "object_class_id": class_id} for n in on]
                 else:
                     new_parameters += [
-                        {"name": n, "relationship_class_id": self.relationship_classes[self.current_class_name].id}
+                        {"name": n, "relationship_class_id": self.relationship_classes[self.current_class_name]["id"]}
                         for n in on
                     ]
             elif k != self._JSON_TIME_NAME:
-                new_objects += [{"name": n, "class_id": self.object_classes[k].id} for n in on]
+                new_objects += [{"name": n, "class_id": self.object_classes[k]["id"]} for n in on]
         if new_objects:
             self.db_mngr.add_objects({self.db_map: new_objects})
             db_edited = True
@@ -367,22 +372,22 @@ class TabularViewForm(QMainWindow):
                 new = self.model.model._added_index_entries[name]
                 new_data_set = set(r[i] for r in add_relationships)
                 new = [n for n in new if n in new_data_set]
-                add_objects.extend([{'name': n, 'class_id': self.object_classes[name].id} for n in new])
+                add_objects.extend([{'name': n, 'class_id': self.object_classes[name]["id"]} for n in new])
             if add_objects:
                 self.db_mngr.add_objects({self.db_map: add_objects})
                 self.load_objects()
             if delete_relationships:
-                ids = [tuple(self.objects[i].id for i in rel) for rel in delete_relationships]
+                ids = [tuple(self.objects[i]["id"] for i in rel) for rel in delete_relationships]
                 relationships_to_delete = list()
                 for deletable_id in ids:
                     if deletable_id in self.relationships:
-                        deletable = self.relationships.pop(deletable_id)._asdict()
+                        deletable = self.relationships.pop(deletable_id)
                         relationships_to_delete.append(deletable)
                 if relationships_to_delete:
                     self.db_mngr.remove_items({self.db_map: {"relationship": relationships_to_delete}})
             if add_relationships:
-                ids = [(tuple(self.objects[i].id for i in rel), '_'.join(rel)) for rel in delete_relationships]
-                c_id = self.relationship_classes[self.current_class_name].id
+                ids = [(tuple(self.objects[i]["id"] for i in rel), '_'.join(rel)) for rel in delete_relationships]
+                c_id = self.relationship_classes[self.current_class_name]["id"]
                 insert_rels = [
                     {'object_id_list': r[0], 'name': r[1], 'class_id': c_id} for r in ids if r not in self.relationships
                 ]
@@ -396,12 +401,12 @@ class TabularViewForm(QMainWindow):
             if delete_objects:
                 objects_to_delete = list()
                 for name in delete_objects:
-                    deletable = self.objects[name]._asdict()
+                    deletable = self.objects[name]
                     objects_to_delete.append(deletable)
                 self.db_mngr.remove_items({self.db_map: {"object": objects_to_delete}})
                 db_edited = True
             if add_objects:
-                class_id = self.object_classes[self.current_class_name].id
+                class_id = self.object_classes[self.current_class_name]["id"]
                 add_objects = [{"name": o, "class_id": class_id} for o in add_objects]
                 self.db_mngr.add_objects({self.db_map: add_objects})
                 db_edited = True
@@ -419,7 +424,9 @@ class TabularViewForm(QMainWindow):
             add_indexes = self.model.model._added_index_entries
             obj_edited = self.add_index_values_to_db(add_indexes)
             if obj_edited:
-                self.parameters = {p.name: p for p in self.db_map.parameter_definition_list().all()}
+                self.parameters = {
+                    p["parameter_name"]: p for p in self.db_mngr.get_items(self.db_map, "parameter definition")
+                }
                 self.load_objects()
 
             delete_values = self.model.model._deleted_data
@@ -463,12 +470,12 @@ class TabularViewForm(QMainWindow):
             id_field = "object_id"
         par_ind = len(obj_ind)
         for k in data.keys():
-            obj_id = tuple(self.objects[k[i]].id for i in obj_ind)
-            par_id = self.parameters[k[par_ind]].id
+            obj_id = tuple(self.objects[k[i]]["id"] for i in obj_ind)
+            par_id = self.parameters[k[par_ind]]["id"]
             db_id = None
             if self.current_class_type == self._RELATIONSHIP_CLASS:
                 if obj_id in self.relationships:
-                    db_id = self.relationships[obj_id].id
+                    db_id = self.relationships[obj_id]["id"]
                 obj_id = ",".join(map(str, obj_id))
             else:
                 obj_id = obj_id[0]
@@ -494,12 +501,12 @@ class TabularViewForm(QMainWindow):
             rels = self.model.model._added_tuple_index_entries[self.relationship_tuple_key]
             for rel in rels:
                 if all(n in self.objects for n in rel):
-                    obj_ids = tuple(self.objects[n].id for n in rel)
+                    obj_ids = tuple(self.objects[n]["id"] for n in rel)
                     if obj_ids not in self.relationships:
                         new_rels.append(
                             {
                                 'object_id_list': obj_ids,
-                                'class_id': self.relationship_classes[self.current_class_name].id,
+                                'class_id': self.relationship_classes[self.current_class_name]["id"],
                                 'name': '_'.join(rel),
                             }
                         )
@@ -535,36 +542,38 @@ class TabularViewForm(QMainWindow):
         tuple_entries = {}
         used_index_entries = {}
         valid_index_values = {self._JSON_TIME_NAME: range(1, 9999999)}
-        # used_index_entries[(self.PARAMETER_NAME,)] = set(p.name for p in self.parameters.values())
+        # used_index_entries[(self.PARAMETER_NAME,)] = set(self.parameters.keys())
         index_entries = {}
         if self.current_class_type == self._RELATIONSHIP_CLASS:
             object_class_names = tuple(
-                self.relationship_classes[self.current_class_name].object_class_name_list.split(',')
+                self.relationship_classes[self.current_class_name]["object_class_name_list"].split(',')
             )
-            # used_index_entries[object_class_names] = set(o.name for o in self.objects.values())
+            # used_index_entries[object_class_names] = set(self.objects.keys())
             index_entries[self._PARAMETER_NAME] = set(
-                p.name
+                p["parameter_name"]
                 for p in self.parameters.values()
-                if p.relationship_class_id == self.relationship_classes[self.current_class_name].id
+                if p.get("relationship_class_id") == self.relationship_classes[self.current_class_name]["id"]
             )
             tuple_entries[(self._PARAMETER_NAME,)] = set((i,) for i in index_entries[self._PARAMETER_NAME])
             for oc in object_class_names:
                 index_entries[oc] = set(
-                    o.name for o in self.objects.values() if o.class_id == self.object_classes[oc].id
+                    o["name"] for o in self.objects.values() if o["class_id"] == self.object_classes[oc]["id"]
                 )
             unique_class_names = list(object_class_names)
             unique_class_names = fix_name_ambiguity(unique_class_names)
             tuple_entries[tuple(unique_class_names)] = set(
-                tuple(r.object_name_list.split(',')) for r in self.relationships.values()
+                tuple(r["object_name_list"].split(',')) for r in self.relationships.values()
             )
         else:
             index_entries[self.current_class_name] = set(
-                o.name for o in self.objects.values() if o.class_id == self.object_classes[self.current_class_name].id
+                o["name"]
+                for o in self.objects.values()
+                if o["class_id"] == self.object_classes[self.current_class_name]["id"]
             )
             index_entries[self._PARAMETER_NAME] = set(
-                p.name
+                p["parameter_name"]
                 for p in self.parameters.values()
-                if p.object_class_id == self.object_classes[self.current_class_name].id
+                if p.get("object_class_id") == self.object_classes[self.current_class_name]["id"]
             )
             tuple_entries[(self._PARAMETER_NAME,)] = set((i,) for i in index_entries[self._PARAMETER_NAME])
             tuple_entries[(self.current_class_name,)] = set((i,) for i in index_entries[self.current_class_name])
