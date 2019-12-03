@@ -20,10 +20,9 @@ import csv
 import io
 import locale
 import numpy as np
-from PySide2.QtWidgets import QTableView, QApplication, QAbstractItemView, QMenu, QLineEdit, QWidgetAction
+from PySide2.QtWidgets import QTableView, QApplication, QMenu, QLineEdit, QWidgetAction
 from PySide2.QtCore import Qt, Signal, Slot, QItemSelectionModel, QPoint
 from PySide2.QtGui import QKeySequence
-from ..mvcmodels.table_model import TableModel
 from ..mvcmodels.auto_filter_menu_model import AutoFilterMenuValueItemModel, AutoFilterMenuAllItemModel
 from ..widgets.custom_qlistview import AutoFilterMenuView
 from ..helpers import busy_effect
@@ -350,38 +349,6 @@ class AutoFilterCopyPasteTableView(CopyPasteTableView):
     def sort_model_descending(self):
         """Called when the user selects sort descending in the auto filter widget."""
         self.model().sort(self.auto_filter_column, Qt.DescendingOrder)
-
-
-class FrozenTableView(QTableView):
-    def __init__(self, parent=None):
-        super(FrozenTableView, self).__init__(parent)
-        self.model = TableModel()
-        self.setSelectionBehavior(QAbstractItemView.SelectRows)
-        self.setSelectionMode(QAbstractItemView.SingleSelection)
-        self.verticalHeader().setVisible(False)
-        self.setSortingEnabled(True)
-        self.setModel(self.model)
-        self.is_updating = False
-
-    def clear(self):
-        self.model.set_data([], [])
-
-    def get_selected_row(self):
-        if self.model.columnCount() == 0:
-            return ()
-        if self.model.rowCount() == 0:
-            return tuple(None for _ in range(self.model.columnCount()))
-        indexes = self.selectedIndexes()
-        if not indexes:
-            return tuple(None for _ in range(self.model.columnCount()))
-        index = indexes[0]
-        return self.model.row(index)
-
-    def set_data(self, values, headers):
-        self.selectionModel().blockSignals(True)  # prevent selectionChanged signal when updating
-        self.model.set_data(values, headers)
-        self.selectRow(0)
-        self.selectionModel().blockSignals(False)
 
 
 class IndexedParameterValueTableViewBase(CopyPasteTableView):

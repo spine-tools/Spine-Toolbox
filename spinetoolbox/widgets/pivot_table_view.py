@@ -20,6 +20,7 @@ from PySide2.QtWidgets import QTableView, QApplication
 from PySide2.QtCore import Qt, Slot, QItemSelectionModel
 from PySide2.QtGui import QKeySequence
 from spinedb_api import from_database, DateTime, Duration, ParameterValueFormatError, TimePattern, TimeSeries
+from .pivot_table_header_view import PivotTableHeaderView
 from .parameter_value_editor import ParameterValueEditor
 from ..helpers import busy_effect
 
@@ -38,6 +39,12 @@ class PivotTableView(QTableView):
         self.clipboard = QApplication.clipboard()
         self.clipboard_text = self.clipboard.text()
         self.clipboard.dataChanged.connect(self.clipboard_data_changed)
+        h_header = PivotTableHeaderView(Qt.Horizontal, "columns", self)
+        v_header = PivotTableHeaderView(Qt.Vertical, "rows", self)
+        self.setHorizontalHeader(h_header)
+        self.setVerticalHeader(v_header)
+        h_header.setContextMenuPolicy(Qt.CustomContextMenu)
+        v_header.hide()
 
     @Slot(name="clipboard_data_changed")
     def clipboard_data_changed(self):

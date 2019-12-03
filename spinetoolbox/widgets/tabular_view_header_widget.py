@@ -27,13 +27,14 @@ class TabularViewHeaderWidget(QFrame):
 
     header_dropped = Signal(object, object, str)
 
-    def __init__(self, parent, name, area):
+    def __init__(self, parent, name, area, enable_filter=True):
         """
 
         Args:
             parent (QWidget): Parent widget
             name (str)
-            area (str): either "top" or "left"
+            area (str): either "rows", "columns", or "frozen"
+            enable_filter (bool)
         """
         super().__init__(parent=parent)
         self._name = name
@@ -43,6 +44,7 @@ class TabularViewHeaderWidget(QFrame):
         button.setPopupMode(QToolButton.InstantPopup)
         button.setArrowType(Qt.DownArrow)
         button.setStyleSheet("QToolButton {border: none;}")
+        button.setEnabled(enable_filter)
         self.menu = FilterMenu(self)
         # menu.filterChanged.connect(self.change_filter)
         button.setMenu(self.menu)
@@ -60,6 +62,8 @@ class TabularViewHeaderWidget(QFrame):
         elif area == "columns":
             h_alignment = Qt.AlignRight
             layout.insertSpacing(0, spacing)
+        elif area == "frozen":
+            h_alignment = Qt.AlignHCenter
         label.setAlignment(h_alignment | Qt.AlignVCenter)
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setAutoFillBackground(True)
@@ -113,7 +117,7 @@ class TabularViewHeaderWidget(QFrame):
             return
         center = self.rect().center()
         drop = event.pos()
-        if self.area == "rows":
+        if self.area in ("rows", "frozen"):
             position = "before" if center.x() > drop.x() else "after"
         elif self.area == "columns":
             position = "before" if center.y() > drop.y() else "after"

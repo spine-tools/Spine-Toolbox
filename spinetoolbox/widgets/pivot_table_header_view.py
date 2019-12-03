@@ -16,7 +16,7 @@ Contains custom QHeaderView for the pivot table.
 :date:   2.12.2019
 """
 
-from PySide2.QtCore import Qt, Signal
+from PySide2.QtCore import Signal
 from PySide2.QtWidgets import QHeaderView
 from .tabular_view_header_widget import TabularViewHeaderWidget
 
@@ -25,13 +25,10 @@ class PivotTableHeaderView(QHeaderView):
 
     header_dropped = Signal(object, object)
 
-    def __init__(self, orientation, parent=None):
+    def __init__(self, orientation, area, parent=None):
         super().__init__(orientation, parent=parent)
         self.setAcceptDrops(True)
-        if orientation == Qt.Horizontal:
-            self._area = "columns"
-        elif orientation == Qt.Vertical:
-            self._area = "rows"
+        self._area = area
 
     @property
     def area(self):

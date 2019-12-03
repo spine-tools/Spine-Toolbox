@@ -772,10 +772,7 @@ class DataStoreForm(QMainWindow):
         self.qsettings.setValue("relParDefHeaderState", h.saveState())
         h = self.ui.tableView_relationship_parameter_value.horizontalHeader()
         self.qsettings.setValue("relParValHeaderState", h.saveState())
-        if self.windowState() == Qt.WindowMaximized:
-            self.qsettings.setValue("windowMaximized", True)
-        else:
-            self.qsettings.setValue("windowMaximized", False)
+        self.qsettings.setValue("windowMaximized", self.windowState() == Qt.WindowMaximized)
         self.qsettings.endGroup()
 
     def closeEvent(self, event):

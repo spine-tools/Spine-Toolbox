@@ -59,9 +59,8 @@ class TableModel(QAbstractItemModel):
         return len(self._headers)
 
     def headerData(self, section, orientation, role):
-        if role == Qt.DisplayRole:
-            if orientation == Qt.Horizontal:
-                return self._headers[section]
+        if role == Qt.DisplayRole and orientation == Qt.Horizontal:
+            return self._headers[section]
 
     def row(self, index):
         if index.isValid():
