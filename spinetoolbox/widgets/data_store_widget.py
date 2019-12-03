@@ -580,7 +580,7 @@ class DataStoreForm(QMainWindow):
 
     def notify_items_changed(self, action, item_type, db_map_data):
         """Enables or disables actions and informs the user about what just happened."""
-        msg = f"<html> Successfully {action}"
+        msg = f"Successfully {action}"
         name_keys = {
             "parameter tag": "tag",
             "parameter value": None,
@@ -594,7 +594,7 @@ class DataStoreForm(QMainWindow):
         else:
             count = sum(len(data) for data in db_map_data.values())
             msg += f" {count} {item_type} item(s)"
-        msg += "</html>"
+        msg += "<br />"
         self.msg.emit(msg)
 
     def receive_object_classes_added(self, db_map_data):
