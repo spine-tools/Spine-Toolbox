@@ -18,12 +18,13 @@ Contains TabularViewForm class and some related constants.
 
 import operator
 from collections import namedtuple
-from PySide2.QtWidgets import QListWidget, QMainWindow, QComboBox
+from PySide2.QtWidgets import QMainWindow, QComboBox
 from PySide2.QtCore import QItemSelection, Qt, QSettings, Slot
-from PySide2.QtGui import QDropEvent, QIcon, QGuiApplication
+from PySide2.QtGui import QIcon, QGuiApplication
 from sqlalchemy.sql import literal_column
 from .custom_menus import PivotTableModelMenu, PivotTableHorizontalHeaderMenu
 from .tabular_view_header_widget import TabularViewHeaderWidget
+from .custom_menus import FilterMenu
 from ..helpers import fix_name_ambiguity, tuple_itemgetter
 from ..mvcmodels.pivot_table_models import PivotTableSortFilterProxy, PivotTableModel
 from ..config import MAINWINDOW_SS
@@ -80,7 +81,7 @@ class TabularViewForm(QMainWindow):
         self.parameter_values = {}
         self.relationship_tuple_key = ()
         self.original_index_names = {}
-        self.header_widgets = {}
+        self.filter_menus = {}
 
         # history of selected pivot
         self.class_pivot_preferences = {}
@@ -615,24 +616,26 @@ class TabularViewForm(QMainWindow):
             real_names,
         )
         self.proxy_model.clear_filter()
-        self.update_header_widgets()
+        self.update_filter_menus()
         self.update_frozen_table_to_model()
         self.make_pivot_headers()
         # TODO: self.ui.list_frozen.clear()
 
     @Slot(dict, dict)
     def table_index_entries_changed(self, added_entries, deleted_entries):
-        for widget in self.pivot_header_widgets + self.frozen_header_widgets:
-            name = widget.menu.object_class_name
-            if name in deleted_entries:
-                widget.menu.remove_items_from_filter_list(deleted_entries[name])
-            if name in added_entries:
-                widget.menu.add_items_to_filter_list(added_entries[name])
+        for menu in self.filter_menus.values():
+            if menu.object_class_name in deleted_entries:
+                menu.remove_items_from_filter_list(deleted_entries[menu.object_class_name])
+            if menu.object_class_name in added_entries:
+                menu.add_items_to_filter_list(added_entries[menu.object_class_name])
 
-    def update_header_widgets(self):
-        self.header_widgets.clear()
-        for unique_name, name in self.model.model._unique_name_2_name.items():
-            self.header_widgets[unique_name] = self.create_header_widget(unique_name, name)
+    def update_filter_menus(self):
+        self.filter_menus.clear()
+        for unique_name, object_class_name in self.model.model._unique_name_2_name.items():
+            self.filter_menus[unique_name] = menu = FilterMenu()
+            menu.set_filter_list(self.model.model.index_entries[object_class_name])
+            menu.object_class_name = object_class_name
+            menu.filterChanged.connect(self.change_filter)
 
     def make_pivot_headers(self):
         """
@@ -641,17 +644,13 @@ class TabularViewForm(QMainWindow):
         top_indexes, left_indexes = self.model.top_left_indexes()
         for index in left_indexes:
             proxy_index = self.proxy_model.mapFromSource(index)
-            widget = self.header_widgets[proxy_index.data(Qt.DisplayRole)]
-            widget.area = "columns"
+            widget = self.create_header_widget(proxy_index.data(Qt.DisplayRole), "columns")
             self.ui.pivot_table.setIndexWidget(proxy_index, widget)
-            self.pivot_header_widgets.append(widget)
         for index in top_indexes:
             proxy_index = self.proxy_model.mapFromSource(index)
-            widget = self.header_widgets[proxy_index.data(Qt.DisplayRole)]
-            widget.area = "rows"
+            widget = self.create_header_widget(proxy_index.data(Qt.DisplayRole), "rows")
             self.ui.pivot_table.setIndexWidget(proxy_index, widget)
             self.ui.pivot_table.resizeColumnToContents(index.column())
-            self.pivot_header_widgets.append(widget)
         self.ui.pivot_table.verticalHeader().setVisible(not top_indexes)
 
     def make_frozen_headers(self):
@@ -660,26 +659,22 @@ class TabularViewForm(QMainWindow):
         """
         for column in range(self.ui.frozen_table.model.columnCount()):
             index = self.ui.frozen_table.model.index(0, column)
-            widget = self.header_widgets[index.data(Qt.DisplayRole)]
-            widget.area = "frozen"
+            widget = self.create_header_widget(index.data(Qt.DisplayRole), "frozen")
             # TODO: disable filter?
             self.ui.frozen_table.setIndexWidget(index, widget)
             self.ui.frozen_table.resizeColumnToContents(column)
-            self.frozen_header_widgets.append(widget)
 
-    def create_header_widget(self, unique_name, object_class_name):
+    def create_header_widget(self, unique_name, area):
         """
         Returns a TabularViewHeaderWidget with given name.
 
         Args:
             unique_name (str)
-            object_class_name (str)
+            area (str)
         """
-        widget = TabularViewHeaderWidget(self, unique_name)
+        menu = self.filter_menus[unique_name]
+        widget = TabularViewHeaderWidget(unique_name, menu, area, parent=self)
         widget.header_dropped.connect(self.handle_header_dropped)
-        widget.menu.filterChanged.connect(self.change_filter)
-        widget.menu.set_filter_list(self.model.model.index_entries[object_class_name])
-        widget.menu.object_class_name = object_class_name
         return widget
 
     @staticmethod
@@ -696,7 +691,7 @@ class TabularViewForm(QMainWindow):
     @Slot(object, object, str)
     def handle_header_dropped(self, dropped, catcher, position=""):
         """
-        Sets pivot when a header is dropped onto another header (the catcher).
+        Updates pivots when a header is dropped.
 
         Args:
             dropped (TabularViewHeaderWidget)

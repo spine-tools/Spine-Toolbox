@@ -19,7 +19,6 @@ Contains TabularViewHeaderWidget class.
 from PySide2.QtCore import Qt, QMimeData, Signal
 from PySide2.QtWidgets import QFrame, QToolButton, QApplication, QLabel, QHBoxLayout
 from PySide2.QtGui import QDrag, QPalette
-from .custom_menus import FilterMenu
 
 
 class TabularViewHeaderWidget(QFrame):
@@ -27,29 +26,42 @@ class TabularViewHeaderWidget(QFrame):
 
     header_dropped = Signal(object, object, str)
 
-    def __init__(self, parent, name):
+    def __init__(self, name, menu, area, parent=None):
         """
 
         Args:
-            parent (QWidget): Parent widget
             name (str)
+            menu (FilterMenu)
+            area (str): either "rows", "columns", or "frozen"
+            parent (QWidget, NoneType): Parent widget
         """
         super().__init__(parent=parent)
         self._name = name
-        self._area = None
+        self._area = area
         layout = QHBoxLayout(self)
         button = QToolButton(self)
         button.setPopupMode(QToolButton.InstantPopup)
         button.setArrowType(Qt.DownArrow)
         button.setStyleSheet("QToolButton {border: none;}")
-        self.menu = FilterMenu(self)
+        self.menu = menu
         button.setMenu(self.menu)
+        self.menu.setParent(self, self.menu.windowFlags())
         self.drag_start_pos = None
-        self.label = QLabel(name)
-        layout.addWidget(self.label)
+        label = QLabel(name)
+        layout.addWidget(label)
         layout.addWidget(button)
         h_margin = 3
         layout.setContentsMargins(h_margin, 0, h_margin, 0)
+        spacing = 16
+        if area == "rows":
+            h_alignment = Qt.AlignLeft
+            self.layout().insertSpacing(1, spacing)
+        elif area == "columns":
+            h_alignment = Qt.AlignRight
+            self.layout().insertSpacing(0, spacing)
+        elif area == "frozen":
+            h_alignment = Qt.AlignHCenter
+        label.setAlignment(h_alignment | Qt.AlignVCenter)
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setAutoFillBackground(True)
         self.setFrameStyle(QFrame.Raised)
@@ -65,24 +77,6 @@ class TabularViewHeaderWidget(QFrame):
     @property
     def area(self):
         return self._area
-
-    @area.setter
-    def area(self, area):
-        """
-        Args:
-            area (str): either "rows", "columns", or "frozen"
-        """
-        self._area = area
-        spacing = 16
-        if area == "rows":
-            h_alignment = Qt.AlignLeft
-            self.layout().insertSpacing(1, spacing)
-        elif area == "columns":
-            h_alignment = Qt.AlignRight
-            self.layout().insertSpacing(0, spacing)
-        elif area == "frozen":
-            h_alignment = Qt.AlignHCenter
-        self.label.setAlignment(h_alignment | Qt.AlignVCenter)
 
     def mousePressEvent(self, event):
         """Register drag start position"""
