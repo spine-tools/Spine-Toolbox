@@ -551,7 +551,7 @@ class FilterMenu(QMenu):
         self._filter.cancelPressed.connect(self.hide)
 
     def add_items_to_filter_list(self, items):
-        self._filter._filter_model.add_item(items)
+        self._filter._filter_model.add_items(items)
         self._filter.save_state()
 
     def remove_items_from_filter_list(self, items):

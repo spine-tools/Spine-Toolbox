@@ -19,6 +19,7 @@ Contains custom QHeaderView for the pivot table.
 from PySide2.QtCore import Signal
 from PySide2.QtWidgets import QHeaderView
 from .tabular_view_header_widget import TabularViewHeaderWidget
+from ..config import PIVOT_TABLE_HEADER_COLOR
 
 
 class PivotTableHeaderView(QHeaderView):
@@ -29,6 +30,7 @@ class PivotTableHeaderView(QHeaderView):
         super().__init__(orientation, parent=parent)
         self.setAcceptDrops(True)
         self._area = area
+        self.setStyleSheet("QHeaderView::section {background-color: " + PIVOT_TABLE_HEADER_COLOR + ";}")
 
     @property
     def area(self):

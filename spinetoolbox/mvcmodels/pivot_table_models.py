@@ -17,9 +17,10 @@ Provides pivot table models for the Tabular View.
 """
 
 from PySide2.QtCore import QAbstractTableModel, Qt, QModelIndex, Signal, QSortFilterProxyModel
-from PySide2.QtGui import QColor, QFont, QPalette
+from PySide2.QtGui import QColor, QFont
 from .parameter_value_formatting import format_for_DisplayRole, format_for_EditRole, format_for_ToolTipRole
 from .pivot_model import PivotModel
+from ..config import PIVOT_TABLE_HEADER_COLOR
 
 
 class PivotTableModel(QAbstractTableModel):
@@ -505,7 +506,7 @@ class PivotTableModel(QAbstractTableModel):
                 # color added indexes
                 return QColor(Qt.green)
         elif self.index_in_top_left(index):
-            return qApp.palette().color(QPalette.Button)
+            return QColor(PIVOT_TABLE_HEADER_COLOR)
 
 
 class PivotTableSortFilterProxy(QSortFilterProxyModel):

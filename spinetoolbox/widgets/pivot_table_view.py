@@ -35,7 +35,6 @@ class PivotTableView(QTableView):
     def __init__(self, parent=None):
         """Initialize the class."""
         super().__init__(parent)
-        # self.editing = False
         self.clipboard = QApplication.clipboard()
         self.clipboard_text = self.clipboard.text()
         self.clipboard.dataChanged.connect(self.clipboard_data_changed)

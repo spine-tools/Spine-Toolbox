@@ -150,7 +150,7 @@ class FilterCheckboxListModel(QAbstractListModel):
         self.remove_filter()
         self.endResetModel()
 
-    def add_item(self, items, selected=True):
+    def add_items(self, items, selected=True):
         for item in items:
             if item not in self._data_set:
                 pos = bisect.bisect_left(self._data, item)

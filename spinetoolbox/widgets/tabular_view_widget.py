@@ -74,7 +74,7 @@ class TabularViewForm(QMainWindow):
         self.current_class_name = ''
         self.current_value_type = ''
         self.relationships = []
-        self.relationship_class = []
+        self.relationship_classes = []
         self.object_classes = []
         self.objects = []
         self.parameters = []

@@ -18,13 +18,16 @@ Contains TabularViewHeaderWidget class.
 
 from PySide2.QtCore import Qt, QMimeData, Signal
 from PySide2.QtWidgets import QFrame, QToolButton, QApplication, QLabel, QHBoxLayout
-from PySide2.QtGui import QDrag, QPalette
+from PySide2.QtGui import QDrag
+from ..config import PIVOT_TABLE_HEADER_COLOR
 
 
 class TabularViewHeaderWidget(QFrame):
     """A draggable QWidget."""
 
     header_dropped = Signal(object, object, str)
+    _H_MARGIN = 3
+    _SPACING = 32
 
     def __init__(self, name, area, menu=None, parent=None):
         """
@@ -52,15 +55,13 @@ class TabularViewHeaderWidget(QFrame):
         label = QLabel(name)
         layout.addWidget(label)
         layout.addWidget(button)
-        h_margin = 3
-        layout.setContentsMargins(h_margin, 0, h_margin, 0)
-        spacing = 16
+        layout.setContentsMargins(self._H_MARGIN, 0, self._H_MARGIN, 0)
         if area == "rows":
             h_alignment = Qt.AlignLeft
-            self.layout().insertSpacing(1, spacing)
+            self.layout().insertSpacing(1, self._SPACING)
         elif area == "columns":
             h_alignment = Qt.AlignRight
-            self.layout().insertSpacing(0, spacing)
+            self.layout().insertSpacing(0, self._SPACING)
         elif area == "frozen":
             h_alignment = Qt.AlignHCenter
         label.setAlignment(h_alignment | Qt.AlignVCenter)
@@ -68,7 +69,7 @@ class TabularViewHeaderWidget(QFrame):
         self.setAutoFillBackground(True)
         self.setFrameStyle(QFrame.Raised)
         self.setFrameShape(QFrame.Panel)
-        self.setBackgroundRole(QPalette.Window)
+        self.setStyleSheet("QFrame {background: " + PIVOT_TABLE_HEADER_COLOR + ";}")
         self.setAcceptDrops(True)
         self.setToolTip("<p>Drag-and-drop this onto any header to pivot the table.</p>")
 
