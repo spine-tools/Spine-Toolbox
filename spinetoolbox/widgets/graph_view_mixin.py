@@ -72,10 +72,8 @@ class GraphViewMixin:
         self.ui.menuView.addAction(self.ui.dockWidget_entity_graph.toggleViewAction())
         self.ui.menuView.addAction(self.ui.dockWidget_item_palette.toggleViewAction())
 
-    @Slot(bool)
-    def restore_dock_widgets(self, checked=False):
-        """Docks all floating and or hidden QDockWidgets back to the window at 'factory' positions."""
-        super().restore_dock_widgets(checked)
+    def restore_dock_widgets(self):
+        super().restore_dock_widgets()
         self.live_demo.hide()
 
     def connect_signals(self):

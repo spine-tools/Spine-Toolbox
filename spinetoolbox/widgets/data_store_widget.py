@@ -112,7 +112,6 @@ class DataStoreFormBase(QMainWindow):
         self.ui.actionRollback.triggered.connect(self.rollback_session)
         self.ui.actionRefresh.triggered.connect(self.refresh_session)
         self.ui.actionClose.triggered.connect(self.close)
-        self.ui.actionRestore_Dock_Widgets.triggered.connect(self.restore_dock_widgets)
         self.ui.menuEdit.aboutToShow.connect(self._handle_menu_edit_about_to_show)
         self.ui.actionImport.triggered.connect(self.show_import_file_dialog)
         self.ui.actionExport.triggered.connect(self.export_database)
@@ -149,10 +148,8 @@ class DataStoreFormBase(QMainWindow):
         """
         self.ui.statusbar.add_notification(msg)
 
-    @Slot(bool)
-    def restore_dock_widgets(self, checked=False):
-        """Docks all floating and or hidden QDockWidgets back to the window at 'factory' positions."""
-        # Place docks
+    def restore_dock_widgets(self):
+        """Docks all floating and or hidden QDockWidgets back to the window."""
         for dock in self.findChildren(QDockWidget):
             dock.setVisible(True)
             dock.setFloating(False)
@@ -640,14 +637,14 @@ class DataStoreForm(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         toc = time.process_time()
         self.msg.emit("Data store view created in {} seconds".format(toc - tic))
 
-    @Slot(bool)
-    def restore_dock_widgets(self, checked=False):
-        """Docks all floating and or hidden QDockWidgets back to the window at 'factory' positions."""
-        super().restore_dock_widgets(checked)
-        self.splitDockWidget(self.ui.dockWidget_object_tree, self.ui.dockWidget_object_parameter_value, Qt.Horizontal)
-        self.splitDockWidget(self.ui.dockWidget_object_parameter_value, self.ui.dockWidget_pivot_table, Qt.Horizontal)
-        self.splitDockWidget(self.ui.dockWidget_pivot_table, self.ui.dockWidget_parameter_value_list, Qt.Horizontal)
-        self.splitDockWidget(self.ui.dockWidget_object_tree, self.ui.dockWidget_relationship_tree, Qt.Vertical)
+    def connect_signals(self):
+        super().connect_signals()
+        self.ui.actionAll_in_style.triggered.connect(self.apply_all_in_style)
+        self.ui.actionTree_style.triggered.connect(self.apply_tree_style)
+        self.ui.actionGraph_style.triggered.connect(self.apply_graph_style)
+        self.ui.actionTabular_style.triggered.connect(self.apply_tabular_style)
+
+    def dock_parameter_tables(self):
         self.splitDockWidget(
             self.ui.dockWidget_object_parameter_value, self.ui.dockWidget_relationship_parameter_value, Qt.Vertical
         )
@@ -657,6 +654,47 @@ class DataStoreForm(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         )
         self.ui.dockWidget_object_parameter_value.raise_()
         self.ui.dockWidget_relationship_parameter_value.raise_()
+
+    @Slot(bool)
+    def apply_all_in_style(self, checked=False):
+        """Docks all floating and or hidden QDockWidgets back to the window at 'factory' positions."""
+        self.restore_dock_widgets()
+        self.splitDockWidget(self.ui.dockWidget_object_tree, self.ui.dockWidget_object_parameter_value, Qt.Horizontal)
+        self.splitDockWidget(self.ui.dockWidget_object_parameter_value, self.ui.dockWidget_pivot_table, Qt.Horizontal)
+        self.splitDockWidget(self.ui.dockWidget_pivot_table, self.ui.dockWidget_parameter_value_list, Qt.Horizontal)
+        self.splitDockWidget(self.ui.dockWidget_object_tree, self.ui.dockWidget_relationship_tree, Qt.Vertical)
+        self.dock_parameter_tables()
         self.splitDockWidget(self.ui.dockWidget_pivot_table, self.ui.dockWidget_entity_graph, Qt.Vertical)
         self.splitDockWidget(self.ui.dockWidget_pivot_table, self.ui.dockWidget_frozen_table, Qt.Horizontal)
-        self.splitDockWidget(self.ui.dockWidget_entity_graph, self.ui.dockWidget_item_palette, Qt.Horizontal)
+        self.splitDockWidget(self.ui.dockWidget_entity_graph, self.ui.dockWidget_item_palette, Qt.Vertical)
+
+    @Slot(bool)
+    def apply_tree_style(self, checked=False):
+        self.apply_all_in_style()
+        self.ui.dockWidget_entity_graph.hide()
+        self.ui.dockWidget_item_palette.hide()
+        self.ui.dockWidget_pivot_table.hide()
+        self.ui.dockWidget_frozen_table.hide()
+
+    @Slot(bool)
+    def apply_graph_style(self, checked=False):
+        self.restore_dock_widgets()
+        self.ui.dockWidget_relationship_tree.hide()
+        self.ui.dockWidget_parameter_value_list.hide()
+        self.ui.dockWidget_pivot_table.hide()
+        self.ui.dockWidget_frozen_table.hide()
+        self.splitDockWidget(self.ui.dockWidget_object_tree, self.ui.dockWidget_entity_graph, Qt.Horizontal)
+        self.splitDockWidget(self.ui.dockWidget_entity_graph, self.ui.dockWidget_object_parameter_value, Qt.Horizontal)
+        self.splitDockWidget(self.ui.dockWidget_entity_graph, self.ui.dockWidget_item_palette, Qt.Vertical)
+        self.dock_parameter_tables()
+
+    @Slot(bool)
+    def apply_tabular_style(self, checked=False):
+        self.apply_all_in_style()
+        self.ui.dockWidget_entity_graph.hide()
+        self.ui.dockWidget_item_palette.hide()
+        self.ui.dockWidget_object_parameter_value.hide()
+        self.ui.dockWidget_object_parameter_definition.hide()
+        self.ui.dockWidget_relationship_parameter_value.hide()
+        self.ui.dockWidget_relationship_parameter_definition.hide()
+        self.ui.dockWidget_parameter_value_list.hide()

@@ -13,7 +13,7 @@
 # Form implementation generated from reading ui file '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/data_store_view.ui',
 # licensing of '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/data_store_view.ui' applies.
 #
-# Created: Wed Dec  4 18:58:02 2019
+# Created: Wed Dec  4 22:46:14 2019
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -23,7 +23,7 @@ from PySide2 import QtCore, QtGui, QtWidgets
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
-        MainWindow.resize(872, 701)
+        MainWindow.resize(872, 789)
         MainWindow.setLayoutDirection(QtCore.Qt.LeftToRight)
         MainWindow.setDockOptions(QtWidgets.QMainWindow.AllowNestedDocks|QtWidgets.QMainWindow.AllowTabbedDocks|QtWidgets.QMainWindow.AnimatedDocks|QtWidgets.QMainWindow.GroupedDragging)
         self.centralwidget = QtWidgets.QWidget(MainWindow)
@@ -458,8 +458,8 @@ class Ui_MainWindow(object):
         self.actionRemove_selection = QtWidgets.QAction(MainWindow)
         self.actionRemove_selection.setEnabled(True)
         self.actionRemove_selection.setObjectName("actionRemove_selection")
-        self.actionRestore_Dock_Widgets = QtWidgets.QAction(MainWindow)
-        self.actionRestore_Dock_Widgets.setObjectName("actionRestore_Dock_Widgets")
+        self.actionAll_in_style = QtWidgets.QAction(MainWindow)
+        self.actionAll_in_style.setObjectName("actionAll_in_style")
         self.actionHide_selected = QtWidgets.QAction(MainWindow)
         self.actionHide_selected.setObjectName("actionHide_selected")
         self.actionShow_hidden = QtWidgets.QAction(MainWindow)
@@ -470,6 +470,12 @@ class Ui_MainWindow(object):
         self.actionRestore_pruned.setObjectName("actionRestore_pruned")
         self.actionLive_graph_demo = QtWidgets.QAction(MainWindow)
         self.actionLive_graph_demo.setObjectName("actionLive_graph_demo")
+        self.actionTree_style = QtWidgets.QAction(MainWindow)
+        self.actionTree_style.setObjectName("actionTree_style")
+        self.actionGraph_style = QtWidgets.QAction(MainWindow)
+        self.actionGraph_style.setObjectName("actionGraph_style")
+        self.actionTabular_style = QtWidgets.QAction(MainWindow)
+        self.actionTabular_style.setObjectName("actionTabular_style")
         self.menuSession.addAction(self.actionRefresh)
         self.menuSession.addAction(self.actionCommit)
         self.menuSession.addAction(self.actionRollback)
@@ -494,7 +500,10 @@ class Ui_MainWindow(object):
         self.menuFile.addAction(self.actionExport)
         self.menuFile.addSeparator()
         self.menuFile.addAction(self.actionClose)
-        self.menuView.addAction(self.actionRestore_Dock_Widgets)
+        self.menuView.addAction(self.actionAll_in_style)
+        self.menuView.addAction(self.actionTree_style)
+        self.menuView.addAction(self.actionGraph_style)
+        self.menuView.addAction(self.actionTabular_style)
         self.menuGraph.addAction(self.actionHide_selected)
         self.menuGraph.addAction(self.actionShow_hidden)
         self.menuGraph.addSeparator()
@@ -572,18 +581,21 @@ class Ui_MainWindow(object):
         self.actionManage_parameter_tags.setText(QtWidgets.QApplication.translate("MainWindow", "Manage parameter tags", None, -1))
         self.actionRemove_selection.setText(QtWidgets.QApplication.translate("MainWindow", "Remove selection", None, -1))
         self.actionRemove_selection.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+Del", None, -1))
-        self.actionRestore_Dock_Widgets.setText(QtWidgets.QApplication.translate("MainWindow", "Restore Dock Widgets", None, -1))
+        self.actionAll_in_style.setText(QtWidgets.QApplication.translate("MainWindow", "All-in style", None, -1))
         self.actionHide_selected.setText(QtWidgets.QApplication.translate("MainWindow", "Hide selected", None, -1))
         self.actionShow_hidden.setText(QtWidgets.QApplication.translate("MainWindow", "Show hidden items", None, -1))
         self.actionPrune_selected.setText(QtWidgets.QApplication.translate("MainWindow", "Prune selected items", None, -1))
         self.actionRestore_pruned.setText(QtWidgets.QApplication.translate("MainWindow", "Restore pruned", None, -1))
         self.actionLive_graph_demo.setText(QtWidgets.QApplication.translate("MainWindow", "Live graph demo", None, -1))
+        self.actionTree_style.setText(QtWidgets.QApplication.translate("MainWindow", "Tree style", None, -1))
+        self.actionGraph_style.setText(QtWidgets.QApplication.translate("MainWindow", "Graph style", None, -1))
+        self.actionTabular_style.setText(QtWidgets.QApplication.translate("MainWindow", "Tabular style", None, -1))
 
+from spinetoolbox.widgets.custom_qtableview import AutoFilterCopyPasteTableView
 from spinetoolbox.widgets.custom_qgraphicsviews import GraphQGraphicsView
-from spinetoolbox.widgets.pivot_table_view import PivotTableView
 from spinetoolbox.widgets.custom_qtreeview import CopyTreeView, ObjectTreeView
+from spinetoolbox.widgets.custom_qstatusbar import NotificationStatusBar
 from spinetoolbox.widgets.custom_qlistview import DragListView
 from spinetoolbox.widgets.frozen_table_view import FrozenTableView
-from spinetoolbox.widgets.custom_qstatusbar import NotificationStatusBar
-from spinetoolbox.widgets.custom_qtableview import AutoFilterCopyPasteTableView
+from spinetoolbox.widgets.pivot_table_view import PivotTableView
 from spinetoolbox import resources_icons_rc

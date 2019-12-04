@@ -19,7 +19,7 @@
     <x>0</x>
     <y>0</y>
     <width>872</width>
-    <height>701</height>
+    <height>789</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -111,7 +111,10 @@
     <property name="title">
      <string>View</string>
     </property>
-    <addaction name="actionRestore_Dock_Widgets"/>
+    <addaction name="actionAll_in_style"/>
+    <addaction name="actionTree_style"/>
+    <addaction name="actionGraph_style"/>
+    <addaction name="actionTabular_style"/>
    </widget>
    <widget class="QMenu" name="menuGraph">
     <property name="title">
@@ -1156,9 +1159,9 @@
     <string>Ctrl+Del</string>
    </property>
   </action>
-  <action name="actionRestore_Dock_Widgets">
+  <action name="actionAll_in_style">
    <property name="text">
-    <string>Restore Dock Widgets</string>
+    <string>All-in style</string>
    </property>
   </action>
   <action name="actionHide_selected">
@@ -1184,6 +1187,21 @@
   <action name="actionLive_graph_demo">
    <property name="text">
     <string>Live graph demo</string>
+   </property>
+  </action>
+  <action name="actionTree_style">
+   <property name="text">
+    <string>Tree style</string>
+   </property>
+  </action>
+  <action name="actionGraph_style">
+   <property name="text">
+    <string>Graph style</string>
+   </property>
+  </action>
+  <action name="actionTabular_style">
+   <property name="text">
+    <string>Tabular style</string>
    </property>
   </action>
  </widget>
