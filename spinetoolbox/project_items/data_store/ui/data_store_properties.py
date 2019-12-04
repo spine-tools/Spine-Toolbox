@@ -13,7 +13,7 @@
 # Form implementation generated from reading ui file '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/project_items/data_store/ui/data_store_properties.ui',
 # licensing of '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/project_items/data_store/ui/data_store_properties.ui' applies.
 #
-# Created: Wed Dec  4 21:43:36 2019
+# Created: Wed Dec  4 22:22:37 2019
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -366,7 +366,7 @@ class Ui_Form(object):
         self.pushButton_create_new_spine_db.setText(QtWidgets.QApplication.translate("Form", "New Spine db", None, -1))
         self.checkBox_for_spine_model.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Add specific data structure for Spine model to the new Spine database.</p></body></html>", None, -1))
         self.checkBox_for_spine_model.setText(QtWidgets.QApplication.translate("Form", "For Spine model", None, -1))
-        self.pushButton_ds_view.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Open Tree view</p></body></html>", None, -1))
+        self.pushButton_ds_view.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Open Data Store view</p></body></html>", None, -1))
         self.pushButton_ds_view.setText(QtWidgets.QApplication.translate("Form", "Open view", None, -1))
         self.toolButton_copy_url.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Copy current database url to clipboard.</p></body></html>", None, -1))
         self.toolButton_copy_url.setText(QtWidgets.QApplication.translate("Form", "...", None, -1))

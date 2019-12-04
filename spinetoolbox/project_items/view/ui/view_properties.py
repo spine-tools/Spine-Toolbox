@@ -13,7 +13,7 @@
 # Form implementation generated from reading ui file '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/project_items/view/ui/view_properties.ui',
 # licensing of '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/project_items/view/ui/view_properties.ui' applies.
 #
-# Created: Wed Dec  4 21:14:48 2019
+# Created: Wed Dec  4 22:22:37 2019
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -110,7 +110,7 @@ class Ui_Form(object):
     def retranslateUi(self, Form):
         Form.setWindowTitle(QtWidgets.QApplication.translate("Form", "Form", None, -1))
         self.label_view_name.setText(QtWidgets.QApplication.translate("Form", "Name", None, -1))
-        self.pushButton_view_open_ds_view.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Open Tabular view for selected db references (read-only)</p></body></html>", None, -1))
+        self.pushButton_view_open_ds_view.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Open Data store view for selected db references</p></body></html>", None, -1))
         self.pushButton_view_open_ds_view.setText(QtWidgets.QApplication.translate("Form", "Open view", None, -1))
         self.toolButton_view_open_dir.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Open this View\'s project directory in file browser</p></body></html>", None, -1))
 
