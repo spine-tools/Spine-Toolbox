@@ -20,7 +20,7 @@ import os
 from operator import itemgetter
 from PySide2.QtWidgets import QMenu, QWidgetAction, QAction
 from PySide2.QtGui import QIcon
-from PySide2.QtCore import Signal, Slot, QPoint
+from PySide2.QtCore import Signal, Slot, QPoint, QEvent
 from ..helpers import fix_name_ambiguity, tuple_itemgetter
 from ..plotting import plot_pivot_column, plot_selection, PlottingError, PivotTablePlottingHints
 from .custom_qwidgets import FilterWidget
@@ -533,12 +533,15 @@ class FilterMenu(QMenu):
 
     def __init__(self, parent=None, show_empty=True):
         super().__init__(parent)
+        self.object_class_name = None
+        self.unique_name = None
         self._remove_filter = QAction('Remove filters', None)
         self._filter = FilterWidget(show_empty=show_empty)
         self._filter_action = QWidgetAction(parent)
         self._filter_action.setDefaultWidget(self._filter)
         self.addAction(self._remove_filter)
         self.addAction(self._filter_action)
+        self.anchor = parent
 
         # add connections
         self.aboutToHide.connect(self._cancel_filter)
@@ -548,7 +551,7 @@ class FilterMenu(QMenu):
         self._filter.cancelPressed.connect(self.hide)
 
     def add_items_to_filter_list(self, items):
-        self._filter._filter_model.add_item(items)
+        self._filter._filter_model.add_items(items)
         self._filter.save_state()
 
     def remove_items_from_filter_list(self, items):
@@ -574,6 +577,15 @@ class FilterMenu(QMenu):
             valid_values.add(None)
         self.filterChanged.emit(self, valid_values, self._filter.has_filter())
         self.hide()
+
+    def event(self, event):
+        if event.type() == QEvent.Show and self.anchor is not None:
+            if self.anchor.area == "rows":
+                pos = self.anchor.mapToGlobal(QPoint(0, 0)) + QPoint(0, self.anchor.height())
+            elif self.anchor.area == "columns":
+                pos = self.anchor.mapToGlobal(QPoint(0, 0)) + QPoint(self.anchor.width(), 0)
+            self.move(pos)
+        return super().event(event)
 
 
 class PivotTableModelMenu(QMenu):
@@ -786,7 +798,7 @@ class PivotTableHorizontalHeaderMenu(QMenu):
         self._set_as_X_action.setCheckable(True)
         self._set_as_X_action.triggered.connect(self._set_x_flag)
 
-    @Slot(name="_plot_column")
+    @Slot()
     def _plot_column(self):
         """Plots a single column not the selection."""
         try:
@@ -800,7 +812,7 @@ class PivotTableHorizontalHeaderMenu(QMenu):
         )
         plot_window.show()
 
-    @Slot("QPoint", name="request_menu")
+    @Slot("QPoint")
     def request_menu(self, pos):
         """Shows the context menu on the screen."""
         self.move(self.parent().mapToGlobal(pos))
@@ -815,7 +827,7 @@ class PivotTableHorizontalHeaderMenu(QMenu):
             self._set_as_X_action.setChecked(self._model_index.column() == self._model.plot_x_column)
         self.show()
 
-    @Slot(name="_set_x_flag")
+    @Slot()
     def _set_x_flag(self):
         """Sets the X flag for a column."""
         self._model.set_plot_x_column(self._model_index.column(), self._set_as_X_action.isChecked())

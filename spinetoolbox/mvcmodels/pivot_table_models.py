@@ -18,15 +18,23 @@ Provides pivot table models for the Tabular View.
 
 from PySide2.QtCore import QAbstractTableModel, Qt, QModelIndex, Signal, QSortFilterProxyModel
 from PySide2.QtGui import QColor, QFont
-from .parameter_value_formatting import format_for_DisplayRole, format_for_EditRole, format_for_ToolTipRole
 from .pivot_model import PivotModel
+from ..config import PIVOT_TABLE_HEADER_COLOR
 
 
 class PivotTableModel(QAbstractTableModel):
     index_entries_changed = Signal(dict, dict)
 
-    def __init__(self, parent=None):
-        super(PivotTableModel, self).__init__(parent)
+    _V_HEADER_WIDTH = 6
+
+    def __init__(self, parent):
+        """
+        Args:
+            parent (TabularViewForm)
+        """
+        super().__init__(parent)
+        self.db_mngr = parent.db_mngr
+        self.db_map = parent.db_map
         self.model = PivotModel()
         self._data_header = [[]]
         self._num_headers_row = 0
@@ -233,8 +241,8 @@ class PivotTableModel(QAbstractTableModel):
 
     def flags(self, index):
         """Roles for data"""
-        if index.row() < self._num_headers_row and index.column() < self._num_headers_column:
-            return super(PivotTableModel, self).flags(index)
+        if self.index_in_top_left(index):
+            return ~Qt.ItemIsEnabled
         if (
             self.model.pivot_rows
             and self.model.pivot_columns
@@ -248,6 +256,26 @@ class PivotTableModel(QAbstractTableModel):
     def index_in_top_left(self, index):
         """check if index is in top left corner, where pivot names are displayed"""
         return index.row() < self._num_headers_row and index.column() < self._num_headers_column
+
+    def top_left_indexes(self):
+        """Returns indexes in the top left area.
+
+        Returns
+            list(QModelIndex): top indexes (horizontal headers, associated to rows)
+            list(QModelIndex): left indexes (vertical headers, associated to columns)
+        """
+        pivot_column_count = len(self.model.pivot_columns)
+        pivot_row_count = len(self.model.pivot_rows)
+        top_indexes = []
+        left_indexes = []
+        for column in range(pivot_row_count):
+            index = self.index(pivot_column_count, column)
+            top_indexes.append(index)
+        column = max(pivot_row_count - 1, 0)
+        for row in range(pivot_column_count):
+            index = self.index(row, column)
+            left_indexes.append(index)
+        return top_indexes, left_indexes
 
     def index_in_data(self, index):
         """check if index is in data area"""
@@ -278,8 +306,8 @@ class PivotTableModel(QAbstractTableModel):
         """check if index is in row headers (vertical) area"""
         return (
             self.model.pivot_rows
-            and index.row() >= self._num_headers_row
             and index.column() < self._num_headers_column
+            and index.row() >= self._num_headers_row
             and index.row() < self.rowCount() - 1
         )
 
@@ -380,7 +408,7 @@ class PivotTableModel(QAbstractTableModel):
         return False
 
     def data(self, index, role=Qt.DisplayRole):
-        if role in (Qt.DisplayRole, Qt.EditRole):
+        if role in (Qt.DisplayRole, Qt.EditRole, Qt.ToolTipRole):
             if self.index_in_data(index):
                 # get values
                 data = self.model.get_pivoted_data(
@@ -388,14 +416,13 @@ class PivotTableModel(QAbstractTableModel):
                 )
                 if not data or data[0][0] is None:
                     return ''
-                data = data[0][0]
-                if role == Qt.EditRole:
-                    return format_for_EditRole(data)
-                return format_for_DisplayRole(data)
+                if self.parent().current_value_type == self.parent()._DATA_SET:
+                    return data[0][0]
+                return self.db_mngr.get_value(self.db_map, "parameter value", data[0][0], "value", role)
             if self.index_in_column_headers(index):
                 # draw column header values
                 if not self.model.pivot_rows:
-                    # when special case when no pivot_index, no empty line padding
+                    # special case where there is no pivot_index, no empty line padding
                     return self.model._column_data_header[index.column() - self._num_headers_column][index.row()]
                 if index.row() < self._num_headers_row - 1:
                     return self.model._column_data_header[index.column() - self._num_headers_column][index.row()]
@@ -414,15 +441,6 @@ class PivotTableModel(QAbstractTableModel):
                 return font
         elif role == Qt.BackgroundColorRole:
             return self.data_color(index)
-        elif role == Qt.ToolTipRole:
-            if self.index_in_data(index):
-                data = self.model.get_pivoted_data(
-                    [index.row() - self._num_headers_row], [index.column() - self._num_headers_column]
-                )
-                if not data or data[0][0] is None:
-                    return None
-                data = data[0][0]
-                return format_for_ToolTipRole(data)
         else:
             return None
 
@@ -432,7 +450,7 @@ class PivotTableModel(QAbstractTableModel):
                 return "(X)"
             return None
         if role == Qt.DisplayRole and orientation == Qt.Vertical:
-            return None
+            return self._V_HEADER_WIDTH * " "
         return None
 
     def data_color(self, index):
@@ -484,6 +502,8 @@ class PivotTableModel(QAbstractTableModel):
             if index_entry in self.model._added_index_entries[index_name]:
                 # color added indexes
                 return QColor(Qt.green)
+        elif self.index_in_top_left(index):
+            return QColor(PIVOT_TABLE_HEADER_COLOR)
 
 
 class PivotTableSortFilterProxy(QSortFilterProxyModel):
@@ -494,6 +514,12 @@ class PivotTableSortFilterProxy(QSortFilterProxyModel):
         self.index_filters = {}
 
     def set_filter(self, index_name, filter_value):
+        """Sets filter for a given index (object class) name.
+
+        Args:
+            index_name (str): disambiguated index name
+            filter_value (set, None): A set of accepted values, or None if no filter (all pass)
+        """
         self.index_filters[index_name] = filter_value
         self.invalidateFilter()  # trigger filter update
 
@@ -502,12 +528,11 @@ class PivotTableSortFilterProxy(QSortFilterProxyModel):
         self.invalidateFilter()  # trigger filter update
 
     def accept_index(self, index, index_names):
-        accept = True
         for i, n in zip(index, index_names):
-            if self.index_filters.get(n) and i not in self.index_filters[n]:
-                accept = False
-                break
-        return accept
+            valid = self.index_filters.get(n)
+            if valid is not None and i not in valid:
+                return False
+        return True
 
     def delete_values(self, delete_indexes):
         delete_indexes = [self.mapToSource(index) for index in delete_indexes]

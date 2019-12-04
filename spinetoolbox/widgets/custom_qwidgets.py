@@ -30,8 +30,8 @@ from PySide2.QtWidgets import (
     QDialogButtonBox,
     QWidgetAction,
 )
-from PySide2.QtCore import Qt, QTimer, Signal, Slot, QEvent, QRect
-from PySide2.QtGui import QPainter, QColor, QPainterPath
+from PySide2.QtCore import QTimer, Signal, Slot
+from PySide2.QtGui import QPainter
 from ..mvcmodels.filter_checkbox_list_model import FilterCheckboxListModel
 
 
@@ -100,10 +100,7 @@ class FilterWidget(QWidget):
     def set_filter_list(self, data):
         """Sets the list of items to filter."""
         self._filter_state = set(data)
-        if self._filter_model._show_empty:
-            self._filter_empty_state = True
-        else:
-            self._filter_empty_state = False
+        self._filter_empty_state = bool(self._filter_model._show_empty)
         self._filter_model.set_list(self._filter_state)
 
     def _apply_filter(self):

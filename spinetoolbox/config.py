@@ -171,3 +171,5 @@ MAINWINDOW_SS = (
 )
 
 TREEVIEW_HEADER_SS = "QHeaderView::section{background-color: #ecd8c6; font-size: 12px;}"
+
+PIVOT_TABLE_HEADER_COLOR = "#efefef"

@@ -65,7 +65,7 @@ class TestPivotModel(unittest.TestCase):
         ) as eir, mock.patch(
             "spinetoolbox.mvcmodels.filter_checkbox_list_model.FilterCheckboxListModel.dataChanged"
         ) as dc:
-            model.add_item(new_item)
+            model.add_items(new_item)
         self.assertEqual(model._data, sorted(self.data + new_item))
         self.assertEqual(model._data_set, set(self.data + new_item))
 
@@ -80,7 +80,7 @@ class TestPivotModel(unittest.TestCase):
         ) as eir, mock.patch(
             "spinetoolbox.mvcmodels.filter_checkbox_list_model.FilterCheckboxListModel.dataChanged"
         ) as dc:
-            model.add_item(new_item, selected=False)
+            model.add_items(new_item, selected=False)
         self.assertFalse(model._all_selected)
 
     def test_click_select_all_when_all_selected(self):
@@ -272,7 +272,7 @@ class TestPivotModel(unittest.TestCase):
         ) as eir, mock.patch(
             "spinetoolbox.mvcmodels.filter_checkbox_list_model.FilterCheckboxListModel.dataChanged"
         ) as dc:
-            model.add_item(new_item)
+            model.add_items(new_item)
         self.assertEqual(model._data, sorted(self.data + new_item))
         self.assertEqual(model._data_set, set(self.data + new_item))
         self.assertEqual(model._filter_index, [3, 4, 5, 6])
@@ -291,7 +291,7 @@ class TestPivotModel(unittest.TestCase):
         ) as eir, mock.patch(
             "spinetoolbox.mvcmodels.filter_checkbox_list_model.FilterCheckboxListModel.dataChanged"
         ) as dc:
-            model.add_item(new_item)
+            model.add_items(new_item)
         self.assertEqual(model._filter_index, [0, 4, 5, 6])
         self.assertEqual(model.data(model.index(0 + 2, 0)), new_item[0])
 
@@ -307,7 +307,7 @@ class TestPivotModel(unittest.TestCase):
         ) as eir, mock.patch(
             "spinetoolbox.mvcmodels.filter_checkbox_list_model.FilterCheckboxListModel.dataChanged"
         ) as dc:
-            model.add_item(new_item)
+            model.add_items(new_item)
         self.assertEqual(model._filter_index, [3, 4, 5, 6])
         self.assertEqual(model.data(model.index(1 + 2, 0)), new_item[0])
 
