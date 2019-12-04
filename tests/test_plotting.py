@@ -17,7 +17,7 @@ Unit tests for the plotting module.
 """
 
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock, MagicMock
 from PySide2.QtCore import QAbstractTableModel, QModelIndex, Qt
 from PySide2.QtWidgets import QApplication
 from spinedb_api import TimeSeriesVariableResolution
@@ -31,11 +31,15 @@ from spinetoolbox.plotting import (
 )
 from spinetoolbox.mvcmodels.pivot_table_models import PivotTableModel
 from spinetoolbox.widgets.plot_widget import PlotWidget
+from spinetoolbox.widgets.tabular_view_widget import TabularViewForm
 
 
 def _make_pivot_model():
     """Returns a prefilled PivotTableModel."""
-    model = PivotTableModel()
+    db_mngr = MagicMock()
+    db_mngr.get_value.side_effect = lambda db_map, item_type, id_, field, role: id_
+    tabular_view = TabularViewForm(db_mngr, ("sqlite://", "codename"))
+    model = PivotTableModel(tabular_view)
     data = [
         ['1', 'int_col', '-3'],
         ['2', 'int_col', '-1'],

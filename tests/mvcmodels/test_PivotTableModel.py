@@ -17,12 +17,22 @@ Unit tests for the plotting module.
 """
 
 import unittest
+from unittest.mock import MagicMock
+from PySide2.QtWidgets import QApplication
 from spinetoolbox.mvcmodels.pivot_table_models import PivotTableModel
+from spinetoolbox.widgets.tabular_view_widget import TabularViewForm
 
 
 class TestPivotTableModel(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        if not QApplication.instance():
+            QApplication()
+
     def setUp(self):
-        self._model = PivotTableModel()
+        db_mngr = MagicMock()
+        tabular_view = TabularViewForm(db_mngr, ("sqlite://", "codename"))
+        self._model = PivotTableModel(tabular_view)
         data = [['row1', 'col1', '1'], ['row2', 'col1', '3'], ['row1', 'col2', '5'], ['row2', 'col2', '7']]
         index_names = ['rows', 'cols']
         index_real_names = ['real_rows', 'real_cols']
