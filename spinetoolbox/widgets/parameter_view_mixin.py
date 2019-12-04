@@ -263,7 +263,7 @@ class ParameterViewMixin:
 
     # TODO: nothing connected to these two below
 
-    @Slot("int")
+    @Slot(int)
     def _handle_object_parameter_tab_changed(self, index):
         """Updates filter."""
         if index == 0:
@@ -271,7 +271,7 @@ class ParameterViewMixin:
         else:
             self.object_parameter_definition_model.update_main_filter()
 
-    @Slot("int")
+    @Slot(int)
     def _handle_relationship_parameter_tab_changed(self, index):
         """Updates filter."""
         if index == 0:
@@ -279,22 +279,22 @@ class ParameterViewMixin:
         else:
             self.relationship_parameter_definition_model.update_main_filter()
 
-    @Slot("bool")
+    @Slot(bool)
     def _handle_object_parameter_value_visibility_changed(self, visible):
         if visible:
             self.object_parameter_value_model.update_main_filter()
 
-    @Slot("bool")
+    @Slot(bool)
     def _handle_object_parameter_definition_visibility_changed(self, visible):
         if visible:
             self.object_parameter_definition_model.update_main_filter()
 
-    @Slot("bool")
+    @Slot(bool)
     def _handle_relationship_parameter_value_visibility_changed(self, visible):
         if visible:
             self.relationship_parameter_value_model.update_main_filter()
 
-    @Slot("bool")
+    @Slot(bool)
     def _handle_relationship_parameter_definition_visibility_changed(self, visible):
         if visible:
             self.relationship_parameter_definition_model.update_main_filter()

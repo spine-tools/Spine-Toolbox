@@ -23,9 +23,7 @@ from PySide2.QtGui import QStandardItem, QStandardItemModel, QIcon, QPixmap
 from sqlalchemy.engine.url import URL, make_url
 from spinedb_api import SpineDBAPIError
 from spinetoolbox.project_item import ProjectItem
-from spinetoolbox.widgets.graph_view_widget import GraphViewForm
-from spinetoolbox.widgets.tabular_view_widget import TabularViewForm
-from spinetoolbox.widgets.tree_view_widget import TreeViewForm
+from spinetoolbox.widgets.data_store_widget import DataStoreForm
 
 
 class View(ProjectItem):
@@ -41,9 +39,7 @@ class View(ProjectItem):
             y (float): Initial Y coordinate of item icon
         """
         super().__init__(toolbox, name, description, x, y)
-        self._graph_views = {}
-        self._tabular_views = {}
-        self._tree_views = {}
+        self._ds_views = {}
         self._references = list()
         self.reference_model = QStandardItemModel()  # References to databases
         self._spine_ref_icon = QIcon(QPixmap(":/icons/Spine_db_ref_icon.png"))
@@ -63,9 +59,7 @@ class View(ProjectItem):
         This is to enable simpler connecting and disconnecting."""
         s = super().make_signal_handler_dict()
         s[self._properties_ui.toolButton_view_open_dir.clicked] = lambda checked=False: self.open_directory()
-        s[self._properties_ui.pushButton_view_open_graph_view.clicked] = self.open_graph_view_btn_clicked
-        s[self._properties_ui.pushButton_view_open_tabular_view.clicked] = self.open_tabular_view_btn_clicked
-        s[self._properties_ui.pushButton_view_open_tree_view.clicked] = self.open_tree_view_btn_clicked
+        s[self._properties_ui.pushButton_view_open_ds_view.clicked] = self._open_view
         return s
 
     def activate(self):
@@ -95,28 +89,9 @@ class View(ProjectItem):
         return self._references
 
     @Slot(bool)
-    def open_graph_view_btn_clicked(self, checked=False):
-        """Slot for handling the signal emitted by clicking on 'Graph view' button."""
-        self._open_view("graph", supports_multiple_databases=False)
-
-    @Slot(bool)
-    def open_tabular_view_btn_clicked(self, checked=False):
-        """Slot for handling the signal emitted by clicking on 'Tabular view' button."""
-        self._open_view("tabular", supports_multiple_databases=False)
-
-    @Slot(bool)
-    def open_tree_view_btn_clicked(self, checked=False):
-        """Slot for handling the signal emitted by clicking on 'Tree view' button."""
-        self._open_view("tree", supports_multiple_databases=True)
-
-    def _open_view(self, view, supports_multiple_databases):
+    def _open_view(self, checked=False):
         """Opens references in a view window.
-
-        Args:
-            view (str): either "tree", "graph", or "tabular"
-            supports_multiple_databases (bool): True if the view supports more than one database
         """
-        view_store = {"graph": self._graph_views, "tabular": self._tabular_views, "tree": self._tree_views}[view]
         indexes = self._selected_indexes()
         database_urls = self._database_urls(indexes)
         if not database_urls:
@@ -124,19 +99,14 @@ class View(ProjectItem):
         db_urls = [str(x[0]) for x in database_urls]
         # Mangle database paths to get a hashable string identifying the view window.
         view_id = ";".join(sorted(db_urls))
-        if not supports_multiple_databases and len(database_urls) > 1:
-            # Currently, Graph and Tabular views do not support multiple databases.
-            # This if clause can be removed once that support has been implemented.
-            self._toolbox.msg_error.emit("Selected view does not support multiple databases.")
+        if self._restore_existing_view_window(view_id):
             return
-        if self._restore_existing_view_window(view_id, view_store):
-            return
-        view_window = self._make_view_window(view, database_urls)
+        view_window = self._make_view_window(database_urls)
         if not view_window:
             return
         view_window.show()
-        view_window.destroyed.connect(lambda: view_store.pop(view_id))
-        view_store[view_id] = view_window
+        view_window.destroyed.connect(lambda: self._ds_views.pop(view_id))
+        self._ds_views[view_id] = view_window
 
     def populate_reference_list(self, items):
         """Add given list of items to the reference model. If None or
@@ -191,34 +161,25 @@ class View(ProjectItem):
         """Returns list of tuples (url, provider) for given indexes."""
         return [self._references[index.row()] for index in indexes]
 
-    @staticmethod
-    def _restore_existing_view_window(view_id, view_store):
+    def _restore_existing_view_window(self, view_id):
         """Restores an existing view window and returns True if the operation was successful."""
-        if view_id not in view_store:
+        if view_id not in self._ds_views:
             return False
-        view_window = view_store[view_id]
+        view_window = self._ds_views[view_id]
         if view_window.windowState() & Qt.WindowMinimized:
             view_window.setWindowState(view_window.windowState() & ~Qt.WindowMinimized | Qt.WindowActive)
         view_window.activateWindow()
         return True
 
-    def _make_view_window(self, view, db_maps):
-        make_view = {"graph": GraphViewForm, "tabular": TabularViewForm, "tree": TreeViewForm}.get(view)
-        if not make_view:
-            raise RuntimeError("view must be 'tree', 'graph', or 'tabular'")
-        kwargs = {"graph": {"read_only": True}}.get(view, {})
+    def _make_view_window(self, db_maps):
         try:
-            return make_view(self._project.db_mngr, *db_maps, **kwargs)
+            return DataStoreForm(self._project.db_mngr, *db_maps)
         except SpineDBAPIError as e:
             self._toolbox.msg_error.emit(e.msg)
 
     def tear_down(self):
         """Tears down this item. Called by toolbox just before closing. Closes all view windows."""
-        for view in self._graph_views.values():
-            view.close()
-        for view in self._tabular_views.values():
-            view.close()
-        for view in self._tree_views.values():
+        for view in self._ds_views.values():
             view.close()
 
     def notify_destination(self, source_item):

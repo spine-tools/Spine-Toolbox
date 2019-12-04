@@ -18,15 +18,13 @@ Module for data store class.
 
 import os
 import logging
-import spinedb_api
 from PySide2.QtCore import Slot, Qt
 from PySide2.QtWidgets import QFileDialog, QApplication
 from sqlalchemy import create_engine
 from sqlalchemy.engine.url import make_url, URL
+import spinedb_api
 from spinetoolbox.project_item import ProjectItem, ProjectItemResource
-from spinetoolbox.widgets.tree_view_widget import TreeViewForm
-from spinetoolbox.widgets.graph_view_widget import GraphViewForm
-from spinetoolbox.widgets.tabular_view_widget import TabularViewForm
+from spinetoolbox.widgets.data_store_widget import DataStoreForm
 from spinetoolbox.helpers import create_dir, busy_effect
 from .widgets.custom_menus import DataStoreContextMenu
 
@@ -49,7 +47,7 @@ class DataStore(ProjectItem):
             url = reference["url"]
         self._url = self.parse_url(url)
         self._sa_url = None
-        self.views = {}
+        self.ds_view = None
         self._for_spine_model_checkbox_state = Qt.Unchecked
         # Make logs directory for this Data Store
         self.logs_dir = os.path.join(self.data_dir, "logs")
@@ -87,9 +85,7 @@ class DataStore(ProjectItem):
         This is to enable simpler connecting and disconnecting."""
         s = super().make_signal_handler_dict()
         s[self._properties_ui.toolButton_ds_open_dir.clicked] = lambda checked=False: self.open_directory()
-        s[self._properties_ui.pushButton_ds_tree_view.clicked] = self.open_tree_view
-        s[self._properties_ui.pushButton_ds_graph_view.clicked] = self.open_graph_view
-        s[self._properties_ui.pushButton_ds_tabular_view.clicked] = self.open_tabular_view
+        s[self._properties_ui.pushButton_ds_view.clicked] = self.open_ds_view
         s[self._properties_ui.toolButton_open_sqlite_file.clicked] = self.open_sqlite_file
         s[self._properties_ui.toolButton_create_new_spine_db.clicked] = self.create_new_spine_database
         s[self._properties_ui.toolButton_copy_url.clicked] = self.copy_url
@@ -346,63 +342,38 @@ class DataStore(ProjectItem):
         self._properties_ui.lineEdit_password.setEnabled(True)
 
     @Slot(bool)
-    def open_tree_view(self, checked=False):
-        """Opens tree view form."""
-        self.open_view("tree")
-
-    @Slot(bool)
-    def open_graph_view(self, checked=False):
-        """Opens graph view form."""
-        self.open_view("graph")
-
-    @Slot(bool)
-    def open_tabular_view(self, checked=False):
-        """Opens tabular view form."""
-        self.open_view("tabular")
-
-    def open_view(self, view):
-        """Opens current url in the form given by view.
-
-        Args:
-            view (str): either "tree", "graph", or "tabular"
-        """
+    def open_ds_view(self, checked=False):
+        """Opens current url in the data store view."""
         self._update_sa_url()
         if not self._sa_url:
             return
-        form = self.views.get(view)
-        if form:
+        if self.ds_view:
             # If the db_url is the same, just raise the current form
-            if form.db_url == self._sa_url:
-                if form.windowState() & Qt.WindowMinimized:
+            if self.ds_view.db_url == (self._sa_url, self.name):
+                if self.ds_view.windowState() & Qt.WindowMinimized:
                     # Remove minimized status and restore window with the previous state (maximized/normal state)
-                    form.setWindowState(form.windowState() & ~Qt.WindowMinimized | Qt.WindowActive)
-                    form.activateWindow()
+                    self.ds_view.setWindowState(self.ds_view.windowState() & ~Qt.WindowMinimized | Qt.WindowActive)
+                    self.ds_view.activateWindow()
                 else:
-                    form.raise_()
+                    self.ds_view.raise_()
                 return
-            form.close()
-        self.do_open_view(view)
+            self.ds_view.close()
+        self.do_open_ds_view()
 
     @busy_effect
-    def do_open_view(self, view):
-        """Opens the form given by view.
-
-        Args:
-            view (str): either "tree", "graph", or "tabular"
-        """
-        make_form = {"tree": TreeViewForm, "graph": GraphViewForm, "tabular": TabularViewForm}[view]
+    def do_open_ds_view(self):
+        """Opens current url in the data store view."""
         try:
-            form = make_form(self._project.db_mngr, (self._sa_url, self.name))
+            self.ds_view = DataStoreForm(self._project.db_mngr, (self._sa_url, self.name))
         except spinedb_api.SpineDBAPIError as e:
             self._toolbox.msg_error.emit(e.msg)
             return
-        self.views[view] = form
-        form.destroyed.connect(lambda view=view, form=form: self._handle_view_form_destroyed(view, form))
-        form.show()
+        self.ds_view.destroyed.connect(self._handle_ds_view_destroyed)
+        self.ds_view.show()
 
-    def _handle_view_form_destroyed(self, view, form):
-        if self.views[view] == form:
-            self.views.pop(view)
+    @Slot()
+    def _handle_ds_view_destroyed(self):
+        self.ds_view = None
 
     def data_files(self):
         """Return a list of files that are in this items data directory."""
@@ -410,7 +381,7 @@ class DataStore(ProjectItem):
             return None
         return os.listdir(self.data_dir)
 
-    @Slot(bool, name="copy_url")
+    @Slot(bool)
     def copy_url(self, checked=False):
         """Copy db url to clipboard."""
         self._update_sa_url()
@@ -510,8 +481,8 @@ class DataStore(ProjectItem):
         """Tears down this item. Called by toolbox just before closing.
         Closes all GraphViewForm, TreeViewForm, and TabularViewForm instances opened by this item.
         """
-        for form in self.views.values():
-            form.close()
+        if self.ds_view:
+            self.ds_view.close()
 
     def notify_destination(self, source_item):
         """See base class."""

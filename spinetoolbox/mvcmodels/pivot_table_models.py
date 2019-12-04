@@ -25,7 +25,7 @@ from ..config import PIVOT_TABLE_HEADER_COLOR
 class PivotTableModel(QAbstractTableModel):
     index_entries_changed = Signal(dict, dict)
 
-    _V_HEADER_WIDTH = 6
+    _V_HEADER_WIDTH = 5
 
     def __init__(self, parent):
         """

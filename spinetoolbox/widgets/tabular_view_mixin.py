@@ -106,6 +106,7 @@ class TabularViewMixin:
         self.ui.frozen_table.header_dropped.connect(self.handle_header_dropped)
         self.ui.frozen_table.selectionModel().selectionChanged.connect(self.change_frozen_value)
         self.value_type_combo.currentTextChanged.connect(self.refresh_pivot_table)
+        self.ui.dockWidget_pivot_table.visibilityChanged.connect(self._handle_pivot_table_visibility_changed)
 
     def init_models(self):
         """Initializes models."""
@@ -243,11 +244,34 @@ class TabularViewMixin:
             frozen_value = ()
         return rows, columns, frozen, frozen_value
 
+    @staticmethod
+    def _is_class_index(index):
+        """Returns whether or not the given index is a class index.
+
+        Args:
+            index (QModelIndex)
+        Returns:
+            bool
+        """
+        return index.column() == 0 and index.model().item_from_index(index).item_type in (
+            "object class",
+            "relationship class",
+        )
+
+    @Slot(bool)
+    def _handle_pivot_table_visibility_changed(self, visible):
+        if not visible:
+            return
+        self.save_model()
+        self.refresh_pivot_table()
+        self.pivot_table_menu.relationship_tuple_key = self.relationship_tuple_key
+        self.pivot_table_menu.class_type = self.current_class_type
+
     @Slot("QModelIndex", "QModelIndex")
     def _handle_object_tree_current_changed(self, selected, deselected):
         """Refreshes pivot table according to selection."""
         self.save_model()
-        if self.ui.dockWidget_pivot_table.isVisible():
+        if self.ui.dockWidget_pivot_table.isVisible() and self._is_class_index(selected):
             self.do_refresh_pivot_table(self._OBJECT_CLASS, selected.data(Qt.DisplayRole))
         self.pivot_table_menu.relationship_tuple_key = self.relationship_tuple_key
         self.pivot_table_menu.class_type = self.current_class_type
@@ -256,7 +280,7 @@ class TabularViewMixin:
     def _handle_relationship_tree_current_changed(self, selected, deselected):
         """Refreshes pivot table according to selection."""
         self.save_model()
-        if self.ui.dockWidget_pivot_table.isVisible():
+        if self.ui.dockWidget_pivot_table.isVisible() and self._is_class_index(selected):
             self.do_refresh_pivot_table(self._RELATIONSHIP_CLASS, selected.data(Qt.DisplayRole))
         self.pivot_table_menu.relationship_tuple_key = self.relationship_tuple_key
         self.pivot_table_menu.class_type = self.current_class_type
@@ -264,11 +288,11 @@ class TabularViewMixin:
     def refresh_pivot_table(self):
         """Refreshes pivot table."""
         selected = self.ui.treeView_object.selectionModel().currentIndex()
-        if selected.isValid():
+        if self._is_class_index(selected):
             self.do_refresh_pivot_table(self._OBJECT_CLASS, selected.data(Qt.DisplayRole))
             return
         selected = self.ui.treeView_relationship.selectionModel().currentIndex()
-        if selected.isValid():
+        if self._is_class_index(selected):
             self.do_refresh_pivot_table(self._RELATIONSHIP_CLASS, selected.data(Qt.DisplayRole))
 
     @busy_effect
