@@ -75,8 +75,6 @@ class ParameterViewMixin:
         self.ui.tableView_object_parameter_definition.setModel(self.object_parameter_definition_model)
         self.ui.tableView_relationship_parameter_definition.setModel(self.relationship_parameter_definition_model)
         # Others
-        max_screen_height = max([s.availableSize().height() for s in QGuiApplication.screens()])
-        visible_rows = int(max_screen_height / self.default_row_height)
         for view in (
             self.ui.tableView_object_parameter_value,
             self.ui.tableView_relationship_parameter_value,
@@ -85,13 +83,14 @@ class ParameterViewMixin:
         ):
             view.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
             view.verticalHeader().setDefaultSectionSize(self.default_row_height)
-            view.horizontalHeader().setResizeContentsPrecision(visible_rows)
+            view.horizontalHeader().setResizeContentsPrecision(self.visible_rows)
             view.horizontalHeader().setSectionsMovable(True)
         self.setup_delegates()
 
     def add_toggle_view_actions(self):
         """Adds toggle view actions to View menu."""
         super().add_toggle_view_actions()
+        self.ui.menuView.addSeparator()
         self.ui.menuView.addAction(self.ui.dockWidget_object_parameter_value.toggleViewAction())
         self.ui.menuView.addAction(self.ui.dockWidget_object_parameter_definition.toggleViewAction())
         self.ui.menuView.addAction(self.ui.dockWidget_relationship_parameter_value.toggleViewAction())

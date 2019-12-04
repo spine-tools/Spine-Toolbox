@@ -16,7 +16,7 @@ Contains the TreeViewMixin class.
 :date:   26.11.2018
 """
 
-from PySide2.QtCore import Signal, Slot
+from PySide2.QtCore import Slot
 from .custom_menus import ObjectTreeContextMenu, RelationshipTreeContextMenu
 from .add_db_items_dialogs import (
     AddObjectClassesDialog,
@@ -39,9 +39,6 @@ class TreeViewMixin:
     """Provides object and relationship trees for the data store form.
     """
 
-    msg = Signal(str)
-    msg_error = Signal(str)
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Selected ids
@@ -53,6 +50,7 @@ class TreeViewMixin:
     def add_toggle_view_actions(self):
         """Adds toggle view actions to View menu."""
         super().add_toggle_view_actions()
+        self.ui.menuView.addSeparator()
         self.ui.menuView.addAction(self.ui.dockWidget_relationship_tree.toggleViewAction())
 
     def connect_signals(self):

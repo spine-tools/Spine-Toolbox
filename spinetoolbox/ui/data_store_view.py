@@ -13,7 +13,7 @@
 # Form implementation generated from reading ui file '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/data_store_view.ui',
 # licensing of '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/data_store_view.ui' applies.
 #
-# Created: Wed Dec  4 17:33:30 2019
+# Created: Wed Dec  4 18:58:02 2019
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -23,7 +23,7 @@ from PySide2 import QtCore, QtGui, QtWidgets
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
-        MainWindow.resize(640, 588)
+        MainWindow.resize(872, 701)
         MainWindow.setLayoutDirection(QtCore.Qt.LeftToRight)
         MainWindow.setDockOptions(QtWidgets.QMainWindow.AllowNestedDocks|QtWidgets.QMainWindow.AllowTabbedDocks|QtWidgets.QMainWindow.AnimatedDocks|QtWidgets.QMainWindow.GroupedDragging)
         self.centralwidget = QtWidgets.QWidget(MainWindow)
@@ -39,7 +39,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_2.setObjectName("verticalLayout_2")
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 640, 28))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 872, 28))
         self.menubar.setNativeMenuBar(False)
         self.menubar.setObjectName("menubar")
         self.menuSession = QtWidgets.QMenu(self.menubar)
@@ -346,6 +346,32 @@ class Ui_MainWindow(object):
         self.verticalLayout_12.addWidget(self.splitter_object_relationship_class)
         self.dockWidget_item_palette.setWidget(self.dockWidgetContents_9)
         MainWindow.addDockWidget(QtCore.Qt.DockWidgetArea(1), self.dockWidget_item_palette)
+        self.dockWidget_pivot_table = QtWidgets.QDockWidget(MainWindow)
+        self.dockWidget_pivot_table.setObjectName("dockWidget_pivot_table")
+        self.dockWidgetContents_10 = QtWidgets.QWidget()
+        self.dockWidgetContents_10.setObjectName("dockWidgetContents_10")
+        self.verticalLayout_13 = QtWidgets.QVBoxLayout(self.dockWidgetContents_10)
+        self.verticalLayout_13.setSpacing(0)
+        self.verticalLayout_13.setContentsMargins(0, 0, 0, 0)
+        self.verticalLayout_13.setObjectName("verticalLayout_13")
+        self.pivot_table = PivotTableView(self.dockWidgetContents_10)
+        self.pivot_table.setObjectName("pivot_table")
+        self.verticalLayout_13.addWidget(self.pivot_table)
+        self.dockWidget_pivot_table.setWidget(self.dockWidgetContents_10)
+        MainWindow.addDockWidget(QtCore.Qt.DockWidgetArea(2), self.dockWidget_pivot_table)
+        self.dockWidget_frozen_table = QtWidgets.QDockWidget(MainWindow)
+        self.dockWidget_frozen_table.setObjectName("dockWidget_frozen_table")
+        self.dockWidgetContents_11 = QtWidgets.QWidget()
+        self.dockWidgetContents_11.setObjectName("dockWidgetContents_11")
+        self.verticalLayout_14 = QtWidgets.QVBoxLayout(self.dockWidgetContents_11)
+        self.verticalLayout_14.setSpacing(0)
+        self.verticalLayout_14.setContentsMargins(0, 0, 0, 0)
+        self.verticalLayout_14.setObjectName("verticalLayout_14")
+        self.frozen_table = FrozenTableView(self.dockWidgetContents_11)
+        self.frozen_table.setObjectName("frozen_table")
+        self.verticalLayout_14.addWidget(self.frozen_table)
+        self.dockWidget_frozen_table.setWidget(self.dockWidgetContents_11)
+        MainWindow.addDockWidget(QtCore.Qt.DockWidgetArea(2), self.dockWidget_frozen_table)
         self.actionCommit = QtWidgets.QAction(MainWindow)
         self.actionCommit.setEnabled(True)
         icon = QtGui.QIcon()
@@ -515,6 +541,8 @@ class Ui_MainWindow(object):
         self.dockWidget_item_palette.setWindowTitle(QtWidgets.QApplication.translate("MainWindow", "Item palette", None, -1))
         self.label.setText(QtWidgets.QApplication.translate("MainWindow", "Object class", None, -1))
         self.label_2.setText(QtWidgets.QApplication.translate("MainWindow", "Relationship class", None, -1))
+        self.dockWidget_pivot_table.setWindowTitle(QtWidgets.QApplication.translate("MainWindow", "Pivot table", None, -1))
+        self.dockWidget_frozen_table.setWindowTitle(QtWidgets.QApplication.translate("MainWindow", "Frozen table", None, -1))
         self.actionCommit.setText(QtWidgets.QApplication.translate("MainWindow", "Commit", None, -1))
         self.actionCommit.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+Return", None, -1))
         self.actionRollback.setText(QtWidgets.QApplication.translate("MainWindow", "Rollback", None, -1))
@@ -551,9 +579,11 @@ class Ui_MainWindow(object):
         self.actionRestore_pruned.setText(QtWidgets.QApplication.translate("MainWindow", "Restore pruned", None, -1))
         self.actionLive_graph_demo.setText(QtWidgets.QApplication.translate("MainWindow", "Live graph demo", None, -1))
 
-from spinetoolbox.widgets.custom_qtableview import AutoFilterCopyPasteTableView
 from spinetoolbox.widgets.custom_qgraphicsviews import GraphQGraphicsView
+from spinetoolbox.widgets.pivot_table_view import PivotTableView
 from spinetoolbox.widgets.custom_qtreeview import CopyTreeView, ObjectTreeView
 from spinetoolbox.widgets.custom_qlistview import DragListView
+from spinetoolbox.widgets.frozen_table_view import FrozenTableView
 from spinetoolbox.widgets.custom_qstatusbar import NotificationStatusBar
+from spinetoolbox.widgets.custom_qtableview import AutoFilterCopyPasteTableView
 from spinetoolbox import resources_icons_rc

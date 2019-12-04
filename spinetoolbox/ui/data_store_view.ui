@@ -18,8 +18,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>640</width>
-    <height>588</height>
+    <width>872</width>
+    <height>701</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -61,7 +61,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>640</width>
+     <width>872</width>
      <height>28</height>
     </rect>
    </property>
@@ -879,6 +879,66 @@
     </layout>
    </widget>
   </widget>
+  <widget class="QDockWidget" name="dockWidget_pivot_table">
+   <property name="windowTitle">
+    <string>Pivot table</string>
+   </property>
+   <attribute name="dockWidgetArea">
+    <number>2</number>
+   </attribute>
+   <widget class="QWidget" name="dockWidgetContents_10">
+    <layout class="QVBoxLayout" name="verticalLayout_13">
+     <property name="spacing">
+      <number>0</number>
+     </property>
+     <property name="leftMargin">
+      <number>0</number>
+     </property>
+     <property name="topMargin">
+      <number>0</number>
+     </property>
+     <property name="rightMargin">
+      <number>0</number>
+     </property>
+     <property name="bottomMargin">
+      <number>0</number>
+     </property>
+     <item>
+      <widget class="PivotTableView" name="pivot_table"/>
+     </item>
+    </layout>
+   </widget>
+  </widget>
+  <widget class="QDockWidget" name="dockWidget_frozen_table">
+   <property name="windowTitle">
+    <string>Frozen table</string>
+   </property>
+   <attribute name="dockWidgetArea">
+    <number>2</number>
+   </attribute>
+   <widget class="QWidget" name="dockWidgetContents_11">
+    <layout class="QVBoxLayout" name="verticalLayout_14">
+     <property name="spacing">
+      <number>0</number>
+     </property>
+     <property name="leftMargin">
+      <number>0</number>
+     </property>
+     <property name="topMargin">
+      <number>0</number>
+     </property>
+     <property name="rightMargin">
+      <number>0</number>
+     </property>
+     <property name="bottomMargin">
+      <number>0</number>
+     </property>
+     <item>
+      <widget class="FrozenTableView" name="frozen_table"/>
+     </item>
+    </layout>
+   </widget>
+  </widget>
   <action name="actionCommit">
    <property name="enabled">
     <bool>true</bool>
@@ -1157,6 +1217,16 @@
    <class>CopyTreeView</class>
    <extends>QTreeView</extends>
    <header>spinetoolbox/widgets/custom_qtreeview.h</header>
+  </customwidget>
+  <customwidget>
+   <class>PivotTableView</class>
+   <extends>QTableView</extends>
+   <header>spinetoolbox/widgets/pivot_table_view.h</header>
+  </customwidget>
+  <customwidget>
+   <class>FrozenTableView</class>
+   <extends>QTableView</extends>
+   <header>spinetoolbox/widgets/frozen_table_view.h</header>
   </customwidget>
  </customwidgets>
  <tabstops>

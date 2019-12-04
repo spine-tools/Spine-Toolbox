@@ -38,6 +38,7 @@ from .custom_menus import ParameterValueListContextMenu
 from ..widgets.parameter_view_mixin import ParameterViewMixin
 from ..widgets.tree_view_mixin import TreeViewMixin
 from ..widgets.graph_view_mixin import GraphViewMixin
+from ..widgets.tabular_view_mixin import TabularViewMixin
 from ..widgets.toolbars import ParameterTagToolBar
 from ..mvcmodels.parameter_value_list_model import ParameterValueListModel
 from ..helpers import busy_effect, format_string_list
@@ -86,13 +87,17 @@ class DataStoreFormBase(QMainWindow):
         self.selected_parameter_tag_ids = dict()
         self.selected_param_def_ids = {"object class": {}, "relationship class": {}}
         self.parameter_value_list_model = ParameterValueListModel(self, self.db_mngr, *self.db_maps)
-        self.default_row_height = QFontMetrics(QFont("", 0)).lineSpacing()
+        fm = QFontMetrics(QFont("", 0))
+        self.default_row_height = 1.2 * fm.lineSpacing()
+        max_screen_height = max([s.availableSize().height() for s in QGuiApplication.screens()])
+        self.visible_rows = int(max_screen_height / self.default_row_height)
         self._selection_source = None
         self._selection_locked = False
         self.settings_group = 'treeViewWidget'
 
     def add_toggle_view_actions(self):
         """Adds toggle view actions to View menu."""
+        self.ui.menuView.addSeparator()
         self.ui.menuView.addAction(self.ui.dockWidget_parameter_value_list.toggleViewAction())
         self.ui.menuView.addAction(self.parameter_tag_toolbar.toggleViewAction())
 
@@ -114,6 +119,7 @@ class DataStoreFormBase(QMainWindow):
         self.ui.actionCopy.triggered.connect(self.copy)
         self.ui.actionPaste.triggered.connect(self.paste)
         self.ui.actionRemove_selection.triggered.connect(self.remove_selection)
+        self.ui.actionManage_parameter_tags.triggered.connect(self.show_manage_parameter_tags_form)
         self.parameter_tag_toolbar.manage_tags_action_triggered.connect(self.show_manage_parameter_tags_form)
         self.parameter_tag_toolbar.tag_button_toggled.connect(self._handle_tag_button_toggled)
         self.ui.treeView_parameter_value_list.selectionModel().selectionChanged.connect(
@@ -340,16 +346,19 @@ class DataStoreFormBase(QMainWindow):
 
     @Slot()
     def _handle_menu_session_about_to_show(self):
-        on = any(db_map.has_pending_changes() for db_map in self.db_maps)
+        on = self.commit_enabled()
         self.ui.actionCommit.setEnabled(on)
         self.ui.actionRollback.setEnabled(on)
 
-    @Slot("bool")
+    def commit_enabled(self):
+        return any(db_map.has_pending_changes() for db_map in self.db_maps)
+
+    @Slot(bool)
     def commit_session(self, checked=False):
         """Commits session."""
         self.db_mngr.commit_session(*self.db_maps)
 
-    @Slot("bool")
+    @Slot(bool)
     def rollback_session(self, checked=False):
         self.db_mngr.rollback_session(*self.db_maps)
 
@@ -625,7 +634,7 @@ class DataStoreFormBase(QMainWindow):
         event.accept()
 
 
-class DataStoreForm(GraphViewMixin, ParameterViewMixin, TreeViewMixin, DataStoreFormBase):
+class DataStoreForm(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeViewMixin, DataStoreFormBase):
     """A widget to visualize Spine dbs."""
 
     def __init__(self, db_mngr, *db_urls):

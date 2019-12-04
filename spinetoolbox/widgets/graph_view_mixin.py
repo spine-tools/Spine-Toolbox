@@ -68,6 +68,7 @@ class GraphViewMixin:
     def add_toggle_view_actions(self):
         """Adds toggle view actions to View menu."""
         super().add_toggle_view_actions()
+        self.ui.menuView.addSeparator()
         self.ui.menuView.addAction(self.ui.dockWidget_entity_graph.toggleViewAction())
         self.ui.menuView.addAction(self.ui.dockWidget_item_palette.toggleViewAction())
 
@@ -105,6 +106,12 @@ class GraphViewMixin:
         super().init_models()
         self.object_class_list_model.populate_list()
         self.relationship_class_list_model.populate_list()
+
+    @Slot("bool")
+    def restore_dock_widgets(self, checked=False):
+        """Docks all floating and or hidden QDockWidgets back to the window at 'factory' positions."""
+        super().restore_dock_widgets(checked)
+        self.live_demo.hide()
 
     def receive_object_classes_added(self, db_map_data):
         super().receive_object_classes_added(db_map_data)
