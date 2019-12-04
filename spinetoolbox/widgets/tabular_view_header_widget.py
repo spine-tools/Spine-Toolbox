@@ -66,6 +66,7 @@ class TabularViewHeaderWidget(QFrame):
         elif area == "frozen":
             h_alignment = Qt.AlignHCenter
         label.setAlignment(h_alignment | Qt.AlignVCenter)
+        label.setStyleSheet("QLabel {font-weight: bold;}")
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setAutoFillBackground(True)
         self.setFrameStyle(QFrame.Raised)

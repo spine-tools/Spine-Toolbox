@@ -650,7 +650,7 @@ class TabularViewForm(QMainWindow):
     def update_filter_menus(self):
         self.filter_menus.clear()
         for unique_name, object_class_name in self.model.model._unique_name_2_name.items():
-            self.filter_menus[unique_name] = menu = FilterMenu()
+            self.filter_menus[unique_name] = menu = FilterMenu(self)
             menu.set_filter_list(self.model.model.index_entries[object_class_name])
             menu.unique_name = unique_name
             menu.object_class_name = object_class_name

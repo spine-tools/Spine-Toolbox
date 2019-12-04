@@ -107,7 +107,7 @@
     </sizepolicy>
    </property>
    <property name="windowTitle">
-    <string>Frozen table</string>
+    <string>Frozen dimension</string>
    </property>
    <attribute name="dockWidgetArea">
     <number>2</number>
