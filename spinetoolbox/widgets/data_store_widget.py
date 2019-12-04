@@ -149,7 +149,7 @@ class DataStoreFormBase(QMainWindow):
         """
         self.ui.statusbar.add_notification(msg)
 
-    @Slot("bool")
+    @Slot(bool)
     def restore_dock_widgets(self, checked=False):
         """Docks all floating and or hidden QDockWidgets back to the window at 'factory' positions."""
         # Place docks
@@ -157,21 +157,6 @@ class DataStoreFormBase(QMainWindow):
             dock.setVisible(True)
             dock.setFloating(False)
             self.addDockWidget(Qt.RightDockWidgetArea, dock)
-        self.splitDockWidget(self.ui.dockWidget_object_tree, self.ui.dockWidget_object_parameter_value, Qt.Horizontal)
-        # Split and tabify
-        self.splitDockWidget(self.ui.dockWidget_object_tree, self.ui.dockWidget_relationship_tree, Qt.Vertical)
-        self.splitDockWidget(
-            self.ui.dockWidget_object_parameter_value, self.ui.dockWidget_parameter_value_list, Qt.Horizontal
-        )
-        self.splitDockWidget(
-            self.ui.dockWidget_object_parameter_value, self.ui.dockWidget_relationship_parameter_value, Qt.Vertical
-        )
-        self.tabifyDockWidget(self.ui.dockWidget_object_parameter_value, self.ui.dockWidget_object_parameter_definition)
-        self.tabifyDockWidget(
-            self.ui.dockWidget_relationship_parameter_value, self.ui.dockWidget_relationship_parameter_definition
-        )
-        self.ui.dockWidget_object_parameter_value.raise_()
-        self.ui.dockWidget_relationship_parameter_value.raise_()
 
     @Slot()
     def _handle_menu_edit_about_to_show(self):
@@ -247,21 +232,21 @@ class DataStoreFormBase(QMainWindow):
             return True
         return False
 
-    @Slot("bool")
+    @Slot(bool)
     def remove_selection(self, checked=False):
         """Removes selection of items."""
         if not self._selection_source:
             return
         self._selection_source.model().remove_selection_requested.emit()
 
-    @Slot("bool")
+    @Slot(bool)
     def copy(self, checked=False):
         """Copies data to clipboard."""
         if not self._selection_source:
             return
         self._selection_source.copy()
 
-    @Slot("bool")
+    @Slot(bool)
     def paste(self, checked=False):
         """Pastes data from clipboard."""
         focus_widget = self._find_focus_child()
@@ -269,7 +254,7 @@ class DataStoreFormBase(QMainWindow):
             return
         focus_widget.paste()
 
-    @Slot("bool")
+    @Slot(bool)
     def show_import_file_dialog(self, checked=False):
         """Shows dialog to allow user to select a file to import."""
         db_map = next(iter(self.db_maps))
@@ -286,7 +271,7 @@ class DataStoreFormBase(QMainWindow):
                 self.msg.emit("Import successful")
                 self.init_models()
 
-    @Slot("bool")
+    @Slot(bool)
     def export_database(self, checked=False):
         """Exports data from database into a file."""
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
@@ -379,13 +364,13 @@ class DataStoreFormBase(QMainWindow):
         msg = f"All changes in {db_names} rolled back successfully."
         self.msg.emit(msg)
 
-    @Slot("bool", name="refresh_session")
+    @Slot(bool)
     def refresh_session(self, checked=False):
         self.init_models()
         msg = "Session refreshed."
         self.msg.emit(msg)
 
-    @Slot("QVariant", "bool")
+    @Slot("QVariant", bool)
     def _handle_tag_button_toggled(self, db_map_ids, checked):
         """Updates filter according to selected tags.
         """
@@ -416,7 +401,7 @@ class DataStoreFormBase(QMainWindow):
                         ).add(param_def["id"])
         self.update_filter()
 
-    @Slot("bool")
+    @Slot(bool)
     def show_manage_parameter_tags_form(self, checked=False):
         dialog = ManageParameterTagsDialog(self, self.db_mngr, *self.db_maps)
         dialog.show()
@@ -654,3 +639,24 @@ class DataStoreForm(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         self.connect_signals()
         toc = time.process_time()
         self.msg.emit("Data store view created in {} seconds".format(toc - tic))
+
+    @Slot(bool)
+    def restore_dock_widgets(self, checked=False):
+        """Docks all floating and or hidden QDockWidgets back to the window at 'factory' positions."""
+        super().restore_dock_widgets(checked)
+        self.splitDockWidget(self.ui.dockWidget_object_tree, self.ui.dockWidget_object_parameter_value, Qt.Horizontal)
+        self.splitDockWidget(self.ui.dockWidget_object_parameter_value, self.ui.dockWidget_pivot_table, Qt.Horizontal)
+        self.splitDockWidget(self.ui.dockWidget_pivot_table, self.ui.dockWidget_parameter_value_list, Qt.Horizontal)
+        self.splitDockWidget(self.ui.dockWidget_object_tree, self.ui.dockWidget_relationship_tree, Qt.Vertical)
+        self.splitDockWidget(
+            self.ui.dockWidget_object_parameter_value, self.ui.dockWidget_relationship_parameter_value, Qt.Vertical
+        )
+        self.tabifyDockWidget(self.ui.dockWidget_object_parameter_value, self.ui.dockWidget_object_parameter_definition)
+        self.tabifyDockWidget(
+            self.ui.dockWidget_relationship_parameter_value, self.ui.dockWidget_relationship_parameter_definition
+        )
+        self.ui.dockWidget_object_parameter_value.raise_()
+        self.ui.dockWidget_relationship_parameter_value.raise_()
+        self.splitDockWidget(self.ui.dockWidget_pivot_table, self.ui.dockWidget_entity_graph, Qt.Vertical)
+        self.splitDockWidget(self.ui.dockWidget_pivot_table, self.ui.dockWidget_frozen_table, Qt.Horizontal)
+        self.splitDockWidget(self.ui.dockWidget_entity_graph, self.ui.dockWidget_item_palette, Qt.Horizontal)

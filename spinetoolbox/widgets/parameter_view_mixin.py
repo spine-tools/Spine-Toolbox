@@ -17,7 +17,6 @@ Contains the ParameterViewMixin class.
 """
 
 from PySide2.QtCore import Qt, Slot
-from PySide2.QtGui import QGuiApplication
 from PySide2.QtWidgets import QHeaderView
 from .custom_delegates import (
     DatabaseNameDelegate,

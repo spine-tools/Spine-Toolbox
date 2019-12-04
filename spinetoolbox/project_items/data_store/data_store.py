@@ -87,7 +87,7 @@ class DataStore(ProjectItem):
         s[self._properties_ui.toolButton_ds_open_dir.clicked] = lambda checked=False: self.open_directory()
         s[self._properties_ui.pushButton_ds_view.clicked] = self.open_ds_view
         s[self._properties_ui.toolButton_open_sqlite_file.clicked] = self.open_sqlite_file
-        s[self._properties_ui.toolButton_create_new_spine_db.clicked] = self.create_new_spine_database
+        s[self._properties_ui.pushButton_create_new_spine_db.clicked] = self.create_new_spine_database
         s[self._properties_ui.toolButton_copy_url.clicked] = self.copy_url
         s[self._properties_ui.comboBox_dialect.activated[str]] = self.refresh_dialect
         s[self._properties_ui.lineEdit_database.file_dropped] = self.set_path_to_sqlite_file

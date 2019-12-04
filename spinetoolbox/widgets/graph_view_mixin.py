@@ -72,6 +72,12 @@ class GraphViewMixin:
         self.ui.menuView.addAction(self.ui.dockWidget_entity_graph.toggleViewAction())
         self.ui.menuView.addAction(self.ui.dockWidget_item_palette.toggleViewAction())
 
+    @Slot(bool)
+    def restore_dock_widgets(self, checked=False):
+        """Docks all floating and or hidden QDockWidgets back to the window at 'factory' positions."""
+        super().restore_dock_widgets(checked)
+        self.live_demo.hide()
+
     def connect_signals(self):
         """Connects signals."""
         super().connect_signals()
@@ -85,7 +91,6 @@ class GraphViewMixin:
         self.ui.actionRestore_pruned.triggered.connect(self.reinstate_pruned_items)
         self.ui.actionLive_graph_demo.triggered.connect(self.show_demo)
         # Dock Widgets menu action
-        self.ui.actionRestore_Dock_Widgets.triggered.connect(self.restore_dock_widgets)
         self.ui.menuGraph.aboutToShow.connect(self._handle_menu_graph_about_to_show)
         self.ui.menuHelp.aboutToShow.connect(self._handle_menu_help_about_to_show)
         self.zoom_widget_action.minus_pressed.connect(self._handle_zoom_minus_pressed)
@@ -106,12 +111,6 @@ class GraphViewMixin:
         super().init_models()
         self.object_class_list_model.populate_list()
         self.relationship_class_list_model.populate_list()
-
-    @Slot("bool")
-    def restore_dock_widgets(self, checked=False):
-        """Docks all floating and or hidden QDockWidgets back to the window at 'factory' positions."""
-        super().restore_dock_widgets(checked)
-        self.live_demo.hide()
 
     def receive_object_classes_added(self, db_map_data):
         super().receive_object_classes_added(db_map_data)
