@@ -88,6 +88,9 @@ class EntityListModel(QStandardItemModel):
             if item.data(Qt.UserRole + 1) in ids:
                 self.removeRow(item.index().row())
 
+    def flags(self, index):
+        return super().flags(index) & ~Qt.ItemIsSelectable
+
 
 class ObjectClassListModel(EntityListModel):
     """A model for listing object classes in the GraphViewForm."""
