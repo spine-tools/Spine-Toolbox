@@ -23,7 +23,6 @@ import pathlib
 import os.path
 from PySide2.QtCore import Slot
 from spinedb_api.database_mapping import DatabaseMapping
-from spinetoolbox.executioner import ExecutionState
 from spinetoolbox.project_item import ProjectItem, ProjectItemResource
 from spinetoolbox.spine_io.exporters import gdx
 from .widgets.gdx_export_settings import GdxExportSettings
@@ -137,8 +136,9 @@ class Exporter(ProjectItem):
             item.open_settings_clicked.connect(self._show_settings)
             item.file_name_changed.connect(self._update_out_file_name)
 
-    def _do_execute(self, resources_upstream, resources_downstream):
-        """Executes this item."""
+    def execute_forward(self, resources):
+        """See base class."""
+        self._database_urls = [r.url for r in resources if r.type_ == "database"]
         gams_system_directory = self._resolve_gams_system_directory()
         if gams_system_directory is None:
             self._toolbox.msg_error.emit("<b>{}</b>: Cannot proceed. No GAMS installation found.")
@@ -147,7 +147,7 @@ class Exporter(ProjectItem):
             file_name = self._database_to_file_name_map.get(url, None)
             if file_name is None:
                 self._toolbox.msg_error.emit("No file name given to export database {}.".format(url))
-                return ExecutionState.ABORT
+                return False
             database_map = DatabaseMapping(url)
             settings = self._settings.get(url, None)
             if settings is None:
@@ -157,18 +157,11 @@ class Exporter(ProjectItem):
             gdx.to_gdx_file(database_map, out_path, settings, gams_system_directory)
             database_map.connection.close()
             self._toolbox.msg_success.emit("File <b>{0}</b> written".format(out_path))
-        return ExecutionState.CONTINUE
+        return True
 
-    def stop_execution(self):
-        """Stops executing this item."""
-        self._toolbox.msg.emit("Stopping {0}".format(self.name))
-        self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(
-            ExecutionState.STOP_REQUESTED
-        )
-
-    def _do_handle_dag_changed(self, resources_upstream):
+    def _do_handle_dag_changed(self, resources):
         """See base class."""
-        self._database_urls = [r.url for r in resources_upstream if r.type_ == "database"]
+        self._database_urls = [r.url for r in resources if r.type_ == "database"]
         for mapped_database in list(self._database_to_file_name_map):
             if mapped_database not in self._database_urls:
                 del self._database_to_file_name_map[mapped_database]
@@ -285,7 +278,7 @@ class Exporter(ProjectItem):
         """See base class."""
         return "Exporter"
 
-    def available_resources_downstream(self, upstream_resources):
+    def output_resources_forward(self):
         """See base class."""
         files = self._database_to_file_name_map.values()
         paths = [os.path.join(self.data_dir, file_name) for file_name in files]

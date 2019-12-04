@@ -22,7 +22,7 @@ import sys
 from PySide2.QtWidgets import QApplication
 import networkx as nx
 from spinetoolbox.project import SpineToolboxProject
-from spinetoolbox.executioner import DirectedGraphHandler
+from spinetoolbox.dag_handler import DirectedGraphHandler
 from .mock_helpers import clean_up_toolboxui_with_project, create_toolboxui_with_project
 
 
@@ -757,10 +757,10 @@ class TestDirectedGraphHandler(unittest.TestCase):
         self.assertEqual(len(d.edges()), 2)  # a->b, b->c
         self.assertTrue(d.has_edge("a", "b"))
         self.assertTrue(d.has_edge("b", "c"))
-        exec_order = self.dag_handler.calc_exec_order(d)
-        self.assertEqual(len(exec_order), 3)
-        self.assertEqual(list(exec_order.keys()), ["a", "b", "c"])
-        self.assertEqual(list(exec_order.values()), [["b"], ["c"], []])
+        successors = self.dag_handler.node_successors(d)
+        self.assertEqual(len(successors), 3)
+        self.assertEqual(list(successors.keys()), ["a", "b", "c"])
+        self.assertEqual(list(successors.values()), [["b"], ["c"], []])
 
     def test_execution_order2(self):
         """Test that execution order is correct with all kinds of graphs.
@@ -777,13 +777,13 @@ class TestDirectedGraphHandler(unittest.TestCase):
         self.assertEqual(len(d.edges()), 2)  # a->b, b->c
         self.assertTrue(d.has_edge("a", "c"))
         self.assertTrue(d.has_edge("b", "c"))
-        exec_order = self.dag_handler.calc_exec_order(d)
-        self.assertEqual(len(exec_order), 3)
-        exec_list = list(exec_order)
+        successors = self.dag_handler.node_successors(d)
+        self.assertEqual(len(successors), 3)
+        exec_list = list(successors)
         self.assertTrue(exec_list in (["a", "b", "c"], ["b", "a", "c"]))
-        self.assertTrue(exec_order["a"] == ["c"])
-        self.assertTrue(exec_order["b"] == ["c"])
-        self.assertTrue(exec_order["c"] == [])
+        self.assertTrue(successors["a"] == ["c"])
+        self.assertTrue(successors["b"] == ["c"])
+        self.assertTrue(successors["c"] == [])
 
     def test_execution_order3(self):
         """Test that execution order is correct with all kinds of graphs.
@@ -798,13 +798,13 @@ class TestDirectedGraphHandler(unittest.TestCase):
         d = self.dag_handler.dags()[0]
         self.assertEqual(len(d.nodes()), 4)
         self.assertEqual(len(d.edges()), 3)
-        exec_order = self.dag_handler.calc_exec_order(d)
-        self.assertEqual(4, len(exec_order))
-        exec_list = list(exec_order)
+        successors = self.dag_handler.node_successors(d)
+        self.assertEqual(4, len(successors))
+        exec_list = list(successors)
         self.assertTrue(exec_list in (["a", "b", "c", "d"], ["a", "c", "b", "d"], ["c", "a", "b", "d"]))
-        self.assertTrue(exec_order["a"] == ["b"])
-        self.assertTrue(exec_order["b"] == ["d"])
-        self.assertTrue(exec_order["c"] == ["d"])
+        self.assertTrue(successors["a"] == ["b"])
+        self.assertTrue(successors["b"] == ["d"])
+        self.assertTrue(successors["c"] == ["d"])
 
     def test_execution_order4(self):
         """Test that execution order is correct with all kinds of graphs.
@@ -819,13 +819,13 @@ class TestDirectedGraphHandler(unittest.TestCase):
         d = self.dag_handler.dags()[0]
         self.assertEqual(len(d.nodes()), 4)
         self.assertEqual(len(d.edges()), 4)
-        exec_order = self.dag_handler.calc_exec_order(d)
-        self.assertEqual(4, len(exec_order))
-        exec_list = list(exec_order)
+        successors = self.dag_handler.node_successors(d)
+        self.assertEqual(4, len(successors))
+        exec_list = list(successors)
         self.assertTrue(exec_list in (["a", "b", "c", "d"], ["a", "c", "b", "d"]))
-        self.assertTrue(exec_order["a"] in (["b", "c"], ["c", "b"]))
-        self.assertTrue(exec_order["b"] == ["d"])
-        self.assertTrue(exec_order["c"] == ["d"])
+        self.assertTrue(successors["a"] in (["b", "c"], ["c", "b"]))
+        self.assertTrue(successors["b"] == ["d"])
+        self.assertTrue(successors["c"] == ["d"])
 
     def test_execution_order5(self):
         """Test that execution order is correct with all kinds of graphs.
@@ -840,9 +840,9 @@ class TestDirectedGraphHandler(unittest.TestCase):
         d = self.dag_handler.dags()[0]
         self.assertEqual(len(d.nodes()), 1)
         self.assertEqual(len(d.edges()), 0)
-        exec_order = self.dag_handler.calc_exec_order(d)
-        self.assertEqual(1, len(exec_order))
-        self.assertTrue(exec_order["a"] == [])
+        successors = self.dag_handler.node_successors(d)
+        self.assertEqual(1, len(successors))
+        self.assertTrue(successors["a"] == [])
 
     def test_execution_order6(self):
         """Test that execution order is correct with all kinds of graphs.
@@ -857,9 +857,9 @@ class TestDirectedGraphHandler(unittest.TestCase):
         d = self.dag_handler.dags()[0]
         self.assertEqual(len(d.nodes()), 2)
         self.assertEqual(len(d.edges()), 2)
-        exec_order = self.dag_handler.calc_exec_order(d)
+        successors = self.dag_handler.node_successors(d)
         # Execution order for this graph should be empty since it's not a DAG
-        self.assertEqual(0, len(exec_order))
+        self.assertEqual(0, len(successors))
 
     def test_execution_order7(self):
         """Test that execution order is correct with all kinds of graphs.
@@ -874,9 +874,9 @@ class TestDirectedGraphHandler(unittest.TestCase):
         d = self.dag_handler.dags()[0]
         self.assertEqual(len(d.nodes()), 3)
         self.assertEqual(len(d.edges()), 3)
-        exec_order = self.dag_handler.calc_exec_order(d)
+        successors = self.dag_handler.node_successors(d)
         # Execution order for this graph should be empty since it's not a DAG
-        self.assertEqual(0, len(exec_order))
+        self.assertEqual(0, len(successors))
 
     def test_execution_order_to_node_1(self):
         """Test that execution order to node is correct with all kinds of graphs.
@@ -889,8 +889,8 @@ class TestDirectedGraphHandler(unittest.TestCase):
         # Check that the graph was created successfully
         self.assertTrue(len(self.dag_handler.dags()) == 1)
         d = self.dag_handler.dags()[0]
-        exec_order = self.dag_handler.calc_exec_order_to_node(d, "d")
-        self.assertEqual(exec_order, {'a': ['b'], 'b': ['d'], 'd': []})
+        successors = self.dag_handler.successors_til_node(d, "d")
+        self.assertEqual(successors, {'a': ['b'], 'b': ['d'], 'd': []})
 
     def test_remove_node_from_graph1(self):
         """Test that graphs are updated correctly when project items are removed.

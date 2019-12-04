@@ -16,14 +16,13 @@ Contains Importer project item class.
 :date:   10.6.2019
 """
 
-import logging
+import sys
 import os
 import json
 import sys
 from PySide2.QtCore import Qt, Slot, QFileInfo, QEventLoop, QProcess
 from PySide2.QtGui import QStandardItem, QStandardItemModel
 from PySide2.QtWidgets import QFileIconProvider, QListWidget, QDialog, QVBoxLayout, QDialogButtonBox
-from spinetoolbox.executioner import ExecutionState
 from spinetoolbox.project_item import ProjectItem
 from spinetoolbox.helpers import create_dir
 from spinetoolbox.spine_io.importers.csv_reader import CSVConnector
@@ -71,6 +70,7 @@ class Importer(ProjectItem):
                 }
         self.settings = mappings
         self.cancel_on_error = cancel_on_error
+        self.resources_from_downstream = list()
         self.file_model = QStandardItemModel()
         self.importer_process = None
         self.all_files = []  # All source files
@@ -291,32 +291,35 @@ class Importer(ProjectItem):
         output = str(self.importer_process.readAllStandardError().data(), "utf-8").strip()
         self._toolbox.msg_error.emit("<b>{0}</b>: {1}".format(self.name, output))
 
-    def _do_execute(self, resources_upstream, resources_downstream):
-        """Executes this Importer."""
+    def execute_backward(self, resources):
+        """see base class."""
+        self.resources_from_downstream = resources.copy()
+        return True
+
+    def execute_forward(self, resources):
+        """see base class."""
         self.get_icon().start_animation()
         args = [
             [f for f in self.all_files if f not in self.unchecked_files],
             self.settings,
-            [r.url for r in resources_downstream if r.type_ == "database"],
+            [r.url for r in self.resources_from_downstream if r.type_ == "database"],
             self.logs_dir,
             self._properties_ui.cancel_on_error_checkBox.isChecked(),
         ]
         exit_code = self._run_importer_program(args)
         self.get_icon().stop_animation()
-        if exit_code == 0:
-            return ExecutionState.CONTINUE
-        return ExecutionState.ABORT
+        return exit_code == 0
 
     def stop_execution(self):
         """Stops executing this Importer."""
-        self._toolbox.msg_warning.emit("Stopping {0}".format(self.name))
+        super().stop_execution()
         if not self.importer_process:
             return
         self.importer_process.kill()
 
-    def _do_handle_dag_changed(self, resources_upstream):
+    def _do_handle_dag_changed(self, resources):
         """See base class."""
-        file_list = [r.path for r in resources_upstream if r.type_ == "file" and not r.metadata.get("future")]
+        file_list = [r.path for r in resources if r.type_ == "file" and not r.metadata.get("future")]
         self.update_file_model(set(file_list))
         if not file_list:
             self.add_notification(

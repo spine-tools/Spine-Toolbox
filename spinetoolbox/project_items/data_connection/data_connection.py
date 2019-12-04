@@ -23,7 +23,6 @@ import pathlib
 from PySide2.QtCore import Slot, QUrl, QFileSystemWatcher, Qt, QFileInfo
 from PySide2.QtGui import QDesktopServices, QStandardItem, QStandardItemModel, QIcon, QPixmap
 from PySide2.QtWidgets import QFileDialog, QStyle, QFileIconProvider, QInputDialog, QMessageBox
-from spinetoolbox.executioner import ExecutionState
 from spinetoolbox.project_item import ProjectItem, ProjectItemResource
 from spinetoolbox.widgets.spine_datapackage_widget import SpineDatapackageWidget
 from spinetoolbox.helpers import busy_effect
@@ -377,19 +376,12 @@ class DataConnection(ProjectItem):
         """Update Data Connection tab name label. Used only when renaming project items."""
         self._properties_ui.label_dc_name.setText(self.name)
 
-    def resources_for_advertising(self):
-        """Returns list of references and files to advertise to the execution instance."""
+    def output_resources_forward(self):
+        """see base class"""
         refs = self.file_references()
         f_list = [os.path.join(self.data_dir, f) for f in self.data_files()]
         resources = [ProjectItemResource(self, "file", url=pathlib.Path(ref).as_uri()) for ref in (refs + f_list)]
         return resources
-
-    def stop_execution(self):
-        """Stops executing this Data Connection."""
-        self._toolbox.msg.emit("Stopping {0}".format(self.name))
-        self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(
-            ExecutionState.STOP_REQUESTED
-        )
 
     def _do_handle_dag_changed(self, resources_upstream):
         """See base class."""
@@ -448,8 +440,3 @@ class DataConnection(ProjectItem):
     def default_name_prefix():
         """See base class."""
         return "Data Connection"
-
-    def available_resources_downstream(self, upstream_resources):
-        """See base class."""
-        resources = self.resources_for_advertising()
-        return resources

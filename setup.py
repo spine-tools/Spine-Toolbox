@@ -17,7 +17,7 @@ Setup script for Python's setuptools.
 """
 
 from setuptools import setup, find_packages
-from spinetoolbox.config import REQUIRED_SPINEDB_API_VERSION, SPINE_TOOLBOX_VERSION
+from spinetoolbox.config import REQUIRED_SPINEDB_API_VERSION, REQUIRED_SPINE_ENGINE_VERSION, SPINE_TOOLBOX_VERSION
 
 with open("README.md", encoding="utf8") as readme_file:
     readme = readme_file.read()
@@ -29,6 +29,7 @@ requirements = [
     'qtconsole >= 4.3.1',
     'sqlalchemy >= 1.2.6',
     'spinedb_api >= {}'.format(REQUIRED_SPINEDB_API_VERSION),
+    'spine_engine >= {}'.format(REQUIRED_SPINE_ENGINE_VERSION),
     'openpyxl >= 2.5.0',
     'numpy >= 1.15.1',
     'matplotlib >= 3.0',
@@ -53,17 +54,12 @@ setup(
     author_email='spine_info@vtt.fi',
     url='https://github.com/Spine-project/Spine-Toolbox',
     packages=find_packages(),
-    entry_points={
-        'console_scripts': [
-            'spinetoolbox=spinetoolbox.main:main'
-        ]
-    },
+    entry_points={'console_scripts': ['spinetoolbox=spinetoolbox.main:main']},
     include_package_data=True,
     license="LGPL-3.0-or-later",
     zip_safe=False,
     keywords='',
-    classifiers=[
-    ],
+    classifiers=[],
     install_requires=requirements,
     test_suite='tests',
 )

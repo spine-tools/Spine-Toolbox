@@ -26,7 +26,6 @@ from spinetoolbox.project_item import ProjectItem
 from spinetoolbox.widgets.graph_view_widget import GraphViewForm
 from spinetoolbox.widgets.tabular_view_widget import TabularViewForm
 from spinetoolbox.widgets.tree_view_widget import TreeViewForm
-from spinetoolbox.executioner import ExecutionState
 
 
 class View(ProjectItem):
@@ -155,14 +154,10 @@ class View(ProjectItem):
         """Update View tab name label. Used only when renaming project items."""
         self._properties_ui.label_view_name.setText(self.name)
 
-    def stop_execution(self):
-        """Stops executing this View."""
-        self._toolbox.msg.emit("Stopping {0}".format(self.name))
-
-    def _do_execute(self, resources_upstream, resources_downstream):
-        """Executes this item."""
-        self._update_references_list(resources_upstream)
-        return ExecutionState.CONTINUE
+    def execute_forward(self, resources):
+        """see base class"""
+        self._update_references_list(resources)
+        return True
 
     def _do_handle_dag_changed(self, resources_upstream):
         """Update the list of references that this item is viewing."""

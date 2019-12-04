@@ -248,7 +248,7 @@ class RankIcon(QGraphicsTextItem):
 
 
 class ProjectItemIcon(QGraphicsRectItem):
-    def __init__(self, toolbox, x, y, w, h, name, icon_file, icon_color, background_color):
+    def __init__(self, toolbox, x, y, w, h, project_item, icon_file, icon_color, background_color):
         """Base class for project item icons drawn in Design View.
 
         Args:
@@ -257,13 +257,14 @@ class ProjectItemIcon(QGraphicsRectItem):
             y (float): Icon y coordinate
             w (float): Icon width
             h (float): Icon height
-            name (str): Item name
+            project_item (ProjectItem): Item
             icon_file (str): Path to icon resource
             icon_color (QColor): Icon's color
             background_color (QColor): Background color
         """
         super().__init__()
         self._toolbox = toolbox
+        self._project_item = project_item
         self._moved_on_scene = False
         self.renderer = QSvgRenderer()
         self.svg_item = QGraphicsSvgItem()
@@ -271,6 +272,7 @@ class ProjectItemIcon(QGraphicsRectItem):
         self.setRect(QRectF(x, y, w, h))  # Set ellipse coordinates and size
         self.text_font_size = 10  # point size
         # Make item name graphics item.
+        name = project_item.name if project_item else ""
         self.name_item = QGraphicsSimpleTextItem(name)
         shadow_effect = QGraphicsDropShadowEffect()
         shadow_effect.setOffset(1)
@@ -339,7 +341,7 @@ class ProjectItemIcon(QGraphicsRectItem):
 
     def name(self):
         """Returns name of the item that is represented by this icon."""
-        return self.name_item.text()
+        return self._project_item.name
 
     def update_name_item(self, new_name):
         """Set a new text to name item. Used when a project item is renamed."""
