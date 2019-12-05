@@ -17,10 +17,10 @@ Unit tests for the plotting module.
 """
 
 import unittest
-from unittest.mock import MagicMock
+from unittest.mock import Mock, MagicMock
 from PySide2.QtWidgets import QApplication
 from spinetoolbox.mvcmodels.pivot_table_models import PivotTableModel
-from spinetoolbox.widgets.tabular_view_widget import TabularViewForm
+from spinetoolbox.widgets.data_store_widget import DataStoreForm
 
 
 class TestPivotTableModel(unittest.TestCase):
@@ -31,7 +31,10 @@ class TestPivotTableModel(unittest.TestCase):
 
     def setUp(self):
         db_mngr = MagicMock()
-        tabular_view = TabularViewForm(db_mngr, ("sqlite://", "codename"))
+        mock_db_map = Mock()
+        mock_db_map.codename = "codename"
+        db_mngr.get_db_map_for_listener.side_effect = lambda *args, **kwargs: mock_db_map
+        tabular_view = DataStoreForm(db_mngr, ("sqlite://", "codename"))
         self._model = PivotTableModel(tabular_view)
         data = [['row1', 'col1', '1'], ['row2', 'col1', '3'], ['row1', 'col2', '5'], ['row2', 'col2', '7']]
         index_names = ['rows', 'cols']

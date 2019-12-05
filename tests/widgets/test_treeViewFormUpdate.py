@@ -24,7 +24,7 @@ class TestTreeViewFormUpdateMixin:
         """Test that object classes are updated in the object tree model.
         """
         self.put_mock_object_classes_in_db_mngr()
-        self.tree_view_form.init_object_tree_model()
+        self.tree_view_form.init_models()
         for item in self.tree_view_form.object_tree_model.visit_all():
             item.fetch_more()
         self.fish_class = self._object_class(1, "octopus", "An octopus.", 1, None)
@@ -38,7 +38,7 @@ class TestTreeViewFormUpdateMixin:
         """Test that objects are updated in the object tree model."""
         self.put_mock_object_classes_in_db_mngr()
         self.put_mock_objects_in_db_mngr()
-        self.tree_view_form.init_object_tree_model()
+        self.tree_view_form.init_models()
         for item in self.tree_view_form.object_tree_model.visit_all():
             item.fetch_more()
         self.nemo_object = self._object(1, self.fish_class["id"], 'dory', 'The one that forgets.')
@@ -54,7 +54,7 @@ class TestTreeViewFormUpdateMixin:
         self.put_mock_object_classes_in_db_mngr()
         self.put_mock_objects_in_db_mngr()
         self.put_mock_relationship_classes_in_db_mngr()
-        self.tree_view_form.init_object_tree_model()
+        self.tree_view_form.init_models()
         for item in self.tree_view_form.object_tree_model.visit_all():
             item.fetch_more()
         self.fish_dog_class = self._relationship_class(

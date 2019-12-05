@@ -34,7 +34,7 @@ class TestTreeViewFormAddMixin:
     def test_add_objects_to_object_tree_model(self):
         """Test that objects are added to the object tree model."""
         self.put_mock_object_classes_in_db_mngr()
-        self.tree_view_form.init_object_tree_model()
+        self.tree_view_form.init_models()
         for item in self.tree_view_form.object_tree_model.visit_all():
             item.fetch_more()
         objects = [self.nemo_object, self.pluto_object, self.scooby_object]
@@ -56,7 +56,7 @@ class TestTreeViewFormAddMixin:
         """Test that relationship classes are added to the object tree model."""
         self.put_mock_object_classes_in_db_mngr()
         self.put_mock_objects_in_db_mngr()
-        self.tree_view_form.init_object_tree_model()
+        self.tree_view_form.init_models()
         for item in self.tree_view_form.object_tree_model.visit_all():
             item.fetch_more()
         relationship_classes = [self.fish_dog_class, self.dog_fish_class]
@@ -79,7 +79,7 @@ class TestTreeViewFormAddMixin:
         self.put_mock_object_classes_in_db_mngr()
         self.put_mock_objects_in_db_mngr()
         self.put_mock_relationship_classes_in_db_mngr()
-        self.tree_view_form.init_object_tree_model()
+        self.tree_view_form.init_models()
         for item in self.tree_view_form.object_tree_model.visit_all():
             item.fetch_more()
         relationships = [self.pluto_nemo_rel, self.nemo_pluto_rel, self.nemo_scooby_rel]

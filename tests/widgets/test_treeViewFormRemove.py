@@ -22,7 +22,7 @@ class TestTreeViewFormRemoveMixin:
         """Test that object classes are removed from the object tree model.
         """
         self.put_mock_object_classes_in_db_mngr()
-        self.tree_view_form.init_object_tree_model()
+        self.tree_view_form.init_models()
         for item in self.tree_view_form.object_tree_model.visit_all():
             item.fetch_more()
         root_item = self.tree_view_form.object_tree_model.root_item
@@ -36,7 +36,7 @@ class TestTreeViewFormRemoveMixin:
         """Test that objects are removed from the object tree model."""
         self.put_mock_object_classes_in_db_mngr()
         self.put_mock_objects_in_db_mngr()
-        self.tree_view_form.init_object_tree_model()
+        self.tree_view_form.init_models()
         for item in self.tree_view_form.object_tree_model.visit_all():
             item.fetch_more()
         root_item = self.tree_view_form.object_tree_model.root_item
@@ -50,7 +50,7 @@ class TestTreeViewFormRemoveMixin:
         self.put_mock_object_classes_in_db_mngr()
         self.put_mock_objects_in_db_mngr()
         self.put_mock_relationship_classes_in_db_mngr()
-        self.tree_view_form.init_object_tree_model()
+        self.tree_view_form.init_models()
         for item in self.tree_view_form.object_tree_model.visit_all():
             item.fetch_more()
         root_item = self.tree_view_form.object_tree_model.root_item
@@ -66,7 +66,7 @@ class TestTreeViewFormRemoveMixin:
         self.put_mock_objects_in_db_mngr()
         self.put_mock_relationship_classes_in_db_mngr()
         self.put_mock_relationships_in_db_mngr()
-        self.tree_view_form.init_object_tree_model()
+        self.tree_view_form.init_models()
         for item in self.tree_view_form.object_tree_model.visit_all():
             try:
                 item.fetch_more()

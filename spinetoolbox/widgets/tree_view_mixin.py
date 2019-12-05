@@ -16,7 +16,7 @@ Contains the TreeViewMixin class.
 :date:   26.11.2018
 """
 
-from PySide2.QtCore import Slot, Qt
+from PySide2.QtCore import Slot
 from .custom_menus import ObjectTreeContextMenu, RelationshipTreeContextMenu
 from .add_db_items_dialogs import (
     AddObjectClassesDialog,

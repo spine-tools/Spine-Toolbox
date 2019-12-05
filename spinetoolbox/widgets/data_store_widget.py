@@ -74,7 +74,7 @@ class DataStoreFormBase(QMainWindow):
         self.ui.setupUi(self)
         self.takeCentralWidget()
         self.setWindowIcon(QIcon(":/symbols/app.ico"))
-        self.setWindowTitle("Data store tree view    -- {} --".format(", ".join([x.codename for x in self.db_maps])))
+        self.setWindowTitle("Data store view    -- {} --".format(", ".join([x.codename for x in self.db_maps])))
         self.setStyleSheet(MAINWINDOW_SS)
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.qsettings = QSettings("SpineProject", "Spine Toolbox")
