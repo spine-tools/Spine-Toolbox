@@ -140,16 +140,13 @@ class CompoundTableModel(MinimalTableModel):
     def fetchMore(self, parent=QModelIndex()):
         """Fetches the next sub model and increments the fetched counter."""
         model = self.sub_models[self._fetched_count]
-        row_count_before = model.rowCount()
         model.fetchMore(self.map_to_sub(parent))
         # Increment counter or just pop model if empty
         if model.rowCount():
             self._fetched_count += 1
         else:
             self.sub_models.pop(self._fetched_count)
-        if model.rowCount() == row_count_before:
-            # fetching submodel didn't add any rows. Emit layoutChanged so we fetch the next submodel
-            self.layoutChanged.emit()
+        self.layoutChanged.emit()
 
     def flags(self, index):
         return self.map_to_sub(index).flags()
