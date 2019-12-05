@@ -86,7 +86,7 @@ class GraphViewMixin:
         self.ui.actionHide_selected.triggered.connect(self.hide_selected_items)
         self.ui.actionShow_hidden.triggered.connect(self.show_hidden_items)
         self.ui.actionPrune_selected.triggered.connect(self.prune_selected_items)
-        self.ui.actionRestore_pruned.triggered.connect(self.reinstate_pruned_items)
+        self.ui.actionRestore_pruned.triggered.connect(self.restore_pruned_items)
         self.ui.actionLive_graph_demo.triggered.connect(self.show_demo)
         # Dock Widgets menu action
         self.ui.menuGraph.aboutToShow.connect(self._handle_menu_graph_about_to_show)
@@ -245,10 +245,12 @@ class GraphViewMixin:
     @Slot()
     def _handle_menu_graph_about_to_show(self):
         """Enables or disables actions according to current selection in the graph."""
-        self.ui.actionHide_selected.setEnabled(bool(self.entity_item_selection))
-        self.ui.actionShow_hidden.setEnabled(bool(self.hidden_items))
-        self.ui.actionPrune_selected.setEnabled(bool(self.entity_item_selection))
-        self.ui.actionRestore_pruned.setEnabled(bool(self.rejected_items))
+        visible = self.ui.dockWidget_entity_graph.isVisible()
+        self.ui.actionHide_selected.setEnabled(visible and bool(self.entity_item_selection))
+        self.ui.actionShow_hidden.setEnabled(visible and bool(self.hidden_items))
+        self.ui.actionPrune_selected.setEnabled(visible and bool(self.entity_item_selection))
+        self.ui.actionRestore_pruned.setEnabled(visible and bool(self.rejected_items))
+        self.zoom_widget_action.setEnabled(visible)
 
     @Slot()
     def _handle_menu_help_about_to_show(self):
@@ -554,6 +556,7 @@ class GraphViewMixin:
         """Filters parameters by selected objects in the graph."""
         scene = self.ui.graphicsView.scene()
         selected_items = scene.selectedItems()
+        self.entity_item_selection = [x for x in selected_items if isinstance(x, EntityItem)]
         selected_objs = {self.db_map: []}
         selected_rels = {self.db_map: []}
         for item in selected_items:
@@ -714,26 +717,26 @@ class GraphViewMixin:
         """
         menu = GraphViewContextMenu(self, global_pos)
         option = menu.get_action()
-        if option == "Hide selected items":
+        if option == "Hide selected":
             self.hide_selected_items()
-        elif option == "Show hidden items":
+        elif option == "Show hidden":
             self.show_hidden_items()
-        elif option == "Prune selected items":
+        elif option == "Prune selected":
             self.prune_selected_items()
-        elif option == "Reinstate pruned items":
-            self.reinstate_pruned_items()
+        elif option == "Restore pruned":
+            self.restore_pruned_items()
         else:
             pass
         menu.deleteLater()
 
-    @Slot("bool", name="reinstate_pruned_items")
+    @Slot(bool)
     def hide_selected_items(self, checked=False):
         """Hides selected items."""
         self.hidden_items.extend(self.entity_item_selection)
         for item in self.entity_item_selection:
             item.set_all_visible(False)
 
-    @Slot("bool", name="reinstate_pruned_items")
+    @Slot(bool)
     def show_hidden_items(self, checked=False):
         """Shows hidden items."""
         if not self.ui.graphicsView.scene():
@@ -742,19 +745,19 @@ class GraphViewMixin:
             item.set_all_visible(True)
         self.hidden_items.clear()
 
-    @Slot("bool", name="reinstate_pruned_items")
+    @Slot(bool)
     def prune_selected_items(self, checked=False):
         """Prunes selected items."""
         self.rejected_items.extend(self.entity_item_selection)
         self.build_graph()
 
-    @Slot("bool", name="reinstate_pruned_items")
-    def reinstate_pruned_items(self, checked=False):
+    @Slot(bool)
+    def restore_pruned_items(self, checked=False):
         """Reinstates pruned items."""
         self.rejected_items.clear()
         self.build_graph()
 
-    @Slot("bool")
+    @Slot(bool)
     def show_demo(self, checked=False):
         self.live_demo.show()
 

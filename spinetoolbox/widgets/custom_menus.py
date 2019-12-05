@@ -314,11 +314,11 @@ class GraphViewContextMenu(CustomContextMenu):
     def __init__(self, parent, position):
         """Class constructor."""
         super().__init__(parent, position)
-        self.add_action("Hide selected items", enabled=len(parent.entity_item_selection) > 0)
-        self.add_action("Show hidden items", enabled=len(parent.hidden_items) > 0)
+        self.add_action("Hide selected", enabled=len(parent.entity_item_selection) > 0)
+        self.add_action("Show hidden", enabled=len(parent.hidden_items) > 0)
         self.addSeparator()
-        self.add_action("Prune selected items", enabled=len(parent.entity_item_selection) > 0)
-        self.add_action("Reinstate pruned items", enabled=len(parent.rejected_items) > 0)
+        self.add_action("Prune selected", enabled=len(parent.entity_item_selection) > 0)
+        self.add_action("Restore pruned", enabled=len(parent.rejected_items) > 0)
 
 
 class EntityItemContextMenu(CustomContextMenu):
@@ -347,8 +347,6 @@ class ObjectItemContextMenu(EntityItemContextMenu):
             graphics_item (ObjectItem (QGraphicsItem)): item that requested the menu
         """
         super().__init__(parent, position)
-        if parent.read_only:
-            return
         self.addSeparator()
         if graphics_item.is_wip:
             self.add_action("Set name", enabled=self.selection_count == 1)
@@ -381,8 +379,6 @@ class RelationshipItemContextMenu(EntityItemContextMenu):
             position (QPoint): Position on screen
         """
         super().__init__(parent, position)
-        if parent.read_only:
-            return
         self.addSeparator()
         self.add_action("Remove")
 

@@ -628,12 +628,11 @@ class DataStoreForm(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         """
         tic = time.process_time()
         super().__init__(db_mngr, *db_urls)
-        self.restore_dock_widgets()
-        self.restore_ui()
-        # init models
         self.init_models()
         self.add_toggle_view_actions()
         self.connect_signals()
+        self.restore_dock_widgets()
+        self.restore_ui()
         toc = time.process_time()
         self.msg.emit("Data store view created in {} seconds".format(toc - tic))
 
