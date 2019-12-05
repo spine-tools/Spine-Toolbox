@@ -111,7 +111,7 @@
     <property name="title">
      <string>View</string>
     </property>
-    <addaction name="actionAll_in_style"/>
+    <addaction name="separator"/>
     <addaction name="actionTree_style"/>
     <addaction name="actionGraph_style"/>
     <addaction name="actionTabular_style"/>
@@ -500,7 +500,7 @@
       <number>0</number>
      </property>
      <item>
-      <widget class="ObjectTreeView" name="treeView_object">
+      <widget class="StickySelectionEntityTreeView" name="treeView_object">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
          <horstretch>1</horstretch>
@@ -564,7 +564,7 @@
       <number>0</number>
      </property>
      <item>
-      <widget class="ObjectTreeView" name="treeView_relationship">
+      <widget class="EntityTreeView" name="treeView_relationship">
        <property name="contextMenuPolicy">
         <enum>Qt::CustomContextMenu</enum>
        </property>
@@ -1227,7 +1227,7 @@
    <header>spinetoolbox/widgets/custom_qlistview.h</header>
   </customwidget>
   <customwidget>
-   <class>ObjectTreeView</class>
+   <class>EntityTreeView</class>
    <extends>QTreeView</extends>
    <header>spinetoolbox/widgets/custom_qtreeview.h</header>
   </customwidget>
@@ -1245,6 +1245,11 @@
    <class>FrozenTableView</class>
    <extends>QTableView</extends>
    <header>spinetoolbox/widgets/frozen_table_view.h</header>
+  </customwidget>
+  <customwidget>
+   <class>StickySelectionEntityTreeView</class>
+   <extends>QTreeView</extends>
+   <header>spinetoolbox/widgets/custom_qtreeview.h</header>
   </customwidget>
  </customwidgets>
  <tabstops>

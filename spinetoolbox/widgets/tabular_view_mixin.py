@@ -92,9 +92,9 @@ class TabularViewMixin:
     def connect_signals(self):
         """Connects signals to slots."""
         super().connect_signals()
-        self.ui.treeView_object.selectionModel().currentChanged.connect(self._handle_object_tree_current_changed)
-        self.ui.treeView_relationship.selectionModel().currentChanged.connect(
-            self._handle_relationship_tree_current_changed
+        self.ui.treeView_object.selectionModel().selectionChanged.connect(self._handle_entity_tree_selection_changed)
+        self.ui.treeView_relationship.selectionModel().selectionChanged.connect(
+            self._handle_entity_tree_selection_changed
         )
         self.ui.pivot_table.customContextMenuRequested.connect(self.pivot_table_menu.request_menu)
         self.ui.pivot_table.horizontalHeader().customContextMenuRequested.connect(
@@ -267,33 +267,25 @@ class TabularViewMixin:
         self.pivot_table_menu.relationship_tuple_key = self.relationship_tuple_key
         self.pivot_table_menu.class_type = self.current_class_type
 
-    @Slot("QModelIndex", "QModelIndex")
-    def _handle_object_tree_current_changed(self, selected, deselected):
-        """Refreshes pivot table according to selection."""
+    @Slot("QItemSelection", "QItemSelection")
+    def _handle_entity_tree_selection_changed(self, selected, deselected):
         self.save_model()
-        if self.ui.dockWidget_pivot_table.isVisible() and self._is_class_index(selected):
-            self.do_refresh_pivot_table(self._OBJECT_CLASS, selected.data(Qt.DisplayRole))
-        self.pivot_table_menu.relationship_tuple_key = self.relationship_tuple_key
-        self.pivot_table_menu.class_type = self.current_class_type
-
-    @Slot("QModelIndex", "QModelIndex")
-    def _handle_relationship_tree_current_changed(self, selected, deselected):
-        """Refreshes pivot table according to selection."""
-        self.save_model()
-        if self.ui.dockWidget_pivot_table.isVisible() and self._is_class_index(selected):
-            self.do_refresh_pivot_table(self._RELATIONSHIP_CLASS, selected.data(Qt.DisplayRole))
+        self.refresh_pivot_table()
         self.pivot_table_menu.relationship_tuple_key = self.relationship_tuple_key
         self.pivot_table_menu.class_type = self.current_class_type
 
     def refresh_pivot_table(self):
         """Refreshes pivot table."""
-        selected = self.ui.treeView_object.selectionModel().currentIndex()
-        if self._is_class_index(selected):
-            self.do_refresh_pivot_table(self._OBJECT_CLASS, selected.data(Qt.DisplayRole))
+        if self._selection_source == self.ui.treeView_object:
+            selected = self.ui.treeView_object.selectionModel().currentIndex()
+            class_type = self._OBJECT_CLASS
+        elif self._selection_source == self.ui.treeView_relationship:
+            selected = self.ui.treeView_relationship.selectionModel().currentIndex()
+            class_type = self._RELATIONSHIP_CLASS
+        else:
             return
-        selected = self.ui.treeView_relationship.selectionModel().currentIndex()
         if self._is_class_index(selected):
-            self.do_refresh_pivot_table(self._RELATIONSHIP_CLASS, selected.data(Qt.DisplayRole))
+            self.do_refresh_pivot_table(class_type, selected.data(Qt.DisplayRole))
 
     @busy_effect
     def do_refresh_pivot_table(self, class_type, class_name):

@@ -13,7 +13,7 @@
 # Form implementation generated from reading ui file '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/settings.ui',
 # licensing of '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/settings.ui' applies.
 #
-# Created: Sat Nov 23 21:32:53 2019
+# Created: Thu Dec  5 09:37:21 2019
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -403,9 +403,9 @@ class Ui_SettingsForm(object):
         self.checkBox_commit_at_exit.setTristate(True)
         self.checkBox_commit_at_exit.setObjectName("checkBox_commit_at_exit")
         self.verticalLayout_4.addWidget(self.checkBox_commit_at_exit)
-        self.checkBox_graph_view_sticky_selection = QtWidgets.QCheckBox(self.groupBox_data_store)
-        self.checkBox_graph_view_sticky_selection.setObjectName("checkBox_graph_view_sticky_selection")
-        self.verticalLayout_4.addWidget(self.checkBox_graph_view_sticky_selection)
+        self.checkBox_object_tree_sticky_selection = QtWidgets.QCheckBox(self.groupBox_data_store)
+        self.checkBox_object_tree_sticky_selection.setObjectName("checkBox_object_tree_sticky_selection")
+        self.verticalLayout_4.addWidget(self.checkBox_object_tree_sticky_selection)
         self.verticalLayout_9.addWidget(self.groupBox_data_store)
         spacerItem7 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
         self.verticalLayout_9.addItem(spacerItem7)
@@ -435,8 +435,8 @@ class Ui_SettingsForm(object):
         self.verticalLayout_7.addLayout(self.horizontalLayout)
 
         self.retranslateUi(SettingsForm)
-        self.listWidget.setCurrentRow(0)
-        self.stackedWidget.setCurrentIndex(0)
+        self.listWidget.setCurrentRow(-1)
+        self.stackedWidget.setCurrentIndex(3)
         QtCore.QObject.connect(self.listWidget, QtCore.SIGNAL("currentRowChanged(int)"), self.stackedWidget.setCurrentIndex)
         QtCore.QMetaObject.connectSlotsByName(SettingsForm)
         SettingsForm.setTabOrder(self.listWidget, self.checkBox_open_previous_project)
@@ -463,8 +463,8 @@ class Ui_SettingsForm(object):
         SettingsForm.setTabOrder(self.lineEdit_python_path, self.toolButton_browse_python)
         SettingsForm.setTabOrder(self.toolButton_browse_python, self.checkBox_use_embedded_python)
         SettingsForm.setTabOrder(self.checkBox_use_embedded_python, self.checkBox_commit_at_exit)
-        SettingsForm.setTabOrder(self.checkBox_commit_at_exit, self.checkBox_graph_view_sticky_selection)
-        SettingsForm.setTabOrder(self.checkBox_graph_view_sticky_selection, self.pushButton_ok)
+        SettingsForm.setTabOrder(self.checkBox_commit_at_exit, self.checkBox_object_tree_sticky_selection)
+        SettingsForm.setTabOrder(self.checkBox_object_tree_sticky_selection, self.pushButton_ok)
         SettingsForm.setTabOrder(self.pushButton_ok, self.pushButton_cancel)
 
     def retranslateUi(self, SettingsForm):
@@ -474,7 +474,7 @@ class Ui_SettingsForm(object):
         self.listWidget.item(0).setText(QtWidgets.QApplication.translate("SettingsForm", "General", None, -1))
         self.listWidget.item(1).setText(QtWidgets.QApplication.translate("SettingsForm", "Project", None, -1))
         self.listWidget.item(2).setText(QtWidgets.QApplication.translate("SettingsForm", "Tools", None, -1))
-        self.listWidget.item(3).setText(QtWidgets.QApplication.translate("SettingsForm", "Views", None, -1))
+        self.listWidget.item(3).setText(QtWidgets.QApplication.translate("SettingsForm", "View", None, -1))
         self.listWidget.setSortingEnabled(__sortingEnabled)
         self.groupBox_general.setTitle(QtWidgets.QApplication.translate("SettingsForm", "General", None, -1))
         self.checkBox_open_previous_project.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>If checked, Application opens the project at startup that was open the last time the application was exited</p></body></html>", None, -1))
@@ -538,11 +538,11 @@ class Ui_SettingsForm(object):
         self.checkBox_use_embedded_python.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>If checked, Python Tools and scripts will be executed in the embedded Python Console (Shell). If unchecked, Python Tools and scripts will be executed in a terminal as an individual process. I.e. the same as running `python script.py` in terminal.</p></body></html>", None, -1))
         self.checkBox_use_embedded_python.setText(QtWidgets.QApplication.translate("SettingsForm", "Use embedded Python Console", None, -1))
         self.toolButton_browse_python.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>Pick Python interpreter with file browser</p></body></html>", None, -1))
-        self.groupBox_data_store.setTitle(QtWidgets.QApplication.translate("SettingsForm", "Data store views", None, -1))
+        self.groupBox_data_store.setTitle(QtWidgets.QApplication.translate("SettingsForm", "Data store view", None, -1))
         self.checkBox_commit_at_exit.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>Unchecked: Does not commit session and does not show message box</p><p>Partially checked: Shows message box (default)</p><p>Checked: Commits session and does not show message box</p><p><br/></p></body></html>", None, -1))
         self.checkBox_commit_at_exit.setText(QtWidgets.QApplication.translate("SettingsForm", "Commit session when view is closed", None, -1))
-        self.checkBox_graph_view_sticky_selection.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>Controls how selecting items in Graph View\'s Object tree <span style=\" font-weight:600;\">using the left mouse button</span> works. </p><p>When unchecked [default], Single selection is enabled. Pressing the Ctrl-button down enables multiple selection.</p><p>When checked, Multiple selection is enabled. Pressing the Ctrl-button down enables single selection.</p></body></html>", None, -1))
-        self.checkBox_graph_view_sticky_selection.setText(QtWidgets.QApplication.translate("SettingsForm", "Sticky selection in Graph View", None, -1))
+        self.checkBox_object_tree_sticky_selection.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>Controls how selecting items in Graph View\'s Object tree <span style=\" font-weight:600;\">using the left mouse button</span> works. </p><p>When unchecked [default], Single selection is enabled. Pressing the Ctrl-button down enables multiple selection.</p><p>When checked, Multiple selection is enabled. Pressing the Ctrl-button down enables single selection.</p></body></html>", None, -1))
+        self.checkBox_object_tree_sticky_selection.setText(QtWidgets.QApplication.translate("SettingsForm", "Sticky selection in object tree", None, -1))
         self.pushButton_ok.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>Saves changes and closes the window</p></body></html>", None, -1))
         self.pushButton_ok.setText(QtWidgets.QApplication.translate("SettingsForm", "Ok", None, -1))
         self.pushButton_cancel.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>Closes the window without saving changes</p></body></html>", None, -1))

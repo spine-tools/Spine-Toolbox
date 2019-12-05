@@ -13,7 +13,7 @@
 # Form implementation generated from reading ui file '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/data_store_view.ui',
 # licensing of '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/data_store_view.ui' applies.
 #
-# Created: Wed Dec  4 22:46:14 2019
+# Created: Thu Dec  5 10:26:30 2019
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -200,7 +200,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_4.setSpacing(0)
         self.verticalLayout_4.setContentsMargins(0, 0, 0, 0)
         self.verticalLayout_4.setObjectName("verticalLayout_4")
-        self.treeView_object = ObjectTreeView(self.dockWidgetContents_6)
+        self.treeView_object = StickySelectionEntityTreeView(self.dockWidgetContents_6)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(1)
         sizePolicy.setVerticalStretch(0)
@@ -225,7 +225,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_6.setSpacing(0)
         self.verticalLayout_6.setContentsMargins(0, 0, 0, 0)
         self.verticalLayout_6.setObjectName("verticalLayout_6")
-        self.treeView_relationship = ObjectTreeView(self.dockWidgetContents_7)
+        self.treeView_relationship = EntityTreeView(self.dockWidgetContents_7)
         self.treeView_relationship.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.treeView_relationship.setEditTriggers(QtWidgets.QAbstractItemView.EditKeyPressed)
         self.treeView_relationship.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
@@ -500,7 +500,7 @@ class Ui_MainWindow(object):
         self.menuFile.addAction(self.actionExport)
         self.menuFile.addSeparator()
         self.menuFile.addAction(self.actionClose)
-        self.menuView.addAction(self.actionAll_in_style)
+        self.menuView.addSeparator()
         self.menuView.addAction(self.actionTree_style)
         self.menuView.addAction(self.actionGraph_style)
         self.menuView.addAction(self.actionTabular_style)
@@ -591,11 +591,11 @@ class Ui_MainWindow(object):
         self.actionGraph_style.setText(QtWidgets.QApplication.translate("MainWindow", "Graph style", None, -1))
         self.actionTabular_style.setText(QtWidgets.QApplication.translate("MainWindow", "Tabular style", None, -1))
 
-from spinetoolbox.widgets.custom_qtableview import AutoFilterCopyPasteTableView
-from spinetoolbox.widgets.custom_qgraphicsviews import GraphQGraphicsView
-from spinetoolbox.widgets.custom_qtreeview import CopyTreeView, ObjectTreeView
+from spinetoolbox.widgets.pivot_table_view import PivotTableView
 from spinetoolbox.widgets.custom_qstatusbar import NotificationStatusBar
+from spinetoolbox.widgets.custom_qgraphicsviews import GraphQGraphicsView
+from spinetoolbox.widgets.custom_qtreeview import EntityTreeView, StickySelectionEntityTreeView, CopyTreeView
 from spinetoolbox.widgets.custom_qlistview import DragListView
 from spinetoolbox.widgets.frozen_table_view import FrozenTableView
-from spinetoolbox.widgets.pivot_table_view import PivotTableView
+from spinetoolbox.widgets.custom_qtableview import AutoFilterCopyPasteTableView
 from spinetoolbox import resources_icons_rc

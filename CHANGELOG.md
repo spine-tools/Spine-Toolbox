@@ -29,7 +29,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - Renamed *Data Interface* project item to *Importer*.
   The corresponding category *Data Importers* was renamed to *Importers*.
 - The status bar of tree and graph views now has a notification icon. Click on this icon to see the list of 
-  notifications as a popup.
+  notifications in a popup.
+- Tree, graph, and tabular views have been merged into one consolidated view. You can chose your preferred style
+  from the View menu.
 
 ### Deprecated
 

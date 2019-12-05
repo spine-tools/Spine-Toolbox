@@ -151,7 +151,7 @@
         <bool>true</bool>
        </property>
        <property name="currentRow">
-        <number>0</number>
+        <number>-1</number>
        </property>
        <item>
         <property name="text">
@@ -188,7 +188,7 @@
        </item>
        <item>
         <property name="text">
-         <string>Views</string>
+         <string>View</string>
         </property>
         <property name="icon">
          <iconset resource="resources/resources_icons.qrc">
@@ -206,7 +206,7 @@
         </sizepolicy>
        </property>
        <property name="currentIndex">
-        <number>0</number>
+        <number>3</number>
        </property>
        <widget class="QWidget" name="General">
         <layout class="QVBoxLayout" name="verticalLayout_6">
@@ -1044,7 +1044,7 @@ p, li { white-space: pre-wrap; }
             </sizepolicy>
            </property>
            <property name="title">
-            <string>Data store views</string>
+            <string>Data store view</string>
            </property>
            <layout class="QVBoxLayout" name="verticalLayout_4">
             <property name="spacing">
@@ -1064,12 +1064,12 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item>
-             <widget class="QCheckBox" name="checkBox_graph_view_sticky_selection">
+             <widget class="QCheckBox" name="checkBox_object_tree_sticky_selection">
               <property name="toolTip">
                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Controls how selecting items in Graph View's Object tree &lt;span style=&quot; font-weight:600;&quot;&gt;using the left mouse button&lt;/span&gt; works. &lt;/p&gt;&lt;p&gt;When unchecked [default], Single selection is enabled. Pressing the Ctrl-button down enables multiple selection.&lt;/p&gt;&lt;p&gt;When checked, Multiple selection is enabled. Pressing the Ctrl-button down enables single selection.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="text">
-               <string>Sticky selection in Graph View</string>
+               <string>Sticky selection in object tree</string>
               </property>
              </widget>
             </item>
@@ -1219,7 +1219,7 @@ p, li { white-space: pre-wrap; }
   <tabstop>toolButton_browse_python</tabstop>
   <tabstop>checkBox_use_embedded_python</tabstop>
   <tabstop>checkBox_commit_at_exit</tabstop>
-  <tabstop>checkBox_graph_view_sticky_selection</tabstop>
+  <tabstop>checkBox_object_tree_sticky_selection</tabstop>
   <tabstop>pushButton_ok</tabstop>
   <tabstop>pushButton_cancel</tabstop>
  </tabstops>
