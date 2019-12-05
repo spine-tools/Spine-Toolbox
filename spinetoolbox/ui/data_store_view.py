@@ -13,7 +13,7 @@
 # Form implementation generated from reading ui file '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/data_store_view.ui',
 # licensing of '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/data_store_view.ui' applies.
 #
-# Created: Thu Dec  5 18:30:40 2019
+# Created: Thu Dec  5 22:45:51 2019
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -23,7 +23,7 @@ from PySide2 import QtCore, QtGui, QtWidgets
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
-        MainWindow.resize(872, 789)
+        MainWindow.resize(872, 814)
         MainWindow.setLayoutDirection(QtCore.Qt.LeftToRight)
         MainWindow.setDockOptions(QtWidgets.QMainWindow.AllowNestedDocks|QtWidgets.QMainWindow.AllowTabbedDocks|QtWidgets.QMainWindow.AnimatedDocks|QtWidgets.QMainWindow.GroupedDragging)
         self.centralwidget = QtWidgets.QWidget(MainWindow)
@@ -429,13 +429,13 @@ class Ui_MainWindow(object):
         self.actionAdd_relationships.setObjectName("actionAdd_relationships")
         self.actionImport = QtWidgets.QAction(MainWindow)
         icon5 = QtGui.QIcon()
-        icon5.addPixmap(QtGui.QPixmap(":/icons/menu_icons/file-import.svg"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon5.addPixmap(QtGui.QPixmap(":/icons/project_item_icons/database-import.svg"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.actionImport.setIcon(icon5)
         self.actionImport.setObjectName("actionImport")
         self.actionExport = QtWidgets.QAction(MainWindow)
         self.actionExport.setEnabled(True)
         icon6 = QtGui.QIcon()
-        icon6.addPixmap(QtGui.QPixmap(":/icons/menu_icons/file-export.svg"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon6.addPixmap(QtGui.QPixmap(":/icons/project_item_icons/database-export.svg"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.actionExport.setIcon(icon6)
         self.actionExport.setObjectName("actionExport")
         self.actionCopy = QtWidgets.QAction(MainWindow)
@@ -480,8 +480,6 @@ class Ui_MainWindow(object):
         self.actionRemove_selection = QtWidgets.QAction(MainWindow)
         self.actionRemove_selection.setEnabled(True)
         self.actionRemove_selection.setObjectName("actionRemove_selection")
-        self.actionAll_in_style = QtWidgets.QAction(MainWindow)
-        self.actionAll_in_style.setObjectName("actionAll_in_style")
         self.actionHide_selected = QtWidgets.QAction(MainWindow)
         self.actionHide_selected.setObjectName("actionHide_selected")
         self.actionShow_hidden = QtWidgets.QAction(MainWindow)
@@ -493,10 +491,19 @@ class Ui_MainWindow(object):
         self.actionLive_graph_demo = QtWidgets.QAction(MainWindow)
         self.actionLive_graph_demo.setObjectName("actionLive_graph_demo")
         self.actionTree_style = QtWidgets.QAction(MainWindow)
+        icon12 = QtGui.QIcon()
+        icon12.addPixmap(QtGui.QPixmap(":/symbols/menu_icons/tree.svg"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.actionTree_style.setIcon(icon12)
         self.actionTree_style.setObjectName("actionTree_style")
         self.actionGraph_style = QtWidgets.QAction(MainWindow)
+        icon13 = QtGui.QIcon()
+        icon13.addPixmap(QtGui.QPixmap(":/icons/project-diagram.svg"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.actionGraph_style.setIcon(icon13)
         self.actionGraph_style.setObjectName("actionGraph_style")
         self.actionTabular_style = QtWidgets.QAction(MainWindow)
+        icon14 = QtGui.QIcon()
+        icon14.addPixmap(QtGui.QPixmap(":/symbols/menu_icons/table.svg"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.actionTabular_style.setIcon(icon14)
         self.actionTabular_style.setObjectName("actionTabular_style")
         self.menuSession.addAction(self.actionRefresh)
         self.menuSession.addAction(self.actionCommit)
@@ -604,7 +611,6 @@ class Ui_MainWindow(object):
         self.actionManage_parameter_tags.setText(QtWidgets.QApplication.translate("MainWindow", "Manage parameter tags", None, -1))
         self.actionRemove_selection.setText(QtWidgets.QApplication.translate("MainWindow", "Remove selection", None, -1))
         self.actionRemove_selection.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+Del", None, -1))
-        self.actionAll_in_style.setText(QtWidgets.QApplication.translate("MainWindow", "All-in style", None, -1))
         self.actionHide_selected.setText(QtWidgets.QApplication.translate("MainWindow", "Hide selected", None, -1))
         self.actionShow_hidden.setText(QtWidgets.QApplication.translate("MainWindow", "Show hidden items", None, -1))
         self.actionPrune_selected.setText(QtWidgets.QApplication.translate("MainWindow", "Prune selected items", None, -1))
@@ -614,11 +620,11 @@ class Ui_MainWindow(object):
         self.actionGraph_style.setText(QtWidgets.QApplication.translate("MainWindow", "Graph style", None, -1))
         self.actionTabular_style.setText(QtWidgets.QApplication.translate("MainWindow", "Tabular style", None, -1))
 
-from spinetoolbox.widgets.custom_qtreeview import CopyTreeView, EntityTreeView, StickySelectionEntityTreeView
+from spinetoolbox.widgets.frozen_table_view import FrozenTableView
+from spinetoolbox.widgets.custom_qtreeview import EntityTreeView, CopyTreeView, StickySelectionEntityTreeView
+from spinetoolbox.widgets.custom_qgraphicsviews import GraphQGraphicsView
+from spinetoolbox.widgets.custom_qtableview import AutoFilterCopyPasteTableView
 from spinetoolbox.widgets.pivot_table_view import PivotTableView
 from spinetoolbox.widgets.custom_qstatusbar import NotificationStatusBar
-from spinetoolbox.widgets.frozen_table_view import FrozenTableView
-from spinetoolbox.widgets.custom_qtableview import AutoFilterCopyPasteTableView
-from spinetoolbox.widgets.custom_qgraphicsviews import GraphQGraphicsView
 from spinetoolbox.widgets.custom_qlistview import DragListView
 from spinetoolbox import resources_icons_rc

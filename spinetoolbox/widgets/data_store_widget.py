@@ -743,3 +743,4 @@ class DataStoreForm(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         height = sum(d.size().height() for d in docks)
         self.resizeDocks(docks, [0.7 * height, 0.3 * height], Qt.Vertical)
         self.end_style_change()
+        self.ui.graphicsView.reset_zoom()

@@ -19,7 +19,7 @@
     <x>0</x>
     <y>0</y>
     <width>872</width>
-    <height>789</height>
+    <height>814</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -1074,7 +1074,7 @@
   <action name="actionImport">
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
-     <normaloff>:/icons/menu_icons/file-import.svg</normaloff>:/icons/menu_icons/file-import.svg</iconset>
+     <normaloff>:/icons/project_item_icons/database-import.svg</normaloff>:/icons/project_item_icons/database-import.svg</iconset>
    </property>
    <property name="text">
     <string>Import</string>
@@ -1086,7 +1086,7 @@
    </property>
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
-     <normaloff>:/icons/menu_icons/file-export.svg</normaloff>:/icons/menu_icons/file-export.svg</iconset>
+     <normaloff>:/icons/project_item_icons/database-export.svg</normaloff>:/icons/project_item_icons/database-export.svg</iconset>
    </property>
    <property name="text">
     <string>Export</string>
@@ -1198,11 +1198,6 @@
     <string>Ctrl+Del</string>
    </property>
   </action>
-  <action name="actionAll_in_style">
-   <property name="text">
-    <string>All-in style</string>
-   </property>
-  </action>
   <action name="actionHide_selected">
    <property name="text">
     <string>Hide selected</string>
@@ -1229,16 +1224,28 @@
    </property>
   </action>
   <action name="actionTree_style">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/symbols/menu_icons/tree.svg</normaloff>:/symbols/menu_icons/tree.svg</iconset>
+   </property>
    <property name="text">
     <string>Tree style</string>
    </property>
   </action>
   <action name="actionGraph_style">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/project-diagram.svg</normaloff>:/icons/project-diagram.svg</iconset>
+   </property>
    <property name="text">
     <string>Graph style</string>
    </property>
   </action>
   <action name="actionTabular_style">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/symbols/menu_icons/table.svg</normaloff>:/symbols/menu_icons/table.svg</iconset>
+   </property>
    <property name="text">
     <string>Tabular style</string>
    </property>
