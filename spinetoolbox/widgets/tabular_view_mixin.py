@@ -18,7 +18,16 @@ Contains TabularViewForm class and some related constants.
 
 import operator
 from collections import namedtuple
-from PySide2.QtWidgets import QWidget, QHBoxLayout, QLabel, QComboBox
+from PySide2.QtWidgets import (
+    QWidget,
+    QHBoxLayout,
+    QLabel,
+    QComboBox,
+    QToolButton,
+    QStyle,
+    QStyleOptionTitleBar,
+    QStylePainter,
+)
 from PySide2.QtCore import QItemSelection, Qt, Slot
 from .custom_menus import PivotTableModelMenu, PivotTableHorizontalHeaderMenu
 from .tabular_view_header_widget import TabularViewHeaderWidget
@@ -55,12 +64,9 @@ class TabularViewMixin:
         self.relationship_tuple_key = ()
         self.original_index_names = {}
         self.filter_menus = {}
-        # history of selected pivot
         self.class_pivot_preferences = {}
         self.PivotPreferences = namedtuple("PivotPreferences", ["index", "columns", "frozen", "frozen_value"])
-        # Set dockWidget_pivot_table title bar widget
-        self.value_type_combo = QComboBox()
-        self.set_pivot_table_title_bar_widget()
+        self.ui.comboBox_pivot_table_input_type.addItems([self._DATA_VALUE, self._DATA_SET])
         self.proxy_model = PivotTableSortFilterProxy()
         self.model = PivotTableModel(self)
         self.proxy_model.setSourceModel(self.model)
@@ -70,17 +76,6 @@ class TabularViewMixin:
         self.ui.pivot_table.horizontalHeader().setResizeContentsPrecision(self.visible_rows)
         self.pivot_table_menu = PivotTableModelMenu(self.model, self.proxy_model, self.ui.pivot_table)
         self._pivot_table_horizontal_header_menu = PivotTableHorizontalHeaderMenu(self.model, self.ui.pivot_table)
-
-    def set_pivot_table_title_bar_widget(self):
-        widget = QWidget()
-        layout = QHBoxLayout(widget)
-        layout.setContentsMargins(3, 0, 3, 0)
-        layout.addWidget(QLabel("Pivot table"))
-        layout.addStretch()
-        layout.addWidget(QLabel("Input type:"))
-        layout.addWidget(self.value_type_combo)
-        self.value_type_combo.addItems([self._DATA_VALUE, self._DATA_SET])
-        self.ui.dockWidget_pivot_table.setTitleBarWidget(widget)
 
     def add_toggle_view_actions(self):
         """Adds toggle view actions to View menu."""
@@ -105,8 +100,9 @@ class TabularViewMixin:
         self.ui.pivot_table.verticalHeader().header_dropped.connect(self.handle_header_dropped)
         self.ui.frozen_table.header_dropped.connect(self.handle_header_dropped)
         self.ui.frozen_table.selectionModel().selectionChanged.connect(self.change_frozen_value)
-        self.value_type_combo.currentTextChanged.connect(self.refresh_pivot_table)
+        self.ui.comboBox_pivot_table_input_type.currentTextChanged.connect(self.refresh_pivot_table)
         self.ui.dockWidget_pivot_table.visibilityChanged.connect(self._handle_pivot_table_visibility_changed)
+        self.ui.dockWidget_frozen_table.visibilityChanged.connect(self._handle_frozen_table_visibility_changed)
 
     def init_models(self):
         """Initializes models."""
@@ -244,35 +240,42 @@ class TabularViewMixin:
             frozen_value = ()
         return rows, columns, frozen, frozen_value
 
-    @staticmethod
-    def _is_class_index(index):
+    def _is_class_index(self, index, class_type):
         """Returns whether or not the given index is a class index.
 
         Args:
             index (QModelIndex)
+            class_type (str)
         Returns:
             bool
         """
-        return index.column() == 0 and index.model().item_from_index(index).item_type in (
-            "object class",
-            "relationship class",
+        return (
+            index.column() == 0
+            and index.model().item_from_index(index).item_type
+            == {self._OBJECT_CLASS: "object class", self._RELATIONSHIP_CLASS: "relationship class"}[class_type]
         )
 
     @Slot(bool)
     def _handle_pivot_table_visibility_changed(self, visible):
-        if not visible:
-            return
-        self.save_model()
-        self.refresh_pivot_table()
-        self.pivot_table_menu.relationship_tuple_key = self.relationship_tuple_key
-        self.pivot_table_menu.class_type = self.current_class_type
+        if visible:
+            self.save_model()
+            self.refresh_pivot_table()
+            self.pivot_table_menu.relationship_tuple_key = self.relationship_tuple_key
+            self.pivot_table_menu.class_type = self.current_class_type
+        self.ui.dockWidget_frozen_table.setVisible(self.ui.dockWidget_pivot_table.isVisible())
+
+    @Slot(bool)
+    def _handle_frozen_table_visibility_changed(self, visible):
+        if visible:
+            self.ui.dockWidget_pivot_table.show()
 
     @Slot("QItemSelection", "QItemSelection")
     def _handle_entity_tree_selection_changed(self, selected, deselected):
-        self.save_model()
-        self.refresh_pivot_table()
-        self.pivot_table_menu.relationship_tuple_key = self.relationship_tuple_key
-        self.pivot_table_menu.class_type = self.current_class_type
+        if self.ui.dockWidget_pivot_table.isVisible():
+            self.save_model()
+            self.refresh_pivot_table()
+            self.pivot_table_menu.relationship_tuple_key = self.relationship_tuple_key
+            self.pivot_table_menu.class_type = self.current_class_type
 
     def refresh_pivot_table(self):
         """Refreshes pivot table."""
@@ -284,7 +287,7 @@ class TabularViewMixin:
             class_type = self._RELATIONSHIP_CLASS
         else:
             return
-        if self._is_class_index(selected):
+        if self._is_class_index(selected, class_type):
             self.do_refresh_pivot_table(class_type, selected.data(Qt.DisplayRole))
 
     @busy_effect
@@ -297,7 +300,7 @@ class TabularViewMixin:
         """
         self.current_class_type = class_type
         self.current_class_name = class_name
-        self.current_value_type = self.value_type_combo.currentText()
+        self.current_value_type = self.ui.comboBox_pivot_table_input_type.currentText()
         self.load_relationships()
         index_entries, tuple_entries, valid_index_values, used_index_entries = self.get_valid_entries_dicts()
         if self.current_value_type == self._DATA_SET:

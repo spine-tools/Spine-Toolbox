@@ -634,7 +634,7 @@ class DataStoreForm(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         self.init_models()
         self.add_toggle_view_actions()
         self.connect_signals()
-        self.restore_dock_widgets()
+        self.apply_tree_style()
         self.restore_ui()
         toc = time.process_time()
         self.msg.emit("Data store view created in {} seconds".format(toc - tic))

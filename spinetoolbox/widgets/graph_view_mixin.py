@@ -82,6 +82,7 @@ class GraphViewMixin:
         self.ui.graphicsView.context_menu_requested.connect(self.show_graph_view_context_menu)
         self.ui.graphicsView.item_dropped.connect(self._handle_item_dropped)
         self.ui.dockWidget_entity_graph.visibilityChanged.connect(self._handle_entity_graph_visibility_changed)
+        self.ui.dockWidget_item_palette.visibilityChanged.connect(self._handle_item_palette_visibility_changed)
         self.ui.dockWidget_item_palette.dockLocationChanged.connect(self._handle_item_palette_dock_location_changed)
         self.ui.actionHide_selected.triggered.connect(self.hide_selected_items)
         self.ui.actionShow_hidden.triggered.connect(self.show_hidden_items)
@@ -266,10 +267,16 @@ class GraphViewMixin:
         else:
             self.ui.splitter_object_relationship_class.setOrientation(Qt.Horizontal)
 
-    @Slot("bool")
+    @Slot(bool)
     def _handle_entity_graph_visibility_changed(self, visible):
         if visible:
             self.build_graph()
+        self.ui.dockWidget_item_palette.setVisible(self.ui.dockWidget_entity_graph.isVisible())
+
+    @Slot(bool)
+    def _handle_item_palette_visibility_changed(self, visible):
+        if visible:
+            self.ui.dockWidget_entity_graph.show()
 
     @Slot("QItemSelection", "QItemSelection")
     def _handle_object_tree_selection_changed(self, selected, deselected):

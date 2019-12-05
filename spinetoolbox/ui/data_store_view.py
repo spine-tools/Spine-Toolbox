@@ -13,7 +13,7 @@
 # Form implementation generated from reading ui file '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/data_store_view.ui',
 # licensing of '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/data_store_view.ui' applies.
 #
-# Created: Thu Dec  5 16:39:22 2019
+# Created: Thu Dec  5 18:30:40 2019
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -354,6 +354,28 @@ class Ui_MainWindow(object):
         self.verticalLayout_13.setSpacing(0)
         self.verticalLayout_13.setContentsMargins(0, 0, 0, 0)
         self.verticalLayout_13.setObjectName("verticalLayout_13")
+        self.horizontalLayout = QtWidgets.QHBoxLayout()
+        self.horizontalLayout.setSpacing(3)
+        self.horizontalLayout.setObjectName("horizontalLayout")
+        self.label_3 = QtWidgets.QLabel(self.dockWidgetContents_10)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.label_3.sizePolicy().hasHeightForWidth())
+        self.label_3.setSizePolicy(sizePolicy)
+        self.label_3.setAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignTrailing|QtCore.Qt.AlignVCenter)
+        self.label_3.setObjectName("label_3")
+        self.horizontalLayout.addWidget(self.label_3)
+        self.comboBox_pivot_table_input_type = QtWidgets.QComboBox(self.dockWidgetContents_10)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.comboBox_pivot_table_input_type.sizePolicy().hasHeightForWidth())
+        self.comboBox_pivot_table_input_type.setSizePolicy(sizePolicy)
+        self.comboBox_pivot_table_input_type.setMaximumSize(QtCore.QSize(180, 23))
+        self.comboBox_pivot_table_input_type.setObjectName("comboBox_pivot_table_input_type")
+        self.horizontalLayout.addWidget(self.comboBox_pivot_table_input_type)
+        self.verticalLayout_13.addLayout(self.horizontalLayout)
         self.pivot_table = PivotTableView(self.dockWidgetContents_10)
         self.pivot_table.setObjectName("pivot_table")
         self.verticalLayout_13.addWidget(self.pivot_table)
@@ -551,6 +573,7 @@ class Ui_MainWindow(object):
         self.label.setText(QtWidgets.QApplication.translate("MainWindow", "Object class", None, -1))
         self.label_2.setText(QtWidgets.QApplication.translate("MainWindow", "Relationship class", None, -1))
         self.dockWidget_pivot_table.setWindowTitle(QtWidgets.QApplication.translate("MainWindow", "Pivot table", None, -1))
+        self.label_3.setText(QtWidgets.QApplication.translate("MainWindow", "Input type:", None, -1))
         self.dockWidget_frozen_table.setWindowTitle(QtWidgets.QApplication.translate("MainWindow", "Frozen table", None, -1))
         self.actionCommit.setText(QtWidgets.QApplication.translate("MainWindow", "Commit", None, -1))
         self.actionCommit.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+Return", None, -1))
@@ -591,11 +614,11 @@ class Ui_MainWindow(object):
         self.actionGraph_style.setText(QtWidgets.QApplication.translate("MainWindow", "Graph style", None, -1))
         self.actionTabular_style.setText(QtWidgets.QApplication.translate("MainWindow", "Tabular style", None, -1))
 
-from spinetoolbox.widgets.custom_qtableview import AutoFilterCopyPasteTableView
-from spinetoolbox.widgets.custom_qstatusbar import NotificationStatusBar
-from spinetoolbox.widgets.custom_qtreeview import EntityTreeView, CopyTreeView, StickySelectionEntityTreeView
-from spinetoolbox.widgets.custom_qgraphicsviews import GraphQGraphicsView
-from spinetoolbox.widgets.frozen_table_view import FrozenTableView
-from spinetoolbox.widgets.custom_qlistview import DragListView
+from spinetoolbox.widgets.custom_qtreeview import CopyTreeView, EntityTreeView, StickySelectionEntityTreeView
 from spinetoolbox.widgets.pivot_table_view import PivotTableView
+from spinetoolbox.widgets.custom_qstatusbar import NotificationStatusBar
+from spinetoolbox.widgets.frozen_table_view import FrozenTableView
+from spinetoolbox.widgets.custom_qtableview import AutoFilterCopyPasteTableView
+from spinetoolbox.widgets.custom_qgraphicsviews import GraphQGraphicsView
+from spinetoolbox.widgets.custom_qlistview import DragListView
 from spinetoolbox import resources_icons_rc

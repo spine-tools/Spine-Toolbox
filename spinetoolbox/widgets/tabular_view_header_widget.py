@@ -73,7 +73,11 @@ class TabularViewHeaderWidget(QFrame):
         self.setFrameShape(QFrame.Panel)
         self.setStyleSheet("QFrame {background: " + PIVOT_TABLE_HEADER_COLOR + ";}")
         self.setAcceptDrops(True)
-        self.setToolTip("<p>Drag-and-drop this onto any header to pivot the table.</p>")
+        self.setToolTip(
+            "<p>This is a draggable header. </p>"
+            "<p>Drag-and-drop it onto another header to pivot the table, "
+            "or onto the Frozen table to freeze this dimension.</p>"
+        )
 
     @property
     def name(self):
