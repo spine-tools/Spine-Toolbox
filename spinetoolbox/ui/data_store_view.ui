@@ -740,8 +740,8 @@
            </property>
            <property name="iconSize">
             <size>
-             <width>32</width>
-             <height>32</height>
+             <width>24</width>
+             <height>24</height>
             </size>
            </property>
            <property name="textElideMode">
@@ -761,8 +761,8 @@
            </property>
            <property name="gridSize">
             <size>
-             <width>128</width>
-             <height>64</height>
+             <width>96</width>
+             <height>48</height>
             </size>
            </property>
            <property name="viewMode">
@@ -839,8 +839,8 @@
            </property>
            <property name="iconSize">
             <size>
-             <width>32</width>
-             <height>32</height>
+             <width>24</width>
+             <height>24</height>
             </size>
            </property>
            <property name="textElideMode">
@@ -860,8 +860,8 @@
            </property>
            <property name="gridSize">
             <size>
-             <width>128</width>
-             <height>64</height>
+             <width>96</width>
+             <height>48</height>
             </size>
            </property>
            <property name="viewMode">

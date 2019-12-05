@@ -13,7 +13,7 @@
 # Form implementation generated from reading ui file '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/data_store_view.ui',
 # licensing of '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/data_store_view.ui' applies.
 #
-# Created: Thu Dec  5 10:26:30 2019
+# Created: Thu Dec  5 16:39:22 2019
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -294,13 +294,13 @@ class Ui_MainWindow(object):
         self.listView_object_class.setDragEnabled(False)
         self.listView_object_class.setDragDropMode(QtWidgets.QAbstractItemView.NoDragDrop)
         self.listView_object_class.setDefaultDropAction(QtCore.Qt.CopyAction)
-        self.listView_object_class.setIconSize(QtCore.QSize(32, 32))
+        self.listView_object_class.setIconSize(QtCore.QSize(24, 24))
         self.listView_object_class.setTextElideMode(QtCore.Qt.ElideRight)
         self.listView_object_class.setMovement(QtWidgets.QListView.Static)
         self.listView_object_class.setFlow(QtWidgets.QListView.LeftToRight)
         self.listView_object_class.setProperty("isWrapping", True)
         self.listView_object_class.setResizeMode(QtWidgets.QListView.Adjust)
-        self.listView_object_class.setGridSize(QtCore.QSize(128, 64))
+        self.listView_object_class.setGridSize(QtCore.QSize(96, 48))
         self.listView_object_class.setViewMode(QtWidgets.QListView.IconMode)
         self.listView_object_class.setUniformItemSizes(False)
         self.listView_object_class.setWordWrap(True)
@@ -331,13 +331,13 @@ class Ui_MainWindow(object):
         self.listView_relationship_class.setProperty("showDropIndicator", False)
         self.listView_relationship_class.setDragEnabled(False)
         self.listView_relationship_class.setDragDropMode(QtWidgets.QAbstractItemView.NoDragDrop)
-        self.listView_relationship_class.setIconSize(QtCore.QSize(32, 32))
+        self.listView_relationship_class.setIconSize(QtCore.QSize(24, 24))
         self.listView_relationship_class.setTextElideMode(QtCore.Qt.ElideMiddle)
         self.listView_relationship_class.setMovement(QtWidgets.QListView.Static)
         self.listView_relationship_class.setFlow(QtWidgets.QListView.LeftToRight)
         self.listView_relationship_class.setProperty("isWrapping", True)
         self.listView_relationship_class.setResizeMode(QtWidgets.QListView.Adjust)
-        self.listView_relationship_class.setGridSize(QtCore.QSize(128, 64))
+        self.listView_relationship_class.setGridSize(QtCore.QSize(96, 48))
         self.listView_relationship_class.setViewMode(QtWidgets.QListView.IconMode)
         self.listView_relationship_class.setUniformItemSizes(False)
         self.listView_relationship_class.setWordWrap(True)
@@ -591,11 +591,11 @@ class Ui_MainWindow(object):
         self.actionGraph_style.setText(QtWidgets.QApplication.translate("MainWindow", "Graph style", None, -1))
         self.actionTabular_style.setText(QtWidgets.QApplication.translate("MainWindow", "Tabular style", None, -1))
 
-from spinetoolbox.widgets.pivot_table_view import PivotTableView
-from spinetoolbox.widgets.custom_qstatusbar import NotificationStatusBar
-from spinetoolbox.widgets.custom_qgraphicsviews import GraphQGraphicsView
-from spinetoolbox.widgets.custom_qtreeview import EntityTreeView, StickySelectionEntityTreeView, CopyTreeView
-from spinetoolbox.widgets.custom_qlistview import DragListView
-from spinetoolbox.widgets.frozen_table_view import FrozenTableView
 from spinetoolbox.widgets.custom_qtableview import AutoFilterCopyPasteTableView
+from spinetoolbox.widgets.custom_qstatusbar import NotificationStatusBar
+from spinetoolbox.widgets.custom_qtreeview import EntityTreeView, CopyTreeView, StickySelectionEntityTreeView
+from spinetoolbox.widgets.custom_qgraphicsviews import GraphQGraphicsView
+from spinetoolbox.widgets.frozen_table_view import FrozenTableView
+from spinetoolbox.widgets.custom_qlistview import DragListView
+from spinetoolbox.widgets.pivot_table_view import PivotTableView
 from spinetoolbox import resources_icons_rc
