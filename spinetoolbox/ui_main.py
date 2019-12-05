@@ -22,7 +22,7 @@ import logging
 import json
 import pathlib
 import numpy as np
-from PySide2.QtCore import QByteArray, QMimeData, Qt, Signal, Slot, QSettings, QUrl, SIGNAL, QStandardPaths
+from PySide2.QtCore import QByteArray, QMimeData, Qt, Signal, Slot, QSettings, QUrl, SIGNAL, QStandardPaths, QDir
 from PySide2.QtWidgets import (
     QMainWindow,
     QApplication,
@@ -56,7 +56,8 @@ from .project import SpineToolboxProject
 from .config import SPINE_TOOLBOX_VERSION, STATUSBAR_SS, \
     TEXTBROWSER_SS, MAINWINDOW_SS, DOCUMENTATION_PATH, _program_root, LATEST_PROJECT_VERSION, DEFAULT_WORK_DIR
 from .helpers import get_datetime, erase_dir, busy_effect, set_taskbar_icon, \
-    supported_img_formats, create_dir, recursive_overwrite, serialize_path, deserialize_path
+    supported_img_formats, create_dir, recursive_overwrite, serialize_path, \
+    deserialize_path, ProjectDirectoryIconProvider
 from .project_item import RootProjectItem, CategoryProjectItem
 from .project_upgrader import ProjectUpgrader
 from .project_items import data_store, data_connection, exporter, tool, view, importer
@@ -144,20 +145,22 @@ class ToolboxUI(QMainWindow):
 
     def connect_signals(self):
         """Connect signals."""
-        # Event log signals
+        # Event and process log signals
         self.msg.connect(self.add_message)
         self.msg_success.connect(self.add_success_message)
         self.msg_error.connect(self.add_error_message)
         self.msg_warning.connect(self.add_warning_message)
         self.msg_proc.connect(self.add_process_message)
         self.msg_proc_error.connect(self.add_process_error_message)
-        # Menu commands
+        self.ui.textBrowser_eventlog.anchorClicked.connect(self.open_anchor)
+        # Menu actions
         self.ui.actionNew.triggered.connect(self.new_project)
         self.ui.actionOpen.triggered.connect(self.open_project)
         self.ui.actionOpen_recent.setMenu(self.recent_projects_menu)
         self.ui.actionOpen_recent.hovered.connect(self.show_recent_projects_menu)
         self.ui.actionSave.triggered.connect(self.save_project)
         self.ui.actionSave_As.triggered.connect(self.save_project_as)
+        self.ui.actionUpgrade_project.triggered.connect(self.upgrade_project)
         self.ui.actionExport_project_to_GraphML.triggered.connect(self.export_as_graphml)
         self.ui.actionSettings.triggered.connect(self.show_settings)
         self.ui.actionPackages.triggered.connect(self.show_tool_config_asst)
@@ -172,7 +175,7 @@ class ToolboxUI(QMainWindow):
         self.ui.actionCopy.triggered.connect(self.project_item_to_clipboard)
         self.ui.actionPaste.triggered.connect(self.project_item_from_clipboard)
         self.ui.actionDuplicate.triggered.connect(self.duplicate_project_item)
-        # Debug QActions
+        # Debug actions
         self.show_properties_tabbar.triggered.connect(self.toggle_properties_tabbar_visibility)
         self.show_supported_img_formats.triggered.connect(supported_img_formats)  # in helpers.py
         self.test_variable_push.triggered.connect(self.python_repl.test_push_vars)
@@ -180,11 +183,9 @@ class ToolboxUI(QMainWindow):
         self.add_tool_specification_popup_menu = AddToolSpecificationPopupMenu(self)
         self.ui.toolButton_add_tool_specification.setMenu(self.add_tool_specification_popup_menu)
         self.ui.toolButton_remove_tool_specification.clicked.connect(self.remove_selected_tool_specification)
-        # Event Log & Process output
-        self.ui.textBrowser_eventlog.anchorClicked.connect(self.open_anchor)
         # Context-menus
         self.ui.treeView_project.customContextMenuRequested.connect(self.show_item_context_menu)
-        # Main menu
+        # Zoom actions
         self.zoom_widget_action.minus_pressed.connect(self._handle_zoom_minus_pressed)
         self.zoom_widget_action.plus_pressed.connect(self._handle_zoom_plus_pressed)
         self.zoom_widget_action.reset_pressed.connect(self._handle_zoom_reset_pressed)
@@ -327,7 +328,7 @@ class ToolboxUI(QMainWindow):
 
     @Slot(name="open_project")
     def open_project(self, load_dir=None, clear_logs=True):
-        """Opens project from a selected directory.
+        """Opens project from a selected or given directory.
 
         Args:
             load_dir (str): Path to project base directory. If default value is used,
@@ -339,38 +340,15 @@ class ToolboxUI(QMainWindow):
             bool: True when opening the project succeeded, False otherwise
         """
         if not load_dir:
-            dialog = OpenProjectDialog(self)
-            retval = dialog.exec_()
-            if retval == 0:  # Canceled or closed
+            dialog = QFileDialog(self, "Open project", _program_root)
+            dialog.setOption(QFileDialog.DontUseNativeDialog, True)
+            dialog.setOption(QFileDialog.ShowDirsOnly, True)
+            dialog.setFileMode(QFileDialog.Directory)
+            dialog.setFilter(QDir.AllDirs | QDir.NoDotAndDotDot)
+            dialog.setIconProvider(ProjectDirectoryIconProvider())  # DontUseNativeDialog is required for this to work
+            if not dialog.exec():
                 return False
-            selection = dialog.selection()
-            if os.path.isfile(selection) and selection.endswith(".proj"):
-                # Convert old style (.proj) project to latest version
-                upgrader = ProjectUpgrader(self)
-                proj_dir = upgrader.get_project_directory()
-                if not proj_dir:
-                    self.msg.emit("Project upgrade canceled")
-                    return False
-                proj_info = upgrader.open_proj_json(selection)
-                if not proj_info:
-                    return False
-                # Copy (project item) data from old project to new project directory
-                old_project_dir = os.path.normpath(os.path.join(os.path.dirname(selection), selection[:-5]))
-                if not os.path.isdir(old_project_dir):
-                    self.msg_error.emit("Upgrade Failed")
-                    self.msg_warning.emit("Project directory <b>{0}</b> does not exist")
-                    return False
-                upgraded_proj_info = upgrader.upgrade(proj_info, old_project_dir, proj_dir)
-                if not self.restore_project(upgraded_proj_info, proj_dir, clear_logs):
-                    return False
-                if not upgrader.copy_data(selection, proj_dir):
-                    self.msg_warning.emit("Copying data to project <b>{0}</b> failed. "
-                                          "Please copy project item directories to directory <b>{1}</b> manually."
-                                          .format(proj_dir, os.path.join(proj_dir, ".spinetoolbox", "items")))
-                # Save project to finish the upgrade process
-                self.save_project()
-                return True
-            load_dir = selection
+            load_dir = dialog.selectedFiles()[0]
         load_path = os.path.abspath(os.path.join(load_dir, ".spinetoolbox", "project.json"))
         if not os.path.isfile(load_path):
             self.msg_error.emit("Opening project failed. File <b>{0}</b> not found.".format(load_path))
@@ -510,6 +488,55 @@ class ToolboxUI(QMainWindow):
         # noinspection PyCallByClass, PyArgumentList
         QMessageBox.information(self, "Project saved".format(self._project.name),
                                 "Project directory is now\n\n{0}".format(answer))
+        return
+
+    @Slot(bool)
+    def upgrade_project(self, checked=False):
+        """Upgrades an old style project (.proj file) to a new directory based Spine Toolbox project.
+        Note that this method can be removed when we no longer want to support upgrading .proj projects.
+        Project upgrading happens later via ProjectUpgrader class.
+        """
+        msg = (
+            "This tool upgrades your legacy Spine Toolbox projects from .proj files to "
+            "<br/>Spine Toolbox project <b>directories</b>."
+            "<br/><br/>Steps:"
+            "<br/><b>1.</b> Please select a project you<br/> want to upgrade by selecting a <i>.proj</i> <b>file</b>"
+            "<br/><b>2.</b> Please select a <b>directory</b> for the upgraded project."
+            "<br/><br/>Project item data will be copied to the new project directory."
+            "<br/><b>P.S.</b> You only need to do this once per project."
+        )
+        QMessageBox.information(self, "Project upgrade tool", msg)
+        # noinspection PyCallByClass
+        answer = QFileDialog.getOpenFileName(self, "Select a project (.proj file) to upgrade",
+                                             _program_root, "Project file (*.proj)")
+        if not answer[0]:
+            return
+        fp = answer[0]
+        upgrader = ProjectUpgrader(self)
+        proj_dir = upgrader.get_project_directory()
+        if not proj_dir:
+            self.msg.emit("Project upgrade canceled")
+            return
+        proj_info = upgrader.open_proj_json(fp)
+        if not proj_info:
+            return
+        old_project_dir = os.path.normpath(os.path.join(os.path.dirname(fp), fp[:-5]))
+        if not os.path.isdir(old_project_dir):
+            self.msg_error.emit("Project upgrade failed")
+            self.msg_warning.emit("Project directory <b>{0}</b> does not exist")
+            return
+        # Upgrade project info dict to latest version
+        upgraded_proj_info = upgrader.upgrade(proj_info, old_project_dir, proj_dir)
+        # Open the upgraded project
+        if not self.restore_project(upgraded_proj_info, proj_dir, clear_logs=True):
+            return
+        # Copy project item data from old project to new project directory
+        if not upgrader.copy_data(fp, proj_dir):
+            self.msg_warning.emit("Copying data to project <b>{0}</b> failed. "
+                                  "Please copy project item directories to directory <b>{1}</b> manually."
+                                  .format(proj_dir, os.path.join(proj_dir, ".spinetoolbox", "items")))
+        # Save project to finish the upgrade process
+        self.save_project()
         return
 
     def init_models(self, tool_specification_paths):

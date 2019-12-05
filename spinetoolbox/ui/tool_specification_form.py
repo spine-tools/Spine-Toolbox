@@ -13,7 +13,7 @@
 # Form implementation generated from reading ui file 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\ui\tool_specification_form.ui',
 # licensing of 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\ui\tool_specification_form.ui' applies.
 #
-# Created: Fri Nov 29 13:07:06 2019
+# Created: Thu Dec  5 16:39:02 2019
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -452,6 +452,6 @@ class Ui_Form(object):
         self.pushButton_ok.setText(QtWidgets.QApplication.translate("Form", "Ok", None, -1))
         self.pushButton_cancel.setText(QtWidgets.QApplication.translate("Form", "Cancel", None, -1))
 
-from spinetoolbox.widgets.custom_qtreeview import SourcesTreeView, CustomTreeView
 from spinetoolbox.widgets.custom_qlineedit import CustomQLineEdit
+from spinetoolbox.widgets.custom_qtreeview import SourcesTreeView, CustomTreeView
 from spinetoolbox import resources_icons_rc

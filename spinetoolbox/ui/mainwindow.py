@@ -13,7 +13,7 @@
 # Form implementation generated from reading ui file 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\ui\mainwindow.ui',
 # licensing of 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\ui\mainwindow.ui' applies.
 #
-# Created: Fri Nov 29 13:06:52 2019
+# Created: Thu Dec  5 16:38:49 2019
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -64,10 +64,11 @@ class Ui_MainWindow(object):
         self.verticalLayout_10.addWidget(self.graphicsView)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 862, 28))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 862, 21))
         self.menubar.setNativeMenuBar(False)
         self.menubar.setObjectName("menubar")
         self.menuFile = QtWidgets.QMenu(self.menubar)
+        self.menuFile.setToolTipsVisible(True)
         self.menuFile.setObjectName("menuFile")
         self.menuHelp = QtWidgets.QMenu(self.menubar)
         self.menuHelp.setObjectName("menuHelp")
@@ -392,6 +393,9 @@ class Ui_MainWindow(object):
         self.actionGetting_started.setIcon(icon13)
         self.actionGetting_started.setObjectName("actionGetting_started")
         self.actionOpen_recent = QtWidgets.QAction(MainWindow)
+        icon19 = QtGui.QIcon()
+        icon19.addPixmap(QtGui.QPixmap(":/icons/menu_icons/history.svg"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.actionOpen_recent.setIcon(icon19)
         self.actionOpen_recent.setObjectName("actionOpen_recent")
         self.actionCopy = QtWidgets.QAction(MainWindow)
         self.actionCopy.setObjectName("actionCopy")
@@ -402,11 +406,18 @@ class Ui_MainWindow(object):
         self.actionLive_tutorial = QtWidgets.QAction(MainWindow)
         self.actionLive_tutorial.setIcon(icon13)
         self.actionLive_tutorial.setObjectName("actionLive_tutorial")
+        self.actionUpgrade_project = QtWidgets.QAction(MainWindow)
+        icon20 = QtGui.QIcon()
+        icon20.addPixmap(QtGui.QPixmap(":/icons/menu_icons/level-up-alt.svg"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.actionUpgrade_project.setIcon(icon20)
+        self.actionUpgrade_project.setObjectName("actionUpgrade_project")
         self.menuFile.addAction(self.actionNew)
         self.menuFile.addAction(self.actionOpen)
         self.menuFile.addAction(self.actionOpen_recent)
         self.menuFile.addAction(self.actionSave)
         self.menuFile.addAction(self.actionSave_As)
+        self.menuFile.addSeparator()
+        self.menuFile.addAction(self.actionUpgrade_project)
         self.menuFile.addAction(self.actionExport_project_to_GraphML)
         self.menuFile.addSeparator()
         self.menuFile.addAction(self.actionSettings)
@@ -474,7 +485,6 @@ class Ui_MainWindow(object):
         self.actionSave.setText(QtWidgets.QApplication.translate("MainWindow", "Save project", None, -1))
         self.actionSave.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+S", None, -1))
         self.actionSave_As.setText(QtWidgets.QApplication.translate("MainWindow", "Save project as...", None, -1))
-        self.actionSave_As.setToolTip(QtWidgets.QApplication.translate("MainWindow", "Duplicate project under a new name", None, -1))
         self.actionSave_As.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+Shift+S", None, -1))
         self.actionOpen.setText(QtWidgets.QApplication.translate("MainWindow", "Open project...", None, -1))
         self.actionOpen.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+O", None, -1))
@@ -518,7 +528,9 @@ class Ui_MainWindow(object):
         self.actionDuplicate.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+D", None, -1))
         self.actionLive_tutorial.setText(QtWidgets.QApplication.translate("MainWindow", "Live tutorial", None, -1))
         self.actionLive_tutorial.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Shift+F2", None, -1))
+        self.actionUpgrade_project.setText(QtWidgets.QApplication.translate("MainWindow", "Upgrade project", None, -1))
+        self.actionUpgrade_project.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Upgrade old (.proj) Spine Toolbox project into a new style directory based project</p></body></html>", None, -1))
 
-from spinetoolbox.widgets.custom_qtextbrowser import CustomQTextBrowser
 from spinetoolbox.widgets.custom_qgraphicsviews import DesignQGraphicsView
+from spinetoolbox.widgets.custom_qtextbrowser import CustomQTextBrowser
 from spinetoolbox import resources_icons_rc

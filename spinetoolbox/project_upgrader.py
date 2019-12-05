@@ -269,14 +269,6 @@ class ProjectUpgrader:
         Returns:
             str: Path to project directory or an empty string if operation is canceled.
         """
-        msg = (
-            "Please select a directory for the upgraded project."
-            "\n\nProject item data will be copied to the new project directory."
-            "\n\nNote that you may need to manually update some project items "
-            "to accommodate for the new project structure. E.g. Data Store Database paths "
-            "are not updated automatically."
-        )
-        QMessageBox.information(self._toolbox, "Project needs to be upgraded", msg)
         # Ask user for a new directory where to save the project
         answer = QFileDialog.getExistingDirectory(self._toolbox, "Select a project directory", os.path.abspath("C:\\"))
         if not answer:  # Canceled (american-english), cancelled (british-english)

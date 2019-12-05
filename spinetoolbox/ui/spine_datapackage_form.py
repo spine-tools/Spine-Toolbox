@@ -13,7 +13,7 @@
 # Form implementation generated from reading ui file 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\ui\spine_datapackage_form.ui',
 # licensing of 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\ui\spine_datapackage_form.ui' applies.
 #
-# Created: Fri Nov 29 13:06:59 2019
+# Created: Thu Dec  5 16:38:55 2019
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
