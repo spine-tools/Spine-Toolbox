@@ -445,12 +445,8 @@ class DataStore(ProjectItem):
             action (str): The selected action
         """
         super().apply_context_menu_action(parent, action)
-        if action == "Open tree view...":
-            self.open_tree_view()
-        elif action == "Open graph view...":
-            self.open_graph_view()
-        elif action == "Open tabular view...":
-            self.open_tabular_view()
+        if action == "Open view...":
+            self.open_ds_view()
 
     def rename(self, new_name):
         """Rename this item.

@@ -18,16 +18,6 @@ Contains TabularViewForm class and some related constants.
 
 import operator
 from collections import namedtuple
-from PySide2.QtWidgets import (
-    QWidget,
-    QHBoxLayout,
-    QLabel,
-    QComboBox,
-    QToolButton,
-    QStyle,
-    QStyleOptionTitleBar,
-    QStylePainter,
-)
 from PySide2.QtCore import QItemSelection, Qt, Slot
 from .custom_menus import PivotTableModelMenu, PivotTableHorizontalHeaderMenu
 from .tabular_view_header_widget import TabularViewHeaderWidget
