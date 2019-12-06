@@ -72,13 +72,10 @@ class SingleParameterModel(MinimalTableModel):
     @property
     def group_fields(self):
         return {
-            "object class": {
-                "parameter definition": ["parameter_tag_list", "database"],
-                "parameter value": ["database"],
-            },
+            "object class": {"parameter definition": ["parameter_tag_list"], "parameter value": []},
             "relationship class": {
-                "parameter definition": ["object_class_name_list", "parameter_tag_list", "database"],
-                "parameter value": ["object_name_list", "database"],
+                "parameter definition": ["object_class_name_list", "parameter_tag_list"],
+                "parameter value": ["object_name_list"],
             },
         }[self.entity_class_type][self.item_type]
 
