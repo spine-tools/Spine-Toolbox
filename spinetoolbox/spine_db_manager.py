@@ -39,6 +39,12 @@ from .spine_db_signaller import SpineDBSignaller
 from .widgets.manage_db_items_dialog import CommitDialog
 
 
+@busy_effect
+def do_create_new_spine_database(url, for_spine_model):
+    """Creates a new spine database at the given url."""
+    create_new_spine_database(url, for_spine_model=for_spine_model)
+
+
 class SpineDBManager(QObject):
     """Class to manage DBs within a project.
 
@@ -119,15 +125,10 @@ class SpineDBManager(QObject):
                 ret = msg.exec_()  # Show message box
                 if ret != QMessageBox.AcceptRole:
                     return
-            self.do_create_new_spine_database(url, for_spine_model)
+            do_create_new_spine_database(url, for_spine_model)
             self.parent()._toolbox.msg_success.emit("New Spine db successfully created at '{0}'.".format(url))
         except SpineDBAPIError as e:
             self.parent()._toolbox.msg_error.emit("Unable to create new Spine db at '{0}': {1}.".format(url, e))
-
-    @busy_effect
-    def do_create_new_spine_database(self, url, for_spine_model):
-        """Creates a new spine database at the given url."""
-        create_new_spine_database(url, for_spine_model=for_spine_model)
 
     def close_session(self, url):
         """Pops any db map on the given url and closes its connection.
