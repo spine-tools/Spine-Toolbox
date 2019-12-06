@@ -80,16 +80,8 @@ class Tool(ProjectItem):
         self.basedir = None
         # Make directory for results
         self.output_dir = os.path.join(self.data_dir, TOOL_OUTPUT_DIR)
-        self.output_dir_watcher = QFileSystemWatcher(self)
-        self.watch_output_dir()
-        self.output_dir_watcher.directoryChanged.connect(lambda path: self.item_changed.emit())
-
-    def watch_output_dir(self):
-        if not os.path.isdir(self.output_dir):
-            return
-        self.output_dir_watcher.addPath(self.output_dir)
-        sub_dir_paths = [os.path.join(root, d) for root, dirs, _ in os.walk(self.output_dir) for d in dirs]
-        self.output_dir_watcher.addPaths(sub_dir_paths)
+        self.output_files_watcher = QFileSystemWatcher(self)
+        self.output_files_watcher.fileChanged.connect(lambda path: self.item_changed.emit())
 
     @staticmethod
     def item_type():
@@ -366,17 +358,45 @@ class Tool(ProjectItem):
 
     def output_resources_forward(self):
         """See base class."""
+        watched_files = self.output_files_watcher.files()
+        if watched_files:
+            self.output_files_watcher.removePaths(watched_files)
         if not self.basedir:
-            return []
-        resources = list()
-        for i in range(self.output_file_model.rowCount()):
-            filename = self.output_file_model.item(i, 0).data(Qt.DisplayRole)
-            output_file = os.path.abspath(os.path.join(self.basedir, filename))
-            resource = ProjectItemResource(
-                self, "file", url=pathlib.Path(output_file).as_uri(), metadata=dict(future=True)
-            )
-            resources.append(resource)
-        return resources
+            output_files = self._find_last_output_files()
+            metadata = dict()
+        else:
+            output_files = [
+                os.path.abspath(os.path.join(self.basedir, self.output_file_model.item(i, 0).data(Qt.DisplayRole)))
+                for i in range(self.output_file_model.rowCount())
+            ]
+            metadata = dict(future=True)
+        self.output_files_watcher.addPaths(output_files)
+        return [
+            ProjectItemResource(self, "file", url=pathlib.Path(output_file).as_uri(), metadata=metadata)
+            for output_file in output_files
+        ]
+
+    def _find_last_output_files(self):
+        """Returns a list of most recent output files from the results directory.
+
+        Returns:
+            list
+        """
+        output_files = []
+        filenames = [
+            self.output_file_model.item(i, 0).data(Qt.DisplayRole) for i in range(self.output_file_model.rowCount())
+        ]
+        for root, dirs, files in os.walk(self.output_dir):
+            if "failed" in dirs:
+                dirs.remove("failed")
+            dirs.sort(reverse=True)
+            for f in sorted(files, reverse=True):
+                if f in filenames:
+                    filenames.remove(f)
+                    output_files.append(os.path.join(root, f))
+                    if not filenames:
+                        return output_files
+        return output_files
 
     def execute_forward(self, resources):
         if not self.tool_specification():
@@ -1010,9 +1030,9 @@ class Tool(ProjectItem):
         if not ret:
             return False
         self.output_dir = os.path.join(self.data_dir, TOOL_OUTPUT_DIR)
-        if self.output_dir_watcher.directories():
-            self.output_dir_watcher.removePaths(self.output_dir_watcher.directories())
-        self.watch_output_dir()
+        if self.output_files_watcher.files():
+            self.output_files_watcher.removePaths(self.output_files_watcher.files())
+        self.item_changed.emit()
         return True
 
     def notify_destination(self, source_item):
