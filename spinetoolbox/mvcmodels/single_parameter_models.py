@@ -70,6 +70,19 @@ class SingleParameterModel(MinimalTableModel):
         }[self.entity_class_type][self.item_type]
 
     @property
+    def group_fields(self):
+        return {
+            "object class": {
+                "parameter definition": ["parameter_tag_list", "database"],
+                "parameter value": ["database"],
+            },
+            "relationship class": {
+                "parameter definition": ["object_class_name_list", "parameter_tag_list", "database"],
+                "parameter value": ["object_name_list", "database"],
+            },
+        }[self.entity_class_type][self.item_type]
+
+    @property
     def parameter_definition_id_key(self):
         return {"parameter definition": "id", "parameter value": "parameter_id"}[self.item_type]
 
@@ -104,7 +117,10 @@ class SingleParameterModel(MinimalTableModel):
             id_ = self._main_data[index.row()]
             if field in self.json_fields:
                 return self.db_mngr.get_value(self.db_map, self.item_type, id_, field, role)
-            return self.db_mngr.get_item(self.db_map, self.item_type, id_).get(field)
+            data = self.db_mngr.get_item(self.db_map, self.item_type, id_).get(field)
+            if role == Qt.DisplayRole and data and field in self.group_fields:
+                data = data.replace(",", self.db_mngr._GROUP_SEP)
+            return data
         # Decoration role
         entity_class_name_field = {
             "object class": "object_class_name",

@@ -512,7 +512,12 @@ class RelationshipItem(EntityItem):
     @property
     def display_name(self):
         """"Returns the name for display."""
-        return self.db_map_data_field(self.first_db_map, "object_name_list")
+        return (
+            self.db_map_data_field(self.first_db_map, "object_name_list")
+            .replace(self.parent_item.parent_item.display_name + ",", "")
+            .replace("," + self.parent_item.parent_item.display_name, "")
+            .replace(",", self.db_mngr._GROUP_SEP)
+        )
 
     @property
     def display_icon(self):
@@ -527,6 +532,6 @@ class RelationshipItem(EntityItem):
         """Return data to put as default in a parameter table when this item is selected."""
         return dict(
             relationship_class_name=self.parent_item.display_name,
-            object_name_list=self.display_name,
+            object_name_list=self.db_map_data_field(self.first_db_map, "object_name_list"),
             database=self.first_db_map.codename,
         )

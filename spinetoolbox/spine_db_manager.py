@@ -87,6 +87,8 @@ class SpineDBManager(QObject):
     parameter_tags_updated = Signal("QVariant")
     parameter_definition_tags_set = Signal("QVariant")
 
+    _GROUP_SEP = " \u01C0 "
+
     def __init__(self, parent=None):
         """Initializes the instance.
 
