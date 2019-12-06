@@ -15,6 +15,7 @@ Unit tests for TreeViewForm and GraphViewForm classes.
 :author: M. Marin (KTH)
 :date:   6.12.2018
 """
+from PySide2.QtCore import Qt
 
 
 class TestTreeViewFormAddMixin:
@@ -104,17 +105,17 @@ class TestTreeViewFormAddMixin:
         self.assertEqual(scooby_dog_fish_item.child_count(), 0)
         self.assertEqual(scooby_fish_dog_item.child_count(), 1)
         self.assertEqual(pluto_nemo_item1.item_type, "relationship")
-        self.assertEqual(pluto_nemo_item1.display_name, 'pluto,nemo')
+        self.assertEqual(pluto_nemo_item1.display_name, 'nemo')
         self.assertEqual(pluto_nemo_item2.item_type, "relationship")
-        self.assertEqual(pluto_nemo_item2.display_name, 'pluto,nemo')
+        self.assertEqual(pluto_nemo_item2.display_name, 'pluto')
         self.assertEqual(nemo_pluto_item1.item_type, "relationship")
-        self.assertEqual(nemo_pluto_item1.display_name, 'nemo,pluto')
+        self.assertEqual(nemo_pluto_item1.display_name, 'nemo')
         self.assertEqual(nemo_pluto_item2.item_type, "relationship")
-        self.assertEqual(nemo_pluto_item2.display_name, 'nemo,pluto')
+        self.assertEqual(nemo_pluto_item2.display_name, 'pluto')
         self.assertEqual(nemo_scooby_item1.item_type, "relationship")
-        self.assertEqual(nemo_scooby_item1.display_name, 'nemo,scooby')
+        self.assertEqual(nemo_scooby_item1.display_name, 'nemo')
         self.assertEqual(nemo_scooby_item2.item_type, "relationship")
-        self.assertEqual(nemo_scooby_item2.display_name, 'nemo,scooby')
+        self.assertEqual(nemo_scooby_item2.display_name, 'scooby')
 
     def test_add_object_parameter_definitions_to_model(self):
         """Test that object parameter definitions are added to the model."""
@@ -185,7 +186,7 @@ class TestTreeViewFormAddMixin:
         for row in range(model.rowCount()):
             parameters.append(
                 (
-                    model.index(row, h("object_name_list")).data(),
+                    model.index(row, h("object_name_list")).data(Qt.EditRole),
                     model.index(row, h("parameter_name")).data(),
                     model.index(row, h("value")).data(),
                 )

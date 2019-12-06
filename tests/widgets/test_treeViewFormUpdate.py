@@ -17,6 +17,7 @@ Unit tests for TreeViewForm and GraphViewForm classes.
 """
 
 import unittest
+from PySide2.QtCore import Qt
 
 
 class TestTreeViewFormUpdateMixin:
@@ -174,7 +175,7 @@ class TestTreeViewFormUpdateMixin:
         for row in range(model.rowCount()):
             parameters.append(
                 (
-                    model.index(row, h("object_name_list")).data(),
+                    model.index(row, h("object_name_list")).data(Qt.EditRole),
                     model.index(row, h("parameter_name")).data(),
                     model.index(row, h("value")).data(),
                 )

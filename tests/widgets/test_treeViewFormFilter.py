@@ -15,7 +15,8 @@ Unit tests for TreeViewForm and GraphViewForm classes.
 :author: M. Marin (KTH)
 :date:   6.12.2018
 """
-from PySide2.QtCore import QItemSelection
+
+from PySide2.QtCore import QItemSelection, Qt
 
 
 class TestTreeViewFormFilterMixin:
@@ -46,7 +47,7 @@ class TestTreeViewFormFilterMixin:
     @staticmethod
     def _parameter_data(model, *fields):
         return [
-            tuple(model.index(row, model.header.index(field)).data() for field in fields)
+            tuple(model.index(row, model.header.index(field)).data(Qt.EditRole) for field in fields)
             for row in range(model.rowCount())
         ]
 

@@ -434,7 +434,7 @@ class RelationshipClassItem(EntityClassItem):
         )
 
     def _get_children_ids(self, db_map):
-        """Returns a set of relationship ids.
+        """Returns a set of relationship ids in this class.
         If the parent is an ObjectItem, then only returns ids of relationships involving that object.
         """
         if not isinstance(self.parent_item, ObjectItem):

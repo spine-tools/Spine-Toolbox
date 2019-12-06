@@ -78,8 +78,8 @@ class TestTreeViewFormRemoveMixin:
         pluto_fish_dog_item = pluto_item.child(0)
         relationships = [x.display_name for x in pluto_fish_dog_item.children]
         self.assertEqual(pluto_fish_dog_item.child_count(), 2)
-        self.assertEqual(relationships[0], "nemo,pluto")
-        self.assertEqual(relationships[1], "nemo,scooby")
+        self.assertEqual(relationships[0], "pluto")
+        self.assertEqual(relationships[1], "scooby")
         self.db_mngr.relationships_removed.emit({self.mock_db_map: [self.nemo_pluto_rel]})
         self.assertEqual(pluto_fish_dog_item.child_count(), 1)
 
