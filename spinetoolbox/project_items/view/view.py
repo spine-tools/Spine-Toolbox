@@ -40,7 +40,7 @@ class View(ProjectItem):
         """
         super().__init__(toolbox, name, description, x, y)
         self._ds_views = {}
-        self._references = list()
+        self._references = dict()
         self.reference_model = QStandardItemModel()  # References to databases
         self._spine_ref_icon = QIcon(QPixmap(":/icons/Spine_db_ref_icon.png"))
 
@@ -84,10 +84,6 @@ class View(ProjectItem):
         """Save selections in shared widgets for this project item into instance variables."""
         self._properties_ui.treeView_view.setModel(None)
 
-    def references(self):
-        """Returns a list of url strings that are in this item as references."""
-        return self._references
-
     @Slot(bool)
     def _open_view(self, checked=False):
         """Opens references in a view window.
@@ -108,13 +104,11 @@ class View(ProjectItem):
         view_window.destroyed.connect(lambda: self._ds_views.pop(view_id))
         self._ds_views[view_id] = view_window
 
-    def populate_reference_list(self, items):
-        """Add given list of items to the reference model. If None or
-        an empty list given, the model is cleared."""
+    def populate_reference_list(self):
+        """Populates reference list."""
         self.reference_model.clear()
         self.reference_model.setHorizontalHeaderItem(0, QStandardItem("References"))  # Add header
-        sorted_dbs = sorted([item.database for item in items], reverse=True)
-        for db in sorted_dbs:
+        for db in sorted(self._references, reverse=True):
             qitem = QStandardItem(db)
             qitem.setFlags(~Qt.ItemIsEditable)
             qitem.setData(self._spine_ref_icon, Qt.DecorationRole)
@@ -129,9 +123,9 @@ class View(ProjectItem):
         self._update_references_list(resources)
         return True
 
-    def _do_handle_dag_changed(self, resources_upstream):
+    def _do_handle_dag_changed(self, resources):
         """Update the list of references that this item is viewing."""
-        self._update_references_list(resources_upstream)
+        self._update_references_list(resources)
 
     def _update_references_list(self, resources_upstream):
         """Updates the references list with resources upstream.
@@ -142,13 +136,14 @@ class View(ProjectItem):
         self._references.clear()
         for resource in resources_upstream:
             if resource.type_ == "database" and resource.scheme == "sqlite":
-                self._references.append((make_url(resource.url), resource.provider.name))
+                url = make_url(resource.url)
+                self._references[url.database] = (url, resource.provider.name)
             elif resource.type_ == "file":
                 filepath = resource.path
                 if os.path.splitext(filepath)[1] == '.sqlite':
                     url = URL("sqlite", database=filepath)
-                    self._references.append((url, resource.provider.name))
-        self.populate_reference_list([url for url, _ in self._references])
+                    self._references[url.database] = (url, resource.provider.name)
+        self.populate_reference_list()
 
     def _selected_indexes(self):
         """Returns selected indexes."""
@@ -159,7 +154,7 @@ class View(ProjectItem):
 
     def _database_urls(self, indexes):
         """Returns list of tuples (url, provider) for given indexes."""
-        return [self._references[index.row()] for index in indexes]
+        return [self._references[index.data(Qt.DisplayRole)] for index in indexes]
 
     def _restore_existing_view_window(self, view_id):
         """Restores an existing view window and returns True if the operation was successful."""
