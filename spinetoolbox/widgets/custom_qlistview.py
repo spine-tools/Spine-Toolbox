@@ -16,9 +16,9 @@ Classes for custom QListView.
 :date:   14.11.2018
 """
 
-from PySide2.QtWidgets import QListView, QApplication, QListWidget, QAbstractItemView
-from PySide2.QtGui import QDrag, QDropEvent
-from PySide2.QtCore import Qt, QMimeData, Signal, Slot, QItemSelectionModel
+from PySide2.QtWidgets import QListView, QApplication
+from PySide2.QtGui import QDrag
+from PySide2.QtCore import Qt, QMimeData, Slot, QItemSelectionModel
 
 
 class AutoFilterMenuView(QListView):

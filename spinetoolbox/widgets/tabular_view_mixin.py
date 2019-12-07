@@ -44,7 +44,7 @@ class TabularViewMixin:
         # current state of ui
         self.current_class_type = ''
         self.current_class_name = ''
-        self.current_value_type = ''
+        self.current_input_type = ''
         self.relationships = {}
         self.relationship_classes = {}
         self.object_classes = {}
@@ -64,6 +64,7 @@ class TabularViewMixin:
         self.ui.pivot_table.setContextMenuPolicy(Qt.CustomContextMenu)
         self.ui.pivot_table.verticalHeader().setDefaultSectionSize(self.default_row_height)
         self.ui.pivot_table.horizontalHeader().setResizeContentsPrecision(self.visible_rows)
+        # TODO: It's enough to pass self.ui.pivot_table to the constructors below
         self.pivot_table_menu = PivotTableModelMenu(self.model, self.proxy_model, self.ui.pivot_table)
         self._pivot_table_horizontal_header_menu = PivotTableHorizontalHeaderMenu(self.model, self.ui.pivot_table)
 
@@ -158,14 +159,15 @@ class TabularViewMixin:
     def current_object_class_list(self):
         return self.relationship_classes[self.current_class_name]["object_class_name_list"].split(',')
 
-    def get_set_data(self):
+    def load_set_data(self):
+        marker = '\u274C'  # '\u2714'
         if self.current_class_type == self._RELATIONSHIP_CLASS:
-            data = [r["object_name_list"].split(',') + ['x'] for r in self.relationships.values()]
+            data = [r["object_name_list"].split(',') + [marker] for r in self.relationships.values()]
             index_names = self.current_object_class_list()
             index_types = [str for _ in index_names]
         else:
             data = [
-                [o["name"], 'x']
+                [o["name"], marker]
                 for o in self.objects.values()
                 if o["class_id"] == self.object_classes[self.current_class_name]["id"]
             ]
@@ -207,7 +209,7 @@ class TabularViewMixin:
         self.make_pivot_headers()
         # update pivot history
         self.class_pivot_preferences[
-            (self.current_class_name, self.current_class_type, self.current_value_type)
+            (self.current_class_name, self.current_class_type, self.current_input_type)
         ] = self.PivotPreferences(
             self.model.model.pivot_rows,
             self.model.model.pivot_columns,
@@ -234,7 +236,7 @@ class TabularViewMixin:
         """Returns whether or not the given index is a class index.
 
         Args:
-            index (QModelIndex)
+            index (QModelIndex): index from object or relationship tree
             class_type (str)
         Returns:
             bool
@@ -290,17 +292,16 @@ class TabularViewMixin:
         """
         self.current_class_type = class_type
         self.current_class_name = class_name
-        self.current_value_type = self.ui.comboBox_pivot_table_input_type.currentText()
+        self.current_input_type = self.ui.comboBox_pivot_table_input_type.currentText()
         self.load_relationships()
         index_entries, tuple_entries, valid_index_values, used_index_entries = self.get_valid_entries_dicts()
-        if self.current_value_type == self._DATA_SET:
-            data, index_names, index_types = self.get_set_data()
+        if self.current_input_type == self._DATA_SET:
+            data, index_names, index_types = self.load_set_data()
             tuple_entries = {}
             valid_index_values = {}
             index_entries.pop(self._PARAMETER_NAME, None)
         else:
-            data, index_names, index_types, parameter_values = self.load_parameter_values()
-            self.parameter_values = parameter_values
+            data, index_names, index_types, self.parameter_values = self.load_parameter_values()
         # make names unique
         real_names = index_names
         unique_names = list(index_names)
@@ -309,7 +310,7 @@ class TabularViewMixin:
         if self.current_class_type == self._RELATIONSHIP_CLASS:
             self.relationship_tuple_key = tuple(unique_names[: len(self.current_object_class_list())])
         # get pivot preference for current selection
-        selection_key = (self.current_class_name, self.current_class_type, self.current_value_type)
+        selection_key = (self.current_class_name, self.current_class_type, self.current_input_type)
         rows, columns, frozen, frozen_value = self.get_pivot_preferences(selection_key, unique_names)
         # update model and views
         self.model.set_data(
@@ -424,6 +425,9 @@ class TabularViewMixin:
             unique_name (str)
             area (str)
             with_menu (bool)
+
+        Returns:
+            TabularViewHeaderWidget
         """
         if with_menu:
             menu = self.filter_menus[unique_name]
@@ -435,7 +439,11 @@ class TabularViewMixin:
 
     @staticmethod
     def _get_insert_index(pivot_list, catcher, position):
-        """Returns an index for inserting a new element in the given pivot list."""
+        """Returns an index for inserting a new element in the given pivot list.
+
+        Returns:
+            int
+        """
         if isinstance(catcher, TabularViewHeaderWidget):
             i = pivot_list.index(catcher.name)
             if position == "after":
@@ -474,7 +482,7 @@ class TabularViewMixin:
         self.model.set_pivot(rows, columns, frozen, frozen_value)
         # save current pivot
         self.class_pivot_preferences[
-            (self.current_class_name, self.current_class_type, self.current_value_type)
+            (self.current_class_name, self.current_class_type, self.current_input_type)
         ] = self.PivotPreferences(rows, columns, frozen, frozen_value)
         self.make_pivot_headers()
 
@@ -543,12 +551,12 @@ class TabularViewMixin:
             index = k[index_ind]
             key = (obj_id, par_id, index)
             if key in self.parameter_values:
-                if self.current_value_type == self._DATA_VALUE:
+                if self.current_input_type == self._DATA_VALUE:
                     # only delete values where only one field is populated
                     values_to_delete.append(self.parameter_values[key])
                 else:
                     # remove value from parameter_value field but not entire row
-                    update_data.append({"id": self.parameter_values[key], self.current_value_type: None})
+                    update_data.append({"id": self.parameter_values[key], self.current_input_type: None})
         if values_to_delete:
             self.db_mngr.remove_items({self.db_map: {"parameter value list": values_to_delete}})
         if update_data:
@@ -678,11 +686,11 @@ class TabularViewMixin:
     def save_model(self):
         db_edited = False
         self.db_mngr.signaller.listeners[self].remove(self.db_map)
-        if self.current_value_type == self._DATA_SET:
+        if self.current_input_type == self._DATA_SET:
             db_edited = self.save_model_set()
             delete_indexes = self.model.model._deleted_index_entries
             self.delete_index_values_from_db(delete_indexes)
-        elif self.current_value_type == self._DATA_VALUE:
+        elif self.current_input_type == self._DATA_VALUE:
             # save new objects and parameters
             add_indexes = self.model.model._added_index_entries
             obj_edited = self.add_index_values_to_db(add_indexes)
@@ -746,10 +754,10 @@ class TabularViewMixin:
             key = (obj_id, par_id)
             if key in self.parameter_values:
                 value_id = self.parameter_values[key]
-                update_data.append({"id": value_id, self.current_value_type: data_value[k]})
+                update_data.append({"id": value_id, self.current_input_type: data_value[k]})
             elif db_id:
                 new_data.append(
-                    {id_field: db_id, "parameter_definition_id": par_id, self.current_value_type: data_value[k]}
+                    {id_field: db_id, "parameter_definition_id": par_id, self.current_input_type: data_value[k]}
                 )
         if new_data:
             self.db_mngr.add_parameter_values({self.db_map: new_data})

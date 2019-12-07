@@ -113,8 +113,8 @@
     </property>
     <addaction name="separator"/>
     <addaction name="actionTree_style"/>
-    <addaction name="actionGraph_style"/>
     <addaction name="actionTabular_style"/>
+    <addaction name="actionGraph_style"/>
    </widget>
    <widget class="QMenu" name="menuGraph">
     <property name="title">

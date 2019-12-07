@@ -13,7 +13,7 @@
 # Form implementation generated from reading ui file '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/data_store_view.ui',
 # licensing of '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/data_store_view.ui' applies.
 #
-# Created: Thu Dec  5 22:45:51 2019
+# Created: Sat Dec  7 10:07:08 2019
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -531,8 +531,8 @@ class Ui_MainWindow(object):
         self.menuFile.addAction(self.actionClose)
         self.menuView.addSeparator()
         self.menuView.addAction(self.actionTree_style)
-        self.menuView.addAction(self.actionGraph_style)
         self.menuView.addAction(self.actionTabular_style)
+        self.menuView.addAction(self.actionGraph_style)
         self.menuGraph.addAction(self.actionHide_selected)
         self.menuGraph.addAction(self.actionShow_hidden)
         self.menuGraph.addSeparator()
@@ -620,11 +620,11 @@ class Ui_MainWindow(object):
         self.actionGraph_style.setText(QtWidgets.QApplication.translate("MainWindow", "Graph style", None, -1))
         self.actionTabular_style.setText(QtWidgets.QApplication.translate("MainWindow", "Tabular style", None, -1))
 
-from spinetoolbox.widgets.frozen_table_view import FrozenTableView
-from spinetoolbox.widgets.custom_qtreeview import EntityTreeView, CopyTreeView, StickySelectionEntityTreeView
+from spinetoolbox.widgets.custom_qstatusbar import NotificationStatusBar
+from spinetoolbox.widgets.custom_qtreeview import CopyTreeView, StickySelectionEntityTreeView, EntityTreeView
 from spinetoolbox.widgets.custom_qgraphicsviews import GraphQGraphicsView
+from spinetoolbox.widgets.frozen_table_view import FrozenTableView
+from spinetoolbox.widgets.custom_qlistview import DragListView
 from spinetoolbox.widgets.custom_qtableview import AutoFilterCopyPasteTableView
 from spinetoolbox.widgets.pivot_table_view import PivotTableView
-from spinetoolbox.widgets.custom_qstatusbar import NotificationStatusBar
-from spinetoolbox.widgets.custom_qlistview import DragListView
 from spinetoolbox import resources_icons_rc

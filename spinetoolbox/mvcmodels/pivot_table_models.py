@@ -380,45 +380,41 @@ class PivotTableModel(QAbstractTableModel):
         return True
 
     def setData(self, index, value, role=Qt.EditRole):
-        if role == Qt.EditRole:
-            if self.index_in_data(index):
-                # edit existing data
-                self.model.set_pivoted_data(
-                    [[value]], [index.row() - self._num_headers_row], [index.column() - self._num_headers_column]
-                )
-                return True
-            if index.row() == self.rowCount() - 1 and index.column() < self._num_headers_column:
-                # add new row if there are any indexes on the row
-                if self.model.pivot_rows:
-                    return self.set_index_key(index, value, "row")
-            elif index.column() == self.columnCount() - 1 and index.row() < self._num_headers_row:
-                # add new column if there are any columns on the pivot
-                if self.model.pivot_columns:
-                    return self.set_index_key(index, value, "column")
-            elif (
-                index.row() < self._num_headers_row - min(1, self.dataRowCount())
-                and index.column() >= self._num_headers_column
-                and index.column() < self.columnCount() - 1
-            ):
-                # edit column key
-                return self.set_index_key(index, value, "column")
-            elif self.index_in_row_headers(index):
-                # edit row key
+        if role != Qt.EditRole:
+            return False
+        if self.index_in_data(index):
+            # edit existing data
+            self.model.set_pivoted_data(
+                [[value]], [index.row() - self._num_headers_row], [index.column() - self._num_headers_column]
+            )
+            return True
+        if (
+            index.row() < self._num_headers_row - min(1, self.dataRowCount())
+            and index.column() >= self._num_headers_column
+            and index.column() < self.columnCount() - 1
+        ):  # TODO: try to use `if self.index_in_column_headers(index):`
+            # edit column key
+            return self.set_index_key(index, value, "column")
+        if self.index_in_row_headers(index):
+            # edit row key
+            return self.set_index_key(index, value, "row")
+        if index.row() == self.rowCount() - 1 and index.column() < self._num_headers_column:
+            # add new row if there are any indexes on the row
+            if self.model.pivot_rows:
                 return self.set_index_key(index, value, "row")
-        return False
+        elif index.column() == self.columnCount() - 1 and index.row() < self._num_headers_row:
+            # add new column if there are any columns on the pivot
+            if self.model.pivot_columns:
+                return self.set_index_key(index, value, "column")
 
     def data(self, index, role=Qt.DisplayRole):
         if role in (Qt.DisplayRole, Qt.EditRole, Qt.ToolTipRole):
-            if self.index_in_data(index):
-                # get values
-                data = self.model.get_pivoted_data(
-                    [index.row() - self._num_headers_row], [index.column() - self._num_headers_column]
-                )
-                if not data or data[0][0] is None:
-                    return ''
-                if self.parent().current_value_type == self.parent()._DATA_SET:
-                    return data[0][0]
-                return self.db_mngr.get_value(self.db_map, "parameter value", data[0][0], "value", role)
+            if index.row() < self._num_headers_row and index.column() < self._num_headers_column:
+                # draw header values
+                return self._data_header[index.row()][index.column()]
+            if self.index_in_row_headers(index):
+                # draw index values
+                return self.model._row_data_header[index.row() - self._num_headers_row][index.column()]
             if self.index_in_column_headers(index):
                 # draw column header values
                 if not self.model.pivot_rows:
@@ -426,23 +422,30 @@ class PivotTableModel(QAbstractTableModel):
                     return self.model._column_data_header[index.column() - self._num_headers_column][index.row()]
                 if index.row() < self._num_headers_row - 1:
                     return self.model._column_data_header[index.column() - self._num_headers_column][index.row()]
-            elif self.index_in_row_headers(index):
-                # draw index values
-                return self.model._row_data_header[index.row() - self._num_headers_row][index.column()]
-            elif index.row() < self._num_headers_row and index.column() < self._num_headers_column:
-                # draw header values
-                return self._data_header[index.row()][index.column()]
-            else:
-                return None
-        elif role == Qt.FontRole:
-            if self.index_in_top_left(index):
-                font = QFont()
-                font.setBold(True)
-                return font
-        elif role == Qt.BackgroundColorRole:
-            return self.data_color(index)
-        else:
+            if self.index_in_data(index):
+                # get values
+                data = self.model.get_pivoted_data(
+                    [index.row() - self._num_headers_row], [index.column() - self._num_headers_column]
+                )
+                if not data or data[0][0] is None:
+                    return ''
+                if self.parent().current_input_type == self.parent()._DATA_SET:
+                    return data[0][0]
+                return self.db_mngr.get_value(self.db_map, "parameter value", data[0][0], "value", role)
             return None
+        if role == Qt.FontRole and self.index_in_top_left(index):
+            font = QFont()
+            font.setBold(True)
+            return font
+        if role == Qt.BackgroundColorRole:
+            return self.data_color(index)
+        if (
+            role == Qt.TextAlignmentRole
+            and self.index_in_data(index)
+            and self.parent().current_input_type == self.parent()._DATA_SET
+        ):
+            return Qt.AlignHCenter
+        return None
 
     def headerData(self, section, orientation, role=Qt.DisplayRole):
         if role == Qt.DisplayRole and orientation == Qt.Horizontal:
