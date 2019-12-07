@@ -106,26 +106,3 @@ class DragListView(QListView):
         self.drag_start_pos = None
         self.pixmap = None
         self.mime_data = None
-
-
-class PivotListWidget(QListWidget):
-    afterDrop = Signal(QListWidget, QDropEvent)
-    allowedDragLists = []
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setDragDropMode(QAbstractItemView.DragDrop)
-        self.setDefaultDropAction(Qt.MoveAction)
-        self.setDragDropOverwriteMode(False)
-        self.setAcceptDrops(True)
-        self.setDropIndicatorShown(True)
-        self.setDragEnabled(True)
-
-    def dragEnterEvent(self, event):
-        if event.source() == self or event.source() in self.allowedDragLists:
-            event.accept()
-
-    def dropEvent(self, event):
-        if event.source() == self or event.source() in self.allowedDragLists:
-            super(PivotListWidget, self).dropEvent(event)
-            self.afterDrop.emit(self, event)
