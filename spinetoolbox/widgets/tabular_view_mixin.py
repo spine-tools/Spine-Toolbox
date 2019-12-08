@@ -30,8 +30,8 @@ class TabularViewMixin:
     """Provides the pivot table and its frozen table for the DS form."""
 
     # constant strings
-    _RELATIONSHIP_CLASS = "relationship"
-    _OBJECT_CLASS = "object"
+    _RELATIONSHIP_CLASS = "relationship class"
+    _OBJECT_CLASS = "object class"
 
     _DATA_VALUE = "Parameter value"
     _DATA_SET = "Relationship"
@@ -104,6 +104,9 @@ class TabularViewMixin:
     def commit_enabled(self):
         return super().commit_enabled() or self.model_has_changes()
 
+    def current_object_class_list(self):
+        return self.relationship_classes[self.current_class_name]["object_class_name_list"].split(',')
+
     def load_classes_and_parameter_definitions(self):
         self.object_classes = {oc["name"]: oc for oc in self.db_mngr.get_items(self.db_map, "object class")}
         self.relationship_classes = {rc["name"]: rc for rc in self.db_mngr.get_items(self.db_map, "relationship class")}
@@ -119,20 +122,37 @@ class TabularViewMixin:
                 tuple(int(i) for i in r["object_id_list"].split(",")): r
                 for r in self.db_mngr.get_items_by_field(self.db_map, "relationship", "class_id", class_id)
             }
-            self.relationship_tuple_key = tuple(
-                self.relationship_classes[self.current_class_name]["object_class_name_list"].split(',')
-            )
+            self.relationship_tuple_key = tuple(self.current_object_class_list())
+
+    def _parameter_value_data(self):
+        """Returns a list of dict items from the parameter value model
+        corresponding to the currently selected class.
+
+        Returns:
+            list(dict)
+        """
+        entity_class = self.db_mngr.get_item_by_field(
+            self.db_map, self.current_class_type, "name", self.current_class_name
+        )
+        model = {
+            self._OBJECT_CLASS: self.object_parameter_value_model,
+            self._RELATIONSHIP_CLASS: self.relationship_parameter_value_model,
+        }[self.current_class_type]
+        sub_model = None
+        for sub_model in model.single_models:
+            if (sub_model.db_map, sub_model.entity_class_id) == (self.db_map, entity_class["id"]):
+                break
+        else:
+            return []
+        if sub_model.canFetchMore():
+            model._fetch_sub_model = sub_model
+            model.fetchMore()
+        ids = sub_model._main_data
+        return [self.db_mngr.get_item(self.db_map, "parameter value", id_) for id_ in ids]
 
     def load_parameter_values(self):
+        data = self._parameter_value_data()
         if self.current_class_type == self._RELATIONSHIP_CLASS:
-            data = self.db_mngr.get_items_by_field(
-                self.db_map, "parameter value", "relationship_class_name", self.current_class_name
-            )
-            # TODO: Which is consistently faster?
-            # relationship_class_id = self.relationship_classes[self.current_class_name]["id"]
-            # data = self.db_mngr.get_relationship_parameter_values(
-            #    self.db_map, relationship_class_id=relationship_class_id
-            # )
             parameter_values = {(d["object_id_list"], d["parameter_id"]): d["id"] for d in data}
             data = [
                 d["object_name_list"].split(',') + [d["parameter_name"], d["id"]]
@@ -142,12 +162,6 @@ class TabularViewMixin:
             index_names = self.current_object_class_list()
             index_types = [str] * len(index_names)
         else:
-            data = self.db_mngr.get_items_by_field(
-                self.db_map, "parameter value", "object_class_name", self.current_class_name
-            )
-            # TODO: Which is consistently faster?
-            # object_class_id = self.object_classes[self.current_class_name]["id"]
-            # data = self.db_mngr.get_object_parameter_values(self.db_map, object_class_id=object_class_id)
             parameter_values = {(d["object_id"], d["parameter_id"]): d["id"] for d in data}
             data = [[d["object_name"], d["parameter_name"], d["id"]] for d in data if d["value"] is not None]
             index_names = [self.current_class_name]
@@ -155,9 +169,6 @@ class TabularViewMixin:
         index_names.extend([self._PARAMETER_NAME])
         index_types.extend([str])
         return data, index_names, index_types, parameter_values
-
-    def current_object_class_list(self):
-        return self.relationship_classes[self.current_class_name]["object_class_name_list"].split(',')
 
     def load_set_data(self):
         marker = '\u274C'  # '\u2714'
@@ -241,11 +252,7 @@ class TabularViewMixin:
         Returns:
             bool
         """
-        return (
-            index.column() == 0
-            and index.model().item_from_index(index).item_type
-            == {self._OBJECT_CLASS: "object class", self._RELATIONSHIP_CLASS: "relationship class"}[class_type]
-        )
+        return index.column() == 0 and index.model().item_from_index(index).item_type == class_type
 
     @Slot(bool)
     def _handle_pivot_table_visibility_changed(self, visible):
@@ -337,22 +344,28 @@ class TabularViewMixin:
         tuple_entries = {}
         used_index_entries = {}
         valid_index_values = {self._JSON_TIME_NAME: range(1, 9999999)}
-        # used_index_entries[(self.PARAMETER_NAME,)] = set(self.parameters.keys())
+        # used_index_entries[(self.PARAMETER_NAME,)] = set(
+        #    p["parameter_name"] for p in self.db_mngr.get_items(self.db_map, "parameter definition")
+        # )
         index_entries = {}
         if self.current_class_type == self._RELATIONSHIP_CLASS:
-            object_class_names = tuple(
-                self.relationship_classes[self.current_class_name]["object_class_name_list"].split(',')
+            relationship_class = self.db_mngr.get_item_by_field(
+                self.db_map, "relationship class", "name", self.current_class_name
             )
-            # used_index_entries[object_class_names] = set(self.objects.keys())
+            object_class_names = tuple(relationship_class["object_class_name_list"].split(','))
+            # used_index_entries[object_class_names] = set(
+            #    o["name"] for o in self.db_mngr.get_items(self.db_map, "object")
+            # )
             index_entries[self._PARAMETER_NAME] = set(
                 p["parameter_name"]
-                for p in self.parameters.values()
-                if p.get("relationship_class_id") == self.relationship_classes[self.current_class_name]["id"]
+                for p in self.db_mngr.get_items_by_field(
+                    self.db_map, "parameter definition", "relationship_class_id", relationship_class["id"]
+                )
             )
             tuple_entries[(self._PARAMETER_NAME,)] = set((i,) for i in index_entries[self._PARAMETER_NAME])
-            for oc in object_class_names:
-                index_entries[oc] = set(
-                    o["name"] for o in self.objects.values() if o["class_id"] == self.object_classes[oc]["id"]
+            for oc in self.db_mngr.get_items(self.db_map, "object class"):
+                index_entries[oc["name"]] = set(
+                    o["name"] for o in self.db_mngr.get_items_by_field(self.db_map, "object", "class_id", oc["id"])
                 )
             unique_class_names = list(object_class_names)
             unique_class_names = fix_name_ambiguity(unique_class_names)
@@ -360,23 +373,26 @@ class TabularViewMixin:
                 tuple(r["object_name_list"].split(',')) for r in self.relationships.values()
             )
         else:
+            object_class = self.db_mngr.get_item_by_field(self.db_map, "object class", "name", self.current_class_name)
             index_entries[self.current_class_name] = set(
                 o["name"]
-                for o in self.objects.values()
-                if o["class_id"] == self.object_classes[self.current_class_name]["id"]
+                for o in self.db_mngr.get_items_by_field(self.db_map, "object", "class_id", object_class["id"])
             )
             index_entries[self._PARAMETER_NAME] = set(
                 p["parameter_name"]
-                for p in self.parameters.values()
-                if p.get("object_class_id") == self.object_classes[self.current_class_name]["id"]
+                for p in self.db_mngr.get_items_by_field(
+                    self.db_map, "parameter definition", "object_class_id", object_class["id"]
+                )
             )
             tuple_entries[(self._PARAMETER_NAME,)] = set((i,) for i in index_entries[self._PARAMETER_NAME])
             tuple_entries[(self.current_class_name,)] = set((i,) for i in index_entries[self.current_class_name])
-
         return index_entries, tuple_entries, valid_index_values, used_index_entries
 
     @Slot(dict, dict)
     def table_index_entries_changed(self, added_entries, deleted_entries):
+        """
+        Updates the filter menus whenever objects are added or removed.
+        """
         for menu in self.filter_menus.values():
             if menu.object_class_name in deleted_entries:
                 menu.remove_items_from_filter_list(deleted_entries[menu.object_class_name])
@@ -384,8 +400,12 @@ class TabularViewMixin:
                 menu.add_items_to_filter_list(added_entries[menu.object_class_name])
 
     def update_filter_menus(self):
+        """Creates and stores filter menus for each object class.
+        These menus are then attached to TabularViewHeaderWidgets as they move around (by drag-and-drop).
+        The idea is that the TabularViewHeaderWidget remembers the filter.
+        """
         self.filter_menus.clear()
-        for unique_name, object_class_name in self.model.model._unique_name_2_name.items():
+        for unique_name, object_class_name in self.original_index_names.items():
             self.filter_menus[unique_name] = menu = FilterMenu(self)
             menu.set_filter_list(self.model.model.index_entries[object_class_name])
             menu.unique_name = unique_name
