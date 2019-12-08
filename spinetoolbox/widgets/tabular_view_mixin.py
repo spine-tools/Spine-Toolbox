@@ -64,8 +64,7 @@ class TabularViewMixin:
         self.ui.pivot_table.setContextMenuPolicy(Qt.CustomContextMenu)
         self.ui.pivot_table.verticalHeader().setDefaultSectionSize(self.default_row_height)
         self.ui.pivot_table.horizontalHeader().setResizeContentsPrecision(self.visible_rows)
-        # TODO: It's enough to pass self.ui.pivot_table to the constructors below
-        self.pivot_table_menu = PivotTableModelMenu(self.model, self.proxy_model, self.ui.pivot_table)
+        self.pivot_table_menu = PivotTableModelMenu(self.proxy_model, self.ui.pivot_table)
         self._pivot_table_horizontal_header_menu = PivotTableHorizontalHeaderMenu(self.model, self.ui.pivot_table)
 
     def add_toggle_view_actions(self):
@@ -87,6 +86,7 @@ class TabularViewMixin:
             self._pivot_table_horizontal_header_menu.request_menu
         )
         self.model.index_entries_changed.connect(self.table_index_entries_changed)
+        self.model.modelReset.connect(self._handle_model_reset)
         self.ui.pivot_table.horizontalHeader().header_dropped.connect(self.handle_header_dropped)
         self.ui.pivot_table.verticalHeader().header_dropped.connect(self.handle_header_dropped)
         self.ui.frozen_table.header_dropped.connect(self.handle_header_dropped)
@@ -304,22 +304,22 @@ class TabularViewMixin:
         index_entries, tuple_entries, valid_index_values, used_index_entries = self.get_valid_entries_dicts()
         if self.current_input_type == self._DATA_SET:
             data, index_names, index_types = self.load_set_data()
+            index_entries.pop(self._PARAMETER_NAME, None)
             tuple_entries = {}
             valid_index_values = {}
-            index_entries.pop(self._PARAMETER_NAME, None)
         else:
             data, index_names, index_types, self.parameter_values = self.load_parameter_values()
         # make names unique
         real_names = index_names
-        unique_names = list(index_names)
-        unique_names = fix_name_ambiguity(unique_names)
-        self.original_index_names = {u: r for u, r in zip(unique_names, real_names)}
+        unique_names = fix_name_ambiguity(list(index_names))
+        self.original_index_names = dict(zip(unique_names, real_names))
         if self.current_class_type == self._RELATIONSHIP_CLASS:
             self.relationship_tuple_key = tuple(unique_names[: len(self.current_object_class_list())])
         # get pivot preference for current selection
         selection_key = (self.current_class_name, self.current_class_type, self.current_input_type)
         rows, columns, frozen, frozen_value = self.get_pivot_preferences(selection_key, unique_names)
         # update model and views
+        self.filter_menus.clear()
         self.model.set_data(
             data,
             unique_names,
@@ -335,7 +335,9 @@ class TabularViewMixin:
             real_names,
         )
         self.proxy_model.clear_filter()
-        self.update_filter_menus()
+
+    @Slot()
+    def _handle_model_reset(self):
         self.update_frozen_table_to_model()
         self.make_pivot_headers()
 
@@ -399,19 +401,6 @@ class TabularViewMixin:
             if menu.object_class_name in added_entries:
                 menu.add_items_to_filter_list(added_entries[menu.object_class_name])
 
-    def update_filter_menus(self):
-        """Creates and stores filter menus for each object class.
-        These menus are then attached to TabularViewHeaderWidgets as they move around (by drag-and-drop).
-        The idea is that the TabularViewHeaderWidget remembers the filter.
-        """
-        self.filter_menus.clear()
-        for unique_name, object_class_name in self.original_index_names.items():
-            self.filter_menus[unique_name] = menu = FilterMenu(self)
-            menu.set_filter_list(self.model.model.index_entries[object_class_name])
-            menu.unique_name = unique_name
-            menu.object_class_name = object_class_name
-            menu.filterChanged.connect(self.change_filter)
-
     def make_pivot_headers(self):
         """
         Turns top left indexes in the pivot table into TabularViewHeaderWidget.
@@ -437,9 +426,27 @@ class TabularViewMixin:
             self.ui.frozen_table.setIndexWidget(index, widget)
             self.ui.frozen_table.resizeColumnToContents(column)
 
+    def create_filter_menu(self, unique_name):
+        """Returns a filter menu for given given object class disambiguated name.
+
+        Args:
+            unique_name (str)
+
+        Returns:
+            FilterMenu
+        """
+        if unique_name not in self.filter_menus:
+            object_class_name = self.original_index_names[unique_name]
+            self.filter_menus[unique_name] = menu = FilterMenu(self)
+            menu.unique_name = unique_name
+            menu.object_class_name = object_class_name
+            menu.set_filter_list(self.model.model.index_entries[object_class_name])
+            menu.filterChanged.connect(self.change_filter)
+        return self.filter_menus[unique_name]
+
     def create_header_widget(self, unique_name, area, with_menu=True):
         """
-        Returns a TabularViewHeaderWidget with given name.
+        Returns a TabularViewHeaderWidget for given object class disambiguated name.
 
         Args:
             unique_name (str)
@@ -450,7 +457,7 @@ class TabularViewMixin:
             TabularViewHeaderWidget
         """
         if with_menu:
-            menu = self.filter_menus[unique_name]
+            menu = self.create_filter_menu(unique_name)
         else:
             menu = None
         widget = TabularViewHeaderWidget(unique_name, area, menu=menu, parent=self)

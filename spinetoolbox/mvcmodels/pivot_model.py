@@ -39,9 +39,9 @@ class PivotModel:
         self.pivot_columns = ()  # current selected columns indexes
         self.pivot_frozen = ()  # current filtered frozen indexes
         self.frozen_value = ()  # current selected value of index_frozen
-        self._key_getter = lambda *x: ()  # operator.itemgetter placeholder used translate pivot to keys in _data
+        self._key_getter = lambda *x: ()  # operator.itemgetter placeholder used to translate pivot to keys in _data
         self._row_data_header = []  # header values for row data
-        self._column_data_header = []  # header valus for column data
+        self._column_data_header = []  # header values for column data
         self._row_data_header_set = set()  # set of _row_data_header
         self._column_data_header_set = set()  # set of _column_data_header
         self._invalid_row = {}  # set of rows that have invalid indexes
@@ -229,10 +229,14 @@ class PivotModel:
             raise ValueError(pivot_error)
         if not self._model_is_updating:
             # check if pivot has changed
-            if self.pivot_rows == rows and self.pivot_columns == columns and self.pivot_frozen == frozen:
-                if frozen_value == self.frozen_value:
-                    # nothing has changed
-                    return
+            if (
+                self.pivot_rows == rows
+                and self.pivot_columns == columns
+                and self.pivot_frozen == frozen
+                and frozen_value == self.frozen_value
+            ):
+                # nothing has changed
+                return
 
         self.pivot_rows = tuple(rows)
         self.pivot_columns = tuple(columns)

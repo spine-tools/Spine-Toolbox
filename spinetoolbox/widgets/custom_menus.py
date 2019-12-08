@@ -585,15 +585,15 @@ class FilterMenu(QMenu):
 
 
 class PivotTableModelMenu(QMenu):
-    def __init__(self, model, proxy_model, parent=None):
+    def __init__(self, proxy_model, parent=None):
         super().__init__(parent)
-        self._model = model
+        self._source = proxy_model.sourceModel()
         self._proxy = proxy_model
         self.relationship_tuple_key = ()
         self.class_type = ""
 
         # strings
-        self._DELETE_INDEX = "Delete selected indexes"
+        self._DELETE_INDEX = "Delete selected objects"
         self._DELETE_RELATIONSHIP = "Delete selected relationships"
         self._RELATIONSHIP_CLASS = "relationship"
 
@@ -606,10 +606,11 @@ class PivotTableModelMenu(QMenu):
         self.delete_values_action = self.addAction('Delete selected values')
         self.delete_index_action = self.addAction(self._DELETE_INDEX)
         self.delete_relationship_action = self.addAction(self._DELETE_RELATIONSHIP)
-        self.delete_invalid_row_action = self.addAction('Delete selected invalid rows')
-        self.delete_invalid_col_action = self.addAction('Delete selected invalid columns')
-        self.insert_row_action = self.addAction('Insert rows')
-        self.insert_col_action = self.addAction('Insert columns')
+        # TODO
+        # self.delete_invalid_row_action = self.addAction('Delete selected invalid rows')
+        # self.delete_invalid_col_action = self.addAction('Delete selected invalid columns')
+        # self.insert_row_action = self.addAction('Insert rows')
+        # self.insert_col_action = self.addAction('Insert columns')
 
         # connect signals
         self.open_value_editor_action.triggered.connect(self.open_value_editor)
@@ -618,26 +619,27 @@ class PivotTableModelMenu(QMenu):
         self.delete_values_action.triggered.connect(self.delete_values)
         self.delete_index_action.triggered.connect(self.delete_index_values)
         self.delete_relationship_action.triggered.connect(self.delete_relationship_values)
-        self.delete_invalid_row_action.triggered.connect(self.delete_invalid_row)
-        self.delete_invalid_col_action.triggered.connect(self.delete_invalid_col)
-        self.insert_row_action.triggered.connect(self.insert_row)
-        self.insert_col_action.triggered.connect(self.insert_col)
+        # TODO
+        # self.delete_invalid_row_action.triggered.connect(self.delete_invalid_row)
+        # self.delete_invalid_col_action.triggered.connect(self.delete_invalid_col)
+        # self.insert_row_action.triggered.connect(self.insert_row)
+        # self.insert_col_action.triggered.connect(self.insert_col)
 
     def _find_selected_indexes(self, indexes):
         """Find any selected index values"""
         selected = {}
         for i in indexes:
             index_name = None
-            if self._model.index_in_column_headers(i):
-                value = self._model.data(i)
+            if self._source.index_in_column_headers(i):
+                value = self._source.data(i)
                 if value:
-                    index_name = self._model.model.pivot_columns[i.row()]
-            elif self._model.index_in_row_headers(i):
-                value = self._model.data(i)
+                    index_name = self._source.model.pivot_columns[i.row()]
+            elif self._source.index_in_row_headers(i):
+                value = self._source.data(i)
                 if value:
-                    index_name = self._model.model.pivot_rows[i.column()]
-            if index_name and index_name in self._model.model._unique_name_2_name:
-                index_name = self._model.model._unique_name_2_name[index_name]
+                    index_name = self._source.model.pivot_rows[i.column()]
+            if index_name and index_name in self._source.model._unique_name_2_name:
+                index_name = self._source.model._unique_name_2_name[index_name]
                 if index_name in selected:
                     selected[index_name].add(value)
                 else:
@@ -646,17 +648,17 @@ class PivotTableModelMenu(QMenu):
 
     def _find_selected_relationships(self, indexes):
         """Find any selected tuple combinations in self.relationship_tuple_key"""
-        pos = [self._model.model.index_names.index(n) for n in self.relationship_tuple_key]
+        pos = [self._source.model.index_names.index(n) for n in self.relationship_tuple_key]
         getter = tuple_itemgetter(itemgetter(*pos), len(pos))
         selected = set()
         for i in indexes:
-            if self._model.index_in_column_headers(i) or self._model.index_in_row_headers(i):
+            if self._source.index_in_column_headers(i) or self._source.index_in_row_headers(i):
                 if (
-                    i.row() - self._model._num_headers_row in self._model.model._invalid_row
-                    or i.column() - self._model._num_headers_column in self._model.model._invalid_column
+                    i.row() - self._source._num_headers_row in self._source.model._invalid_row
+                    or i.column() - self._source._num_headers_column in self._source.model._invalid_column
                 ):
                     continue
-                key = self._model.get_key(i)
+                key = self._source.get_key(i)
                 key = getter(key)
                 if all(key):
                     selected.add(key)
@@ -670,45 +672,49 @@ class PivotTableModelMenu(QMenu):
         return indexes
 
     def delete_invalid_row(self):  # pylint: disable=no-self-use
+        # TODO
         return
 
     def delete_invalid_col(self):  # pylint: disable=no-self-use
+        # TODO
         return
 
     def insert_row(self):  # pylint: disable=no-self-use
+        # TODO
         return
 
     def insert_col(self):  # pylint: disable=no-self-use
+        # TODO
         return
 
     def delete_values(self):
         """deletes selected indexes in pivot_table"""
         indexes = self._get_selected_indexes()
-        self._model.delete_values(indexes)
+        self._source.delete_values(indexes)
 
     def restore_values(self):
         """restores edited selected indexes in pivot_table"""
         indexes = self._get_selected_indexes()
-        self._model.restore_values(indexes)
+        self._source.restore_values(indexes)
 
     def delete_index_values(self):
         """finds selected index items and deletes"""
         indexes = self._get_selected_indexes()
         delete_dict = self._find_selected_indexes(indexes)
         if delete_dict:
-            self._model.delete_index_values(delete_dict)
+            self._source.delete_index_values(delete_dict)
 
     def delete_relationship_values(self):
         """finds selected relationships deletes"""
         indexes = self._get_selected_indexes()
         delete_tuples = self._find_selected_relationships(indexes)
         if delete_tuples:
-            self._model.delete_tuple_index_values({self.relationship_tuple_key: delete_tuples})
+            self._source.delete_tuple_index_values({self.relationship_tuple_key: delete_tuples})
 
     def open_value_editor(self):
         """Opens the parameter value editor for the first selected cell."""
         model_index = self._get_selected_indexes()[0]
-        value_name = ", ".join(self._model.get_key(model_index))
+        value_name = ", ".join(self._source.get_key(model_index))
         value_editor = ParameterValueEditor(model_index, value_name, parent_widget=self.parent())
         value_editor.show()
 
@@ -717,13 +723,13 @@ class PivotTableModelMenu(QMenu):
         selected_indexes = self._get_selected_indexes()
         hints = PivotTablePlottingHints()
         try:
-            plot_window = plot_selection(self._model, selected_indexes, hints)
+            plot_window = plot_selection(self._source, selected_indexes, hints)
         except PlottingError as error:
             report_plotting_failure(error, self)
             return
         plotted_column_names = set()
         for index in selected_indexes:
-            label = hints.column_label(self._model, index.column())
+            label = hints.column_label(self._source, index.column())
             plotted_column_names.add(label)
         plot_window.setWindowTitle("Plot    -- {} --".format(", ".join(plotted_column_names)))
         plot_window.show()
@@ -737,9 +743,9 @@ class PivotTableModelMenu(QMenu):
         if len(indexes) > 1:
             # more than one index selected
             self.open_value_editor_action.setEnabled(False)
-            self.plot_action.setEnabled(any(self._model.index_in_data(index) for index in indexes))
-            if any(self._model.index_in_column_headers(i) for i in indexes) or any(
-                self._model.index_in_row_headers(i) for i in indexes
+            self.plot_action.setEnabled(any(self._source.index_in_data(index) for index in indexes))
+            if any(self._source.index_in_column_headers(i) for i in indexes) or any(
+                self._source.index_in_row_headers(i) for i in indexes
             ):
                 self.delete_index_action.setText(self._DELETE_INDEX)
                 self.delete_index_action.setEnabled(True)
@@ -750,7 +756,7 @@ class PivotTableModelMenu(QMenu):
         elif len(indexes) == 1:
             # one selected, show names
             selected_index = self._find_selected_indexes(indexes)
-            index_in_data = self._model.index_in_data(indexes[0])
+            index_in_data = self._source.index_in_data(indexes[0])
             self.open_value_editor_action.setEnabled(index_in_data)
             self.plot_action.setEnabled(index_in_data)
             if selected_index:

@@ -370,7 +370,8 @@ class Tool(ProjectItem):
                 for i in range(self.output_file_model.rowCount())
             ]
             metadata = dict(future=True)
-        self.output_files_watcher.addPaths(output_files)
+        if output_files:
+            self.output_files_watcher.addPaths(output_files)
         return [
             ProjectItemResource(self, "file", url=pathlib.Path(output_file).as_uri(), metadata=metadata)
             for output_file in output_files
