@@ -22,20 +22,13 @@ from numpy import atleast_1d as arr
 from scipy.sparse.csgraph import dijkstra
 from PySide2.QtCore import Qt, Signal, Slot
 from PySide2.QtWidgets import QGraphicsTextItem
-from .custom_menus import (
-    SimpleEditableParameterValueContextMenu,
-    GraphViewContextMenu,
-    ObjectItemContextMenu,
-    RelationshipItemContextMenu,
-)
+from .custom_menus import GraphViewContextMenu, ObjectItemContextMenu, RelationshipItemContextMenu
 from .custom_qwidgets import ZoomWidgetAction
-from .report_plotting_failure import report_plotting_failure
 from .shrinking_scene import ShrinkingScene
 from .graph_view_graphics_items import EntityItem, ObjectItem, RelationshipItem, ArcItem
 from .graph_view_demo import GraphViewDemo
 from ..mvcmodels.entity_list_models import ObjectClassListModel, RelationshipClassListModel
 from ..helpers import busy_effect
-from ..plotting import plot_selection, PlottingError, GraphAndTreeViewPlottingHints
 
 
 class GraphViewMixin:
@@ -826,80 +819,6 @@ class GraphViewMixin:
                 db_item = item.db_representation
                 db_map_typed_data[self.db_map].setdefault(item.entity_type, []).append(db_item)
         self.db_mngr.remove_items(db_map_typed_data)
-
-    @Slot("QPoint", name="show_object_parameter_value_context_menu")
-    def show_object_parameter_value_context_menu(self, pos):
-        """Shows context menu for object parameter value table.
-
-        Args:
-            pos (QPoint)
-        """
-        self._show_table_context_menu(pos, self.ui.tableView_object_parameter_value, 'value')
-
-    @Slot("QPoint", name="show_object_parameter_definition_context_menu")
-    def show_object_parameter_definition_context_menu(self, pos):
-        """Shows context menu for object parameter definition table.
-
-        Args:
-            pos (QPoint)
-        """
-        self._show_table_context_menu(pos, self.ui.tableView_object_parameter_definition, 'default_value')
-
-    @Slot("QPoint", name="show_relationship_parameter_value_context_menu")
-    def show_relationship_parameter_value_context_menu(self, pos):
-        """Shows context menu for relationship parameter value table.
-
-        Args:
-            pos (QPoint)
-        """
-        self._show_table_context_menu(pos, self.ui.tableView_relationship_parameter_value, 'value')
-
-    @Slot("QPoint", name="show_relationship_parameter_definition_context_menu")
-    def show_relationship_parameter_definition_context_menu(self, pos):
-        """Shows context menu for relationship parameter definition table.
-
-        Args:
-            pos (QPoint)
-        """
-        self._show_table_context_menu(pos, self.ui.tableView_relationship_parameter_definition, 'default_value')
-
-    def _show_table_context_menu(self, position, table_view, column_name):
-        index = table_view.indexAt(position)
-        global_pos = table_view.viewport().mapToGlobal(position)
-        model = table_view.model()
-        flags = model.flags(index)
-        editable = (flags & Qt.ItemIsEditable) == Qt.ItemIsEditable
-        is_value = model.headerData(index.column(), Qt.Horizontal) == column_name
-        if editable and is_value:
-            menu = SimpleEditableParameterValueContextMenu(self, global_pos, index)
-        else:
-            return
-        option = menu.get_action()
-        if option == "Open in editor...":
-            self.show_parameter_value_editor(index, table_view)
-        elif option == "Plot":
-            selection = table_view.selectedIndexes()
-            try:
-                hints = GraphAndTreeViewPlottingHints(table_view)
-                plot_widget = plot_selection(model, selection, hints)
-            except PlottingError as error:
-                report_plotting_failure(error, self)
-                return
-            if (
-                table_view is self.ui.tableView_object_parameter_value
-                or table_view is self.ui.tableView_object_parameter_definition
-            ):
-                plot_window_title = "Object parameter plot    -- {} --".format(column_name)
-            elif (
-                table_view is self.ui.tableView_relationship_parameter_value
-                or table_view is self.ui.tableView_relationship_parameter_definition
-            ):
-                plot_window_title = "Relationship parameter plot    -- {} --".format(column_name)
-            else:
-                plot_window_title = "Plot"
-            plot_widget.setWindowTitle(plot_window_title)
-            plot_widget.show()
-        menu.deleteLater()
 
     def closeEvent(self, event=None):
         """Handles close window event.

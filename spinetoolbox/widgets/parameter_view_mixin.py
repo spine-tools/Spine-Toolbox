@@ -42,12 +42,7 @@ from ..mvcmodels.compound_parameter_models import (
 )
 from ..widgets.parameter_value_editor import ParameterValueEditor
 from ..widgets.object_name_list_editor import ObjectNameListEditor
-from ..plotting import (
-    plot_selection,
-    PlottingError,
-    GraphAndTreeViewPlottingHints,
-    tree_graph_view_parameter_value_name,
-)
+from ..plotting import plot_selection, PlottingError, ParameterTablePlottingHints, parameter_table_value_name
 from ..helpers import busy_effect
 
 
@@ -256,7 +251,7 @@ class ParameterViewMixin:
     def show_parameter_value_editor(self, index, table_view, value=None):
         """Shows the parameter value editor for the given index of given table view.
         """
-        value_name = tree_graph_view_parameter_value_name(index, table_view)
+        value_name = parameter_table_value_name(index, table_view)
         editor = ParameterValueEditor(index, value_name=value_name, value=value, parent_widget=self)
         editor.show()
 
@@ -410,7 +405,7 @@ class ParameterViewMixin:
         elif option == "Plot":
             selection = table_view.selectedIndexes()
             try:
-                hints = GraphAndTreeViewPlottingHints(table_view)
+                hints = ParameterTablePlottingHints(table_view)
                 plot_widget = plot_selection(model, selection, hints)
             except PlottingError as error:
                 report_plotting_failure(error, self)

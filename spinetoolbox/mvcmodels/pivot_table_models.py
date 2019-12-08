@@ -384,9 +384,16 @@ class PivotTableModel(QAbstractTableModel):
             return False
         if self.index_in_data(index):
             # edit existing data
-            self.model.set_pivoted_data(
-                [[value]], [index.row() - self._num_headers_row], [index.column() - self._num_headers_column]
-            )
+            row = index.row() - self._num_headers_row
+            column = index.column() - self._num_headers_column
+            data = self.model.get_pivoted_data([row], [column])
+            if not data or data[0][0] is None:
+                # Add
+                index_tuple = self.model.get_index_tuple(row, column)
+                self.parent().add_parameter_value(index_tuple, value)
+            else:
+                self.parent().update_parameter_value(data[0][0], value)
+            self.dataChanged.emit(index, index)
             return True
         if (
             index.row() < self._num_headers_row - min(1, self.dataRowCount())
@@ -429,7 +436,7 @@ class PivotTableModel(QAbstractTableModel):
                 )
                 if not data or data[0][0] is None:
                     return ''
-                if self.parent().current_input_type == self.parent()._DATA_SET:
+                if not self.parent().is_value_input_type():
                     return data[0][0]
                 return self.db_mngr.get_value(self.db_map, "parameter value", data[0][0], "value", role)
             return None
@@ -439,11 +446,7 @@ class PivotTableModel(QAbstractTableModel):
             return font
         if role == Qt.BackgroundColorRole:
             return self.data_color(index)
-        if (
-            role == Qt.TextAlignmentRole
-            and self.index_in_data(index)
-            and self.parent().current_input_type == self.parent()._DATA_SET
-        ):
+        if role == Qt.TextAlignmentRole and self.index_in_data(index) and not self.parent().is_value_input_type():
             return Qt.AlignHCenter
         return None
 

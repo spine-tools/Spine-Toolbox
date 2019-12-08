@@ -19,10 +19,7 @@ Custom QTableView classes that support copy-paste and the like.
 from PySide2.QtWidgets import QTableView, QApplication
 from PySide2.QtCore import Qt, Slot, QItemSelectionModel
 from PySide2.QtGui import QKeySequence
-from spinedb_api import from_database, DateTime, Duration, ParameterValueFormatError, TimePattern, TimeSeries
 from .pivot_table_header_view import PivotTableHeaderView
-from .parameter_value_editor import ParameterValueEditor
-from ..helpers import busy_effect
 
 
 class PivotTableView(QTableView):
@@ -84,24 +81,3 @@ class PivotTableView(QTableView):
             self.model().paste_data(top_left_index, data)
         else:
             super().keyPressEvent(event)
-
-    @busy_effect
-    def edit(self, index, trigger, event):
-        """Starts editing the item at index from pivot_table.
-        If the index contains some 'complex' parameter value,
-        we open the parameter value editor window instead.
-        """
-        # pylint: disable=bad-super-call
-        if not super().edit(index, trigger, event):
-            return False
-        if self.model().sourceModel().index_in_data(index):
-            try:
-                value = from_database(index.data(role=Qt.EditRole))
-            except ParameterValueFormatError:
-                value = None
-            if isinstance(value, (DateTime, Duration, TimePattern, TimeSeries)) or value is None:
-                # Close the normal editor and show the `ParameterValueEditor` instead
-                self.closePersistentEditor(index)
-                editor = ParameterValueEditor(index, value=value, parent_widget=self)
-                editor.show()
-        return True

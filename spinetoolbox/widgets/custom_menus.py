@@ -723,9 +723,7 @@ class PivotTableModelMenu(QMenu):
     def open_value_editor(self):
         """Opens the parameter value editor for the first selected cell."""
         model_index = self._get_selected_indexes()[0]
-        value_name = ", ".join(self._source.get_key(model_index))
-        value_editor = ParameterValueEditor(model_index, value_name, parent_widget=self.parent())
-        value_editor.show()
+        self.parent().show_parameter_value_editor(model_index, self._table)
 
     def plot(self):
         """Plots the selected cells in the pivot table."""

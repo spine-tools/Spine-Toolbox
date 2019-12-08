@@ -19,9 +19,9 @@ Contains TabularViewForm class and some related constants.
 import operator
 from collections import namedtuple
 from PySide2.QtCore import QItemSelection, Qt, Slot
-from .custom_menus import PivotTableModelMenu, PivotTableHorizontalHeaderMenu
+from .custom_menus import FilterMenu, PivotTableModelMenu, PivotTableHorizontalHeaderMenu
 from .tabular_view_header_widget import TabularViewHeaderWidget
-from .custom_menus import FilterMenu
+from .custom_delegates import PivotTableDelegate
 from ..helpers import fix_name_ambiguity, tuple_itemgetter, busy_effect
 from ..mvcmodels.pivot_table_models import PivotTableSortFilterProxy, PivotTableModel
 
@@ -33,8 +33,8 @@ class TabularViewMixin:
     _RELATIONSHIP_CLASS = "relationship class"
     _OBJECT_CLASS = "object class"
 
-    _DATA_VALUE = "Parameter value"
-    _DATA_SET = "Relationship"
+    _INPUT_VALUE = "Parameter value"
+    _INPUT_SET = "Relationship"
 
     _JSON_TIME_NAME = "json time"
     _PARAMETER_NAME = "parameter"
@@ -44,7 +44,7 @@ class TabularViewMixin:
         # current state of ui
         self.current_class_type = ''
         self.current_class_name = ''
-        self.current_input_type = ''
+        self.current_input_type = self._INPUT_VALUE
         self.relationships = {}
         self.relationship_classes = {}
         self.object_classes = {}
@@ -56,7 +56,7 @@ class TabularViewMixin:
         self.filter_menus = {}
         self.class_pivot_preferences = {}
         self.PivotPreferences = namedtuple("PivotPreferences", ["index", "columns", "frozen", "frozen_value"])
-        self.ui.comboBox_pivot_table_input_type.addItems([self._DATA_VALUE, self._DATA_SET])
+        self.ui.comboBox_pivot_table_input_type.addItems([self._INPUT_VALUE, self._INPUT_SET])
         self.proxy_model = PivotTableSortFilterProxy()
         self.model = PivotTableModel(self)
         self.proxy_model.setSourceModel(self.model)
@@ -65,7 +65,25 @@ class TabularViewMixin:
         self.ui.pivot_table.verticalHeader().setDefaultSectionSize(self.default_row_height)
         self.ui.pivot_table.horizontalHeader().setResizeContentsPrecision(self.visible_rows)
         self.pivot_table_menu = PivotTableModelMenu(self)
+
         self._pivot_table_horizontal_header_menu = PivotTableHorizontalHeaderMenu(self.model, self.ui.pivot_table)
+
+    def is_value_input_type(self):
+        return self.current_input_type == self._INPUT_VALUE
+
+    def setup_delegates(self):
+        """Sets delegates for tables."""
+        super().setup_delegates()
+        delegate = PivotTableDelegate(self)
+        self.ui.pivot_table.setItemDelegate(delegate)
+        delegate.parameter_value_editor_requested.connect(
+            lambda index, value: self.show_parameter_value_editor(index, self.ui.pivot_table, value=value)
+        )
+        delegate.data_committed.connect(self._set_model_data)
+
+    @Slot("QModelIndex", object)
+    def _set_model_data(self, index, value):
+        self.proxy_model.setData(index, value)
 
     def add_toggle_view_actions(self):
         """Adds toggle view actions to View menu."""
@@ -107,12 +125,60 @@ class TabularViewMixin:
     def current_object_class_list(self):
         return self.relationship_classes[self.current_class_name]["object_class_name_list"].split(',')
 
+    def add_parameter_value(self, index_tuple, value):
+        """
+        Args:
+            index_tuple (tuple(str))
+            value
+        """
+        parameter_name = index_tuple[-1]
+        parameters = self.db_mngr.get_items_by_field(
+            self.db_map, "parameter definition", "parameter_name", parameter_name
+        )
+        if self.current_class_type == self._RELATIONSHIP_CLASS:
+            object_name_list = index_tuple[: len(self.current_object_class_list())]
+            object_name_list = ",".join(object_name_list)
+            relationship_class = self.db_mngr.get_item_by_field(
+                self.db_map, "relationship class", "name", self.current_class_name
+            )
+            relationships = self.db_mngr.get_items(self.db_map, "relationship")
+            relationship = next(
+                iter(
+                    rel
+                    for rel in relationships
+                    if rel["class_id"] == relationship_class["id"] and rel["object_name_list"] == object_name_list
+                )
+            )
+            parameter = next(iter(p for p in parameters if p.get("relationship_class_id") == relationship_class["id"]))
+            item = dict(parameter_definition_id=parameter["id"], relationship_id=relationship["id"], value=value)
+        else:
+            object_name = index_tuple[0]
+            object_class = self.db_mngr.get_item_by_field(self.db_map, "object class", "name", self.current_class_name)
+            objects = self.db_mngr.get_items(self.db_map, "object")
+            object_ = next(
+                iter(obj for obj in objects if obj["class_id"] == object_class["id"] and obj["name"] == object_name)
+            )
+            parameter = next(iter(p for p in parameters if p.get("object_class_id") == object_class["id"]))
+            item = dict(parameter_definition_id=parameter["id"], object_id=object_["id"], value=value)
+        self.db_mngr.add_parameter_values({self.db_map: [item]})
+
+    def update_parameter_value(self, id_, value):
+        """
+        Args:
+            id_ (int)
+            value
+        """
+        db_map_data = {self.db_map: [dict(id=id_, value=value)]}
+        self.db_mngr.update_parameter_values(db_map_data)
+
     def load_classes_and_parameter_definitions(self):
         self.object_classes = {oc["name"]: oc for oc in self.db_mngr.get_items(self.db_map, "object class")}
         self.relationship_classes = {rc["name"]: rc for rc in self.db_mngr.get_items(self.db_map, "relationship class")}
+        # TODO: This doesn't work since parameter names are not unique across classes
         self.parameters = {p["parameter_name"]: p for p in self.db_mngr.get_items(self.db_map, "parameter definition")}
 
     def load_objects(self):
+        # TODO: This doesn't work since object names are not unique across classes
         self.objects = {o["name"]: o for o in self.db_mngr.get_items(self.db_map, "object")}
 
     def load_relationships(self):
@@ -138,16 +204,16 @@ class TabularViewMixin:
             self._OBJECT_CLASS: self.object_parameter_value_model,
             self._RELATIONSHIP_CLASS: self.relationship_parameter_value_model,
         }[self.current_class_type]
-        sub_model = None
-        for sub_model in model.single_models:
-            if (sub_model.db_map, sub_model.entity_class_id) == (self.db_map, entity_class["id"]):
-                break
-        else:
+        sub_models = [
+            m for m in model.single_models if (m.db_map, m.entity_class_id) == (self.db_map, entity_class["id"])
+        ]
+        if not sub_models:
             return []
-        if sub_model.canFetchMore():
-            model._fetch_sub_model = sub_model
-            model.fetchMore()
-        ids = sub_model._main_data
+        for m in sub_models:
+            if m.canFetchMore():
+                model._fetch_sub_model = m
+                model.fetchMore()
+        ids = [id_ for m in sub_models for id_ in m._main_data]
         return [self.db_mngr.get_item(self.db_map, "parameter value", id_) for id_ in ids]
 
     def load_parameter_values(self):
@@ -243,7 +309,8 @@ class TabularViewMixin:
             frozen_value = ()
         return rows, columns, frozen, frozen_value
 
-    def _is_class_index(self, index, class_type):
+    @staticmethod
+    def _is_class_index(index, class_type):
         """Returns whether or not the given index is a class index.
 
         Args:
@@ -283,22 +350,18 @@ class TabularViewMixin:
         else:
             return
         if self._is_class_index(selected, class_type):
-            self.do_refresh_pivot_table(class_type, selected.data(Qt.DisplayRole))
+            self.current_class_type = class_type
+            self.current_class_name = selected.data(Qt.DisplayRole)
+            self.do_refresh_pivot_table()
 
     @busy_effect
-    def do_refresh_pivot_table(self, class_type, class_name):
+    def do_refresh_pivot_table(self):
         """Refreshes pivot table.
-
-        Args:
-            class_type (str)
-            class_name (str)
         """
-        self.current_class_type = class_type
-        self.current_class_name = class_name
         self.current_input_type = self.ui.comboBox_pivot_table_input_type.currentText()
         self.load_relationships()
         index_entries, tuple_entries, valid_index_values, used_index_entries = self.get_valid_entries_dicts()
-        if self.current_input_type == self._DATA_SET:
+        if self.current_input_type == self._INPUT_SET:
             data, index_names, index_types = self.load_set_data()
             index_entries.pop(self._PARAMETER_NAME, None)
             tuple_entries = {}
@@ -574,7 +637,7 @@ class TabularViewMixin:
             index = k[index_ind]
             key = (obj_id, par_id, index)
             if key in self.parameter_values:
-                if self.current_input_type == self._DATA_VALUE:
+                if self.current_input_type == self._INPUT_VALUE:
                     # only delete values where only one field is populated
                     values_to_delete.append(self.parameter_values[key])
                 else:
@@ -709,11 +772,11 @@ class TabularViewMixin:
     def save_model(self):
         db_edited = False
         self.db_mngr.signaller.listeners[self].remove(self.db_map)
-        if self.current_input_type == self._DATA_SET:
+        if self.current_input_type == self._INPUT_SET:
             db_edited = self.save_model_set()
             delete_indexes = self.model.model._deleted_index_entries
             self.delete_index_values_from_db(delete_indexes)
-        elif self.current_input_type == self._DATA_VALUE:
+        elif self.current_input_type == self._INPUT_VALUE:
             # save new objects and parameters
             add_indexes = self.model.model._added_index_entries
             obj_edited = self.add_index_values_to_db(add_indexes)
@@ -777,11 +840,9 @@ class TabularViewMixin:
             key = (obj_id, par_id)
             if key in self.parameter_values:
                 value_id = self.parameter_values[key]
-                update_data.append({"id": value_id, self.current_input_type: data_value[k]})
+                update_data.append({"id": value_id, "value": data_value[k]})
             elif db_id:
-                new_data.append(
-                    {id_field: db_id, "parameter_definition_id": par_id, self.current_input_type: data_value[k]}
-                )
+                new_data.append({id_field: db_id, "parameter_definition_id": par_id, "value": data_value[k]})
         if new_data:
             self.db_mngr.add_parameter_values({self.db_map: new_data})
         if update_data:
@@ -873,20 +934,6 @@ class TabularViewMixin:
         """Reacts to parameter definitions updated event."""
         super().receive_parameter_definitions_updated(db_map_data)
         self.load_classes_and_parameter_definitions()
-
-    def receive_parameter_values_updated(self, db_map_data):
-        """Updates parameter values if they are included in the selected object/relationship class."""
-        super().receive_parameter_values_updated(db_map_data)
-        if len(db_map_data) > 1 or self.db_map not in db_map_data:
-            raise RuntimeError("Data Store view received parameter value update from wrong database.")
-        changed_data = db_map_data[self.db_map]
-        for changes in changed_data:
-            class_name = (
-                changes["object_class_name"] if "object_class_name" in changes else changes["relationship_class_name"]
-            )
-            if class_name == self.current_class_name:
-                self.refresh_pivot_table()
-                break
 
     def receive_object_classes_removed(self, db_map_data):
         """Reacts to object classes removed event."""

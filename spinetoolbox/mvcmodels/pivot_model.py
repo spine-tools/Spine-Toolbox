@@ -384,6 +384,11 @@ class PivotModel:
             data.append(data_row)
         return data
 
+    def get_index_tuple(self, row, column):
+        row_key = self.row(row)
+        column_key = self.column(column)
+        return self._key_getter(row_key + column_key + self.frozen_value)
+
     def set_pivoted_data(self, data, row_mask, col_mask):
         """paste list of lists into current pivot, no change of indexes,
         row_mask list of indexes where to paste data rows in current pivot

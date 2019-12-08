@@ -235,9 +235,9 @@ def add_time_series_plot(plot_widget, value, label=None):
     plot_widget.canvas.figure.autofmt_xdate()
 
 
-def tree_graph_view_parameter_value_name(index, table_view):
+def parameter_table_value_name(index, table_view):
     """
-    Returns a label for Tree or Graph view table cell.
+    Returns a label for a parameter value table view cell.
 
     Args:
         index (QModelIndex): an index to the table model
@@ -287,7 +287,7 @@ class PlottingHints:
         raise NotImplementedError()
 
 
-class GraphAndTreeViewPlottingHints(PlottingHints):
+class ParameterTablePlottingHints(PlottingHints):
     def __init__(self, table_view):
         """Support for plotting data in Graph and Tree views.
 
@@ -298,7 +298,7 @@ class GraphAndTreeViewPlottingHints(PlottingHints):
 
     def cell_label(self, model, index):
         """Returns a label build from the columns on the left from the data column."""
-        return tree_graph_view_parameter_value_name(index, self._table_view)
+        return parameter_table_value_name(index, self._table_view)
 
     def column_label(self, model, column):
         """Returns the column header."""
