@@ -125,6 +125,33 @@ class TabularViewMixin:
     def current_object_class_list(self):
         return self.relationship_classes[self.current_class_name]["object_class_name_list"].split(',')
 
+    def _new_relationship_parameter_value(self, index_tuple, value, parameters):
+        object_name_list = index_tuple[: len(self.current_object_class_list())]
+        object_name_list = ",".join(object_name_list)
+        relationship_class = self.db_mngr.get_item_by_field(
+            self.db_map, "relationship class", "name", self.current_class_name
+        )
+        relationships = self.db_mngr.get_items(self.db_map, "relationship")
+        relationship = next(
+            iter(
+                rel
+                for rel in relationships
+                if rel["class_id"] == relationship_class["id"] and rel["object_name_list"] == object_name_list
+            )
+        )
+        parameter = next(iter(p for p in parameters if p.get("relationship_class_id") == relationship_class["id"]))
+        return dict(parameter_definition_id=parameter["id"], relationship_id=relationship["id"], value=value)
+
+    def _new_object_parameter_value(self, index_tuple, value, parameters):
+        object_name = index_tuple[0]
+        object_class = self.db_mngr.get_item_by_field(self.db_map, "object class", "name", self.current_class_name)
+        objects = self.db_mngr.get_items(self.db_map, "object")
+        object_ = next(
+            iter(obj for obj in objects if obj["class_id"] == object_class["id"] and obj["name"] == object_name)
+        )
+        parameter = next(iter(p for p in parameters if p.get("object_class_id") == object_class["id"]))
+        return dict(parameter_definition_id=parameter["id"], object_id=object_["id"], value=value)
+
     def add_parameter_value(self, index_tuple, value):
         """
         Args:
@@ -136,30 +163,9 @@ class TabularViewMixin:
             self.db_map, "parameter definition", "parameter_name", parameter_name
         )
         if self.current_class_type == self._RELATIONSHIP_CLASS:
-            object_name_list = index_tuple[: len(self.current_object_class_list())]
-            object_name_list = ",".join(object_name_list)
-            relationship_class = self.db_mngr.get_item_by_field(
-                self.db_map, "relationship class", "name", self.current_class_name
-            )
-            relationships = self.db_mngr.get_items(self.db_map, "relationship")
-            relationship = next(
-                iter(
-                    rel
-                    for rel in relationships
-                    if rel["class_id"] == relationship_class["id"] and rel["object_name_list"] == object_name_list
-                )
-            )
-            parameter = next(iter(p for p in parameters if p.get("relationship_class_id") == relationship_class["id"]))
-            item = dict(parameter_definition_id=parameter["id"], relationship_id=relationship["id"], value=value)
+            item = self._new_relationship_parameter_value(index_tuple, value, parameters)
         else:
-            object_name = index_tuple[0]
-            object_class = self.db_mngr.get_item_by_field(self.db_map, "object class", "name", self.current_class_name)
-            objects = self.db_mngr.get_items(self.db_map, "object")
-            object_ = next(
-                iter(obj for obj in objects if obj["class_id"] == object_class["id"] and obj["name"] == object_name)
-            )
-            parameter = next(iter(p for p in parameters if p.get("object_class_id") == object_class["id"]))
-            item = dict(parameter_definition_id=parameter["id"], object_id=object_["id"], value=value)
+            item = self._new_object_parameter_value(index_tuple, value, parameters)
         self.db_mngr.add_parameter_values({self.db_map: [item]})
 
     def update_parameter_value(self, id_, value):
@@ -644,7 +650,7 @@ class TabularViewMixin:
                     # remove value from parameter_value field but not entire row
                     update_data.append({"id": self.parameter_values[key], self.current_input_type: None})
         if values_to_delete:
-            self.db_mngr.remove_items({self.db_map: {"parameter value list": values_to_delete}})
+            self.db_mngr.remove_items({self.db_map: {"parameter value": values_to_delete}})
         if update_data:
             self.db_mngr.update_parameter_values({self.db_map: update_data})
 

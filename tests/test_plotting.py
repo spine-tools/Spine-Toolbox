@@ -26,7 +26,7 @@ from spinetoolbox.plotting import (
     plot_pivot_column,
     plot_selection,
     PlottingError,
-    GraphAndTreeViewPlottingHints,
+    ParameterTablePlottingHints,
     PivotTablePlottingHints,
 )
 from spinetoolbox.mvcmodels.pivot_table_models import PivotTableModel
@@ -105,7 +105,7 @@ class _MockTreeGraphViewModel(QAbstractTableModel):
 def mock_graph_tree_view_plotting_support():
     mock_table_view = Mock()
     mock_table_view.isColumnHidden.return_value = False
-    return GraphAndTreeViewPlottingHints(mock_table_view)
+    return ParameterTablePlottingHints(mock_table_view)
 
 
 class TestPlotting(unittest.TestCase):
