@@ -523,7 +523,7 @@ class RecentProjectsPopupMenu(CustomPopupMenu):
 
 
 class FilterMenu(QMenu):
-    """Filter menu to use together with FilterWidget in TabularViewForm."""
+    """Filter menu to use together with FilterWidget in TabularViewMixin."""
 
     filterChanged = Signal(object, set, bool)
 
@@ -585,17 +585,19 @@ class FilterMenu(QMenu):
 
 
 class PivotTableModelMenu(QMenu):
-    def __init__(self, proxy_model, parent=None):
-        super().__init__(parent)
-        self._source = proxy_model.sourceModel()
-        self._proxy = proxy_model
-        self.relationship_tuple_key = ()
-        self.class_type = ""
 
-        # strings
-        self._DELETE_INDEX = "Delete selected objects"
-        self._DELETE_RELATIONSHIP = "Delete selected relationships"
-        self._RELATIONSHIP_CLASS = "relationship"
+    _DELETE_OBJECT = "Delete selected objects"
+    _DELETE_RELATIONSHIP = "Delete selected relationships"
+
+    def __init__(self, parent):
+        """
+        Args:
+            parent (TabularViewMixin)
+        """
+        super().__init__(parent)
+        self._table = parent.ui.pivot_table
+        self._proxy = self._table.model()
+        self._source = self._proxy.sourceModel()
 
         # actions
         self.open_value_editor_action = self.addAction('Open in editor...')
@@ -604,51 +606,58 @@ class PivotTableModelMenu(QMenu):
         self.addSeparator()
         self.restore_values_action = self.addAction('Restore selected values')
         self.delete_values_action = self.addAction('Delete selected values')
-        self.delete_index_action = self.addAction(self._DELETE_INDEX)
+        self.delete_object_action = self.addAction(self._DELETE_OBJECT)
         self.delete_relationship_action = self.addAction(self._DELETE_RELATIONSHIP)
-        # TODO
-        # self.delete_invalid_row_action = self.addAction('Delete selected invalid rows')
-        # self.delete_invalid_col_action = self.addAction('Delete selected invalid columns')
-        # self.insert_row_action = self.addAction('Insert rows')
-        # self.insert_col_action = self.addAction('Insert columns')
 
         # connect signals
         self.open_value_editor_action.triggered.connect(self.open_value_editor)
         self.plot_action.triggered.connect(self.plot)
         self.restore_values_action.triggered.connect(self.restore_values)
         self.delete_values_action.triggered.connect(self.delete_values)
-        self.delete_index_action.triggered.connect(self.delete_index_values)
-        self.delete_relationship_action.triggered.connect(self.delete_relationship_values)
+        self.delete_object_action.triggered.connect(self.delete_objects)
+        self.delete_relationship_action.triggered.connect(self.delete_relationships)
+
         # TODO
+        # self.delete_invalid_row_action = self.addAction('Delete selected invalid rows')
+        # self.delete_invalid_col_action = self.addAction('Delete selected invalid columns')
+        # self.insert_row_action = self.addAction('Insert rows')
+        # self.insert_col_action = self.addAction('Insert columns')
+        #
         # self.delete_invalid_row_action.triggered.connect(self.delete_invalid_row)
         # self.delete_invalid_col_action.triggered.connect(self.delete_invalid_col)
         # self.insert_row_action.triggered.connect(self.insert_row)
         # self.insert_col_action.triggered.connect(self.insert_col)
 
-    def _find_selected_indexes(self, indexes):
-        """Find any selected index values"""
+    def _find_selected_objects(self, indexes):
+        """Returns objects from given indexes keyed by class.
+
+        Returns:
+            dict(str,set)
+        """
         selected = {}
         for i in indexes:
             index_name = None
-            if self._source.index_in_column_headers(i):
-                value = self._source.data(i)
-                if value:
+            value = self._source.data(i)
+            if value:
+                if self._source.index_in_column_headers(i):
                     index_name = self._source.model.pivot_columns[i.row()]
-            elif self._source.index_in_row_headers(i):
-                value = self._source.data(i)
-                if value:
+                elif self._source.index_in_row_headers(i):
                     index_name = self._source.model.pivot_rows[i.column()]
-            if index_name and index_name in self._source.model._unique_name_2_name:
-                index_name = self._source.model._unique_name_2_name[index_name]
-                if index_name in selected:
-                    selected[index_name].add(value)
-                else:
-                    selected[index_name] = set([value])
+            index_name = self._source.model._unique_name_2_name.get(index_name)
+            if index_name is not None:
+                selected.setdefault(index_name, set()).add(value)
         return selected
 
     def _find_selected_relationships(self, indexes):
-        """Find any selected tuple combinations in self.relationship_tuple_key"""
-        pos = [self._source.model.index_names.index(n) for n in self.relationship_tuple_key]
+        """Returns relationships from given indexes.
+
+        Returns:
+            dict(tuple,set)
+        """
+        relationship_tuple_key = self.parent().relationship_tuple_key
+        if not relationship_tuple_key:
+            return {}
+        pos = [self._source.model.index_names.index(n) for n in relationship_tuple_key]
         getter = tuple_itemgetter(itemgetter(*pos), len(pos))
         selected = set()
         for i in indexes:
@@ -662,11 +671,11 @@ class PivotTableModelMenu(QMenu):
                 key = getter(key)
                 if all(key):
                     selected.add(key)
-        return selected
+        return {relationship_tuple_key: selected}
 
     def _get_selected_indexes(self):
         """Find selected indexes of parent, map to source if proxy is given"""
-        indexes = self.parent().selectedIndexes()
+        indexes = self._table.selectedIndexes()
         if self._proxy:
             indexes = [self._proxy.mapToSource(i) for i in indexes]
         return indexes
@@ -697,19 +706,19 @@ class PivotTableModelMenu(QMenu):
         indexes = self._get_selected_indexes()
         self._source.restore_values(indexes)
 
-    def delete_index_values(self):
-        """finds selected index items and deletes"""
+    def delete_objects(self):
+        """finds selected objects and deletes"""
         indexes = self._get_selected_indexes()
-        delete_dict = self._find_selected_indexes(indexes)
+        delete_dict = self._find_selected_objects(indexes)
         if delete_dict:
             self._source.delete_index_values(delete_dict)
 
-    def delete_relationship_values(self):
-        """finds selected relationships deletes"""
+    def delete_relationships(self):
+        """finds selected relationships and deletes"""
         indexes = self._get_selected_indexes()
-        delete_tuples = self._find_selected_relationships(indexes)
-        if delete_tuples:
-            self._source.delete_tuple_index_values({self.relationship_tuple_key: delete_tuples})
+        delete_dict = self._find_selected_relationships(indexes)
+        if delete_dict:
+            self._source.delete_tuple_index_values(delete_dict)
 
     def open_value_editor(self):
         """Opens the parameter value editor for the first selected cell."""
@@ -737,47 +746,33 @@ class PivotTableModelMenu(QMenu):
     def request_menu(self, QPos=None):
         """Shows the context menu on the screen."""
         indexes = self._get_selected_indexes()
-        self.delete_relationship_action.setText(self._DELETE_RELATIONSHIP)
-        self.delete_relationship_action.setEnabled(False)
 
-        if len(indexes) > 1:
-            # more than one index selected
-            self.open_value_editor_action.setEnabled(False)
-            self.plot_action.setEnabled(any(self._source.index_in_data(index) for index in indexes))
-            if any(self._source.index_in_column_headers(i) for i in indexes) or any(
-                self._source.index_in_row_headers(i) for i in indexes
-            ):
-                self.delete_index_action.setText(self._DELETE_INDEX)
-                self.delete_index_action.setEnabled(True)
-                if self.class_type == self._RELATIONSHIP_CLASS:
-                    self.delete_relationship_action.setText(self._DELETE_RELATIONSHIP)
-                    self.delete_relationship_action.setEnabled(True)
+        indexes_in_data = [ind for ind in indexes if self._source.index_in_data(ind)]
 
-        elif len(indexes) == 1:
-            # one selected, show names
-            selected_index = self._find_selected_indexes(indexes)
-            index_in_data = self._source.index_in_data(indexes[0])
-            self.open_value_editor_action.setEnabled(index_in_data)
-            self.plot_action.setEnabled(index_in_data)
-            if selected_index:
-                index_name = list(selected_index.keys())[0]
-                index_value = list(selected_index[index_name])[0]
-                self.delete_index_action.setText("Delete {}: {}".format(index_name, index_value))
-                self.delete_index_action.setEnabled(True)
-            else:
-                self.delete_index_action.setText(self._DELETE_INDEX)
-                self.delete_index_action.setEnabled(False)
-
-            if self.class_type == self._RELATIONSHIP_CLASS:
-                relationship = self._find_selected_relationships(indexes)
-                if relationship:
-                    relationship = list(relationship)[0]
-                    self.delete_relationship_action.setText("Delete relationship: {}".format(", ".join(relationship)))
-                    self.delete_relationship_action.setEnabled(True)
-
-        pPos = self.parent().mapToGlobal(QPoint(5, 20))
-        mPos = pPos + QPos
-        self.move(mPos)
+        self.open_value_editor_action.setEnabled(len(indexes_in_data) == 1)
+        self.plot_action.setEnabled(len(indexes_in_data) > 1)
+        self.restore_values_action.setEnabled(bool(indexes_in_data))  # TODO: check there's data to restore
+        self.delete_values_action.setEnabled(bool(indexes_in_data))
+        selected_objects = self._find_selected_objects(indexes)
+        selected_relationships = self._find_selected_relationships(indexes)
+        selected_obj_values = [v for values in selected_objects.values() for v in values]
+        selected_rel_values = [v for values in selected_relationships.values() for v in values]
+        self.delete_object_action.setEnabled(bool(selected_obj_values))
+        self.delete_relationship_action.setEnabled(bool(selected_rel_values))
+        if len(selected_obj_values) == 1:
+            class_name = list(selected_objects.keys())[0]
+            entity_name = list(selected_objects[class_name])[0]
+            self.delete_object_action.setText("Delete {}: {}".format(class_name, entity_name))
+        else:
+            self.delete_object_action.setText(self._DELETE_OBJECT)
+        if len(selected_rel_values) == 1:
+            class_name = list(selected_relationships.keys())[0]
+            entity_name = list(selected_relationships[class_name])[0]
+            self.delete_relationship_action.setText("Delete relationsip: {}".format(entity_name))
+        else:
+            self.delete_relationship_action.setText(self._DELETE_RELATIONSHIP)
+        pos = self._table.viewport().mapToGlobal(QPos)
+        self.move(pos)
         self.show()
 
 

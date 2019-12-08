@@ -64,7 +64,7 @@ class TabularViewMixin:
         self.ui.pivot_table.setContextMenuPolicy(Qt.CustomContextMenu)
         self.ui.pivot_table.verticalHeader().setDefaultSectionSize(self.default_row_height)
         self.ui.pivot_table.horizontalHeader().setResizeContentsPrecision(self.visible_rows)
-        self.pivot_table_menu = PivotTableModelMenu(self.proxy_model, self.ui.pivot_table)
+        self.pivot_table_menu = PivotTableModelMenu(self)
         self._pivot_table_horizontal_header_menu = PivotTableHorizontalHeaderMenu(self.model, self.ui.pivot_table)
 
     def add_toggle_view_actions(self):
@@ -259,8 +259,6 @@ class TabularViewMixin:
         if visible:
             self.save_model()
             self.refresh_pivot_table()
-            self.pivot_table_menu.relationship_tuple_key = self.relationship_tuple_key
-            self.pivot_table_menu.class_type = self.current_class_type
         self.ui.dockWidget_frozen_table.setVisible(self.ui.dockWidget_pivot_table.isVisible())
 
     @Slot(bool)
@@ -273,8 +271,6 @@ class TabularViewMixin:
         if self.ui.dockWidget_pivot_table.isVisible():
             self.save_model()
             self.refresh_pivot_table()
-            self.pivot_table_menu.relationship_tuple_key = self.relationship_tuple_key
-            self.pivot_table_menu.class_type = self.current_class_type
 
     def refresh_pivot_table(self):
         """Refreshes pivot table."""
