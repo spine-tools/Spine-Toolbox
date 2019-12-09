@@ -235,26 +235,6 @@ def add_time_series_plot(plot_widget, value, label=None):
     plot_widget.canvas.figure.autofmt_xdate()
 
 
-def parameter_table_value_name(index, table_view):
-    """
-    Returns a label for a parameter value table view cell.
-
-    Args:
-        index (QModelIndex): an index to the table model
-        table_view (QTableView): a table view widget corresponding to index
-
-    Returns:
-        a unique name for the parameter value as a string
-    """
-    tokens = list()
-    for column in range(index.column()):
-        if not table_view.isColumnHidden(column):
-            token = index.model().index(index.row(), column).data()
-            if token is not None:
-                tokens.append(token)
-    return ", ".join(tokens)
-
-
 class PlottingHints:
     """A base class for plotting hints.
 
@@ -288,17 +268,11 @@ class PlottingHints:
 
 
 class ParameterTablePlottingHints(PlottingHints):
-    def __init__(self, table_view):
-        """Support for plotting data in Graph and Tree views.
-
-        Args:
-            table_view (QTableView): a parameter value or definition widget
-        """
-        self._table_view = table_view
+    """Support for plotting data in Parameter table views."""
 
     def cell_label(self, model, index):
         """Returns a label build from the columns on the left from the data column."""
-        return parameter_table_value_name(index, self._table_view)
+        return model.value_name(index)
 
     def column_label(self, model, column):
         """Returns the column header."""

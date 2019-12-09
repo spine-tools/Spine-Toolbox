@@ -42,7 +42,7 @@ from ..mvcmodels.compound_parameter_models import (
 )
 from ..widgets.parameter_value_editor import ParameterValueEditor
 from ..widgets.object_name_list_editor import ObjectNameListEditor
-from ..plotting import plot_selection, PlottingError, ParameterTablePlottingHints, parameter_table_value_name
+from ..plotting import plot_selection, PlottingError, ParameterTablePlottingHints
 from ..helpers import busy_effect
 
 
@@ -174,11 +174,7 @@ class ParameterViewMixin:
             self._setup_delegate(table_view, h("parameter_tag_list"), TagListDelegate)
             self._setup_delegate(table_view, h("value_list_name"), ValueListDelegate)
             delegate = self._setup_delegate(table_view, h("default_value"), ParameterDefaultValueDelegate)
-            delegate.parameter_value_editor_requested.connect(
-                lambda index, value, table_view=table_view: self.show_parameter_value_editor(
-                    index, table_view, value=value
-                )
-            )
+            delegate.parameter_value_editor_requested.connect(self.show_parameter_value_editor)
         # Parameter values
         for table_view in (self.ui.tableView_object_parameter_value, self.ui.tableView_relationship_parameter_value):
             h = table_view.model().header.index
@@ -198,18 +194,14 @@ class ParameterViewMixin:
         table_view = self.ui.tableView_object_parameter_value
         h = table_view.model().header.index
         delegate = self._setup_delegate(table_view, h("value"), ObjectParameterValueDelegate)
-        delegate.parameter_value_editor_requested.connect(
-            lambda index, value, table_view=table_view: self.show_parameter_value_editor(index, table_view, value=value)
-        )
+        delegate.parameter_value_editor_requested.connect(self.show_parameter_value_editor)
         self._setup_delegate(table_view, h("parameter_name"), ObjectParameterNameDelegate)
         self._setup_delegate(table_view, h("object_name"), ObjectNameDelegate)
         # Relationship parameter value
         table_view = self.ui.tableView_relationship_parameter_value
         h = table_view.model().header.index
         delegate = self._setup_delegate(table_view, h("value"), RelationshipParameterValueDelegate)
-        delegate.parameter_value_editor_requested.connect(
-            lambda index, value, table_view=table_view: self.show_parameter_value_editor(index, table_view, value=value)
-        )
+        delegate.parameter_value_editor_requested.connect(self.show_parameter_value_editor)
         self._setup_delegate(table_view, h("parameter_name"), RelationshipParameterNameDelegate)
         delegate = self._setup_delegate(table_view, h("object_name_list"), ObjectNameListDelegate)
         delegate.object_name_list_editor_requested.connect(self.show_object_name_list_editor)
@@ -248,10 +240,10 @@ class ParameterViewMixin:
         editor.show()
 
     @busy_effect
-    def show_parameter_value_editor(self, index, table_view, value=None):
+    @Slot("QModelIndex", str, object)
+    def show_parameter_value_editor(self, index, value_name="", value=None):
         """Shows the parameter value editor for the given index of given table view.
         """
-        value_name = parameter_table_value_name(index, table_view)
         editor = ParameterValueEditor(index, value_name=value_name, value=value, parent_widget=self)
         editor.show()
 
@@ -401,11 +393,12 @@ class ParameterViewMixin:
             menu = ParameterContextMenu(self, global_pos, index)
         option = menu.get_action()
         if option == "Open in editor...":
-            self.show_parameter_value_editor(index, table_view)
+            value_name = model.value_name(index)
+            self.show_parameter_value_editor(index, value_name=value_name)
         elif option == "Plot":
             selection = table_view.selectedIndexes()
             try:
-                hints = ParameterTablePlottingHints(table_view)
+                hints = ParameterTablePlottingHints()
                 plot_widget = plot_selection(model, selection, hints)
             except PlottingError as error:
                 report_plotting_failure(error, self)
@@ -425,7 +418,7 @@ class ParameterViewMixin:
             plot_widget.setWindowTitle(plot_window_title)
             plot_widget.show()
         elif option == "Remove selection":
-            table_view.model().remove_selection_requested.emit()
+            model.remove_selection_requested.emit()
         elif option == "Copy":
             table_view.copy()
         elif option == "Paste":

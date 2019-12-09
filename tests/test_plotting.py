@@ -66,7 +66,7 @@ def _make_pivot_model():
     return model
 
 
-class _MockTreeGraphViewModel(QAbstractTableModel):
+class _MockParameterModel(QAbstractTableModel):
     """A mock model for testing purposes."""
 
     def __init__(self):
@@ -101,11 +101,8 @@ class _MockTreeGraphViewModel(QAbstractTableModel):
         self._table[index.row()][index.column()] = value
         return True
 
-
-def mock_graph_tree_view_plotting_support():
-    mock_table_view = Mock()
-    mock_table_view.isColumnHidden.return_value = False
-    return ParameterTablePlottingHints(mock_table_view)
+    def value_name(self, index):
+        return "entity - parameter"
 
 
 class TestPlotting(unittest.TestCase):
@@ -164,22 +161,22 @@ class TestPlotting(unittest.TestCase):
         self.assertTrue(all(lines[0].get_ydata(orig=True) == [-3.0, -1.0, 2.0]))
 
     def test_plot_tree_view_selection_of_floats(self):
-        model = _MockTreeGraphViewModel()
+        model = _MockParameterModel()
         selected_indexes = list()
         selected_indexes.append(model.index(0, 1))
         selected_indexes.append(model.index(1, 1))
-        support = mock_graph_tree_view_plotting_support()
+        support = ParameterTablePlottingHints()
         plot_widget = plot_selection(model, selected_indexes, support)
         lines = plot_widget.canvas.axes.get_lines()
         self.assertEqual(len(lines), 1)
         self.assertTrue(all(lines[0].get_ydata(orig=True) == [-2.3, -0.5]))
 
     def test_plot_tree_view_selection_of_time_series(self):
-        model = _MockTreeGraphViewModel()
+        model = _MockParameterModel()
         selected_indexes = list()
         selected_indexes.append(model.index(2, 1))
         selected_indexes.append(model.index(3, 1))
-        support = mock_graph_tree_view_plotting_support()
+        support = ParameterTablePlottingHints()
         plot_widget = plot_selection(model, selected_indexes, support)
         lines = plot_widget.canvas.axes.get_lines()
         self.assertEqual(len(lines), 2)
@@ -187,19 +184,19 @@ class TestPlotting(unittest.TestCase):
         self.assertTrue(all(lines[1].get_ydata(orig=True) == [-5.0, -3.3]))
 
     def test_plot_tree_view_selection_raises_with_mixed_data(self):
-        model = _MockTreeGraphViewModel()
+        model = _MockParameterModel()
         selected_indexes = list()
         selected_indexes.append(model.index(1, 1))
         selected_indexes.append(model.index(2, 1))
-        support = mock_graph_tree_view_plotting_support()
+        support = ParameterTablePlottingHints()
         self.assertRaises(PlottingError, plot_selection, model, selected_indexes, support)
 
     def test_plot_single_plain_number(self):
         """Test that a selection containing a single plain number gets plotted."""
-        model = _MockTreeGraphViewModel()
+        model = _MockParameterModel()
         selected_indexes = list()
         selected_indexes.append(model.index(0, 1))
-        support = mock_graph_tree_view_plotting_support()
+        support = ParameterTablePlottingHints()
         plot_widget = plot_selection(model, selected_indexes, support)
         lines = plot_widget.canvas.axes.get_lines()
         self.assertEqual(len(lines), 1)

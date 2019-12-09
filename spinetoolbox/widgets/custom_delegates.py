@@ -172,7 +172,7 @@ class CheckBoxDelegate(QItemDelegate):
 
 class PivotTableDelegate(CheckBoxDelegate):
 
-    parameter_value_editor_requested = Signal("QModelIndex", "QVariant")
+    parameter_value_editor_requested = Signal("QModelIndex", str, object)
     data_committed = Signal("QModelIndex", "QVariant")
 
     def setModelData(self, editor, model, index):
@@ -202,7 +202,8 @@ class PivotTableDelegate(CheckBoxDelegate):
             except ParameterValueFormatError:
                 value = None
             if isinstance(value, (DateTime, Duration, TimePattern, TimeSeries)) or value is None:
-                self.parameter_value_editor_requested.emit(index, value)
+                value_name = ", ".join(index.model().sourceModel().get_key(index))
+                self.parameter_value_editor_requested.emit(index, value_name, value)
                 return None
         return CustomLineEditor(parent)
 
@@ -286,7 +287,7 @@ class DatabaseNameDelegate(ParameterDelegate):
 class ParameterValueOrDefaultValueDelegate(ParameterDelegate):
     """A delegate for the either the value or the default value."""
 
-    parameter_value_editor_requested = Signal("QModelIndex", "QVariant")
+    parameter_value_editor_requested = Signal("QModelIndex", str, object)
 
     def setModelData(self, editor, model, index):
         """Emits the data_committed signal with new data."""
@@ -315,7 +316,8 @@ class ParameterValueOrDefaultValueDelegate(ParameterDelegate):
         except ParameterValueFormatError:
             value = None
         if isinstance(value, (DateTime, Duration, TimePattern, TimeSeries)):
-            self.parameter_value_editor_requested.emit(index, value)
+            value_name = index.model().value_name(index)
+            self.parameter_value_editor_requested.emit(index, value_name, value)
             return None
         if isinstance(value, (float, int)):
             editor = NumberParameterInlineEditor(parent)

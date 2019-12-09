@@ -458,6 +458,23 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
             return
         self.dataChanged.emit(self.index(0, column), self.index(self.rowCount() - 1, column), [Qt.DisplayRole])
 
+    def db_item(self, index):
+        id_ = self.item_at_row(index.row())
+        db_map = self.sub_model_at_row(index.row()).db_map
+        return self.db_mngr.get_item(db_map, self.item_type, id_)
+
+    def value_name(self, index):
+        item = self.db_item(index)
+        entity_name_key = {
+            "parameter definition": {
+                "object class": "object_class_name",
+                "relationship class": "relationship_class_name",
+            },
+            "parameter value": {"object class": "object_name", "relationship class": "object_name_list"},
+        }[self.item_type][self.entity_class_type]
+        entity_name = item[entity_name_key].replace(",", self.db_mngr._GROUP_SEP)
+        return entity_name + " - " + item["parameter_name"]
+
 
 class CompoundObjectParameterMixin:
     """Implements the interface for populating and filtering a compound object parameter model."""

@@ -364,9 +364,9 @@ class PivotModel:
             # no data
             return []
         if self.pivot_rows and any(r >= len(self._row_data_header) or r < 0 for r in row_mask):
-            raise ValueError("row_mask contains invalid indexes to current row pivot")
+            raise ValueError("row_mask contains invalid indexes for current row pivot")
         if self.pivot_columns and any(c >= len(self._column_data_header) or c < 0 for c in col_mask):
-            raise ValueError("col_mask contains invalid indexes to current row pivot")
+            raise ValueError("col_mask contains invalid indexes for current column pivot")
         data = []
         for row in row_mask:
             data_row = []
@@ -383,11 +383,6 @@ class PivotModel:
                     data_row.append(self._data.get(key, None))
             data.append(data_row)
         return data
-
-    def get_index_tuple(self, row, column):
-        row_key = self.row(row)
-        column_key = self.column(column)
-        return self._key_getter(row_key + column_key + self.frozen_value)
 
     def set_pivoted_data(self, data, row_mask, col_mask):
         """paste list of lists into current pivot, no change of indexes,

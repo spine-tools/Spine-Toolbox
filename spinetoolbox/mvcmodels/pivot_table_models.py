@@ -389,7 +389,7 @@ class PivotTableModel(QAbstractTableModel):
             data = self.model.get_pivoted_data([row], [column])
             if not data or data[0][0] is None:
                 # Add
-                index_tuple = self.model.get_index_tuple(row, column)
+                index_tuple = self.get_key(index)
                 self.parent().add_parameter_value(index_tuple, value)
             else:
                 self.parent().update_parameter_value(data[0][0], value)

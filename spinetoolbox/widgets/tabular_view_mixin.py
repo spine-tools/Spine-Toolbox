@@ -76,9 +76,7 @@ class TabularViewMixin:
         super().setup_delegates()
         delegate = PivotTableDelegate(self)
         self.ui.pivot_table.setItemDelegate(delegate)
-        delegate.parameter_value_editor_requested.connect(
-            lambda index, value: self.show_parameter_value_editor(index, self.ui.pivot_table, value=value)
-        )
+        delegate.parameter_value_editor_requested.connect(self.show_parameter_value_editor)
         delegate.data_committed.connect(self._set_model_data)
 
     @Slot("QModelIndex", object)
@@ -226,16 +224,12 @@ class TabularViewMixin:
         data = self._parameter_value_data()
         if self.current_class_type == self._RELATIONSHIP_CLASS:
             parameter_values = {(d["object_id_list"], d["parameter_id"]): d["id"] for d in data}
-            data = [
-                d["object_name_list"].split(',') + [d["parameter_name"], d["id"]]
-                for d in data
-                if d["value"] is not None
-            ]
+            data = [d["object_name_list"].split(',') + [d["parameter_name"], d["id"]] for d in data]
             index_names = self.current_object_class_list()
             index_types = [str] * len(index_names)
         else:
             parameter_values = {(d["object_id"], d["parameter_id"]): d["id"] for d in data}
-            data = [[d["object_name"], d["parameter_name"], d["id"]] for d in data if d["value"] is not None]
+            data = [[d["object_name"], d["parameter_name"], d["id"]] for d in data]
             index_names = [self.current_class_name]
             index_types = [str]
         index_names.extend([self._PARAMETER_NAME])
