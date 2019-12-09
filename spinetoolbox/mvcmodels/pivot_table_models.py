@@ -36,51 +36,13 @@ class PivotTableModel(QAbstractTableModel):
         self.db_mngr = parent.db_mngr
         self.db_map = parent.db_map
         self.model = PivotModel()
-        self._data_header = [[]]
         self._num_headers_row = 0
         self._num_headers_column = 0
         self._plot_x_column = None
 
-    def set_data(
-        self,
-        data,
-        index_names,
-        index_type,
-        rows=(),
-        columns=(),
-        frozen=(),
-        frozen_value=(),
-        index_entries=None,
-        valid_index_values=None,
-        tuple_index_entries=None,
-        used_index_values=None,
-        index_real_names=None,
-    ):
-        if index_entries is None:
-            index_entries = dict()
-        if valid_index_values is None:
-            valid_index_values = dict()
-        if tuple_index_entries is None:
-            tuple_index_entries = dict()
-        if used_index_values is None:
-            used_index_values = dict()
-        if index_real_names is None:
-            index_real_names = list()
+    def set_data(self, data, index_ids, rows=(), columns=(), frozen=(), frozen_value=()):
         self.beginResetModel()
-        self.model.set_new_data(
-            data,
-            index_names,
-            index_type,
-            rows,
-            columns,
-            frozen,
-            frozen_value,
-            index_entries,
-            valid_index_values,
-            tuple_index_entries,
-            used_index_values,
-            index_real_names,
-        )
+        self.model.set_new_data(data, index_ids, rows, columns, frozen, frozen_value)
         self._plot_x_column = None
         self._update_header_data()
         self.endResetModel()
@@ -97,42 +59,18 @@ class PivotTableModel(QAbstractTableModel):
         self._update_header_data()
         self.endResetModel()
 
-    def delete_values(self, indexes):
-        # transform to PivotModel index
-        indexes = self._indexes_to_pivot_index(indexes)
-        self.beginResetModel()
-        self.model.delete_pivoted_values(indexes)
-        self.endResetModel()
+    def set_plot_x_column(self, column, is_x):
+        """Sets or clears the Y flag on a column"""
+        if is_x:
+            self._plot_x_column = column
+        elif column == self._plot_x_column:
+            self._plot_x_column = None
+        self.headerDataChanged.emit(Qt.Horizontal, column, column)
 
-    def delete_index_values(self, keys_dict):
-        add_index = {k: len(v) for k, v in self.model._added_index_entries.items()}
-        del_index = {k: len(v) for k, v in self.model._deleted_index_entries.items()}
-
-        self.beginResetModel()
-        self.model.delete_index_values(keys_dict)
-        self.endResetModel()
-
-        new_indexes = {}
-        deleted_indexes = {}
-        for k, v in self.model._added_index_entries.items():
-            if k in add_index and not len(v) == add_index[k]:
-                new_indexes[k] = set(v)
-        for k, v in self.model._deleted_index_entries.items():
-            if k in add_index and not len(v) == del_index[k]:
-                deleted_indexes[k] = set(v)
-        if new_indexes or deleted_indexes:
-            self.index_entries_changed.emit(new_indexes, deleted_indexes)
-
-    def delete_tuple_index_values(self, tuple_key_dict):
-        self.beginResetModel()
-        self.model.delete_tuple_index_values(tuple_key_dict)
-        self.endResetModel()
-
-    def restore_values(self, indexes):
-        indexes = self._indexes_to_pivot_index(indexes)
-        self.beginResetModel()
-        self.model.restore_pivoted_values(indexes)
-        self.endResetModel()
+    @property
+    def plot_x_column(self):
+        """Returns the index of the column designated as Y values for plotting or None."""
+        return self._plot_x_column
 
     def get_key(self, index):
         row = self.model.row(max(0, index.row() - self._num_headers_row))
@@ -141,55 +79,6 @@ class PivotTableModel(QAbstractTableModel):
 
     def get_col_key(self, column):
         return self.model.column(max(0, column - self._num_headers_column))
-
-    def paste_data(self, index, data, row_mask, col_mask):
-        """paste data into pivot model"""
-        row_header_data = []
-        col_header_data = [[]]
-        skip_cols = max(0, self._num_headers_column - index.column())
-        skip_rows = max(0, self._num_headers_row - index.row())
-
-        if self.model.pivot_columns and index.row() < self._num_headers_row:
-            # extract data for column headers
-            if not self.model.pivot_rows or not index.row() == self._num_headers_row - 1:
-                col_header_data = [line[skip_cols:] for line in data[:skip_rows]]
-        if self.model.pivot_rows and index.column() < self._num_headers_column:
-            # extract data for row headers
-            row_header_data = [data[r][:skip_cols] for r in range(skip_rows, len(data))]
-
-        # extract data for pasting in values
-        value_data = [line[skip_cols:] for line in data[skip_rows:]]
-        if not value_data:
-            value_data = [[]]
-        # translate mask into pivot index
-        row_mask = [r - self._num_headers_row for r in row_mask if r >= self._num_headers_row]
-        col_mask = [c - self._num_headers_column for c in col_mask if c >= self._num_headers_column]
-        new_rows = max(len(value_data), len(row_header_data)) - len(row_mask)
-        new_cols = max(len(value_data[0]), len(col_header_data[0])) - len(col_mask)
-
-        # extend mask if new values are given
-        if new_rows > 0:
-            row_mask.extend(list(range(len(self.model.rows), len(self.model.rows) + new_rows)))
-        if new_cols > 0:
-            col_mask.extend(list(range(len(self.model.columns), len(self.model.columns) + new_cols)))
-
-        add_index = {k: len(v) for k, v in self.model._added_index_entries.items()}
-        del_index = {k: len(v) for k, v in self.model._deleted_index_entries.items()}
-        self.beginResetModel()
-        self.model.paste_data(
-            index.column(), row_header_data, index.row(), col_header_data, value_data, row_mask, col_mask
-        )
-        self.endResetModel()
-        new_indexes = {}
-        deleted_indexes = {}
-        for k, v in self.model._added_index_entries.items():
-            if k in add_index and not len(v) == add_index[k]:
-                new_indexes[k] = set(v)
-        for k, v in self.model._deleted_index_entries.items():
-            if k in add_index and not len(v) == del_index[k]:
-                deleted_indexes[k] = set(v)
-        if new_indexes or deleted_indexes:
-            self.index_entries_changed.emit(new_indexes, deleted_indexes)
 
     def _indexes_to_pivot_index(self, indexes):
         max_row = len(self.model.rows)
@@ -210,13 +99,6 @@ class PivotTableModel(QAbstractTableModel):
         """updates the top left corner 'header' data"""
         self._num_headers_row = len(self.model.pivot_columns) + min(1, len(self.model.pivot_rows))
         self._num_headers_column = max(len(self.model.pivot_rows), 1)
-        if self.model.pivot_columns:
-            headers = [[None for _ in range(self._num_headers_column - 1)] + [c] for c in self.model.pivot_columns]
-            if self.model.pivot_rows:
-                headers.append(self.model.pivot_rows)
-        else:
-            headers = [self.model.pivot_rows]
-        self._data_header = headers
 
     def first_data_row(self):
         """Returns the row index to the first data row."""
@@ -243,19 +125,10 @@ class PivotTableModel(QAbstractTableModel):
         """Roles for data"""
         if self.index_in_top_left(index):
             return ~Qt.ItemIsEnabled
-        if (
-            self.model.pivot_rows
-            and self.model.pivot_columns
-            and index.row() == self._num_headers_row - 1
-            and index.column() >= self._num_headers_column
-        ):
+        if self.model.pivot_rows and index.row() == len(self.model.pivot_columns):
             # empty line between column headers and data
             return Qt.ItemIsSelectable | Qt.ItemIsEnabled
         return Qt.ItemIsEditable | Qt.ItemIsEnabled | Qt.ItemIsSelectable
-
-    def index_in_top_left(self, index):
-        """check if index is in top left corner, where pivot names are displayed"""
-        return index.row() < self._num_headers_row and index.column() < self._num_headers_column
 
     def top_left_indexes(self):
         """Returns indexes in the top left area.
@@ -277,8 +150,41 @@ class PivotTableModel(QAbstractTableModel):
             left_indexes.append(index)
         return top_indexes, left_indexes
 
+    def index_in_top(self, index):
+        return index.row() == len(self.model.pivot_columns) and index.column() < len(self.model.pivot_rows)
+
+    def index_in_left(self, index):
+        last_top_column = max(0, len(self.model.pivot_rows) - 1)
+        return index.column() == last_top_column and index.row() < len(self.model.pivot_columns)
+
+    def index_in_top_left(self, index):
+        """Returns whether or not the given index is in top left corner, where pivot names are displayed"""
+        return self.index_in_top(index) or self.index_in_left(index)
+
+    def index_in_column_headers(self, index):
+        """Returns whether or not the given index is in column headers (horizontal) area"""
+        return (
+            index.row() < len(self.model.pivot_columns)
+            and len(self.model.pivot_rows) <= index.column() < self.columnCount() - 1
+        )
+
+    def index_in_row_headers(self, index):
+        """Returns whether or not the given index is in row headers (vertical) area"""
+        return (
+            index.column() < len(self.model.pivot_rows)
+            and len(self.model.pivot_columns) < index.row() < self.rowCount() - 1
+        )
+
+    def index_in_empty_column_headers(self, index):
+        """Returns whether or not the given index is in empty column headers (vertical) area"""
+        return index.row() < len(self.model.pivot_columns) and index.column() == self.columnCount() - 1
+
+    def index_in_empty_row_headers(self, index):
+        """Returns whether or not the given index is in empty row headers (vertical) area"""
+        return index.column() < len(self.model.pivot_rows) and index.row() == self.rowCount() - 1
+
     def index_in_data(self, index):
-        """check if index is in data area"""
+        """Returns whether or not the given index is in data area"""
         if (
             self.dataRowCount() == 0
             and self.model.pivot_rows
@@ -294,143 +200,35 @@ class PivotTableModel(QAbstractTableModel):
             and index.column() < self._num_headers_column + max(1, self.dataColumnCount())
         )
 
-    def index_in_column_headers(self, index):
-        """check if index is in column headers (horizontal) area"""
-        return (
-            index.row() < self._num_headers_row
-            and index.column() >= self._num_headers_column
-            and index.column() < self.columnCount() - 1
-        )
+    def headerData(self, section, orientation, role=Qt.DisplayRole):
+        if role == Qt.DisplayRole and orientation == Qt.Horizontal:
+            if section == self._plot_x_column:
+                return "(X)"
+            return None
+        if role == Qt.DisplayRole and orientation == Qt.Vertical:
+            return self._V_HEADER_WIDTH * " "
+        return None
 
-    def index_in_row_headers(self, index):
-        """check if index is in row headers (vertical) area"""
-        return (
-            self.model.pivot_rows
-            and index.column() < self._num_headers_column
-            and index.row() >= self._num_headers_row
-            and index.row() < self.rowCount() - 1
-        )
-
-    def set_plot_x_column(self, column, is_x):
-        """Sets or clears the Y flag on a column"""
-        if is_x:
-            self._plot_x_column = column
-        elif column == self._plot_x_column:
-            self._plot_x_column = None
-        self.headerDataChanged.emit(Qt.Horizontal, column, column)
-
-    @property
-    def plot_x_column(self):
-        """Returns the index of the column designated as Y values for plotting or None."""
-        return self._plot_x_column
-
-    def set_index_key(self, index, value, direction):
-        """edits/sets a index value in a index in row/column"""
-        # TODO: change this to insertRow/Column instead when creating new rows
-        self.beginResetModel()
-        if not value or value.isspace():
-            # empty do nothing
-            return False
-        if direction == "column":
-            header_ind = index.row()
-            index_ind = index.column() - self._num_headers_column
-            index_name = self.model.pivot_columns[header_ind]
-            if len(self.model.columns) <= index_ind:
-                # edited index outside, add new column
-                old_key = [None for _ in range(len(self.model.pivot_columns))]
-            else:
-                old_key = self.model.column(index_ind)
-        elif direction == "row":
-            header_ind = index.column()
-            index_ind = index.row() - self._num_headers_row
-            index_name = self.model.pivot_rows[header_ind]
-            if len(self.model.rows) <= index_ind:
-                # edited index outside, add new column
-                old_key = [None for _ in range(len(self.model.pivot_rows))]
-            else:
-                old_key = self.model.row(index_ind)
-        else:
-            raise ValueError('parameter direction must be "row" or "column"')
-        # check if value should be int
-        if index_name in self.model._index_type and self.model._index_type[index_name] == int and value.isdigit():
-            value = int(value)
-        # update value
-        new_key = list(old_key)
-        new_key[header_ind] = value
-        new_key = tuple(new_key)
-        # change index values
-        add_index = {k: len(v) for k, v in self.model._added_index_entries.items()}
-        del_index = {k: len(v) for k, v in self.model._deleted_index_entries.items()}
-        self.model.edit_index([new_key], [index_ind], direction)
-        self.endResetModel()
-        self.dataChanged.emit(index, index)
-        # self.update_index_entries(new_key_entries)
-        # check if any index has been updated
-        new_indexes = {}
-        deleted_indexes = {}
-        for k, v in self.model._added_index_entries.items():
-            if k in add_index and not len(v) == add_index[k]:
-                new_indexes[k] = set(v)
-        for k, v in self.model._deleted_index_entries.items():
-            if k in add_index and not len(v) == del_index[k]:
-                deleted_indexes[k] = set(v)
-        if new_indexes or deleted_indexes:
-            self.index_entries_changed.emit(new_indexes, deleted_indexes)
-
-        return True
-
-    def setData(self, index, value, role=Qt.EditRole):
-        if role != Qt.EditRole:
-            return False
-        if self.index_in_data(index):
-            # edit existing data
-            row = index.row() - self._num_headers_row
-            column = index.column() - self._num_headers_column
-            data = self.model.get_pivoted_data([row], [column])
-            if not data or data[0][0] is None:
-                # Add
-                index_tuple = self.get_key(index)
-                self.parent().add_parameter_value(index_tuple, value)
-            else:
-                self.parent().update_parameter_value(data[0][0], value)
-            self.dataChanged.emit(index, index)
-            return True
-        if (
-            index.row() < self._num_headers_row - min(1, self.dataRowCount())
-            and index.column() >= self._num_headers_column
-            and index.column() < self.columnCount() - 1
-        ):  # TODO: try to use `if self.index_in_column_headers(index):`
-            # edit column key
-            return self.set_index_key(index, value, "column")
-        if self.index_in_row_headers(index):
-            # edit row key
-            return self.set_index_key(index, value, "row")
-        if index.row() == self.rowCount() - 1 and index.column() < self._num_headers_column:
-            # add new row if there are any indexes on the row
-            if self.model.pivot_rows:
-                return self.set_index_key(index, value, "row")
-        elif index.column() == self.columnCount() - 1 and index.row() < self._num_headers_row:
-            # add new column if there are any columns on the pivot
-            if self.model.pivot_columns:
-                return self.set_index_key(index, value, "column")
+    def _header_data(self, header_key, header_id):
+        if header_key == -1:
+            return self.db_mngr.get_item(self.db_map, "parameter definition", header_id)["parameter_name"]
+        return self.db_mngr.get_item(self.db_map, "object", header_id)["name"]
 
     def data(self, index, role=Qt.DisplayRole):
         if role in (Qt.DisplayRole, Qt.EditRole, Qt.ToolTipRole):
-            if index.row() < self._num_headers_row and index.column() < self._num_headers_column:
-                # draw header values
-                return self._data_header[index.row()][index.column()]
+            if self.index_in_top(index):
+                return self.model.pivot_rows[index.column()]
+            if self.index_in_left(index):
+                return self.model.pivot_columns[index.row()]
             if self.index_in_row_headers(index):
-                # draw index values
-                return self.model._row_data_header[index.row() - self._num_headers_row][index.column()]
+                header_id = self.model._row_data_header[index.row() - len(self.model.pivot_columns) - 1][index.column()]
+                header_key = self.model.pivot_rows[index.column()]
+                return self._header_data(header_key, header_id)
             if self.index_in_column_headers(index):
-                # draw column header values
-                if not self.model.pivot_rows:
-                    # special case where there is no pivot_index, no empty line padding
-                    return self.model._column_data_header[index.column() - self._num_headers_column][index.row()]
-                if index.row() < self._num_headers_row - 1:
-                    return self.model._column_data_header[index.column() - self._num_headers_column][index.row()]
+                header_id = self.model._column_data_header[index.column() - len(self.model.pivot_rows) - 1][index.row()]
+                header_key = self.model.pivot_columns[index.row()]
+                return self._header_data(header_key, header_id)
             if self.index_in_data(index):
-                # get values
                 data = self.model.get_pivoted_data(
                     [index.row() - self._num_headers_row], [index.column() - self._num_headers_column]
                 )
@@ -450,16 +248,68 @@ class PivotTableModel(QAbstractTableModel):
             return Qt.AlignHCenter
         return None
 
-    def headerData(self, section, orientation, role=Qt.DisplayRole):
-        if role == Qt.DisplayRole and orientation == Qt.Horizontal:
-            if section == self._plot_x_column:
-                return "(X)"
-            return None
-        if role == Qt.DisplayRole and orientation == Qt.Vertical:
-            return self._V_HEADER_WIDTH * " "
-        return None
+    def _set_header_data(self, header, header_id, value):
+        item = dict(id=header_id, name=value)
+        if header == 0:
+            self.db_mngr.update_parameter_definitions({self.db_map: [item]})
+        else:
+            self.db_mngr.update_objects({self.db_map: [item]})
+
+    def setData(self, index, value, role=Qt.EditRole):
+        if role != Qt.EditRole:
+            return False
+        if self.index_in_data(index):
+            # edit existing data
+            row = index.row() - self._num_headers_row
+            column = index.column() - self._num_headers_column
+            data = self.model.get_pivoted_data([row], [column])
+            if not data or data[0][0] is None:
+                # Add
+                index_tuple = self.get_key(index)
+                self.parent().add_parameter_value(index_tuple, value)
+            else:
+                self.parent().update_parameter_value(data[0][0], value)
+            self.dataChanged.emit(index, index)
+            return True
+        if self.index_in_row_headers(index):
+            header_id = self.model._row_data_header[index.row() - len(self.model.pivot_columns) - 1][index.column()]
+            header = self.model.pivot_rows[index.column()]
+            self._set_header_data(header, header_id, value)
+            return True
+        if self.index_in_column_headers(index):
+            header_id = self.model._column_data_header[index.column() - len(self.model.pivot_rows) - 1][index.row()]
+            header = self.model.pivot_columns[index.row()]
+            self._set_header_data(header, header_id, value)
+            return True
+        if self.index_in_empty_row_headers(index):
+            header = self.model.pivot_rows[index.column()]
+            print(header)
+            return True
+        if self.index_in_empty_column_headers(index):
+            print("hey")
+            return True
+        return False
+        if (
+            index.row() < self._num_headers_row - min(1, self.dataRowCount())
+            and index.column() >= self._num_headers_column
+            and index.column() < self.columnCount() - 1
+        ):  # TODO: try to use `if self.index_in_column_headers(index):`
+            # edit column key
+            return self.set_index_key(index, value, "column")
+        if self.index_in_row_headers(index):
+            # edit row key
+            return self.set_index_key(index, value, "row")
+        if index.row() == self.rowCount() - 1 and index.column() < self._num_headers_column:
+            # add new row if there are any indexes on the row
+            if self.model.pivot_rows:
+                return self.set_index_key(index, value, "row")
+        elif index.column() == self.columnCount() - 1 and index.row() < self._num_headers_row:
+            # add new column if there are any columns on the pivot
+            if self.model.pivot_columns:
+                return self.set_index_key(index, value, "column")
 
     def data_color(self, index):
+        return None
         if self.index_in_data(index):
             # color edited values
             r = index.row() - self._num_headers_row

@@ -529,8 +529,7 @@ class FilterMenu(QMenu):
 
     def __init__(self, parent=None, show_empty=True):
         super().__init__(parent)
-        self.object_class_name = None
-        self.unique_name = None
+        self.identifier = None
         self._remove_filter = QAction('Remove filters', None)
         self._filter = FilterWidget(show_empty=show_empty)
         self._filter_action = QWidgetAction(parent)

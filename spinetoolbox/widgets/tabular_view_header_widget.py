@@ -29,17 +29,18 @@ class TabularViewHeaderWidget(QFrame):
     _H_MARGIN = 3
     _SPACING = 16
 
-    def __init__(self, name, area, menu=None, parent=None):
+    def __init__(self, identifier, name, area, menu=None, parent=None):
         """
 
         Args:
+            identifier (int)
             name (str)
             area (str): either "rows", "columns", or "frozen"
             menu (FilterMenu, optional)
             parent (QWidget, optional): Parent widget
         """
         super().__init__(parent=parent)
-        self._name = name
+        self._identifier = identifier
         self._area = area
         layout = QHBoxLayout(self)
         button = QToolButton(self)
@@ -80,8 +81,8 @@ class TabularViewHeaderWidget(QFrame):
         )
 
     @property
-    def name(self):
-        return self._name
+    def identifier(self):
+        return self._identifier
 
     @property
     def area(self):
@@ -103,7 +104,6 @@ class TabularViewHeaderWidget(QFrame):
             return
         drag = QDrag(self)
         mime_data = QMimeData()
-        mime_data.setText(self._name)
         drag.setMimeData(mime_data)
         pixmap = self.grab()
         drag.setPixmap(pixmap)
