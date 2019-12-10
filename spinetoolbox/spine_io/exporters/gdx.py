@@ -24,24 +24,18 @@ to_gdx_file() that does basically everything needed for exporting is provided fo
 :date:   30.8.2019
 """
 
-from copy import copy
 import os
 import os.path
 import sys
 from gdx2py import GAMSSet, GAMSScalar, GAMSParameter, GdxFile
-from spinedb_api import from_database, IndexedValue, ParameterValueFormatError
+from spinedb_api import from_database, IndexedValue
 
 if sys.platform == 'win32':
     import winreg
 
 
 class GdxExportException(Exception):
-    """
-    An exception raised when something goes wrong within the gdx module.
-
-    Attributes:
-        message (str): a message detailing the cause of the exception
-    """
+    """An exception raised when something goes wrong within the gdx module."""
 
     def __init__(self, message):
         super().__init__()
@@ -49,15 +43,12 @@ class GdxExportException(Exception):
 
     @property
     def message(self):
+        """A message detailing the cause of the exception."""
         return self._message
 
     def __str__(self):
+        """Returns the message detailing the cause of the exception."""
         return self._message
-
-
-class UnexpandedIndexedParameterException(GdxExportException):
-    def __init__(self, message):
-        super().__init__(message)
 
 
 class Set:
@@ -187,14 +178,24 @@ class Parameter:
             raise GdxExportException("Not all values are of the same type.")
         self.values = values
 
-    def __bool__(self):
-        return bool(self.values)
-
     def append_value(self, index, value):
+        """
+        Appends a new value.
+
+        Args:
+            index (tuple): record keys indexing the value
+            value: a value
+        """
         self.indexes.append(index)
         self.values.append(value)
 
     def append_object_parameter(self, object_parameter):
+        """
+        Appends a value from object parameter.
+
+        Args:
+            object_parameter (namedtuple): an object parameter row from the database
+        """
         index = object_parameter.object_name,
         value = from_database(object_parameter.value)
         if isinstance(value, int):
@@ -202,6 +203,12 @@ class Parameter:
         self.append_value(index, value)
 
     def append_relationship_parameter(self, relationship_parameter):
+        """
+        Appends a value from relationship parameter.
+
+        Args:
+            relationship_parameter (namedtuple): a relationship parameter row from the database
+        """
         index = tuple(name.strip() for name in relationship_parameter.object_name_list.split(","))
         value = from_database(relationship_parameter.value)
         if isinstance(value, int):
@@ -209,17 +216,34 @@ class Parameter:
         self.append_value(index, value)
 
     def slurp(self, parameter):
+        """
+        Appends the indexes and values from another parameter.
+
+        Args:
+            parameter (Parameter): a parameter to append from
+        """
         self.indexes += parameter.indexes
         self.values += parameter.values
 
     def is_scalar(self):
+        """Returns True if this parameter contains only scalars."""
         return bool(self.values) and isinstance(self.values[0], float)
 
     def is_indexed(self):
-        """Returns True if this parameter is not a plain number."""
+        """Returns True if this parameter contains only indexed values."""
         return bool(self.values) and isinstance(self.values[0], IndexedValue)
 
     def expand_indexes(self, indexing_setting):
+        """
+        Expands indexed values to scalars in place by adding a new dimension (index).
+
+        The indexes and values attributes are resized to accommodate all scalars in the indexed values.
+        A new indexing domain is inserted to domain_names and the corresponding keys into indexes.
+        Effectively, this increases parameter's dimensions by one.
+
+        Args:
+            indexing_setting (IndexingSetting): description of how the expansion should be done
+        """
         index_position = indexing_setting.index_position
         indexing_domain = indexing_setting.indexing_domain
         self.domain_names.insert(index_position, indexing_domain.name)
@@ -227,7 +251,7 @@ class Parameter:
         new_indexes = list()
         for parameter_index, parameter_value in zip(self.indexes, self.values):
             for new_index in indexing_domain.indexes:
-                expanded_index = tuple(parameter_index[:index_position] + (new_index,) + parameter_index[index_position:])
+                expanded_index = tuple(parameter_index[:index_position] + new_index + parameter_index[index_position:])
                 new_indexes.append(expanded_index)
             new_values += list(parameter_value.values)
         self.indexes = new_indexes
@@ -265,12 +289,27 @@ class Parameter:
 
 
 class IndexingDomain:
+    """
+    This class holds the indexes that should be used for indexed parameter value expansion.
+
+    Attributes:
+        name (str): indexing domain's name
+        indexes (list): a list of indexing key tuples
+    """
+
     def __init__(self, base_domain, pick_list):
+        """
+        Picks the keys from base_domain for which the corresponding element in pick_list holds True.
+
+        Args:
+            base_domain (Set): a domain set that holds the indexes
+            pick_list (list): a list of booleans
+        """
         self.name = base_domain.name
         self.indexes = list()
         for record, pick in zip(base_domain.records, pick_list):
             if pick:
-                self.indexes.append(record.keys[0])
+                self.indexes.append(record.keys)
 
 
 def _python_interpreter_bitness():
@@ -335,7 +374,6 @@ def extract_index_domain(parameter_value, domain_name, description):
     """
     Extracts the indexes of an indexed parameter into a Set.
 
-
     Args:
         parameter_value (IndexedValue): an indexed parameter
         domain_name(str): domain's name
@@ -359,6 +397,7 @@ def sets_to_gams(gdx_file, sets, omitted_set=None):
     Args:
         gdx_file (GdxFile): a target file
         sets (list): a list of Set objects
+        omitted_set (Set): prevents writing this set even if it is included in given sets
     """
     for current_set in sets:
         if omitted_set is not None and current_set.name == omitted_set.name:
@@ -537,16 +576,37 @@ def set_names_and_records(db_map):
 
 
 class IndexingSetting:
+    """
+    Settings for indexed value expansion for a single Parameter.
+
+    Attributes:
+        parameter (Parameter): a parameter containing indexed values
+        indexing_domain (IndexingDomain): indexing info
+        index_position (int): where to insert the new index when expanding a parameter
+    """
     def __init__(self, indexed_parameter):
+        """
+        Args:
+            indexed_parameter (Parameter): a parameter containing indexed values
+        """
         self.parameter = indexed_parameter
         self.indexing_domain = None
         self.index_position = len(indexed_parameter.domain_names)
 
     def append_parameter(self, parameter):
+        """Adds indexes and values from another parameter."""
         self.parameter.slurp(parameter)
 
 
 def make_indexing_settings(db_map):
+    """
+    Constructs skeleton indexing settings for parameter indexed value expansion.
+
+    Args:
+        db_map (spinedb_api.DatabaseMapping): a database mapping
+    Returns:
+        dict: a mapping from parameter name to IndexingSetting
+    """
     settings = dict()
     object_parameter_value_query = db_map.object_parameter_value_list()
     for object_parameter in object_parameter_value_query.all():
@@ -571,20 +631,6 @@ def make_indexing_settings(db_map):
     return settings
 
 
-def extract_new_indexing_domains(indexing_settings, existing_domains):
-    new_domains = list()
-    for setting in indexing_settings:
-        indexing_domain = setting.indexing_domain
-        if indexing_domain is not None:
-            domain_exists = False
-            for domain in existing_domains:
-                if indexing_domain.name == domain.name:
-                    domain_exists = True
-                    break
-            if not domain_exists:
-                new_domains.append(indexing_domain)
-
-
 def filter_and_sort_sets(sets, sorted_set_names, filter_flags):
     """
     Returns a list of sets sorted by `sorted_set_names` and their filter flag set to True
@@ -600,7 +646,7 @@ def filter_and_sort_sets(sets, sorted_set_names, filter_flags):
             if True the corresponding set will be included in the output
 
     Returns:
-        a list of sets
+        list: a list of sets
     """
     sets = list(sets)
     sorted_exportable_sets = list()
@@ -787,18 +833,22 @@ class Settings:
         self._global_parameters_domain_name = name
 
     def add_domain(self, domain):
+        """Adds a new domain and domain's records."""
         self._domain_names.append(domain.name)
         self._records[domain.name] = [record.keys for record in domain.records]
         self._domain_exportable_flags.append(True)
 
     def domain_index(self, domain):
+        """Returns an integral index to the domain's name in sorted domain names."""
         return self._domain_names.index(domain.name)
 
     def del_domain_at(self, index):
+        """Erases domain name at given integal index."""
         del self._domain_names[index]
         del self._domain_exportable_flags[index]
 
     def update_domain(self, domain):
+        """Updates domain's records."""
         self._records[domain.name] = [record.keys for record in domain.records]
 
     def sorted_record_key_lists(self, name):

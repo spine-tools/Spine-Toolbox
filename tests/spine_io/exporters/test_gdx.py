@@ -42,6 +42,11 @@ class TestGdx(unittest.TestCase):
         if not QApplication.instance():
             QApplication()
 
+    def test_GdxExportException(self):
+        exception = gdx.GdxExportException("message")
+        self.assertEqual(exception.message, "message")
+        self.assertEqual(str(exception), "message")
+
     def test_Set_construction(self):
         regular_set = gdx.Set("name", "description", ["domain1", "domain2"])
         self.assertEqual(regular_set.description, "description")
@@ -61,6 +66,7 @@ class TestGdx(unittest.TestCase):
         self.assertEqual(domain.dimensions, 1)
         self.assertEqual(domain.name, "domain")
         self.assertEqual(domain.records, [])
+        self.assertTrue(domain.is_domain())
 
     def test_Set_from_relationship_class(self):
         with TemporaryDirectory() as tmp_dir_name:
@@ -75,6 +81,7 @@ class TestGdx(unittest.TestCase):
         self.assertEqual(regular_set.dimensions, 2)
         self.assertEqual(regular_set.name, "set")
         self.assertEqual(regular_set.records, [])
+        self.assertFalse(regular_set.is_domain())
 
     def test_Record_construction(self):
         record = gdx.Record(("key1", "key2"))
@@ -162,6 +169,26 @@ class TestGdx(unittest.TestCase):
         self.assertEqual(parameter.indexes, [("record1",), ("record2",)])
         self.assertEqual(parameter.values, [3.14, 6.28])
 
+    def test_Parameter_slurp(self):
+        parameter = gdx.Parameter(["domain"], [("label1",)], [4.2])
+        slurpable = gdx.Parameter(["domain"], [("label2",)], [3.3])
+        parameter.slurp(slurpable)
+        self.assertEqual(parameter.domain_names, ["domain"])
+        self.assertEqual(parameter.indexes, [("label1",), ("label2",)])
+        self.assertEqual(parameter.values, [4.2, 3.3])
+
+    def test_parameter_is_scalar(self):
+        parameter = gdx.Parameter(["domain"], [("label",)], [2.0])
+        self.assertTrue(parameter.is_scalar())
+        parameter.values = [TimeSeriesFixedResolution("2019-12-05T01:01:00", "1h", [4.2, 5.3], False, False)]
+        self.assertFalse(parameter.is_scalar())
+
+    def test_parameter_is_indexed(self):
+        parameter = gdx.Parameter(["domain"], [("label",)], [2.0])
+        self.assertFalse(parameter.is_indexed())
+        parameter.values = [TimeSeriesFixedResolution("2019-12-05T01:01:00", "1h", [4.2, 5.3], False, False)]
+        self.assertTrue(parameter.is_indexed())
+
     def test_Parameter_expand_indexes(self):
         time_series1 = TimeSeriesFixedResolution("2019-12-05T01:01:00", "1h", [4.2, 5.3], False, False)
         time_series2 = TimeSeriesFixedResolution("2020-12-05T01:01:00", "1h", [-4.2, -5.3], False, False)
@@ -185,6 +212,12 @@ class TestGdx(unittest.TestCase):
             ],
         )
         self.assertEqual(parameter.values, [4.2, 5.3, -4.2, -5.3])
+
+    def test_IndexingDomain_construction(self):
+        domain = gdx.Set("domain name")
+        domain.records = [gdx.Record(("key1",)), gdx.Record(("key2",)), gdx.Record(("key3",))]
+        indexing_domain = gdx.IndexingDomain(domain, [True, False, True])
+        self.assertEqual(indexing_domain.indexes, [("key1",), ("key3",)])
 
     def test_Settings_construction(self):
         domain_names, set_names, records, settings = self._make_settings()
@@ -266,28 +299,43 @@ class TestGdx(unittest.TestCase):
         self.assertEqual(set_parameters["parameter"].indexes, [("record",)])
         self.assertEqual(set_parameters["parameter"].values, [3.14])
 
-    @unittest.skipIf(gdx.find_gams_directory() is None, "No working GAMS installation found.")
+    def test_domain_names_and_records(self):
+        with TemporaryDirectory() as tmp_dir_name:
+            database_map = self._make_database_map(tmp_dir_name, "test_domain_names_and_records.sqlite")
+            dbmanip.import_object_classes(database_map, ["domain"])
+            dbmanip.import_objects(database_map, [("domain", "recordA"), ("domain", "recordB")])
+            domain_names, domain_records = gdx.domain_names_and_records(database_map)
+            database_map.connection.close()
+        self.assertEqual(domain_names, ["domain"])
+        self.assertEqual(domain_records, {"domain": [("recordA", ), ("recordB",)]})
+
+    def test_set_names_and_records(self):
+        with TemporaryDirectory() as tmp_dir_name:
+            database_map = self._make_database_map(tmp_dir_name, "test_set_names_and_records.sqlite")
+            dbmanip.import_object_classes(database_map, ["domain"])
+            dbmanip.import_objects(database_map, [("domain", "record")])
+            dbmanip.import_relationship_classes(database_map, [("set", ["domain"])])
+            dbmanip.import_relationships(database_map, [("set", ["record"])])
+            set_names, set_records = gdx.set_names_and_records(database_map)
+            database_map.connection.close()
+        self.assertEqual(set_names, ["set"])
+        self.assertEqual(set_records, {"set": [("record",)]})
+
+    @unittest.skipIf(gdx_utils.find_gams_directory() is None, "No working GAMS installation found.")
     def test_sets_to_gams_with_domain_sets(self):
         domain = gdx.Set("mock_object_class_name")
         record = gdx.Record(("mock_object_name",))
-        parameters = {"scalar": gdx.Parameter(domain.domain_names, [record.keys], [2.3])}
         domain.records.append(record)
-        gams_directory = gdx.find_gams_directory()
+        gams_directory = gdx_utils.find_gams_directory()
         with TemporaryDirectory() as temp_directory:
             path_to_gdx = Path(temp_directory).joinpath("test_domains_to_gams.gdx")
             with GdxFile(path_to_gdx, 'w', gams_directory) as gdx_file:
                 gdx.sets_to_gams(gdx_file, [domain])
-                gdx.parameters_to_gams(gdx_file, parameters)
             with GdxFile(path_to_gdx, 'r', gams_directory) as gdx_file:
-                self.assertEqual(len(gdx_file), 2)
+                self.assertEqual(len(gdx_file), 1)
                 gams_set = gdx_file["mock_object_class_name"]
                 self.assertEqual(len(gams_set.elements), 1)
                 self.assertEqual(gams_set.elements[0], "mock_object_name")
-                gams_parameter = gdx_file["scalar"]
-                self.assertEqual(len(gams_parameter.keys()), 1)
-                for key, value in gams_parameter:  # pylint: disable=not-an-iterable
-                    self.assertEqual(key, "mock_object_name")
-                    self.assertEqual(value, 2.3)
 
     @unittest.skipIf(gdx_utils.find_gams_directory() is None, "No working GAMS installation found.")
     def test_sets_to_gams(self):
@@ -297,43 +345,84 @@ class TestGdx(unittest.TestCase):
         set_item = gdx.Set("mock_relationship_class_name", domain_names=["mock_object_class_name"])
         record = gdx.Record(("mock_object_name",))
         set_item.records.append(record)
-        parameters = {"scalar": gdx.Parameter(set_item.domain_names, [record.keys], [2.3])}
         gams_directory = gdx_utils.find_gams_directory()
         with TemporaryDirectory() as temp_directory:
             path_to_gdx = Path(temp_directory).joinpath("test_sets_to_gams.gdx")
             with GdxFile(path_to_gdx, 'w', gams_directory) as gdx_file:
                 gdx.sets_to_gams(gdx_file, [domain])
                 gdx.sets_to_gams(gdx_file, [set_item])
-                gdx.parameters_to_gams(gdx_file, parameters)
             with GdxFile(path_to_gdx, 'r', gams_directory) as gdx_file:
-                self.assertEqual(len(gdx_file), 3)
+                self.assertEqual(len(gdx_file), 2)
                 gams_set = gdx_file["mock_object_class_name"]
                 self.assertEqual(len(gams_set.elements), 1)
                 self.assertEqual(gams_set.elements[0], "mock_object_name")
                 gams_set = gdx_file["mock_relationship_class_name"]
                 self.assertEqual(len(gams_set.elements), 1)
                 self.assertEqual(gams_set.elements[0], "mock_object_name")
+
+    @unittest.skipIf(gdx_utils.find_gams_directory() is None, "No working GAMS installation found.")
+    def test_sets_to_gams_omits_a_set(self):
+        domain = gdx.Set("domain_for_gdx")
+        domain.records.append(gdx.Record(("key",)))
+        omitted = gdx.Set("omitted_domain")
+        omitted.records.append(gdx.Record(("omitted_key",)))
+        gams_directory = gdx_utils.find_gams_directory()
+        with TemporaryDirectory() as temp_directory:
+            path_to_gdx = Path(temp_directory).joinpath("test_sets_to_gams_omits_a_set.gdx")
+            with GdxFile(path_to_gdx, 'w', gams_directory) as gdx_file:
+                gdx.sets_to_gams(gdx_file, [domain, omitted], omitted)
+            with GdxFile(path_to_gdx, 'r', gams_directory) as gdx_file:
+                self.assertEqual(len(gdx_file), 1)
+                gams_set = gdx_file["domain_for_gdx"]
+                self.assertEqual(len(gams_set.elements), 1)
+                self.assertEqual(gams_set.elements[0], "key")
+
+    @unittest.skipIf(gdx_utils.find_gams_directory() is None, "No working GAMS installation found.")
+    def test_parameters_to_gams(self):
+        parameters = {"scalar": gdx.Parameter(["domain"], [("key",)], [2.3])}
+        gams_directory = gdx_utils.find_gams_directory()
+        with TemporaryDirectory() as temp_directory:
+            path_to_gdx = Path(temp_directory).joinpath("test_parameters_to_gams.gdx")
+            with GdxFile(path_to_gdx, 'w', gams_directory) as gdx_file:
+                gdx.parameters_to_gams(gdx_file, parameters)
+            with GdxFile(path_to_gdx, 'r', gams_directory) as gdx_file:
+                self.assertEqual(len(gdx_file), 1)
                 gams_parameter = gdx_file["scalar"]
                 self.assertEqual(len(gams_parameter.keys()), 1)
                 for key, value in gams_parameter:  # pylint: disable=not-an-iterable
-                    self.assertEqual(key, "mock_object_name")
+                    self.assertEqual(key, "key")
                     self.assertEqual(value, 2.3)
 
     @unittest.skipIf(gdx_utils.find_gams_directory() is None, "No working GAMS installation found.")
-    def test_domain_parameters_to_gams(self):
+    def test_domain_parameters_to_gams_scalars(self):
         domain = gdx.Set("object_class_name")
         record = gdx.Record(("mock_object_name",))
         domain.records.append(record)
         parameters = {"mock_parameter_name": gdx.Parameter(["object_class_name"], [["mock_object_name"]], [2.3])}
         gams_directory = gdx_utils.find_gams_directory()
         with TemporaryDirectory() as temp_directory:
-            path_to_gdx = Path(temp_directory).joinpath("test_domain_parameters_to_gams.gdx")
+            path_to_gdx = Path(temp_directory).joinpath("test_domain_parameters_to_gams_scalars.gdx")
             with GdxFile(path_to_gdx, 'w', gams_directory) as gdx_file:
                 gdx.domain_parameters_to_gams_scalars(gdx_file, parameters, "object_class_name")
             with GdxFile(path_to_gdx, 'r', gams_directory) as gdx_file:
                 self.assertEqual(len(gdx_file), 1)
                 gams_scalar = gdx_file["mock_parameter_name"]
                 self.assertEqual(float(gams_scalar), 2.3)
+
+    def test_IndexingSetting_construction(self):
+        time_series = TimeSeriesFixedResolution("2019-12-05T01:01:00", "1h", [4.2, 5.3], False, False)
+        setting = gdx.IndexingSetting(gdx.Parameter(["domain"], [("keyA",)], [time_series]))
+        self.assertIsNone(setting.indexing_domain)
+        self.assertEqual(setting.index_position, 1)
+
+    def test_IndexingSetting_append_parameter(self):
+        time_series1 = TimeSeriesFixedResolution("2019-12-05T01:01:00", "1h", [4.2, 5.3], False, False)
+        setting = gdx.IndexingSetting(gdx.Parameter(["domain"], [("keyA",)], [time_series1]))
+        time_series2 = TimeSeriesFixedResolution("2019-12-05T01:01:00", "1h", [-4.2, -5.3], False, False)
+        setting.append_parameter(gdx.Parameter(["domain"], [("keyB",)], [time_series2]))
+        self.assertEqual(setting.parameter.domain_names, ["domain"])
+        self.assertEqual(setting.parameter.indexes, [("keyA",), ("keyB",)])
+        self.assertEqual(setting.parameter.values, [time_series1, time_series2])
 
     def test_filter_and_sort_sets(self):
         set_object = self._NamedObject

@@ -173,7 +173,7 @@ class Exporter(ProjectItem):
         self._database_urls = [r.url for r in resources if r.type_ == "database"]
         gams_system_directory = self._resolve_gams_system_directory()
         if gams_system_directory is None:
-            self._toolbox.msg_error.emit("<b>{}</b>: Cannot proceed. No GAMS installation found.")
+            self._toolbox.msg_error.emit("<b>{}</b>: Cannot proceed. No GAMS installation found.".format(self.name))
             return False
         for url in self._database_urls:
             file_name = self._database_to_file_name_map.get(url, None)
@@ -187,13 +187,7 @@ class Exporter(ProjectItem):
             out_path = os.path.join(self.data_dir, file_name)
             indexing_settings = self._parameter_indexing_settings.get(url, dict())
             additional_domains = self._additional_parameter_indexing_domains.get(url, dict())
-            try:
-                gdx.to_gdx_file(database_map, out_path, additional_domains, settings, indexing_settings, gams_system_directory)
-            except gdx.UnexpandedIndexedParameterException:
-                self._toolbox.msg_error.emit(
-                    "<b>{}</b>: Cannot proceed. Specify parameter indexing in Gdx Export Settings.".format(self.name)
-                )
-                return False
+            gdx.to_gdx_file(database_map, out_path, additional_domains, settings, indexing_settings, gams_system_directory)
             database_map.connection.close()
             self._toolbox.msg_success.emit("File <b>{0}</b> written".format(out_path))
         return True
