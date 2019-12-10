@@ -196,7 +196,7 @@ class Parameter:
         Args:
             object_parameter (namedtuple): an object parameter row from the database
         """
-        index = object_parameter.object_name,
+        index = (object_parameter.object_name,)
         value = from_database(object_parameter.value)
         if isinstance(value, int):
             value = float(value)
@@ -266,7 +266,7 @@ class Parameter:
             object_parameter (namedtuple): a parameter row from the database
         """
         domain_names = [object_parameter.object_class_name]
-        index = object_parameter.object_name,
+        index = (object_parameter.object_name,)
         value = from_database(object_parameter.value)
         if isinstance(value, int):
             value = float(value)
@@ -584,6 +584,7 @@ class IndexingSetting:
         indexing_domain (IndexingDomain): indexing info
         index_position (int): where to insert the new index when expanding a parameter
     """
+
     def __init__(self, indexed_parameter):
         """
         Args:
@@ -614,7 +615,7 @@ def make_indexing_settings(db_map):
         if not parameter.is_indexed():
             continue
         setting = settings.get(object_parameter.parameter_name, None)
-        if setting is not None :
+        if setting is not None:
             setting.append_parameter(parameter)
         else:
             settings[object_parameter.parameter_name] = IndexingSetting(parameter)
@@ -624,7 +625,7 @@ def make_indexing_settings(db_map):
         if not parameter.is_indexed():
             continue
         setting = settings.get(relationship_parameter.parameter_name, None)
-        if setting is not None :
+        if setting is not None:
             setting.append_parameter(parameter)
         else:
             settings[relationship_parameter.parameter_name] = IndexingSetting(parameter)
@@ -734,7 +735,9 @@ def to_gdx_file(database_map, file_name, additional_domains, settings, indexing_
         sets_to_gams(output_file, sets)
         deletable_parameter_names = list()
         if global_parameters_domain is not None:
-            deletable_parameter_names = domain_parameters_to_gams_scalars(output_file, domain_parameters, global_parameters_domain.name)
+            deletable_parameter_names = domain_parameters_to_gams_scalars(
+                output_file, domain_parameters, global_parameters_domain.name
+            )
         for name in deletable_parameter_names:
             del parameters[name]
         parameters_to_gams(output_file, parameters)

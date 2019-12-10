@@ -17,7 +17,7 @@ Parameter indexing settings window for .gdx export.
 """
 
 import enum
-from PySide2.QtCore import QAbstractTableModel, QItemSelection, QItemSelectionModel, QModelIndex, Qt, Signal, Slot
+from PySide2.QtCore import QAbstractTableModel, QItemSelection, QItemSelectionModel, QModelIndex, Qt, Slot
 from PySide2.QtWidgets import QWidget
 from spinetoolbox.spine_io.exporters import gdx
 
@@ -84,7 +84,7 @@ class ParameterIndexSettings(QWidget):
         if self._ui.use_existing_domain_radio_button.isChecked():
             domain_name = self._ui.existing_domains_combo.currentText()
             base_domain = gdx.Set(domain_name)
-            base_domain.records = [gdx.Record((keys,)) for keys in (self._available_domains[domain_name])]
+            base_domain.records = [gdx.Record((keys,)) for keys in self._available_domains[domain_name]]
         else:
             indexes = self._indexing_table_model.indexes
             domain_name = self._ui.domain_name_edit.text()
@@ -167,7 +167,7 @@ class ParameterIndexSettings(QWidget):
         if mapped_values_count < 0:
             self.state = IndexSettingsState.DOMAIN_MISSING_INDEXES
             return True
-        elif self._ui.create_domain_radio_button.isChecked() and not self._ui.domain_name_edit.text():
+        if self._ui.create_domain_radio_button.isChecked() and not self._ui.domain_name_edit.text():
             self.state = IndexSettingsState.DOMAIN_NAME_MISSING
             return True
         return False
@@ -247,7 +247,7 @@ class ParameterIndexSettings(QWidget):
         selected_domain_name = self._ui.existing_domains_combo.currentText()
         try:
             for index in range(len(self._available_domains[selected_domain_name])):
-                if eval(expression, {}, {"i": index + 1}):
+                if eval(expression, {}, {"i": index + 1}):  # pylint: disable=eval-used
                     selected_top_left = get_index(index, 0)
                     selected_bottom_right = get_index(index, 1)
                     selection.select(selected_top_left, selected_bottom_right)
@@ -266,7 +266,7 @@ class ParameterIndexSettings(QWidget):
         indexes = list()
         try:
             for index in range(len(self._parameter)):
-                indexes.append(str(eval(expression, {}, {"i": index + 1})))
+                indexes.append(str(eval(expression, {}, {"i": index + 1})))  # pylint: disable=eval-used
         except (AttributeError, NameError, SyntaxError):
             return
         self._indexing_table_model.set_indexes(indexes)
