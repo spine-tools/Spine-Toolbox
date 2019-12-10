@@ -23,6 +23,8 @@ from spinetoolbox.spine_io.exporters import gdx
 
 
 class IndexSettingsState(enum.Enum):
+    """An enumeration indicating the state of the settings window."""
+
     OK = enum.auto()
     DOMAIN_MISSING_INDEXES = enum.auto()
     DOMAIN_NAME_MISSING = enum.auto()
@@ -30,7 +32,16 @@ class IndexSettingsState(enum.Enum):
 
 
 class ParameterIndexSettings(QWidget):
+    """A widget showing setting for a parameter with indexed values."""
+
     def __init__(self, parameter_name, indexing_setting, available_existing_domains, parent):
+        """
+        Args:
+            parameter_name (str): parameter's name
+            indexing_setting (IndexingSetting): indexing settings for the parameter
+            available_existing_domains (dict): a dict from existing domain name to a list of its record keys
+            parent (QWidget): a parent widget
+        """
         from ..ui.parameter_index_settings import Ui_Form
 
         super().__init__(parent)
@@ -61,14 +72,17 @@ class ParameterIndexSettings(QWidget):
 
     @property
     def new_domain_name(self):
+        """name of the new domain"""
         return str(self._ui.domain_name_edit.text())
 
     @property
     def state(self):
+        """widget's state"""
         return self._state
 
     @state.setter
     def state(self, new_state):
+        """Sets the state of the widget and possibly shows an error indicator."""
         self._state = new_state
         if self._state == IndexSettingsState.DOMAIN_MISSING_INDEXES:
             self.error_message("Not enough selected indexes to index all values.")
@@ -80,6 +94,12 @@ class ParameterIndexSettings(QWidget):
             self.notification_message("Parameter successfully indexed.")
 
     def indexing_domain(self):
+        """
+        Provides information needed to expand the parameter's indexed values.
+
+        Returns:
+            tuple: a tuple of IndexingDomain and a Set if a new domain is needed for indexing, otherwise None
+        """
         new_domain = None
         if self._ui.use_existing_domain_radio_button.isChecked():
             domain_name = self._ui.existing_domains_combo.currentText()
@@ -97,6 +117,7 @@ class ParameterIndexSettings(QWidget):
         return indexing_domain, new_domain
 
     def serialize(self):
+        """Writes the widget's state to a dict."""
         serialized = dict()
         use_existing_domain = self._ui.use_existing_domain_radio_button.isChecked()
         serialized["use_existing_domain"] = use_existing_domain
@@ -116,8 +137,11 @@ class ParameterIndexSettings(QWidget):
             else:
                 serialized["indexes"] = self._indexing_table_model.indexes
             serialized["pick_indexes"] = self._indexing_table_model.index_selection
+        return serialized
 
     def deserialize(self, serialized):
+        """Reads widget's state from a dict."""
+
         def select_pick_indexes(pick_indexes):
             select = QItemSelection()
             for row, selected in enumerate(pick_indexes):
@@ -145,17 +169,21 @@ class ParameterIndexSettings(QWidget):
             select_pick_indexes(serialized["pick_indexes"])
 
     def notification_message(self, message):
+        """Shows a notification message on the widget."""
         self._ui.message_label.setText(message)
 
     def warning_message(self, message):
+        """Shows a warning message on the widget."""
         yellow_message = "<span style='color:#b89e00;white-space: pre-wrap;'>" + message + "</span>"
         self._ui.message_label.setText(yellow_message)
 
     def error_message(self, message):
+        """Shows an error message on the widget."""
         red_message = "<span style='color:#ff3333;white-space: pre-wrap;'>" + message + "</span>"
         self._ui.message_label.setText(red_message)
 
     def _check_state(self):
+        """Updated the widget's state."""
         mapped_values_count = self._indexing_table_model.mapped_values_count()
         if self._check_errors(mapped_values_count):
             return
@@ -164,6 +192,7 @@ class ParameterIndexSettings(QWidget):
         self.state = IndexSettingsState.OK
 
     def _check_errors(self, mapped_values_count):
+        """Checks if the parameter is correctly indexed."""
         if mapped_values_count < 0:
             self.state = IndexSettingsState.DOMAIN_MISSING_INDEXES
             return True
@@ -173,6 +202,7 @@ class ParameterIndexSettings(QWidget):
         return False
 
     def _check_warnings(self, mapped_values_count):
+        """Checks if there are non-fatal issues with parameter indexing."""
         if mapped_values_count > 0:
             self._state = IndexSettingsState.OK
             self.warning_message("Too many indexes selected. The excess indexes will not be used.")
@@ -180,6 +210,7 @@ class ParameterIndexSettings(QWidget):
         return False
 
     def _update_indexing_domains_label(self):
+        """Moves the domain names around in the label showing the indexing domains."""
         parameter = self._indexing_setting.parameter
         index_position = self._indexing_setting.index_position
         if self._ui.use_existing_domain_radio_button.isChecked():
@@ -196,6 +227,7 @@ class ParameterIndexSettings(QWidget):
 
     @Slot(str)
     def _domain_name_changed(self, text):
+        """Reacts to changes in indexing domain name."""
         if text and self._state in (IndexSettingsState.DOMAIN_NAME_MISSING, IndexSettingsState.DOMAIN_NAME_CLASH):
             self._check_state()
         elif not text and self._state == IndexSettingsState.OK:
@@ -204,6 +236,7 @@ class ParameterIndexSettings(QWidget):
 
     @Slot(bool)
     def _set_enabled_use_existing_domain_widgets(self, enabled):
+        """Enables and disables controls used to set up indexing based on an existing domain."""
         self._ui.existing_domains_combo.setEnabled(enabled)
         self._ui.pick_expression_edit.setEnabled(enabled)
         self._ui.pick_expression_label.setEnabled(enabled)
@@ -214,6 +247,7 @@ class ParameterIndexSettings(QWidget):
 
     @Slot(bool)
     def _set_enabled_create_domain_widgets(self, enabled):
+        """Enables and disables controls used to set up indexing based on a new domain."""
         self._ui.domain_name_label.setEnabled(enabled)
         self._ui.domain_name_edit.setEnabled(enabled)
         self._ui.domain_description_label.setEnabled(enabled)
@@ -231,6 +265,7 @@ class ParameterIndexSettings(QWidget):
 
     @Slot(int)
     def _existing_domain_changed(self, index):
+        """Reacts to changes in existing domains combo box."""
         selected_domain_name = self._ui.existing_domains_combo.itemText(index)
         self._indexing_table_model.set_indexes(self._available_domains[selected_domain_name])
         self._ui.index_table_view.selectAll()
@@ -238,6 +273,7 @@ class ParameterIndexSettings(QWidget):
 
     @Slot("QString")
     def _update_index_list_selection(self, expression, clear_selection_if_expression_empty=True):
+        """Updates selection according to changed selection expression."""
         if not expression:
             if clear_selection_if_expression_empty:
                 self._ui.index_table_view.clearSelection()
@@ -258,11 +294,13 @@ class ParameterIndexSettings(QWidget):
 
     @Slot("QItemSelection", "QItemSelection")
     def _update_model_to_selection(self, selected, deselected):
+        """Updates the model after table selection has changed."""
         self._indexing_table_model.selection_changed(selected, deselected)
         self._check_state()
 
     @Slot(str)
     def _generate_index(self, expression):
+        """Builds indexes according to given expression."""
         indexes = list()
         try:
             for index in range(len(self._parameter)):
@@ -275,25 +313,41 @@ class ParameterIndexSettings(QWidget):
 
     @Slot(bool)
     def _extract_index_from_parameter(self, _=True):
+        """Assigns indexes from the parameter to the model."""
         indexes = [str(index) for index in self._indexing_setting.parameter.values[0].indexes]
         self._indexing_table_model.set_indexes(indexes)
         self._ui.index_table_view.selectAll()
 
     @Slot(bool)
     def _move_indexing_domain_left(self, _):
+        """Moves the indexing domain name left on the indexing label."""
         if self._indexing_setting.index_position > 0:
             self._indexing_setting.index_position -= 1
             self._update_indexing_domains_label()
 
     @Slot(bool)
     def _move_indexing_domain_right(self, _):
+        """Moves the indexing domain name right on the indexing label."""
         if self._indexing_setting.index_position < len(self._indexing_setting.parameter.domain_names):
             self._indexing_setting.index_position += 1
             self._update_indexing_domains_label()
 
 
 class _IndexingTableModel(QAbstractTableModel):
+    """
+    A table model for parameter value indexing.
+
+    First column contains the proposed new index keys.
+    The rest of the columns contain the parameter values for each set of existing index keys.
+    Only selected new index keys are used for indexing.
+    Unselected rows are left empty.
+    """
+
     def __init__(self, parameter):
+        """
+        Args:
+            parameter (Parameter): a parameter to model
+        """
         super().__init__()
         self._indexes = list()
         self._parameter_values = list()
@@ -306,13 +360,16 @@ class _IndexingTableModel(QAbstractTableModel):
 
     @property
     def indexes(self):
+        """a string list of all new indexing keys"""
         return self._indexes
 
     @property
     def index_selection(self):
+        """a boolean list of selected index keys, so called pick list"""
         return self._selected
 
     def clear(self):
+        """Clears the model."""
         self.beginResetModel()
         self._indexes = list()
         self._selected = list()
@@ -320,9 +377,11 @@ class _IndexingTableModel(QAbstractTableModel):
         self.endResetModel()
 
     def columnCount(self, parent=QModelIndex()):
+        """Returns the number of columns."""
         return len(self._parameter_values) + 1
 
     def data(self, index, role=Qt.DisplayRole):
+        """Returns data associated with given model index and role."""
         if role not in (Qt.DisplayRole, Qt.ToolTipRole) or not index.isValid():
             return None
         row = index.row()
@@ -333,6 +392,7 @@ class _IndexingTableModel(QAbstractTableModel):
         return str(value) if value is not None else None
 
     def headerData(self, section, orientation, role=Qt.DisplayRole):
+        """Returns header data."""
         if role != Qt.DisplayRole:
             return None
         if orientation == Qt.Vertical:
@@ -342,6 +402,7 @@ class _IndexingTableModel(QAbstractTableModel):
         return ", ".join(self._parameter_nonexpanded_indexes[section - 1])
 
     def mapped_values_count(self):
+        """Returns the number of fully indexed paramter values."""
         count = 0
         for selected in self._selected:
             if selected:
@@ -349,9 +410,11 @@ class _IndexingTableModel(QAbstractTableModel):
         return count - len(self._parameter_values[0].values) if self._parameter_values else 0
 
     def rowCount(self, parent=QModelIndex()):
+        """Return the number of rows."""
         return len(self._indexes)
 
     def selection_changed(self, selected, deselected):
+        """Updates selected and deselected rows on the table."""
         selected_indexes = selected.indexes()
         deselected_indexes = deselected.indexes()
         min_changed_row = len(self._indexes)
@@ -379,6 +442,7 @@ class _IndexingTableModel(QAbstractTableModel):
         self.dataChanged.emit(top_left, bottom_right, [Qt.DisplayRole])
 
     def set_indexes(self, indexes):
+        """Overwrites all new indexes."""
         self.beginResetModel()
         self._indexes = indexes
         self._selected = len(indexes) * [False]

@@ -160,7 +160,7 @@ class Exporter(ProjectItem):
         for url in self._database_urls:
             if url in urls_already_in_items:
                 continue
-            file_name = self._database_to_file_name_map.get(url, '')
+            file_name = self._database_to_file_name_map.get(url, "")
             item = ExportListItem(url, file_name)
             database_list_storage.insertWidget(0, item)
             # pylint: disable=cell-var-from-loop
@@ -187,7 +187,9 @@ class Exporter(ProjectItem):
             out_path = os.path.join(self.data_dir, file_name)
             indexing_settings = self._parameter_indexing_settings.get(url, dict())
             additional_domains = self._additional_parameter_indexing_domains.get(url, dict())
-            gdx.to_gdx_file(database_map, out_path, additional_domains, settings, indexing_settings, gams_system_directory)
+            gdx.to_gdx_file(
+                database_map, out_path, additional_domains, settings, indexing_settings, gams_system_directory
+            )
             database_map.connection.close()
             self._toolbox.msg_success.emit("File <b>{0}</b> written".format(out_path))
         return True
@@ -233,8 +235,7 @@ class Exporter(ProjectItem):
         settings_window = self._settings_windows.setdefault(
             database_url, GdxExportSettings(settings, indexing_settings, database_url, self._toolbox)
         )
-        settings_window.button_box.accepted.connect(lambda: self._update_settings_from_settings_window(database_url))
-        settings_window.window_closing.connect(lambda: self._discard_settings_window(database_url))
+        settings_window.settings_accepted.connect(self._update_settings_from_settings_window)
         settings_window.show()
 
     @Slot(str, str)
@@ -247,6 +248,15 @@ class Exporter(ProjectItem):
         self._database_to_file_name_map[database_path] = file_name
         self.item_changed.emit()
 
+    @Slot(str)
+    def _update_settings_from_settings_window(self, database_path):
+        """Updates the export settings for given database from the settings window."""
+        settings_window = self._settings_windows[database_path]
+        self._settings[database_path] = settings_window.settings
+        self._parameter_indexing_settings[database_path] = settings_window.indexing_settings
+        self._additional_parameter_indexing_domains[database_path] = settings_window.new_domains
+        settings_window.hide()
+
     def item_dict(self):
         """Returns a dictionary corresponding to this item's configuration."""
         d = super().item_dict()
@@ -254,19 +264,6 @@ class Exporter(ProjectItem):
         settings_file_names = self._save_settings()
         d["settings_file_names"] = settings_file_names
         return d
-
-    def _update_settings_from_settings_window(self, database_path):
-        """Updates the export settings for given database from the settings window."""
-        settings_window = self._settings_windows[database_path]
-        self._settings[database_path] = settings_window.settings
-        self._parameter_indexing_settings[database_path] = settings_window.indexing_settings
-        self._additional_parameter_indexing_domains[database_path] = settings_window.new_domains
-
-        settings_window.close()
-
-    def _discard_settings_window(self, database_path):
-        """Discards the settings window for given database."""
-        del self._settings_windows[database_path]
 
     def _save_settings(self):
         """Saves all export settings to .json files in the item's data directory."""

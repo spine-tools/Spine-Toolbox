@@ -23,14 +23,10 @@ from .parameter_index_settings_window import ParameterIndexSettingsWindow
 
 
 class GdxExportSettings(QWidget):
-    """
-    A setting window for exporting .gdx files.
+    """A setting window for exporting .gdx files."""
 
-    Attributes:
-        window_closing (Signal): fired when the settings window is closing
-    """
-
-    window_closing = Signal()
+    settings_accepted = Signal(str)
+    """Fired when the OK button has been clicked."""
 
     def __init__(self, settings, indexing_settings, database_path, parent):
         """
@@ -48,7 +44,8 @@ class GdxExportSettings(QWidget):
         self.setWindowTitle("Gdx Export settings    -- {} --".format(database_path))
         self.setAttribute(Qt.WA_DeleteOnClose, True)
         self._database_path = database_path
-        self._ui.button_box.rejected.connect(self.close)
+        self._ui.button_box.accepted.connect(self._accepted)
+        self._ui.button_box.rejected.connect(self._rejected)
         self._ui.set_move_up_button.clicked.connect(self._move_sets_up)
         self._ui.set_move_down_button.clicked.connect(self._move_sets_down)
         self._ui.set_as_global_parameters_object_class_button.clicked.connect(
@@ -79,16 +76,18 @@ class GdxExportSettings(QWidget):
 
     @property
     def indexing_settings(self):
+        """indexing settings dict"""
         return self._indexing_settings
 
     @property
     def new_domains(self):
+        """list of additional domain needed for indexing"""
         return self._new_domains_for_indexing
 
-    @property
-    def button_box(self):
-        """window's dialog button box containing the OK and Cancel buttons"""
-        return self._ui.button_box
+    @Slot()
+    def _accepted(self):
+        """Emits the settings_accepted signal."""
+        self.settings_accepted.emit(self._database_path)
 
     @Slot(bool)
     def _move_sets_up(self, checked=False):
@@ -109,6 +108,11 @@ class GdxExportSettings(QWidget):
     def _move_records_down(self, checked=False):
         """Moves selected records down on position."""
         _move_selected_elements_by(self._ui.record_list_view, 1)
+
+    @Slot()
+    def _rejected(self):
+        """Hides the window."""
+        self.hide()
 
     @Slot("QModelIndex", "QModelIndex")
     def _update_as_global_button_enabled_state(self, current, previous):
@@ -150,6 +154,7 @@ class GdxExportSettings(QWidget):
 
     @Slot(bool)
     def _show_indexed_parameter_settings(self, _):
+        """Shows the indexed parameter settings window."""
         if self._indexed_parameter_settings_window is None:
             available_domains = dict()
             for domain_name, exportable in zip(
@@ -169,6 +174,7 @@ class GdxExportSettings(QWidget):
 
     @Slot()
     def _parameter_settings_approved(self):
+        """Gathers settings from the indexed parameters settings window."""
         self._indexing_settings = self._indexed_parameter_settings_window.indexing_settings
         new_domains = self._indexed_parameter_settings_window.new_domains
         for old_domain in self._new_domains_for_indexing:
@@ -190,10 +196,6 @@ class GdxExportSettings(QWidget):
             if not domain_found:
                 self._ui.set_list_view.model().add_domain(new_domain)
         self._new_domains_for_indexing = list(new_domains)
-
-    def closeEvent(self, event):
-        self.window_closing.emit()
-        super().closeEvent(event)
 
 
 def _move_selected_elements_by(list_view, delta):
@@ -263,6 +265,7 @@ class GAMSSetListModel(QAbstractListModel):
         self._settings = settings
 
     def add_domain(self, domain):
+        """Adds a new domain."""
         first = len(self._settings.sorted_domain_names)
         last = first
         self.beginInsertRows(QModelIndex(), first, last)
@@ -270,12 +273,14 @@ class GAMSSetListModel(QAbstractListModel):
         self.endInsertRows()
 
     def drop_domain(self, domain):
+        """Removes a domain."""
         index = self._settings.domain_index(domain)
         self.beginRemoveRows(QModelIndex(), index, index)
         self._settings.del_domain_at(index)
         self.endRemoveRows()
 
     def update_domain(self, domain):
+        """Updates an existing domain."""
         index = self._settings.domain_index(domain)
         self._settings.update_domain(domain)
         cell = self.index(index, 0)

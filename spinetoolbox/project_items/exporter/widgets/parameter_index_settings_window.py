@@ -22,10 +22,19 @@ from .parameter_index_settings import IndexSettingsState, ParameterIndexSettings
 
 
 class ParameterIndexSettingsWindow(QWidget):
+    """A window which shows a list of ParameterIndexSettings widgets, one for each parameter with indexed values."""
 
     settings_approved = Signal()
+    """Fired when the settings have been approved."""
 
     def __init__(self, indexing_settings, available_existing_domains, database_path, parent):
+        """
+        Args:
+            indexing_settings (dict): a map from parameter name to IndexingSettings
+            available_existing_domains (dict): a map from existing domain names to lists of record keys
+            database_path (str): a database url
+            parent (QWidget): a parent widget
+        """
         from ..ui.parameter_index_settings_window import Ui_Form
 
         super().__init__(parent, f=Qt.Window)
@@ -45,24 +54,24 @@ class ParameterIndexSettingsWindow(QWidget):
         self._settings_widgets = dict()
         for parameter_name, indexing_setting in indexing_settings.items():
             settings_widget = ParameterIndexSettings(
-                parameter_name,
-                indexing_setting,
-                self._available_existing_domains,
-                self._ui.settings_area_contents,
+                parameter_name, indexing_setting, self._available_existing_domains, self._ui.settings_area_contents
             )
             self._ui.settings_area_layout.insertWidget(0, settings_widget)
             self._settings_widgets[parameter_name] = settings_widget
 
     @property
     def indexing_settings(self):
+        """indexing settings dictionary"""
         return self._indexing_settings
 
     @property
     def new_domains(self):
+        """list of additional domains needed for indexing"""
         return self._new_domains
 
     @Slot()
     def _collect_and_close(self):
+        """Collects settings from individual ParameterIndexSettings widgets and hides the window."""
         for parameter_name, settings_widget in self._settings_widgets.items():
             if settings_widget.state != IndexSettingsState.OK:
                 message = "Parameter '{}' indexing not well-defined.".format(parameter_name)
