@@ -196,7 +196,7 @@ class PivotTableDelegate(CheckBoxDelegate):
     def createEditor(self, parent, option, index):
         if self._is_set_index(index):
             return super().createEditor(parent, option, index)
-        if self.parent().model.index_in_data(index):
+        if self.parent().pivot_table_model.index_in_data(index):
             try:
                 value = from_database(index.data(role=Qt.EditRole))
             except ParameterValueFormatError:

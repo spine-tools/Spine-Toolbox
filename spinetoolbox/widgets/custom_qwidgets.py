@@ -41,8 +41,13 @@ class FilterWidget(QWidget):
     okPressed = Signal()
     cancelPressed = Signal()
 
-    def __init__(self, parent=None, show_empty=True):
-        """Init class."""
+    def __init__(self, parent, item_type, show_empty=True):
+        """Init class.
+
+        Args:
+            parent (TabularViewMixin)
+            item_type (str): either "object" or "parameter definition"
+        """
         super().__init__(parent)
         # parameters
         self._filter_state = set()
@@ -65,7 +70,7 @@ class FilterWidget(QWidget):
         self._search_timer = QTimer()  # Used to limit search so it doesn't search when typing
         self._search_timer.setSingleShot(True)
 
-        self._filter_model = FilterCheckboxListModel(show_empty=show_empty)
+        self._filter_model = FilterCheckboxListModel(parent, item_type, show_empty=show_empty)
         self._filter_model.set_list(self._filter_state)
         self._ui_list.setModel(self._filter_model)
 

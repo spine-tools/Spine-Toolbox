@@ -21,9 +21,17 @@ from PySide2.QtCore import Qt, QModelIndex, QAbstractListModel
 
 
 class FilterCheckboxListModel(QAbstractListModel):
-    def __init__(self, parent=None, show_empty=True):
-        """Initialize class."""
+    def __init__(self, parent, item_type, show_empty=True):
+        """Init class.
+
+        Args:
+            parent (TabularViewMixin)
+            item_type (str): either "object" or "parameter definition"
+        """
         super().__init__(parent)
+        self.db_mngr = parent.db_mngr
+        self.db_map = parent.db_map
+        self.item_type = item_type
         self._data = []
         self._data_set = set()
         self._all_selected = True
@@ -100,7 +108,8 @@ class FilterCheckboxListModel(QAbstractListModel):
             selected = self._selected
         if role == Qt.DisplayRole:
             if row >= len(action_rows):
-                return self._data[i]
+                name_key = {"object": "name", "parameter definition": "parameter_name"}[self.item_type]
+                return self.db_mngr.get_item(self.db_map, self.item_type, self._data[i])[name_key]
             return action_rows[row]
         if role == Qt.CheckStateRole:
             if row < len(action_state):

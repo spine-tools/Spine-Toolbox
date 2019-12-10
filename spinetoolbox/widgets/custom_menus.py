@@ -24,7 +24,6 @@ from PySide2.QtCore import Signal, Slot, QPoint, QEvent
 from ..helpers import fix_name_ambiguity, tuple_itemgetter
 from ..plotting import plot_pivot_column, plot_selection, PlottingError, PivotTablePlottingHints
 from .custom_qwidgets import FilterWidget
-from .parameter_value_editor import ParameterValueEditor
 from .report_plotting_failure import report_plotting_failure
 
 
@@ -527,11 +526,17 @@ class FilterMenu(QMenu):
 
     filterChanged = Signal(object, set, bool)
 
-    def __init__(self, parent=None, show_empty=True):
+    def __init__(self, parent, identifier, item_type, show_empty=True):
+        """
+        Args:
+            parent (TabularViewMixin)
+            identifier (int): index identifier
+            item_type (str): either "object" or "parameter definition"
+        """
         super().__init__(parent)
-        self.identifier = None
+        self.identifier = identifier
         self._remove_filter = QAction('Remove filters', None)
-        self._filter = FilterWidget(show_empty=show_empty)
+        self._filter = FilterWidget(parent, item_type, show_empty=show_empty)
         self._filter_action = QWidgetAction(parent)
         self._filter_action.setDefaultWidget(self._filter)
         self.addAction(self._remove_filter)
@@ -570,7 +575,7 @@ class FilterMenu(QMenu):
         valid_values = set(self._filter._filter_state)
         if self._filter._filter_empty_state:
             valid_values.add(None)
-        self.filterChanged.emit(self, valid_values, self._filter.has_filter())
+        self.filterChanged.emit(self.identifier, valid_values, self._filter.has_filter())
         self.hide()
 
     def event(self, event):

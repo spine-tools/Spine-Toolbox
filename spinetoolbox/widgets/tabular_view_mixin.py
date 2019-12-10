@@ -68,6 +68,17 @@ class TabularViewMixin:
             self.pivot_table_model, self.ui.pivot_table
         )
 
+    @Slot(dict, dict)
+    def table_index_entries_changed(self, added_entries, deleted_entries):
+        """
+        Updates the filter menus whenever objects are added or removed.
+        """
+        for menu in self.filter_menus.values():
+            if menu.object_class_name in deleted_entries:
+                menu.remove_items_from_filter_list(deleted_entries[menu.object_class_name])
+            if menu.object_class_name in added_entries:
+                menu.add_items_to_filter_list(added_entries[menu.object_class_name])
+
     def is_value_input_type(self):
         return self.current_input_type == self._INPUT_VALUE
 
@@ -101,7 +112,7 @@ class TabularViewMixin:
         self.ui.pivot_table.horizontalHeader().customContextMenuRequested.connect(
             self._pivot_table_horizontal_header_menu.request_menu
         )
-        self.pivot_table_model.index_entries_changed.connect(self.table_index_entries_changed)
+        # TODO: self.pivot_table_model.index_entries_changed.connect(self.table_index_entries_changed)
         self.pivot_table_model.modelReset.connect(self.make_pivot_headers)
         self.ui.pivot_table.horizontalHeader().header_dropped.connect(self.handle_header_dropped)
         self.ui.pivot_table.verticalHeader().header_dropped.connect(self.handle_header_dropped)
@@ -115,7 +126,7 @@ class TabularViewMixin:
         """Returns a new parameter value item to insert to the db.
 
         Args:
-            index_tuple (tuple(str)): tuple of object names
+            index_tuple (tuple(int)): tuple of indexes
             value
             parameters (list(dict)): existing parameter definitions
         Returns:
@@ -352,24 +363,12 @@ class TabularViewMixin:
         else:
             data_keys = list(zip(*data.keys()))
             self.index_values = {id_: data_keys[k] for k, id_ in enumerate(index_ids)}
-        # self.index_values = dict(zip(index_ids, data_keys))
         # get pivot preference for current selection
         selection_key = (self.current_class_id, self.current_class_type, self.current_input_type)
         rows, columns, frozen, frozen_value = self.get_pivot_preferences(selection_key)
         self.filter_menus.clear()
         self.pivot_table_model.reset_model(data, index_ids, rows, columns, frozen, frozen_value)
         self.pivot_table_proxy.clear_filter()
-
-    @Slot(dict, dict)
-    def table_index_entries_changed(self, added_entries, deleted_entries):
-        """
-        Updates the filter menus whenever objects are added or removed.
-        """
-        for menu in self.filter_menus.values():
-            if menu.object_class_name in deleted_entries:
-                menu.remove_items_from_filter_list(deleted_entries[menu.object_class_name])
-            if menu.object_class_name in added_entries:
-                menu.add_items_to_filter_list(added_entries[menu.object_class_name])
 
     @Slot()
     def make_pivot_headers(self):
@@ -407,9 +406,9 @@ class TabularViewMixin:
             FilterMenu
         """
         if identifier not in self.filter_menus:
-            self.filter_menus[identifier] = menu = FilterMenu(self)
-            menu.identifier = identifier
-            # menu.set_filter_list(self.pivot_table_model.model.index_entries[object_class_name])
+            item_type = "parameter definition" if identifier == -1 else "object"
+            self.filter_menus[identifier] = menu = FilterMenu(self, identifier, item_type)
+            menu.set_filter_list(sorted(set(self.index_values[identifier])))
             menu.filterChanged.connect(self.change_filter)
         return self.filter_menus[identifier]
 
@@ -507,12 +506,12 @@ class TabularViewMixin:
             self.pivot_table_model.model.frozen_value,
         )
 
-    @Slot(object, set, bool)
-    def change_filter(self, menu, valid, has_filter):
+    @Slot(int, set, bool)
+    def change_filter(self, identifier, valid, has_filter):
         if has_filter:
-            self.pivot_table_proxy.set_filter(menu.unique_name, valid)
+            self.pivot_table_proxy.set_filter(identifier, valid)
         else:
-            self.pivot_table_proxy.set_filter(menu.unique_name, None)  # None means everything passes
+            self.pivot_table_proxy.set_filter(identifier, None)  # None means everything passes
 
     def refresh_frozen_table(self):
         """Resets the frozen model for the new selection in the entity trees."""

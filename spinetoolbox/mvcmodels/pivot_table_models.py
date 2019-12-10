@@ -23,7 +23,6 @@ from ..config import PIVOT_TABLE_HEADER_COLOR
 
 
 class PivotTableModel(QAbstractTableModel):
-    index_entries_changed = Signal(dict, dict)
 
     _V_HEADER_WIDTH = 5
 
@@ -37,27 +36,22 @@ class PivotTableModel(QAbstractTableModel):
         self.db_mngr = parent.db_mngr
         self.db_map = parent.db_map
         self.model = PivotModel()
-        self._num_headers_row = 0
-        self._num_headers_column = 0
         self._plot_x_column = None
 
     def reset_model(self, data, index_ids, rows=(), columns=(), frozen=(), frozen_value=()):
         self.beginResetModel()
         self.model.reset_model(data, index_ids, rows, columns, frozen, frozen_value)
         self._plot_x_column = None
-        self._update_header_data()
         self.endResetModel()
 
     def set_pivot(self, rows, columns, frozen, frozen_value):
         self.beginResetModel()
         self.model.set_pivot(rows, columns, frozen, frozen_value)
-        self._update_header_data()
         self.endResetModel()
 
     def set_frozen_value(self, frozen_value):
         self.beginResetModel()
         self.model.set_frozen_value(frozen_value)
-        self._update_header_data()
         self.endResetModel()
 
     def set_plot_x_column(self, column, is_x):
@@ -81,11 +75,6 @@ class PivotTableModel(QAbstractTableModel):
     def get_col_key(self, column):
         return self.model.column(max(0, column - self._num_headers_column))
 
-    def _update_header_data(self):
-        """updates the top left corner 'header' data"""
-        self._num_headers_row = len(self.model.pivot_columns) + min(1, len(self.model.pivot_rows))
-        self._num_headers_column = max(len(self.model.pivot_rows), 1)
-
     def first_data_row(self):
         """Returns the row index to the first data row."""
         # Last row is an empty row, exclude it.
@@ -100,9 +89,11 @@ class PivotTableModel(QAbstractTableModel):
         return max(1, len(self.model.columns))
 
     def headerRowCount(self):
+        """Returns number of rows occupied by header."""
         return len(self.model.pivot_columns) + bool(self.model.pivot_rows)
 
     def headerColumnCount(self):
+        """Returns number of columns occupied by header."""
         if not self.model.pivot_rows:
             if self.model.pivot_columns:
                 return 1
@@ -255,8 +246,7 @@ class PivotTableModel(QAbstractTableModel):
             return False
         if self.index_in_data(index):
             # edit existing data
-            row = index.row() - self._num_headers_row
-            column = index.column() - self._num_headers_column
+            row, column = self.map_to_pivot(index)
             data = self.model.get_pivoted_data([row], [column])
             if not data or data[0][0] is None:
                 # Add
@@ -362,23 +352,23 @@ class PivotTableSortFilterProxy(QSortFilterProxyModel):
         self.setDynamicSortFilter(False)  # Important so we can edit parameters in the view
         self.index_filters = {}
 
-    def set_filter(self, index_name, filter_value):
+    def set_filter(self, identifier, filter_value):
         """Sets filter for a given index (object class) name.
 
         Args:
-            index_name (str): disambiguated index name
+            identifier (int): index identifier
             filter_value (set, None): A set of accepted values, or None if no filter (all pass)
         """
-        self.index_filters[index_name] = filter_value
+        self.index_filters[identifier] = filter_value
         self.invalidateFilter()  # trigger filter update
 
     def clear_filter(self):
         self.index_filters = {}
         self.invalidateFilter()  # trigger filter update
 
-    def accept_index(self, index, index_names):
-        for i, n in zip(index, index_names):
-            valid = self.index_filters.get(n)
+    def accept_index(self, index, index_ids):
+        for i, identifier in zip(index, index_ids):
+            valid = self.index_filters.get(identifier)
             if valid is not None and i not in valid:
                 return False
         return True
@@ -394,16 +384,14 @@ class PivotTableSortFilterProxy(QSortFilterProxyModel):
     def filterAcceptsRow(self, source_row, source_parent):
         """Returns true if the item in the row indicated by the given source_row
         and source_parent should be included in the model; otherwise returns false.
-        All the rules and subrules need to pass.
         """
 
-        if source_row < self.sourceModel()._num_headers_row or source_row == self.sourceModel().rowCount() - 1:
-            # always display headers
+        if source_row < self.sourceModel().headerRowCount() or source_row == self.sourceModel().rowCount() - 1:
             return True
         if source_row in self.sourceModel().model._invalid_row:
             return True
         if self.sourceModel().model.pivot_rows:
-            index = self.sourceModel().model._row_data_header[source_row - self.sourceModel()._num_headers_row]
+            index = self.sourceModel().model._row_data_header[source_row - self.sourceModel().headerRowCount()]
             return self.accept_index(index, self.sourceModel().model.pivot_rows)
         return True
 
@@ -412,14 +400,13 @@ class PivotTableSortFilterProxy(QSortFilterProxyModel):
         and source_parent should be included in the model; otherwise returns false.
         """
         if (
-            source_column < self.sourceModel()._num_headers_column
+            source_column < self.sourceModel().headerColumnCount()
             or source_column == self.sourceModel().columnCount() - 1
         ):
-            # always display headers
             return True
         if source_column in self.sourceModel().model._invalid_column:
             return True
         if self.sourceModel().model.pivot_columns:
-            index = self.sourceModel().model._column_data_header[source_column - self.sourceModel()._num_headers_column]
+            index = self.sourceModel().model._column_data_header[source_column - self.sourceModel().headerColumnCount()]
             return self.accept_index(index, self.sourceModel().model.pivot_columns)
         return True
