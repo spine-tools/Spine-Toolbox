@@ -32,7 +32,8 @@ class PivotTableModel(QAbstractTableModel):
         Args:
             parent (TabularViewForm)
         """
-        super().__init__(parent)
+        super().__init__()
+        self._parent = parent
         self.db_mngr = parent.db_mngr
         self.db_map = parent.db_map
         self.model = PivotModel()
@@ -40,9 +41,9 @@ class PivotTableModel(QAbstractTableModel):
         self._num_headers_column = 0
         self._plot_x_column = None
 
-    def set_data(self, data, index_ids, rows=(), columns=(), frozen=(), frozen_value=()):
+    def reset_model(self, data, index_ids, rows=(), columns=(), frozen=(), frozen_value=()):
         self.beginResetModel()
-        self.model.set_new_data(data, index_ids, rows, columns, frozen, frozen_value)
+        self.model.reset_model(data, index_ids, rows, columns, frozen, frozen_value)
         self._plot_x_column = None
         self._update_header_data()
         self.endResetModel()
@@ -80,21 +81,6 @@ class PivotTableModel(QAbstractTableModel):
     def get_col_key(self, column):
         return self.model.column(max(0, column - self._num_headers_column))
 
-    def _indexes_to_pivot_index(self, indexes):
-        max_row = len(self.model.rows)
-        max_col = len(self.model.columns)
-        if not self.model.pivot_rows:
-            max_row = 1
-        if not self.model.pivot_columns:
-            max_col = 1
-        indexes = [
-            (i.row() - self._num_headers_row, i.column() - self._num_headers_column)
-            for i in indexes
-            if (i.row() >= self._num_headers_row and i.row() - self._num_headers_row < max_row)
-            and (i.column() >= self._num_headers_column and i.column() - self._num_headers_column < max_col)
-        ]
-        return indexes
-
     def _update_header_data(self):
         """updates the top left corner 'header' data"""
         self._num_headers_row = len(self.model.pivot_columns) + min(1, len(self.model.pivot_rows))
@@ -107,19 +93,29 @@ class PivotTableModel(QAbstractTableModel):
 
     def dataRowCount(self):
         """number of rows that contains actual data"""
-        return len(self.model.rows)
+        return max(1, len(self.model.rows))
 
     def dataColumnCount(self):
         """number of columns that contains actual data"""
-        return len(self.model.columns)
+        return max(1, len(self.model.columns))
+
+    def headerRowCount(self):
+        return len(self.model.pivot_columns) + bool(self.model.pivot_rows)
+
+    def headerColumnCount(self):
+        if not self.model.pivot_rows:
+            if self.model.pivot_columns:
+                return 1
+            return 0
+        return len(self.model.pivot_rows)
 
     def rowCount(self, parent=QModelIndex()):
         """Number of rows in table, number of header rows + datarows + 1 empty row"""
-        return self._num_headers_row + self.dataRowCount() + 1
+        return self.headerRowCount() + self.dataRowCount() + 1
 
     def columnCount(self, parent=QModelIndex()):
         """Number of columns in table, number of header columns + datacolumns + 1 empty columns"""
-        return self._num_headers_column + self.dataColumnCount() + 1
+        return self.headerColumnCount() + self.dataColumnCount() + 1
 
     def flags(self, index):
         """Roles for data"""
@@ -185,19 +181,9 @@ class PivotTableModel(QAbstractTableModel):
 
     def index_in_data(self, index):
         """Returns whether or not the given index is in data area"""
-        if (
-            self.dataRowCount() == 0
-            and self.model.pivot_rows
-            or self.dataColumnCount() == 0
-            and self.model.pivot_columns
-        ):
-            # no data
-            return False
         return (
-            index.row() >= self._num_headers_row
-            and index.column() >= self._num_headers_column
-            and index.row() < self._num_headers_row + max(1, self.dataRowCount())
-            and index.column() < self._num_headers_column + max(1, self.dataColumnCount())
+            self.headerRowCount() <= index.row() < self.rowCount() - 1
+            and self.headerColumnCount() <= index.column() < self.columnCount() - 1
         )
 
     def headerData(self, section, orientation, role=Qt.DisplayRole):
@@ -214,6 +200,9 @@ class PivotTableModel(QAbstractTableModel):
             return self.db_mngr.get_item(self.db_map, "parameter definition", header_id)["parameter_name"]
         return self.db_mngr.get_item(self.db_map, "object", header_id)["name"]
 
+    def map_to_pivot(self, index):
+        return index.row() - self.headerRowCount(), index.column() - self.headerColumnCount()
+
     def data(self, index, role=Qt.DisplayRole):
         if role in (Qt.DisplayRole, Qt.EditRole, Qt.ToolTipRole):
             if self.index_in_top(index):
@@ -221,20 +210,21 @@ class PivotTableModel(QAbstractTableModel):
             if self.index_in_left(index):
                 return self.model.pivot_columns[index.row()]
             if self.index_in_row_headers(index):
-                header_id = self.model._row_data_header[index.row() - len(self.model.pivot_columns) - 1][index.column()]
+                row, _ = self.map_to_pivot(index)
+                header_id = self.model._row_data_header[row][index.column()]
                 header_key = self.model.pivot_rows[index.column()]
                 return self._header_data(header_key, header_id)
             if self.index_in_column_headers(index):
-                header_id = self.model._column_data_header[index.column() - len(self.model.pivot_rows) - 1][index.row()]
+                _, column = self.map_to_pivot(index)
+                header_id = self.model._column_data_header[column][index.row()]
                 header_key = self.model.pivot_columns[index.row()]
                 return self._header_data(header_key, header_id)
             if self.index_in_data(index):
-                data = self.model.get_pivoted_data(
-                    [index.row() - self._num_headers_row], [index.column() - self._num_headers_column]
-                )
+                row, column = self.map_to_pivot(index)
+                data = self.model.get_pivoted_data([row], [column])
                 if not data or data[0][0] is None:
                     return ''
-                if not self.parent().is_value_input_type():
+                if not self._parent.is_value_input_type():
                     return data[0][0]
                 return self.db_mngr.get_value(self.db_map, "parameter value", data[0][0], "value", role)
             return None
@@ -244,7 +234,12 @@ class PivotTableModel(QAbstractTableModel):
             return font
         if role == Qt.BackgroundColorRole:
             return self.data_color(index)
-        if role == Qt.TextAlignmentRole and self.index_in_data(index) and not self.parent().is_value_input_type():
+        if (
+            role == Qt.TextAlignmentRole
+            and self.index_in_data(index)
+            and not self._parent.is_value_input_type()
+            # or self.index_in_column_headers(index)
+        ):
             return Qt.AlignHCenter
         return None
 
@@ -266,9 +261,9 @@ class PivotTableModel(QAbstractTableModel):
             if not data or data[0][0] is None:
                 # Add
                 index_tuple = self.get_key(index)
-                self.parent().add_parameter_value(index_tuple, value)
+                self._parent.add_parameter_value(index_tuple, value)
             else:
-                self.parent().update_parameter_value(data[0][0], value)
+                self._parent.update_parameter_value(data[0][0], value)
             self.dataChanged.emit(index, index)
             return True
         if self.index_in_row_headers(index):
@@ -283,10 +278,8 @@ class PivotTableModel(QAbstractTableModel):
             return True
         if self.index_in_empty_row_headers(index):
             header = self.model.pivot_rows[index.column()]
-            print(header)
             return True
         if self.index_in_empty_column_headers(index):
-            print("hey")
             return True
         return False
         if (
@@ -397,26 +390,6 @@ class PivotTableSortFilterProxy(QSortFilterProxyModel):
     def restore_values(self, indexes):
         indexes = [self.mapToSource(index) for index in indexes]
         self.sourceModel().restore_values(indexes)
-
-    def paste_data(self, index, data):
-        model_index = self.mapToSource(index)
-        row_mask = []
-        # get indexes of filtered rows
-        # TODO: this might be cached somewhere?
-        for r in range(model_index.row(), self.sourceModel().dataRowCount() + self.sourceModel()._num_headers_row):
-            if self.filterAcceptsRow(r, None):
-                row_mask.append(r)
-                if len(row_mask) == len(data):
-                    break
-        col_mask = []
-        for c in range(
-            model_index.column(), self.sourceModel().dataColumnCount() + self.sourceModel()._num_headers_column
-        ):
-            if self.filterAcceptsColumn(c, None):
-                col_mask.append(c)
-                if len(col_mask) == len(data[0]):
-                    break
-        self.sourceModel().paste_data(model_index, data, row_mask, col_mask)
 
     def filterAcceptsRow(self, source_row, source_parent):
         """Returns true if the item in the row indicated by the given source_row
