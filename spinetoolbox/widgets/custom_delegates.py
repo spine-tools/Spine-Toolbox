@@ -202,7 +202,7 @@ class PivotTableDelegate(CheckBoxDelegate):
             except ParameterValueFormatError:
                 value = None
             if isinstance(value, (DateTime, Duration, TimePattern, TimeSeries)) or value is None:
-                value_name = ", ".join(index.model().sourceModel().get_key(index))
+                value_name = index.model().sourceModel().get_key(index)  # FIXME: get the actual name
                 self.parameter_value_editor_requested.emit(index, value_name, value)
                 return None
         return CustomLineEditor(parent)

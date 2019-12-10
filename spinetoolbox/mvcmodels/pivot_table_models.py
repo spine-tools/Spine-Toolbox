@@ -16,7 +16,7 @@ Provides pivot table models for the Tabular View.
 :date:   1.11.2018
 """
 
-from PySide2.QtCore import QAbstractTableModel, Qt, QModelIndex, Signal, QSortFilterProxyModel
+from PySide2.QtCore import QAbstractTableModel, Qt, QModelIndex, QSortFilterProxyModel
 from PySide2.QtGui import QColor, QFont
 from .pivot_model import PivotModel
 from ..config import PIVOT_TABLE_HEADER_COLOR
@@ -68,8 +68,8 @@ class PivotTableModel(QAbstractTableModel):
         return self._plot_x_column
 
     def get_key(self, index):
-        row = self.model.row(max(0, index.row() - self._num_headers_row))
-        col = self.model.column(max(0, index.column() - self._num_headers_column))
+        row = self.model.row(max(0, index.row() - self.headerRowCount()))
+        col = self.model.column(max(0, index.column() - self.headerColumnCount()))
         return self.model._key_getter(row + col + self.model.frozen_value)
 
     def get_col_key(self, column):
@@ -82,10 +82,14 @@ class PivotTableModel(QAbstractTableModel):
 
     def dataRowCount(self):
         """number of rows that contains actual data"""
+        if not self.model.rows:
+            return 0
         return max(1, len(self.model.rows))
 
     def dataColumnCount(self):
         """number of columns that contains actual data"""
+        if not self.model.column:
+            return 0
         return max(1, len(self.model.columns))
 
     def headerRowCount(self):

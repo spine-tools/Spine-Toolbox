@@ -118,68 +118,43 @@ class TabularViewMixin:
         self.ui.pivot_table.verticalHeader().header_dropped.connect(self.handle_header_dropped)
         self.ui.frozen_table.header_dropped.connect(self.handle_header_dropped)
         self.ui.frozen_table.selectionModel().currentChanged.connect(self.change_frozen_value)
-        self.ui.comboBox_pivot_table_input_type.currentTextChanged.connect(self.refresh_pivot_table)
+        self.ui.comboBox_pivot_table_input_type.currentTextChanged.connect(self.reload_pivot_table)
         self.ui.dockWidget_pivot_table.visibilityChanged.connect(self._handle_pivot_table_visibility_changed)
         self.ui.dockWidget_frozen_table.visibilityChanged.connect(self._handle_frozen_table_visibility_changed)
 
-    def _new_relationship_parameter_value(self, index_tuple, value, parameters):
+    def _new_relationship_parameter_value(self, object_ids, value):
         """Returns a new parameter value item to insert to the db.
 
         Args:
-            index_tuple (tuple(int)): tuple of indexes
+            object_ids (tuple(int)):
             value
-            parameters (list(dict)): existing parameter definitions
         Returns:
             dict
         """
-        # FIXME: make index_tuple have ids rather than names
-        object_name_list = index_tuple[: len(self.current_object_class_list())]
-        object_name_list = ",".join(object_name_list)
+        object_id_list = ",".join([str(id_) for id_ in object_ids])
         relationships = self.db_mngr.get_items(self.db_map, "relationship")
         relationship = next(
             iter(
                 rel
                 for rel in relationships
-                if rel["class_id"] == self.current_class_id and rel["object_name_list"] == object_name_list
+                if rel["class_id"] == self.current_class_id and rel["object_id_list"] == object_id_list
             )
         )
-        parameter = next(iter(p for p in parameters if p.get("relationship_class_id") == self.current_class_id))
-        return dict(parameter_definition_id=parameter["id"], relationship_id=relationship["id"], value=value)
+        return dict(relationship_id=relationship["id"], value=value)
 
-    def _new_object_parameter_value(self, index_tuple, value, parameters):
-        """Returns a new parameter value item to insert to the db.
-
-        Args:
-            index_tuple (tuple(str)): tuple of object names
-            value
-            parameters (list(dict)): existing parameter definitions
-        Returns:
-            dict
-        """
-        # FIXME: make index_tuple have ids rather than names
-        object_name = index_tuple[0]
-        object_class = self.db_mngr.get_item_by_field(self.db_map, "object class", "name", self.current_class_name)
-        objects = self.db_mngr.get_items(self.db_map, "object")
-        object_ = next(
-            iter(obj for obj in objects if obj["class_id"] == object_class["id"] and obj["name"] == object_name)
-        )
-        parameter = next(iter(p for p in parameters if p.get("object_class_id") == object_class["id"]))
-        return dict(parameter_definition_id=parameter["id"], object_id=object_["id"], value=value)
-
-    def add_parameter_value(self, index_tuple, value):
+    def add_parameter_value(self, id_tuple, value):
         """
         Args:
-            index_tuple (tuple(str))
+            id_tuple (tuple(int)): object_ids + parameter_id
             value
         """
-        parameter_name = index_tuple[-1]
-        parameters = self.db_mngr.get_items_by_field(
-            self.db_map, "parameter definition", "parameter_name", parameter_name
-        )
         if self.current_class_type == self._RELATIONSHIP_CLASS:
-            item = self._new_relationship_parameter_value(index_tuple, value, parameters)
+            item = self._new_relationship_parameter_value(id_tuple[:-1], value)
         else:
-            item = self._new_object_parameter_value(index_tuple, value, parameters)
+            object_id = id_tuple[0]
+            item = dict(object_id=object_id, value=value)
+        parameter_id = id_tuple[-1]
+        item["parameter_definition_id"] = parameter_id
         self.db_mngr.add_parameter_values({self.db_map: [item]})
 
     def update_parameter_value(self, id_, value):
@@ -194,7 +169,7 @@ class TabularViewMixin:
     @Slot(bool)
     def rollback_session(self, checked=False):
         super().rollback_session()
-        self.refresh_pivot_table()
+        self.reload_pivot_table()
 
     def current_object_class_id_list(self):
         if self.current_class_type == self._OBJECT_CLASS:
@@ -223,7 +198,8 @@ class TabularViewMixin:
     @Slot(bool)
     def _handle_pivot_table_visibility_changed(self, visible):
         if visible:
-            self.refresh_pivot_table()
+            self.reload_pivot_table()
+            self.reload_frozen_table()
         self.ui.dockWidget_frozen_table.setVisible(self.ui.dockWidget_pivot_table.isVisible())
 
     @Slot(bool)
@@ -234,21 +210,30 @@ class TabularViewMixin:
     @Slot("QItemSelection", "QItemSelection")
     def _handle_entity_tree_selection_changed(self, selected, deselected):
         if self.ui.dockWidget_pivot_table.isVisible():
-            self.refresh_pivot_table()
-            self.refresh_frozen_table()
+            self.reload_pivot_table()
+            self.reload_frozen_table()
 
-    def _get_parameter_values(self):
-        """Returns a list of dict items from the parameter value model
-        corresponding to the currently selected class.
+    def _get_parameter_data(self, item_type):
+        """Returns a list of dict items from the parameter model
+        corresponding to the currently selected class and the given item type.
+
+        Args:
+            item_type (str): either "parameter value" or "parameter definition"
 
         Returns:
             list(dict)
         """
         entity_class = self.db_mngr.get_item(self.db_map, self.current_class_type, self.current_class_id)
         model = {
-            self._OBJECT_CLASS: self.object_parameter_value_model,
-            self._RELATIONSHIP_CLASS: self.relationship_parameter_value_model,
-        }[self.current_class_type]
+            self._OBJECT_CLASS: {
+                "parameter value": self.object_parameter_value_model,
+                "parameter definition": self.object_parameter_definition_model,
+            },
+            self._RELATIONSHIP_CLASS: {
+                "parameter value": self.relationship_parameter_value_model,
+                "parameter definition": self.relationship_parameter_definition_model,
+            },
+        }[self.current_class_type][item_type]
         sub_models = [
             m for m in model.single_models if (m.db_map, m.entity_class_id) == (self.db_map, entity_class["id"])
         ]
@@ -259,7 +244,7 @@ class TabularViewMixin:
                 model._fetch_sub_model = m
                 model.fetchMore()
         ids = [id_ for m in sub_models for id_ in m._main_data]
-        return [self.db_mngr.get_item(self.db_map, "parameter value", id_) for id_ in ids]
+        return [self.db_mngr.get_item(self.db_map, item_type, id_) for id_ in ids]
 
     def _get_entities(self):
         """Returns a list of dict items from the object or relationship tree model
@@ -283,13 +268,20 @@ class TabularViewMixin:
         Returns:
             dict
         """
-        parameter_values = self._get_parameter_values()
+        parameter_values = self._get_parameter_data("parameter value")
+        parameter_ids = {x["id"] for x in self._get_parameter_data("parameter definition")}
+        entities = self.get_entity_data().keys()
+        data = {entity + (parameter_id,): None for entity in entities for parameter_id in parameter_ids}
         if self.current_class_type == self._OBJECT_CLASS:
-            return {(x["object_id"], x["parameter_id"]): x["id"] for x in parameter_values}
-        return {
-            tuple(int(id_) for id_ in x["object_id_list"].split(',')) + (x["parameter_id"],): x["id"]
-            for x in parameter_values
-        }
+            data.update({(x["object_id"], x["parameter_id"]): x["id"] for x in parameter_values})
+            return data
+        data.update(
+            {
+                tuple(int(id_) for id_ in x["object_id_list"].split(',')) + (x["parameter_id"],): x["id"]
+                for x in parameter_values
+            }
+        )
+        return data
 
     def get_entity_data(self):
         """Returns a dict with entity data for resetting the pivot table model.
@@ -330,7 +322,7 @@ class TabularViewMixin:
             frozen_value = ()
         return rows, columns, frozen, frozen_value
 
-    def refresh_pivot_table(self):
+    def reload_pivot_table(self):
         """Refreshes pivot table."""
         if self._selection_source == self.ui.treeView_object:
             selected = self.ui.treeView_object.selectionModel().currentIndex()
@@ -513,11 +505,11 @@ class TabularViewMixin:
         else:
             self.pivot_table_proxy.set_filter(identifier, None)  # None means everything passes
 
-    def refresh_frozen_table(self):
-        """Resets the frozen model for the new selection in the entity trees."""
+    def reload_frozen_table(self):
+        """Resets the frozen model according to new selection in entity trees."""
         frozen = self.pivot_table_model.model.pivot_frozen
-        frozen_values = self.find_frozen_values(frozen)
         frozen_value = self.pivot_table_model.model.frozen_value
+        frozen_values = self.find_frozen_values(frozen)
         self.frozen_table_model.reset_model(frozen_values, frozen)
         self.make_frozen_headers()
         if frozen_value in frozen_values:
@@ -542,133 +534,126 @@ class TabularViewMixin:
         """
         return sorted(set(zip(*[self.index_values[k] for k in frozen])))
 
+    def refresh_pivot_table_view(self):
+        top_left = self.ui.pivot_table.indexAt(self.ui.pivot_table.rect().topLeft())
+        bottom_right = self.ui.pivot_table.indexAt(self.ui.pivot_table.rect().bottomRight())
+        self.pivot_table_proxy.dataChanged.emit(top_left, bottom_right)
+
     def receive_object_classes_added(self, db_map_data):
         """Reacts to object classes added event."""
         super().receive_object_classes_added(db_map_data)
-        self.load_classes_and_parameter_definitions()
 
     def receive_objects_added(self, db_map_data):
         """Reacts to objects added event."""
         super().receive_objects_added(db_map_data)
-        self.load_objects()
 
     def receive_relationship_classes_added(self, db_map_data):
         """Reacts to relationship classes added."""
         super().receive_relationship_classes_added(db_map_data)
-        self.load_classes_and_parameter_definitions()
 
     def receive_relationships_added(self, db_map_data):
         """Reacts to relationships added event."""
         super().receive_relationships_added(db_map_data)
-        self.load_relationships()
 
     def receive_parameter_definitions_added(self, db_map_data):
         """Reacts to parameter definitions added event."""
         super().receive_parameter_definitions_added(db_map_data)
-        self.load_classes_and_parameter_definitions()
 
     def receive_parameter_values_added(self, db_map_data):
         """Reacts to parameter values added event."""
         super().receive_parameter_values_added(db_map_data)
         if len(db_map_data) > 1 or self.db_map not in db_map_data:
             raise RuntimeError("Data Store view received parameter value update from wrong database.")
-        changed_data = db_map_data[self.db_map]
-        for changes in changed_data:
-            class_name = (
-                changes["object_class_name"] if "object_class_name" in changes else changes["relationship_class_name"]
-            )
-            if class_name == self.current_class_name:
-                self.refresh_pivot_table()
+        items = db_map_data[self.db_map]
+        for item in items:
+            class_id = item.get("object_class_id") or item.get("relationship_class_id")
+            if class_id == self.current_class_id:
+                self.reload_pivot_table()
                 break
 
     def receive_object_classes_updated(self, db_map_data):
         """Reacts to object classes updated event."""
         super().receive_object_classes_updated(db_map_data)
-        self.load_classes_and_parameter_definitions()
 
     def receive_objects_updated(self, db_map_data):
         """Reacts to objects updated event."""
         super().receive_objects_updated(db_map_data)
-        self.load_objects()
+        items = db_map_data[self.db_map]
+        for item in items:
+            class_id = item["class_id"]
+            if class_id == self.current_class_id:
+                self.refresh_pivot_table_view()
+                break
 
     def receive_relationship_classes_updated(self, db_map_data):
         """Reacts to relationship classes updated event."""
         super().receive_relationship_classes_updated(db_map_data)
-        self.load_classes_and_parameter_definitions()
 
     def receive_relationships_updated(self, db_map_data):
         """Reacts to relationships updated event."""
         super().receive_relationships_updated(db_map_data)
-        self.load_relationships()
 
     def receive_parameter_values_updated(self, db_map_data):
         """Reacts to parameter values added event."""
         if len(db_map_data) > 1 or self.db_map not in db_map_data:
             raise RuntimeError("Data Store view received parameter value update from wrong database.")
-        changed_data = db_map_data[self.db_map]
-        for changes in changed_data:
-            class_name = (
-                changes["object_class_name"] if "object_class_name" in changes else changes["relationship_class_name"]
-            )
-            if class_name == self.current_class_name:
-                top_left = self.pivot_table_proxy.index(0, 0)
-                bottom_right = self.pivot_table_proxy.index(
-                    self.pivot_table_proxy.rowCount() - 1, self.pivot_table_proxy.columnCount() - 1
-                )
-                self.pivot_table_proxy.dataChanged.emit(top_left, bottom_right)
+        items = db_map_data[self.db_map]
+        for item in items:
+            class_id = item.get("object_class_id") or item.get("relationship_class_id")
+            if class_id == self.current_class_id:
+                self.refresh_pivot_table_view()
                 break
 
     def receive_parameter_definitions_updated(self, db_map_data):
         """Reacts to parameter definitions updated event."""
         super().receive_parameter_definitions_updated(db_map_data)
-        self.load_classes_and_parameter_definitions()
 
     def receive_object_classes_removed(self, db_map_data):
         """Reacts to object classes removed event."""
         super().receive_object_classes_removed(db_map_data)
-        self.load_classes_and_parameter_definitions()
 
     def receive_objects_removed(self, db_map_data):
         """Reacts to objects removed event."""
         super().receive_objects_removed(db_map_data)
-        self.load_objects()
 
     def receive_relationship_classes_removed(self, db_map_data):
         """Reacts to relationship classes remove event."""
         super().receive_relationship_classes_removed(db_map_data)
-        self.load_classes_and_parameter_definitions()
 
     def receive_relationships_removed(self, db_map_data):
         """Reacts to relationships removed event."""
         super().receive_relationships_removed(db_map_data)
-        self.load_relationships()
 
     def receive_parameter_definitions_removed(self, db_map_data):
         """Reacts to parameter definitions removed event."""
         super().receive_parameter_definitions_removed(db_map_data)
-        self.load_classes_and_parameter_definitions()
 
     def receive_parameter_values_removed(self, db_map_data):
         """Reacts to parameter values removed event."""
         super().receive_parameter_values_removed(db_map_data)
         if len(db_map_data) > 1 or self.db_map not in db_map_data:
             raise RuntimeError("Data Store view received parameter value update from wrong database.")
+        items = db_map_data[self.db_map]
+        for item in items:
+            class_id = item.get("object_class_id") or item.get("relationship_class_id")
+            if class_id == self.current_class_id:
+                self.refresh_pivot_table_view()
+                break
         changed_data = db_map_data[self.db_map]
         for changes in changed_data:
             class_name = (
                 changes["object_class_name"] if "object_class_name" in changes else changes["relationship_class_name"]
             )
             if class_name == self.current_class_name:
-                self.refresh_pivot_table()
+                self.reload_pivot_table()
                 break
 
     def receive_session_committed(self, db_maps):
         """Reacts to session committed event."""
         super().receive_session_committed(db_maps)
-        self.load_classes_and_parameter_definitions()
 
     def receive_session_rolled_back(self, db_maps):
         """Reacts to session rolled back event."""
         super().receive_session_rolled_back(db_maps)
-        self.load_classes_and_parameter_definitions()
-        self.refresh_pivot_table()
+        self.reload_pivot_table()
+        self.reload_frozen_table()

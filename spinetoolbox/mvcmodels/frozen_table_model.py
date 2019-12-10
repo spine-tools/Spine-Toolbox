@@ -72,6 +72,9 @@ class FrozenTableModel(QAbstractItemModel):
             id_ = self._data[index.row()][index.column()]
             if index.row() == 0:
                 return id_
+            index_id = self._data[0][index.column()]
+            if index_id == -1:
+                return self.db_mngr.get_item(self.db_map, "parameter definition", id_)["parameter_name"]
             return self.db_mngr.get_item(self.db_map, "object", id_)["name"]
 
     @property
