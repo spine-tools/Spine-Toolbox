@@ -179,22 +179,22 @@ class PivotTableDelegate(CheckBoxDelegate):
         """Send signal."""
         self.data_committed.emit(index, editor.data())
 
-    def _is_set_index(self, index):
-        return not self.parent().is_value_input_type() and self.parent().model.index_in_data(index)
+    def _is_entity_index(self, index):
+        return not self.parent().is_value_input_type() and index.model().sourceModel().index_in_data(index)
 
     def paint(self, painter, option, index):
-        if self._is_set_index(index):
+        if self._is_entity_index(index):
             super().paint(painter, option, index)
         else:
             QItemDelegate.paint(self, painter, option, index)
 
     def editorEvent(self, event, model, option, index):
-        if self._is_set_index(index):
+        if self._is_entity_index(index):
             return super().editorEvent(event, model, option, index)
         return QItemDelegate.editorEvent(self, event, model, option, index)
 
     def createEditor(self, parent, option, index):
-        if self._is_set_index(index):
+        if self._is_entity_index(index):
             return super().createEditor(parent, option, index)
         if self.parent().pivot_table_model.index_in_data(index):
             try:

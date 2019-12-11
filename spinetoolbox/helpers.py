@@ -24,7 +24,6 @@ import time
 import shutil
 import glob
 import json
-import spinedb_api
 from PySide2.QtCore import Qt, Slot, QFile, QIODevice, QSize, QRect, QPoint
 from PySide2.QtCore import __version__ as qt_version
 from PySide2.QtCore import __version_info__ as qt_version_info
@@ -41,6 +40,7 @@ from PySide2.QtGui import (
     QStandardItemModel,
     QStandardItem,
 )
+import spinedb_api
 from .config import DEFAULT_PROJECT_DIR, REQUIRED_SPINEDB_API_VERSION
 
 

@@ -31,9 +31,6 @@ class PivotModel:
         self._key_getter = lambda *x: ()  # operator.itemgetter placeholder used to translate pivot to keys in _data
         self._row_data_header = []  # header values for row data
         self._column_data_header = []  # header values for column data
-        self._invalid_row = {}  # set of rows that have invalid indexes
-        self._invalid_column = {}  # set of columns that have invalid indexes
-        self._invalid_data = {}  # dictionary of invalid data
 
     def reset_model(self, data, index_ids=(), rows=(), columns=(), frozen=(), frozen_value=()):
         """Resets the model.
@@ -95,15 +92,18 @@ class PivotModel:
             indexes (list)
 
         Returns
-            set
+            list
         """
         if not indexes:
-            return set()
+            return []
         index_getter = self._index_key_getter(indexes)
         if self.pivot_frozen:
             frozen_getter = self._index_key_getter(self.pivot_frozen)
             return sorted(set(index_getter(k) for k in self._data.keys() if frozen_getter(k) == self.frozen_value))
-        return sorted(set(index_getter(k) for k in self._data.keys()))
+        try:
+            return sorted(set(index_getter(k) for k in self._data.keys()))
+        except IndexError:
+            return []
 
     def set_pivot(self, rows, columns, frozen, frozen_value, model_is_updating=False):
         """Sets pivot."""
@@ -127,20 +127,12 @@ class PivotModel:
         self._key_getter = tuple_itemgetter(operator.itemgetter(*order), len(order))
         self._row_data_header = self._get_unique_index_values(self.pivot_rows)
         self._column_data_header = self._get_unique_index_values(self.pivot_columns)
-        # TODO: handle invalid data
-        # len_valid_rows = len(self._row_data_header)
-        # len_valid_columns = len(self._column_data_header)
-        # set invalid data to indexes with none in them.
-        # self._invalid_row = set(i + len_valid_rows for i, key in enumerate(none_rows))
-        # self._invalid_column = set(i + len_valid_columns for i, key in enumerate(none_columns))
-        self._invalid_data = {}
 
     def set_frozen_value(self, value):
-        """Sets value for the frozen indexes."""
+        """Sets values for the frozen indexes."""
         if len(value) != len(self.pivot_frozen):
             raise ValueError("'value' must have same length as 'self.pivot_frozen'")
         if value == self.frozen_value:
-            # same as previous do nothing
             return
         self.set_pivot(self.pivot_rows, self.pivot_columns, self.pivot_frozen, value)
 
@@ -166,21 +158,15 @@ class PivotModel:
         data = []
         for row in row_mask:
             data_row = []
-            invalid_row = row in self._invalid_row
-            row_key = self.row(row)
-            for col in column_mask:
-                if invalid_row or col in self._invalid_column:
-                    # get invalid data
-                    data_row.append(self._invalid_data.get((row, col), None))
-                else:
-                    # get dict data
-                    col_key = self.column(col)
-                    key = self._key_getter(row_key + col_key + self.frozen_value)
-                    data_row.append(self._data.get(key, None))
+            row_key = self.row_key(row)
+            for column in column_mask:
+                column_key = self.column_key(column)
+                key = self._key_getter(row_key + column_key + self.frozen_value)
+                data_row.append(self._data.get(key, None))
             data.append(data_row)
         return data
 
-    def row(self, row):
+    def row_key(self, row):
         if self.pivot_rows:
             if self._row_data_header:
                 return self._row_data_header[row]
@@ -189,12 +175,12 @@ class PivotModel:
             return ()
         raise IndexError('index out of range for current row pivot')
 
-    def column(self, col):
+    def column_key(self, column):
         if self.pivot_columns:
             if self._column_data_header:
-                return self._column_data_header[col]
+                return self._column_data_header[column]
             return tuple(None for _ in self.pivot_columns)
-        if col == 0:
+        if column == 0:
             return ()
         raise IndexError('index out of range for current column pivot')
 
