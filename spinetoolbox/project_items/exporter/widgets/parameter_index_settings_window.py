@@ -18,6 +18,7 @@ Parameter indexing settings window for .gdx export.
 
 from PySide2.QtCore import Qt, Signal, Slot
 from PySide2.QtWidgets import QMessageBox, QWidget
+from spinetoolbox.spine_io.exporters.gdx import indexing_settings_from_dict, indexing_settings_to_dict
 from .parameter_index_settings import IndexSettingsState, ParameterIndexSettings
 
 
@@ -68,6 +69,30 @@ class ParameterIndexSettingsWindow(QWidget):
     def new_domains(self):
         """list of additional domains needed for indexing"""
         return self._new_domains
+
+    def to_dict(self):
+        serialized = dict()
+        serialized["indexing_settings"] = indexing_settings_to_dict(self._indexing_settings)
+        serialized_settings_widgets = dict()
+        for parametr_name, settings_widget in self._settings_widgets.items():
+            serialized_settings_widgets[parametr_name] = settings_widget.to_dict()
+        serialized["settings_widgets"] = serialized_settings_widgets
+        return serialized
+
+    def restore_from_dict(self, serialized):
+        while self._ui.settings_area_layout.takeAt(0) is not None:
+            # Just clearing the layout of previous widgets
+            pass
+        self._settings_widgets.clear()
+        self._indexing_settings = indexing_settings_from_dict(serialized["indexing_settings"])
+        serialized_widgets = serialized["settings_widgets"]
+        for parameter_name, indexing_setting in self._indexing_settings.items():
+            settings_widget = ParameterIndexSettings(
+                parameter_name, indexing_setting, self._available_existing_domains, self._ui.settings_area_contents
+            )
+            settings_widget.restore_from_dict(serialized_widgets[parameter_name])
+            self._ui.settings_area_layout.insertWidget(0, settings_widget)
+            self._settings_widgets[parameter_name] = settings_widget
 
     @Slot()
     def _collect_and_close(self):

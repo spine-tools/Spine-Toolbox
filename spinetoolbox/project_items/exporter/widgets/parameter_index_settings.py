@@ -113,12 +113,13 @@ class ParameterIndexSettings(QWidget):
             base_domain.records += [gdx.Record((index,)) for index in indexes]
             new_domain = base_domain
         pick_list = self._indexing_table_model.index_selection
-        indexing_domain = gdx.IndexingDomain(base_domain, pick_list)
+        indexing_domain = gdx.IndexingDomain.from_base_domain(base_domain, pick_list)
         return indexing_domain, new_domain
 
-    def serialize(self):
+    def to_dict(self):
         """Writes the widget's state to a dict."""
         serialized = dict()
+        serialized["index_position"] = self._indexing_setting.index_position
         use_existing_domain = self._ui.use_existing_domain_radio_button.isChecked()
         serialized["use_existing_domain"] = use_existing_domain
         if use_existing_domain:
@@ -137,9 +138,10 @@ class ParameterIndexSettings(QWidget):
             else:
                 serialized["indexes"] = self._indexing_table_model.indexes
             serialized["pick_indexes"] = self._indexing_table_model.index_selection
+            indexes = self._indexing_table_model.indexes
         return serialized
 
-    def deserialize(self, serialized):
+    def restore_from_dict(self, serialized):
         """Reads widget's state from a dict."""
 
         def select_pick_indexes(pick_indexes):
@@ -151,6 +153,7 @@ class ParameterIndexSettings(QWidget):
                     select.select(top_left, bottom_right)
             self._ui.index_table_view.selectionModel().select(select, Qt.ClearAndSelect)
 
+        self._indexing_setting.index_position = serialized["index_position"]
         if serialized["use_existing_domain"]:
             self._ui.existing_domains_combo.setCurrentText(serialized["domain_name"])
             pick_expression = serialized.get(["pick_expression"], None)

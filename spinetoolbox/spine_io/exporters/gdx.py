@@ -83,6 +83,23 @@ class Set:
         """Returns True if this set is a domain set."""
         return self.domain_names[0] is None
 
+    def to_dict(self):
+        set_dict = dict()
+        set_dict["name"] = self.name
+        set_dict["description"] = self.description
+        set_dict["domain_names"] = self.domain_names
+        set_dict["records"] = [record.to_dict() for record in self.records]
+        return set_dict
+
+    @staticmethod
+    def from_dict(set_dict):
+        name = set_dict["name"]
+        description = set_dict["description"]
+        domain_names = set_dict["description"]
+        restored = Set(name, description, domain_names)
+        restored.records = [Record.from_dict(record_dict) for record_dict in set_dict["records"]]
+        return restored
+
     @staticmethod
     def from_object_class(object_class):
         """
@@ -127,6 +144,17 @@ class Record:
     def name(self):
         """Record's 'name' as a comma separated list of its keys."""
         return ",".join(self.keys)
+
+    def to_dict(self):
+        record_dict = dict()
+        record_dict["keys"] = self.keys
+        return record_dict
+
+    @staticmethod
+    def from_dict(record_dict):
+        keys = record_dict["keys"]
+        restored = Record(tuple(keys))
+        return restored
 
     @staticmethod
     def from_object(object_):
@@ -297,19 +325,40 @@ class IndexingDomain:
         indexes (list): a list of indexing key tuples
     """
 
-    def __init__(self, base_domain, pick_list):
+    def __init__(self, name, indexes):
         """
         Picks the keys from base_domain for which the corresponding element in pick_list holds True.
 
         Args:
+            name (str): indexing domain's name
+            indexes (list): a list of indexing key tuples
+        """
+        self.name = name
+        self.indexes = indexes
+
+    def to_dict(self):
+        domain_dict = dict()
+        domain_dict["name"] = self.name
+        domain_dict["indexes"] = self.indexes
+        return domain_dict
+
+    @staticmethod
+    def from_dict(domain_dict):
+        indexes = [tuple(index) for index in domain_dict["indexes"]]
+        return IndexingDomain(domain_dict["name"], indexes)
+
+    @staticmethod
+    def from_base_domain(base_domain, pick_list):
+        """
+        Args:
             base_domain (Set): a domain set that holds the indexes
             pick_list (list): a list of booleans
         """
-        self.name = base_domain.name
-        self.indexes = list()
+        indexes = list()
         for record, pick in zip(base_domain.records, pick_list):
             if pick:
-                self.indexes.append(record.keys)
+                indexes.append(record.keys)
+        return IndexingDomain(base_domain.name, indexes)
 
 
 def _python_interpreter_bitness():
@@ -589,6 +638,8 @@ class IndexingSetting:
         """
         Args:
             indexed_parameter (Parameter): a parameter containing indexed values
+            indexing_domain (IndexingDomain): indexing info
+            index_position (int): where to insert the new index when expanding a parameter
         """
         self.parameter = indexed_parameter
         self.indexing_domain = None
@@ -630,6 +681,61 @@ def make_indexing_settings(db_map):
         else:
             settings[relationship_parameter.parameter_name] = IndexingSetting(parameter)
     return settings
+
+
+def indexing_settings_to_dict(settings):
+    settings_dict = dict()
+    for parameter_name, setting in settings.items():
+        parameter_dict = dict()
+        parameter_dict["indexing_domain"] = (
+            setting.indexing_domain.to_dict() if setting.indexing_domain is not None else None
+        )
+        parameter_dict["index_position"] = setting.index_position
+        settings_dict[parameter_name] = parameter_dict
+    return settings_dict
+
+
+def indexing_settings_from_dict(settings_dict, db_map):
+    settings = dict()
+    for parameter_name, setting_dict in settings_dict.items():
+        parameter = _find_parameter(parameter_name, db_map)
+        setting = IndexingSetting(parameter)
+        indexing_domain_dict = setting_dict["indexing_domain"]
+        if indexing_domain_dict is not None:
+            setting.indexing_domain = IndexingDomain.from_dict(indexing_domain_dict)
+        setting.index_position = setting_dict["index_position"]
+        settings[parameter_name] = setting
+    return settings
+
+
+def _find_parameter(parameter_name, db_map):
+    parameter = None
+    parameter_rows = (
+        db_map.object_parameter_value_list()
+        .filter(db_map.object_parameter_value_sq.c.parameter_name == parameter_name)
+        .all()
+    )
+    if parameter_rows:
+        for row in parameter_rows:
+            if parameter is None:
+                parameter = Parameter.from_object_parameter(row)
+            else:
+                parameter.append_object_parameter(row)
+    if parameter is None:
+        parameter_rows = (
+            db_map.relationship_parameter_value_list()
+            .filter(db_map.relationship_parameter_value_sq.c.parameter_name == parameter_name)
+            .all()
+        )
+        if parameter_rows:
+            for row in parameter_rows:
+                if parameter is None:
+                    parameter = Parameter.from_relationship_parameter(row)
+                else:
+                    parameter.append_relationship_parameter(row)
+    if parameter is None:
+        raise GdxExportException(f"Cannot find parameter '{parameter_name}' in the database.")
+    return parameter
 
 
 def filter_and_sort_sets(sets, sorted_set_names, filter_flags):
@@ -953,7 +1059,9 @@ class Settings:
         domain_exportable_flags = dictionary.get("domain exportable flags", None)
         set_names = dictionary.get("set names", list())
         set_exportable_flags = dictionary.get("set exportable flags", None)
-        records = dictionary.get("records", list())
+        records = {
+            set_name: [tuple(key) for key in keys] for set_name, keys in dictionary.get("records", dict()).items()
+        }
         global_parameters_domain_name = dictionary.get("global parameters domain name", "")
         settings = Settings(
             domain_names,

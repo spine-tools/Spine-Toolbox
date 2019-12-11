@@ -197,9 +197,7 @@ class TestGdx(unittest.TestCase):
         )
         setting = gdx.IndexingSetting(parameter)
         setting.index_position = 1
-        stamp_domain = gdx.Set("stamp domain")
-        stamp_domain.records += [gdx.Record(("stamp1",)), gdx.Record(("stamp2",))]
-        setting.indexing_domain = gdx.IndexingDomain(stamp_domain, [True, True])
+        setting.indexing_domain = gdx.IndexingDomain("stamp domain", [("stamp1",), ("stamp2",)])
         parameter.expand_indexes(setting)
         self.assertEqual(parameter.domain_names, ["domain1", "stamp domain", "domain2"])
         self.assertEqual(
@@ -213,10 +211,10 @@ class TestGdx(unittest.TestCase):
         )
         self.assertEqual(parameter.values, [4.2, 5.3, -4.2, -5.3])
 
-    def test_IndexingDomain_construction(self):
+    def test_IndexingDomain_from_base_domain(self):
         domain = gdx.Set("domain name")
         domain.records = [gdx.Record(("key1",)), gdx.Record(("key2",)), gdx.Record(("key3",))]
-        indexing_domain = gdx.IndexingDomain(domain, [True, False, True])
+        indexing_domain = gdx.IndexingDomain.from_base_domain(domain, [True, False, True])
         self.assertEqual(indexing_domain.indexes, [("key1",), ("key3",)])
 
     def test_Settings_construction(self):
@@ -640,10 +638,7 @@ class TestGdx(unittest.TestCase):
         domain.records.append(record)
         time_series = TimeSeriesFixedResolution("2019-01-01T12:15", "1D", [3.3, 4.4], False, False)
         parameters = {"time series": gdx.Parameter(["domain name"], [("element",)], [time_series])}
-        index_domain = gdx.Set("indexes")
-        index_domain.records.append(gdx.Record(("stamp1",)))
-        index_domain.records.append(gdx.Record(("stamp2",)))
-        indexing_domain = gdx.IndexingDomain(index_domain, [True, True])
+        indexing_domain = gdx.IndexingDomain("indexes", [("stamp1",), ("stamp2",)])
         setting = gdx.IndexingSetting(parameters["time series"])
         setting.indexing_domain = indexing_domain
         settings = {"time series": setting}
@@ -661,10 +656,7 @@ class TestGdx(unittest.TestCase):
         time_series = TimeSeriesFixedResolution("2019-01-01T12:15", "1D", [3.3, 4.4], False, False)
         indexed_parameter = gdx.Parameter(["domain name"], [("element",)], [time_series])
         parameters = {"scalar": scalar_parameter, "time series": indexed_parameter}
-        index_domain = gdx.Set("indexes")
-        index_domain.records.append(gdx.Record(("stamp1",)))
-        index_domain.records.append(gdx.Record(("stamp2",)))
-        indexing_domain = gdx.IndexingDomain(index_domain, [True, True])
+        indexing_domain = gdx.IndexingDomain("indexes", [("stamp1",), ("stamp2",)])
         setting = gdx.IndexingSetting(parameters["time series"])
         setting.indexing_domain = indexing_domain
         settings = {"time series": setting}
@@ -683,10 +675,7 @@ class TestGdx(unittest.TestCase):
         original_set.records.append(record)
         time_series = TimeSeriesFixedResolution("2019-01-01T12:15", "1D", [3.3, 4.4], False, False)
         parameters = {"time series": gdx.Parameter(original_set.domain_names, [record.keys], [time_series])}
-        index_domain = gdx.Set("indexes")
-        index_domain.records.append(gdx.Record(("stamp1",)))
-        index_domain.records.append(gdx.Record(("stamp2",)))
-        indexing_domain = gdx.IndexingDomain(index_domain, [True, True])
+        indexing_domain = gdx.IndexingDomain("indexes", [("stamp1",), ("stamp2",)])
         setting = gdx.IndexingSetting(parameters["time series"])
         setting.indexing_domain = indexing_domain
         settings = {"time series": setting}
@@ -779,11 +768,11 @@ class TestGdx(unittest.TestCase):
         domain_names = ["domain1", "domain2"]
         set_names = ["set1", "set2", "set3"]
         records = {
-            "domain1": [["a1"], ["a2"]],
-            "domain2": [["b1"]],
-            "set1": [["c1", "c2"], ["c3", "c4"], ["c5", "c6"]],
-            "set2": [["d1"]],
-            "set3": [["e1"]],
+            "domain1": [("a1",), ("a2",)],
+            "domain2": [("b1",)],
+            "set1": [("c1", "c2",), ("c3", "c4",), ("c5", "c6",)],
+            "set2": [("d1",)],
+            "set3": [("e1",)],
         }
         return (
             domain_names,

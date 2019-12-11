@@ -73,42 +73,7 @@ class Exporter(ProjectItem):
         self._database_to_file_name_map = database_to_file_name_map if database_to_file_name_map is not None else dict()
         if settings_file_names is not None:
             for file_name in settings_file_names:
-                try:
-                    with open(file_name) as input_file:
-                        try:
-                            data = json.load(input_file)
-                            settings = data["settings"]
-                            database_path = settings["database path"]
-                            settings = gdx.Settings.from_dict(settings)
-                            self._settings[database_path] = settings
-                            parameter_indexing_settings = data.get("indexing settings", None)
-                            if parameter_indexing_settings is not None:
-                                database_map = DatabaseMapping(database_path)
-                                for entity_class_name, entity in parameter_indexing_settings.items():
-                                    entity_class = database_map.object_class_list.filter(
-                                        database_map.object_class_sq.c.name == entity_class_name
-                                    ).all()
-                                    is_object = bool(entity_class)
-                                    for entity_name, parameter in entity.items():
-                                        for parameter_name, data in parameter.items():
-                                            if is_object:
-                                                data["value"] = from_database(
-                                                    database_map.object_parameter_value_list(parameter_name).all()[0]
-                                                )
-                                            else:
-                                                data["value"] = from_database(
-                                                    database_map.relationship_parameter_value_list(
-                                                        parameter_name
-                                                    ).all()[0]
-                                                )
-                                database_map.connection.close()
-                                self._parameter_indexing_settings[database_path] = parameter_indexing_settings
-                        except (KeyError, json.JSONDecodeError):
-                            self._toolbox.msg_warning.emit(
-                                "Couldn't parse Exporter settings file {}. Skipping.".format(file_name)
-                            )
-                except FileNotFoundError:
-                    self._toolbox.msg_error.emit("Exporter settings file {} not found. Skipping.".format(file_name))
+                self._restore_settings(file_name)
         self._activated = False
 
     @staticmethod
@@ -268,28 +233,50 @@ class Exporter(ProjectItem):
     def _save_settings(self):
         """Saves all export settings to .json files in the item's data directory."""
         file_names = list()
-        for index, (database_path, settings) in enumerate(self._settings.items()):
-            setting_set = dict()
-            settings_dictionary = settings.to_dict()
-            settings_dictionary["database path"] = database_path
-            setting_set["settings"] = settings_dictionary
-            indexing_domains = self._parameter_indexing_settings.get(database_path, None)
-            if indexing_domains is not None:
-                indexing_domains_dictionary = dict()
-                for entity_class_name, entity in indexing_domains.items():
-                    entity_dictionary = dict()
-                    for entity_name, parameter in entity.items():
-                        parameter_dictionary = dict()
-                        for parameter_name, data in parameter.items():
-                            parameter_dictionary[parameter_name] = {"indexing domain": data["indexing domain"]}
-                        entity_dictionary[entity_class_name] = parameter_dictionary
-                    indexing_domains_dictionary[entity_class_name] = entity_dictionary
-                setting_set["indexing domains"] = indexing_domains_dictionary
+        for index, database_url in enumerate(self._settings):
+            exporter_dictionary = dict()
+            settings_dictionary = self._settings[database_url].to_dict()
+            exporter_dictionary["database_url"] = database_url
+            exporter_dictionary["settings"] = settings_dictionary
+            exporter_dictionary["parameter_indexing_domains"] = gdx.indexing_settings_to_dict(
+                self._parameter_indexing_settings[database_url]
+            )
+            exporter_dictionary["additional_domains"] = [
+                domain.to_dict() for domain in self._additional_parameter_indexing_domains[database_url]
+            ]
             file_name = os.path.join(self.data_dir, "export_settings_{}.json".format(index + 1))
             with open(file_name, "w") as output_file:
-                json.dump(setting_set, output_file, sort_keys=True, indent=4)
+                json.dump(exporter_dictionary, output_file, sort_keys=True, indent=4)
                 file_names.append(file_name)
         return file_names
+
+    def _restore_settings(self, file_name):
+        try:
+            with open(file_name) as input_file:
+                try:
+                    exporter_dictionary = json.load(input_file)
+                    database_url = exporter_dictionary["database_url"]
+                    settings_dictionary = exporter_dictionary["settings"]
+                    settings = gdx.Settings.from_dict(settings_dictionary)
+                    self._settings[database_url] = settings
+                    parameter_indexing_domains_dict = exporter_dictionary["parameter_indexing_domains"]
+                    db_map = DatabaseMapping(database_url)
+                    self._parameter_indexing_settings[database_url] = gdx.indexing_settings_from_dict(
+                        parameter_indexing_domains_dict, db_map
+                    )
+                    db_map.connection.close()
+                    additional_domains_dicts = exporter_dictionary["additional_domains"]
+                    self._additional_parameter_indexing_domains[database_url] = [
+                        gdx.Set.from_dict(domain_dict) for domain_dict in additional_domains_dicts
+                    ]
+                    for domain in self._additional_parameter_indexing_domains:
+                        additional_domain_needed = False
+                except (KeyError, json.JSONDecodeError):
+                    self._toolbox.msg_warning.emit(
+                        "Couldn't parse Exporter settings file {}. Skipping.".format(file_name)
+                    )
+        except FileNotFoundError:
+            self._toolbox.msg_warning.emit("Exporter settings file {} not found. Skipping.".format(file_name))
 
     def update_name_label(self):
         """See `ProjectItem.update_name_label()`."""
