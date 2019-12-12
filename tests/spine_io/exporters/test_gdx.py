@@ -197,7 +197,7 @@ class TestGdx(unittest.TestCase):
         )
         setting = gdx.IndexingSetting(parameter)
         setting.index_position = 1
-        setting.indexing_domain = gdx.IndexingDomain("stamp domain", [("stamp1",), ("stamp2",)])
+        setting.indexing_domain = gdx.IndexingDomain("stamp domain", [("stamp1",), ("stamp2",)], [True, True])
         parameter.expand_indexes(setting)
         self.assertEqual(parameter.domain_names, ["domain1", "stamp domain", "domain2"])
         self.assertEqual(
@@ -305,7 +305,7 @@ class TestGdx(unittest.TestCase):
             domain_names, domain_records = gdx.domain_names_and_records(database_map)
             database_map.connection.close()
         self.assertEqual(domain_names, ["domain"])
-        self.assertEqual(domain_records, {"domain": [("recordA", ), ("recordB",)]})
+        self.assertEqual(domain_records, {"domain": [("recordA",), ("recordB",)]})
 
     def test_set_names_and_records(self):
         with TemporaryDirectory() as tmp_dir_name:
@@ -638,7 +638,7 @@ class TestGdx(unittest.TestCase):
         domain.records.append(record)
         time_series = TimeSeriesFixedResolution("2019-01-01T12:15", "1D", [3.3, 4.4], False, False)
         parameters = {"time series": gdx.Parameter(["domain name"], [("element",)], [time_series])}
-        indexing_domain = gdx.IndexingDomain("indexes", [("stamp1",), ("stamp2",)])
+        indexing_domain = gdx.IndexingDomain("indexes", [("stamp1",), ("stamp2",)], [True, True])
         setting = gdx.IndexingSetting(parameters["time series"])
         setting.indexing_domain = indexing_domain
         settings = {"time series": setting}
@@ -656,7 +656,7 @@ class TestGdx(unittest.TestCase):
         time_series = TimeSeriesFixedResolution("2019-01-01T12:15", "1D", [3.3, 4.4], False, False)
         indexed_parameter = gdx.Parameter(["domain name"], [("element",)], [time_series])
         parameters = {"scalar": scalar_parameter, "time series": indexed_parameter}
-        indexing_domain = gdx.IndexingDomain("indexes", [("stamp1",), ("stamp2",)])
+        indexing_domain = gdx.IndexingDomain("indexes", [("stamp1",), ("stamp2",)], [True, True])
         setting = gdx.IndexingSetting(parameters["time series"])
         setting.indexing_domain = indexing_domain
         settings = {"time series": setting}
@@ -675,7 +675,7 @@ class TestGdx(unittest.TestCase):
         original_set.records.append(record)
         time_series = TimeSeriesFixedResolution("2019-01-01T12:15", "1D", [3.3, 4.4], False, False)
         parameters = {"time series": gdx.Parameter(original_set.domain_names, [record.keys], [time_series])}
-        indexing_domain = gdx.IndexingDomain("indexes", [("stamp1",), ("stamp2",)])
+        indexing_domain = gdx.IndexingDomain("indexes", [("stamp1",), ("stamp2",)], [True, True])
         setting = gdx.IndexingSetting(parameters["time series"])
         setting.indexing_domain = indexing_domain
         settings = {"time series": setting}
@@ -731,6 +731,19 @@ class TestGdx(unittest.TestCase):
         self.assertIsNone(indexing_settings["relationship_parameter"].indexing_domain)
         self.assertEqual(indexing_settings["relationship_parameter"].index_position, 1)
 
+    def test_sort_indexing_domain_indexes(self):
+        settings = gdx.Settings(
+            ["domain2", "domain1"], [], {"domain1": [("a1",), ("a2",)], "domain2": [("b1",), ("b2",), ("b3",)]}
+        )
+        indexing_domain = gdx.IndexingDomain("domain2", [("b3",), ("b2",), ("b1",)], [False, True, True])
+        time_series = TimeSeriesFixedResolution("2019-01-01T12:15", "1D", [3.3, 4.4], False, False)
+        indexed_parameter = gdx.Parameter(["domain1"], [("a1",)], [time_series])
+        indexing_setting = gdx.IndexingSetting(indexed_parameter)
+        indexing_setting.indexing_domain = indexing_domain
+        indexing_settings = {"parameter": indexing_setting}
+        gdx.sort_indexing_domain_indexes(indexing_settings, settings)
+        self.assertEqual(indexing_domain.indexes, [("b2",), ("b3",)])
+
     @staticmethod
     def _object_parameter():
         with TemporaryDirectory() as tmp_dir_name:
@@ -770,7 +783,7 @@ class TestGdx(unittest.TestCase):
         records = {
             "domain1": [("a1",), ("a2",)],
             "domain2": [("b1",)],
-            "set1": [("c1", "c2",), ("c3", "c4",), ("c5", "c6",)],
+            "set1": [("c1", "c2"), ("c3", "c4"), ("c5", "c6")],
             "set2": [("d1",)],
             "set3": [("e1",)],
         }

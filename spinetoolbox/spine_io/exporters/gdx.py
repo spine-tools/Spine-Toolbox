@@ -322,30 +322,49 @@ class IndexingDomain:
 
     Attributes:
         name (str): indexing domain's name
-        indexes (list): a list of indexing key tuples
     """
 
-    def __init__(self, name, indexes):
+    def __init__(self, name, indexes, pick_list):
         """
         Picks the keys from base_domain for which the corresponding element in pick_list holds True.
 
         Args:
             name (str): indexing domain's name
             indexes (list): a list of indexing key tuples
+            pick_list (list): a list of booleans
         """
         self.name = name
-        self.indexes = indexes
+        self._picked_indexes = None
+        self._all_indexes = indexes
+        self._pick_list = pick_list
+
+    @property
+    def indexes(self):
+        """a list of indexing key tuples"""
+        if self._picked_indexes is None:
+            picked = list()
+            for index, pick in zip(self._all_indexes, self._pick_list):
+                if pick:
+                    picked.append(index)
+            self._picked_indexes = picked
+        return self._picked_indexes
+
+    def sort_indexes(self, settings):
+        self._all_indexes = settings.sorted_record_key_lists(self.name)
+        self._picked_indexes = None
 
     def to_dict(self):
         domain_dict = dict()
         domain_dict["name"] = self.name
-        domain_dict["indexes"] = self.indexes
+        domain_dict["indexes"] = self._all_indexes
+        domain_dict["pick_list"] = self._pick_list
         return domain_dict
 
     @staticmethod
     def from_dict(domain_dict):
         indexes = [tuple(index) for index in domain_dict["indexes"]]
-        return IndexingDomain(domain_dict["name"], indexes)
+        pick_list = domain_dict["pick_list"]
+        return IndexingDomain(domain_dict["name"], indexes, pick_list)
 
     @staticmethod
     def from_base_domain(base_domain, pick_list):
@@ -355,10 +374,15 @@ class IndexingDomain:
             pick_list (list): a list of booleans
         """
         indexes = list()
-        for record, pick in zip(base_domain.records, pick_list):
-            if pick:
-                indexes.append(record.keys)
-        return IndexingDomain(base_domain.name, indexes)
+        for record in base_domain.records:
+            indexes.append(record.keys)
+        return IndexingDomain(base_domain.name, indexes, pick_list)
+
+
+def sort_indexing_domain_indexes(indexing_settings, settings):
+    for indexing_setting in indexing_settings.values():
+        indexing_domain = indexing_setting.indexing_domain
+        indexing_domain.sort_indexes(settings)
 
 
 def _python_interpreter_bitness():
@@ -830,6 +854,7 @@ def to_gdx_file(database_map, file_name, additional_domains, settings, indexing_
     domains += additional_domains
     domains = filter_and_sort_sets(domains, settings.sorted_domain_names, settings.domain_exportable_flags)
     sort_records_inplace(domains, settings)
+    sort_indexing_domain_indexes(indexing_settings, settings)
     expand_indexed_parameter_values(domain_parameters, indexing_settings)
     sets, set_parameters = relationship_classes_to_sets(database_map)
     sets = filter_and_sort_sets(sets, settings.sorted_set_names, settings.set_exportable_flags)

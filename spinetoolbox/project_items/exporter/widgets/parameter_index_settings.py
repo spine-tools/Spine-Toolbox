@@ -20,6 +20,7 @@ import enum
 from PySide2.QtCore import QAbstractTableModel, QItemSelection, QItemSelectionModel, QModelIndex, Qt, Slot
 from PySide2.QtWidgets import QWidget
 from spinetoolbox.spine_io.exporters import gdx
+from ..list_utils import move_list_elements
 
 
 class IndexSettingsState(enum.Enum):
@@ -93,6 +94,12 @@ class ParameterIndexSettings(QWidget):
         elif self._state == IndexSettingsState.OK:
             self.notification_message("Parameter successfully indexed.")
 
+    def is_using_domain(self, domain_name):
+        return (
+            self._ui.use_existing_domain_radio_button.isChecked()
+            and self._ui.existing_domains_combo.currentText() == domain_name
+        )
+
     def indexing_domain(self):
         """
         Provides information needed to expand the parameter's indexed values.
@@ -101,12 +108,12 @@ class ParameterIndexSettings(QWidget):
             tuple: a tuple of IndexingDomain and a Set if a new domain is needed for indexing, otherwise None
         """
         new_domain = None
+        indexes = self._indexing_table_model.indexes
         if self._ui.use_existing_domain_radio_button.isChecked():
             domain_name = self._ui.existing_domains_combo.currentText()
             base_domain = gdx.Set(domain_name)
-            base_domain.records = [gdx.Record((keys,)) for keys in self._available_domains[domain_name]]
+            base_domain.records = [gdx.Record((index,)) for index in indexes]
         else:
-            indexes = self._indexing_table_model.indexes
             domain_name = self._ui.domain_name_edit.text()
             domain_description = self._ui.domain_description_edit.text()
             base_domain = gdx.Set(domain_name, domain_description)
@@ -115,61 +122,6 @@ class ParameterIndexSettings(QWidget):
         pick_list = self._indexing_table_model.index_selection
         indexing_domain = gdx.IndexingDomain.from_base_domain(base_domain, pick_list)
         return indexing_domain, new_domain
-
-    def to_dict(self):
-        """Writes the widget's state to a dict."""
-        serialized = dict()
-        serialized["index_position"] = self._indexing_setting.index_position
-        use_existing_domain = self._ui.use_existing_domain_radio_button.isChecked()
-        serialized["use_existing_domain"] = use_existing_domain
-        if use_existing_domain:
-            serialized["domain_name"] = str(self._ui.existing_domains_combo.currentText())
-            pick_expression = str(self._ui.pick_expression_edit.text())
-            if pick_expression:
-                serialized["pick_expression"] = pick_expression
-            else:
-                serialized["pick_indexes"] = self._indexing_table_model.index_selection
-        else:
-            serialized["domain_name"] = str(self._ui.domain_name_edit.text())
-            serialized["domain_description"] = str(self._ui.domain_description_edit.text())
-            generator_expression = str(self._ui.generator_expression_edit.text())
-            if generator_expression:
-                serialized["generator_expression"] = generator_expression
-            else:
-                serialized["indexes"] = self._indexing_table_model.indexes
-            serialized["pick_indexes"] = self._indexing_table_model.index_selection
-            indexes = self._indexing_table_model.indexes
-        return serialized
-
-    def restore_from_dict(self, serialized):
-        """Reads widget's state from a dict."""
-
-        def select_pick_indexes(pick_indexes):
-            select = QItemSelection()
-            for row, selected in enumerate(pick_indexes):
-                if selected:
-                    top_left = self._indexing_table_model.index(row, 0)
-                    bottom_right = self._indexing_table_model.index(row, 1)
-                    select.select(top_left, bottom_right)
-            self._ui.index_table_view.selectionModel().select(select, Qt.ClearAndSelect)
-
-        self._indexing_setting.index_position = serialized["index_position"]
-        if serialized["use_existing_domain"]:
-            self._ui.existing_domains_combo.setCurrentText(serialized["domain_name"])
-            pick_expression = serialized.get(["pick_expression"], None)
-            if pick_expression is not None:
-                self._ui.pick_expression_edit.setText(pick_expression)
-            else:
-                select_pick_indexes(serialized["pick_indexes"])
-        else:
-            self._ui.domain_name_edit.setText(serialized["domain_name"])
-            self._ui.domain_description_edit.setText(serialized["domain_description"])
-            generator_expression = serialized.get("generator_expression", None)
-            if generator_expression is not None:
-                self._ui.generator_expression_edit.setText(generator_expression)
-            else:
-                self._indexing_table_model.set_indexes(serialized["indexes"])
-            select_pick_indexes(serialized["pick_indexes"])
 
     def notification_message(self, message):
         """Shows a notification message on the widget."""
@@ -184,6 +136,9 @@ class ParameterIndexSettings(QWidget):
         """Shows an error message on the widget."""
         red_message = "<span style='color:#ff3333;white-space: pre-wrap;'>" + message + "</span>"
         self._ui.message_label.setText(red_message)
+
+    def reorder_indexes(self, first, last, target):
+        self._indexing_table_model.reorder_indexes(first, last, target)
 
     def _check_state(self):
         """Updated the widget's state."""
@@ -411,6 +366,12 @@ class _IndexingTableModel(QAbstractTableModel):
             if selected:
                 count += 1
         return count - len(self._parameter_values[0].values) if self._parameter_values else 0
+
+    def reorder_indexes(self, first, last, target):
+        self._indexes = move_list_elements(self._indexes, first, last, target)
+        top_left = self.index(first, 0)
+        bottom_right = self.index(target, 0)
+        self.dataChanged.emit(top_left, bottom_right, [Qt.DisplayRole, Qt.ToolTipRole])
 
     def rowCount(self, parent=QModelIndex()):
         """Return the number of rows."""

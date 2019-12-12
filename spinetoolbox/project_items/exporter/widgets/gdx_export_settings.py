@@ -19,6 +19,7 @@ Export item's settings window for .gdx export.
 from PySide2.QtCore import QAbstractListModel, QModelIndex, Qt, Signal, Slot
 from PySide2.QtGui import QColor
 from PySide2.QtWidgets import QWidget
+from ..list_utils import move_list_elements
 from .parameter_index_settings_window import ParameterIndexSettingsWindow
 
 
@@ -141,7 +142,7 @@ class GdxExportSettings(QWidget):
         self._settings.global_parameters_domain_name = text
 
     @Slot("QItemSelection", "QItemSelection")
-    def _populate_set_contents(self, selected, deselected):
+    def _populate_set_contents(self, selected, _):
         """Populates the record list by the selected domain's or set's records."""
         selected_indexes = selected.indexes()
         if not selected_indexes:
@@ -150,7 +151,7 @@ class GdxExportSettings(QWidget):
         selected_set_name = set_model.data(selected_indexes[0])
         record_keys = self._settings.sorted_record_key_lists(selected_set_name)
         record_model = self._ui.record_list_view.model()
-        record_model.reset(record_keys)
+        record_model.reset(record_keys, selected_set_name)
 
     @Slot(bool)
     def _show_indexed_parameter_settings(self, _):
@@ -170,6 +171,9 @@ class GdxExportSettings(QWidget):
                 self._indexing_settings, available_domains, self._database_path, self
             )
             self._indexed_parameter_settings_window.settings_approved.connect(self._parameter_settings_approved)
+            self._ui.record_list_view.model().domain_records_reordered.connect(
+                self._indexed_parameter_settings_window.reorder_indexes
+            )
         self._indexed_parameter_settings_window.show()
 
     @Slot()
@@ -222,28 +226,6 @@ def _move_selected_elements_by(list_view, delta):
     model = list_view.model()
     for chunk in contiguous_selections:
         model.moveRows(QModelIndex(), chunk[0], chunk[1], QModelIndex(), chunk[0] + delta)
-
-
-def _move_list_elements(originals, first, last, target):
-    """
-    Moves elements in a list.
-
-    Args:
-        originals (list): a list
-        first (int): index of the first element to move
-        last (int): index of the last element to move
-        target (int): index where the elements `[first:last]` should be inserted
-
-    Return:
-        a new list with the elements moved
-    """
-    trashable = list(originals)
-    elements_to_move = list(originals[first : last + 1])
-    del trashable[first : last + 1]
-    elements_that_come_before = trashable[:target]
-    elements_that_come_after = trashable[target:]
-    brave_new_list = elements_that_come_before + elements_to_move + elements_that_come_after
-    return brave_new_list
 
 
 class GAMSSetListModel(QAbstractListModel):
@@ -378,8 +360,8 @@ class GAMSSetListModel(QAbstractListModel):
             sourceRow -= domain_count
             last_source_row -= domain_count
             destinationChild -= domain_count
-        names[:] = _move_list_elements(names, sourceRow, last_source_row, destinationChild)
-        export_flags[:] = _move_list_elements(export_flags, sourceRow, last_source_row, destinationChild)
+        names[:] = move_list_elements(names, sourceRow, last_source_row, destinationChild)
+        export_flags[:] = move_list_elements(export_flags, sourceRow, last_source_row, destinationChild)
         self.endMoveRows()
         return True
 
@@ -404,9 +386,12 @@ class GAMSSetListModel(QAbstractListModel):
 class GAMSRecordListModel(QAbstractListModel):
     """A model to manage record ordering within domains and sets."""
 
+    domain_records_reordered = Signal(str, int, int, int)
+
     def __init__(self):
         super().__init__()
         self._records = list()
+        self._set_name = ""
 
     def data(self, index, role=Qt.DisplayRole):
         """With `role == Qt.DisplayRole` returns the record's keys as comma separated string."""
@@ -443,12 +428,15 @@ class GAMSRecordListModel(QAbstractListModel):
         last_source_row = sourceRow + count - 1
         row_after = destinationChild if sourceRow > destinationChild else destinationChild + 1
         self.beginMoveRows(sourceParent, sourceRow, last_source_row, destinationParent, row_after)
-        self._records[:] = _move_list_elements(self._records, sourceRow, last_source_row, destinationChild)
+        self._records[:] = move_list_elements(self._records, sourceRow, last_source_row, destinationChild)
         self.endMoveRows()
+        if len(self._records[0]) == 1:
+            self.domain_records_reordered.emit(self._set_name, sourceRow, last_source_row, destinationChild)
         return True
 
-    def reset(self, records):
+    def reset(self, records, set_name):
         """Resets the model's record data."""
+        self._set_name = set_name
         self.beginResetModel()
         self._records = records
         self.endResetModel()
