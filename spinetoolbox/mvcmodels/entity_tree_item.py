@@ -531,7 +531,7 @@ class RelationshipItem(EntityItem):
     def display_name(self):
         """"Returns the name for display."""
         return (
-            self.db_map_data_field(self.first_db_map, "object_name_list")
+            self.db_map_data_field(self.first_db_map, "object_name_list", default="")
             .replace(self.parent_item.parent_item.display_name + ",", "")
             .replace("," + self.parent_item.parent_item.display_name, "")
             .replace(",", self.db_mngr._GROUP_SEP)
