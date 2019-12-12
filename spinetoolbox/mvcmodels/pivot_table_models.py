@@ -229,7 +229,7 @@ class PivotTableModel(QAbstractTableModel):
         return None
 
     def _header_ids(self, index):
-        """Returns the ids of the row *and* column headers corresponding to the given data index.
+        """Returns the ids of the row *and* column headers corresponding to the given header or data index.
 
         Args:
             index (QModelIndex)
@@ -360,8 +360,7 @@ class PivotTableModel(QAbstractTableModel):
             data = self.model.get_pivoted_data([row], [column])
             if not data or data[0][0] is None:
                 # Add
-                header_ids = self._header_ids(index)
-                self.add_parameter_value(header_ids, value)
+                self.add_parameter_value(index, value)
             else:
                 self.update_parameter_value(data[0][0], value)
             self.dataChanged.emit(index, index)
@@ -402,6 +401,26 @@ class PivotTableModel(QAbstractTableModel):
             item["class_id"] = self._parent.current_object_class_id_list()[top_left_id]
             self.db_mngr.add_objects({self.db_map: [item]})
 
+    def _get_relationship(self, object_ids):
+        """
+        Returns a relationship dictionary item associated with given object ids.
+
+        Args:
+            object_ids (tuple(int)):
+
+        Returns:
+            dict, NoneType
+        """
+        object_id_list = ",".join([str(id_) for id_ in object_ids])
+        relationships = self.db_mngr.get_items(self.db_map, "relationship")
+        return next(
+            iter(
+                rel
+                for rel in relationships
+                if rel["class_id"] == self._parent.current_class_id and rel["object_id_list"] == object_id_list
+            )
+        )
+
     def _new_relationship_parameter_value(self, object_ids, value):
         """Returns a new parameter value item to insert to the db.
 
@@ -411,29 +430,22 @@ class PivotTableModel(QAbstractTableModel):
         Returns:
             dict
         """
-        object_id_list = ",".join([str(id_) for id_ in object_ids])
-        relationships = self.db_mngr.get_items(self.db_map, "relationship")
-        relationship = next(
-            iter(
-                rel
-                for rel in relationships
-                if rel["class_id"] == self._parent.current_class_id and rel["object_id_list"] == object_id_list
-            )
-        )
+        relationship = self._get_relationship(object_ids)
         return dict(relationship_id=relationship["id"], value=value)
 
-    def add_parameter_value(self, index_ids, value):
+    def add_parameter_value(self, index, value):
         """
         Args:
-            index_ids (tuple(int)): object_ids + parameter_id
+            index (QModelIndex)
             value
         """
+        header_ids = self._header_ids(index)
         if self._parent.current_class_type == self._parent._RELATIONSHIP_CLASS:
-            item = self._new_relationship_parameter_value(index_ids[:-1], value)
+            item = self._new_relationship_parameter_value(header_ids[:-1], value)
         else:
-            object_id = index_ids[0]
+            object_id = header_ids[0]
             item = dict(object_id=object_id, value=value)
-        parameter_id = index_ids[-1]
+        parameter_id = header_ids[-1]
         item["parameter_definition_id"] = parameter_id
         self.db_mngr.add_parameter_values({self.db_map: [item]})
 

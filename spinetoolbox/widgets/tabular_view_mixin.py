@@ -44,9 +44,6 @@ class TabularViewMixin:
         self.current_class_type = ''
         self.current_class_id = ''
         self.current_input_type = self._INPUT_VALUE
-        self.relationships = {}
-        self.object_classes = {}
-        self.objects = {}
         self.filter_menus = {}
         self.index_values = {}  # Maps index id to a sorted set of values for that index
         self.class_pivot_preferences = {}
@@ -68,20 +65,6 @@ class TabularViewMixin:
             self.pivot_table_model, self.ui.pivot_table
         )
 
-    @Slot(dict, dict)
-    def table_index_entries_changed(self, added_entries, deleted_entries):
-        """
-        Updates the filter menus whenever objects are added or removed.
-        """
-        for menu in self.filter_menus.values():
-            if menu.object_class_name in deleted_entries:
-                menu.remove_items_from_filter_list(deleted_entries[menu.object_class_name])
-            if menu.object_class_name in added_entries:
-                menu.add_items_to_filter_list(added_entries[menu.object_class_name])
-
-    def is_value_input_type(self):
-        return self.current_input_type == self._INPUT_VALUE
-
     def setup_delegates(self):
         """Sets delegates for tables."""
         super().setup_delegates()
@@ -89,10 +72,6 @@ class TabularViewMixin:
         self.ui.pivot_table.setItemDelegate(delegate)
         delegate.parameter_value_editor_requested.connect(self.show_parameter_value_editor)
         delegate.data_committed.connect(self._set_model_data)
-
-    @Slot("QModelIndex", object)
-    def _set_model_data(self, index, value):
-        self.pivot_table_proxy.setData(index, value)
 
     def add_toggle_view_actions(self):
         """Adds toggle view actions to View menu."""
@@ -112,7 +91,6 @@ class TabularViewMixin:
         self.ui.pivot_table.horizontalHeader().customContextMenuRequested.connect(
             self._pivot_table_horizontal_header_menu.request_menu
         )
-        # TODO: self.pivot_table_model.index_entries_changed.connect(self.table_index_entries_changed)
         self.pivot_table_model.modelReset.connect(self.make_pivot_headers)
         self.ui.pivot_table.horizontalHeader().header_dropped.connect(self.handle_header_dropped)
         self.ui.pivot_table.verticalHeader().header_dropped.connect(self.handle_header_dropped)
@@ -122,10 +100,12 @@ class TabularViewMixin:
         self.ui.dockWidget_pivot_table.visibilityChanged.connect(self._handle_pivot_table_visibility_changed)
         self.ui.dockWidget_frozen_table.visibilityChanged.connect(self._handle_frozen_table_visibility_changed)
 
-    @Slot(bool)
-    def rollback_session(self, checked=False):
-        super().rollback_session()
-        self.reload_pivot_table()
+    def is_value_input_type(self):
+        return self.current_input_type == self._INPUT_VALUE
+
+    @Slot("QModelIndex", object)
+    def _set_model_data(self, index, value):
+        self.pivot_table_proxy.setData(index, value)
 
     def current_object_class_id_list(self):
         if self.current_class_type == self._OBJECT_CLASS:
@@ -332,7 +312,9 @@ class TabularViewMixin:
         # get pivot preference for current selection
         selection_key = (self.current_class_id, self.current_class_type, self.current_input_type)
         rows, columns, frozen, frozen_value = self.get_pivot_preferences(selection_key)
-        self.filter_menus.clear()
+        while self.filter_menus:
+            _, menu = self.filter_menus.popitem()
+            menu.wipe_out()
         self.pivot_table_model.reset_model(data, index_ids, rows, columns, frozen, frozen_value)
         self.pivot_table_proxy.clear_filter()
         self.ui.pivot_table.resizeColumnsToContents()
@@ -363,7 +345,7 @@ class TabularViewMixin:
             self.ui.frozen_table.horizontalHeader().resizeSection(column, widget.size().width())
 
     def create_filter_menu(self, identifier):
-        """Returns a filter menu for given given object class disambiguated name.
+        """Returns a filter menu for given given disambiguated object class name.
 
         Args:
             identifier (int)
@@ -517,52 +499,57 @@ class TabularViewMixin:
         """
         return sorted(set(zip(*[self.index_values[k] for k in frozen])))
 
-    def refresh_pivot_table_view(self):
-        top_left = self.ui.pivot_table.indexAt(self.ui.pivot_table.rect().topLeft())
-        bottom_right = self.ui.pivot_table.indexAt(self.ui.pivot_table.rect().bottomRight())
-        self.pivot_table_proxy.dataChanged.emit(top_left, bottom_right)
+    @staticmethod
+    def refresh_table_view(table_view):
+        top_left = table_view.indexAt(table_view.rect().topLeft())
+        bottom_right = table_view.indexAt(table_view.rect().bottomRight())
+        table_view.model().dataChanged.emit(top_left, bottom_right)
 
-    def receive_db_map_data_added(self, db_map_data, get_class_id):
+    def _check_db_map_data(self, db_map_data):
         if len(db_map_data) > 1 or self.db_map not in db_map_data:
-            raise RuntimeError("Data Store view received data insert signal from wrong database.")
+            raise RuntimeError("Data Store view received signal from wrong database.")
+
+    def receive_db_map_data_added_or_removed(self, db_map_data, get_class_id):
+        self._check_db_map_data(db_map_data)
         items = db_map_data[self.db_map]
         for item in items:
             if get_class_id(item) == self.current_class_id:
                 self.reload_pivot_table()
+                self.reload_frozen_table()
+                break
+
+    def receive_db_map_data_updated(self, db_map_data, get_class_id):
+        self._check_db_map_data(db_map_data)
+        items = db_map_data[self.db_map]
+        for item in items:
+            if get_class_id(item) == self.current_class_id:
+                self.refresh_table_view(self.ui.pivot_table)
+                self.refresh_table_view(self.ui.frozen_table)
                 break
 
     def receive_objects_added(self, db_map_data):
         """Reacts to objects added event."""
         super().receive_objects_added(db_map_data)
-        self.receive_db_map_data_added(db_map_data, get_class_id=lambda x: x["class_id"])
+        self.receive_db_map_data_added_or_removed(db_map_data, get_class_id=lambda x: x["class_id"])
 
     def receive_relationships_added(self, db_map_data):
         """Reacts to relationships added event."""
         super().receive_relationships_added(db_map_data)
-        self.receive_db_map_data_added(db_map_data, get_class_id=lambda x: x["class_id"])
+        self.receive_db_map_data_added_or_removed(db_map_data, get_class_id=lambda x: x["class_id"])
 
     def receive_parameter_definitions_added(self, db_map_data):
         """Reacts to parameter definitions added event."""
         super().receive_parameter_definitions_added(db_map_data)
-        self.receive_db_map_data_added(
+        self.receive_db_map_data_added_or_removed(
             db_map_data, get_class_id=lambda x: x.get("object_class_id") or x.get("relationship_class_id")
         )
 
     def receive_parameter_values_added(self, db_map_data):
         """Reacts to parameter values added event."""
         super().receive_parameter_values_added(db_map_data)
-        self.receive_db_map_data_added(
+        self.receive_db_map_data_added_or_removed(
             db_map_data, get_class_id=lambda x: x.get("object_class_id") or x.get("relationship_class_id")
         )
-
-    def receive_db_map_data_updated(self, db_map_data, get_class_id):
-        if len(db_map_data) > 1 or self.db_map not in db_map_data:
-            raise RuntimeError("Data Store view received data update signal from wrong database.")
-        items = db_map_data[self.db_map]
-        for item in items:
-            if get_class_id(item) == self.current_class_id:
-                self.refresh_pivot_table_view()
-                break
 
     def receive_object_classes_updated(self, db_map_data):
         """Reacts to object classes updated event."""
@@ -598,31 +585,39 @@ class TabularViewMixin:
             db_map_data, get_class_id=lambda x: x.get("object_class_id") or x.get("relationship_class_id")
         )
 
-    # TODO: removed
-
     def receive_object_classes_removed(self, db_map_data):
         """Reacts to object classes removed event."""
         super().receive_object_classes_removed(db_map_data)
+        self.receive_db_map_data_added_or_removed(db_map_data, get_class_id=lambda x: x["id"])
 
     def receive_objects_removed(self, db_map_data):
         """Reacts to objects removed event."""
         super().receive_objects_removed(db_map_data)
+        self.receive_db_map_data_added_or_removed(db_map_data, get_class_id=lambda x: x["class_id"])
 
     def receive_relationship_classes_removed(self, db_map_data):
         """Reacts to relationship classes remove event."""
         super().receive_relationship_classes_removed(db_map_data)
+        self.receive_db_map_data_added_or_removed(db_map_data, get_class_id=lambda x: x["id"])
 
     def receive_relationships_removed(self, db_map_data):
         """Reacts to relationships removed event."""
         super().receive_relationships_removed(db_map_data)
+        self.receive_db_map_data_added_or_removed(db_map_data, get_class_id=lambda x: x["class_id"])
 
     def receive_parameter_definitions_removed(self, db_map_data):
         """Reacts to parameter definitions removed event."""
         super().receive_parameter_definitions_removed(db_map_data)
+        self.receive_db_map_data_added_or_removed(
+            db_map_data, get_class_id=lambda x: x.get("object_class_id") or x.get("relationship_class_id")
+        )
 
     def receive_parameter_values_removed(self, db_map_data):
         """Reacts to parameter values removed event."""
         super().receive_parameter_values_removed(db_map_data)
+        self.receive_db_map_data_added_or_removed(
+            db_map_data, get_class_id=lambda x: x.get("object_class_id") or x.get("relationship_class_id")
+        )
 
     def receive_session_rolled_back(self, db_maps):
         """Reacts to session rolled back event."""

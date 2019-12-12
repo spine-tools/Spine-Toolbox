@@ -16,7 +16,6 @@ Provides FilterCheckboxListModel for FilterWidget.
 :date:   1.11.2018
 """
 
-import bisect
 from PySide2.QtCore import Qt, QModelIndex, QAbstractListModel
 
 
@@ -159,26 +158,6 @@ class FilterCheckboxListModel(QAbstractListModel):
         self.remove_filter()
         self.endResetModel()
 
-    def add_items(self, items, selected=True):
-        for item in items:
-            if item not in self._data_set:
-                pos = bisect.bisect_left(self._data, item)
-                self.beginInsertRows(self.index(0, 0), pos, pos)
-                if self._is_filtered and pos is not None:
-                    start_pos = bisect.bisect_left(self._filter_index, pos)
-                    for i in range(start_pos, len(self._filter_index)):
-                        self._filter_index[i] = self._filter_index[i] + 1
-                    if self._list_filter in item:
-                        self._filter_index.insert(start_pos, pos)
-                self._data.insert(pos, item)
-                self._data_set.add(item)
-                if selected:
-                    self._selected.add(item)
-                    if self._is_filtered:
-                        self._selected_filtered.add(item)
-                self._all_selected = self._is_all_selected()
-                self.endInsertRows()
-
     def set_selected(self, selected, select_empty=None):
         self.beginResetModel()
         self._selected = self._data_set.intersection(selected)
@@ -246,24 +225,3 @@ class FilterCheckboxListModel(QAbstractListModel):
         self._selected_filtered = set()
         self._all_selected = self._is_all_selected()
         self.endResetModel()
-
-    def remove_items(self, items):
-        if self._is_filtered:
-            self._selected_filtered.difference_update(items)
-            remove_index = []
-            subtract_index = 0
-            for i, row in enumerate(self._filter_index):
-                if self._data[row] in items:
-                    # indexes to remove
-                    remove_index.append(i)
-                    subtract_index = subtract_index + 1
-                else:
-                    # update row index
-                    self._filter_index[i] = self._filter_index[i] - subtract_index
-            for i in reversed(remove_index):
-                self._filter_index.pop(i)
-        self._data_set.difference_update(items)
-        self._data = [d for d in self._data if d not in items]
-        self._selected.difference_update(items)
-
-        self._all_selected = self._is_all_selected()

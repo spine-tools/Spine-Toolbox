@@ -550,14 +550,6 @@ class FilterMenu(QMenu):
         self._filter.okPressed.connect(self._change_filter)
         self._filter.cancelPressed.connect(self.hide)
 
-    def add_items_to_filter_list(self, items):
-        self._filter._filter_model.add_items(items)
-        self._filter.save_state()
-
-    def remove_items_from_filter_list(self, items):
-        self._filter._filter_model.remove_items(items)
-        self._filter.save_state()
-
     def set_filter_list(self, data):
         self._filter.set_filter_list(data)
 
@@ -577,6 +569,10 @@ class FilterMenu(QMenu):
             valid_values.add(None)
         self.filterChanged.emit(self.identifier, valid_values, self._filter.has_filter())
         self.hide()
+
+    def wipe_out(self):
+        self._filter._filter_model.set_list(set())
+        self.deleteLater()
 
     def event(self, event):
         if event.type() == QEvent.Show and self.anchor is not None:
@@ -600,6 +596,8 @@ class PivotTableModelMenu(QMenu):
             parent (TabularViewMixin)
         """
         super().__init__(parent)
+        self.db_mngr = parent.db_mngr
+        self.db_map = parent.db_map
         self._table = parent.ui.pivot_table
         self._proxy = self._table.model()
         self._source = self._proxy.sourceModel()
@@ -630,19 +628,25 @@ class PivotTableModelMenu(QMenu):
         self._source.delete_values(indexes)
 
     def delete_objects(self):
-        indexes = self._get_selected_indexes()
-        delete_dict = self._find_selected_objects(indexes)
-        if delete_dict:
-            self._source.delete_index_values(delete_dict)
+        ids = {self._source._header_id(index) for index in self._selected_entity_indexes}
+        objects = [self.db_mngr.get_item(self.db_map, "object", id_) for id_ in ids]
+        db_map_typed_data = {self.parent().db_map: {"object": objects}}
+        self.db_mngr.remove_items(db_map_typed_data)
 
     def delete_relationships(self):
-        indexes = self._get_selected_indexes()
-        delete_dict = self._find_selected_relationships(indexes)
-        if delete_dict:
-            self._source.delete_tuple_index_values(delete_dict)
+        relationships = []
+        for index in self._selected_entity_indexes:
+            header_ids = self._source._header_ids(index)
+            objects_ids = header_ids[:-1]
+            relationships.append(self._source._get_relationship(objects_ids))
+        db_map_typed_data = {self.parent().db_map: {"relationship": relationships}}
+        self.db_mngr.remove_items(db_map_typed_data)
 
     def delete_parameters(self):
-        """"""
+        ids = {self._source._header_id(index) for index in self._selected_parameter_indexes}
+        parameters = [self.db_mngr.get_item(self.db_map, "parameter definition", id_) for id_ in ids]
+        db_map_typed_data = {self.parent().db_map: {"parameter definition": parameters}}
+        self.db_mngr.remove_items(db_map_typed_data)
 
     def open_value_editor(self):
         """Opens the parameter value editor for the first selected cell."""
@@ -683,18 +687,21 @@ class PivotTableModelMenu(QMenu):
         self.plot_action.setEnabled(len(self._selected_value_indexes) > 1)
         self.delete_values_action.setEnabled(bool(self._selected_value_indexes))
         self.delete_object_action.setEnabled(bool(self._selected_entity_indexes))
-        self.delete_relationship_action.setEnabled(bool(self._selected_entity_indexes))
+        self.delete_relationship_action.setEnabled(
+            bool(self._selected_entity_indexes)
+            and self.parent().current_class_type == self.parent()._RELATIONSHIP_CLASS
+        )
         self.delete_parameter_action.setEnabled(bool(self._selected_parameter_indexes))
+        self.delete_object_action.setText(self._DELETE_OBJECT)
+        self.delete_relationship_action.setText(self._DELETE_RELATIONSHIP)
         if len(self._selected_entity_indexes) == 1:
             index = self._selected_entity_indexes[0]
             object_name = self._source.header_name(index)
-            object_names, _ = self._source.header_names(index)
-            relationship_name = self.parent().db_mngr._GROUP_SEP.join(object_names)
             self.delete_object_action.setText("Remove object: {}".format(object_name))
-            self.delete_relationship_action.setText("Remove relationship: {}".format(relationship_name))
-        else:
-            self.delete_object_action.setText(self._DELETE_OBJECT)
-            self.delete_relationship_action.setText(self._DELETE_RELATIONSHIP)
+            if self.delete_relationship_action.isEnabled():
+                object_names, _ = self._source.header_names(index)
+                relationship_name = self.db_mngr._GROUP_SEP.join(object_names)
+                self.delete_relationship_action.setText("Remove relationship: {}".format(relationship_name))
         pos = self._table.viewport().mapToGlobal(QPos)
         self.move(pos)
         self.show()
