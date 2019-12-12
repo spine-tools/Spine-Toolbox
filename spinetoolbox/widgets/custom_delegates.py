@@ -109,6 +109,7 @@ class CheckBoxDelegate(QItemDelegate):
     def __init__(self, parent, centered=True):
         super().__init__(parent)
         self._centered = centered
+        self._checkbox_pressed = None
 
     def createEditor(self, parent, option, index):
         """Important, otherwise an editor is created if the user clicks in this cell.
@@ -145,10 +146,11 @@ class CheckBoxDelegate(QItemDelegate):
         if event.type() == QEvent.MouseButtonDblClick:
             return True
         if event.type() == QEvent.MouseButtonPress:
-            checkbox_rect = self.get_checkbox_rect(option)
-            if checkbox_rect.contains(event.pos()):
-                # Change the checkbox-state
-                self.data_committed.emit(index)
+            self._checkbox_pressed = self.get_checkbox_rect(option).contains(event.pos())
+        if event.type() == QEvent.MouseButtonPress:
+            if self._checkbox_pressed and self.get_checkbox_rect(option).contains(event.pos()):
+                self._checkbox_pressed = False
+                self.data_committed.emit(index, not index.data(Qt.EditRole))
                 return True
         return False
 
@@ -202,7 +204,7 @@ class PivotTableDelegate(CheckBoxDelegate):
             except ParameterValueFormatError:
                 value = None
             if isinstance(value, (DateTime, Duration, TimePattern, TimeSeries)) or value is None:
-                value_name = index.model().sourceModel().get_key(index)  # FIXME: get the actual name
+                value_name = index.model().sourceModel().value_name(index)  # FIXME: get the actual name
                 self.parameter_value_editor_requested.emit(index, value_name, value)
                 return None
         return CustomLineEditor(parent)

@@ -67,18 +67,10 @@ class PivotTableModel(QAbstractTableModel):
         """Returns the index of the column designated as Y values for plotting or None."""
         return self._plot_x_column
 
-    def get_key(self, index):
-        row_key = self.model.row_key(max(0, index.row() - self.headerRowCount()))
-        colum_key = self.model.column_key(max(0, index.column() - self.headerColumnCount()))
-        return self.model._key_getter(row_key + colum_key + self.model.frozen_value)
-
-    def get_col_key(self, column):
-        return self.model.column(max(0, column - self._num_headers_column))
-
     def first_data_row(self):
         """Returns the row index to the first data row."""
         # Last row is an empty row, exclude it.
-        return self.rowCount() - self.dataRowCount() - 1
+        return self.headerRowCount()
 
     def headerRowCount(self):
         """Returns number of rows occupied by header."""
@@ -167,6 +159,9 @@ class PivotTableModel(QAbstractTableModel):
             and self.headerRowCount() <= index.row() < self.headerRowCount() + self.dataRowCount()
         )
 
+    def index_in_headers(self, index):
+        return self.index_in_column_headers(index) or self.index_in_row_headers(index)
+
     def index_in_empty_column_headers(self, index):
         """Returns whether or not the given index is in empty column headers (vertical) area"""
         return index.row() < len(self.model.pivot_columns) and index.column() == self.columnCount() - 1
@@ -182,9 +177,6 @@ class PivotTableModel(QAbstractTableModel):
             and self.headerColumnCount() <= index.column() < self.columnCount() - self.emptyColumnCount()
         )
 
-    def map_to_pivot(self, index):
-        return index.row() - self.headerRowCount(), index.column() - self.headerColumnCount()
-
     def headerData(self, section, orientation, role=Qt.DisplayRole):
         if role == Qt.DisplayRole and orientation == Qt.Horizontal:
             if section == self._plot_x_column:
@@ -194,10 +186,134 @@ class PivotTableModel(QAbstractTableModel):
             return self._V_HEADER_WIDTH * " "
         return None
 
-    def _header_data(self, header_key, header_id):
-        if header_key == -1:
+    def map_to_pivot(self, index):
+        """Returns a tuple of row and column in the pivot model that corresponds to the given model index.
+
+        Args:
+            index (QModelIndex)
+
+        Returns:
+            int: row
+            int: column
+        """
+        return index.row() - self.headerRowCount(), index.column() - self.headerColumnCount()
+
+    def _top_left_id(self, index):
+        """Returns the id of the top left header corresponding to the given header index.
+
+        Args:
+            index (QModelIndex)
+        Returns:
+            int, NoneType
+        """
+        if self.index_in_row_headers(index):
+            return self.model.pivot_rows[index.column()]
+        if self.index_in_column_headers(index):
+            return self.model.pivot_columns[index.row()]
+        return None
+
+    def _header_id(self, index):
+        """Returns the id of the given row or column header index.
+
+        Args:
+            index (QModelIndex)
+        Returns:
+            int, NoneType
+        """
+        if self.index_in_row_headers(index):
+            row, _ = self.map_to_pivot(index)
+            return self.model._row_data_header[row][index.column()]
+        if self.index_in_column_headers(index):
+            _, column = self.map_to_pivot(index)
+            return self.model._column_data_header[column][index.row()]
+        return None
+
+    def _header_ids(self, index):
+        """Returns the ids of the row *and* column headers corresponding to the given data index.
+
+        Args:
+            index (QModelIndex)
+
+        Returns:
+            tuple(int)
+        """
+        row, column = self.map_to_pivot(index)
+        row_key = self.model.row_key(max(0, row))
+        column_key = self.model.column_key(max(0, column))
+        return self.model._key_getter(row_key + column_key + self.model.frozen_value)
+
+    def _header_name(self, top_left_id, header_id):
+        """Returns the name of the header given by top_left_id and header_id.
+
+        Args:
+            top_left_id (int): The id of the top left header
+            header_id (int): The header id
+
+        Returns
+            str
+        """
+        if top_left_id == -1:
             return self.db_mngr.get_item(self.db_map, "parameter definition", header_id).get("parameter_name")
         return self.db_mngr.get_item(self.db_map, "object", header_id)["name"]
+
+    def header_name(self, index):
+        """Returns the name corresponding to the given header index.
+
+        Args:
+            index (QModelIndex)
+
+        Returns:
+            str
+        """
+        header_id = self._header_id(index)
+        top_left_id = self._top_left_id(index)
+        return self._header_name(top_left_id, header_id)
+
+    def header_names(self, index):
+        """Returns the header names corresponding to the given data index.
+
+        Args:
+            index (QModelIndex)
+
+        Returns:
+            list(str): object names
+            str: parameter name
+        """
+        header_ids = self._header_ids(index)
+        objects_ids, parameter_id = header_ids[:-1], header_ids[-1]
+        object_names = [self.db_mngr.get_item(self.db_map, "object", id_)["name"] for id_ in objects_ids]
+        parameter_name = self.db_mngr.get_item(self.db_map, "parameter definition", parameter_id)["parameter_name"]
+        return object_names, parameter_name
+
+    def value_name(self, index):
+        """Returns a string that concatenates the header names corresponding to the given data index.
+
+        Args:
+            index (QModelIndex)
+
+        Returns:
+            str
+        """
+        if not self.index_in_data(index):
+            return ""
+        object_names, parameter_name = self.header_names(index)
+        return self.db_mngr._GROUP_SEP.join(object_names) + " - " + parameter_name
+
+    def column_name(self, column):
+        """Returns a string that concatenates the header names corresponding to the given column.
+
+        Args:
+            column (int)
+
+        Returns:
+            str
+        """
+        header_names = []
+        column -= self.headerColumnCount()
+        for row, top_left_id in enumerate(self.model.pivot_columns):
+            header_id = self.model._column_data_header[column][row]
+            header_names.append(self._header_name(top_left_id, header_id))
+        return self.db_mngr._GROUP_SEP.join(header_names)
 
     def _color_data(self, index):
         if index.row() < self.headerRowCount() and index.column() < self.headerColumnCount():
@@ -209,16 +325,8 @@ class PivotTableModel(QAbstractTableModel):
                 return self.model.pivot_rows[index.column()]
             if self.index_in_left(index):
                 return self.model.pivot_columns[index.row()]
-            if self.index_in_row_headers(index):
-                row, _ = self.map_to_pivot(index)
-                header_id = self.model._row_data_header[row][index.column()]
-                header_key = self.model.pivot_rows[index.column()]
-                return self._header_data(header_key, header_id)
-            if self.index_in_column_headers(index):
-                _, column = self.map_to_pivot(index)
-                header_id = self.model._column_data_header[column][index.row()]
-                header_key = self.model.pivot_columns[index.row()]
-                return self._header_data(header_key, header_id)
+            if self.index_in_headers(index):
+                return self.header_name(index)
             if self.index_in_data(index):
                 row, column = self.map_to_pivot(index)
                 data = self.model.get_pivoted_data([row], [column])
@@ -252,44 +360,37 @@ class PivotTableModel(QAbstractTableModel):
             data = self.model.get_pivoted_data([row], [column])
             if not data or data[0][0] is None:
                 # Add
-                index_tuple = self.get_key(index)
-                self.add_parameter_value(index_tuple, value)
+                header_ids = self._header_ids(index)
+                self.add_parameter_value(header_ids, value)
             else:
                 self.update_parameter_value(data[0][0], value)
             self.dataChanged.emit(index, index)
             return True
-        if self.index_in_row_headers(index):
-            row, _ = self.map_to_pivot(index)
-            header_id = self.model._row_data_header[row][index.column()]
-            header_key = self.model.pivot_rows[index.column()]
-            self._set_header_data(header_key, header_id, value)
-            return True
-        if self.index_in_column_headers(index):
-            _, column = self.map_to_pivot(index)
-            header_id = self.model._column_data_header[column][index.row()]
-            header_key = self.model.pivot_columns[index.row()]
-            self._set_header_data(header_key, header_id, value)
+        if self.index_in_headers(index):
+            header_id = self._header_id(index)
+            top_left_id = self._top_left_id(index)
+            self._set_header_name(top_left_id, header_id, value)
             return True
         if self.index_in_empty_row_headers(index):
-            header_key = self.model.pivot_rows[index.column()]
-            self._set_empty_header_data(header_key, value)
+            top_left_id = self.model.pivot_rows[index.column()]
+            self._set_empty_header_name(top_left_id, value)
             return True
         if self.index_in_empty_column_headers(index):
-            header_key = self.model.pivot_columns[index.row()]
-            self._set_empty_header_data(header_key, value)
+            top_left_id = self.model.pivot_columns[index.row()]
+            self._set_empty_header_name(top_left_id, value)
             return True
         return False
 
-    def _set_header_data(self, header_key, header_id, value):
+    def _set_header_name(self, top_left_id, header_id, value):
         item = dict(id=header_id, name=value)
-        if header_key == -1:
+        if top_left_id == -1:
             self.db_mngr.update_parameter_definitions({self.db_map: [item]})
         else:
             self.db_mngr.update_objects({self.db_map: [item]})
 
-    def _set_empty_header_data(self, header_key, value):
+    def _set_empty_header_name(self, top_left_id, value):
         item = dict(name=value)
-        if header_key == -1:
+        if top_left_id == -1:
             class_key = (
                 "object_class_id"
                 if self._parent.current_class_type == self._parent._OBJECT_CLASS
@@ -298,7 +399,7 @@ class PivotTableModel(QAbstractTableModel):
             item[class_key] = self._parent.current_class_id
             self.db_mngr.add_parameter_definitions({self.db_map: [item]})
         else:
-            item["class_id"] = self._parent.current_object_class_id_list()[header_key]
+            item["class_id"] = self._parent.current_object_class_id_list()[top_left_id]
             self.db_mngr.add_objects({self.db_map: [item]})
 
     def _new_relationship_parameter_value(self, object_ids, value):
@@ -321,18 +422,18 @@ class PivotTableModel(QAbstractTableModel):
         )
         return dict(relationship_id=relationship["id"], value=value)
 
-    def add_parameter_value(self, id_tuple, value):
+    def add_parameter_value(self, index_ids, value):
         """
         Args:
-            id_tuple (tuple(int)): object_ids + parameter_id
+            index_ids (tuple(int)): object_ids + parameter_id
             value
         """
         if self._parent.current_class_type == self._parent._RELATIONSHIP_CLASS:
-            item = self._new_relationship_parameter_value(id_tuple[:-1], value)
+            item = self._new_relationship_parameter_value(index_ids[:-1], value)
         else:
-            object_id = id_tuple[0]
+            object_id = index_ids[0]
             item = dict(object_id=object_id, value=value)
-        parameter_id = id_tuple[-1]
+        parameter_id = index_ids[-1]
         item["parameter_definition_id"] = parameter_id
         self.db_mngr.add_parameter_values({self.db_map: [item]})
 
@@ -373,14 +474,6 @@ class PivotTableSortFilterProxy(QSortFilterProxyModel):
             if valid is not None and i not in valid:
                 return False
         return True
-
-    def delete_values(self, delete_indexes):
-        delete_indexes = [self.mapToSource(index) for index in delete_indexes]
-        self.sourceModel().delete_values(delete_indexes)
-
-    def restore_values(self, indexes):
-        indexes = [self.mapToSource(index) for index in indexes]
-        self.sourceModel().restore_values(indexes)
 
     def filterAcceptsRow(self, source_row, source_parent):
         """Returns true if the item in the row indicated by the given source_row
