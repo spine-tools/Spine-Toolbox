@@ -330,11 +330,13 @@ class PivotTableModel(QAbstractTableModel):
             if self.index_in_data(index):
                 row, column = self.map_to_pivot(index)
                 data = self.model.get_pivoted_data([row], [column])
-                if not data or data[0][0] is None:
-                    return ''
-                if not self._parent.is_value_input_type():
-                    return data[0][0]
-                return self.db_mngr.get_value(self.db_map, "parameter value", data[0][0], "value", role)
+                if not data:
+                    return None
+                if self._parent.is_value_input_type():
+                    if data[0][0] is None:
+                        return None
+                    return self.db_mngr.get_value(self.db_map, "parameter value", data[0][0], "value", role)
+                return bool(data[0][0])
             return None
         if role == Qt.FontRole and self.index_in_top_left(index):
             font = QFont()
@@ -358,12 +360,18 @@ class PivotTableModel(QAbstractTableModel):
             # edit existing data
             row, column = self.map_to_pivot(index)
             data = self.model.get_pivoted_data([row], [column])
-            if not data or data[0][0] is None:
-                # Add
-                self.add_parameter_value(index, value)
+            if not data:
+                return False
+            if self._parent.is_value_input_type():
+                if data[0][0] is None:
+                    self.add_parameter_value(index, value)
+                else:
+                    self.update_parameter_value(data[0][0], value)
             else:
-                self.update_parameter_value(data[0][0], value)
-            self.dataChanged.emit(index, index)
+                if data[0][0] is None:
+                    self.add_relationship(index)
+                else:
+                    self.remove_relationship(data[0][0])
             return True
         if self.index_in_headers(index):
             header_id = self._header_id(index)
@@ -457,6 +465,29 @@ class PivotTableModel(QAbstractTableModel):
         """
         db_map_data = {self.db_map: [dict(id=id_, value=value)]}
         self.db_mngr.update_parameter_values(db_map_data)
+
+    def add_relationship(self, index):
+        """
+        Args:
+            index (QModelIndex)
+        """
+        objects_id_list = list(self._header_ids(index))
+        class_id = self._parent.current_class_id
+        rel_cls_name = self.db_mngr.get_item(self.db_map, "relationship class", self._parent.current_class_id)["name"]
+        object_names = [self.db_mngr.get_item(self.db_map, "object", id_)["name"] for id_ in objects_id_list]
+        name = rel_cls_name + "_" + "__".join(object_names)
+        relationship = dict(object_id_list=objects_id_list, class_id=class_id, name=name)
+        db_map_data = {self.db_map: [relationship]}
+        self.db_mngr.add_relationships(db_map_data)
+
+    def remove_relationship(self, id_):
+        """
+        Args:
+            id_ (int)
+        """
+        relationship = self.db_mngr.get_item(self.db_map, "relationship", id_)
+        db_map_typed_data = {self.db_map: {"relationship": [relationship]}}
+        self.db_mngr.remove_items(db_map_typed_data)
 
 
 class PivotTableSortFilterProxy(QSortFilterProxyModel):

@@ -16,6 +16,7 @@ Contains TabularViewForm class and some related constants.
 :date:   1.11.2018
 """
 
+from itertools import product
 from collections import namedtuple
 from PySide2.QtCore import Qt, Slot
 from .custom_menus import FilterMenu, PivotTableModelMenu, PivotTableHorizontalHeaderMenu
@@ -34,7 +35,7 @@ class TabularViewMixin:
     _OBJECT_CLASS = "object class"
 
     _INPUT_VALUE = "Parameter value"
-    _INPUT_ENTITY = "Entity"
+    _INPUT_RELATIONSHIP = "Relationship"
 
     _PARAMETER_NAME = "parameter"
 
@@ -48,7 +49,7 @@ class TabularViewMixin:
         self.index_values = {}  # Maps index id to a sorted set of values for that index
         self.class_pivot_preferences = {}
         self.PivotPreferences = namedtuple("PivotPreferences", ["index", "columns", "frozen", "frozen_value"])
-        self.ui.comboBox_pivot_table_input_type.addItems([self._INPUT_VALUE, self._INPUT_ENTITY])
+        self.ui.comboBox_pivot_table_input_type.addItems([self._INPUT_VALUE, self._INPUT_RELATIONSHIP])
         self.pivot_table_proxy = PivotTableSortFilterProxy()
         self.pivot_table_model = PivotTableModel(self)
         self.pivot_table_proxy.setSourceModel(self.pivot_table_model)
@@ -149,7 +150,66 @@ class TabularViewMixin:
             self.reload_pivot_table()
             self.reload_frozen_table()
 
-    def _get_parameter_ids(self, item_type):
+    def _get_entities(self, class_id=None, class_type=None):
+        """Returns a list of dict items from the object or relationship tree model
+        corresponding to the given class id.
+
+        Args:
+            class_id (int)
+            class_type (str)
+
+        Returns:
+            list(dict)
+        """
+        if class_id is None:
+            class_id = self.current_class_id
+        if class_type is None:
+            class_type = self.current_class_type
+        model = {self._OBJECT_CLASS: self.object_tree_model, self._RELATIONSHIP_CLASS: self.relationship_tree_model}[
+            class_type
+        ]
+        class_item = next(model.root_item.find_children_by_id(self.db_map, class_id))
+        if class_item.can_fetch_more():
+            class_item.fetch_more()
+        return [item.db_map_data(self.db_map) for item in class_item.find_children_by_id(self.db_map, True)]
+
+    def load_empty_relationship_data(self):
+        """Returns a dict containing all possible relationships in the current class.
+
+        Returns:
+            dict: Key is object id tuple, value is None.
+        """
+        if self.current_class_type == self._OBJECT_CLASS:
+            return {}
+        object_id_sets = []
+        for obj_cls_id in self.current_object_class_id_list():
+            objects = self._get_entities(obj_cls_id, self._OBJECT_CLASS)
+            id_set = {item["id"] for item in objects}
+            object_id_sets.append(id_set)
+        return dict.fromkeys(product(*object_id_sets))
+
+    def load_full_relationship_data(self):
+        """Returns a dict of relationships in the current class.
+
+        Returns:
+            dict: Key is object id tuple, value is relationship id.
+        """
+        if self.current_class_type == self._OBJECT_CLASS:
+            return {}
+        relationships = self._get_entities()
+        return {tuple(int(id_) for id_ in e["object_id_list"].split(',')): e["id"] for e in relationships}
+
+    def load_relationship_data(self):
+        """Returns a dict that merges empty and full relationship data.
+
+        Returns:
+            dict: Key is object id tuple, value is True if a relationship exists, False otherwise.
+        """
+        data = self.load_empty_relationship_data()
+        data.update(self.load_full_relationship_data())
+        return data
+
+    def _get_parameter_value_or_def_ids(self, item_type):
         """Returns a set of integer ids from the parameter model
         corresponding to the currently selected class and the given item type.
 
@@ -181,7 +241,7 @@ class TabularViewMixin:
                 model.fetchMore()
         return {id_ for m in sub_models for id_ in m._main_data}
 
-    def _get_parameter_data(self, item_type):
+    def _get_parameter_values_or_defs(self, item_type):
         """Returns a list of dict items from the parameter model
         corresponding to the currently selected class and the given item type.
 
@@ -191,66 +251,48 @@ class TabularViewMixin:
         Returns:
             list(dict)
         """
-        ids = self._get_parameter_ids(item_type)
+        ids = self._get_parameter_value_or_def_ids(item_type)
         return [self.db_mngr.get_item(self.db_map, item_type, id_) for id_ in ids]
-
-    def _get_entities(self):
-        """Returns a list of dict items from the object or relationship tree model
-        corresponding to the currently selected class.
-
-        Returns:
-            list(dict)
-        """
-        entity_class = self.db_mngr.get_item(self.db_map, self.current_class_type, self.current_class_id)
-        model = {self._OBJECT_CLASS: self.object_tree_model, self._RELATIONSHIP_CLASS: self.relationship_tree_model}[
-            self.current_class_type
-        ]
-        entity_class_item = next(model.root_item.find_children_by_id(self.db_map, entity_class["id"]))
-        if entity_class_item.can_fetch_more():
-            entity_class_item.fetch_more()
-        return [item.db_map_data(self.db_map) for item in entity_class_item.find_children_by_id(self.db_map, True)]
 
     def load_empty_parameter_value_data(self):
         """Returns a dict containing all possible combinations of entities and parameters for the current class.
 
         Returns:
-            dict: Key is a tuple entity_id + parameter_id, value is None.
-        """
-        entities = self.load_entity_data()
-        parameter_ids = self._get_parameter_ids("parameter definition")
-        if not parameter_ids:
-            return {entity: None for entity in entities}
-        return {entity + (parameter_id,): None for entity in entities for parameter_id in parameter_ids}
-
-    def load_parameter_value_data(self):
-        """Returns a dict containing all possible combinations of entities and parameters for the current class,
-        together with the corresponding values.
-
-        Returns:
-            dict: Key is a tuple entity_id + parameter_id, value is the parameter value or None if not specified.
-        """
-        data = self.load_empty_parameter_value_data()
-        parameter_values = self._get_parameter_data("parameter value")
-        if self.current_class_type == self._OBJECT_CLASS:
-            filled_data = {(x["object_id"], x["parameter_id"]): x["id"] for x in parameter_values}
-        else:
-            filled_data = {
-                tuple(int(id_) for id_ in x["object_id_list"].split(',')) + (x["parameter_id"],): x["id"]
-                for x in parameter_values
-            }
-        data.update(filled_data)
-        return data
-
-    def load_entity_data(self):
-        """Returns a dict with entity data for reloading the pivot table model.
-
-        Returns:
-            dict
+            dict: Key is a tuple object_id, ..., parameter_id, value is None.
         """
         entities = self._get_entities()
         if self.current_class_type == self._RELATIONSHIP_CLASS:
-            return {tuple(int(id_) for id_ in e["object_id_list"].split(',')): True for e in entities}
-        return {(e["id"],): True for e in entities}
+            entity_ids = [tuple(int(id_) for id_ in e["object_id_list"].split(',')) for e in entities]
+        else:
+            entity_ids = [(e["id"],) for e in entities]
+        parameter_ids = self._get_parameter_value_or_def_ids("parameter definition")
+        if not parameter_ids:
+            return {entity_id: None for entity_id in entity_ids}
+        return {entity_id + (parameter_id,): None for entity_id in entity_ids for parameter_id in parameter_ids}
+
+    def load_full_parameter_value_data(self):
+        """Returns a dict of parameter values for the current class.
+
+        Returns:
+            dict: Key is a tuple object_id, ..., parameter_id, value is the parameter value.
+        """
+        parameter_values = self._get_parameter_values_or_defs("parameter value")
+        if self.current_class_type == self._OBJECT_CLASS:
+            return {(x["object_id"], x["parameter_id"]): x["id"] for x in parameter_values}
+        return {
+            tuple(int(id_) for id_ in x["object_id_list"].split(',')) + (x["parameter_id"],): x["id"]
+            for x in parameter_values
+        }
+
+    def load_parameter_value_data(self):
+        """Returns a dict that merges empty and full parameter value data.
+
+        Returns:
+            dict: Key is a tuple object_id, ..., parameter_id, value is the parameter value or None if not specified.
+        """
+        data = self.load_empty_parameter_value_data()
+        data.update(self.load_full_parameter_value_data())
+        return data
 
     def get_pivot_preferences(self, selection_key):
         """Returns saved or default pivot preferences.
@@ -300,13 +342,17 @@ class TabularViewMixin:
         """Refreshes pivot table.
         """
         self.current_input_type = self.ui.comboBox_pivot_table_input_type.currentText()
-        length = len(self.current_object_class_id_list())
-        index_ids = tuple(range(length))  # NOTE: the index id is just the index in the current object class id list
-        if self.current_input_type == self._INPUT_VALUE:
-            data = self.load_parameter_value_data()
-            index_ids += (-1,)  # NOTE: -1 is the index id of 'parameter'
+        if self.current_input_type == self._INPUT_RELATIONSHIP and self.current_class_type != self._RELATIONSHIP_CLASS:
+            index_ids = (0,)
+            data = {}
         else:
-            data = self.load_entity_data()
+            length = len(self.current_object_class_id_list())
+            index_ids = tuple(range(length))  # NOTE: index id is just the index in the current object class id list
+            if self.current_input_type == self._INPUT_VALUE:
+                data = self.load_parameter_value_data()
+                index_ids += (-1,)  # NOTE: -1 is the index id of 'parameter'
+            else:
+                data = self.load_relationship_data()
         data_keys = dict(enumerate(zip(*data.keys())))
         self.index_values = {id_: data_keys.get(k, []) for k, id_ in enumerate(index_ids)}
         # get pivot preference for current selection

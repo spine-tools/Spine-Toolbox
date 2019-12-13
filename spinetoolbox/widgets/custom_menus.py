@@ -604,7 +604,6 @@ class PivotTableModelMenu(QMenu):
         self._selected_value_indexes = list()
         self._selected_entity_indexes = list()
         self._selected_parameter_indexes = list()
-
         # add actions
         self.open_value_editor_action = self.addAction('Open in editor...')
         self.addSeparator()
@@ -614,7 +613,6 @@ class PivotTableModelMenu(QMenu):
         self.delete_object_action = self.addAction(self._DELETE_OBJECT)
         self.delete_relationship_action = self.addAction(self._DELETE_RELATIONSHIP)
         self.delete_parameter_action = self.addAction(self._DELETE_PARAMETER)
-
         # connect signals
         self.open_value_editor_action.triggered.connect(self.open_value_editor)
         self.plot_action.triggered.connect(self.plot)
@@ -624,8 +622,17 @@ class PivotTableModelMenu(QMenu):
         self.delete_parameter_action.triggered.connect(self.delete_parameters)
 
     def delete_values(self):
-        indexes = self._get_selected_indexes()
-        self._source.delete_values(indexes)
+        row_mask = set()
+        column_mask = set()
+        for index in self._selected_value_indexes:
+            row, column = self._source.map_to_pivot(index)
+            row_mask.add(row)
+            column_mask.add(column)
+        data = self._source.model.get_pivoted_data(row_mask, column_mask)
+        ids = {item for row in data for item in row if item is not None}
+        parameter_values = [self.db_mngr.get_item(self.db_map, "parameter value", id_) for id_ in ids]
+        db_map_typed_data = {self.parent().db_map: {"parameter value": parameter_values}}
+        self.db_mngr.remove_items(db_map_typed_data)
 
     def delete_objects(self):
         ids = {self._source._header_id(index) for index in self._selected_entity_indexes}
@@ -671,6 +678,14 @@ class PivotTableModelMenu(QMenu):
 
     def request_menu(self, QPos=None):
         """Shows the context menu on the screen."""
+        self._find_selected_indexes()
+        self._update_actions_enable()
+        self._update_actions_text()
+        pos = self._table.viewport().mapToGlobal(QPos)
+        self.move(pos)
+        self.show()
+
+    def _find_selected_indexes(self):
         indexes = [self._proxy.mapToSource(ind) for ind in self._table.selectedIndexes()]
         self._selected_value_indexes = list()
         self._selected_entity_indexes = list()
@@ -683,6 +698,8 @@ class PivotTableModelMenu(QMenu):
                     self._selected_parameter_indexes.append(index)
                 else:
                     self._selected_entity_indexes.append(index)
+
+    def _update_actions_enable(self):
         self.open_value_editor_action.setEnabled(len(self._selected_value_indexes) == 1)
         self.plot_action.setEnabled(len(self._selected_value_indexes) > 1)
         self.delete_values_action.setEnabled(bool(self._selected_value_indexes))
@@ -692,8 +709,11 @@ class PivotTableModelMenu(QMenu):
             and self.parent().current_class_type == self.parent()._RELATIONSHIP_CLASS
         )
         self.delete_parameter_action.setEnabled(bool(self._selected_parameter_indexes))
+
+    def _update_actions_text(self):
         self.delete_object_action.setText(self._DELETE_OBJECT)
         self.delete_relationship_action.setText(self._DELETE_RELATIONSHIP)
+        self.delete_parameter_action.setText(self._DELETE_PARAMETER)
         if len(self._selected_entity_indexes) == 1:
             index = self._selected_entity_indexes[0]
             object_name = self._source.header_name(index)
@@ -702,9 +722,10 @@ class PivotTableModelMenu(QMenu):
                 object_names, _ = self._source.header_names(index)
                 relationship_name = self.db_mngr._GROUP_SEP.join(object_names)
                 self.delete_relationship_action.setText("Remove relationship: {}".format(relationship_name))
-        pos = self._table.viewport().mapToGlobal(QPos)
-        self.move(pos)
-        self.show()
+        if len(self._selected_parameter_indexes) == 1:
+            index = self._selected_parameter_indexes[0]
+            parameter_name = self._source.header_name(index)
+            self.delete_parameter_action.setText("Remove parameter definition: {}".format(parameter_name))
 
 
 class PivotTableHorizontalHeaderMenu(QMenu):
