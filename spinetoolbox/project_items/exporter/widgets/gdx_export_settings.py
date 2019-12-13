@@ -19,6 +19,7 @@ Export item's settings window for .gdx export.
 from PySide2.QtCore import QAbstractListModel, QModelIndex, Qt, Signal, Slot
 from PySide2.QtGui import QColor
 from PySide2.QtWidgets import QWidget
+import spinetoolbox.spine_io.exporters.gdx as gdx
 from ..list_utils import move_list_elements
 from .parameter_index_settings_window import ParameterIndexSettingsWindow
 
@@ -134,7 +135,7 @@ class GdxExportSettings(QWidget):
             return
         set_name = current_index.data()
         self._ui.global_parameters_object_class_line_edit.setText(set_name)
-        model.setData(current_index, Qt.Unchecked, Qt.CheckStateRole)
+        model.dataChanged.emit(current_index, current_index, [Qt.CheckStateRole, Qt.ToolTipRole])
 
     @Slot(str)
     def _update_global_parameters_object_class(self, text):
@@ -158,10 +159,10 @@ class GdxExportSettings(QWidget):
         """Shows the indexed parameter settings window."""
         if self._indexed_parameter_settings_window is None:
             available_domains = dict()
-            for domain_name, exportable in zip(
-                self._settings.sorted_domain_names, self._settings.domain_exportable_flags
+            for domain_name, metadata in zip(
+                self._settings.sorted_domain_names, self._settings.domain_metadatas
             ):
-                if exportable:
+                if metadata.is_exportable() and not metadata.is_additional:
                     record_keys = self._settings.sorted_record_key_lists(domain_name)
                     keys = list()
                     for key_list in record_keys:
@@ -251,7 +252,7 @@ class GAMSSetListModel(QAbstractListModel):
         first = len(self._settings.sorted_domain_names)
         last = first
         self.beginInsertRows(QModelIndex(), first, last)
-        self._settings.add_domain(domain)
+        self._settings.add_domain(domain, gdx.SetMetadata(gdx.ExportFlag.FORCED_EXPORTABLE, True))
         self.endInsertRows()
 
     def drop_domain(self, domain):
@@ -297,10 +298,19 @@ class GAMSSetListModel(QAbstractListModel):
             return None
         if role == Qt.CheckStateRole:
             if row < domain_count:
-                checked = self._settings.domain_exportable_flags[row]
+                checked = self._settings.domain_metadatas[row].is_exportable()
             else:
-                checked = self._settings.set_exportable_flags[row - domain_count]
+                checked = self._settings.set_metadatas[row - domain_count].is_exportable()
             return Qt.Checked if checked else Qt.Unchecked
+        if role == Qt.ToolTipRole:
+            if row < domain_count:
+                exportable = self._settings.domain_metadatas[row].exportable
+            else:
+                exportable = self._settings.set_metadatas[row - domain_count].exportable
+            if exportable == gdx.ExportFlag.FORCED_NON_EXPORTABLE:
+                return "Domain is the global parameter domain\n and cannot be exported as is."
+            if exportable == gdx.ExportFlag.FORCED_EXPORTABLE:
+                return "Domain is used for parameter indexing\n and must be exported."
         return None
 
     def flags(self, index):
@@ -353,15 +363,15 @@ class GAMSSetListModel(QAbstractListModel):
         self.beginMoveRows(sourceParent, sourceRow, last_source_row, destinationParent, row_after)
         if sourceRow < domain_count:
             names = self._settings.sorted_domain_names
-            export_flags = self._settings.domain_exportable_flags
+            metadatas = self._settings.domain_metadatas
         else:
             names = self._settings.sorted_set_names
-            export_flags = self._settings.set_exportable_flags
+            metadatas = self._settings.set_metadatas
             sourceRow -= domain_count
             last_source_row -= domain_count
             destinationChild -= domain_count
         names[:] = move_list_elements(names, sourceRow, last_source_row, destinationChild)
-        export_flags[:] = move_list_elements(export_flags, sourceRow, last_source_row, destinationChild)
+        metadatas[:] = move_list_elements(metadatas, sourceRow, last_source_row, destinationChild)
         self.endMoveRows()
         return True
 
@@ -376,10 +386,16 @@ class GAMSSetListModel(QAbstractListModel):
         row = index.row()
         domain_count = len(self._settings.sorted_domain_names)
         if row < domain_count:
-            self._settings.domain_exportable_flags[row] = value != Qt.Unchecked
+            if self._settings.domain_metadatas[row].is_forced():
+                return False
+            exportable = gdx.ExportFlag.EXPORTABLE if value == Qt.Checked else gdx.ExportFlag.NON_EXPORTABLE
+            self._settings.domain_metadatas[row].exportable = exportable
         else:
-            self._settings.set_exportable_flags[row - domain_count] = value != Qt.Unchecked
-        self.dataChanged.emit(index, index, [Qt.CheckStateRole])
+            if self._settings.set_metadatas[row - domain_count].is_forced():
+                return False
+            exportable = gdx.ExportFlag.EXPORTABLE if value == Qt.Checked else gdx.ExportFlag.NON_EXPORTABLE
+            self._settings.set_metadatas[row - domain_count].exportable = exportable
+        self.dataChanged.emit(index, index, [Qt.CheckStateRole, Qt.ToolTipRole])
         return True
 
 

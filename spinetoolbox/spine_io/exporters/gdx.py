@@ -24,6 +24,7 @@ to_gdx_file() that does basically everything needed for exporting is provided fo
 :date:   30.8.2019
 """
 
+import enum
 import os
 import os.path
 import sys
@@ -762,7 +763,7 @@ def _find_parameter(parameter_name, db_map):
     return parameter
 
 
-def filter_and_sort_sets(sets, sorted_set_names, filter_flags):
+def filter_and_sort_sets(sets, sorted_set_names, metadatas):
     """
     Returns a list of sets sorted by `sorted_set_names` and their filter flag set to True
 
@@ -773,16 +774,15 @@ def filter_and_sort_sets(sets, sorted_set_names, filter_flags):
         sets (list): a list of sets (DomainSet or Set) to be filtered and sorted
         sorted_set_names (list): a list of set names in the order they should be in the output list,
             including ones to be removed
-        filter_flags (list): list of booleans in the same order as `sorted_set_names`;
-            if True the corresponding set will be included in the output
+        metadatas (list): list of SetMetadata objects in the same order as `sorted_set_names`;
 
     Returns:
         list: a list of sets
     """
     sets = list(sets)
     sorted_exportable_sets = list()
-    for name, exportable in zip(sorted_set_names, filter_flags):
-        if not exportable:
+    for name, metadata in zip(sorted_set_names, metadatas):
+        if not metadata.is_exportable():
             for current_set in sets:
                 if current_set.name == name:
                     sets.remove(current_set)
@@ -852,12 +852,12 @@ def to_gdx_file(database_map, file_name, additional_domains, settings, indexing_
     domains, domain_parameters = object_classes_to_domains(database_map)
     domains, global_parameters_domain = extract_domain(domains, settings.global_parameters_domain_name)
     domains += additional_domains
-    domains = filter_and_sort_sets(domains, settings.sorted_domain_names, settings.domain_exportable_flags)
+    domains = filter_and_sort_sets(domains, settings.sorted_domain_names, settings.domain_metadatas)
     sort_records_inplace(domains, settings)
     sort_indexing_domain_indexes(indexing_settings, settings)
     expand_indexed_parameter_values(domain_parameters, indexing_settings)
     sets, set_parameters = relationship_classes_to_sets(database_map)
-    sets = filter_and_sort_sets(sets, settings.sorted_set_names, settings.set_exportable_flags)
+    sets = filter_and_sort_sets(sets, settings.sorted_set_names, settings.set_metadatas)
     sort_records_inplace(sets, settings)
     expand_indexed_parameter_values(set_parameters, indexing_settings)
     parameters = {**domain_parameters, **set_parameters}
@@ -904,8 +904,8 @@ class Settings:
         domain_names,
         set_names,
         records,
-        domain_exportable_flags=None,
-        set_exportable_flags=None,
+        domain_metadatas=None,
+        set_metadatas=None,
         global_parameters_domain_name='',
     ):
         """
@@ -915,19 +915,19 @@ class Settings:
             domain_names (list): a list of Set names
             set_names (list): a list of Set names
             records (dict): a mapping from Set names to record key tuples
-            domain_exportable_flags (list): a boolean for each name in domain_names indicating if it should be exported
-            set_exportable_flags (list): a boolean for each name in set_names indicating if it should be exported
+            domain_metadatas (list): a list of SetMetadata objects, one for each domain
+            set_metadatas (list): a list of SetMetadata objects, one for each set
             global_parameters_domain_name (str): name of the Set whose parameters to export as GAMS scalars
         """
         self._domain_names = domain_names
         self._set_names = set_names
         self._records = records
-        if domain_exportable_flags is None:
-            domain_exportable_flags = len(domain_names) * [True]
-        self._domain_exportable_flags = domain_exportable_flags
-        if set_exportable_flags is None:
-            set_exportable_flags = len(set_names) * [True]
-        self._set_exportable_flags = set_exportable_flags
+        if domain_metadatas is None:
+            domain_metadatas = [SetMetadata() for _ in range(len(domain_names))]
+        self._domain_metadatas = domain_metadatas
+        if set_metadatas is None:
+            set_metadatas = [SetMetadata() for _ in range(len(set_names))]
+        self._set_metadatas = set_metadatas
         self._global_parameters_domain_name = global_parameters_domain_name
 
     @property
@@ -936,12 +936,9 @@ class Settings:
         return self._domain_names
 
     @property
-    def domain_exportable_flags(self):
-        """
-        this list contains booleans for each name in `domain_names`
-        which when True, mark the domain to be exported.
-        """
-        return self._domain_exportable_flags
+    def domain_metadatas(self):
+        """this list contains SetMetadata objects for each name in `domain_names`"""
+        return self._domain_metadatas
 
     @property
     def sorted_set_names(self):
@@ -949,12 +946,9 @@ class Settings:
         return self._set_names
 
     @property
-    def set_exportable_flags(self):
-        """
-        this list contains booleans for each name in `set_names`
-        which when True, mark the domain to be exported.
-        """
-        return self._set_exportable_flags
+    def set_metadatas(self):
+        """this list contains SetMetadata objects for each name in `set_names`"""
+        return self._set_metadatas
 
     @property
     def global_parameters_domain_name(self):
@@ -963,14 +957,21 @@ class Settings:
 
     @global_parameters_domain_name.setter
     def global_parameters_domain_name(self, name):
-        """Sets the global parameters domain name to given name."""
+        try:
+            if self._global_parameters_domain_name:
+                i = self._domain_names.index(self._global_parameters_domain_name)
+                self._domain_metadatas[i].exportable = ExportFlag.EXPORTABLE
+            i = self._domain_names.index(name)
+            self._domain_metadatas[i].exportable = ExportFlag.FORCED_NON_EXPORTABLE
+        except ValueError:
+            pass
         self._global_parameters_domain_name = name
 
-    def add_domain(self, domain):
+    def add_domain(self, domain, metadata):
         """Adds a new domain and domain's records."""
         self._domain_names.append(domain.name)
         self._records[domain.name] = [record.keys for record in domain.records]
-        self._domain_exportable_flags.append(True)
+        self._domain_metadatas.append(metadata)
 
     def domain_index(self, domain):
         """Returns an integral index to the domain's name in sorted domain names."""
@@ -979,7 +980,7 @@ class Settings:
     def del_domain_at(self, index):
         """Erases domain name at given integal index."""
         del self._domain_names[index]
-        del self._domain_exportable_flags[index]
+        del self._domain_metadatas[index]
 
     def update_domain(self, domain):
         """Updates domain's records."""
@@ -1003,7 +1004,7 @@ class Settings:
         """
         Updates the settings by merging with another one.
 
-        All domains, sets and records (elements) that are in both settings (common)
+        All domains, sets and records that are in both settings (common)
         or in `updating_settings` (new) are retained.
         Common elements are ordered the same way they were ordered in the original settings.
         New elements are appended to the common ones in the order they were in `updating_settings`
@@ -1011,17 +1012,17 @@ class Settings:
         Args:
             updating_settings (Settings): settings to merge with
         """
-        self._domain_names, self._domain_exportable_flags = self._update_names(
+        self._domain_names, self._domain_metadatas = self._update_names(
             self._domain_names,
-            self._domain_exportable_flags,
+            self._domain_metadatas,
             updating_settings._domain_names,
-            updating_settings._domain_exportable_flags,
+            updating_settings._domain_metadatas,
         )
-        self._set_names, self._set_exportable_flags = self._update_names(
+        self._set_names, self._set_metadatas = self._update_names(
             self._set_names,
-            self._set_exportable_flags,
+            self._set_metadatas,
             updating_settings._set_names,
-            updating_settings._set_exportable_flags,
+            updating_settings._set_metadatas,
         )
         if self._global_parameters_domain_name not in self._domain_names:
             self._global_parameters_domain_name = ''
@@ -1045,55 +1046,96 @@ class Settings:
         self._records = new_records
 
     @staticmethod
-    def _update_names(names, exportable_flags, updating_names, updating_flags):
+    def _update_names(names, metadatas, updating_names, updating_metadatas):
         """Updates a list of domain/set names and exportable flags based on reference names and flags."""
         new_names = list()
-        new_flags = list()
+        new_metadatas = list()
         updating_names = list(updating_names)
-        updating_flags = list(updating_flags)
-        for name, exportable in zip(names, exportable_flags):
+        updating_metadatas = list(updating_metadatas)
+        for name, metadata in zip(names, metadatas):
             try:
                 index = updating_names.index(name)
                 del updating_names[index]
-                del updating_flags[index]
+                del updating_metadatas[index]
                 new_names.append(name)
-                new_flags.append(exportable)
+                new_metadatas.append(metadata)
             except ValueError:
                 # name not found in updating_names -- skip it
                 continue
         new_names += updating_names
-        new_flags += updating_flags
-        return new_names, new_flags
+        new_metadatas += updating_metadatas
+        return new_names, new_metadatas
 
     def to_dict(self):
         """Serializes the Settings object to a dict."""
         as_dictionary = {
-            "domain names": self._domain_names,
-            "domain exportable flags": self._domain_exportable_flags,
-            "set names": self._set_names,
-            "set exportable flags": self._set_exportable_flags,
+            "domain_names": self._domain_names,
+            "domain_metadatas": [metadata.to_dict() for metadata in self._domain_metadatas],
+            "set_names": self._set_names,
+            "set_metadatas": [metadata.to_dict() for metadata in self._set_metadatas],
             "records": self._records,
-            "global parameters domain name": self._global_parameters_domain_name,
+            "global_parameters_domain_name": self._global_parameters_domain_name,
         }
         return as_dictionary
 
     @staticmethod
     def from_dict(dictionary):
         """Deserializes Settings from a dict."""
-        domain_names = dictionary.get("domain names", list())
-        domain_exportable_flags = dictionary.get("domain exportable flags", None)
-        set_names = dictionary.get("set names", list())
-        set_exportable_flags = dictionary.get("set exportable flags", None)
+        domain_names = dictionary.get("domain_names", list())
+        domain_metadatas = dictionary.get("domain_metadatas", None)
+        if domain_metadatas is not None:
+            domain_metadatas = [SetMetadata.from_dict(metadata_dict) for metadata_dict in domain_metadatas]
+        set_names = dictionary.get("set_names", list())
+        set_metadatas = dictionary.get("set_metadatas", None)
+        if set_metadatas is not None:
+            set_metadatas = [SetMetadata.from_dict(metadata_dict) for metadata_dict in set_metadatas]
         records = {
             set_name: [tuple(key) for key in keys] for set_name, keys in dictionary.get("records", dict()).items()
         }
-        global_parameters_domain_name = dictionary.get("global parameters domain name", "")
+        global_parameters_domain_name = dictionary.get("global_parameters_domain_name", "")
         settings = Settings(
             domain_names,
             set_names,
             records,
-            domain_exportable_flags,
-            set_exportable_flags,
+            domain_metadatas,
+            set_metadatas,
             global_parameters_domain_name,
         )
         return settings
+
+
+class ExportFlag(enum.Enum):
+    EXPORTABLE = enum.auto()
+    NON_EXPORTABLE = enum.auto()
+    FORCED_EXPORTABLE = enum.auto()
+    FORCED_NON_EXPORTABLE = enum.auto()
+
+
+class SetMetadata:
+    def __init__(self, exportable=ExportFlag.EXPORTABLE, is_additional=False):
+        self.exportable = exportable
+        self.is_additional = is_additional
+
+    def __eq__(self, other):
+        if not isinstance(other, SetMetadata):
+            return NotImplemented
+        return self.exportable == other.exportable and self.is_additional == other.is_additional
+
+    def is_exportable(self):
+        return self.exportable in [ExportFlag.EXPORTABLE, ExportFlag.FORCED_EXPORTABLE]
+
+    def is_forced(self):
+        return self.exportable in [ExportFlag.FORCED_EXPORTABLE, ExportFlag.FORCED_NON_EXPORTABLE]
+
+    def to_dict(self):
+        metadata_dict = dict()
+        metadata_dict["exportable"] = self.exportable
+        metadata_dict["is_additional"] = self.is_additional
+        return metadata_dict
+
+    @staticmethod
+    def from_dict(metadata_dict):
+        metadata = SetMetadata()
+        metadata.exportable = metadata_dict["exportable"]
+        metadata.is_additional = metadata_dict["is_additional"]
+        return metadata

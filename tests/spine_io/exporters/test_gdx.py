@@ -220,24 +220,31 @@ class TestGdx(unittest.TestCase):
     def test_Settings_construction(self):
         domain_names, set_names, records, settings = self._make_settings()
         self.assertEqual(settings.sorted_domain_names, domain_names)
-        self.assertEqual(settings.domain_exportable_flags, 2 * [True])
+        self.assertEqual(settings.domain_metadatas, 2 * [gdx.SetMetadata()])
         self.assertEqual(settings.sorted_set_names, set_names)
-        self.assertEqual(settings.set_exportable_flags, 3 * [True])
+        self.assertEqual(settings.set_metadatas, 3 * [gdx.SetMetadata()])
         for keys in records:
             self.assertEqual(settings.sorted_record_key_lists(keys), records[keys])
         self.assertEqual(settings.global_parameters_domain_name, "")
 
     def test_Settings_serialization_to_dictionary(self):
-        domain_flags = [False, True]
-        set_flags = [False, True, False]
+        domain_metadatas = [
+            gdx.SetMetadata(gdx.ExportFlag.FORCED_NON_EXPORTABLE, True),
+            gdx.SetMetadata(gdx.ExportFlag.FORCED_EXPORTABLE, False),
+        ]
+        set_metadatas = [
+            gdx.SetMetadata(gdx.ExportFlag.NON_EXPORTABLE, False),
+            gdx.SetMetadata(gdx.ExportFlag.EXPORTABLE, True),
+            gdx.SetMetadata(gdx.ExportFlag.NON_EXPORTABLE, False),
+        ]
         global_domain_name = 'global parameter domain'
-        domain_names, set_names, _, settings = self._make_settings(domain_flags, set_flags, global_domain_name)
+        domain_names, set_names, _, settings = self._make_settings(domain_metadatas, set_metadatas, global_domain_name)
         settings_as_dict = settings.to_dict()
         recovered = gdx.Settings.from_dict(settings_as_dict)
         self.assertEqual(recovered.sorted_domain_names, settings.sorted_domain_names)
-        self.assertEqual(recovered.domain_exportable_flags, settings.domain_exportable_flags)
+        self.assertEqual(recovered.domain_metadatas, settings.domain_metadatas)
         self.assertEqual(recovered.sorted_set_names, settings.sorted_set_names)
-        self.assertEqual(recovered.set_exportable_flags, settings.set_exportable_flags)
+        self.assertEqual(recovered.set_metadatas, settings.set_metadatas)
         for name in domain_names + set_names:
             self.assertEqual(recovered.sorted_record_key_lists(name), settings.sorted_record_key_lists(name))
         self.assertEqual(recovered.global_parameters_domain_name, settings.global_parameters_domain_name)
@@ -426,8 +433,12 @@ class TestGdx(unittest.TestCase):
         set_object = self._NamedObject
         sets = [set_object("set1"), set_object("set2"), set_object("set3")]
         set_names = ["set2", "set1", "set3"]
-        set_flags = [True, True, False]
-        filtered = gdx.filter_and_sort_sets(sets, set_names, set_flags)
+        set_metadata = [
+            gdx.SetMetadata(gdx.ExportFlag.EXPORTABLE),
+            gdx.SetMetadata(gdx.ExportFlag.FORCED_EXPORTABLE),
+            gdx.SetMetadata(gdx.ExportFlag.NON_EXPORTABLE),
+        ]
+        filtered = gdx.filter_and_sort_sets(sets, set_names, set_metadata)
         self.assertEqual(filtered, [set_object("set2"), set_object("set1")])
 
     def test_sort_records_in_place(self):
@@ -570,12 +581,12 @@ class TestGdx(unittest.TestCase):
         self.assertEqual(len(domain_names), 2)
         for name in domain_names:
             self.assertTrue(name in ["domain1", "domain2"])
-        self.assertEqual(settings.domain_exportable_flags, [True, True])
+        self.assertEqual(settings.domain_metadatas, [gdx.SetMetadata(), gdx.SetMetadata()])
         set_names = settings.sorted_set_names
         self.assertEqual(len(set_names), 2)
         for name in set_names:
             self.assertTrue(name in ["set1", "set2"])
-        self.assertEqual(settings.set_exportable_flags, [True, True])
+        self.assertEqual(settings.set_metadatas, [gdx.SetMetadata(), gdx.SetMetadata()])
         record_keys = settings.sorted_record_key_lists("domain1")
         self.assertEqual(record_keys, [("record11",), ("record12",)])
         record_keys = settings.sorted_record_key_lists("domain2")
@@ -585,48 +596,122 @@ class TestGdx(unittest.TestCase):
         record_keys = settings.sorted_record_key_lists("set2")
         self.assertEqual(record_keys, [("record12", "record21"), ("record11", "record21")])
 
-    def test_Settings_update_domains_and_domain_exportable_flags(self):
-        base_settings = gdx.Settings(["a", "b"], [], {}, [True, True], [], "")
-        update_settings = gdx.Settings(["b", "c"], [], {}, [False, False], [], "")
+    def test_Settings_update_domains_and_domain_metadatas(self):
+        base_settings = gdx.Settings(
+            ["a", "b"],
+            [],
+            {},
+            [
+                gdx.SetMetadata(gdx.ExportFlag.NON_EXPORTABLE, True),
+                gdx.SetMetadata(gdx.ExportFlag.FORCED_EXPORTABLE, False),
+            ],
+            [],
+            "",
+        )
+        update_settings = gdx.Settings(
+            ["b", "c"],
+            [],
+            {},
+            [
+                gdx.SetMetadata(gdx.ExportFlag.EXPORTABLE, False),
+                gdx.SetMetadata(gdx.ExportFlag.FORCED_NON_EXPORTABLE, True),
+            ],
+            [],
+            "",
+        )
         base_settings.update(update_settings)
         self.assertEqual(base_settings.sorted_domain_names, ["b", "c"])
-        self.assertEqual(base_settings.domain_exportable_flags, [True, False])
+        self.assertEqual(
+            base_settings.domain_metadatas,
+            [
+                gdx.SetMetadata(gdx.ExportFlag.FORCED_EXPORTABLE, False),
+                gdx.SetMetadata(gdx.ExportFlag.FORCED_NON_EXPORTABLE, True),
+            ],
+        )
         self.assertEqual(base_settings.sorted_set_names, [])
-        self.assertEqual(base_settings.set_exportable_flags, [])
+        self.assertEqual(base_settings.set_metadatas, [])
         self.assertEqual(base_settings.global_parameters_domain_name, "")
 
-    def test_Settings_update_sets_and_set_exportable_flags(self):
-        base_settings = gdx.Settings([], ["a", "b"], {}, [], [True, True], "")
-        update_settings = gdx.Settings([], ["b", "c"], {}, [], [False, False], "")
+    def test_Settings_update_sets_and_set_metadatas(self):
+        base_settings = gdx.Settings(
+            [],
+            ["a", "b"],
+            {},
+            [],
+            [
+                gdx.SetMetadata(gdx.ExportFlag.NON_EXPORTABLE, False),
+                gdx.SetMetadata(gdx.ExportFlag.FORCED_EXPORTABLE, False),
+            ],
+            "",
+        )
+        update_settings = gdx.Settings(
+            [],
+            ["b", "c"],
+            {},
+            [],
+            [
+                gdx.SetMetadata(gdx.ExportFlag.EXPORTABLE, True),
+                gdx.SetMetadata(gdx.ExportFlag.FORCED_NON_EXPORTABLE, True),
+            ],
+            "",
+        )
         base_settings.update(update_settings)
         self.assertEqual(base_settings.sorted_domain_names, [])
-        self.assertEqual(base_settings.domain_exportable_flags, [])
+        self.assertEqual(base_settings.domain_metadatas, [])
         self.assertEqual(base_settings.sorted_set_names, ["b", "c"])
-        self.assertEqual(base_settings.set_exportable_flags, [True, False])
+        self.assertEqual(
+            base_settings.set_metadatas,
+            [
+                gdx.SetMetadata(gdx.ExportFlag.FORCED_EXPORTABLE, False),
+                gdx.SetMetadata(gdx.ExportFlag.FORCED_NON_EXPORTABLE, True),
+            ],
+        )
         self.assertEqual(base_settings.global_parameters_domain_name, "")
 
     def test_Settings_update_global_parameters_domain_name(self):
-        base_settings = gdx.Settings(["a", "b"], [], {}, [True, False], [], "b")
-        update_settings = gdx.Settings(["b", "c"], [], {}, [True, False], [], "c")
+        base_settings = gdx.Settings(["a", "b"], [], {}, [gdx.SetMetadata(), gdx.SetMetadata()], [], "b")
+        update_settings = gdx.Settings(["b", "c"], [], {}, [gdx.SetMetadata(), gdx.SetMetadata()], [], "c")
         base_settings.update(update_settings)
         self.assertEqual(base_settings.sorted_domain_names, ["b", "c"])
-        self.assertEqual(base_settings.domain_exportable_flags, [False, False])
+        self.assertEqual(base_settings.domain_metadatas, [gdx.SetMetadata(), gdx.SetMetadata()])
         self.assertEqual(base_settings.sorted_set_names, [])
-        self.assertEqual(base_settings.set_exportable_flags, [])
+        self.assertEqual(base_settings.set_metadatas, [])
         self.assertEqual(base_settings.global_parameters_domain_name, "b")
 
     def test_Settings_update_records(self):
         base_settings = gdx.Settings(
-            ["a", "b"], ["c"], {"a": ["A"], "b": ["B", "BB"], "c": ["C", "CC"]}, [True, True], [True], ""
+            ["a", "b"],
+            ["c"],
+            {"a": ["A"], "b": ["B", "BB"], "c": ["C", "CC"]},
+            [
+                gdx.SetMetadata(gdx.ExportFlag.FORCED_EXPORTABLE, True),
+                gdx.SetMetadata(gdx.ExportFlag.NON_EXPORTABLE, True),
+            ],
+            [gdx.SetMetadata(gdx.ExportFlag.FORCED_NON_EXPORTABLE, False)],
+            "",
         )
         update_settings = gdx.Settings(
-            ["b", "d"], ["c"], {"b": ["BB", "BBB"], "c": ["CC", "CCC"], "d": ["D"]}, [False, False], [False], ""
+            ["b", "d"],
+            ["c"],
+            {"b": ["BB", "BBB"], "c": ["CC", "CCC"], "d": ["D"]},
+            [
+                gdx.SetMetadata(gdx.ExportFlag.EXPORTABLE, False),
+                gdx.SetMetadata(gdx.ExportFlag.FORCED_EXPORTABLE, False),
+            ],
+            [gdx.SetMetadata(gdx.ExportFlag.EXPORTABLE, True)],
+            "",
         )
         base_settings.update(update_settings)
         self.assertEqual(base_settings.sorted_domain_names, ["b", "d"])
-        self.assertEqual(base_settings.domain_exportable_flags, [True, False])
+        self.assertEqual(
+            base_settings.domain_metadatas,
+            [
+                gdx.SetMetadata(gdx.ExportFlag.NON_EXPORTABLE, True),
+                gdx.SetMetadata(gdx.ExportFlag.FORCED_EXPORTABLE, False),
+            ],
+        )
         self.assertEqual(base_settings.sorted_set_names, ["c"])
-        self.assertEqual(base_settings.set_exportable_flags, [True])
+        self.assertEqual(base_settings.set_metadatas, [gdx.SetMetadata(gdx.ExportFlag.FORCED_NON_EXPORTABLE, False)])
         self.assertEqual(base_settings.global_parameters_domain_name, "")
         self.assertEqual(base_settings.sorted_record_key_lists("b"), ["BB", "BBB"])
         self.assertEqual(base_settings.sorted_record_key_lists("c"), ["CC", "CCC"])
