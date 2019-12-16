@@ -197,7 +197,9 @@ class TestGdx(unittest.TestCase):
         )
         setting = gdx.IndexingSetting(parameter)
         setting.index_position = 1
-        setting.indexing_domain = gdx.IndexingDomain("stamp domain", "description", [("stamp1",), ("stamp2",)], [True, True])
+        setting.indexing_domain = gdx.IndexingDomain(
+            "stamp domain", "description", [("stamp1",), ("stamp2",)], [True, True]
+        )
         parameter.expand_indexes(setting)
         self.assertEqual(parameter.domain_names, ["domain1", "stamp domain", "domain2"])
         self.assertEqual(

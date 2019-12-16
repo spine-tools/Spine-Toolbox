@@ -1045,10 +1045,7 @@ class Settings:
             updating_settings._domain_metadatas,
         )
         self._set_names, self._set_metadatas = self._update_names(
-            self._set_names,
-            self._set_metadatas,
-            updating_settings._set_names,
-            updating_settings._set_metadatas,
+            self._set_names, self._set_metadatas, updating_settings._set_names, updating_settings._set_metadatas
         )
         if self._global_parameters_domain_name not in self._domain_names:
             self._global_parameters_domain_name = ''
@@ -1120,12 +1117,7 @@ class Settings:
         }
         global_parameters_domain_name = dictionary.get("global_parameters_domain_name", "")
         settings = Settings(
-            domain_names,
-            set_names,
-            records,
-            domain_metadatas,
-            set_metadatas,
-            global_parameters_domain_name,
+            domain_names, set_names, records, domain_metadatas, set_metadatas, global_parameters_domain_name
         )
         return settings
 

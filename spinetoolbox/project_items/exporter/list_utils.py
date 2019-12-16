@@ -16,6 +16,7 @@ Contains list helper functions for list manipulation.
 :date:   12.12.2019
 """
 
+
 def move_list_elements(originals, first, last, target):
     """
     Moves elements in a list.
