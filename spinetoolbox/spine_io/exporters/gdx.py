@@ -96,7 +96,7 @@ class Set:
     def from_dict(set_dict):
         name = set_dict["name"]
         description = set_dict["description"]
-        domain_names = set_dict["description"]
+        domain_names = set_dict["domain_names"]
         restored = Set(name, description, domain_names)
         restored.records = [Record.from_dict(record_dict) for record_dict in set_dict["records"]]
         return restored

@@ -56,7 +56,7 @@ class ParameterIndexSettings(QWidget):
         self._ui.index_table_view.setModel(self._indexing_table_model)
         self._ui.index_table_view.selectionModel().selectionChanged.connect(self._update_model_to_selection)
         self._available_domains = available_existing_domains
-        for domain_name in available_existing_domains:
+        for domain_name in sorted([name for name in available_existing_domains.keys()]):
             self._ui.existing_domains_combo.addItem(domain_name)
         self._ui.existing_domains_combo.activated.connect(self._existing_domain_changed)
         self._ui.use_existing_domain_radio_button.toggled.connect(self._set_enabled_use_existing_domain_widgets)

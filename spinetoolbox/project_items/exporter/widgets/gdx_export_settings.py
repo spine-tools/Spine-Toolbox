@@ -51,22 +51,21 @@ class GdxExportSettings(QWidget):
         self._ui.button_box.rejected.connect(self._rejected)
         self._ui.set_move_up_button.clicked.connect(self._move_sets_up)
         self._ui.set_move_down_button.clicked.connect(self._move_sets_down)
-        self._ui.set_as_global_parameters_object_class_button.clicked.connect(
-            self._set_selected_set_as_global_parameters_object_class
-        )
+        self._ui.global_parameters_combo_box.addItem("Nothing selected")
+        for domain_name in sorted(settings.sorted_domain_names):
+            self._ui.global_parameters_combo_box.addItem(domain_name)
+        if settings.global_parameters_domain_name:
+            self._ui.global_parameters_combo_box.setCurrentText(settings.global_parameters_domain_name)
+        self._ui.global_parameters_combo_box.currentIndexChanged[str].connect(self._update_global_parameters_domain)
+        self._ui.record_sort_alphabetic.clicked.connect(self._sort_records_alphabetically)
         self._ui.record_move_up_button.clicked.connect(self._move_records_up)
         self._ui.record_move_down_button.clicked.connect(self._move_records_down)
-        self._ui.global_parameters_object_class_line_edit.setText(settings.global_parameters_domain_name)
-        self._ui.global_parameters_object_class_line_edit.textChanged.connect(
-            self._update_global_parameters_object_class
-        )
         self._settings = settings
         set_list_model = GAMSSetListModel(settings)
         self._ui.set_list_view.setModel(set_list_model)
         record_list_model = GAMSRecordListModel()
         self._ui.record_list_view.setModel(record_list_model)
         self._ui.set_list_view.selectionModel().selectionChanged.connect(self._populate_set_contents)
-        self._ui.set_list_view.selectionModel().currentChanged.connect(self._update_as_global_button_enabled_state)
         self._ui.open_indexed_parameter_settings_button.clicked.connect(self._show_indexed_parameter_settings)
         self._indexing_settings = indexing_settings
         self._new_domains_for_indexing = new_indexing_domains
@@ -117,31 +116,16 @@ class GdxExportSettings(QWidget):
         """Hides the window."""
         self.hide()
 
-    @Slot("QModelIndex", "QModelIndex")
-    def _update_as_global_button_enabled_state(self, current, previous):
-        """Enables or disables the *As Global* button depending if the selected element is a domain or a set."""
-        model = current.model()
-        is_previous_domain = model.is_domain(previous)
-        is_current_domain = model.is_domain(current)
-        if is_current_domain != is_previous_domain:
-            self._ui.set_as_global_parameters_object_class_button.setEnabled(is_current_domain)
-
-    @Slot(bool)
-    def _set_selected_set_as_global_parameters_object_class(self, checked=False):
-        """Sets the currently selected domain as the global parameters object class."""
-        selection_model = self._ui.set_list_view.selectionModel()
-        current_index = selection_model.currentIndex()
-        model = current_index.model()
-        if not current_index.isValid() or not model.is_domain(current_index):
-            return
-        set_name = current_index.data()
-        self._ui.global_parameters_object_class_line_edit.setText(set_name)
-        model.dataChanged.emit(current_index, current_index, [Qt.CheckStateRole, Qt.ToolTipRole])
-
     @Slot(str)
-    def _update_global_parameters_object_class(self, text):
-        """Sets the global parameters domain name to `text` in the settings."""
-        self._settings.global_parameters_domain_name = text
+    def _update_global_parameters_domain(self, text):
+        if text == "Nothing selected":
+            index = self._ui.set_list_view.model().index_for_domain(self._settings.global_parameters_domain_name)
+            self._settings.global_parameters_domain_name = ""
+        else:
+            self._settings.global_parameters_domain_name = text
+            index = self._ui.set_list_view.model().index_for_domain(text)
+        if index.isValid():
+            index.model().dataChanged.emit(index, index, [Qt.CheckStateRole, Qt.ToolTipRole])
 
     @Slot("QItemSelection", "QItemSelection")
     def _populate_set_contents(self, selected, _):
@@ -154,6 +138,11 @@ class GdxExportSettings(QWidget):
         record_keys = self._settings.sorted_record_key_lists(selected_set_name)
         record_model = self._ui.record_list_view.model()
         record_model.reset(record_keys, selected_set_name)
+
+    @Slot(bool)
+    def _sort_records_alphabetically(self, _):
+        model = self._ui.record_list_view.model()
+        model.sort_alphabetically()
 
     @Slot(bool)
     def _show_indexed_parameter_settings(self, _):
@@ -328,6 +317,13 @@ class GAMSSetListModel(QAbstractListModel):
             return ''
         return section + 1
 
+    def index_for_domain(self, domain_name):
+        """Returns the model index for a domain."""
+        for i, name in enumerate(self._settings.sorted_domain_names):
+            if name == domain_name:
+                return self.index(i, 0)
+        return QModelIndex()
+
     def is_domain(self, index):
         """Returns True if index points to a domain name, otherwise returns False."""
         if not index.isValid():
@@ -463,3 +459,9 @@ class GAMSRecordListModel(QAbstractListModel):
     def rowCount(self, parent=QModelIndex()):
         """Return the number of records in the model."""
         return len(self._records)
+
+    def sort_alphabetically(self):
+        self._records = sorted(self._records)
+        top_left = self.index(0, 0)
+        bottom_right = self.index(len(self._records) - 1, 0)
+        self.dataChanged.emit(top_left, bottom_right, [Qt.DisplayRole])
