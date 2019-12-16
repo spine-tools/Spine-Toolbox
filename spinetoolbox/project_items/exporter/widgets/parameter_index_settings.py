@@ -291,7 +291,7 @@ class ParameterIndexSettings(QWidget):
         """Builds indexes according to given expression."""
         indexes = list()
         try:
-            for index in range(len(self._parameter)):
+            for index in range(len(self._indexing_setting.parameter.values[0])):
                 indexes.append(str(eval(expression, {}, {"i": index + 1})))  # pylint: disable=eval-used
         except (AttributeError, NameError, SyntaxError):
             return
@@ -302,6 +302,9 @@ class ParameterIndexSettings(QWidget):
     @Slot(bool)
     def _extract_index_from_parameter(self, _=True):
         """Assigns indexes from the parameter to the model."""
+        self._ui.generator_expression_edit.blockSignals(True)
+        self._ui.generator_expression_edit.clear()
+        self._ui.generator_expression_edit.blockSignals(False)
         indexes = [str(index) for index in self._indexing_setting.parameter.values[0].indexes]
         self._indexing_table_model.set_indexes(indexes)
         self._ui.index_table_view.selectAll()
