@@ -16,12 +16,18 @@ Export item's settings window for .gdx export.
 :date:   9.9.2019
 """
 
+import enum
 from PySide2.QtCore import QAbstractListModel, QModelIndex, Qt, Signal, Slot
 from PySide2.QtGui import QColor
-from PySide2.QtWidgets import QWidget
+from PySide2.QtWidgets import QMessageBox, QWidget
 import spinetoolbox.spine_io.exporters.gdx as gdx
 from ..list_utils import move_list_elements
 from .parameter_index_settings_window import ParameterIndexSettingsWindow
+
+
+class State(enum.Enum):
+    OK = enum.auto()
+    BAD_INDEXING = enum.auto()
 
 
 class GdxExportSettings(QWidget):
@@ -70,6 +76,14 @@ class GdxExportSettings(QWidget):
         self._indexing_settings = indexing_settings
         self._new_domains_for_indexing = new_indexing_domains
         self._indexed_parameter_settings_window = None
+        self._state = State.OK
+        for setting in indexing_settings.values():
+            if setting.indexing_domain is None:
+                self._ui.indexing_status_label.setText(
+                    "<span style='color:#ff3333;white-space: pre-wrap;'>Not all parameters correctly indexed.</span>"
+                )
+                self._state = State.BAD_INDEXING
+                break
 
     @property
     def settings(self):
@@ -89,6 +103,13 @@ class GdxExportSettings(QWidget):
     @Slot()
     def _accepted(self):
         """Emits the settings_accepted signal."""
+        if self._state != State.OK:
+            QMessageBox.warning(
+                self,
+                "Bad Parameter Indexing",
+                "Parameter indexing not set up correctly. Click 'Indexed parameters...' to open the settings window.",
+            )
+            return
         self.settings_accepted.emit(self._database_path)
 
     @Slot(bool)
@@ -193,6 +214,8 @@ class GdxExportSettings(QWidget):
             if not domain_found:
                 self._ui.set_list_view.model().add_domain(new_domain)
         self._new_domains_for_indexing = list(new_domains)
+        self._state = State.OK
+        self._ui.indexing_status_label.setText("")
 
 
 def _move_selected_elements_by(list_view, delta):

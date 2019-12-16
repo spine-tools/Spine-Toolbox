@@ -13,7 +13,7 @@
 # Form implementation generated from reading ui file 'C:\data\src\toolbox\bin\..\spinetoolbox\project_items\exporter\ui\gdx_export_settings.ui',
 # licensing of 'C:\data\src\toolbox\bin\..\spinetoolbox\project_items\exporter\ui\gdx_export_settings.ui' applies.
 #
-# Created: Wed Jan 15 14:44:55 2020
+# Created: Wed Jan 15 14:58:00 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -80,6 +80,8 @@ class Ui_Form(object):
         self.open_indexed_parameter_settings_button.setObjectName("open_indexed_parameter_settings_button")
         self.horizontalLayout_4.addWidget(self.open_indexed_parameter_settings_button)
         self.indexing_status_label = QtWidgets.QLabel(Form)
+        self.indexing_status_label.setText("")
+        self.indexing_status_label.setTextFormat(QtCore.Qt.RichText)
         self.indexing_status_label.setObjectName("indexing_status_label")
         self.horizontalLayout_4.addWidget(self.indexing_status_label)
         spacerItem4 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
@@ -117,6 +119,5 @@ class Ui_Form(object):
         self.record_move_up_button.setText(QtWidgets.QApplication.translate("Form", "Move Up", None, -1))
         self.record_move_down_button.setText(QtWidgets.QApplication.translate("Form", "Move Down", None, -1))
         self.open_indexed_parameter_settings_button.setText(QtWidgets.QApplication.translate("Form", "Indexed parameters...", None, -1))
-        self.indexing_status_label.setText(QtWidgets.QApplication.translate("Form", "Indexing ok. No actions needed.", None, -1))
         self.label.setText(QtWidgets.QApplication.translate("Form", "Global parameters domain:", None, -1))
 

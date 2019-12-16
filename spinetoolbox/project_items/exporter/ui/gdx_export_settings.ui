@@ -163,7 +163,10 @@
      <item>
       <widget class="QLabel" name="indexing_status_label">
        <property name="text">
-        <string>Indexing ok. No actions needed.</string>
+        <string/>
+       </property>
+       <property name="textFormat">
+        <enum>Qt::RichText</enum>
        </property>
       </widget>
      </item>
