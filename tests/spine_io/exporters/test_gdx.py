@@ -197,7 +197,7 @@ class TestGdx(unittest.TestCase):
         )
         setting = gdx.IndexingSetting(parameter)
         setting.index_position = 1
-        setting.indexing_domain = gdx.IndexingDomain("stamp domain", [("stamp1",), ("stamp2",)], [True, True])
+        setting.indexing_domain = gdx.IndexingDomain("stamp domain", "description", [("stamp1",), ("stamp2",)], [True, True])
         parameter.expand_indexes(setting)
         self.assertEqual(parameter.domain_names, ["domain1", "stamp domain", "domain2"])
         self.assertEqual(
@@ -723,7 +723,7 @@ class TestGdx(unittest.TestCase):
         domain.records.append(record)
         time_series = TimeSeriesFixedResolution("2019-01-01T12:15", "1D", [3.3, 4.4], False, False)
         parameters = {"time series": gdx.Parameter(["domain name"], [("element",)], [time_series])}
-        indexing_domain = gdx.IndexingDomain("indexes", [("stamp1",), ("stamp2",)], [True, True])
+        indexing_domain = gdx.IndexingDomain("indexes", "", [("stamp1",), ("stamp2",)], [True, True])
         setting = gdx.IndexingSetting(parameters["time series"])
         setting.indexing_domain = indexing_domain
         settings = {"time series": setting}
@@ -741,7 +741,7 @@ class TestGdx(unittest.TestCase):
         time_series = TimeSeriesFixedResolution("2019-01-01T12:15", "1D", [3.3, 4.4], False, False)
         indexed_parameter = gdx.Parameter(["domain name"], [("element",)], [time_series])
         parameters = {"scalar": scalar_parameter, "time series": indexed_parameter}
-        indexing_domain = gdx.IndexingDomain("indexes", [("stamp1",), ("stamp2",)], [True, True])
+        indexing_domain = gdx.IndexingDomain("indexes", "", [("stamp1",), ("stamp2",)], [True, True])
         setting = gdx.IndexingSetting(parameters["time series"])
         setting.indexing_domain = indexing_domain
         settings = {"time series": setting}
@@ -760,7 +760,7 @@ class TestGdx(unittest.TestCase):
         original_set.records.append(record)
         time_series = TimeSeriesFixedResolution("2019-01-01T12:15", "1D", [3.3, 4.4], False, False)
         parameters = {"time series": gdx.Parameter(original_set.domain_names, [record.keys], [time_series])}
-        indexing_domain = gdx.IndexingDomain("indexes", [("stamp1",), ("stamp2",)], [True, True])
+        indexing_domain = gdx.IndexingDomain("indexes", "", [("stamp1",), ("stamp2",)], [True, True])
         setting = gdx.IndexingSetting(parameters["time series"])
         setting.indexing_domain = indexing_domain
         settings = {"time series": setting}
@@ -820,7 +820,7 @@ class TestGdx(unittest.TestCase):
         settings = gdx.Settings(
             ["domain2", "domain1"], [], {"domain1": [("a1",), ("a2",)], "domain2": [("b1",), ("b2",), ("b3",)]}
         )
-        indexing_domain = gdx.IndexingDomain("domain2", [("b3",), ("b2",), ("b1",)], [False, True, True])
+        indexing_domain = gdx.IndexingDomain("domain2", "", [("b3",), ("b2",), ("b1",)], [False, True, True])
         time_series = TimeSeriesFixedResolution("2019-01-01T12:15", "1D", [3.3, 4.4], False, False)
         indexed_parameter = gdx.Parameter(["domain1"], [("a1",)], [time_series])
         indexing_setting = gdx.IndexingSetting(indexed_parameter)

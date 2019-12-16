@@ -323,18 +323,21 @@ class IndexingDomain:
 
     Attributes:
         name (str): indexing domain's name
+        description (str): domain's description
     """
 
-    def __init__(self, name, indexes, pick_list):
+    def __init__(self, name, description, indexes, pick_list):
         """
         Picks the keys from base_domain for which the corresponding element in pick_list holds True.
 
         Args:
             name (str): indexing domain's name
+            description (str): domain's description
             indexes (list): a list of indexing key tuples
             pick_list (list): a list of booleans
         """
         self.name = name
+        self.description = description
         self._picked_indexes = None
         self._all_indexes = indexes
         self._pick_list = pick_list
@@ -350,6 +353,14 @@ class IndexingDomain:
             self._picked_indexes = picked
         return self._picked_indexes
 
+    @property
+    def all_indexes(self):
+        return self._all_indexes
+
+    @property
+    def pick_list(self):
+        return self._pick_list
+
     def sort_indexes(self, settings):
         self._all_indexes = settings.sorted_record_key_lists(self.name)
         self._picked_indexes = None
@@ -357,6 +368,7 @@ class IndexingDomain:
     def to_dict(self):
         domain_dict = dict()
         domain_dict["name"] = self.name
+        domain_dict["description"] = self.description
         domain_dict["indexes"] = self._all_indexes
         domain_dict["pick_list"] = self._pick_list
         return domain_dict
@@ -365,7 +377,7 @@ class IndexingDomain:
     def from_dict(domain_dict):
         indexes = [tuple(index) for index in domain_dict["indexes"]]
         pick_list = domain_dict["pick_list"]
-        return IndexingDomain(domain_dict["name"], indexes, pick_list)
+        return IndexingDomain(domain_dict["name"], domain_dict["description"], indexes, pick_list)
 
     @staticmethod
     def from_base_domain(base_domain, pick_list):
@@ -377,7 +389,7 @@ class IndexingDomain:
         indexes = list()
         for record in base_domain.records:
             indexes.append(record.keys)
-        return IndexingDomain(base_domain.name, indexes, pick_list)
+        return IndexingDomain(base_domain.name, base_domain.description, indexes, pick_list)
 
 
 def sort_indexing_domain_indexes(indexing_settings, settings):
@@ -967,11 +979,25 @@ class Settings:
             pass
         self._global_parameters_domain_name = name
 
-    def add_domain(self, domain, metadata):
-        """Adds a new domain and domain's records."""
-        self._domain_names.append(domain.name)
+    def add_or_replace_domain(self, domain, metadata):
+        """
+        Adds a new domain or replaces an existing domain's records and metadata.
+
+        Args:
+            domain (Set): a domain to add/replace
+            metadata (SetMetadata): domain's metadata
+        Returns:
+            True if a new domain was added, False if an existing domain was replaced
+        """
         self._records[domain.name] = [record.keys for record in domain.records]
-        self._domain_metadatas.append(metadata)
+        try:
+            i = self._domain_names.index(domain.name)
+        except ValueError:
+            self._domain_names.append(domain.name)
+            self._domain_metadatas.append(metadata)
+            return True
+        self._domain_metadatas[i] = metadata
+        return False
 
     def domain_index(self, domain):
         """Returns an integral index to the domain's name in sorted domain names."""
@@ -1129,13 +1155,13 @@ class SetMetadata:
 
     def to_dict(self):
         metadata_dict = dict()
-        metadata_dict["exportable"] = self.exportable
+        metadata_dict["exportable"] = self.exportable.value
         metadata_dict["is_additional"] = self.is_additional
         return metadata_dict
 
     @staticmethod
     def from_dict(metadata_dict):
         metadata = SetMetadata()
-        metadata.exportable = metadata_dict["exportable"]
+        metadata.exportable = ExportFlag(metadata_dict["exportable"])
         metadata.is_additional = metadata_dict["is_additional"]
         return metadata

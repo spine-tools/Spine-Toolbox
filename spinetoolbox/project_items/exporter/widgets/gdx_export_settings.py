@@ -30,11 +30,12 @@ class GdxExportSettings(QWidget):
     settings_accepted = Signal(str)
     """Fired when the OK button has been clicked."""
 
-    def __init__(self, settings, indexing_settings, database_path, parent):
+    def __init__(self, settings, indexing_settings, new_indexing_domains, database_path, parent):
         """
         Args:
             settings (Settings): export settings
             indexing_settings (dict): indexing domain information for indexed parameter values
+            new_indexing_domains (list): list of additional domains needed for indexed parameter
             database_path (str): database URL
             parent (QWidget): a parent widget
         """
@@ -68,7 +69,7 @@ class GdxExportSettings(QWidget):
         self._ui.set_list_view.selectionModel().currentChanged.connect(self._update_as_global_button_enabled_state)
         self._ui.open_indexed_parameter_settings_button.clicked.connect(self._show_indexed_parameter_settings)
         self._indexing_settings = indexing_settings
-        self._new_domains_for_indexing = list()
+        self._new_domains_for_indexing = new_indexing_domains
         self._indexed_parameter_settings_window = None
 
     @property
@@ -159,17 +160,19 @@ class GdxExportSettings(QWidget):
         """Shows the indexed parameter settings window."""
         if self._indexed_parameter_settings_window is None:
             available_domains = dict()
-            for domain_name, metadata in zip(
-                self._settings.sorted_domain_names, self._settings.domain_metadatas
-            ):
-                if metadata.is_exportable() and not metadata.is_additional:
+            new_domains = dict()
+            for domain_name, metadata in zip(self._settings.sorted_domain_names, self._settings.domain_metadatas):
+                if metadata.is_exportable():
                     record_keys = self._settings.sorted_record_key_lists(domain_name)
                     keys = list()
                     for key_list in record_keys:
                         keys.append(key_list[0])
-                    available_domains.update({domain_name: keys})
+                    if not metadata.is_additional:
+                        available_domains.update({domain_name: keys})
+                    else:
+                        new_domains.update({domain_name: keys})
             self._indexed_parameter_settings_window = ParameterIndexSettingsWindow(
-                self._indexing_settings, available_domains, self._database_path, self
+                self._indexing_settings, available_domains, new_domains, self._database_path, self
             )
             self._indexed_parameter_settings_window.settings_approved.connect(self._parameter_settings_approved)
             self._ui.record_list_view.model().domain_records_reordered.connect(
@@ -249,11 +252,11 @@ class GAMSSetListModel(QAbstractListModel):
 
     def add_domain(self, domain):
         """Adds a new domain."""
-        first = len(self._settings.sorted_domain_names)
-        last = first
-        self.beginInsertRows(QModelIndex(), first, last)
-        self._settings.add_domain(domain, gdx.SetMetadata(gdx.ExportFlag.FORCED_EXPORTABLE, True))
-        self.endInsertRows()
+        if self._settings.add_or_replace_domain(domain, gdx.SetMetadata(gdx.ExportFlag.FORCED_EXPORTABLE, True)):
+            first = len(self._settings.sorted_domain_names)
+            last = first
+            self.beginInsertRows(QModelIndex(), first, last)
+            self.endInsertRows()
 
     def drop_domain(self, domain):
         """Removes a domain."""

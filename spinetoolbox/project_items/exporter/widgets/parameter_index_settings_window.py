@@ -18,7 +18,6 @@ Parameter indexing settings window for .gdx export.
 
 from PySide2.QtCore import Qt, Signal, Slot
 from PySide2.QtWidgets import QMessageBox, QWidget
-from spinetoolbox.spine_io.exporters.gdx import indexing_settings_from_dict, indexing_settings_to_dict
 from .parameter_index_settings import IndexSettingsState, ParameterIndexSettings
 
 
@@ -28,11 +27,12 @@ class ParameterIndexSettingsWindow(QWidget):
     settings_approved = Signal()
     """Fired when the settings have been approved."""
 
-    def __init__(self, indexing_settings, available_existing_domains, database_path, parent):
+    def __init__(self, indexing_settings, available_existing_domains, new_domains, database_path, parent):
         """
         Args:
             indexing_settings (dict): a map from parameter name to IndexingSettings
             available_existing_domains (dict): a map from existing domain names to lists of record keys
+            new_domains (dict): a map from new domain names to lists of record keys
             database_path (str): a database url
             parent (QWidget): a parent widget
         """
@@ -46,7 +46,7 @@ class ParameterIndexSettingsWindow(QWidget):
         self._ui.setupUi(self)
         self.setWindowTitle("Gdx Parameter Indexing Settings    -- {} --".format(database_path))
         self.setAttribute(Qt.WA_DeleteOnClose, True)
-        self._ui.button_box.accepted.connect(self._collect_and_close)
+        self._ui.button_box.accepted.connect(self._collect_and_hide)
         self._ui.button_box.rejected.connect(self.hide)
         if not indexing_settings:
             self._ui.widget_stack.setCurrentIndex(1)
@@ -55,7 +55,11 @@ class ParameterIndexSettingsWindow(QWidget):
         self._settings_widgets = dict()
         for parameter_name, indexing_setting in indexing_settings.items():
             settings_widget = ParameterIndexSettings(
-                parameter_name, indexing_setting, self._available_existing_domains, self._ui.settings_area_contents
+                parameter_name,
+                indexing_setting,
+                self._available_existing_domains,
+                new_domains,
+                self._ui.settings_area_contents,
             )
             self._ui.settings_area_layout.insertWidget(0, settings_widget)
             self._settings_widgets[parameter_name] = settings_widget
@@ -77,7 +81,7 @@ class ParameterIndexSettingsWindow(QWidget):
                 widget.reorder_indexes(first, last, target)
 
     @Slot()
-    def _collect_and_close(self):
+    def _collect_and_hide(self):
         """Collects settings from individual ParameterIndexSettings widgets and hides the window."""
         for parameter_name, settings_widget in self._settings_widgets.items():
             if settings_widget.state != IndexSettingsState.OK:

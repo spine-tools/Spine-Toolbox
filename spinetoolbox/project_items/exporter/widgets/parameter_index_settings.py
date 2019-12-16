@@ -35,12 +35,13 @@ class IndexSettingsState(enum.Enum):
 class ParameterIndexSettings(QWidget):
     """A widget showing setting for a parameter with indexed values."""
 
-    def __init__(self, parameter_name, indexing_setting, available_existing_domains, parent):
+    def __init__(self, parameter_name, indexing_setting, available_existing_domains, new_domains, parent):
         """
         Args:
             parameter_name (str): parameter's name
             indexing_setting (IndexingSetting): indexing settings for the parameter
             available_existing_domains (dict): a dict from existing domain name to a list of its record keys
+            new_domains (dict): a dict from new domain name to a list of its record keys
             parent (QWidget): a parent widget
         """
         from ..ui.parameter_index_settings import Ui_Form
@@ -56,19 +57,42 @@ class ParameterIndexSettings(QWidget):
         self._ui.index_table_view.selectionModel().selectionChanged.connect(self._update_model_to_selection)
         self._available_domains = available_existing_domains
         for domain_name in available_existing_domains:
-            self._ui.existing_domains_combo.insertItem(0, domain_name)
-        self._ui.existing_domains_combo.setCurrentIndex(0)
+            self._ui.existing_domains_combo.addItem(domain_name)
         self._ui.existing_domains_combo.activated.connect(self._existing_domain_changed)
         self._ui.use_existing_domain_radio_button.toggled.connect(self._set_enabled_use_existing_domain_widgets)
         self._ui.create_domain_radio_button.toggled.connect(self._set_enabled_create_domain_widgets)
-        self._set_enabled_use_existing_domain_widgets(True)
-        self._set_enabled_create_domain_widgets(False)
         self._ui.pick_expression_edit.textChanged.connect(self._update_index_list_selection)
         self._ui.generator_expression_edit.textChanged.connect(self._generate_index)
         self._ui.extract_indexes_button.clicked.connect(self._extract_index_from_parameter)
-        self._ui.domain_name_edit.textEdited.connect(self._domain_name_changed)
+        self._ui.domain_name_edit.textChanged.connect(self._domain_name_changed)
         self._ui.move_domain_left_button.clicked.connect(self._move_indexing_domain_left)
         self._ui.move_domain_right_button.clicked.connect(self._move_indexing_domain_right)
+        indexing_domain = indexing_setting.indexing_domain
+        if indexing_domain is not None:
+            if indexing_domain.name in available_existing_domains:
+                self._ui.existing_domains_combo.setCurrentText(indexing_domain.name)
+                self._set_enabled_use_existing_domain_widgets(True)
+                self._set_enabled_create_domain_widgets(False)
+            else:
+                self._ui.create_domain_radio_button.setChecked(True)
+                self._set_enabled_use_existing_domain_widgets(False)
+                self._set_enabled_create_domain_widgets(True)
+                self._ui.domain_name_edit.setText(indexing_domain.name)
+                self._ui.domain_description_edit.setText(indexing_domain.description)
+                self._indexing_table_model.set_indexes(new_domains[indexing_domain.name])
+            selection_model = self._ui.index_table_view.selectionModel()
+            selection_model.clearSelection()
+            index = self._indexing_table_model.index
+            last_column = self._indexing_table_model.columnCount() - 1
+            for i, pick in enumerate(indexing_domain.pick_list):
+                if pick:
+                    top_left = index(i, 0)
+                    bottom_right = index(i, last_column)
+                    selection = QItemSelection(top_left, bottom_right)
+                    selection_model.select(selection, QItemSelectionModel.Select)
+        else:
+            self._set_enabled_use_existing_domain_widgets(True)
+            self._set_enabled_create_domain_widgets(False)
         self._check_state()
 
     @property
@@ -95,10 +119,9 @@ class ParameterIndexSettings(QWidget):
             self.notification_message("Parameter successfully indexed.")
 
     def is_using_domain(self, domain_name):
-        return (
-            self._ui.use_existing_domain_radio_button.isChecked()
-            and self._ui.existing_domains_combo.currentText() == domain_name
-        )
+        if self._ui.use_existing_domain_radio_button.isChecked():
+            return self._ui.existing_domains_combo.currentText() == domain_name
+        return self._ui.domain_name_edit.text() == domain_name
 
     def indexing_domain(self):
         """
@@ -167,14 +190,21 @@ class ParameterIndexSettings(QWidget):
             return True
         return False
 
-    def _update_indexing_domains_label(self):
-        """Moves the domain names around in the label showing the indexing domains."""
+    def _update_indexing_domains_name(self, domain_name=None):
+        """
+        Updates the model's header and the label showing the indexing domains.
+
+        Args:
+            domain_name (str): indexing domain's name or None to read it from the other widgets.
+        """
         parameter = self._indexing_setting.parameter
         index_position = self._indexing_setting.index_position
-        if self._ui.use_existing_domain_radio_button.isChecked():
-            domain_name = self._ui.existing_domains_combo.currentText()
-        else:
-            domain_name = self._ui.domain_name_edit.text()
+        if domain_name is None:
+            if self._ui.use_existing_domain_radio_button.isChecked():
+                domain_name = self._ui.existing_domains_combo.currentText()
+            else:
+                domain_name = self._ui.domain_name_edit.text()
+        self._indexing_table_model.set_index_name(domain_name)
         name = "<b>{}</b>".format(domain_name if domain_name else "unnamed")
         label = (
             "("
@@ -190,7 +220,7 @@ class ParameterIndexSettings(QWidget):
             self._check_state()
         elif not text and self._state == IndexSettingsState.OK:
             self._check_state()
-        self._update_indexing_domains_label()
+        self._update_indexing_domains_name(text)
 
     @Slot(bool)
     def _set_enabled_use_existing_domain_widgets(self, enabled):
@@ -201,7 +231,7 @@ class ParameterIndexSettings(QWidget):
         if enabled:
             self._existing_domain_changed(self._ui.existing_domains_combo.currentIndex())
             self._update_index_list_selection(self._ui.pick_expression_edit.text(), False)
-        self._update_indexing_domains_label()
+        self._update_indexing_domains_name()
 
     @Slot(bool)
     def _set_enabled_create_domain_widgets(self, enabled):
@@ -227,7 +257,7 @@ class ParameterIndexSettings(QWidget):
         selected_domain_name = self._ui.existing_domains_combo.itemText(index)
         self._indexing_table_model.set_indexes(self._available_domains[selected_domain_name])
         self._ui.index_table_view.selectAll()
-        self._update_indexing_domains_label()
+        self._update_indexing_domains_name()
 
     @Slot("QString")
     def _update_index_list_selection(self, expression, clear_selection_if_expression_empty=True):
@@ -281,14 +311,14 @@ class ParameterIndexSettings(QWidget):
         """Moves the indexing domain name left on the indexing label."""
         if self._indexing_setting.index_position > 0:
             self._indexing_setting.index_position -= 1
-            self._update_indexing_domains_label()
+            self._update_indexing_domains_name()
 
     @Slot(bool)
     def _move_indexing_domain_right(self, _):
         """Moves the indexing domain name right on the indexing label."""
         if self._indexing_setting.index_position < len(self._indexing_setting.parameter.domain_names):
             self._indexing_setting.index_position += 1
-            self._update_indexing_domains_label()
+            self._update_indexing_domains_name()
 
 
 class _IndexingTableModel(QAbstractTableModel):
@@ -308,6 +338,7 @@ class _IndexingTableModel(QAbstractTableModel):
         """
         super().__init__()
         self._indexes = list()
+        self._index_name = ""
         self._parameter_values = list()
         self._parameter_nonexpanded_indexes = list()
         for value_index, parameter_value in zip(parameter.indexes, parameter.values):
@@ -356,7 +387,7 @@ class _IndexingTableModel(QAbstractTableModel):
         if orientation == Qt.Vertical:
             return section + 1
         if section == 0:
-            return "Index"
+            return self._index_name
         return ", ".join(self._parameter_nonexpanded_indexes[section - 1])
 
     def mapped_values_count(self):
@@ -404,6 +435,11 @@ class _IndexingTableModel(QAbstractTableModel):
         top_left = self.index(min_changed_row, 1)
         bottom_right = self.index(len(self._indexes), len(self._parameter_values))
         self.dataChanged.emit(top_left, bottom_right, [Qt.DisplayRole])
+
+    def set_index_name(self, name):
+        """Sets the indexing domain name."""
+        self._index_name = name
+        self.headerDataChanged.emit(Qt.Horizontal, 0, 0)
 
     def set_indexes(self, indexes):
         """Overwrites all new indexes."""

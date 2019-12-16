@@ -23,7 +23,6 @@ import pathlib
 import os.path
 from PySide2.QtCore import Slot
 from spinedb_api.database_mapping import DatabaseMapping
-from spinedb_api.parameter_value import from_database
 from spinetoolbox.project_item import ProjectItem, ProjectItemResource
 from spinetoolbox.spine_io import gdx_utils
 from spinetoolbox.spine_io.exporters import gdx
@@ -198,7 +197,14 @@ class Exporter(ProjectItem):
         settings = deepcopy(settings)
         indexing_settings = deepcopy(indexing_settings)
         settings_window = self._settings_windows.setdefault(
-            database_url, GdxExportSettings(settings, indexing_settings, database_url, self._toolbox)
+            database_url,
+            GdxExportSettings(
+                settings,
+                indexing_settings,
+                self._additional_parameter_indexing_domains[database_url],
+                database_url,
+                self._toolbox,
+            ),
         )
         settings_window.settings_accepted.connect(self._update_settings_from_settings_window)
         settings_window.show()
@@ -269,8 +275,6 @@ class Exporter(ProjectItem):
                     self._additional_parameter_indexing_domains[database_url] = [
                         gdx.Set.from_dict(domain_dict) for domain_dict in additional_domains_dicts
                     ]
-                    for domain in self._additional_parameter_indexing_domains:
-                        additional_domain_needed = False
                 except (KeyError, json.JSONDecodeError):
                     self._toolbox.msg_warning.emit(
                         "Couldn't parse Exporter settings file {}. Skipping.".format(file_name)
