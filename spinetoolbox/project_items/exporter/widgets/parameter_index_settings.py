@@ -56,7 +56,7 @@ class ParameterIndexSettings(QWidget):
         self._ui.index_table_view.setModel(self._indexing_table_model)
         self._ui.index_table_view.selectionModel().selectionChanged.connect(self._update_model_to_selection)
         self._available_domains = available_existing_domains
-        for domain_name in sorted([name for name in available_existing_domains.keys()]):
+        for domain_name in sorted(name for name in available_existing_domains.keys()):
             self._ui.existing_domains_combo.addItem(domain_name)
         self._ui.existing_domains_combo.activated.connect(self._existing_domain_changed)
         self._ui.use_existing_domain_radio_button.toggled.connect(self._set_enabled_use_existing_domain_widgets)
@@ -165,16 +165,16 @@ class ParameterIndexSettings(QWidget):
 
     def _check_state(self):
         """Updated the widget's state."""
-        mapped_values_count = self._indexing_table_model.mapped_values_count()
-        if self._check_errors(mapped_values_count):
+        mapped_values_balance = self._indexing_table_model.mapped_values_balance()
+        if self._check_errors(mapped_values_balance):
             return
-        if self._check_warnings(mapped_values_count):
+        if self._check_warnings(mapped_values_balance):
             return
         self.state = IndexSettingsState.OK
 
-    def _check_errors(self, mapped_values_count):
+    def _check_errors(self, mapped_values_balance):
         """Checks if the parameter is correctly indexed."""
-        if mapped_values_count < 0:
+        if mapped_values_balance < 0:
             self.state = IndexSettingsState.DOMAIN_MISSING_INDEXES
             return True
         if self._ui.create_domain_radio_button.isChecked() and not self._ui.domain_name_edit.text():
@@ -182,9 +182,9 @@ class ParameterIndexSettings(QWidget):
             return True
         return False
 
-    def _check_warnings(self, mapped_values_count):
+    def _check_warnings(self, mapped_values_balance):
         """Checks if there are non-fatal issues with parameter indexing."""
-        if mapped_values_count > 0:
+        if mapped_values_balance > 0:
             self._state = IndexSettingsState.OK
             self.warning_message("Too many indexes selected. The excess indexes will not be used.")
             return True
@@ -393,8 +393,18 @@ class _IndexingTableModel(QAbstractTableModel):
             return self._index_name
         return ", ".join(self._parameter_nonexpanded_indexes[section - 1])
 
-    def mapped_values_count(self):
-        """Returns the number of fully indexed paramter values."""
+    def mapped_values_balance(self):
+        """
+        Returns the balance between available indexes and parameter values.
+
+        Zero means that there is as many indexes available as there are values,
+        i.e. the parameter is 'perfectly' indexed.
+        A positive value means there are more indexes than values
+        while a negative value means there are not enough indexes for all values.
+
+        Returns:
+            int: mapped values' balance
+        """
         count = 0
         for selected in self._selected:
             if selected:
@@ -402,6 +412,14 @@ class _IndexingTableModel(QAbstractTableModel):
         return count - len(self._parameter_values[0].values) if self._parameter_values else 0
 
     def reorder_indexes(self, first, last, target):
+        """
+        Moves indexes around.
+
+        Args:
+            first (int): first index to move
+            last (int): last index to move (inclusive)
+            target (int): where to move the first index
+        """
         self._indexes = move_list_elements(self._indexes, first, last, target)
         top_left = self.index(first, 0)
         bottom_right = self.index(target, 0)

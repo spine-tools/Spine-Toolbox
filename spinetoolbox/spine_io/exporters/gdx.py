@@ -39,6 +39,10 @@ class GdxExportException(Exception):
     """An exception raised when something goes wrong within the gdx module."""
 
     def __init__(self, message):
+        """
+        Args:
+            message (str): a message detailing the cause of the exception
+        """
         super().__init__()
         self._message = message
 
@@ -85,6 +89,7 @@ class Set:
         return self.domain_names[0] is None
 
     def to_dict(self):
+        """Stores Set to a dictionary."""
         set_dict = dict()
         set_dict["name"] = self.name
         set_dict["description"] = self.description
@@ -94,6 +99,7 @@ class Set:
 
     @staticmethod
     def from_dict(set_dict):
+        """Restores Set from a dictionary."""
         name = set_dict["name"]
         description = set_dict["description"]
         domain_names = set_dict["domain_names"]
@@ -131,13 +137,13 @@ class Record:
     Represents a GAMS set element in a Set.
 
     Parameters:
-        keys (tuple): a list  of record's keys
+        keys (tuple): a tuple of record's keys
     """
 
     def __init__(self, keys):
         """
         Args:
-            keys (tuple): a list  of record's keys
+            keys (tuple): a tuple of record's keys
         """
         self.keys = keys
 
@@ -147,12 +153,14 @@ class Record:
         return ",".join(self.keys)
 
     def to_dict(self):
+        """Stores Record to a dictionary."""
         record_dict = dict()
         record_dict["keys"] = self.keys
         return record_dict
 
     @staticmethod
     def from_dict(record_dict):
+        """Restores Record from a dictionary."""
         keys = record_dict["keys"]
         restored = Record(tuple(keys))
         return restored
@@ -344,7 +352,7 @@ class IndexingDomain:
 
     @property
     def indexes(self):
-        """a list of indexing key tuples"""
+        """a list of picked indexing key tuples"""
         if self._picked_indexes is None:
             picked = list()
             for index, pick in zip(self._all_indexes, self._pick_list):
@@ -355,17 +363,26 @@ class IndexingDomain:
 
     @property
     def all_indexes(self):
+        """a list of all indexing key tuples"""
         return self._all_indexes
 
     @property
     def pick_list(self):
+        """list of boolean values where True means the corresponding index should be picked"""
         return self._pick_list
 
     def sort_indexes(self, settings):
+        """
+        Sorts the indexes according to settings.
+
+        Args:
+            settings (Settings): a Settings object
+        """
         self._all_indexes = settings.sorted_record_key_lists(self.name)
         self._picked_indexes = None
 
     def to_dict(self):
+        """Stores IndexingDomain to a dictionary."""
         domain_dict = dict()
         domain_dict["name"] = self.name
         domain_dict["description"] = self.description
@@ -375,6 +392,7 @@ class IndexingDomain:
 
     @staticmethod
     def from_dict(domain_dict):
+        """Restores IndexingDomain from a dictionary."""
         indexes = [tuple(index) for index in domain_dict["indexes"]]
         pick_list = domain_dict["pick_list"]
         return IndexingDomain(domain_dict["name"], domain_dict["description"], indexes, pick_list)
@@ -382,6 +400,8 @@ class IndexingDomain:
     @staticmethod
     def from_base_domain(base_domain, pick_list):
         """
+        Builds a new IndexingDomain from an existing Set.
+
         Args:
             base_domain (Set): a domain set that holds the indexes
             pick_list (list): a list of booleans
@@ -393,6 +413,13 @@ class IndexingDomain:
 
 
 def sort_indexing_domain_indexes(indexing_settings, settings):
+    """
+    Sorts the index keys of an indexing domain in place.
+
+    Args:
+        indexing_settings (dict): a mapping from parameter name to IndexingSetting
+        settings (Settings): settings
+    """
     for indexing_setting in indexing_settings.values():
         indexing_domain = indexing_setting.indexing_domain
         indexing_domain.sort_indexes(settings)
@@ -454,24 +481,6 @@ def expand_indexed_parameter_values(parameters, indexing_settings):
         except KeyError:
             continue
         parameter.expand_indexes(indexing_setting)
-
-
-def extract_index_domain(parameter_value, domain_name, description):
-    """
-    Extracts the indexes of an indexed parameter into a Set.
-
-    Args:
-        parameter_value (IndexedValue): an indexed parameter
-        domain_name(str): domain's name
-        description (str): domain's explanatory text
-    Returns:
-        a domain Set containing the indices of the given parameter as records
-    """
-    indexes = parameter_value.indexes
-    index_domain = Set(domain_name, description)
-    for index in indexes:
-        index_domain.records.append(Record((str(index),)))
-    return index_domain
 
 
 def sets_to_gams(gdx_file, sets, omitted_set=None):
@@ -721,6 +730,14 @@ def make_indexing_settings(db_map):
 
 
 def indexing_settings_to_dict(settings):
+    """
+    Stores indexing settings to a JSON compatible dictionary.
+
+    Args:
+        settings (dict): a mapping from parameter name to IndexingSetting.
+    Returns:
+        a JSON serializable dictionary
+    """
     settings_dict = dict()
     for parameter_name, setting in settings.items():
         parameter_dict = dict()
@@ -733,6 +750,15 @@ def indexing_settings_to_dict(settings):
 
 
 def indexing_settings_from_dict(settings_dict, db_map):
+    """
+    Restores indexing settings from a json compatible dictionary.
+
+    Args:
+        settings (dict): a JSON compatible dictionary representing parameter indexing settings.
+        db_map (DatabaseMapping): database mapping
+    Returns:
+        a dictionary mapping parameter name to IndexingSetting.
+    """
     settings = dict()
     for parameter_name, setting_dict in settings_dict.items():
         parameter = _find_parameter(parameter_name, db_map)
@@ -746,6 +772,7 @@ def indexing_settings_from_dict(settings_dict, db_map):
 
 
 def _find_parameter(parameter_name, db_map):
+    """Searches for parameter_name in db_map and returns Parameter."""
     parameter = None
     parameter_rows = (
         db_map.object_parameter_value_list()
@@ -918,7 +945,7 @@ class Settings:
         records,
         domain_metadatas=None,
         set_metadatas=None,
-        global_parameters_domain_name='',
+        global_parameters_domain_name="",
     ):
         """
         Constructs a new Settings object.
@@ -969,6 +996,7 @@ class Settings:
 
     @global_parameters_domain_name.setter
     def global_parameters_domain_name(self, name):
+        """Sets the global_parameters_domain_name and declares that domain FORCED_NON_EXPORTABLE."""
         try:
             if self._global_parameters_domain_name:
                 i = self._domain_names.index(self._global_parameters_domain_name)
@@ -1005,8 +1033,10 @@ class Settings:
 
     def del_domain_at(self, index):
         """Erases domain name at given integal index."""
+        domain_name = self._domain_names[index]
         del self._domain_names[index]
         del self._domain_metadatas[index]
+        del self._records[domain_name]
 
     def update_domain(self, domain):
         """Updates domain's records."""
@@ -1123,29 +1153,52 @@ class Settings:
 
 
 class ExportFlag(enum.Enum):
+    """Options for exporting Set objects."""
+
     EXPORTABLE = enum.auto()
+    """User has declared that the set should be exported."""
     NON_EXPORTABLE = enum.auto()
+    """User has declared that the set should not be exported."""
     FORCED_EXPORTABLE = enum.auto()
+    """Set must be exported no matter what."""
     FORCED_NON_EXPORTABLE = enum.auto()
+    """Set must never be exported."""
 
 
 class SetMetadata:
+    """
+    This class holds some additional configuration for Sets.
+
+    Attributes:
+        exportable (ExportFlag): set's export flag
+        is_additional (bool): True if the domain does not exist in the database but is supplied separately.
+    """
+
     def __init__(self, exportable=ExportFlag.EXPORTABLE, is_additional=False):
+        """
+        Args:
+            exportable (ExportFlag): set's export flag
+            is_additional (bool): True if the domain does not exist in the database but is supplied separately.
+        """
         self.exportable = exportable
         self.is_additional = is_additional
 
     def __eq__(self, other):
+        """Returns True if other is equal to this metadata."""
         if not isinstance(other, SetMetadata):
             return NotImplemented
         return self.exportable == other.exportable and self.is_additional == other.is_additional
 
     def is_exportable(self):
+        """Returns True if Set should be exported."""
         return self.exportable in [ExportFlag.EXPORTABLE, ExportFlag.FORCED_EXPORTABLE]
 
     def is_forced(self):
+        """Returns True if user's export choices should be overriden."""
         return self.exportable in [ExportFlag.FORCED_EXPORTABLE, ExportFlag.FORCED_NON_EXPORTABLE]
 
     def to_dict(self):
+        """Serializes metadata to a dictionary."""
         metadata_dict = dict()
         metadata_dict["exportable"] = self.exportable.value
         metadata_dict["is_additional"] = self.is_additional
@@ -1153,6 +1206,7 @@ class SetMetadata:
 
     @staticmethod
     def from_dict(metadata_dict):
+        """Deserializes metadata from a dictionary."""
         metadata = SetMetadata()
         metadata.exportable = ExportFlag(metadata_dict["exportable"])
         metadata.is_additional = metadata_dict["is_additional"]
