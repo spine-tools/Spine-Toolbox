@@ -23,7 +23,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Select File or Directory</string>
+   <string>Open project</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
@@ -91,9 +91,12 @@
     </layout>
    </item>
    <item>
-    <widget class="QLineEdit" name="lineEdit_current_path">
-     <property name="placeholderText">
-      <string>Selected path</string>
+    <widget class="QComboBox" name="comboBox_current_path">
+     <property name="contextMenuPolicy">
+      <enum>Qt::CustomContextMenu</enum>
+     </property>
+     <property name="editable">
+      <bool>true</bool>
      </property>
     </widget>
    </item>
@@ -122,7 +125,7 @@
       </font>
      </property>
      <property name="text">
-      <string>Select a .proj file or a project directory</string>
+      <string>Select Spine Toolbox project directory</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignCenter</set>
@@ -142,12 +145,12 @@
   </layout>
  </widget>
  <tabstops>
+  <tabstop>comboBox_current_path</tabstop>
   <tabstop>treeView_file_system</tabstop>
   <tabstop>toolButton_root</tabstop>
   <tabstop>toolButton_home</tabstop>
   <tabstop>toolButton_documents</tabstop>
   <tabstop>toolButton_desktop</tabstop>
-  <tabstop>lineEdit_current_path</tabstop>
  </tabstops>
  <resources>
   <include location="resources/resources_icons.qrc"/>

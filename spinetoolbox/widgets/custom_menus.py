@@ -387,6 +387,18 @@ class RelationshipItemContextMenu(EntityItemContextMenu):
         self.add_action("Remove")
 
 
+class OpenProjectDialogComboBoxContextMenu(CustomContextMenu):
+    def __init__(self, parent, position):
+        """Class constructor.
+
+        Args:
+            parent (QWidget): Parent for menu widget
+            position (QPoint): Position on screen
+        """
+        super().__init__(parent, position)
+        self.add_action("Clear history")
+
+
 class CustomPopupMenu(QMenu):
     """Popup menu master class for several popup menus.
 

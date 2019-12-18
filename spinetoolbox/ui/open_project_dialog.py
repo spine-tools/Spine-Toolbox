@@ -13,7 +13,7 @@
 # Form implementation generated from reading ui file 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\ui\open_project_dialog.ui',
 # licensing of 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\ui\open_project_dialog.ui' applies.
 #
-# Created: Thu Dec  5 16:38:50 2019
+# Created: Tue Dec 17 10:16:10 2019
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -56,9 +56,11 @@ class Ui_Dialog(object):
         spacerItem = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
         self.horizontalLayout.addItem(spacerItem)
         self.verticalLayout.addLayout(self.horizontalLayout)
-        self.lineEdit_current_path = QtWidgets.QLineEdit(Dialog)
-        self.lineEdit_current_path.setObjectName("lineEdit_current_path")
-        self.verticalLayout.addWidget(self.lineEdit_current_path)
+        self.comboBox_current_path = QtWidgets.QComboBox(Dialog)
+        self.comboBox_current_path.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        self.comboBox_current_path.setEditable(True)
+        self.comboBox_current_path.setObjectName("comboBox_current_path")
+        self.verticalLayout.addWidget(self.comboBox_current_path)
         self.treeView_file_system = QtWidgets.QTreeView(Dialog)
         self.treeView_file_system.setVerticalScrollMode(QtWidgets.QAbstractItemView.ScrollPerPixel)
         self.treeView_file_system.setUniformRowHeights(True)
@@ -84,19 +86,18 @@ class Ui_Dialog(object):
         QtCore.QObject.connect(self.buttonBox, QtCore.SIGNAL("accepted()"), Dialog.accept)
         QtCore.QObject.connect(self.buttonBox, QtCore.SIGNAL("rejected()"), Dialog.reject)
         QtCore.QMetaObject.connectSlotsByName(Dialog)
+        Dialog.setTabOrder(self.comboBox_current_path, self.treeView_file_system)
         Dialog.setTabOrder(self.treeView_file_system, self.toolButton_root)
         Dialog.setTabOrder(self.toolButton_root, self.toolButton_home)
         Dialog.setTabOrder(self.toolButton_home, self.toolButton_documents)
         Dialog.setTabOrder(self.toolButton_documents, self.toolButton_desktop)
-        Dialog.setTabOrder(self.toolButton_desktop, self.lineEdit_current_path)
 
     def retranslateUi(self, Dialog):
-        Dialog.setWindowTitle(QtWidgets.QApplication.translate("Dialog", "Select File or Directory", None, -1))
+        Dialog.setWindowTitle(QtWidgets.QApplication.translate("Dialog", "Open project", None, -1))
         self.toolButton_root.setToolTip(QtWidgets.QApplication.translate("Dialog", "<html><head/><body><p>Root</p></body></html>", None, -1))
         self.toolButton_home.setToolTip(QtWidgets.QApplication.translate("Dialog", "<html><head/><body><p>Home</p></body></html>", None, -1))
         self.toolButton_documents.setToolTip(QtWidgets.QApplication.translate("Dialog", "<html><head/><body><p>Documents</p></body></html>", None, -1))
         self.toolButton_desktop.setToolTip(QtWidgets.QApplication.translate("Dialog", "<html><head/><body><p>Desktop</p></body></html>", None, -1))
-        self.lineEdit_current_path.setPlaceholderText(QtWidgets.QApplication.translate("Dialog", "Selected path", None, -1))
-        self.label.setText(QtWidgets.QApplication.translate("Dialog", "Select a .proj file or a project directory", None, -1))
+        self.label.setText(QtWidgets.QApplication.translate("Dialog", "Select Spine Toolbox project directory", None, -1))
 
 from spinetoolbox import resources_icons_rc

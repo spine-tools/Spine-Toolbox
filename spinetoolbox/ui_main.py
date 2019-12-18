@@ -111,7 +111,6 @@ class ToolboxUI(QMainWindow):
         self.project_item_context_menu = None
         self.link_context_menu = None
         self.process_output_context_menu = None
-        self.project_form = None
         self.add_project_item_form = None
         self.tool_specification_form = None
         self.placing_item = ""
@@ -340,19 +339,14 @@ class ToolboxUI(QMainWindow):
             bool: True when opening the project succeeded, False otherwise
         """
         if not load_dir:
-            dialog = QFileDialog(self, "Open project", _program_root)
-            dialog.setOption(QFileDialog.DontUseNativeDialog, True)
-            dialog.setOption(QFileDialog.ShowDirsOnly, True)
-            dialog.setFileMode(QFileDialog.Directory)
-            dialog.setFilter(QDir.AllDirs | QDir.NoDotAndDotDot)
-            dialog.setIconProvider(ProjectDirectoryIconProvider())  # DontUseNativeDialog is required for this to work
+            dialog = OpenProjectDialog(self)
             if not dialog.exec():
                 return False
-            load_dir = dialog.selectedFiles()[0]
+            load_dir = dialog.selection()
         load_path = os.path.abspath(os.path.join(load_dir, ".spinetoolbox", "project.json"))
-        if not os.path.isfile(load_path):
-            self.msg_error.emit("Opening project failed. File <b>{0}</b> not found.".format(load_path))
-            return False
+        # if not os.path.isfile(load_path):
+        #     self.msg_error.emit("Directory <b>{0}</b> is not a Spine Toolbox project".format(load_dir))
+        #     return False
         try:
             with open(load_path, "r") as fh:
                 try:
@@ -494,7 +488,7 @@ class ToolboxUI(QMainWindow):
     def upgrade_project(self, checked=False):
         """Upgrades an old style project (.proj file) to a new directory based Spine Toolbox project.
         Note that this method can be removed when we no longer want to support upgrading .proj projects.
-        Project upgrading happens later via ProjectUpgrader class.
+        Project upgrading should happen later automatically when opening a project.
         """
         msg = (
             "This tool upgrades your legacy Spine Toolbox projects from .proj files to "
