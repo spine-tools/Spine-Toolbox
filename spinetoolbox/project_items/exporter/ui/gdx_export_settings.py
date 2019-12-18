@@ -13,7 +13,7 @@
 # Form implementation generated from reading ui file 'C:\data\src\toolbox\bin\..\spinetoolbox\project_items\exporter\ui\gdx_export_settings.ui',
 # licensing of 'C:\data\src\toolbox\bin\..\spinetoolbox\project_items\exporter\ui\gdx_export_settings.ui' applies.
 #
-# Created: Wed Jan 15 14:58:00 2020
+# Created: Wed Jan 15 16:09:05 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -102,7 +102,7 @@ class Ui_Form(object):
         self.horizontalLayout_3.addItem(spacerItem5)
         self.verticalLayout_4.addLayout(self.horizontalLayout_3)
         self.button_box = QtWidgets.QDialogButtonBox(Form)
-        self.button_box.setStandardButtons(QtWidgets.QDialogButtonBox.Cancel|QtWidgets.QDialogButtonBox.Ok)
+        self.button_box.setStandardButtons(QtWidgets.QDialogButtonBox.Cancel|QtWidgets.QDialogButtonBox.Ok|QtWidgets.QDialogButtonBox.RestoreDefaults)
         self.button_box.setObjectName("button_box")
         self.verticalLayout_4.addWidget(self.button_box)
 

@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <!--
 ######################################################################################################################
 # Copyright (C) 2017 - 2019 Spine project consortium
@@ -79,13 +79,6 @@
            </size>
           </property>
          </spacer>
-        </item>
-        <item>
-         <widget class="QPushButton" name="refresh_button">
-          <property name="text">
-           <string>Refresh</string>
-          </property>
-         </widget>
         </item>
         <item>
          <widget class="QPushButton" name="settings_button">

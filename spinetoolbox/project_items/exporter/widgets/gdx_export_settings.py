@@ -16,25 +16,34 @@ Export item's settings window for .gdx export.
 :date:   9.9.2019
 """
 
+from copy import deepcopy
 import enum
 from PySide2.QtCore import QAbstractListModel, QModelIndex, Qt, Signal, Slot
 from PySide2.QtGui import QColor
-from PySide2.QtWidgets import QMessageBox, QWidget
+from PySide2.QtWidgets import QDialogButtonBox, QMessageBox, QWidget
 import spinetoolbox.spine_io.exporters.gdx as gdx
 from ..list_utils import move_list_elements
 from .parameter_index_settings_window import ParameterIndexSettingsWindow
 
 
 class State(enum.Enum):
+    """Gdx Export Settings window state"""
+
     OK = enum.auto()
+    """Settings are ok."""
     BAD_INDEXING = enum.auto()
+    """Not all indexed parameters are set up correctly."""
 
 
 class GdxExportSettings(QWidget):
     """A setting window for exporting .gdx files."""
 
+    reset_requested = Signal(str)
+    """Emitted when Reset Defaults button has been clicked."""
     settings_accepted = Signal(str)
-    """Fired when the OK button has been clicked."""
+    """Emitted when the OK button has been clicked."""
+    settings_rejected = Signal(str)
+    """Emitted when the Cancel button has been clicked."""
 
     def __init__(self, settings, indexing_settings, new_indexing_domains, database_path, parent):
         """
@@ -55,13 +64,10 @@ class GdxExportSettings(QWidget):
         self._database_path = database_path
         self._ui.button_box.accepted.connect(self._accepted)
         self._ui.button_box.rejected.connect(self._rejected)
+        self._ui.button_box.clicked.connect(self._reset_settings)
         self._ui.set_move_up_button.clicked.connect(self._move_sets_up)
         self._ui.set_move_down_button.clicked.connect(self._move_sets_down)
-        self._ui.global_parameters_combo_box.addItem("Nothing selected")
-        for domain_name in sorted(settings.sorted_domain_names):
-            self._ui.global_parameters_combo_box.addItem(domain_name)
-        if settings.global_parameters_domain_name:
-            self._ui.global_parameters_combo_box.setCurrentText(settings.global_parameters_domain_name)
+        self._populate_global_parameters_combo_box(settings)
         self._ui.global_parameters_combo_box.currentIndexChanged[str].connect(self._update_global_parameters_domain)
         self._ui.record_sort_alphabetic.clicked.connect(self._sort_records_alphabetically)
         self._ui.record_move_up_button.clicked.connect(self._move_records_up)
@@ -77,13 +83,7 @@ class GdxExportSettings(QWidget):
         self._new_domains_for_indexing = new_indexing_domains
         self._indexed_parameter_settings_window = None
         self._state = State.OK
-        for setting in indexing_settings.values():
-            if setting.indexing_domain is None:
-                self._ui.indexing_status_label.setText(
-                    "<span style='color:#ff3333;white-space: pre-wrap;'>Not all parameters correctly indexed.</span>"
-                )
-                self._state = State.BAD_INDEXING
-                break
+        self._check_state()
 
     @property
     def settings(self):
@@ -100,6 +100,40 @@ class GdxExportSettings(QWidget):
         """list of additional domain needed for indexing"""
         return self._new_domains_for_indexing
 
+    def reset_settings(self, settings, indexing_settings, new_indexing_domains):
+        """Resets all settings."""
+        if self._indexed_parameter_settings_window is not None:
+            self._indexed_parameter_settings_window.close()
+            self._indexed_parameter_settings_window = None
+        self._ui.global_parameters_combo_box.clear()
+        self._populate_global_parameters_combo_box(settings)
+        self._settings = settings
+        set_list_model = GAMSSetListModel(settings)
+        self._ui.set_list_view.setModel(set_list_model)
+        self._ui.set_list_view.selectionModel().selectionChanged.connect(self._populate_set_contents)
+        self._ui.record_list_view.setModel(GAMSRecordListModel())
+        self._indexing_settings = indexing_settings
+        self._new_domains_for_indexing = new_indexing_domains
+        self._check_state()
+
+    def _check_state(self):
+        """Checks if there are parameters in need for indexing."""
+        for setting in self.indexing_settings.values():
+            if setting.indexing_domain is None:
+                self._ui.indexing_status_label.setText(
+                    "<span style='color:#ff3333;white-space: pre-wrap;'>Not all parameters correctly indexed.</span>"
+                )
+                self._state = State.BAD_INDEXING
+                break
+
+    def _populate_global_parameters_combo_box(self, settings):
+        """(Re)populates the global parameters combo box."""
+        self._ui.global_parameters_combo_box.addItem("Nothing selected")
+        for domain_name in sorted(settings.sorted_domain_names):
+            self._ui.global_parameters_combo_box.addItem(domain_name)
+        if settings.global_parameters_domain_name:
+            self._ui.global_parameters_combo_box.setCurrentText(settings.global_parameters_domain_name)
+
     @Slot()
     def _accepted(self):
         """Emits the settings_accepted signal."""
@@ -111,6 +145,7 @@ class GdxExportSettings(QWidget):
             )
             return
         self.settings_accepted.emit(self._database_path)
+        self.hide()
 
     @Slot(bool)
     def _move_sets_up(self, checked=False):
@@ -135,7 +170,14 @@ class GdxExportSettings(QWidget):
     @Slot()
     def _rejected(self):
         """Hides the window."""
-        self.hide()
+        self.settings_rejected.emit(self._database_path)
+        self.close()
+
+    @Slot("QAbstractButton")
+    def _reset_settings(self, button):
+        if self._ui.button_box.standardButton(button) != QDialogButtonBox.RestoreDefaults:
+            return
+        self.reset_requested.emit(self._database_path)
 
     @Slot(str)
     def _update_global_parameters_domain(self, text):
@@ -162,6 +204,7 @@ class GdxExportSettings(QWidget):
 
     @Slot(bool)
     def _sort_records_alphabetically(self, _):
+        """Sorts the lists of set records alphabetically."""
         model = self._ui.record_list_view.model()
         model.sort_alphabetically()
 
@@ -181,10 +224,12 @@ class GdxExportSettings(QWidget):
                         available_domains.update({domain_name: keys})
                     else:
                         new_domains.update({domain_name: keys})
+            indexing_settings = deepcopy(self._indexing_settings)
             self._indexed_parameter_settings_window = ParameterIndexSettingsWindow(
-                self._indexing_settings, available_domains, new_domains, self._database_path, self
+                indexing_settings, available_domains, new_domains, self._database_path, self
             )
             self._indexed_parameter_settings_window.settings_approved.connect(self._parameter_settings_approved)
+            self._indexed_parameter_settings_window.settings_rejected.connect(self._dispose_parameter_settings_window)
             self._ui.record_list_view.model().domain_records_reordered.connect(
                 self._indexed_parameter_settings_window.reorder_indexes
             )
@@ -216,6 +261,11 @@ class GdxExportSettings(QWidget):
         self._new_domains_for_indexing = list(new_domains)
         self._state = State.OK
         self._ui.indexing_status_label.setText("")
+
+    @Slot()
+    def _dispose_parameter_settings_window(self):
+        """Removes references to the indexed parameter settings window."""
+        self._indexed_parameter_settings_window = None
 
 
 def _move_selected_elements_by(list_view, delta):

@@ -613,6 +613,7 @@ class TestGdx(unittest.TestCase):
                 self.assertTrue("extra_domain" in gdx_file)
                 additional_gams_domain = gdx_file["extra_domain"]
                 self.assertEqual(len(additional_gams_domain), 2)
+                # pylint: disable=unsupported-membership-test
                 self.assertTrue("record1" in additional_gams_domain)
                 self.assertTrue("record2" in additional_gams_domain)
 
@@ -713,6 +714,7 @@ class TestGdx(unittest.TestCase):
                 self.assertEqual(gams_set.elements[0], "record21")
                 gams_set = gdx_file["internal_indexes"]
                 self.assertEqual(len(gams_set), 2)
+                # pylint: disable=unsupported-membership-test
                 self.assertTrue("stamp1" in gams_set)
                 self.assertTrue("stamp2" in gams_set)
                 gams_set = gdx_file["external_indexes"]
@@ -912,20 +914,19 @@ class TestGdx(unittest.TestCase):
 
     def test_Settings_add_domain(self):
         settings = gdx.Settings(
-            ["a"],
-            [],
-            {"a": [("A",)]},
-            [
-                gdx.SetMetadata(gdx.ExportFlag.FORCED_EXPORTABLE, True),
-            ],
-            [],
-            "",
+            ["a"], [], {"a": [("A",)]}, [gdx.SetMetadata(gdx.ExportFlag.FORCED_EXPORTABLE, True)], [], ""
         )
         domain = gdx.Set("b")
         domain.records.append(gdx.Record(("B",)))
         settings.add_or_replace_domain(domain, gdx.SetMetadata(gdx.ExportFlag.NON_EXPORTABLE, False))
         self.assertEqual(settings.sorted_domain_names, ["a", "b"])
-        self.assertEqual(settings.domain_metadatas, [gdx.SetMetadata(gdx.ExportFlag.FORCED_EXPORTABLE, True), gdx.SetMetadata(gdx.ExportFlag.NON_EXPORTABLE, False)])
+        self.assertEqual(
+            settings.domain_metadatas,
+            [
+                gdx.SetMetadata(gdx.ExportFlag.FORCED_EXPORTABLE, True),
+                gdx.SetMetadata(gdx.ExportFlag.NON_EXPORTABLE, False),
+            ],
+        )
         self.assertEqual(settings.sorted_set_names, [])
         self.assertEqual(settings.set_metadatas, [])
         self.assertEqual(settings.global_parameters_domain_name, "")
@@ -934,14 +935,7 @@ class TestGdx(unittest.TestCase):
 
     def test_Settings_replace_domain(self):
         settings = gdx.Settings(
-            ["a"],
-            [],
-            {"a": [("A",)]},
-            [
-                gdx.SetMetadata(gdx.ExportFlag.FORCED_EXPORTABLE, True),
-            ],
-            [],
-            "",
+            ["a"], [], {"a": [("A",)]}, [gdx.SetMetadata(gdx.ExportFlag.FORCED_EXPORTABLE, True)], [], ""
         )
         domain = gdx.Set("a")
         domain.records.append(gdx.Record(("B",)))
@@ -955,14 +949,7 @@ class TestGdx(unittest.TestCase):
 
     def test_Settings_del_domain_at(self):
         settings = gdx.Settings(
-            ["a"],
-            [],
-            {"a": [("A",)]},
-            [
-                gdx.SetMetadata(gdx.ExportFlag.FORCED_EXPORTABLE, True),
-            ],
-            [],
-            "",
+            ["a"], [], {"a": [("A",)]}, [gdx.SetMetadata(gdx.ExportFlag.FORCED_EXPORTABLE, True)], [], ""
         )
         domain = gdx.Set("a")
         i = settings.domain_index(domain)
@@ -973,6 +960,14 @@ class TestGdx(unittest.TestCase):
         self.assertEqual(settings.set_metadatas, [])
         self.assertEqual(settings.global_parameters_domain_name, "")
         self.assertRaises(KeyError, settings.sorted_record_key_lists, "a")
+
+    def test_Settings_del_domain_at_clears_global_parameters_domain_name(self):
+        settings = gdx.Settings(["a"], [], {"a": []}, [gdx.SetMetadata()], [], "a")
+        self.assertEqual(settings.global_parameters_domain_name, "a")
+        domain = gdx.Set("a")
+        i = settings.domain_index(domain)
+        settings.del_domain_at(i)
+        self.assertEqual(settings.global_parameters_domain_name, "")
 
     def test_expand_indexed_parameter_values_for_domains(self):
         domain = gdx.Set("domain name")

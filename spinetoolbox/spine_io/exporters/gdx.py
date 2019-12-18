@@ -997,14 +997,12 @@ class Settings:
     @global_parameters_domain_name.setter
     def global_parameters_domain_name(self, name):
         """Sets the global_parameters_domain_name and declares that domain FORCED_NON_EXPORTABLE."""
-        try:
-            if self._global_parameters_domain_name:
-                i = self._domain_names.index(self._global_parameters_domain_name)
-                self._domain_metadatas[i].exportable = ExportFlag.EXPORTABLE
+        if self._global_parameters_domain_name:
+            i = self._domain_names.index(self._global_parameters_domain_name)
+            self._domain_metadatas[i].exportable = ExportFlag.EXPORTABLE
+        if name:
             i = self._domain_names.index(name)
             self._domain_metadatas[i].exportable = ExportFlag.FORCED_NON_EXPORTABLE
-        except ValueError:
-            pass
         self._global_parameters_domain_name = name
 
     def add_or_replace_domain(self, domain, metadata):
@@ -1032,11 +1030,13 @@ class Settings:
         return self._domain_names.index(domain.name)
 
     def del_domain_at(self, index):
-        """Erases domain name at given integal index."""
+        """Erases domain name at given integral index."""
         domain_name = self._domain_names[index]
         del self._domain_names[index]
         del self._domain_metadatas[index]
         del self._records[domain_name]
+        if domain_name == self._global_parameters_domain_name:
+            self._global_parameters_domain_name = ""
 
     def update_domain(self, domain):
         """Updates domain's records."""
@@ -1078,7 +1078,7 @@ class Settings:
             self._set_names, self._set_metadatas, updating_settings._set_names, updating_settings._set_metadatas
         )
         if self._global_parameters_domain_name not in self._domain_names:
-            self._global_parameters_domain_name = ''
+            self._global_parameters_domain_name = ""
         new_records = dict()
         updating_records = dict(updating_settings._records)
         for set_name, record_names in self._records.items():

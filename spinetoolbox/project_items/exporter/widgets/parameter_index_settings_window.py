@@ -25,7 +25,9 @@ class ParameterIndexSettingsWindow(QWidget):
     """A window which shows a list of ParameterIndexSettings widgets, one for each parameter with indexed values."""
 
     settings_approved = Signal()
-    """Fired when the settings have been approved."""
+    """Emitted when the settings have been approved."""
+    settings_rejected = Signal()
+    """Emitted when the settings have been rejected."""
 
     def __init__(self, indexing_settings, available_existing_domains, new_domains, database_path, parent):
         """
@@ -47,11 +49,7 @@ class ParameterIndexSettingsWindow(QWidget):
         self.setWindowTitle("Gdx Parameter Indexing Settings    -- {} --".format(database_path))
         self.setAttribute(Qt.WA_DeleteOnClose, True)
         self._ui.button_box.accepted.connect(self._collect_and_hide)
-        self._ui.button_box.rejected.connect(self.hide)
-        if not indexing_settings:
-            self._ui.widget_stack.setCurrentIndex(1)
-            return
-        self._ui.widget_stack.setCurrentIndex(0)
+        self._ui.button_box.rejected.connect(self._reject_and_close)
         self._settings_widgets = dict()
         for parameter_name, indexing_setting in indexing_settings.items():
             settings_widget = ParameterIndexSettings(
@@ -63,6 +61,10 @@ class ParameterIndexSettingsWindow(QWidget):
             )
             self._ui.settings_area_layout.insertWidget(0, settings_widget)
             self._settings_widgets[parameter_name] = settings_widget
+        if not indexing_settings:
+            self._ui.widget_stack.setCurrentIndex(1)
+            return
+        self._ui.widget_stack.setCurrentIndex(0)
 
     @property
     def indexing_settings(self):
@@ -103,3 +105,8 @@ class ParameterIndexSettingsWindow(QWidget):
                 self._new_domains.append(new_domain)
         self.settings_approved.emit()
         self.hide()
+
+    @Slot()
+    def _reject_and_close(self):
+        self.settings_rejected.emit()
+        self.close()

@@ -74,6 +74,7 @@ class Exporter(ProjectItem):
             for file_name in settings_file_names:
                 self._restore_settings(file_name)
         self._activated = False
+        self._project.db_mngr.session_committed.connect(self._update_settings_after_db_commit)
 
     @staticmethod
     def item_type():
@@ -93,7 +94,7 @@ class Exporter(ProjectItem):
     def activate(self):
         """Restores selections and connects signals."""
         self._properties_ui.item_name_label.setText(self.name)
-        self.update_database_list()
+        self._update_database_list()
         super().connect_signals()
         self._activated = True
 
@@ -109,26 +110,16 @@ class Exporter(ProjectItem):
     def save_selections(self):
         """Saves selections in shared widgets for this project item into instance variables."""
 
-    def update_database_list(self):
+    def _update_database_list(self):
         """Updates the database list in the properties tab."""
         database_list_storage = self._properties_ui.databases_list_layout
-        urls_already_in_items = list()
-        for i in range(database_list_storage.count()):
-            item_url = database_list_storage.itemAt(i).widget().url_field.text()
-            if item_url not in self._database_urls:
-                widget_to_remove = database_list_storage.takeAt(i)
-                widget_to_remove.widget().file_name_changed.disconnect()
-                widget_to_remove.widget().deleteLater()
-            else:
-                urls_already_in_items.append(item_url)
+        while not database_list_storage.isEmpty():
+            widget_to_remove = database_list_storage.takeAt(0)
+            widget_to_remove.widget().deleteLater()
         for url in self._database_urls:
-            if url in urls_already_in_items:
-                continue
             file_name = self._database_to_file_name_map.get(url, "")
             item = ExportListItem(url, file_name)
             database_list_storage.insertWidget(0, item)
-            # pylint: disable=cell-var-from-loop
-            item.refresh_settings_clicked.connect(self._refresh_settings_for_database)
             item.open_settings_clicked.connect(self._show_settings)
             item.file_name_changed.connect(self._update_out_file_name)
 
@@ -160,10 +151,21 @@ class Exporter(ProjectItem):
 
     def _do_handle_dag_changed(self, resources):
         """See base class."""
-        self._database_urls = [r.url for r in resources if r.type_ == "database"]
+        database_urls = [r.url for r in resources if r.type_ == "database"]
+        if set(database_urls) == set(self._database_urls):
+            return
+        self._database_urls = database_urls
         for mapped_database in list(self._database_to_file_name_map):
             if mapped_database not in self._database_urls:
                 del self._database_to_file_name_map[mapped_database]
+                if mapped_database in self._settings_windows:
+                    del self._settings_windows[mapped_database]
+                if mapped_database in self._settings:
+                    del self._settings[mapped_database]
+                if mapped_database in self._parameter_indexing_settings:
+                    del self._parameter_indexing_settings[mapped_database]
+                if mapped_database in self._additional_parameter_indexing_domains:
+                    del self._additional_parameter_indexing_domains[mapped_database]
         files = self._database_to_file_name_map.values()
         notify_about_missing_output_file = False
         if "" in files:
@@ -176,7 +178,7 @@ class Exporter(ProjectItem):
         if notify_about_missing_output_file:
             self.add_notification(Exporter._missing_output_file_notification)
         if self._activated:
-            self.update_database_list()
+            self._update_database_list()
 
     @Slot(str)
     def _show_settings(self, database_url):
@@ -196,18 +198,32 @@ class Exporter(ProjectItem):
         # Give window its own settings and indexing domains so Cancel doesn't change anything here.
         settings = deepcopy(settings)
         indexing_settings = deepcopy(indexing_settings)
-        settings_window = self._settings_windows.setdefault(
-            database_url,
-            GdxExportSettings(
+        additional_parameter_indexing_domains = list(self._additional_parameter_indexing_domains[database_url])
+        settings_window = self._settings_windows.get(database_url, None)
+        if settings_window is None:
+            settings_window = GdxExportSettings(
                 settings,
                 indexing_settings,
-                self._additional_parameter_indexing_domains[database_url],
+                additional_parameter_indexing_domains,
                 database_url,
                 self._toolbox,
-            ),
-        )
-        settings_window.settings_accepted.connect(self._update_settings_from_settings_window)
+            )
+            settings_window.settings_accepted.connect(self._update_settings_from_settings_window)
+            settings_window.settings_rejected.connect(self._dispose_settings_window)
+            settings_window.reset_requested.connect(self._reset_settings_window)
+            self._settings_windows[database_url] = settings_window
         settings_window.show()
+
+    @Slot(str)
+    def _reset_settings_window(self, database_url):
+        """Sends new settings to Gdx Export Settings window."""
+        self._reset_settings(database_url)
+        self._send_settings_to_window(database_url)
+
+    @Slot(str)
+    def _dispose_settings_window(self, database_url):
+        """Deletes rejected export settings windows."""
+        del self._settings_windows[database_url]
 
     @Slot(str, str)
     def _update_out_file_name(self, file_name, database_path):
@@ -226,7 +242,6 @@ class Exporter(ProjectItem):
         self._settings[database_path] = settings_window.settings
         self._parameter_indexing_settings[database_path] = settings_window.indexing_settings
         self._additional_parameter_indexing_domains[database_path] = settings_window.new_domains
-        settings_window.hide()
 
     def item_dict(self):
         """Returns a dictionary corresponding to this item's configuration."""
@@ -257,6 +272,7 @@ class Exporter(ProjectItem):
         return file_names
 
     def _restore_settings(self, file_name):
+        """Loads export settings from disk."""
         try:
             with open(file_name) as input_file:
                 try:
@@ -282,6 +298,24 @@ class Exporter(ProjectItem):
         except FileNotFoundError:
             self._toolbox.msg_warning.emit("Exporter settings file {} not found. Skipping.".format(file_name))
 
+    def _reset_settings(self, database_url):
+        """Recreates export settings for given database."""
+        database_map = DatabaseMapping(database_url)
+        settings = gdx.make_settings(database_map)
+        indexing_settings = gdx.make_indexing_settings(database_map)
+        database_map.connection.close()
+        self._settings[database_url] = settings
+        self._parameter_indexing_settings[database_url] = indexing_settings
+        self._additional_parameter_indexing_domains[database_url] = list()
+
+    def _send_settings_to_window(self, database_url):
+        """Resets settings in given export settings window."""
+        window = self._settings_windows[database_url]
+        settings = deepcopy(self._settings[database_url])
+        indexing_settings = deepcopy(self._parameter_indexing_settings[database_url])
+        additional_parameter_indexing_domains = list(self._additional_parameter_indexing_domains[database_url])
+        window.reset_settings(settings, indexing_settings, additional_parameter_indexing_domains)
+
     def update_name_label(self):
         """See `ProjectItem.update_name_label()`."""
         self._properties_ui.item_name_label.setText(self.name)
@@ -305,7 +339,6 @@ class Exporter(ProjectItem):
         else:
             super().notify_destination(source_item)
 
-    @Slot(str)
     def _refresh_settings_for_database(self, url):
         """Refreshes database export settings after changes in database's structure/data."""
         original_settings = self._settings.get(url, None)
@@ -318,6 +351,17 @@ class Exporter(ProjectItem):
             self._settings[url] = new_settings
             return
         original_settings.update(new_settings)
+        if url in self._settings_windows:
+            self._settings_windows[url].close()
+            self._dispose_settings_window(url)
+
+    @Slot("QVariant")
+    def _update_settings_after_db_commit(self, committed_db_maps):
+        """Refreshes export settings for databases after data has been committed to them."""
+        for db_map in committed_db_maps:
+            url = str(db_map.db_url)
+            if url in self._database_urls:
+                self._refresh_settings_for_database(url)
 
     @staticmethod
     def default_name_prefix():
@@ -330,3 +374,7 @@ class Exporter(ProjectItem):
         paths = [os.path.join(self.data_dir, file_name) for file_name in files]
         resources = [ProjectItemResource(self, "file", url=pathlib.Path(path).as_uri()) for path in paths]
         return resources
+
+    def tear_down(self):
+        """See base class."""
+        self._project.db_mngr.session_committed.disconnect(self._update_settings_after_db_commit)

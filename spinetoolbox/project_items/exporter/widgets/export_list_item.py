@@ -16,15 +16,13 @@ A small widget to set up a database export in Gdx Export settings.
 :date:   10.9.2019
 """
 
-from PySide2.QtCore import Signal
+from PySide2.QtCore import Signal, Slot
 from PySide2.QtWidgets import QWidget
 
 
 class ExportListItem(QWidget):
     """A widget with few controls to select the output file name and open a settings window."""
 
-    refresh_settings_clicked = Signal(str)
-    """signal that is triggered when the settings should be refreshed"""
     open_settings_clicked = Signal(str)
     """signal that is triggered when settings window should be opened"""
     file_name_changed = Signal(str, str)
@@ -41,18 +39,13 @@ class ExportListItem(QWidget):
 
         super().__init__(parent)
         self._ui = Ui_Form()
+        self._url = url
         self._ui.setupUi(self)
         self._ui.url_field.setText(url)
         self._ui.url_field.setToolTip(url)
         self._ui.out_file_name_edit.setText(file_name)
-        self._ui.out_file_name_edit.textChanged.connect(lambda text: self.file_name_changed.emit(text, url))
-        self._ui.refresh_button.clicked.connect(lambda checked: self.refresh_settings_clicked.emit(url))
-        self._ui.settings_button.clicked.connect(lambda checked: self.open_settings_clicked.emit(url))
-
-    @property
-    def refresh_button(self):
-        """a QButton to trigger refresh due to changes in the database"""
-        return self._ui.refresh_button
+        self._ui.out_file_name_edit.textChanged.connect(self.emit_file_name_changed)
+        self._ui.settings_button.clicked.connect(self.emit_open_settings_clicked)
 
     @property
     def settings_button(self):
@@ -67,3 +60,11 @@ class ExportListItem(QWidget):
     @property
     def url_field(self):
         return self._ui.url_field
+
+    @Slot(str)
+    def emit_file_name_changed(self, file_name):
+        self.file_name_changed.emit(file_name, self._url)
+
+    @Slot(bool)
+    def emit_open_settings_clicked(self, _):
+        self.open_settings_clicked.emit(self._url)
