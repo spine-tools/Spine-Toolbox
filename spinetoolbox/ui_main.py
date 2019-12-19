@@ -344,9 +344,6 @@ class ToolboxUI(QMainWindow):
                 return False
             load_dir = dialog.selection()
         load_path = os.path.abspath(os.path.join(load_dir, ".spinetoolbox", "project.json"))
-        # if not os.path.isfile(load_path):
-        #     self.msg_error.emit("Directory <b>{0}</b> is not a Spine Toolbox project".format(load_dir))
-        #     return False
         try:
             with open(load_path, "r") as fh:
                 try:

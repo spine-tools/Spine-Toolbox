@@ -159,10 +159,6 @@ class ProjectUpgrader:
         else:
             # old connections maybe of two types, convert them to the newer format
             new["connections"] = self.upgrade_connections(item_names, old_connections)
-        new["scene_x"] = old["project"]["scene_x"]
-        new["scene_y"] = old["project"]["scene_y"]
-        new["scene_w"] = old["project"]["scene_w"]
-        new["scene_h"] = old["project"]["scene_h"]
         new_objects = dict(old["objects"])
         for category_name in old["objects"]:
             if category_name not in self._toolbox.categories:

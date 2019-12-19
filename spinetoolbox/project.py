@@ -134,10 +134,6 @@ class SpineToolboxProject(MetaObject):
             connections.append(conn)
         project_dict["connections"] = connections
         scene_rect = self._toolbox.ui.graphicsView.scene().sceneRect()
-        project_dict["scene_y"] = scene_rect.y()
-        project_dict["scene_w"] = scene_rect.width()
-        project_dict["scene_h"] = scene_rect.height()
-        project_dict["scene_x"] = scene_rect.x()
         items_dict = dict()  # Dictionary for storing project items
         # Traverse all items in project model by category
         for category_item in self._toolbox.project_item_model.root().children():
