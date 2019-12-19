@@ -142,9 +142,13 @@ class Exporter(ProjectItem):
             out_path = os.path.join(self.data_dir, file_name)
             indexing_settings = self._parameter_indexing_settings.get(url, dict())
             additional_domains = self._additional_parameter_indexing_domains.get(url, dict())
-            gdx.to_gdx_file(
-                database_map, out_path, additional_domains, settings, indexing_settings, gams_system_directory
-            )
+            try:
+                gdx.to_gdx_file(
+                    database_map, out_path, additional_domains, settings, indexing_settings, gams_system_directory
+                )
+            except gdx.GdxExportException as error:
+                self._toolbox.msg_error.emit(f"Failed to export <b>{url}</b> to .gdx: {error}")
+                return False
             database_map.connection.close()
             self._toolbox.msg_success.emit("File <b>{0}</b> written".format(out_path))
         return True

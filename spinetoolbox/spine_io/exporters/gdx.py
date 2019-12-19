@@ -517,6 +517,17 @@ def parameters_to_gams(gdx_file, parameters):
     for parameter_name, parameter in parameters.items():
         indexed_values = dict()
         for index, value in zip(parameter.indexes, parameter.values):
+            if not isinstance(value, float):
+                if isinstance(value, IndexedValue):
+                    raise GdxExportException(
+                        f"Cannot write parameter '{parameter_name}':"
+                        + " parameter contains indexed values but indexing domain information is missing."
+                    )
+                else:
+                    raise GdxExportException(
+                        f"Cannot write parameter '{parameter_name}':"
+                        + f" parameter contains unsupported values of type '{type(value)}'."
+                    )
             indexed_values[tuple(index)] = value
         gams_parameter = GAMSParameter(indexed_values, domain=parameter.domain_names)
         gdx_file[parameter_name] = gams_parameter
