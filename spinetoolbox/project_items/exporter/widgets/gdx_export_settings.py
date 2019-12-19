@@ -65,6 +65,9 @@ class GdxExportSettings(QWidget):
         self._ui.button_box.accepted.connect(self._accepted)
         self._ui.button_box.rejected.connect(self._rejected)
         self._ui.button_box.clicked.connect(self._reset_settings)
+        self._ui.button_box.button(QDialogButtonBox.RestoreDefaults).setToolTip(
+            "Reset all settings\nby reloading the database."
+        )
         self._ui.set_move_up_button.clicked.connect(self._move_sets_up)
         self._ui.set_move_down_button.clicked.connect(self._move_sets_down)
         self._populate_global_parameters_combo_box(settings)

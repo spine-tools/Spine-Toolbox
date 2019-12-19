@@ -113,6 +113,9 @@
          </item>
          <item>
           <widget class="QPushButton" name="record_sort_alphabetic">
+           <property name="toolTip">
+            <string>Sort set contents alphabetically.</string>
+           </property>
            <property name="text">
             <string>Alphabetic</string>
            </property>
@@ -155,6 +158,9 @@
     <layout class="QHBoxLayout" name="horizontalLayout_4">
      <item>
       <widget class="QPushButton" name="open_indexed_parameter_settings_button">
+       <property name="toolTip">
+        <string>Set up indexing for time series and other indexed parameters.</string>
+       </property>
        <property name="text">
         <string>Indexed parameters...</string>
        </property>
@@ -191,6 +197,10 @@
       <layout class="QFormLayout" name="formLayout">
        <item row="0" column="0">
         <widget class="QLabel" name="label">
+         <property name="toolTip">
+          <string>Selected domain's parameters are exported as GAMS scalars.
+The domain itself is not exported.</string>
+         </property>
          <property name="text">
           <string>Global parameters domain:</string>
          </property>

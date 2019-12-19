@@ -13,7 +13,7 @@
 # Form implementation generated from reading ui file 'C:\data\src\toolbox\bin\..\spinetoolbox\project_items\exporter\ui\parameter_index_settings.ui',
 # licensing of 'C:\data\src\toolbox\bin\..\spinetoolbox\project_items\exporter\ui\parameter_index_settings.ui' applies.
 #
-# Created: Wed Jan 15 16:09:05 2020
+# Created: Wed Jan 15 16:21:19 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -142,10 +142,12 @@ class Ui_Form(object):
         self.move_domain_left_button.setText(QtWidgets.QApplication.translate("Form", "Move Left", None, -1))
         self.move_domain_right_button.setText(QtWidgets.QApplication.translate("Form", "Move Right", None, -1))
         self.use_existing_domain_radio_button.setText(QtWidgets.QApplication.translate("Form", "Use existing domain", None, -1))
+        self.pick_expression_label.setToolTip(QtWidgets.QApplication.translate("Form", "Select rows for which this Python expression evaluates to True. Use <i>i</i> as the row index.", None, -1))
         self.pick_expression_label.setText(QtWidgets.QApplication.translate("Form", "Label picking expression:", None, -1))
         self.create_domain_radio_button.setText(QtWidgets.QApplication.translate("Form", "Create new index domain", None, -1))
         self.domain_name_label.setText(QtWidgets.QApplication.translate("Form", "Domain name:", None, -1))
         self.domain_description_label.setText(QtWidgets.QApplication.translate("Form", "Description:", None, -1))
+        self.generator_expression_label.setToolTip(QtWidgets.QApplication.translate("Form", "Generate index labels from Python expression. Use <i>i</i> as the row number.", None, -1))
         self.generator_expression_label.setText(QtWidgets.QApplication.translate("Form", "Generator expression:", None, -1))
         self.extract_indexes_button.setText(QtWidgets.QApplication.translate("Form", "Extract index from parameter", None, -1))
 

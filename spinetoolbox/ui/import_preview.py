@@ -13,7 +13,7 @@
 # Form implementation generated from reading ui file 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\import_preview.ui',
 # licensing of 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\import_preview.ui' applies.
 #
-# Created: Wed Jan 15 16:09:10 2020
+# Created: Wed Jan 15 16:21:24 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!

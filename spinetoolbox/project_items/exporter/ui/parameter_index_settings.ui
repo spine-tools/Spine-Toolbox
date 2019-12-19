@@ -133,6 +133,9 @@
              <layout class="QFormLayout" name="formLayout_3">
               <item row="0" column="0">
                <widget class="QLabel" name="pick_expression_label">
+                <property name="toolTip">
+                 <string>Select rows for which this Python expression evaluates to True. Use &lt;i&gt;i&lt;/i&gt; as the row index.</string>
+                </property>
                 <property name="text">
                  <string>Label picking expression:</string>
                 </property>
@@ -184,6 +187,9 @@
                <layout class="QFormLayout" name="formLayout_2">
                 <item row="0" column="0">
                  <widget class="QLabel" name="generator_expression_label">
+                  <property name="toolTip">
+                   <string>Generate index labels from Python expression. Use &lt;i&gt;i&lt;/i&gt; as the row number.</string>
+                  </property>
                   <property name="text">
                    <string>Generator expression:</string>
                   </property>

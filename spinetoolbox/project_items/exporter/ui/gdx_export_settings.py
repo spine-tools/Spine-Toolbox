@@ -13,7 +13,7 @@
 # Form implementation generated from reading ui file 'C:\data\src\toolbox\bin\..\spinetoolbox\project_items\exporter\ui\gdx_export_settings.ui',
 # licensing of 'C:\data\src\toolbox\bin\..\spinetoolbox\project_items\exporter\ui\gdx_export_settings.ui' applies.
 #
-# Created: Wed Jan 15 16:09:05 2020
+# Created: Wed Jan 15 16:21:18 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -115,9 +115,13 @@ class Ui_Form(object):
         self.set_move_up_button.setText(QtWidgets.QApplication.translate("Form", "Move Up", None, -1))
         self.set_move_down_button.setText(QtWidgets.QApplication.translate("Form", "Move Down", None, -1))
         self.groupBox_2.setTitle(QtWidgets.QApplication.translate("Form", "Set Contents", None, -1))
+        self.record_sort_alphabetic.setToolTip(QtWidgets.QApplication.translate("Form", "Sort set contents alphabetically.", None, -1))
         self.record_sort_alphabetic.setText(QtWidgets.QApplication.translate("Form", "Alphabetic", None, -1))
         self.record_move_up_button.setText(QtWidgets.QApplication.translate("Form", "Move Up", None, -1))
         self.record_move_down_button.setText(QtWidgets.QApplication.translate("Form", "Move Down", None, -1))
+        self.open_indexed_parameter_settings_button.setToolTip(QtWidgets.QApplication.translate("Form", "Set up indexing for time series and other indexed parameters.", None, -1))
         self.open_indexed_parameter_settings_button.setText(QtWidgets.QApplication.translate("Form", "Indexed parameters...", None, -1))
+        self.label.setToolTip(QtWidgets.QApplication.translate("Form", "Selected domain\'s parameters are exported as GAMS scalars.\n"
+"The domain itself is not exported.", None, -1))
         self.label.setText(QtWidgets.QApplication.translate("Form", "Global parameters domain:", None, -1))
 
