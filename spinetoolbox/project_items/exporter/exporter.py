@@ -202,11 +202,7 @@ class Exporter(ProjectItem):
         settings_window = self._settings_windows.get(database_url, None)
         if settings_window is None:
             settings_window = GdxExportSettings(
-                settings,
-                indexing_settings,
-                additional_parameter_indexing_domains,
-                database_url,
-                self._toolbox,
+                settings, indexing_settings, additional_parameter_indexing_domains, database_url, self._toolbox
             )
             settings_window.settings_accepted.connect(self._update_settings_from_settings_window)
             settings_window.settings_rejected.connect(self._dispose_settings_window)
@@ -256,15 +252,18 @@ class Exporter(ProjectItem):
         file_names = list()
         for index, database_url in enumerate(self._settings):
             exporter_dictionary = dict()
-            settings_dictionary = self._settings[database_url].to_dict()
             exporter_dictionary["database_url"] = database_url
-            exporter_dictionary["settings"] = settings_dictionary
-            exporter_dictionary["parameter_indexing_domains"] = gdx.indexing_settings_to_dict(
-                self._parameter_indexing_settings[database_url]
-            )
-            exporter_dictionary["additional_domains"] = [
-                domain.to_dict() for domain in self._additional_parameter_indexing_domains[database_url]
-            ]
+            if database_url in self._settings:
+                settings_dictionary = self._settings[database_url].to_dict()
+                exporter_dictionary["settings"] = settings_dictionary
+            if database_url in self._parameter_indexing_settings:
+                exporter_dictionary["parameter_indexing_domains"] = gdx.indexing_settings_to_dict(
+                    self._parameter_indexing_settings[database_url]
+                )
+            if database_url in self._additional_parameter_indexing_domains:
+                exporter_dictionary["additional_domains"] = [
+                    domain.to_dict() for domain in self._additional_parameter_indexing_domains[database_url]
+                ]
             file_name = os.path.join(self.data_dir, "export_settings_{}.json".format(index + 1))
             with open(file_name, "w") as output_file:
                 json.dump(exporter_dictionary, output_file, sort_keys=True, indent=4)
@@ -278,19 +277,22 @@ class Exporter(ProjectItem):
                 try:
                     exporter_dictionary = json.load(input_file)
                     database_url = exporter_dictionary["database_url"]
-                    settings_dictionary = exporter_dictionary["settings"]
-                    settings = gdx.Settings.from_dict(settings_dictionary)
-                    self._settings[database_url] = settings
-                    parameter_indexing_domains_dict = exporter_dictionary["parameter_indexing_domains"]
-                    db_map = DatabaseMapping(database_url)
-                    self._parameter_indexing_settings[database_url] = gdx.indexing_settings_from_dict(
-                        parameter_indexing_domains_dict, db_map
-                    )
-                    db_map.connection.close()
-                    additional_domains_dicts = exporter_dictionary["additional_domains"]
-                    self._additional_parameter_indexing_domains[database_url] = [
-                        gdx.Set.from_dict(domain_dict) for domain_dict in additional_domains_dicts
-                    ]
+                    settings_dictionary = exporter_dictionary.get("settings", None)
+                    if settings_dictionary is not None:
+                        settings = gdx.Settings.from_dict(settings_dictionary)
+                        self._settings[database_url] = settings
+                    parameter_indexing_domains_dict = exporter_dictionary.get("parameter_indexing_domains", None)
+                    if parameter_indexing_domains_dict is not None:
+                        db_map = DatabaseMapping(database_url)
+                        self._parameter_indexing_settings[database_url] = gdx.indexing_settings_from_dict(
+                            parameter_indexing_domains_dict, db_map
+                        )
+                        db_map.connection.close()
+                    additional_domains_dicts = exporter_dictionary.get("additional_domains", None)
+                    if additional_domains_dicts is not None:
+                        self._additional_parameter_indexing_domains[database_url] = [
+                            gdx.Set.from_dict(domain_dict) for domain_dict in additional_domains_dicts
+                        ]
                 except (KeyError, json.JSONDecodeError):
                     self._toolbox.msg_warning.emit(
                         "Couldn't parse Exporter settings file {}. Skipping.".format(file_name)
