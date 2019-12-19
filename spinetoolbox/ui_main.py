@@ -352,7 +352,9 @@ class ToolboxUI(QMainWindow):
                     self.msg_error.emit("Error in project file <b>{0}</b>. Invalid JSON. {0}".format(load_path))
                     return False
         except OSError:
-            self.msg_error.emit("[OSError] Loading project file <b>{0}</b> failed".format(load_path))
+            # Remove path from recent projects
+            self.remove_path_from_recent_projects(load_dir)
+            self.msg_error.emit("Project file <b>{0}</b> missing".format(load_path))
             return False
         if not self.restore_project(proj_info, load_dir, clear_logs):
             return False
