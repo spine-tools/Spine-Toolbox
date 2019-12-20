@@ -65,6 +65,13 @@ class ExportListItem(QWidget):
         if state == SettingsState.FETCHING:
             self._ui.settings_button.setEnabled(False)
             self._ui.settings_button.setToolTip("Database is being read...")
+        elif state == SettingsState.ERROR:
+            self._ui.settings_button.setEnabled(False)
+            self._ui.settings_button.setToolTip("Cannot open settings window.")
+            self._ui.notification_label.setText(
+                "<span style='color:#ff3333;white-space: pre-wrap;'>"
+                + "Failed to initialize settings for the database.</span>"
+            )
         else:
             self._ui.settings_button.setEnabled(True)
             self._ui.settings_button.setToolTip("Open Gdx Export Settings.")

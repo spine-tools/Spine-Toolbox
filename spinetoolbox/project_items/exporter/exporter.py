@@ -141,6 +141,8 @@ class Exporter(ProjectItem):
             except gdx.GdxExportException as error:
                 self._toolbox.msg_error.emit(f"Failed to export <b>{url}</b> to .gdx: {error}")
                 return False
+            except Exception as error:
+                print(error)
             finally:
                 database_map.connection.close()
             self._toolbox.msg_success.emit("File <b>{0}</b> written".format(out_path))
@@ -149,12 +151,13 @@ class Exporter(ProjectItem):
     def _do_handle_dag_changed(self, resources):
         """See base class."""
         database_urls = [r.url for r in resources if r.type_ == "database"]
-        self._check_state(clear_before_check=False)
         if set(database_urls) == set(self._settings_packs.keys()):
+            self._check_state(clear_before_check=False)
             return
         # Drop settings packs without connected databases.
-        for database_url, pack in self._settings_packs.items():
+        for database_url in list(self._settings_packs):
             if database_url not in database_urls:
+                pack = self._settings_packs[database_url]
                 if pack.settings_window is not None:
                     pack.settings_window.close()
                     pack.settings_window.deleteLater()
@@ -166,6 +169,7 @@ class Exporter(ProjectItem):
                 self._start_worker(database_url)
         if self._activated:
             self._update_properties_tab()
+        self._check_state(clear_before_check=False)
 
     def _start_worker(self, database_url):
         worker = self._workers.get(database_url, None)
@@ -177,6 +181,7 @@ class Exporter(ProjectItem):
             worker.settings_read.connect(self._update_export_settings)
             worker.indexing_settings_read.connect(self._update_indexing_settings)
             worker.finished.connect(self._worker_finished)
+            worker.errored.connect(self._worker_failed)
             self._workers[database_url] = worker
         self._settings_packs[database_url].state = SettingsState.FETCHING
         worker.start()
@@ -207,11 +212,24 @@ class Exporter(ProjectItem):
                 settings_pack.state = SettingsState.OK
             self._check_state()
 
+    @Slot(str, "QVariant")
+    def _worker_failed(self, database_url, exception):
+        if database_url in self._settings_packs:
+            self._toolbox.msg_error.emit(f"Failed to initialize settings from database {database_url}: {exception}")
+            self._settings_packs[database_url].state = SettingsState.ERROR
+            self._check_state()
+        if database_url in self._workers:
+            worker = self._workers[database_url]
+            worker.wait()
+            worker.deleteLater()
+            del self._workers[database_url]
+
     def _check_state(self, clear_before_check=True):
         if clear_before_check:
             self.clear_notifications()
         self._check_missing_file_names()
         self._check_missing_parameter_indexing()
+        self._check_errorneous_databases()
 
     def _check_missing_file_names(self):
         for pack in self._settings_packs.values():
@@ -222,7 +240,7 @@ class Exporter(ProjectItem):
     def _check_missing_parameter_indexing(self):
         notification_added = False
         for pack in self._settings_packs.values():
-            if pack.state != SettingsState.FETCHING:
+            if pack.state not in (SettingsState.FETCHING, SettingsState.ERROR):
                 pack.state = SettingsState.OK
                 for setting in pack.indexing_settings.values():
                     if setting.indexing_domain is None:
@@ -230,6 +248,12 @@ class Exporter(ProjectItem):
                             self.add_notification("Parameter indexing settings need to be updated.")
                         pack.state = SettingsState.INDEXING_PROBLEM
                         break
+
+    def _check_errorneous_databases(self):
+        for pack in self._settings_packs.values():
+            if pack.state == SettingsState.ERROR:
+                self.add_notification("Failed to initialize export settings for a database.")
+                return
 
     @Slot(str)
     def _show_settings(self, database_url):

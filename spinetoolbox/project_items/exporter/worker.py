@@ -23,6 +23,7 @@ from spinetoolbox.spine_io.exporters import gdx
 
 class Worker(QThread):
 
+    errored = Signal(str, "QVariant")
     finished = Signal(str)
     indexing_settings_read = Signal(str, "QVariant")
     settings_read = Signal(str, "QVariant")
@@ -33,11 +34,16 @@ class Worker(QThread):
 
     def run(self):
         database_map = DatabaseMapping(self._database_url)
-        if not self.isInterruptionRequested():
-            settings = gdx.make_settings(database_map)
-        if not self.isInterruptionRequested():
-            indexing_settings = gdx.make_indexing_settings(database_map)
-        database_map.connection.close()
+        try:
+            if not self.isInterruptionRequested():
+                settings = gdx.make_settings(database_map)
+            if not self.isInterruptionRequested():
+                indexing_settings = gdx.make_indexing_settings(database_map)
+        except gdx.GdxExportException as error:
+            self.errored.emit(self._database_url, error)
+            return
+        finally:
+            database_map.connection.close()
         if not self.isInterruptionRequested():
             self.settings_read.emit(self._database_url, settings)
             self.indexing_settings_read.emit(self._database_url, indexing_settings)

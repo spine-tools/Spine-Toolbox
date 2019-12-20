@@ -29,7 +29,7 @@ import os
 import os.path
 import sys
 from gdx2py import GAMSSet, GAMSScalar, GAMSParameter, GdxFile
-from spinedb_api import from_database, IndexedValue
+from spinedb_api import from_database, IndexedValue, ParameterValueFormatError
 
 if sys.platform == 'win32':
     import winreg
@@ -234,9 +234,7 @@ class Parameter:
             object_parameter (namedtuple): an object parameter row from the database
         """
         index = (object_parameter.object_name,)
-        value = from_database(object_parameter.value)
-        if isinstance(value, int):
-            value = float(value)
+        value = _read_value(object_parameter.value)
         self.append_value(index, value)
 
     def append_relationship_parameter(self, relationship_parameter):
@@ -247,9 +245,7 @@ class Parameter:
             relationship_parameter (namedtuple): a relationship parameter row from the database
         """
         index = tuple(name.strip() for name in relationship_parameter.object_name_list.split(","))
-        value = from_database(relationship_parameter.value)
-        if isinstance(value, int):
-            value = float(value)
+        value = _read_value(relationship_parameter.value)
         self.append_value(index, value)
 
     def slurp(self, parameter):
@@ -304,9 +300,7 @@ class Parameter:
         """
         domain_names = [object_parameter.object_class_name]
         index = (object_parameter.object_name,)
-        value = from_database(object_parameter.value)
-        if isinstance(value, int):
-            value = float(value)
+        value = _read_value(object_parameter.value)
         return Parameter(domain_names, [index], [value])
 
     @staticmethod
@@ -319,9 +313,7 @@ class Parameter:
         """
         domain_names = [name.strip() for name in relationship_parameter.object_class_name_list.split(",")]
         index = tuple(name.strip() for name in relationship_parameter.object_name_list.split(","))
-        value = from_database(relationship_parameter.value)
-        if isinstance(value, int):
-            value = float(value)
+        value = _read_value(relationship_parameter.value)
         return Parameter(domain_names, [index], [value])
 
 
@@ -430,6 +422,18 @@ def _python_interpreter_bitness():
     # As recommended in Python's docs:
     # https://docs.python.org/3/library/platform.html#cross-platform
     return 64 if sys.maxsize > 2 ** 32 else 32
+
+
+def _read_value(value_in_database):
+    try:
+        value = from_database(value_in_database)
+    except ParameterValueFormatError:
+        raise GdxExportException("Failed to read parameter value.")
+    if isinstance(value, int):
+        value = float(value)
+    if value is not None and not isinstance(value, (float, IndexedValue, bool)):
+        raise GdxExportException(f"Unsupported parameter value type '{type(value).__name__}'.")
+    return value
 
 
 def _windows_dlls_exist(gams_path):
