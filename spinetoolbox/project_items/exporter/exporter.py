@@ -172,6 +172,7 @@ class Exporter(ProjectItem):
         self._check_state(clear_before_check=False)
 
     def _start_worker(self, database_url):
+        """Starts fetching settings using a worker in another thread."""
         worker = self._workers.get(database_url, None)
         if worker is not None and worker.isRunning():
             worker.requestInterruption()
@@ -188,18 +189,21 @@ class Exporter(ProjectItem):
 
     @Slot(str, "QVariant")
     def _update_export_settings(self, database_url, settings):
+        """Sets new settings for given database."""
         if database_url not in self._settings_packs:
             return
         self._settings_packs[database_url].settings = settings
 
     @Slot(str, "QVariant")
     def _update_indexing_settings(self, database_url, indexing_settings):
+        """Sets new indexing settings for given database."""
         if database_url not in self._settings_packs:
             return
         self._settings_packs[database_url].indexing_settings = indexing_settings
 
     @Slot(str)
     def _worker_finished(self, database_url):
+        """Cleans up after a worker has finished fetching export settings."""
         if database_url in self._workers:
             worker = self._workers[database_url]
             worker.wait()
@@ -214,6 +218,7 @@ class Exporter(ProjectItem):
 
     @Slot(str, "QVariant")
     def _worker_failed(self, database_url, exception):
+        """Clean up after a worker has failed fetching export settings."""
         if database_url in self._settings_packs:
             self._toolbox.msg_error.emit(f"Failed to initialize settings from database {database_url}: {exception}")
             self._settings_packs[database_url].state = SettingsState.ERROR
@@ -225,6 +230,14 @@ class Exporter(ProjectItem):
             del self._workers[database_url]
 
     def _check_state(self, clear_before_check=True):
+        """
+        Checks the status of database export settings.
+
+        Updates both the notification message (exclamation icon) and settings states.
+
+        Args:
+            clear_before_check (bool): if True, clears the notification message before updating it.
+        """
         if clear_before_check:
             self.clear_notifications()
         self._check_missing_file_names()
@@ -232,12 +245,14 @@ class Exporter(ProjectItem):
         self._check_errorneous_databases()
 
     def _check_missing_file_names(self):
+        """Checks and reports the status of output file names."""
         for pack in self._settings_packs.values():
             if not pack.output_file_name:
                 self.add_notification(Exporter._missing_output_file_notification)
                 break
 
     def _check_missing_parameter_indexing(self):
+        """Checks and reports the status of parameter indexing settings."""
         notification_added = False
         for pack in self._settings_packs.values():
             if pack.state not in (SettingsState.FETCHING, SettingsState.ERROR):
@@ -250,6 +265,7 @@ class Exporter(ProjectItem):
                         break
 
     def _check_errorneous_databases(self):
+        """Checks and reports errors in settings fetching from a database."""
         for pack in self._settings_packs.values():
             if pack.state == SettingsState.ERROR:
                 self.add_notification("Failed to initialize export settings for a database.")
@@ -369,10 +385,25 @@ class Exporter(ProjectItem):
 
 
 class _SettingsPack(QObject):
+    """
+    Keeper of all settings and stuff needed for exporting a database.
+
+    Attributes:
+        output_file_name (str): name of the export file
+        settings (Settings): export settings
+        indexing_settings (dict): parameter indexing settings
+        additional_domains (list): extra domains needed for parameter indexing
+        settings_window (GdxExportSettings): settings editor window
+    """
 
     state_changed = Signal("QVariant")
+    """Emitted when the pack's state changes."""
 
     def __init__(self, output_file_name):
+        """
+        Args:
+            output_file_name (str): name of the export file
+        """
         super().__init__()
         self.output_file_name = output_file_name
         self.settings = None
@@ -383,6 +414,7 @@ class _SettingsPack(QObject):
 
     @property
     def state(self):
+        """State of the pack."""
         return self._state
 
     @state.setter
@@ -391,6 +423,7 @@ class _SettingsPack(QObject):
         self.state_changed.emit(state)
 
     def to_dict(self):
+        """Stores the settings pack into a JSON compatible dictionary."""
         d = dict()
         d["output_file_name"] = self.output_file_name
         d["state"] = self.state.value
@@ -403,6 +436,7 @@ class _SettingsPack(QObject):
 
     @staticmethod
     def from_dict(pack_dict, database_url):
+        """Restores the settings pack from a dictionary."""
         pack = _SettingsPack(pack_dict["output_file_name"])
         pack.state = SettingsState(pack_dict["state"])
         if pack.state == SettingsState.FETCHING:

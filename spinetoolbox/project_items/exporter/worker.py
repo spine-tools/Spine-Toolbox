@@ -22,17 +22,27 @@ from spinetoolbox.spine_io.exporters import gdx
 
 
 class Worker(QThread):
+    """A worker thread to construct export settings for a database."""
 
     errored = Signal(str, "QVariant")
+    """Emitted when an error occurs."""
     finished = Signal(str)
+    """Emitted when the worker has finished."""
     indexing_settings_read = Signal(str, "QVariant")
+    """Sends the indexing settings away."""
     settings_read = Signal(str, "QVariant")
+    """Sends the settings away."""
 
     def __init__(self, database_url):
+        """
+        Args:
+            database_url (str): database's URL
+        """
         super().__init__()
         self._database_url = str(database_url)
 
     def run(self):
+        """Constructs settings and parameter index settings and sends them away using signals."""
         database_map = DatabaseMapping(self._database_url)
         try:
             if not self.isInterruptionRequested():
