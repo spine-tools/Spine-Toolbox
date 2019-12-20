@@ -30,7 +30,7 @@ class TestExporter(unittest.TestCase):
     def setUp(self):
         """Set up."""
         self.toolbox = create_toolboxui_with_project()
-        item_dict = dict(name="exporter", description="", x=0, y=0)
+        item_dict = dict(name="exporter", description="", settings_packs=None, x=0, y=0)
         self.toolbox.project().add_project_items("Exporters", item_dict)
         index = self.toolbox.project_item_model.find_item("exporter")
         self.exporter = self.toolbox.project_item_model.project_item(index)
@@ -107,6 +107,7 @@ class TestExporter(unittest.TestCase):
         self.assertIsNone(dag_with_old_node_name)
 
     def test_activation_populates_properties_tab(self):
+        self.exporter._start_worker = MagicMock()
         resources = [
             ProjectItemResource(None, "database", "first url to database"),
             ProjectItemResource(None, "database", "second url to database"),
@@ -122,10 +123,12 @@ class TestExporter(unittest.TestCase):
         self.assertTrue("second url to database" in urls_in_properties_tab)
 
     def test_activating_second_exporter_with_less_database_urls_does_not_crash(self):
-        item_dict = dict(name="2nd exporter", description="", x=0, y=0)
+        self.exporter._start_worker = MagicMock()
+        item_dict = dict(name="2nd exporter", description="", settings_packs=None, x=0, y=0)
         self.toolbox.project().add_project_items("Exporters", item_dict)
         index = self.toolbox.project_item_model.find_item("2nd exporter")
         exporter2 = self.toolbox.project_item_model.project_item(index)
+        exporter2._start_worker = MagicMock()
         resources = [
             ProjectItemResource(None, "database", "first url to database"),
             ProjectItemResource(None, "database", "second url to database"),
@@ -147,14 +150,15 @@ class TestExporter(unittest.TestCase):
         self.assertEqual(database_item.url_field.text(), "url to a database in the clouds")
 
     def test_handle_dag_changed_does_not_overwrite_properties_tab_when_no_urls_change(self):
+        self.exporter._start_worker = MagicMock()
         self.exporter.activate()
-        self.exporter._update_database_list = MagicMock()
+        self.exporter._update_properties_tab = MagicMock()
         resources = [ProjectItemResource(None, "database", "url to database")]
         self.exporter.handle_dag_changed(0, resources)
-        self.exporter._update_database_list.assert_called_once()
-        self.exporter._update_database_list.reset_mock()
+        self.exporter._update_properties_tab.assert_called_once()
+        self.exporter._update_properties_tab.reset_mock()
         self.exporter.handle_dag_changed(0, resources)
-        self.exporter._update_database_list.assert_not_called()
+        self.exporter._update_properties_tab.assert_not_called()
 
 
 if __name__ == '__main__':

@@ -23,6 +23,7 @@ from PySide2.QtGui import QColor
 from PySide2.QtWidgets import QDialogButtonBox, QMessageBox, QWidget
 import spinetoolbox.spine_io.exporters.gdx as gdx
 from ..list_utils import move_list_elements
+from ..settings_state import SettingsState
 from .parameter_index_settings_window import ParameterIndexSettingsWindow
 
 
@@ -136,6 +137,15 @@ class GdxExportSettings(QWidget):
             self._ui.global_parameters_combo_box.addItem(domain_name)
         if settings.global_parameters_domain_name:
             self._ui.global_parameters_combo_box.setCurrentText(settings.global_parameters_domain_name)
+
+    @Slot("QVariant")
+    def settings_state_changed(self, state):
+        enabled = state != SettingsState.FETCHING
+        self._ui.set_group_box.setEnabled(enabled)
+        self._ui.contents_group_box.setEnabled(enabled)
+        self._ui.misc_control_holder.setEnabled(enabled)
+        self._ui.button_box.button(QDialogButtonBox.Ok).setEnabled(enabled)
+        self._ui.button_box.button(QDialogButtonBox.RestoreDefaults).setEnabled(enabled)
 
     @Slot()
     def _accepted(self):

@@ -13,7 +13,7 @@
 # Form implementation generated from reading ui file 'C:\data\src\toolbox\bin\..\spinetoolbox\project_items\exporter\ui\parameter_index_settings.ui',
 # licensing of 'C:\data\src\toolbox\bin\..\spinetoolbox\project_items\exporter\ui\parameter_index_settings.ui' applies.
 #
-# Created: Wed Jan 15 16:21:19 2020
+# Created: Wed Jan 15 16:33:43 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -80,6 +80,7 @@ class Ui_Form(object):
         self.pick_expression_label.setObjectName("pick_expression_label")
         self.formLayout_3.setWidget(0, QtWidgets.QFormLayout.LabelRole, self.pick_expression_label)
         self.pick_expression_edit = QtWidgets.QLineEdit(self.verticalLayoutWidget_3)
+        self.pick_expression_edit.setPlaceholderText("")
         self.pick_expression_edit.setObjectName("pick_expression_edit")
         self.formLayout_3.setWidget(0, QtWidgets.QFormLayout.FieldRole, self.pick_expression_edit)
         self.verticalLayout_6.addLayout(self.formLayout_3)
@@ -95,6 +96,7 @@ class Ui_Form(object):
         self.domain_name_label.setObjectName("domain_name_label")
         self.formLayout.setWidget(0, QtWidgets.QFormLayout.LabelRole, self.domain_name_label)
         self.domain_name_edit = QtWidgets.QLineEdit(self.verticalLayoutWidget_3)
+        self.domain_name_edit.setText("")
         self.domain_name_edit.setObjectName("domain_name_edit")
         self.formLayout.setWidget(0, QtWidgets.QFormLayout.FieldRole, self.domain_name_edit)
         self.domain_description_label = QtWidgets.QLabel(self.verticalLayoutWidget_3)
@@ -146,7 +148,9 @@ class Ui_Form(object):
         self.pick_expression_label.setText(QtWidgets.QApplication.translate("Form", "Label picking expression:", None, -1))
         self.create_domain_radio_button.setText(QtWidgets.QApplication.translate("Form", "Create new index domain", None, -1))
         self.domain_name_label.setText(QtWidgets.QApplication.translate("Form", "Domain name:", None, -1))
+        self.domain_name_edit.setPlaceholderText(QtWidgets.QApplication.translate("Form", "Type domain\'s name here...", None, -1))
         self.domain_description_label.setText(QtWidgets.QApplication.translate("Form", "Description:", None, -1))
+        self.domain_description_edit.setPlaceholderText(QtWidgets.QApplication.translate("Form", "Type explanatory text here...", None, -1))
         self.generator_expression_label.setToolTip(QtWidgets.QApplication.translate("Form", "Generate index labels from Python expression. Use <i>i</i> as the row number.", None, -1))
         self.generator_expression_label.setText(QtWidgets.QApplication.translate("Form", "Generator expression:", None, -1))
         self.extract_indexes_button.setText(QtWidgets.QApplication.translate("Form", "Extract index from parameter", None, -1))

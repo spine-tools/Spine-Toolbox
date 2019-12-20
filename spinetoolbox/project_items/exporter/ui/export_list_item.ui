@@ -61,7 +61,11 @@
          </widget>
         </item>
         <item row="0" column="1">
-         <widget class="QLineEdit" name="out_file_name_edit"/>
+         <widget class="QLineEdit" name="out_file_name_edit">
+          <property name="placeholderText">
+           <string>Type output file name here...</string>
+          </property>
+         </widget>
         </item>
        </layout>
       </item>
@@ -79,6 +83,16 @@
            </size>
           </property>
          </spacer>
+        </item>
+        <item>
+         <widget class="QLabel" name="notification_label">
+          <property name="text">
+           <string/>
+          </property>
+          <property name="textFormat">
+           <enum>Qt::RichText</enum>
+          </property>
+         </widget>
         </item>
         <item>
          <widget class="QPushButton" name="settings_button">

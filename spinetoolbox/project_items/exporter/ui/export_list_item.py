@@ -13,7 +13,7 @@
 # Form implementation generated from reading ui file 'C:\data\src\toolbox\bin\..\spinetoolbox\project_items\exporter\ui\export_list_item.ui',
 # licensing of 'C:\data\src\toolbox\bin\..\spinetoolbox\project_items\exporter\ui\export_list_item.ui' applies.
 #
-# Created: Wed Jan 15 16:21:18 2020
+# Created: Wed Jan 15 16:33:43 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -54,6 +54,11 @@ class Ui_Form(object):
         self.horizontalLayout.setObjectName("horizontalLayout")
         spacerItem = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
         self.horizontalLayout.addItem(spacerItem)
+        self.notification_label = QtWidgets.QLabel(self.frame)
+        self.notification_label.setText("")
+        self.notification_label.setTextFormat(QtCore.Qt.RichText)
+        self.notification_label.setObjectName("notification_label")
+        self.horizontalLayout.addWidget(self.notification_label)
         self.settings_button = QtWidgets.QPushButton(self.frame)
         self.settings_button.setObjectName("settings_button")
         self.horizontalLayout.addWidget(self.settings_button)
@@ -66,5 +71,6 @@ class Ui_Form(object):
     def retranslateUi(self, Form):
         Form.setWindowTitle(QtWidgets.QApplication.translate("Form", "Form", None, -1))
         self.file_name_label.setText(QtWidgets.QApplication.translate("Form", "Filename:", None, -1))
+        self.out_file_name_edit.setPlaceholderText(QtWidgets.QApplication.translate("Form", "Type output file name here...", None, -1))
         self.settings_button.setText(QtWidgets.QApplication.translate("Form", "Settings...", None, -1))
 

@@ -142,7 +142,11 @@
                </widget>
               </item>
               <item row="0" column="1">
-               <widget class="QLineEdit" name="pick_expression_edit"/>
+               <widget class="QLineEdit" name="pick_expression_edit">
+                <property name="placeholderText">
+                 <string/>
+                </property>
+               </widget>
               </item>
              </layout>
             </item>
@@ -167,7 +171,14 @@
                </widget>
               </item>
               <item row="0" column="1">
-               <widget class="QLineEdit" name="domain_name_edit"/>
+               <widget class="QLineEdit" name="domain_name_edit">
+                <property name="text">
+                 <string/>
+                </property>
+                <property name="placeholderText">
+                 <string>Type domain's name here...</string>
+                </property>
+               </widget>
               </item>
               <item row="1" column="0">
                <widget class="QLabel" name="domain_description_label">
@@ -177,7 +188,11 @@
                </widget>
               </item>
               <item row="1" column="1">
-               <widget class="QLineEdit" name="domain_description_edit"/>
+               <widget class="QLineEdit" name="domain_description_edit">
+                <property name="placeholderText">
+                 <string>Type explanatory text here...</string>
+                </property>
+               </widget>
               </item>
              </layout>
             </item>
