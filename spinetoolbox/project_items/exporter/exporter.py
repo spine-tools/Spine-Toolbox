@@ -141,8 +141,6 @@ class Exporter(ProjectItem):
             except gdx.GdxExportException as error:
                 self._toolbox.msg_error.emit(f"Failed to export <b>{url}</b> to .gdx: {error}")
                 return False
-            except Exception as error:
-                print(error)
             finally:
                 database_map.connection.close()
             self._toolbox.msg_success.emit("File <b>{0}</b> written".format(out_path))
