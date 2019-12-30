@@ -16,7 +16,7 @@ Provides pivot table models for the Tabular View.
 :date:   1.11.2018
 """
 
-from PySide2.QtCore import QAbstractTableModel, Qt, QModelIndex, QSortFilterProxyModel
+from PySide2.QtCore import Slot, QAbstractTableModel, Qt, QModelIndex, QSortFilterProxyModel
 from PySide2.QtGui import QColor, QFont
 from .pivot_model import PivotModel
 from ..config import PIVOT_TABLE_HEADER_COLOR
@@ -25,6 +25,7 @@ from ..config import PIVOT_TABLE_HEADER_COLOR
 class PivotTableModel(QAbstractTableModel):
 
     _V_HEADER_WIDTH = 5
+    _ITEMS_TO_FETCH = 1024
 
     def __init__(self, parent):
         """
@@ -37,12 +38,44 @@ class PivotTableModel(QAbstractTableModel):
         self.db_map = parent.db_map
         self.model = PivotModel()
         self._plot_x_column = None
+        self._data_row_count = 0
+        self._data_column_count = 0
+        self.modelReset.connect(self.reset_data_count)
+
+    @Slot()
+    def reset_data_count(self):
+        self._data_row_count = 0
+        self._data_column_count = 0
+
+    def canFetchMore(self, parent):
+        return self._data_row_count < len(self.model.rows) or self._data_column_count < len(self.model.columns)
+
+    def fetchMore(self, parent):
+        self.fetch_more_rows(parent)
+        self.fetch_more_columns(parent)
+
+    def fetch_more_rows(self, parent):
+        new_row_count = min(self._ITEMS_TO_FETCH, len(self.model.rows) - self._data_row_count)
+        first = self.headerRowCount() + self._data_row_count
+        self.beginInsertRows(parent, first, first + new_row_count - 1)
+        self._data_row_count += new_row_count
+        self.endInsertRows()
+
+    def fetch_more_columns(self, parent):
+        new_column_count = min(self._ITEMS_TO_FETCH, len(self.model.columns) - self._data_column_count)
+        first = self.headerColumnCount() + self._data_column_count
+        self.beginInsertColumns(parent, first, first + new_column_count - 1)
+        self._data_column_count += new_column_count
+        self.endInsertColumns()
 
     def reset_model(self, data, index_ids, rows=(), columns=(), frozen=(), frozen_value=()):
         self.beginResetModel()
         self.model.reset_model(data, index_ids, rows, columns, frozen, frozen_value)
-        self._plot_x_column = None
         self.endResetModel()
+        self._plot_x_column = None
+
+    def update_model(self, data):
+        self.model._data.update(data)
 
     def set_pivot(self, rows, columns, frozen, frozen_value):
         self.beginResetModel()
@@ -84,13 +117,13 @@ class PivotTableModel(QAbstractTableModel):
         """Returns number of rows that contain actual data."""
         if not self.model.pivot_rows:
             return 1
-        return len(self.model.rows)
+        return self._data_row_count
 
     def dataColumnCount(self):
         """Returns number of columns that contain actual data."""
         if not self.model.pivot_columns:
             return 1
-        return len(self.model.columns)
+        return self._data_column_count
 
     def emptyRowCount(self):
         return 1 if self.model.pivot_rows else 0
