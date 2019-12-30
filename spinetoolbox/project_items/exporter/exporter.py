@@ -38,10 +38,6 @@ class Exporter(ProjectItem):
     Currently, only .gdx format is supported.
     """
 
-    _missing_output_file_notification = (
-        "Output file name(s) missing. See the settings in the Exporter Properties panel."
-    )
-
     def __init__(self, toolbox, name, description, settings_packs, x=0.0, y=0.0):
         """
         Args:
@@ -60,6 +56,7 @@ class Exporter(ProjectItem):
         for pack in settings_packs:
             url = pack["database_url"]
             settings_pack = _SettingsPack.from_dict(pack, url)
+            settings_pack.notifications.changed_due_to_settings_state.connect(self._report_notifications)
             self._settings_packs[url] = settings_pack
         self._activated = False
         self._project.db_mngr.session_committed.connect(self._update_settings_after_db_commit)
@@ -112,7 +109,7 @@ class Exporter(ProjectItem):
         database_urls = [r.url for r in resources if r.type_ == "database"]
         gams_system_directory = self._resolve_gams_system_directory()
         if gams_system_directory is None:
-            self._toolbox.msg_error.emit("<b>{}</b>: Cannot proceed. No GAMS installation found.".format(self.name))
+            self._toolbox.msg_error.emit(f"<b>{self.name}</b>: Cannot proceed. No GAMS installation found.")
             return False
         for url in database_urls:
             settings_pack = self._settings_packs.get(url, None)
@@ -120,12 +117,18 @@ class Exporter(ProjectItem):
                 self._toolbox.msg_error.emit(f"<b>{self.name}</b>: No export settings defined for database {url}.")
                 return False
             if not settings_pack.output_file_name:
-                self._toolbox.msg_error.emit(
-                    "<b>{}</b>: No file name given to export database {}.".format(self.name, url)
-                )
+                self._toolbox.msg_error.emit(f"<b>{self.name}</b>: No file name given to export database {url}.")
                 return False
             if settings_pack.state == SettingsState.FETCHING:
                 self._toolbox.msg_error.emit(f"<b>{self.name}</b>: Settings not ready for database {url}.")
+                return False
+            if settings_pack.state == SettingsState.INDEXING_PROBLEM:
+                self._toolbox.msg_error.emit(
+                    f"<b>{self.name}</b>: Parameters missing indexing information for database {url}."
+                )
+                return False
+            if settings_pack.state == SettingsState.ERROR:
+                self._toolbox.msg_error.emit(f"<b>{self.name}</b>: Ill formed database {url}.")
                 return False
             out_path = os.path.join(self.data_dir, settings_pack.output_file_name)
             database_map = DatabaseMapping(url)
@@ -143,14 +146,14 @@ class Exporter(ProjectItem):
                 return False
             finally:
                 database_map.connection.close()
-            self._toolbox.msg_success.emit("File <b>{0}</b> written".format(out_path))
+            self._toolbox.msg_success.emit(f"File <b>{out_path}</b> written")
         return True
 
     def _do_handle_dag_changed(self, resources):
         """See base class."""
-        database_urls = [r.url for r in resources if r.type_ == "database"]
-        if set(database_urls) == set(self._settings_packs.keys()):
-            self._check_state(clear_before_check=False)
+        database_urls = set(r.url for r in resources if r.type_ == "database")
+        if database_urls == set(self._settings_packs):
+            self._check_state()
             return
         # Drop settings packs without connected databases.
         for database_url in list(self._settings_packs):
@@ -167,7 +170,7 @@ class Exporter(ProjectItem):
                 self._start_worker(database_url)
         if self._activated:
             self._update_properties_tab()
-        self._check_state(clear_before_check=False)
+        self._check_state()
 
     def _start_worker(self, database_url):
         """Starts fetching settings using a worker in another thread."""
@@ -220,7 +223,7 @@ class Exporter(ProjectItem):
         if database_url in self._settings_packs:
             self._toolbox.msg_error.emit(f"Failed to initialize settings from database {database_url}: {exception}")
             self._settings_packs[database_url].state = SettingsState.ERROR
-            self._check_state()
+            self._report_notifications()
         if database_url in self._workers:
             worker = self._workers[database_url]
             worker.wait()
@@ -232,42 +235,65 @@ class Exporter(ProjectItem):
         Checks the status of database export settings.
 
         Updates both the notification message (exclamation icon) and settings states.
-
-        Args:
-            clear_before_check (bool): if True, clears the notification message before updating it.
         """
-        if clear_before_check:
-            self.clear_notifications()
         self._check_missing_file_names()
+        self._check_duplicate_file_names()
         self._check_missing_parameter_indexing()
-        self._check_errorneous_databases()
+        self._check_erroneous_databases()
+        self._report_notifications()
 
     def _check_missing_file_names(self):
-        """Checks and reports the status of output file names."""
+        """Checks the status of output file names."""
         for pack in self._settings_packs.values():
+            pack.notifications.missing_output_file_name = not pack.output_file_name
+
+    def _check_duplicate_file_names(self):
+        """Checks for duplicate output file names."""
+        packs = list(self._settings_packs.values())
+        for pack in packs:
+            pack.notifications.duplicate_output_file_name = False
+        for index, pack in enumerate(packs):
             if not pack.output_file_name:
-                self.add_notification(Exporter._missing_output_file_notification)
-                break
+                continue
+            for other_pack in packs[index + 1 :]:
+                if pack.output_file_name == other_pack.output_file_name:
+                    pack.notifications.duplicate_output_file_name = True
+                    other_pack.notifications.duplicate_output_file_name = True
+                    break
 
     def _check_missing_parameter_indexing(self):
-        """Checks and reports the status of parameter indexing settings."""
-        notification_added = False
+        """Checks the status of parameter indexing settings."""
         for pack in self._settings_packs.values():
+            missing_indexing = False
             if pack.state not in (SettingsState.FETCHING, SettingsState.ERROR):
                 pack.state = SettingsState.OK
                 for setting in pack.indexing_settings.values():
                     if setting.indexing_domain is None:
-                        if not notification_added:
-                            self.add_notification("Parameter indexing settings need to be updated.")
                         pack.state = SettingsState.INDEXING_PROBLEM
+                        missing_indexing = True
                         break
+            pack.notifications.missing_parameter_indexing = missing_indexing
 
-    def _check_errorneous_databases(self):
-        """Checks and reports errors in settings fetching from a database."""
+    def _check_erroneous_databases(self):
+        """Checks errors in settings fetching from a database."""
         for pack in self._settings_packs.values():
-            if pack.state == SettingsState.ERROR:
-                self.add_notification("Failed to initialize export settings for a database.")
-                return
+            pack.notifications.erroneous_database = pack.state == SettingsState.ERROR
+
+    @Slot()
+    def _report_notifications(self):
+        """Updates the exclamation icon and notifications labels."""
+        self.clear_notifications()
+        merged = _Notifications()
+        for pack in self._settings_packs.values():
+            merged |= pack.notifications
+        if merged.duplicate_output_file_name:
+            self.add_notification("Duplicate output file names.")
+        if merged.missing_output_file_name:
+            self.add_notification("Output file name(s) missing.")
+        if merged.missing_parameter_indexing:
+            self.add_notification("Parameter indexing settings need to be updated.")
+        if merged.erroneous_database:
+            self.add_notification("Failed to initialize export settings for a database.")
 
     @Slot(str)
     def _show_settings(self, database_url):
@@ -303,7 +329,9 @@ class Exporter(ProjectItem):
     def _update_out_file_name(self, file_name, database_path):
         """Updates the output file name for given database"""
         self._settings_packs[database_path].output_file_name = file_name
-        self._check_state()
+        self._settings_packs[database_path].notifications.missing_output_file_name = not file_name
+        self._check_duplicate_file_names()
+        self._report_notifications()
 
     @Slot(str)
     def _update_settings_from_settings_window(self, database_path):
@@ -312,7 +340,8 @@ class Exporter(ProjectItem):
         settings_pack.settings = settings_pack.settings_window.settings
         settings_pack.indexing_settings = settings_pack.settings_window.indexing_settings
         settings_pack.additional_domains = settings_pack.settings_window.new_domains
-        self._check_state()
+        self._check_missing_parameter_indexing()
+        self._report_notifications()
 
     def item_dict(self):
         """Returns a dictionary corresponding to this item's configuration."""
@@ -335,7 +364,7 @@ class Exporter(ProjectItem):
         window.reset_settings(settings, indexing_settings, additional_parameter_indexing_domains)
 
     def update_name_label(self):
-        """See `ProjectItem.update_name_label()`."""
+        """See base class."""
         self._properties_ui.item_name_label.setText(self.name)
 
     def _resolve_gams_system_directory(self):
@@ -409,6 +438,8 @@ class _SettingsPack(QObject):
         self.additional_domains = list()
         self.settings_window = None
         self._state = SettingsState.FETCHING
+        self.notifications = _Notifications()
+        self.state_changed.connect(self.notifications.update_settings_state)
 
     @property
     def state(self):
@@ -425,7 +456,7 @@ class _SettingsPack(QObject):
         d = dict()
         d["output_file_name"] = self.output_file_name
         d["state"] = self.state.value
-        if self.state == SettingsState.FETCHING:
+        if self.state in (SettingsState.FETCHING, SettingsState.ERROR):
             return d
         d["settings"] = self.settings.to_dict()
         d["indexing_settings"] = gdx.indexing_settings_to_dict(self.indexing_settings)
@@ -437,7 +468,7 @@ class _SettingsPack(QObject):
         """Restores the settings pack from a dictionary."""
         pack = _SettingsPack(pack_dict["output_file_name"])
         pack.state = SettingsState(pack_dict["state"])
-        if pack.state == SettingsState.FETCHING:
+        if pack.state in (SettingsState.FETCHING, SettingsState.ERROR):
             return pack
         pack.settings = gdx.Settings.from_dict(pack_dict["settings"])
         db_map = DatabaseMapping(database_url)
@@ -445,3 +476,53 @@ class _SettingsPack(QObject):
         db_map.connection.close()
         pack.additional_domains = [gdx.Set.from_dict(set_dict) for set_dict in pack_dict["additional_domains"]]
         return pack
+
+
+class _Notifications(QObject):
+    """
+    Holds flags for different error conditions.
+
+    Attributes:
+        duplicate_output_file_name (bool): if True there are duplicate output file names
+        missing_output_file_name (bool): if True the output file name is missing
+        missing_parameter_indexing (bool): if True there are indexed parameters without indexing domains
+        erroneous_database (bool): if True the database has issues
+    """
+
+    changed_due_to_settings_state = Signal()
+    """Emitted when notifications have changed due to changes in settings state."""
+
+    def __init__(self):
+        super().__init__()
+        self.duplicate_output_file_name = False
+        self.missing_output_file_name = False
+        self.missing_parameter_indexing = False
+        self.erroneous_database = False
+
+    def __ior__(self, other):
+        """
+        ORs the flags with another notifications.
+
+        Args:
+            other (_Notifications): a _Notifications object
+        """
+        self.duplicate_output_file_name |= other.duplicate_output_file_name
+        self.missing_output_file_name |= other.missing_output_file_name
+        self.missing_parameter_indexing |= other.missing_parameter_indexing
+        self.erroneous_database |= other.erroneous_database
+        return self
+
+    @Slot("QVariant")
+    def update_settings_state(self, state):
+        """Updates the notifications according to settings state."""
+        changed = False
+        is_erroneous = state == SettingsState.ERROR
+        if self.erroneous_database != is_erroneous:
+            self.erroneous_database = is_erroneous
+            changed = True
+        is_problem = state == state.INDEXING_PROBLEM
+        if self.missing_parameter_indexing != is_problem:
+            self.missing_parameter_indexing = is_problem
+            changed = True
+        if changed:
+            self.changed_due_to_settings_state.emit()
