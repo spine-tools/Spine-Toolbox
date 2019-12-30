@@ -41,23 +41,14 @@ class PivotModel:
             columns = ()
             frozen = ()
             frozen_value = ()
-        else:
-            # check given pivot
-            pivot_error = self._is_invalid_pivot(rows, columns, frozen, frozen_value, index_ids)
-            if pivot_error:
-                raise ValueError(pivot_error)
-        self.pivot_rows = tuple(rows)
-        self.pivot_columns = tuple(columns)
-        self.pivot_frozen = tuple(frozen)
-        self.frozen_value = tuple(frozen_value)
+        self.pivot_rows = None
+        self.pivot_columns = None
+        self.pivot_frozen = None
+        self.frozen_value = None
         self.index_ids = tuple(index_ids)
         # create data dict with keys as long as index_ids
         self._data = data
-        # item getter so that you can call _key_getter(row_header + column_header + frozen_value)
-        # and get a key to use on _data
-        key = tuple(self.index_ids.index(i) for i in index_ids)
-        self._key_getter = tuple_itemgetter(operator.itemgetter(*key), len(key))
-        self.set_pivot(rows, columns, frozen, frozen_value, model_is_updating=True)
+        self.set_pivot(rows, columns, frozen, frozen_value)
 
     @staticmethod
     def _is_invalid_pivot(rows, columns, frozen, frozen_value, index_ids):
@@ -97,24 +88,25 @@ class PivotModel:
         if not indexes:
             return []
         index_getter = self._index_key_getter(indexes)
-        if self.pivot_frozen:
-            frozen_getter = self._index_key_getter(self.pivot_frozen)
-            return sorted(set(index_getter(k) for k in self._data.keys() if frozen_getter(k) == self.frozen_value))
         try:
-            return sorted(set(index_getter(k) for k in self._data.keys()))
+            if self.pivot_frozen:
+                frozen_getter = self._index_key_getter(self.pivot_frozen)
+                return sorted(set(index_getter(k) for k in self._data if frozen_getter(k) == self.frozen_value))
+            return sorted(set(index_getter(k) for k in self._data))
         except IndexError:
+            # TODO: This happens when a class has no parameter definitions, but it's ugly
             return []
 
-    def set_pivot(self, rows, columns, frozen, frozen_value, model_is_updating=False):
+    def set_pivot(self, rows, columns, frozen, frozen_value):
         """Sets pivot."""
         pivot_error = self._is_invalid_pivot(rows, columns, frozen, frozen_value, self.index_ids)
         if pivot_error:
             raise ValueError(pivot_error)
-        if not model_is_updating and (
+        if (
             self.pivot_rows == rows
             and self.pivot_columns == columns
             and self.pivot_frozen == frozen
-            and frozen_value == self.frozen_value
+            and self.frozen_value == frozen_value
         ):
             # Nothing changed
             return
@@ -145,15 +137,15 @@ class PivotModel:
         Returns:
             list(list)
         """
-        if not self._row_data_header and not self._column_data_header:
+        if not self.rows and not self.columns:
             if self.pivot_frozen and len(self.pivot_frozen) == len(self.index_ids):
                 # special case when all indexes are in pivot frozen
                 return [[self._data.get(self._key_getter(self.frozen_value), None)]]
             # no data
             return []
-        if self.pivot_rows and any(r >= len(self._row_data_header) or r < 0 for r in row_mask):
+        if self.pivot_rows and any(r >= len(self.rows) or r < 0 for r in row_mask):
             raise ValueError("row_mask contains invalid indexes for current row pivot")
-        if self.pivot_columns and any(c >= len(self._column_data_header) or c < 0 for c in column_mask):
+        if self.pivot_columns and any(c >= len(self.columns) or c < 0 for c in column_mask):
             raise ValueError("column_mask contains invalid indexes for current column pivot")
         data = []
         for row in row_mask:
