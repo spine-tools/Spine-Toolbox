@@ -55,17 +55,17 @@ class PivotTableModel(QAbstractTableModel):
         self.fetch_more_columns(parent)
 
     def fetch_more_rows(self, parent):
-        new_row_count = min(self._ITEMS_TO_FETCH, len(self.model.rows) - self._data_row_count)
-        first = self.headerRowCount() + self._data_row_count
-        self.beginInsertRows(parent, first, first + new_row_count - 1)
-        self._data_row_count += new_row_count
+        count = min(self._ITEMS_TO_FETCH, len(self.model.rows) - self._data_row_count)
+        first = self.headerRowCount() + self.dataRowCount()
+        self.beginInsertRows(parent, first, first + count - 1)
+        self._data_row_count += count
         self.endInsertRows()
 
     def fetch_more_columns(self, parent):
-        new_column_count = min(self._ITEMS_TO_FETCH, len(self.model.columns) - self._data_column_count)
-        first = self.headerColumnCount() + self._data_column_count
-        self.beginInsertColumns(parent, first, first + new_column_count - 1)
-        self._data_column_count += new_column_count
+        count = min(self._ITEMS_TO_FETCH, len(self.model.columns) - self._data_column_count)
+        first = self.headerColumnCount() + self.dataColumnCount()
+        self.beginInsertColumns(parent, first, first + count - 1)
+        self._data_column_count += count
         self.endInsertColumns()
 
     def reset_model(self, data, index_ids, rows=(), columns=(), frozen=(), frozen_value=()):
@@ -75,7 +75,33 @@ class PivotTableModel(QAbstractTableModel):
         self._plot_x_column = None
 
     def update_model(self, data):
-        self.model._data.update(data)
+        self.model.update_model(data)
+
+    def add_to_model(self, data):
+        row_count, column_count = self.model.add_to_model(data)
+        if row_count > 0:
+            first = self.headerRowCount() + self.dataRowCount()
+            self.beginInsertRows(QModelIndex(), first, first + row_count - 1)
+            self._data_row_count += row_count
+            self.endInsertRows()
+        if column_count > 0:
+            first = self.headerColumnCount() + self.dataColumnCount()
+            self.beginInsertColumns(QModelIndex(), first, first + column_count - 1)
+            self._data_column_count += column_count
+            self.endInsertColumns()
+
+    def remove_from_model(self, data):
+        row_count, column_count = self.model.remove_from_model(data)
+        if row_count > 0:
+            first = self.headerRowCount()
+            self.beginRemoveRows(QModelIndex(), first, first + row_count - 1)
+            self._data_row_count -= row_count
+            self.endRemoveRows()
+        if column_count > 0:
+            first = self.headerColumnCount()
+            self.beginRemoveColumns(QModelIndex(), first, first + column_count - 1)
+            self._data_column_count -= column_count
+            self.endRemoveColumns()
 
     def set_pivot(self, rows, columns, frozen, frozen_value):
         self.beginResetModel()

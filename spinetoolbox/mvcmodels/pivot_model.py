@@ -50,6 +50,25 @@ class PivotModel:
         self._data = data
         self.set_pivot(rows, columns, frozen, frozen_value)
 
+    def update_model(self, data):
+        self._data.update(data)
+
+    def add_to_model(self, data):
+        self._data.update(data)
+        old_row_count = len(self._row_data_header)
+        old_column_count = len(self._column_data_header)
+        self._row_data_header = self._get_unique_index_values(self.pivot_rows)
+        self._column_data_header = self._get_unique_index_values(self.pivot_columns)
+        return len(self._row_data_header) - old_row_count, len(self._column_data_header) - old_column_count
+
+    def remove_from_model(self, data):
+        self._data = {key: self._data[key] for key in set(self._data) - set(data)}
+        old_row_count = len(self._row_data_header)
+        old_column_count = len(self._column_data_header)
+        self._row_data_header = self._get_unique_index_values(self.pivot_rows)
+        self._column_data_header = self._get_unique_index_values(self.pivot_columns)
+        return old_row_count - len(self._row_data_header), old_column_count - len(self._column_data_header)
+
     @staticmethod
     def _is_invalid_pivot(rows, columns, frozen, frozen_value, index_ids):
         """Checks if given pivot is valid.
@@ -88,14 +107,16 @@ class PivotModel:
         if not indexes:
             return []
         index_getter = self._index_key_getter(indexes)
+        if self.pivot_frozen:
+            frozen_getter = self._index_key_getter(self.pivot_frozen)
+            result = set(index_getter(k) for k in self._data if frozen_getter(k) == self.frozen_value)
+        else:
+            result = set(index_getter(k) for k in self._data)
         try:
-            if self.pivot_frozen:
-                frozen_getter = self._index_key_getter(self.pivot_frozen)
-                return sorted(set(index_getter(k) for k in self._data if frozen_getter(k) == self.frozen_value))
-            return sorted(set(index_getter(k) for k in self._data))
-        except IndexError:
-            # TODO: This happens when a class has no parameter definitions, but it's ugly
-            return []
+            result.remove((None,))
+        except KeyError:
+            pass
+        return sorted(result)
 
     def set_pivot(self, rows, columns, frozen, frozen_value):
         """Sets pivot."""
