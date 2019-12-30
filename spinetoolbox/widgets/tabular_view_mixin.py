@@ -173,17 +173,25 @@ class TabularViewMixin:
             class_item.fetch_more()
         return [item.db_map_data(self.db_map) for item in class_item.find_children_by_id(self.db_map, True)]
 
-    def load_empty_relationship_data(self):
+    def load_empty_relationship_data(self, class_objects=None):
         """Returns a dict containing all possible relationships in the current class.
+
+        Args:
+            class_objects (dict, optional): A dictionary mapping class ids to list of objects in this class.
 
         Returns:
             dict: Key is object id tuple, value is None.
         """
+        if class_objects is None:
+            class_objects = dict()
         if self.current_class_type == self._OBJECT_CLASS:
             return {}
         object_id_sets = []
         for obj_cls_id in self.current_object_class_id_list():
-            objects = self._get_entities(obj_cls_id, self._OBJECT_CLASS)
+            if obj_cls_id in class_objects:
+                objects = class_objects[obj_cls_id]
+            else:
+                objects = self._get_entities(obj_cls_id, self._OBJECT_CLASS)
             id_set = {item["id"] for item in objects}
             object_id_sets.append(id_set)
         return dict.fromkeys(product(*object_id_sets))
@@ -321,7 +329,8 @@ class TabularViewMixin:
             frozen_value = ()
         return rows, columns, frozen, frozen_value
 
-    def reload_pivot_table(self):
+    @Slot(str)
+    def reload_pivot_table(self, text=""):
         """Refreshes pivot table."""
         if self._selection_source == self.ui.treeView_object:
             selected = self.ui.treeView_object.selectionModel().currentIndex()
@@ -343,6 +352,7 @@ class TabularViewMixin:
         """
         self.current_input_type = self.ui.comboBox_pivot_table_input_type.currentText()
         if self.current_input_type == self._INPUT_RELATIONSHIP and self.current_class_type != self._RELATIONSHIP_CLASS:
+            # TODO: try and do something better here.
             index_ids = (0,)
             data = {}
         else:
@@ -353,8 +363,7 @@ class TabularViewMixin:
                 index_ids += (-1,)  # NOTE: -1 is the index id of 'parameter'
             else:
                 data = self.load_relationship_data()
-        data_keys = dict(enumerate(zip(*data.keys())))
-        self.index_values = {id_: data_keys.get(k, []) for k, id_ in enumerate(index_ids)}
+        self.index_values = dict(zip(index_ids, zip(*data.keys())))
         # get pivot preference for current selection
         selection_key = (self.current_class_id, self.current_class_type, self.current_input_type)
         rows, columns, frozen, frozen_value = self.get_pivot_preferences(selection_key)
@@ -402,7 +411,7 @@ class TabularViewMixin:
         if identifier not in self.filter_menus:
             item_type = "parameter definition" if identifier == -1 else "object"
             self.filter_menus[identifier] = menu = FilterMenu(self, identifier, item_type)
-            menu.set_filter_list(sorted(set(self.index_values[identifier])))
+            menu.set_filter_list(sorted(set(self.index_values.get(identifier, []))))
             menu.filterChanged.connect(self.change_filter)
         return self.filter_menus[identifier]
 
@@ -543,7 +552,7 @@ class TabularViewMixin:
         Returns:
             list(tuple(list(int)))
         """
-        return sorted(set(zip(*[self.index_values[k] for k in frozen])))
+        return sorted(set(zip(*[self.index_values.get(k, []) for k in frozen])))
 
     @staticmethod
     def refresh_table_view(table_view):
@@ -573,10 +582,23 @@ class TabularViewMixin:
                 self.refresh_table_view(self.ui.frozen_table)
                 break
 
+    @staticmethod
+    def _group_by_class(items, get_class_id):
+        d = dict()
+        for item in items:
+            d.setdefault(get_class_id(item), []).append(item)
+        return d
+
     def receive_objects_added(self, db_map_data):
         """Reacts to objects added event."""
         super().receive_objects_added(db_map_data)
-        self.receive_db_map_data_added_or_removed(db_map_data, get_class_id=lambda x: x["class_id"])
+        if self.current_input_type == self._INPUT_VALUE:
+            return
+        self._check_db_map_data(db_map_data)
+        class_objects = self._group_by_class(db_map_data[self.db_map], lambda x: x["class_id"])
+        data = self.load_empty_relationship_data(class_objects=class_objects)
+        if data:
+            self.pivot_table_model.update_model(data)
 
     def receive_relationships_added(self, db_map_data):
         """Reacts to relationships added event."""
