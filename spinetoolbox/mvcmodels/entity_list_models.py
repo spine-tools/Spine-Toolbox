@@ -16,7 +16,7 @@ List models for object and relationship classes.
 :date:   28.6.2019
 """
 
-from PySide2.QtCore import Qt, Slot
+from PySide2.QtCore import Qt
 from PySide2.QtGui import QStandardItem, QStandardItemModel, QBrush, QIcon, QColor
 
 

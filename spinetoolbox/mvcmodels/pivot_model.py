@@ -104,7 +104,7 @@ class PivotModel:
             raise ValueError('index_type can only contain str or int type')
         if len(set(index_real_names)) != len(index_names):
             # index_real_names contains duplicates, make sure the type is the same
-            un_2_n = {unique: name for unique, name in zip(index_names, index_real_names)}
+            un_2_n = dict(zip(index_names, index_real_names))
             real_type = {n: set() for n in index_real_names}
             for name, name_type in zip(index_names, index_type):
                 real_name = un_2_n[name]
@@ -127,7 +127,7 @@ class PivotModel:
 
         self._model_is_updating = True
 
-        self._unique_name_2_name = {unique: name for unique, name in zip(index_names, index_real_names)}
+        self._unique_name_2_name = dict(zip(index_names, index_real_names))
 
         self._valid_index_values = valid_index_values
         self._index_ind = {index: ind for ind, index in enumerate(index_names)}
@@ -859,7 +859,7 @@ class PivotModel:
         # update tuple entities
         for k in self.tuple_index_entries:
             if set(k).issubset(index_name + self.pivot_frozen) and not set(self.pivot_frozen).issuperset(k):
-                names = [n for n in index_name + self.pivot_frozen]
+                names = index_name + self.pivot_frozen
                 valid = [(i, names.index(kn)) for i, kn in enumerate(k) if kn in names]
                 keys = tuple(v[1] for v in valid)
                 names = tuple(k[v[0]] for v in valid)

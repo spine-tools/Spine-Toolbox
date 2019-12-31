@@ -379,7 +379,7 @@ class DataConnection(ProjectItem):
         """see base class"""
         refs = self.file_references()
         f_list = [os.path.join(self.data_dir, f) for f in self.data_files()]
-        resources = [ProjectItemResource(self, "file", url=pathlib.Path(ref).as_uri()) for ref in (refs + f_list)]
+        resources = [ProjectItemResource(self, "file", url=pathlib.Path(ref).as_uri()) for ref in refs + f_list]
         return resources
 
     def _do_handle_dag_changed(self, resources_upstream):

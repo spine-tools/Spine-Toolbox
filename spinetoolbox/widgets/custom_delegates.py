@@ -342,7 +342,7 @@ class ParameterValueDelegate(ParameterValueOrDefaultValueDelegate):
     """A delegate for the parameter value."""
 
     def _get_entity_class_id(self, index, db_map):
-        return NotImplementedError()
+        raise NotImplementedError()
 
     def _get_value_list(self, index, db_map):
         """Returns a value list item for the given index and db_map."""
@@ -539,9 +539,6 @@ class ManageItemsDelegate(QItemDelegate):
     """
 
     data_committed = Signal("QModelIndex", "QVariant", name="data_committed")
-
-    def __init__(self, parent):
-        super().__init__(parent)
 
     def setModelData(self, editor, model, index):
         """Send signal."""

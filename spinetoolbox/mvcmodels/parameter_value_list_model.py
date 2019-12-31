@@ -16,7 +16,7 @@ A tree model for parameter value lists.
 :date:   28.6.2019
 """
 
-from PySide2.QtCore import Qt, Signal, Slot, QModelIndex
+from PySide2.QtCore import Qt, Signal, QModelIndex
 from PySide2.QtGui import QBrush, QFont, QIcon, QGuiApplication
 from spinedb_api import to_database, from_database
 from .minimal_tree_model import MinimalTreeModel, TreeItem
@@ -121,6 +121,7 @@ class ListItem(GrayFontMixin, BoldFontMixin, AppendEmptyChildMixin, EditableMixi
     def compile_value_list(self):
         return [to_database(child.value) for child in self.children[:-1]]
 
+    # pylint: disable=no-self-use
     def empty_child(self):
         return ValueItem("Type new list value here...")
 
@@ -248,7 +249,7 @@ class ParameterValueListModel(MinimalTreeModel):
                 list_item.handle_added_to_db(identifier=item["id"], value_list=item["value_list"].split(","))
             # Now append remaining items
             children = [
-                ListItem(self.db_mngr, db_item.db_map, item["id"], item["name"], item["value_list"].split(","))
+                ListItem(db_item.db_map, item["id"], item["name"], item["value_list"].split(","))
                 for item in items.values()
             ]
             db_item.insert_children(db_item.child_count() - 1, *children)

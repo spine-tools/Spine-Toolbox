@@ -87,7 +87,7 @@ class ImportDialog(QDialog):
 
         # set list items
         self._select_widget_ui.source_list.blockSignals(True)
-        self._select_widget_ui.source_list.addItems([c for c in self.connector_list.keys()])
+        self._select_widget_ui.source_list.addItems(list(self.connector_list.keys()))
         self._select_widget_ui.source_list.clearSelection()
         self._select_widget_ui.source_list.blockSignals(False)
 

@@ -43,12 +43,13 @@ from PySide2.QtGui import (
 )
 from .config import DEFAULT_PROJECT_DIR, REQUIRED_SPINEDB_API_VERSION
 
+if os.name == "nt":
+    import ctypes
+
 
 def set_taskbar_icon():
     """Set application icon to Windows taskbar."""
     if os.name == "nt":
-        import ctypes
-
         myappid = "{6E794A8A-E508-47C4-9319-1113852224D3}"
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
 

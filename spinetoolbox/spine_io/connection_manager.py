@@ -138,7 +138,6 @@ class ConnectionManager(QObject):
         """
         if self.is_connected:
             options = self._options_widget.get_options()
-            types = self.table_types.get(table, {})
             self.fetchingData.emit()
             self.startDataGet.emit(table, options, max_rows)
 

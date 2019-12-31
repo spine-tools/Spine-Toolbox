@@ -72,7 +72,7 @@ class TimePatternModel(IndexedValueTableModel):
             row (int): an index where to remove the data
             count (int): number of time period - value pairs to remove
             parent (QModelIndex): an index to a parent model
-            
+
         Returns:
             True if the operation was successful
         """

@@ -24,7 +24,6 @@ from PySide2.QtCore import Signal, Slot, QPoint, QEvent
 from ..helpers import fix_name_ambiguity, tuple_itemgetter
 from ..plotting import plot_pivot_column, plot_selection, PlottingError, PivotTablePlottingHints
 from .custom_qwidgets import FilterWidget
-from .parameter_value_editor import ParameterValueEditor
 from .report_plotting_failure import report_plotting_failure
 
 
