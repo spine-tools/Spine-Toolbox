@@ -51,6 +51,7 @@ class SpineToolboxProject(MetaObject):
         self.db_mngr = SpineDBManager(self)
         self.engine = None
         self._dag_execution_list = None
+        self._dag_execution_permits_list = None
         self._dag_execution_index = None
         self.project_dir = os.path.join(project_dir(self._qsettings), self.short_name)
         if not work_dir:
@@ -66,14 +67,14 @@ class SpineToolboxProject(MetaObject):
             create_dir(self.project_dir)
         except OSError:
             self._toolbox.msg_error.emit(
-                "[OSError] Creating project directory {0} failed." " Check permissions.".format(self.project_dir)
+                f"[OSError] Creating project directory {self.project_dir} failed. Check permissions."
             )
         # Make work directory
         try:
             create_dir(self.work_dir)
         except OSError:
             self._toolbox.msg_error.emit(
-                "[OSError] Creating work directory {0} failed." " Check permissions.".format(self.work_dir)
+                f"[OSError] Creating work directory {self.work_dir} failed. Check permissions."
             )
 
     def connect_signals(self):
@@ -343,14 +344,16 @@ class SpineToolboxProject(MetaObject):
         ind = self._toolbox.project_item_model.find_item(item.name)
         self._toolbox.ui.treeView_project.setCurrentIndex(ind)
 
-    def execute_dags(self, dags):
+    def execute_dags(self, dags, execution_permits):
         """Executes given dags.
 
         Args:
             dags (Sequence(DiGraph))
+            execution_permits (Sequence(dict))
         """
         self._execution_stopped = False
         self._dag_execution_list = list(dags)
+        self._dag_execution_permits_list = list(execution_permits)
         self._dag_execution_index = 0
         self.execute_next_dag()
 
@@ -362,18 +365,20 @@ class SpineToolboxProject(MetaObject):
             return
         try:
             dag = self._dag_execution_list[self._dag_execution_index]
+            execution_permits = self._dag_execution_permits_list[self._dag_execution_index]
         except IndexError:
             return
         dag_identifier = f"{self._dag_execution_index + 1}/{len(self._dag_execution_list)}"
-        self.execute_dag(dag, dag_identifier)
+        self.execute_dag(dag, execution_permits, dag_identifier)
         self._dag_execution_index += 1
         self.dag_execution_finished.emit()
 
-    def execute_dag(self, dag, dag_identifier):
+    def execute_dag(self, dag, execution_permits, dag_identifier):
         """Executes given dag.
 
         Args:
             dag (DiGraph)
+            execution_permits (dict)
             dag_identifier (str)
         """
         node_successors = self.dag_handler.node_successors(dag)
@@ -387,7 +392,7 @@ class SpineToolboxProject(MetaObject):
             )
             return
         items = [self._toolbox.project_item_model.get_item(name) for name in node_successors]
-        self.engine = SpineEngine(items, node_successors)
+        self.engine = SpineEngine(items, node_successors, execution_permits)
         self._toolbox.msg.emit("<b>Starting DAG {0}</b>".format(dag_identifier))
         self._toolbox.msg.emit("Order: {0}".format(" -> ".join(list(node_successors))))
         self.engine.run()
@@ -410,11 +415,13 @@ class SpineToolboxProject(MetaObject):
         # Get selected item
         selected_indexes = self._toolbox.ui.treeView_project.selectedIndexes()
         if not selected_indexes:
-            self._toolbox.msg_warning.emit("Please select a project item and try again")
+            self._toolbox.msg_warning.emit("Please select a project item and try again.")
             return
         dags = set()
+        executable_item_names = list()
         for ind in selected_indexes:
             item = self._toolbox.project_item_model.project_item(ind)
+            executable_item_names.append(item.name)
             dag = self.dag_handler.dag_with_node(item.name)
             if not dag:
                 self._toolbox.msg_error.emit(
@@ -423,11 +430,17 @@ class SpineToolboxProject(MetaObject):
                 )
                 continue
             dags.add(dag)
+        execution_permit_list = list()
+        for dag in dags:
+            execution_permits = dict()
+            for item_name in dag.nodes:
+                execution_permits[item_name] = item_name in executable_item_names
+            execution_permit_list.append(execution_permits)
         self._toolbox.msg.emit("")
         self._toolbox.msg.emit("-------------------------------------------------")
         self._toolbox.msg.emit("<b>Executing Selected Directed Acyclic Graphs</b>")
         self._toolbox.msg.emit("-------------------------------------------------")
-        self.execute_dags(dags)
+        self.execute_dags(dags, execution_permit_list)
 
     def execute_project(self):
         """Executes all dags in the project.
@@ -439,11 +452,14 @@ class SpineToolboxProject(MetaObject):
         if not dags:
             self._toolbox.msg_warning.emit("Project has no items to execute")
             return
+        execution_permit_list = list()
+        for dag in dags:
+            execution_permit_list.append({item_name: True for item_name in dag.nodes})
         self._toolbox.msg.emit("")
         self._toolbox.msg.emit("--------------------------------------------")
         self._toolbox.msg.emit("<b>Executing All Directed Acyclic Graphs</b>")
         self._toolbox.msg.emit("--------------------------------------------")
-        self.execute_dags(dags)
+        self.execute_dags(dags, execution_permit_list)
 
     def stop(self):
         """Stops execution. Slot for the main window Stop tool button in the toolbar."""

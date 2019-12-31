@@ -142,91 +142,65 @@ class TestSpineToolboxProject(unittest.TestCase):
 
     def test_execute_project_with_single_item(self):
         item_name = self.add_tool()
-        item_index = self.toolbox.project_item_model.find_item(item_name)
-        item = self.toolbox.project_item_model.project_item(item_index)
+        item = self.toolbox.project_item_model.get_item(item_name)
         item.execute_forward = mock.MagicMock(return_value=True)
         anim = QVariantAnimation()
         anim.setDuration(0)
         item.make_execution_leave_animation = mock.MagicMock(return_value=anim)
         self.toolbox.project().execute_project()
-        qApp.processEvents()
         item.execute_forward.assert_called_with([])
 
     def test_execute_project_with_two_dags(self):
         item1_name = self.add_tool()
-        item1_index = self.toolbox.project_item_model.find_item(item1_name)
-        item1 = self.toolbox.project_item_model.project_item(item1_index)
+        item1 = self.toolbox.project_item_model.get_item(item1_name)
         item1.execute_forward = mock.MagicMock(return_value=True)
         item2_name = self.add_view()
-        item2_index = self.toolbox.project_item_model.find_item(item2_name)
-        item2 = self.toolbox.project_item_model.project_item(item2_index)
+        item2 = self.toolbox.project_item_model.get_item(item2_name)
         item2.execute_forward = mock.MagicMock(return_value=True)
         anim = QVariantAnimation()
         anim.setDuration(0)
         item1.make_execution_leave_animation = mock.MagicMock(return_value=anim)
         item2.make_execution_leave_animation = mock.MagicMock(return_value=anim)
         self.toolbox.project().execute_project()
-        # We have to process events for each item that gets executed
-        qApp.processEvents()
-        qApp.processEvents()
         item1.execute_forward.assert_called_with([])
         item2.execute_forward.assert_called_with([])
 
-    def test_execute_selected(self):
+    def test_execute_selected_dag(self):
         item1_name = self.add_tool()
-        item1_index = self.toolbox.project_item_model.find_item(item1_name)
-        item1 = self.toolbox.project_item_model.project_item(item1_index)
+        item1 = self.toolbox.project_item_model.get_item(item1_name)
         item1.execute_forward = mock.MagicMock(return_value=True)
         item2_name = self.add_view()
-        item2_index = self.toolbox.project_item_model.find_item(item2_name)
-        item2 = self.toolbox.project_item_model.project_item(item2_index)
+        item2 = self.toolbox.project_item_model.get_item(item2_name)
         item2.execute_forward = mock.MagicMock(return_value=True)
         anim = QVariantAnimation()
         anim.setDuration(0)
         item1.make_execution_leave_animation = mock.MagicMock(return_value=anim)
         item2.make_execution_leave_animation = mock.MagicMock(return_value=anim)
-        self.toolbox.ui.treeView_project.selectionModel().select(item2_index, QItemSelectionModel.Select)
+        self.toolbox.project().set_item_selected(item2)
         self.toolbox.project().execute_selected()
-        qApp.processEvents()
         item1.execute_forward.assert_not_called()
         item2.execute_forward.assert_called_with([])
 
-    # def test_add_item_to_model_in_random_order(self):
-    #     """Add items to model in order DC->View->Tool->DS and check that it still works."""
-    #     self.fail()
-    #
-    # def test_change_name(self):
-    #     self.fail()
-    #
-    # def test_set_description(self):
-    #     self.fail()
-    #
-    # def test_change_filename(self):
-    #     self.fail()
-    #
-    # def test_change_work_dir(self):
-    #     self.fail()
-    #
-    # def test_rename_project(self):
-    #     self.fail()
-    #
-    # def test_save(self):
-    #     self.fail()
-    #
-    # def test_load(self):
-    #     self.fail()
-    #
-    # def test_load_tool_specification_from_file(self):
-    #     self.fail()
-    #
-    # def test_load_tool_specification_from_dict(self):
-    #     self.fail()
-    #
-    # def test_append_connection_model(self):
-    #     self.fail()
-    #
-    # def test_set_item_selected(self):
-    #     self.fail()
+    def test_execute_selected_item_within_single_dag(self):
+        data_store_name = self.add_ds()
+        data_store = self.toolbox.project_item_model.get_item(data_store_name)
+        data_store.execute_forward = mock.MagicMock(return_value=True)
+        tool_name = self.add_tool()
+        tool = self.toolbox.project_item_model.get_item(tool_name)
+        tool.execute_forward = mock.MagicMock(return_value=True)
+        view_name = self.add_view()
+        view = self.toolbox.project_item_model.get_item(view_name)
+        view.execute_forward = mock.MagicMock(return_value=True)
+        anim = QVariantAnimation()
+        anim.setDuration(0)
+        tool.make_execution_leave_animation = mock.MagicMock(return_value=anim)
+        self.toolbox.project().dag_handler.add_graph_edge(data_store_name, tool_name)
+        self.toolbox.project().dag_handler.add_graph_edge(tool_name, view_name)
+        self.toolbox.project().set_item_selected(tool)
+        self.toolbox.project().execute_selected()
+        data_store.execute_forward.assert_not_called()
+        tool.execute_forward.assert_called()
+        view.execute_forward.assert_not_called()
 
     def add_ds(self):
         """Helper method to add Data Store. Returns created items name."""
