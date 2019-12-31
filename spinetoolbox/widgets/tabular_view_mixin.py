@@ -30,26 +30,23 @@ from ..mvcmodels.frozen_table_model import FrozenTableModel
 class TabularViewMixin:
     """Provides the pivot table and its frozen table for the DS form."""
 
-    # constant strings
-    _RELATIONSHIP_CLASS = "relationship class"
-    _OBJECT_CLASS = "object class"
+    _PARAMETER_VALUE = "Parameter value"
+    _RELATIONSHIP = "Relationship"
 
-    _INPUT_VALUE = "Parameter value"
-    _INPUT_RELATIONSHIP = "Relationship"
-
-    _PARAMETER_NAME = "parameter"
+    _PARAMETER = "parameter"
+    _PARAM_INDEX_ID = -1
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # current state of ui
-        self.current_class_type = ''
-        self.current_class_id = ''
-        self.current_input_type = self._INPUT_VALUE
+        self.current_class_type = None
+        self.current_class_id = None
+        self.current_input_type = self._PARAMETER_VALUE
         self.filter_menus = {}
         self.index_values = {}  # Maps index id to a sorted set of values for that index
         self.class_pivot_preferences = {}
         self.PivotPreferences = namedtuple("PivotPreferences", ["index", "columns", "frozen", "frozen_value"])
-        self.ui.comboBox_pivot_table_input_type.addItems([self._INPUT_VALUE, self._INPUT_RELATIONSHIP])
+        self.ui.comboBox_pivot_table_input_type.addItems([self._PARAMETER_VALUE, self._RELATIONSHIP])
         self.pivot_table_proxy = PivotTableSortFilterProxy()
         self.pivot_table_model = PivotTableModel(self)
         self.pivot_table_proxy.setSourceModel(self.pivot_table_model)
@@ -102,20 +99,20 @@ class TabularViewMixin:
         self.ui.dockWidget_frozen_table.visibilityChanged.connect(self._handle_frozen_table_visibility_changed)
 
     def is_value_input_type(self):
-        return self.current_input_type == self._INPUT_VALUE
+        return self.current_input_type == self._PARAMETER_VALUE
 
     @Slot("QModelIndex", object)
     def _set_model_data(self, index, value):
         self.pivot_table_proxy.setData(index, value)
 
     def current_object_class_id_list(self):
-        if self.current_class_type == self._OBJECT_CLASS:
+        if self.current_class_type == "object class":
             return [self.current_class_id]
         relationship_class = self.db_mngr.get_item(self.db_map, "relationship class", self.current_class_id)
         return [int(id_) for id_ in relationship_class["object_class_id_list"].split(",")]
 
     def current_object_class_name_list(self):
-        if self.current_class_type == self._OBJECT_CLASS:
+        if self.current_class_type == "object class":
             return [self.db_mngr.get_item(self.db_map, "object class", self.current_class_id)["name"]]
         relationship_class = self.db_mngr.get_item(self.db_map, "relationship class", self.current_class_id)
         return fix_name_ambiguity(relationship_class["object_class_name_list"].split(","))
@@ -165,9 +162,7 @@ class TabularViewMixin:
             class_id = self.current_class_id
         if class_type is None:
             class_type = self.current_class_type
-        model = {self._OBJECT_CLASS: self.object_tree_model, self._RELATIONSHIP_CLASS: self.relationship_tree_model}[
-            class_type
-        ]
+        model = {"object class": self.object_tree_model, "relationship class": self.relationship_tree_model}[class_type]
         class_item = next(model.root_item.find_children_by_id(self.db_map, class_id))
         if class_item.can_fetch_more():
             class_item.fetch_more()
@@ -184,13 +179,13 @@ class TabularViewMixin:
         """
         if objects_per_class is None:
             objects_per_class = dict()
-        if self.current_class_type == self._OBJECT_CLASS:
+        if self.current_class_type == "object class":
             return {}
         object_id_sets = []
         for obj_cls_id in self.current_object_class_id_list():
             objects = objects_per_class.get(obj_cls_id, None)
             if objects is None:
-                objects = self._get_entities(obj_cls_id, self._OBJECT_CLASS)
+                objects = self._get_entities(obj_cls_id, "object class")
             id_set = {item["id"] for item in objects}
             object_id_sets.append(id_set)
         return dict.fromkeys(product(*object_id_sets))
@@ -201,7 +196,7 @@ class TabularViewMixin:
         Returns:
             dict: Key is object id tuple, value is relationship id.
         """
-        if self.current_class_type == self._OBJECT_CLASS:
+        if self.current_class_type == "object class":
             return {}
         if relationships is None:
             relationships = self._get_entities()
@@ -233,11 +228,11 @@ class TabularViewMixin:
         """
         entity_class = self.db_mngr.get_item(self.db_map, self.current_class_type, self.current_class_id)
         model = {
-            self._OBJECT_CLASS: {
+            "object class": {
                 "parameter value": self.object_parameter_value_model,
                 "parameter definition": self.object_parameter_definition_model,
             },
-            self._RELATIONSHIP_CLASS: {
+            "relationship class": {
                 "parameter value": self.relationship_parameter_value_model,
                 "parameter definition": self.relationship_parameter_definition_model,
             },
@@ -280,7 +275,7 @@ class TabularViewMixin:
             entities = self._get_entities()
         if parameter_ids is None:
             parameter_ids = self._get_parameter_value_or_def_ids("parameter definition")
-        if self.current_class_type == self._RELATIONSHIP_CLASS:
+        if self.current_class_type == "relationship class":
             entity_ids = [tuple(int(id_) for id_ in e["object_id_list"].split(',')) for e in entities]
         else:
             entity_ids = [(e["id"],) for e in entities]
@@ -305,7 +300,7 @@ class TabularViewMixin:
             get_id = lambda x: x["id"]
         else:
             get_id = lambda x: None
-        if self.current_class_type == self._OBJECT_CLASS:
+        if self.current_class_type == "object class":
             return {(x["object_id"], x["parameter_id"]): get_id(x) for x in parameter_values}
         return {
             tuple(int(id_) for id_ in x["object_id_list"].split(',')) + (x["parameter_id"],): get_id(x)
@@ -344,7 +339,7 @@ class TabularViewMixin:
             # use default pivot
             length = len(self.current_object_class_id_list())
             rows = list(range(length))
-            columns = [-1] if self.current_input_type == self._INPUT_VALUE else []
+            columns = [self._PARAM_INDEX_ID] if self.current_input_type == self._PARAMETER_VALUE else []
             frozen = []
             frozen_value = ()
         return rows, columns, frozen, frozen_value
@@ -354,10 +349,10 @@ class TabularViewMixin:
         """Refreshes pivot table."""
         if self._selection_source == self.ui.treeView_object:
             selected = self.ui.treeView_object.selectionModel().currentIndex()
-            class_type = self._OBJECT_CLASS
+            class_type = "object class"
         elif self._selection_source == self.ui.treeView_relationship:
             selected = self.ui.treeView_relationship.selectionModel().currentIndex()
-            class_type = self._RELATIONSHIP_CLASS
+            class_type = "relationship class"
         else:
             return
         if self._is_class_index(selected, class_type):
@@ -371,28 +366,34 @@ class TabularViewMixin:
         """Refreshes pivot table.
         """
         self.current_input_type = self.ui.comboBox_pivot_table_input_type.currentText()
-        if self.current_input_type == self._INPUT_RELATIONSHIP and self.current_class_type != self._RELATIONSHIP_CLASS:
-            # TODO: try and do something better here.
-            index_ids = (0,)
-            data = {}
+        if self.current_input_type == self._RELATIONSHIP and self.current_class_type != "relationship class":
+            self.clear_pivot_table()
+            return
+        length = len(self.current_object_class_id_list())
+        index_ids = tuple(range(length))
+        if self.current_input_type == self._PARAMETER_VALUE:
+            data = self.load_parameter_value_data()
+            index_ids += (self._PARAM_INDEX_ID,)
         else:
-            length = len(self.current_object_class_id_list())
-            index_ids = tuple(range(length))  # NOTE: index id is just the index in the current object class id list
-            if self.current_input_type == self._INPUT_VALUE:
-                data = self.load_parameter_value_data()
-                index_ids += (-1,)  # NOTE: -1 is the index id of 'parameter'
-            else:
-                data = self.load_relationship_data()
+            data = self.load_relationship_data()
         self.index_values = dict(zip(index_ids, zip(*data.keys())))
         # get pivot preference for current selection
         selection_key = (self.current_class_id, self.current_class_type, self.current_input_type)
         rows, columns, frozen, frozen_value = self.get_pivot_preferences(selection_key)
-        while self.filter_menus:
-            _, menu = self.filter_menus.popitem()
-            menu.wipe_out()
+        self.wipe_out_filter_menus()
         self.pivot_table_model.reset_model(data, index_ids, rows, columns, frozen, frozen_value)
         self.pivot_table_proxy.clear_filter()
         self.ui.pivot_table.resizeColumnsToContents()
+
+    def clear_pivot_table(self):
+        self.wipe_out_filter_menus()
+        self.pivot_table_model.clear_model()
+        self.pivot_table_proxy.clear_filter()
+
+    def wipe_out_filter_menus(self):
+        while self.filter_menus:
+            _, menu = self.filter_menus.popitem()
+            menu.wipe_out()
 
     @Slot()
     def make_pivot_headers(self):
@@ -420,7 +421,7 @@ class TabularViewMixin:
             self.ui.frozen_table.horizontalHeader().resizeSection(column, widget.size().width())
 
     def create_filter_menu(self, identifier):
-        """Returns a filter menu for given given disambiguated object class name.
+        """Returns a filter menu for given given object class identifier.
 
         Args:
             identifier (int)
@@ -429,7 +430,7 @@ class TabularViewMixin:
             FilterMenu
         """
         if identifier not in self.filter_menus:
-            item_type = "parameter definition" if identifier == -1 else "object"
+            item_type = "parameter definition" if identifier == self._PARAM_INDEX_ID else "object"
             self.filter_menus[identifier] = menu = FilterMenu(self, identifier, item_type)
             menu.set_filter_list(sorted(set(self.index_values.get(identifier, []))))
             menu.filterChanged.connect(self.change_filter)
@@ -437,7 +438,7 @@ class TabularViewMixin:
 
     def create_header_widget(self, identifier, area, with_menu=True):
         """
-        Returns a TabularViewHeaderWidget for given object class disambiguated name.
+        Returns a TabularViewHeaderWidget for given object class identifier.
 
         Args:
             identifier (int)
@@ -452,7 +453,7 @@ class TabularViewMixin:
         else:
             menu = None
         if identifier == -1:
-            name = self._PARAMETER_NAME
+            name = self._PARAMETER
         else:
             name = self.current_object_class_name_list()[identifier]
         widget = TabularViewHeaderWidget(identifier, name, area, menu=menu, parent=self)
@@ -528,7 +529,7 @@ class TabularViewMixin:
         """
         frozen_value = self.get_frozen_value(current)
         self.pivot_table_model.set_frozen_value(frozen_value)
-        # update pivot history
+        # store pivot preferences
         self.class_pivot_preferences[
             (self.current_class_id, self.current_class_type, self.current_input_type)
         ] = self.PivotPreferences(
@@ -581,17 +582,8 @@ class TabularViewMixin:
         table_view.model().dataChanged.emit(top_left, bottom_right)
 
     def _check_db_map_data(self, db_map_data):
-        if len(db_map_data) > 1 or self.db_map not in db_map_data:
+        if self.db_map not in db_map_data:
             raise RuntimeError("Data Store view received signal from wrong database.")
-
-    def receive_db_map_data_updated(self, db_map_data, get_class_id):
-        self._check_db_map_data(db_map_data)
-        items = db_map_data[self.db_map]
-        for item in items:
-            if get_class_id(item) == self.current_class_id:
-                self.refresh_table_view(self.ui.pivot_table)
-                self.refresh_table_view(self.ui.frozen_table)
-                break
 
     @staticmethod
     def _group_by_class(items, get_class_id):
@@ -606,43 +598,39 @@ class TabularViewMixin:
         elif action == "remove":
             self.pivot_table_model.remove_from_model(data)
 
-    def add_or_remove_objects(self, db_map_data, action):
+    def receive_objects_added_or_removed(self, db_map_data, action):
         self._check_db_map_data(db_map_data)
-        objects = db_map_data[self.db_map]
-        objects_per_class = self._group_by_class(objects, lambda x: x["class_id"])
-        if self.current_input_type == self._INPUT_RELATIONSHIP and self.current_class_type == self._RELATIONSHIP_CLASS:
+        if self.current_input_type == self._RELATIONSHIP and self.current_class_type == "relationship class":
+            objects_per_class = self._group_by_class(db_map_data[self.db_map], lambda x: x["class_id"])
             data = self.load_empty_relationship_data(objects_per_class=objects_per_class)
-        elif self.current_input_type == self._INPUT_VALUE and self.current_class_type == self._OBJECT_CLASS:
-            entities = objects_per_class.get(self.current_class_id, None)
-            if not entities:
+        elif self.current_input_type == self._PARAMETER_VALUE and self.current_class_type == "object class":
+            objects = [x for x in db_map_data[self.db_map] if x["class_id"] == self.current_class_id]
+            if not objects:
                 return
-            data = self.load_empty_parameter_value_data(entities=entities)
+            data = self.load_empty_parameter_value_data(entities=objects)
         else:
             return
-        if data:
-            self.modify_pivot_table_model(data, action)
+        self.modify_pivot_table_model(data, action)
 
-    def add_or_remove_relationships(self, db_map_data, action):
-        if self.current_class_type != self._RELATIONSHIP_CLASS:
-            return
+    def receive_relationships_added_or_removed(self, db_map_data, action):
         self._check_db_map_data(db_map_data)
-        relationships = [r for r in db_map_data[self.db_map] if r["class_id"] == self.current_class_id]
+        if self.current_class_type != "relationship class":
+            return
+        relationships = [x for x in db_map_data[self.db_map] if x["class_id"] == self.current_class_id]
         if not relationships:
             return
-        if self.current_input_type == self._INPUT_RELATIONSHIP:
+        if self.current_input_type == self._RELATIONSHIP:
             data = self.load_full_relationship_data(relationships=relationships, action=action)
-            if data:
-                self.pivot_table_model.update_model(data)
-                self.refresh_table_view(self.ui.pivot_table)
-        elif self.current_input_type == self._INPUT_VALUE:
+            self.pivot_table_model.update_model(data)
+            self.refresh_table_view(self.ui.pivot_table)
+        elif self.current_input_type == self._PARAMETER_VALUE:
             data = self.load_empty_parameter_value_data(relationships)
-            if data:
-                self.modify_pivot_table_model(data, action)
+            self.modify_pivot_table_model(data, action)
 
-    def add_or_remove_parameter_definitions(self, db_map_data, action):
-        if self.current_input_type != self._INPUT_VALUE:
-            return
+    def receive_parameter_definitions_added_or_removed(self, db_map_data, action):
         self._check_db_map_data(db_map_data)
+        if self.current_input_type != self._PARAMETER_VALUE:
+            return
         parameters = [
             x
             for x in db_map_data[self.db_map]
@@ -652,11 +640,11 @@ class TabularViewMixin:
             return
         parameter_ids = {x["id"] for x in parameters}
         data = self.load_empty_parameter_value_data(parameter_ids=parameter_ids)
-        if data:
-            self.modify_pivot_table_model(data, action)
+        self.modify_pivot_table_model(data, action)
 
-    def add_or_remove_parameter_values(self, db_map_data, action):
-        if self.current_input_type != self._INPUT_VALUE:
+    def receive_parameter_values_added_or_removed(self, db_map_data, action):
+        self._check_db_map_data(db_map_data)
+        if self.current_input_type != self._PARAMETER_VALUE:
             return
         parameter_values = [
             x
@@ -666,29 +654,47 @@ class TabularViewMixin:
         if not parameter_values:
             return
         data = self.load_full_parameter_value_data(parameter_values=parameter_values, action=action)
-        if data:
-            self.pivot_table_model.update_model(data)
-            self.refresh_table_view(self.ui.pivot_table)
+        self.pivot_table_model.update_model(data)
+        self.refresh_table_view(self.ui.pivot_table)
+
+    def receive_db_map_data_updated(self, db_map_data, get_class_id):
+        self._check_db_map_data(db_map_data)
+        items = db_map_data[self.db_map]
+        for item in items:
+            if get_class_id(item) == self.current_class_id:
+                self.refresh_table_view(self.ui.pivot_table)
+                self.refresh_table_view(self.ui.frozen_table)
+                break
+
+    def receive_classes_removed(self, db_map_data):
+        self._check_db_map_data(db_map_data)
+        items = db_map_data[self.db_map]
+        for item in items:
+            if item["id"] == self.current_class_id:
+                self.current_class_type = None
+                self.current_class_id = None
+                self.clear_pivot_table()
+                break
 
     def receive_objects_added(self, db_map_data):
         """Reacts to objects added event."""
         super().receive_objects_added(db_map_data)
-        self.add_or_remove_objects(db_map_data, action="add")
+        self.receive_objects_added_or_removed(db_map_data, action="add")
 
     def receive_relationships_added(self, db_map_data):
         """Reacts to relationships added event."""
         super().receive_relationships_added(db_map_data)
-        self.add_or_remove_relationships(db_map_data, action="add")
+        self.receive_relationships_added_or_removed(db_map_data, action="add")
 
     def receive_parameter_definitions_added(self, db_map_data):
         """Reacts to parameter definitions added event."""
         super().receive_parameter_definitions_added(db_map_data)
-        self.add_or_remove_parameter_definitions(db_map_data, action="add")
+        self.receive_parameter_definitions_added_or_removed(db_map_data, action="add")
 
     def receive_parameter_values_added(self, db_map_data):
         """Reacts to parameter values added event."""
         super().receive_parameter_values_added(db_map_data)
-        self.add_or_remove_parameter_values(db_map_data, action="add")
+        self.receive_parameter_values_added_or_removed(db_map_data, action="add")
 
     def receive_object_classes_updated(self, db_map_data):
         """Reacts to object classes updated event."""
@@ -727,32 +733,32 @@ class TabularViewMixin:
     def receive_object_classes_removed(self, db_map_data):
         """Reacts to object classes removed event."""
         super().receive_object_classes_removed(db_map_data)
-        # TODO: clear pivot table if current class is removed
+        self.receive_classes_removed(db_map_data)
 
     def receive_objects_removed(self, db_map_data):
         """Reacts to objects removed event."""
         super().receive_objects_removed(db_map_data)
-        self.add_or_remove_objects(db_map_data, action="remove")
+        self.receive_objects_added_or_removed(db_map_data, action="remove")
 
     def receive_relationship_classes_removed(self, db_map_data):
         """Reacts to relationship classes remove event."""
         super().receive_relationship_classes_removed(db_map_data)
-        # TODO: clear pivot table if current class is removed
+        self.receive_classes_removed(db_map_data)
 
     def receive_relationships_removed(self, db_map_data):
         """Reacts to relationships removed event."""
         super().receive_relationships_removed(db_map_data)
-        self.add_or_remove_relationships(db_map_data, action="remove")
+        self.receive_relationships_added_or_removed(db_map_data, action="remove")
 
     def receive_parameter_definitions_removed(self, db_map_data):
         """Reacts to parameter definitions removed event."""
         super().receive_parameter_definitions_removed(db_map_data)
-        self.add_or_remove_parameter_definitions(db_map_data, action="remove")
+        self.receive_parameter_definitions_added_or_removed(db_map_data, action="remove")
 
     def receive_parameter_values_removed(self, db_map_data):
         """Reacts to parameter values removed event."""
         super().receive_parameter_values_removed(db_map_data)
-        self.add_or_remove_parameter_values(db_map_data, action="remove")
+        self.receive_parameter_values_added_or_removed(db_map_data, action="remove")
 
     def receive_session_rolled_back(self, db_maps):
         """Reacts to session rolled back event."""

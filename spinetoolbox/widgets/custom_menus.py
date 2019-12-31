@@ -705,8 +705,7 @@ class PivotTableModelMenu(QMenu):
         self.delete_values_action.setEnabled(bool(self._selected_value_indexes))
         self.delete_object_action.setEnabled(bool(self._selected_entity_indexes))
         self.delete_relationship_action.setEnabled(
-            bool(self._selected_entity_indexes)
-            and self.parent().current_class_type == self.parent()._RELATIONSHIP_CLASS
+            bool(self._selected_entity_indexes) and self.parent().current_class_type == "relationship class"
         )
         self.delete_parameter_action.setEnabled(bool(self._selected_parameter_indexes))
 

@@ -28,7 +28,7 @@ class PivotModel:
         self.pivot_columns = ()  # current selected columns indexes
         self.pivot_frozen = ()  # current filtered frozen indexes
         self.frozen_value = ()  # current selected value of index_frozen
-        self._key_getter = lambda *x: ()  # operator.itemgetter placeholder used to translate pivot to keys in _data
+        self._key_getter = None  # operator.itemgetter placeholder used to translate pivot to keys in _data
         self._row_data_header = []  # header values for row data
         self._column_data_header = []  # header values for column data
 
@@ -36,7 +36,7 @@ class PivotModel:
         """Resets the model.
         """
         if not rows + columns + frozen:
-            # no pivot given, set default pivot
+            # no pivot given, set default
             rows = tuple(index_ids)
             columns = ()
             frozen = ()
@@ -50,6 +50,17 @@ class PivotModel:
         self._data = data
         self.set_pivot(rows, columns, frozen, frozen_value)
 
+    def clear_model(self):
+        self._data = {}
+        self.index_ids = ()
+        self.pivot_rows = ()
+        self.pivot_columns = ()
+        self.pivot_frozen = ()
+        self.frozen_value = ()
+        self._key_getter = None
+        self._row_data_header = []
+        self._column_data_header = []
+
     def update_model(self, data):
         self._data.update(data)
 
@@ -59,7 +70,9 @@ class PivotModel:
         old_column_count = len(self._column_data_header)
         self._row_data_header = self._get_unique_index_values(self.pivot_rows)
         self._column_data_header = self._get_unique_index_values(self.pivot_columns)
-        return len(self._row_data_header) - old_row_count, len(self._column_data_header) - old_column_count
+        added_row_count = len(self._row_data_header) - old_row_count
+        added_column_count = len(self._column_data_header) - old_column_count
+        return added_row_count, added_column_count
 
     def remove_from_model(self, data):
         self._data = {key: self._data[key] for key in set(self._data) - set(data)}
@@ -67,28 +80,31 @@ class PivotModel:
         old_column_count = len(self._column_data_header)
         self._row_data_header = self._get_unique_index_values(self.pivot_rows)
         self._column_data_header = self._get_unique_index_values(self.pivot_columns)
-        return old_row_count - len(self._row_data_header), old_column_count - len(self._column_data_header)
+        removed_row_count = old_row_count - len(self._row_data_header)
+        removed_column_count = old_column_count - len(self._column_data_header)
+        return removed_row_count, removed_column_count
 
-    @staticmethod
-    def _is_invalid_pivot(rows, columns, frozen, frozen_value, index_ids):
+    def _check_pivot(self, rows, columns, frozen, frozen_value):
         """Checks if given pivot is valid.
 
         Returns:
             str, NoneType: error message or None if no error
         """
-        if not len(set(index_ids)) == len(index_ids):
-            return "'index_ids' must contain only unique integers"
-        if not all(i in index_ids for i in frozen):
-            return "'frozen' contains ids that don't belong in 'index_ids'"
-        if not all(i in index_ids for i in rows):
-            return "'rows' contains ids that don't belong in 'index_ids'"
-        if not all(c in index_ids for c in columns):
-            return "'columns' contains ids that don't belong in 'index_ids'"
-        if len(set(rows + columns + frozen)) != len(index_ids):
-            return "'rows', 'columns' and 'frozen' must contain only unique ids in 'index_ids' without duplicates"
-        if len(frozen) != len(frozen_value):
-            return "'frozen_value' must be same length as 'frozen'"
-        return None
+        if not len(set(self.index_ids)) == len(self.index_ids):
+            err_msg = "index ids must be unique"
+        elif not all(i in self.index_ids for i in frozen):
+            err_msg = "'frozen' contains wrong ids"
+        elif not all(i in self.index_ids for i in rows):
+            err_msg = "'rows' contains wrong ids"
+        elif not all(c in self.index_ids for c in columns):
+            err_msg = "'columns' contains wrong ids"
+        elif len(set(rows + columns + frozen)) != len(self.index_ids):
+            err_msg = "ids in 'rows', 'columns' and 'frozen' are not unique"
+        elif len(frozen) != len(frozen_value):
+            err_msg = "'frozen_value' must be same length as 'frozen'"
+        else:
+            return
+        raise ValueError(err_msg)
 
     def _index_key_getter(self, indexes):
         """Returns an itemgetter that always returns tuples from list of indexes"""
@@ -120,9 +136,7 @@ class PivotModel:
 
     def set_pivot(self, rows, columns, frozen, frozen_value):
         """Sets pivot."""
-        pivot_error = self._is_invalid_pivot(rows, columns, frozen, frozen_value, self.index_ids)
-        if pivot_error:
-            raise ValueError(pivot_error)
+        self._check_pivot(rows, columns, frozen, frozen_value)
         if (
             self.pivot_rows == rows
             and self.pivot_columns == columns

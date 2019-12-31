@@ -74,10 +74,20 @@ class PivotTableModel(QAbstractTableModel):
         self.endResetModel()
         self._plot_x_column = None
 
+    def clear_model(self):
+        self.beginResetModel()
+        self.model.clear_model()
+        self.endResetModel()
+        self._plot_x_column = None
+
     def update_model(self, data):
+        if not data:
+            return
         self.model.update_model(data)
 
     def add_to_model(self, data):
+        if not data:
+            return
         row_count, column_count = self.model.add_to_model(data)
         if row_count > 0:
             first = self.headerRowCount() + self.dataRowCount()
@@ -91,6 +101,8 @@ class PivotTableModel(QAbstractTableModel):
             self.endInsertColumns()
 
     def remove_from_model(self, data):
+        if not data:
+            return
         row_count, column_count = self.model.remove_from_model(data)
         if row_count > 0:
             first = self.headerRowCount()
@@ -458,9 +470,7 @@ class PivotTableModel(QAbstractTableModel):
         item = dict(name=value)
         if top_left_id == -1:
             class_key = (
-                "object_class_id"
-                if self._parent.current_class_type == self._parent._OBJECT_CLASS
-                else "relationship_class_id"
+                "object_class_id" if self._parent.current_class_type == "object class" else "relationship_class_id"
             )
             item[class_key] = self._parent.current_class_id
             self.db_mngr.add_parameter_definitions({self.db_map: [item]})
@@ -507,7 +517,7 @@ class PivotTableModel(QAbstractTableModel):
             value
         """
         header_ids = self._header_ids(index)
-        if self._parent.current_class_type == self._parent._RELATIONSHIP_CLASS:
+        if self._parent.current_class_type == "relationship class":
             item = self._new_relationship_parameter_value(header_ids[:-1], value)
         else:
             object_id = header_ids[0]
