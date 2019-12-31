@@ -109,7 +109,7 @@ class SpineToolboxProject(MetaObject):
             new_work_path (str): Absolute path to new work directory
 
         Returns:
-            bool: True if successfull, False otherwise
+            bool: True if successful, False otherwise
         """
         if not new_work_path:
             self.work_dir = DEFAULT_WORK_DIR
@@ -127,7 +127,7 @@ class SpineToolboxProject(MetaObject):
             name (str): New (long) name for project
 
         Returns:
-            bool: True if successfull, False otherwise
+            bool: True if successful, False otherwise
         """
         # Check for illegal characters
         if name.strip() == '' or name.lower() == self.name.lower():
