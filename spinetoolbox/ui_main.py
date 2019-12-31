@@ -1510,7 +1510,8 @@ class ToolboxUI(QMainWindow):
             shift_y = -15.0
         return shift_x, shift_y
 
-    def _set_deserialized_item_position(self, item_dict, shift_x, shift_y, scene_rect):
+    @staticmethod
+    def _set_deserialized_item_position(item_dict, shift_x, shift_y, scene_rect):
         """Moves item's position by shift_x and shift_y while keeping it within the limits of scene_rect."""
         new_x = np.clip(item_dict["x"] - shift_x, scene_rect.left(), scene_rect.right())
         new_y = np.clip(item_dict["y"] - shift_y, scene_rect.top(), scene_rect.bottom())

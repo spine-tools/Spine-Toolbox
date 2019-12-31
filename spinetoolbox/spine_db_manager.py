@@ -186,7 +186,7 @@ class SpineDBManager(QObject):
 
     @busy_effect
     def do_get_db_map(self, url, upgrade, codename):
-        """Returns a memoized DiffDatabaseMapping instance from url.
+        """Returns a memorized DiffDatabaseMapping instance from url.
         Called by `get_db_map`.
 
         Args:

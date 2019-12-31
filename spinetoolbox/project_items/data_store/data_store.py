@@ -193,7 +193,7 @@ class DataStore(ProjectItem):
         """Open file browser where user can select the path to an SQLite
         file that they want to use."""
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-        answer = QFileDialog.getOpenFileName(self._toolbox, 'Select SQlite file', self.data_dir)
+        answer = QFileDialog.getOpenFileName(self._toolbox, 'Select SQLite file', self.data_dir)
         file_path = answer[0]
         if not file_path:  # Cancel button clicked
             return

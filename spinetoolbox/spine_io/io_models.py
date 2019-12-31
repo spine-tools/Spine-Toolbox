@@ -23,22 +23,26 @@ from spinedb_api import (
     RelationshipClassMapping,
     ParameterMapping,
     Mapping,
-    DateTime,
-    Duration,
     ParameterValueFormatError,
-    mapping_non_pivoted_columns
+    mapping_non_pivoted_columns,
 )
-from PySide2.QtWidgets import QHeaderView, QMenu, QAction, QTableView, QPushButton, QToolButton
-from PySide2.QtCore import QModelIndex, Qt, QAbstractTableModel, QAbstractListModel, QPoint, Signal
-from PySide2.QtGui import QColor, QBrush, QRegion, QPixmap, QFont
+from PySide2.QtWidgets import QHeaderView, QMenu, QAction, QTableView, QToolButton
+from PySide2.QtCore import QModelIndex, Qt, QAbstractTableModel, QAbstractListModel, Signal
+from PySide2.QtGui import QColor, QFont
 from ..mvcmodels.minimal_table_model import MinimalTableModel
-from .io_api import TYPE_CLASS_TO_STRING, TYPE_STRING_TO_CLASS
+from .io_api import TYPE_STRING_TO_CLASS
 from .type_conversion import value_to_convert_spec, NewIntegerSequenceDateTimeConvertSpecDialog, ConvertSpec
 
 Margin = namedtuple("Margin", ("left", "right", "top", "bottom"))
 
 
-_MAPPING_COLORS = {"entity": QColor(223, 194, 125), "parameter value": QColor(1, 133, 113), "parameter extra dimension": QColor(128, 205, 193), "parameter name": QColor(128, 205, 193), "entity class": QColor(166, 97, 26)}
+_MAPPING_COLORS = {
+    "entity": QColor(223, 194, 125),
+    "parameter value": QColor(1, 133, 113),
+    "parameter extra dimension": QColor(128, 205, 193),
+    "parameter name": QColor(128, 205, 193),
+    "entity class": QColor(166, 97, 26),
+}
 _ERROR_COLOR = QColor(Qt.red)
 
 
@@ -74,7 +78,6 @@ class MappingPreviewModel(MinimalTableModel):
     columnTypesUpdated = Signal()
     rowTypesUpdated = Signal()
     mappingChanged = Signal()
-
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -168,7 +171,9 @@ class MappingPreviewModel(MinimalTableModel):
             emit_signal = self.rowTypesUpdated
             type_dict = self._row_types
         if not isinstance(section_type, ConvertSpec):
-            raise TypeError(f"section_type must be a instance of ConvertSpec, instead got {type(section_type).__name__}")
+            raise TypeError(
+                f"section_type must be a instance of ConvertSpec, instead got {type(section_type).__name__}"
+            )
         if section < 0 or section > count:
             raise ValueError(f"section must be within model data")
         type_dict[section] = section_type
@@ -199,12 +204,15 @@ class MappingPreviewModel(MinimalTableModel):
             last_pivoted_row = -1
             read_from_row = 0
 
-        if index.row() > max(last_pivoted_row, read_from_row-1):
+        if index.row() > max(last_pivoted_row, read_from_row - 1):
             if (index.row(), index.column()) in self._column_type_errors:
                 return self.data_error(index, role)
 
         if index.row() <= last_pivoted_row:
-            if index.column() not in mapping_non_pivoted_columns(self._mapping._model, self.columnCount(), self.header) and index.column() not in self._mapping.skip_columns:
+            if (
+                index.column() not in mapping_non_pivoted_columns(self._mapping._model, self.columnCount(), self.header)
+                and index.column() not in self._mapping.skip_columns
+            ):
                 if (index.row(), index.column()) in self._row_type_errors:
                     return self.data_error(index, role, orientation=Qt.Vertical)
 
@@ -226,7 +234,7 @@ class MappingPreviewModel(MinimalTableModel):
             # parameter colors
             if mapping.is_pivoted() and mapping.parameters.parameter_type != "definition":
                 # parameter values color
-                last_row = max(mapping.last_pivot_row(), mapping.read_start_row-1)
+                last_row = max(mapping.last_pivot_row(), mapping.read_start_row - 1)
                 if (
                     last_row is not None
                     and index.row() > last_row
@@ -285,7 +293,7 @@ class MappingPreviewModel(MinimalTableModel):
             if index.column() == ref:
                 if self._mapping._model.is_pivoted():
                     # only rows below pivoted rows
-                    last_row = max(self._mapping._model.last_pivot_row(), self._mapping.read_start_row-1)
+                    last_row = max(self._mapping._model.last_pivot_row(), self._mapping.read_start_row - 1)
                     if last_row is not None and index.row() > last_row:
                         return True
                 elif index.row() >= self._mapping.read_start_row:
@@ -333,7 +341,6 @@ class MappingSpecModel(QAbstractTableModel):
         if model is not None:
             self.set_mapping(model)
 
-
     @property
     def skip_columns(self):
         if self._model.skip_columns is None:
@@ -380,13 +387,13 @@ class MappingSpecModel(QAbstractTableModel):
         if self._model:
             return self._model.is_pivoted()
         return False
-    
+
     @property
     def read_start_row(self):
         if self._model:
             return self._model.read_start_row
         return 0
-    
+
     def set_read_start_row(self, row):
         if self._model:
             self._model.read_start_row = row
@@ -842,7 +849,7 @@ class HeaderWithButton(QHeaderView):
     """Class that reimplements the QHeaderView section paint event to draw a button
     that is used to display and change the type of that column or row.
     """
-    
+
     def __init__(self, orientation, parent=None):
         super(HeaderWithButton, self).__init__(orientation, parent)
         self.setHighlightSections(True)
@@ -872,16 +879,15 @@ class HeaderWithButton(QHeaderView):
         self._button_logical_index = None
         self.setMinimumSectionSize(self.minimumSectionSize() + self.widget_width())
 
-
     @property
     def display_all(self):
         return self._display_all
-    
+
     @display_all.setter
     def display_all(self, display_all):
         self._display_all = display_all
         self.viewport().update()
-    
+
     @property
     def sections_with_buttons(self):
         return self._display_sections
@@ -916,25 +922,23 @@ class HeaderWithButton(QHeaderView):
 
     def widget_width(self):
         """Width of widget
-        
+
         Returns:
             [int] -- Width of widget
         """
         if self.orientation() == Qt.Horizontal:
             return self.height()
-        else:
-            return self.sectionSize(0)
-    
+        return self.sectionSize(0)
+
     def widget_height(self):
         """Height of widget
-        
+
         Returns:
             [int] -- Height of widget
         """
         if self.orientation() == Qt.Horizontal:
             return self.height()
-        else:
-            return self.sectionSize(0)
+        return self.sectionSize(0)
 
     def mouseMoveEvent(self, mouse_event):
         """Moves the button to the correct section so that interacting with the button works.
@@ -977,7 +981,7 @@ class HeaderWithButton(QHeaderView):
 
     def _set_button_geometry(self, button, index):
         """Sets a buttons geometry depending on the index.
-        
+
         Arguments:
             button {QWidget} -- QWidget that geometry should be set
             index {int} -- logical_index to set position and geometry to.
@@ -1000,7 +1004,7 @@ class HeaderWithButton(QHeaderView):
 
     def _section_resize(self, i):
         """When a section is resized.
-        
+
         Arguments:
             i {int} -- logical index to section being resized
         """
@@ -1038,17 +1042,17 @@ class HeaderWithButton(QHeaderView):
         else:
             painter.drawPixmap(0, self.sectionViewportPosition(logical_index), rw)
 
-        # shift rect that super class should paint in to the right so it doesn't 
+        # shift rect that super class should paint in to the right so it doesn't
         # paint over the button
         rect.adjust(self.widget_width(), 0, 0, 0)
         super().paintSection(painter, rect, logical_index)
 
     def sectionSizeFromContents(self, logical_index):
         """Add the button width to the section so it displays right.
-        
+
         Arguments:
             logical_index {int} -- logical index of section
-        
+
         Returns:
             [QSize] -- Size of section
         """
@@ -1058,7 +1062,7 @@ class HeaderWithButton(QHeaderView):
 
     def _section_move(self, logical, old_visual_index, new_visual_index):
         """Section beeing moved.
-        
+
         Arguments:
             logical {int} -- logical index of section beeing moved.
             old_visual_index {int} -- old visual index of section

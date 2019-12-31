@@ -29,7 +29,6 @@ from ..config import (
     APPLICATION_PATH,
     TOOL_TYPES,
     REQUIRED_KEYS,
-    INVALID_FILENAME_CHARS,
 )
 from ..helpers import busy_effect
 from .custom_menus import AddIncludesPopupMenu, CreateMainProgramPopupMenu

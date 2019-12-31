@@ -21,7 +21,7 @@ from PySide2.QtWidgets import QWidget, QVBoxLayout, QMenu, QListWidgetItem, QErr
 from PySide2.QtCore import Signal, Qt, QItemSelectionModel, QPoint
 from .mapping_widget import MappingWidget
 from ..spine_io.io_models import MappingPreviewModel, MappingListModel
-from ..spine_io.type_conversion import value_to_convert_spec, ConvertSpec
+from ..spine_io.type_conversion import value_to_convert_spec
 
 
 class ImportPreviewWidget(QWidget):

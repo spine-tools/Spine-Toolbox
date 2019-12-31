@@ -140,6 +140,14 @@ class RootProjectItem(BaseProjectItem):
         logging.error("You can only add a category item as a child of the root item")
         return False
 
+    def custom_context_menu(self, parent, pos):
+        """See base class."""
+        raise NotImplementedError()
+
+    def apply_context_menu_action(self, parent, action):
+        """See base class."""
+        raise NotImplementedError()
+
 
 class CategoryProjectItem(BaseProjectItem):
     """Class for category project items.

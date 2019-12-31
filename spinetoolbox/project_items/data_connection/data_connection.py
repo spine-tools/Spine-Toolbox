@@ -39,7 +39,6 @@ class DataConnection(ProjectItem):
             description (str): Object description
             x (float): Initial X coordinate of item icon
             y (float): Initial Y coordinate of item icon
-            references (list): List of file references
         """
         super().__init__(toolbox, name, description, x, y)
         self.reference_model = QStandardItemModel()  # References to files
@@ -257,7 +256,7 @@ class DataConnection(ProjectItem):
         file_name = answer[0]
         if not file_name:  # Cancel button clicked
             return
-        if file_name.strip() == "":
+        if not file_name.strip():
             return
         # Check that file name has no invalid chars
         if any(True for x in file_name if x in INVALID_FILENAME_CHARS):
@@ -380,7 +379,7 @@ class DataConnection(ProjectItem):
         """see base class"""
         refs = self.file_references()
         f_list = [os.path.join(self.data_dir, f) for f in self.data_files()]
-        resources = [ProjectItemResource(self, "file", url=pathlib.Path(ref).as_uri()) for ref in (refs + f_list)]
+        resources = [ProjectItemResource(self, "file", url=pathlib.Path(ref).as_uri()) for ref in refs + f_list]
         return resources
 
     def _do_handle_dag_changed(self, resources_upstream):

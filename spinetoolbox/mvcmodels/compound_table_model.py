@@ -118,7 +118,8 @@ class CompoundTableModel(MinimalTableModel):
             self._inv_row_map[model_row_tup] = self.rowCount()
             self._row_map.append(model_row_tup)
 
-    def _row_map_for_model(self, model):
+    @staticmethod
+    def _row_map_for_model(model):
         """Returns row map for given model.
         The base class implementation just returns all model rows.
 

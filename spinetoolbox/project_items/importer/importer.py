@@ -16,8 +16,8 @@ Contains Importer project item class.
 :date:   10.6.2019
 """
 
-import sys
 import os
+import logging
 import json
 import sys
 from PySide2.QtCore import Qt, Slot, QFileInfo, QEventLoop, QProcess

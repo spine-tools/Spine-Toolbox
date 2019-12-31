@@ -237,7 +237,7 @@ class ParameterTagToolBar(QToolBar):
             button = self.widgetForAction(action)
             self.tag_button_group.addButton(button, id=len(self.db_map_ids))
             self.actions.append(action)
-            self.db_map_ids.append([(db_map, id_) for db_map, id_ in db_map_data.items()])
+            self.db_map_ids.append(list(db_map_data.items()))
         self.tag_button_group.buttonToggled["int", "bool"].connect(
             lambda i, checked: self.tag_button_toggled.emit(self.db_map_ids[i], checked)
         )
