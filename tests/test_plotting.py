@@ -43,26 +43,23 @@ def _make_pivot_model():
     db_mngr.get_db_map_for_listener.side_effect = lambda *args, **kwargs: mock_db_map
     tabular_view = DataStoreForm(db_mngr, ("sqlite://", "codename"))
     model = PivotTableModel(tabular_view)
-    data = [
-        ['1', 'int_col', '-3'],
-        ['2', 'int_col', '-1'],
-        ['3', 'int_col', '2'],
-        ['1', 'float_col', '1.1'],
-        ['2', 'float_col', '1.2'],
-        ['3', 'float_col', '1.3'],
-        ['1', 'time_series_col', '{"type": "time_series", "data": {"2019-07-10T13:00": 2.3, "2019-07-10T13:20": 5.0}}'],
-        [
+    data = {
+        ('1', 'int_col'): '-3',
+        ('2', 'int_col'): '-1',
+        ('3', 'int_col'): '2',
+        ('1', 'float_col'): '1.1',
+        ('2', 'float_col'): '1.2',
+        ('3', 'float_col'): '1.3',
+        ('1', 'time_series_col'): '{"type": "time_series", "data": {"2019-07-10T13:00": 2.3, "2019-07-10T13:20": 5.0}}',
+        (
             '2',
             'time_series_col',
-            '{"type": "time_series", "index": {"start": "2019-07-10T13:00", "resolution": "20 minutes"}, "data": [3.3, 4.0]}',
-        ],
-        ['3', 'time_series_col', '{"type": "time_series", "data": {"2019-07-10T13:00": 4.3, "2019-07-10T13:20": 3.0}}'],
-    ]
+        ): '{"type": "time_series", "index": {"start": "2019-07-10T13:00", "resolution": "20 minutes"}, "data": [3.3, 4.0]}',
+        ('3', 'time_series_col'): '{"type": "time_series", "data": {"2019-07-10T13:00": 4.3, "2019-07-10T13:20": 3.0}}',
+    }
     index_names = ['rows', 'col_types']
-    index_real_names = ['real_id', 'real_col_types']
-    index_types = [str, str]
-    model.set_data(data, index_names, index_types, index_real_names=index_real_names)
-    model.set_pivot(['rows'], ['col_types'], [], ())
+    model.reset_model(data, index_names, ['rows'], ['col_types'], [], ())
+    model.fetchMore(QModelIndex())
     return model
 
 

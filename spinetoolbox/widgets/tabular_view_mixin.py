@@ -637,10 +637,11 @@ class TabularViewMixin:
         self._check_db_map_data(db_map_data)
         if self.current_input_type != self._PARAMETER_VALUE:
             return
-        class_id_key = {"object class": "object_class_id", "relationship class": "relationship_class_id"}[
-            self.current_class_type
+        parameters = [
+            x
+            for x in db_map_data[self.db_map]
+            if (x.get("object_class_id") or x.get("relationship_class_id")) == self.current_class_id
         ]
-        parameters = [x for x in db_map_data[self.db_map] if x.get(class_id_key) == self.current_class_id]
         if not parameters:
             return
         parameter_ids = {x["id"] for x in parameters}
@@ -651,10 +652,11 @@ class TabularViewMixin:
         self._check_db_map_data(db_map_data)
         if self.current_input_type != self._PARAMETER_VALUE:
             return
-        class_id_key = {"object class": "object_class_id", "relationship class": "relationship_class_id"}[
-            self.current_class_type
+        parameter_values = [
+            x
+            for x in db_map_data[self.db_map]
+            if (x.get("object_class_id") or x.get("relationship_class_id")) == self.current_class_id
         ]
-        parameter_values = [x for x in db_map_data[self.db_map] if x.get(class_id_key) == self.current_class_id]
         if not parameter_values:
             return
         data = self.load_full_parameter_value_data(parameter_values=parameter_values, action=action)
