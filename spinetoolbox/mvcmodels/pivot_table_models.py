@@ -44,8 +44,10 @@ class PivotTableModel(QAbstractTableModel):
 
     @Slot()
     def reset_data_count(self):
+        self.layoutAboutToBeChanged.emit()
         self._data_row_count = 0
         self._data_column_count = 0
+        self.layoutChanged.emit()
 
     def canFetchMore(self, parent):
         return self._data_row_count < len(self.model.rows) or self._data_column_count < len(self.model.columns)

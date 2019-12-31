@@ -53,6 +53,12 @@ class FrozenTableModel(QAbstractItemModel):
         self._data = data
         self.endResetModel()
 
+    def clear_model(self):
+        self._headers = []
+        self.beginResetModel()
+        self._data = []
+        self.endResetModel()
+
     def rowCount(self, parent=QModelIndex()):
         if parent.isValid():
             return 0

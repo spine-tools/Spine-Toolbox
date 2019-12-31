@@ -23,6 +23,7 @@ from ..helpers import tuple_itemgetter
 class PivotModel:
     def __init__(self):
         self._data = {}  # dictionary of unpivoted data
+        self.index_values = {}  # Maps index id to a sorted set of values for that index
         self.index_ids = ()  # ids of the indexes in _data, cannot contain duplicates
         self.pivot_rows = ()  # current selected rows indexes
         self.pivot_columns = ()  # current selected columns indexes
@@ -45,13 +46,15 @@ class PivotModel:
         self.pivot_columns = None
         self.pivot_frozen = None
         self.frozen_value = None
-        self.index_ids = tuple(index_ids)
         # create data dict with keys as long as index_ids
         self._data = data
+        self.index_values = dict(zip(index_ids, zip(*data.keys())))
+        self.index_ids = tuple(index_ids)
         self.set_pivot(rows, columns, frozen, frozen_value)
 
     def clear_model(self):
         self._data = {}
+        self.index_values = {}
         self.index_ids = ()
         self.pivot_rows = ()
         self.pivot_columns = ()
@@ -66,6 +69,7 @@ class PivotModel:
 
     def add_to_model(self, data):
         self._data.update(data)
+        self.index_values = dict(zip(self.index_ids, zip(*self._data.keys())))
         old_row_count = len(self._row_data_header)
         old_column_count = len(self._column_data_header)
         self._row_data_header = self._get_unique_index_values(self.pivot_rows)
@@ -76,6 +80,7 @@ class PivotModel:
 
     def remove_from_model(self, data):
         self._data = {key: self._data[key] for key in set(self._data) - set(data)}
+        self.index_values = dict(zip(self.index_ids, zip(*self._data.keys())))
         old_row_count = len(self._row_data_header)
         old_column_count = len(self._column_data_header)
         self._row_data_header = self._get_unique_index_values(self.pivot_rows)
