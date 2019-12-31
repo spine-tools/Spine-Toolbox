@@ -149,17 +149,17 @@ class PivotTableModel(QAbstractTableModel):
 
     def headerColumnCount(self):
         """Returns number of columns occupied by header."""
-        return max(1, len(self.model.pivot_rows))
+        return max(bool(self.model.pivot_columns), len(self.model.pivot_rows))
 
     def dataRowCount(self):
         """Returns number of rows that contain actual data."""
-        if not self.model.pivot_rows:
+        if self.model.pivot_columns and not self.model.pivot_rows:
             return 1
         return self._data_row_count
 
     def dataColumnCount(self):
         """Returns number of columns that contain actual data."""
-        if not self.model.pivot_columns:
+        if self.model.pivot_rows and not self.model.pivot_columns:
             return 1
         return self._data_column_count
 

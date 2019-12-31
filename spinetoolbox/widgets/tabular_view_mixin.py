@@ -119,7 +119,7 @@ class TabularViewMixin:
 
     @staticmethod
     def _is_class_index(index, class_type):
-        """Returns whether or not the given index is a class index.
+        """Returns whether or not the given tree index is a class index.
 
         Args:
             index (QModelIndex): index from object or relationship tree
@@ -265,8 +265,8 @@ class TabularViewMixin:
         """Returns a dict containing all possible combinations of entities and parameters for the current class.
 
         Args:
-            entities (list)
-            parameter_ids (set)
+            entities (list, optional): if given, only load data for these entities
+            parameter_ids (set, optional): if given, only load data for these parameter definitions
 
         Returns:
             dict: Key is a tuple object_id, ..., parameter_id, value is None.
@@ -289,7 +289,7 @@ class TabularViewMixin:
         """Returns a dict of parameter values for the current class.
 
         Args:
-            parameter_values (list)
+            parameter_values (list, optional)
 
         Returns:
             dict: Key is a tuple object_id, ..., parameter_id, value is the parameter value.
