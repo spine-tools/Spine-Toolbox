@@ -24,7 +24,7 @@ The main entrance points to plotting are:
 """
 
 import numpy as np
-from PySide2.QtCore import Qt
+from PySide2.QtCore import QModelIndex, Qt
 from spinedb_api import from_database, ParameterValueFormatError, TimeSeries
 from .widgets.plot_widget import PlotWidget
 
@@ -85,7 +85,7 @@ def _organize_selection_to_columns(indexes):
 
 def _collect_single_column_values(model, column, rows, hints):
     """
-    Collects selected parameter values from a single column in a PivotTableModel.
+    Collects selected parameter values from a single column.
 
     The return value of this function depends on what type of data the given column contains.
     In case of plain numbers, a list of floats and a single label string are returned.
@@ -130,7 +130,7 @@ def _collect_single_column_values(model, column, rows, hints):
 
 def _collect_column_values(model, column, rows, hints):
     """
-    Collects selected parameter values from a single column in a PivotTableModel for plotting.
+    Collects selected parameter values from a single column for plotting.
 
     The return value of this function depends on what type of data the given column contains.
     In case of plain numbers, a single tuple of two lists of x and y values
@@ -157,12 +157,12 @@ def _collect_column_values(model, column, rows, hints):
     return values, labels
 
 
-def plot_pivot_column(model, column, hints):
+def plot_pivot_column(proxy_model, column, hints):
     """
     Returns a plot widget with a plot of an entire column in PivotTableModel.
 
     Args:
-        model (PivotTableModel): a pivot table model
+        proxy_model (PivotTableSortFilterProxy): a pivot table filter
         column (int): a column index to the model
         hints (PlottingHints): a helper needed for e.g. plot labels
 
@@ -170,13 +170,15 @@ def plot_pivot_column(model, column, hints):
         a PlotWidget object
     """
     plot_widget = PlotWidget()
-    values, labels = _collect_column_values(model, column, range(model.first_data_row(), model.rowCount()), hints)
+    first_data_row = proxy_model.sourceModel().first_data_row()
+    values, labels = _collect_column_values(proxy_model, column, range(first_data_row, proxy_model.rowCount()), hints)
     _add_plot_to_widget(values, labels, plot_widget)
     if len(plot_widget.canvas.axes.get_lines()) > 1:
         plot_widget.canvas.axes.legend(loc="best", fontsize="small")
-    plot_widget.canvas.axes.set_xlabel(hints.x_label(model))
+    plot_widget.canvas.axes.set_xlabel(hints.x_label(proxy_model))
     plot_lines = plot_widget.canvas.axes.get_lines()
-    plot_widget.canvas.axes.set_title(plot_lines[0].get_label())
+    if plot_lines:
+        plot_widget.canvas.axes.set_title(plot_lines[0].get_label())
     return plot_widget
 
 
@@ -306,38 +308,55 @@ class PivotTablePlottingHints(PlottingHints):
 
     def cell_label(self, model, index):
         """Returns a label for the table cell given by index."""
-        return ", ".join(model.get_key(index))
+        source_index = model.mapToSource(index)
+        return ", ".join(model.sourceModel().get_key(source_index))
 
     def column_label(self, model, column):
         """Returns a label for a table column."""
-        return ", ".join(model.get_col_key(column))
+        source_column = self._map_column_to_source(model, column)
+        return ", ".join(model.sourceModel().get_col_key(source_column))
 
     def filter_columns(self, selections, model):
         """Filters the X column from selections."""
-        x_column = model.plot_x_column
-        if x_column is None:
+        x_column = model.sourceModel().plot_x_column
+        if x_column is None or not model.filterAcceptsColumn(x_column, QModelIndex()):
             return selections
+        proxy_x_column = self._map_column_from_source(model, x_column)
         filtered = dict()
         columns = selections.keys()
         for column in columns:
-            if column != x_column:
+            if column != proxy_x_column:
                 filtered[column] = selections[column]
         return filtered
 
     def is_index_in_data(self, model, index):
         """Returns True if index is in the data portion of the table."""
-        return model.index_in_data(index)
+        return model.sourceModel().index_in_data(index)
 
     def special_x_values(self, model, column, rows):
         """Returns the values from the X column if one is designated otherwise returns None."""
-        if model.plot_x_column is not None and column != model.plot_x_column:
-            x_values, _ = _collect_single_column_values(model, model.plot_x_column, rows, self)
-            return x_values
+        x_column = model.sourceModel().plot_x_column
+        if x_column is not None and model.filterAcceptsColumn(x_column, QModelIndex()):
+            proxy_x_column = self._map_column_from_source(model, x_column)
+            if column != proxy_x_column:
+                x_values, _ = _collect_single_column_values(model, proxy_x_column, rows, self)
+                return x_values
         return None
 
     def x_label(self, model):
         """Returns the label of the X column, if available."""
-        x_column = model.plot_x_column
-        if x_column is None:
+        x_column = model.sourceModel().plot_x_column
+        if x_column is None or not model.filterAcceptsColumn(x_column, QModelIndex()):
             return ""
-        return self.column_label(model, x_column)
+        return self.column_label(model, self._map_column_from_source(model, x_column))
+
+    @staticmethod
+    def _map_column_to_source(proxy_model, proxy_column):
+        """Maps a proxy model column to source model."""
+        return proxy_model.mapToSource(proxy_model.index(0, proxy_column)).column()
+
+    @staticmethod
+    def _map_column_from_source(proxy_model, source_column):
+        """Maps a source model column to proxy model."""
+        source_index = proxy_model.sourceModel().index(0, source_column)
+        return proxy_model.mapFromSource(source_index).column()

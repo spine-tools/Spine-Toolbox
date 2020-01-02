@@ -414,7 +414,7 @@ class DataStore(ProjectItem):
         """Update Data Store tab name label. Used only when renaming project items."""
         self._properties_ui.label_ds_name.setText(self.name)
 
-    def _do_handle_dag_changed(self, resources_upstream):
+    def _do_handle_dag_changed(self, resources):
         """See base class."""
         self._update_sa_url(log_errors=False)
         if not self._sa_url:

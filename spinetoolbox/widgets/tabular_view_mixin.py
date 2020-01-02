@@ -66,7 +66,7 @@ class TabularViewMixin:
         self.ui.pivot_table.horizontalHeader().setResizeContentsPrecision(self.visible_rows)
         self.pivot_table_menu = PivotTableModelMenu(self)
 
-        self._pivot_table_horizontal_header_menu = PivotTableHorizontalHeaderMenu(self.model, self.ui.pivot_table)
+        self._pivot_table_horizontal_header_menu = PivotTableHorizontalHeaderMenu(self.proxy_model, self.ui.pivot_table)
 
     def is_value_input_type(self):
         return self.current_input_type == self._INPUT_VALUE

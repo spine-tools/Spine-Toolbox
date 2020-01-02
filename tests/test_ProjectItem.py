@@ -19,7 +19,7 @@ Unit tests for ProjectItem base class.
 import unittest
 from unittest.mock import MagicMock, NonCallableMagicMock
 from PySide2.QtWidgets import QApplication
-import spinetoolbox.resources_icons_rc # pylint: disable=unused-import
+import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
 from spinetoolbox.project_item import ProjectItem
 from .mock_helpers import clean_up_toolboxui_with_project, create_toolboxui_with_project
 

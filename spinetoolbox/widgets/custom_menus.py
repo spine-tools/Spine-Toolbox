@@ -727,16 +727,16 @@ class PivotTableModelMenu(QMenu):
 
     def plot(self):
         """Plots the selected cells in the pivot table."""
-        selected_indexes = self._get_selected_indexes()
+        selected_indexes = self._table.selectedIndexes()
         hints = PivotTablePlottingHints()
         try:
-            plot_window = plot_selection(self._source, selected_indexes, hints)
+            plot_window = plot_selection(self._proxy, selected_indexes, hints)
         except PlottingError as error:
             report_plotting_failure(error, self)
             return
         plotted_column_names = set()
         for index in selected_indexes:
-            label = hints.column_label(self._source, index.column())
+            label = hints.column_label(self._proxy, index.column())
             plotted_column_names.add(label)
         plot_window.setWindowTitle("Plot    -- {} --".format(", ".join(plotted_column_names)))
         plot_window.show()
@@ -779,13 +779,13 @@ class PivotTableHorizontalHeaderMenu(QMenu):
     A context menu for the horizontal header of a pivot table.
 
     Attributes:
-         model (PivotTableModel): a model
+         proxy_model (PivotTableSortFilterProxy): a proxy model
          parent (QWidget): a parent widget
     """
 
-    def __init__(self, model, parent=None):
+    def __init__(self, proxy_model, parent=None):
         super().__init__(parent)
-        self._model = model
+        self._proxy_model = proxy_model
         self._model_index = None
         self._plot_action = self.addAction("Plot single column")
         self._plot_action.triggered.connect(self._plot_column)
@@ -798,12 +798,12 @@ class PivotTableHorizontalHeaderMenu(QMenu):
         """Plots a single column not the selection."""
         try:
             support = PivotTablePlottingHints()
-            plot_window = plot_pivot_column(self._model, self._model_index.column(), support)
+            plot_window = plot_pivot_column(self._proxy_model, self._model_index.column(), support)
         except PlottingError as error:
             report_plotting_failure(error, self)
             return
         plot_window.setWindowTitle(
-            "Plot    -- {} --".format(support.column_label(self._model, self._model_index.column()))
+            "Plot    -- {} --".format(support.column_label(self._proxy_model, self._model_index.column()))
         )
         plot_window.show()
 
@@ -812,17 +812,19 @@ class PivotTableHorizontalHeaderMenu(QMenu):
         """Shows the context menu on the screen."""
         self.move(self.parent().mapToGlobal(pos))
         self._model_index = self.parent().indexAt(pos)
-        if self._model.index_in_top_left(self._model_index):
+        source_index = self._proxy_model.mapToSource(self._model_index)
+        if self._proxy_model.sourceModel().index_in_top_left(source_index):
             self._plot_action.setEnabled(False)
             self._set_as_X_action.setEnabled(False)
             self._set_as_X_action.setChecked(False)
         else:
             self._plot_action.setEnabled(True)
             self._set_as_X_action.setEnabled(True)
-            self._set_as_X_action.setChecked(self._model_index.column() == self._model.plot_x_column)
+            self._set_as_X_action.setChecked(source_index.column() == self._proxy_model.sourceModel().plot_x_column)
         self.show()
 
     @Slot()
     def _set_x_flag(self):
         """Sets the X flag for a column."""
-        self._model.set_plot_x_column(self._model_index.column(), self._set_as_X_action.isChecked())
+        index = self._proxy_model.mapToSource(self._model_index)
+        self._proxy_model.sourceModel().set_plot_x_column(index.column(), self._set_as_X_action.isChecked())

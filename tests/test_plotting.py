@@ -34,36 +34,37 @@ from spinetoolbox.widgets.plot_widget import PlotWidget
 from spinetoolbox.widgets.data_store_widget import DataStoreForm
 
 
-def _make_pivot_model():
+def _make_pivot_proxy_model():
     """Returns a prefilled PivotTableModel."""
     db_mngr = MagicMock()
     db_mngr.get_value.side_effect = lambda db_map, item_type, id_, field, role: id_
     mock_db_map = Mock()
     mock_db_map.codename = "codename"
     db_mngr.get_db_map_for_listener.side_effect = lambda *args, **kwargs: mock_db_map
-    tabular_view = DataStoreForm(db_mngr, ("sqlite://", "codename"))
-    model = PivotTableModel(tabular_view)
+    data_store_widget = DataStoreForm(db_mngr, ("sqlite://", "codename"))
+    model = data_store_widget.model
     data = [
-        ['1', 'int_col', '-3'],
-        ['2', 'int_col', '-1'],
-        ['3', 'int_col', '2'],
-        ['1', 'float_col', '1.1'],
-        ['2', 'float_col', '1.2'],
-        ['3', 'float_col', '1.3'],
-        ['1', 'time_series_col', '{"type": "time_series", "data": {"2019-07-10T13:00": 2.3, "2019-07-10T13:20": 5.0}}'],
+        ["1", "int_col", "-3"],
+        ["2", "int_col", "-1"],
+        ["3", "int_col", "2"],
+        ["1", "float_col", "1.1"],
+        ["2", "float_col", "1.2"],
+        ["3", "float_col", "1.3"],
+        ["1", "time_series_col", '{"type": "time_series", "data": {"2019-07-10T13:00": 2.3, "2019-07-10T13:20": 5.0}}'],
         [
-            '2',
-            'time_series_col',
+            "2",
+            "time_series_col",
             '{"type": "time_series", "index": {"start": "2019-07-10T13:00", "resolution": "20 minutes"}, "data": [3.3, 4.0]}',
         ],
-        ['3', 'time_series_col', '{"type": "time_series", "data": {"2019-07-10T13:00": 4.3, "2019-07-10T13:20": 3.0}}'],
+        ["3", "time_series_col", '{"type": "time_series", "data": {"2019-07-10T13:00": 4.3, "2019-07-10T13:20": 3.0}}'],
     ]
-    index_names = ['rows', 'col_types']
-    index_real_names = ['real_id', 'real_col_types']
+    index_names = ["rows", "col_types"]
+    index_real_names = ["real_id", "real_col_types"]
+    data_store_widget.original_index_names = dict(zip(index_names, index_real_names))
     index_types = [str, str]
     model.set_data(data, index_names, index_types, index_real_names=index_real_names)
-    model.set_pivot(['rows'], ['col_types'], [], ())
-    return model
+    model.set_pivot(["rows"], ["col_types"], [], ())
+    return data_store_widget.proxy_model
 
 
 class _MockParameterModel(QAbstractTableModel):
@@ -112,7 +113,7 @@ class TestPlotting(unittest.TestCase):
             QApplication()
 
     def test_plot_pivot_column_float_type(self):
-        model = _make_pivot_model()
+        model = _make_pivot_proxy_model()
         support = PivotTablePlottingHints()
         plot_widget = plot_pivot_column(model, 1, support)
         lines = plot_widget.canvas.axes.get_lines()
@@ -120,7 +121,7 @@ class TestPlotting(unittest.TestCase):
         self.assertTrue(all(lines[0].get_ydata(orig=True) == [1.1, 1.2, 1.3]))
 
     def test_plot_pivot_column_int_type(self):
-        model = _make_pivot_model()
+        model = _make_pivot_proxy_model()
         support = PivotTablePlottingHints()
         plot_widget = plot_pivot_column(model, 2, support)
         lines = plot_widget.canvas.axes.get_lines()
@@ -128,7 +129,7 @@ class TestPlotting(unittest.TestCase):
         self.assertTrue(all(lines[0].get_ydata(orig=True) == [-3.0, -1.0, 2.0]))
 
     def test_plot_pivot_column_time_series_type(self):
-        model = _make_pivot_model()
+        model = _make_pivot_proxy_model()
         support = PivotTablePlottingHints()
         plot_widget = plot_pivot_column(model, 3, support)
         lines = plot_widget.canvas.axes.get_lines()
@@ -137,8 +138,26 @@ class TestPlotting(unittest.TestCase):
         self.assertTrue(all(lines[1].get_ydata(orig=True) == [3.3, 4.0]))
         self.assertTrue(all(lines[2].get_ydata(orig=True) == [4.3, 3.0]))
 
+    def test_plot_pivot_column_with_row_filtering(self):
+        model = _make_pivot_proxy_model()
+        model.set_filter("rows", {"1", "3"})
+        support = PivotTablePlottingHints()
+        plot_widget = plot_pivot_column(model, 1, support)
+        lines = plot_widget.canvas.axes.get_lines()
+        self.assertEqual(len(lines), 1)
+        self.assertTrue(all(lines[0].get_ydata(orig=True) == [1.1, 1.3]))
+
+    def test_plot_pivot_column_with_column_filtering(self):
+        model = _make_pivot_proxy_model()
+        model.set_filter("col_types", {"int_col"})
+        support = PivotTablePlottingHints()
+        plot_widget = plot_pivot_column(model, 1, support)
+        lines = plot_widget.canvas.axes.get_lines()
+        self.assertEqual(len(lines), 1)
+        self.assertTrue(all(lines[0].get_ydata(orig=True) == [-3.0, -1.0, 2.0]))
+
     def test_plot_pivot_selection(self):
-        model = _make_pivot_model()
+        model = _make_pivot_proxy_model()
         selected_indexes = list()
         for row in range(2, 5):
             for column in range(1, 3):
@@ -151,13 +170,24 @@ class TestPlotting(unittest.TestCase):
         self.assertTrue(all(lines[1].get_ydata(orig=True) == [-3.0, -1.0, 2.0]))
 
     def test_plot_pivot_column_with_x_column(self):
-        model = _make_pivot_model()
-        model.set_plot_x_column(1, True)
+        model = _make_pivot_proxy_model()
+        model.sourceModel().set_plot_x_column(1, True)
         support = PivotTablePlottingHints()
         plot_widget = plot_pivot_column(model, 2, support)
         lines = plot_widget.canvas.axes.get_lines()
         self.assertEqual(len(lines), 1)
         self.assertTrue(all(lines[0].get_xdata(orig=True) == [1.1, 1.2, 1.3]))
+        self.assertTrue(all(lines[0].get_ydata(orig=True) == [-3.0, -1.0, 2.0]))
+
+    def test_plot_pivot_column_when_x_column_hidden(self):
+        model = _make_pivot_proxy_model()
+        model.sourceModel().set_plot_x_column(1, True)
+        model.set_filter("col_types", {"int_col"})
+        support = PivotTablePlottingHints()
+        plot_widget = plot_pivot_column(model, 1, support)
+        lines = plot_widget.canvas.axes.get_lines()
+        self.assertEqual(len(lines), 1)
+        self.assertTrue(all(lines[0].get_xdata(orig=True) == [1.0, 2.0, 3.0]))
         self.assertTrue(all(lines[0].get_ydata(orig=True) == [-3.0, -1.0, 2.0]))
 
     def test_plot_tree_view_selection_of_floats(self):
