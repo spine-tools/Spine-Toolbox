@@ -305,11 +305,11 @@ class PivotTablePlottingHints(PlottingHints):
 
     def cell_label(self, model, index):
         """Returns a label for the table cell given by index."""
-        return model.value_name(index)
+        return model.sourceModel().value_name(index)
 
     def column_label(self, model, column):
         """Returns a label for a table column."""
-        return model.column_name(column)
+        return model.sourceModel().column_name(column)
 
     def filter_columns(self, selections, model):
         """Filters the X column from selections."""

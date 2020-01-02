@@ -29,7 +29,6 @@ from spinetoolbox.plotting import (
     ParameterTablePlottingHints,
     PivotTablePlottingHints,
 )
-from spinetoolbox.mvcmodels.pivot_table_models import PivotTableModel
 from spinetoolbox.widgets.plot_widget import PlotWidget
 from spinetoolbox.widgets.data_store_widget import DataStoreForm
 
@@ -42,6 +41,7 @@ def _make_pivot_proxy_model():
     mock_db_map.codename = "codename"
     db_mngr.get_db_map_for_listener.side_effect = lambda *args, **kwargs: mock_db_map
     data_store_widget = DataStoreForm(db_mngr, ("sqlite://", "codename"))
+    data_store_widget.create_header_widget = lambda *args, **kwargs: None
     model = data_store_widget.pivot_table_model
     data = {
         ('1', 'int_col'): '-3',
@@ -57,8 +57,8 @@ def _make_pivot_proxy_model():
         ): '{"type": "time_series", "index": {"start": "2019-07-10T13:00", "resolution": "20 minutes"}, "data": [3.3, 4.0]}',
         ('3', 'time_series_col'): '{"type": "time_series", "data": {"2019-07-10T13:00": 4.3, "2019-07-10T13:20": 3.0}}',
     }
-    index_names = ['rows', 'col_types']
-    model.reset_model(data, index_names, ['rows'], ['col_types'], [], ())
+    index_ids = ['rows', 'col_types']
+    model.reset_model(data, index_ids, ['rows'], ['col_types'], [], ())
     model.fetchMore(QModelIndex())
     return data_store_widget.pivot_table_proxy
 
