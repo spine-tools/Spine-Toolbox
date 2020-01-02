@@ -23,17 +23,16 @@ import networkx as nx
 
 
 class DirectedGraphHandler(QObject):
-    """Class for manipulating graphs according to user's actions.
-
-    Args:
-        toolbox (ToolboxUI): QMainWindow instance
-    """
+    """Class for manipulating graphs according to user's actions."""
 
     dag_simulation_requested = Signal("QVariant")
 
     def __init__(self, toolbox):
-        """Class constructor."""
-        QObject.__init__(self)
+        """
+        Args:
+            toolbox (ToolboxUI): ToolboxUI instance
+        """
+        super().__init__()
         self._toolbox = toolbox
         self._dags = list()
 
@@ -46,6 +45,7 @@ class DirectedGraphHandler(QObject):
 
         Args:
             dag (DiGraph): Graph to add
+            request_simulation (bool): if True, emits dag_simulation_requested
         """
         self._dags.append(dag)
         if request_simulation:
