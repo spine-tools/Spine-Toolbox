@@ -133,10 +133,7 @@ class PivotModel:
             result = set(index_getter(k) for k in self._data if frozen_getter(k) == self.frozen_value)
         else:
             result = set(index_getter(k) for k in self._data)
-        try:
-            result.remove((None,))
-        except KeyError:
-            pass
+        result.discard((None,))
         return sorted(result)
 
     def set_pivot(self, rows, columns, frozen, frozen_value):

@@ -16,6 +16,7 @@ Provides FilterCheckboxListModel for FilterWidget.
 :date:   1.11.2018
 """
 
+import bisect
 from PySide2.QtCore import Qt, QModelIndex, QAbstractListModel
 
 
@@ -31,8 +32,8 @@ class FilterCheckboxListModel(QAbstractListModel):
         self.db_mngr = parent.db_mngr
         self.db_map = parent.db_map
         self.item_type = item_type
-        self._data = []
-        self._data_set = set()
+        self._id_data = []
+        self._id_data_set = set()
         self._all_selected = True
         self._empty_selected = True
         self._selected = set()
@@ -53,7 +54,7 @@ class FilterCheckboxListModel(QAbstractListModel):
             self._index_offset = 1
 
     def reset_selection(self):
-        self._selected = set(self._data_set)
+        self._selected = self._id_data_set.copy()
         self._all_selected = True
         self._empty_selected = True
 
@@ -66,9 +67,9 @@ class FilterCheckboxListModel(QAbstractListModel):
             self._empty_selected = False
         else:
             if self._is_filtered:
-                self._selected_filtered = set(self._data[i] for i in self._filter_index)
+                self._selected_filtered = set(self._id_data[i] for i in self._filter_index)
             else:
-                self._selected = set(self._data_set)
+                self._selected = self._id_data_set.copy()
             self._empty_selected = True
         self._all_selected = not self._all_selected
         self.dataChanged.emit(self.index(0, 0), self.index(self.rowCount(), 0), [Qt.CheckStateRole])
@@ -76,7 +77,7 @@ class FilterCheckboxListModel(QAbstractListModel):
     def _is_all_selected(self):
         if self._is_filtered:
             return len(self._selected_filtered) == len(self._filter_index)
-        return len(self._selected) == len(self._data_set) and self._empty_selected
+        return len(self._selected) == len(self._id_data_set) and self._empty_selected
 
     def rowCount(self, parent=QModelIndex()):
         if self._is_filtered:
@@ -84,7 +85,7 @@ class FilterCheckboxListModel(QAbstractListModel):
                 return len(self._filter_index) + self._index_offset
             # no filtered values
             return 0
-        return len(self._data) + self._index_offset
+        return len(self._id_data) + self._index_offset
 
     def data(self, index, role=Qt.DisplayRole):
         if not index.isValid():
@@ -107,13 +108,16 @@ class FilterCheckboxListModel(QAbstractListModel):
             selected = self._selected
         if role == Qt.DisplayRole:
             if row >= len(action_rows):
-                name_key = {"object": "name", "parameter definition": "parameter_name"}[self.item_type]
-                return self.db_mngr.get_item(self.db_map, self.item_type, self._data[i])[name_key]
+                return self._item_name(self._id_data[i])
             return action_rows[row]
         if role == Qt.CheckStateRole:
             if row < len(action_state):
                 return Qt.Checked if action_state[row] else Qt.Unchecked
-            return Qt.Checked if self._data[i] in selected else Qt.Unchecked
+            return Qt.Checked if self._id_data[i] in selected else Qt.Unchecked
+
+    def _item_name(self, id_):
+        name_key = {"object": "name", "parameter definition": "parameter_name"}[self.item_type]
+        return self.db_mngr.get_item(self.db_map, self.item_type, id_)[name_key]
 
     def click_index(self, index):
         if index.row() == 0:
@@ -125,30 +129,28 @@ class FilterCheckboxListModel(QAbstractListModel):
                 self._empty_selected = not self._empty_selected
             else:
                 if self._is_filtered:
-                    f_i = self._filter_index[index.row() - self._index_offset]
-                    item = self._data[f_i]
+                    i = self._filter_index[index.row() - self._index_offset]
+                    item = self._id_data[i]
                     if item in self._selected_filtered:
                         self._selected_filtered.discard(item)
-                        self._all_selected = False
                     else:
                         self._selected_filtered.add(item)
                 else:
-                    item = self._data[index.row() - self._index_offset]
+                    item = self._id_data[index.row() - self._index_offset]
                     if item in self._selected:
                         self._selected.discard(item)
-                        self._all_selected = False
                     else:
                         self._selected.add(item)
             self._all_selected = self._is_all_selected()
             self.dataChanged.emit(index, index, [Qt.CheckStateRole])
             self.dataChanged.emit(0, 0, [Qt.CheckStateRole])
 
-    def set_list(self, data, all_selected=True):
+    def set_list(self, id_data, all_selected=True):
         self.beginResetModel()
-        self._data_set = set(data)
-        self._data = sorted(data)
+        self._id_data_set = set(id_data)
+        self._id_data = sorted(self._id_data_set)
         if all_selected:
-            self._selected = set(self._data_set)
+            self._selected = self._id_data_set.copy()
             self._all_selected = True
             self._empty_selected = True
         else:
@@ -160,26 +162,26 @@ class FilterCheckboxListModel(QAbstractListModel):
 
     def set_selected(self, selected, select_empty=None):
         self.beginResetModel()
-        self._selected = self._data_set.intersection(selected)
+        self._selected = self._id_data_set.intersection(selected)
         if select_empty is not None:
             self._empty_selected = select_empty
         self._all_selected = self._is_all_selected()
         self.endResetModel()
 
     def get_selected(self):
-        return set(self._selected)
+        return self._selected.copy()
 
     def get_not_selected(self):
         if self._all_selected:
             return set()
-        return self._data_set.difference(self._selected)
+        return self._id_data_set.difference(self._selected)
 
     def set_filter(self, search_for):
         if search_for and (isinstance(search_for, str) and not search_for.isspace()):
             self._select_all_str = '(Select all filtered)'
             self._list_filter = search_for
-            self._filter_index = [i for i in range(len(self._data)) if search_for in str(self._data[i])]
-            self._selected_filtered = set(self._data[i] for i in self._filter_index)
+            self._filter_index = [i for i, id_ in enumerate(self._id_data) if self._list_filter in self._item_name(id_)]
+            self._selected_filtered = set(self._id_data[i] for i in self._filter_index)
             self._add_to_selection = False
             self.beginResetModel()
             self._is_filtered = True
@@ -205,7 +207,7 @@ class FilterCheckboxListModel(QAbstractListModel):
             self._selected.update(self._selected_filtered)
             # remove unselected
             self._selected.difference_update(
-                set(self._data[i] for i in self._filter_index if self._data[i] not in self._selected_filtered)
+                set(self._id_data[i] for i in self._filter_index if self._id_data[i] not in self._selected_filtered)
             )
         self.remove_filter()
 
@@ -225,3 +227,37 @@ class FilterCheckboxListModel(QAbstractListModel):
         self._selected_filtered = set()
         self._all_selected = self._is_all_selected()
         self.endResetModel()
+
+    def add_items(self, ids, selected=True):
+        ids = set(ids) - self._id_data_set
+        if not ids:
+            return
+        for id_ in ids:
+            k = bisect.bisect_left(self._id_data, id_)
+            self.beginInsertRows(self.index(0, 0), k, k)
+            self._id_data.insert(k, id_)
+            self._id_data_set.update(ids)
+            if selected:
+                self._selected.update(ids)
+                if self._is_filtered:
+                    self._selected_filtered.update(ids)
+            self.endInsertRows()
+        if self._is_filtered:
+            self._filter_index = [i for i, id_ in enumerate(self._id_data) if self._list_filter in self._item_name(id_)]
+        self._all_selected = self._is_all_selected()
+
+    def remove_items(self, ids):
+        ids = set(ids)
+        if not ids.intersection(self._id_data_set):
+            return
+        for k, id_ in reversed(list(enumerate(self._id_data))):
+            if id_ in ids:
+                self.beginRemoveRows(self.index(0, 0), k, k)
+                self._id_data.pop(k)
+                self.endRemoveRows()
+        self._id_data_set.difference_update(ids)
+        self._selected.difference_update(ids)
+        if self._is_filtered:
+            self._filter_index = [i for i, id_ in enumerate(self._id_data) if self._list_filter in self._item_name(id_)]
+            self._selected_filtered.difference_update(ids)
+        self._all_selected = self._is_all_selected()

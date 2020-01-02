@@ -553,6 +553,14 @@ class FilterMenu(QMenu):
     def set_filter_list(self, data):
         self._filter.set_filter_list(data)
 
+    def add_items_to_filter_list(self, items):
+        self._filter._filter_model.add_items(items)
+        self._filter.save_state()
+
+    def remove_items_from_filter_list(self, items):
+        self._filter._filter_model.remove_items(items)
+        self._filter.save_state()
+
     def _clear_filter(self):
         self._filter.clear_filter()
         self._change_filter()

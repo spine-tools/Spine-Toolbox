@@ -433,7 +433,9 @@ class TabularViewMixin:
         if identifier not in self.filter_menus:
             item_type = "parameter definition" if identifier == self._PARAM_INDEX_ID else "object"
             self.filter_menus[identifier] = menu = FilterMenu(self, identifier, item_type)
-            menu.set_filter_list(sorted(set(self.pivot_table_model.model.index_values.get(identifier, []))))
+            index_values = set(self.pivot_table_model.model.index_values.get(identifier, []))
+            index_values.discard(None)
+            menu.set_filter_list(index_values)
             menu.filterChanged.connect(self.change_filter)
         return self.filter_menus[identifier]
 
@@ -594,14 +596,19 @@ class TabularViewMixin:
             d.setdefault(get_class_id(item), []).append(item)
         return d
 
-    def modify_pivot_table_model(self, data, action):
+    def receive_data_added_or_removed(self, data, action):
         if action == "add":
             self.pivot_table_model.add_to_model(data)
         elif action == "remove":
             self.pivot_table_model.remove_from_model(data)
-        self.reload_frozen_table()
         for identifier, menu in self.filter_menus.items():
-            menu.set_filter_list(sorted(set(self.pivot_table_model.model.index_values.get(identifier, []))))
+            current = set(self.pivot_table_model.model.index_values.get(identifier, []))
+            previous = menu._filter._filter_model._id_data_set
+            if action == "add":
+                menu.add_items_to_filter_list(list(current - previous))
+            elif action == "remove":
+                menu.remove_items_from_filter_list(list(previous - current))
+        self.reload_frozen_table()
 
     def receive_objects_added_or_removed(self, db_map_data, action):
         self._check_db_map_data(db_map_data)
@@ -610,13 +617,13 @@ class TabularViewMixin:
             if not set(objects_per_class.keys()).intersection(self.current_object_class_id_list()):
                 return
             data = self.load_empty_relationship_data(objects_per_class=objects_per_class)
-            self.modify_pivot_table_model(data, action)
+            self.receive_data_added_or_removed(data, action)
         elif self.current_input_type == self._PARAMETER_VALUE and self.current_class_type == "object class":
             objects = [x for x in db_map_data[self.db_map] if x["class_id"] == self.current_class_id]
             if not objects:
                 return
             data = self.load_empty_parameter_value_data(entities=objects)
-            self.modify_pivot_table_model(data, action)
+            self.receive_data_added_or_removed(data, action)
 
     def receive_relationships_added_or_removed(self, db_map_data, action):
         self._check_db_map_data(db_map_data)
@@ -631,7 +638,7 @@ class TabularViewMixin:
             self.refresh_table_view(self.ui.pivot_table)
         elif self.current_input_type == self._PARAMETER_VALUE:
             data = self.load_empty_parameter_value_data(relationships)
-            self.modify_pivot_table_model(data, action)
+            self.receive_data_added_or_removed(data, action)
 
     def receive_parameter_definitions_added_or_removed(self, db_map_data, action):
         self._check_db_map_data(db_map_data)
@@ -646,7 +653,7 @@ class TabularViewMixin:
             return
         parameter_ids = {x["id"] for x in parameters}
         data = self.load_empty_parameter_value_data(parameter_ids=parameter_ids)
-        self.modify_pivot_table_model(data, action)
+        self.receive_data_added_or_removed(data, action)
 
     def receive_parameter_values_added_or_removed(self, db_map_data, action):
         self._check_db_map_data(db_map_data)
