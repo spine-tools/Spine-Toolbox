@@ -10,20 +10,27 @@
 ######################################################################################################################
 
 """
-Contains TableModel class.
+Contains FrozenTableModel class.
 
-:authors: M. Marin (KTH)
+:author: P. Vennström (VTT)
 :date:   24.9.2019
 """
 
 from PySide2.QtCore import Qt, QModelIndex, QAbstractItemModel
 
 
-class TableModel(QAbstractItemModel):
+class FrozenTableModel(QAbstractItemModel):
     """Used by custom_qtableview.FrozenTableView"""
 
-    def __init__(self, headers=None, data=None):
-        super(TableModel, self).__init__()
+    def __init__(self, parent, headers=None, data=None):
+        """
+        Args:
+            parent (TabularViewMixin)
+        """
+        super().__init__()
+        self._parent = parent
+        self.db_mngr = parent.db_mngr
+        self.db_map = parent.db_map
         if headers is None:
             headers = list()
         if data is None:
@@ -37,16 +44,20 @@ class TableModel(QAbstractItemModel):
     def index(self, row, column, parent=QModelIndex()):
         return self.createIndex(row, column, parent)
 
-    def set_data(self, data, headers):
+    def reset_model(self, data, headers):
         if data and len(data[0]) != len(headers):
             raise ValueError("'data[0]' must be same length as 'headers'")
+        self._headers = list(headers)
+        data = [self._headers] + data
         self.beginResetModel()
         self._data = data
-        self._headers = headers
         self.endResetModel()
-        top_left = self.index(0, 0)
-        bottom_right = self.index(self.rowCount(), self.columnCount())
-        self.dataChanged.emit(top_left, bottom_right)
+
+    def clear_model(self):
+        self._headers = []
+        self.beginResetModel()
+        self._data = []
+        self.endResetModel()
 
     def rowCount(self, parent=QModelIndex()):
         if parent.isValid():
@@ -58,14 +69,20 @@ class TableModel(QAbstractItemModel):
             return 0
         return len(self._headers)
 
-    def headerData(self, section, orientation, role):
-        if role == Qt.DisplayRole and orientation == Qt.Horizontal:
-            return self._headers[section]
-
     def row(self, index):
         if index.isValid():
             return self._data[index.row()]
 
     def data(self, index, role):
         if role == Qt.DisplayRole:
-            return self._data[index.row()][index.column()]
+            id_ = self._data[index.row()][index.column()]
+            if index.row() == 0:
+                return id_
+            index_id = self._data[0][index.column()]
+            if index_id == -1:
+                return self.db_mngr.get_item(self.db_map, "parameter definition", id_)["parameter_name"]
+            return self.db_mngr.get_item(self.db_map, "object", id_)["name"]
+
+    @property
+    def headers(self):
+        return self._headers

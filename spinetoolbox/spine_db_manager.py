@@ -330,17 +330,7 @@ class SpineDBManager(QObject):
             lambda db_map_data: self.cache_items("parameter definition", db_map_data)
         )
         self.parameter_values_added.connect(lambda db_map_data: self.cache_items("parameter value", db_map_data))
-        # Remove from cache
-        self.object_classes_removed.connect(lambda db_map_data: self.uncache_items("object class", db_map_data))
-        self.objects_removed.connect(lambda db_map_data: self.uncache_items("object", db_map_data))
-        self.relationship_classes_removed.connect(
-            lambda db_map_data: self.uncache_items("relationship class", db_map_data)
-        )
-        self.relationships_removed.connect(lambda db_map_data: self.uncache_items("relationship", db_map_data))
-        self.parameter_definitions_removed.connect(
-            lambda db_map_data: self.uncache_items("parameter definition", db_map_data)
-        )
-        self.parameter_values_removed.connect(lambda db_map_data: self.uncache_items("parameter value", db_map_data))
+
         # Update in cache
         self.object_classes_updated.connect(lambda db_map_data: self.cache_items("object class", db_map_data))
         self.objects_updated.connect(lambda db_map_data: self.cache_items("object", db_map_data))
@@ -388,6 +378,17 @@ class SpineDBManager(QObject):
         self.parameter_value_lists_removed.connect(self.cascade_refresh_parameter_definitions_by_value_list)
         self.parameter_tags_updated.connect(self.cascade_refresh_parameter_definitions_by_tag)
         self.parameter_tags_removed.connect(self.cascade_refresh_parameter_definitions_by_tag)
+        # Remove from cache (last, because of how cascade removal works at the moment)
+        self.object_classes_removed.connect(lambda db_map_data: self.uncache_items("object class", db_map_data))
+        self.objects_removed.connect(lambda db_map_data: self.uncache_items("object", db_map_data))
+        self.relationship_classes_removed.connect(
+            lambda db_map_data: self.uncache_items("relationship class", db_map_data)
+        )
+        self.relationships_removed.connect(lambda db_map_data: self.uncache_items("relationship", db_map_data))
+        self.parameter_definitions_removed.connect(
+            lambda db_map_data: self.uncache_items("parameter definition", db_map_data)
+        )
+        self.parameter_values_removed.connect(lambda db_map_data: self.uncache_items("parameter value", db_map_data))
         # Do this last, so cache is ready when listeners receive signals
         self.signaller.connect_signals()
 

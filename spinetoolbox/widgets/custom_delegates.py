@@ -109,6 +109,7 @@ class CheckBoxDelegate(QItemDelegate):
     def __init__(self, parent, centered=True):
         super().__init__(parent)
         self._centered = centered
+        self._checkbox_pressed = None
 
     def createEditor(self, parent, option, index):
         """Important, otherwise an editor is created if the user clicks in this cell.
@@ -145,10 +146,11 @@ class CheckBoxDelegate(QItemDelegate):
         if event.type() == QEvent.MouseButtonDblClick:
             return True
         if event.type() == QEvent.MouseButtonPress:
-            checkbox_rect = self.get_checkbox_rect(option)
-            if checkbox_rect.contains(event.pos()):
-                # Change the checkbox-state
-                self.data_committed.emit(index)
+            self._checkbox_pressed = self.get_checkbox_rect(option).contains(event.pos())
+        if event.type() == QEvent.MouseButtonPress:
+            if self._checkbox_pressed and self.get_checkbox_rect(option).contains(event.pos()):
+                self._checkbox_pressed = False
+                self.data_committed.emit(index, not index.data(Qt.EditRole))
                 return True
         return False
 
@@ -179,30 +181,30 @@ class PivotTableDelegate(CheckBoxDelegate):
         """Send signal."""
         self.data_committed.emit(index, editor.data())
 
-    def _is_set_index(self, index):
-        return not self.parent().is_value_input_type() and self.parent().model.index_in_data(index)
+    def _is_entity_index(self, index):
+        return not self.parent().is_value_input_type() and index.model().sourceModel().index_in_data(index)
 
     def paint(self, painter, option, index):
-        if self._is_set_index(index):
+        if self._is_entity_index(index):
             super().paint(painter, option, index)
         else:
             QItemDelegate.paint(self, painter, option, index)
 
     def editorEvent(self, event, model, option, index):
-        if self._is_set_index(index):
+        if self._is_entity_index(index):
             return super().editorEvent(event, model, option, index)
         return QItemDelegate.editorEvent(self, event, model, option, index)
 
     def createEditor(self, parent, option, index):
-        if self._is_set_index(index):
+        if self._is_entity_index(index):
             return super().createEditor(parent, option, index)
-        if self.parent().model.index_in_data(index):
+        if self.parent().pivot_table_model.index_in_data(index):
             try:
                 value = from_database(index.data(role=Qt.EditRole))
             except ParameterValueFormatError:
                 value = None
             if isinstance(value, (DateTime, Duration, TimePattern, TimeSeries)) or value is None:
-                value_name = ", ".join(index.model().sourceModel().get_key(index))
+                value_name = index.model().sourceModel().value_name(index)  # FIXME: get the actual name
                 self.parameter_value_editor_requested.emit(index, value_name, value)
                 return None
         return CustomLineEditor(parent)

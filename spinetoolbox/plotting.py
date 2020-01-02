@@ -76,10 +76,7 @@ def _organize_selection_to_columns(indexes):
     """Organizes a list of model indexes into a dictionary of {column: (rows)} entries."""
     selections = dict()
     for index in indexes:
-        column = index.column()
-        if column not in selections:
-            selections[column] = set()
-        selections[column].add(index.row())
+        selections.setdefault(index.column(), set()).add(index.row())
     return selections
 
 
@@ -308,13 +305,11 @@ class PivotTablePlottingHints(PlottingHints):
 
     def cell_label(self, model, index):
         """Returns a label for the table cell given by index."""
-        source_index = model.mapToSource(index)
-        return ", ".join(model.sourceModel().get_key(source_index))
+        return model.value_name(index)
 
     def column_label(self, model, column):
         """Returns a label for a table column."""
-        source_column = self._map_column_to_source(model, column)
-        return ", ".join(model.sourceModel().get_col_key(source_column))
+        return model.column_name(column)
 
     def filter_columns(self, selections, model):
         """Filters the X column from selections."""
