@@ -1283,11 +1283,6 @@
    <header>spinetoolbox/widgets/custom_qtreeview.h</header>
   </customwidget>
   <customwidget>
-   <class>PivotTableView</class>
-   <extends>QTableView</extends>
-   <header>spinetoolbox/widgets/pivot_table_view.h</header>
-  </customwidget>
-  <customwidget>
    <class>FrozenTableView</class>
    <extends>QTableView</extends>
    <header>spinetoolbox/widgets/frozen_table_view.h</header>
@@ -1296,6 +1291,11 @@
    <class>StickySelectionEntityTreeView</class>
    <extends>QTreeView</extends>
    <header>spinetoolbox/widgets/custom_qtreeview.h</header>
+  </customwidget>
+  <customwidget>
+   <class>PivotTableView</class>
+   <extends>QTableView</extends>
+   <header>spinetoolbox/widgets/custom_qtableview.h</header>
   </customwidget>
  </customwidgets>
  <tabstops>

@@ -25,6 +25,7 @@ from PySide2.QtCore import Qt, Signal, Slot, QItemSelectionModel, QPoint
 from PySide2.QtGui import QKeySequence
 from ..mvcmodels.auto_filter_menu_model import AutoFilterMenuValueItemModel, AutoFilterMenuAllItemModel
 from ..widgets.custom_qlistview import AutoFilterMenuView
+from ..widgets.pivot_table_header_view import PivotTableHeaderView
 from ..helpers import busy_effect
 
 
@@ -206,6 +207,23 @@ class CopyPasteTableView(QTableView):
                     values.append(value)
         self.model().batch_set_data(indexes, values)
         return True
+
+
+class PivotTableView(CopyPasteTableView):
+    """Custom QTableView class with pivot capabilities.
+
+    Attributes:
+        parent (QWidget): The parent of this view
+    """
+
+    def __init__(self, parent=None):
+        """Initialize the class."""
+        super().__init__(parent)
+        h_header = PivotTableHeaderView(Qt.Horizontal, "columns", self)
+        v_header = PivotTableHeaderView(Qt.Vertical, "rows", self)
+        self.setHorizontalHeader(h_header)
+        self.setVerticalHeader(v_header)
+        h_header.setContextMenuPolicy(Qt.CustomContextMenu)
 
 
 class AutoFilterMenu(QMenu):

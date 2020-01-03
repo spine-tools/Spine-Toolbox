@@ -69,12 +69,14 @@ class ParameterViewMixin:
         self.ui.tableView_object_parameter_definition.setModel(self.object_parameter_definition_model)
         self.ui.tableView_relationship_parameter_definition.setModel(self.relationship_parameter_definition_model)
         # Others
-        for view in (
-            self.ui.tableView_object_parameter_value,
-            self.ui.tableView_relationship_parameter_value,
+        views = [
             self.ui.tableView_object_parameter_definition,
+            self.ui.tableView_object_parameter_value,
             self.ui.tableView_relationship_parameter_definition,
-        ):
+            self.ui.tableView_relationship_parameter_value,
+        ]
+        self._focusable_childs += views
+        for view in views:
             view.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
             view.verticalHeader().setDefaultSectionSize(self.default_row_height)
             view.horizontalHeader().setResizeContentsPrecision(self.visible_rows)

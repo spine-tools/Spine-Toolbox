@@ -57,10 +57,10 @@ class TabularViewMixin:
         self.ui.frozen_table.verticalHeader().setDefaultSectionSize(self.default_row_height)
         self.ui.pivot_table.horizontalHeader().setResizeContentsPrecision(self.visible_rows)
         self.pivot_table_menu = PivotTableModelMenu(self)
-
         self._pivot_table_horizontal_header_menu = PivotTableHorizontalHeaderMenu(
             self.pivot_table_proxy, self.ui.pivot_table
         )
+        self._focusable_childs.append(self.ui.pivot_table)
 
     def setup_delegates(self):
         """Sets delegates for tables."""
@@ -96,6 +96,12 @@ class TabularViewMixin:
         self.ui.comboBox_pivot_table_input_type.currentTextChanged.connect(self.reload_pivot_table)
         self.ui.dockWidget_pivot_table.visibilityChanged.connect(self._handle_pivot_table_visibility_changed)
         self.ui.dockWidget_frozen_table.visibilityChanged.connect(self._handle_frozen_table_visibility_changed)
+        self.ui.pivot_table.selectionModel().selectionChanged.connect(self._handle_pivot_table_selection_changed)
+
+    @Slot("QItemSelection", "QItemSelection")
+    def _handle_pivot_table_selection_changed(self, selected, deselected):
+        """Accepts selection."""
+        self._accept_selection(self.ui.pivot_table)
 
     def is_value_input_type(self):
         return self.current_input_type == self._PARAMETER_VALUE

@@ -93,6 +93,7 @@ class DataStoreFormBase(QMainWindow):
         self.visible_rows = int(max_screen_height / self.default_row_height)
         self._selection_source = None
         self._selection_locked = False
+        self._focusable_childs = [self.ui.treeView_parameter_value_list]
         self.settings_group = 'treeViewWidget'
 
     def add_toggle_view_actions(self):
@@ -187,13 +188,7 @@ class DataStoreFormBase(QMainWindow):
         self.ui.actionPaste.setEnabled(focus_widget is not None)
 
     def _find_focus_child(self):
-        for child in (
-            self.ui.tableView_object_parameter_definition,
-            self.ui.tableView_object_parameter_value,
-            self.ui.tableView_relationship_parameter_definition,
-            self.ui.tableView_relationship_parameter_value,
-            self.ui.treeView_parameter_value_list,
-        ):
+        for child in self._focusable_childs:
             if child.hasFocus():
                 return child
 
@@ -407,7 +402,7 @@ class DataStoreFormBase(QMainWindow):
 
     @Slot("QItemSelection", "QItemSelection")
     def _handle_parameter_value_list_selection_changed(self, selected, deselected):
-        """Enables/disables the option to remove rows."""
+        """Accepts selection."""
         self._accept_selection(self.ui.treeView_parameter_value_list)
 
     @Slot("QPoint")

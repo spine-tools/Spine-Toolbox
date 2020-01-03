@@ -301,16 +301,16 @@ class PivotTableModel(QAbstractTableModel):
             return self.model._column_data_header[column][index.row()]
         return None
 
-    def _header_ids(self, index):
-        """Returns the ids of the row *and* column headers corresponding to the given header or data index.
+    def _header_ids(self, row, column):
+        """Returns the ids for the headers at given row *and* column.
 
         Args:
-            index (QModelIndex)
+            row (int)
+            column (int)
 
         Returns:
             tuple(int)
         """
-        row, column = self.map_to_pivot(index)
         row_key = self.model.row_key(max(0, row))
         column_key = self.model.column_key(max(0, column))
         return self.model._key_getter(row_key + column_key + self.model.frozen_value)
@@ -352,7 +352,8 @@ class PivotTableModel(QAbstractTableModel):
             list(str): object names
             str: parameter name
         """
-        header_ids = self._header_ids(index)
+        row, column = self.map_to_pivot(index)
+        header_ids = self._header_ids(row, column)
         objects_ids, parameter_id = header_ids[:-1], header_ids[-1]
         object_names = [self.db_mngr.get_item(self.db_map, "object", id_)["name"] for id_ in objects_ids]
         parameter_name = self.db_mngr.get_item(self.db_map, "parameter definition", parameter_id)["parameter_name"]
@@ -429,136 +430,150 @@ class PivotTableModel(QAbstractTableModel):
     def setData(self, index, value, role=Qt.EditRole):
         if role != Qt.EditRole:
             return False
-        if self.index_in_data(index):
-            # edit existing data
+        return self.batch_set_data([index], [value])
+
+    def batch_set_data(self, indexes, values):
+        inner_data = []
+        header_data = []
+        empty_row_header_data = []
+        empty_column_header_data = []
+        for index, value in zip(indexes, values):
+            if self.index_in_data(index):
+                inner_data.append((index, value))
+            elif self.index_in_headers(index):
+                header_data.append((index, value))
+            elif self.index_in_empty_row_headers(index):
+                empty_row_header_data.append((index, value))
+            elif self.index_in_empty_column_headers(index):
+                empty_column_header_data.append((index, value))
+        result = self._batch_set_inner_data(inner_data)
+        result |= self._batch_set_header_data(header_data)
+        result |= self._batch_set_empty_header_data(empty_row_header_data, lambda i: self.model.pivot_rows[i.column()])
+        result |= self._batch_set_empty_header_data(
+            empty_column_header_data, lambda i: self.model.pivot_columns[i.row()]
+        )
+        return result
+
+    def _batch_set_inner_data(self, inner_data):
+        row_map = set()
+        column_map = set()
+        values = {}
+        for index, value in inner_data:
             row, column = self.map_to_pivot(index)
-            data = self.model.get_pivoted_data([row], [column])
-            if not data:
-                return False
-            if self._parent.is_value_input_type():
-                if data[0][0] is None:
-                    self.add_parameter_value(index, value)
+            row_map.add(row)
+            column_map.add(column)
+            values[row, column] = value
+        row_map = list(row_map)
+        column_map = list(column_map)
+        data = self.model.get_pivoted_data(row_map, column_map)
+        if not data:
+            return False
+        if self._parent.is_value_input_type():
+            return self._batch_set_parameter_value_data(row_map, column_map, data, values)
+        return self._batch_set_relationship_data(row_map, column_map, data, values)
+
+    def _batch_set_parameter_value_data(self, row_map, column_map, data, values):
+        """"""
+
+        def object_parameter_value_to_add(header_ids, value, _):
+            return dict(object_id=header_ids[0], parameter_definition_id=header_ids[-1], value=value)
+
+        def relationship_parameter_value_to_add(header_ids, value, relationship_ids):
+            object_id_list = ",".join([str(id_) for id_ in header_ids[:-1]])
+            relationship_id = relationship_ids[object_id_list]
+            return dict(relationship_id=relationship_id, parameter_definition_id=header_ids[-1], value=value)
+
+        to_add = []
+        to_update = []
+        if self._parent.current_class_type == "object class":
+            relationship_ids = {}
+            parameter_value_to_add = object_parameter_value_to_add
+        elif self._parent.current_class_type == "relationship class":
+            relationships = self.db_mngr.get_items_by_field(
+                self.db_map, "relationship", "class_id", self._parent.current_class_id
+            )
+            relationship_ids = {x["object_id_list"]: x["id"] for x in relationships}
+            parameter_value_to_add = relationship_parameter_value_to_add
+        for i, row in enumerate(row_map):
+            for j, column in enumerate(column_map):
+                if (row, column) not in values:
+                    continue
+                header_ids = self._header_ids(row, column)
+                if data[i][j] is None:
+                    item = parameter_value_to_add(header_ids, values[row, column], relationship_ids)
+                    to_add.append(item)
                 else:
-                    self.update_parameter_value(data[0][0], value)
-            else:
-                if data[0][0] is None:
-                    self.add_relationship(index)
-                else:
-                    self.remove_relationship(data[0][0])
-            return True
-        if self.index_in_headers(index):
+                    item = dict(id=data[i][j], value=values[row, column])
+                    to_update.append(item)
+        if not to_add and not to_update:
+            return False
+        self.db_mngr.add_parameter_values({self.db_map: to_add})
+        self.db_mngr.update_parameter_values({self.db_map: to_update})
+        return True
+
+    def _batch_set_relationship_data(self, row_map, column_map, data, values):
+        def relationship_to_add(header_ids):
+            rel_cls_name = self.db_mngr.get_item(self.db_map, "relationship class", self._parent.current_class_id)[
+                "name"
+            ]
+            object_names = [self.db_mngr.get_item(self.db_map, "object", id_)["name"] for id_ in header_ids]
+            name = rel_cls_name + "_" + "__".join(object_names)
+            return dict(object_id_list=list(header_ids), class_id=self._parent.current_class_id, name=name)
+
+        to_add = []
+        to_remove = []
+        for i, row in enumerate(row_map):
+            for j, column in enumerate(column_map):
+                header_ids = self._header_ids(row, column)
+                if data[i][j] is None and values[row, column]:
+                    item = relationship_to_add(header_ids)
+                    to_add.append(item)
+                elif data[i][j] is not None and not values[row, column]:
+                    item = self.db_mngr.get_item(self.db_map, "relationship", data[i][j])
+                    to_remove.append(item)
+        if not to_add and not to_remove:
+            return False
+        self.db_mngr.add_relationships({self.db_map: to_add})
+        self.db_mngr.remove_items({self.db_map: {"relationship": to_remove}})
+        return True
+
+    def _batch_set_header_data(self, header_data):
+        objects = []
+        param_defs = []
+        for index, value in header_data:
             header_id = self._header_id(index)
             top_left_id = self._top_left_id(index)
-            self._set_header_name(top_left_id, header_id, value)
-            return True
-        if self.index_in_empty_row_headers(index):
-            top_left_id = self.model.pivot_rows[index.column()]
-            self._set_empty_header_name(top_left_id, value)
-            return True
-        if self.index_in_empty_column_headers(index):
-            top_left_id = self.model.pivot_columns[index.row()]
-            self._set_empty_header_name(top_left_id, value)
-            return True
-        return False
+            item = dict(id=header_id, name=value)
+            if top_left_id == -1:
+                param_defs.append(item)
+            else:
+                objects.append(item)
+        if not objects and not param_defs:
+            return False
+        self.db_mngr.update_objects({self.db_map: objects})
+        self.db_mngr.update_parameter_definitions({self.db_map: param_defs})
+        return True
 
-    def _set_header_name(self, top_left_id, header_id, value):
-        item = dict(id=header_id, name=value)
-        if top_left_id == -1:
-            self.db_mngr.update_parameter_definitions({self.db_map: [item]})
-        else:
-            self.db_mngr.update_objects({self.db_map: [item]})
-
-    def _set_empty_header_name(self, top_left_id, value):
-        item = dict(name=value)
-        if top_left_id == -1:
-            class_key = (
-                "object_class_id" if self._parent.current_class_type == "object class" else "relationship_class_id"
-            )
-            item[class_key] = self._parent.current_class_id
-            self.db_mngr.add_parameter_definitions({self.db_map: [item]})
-        else:
-            item["class_id"] = self._parent.current_object_class_id_list()[top_left_id]
-            self.db_mngr.add_objects({self.db_map: [item]})
-
-    def _get_relationship(self, object_ids):
-        """
-        Returns a relationship dictionary item associated with given object ids.
-
-        Args:
-            object_ids (tuple(int)):
-
-        Returns:
-            dict, NoneType
-        """
-        object_id_list = ",".join([str(id_) for id_ in object_ids])
-        relationships = self.db_mngr.get_items(self.db_map, "relationship")
-        return next(
-            iter(
-                rel
-                for rel in relationships
-                if rel["class_id"] == self._parent.current_class_id and rel["object_id_list"] == object_id_list
-            )
-        )
-
-    def _new_relationship_parameter_value(self, object_ids, value):
-        """Returns a new parameter value item to insert to the db.
-
-        Args:
-            object_ids (tuple(int)):
-            value
-        Returns:
-            dict
-        """
-        relationship = self._get_relationship(object_ids)
-        return dict(relationship_id=relationship["id"], value=value)
-
-    def add_parameter_value(self, index, value):
-        """
-        Args:
-            index (QModelIndex)
-            value
-        """
-        header_ids = self._header_ids(index)
-        if self._parent.current_class_type == "relationship class":
-            item = self._new_relationship_parameter_value(header_ids[:-1], value)
-        else:
-            object_id = header_ids[0]
-            item = dict(object_id=object_id, value=value)
-        parameter_id = header_ids[-1]
-        item["parameter_definition_id"] = parameter_id
-        self.db_mngr.add_parameter_values({self.db_map: [item]})
-
-    def update_parameter_value(self, id_, value):
-        """
-        Args:
-            id_ (int)
-            value
-        """
-        db_map_data = {self.db_map: [dict(id=id_, value=value)]}
-        self.db_mngr.update_parameter_values(db_map_data)
-
-    def add_relationship(self, index):
-        """
-        Args:
-            index (QModelIndex)
-        """
-        objects_id_list = list(self._header_ids(index))
-        class_id = self._parent.current_class_id
-        rel_cls_name = self.db_mngr.get_item(self.db_map, "relationship class", self._parent.current_class_id)["name"]
-        object_names = [self.db_mngr.get_item(self.db_map, "object", id_)["name"] for id_ in objects_id_list]
-        name = rel_cls_name + "_" + "__".join(object_names)
-        relationship = dict(object_id_list=objects_id_list, class_id=class_id, name=name)
-        db_map_data = {self.db_map: [relationship]}
-        self.db_mngr.add_relationships(db_map_data)
-
-    def remove_relationship(self, id_):
-        """
-        Args:
-            id_ (int)
-        """
-        relationship = self.db_mngr.get_item(self.db_map, "relationship", id_)
-        db_map_typed_data = {self.db_map: {"relationship": [relationship]}}
-        self.db_mngr.remove_items(db_map_typed_data)
+    def _batch_set_empty_header_data(self, header_data, get_top_left_id):
+        objects = []
+        param_defs = []
+        for index, value in header_data:
+            top_left_id = get_top_left_id(index)
+            item = dict(name=value)
+            if top_left_id == -1:
+                class_key = (
+                    "object_class_id" if self._parent.current_class_type == "object class" else "relationship_class_id"
+                )
+                item[class_key] = self._parent.current_class_id
+                param_defs.append(item)
+            else:
+                item["class_id"] = self._parent.current_object_class_id_list()[top_left_id]
+                objects.append(item)
+        if not objects and not param_defs:
+            return False
+        self.db_mngr.add_objects({self.db_map: objects})
+        self.db_mngr.add_parameter_definitions({self.db_map: param_defs})
+        return True
 
 
 class PivotTableSortFilterProxy(QSortFilterProxyModel):
@@ -614,3 +629,7 @@ class PivotTableSortFilterProxy(QSortFilterProxyModel):
             index = self.sourceModel().model._column_data_header[source_column - self.sourceModel().headerColumnCount()]
             return self.accept_index(index, self.sourceModel().model.pivot_columns)
         return True
+
+    def batch_set_data(self, indexes, values):
+        indexes = [self.mapToSource(index) for index in indexes]
+        return self.sourceModel().batch_set_data(indexes, values)
