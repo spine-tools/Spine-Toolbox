@@ -408,7 +408,9 @@ class ProjectItemIcon(QGraphicsRectItem):
     def mouseReleaseEvent(self, event):
         if self._moved_on_scene:
             self._moved_on_scene = False
-            self.scene().shrink_if_needed()
+            scene = self.scene()
+            scene.shrink_if_needed()
+            scene.item_move_finished.emit(self)
         super().mouseReleaseEvent(event)
 
     def contextMenuEvent(self, event):

@@ -279,7 +279,9 @@ class EntityItem(QGraphicsPixmapItem):
             self._bounce_back(self.pos())
         if self._moved_on_scene:
             self._moved_on_scene = False
-            self.scene().shrink_if_needed()
+            scene = self.scene()
+            scene.shrink_if_needed()
+            scene.item_move_finished.emit(self)
 
     def _bounce_back(self, current_pos):
         """Bounces the item back from given position to its original position.

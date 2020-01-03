@@ -147,10 +147,11 @@ class CustomQGraphicsView(QGraphicsView):
         Sets a new scene to this view.
 
         Args:
-            scene (QGraphicsScene): a new scene
+            scene (ShrinkingScene): a new scene
         """
         super().setScene(scene)
         scene.sceneRectChanged.connect(self._update_zoom_limits)
+        scene.item_move_finished.connect(self._ensure_item_visible)
 
     @Slot("QRectF")
     def _update_zoom_limits(self, rect):
@@ -220,6 +221,12 @@ class CustomQGraphicsView(QGraphicsView):
         focus_diff = post_scaling_focus_on_scene - initial_focus_on_scene
         self.centerOn(center_on_scene - focus_diff)
         return True
+
+    @Slot("QGraphicsItem")
+    def _ensure_item_visible(self, item):
+        """Resets zoom if item is not visible."""
+        if not self.viewport().geometry().contains(self.mapFromScene(item.pos())):
+            self.reset_zoom()
 
 
 class DesignQGraphicsView(CustomQGraphicsView):
