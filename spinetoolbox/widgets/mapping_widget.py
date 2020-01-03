@@ -19,7 +19,7 @@ MappingWidget and MappingOptionsWidget class.
 from PySide2.QtWidgets import QWidget
 from PySide2.QtCore import Qt, Signal
 from spinedb_api import RelationshipClassMapping
-from .custom_menus import FilterMenu
+from .custom_menus import SimpleFilterMenu
 from .custom_delegates import ComboBoxDelegate
 from ..spine_io.io_models import MappingSpecModel
 
@@ -140,7 +140,7 @@ class MappingOptionsWidget(QWidget):
         # ui
         self._ui = Ui_ImportMappingOptions()
         self._ui.setupUi(self)
-        self._ui_ignore_columns_filtermenu = FilterMenu(self._ui.ignore_columns_button, show_empty=False)
+        self._ui_ignore_columns_filtermenu = SimpleFilterMenu(self._ui.ignore_columns_button, show_empty=False)
         self._ui.ignore_columns_button.setMenu(self._ui_ignore_columns_filtermenu)
 
         # connect signals
@@ -161,7 +161,7 @@ class MappingOptionsWidget(QWidget):
         self._ui_ignore_columns_filtermenu._filter._filter_model.set_list(set(range(num)))
         self._ui_ignore_columns_filtermenu._filter._filter_model.set_selected(selected)
 
-    def change_skip_columns(self, filterw, skip_cols, has_filter):
+    def change_skip_columns(self, skip_cols):
         if self._model:
             self._model.set_skip_columns(skip_cols)
 

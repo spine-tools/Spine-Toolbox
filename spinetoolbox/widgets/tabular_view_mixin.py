@@ -19,7 +19,7 @@ Contains TabularViewForm class and some related constants.
 from itertools import product
 from collections import namedtuple
 from PySide2.QtCore import Qt, Slot
-from .custom_menus import FilterMenu, PivotTableModelMenu, PivotTableHorizontalHeaderMenu
+from .custom_menus import TabularViewFilterMenu, PivotTableModelMenu, PivotTableHorizontalHeaderMenu
 from .tabular_view_header_widget import TabularViewHeaderWidget
 from .custom_delegates import PivotTableDelegate
 from ..helpers import fix_name_ambiguity, busy_effect
@@ -434,11 +434,11 @@ class TabularViewMixin:
             identifier (int)
 
         Returns:
-            FilterMenu
+            TabularViewFilterMenu
         """
         if identifier not in self.filter_menus:
             item_type = "parameter definition" if identifier == self._PARAM_INDEX_ID else "object"
-            self.filter_menus[identifier] = menu = FilterMenu(self, identifier, item_type)
+            self.filter_menus[identifier] = menu = TabularViewFilterMenu(self, identifier, item_type)
             index_values = set(self.pivot_table_model.model.index_values.get(identifier, []))
             index_values.discard(None)
             menu.set_filter_list(index_values)

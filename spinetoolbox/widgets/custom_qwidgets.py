@@ -32,21 +32,20 @@ from PySide2.QtWidgets import (
 )
 from PySide2.QtCore import QTimer, Signal, Slot
 from PySide2.QtGui import QPainter
-from ..mvcmodels.filter_checkbox_list_model import FilterCheckboxListModel
+from ..mvcmodels.filter_checkbox_list_model import SimpleFilterCheckboxListModel, TabularViewFilterCheckboxListModel
 
 
-class FilterWidget(QWidget):
+class FilterWidgetBase(QWidget):
     """Filter widget class."""
 
     okPressed = Signal()
     cancelPressed = Signal()
 
-    def __init__(self, parent, item_type, show_empty=True):
+    def __init__(self, parent):
         """Init class.
 
         Args:
-            parent (TabularViewMixin)
-            item_type (str): either "object" or "parameter definition"
+            parent (QWidget)
         """
         super().__init__(parent)
         # parameters
@@ -70,10 +69,9 @@ class FilterWidget(QWidget):
         self._search_timer = QTimer()  # Used to limit search so it doesn't search when typing
         self._search_timer.setSingleShot(True)
 
-        self._filter_model = FilterCheckboxListModel(parent, item_type, show_empty=show_empty)
-        self._filter_model.set_list(self._filter_state)
-        self._ui_list.setModel(self._filter_model)
+        self._filter_model = None
 
+    def connect_signals(self):
         # connect signals
         self._ui_list.clicked.connect(self._filter_model.click_index)
         self._search_timer.timeout.connect(self._filter_list)
@@ -133,6 +131,35 @@ class FilterWidget(QWidget):
         """
         self._search_text = new_text
         self._search_timer.start(self.search_delay)
+
+
+class SimpleFilterWidget(FilterWidgetBase):
+    def __init__(self, parent, show_empty=True):
+        """Init class.
+
+        Args:
+            parent (QWidget)
+        """
+        super().__init__(parent)
+        self._filter_model = SimpleFilterCheckboxListModel(parent, show_empty=show_empty)
+        self._filter_model.set_list(self._filter_state)
+        self._ui_list.setModel(self._filter_model)
+        self.connect_signals()
+
+
+class TabularViewFilterWidget(FilterWidgetBase):
+    def __init__(self, parent, item_type, show_empty=True):
+        """Init class.
+
+        Args:
+            parent (QWidget)
+            item_type (str): either "object" or "parameter definition"
+        """
+        super().__init__(parent)
+        self._filter_model = TabularViewFilterCheckboxListModel(parent, item_type, show_empty=show_empty)
+        self._filter_model.set_list(self._filter_state)
+        self._ui_list.setModel(self._filter_model)
+        self.connect_signals()
 
 
 class ZoomWidgetAction(QWidgetAction):

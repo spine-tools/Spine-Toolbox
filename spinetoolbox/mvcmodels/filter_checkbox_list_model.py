@@ -20,18 +20,14 @@ import bisect
 from PySide2.QtCore import Qt, QModelIndex, QAbstractListModel
 
 
-class FilterCheckboxListModel(QAbstractListModel):
-    def __init__(self, parent, item_type, show_empty=True):
+class FilterCheckboxListModelBase(QAbstractListModel):
+    def __init__(self, parent, show_empty=True):
         """Init class.
 
         Args:
-            parent (TabularViewMixin)
-            item_type (str): either "object" or "parameter definition"
+            parent (QWidget)
         """
         super().__init__(parent)
-        self.db_mngr = parent.db_mngr
-        self.db_map = parent.db_map
-        self.item_type = item_type
         self._id_data = []
         self._id_data_set = set()
         self._all_selected = True
@@ -116,8 +112,7 @@ class FilterCheckboxListModel(QAbstractListModel):
             return Qt.Checked if self._id_data[i] in selected else Qt.Unchecked
 
     def _item_name(self, id_):
-        name_key = {"object": "name", "parameter definition": "parameter_name"}[self.item_type]
-        return self.db_mngr.get_item(self.db_map, self.item_type, id_)[name_key]
+        raise NotImplementedError()
 
     def click_index(self, index):
         if index.row() == 0:
@@ -261,3 +256,26 @@ class FilterCheckboxListModel(QAbstractListModel):
             self._filter_index = [i for i, id_ in enumerate(self._id_data) if self._list_filter in self._item_name(id_)]
             self._selected_filtered.difference_update(ids)
         self._all_selected = self._is_all_selected()
+
+
+class SimpleFilterCheckboxListModel(FilterCheckboxListModelBase):
+    def _item_name(self, id_):
+        return id_
+
+
+class TabularViewFilterCheckboxListModel(FilterCheckboxListModelBase):
+    def __init__(self, parent, item_type, show_empty=True):
+        """Init class.
+
+        Args:
+            parent (TabularViewMixin)
+            item_type (str, NoneType): either "object" or "parameter definition"
+        """
+        super().__init__(parent, show_empty=show_empty)
+        self.item_type = item_type
+        self.db_mngr = parent.db_mngr
+        self.db_map = parent.db_map
+
+    def _item_name(self, id_):
+        name_key = {"object": "name", "parameter definition": "parameter_name"}[self.item_type]
+        return self.db_mngr.get_item(self.db_map, self.item_type, id_)[name_key]

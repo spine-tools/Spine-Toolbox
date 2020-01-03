@@ -17,13 +17,12 @@ Classes for custom context menus and pop-up menus.
 """
 
 import os
-from operator import itemgetter
 from PySide2.QtWidgets import QMenu, QWidgetAction, QAction
 from PySide2.QtGui import QIcon
 from PySide2.QtCore import Signal, Slot, QPoint, QEvent
-from ..helpers import fix_name_ambiguity, tuple_itemgetter
+from ..helpers import fix_name_ambiguity
 from ..plotting import plot_pivot_column, plot_selection, PlottingError, PivotTablePlottingHints
-from .custom_qwidgets import FilterWidget
+from .custom_qwidgets import SimpleFilterWidget, TabularViewFilterWidget
 from .report_plotting_failure import report_plotting_failure
 
 
@@ -521,29 +520,21 @@ class RecentProjectsPopupMenu(CustomPopupMenu):
             return
 
 
-class FilterMenu(QMenu):
-    """Filter menu to use together with FilterWidget in TabularViewMixin."""
+class FilterMenuBase(QMenu):
+    """Filter menu."""
 
-    filterChanged = Signal(object, set, bool)
-
-    def __init__(self, parent, identifier, item_type, show_empty=True):
+    def __init__(self, parent):
         """
         Args:
-            parent (TabularViewMixin)
-            identifier (int): index identifier
-            item_type (str): either "object" or "parameter definition"
+            parent (QWidget)
         """
         super().__init__(parent)
-        self.identifier = identifier
         self._remove_filter = QAction('Remove filters', None)
-        self._filter = FilterWidget(parent, item_type, show_empty=show_empty)
-        self._filter_action = QWidgetAction(parent)
-        self._filter_action.setDefaultWidget(self._filter)
+        self._filter = None
+        self._filter_action = None
         self.addAction(self._remove_filter)
-        self.addAction(self._filter_action)
-        self.anchor = parent
 
-        # add connections
+    def connect_signals(self):
         self.aboutToHide.connect(self._cancel_filter)
         self.aboutToShow.connect(self._check_filter)
         self._remove_filter.triggered.connect(self._clear_filter)
@@ -575,12 +566,60 @@ class FilterMenu(QMenu):
         valid_values = set(self._filter._filter_state)
         if self._filter._filter_empty_state:
             valid_values.add(None)
-        self.filterChanged.emit(self.identifier, valid_values, self._filter.has_filter())
+        self.emit_filter_changed(valid_values)
         self.hide()
+
+    def emit_filter_changed(self, valid_values):
+        raise NotImplementedError()
 
     def wipe_out(self):
         self._filter._filter_model.set_list(set())
         self.deleteLater()
+
+
+class SimpleFilterMenu(FilterMenuBase):
+
+    filterChanged = Signal(set)
+
+    def __init__(self, parent, show_empty=True):
+        """
+        Args:
+            parent (TabularViewMixin)
+        """
+        super().__init__(parent)
+        self._filter = SimpleFilterWidget(parent, show_empty=show_empty)
+        self._filter_action = QWidgetAction(parent)
+        self._filter_action.setDefaultWidget(self._filter)
+        self.addAction(self._filter_action)
+        self.connect_signals()
+
+    def emit_filter_changed(self, valid_values):
+        self.filterChanged.emit(valid_values)
+
+
+class TabularViewFilterMenu(FilterMenuBase):
+    """Filter menu to use together with FilterWidget in TabularViewMixin."""
+
+    filterChanged = Signal(object, set, bool)
+
+    def __init__(self, parent, identifier, item_type, show_empty=True):
+        """
+        Args:
+            parent (TabularViewMixin)
+            identifier (int): index identifier
+            item_type (str): either "object" or "parameter definition"
+        """
+        super().__init__(parent)
+        self.identifier = identifier
+        self._filter = TabularViewFilterWidget(parent, item_type, show_empty=show_empty)
+        self._filter_action = QWidgetAction(parent)
+        self._filter_action.setDefaultWidget(self._filter)
+        self.addAction(self._filter_action)
+        self.anchor = parent
+        self.connect_signals()
+
+    def emit_filter_changed(self, valid_values):
+        self.filterChanged.emit(self.identifier, valid_values, self._filter.has_filter())
 
     def event(self, event):
         if event.type() == QEvent.Show and self.anchor is not None:
