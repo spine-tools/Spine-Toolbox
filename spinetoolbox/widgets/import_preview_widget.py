@@ -64,6 +64,12 @@ class ImportPreviewWidget(QWidget):
         self._ui_mapper = MappingWidget()
         self._ui.mappings_box.layout().addWidget(self._ui_mapper)
         self._ui.source_data_table.verticalHeader().display_all = False
+        for i in range(self._ui.main_splitter.count()):
+            self._ui.main_splitter.setCollapsible(i, False)
+        for i in range(self._ui.splitter.count()):
+            self._ui.splitter.setCollapsible(i, False)
+        for i in range(self._ui.top_source_splitter.count()):
+            self._ui.top_source_splitter.setCollapsible(i, False)
 
         # connect signals
         self._ui.source_data_table.setContextMenuPolicy(Qt.CustomContextMenu)

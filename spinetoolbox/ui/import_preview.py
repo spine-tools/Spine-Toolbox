@@ -10,10 +10,10 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-# Form implementation generated from reading ui file 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\ui\import_preview.ui',
-# licensing of 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\ui\import_preview.ui' applies.
+# Form implementation generated from reading ui file 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\import_preview.ui',
+# licensing of 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\import_preview.ui' applies.
 #
-# Created: Fri Nov 22 18:44:19 2019
+# Created: Fri Jan  3 13:39:13 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -73,7 +73,7 @@ class Ui_ImportPreview(object):
         self.verticalLayout.addWidget(self.main_splitter)
 
         self.retranslateUi(ImportPreview)
-        self.source_preview_widget_stack.setCurrentIndex(0)
+        self.source_preview_widget_stack.setCurrentIndex(1)
         QtCore.QMetaObject.connectSlotsByName(ImportPreview)
 
     def retranslateUi(self, ImportPreview):

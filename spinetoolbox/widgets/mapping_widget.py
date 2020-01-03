@@ -49,6 +49,8 @@ class MappingWidget(QWidget):
         self._ui_options = MappingOptionsWidget()
         self._ui.bottom_layout.insertWidget(0, self._ui_options)
         self._ui.table_view.setItemDelegateForColumn(1, ComboBoxDelegate(self, MAPPING_CHOICES))
+        for i in range(self._ui.splitter.count()):
+            self._ui.splitter.setCollapsible(i, False)
 
         # connect signals
         self._select_handle = None
