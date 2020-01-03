@@ -16,7 +16,7 @@ A QGraphicsScene that can shrink sometimes.
 :date:   18.10.2019
 """
 
-from PySide2.QtCore import QMarginsF
+from PySide2.QtCore import QMarginsF, Signal
 from PySide2.QtWidgets import QGraphicsScene
 
 
@@ -28,6 +28,9 @@ class ShrinkingScene(QGraphicsScene):
     which control how far the items need to be from the scene rectangle's edges
     to trigger the shrinking.
     """
+
+    item_move_finished = Signal("QGraphicsItem")
+    """Emitted when an item has finished moving."""
 
     def __init__(self, horizontal_shrinking_threshold, vertical_shrinking_threshold, parent):
         """
