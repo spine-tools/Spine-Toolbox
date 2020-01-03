@@ -70,36 +70,44 @@ class CSVConnector(SourceConnection):
         """
 
     def get_tables(self):
-        """Method that should return a list of table names, list(str)
+        """
+        Returns a mapping from file name to options.
 
         Returns:
-            list(str): Table names in list
+            dict
         """
         options = {}
         # try to find options for file
         with open(self._filename, 'rb') as input_file:
             sniff_result = chardet.detect(input_file.read(1024))
         sniffed_encoding = sniff_result["encoding"].lower()
+        # The sniffed encoding is not always correct. We may still need to try other options too.
         if sniffed_encoding in self._ENCODINGS:
-            options["encoding"] = sniffed_encoding
+            try_encodings = [sniffed_encoding] + [encoding for encoding in self._ENCODINGS if encoding != sniffed_encoding]
         else:
-            options["encoding"] = self._ENCODINGS[0]
-        with open(self._filename, encoding=options["encoding"]) as csvfile:
-            try:
-                dialect = csv.Sniffer().sniff(csvfile.read(1024))
-                if dialect.delimiter in [',', ';']:
-                    options["delimiter"] = dialect.delimiter
-                elif dialect.delimiter == '\t':
-                    options["delimiter"] = 'Tab'
-                else:
-                    options["delimiter_custom"] = dialect.delimiter
-                options.update({"quotechar": dialect.quotechar, "skip": 0})
-            except csv.Error:
-                pass
-            try:
-                options["has_header"] = csv.Sniffer().has_header(csvfile.read(1024))
-            except csv.Error:
-                pass
+            try_encodings = self._ENCODINGS
+        options["encoding"] = try_encodings[0]
+        for encoding in try_encodings:
+            with open(self._filename, encoding=encoding) as csvfile:
+                try:
+                    dialect = csv.Sniffer().sniff(csvfile.read(1024))
+                    if dialect.delimiter in [',', ';']:
+                        options["delimiter"] = dialect.delimiter
+                    elif dialect.delimiter == '\t':
+                        options["delimiter"] = 'Tab'
+                    else:
+                        options["delimiter_custom"] = dialect.delimiter
+                    options.update({"quotechar": dialect.quotechar, "skip": 0})
+                except csv.Error:
+                    pass
+                except UnicodeDecodeError:
+                    continue
+                try:
+                    options["has_header"] = csv.Sniffer().has_header(csvfile.read(1024))
+                except csv.Error:
+                    pass
+                options["encoding"] = encoding
+                break
         return {self._filename: {"options": options}}
 
     @staticmethod
