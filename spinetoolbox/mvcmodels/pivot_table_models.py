@@ -476,12 +476,22 @@ class PivotTableModel(QAbstractTableModel):
         """"""
 
         def object_parameter_value_to_add(header_ids, value, _):
-            return dict(object_id=header_ids[0], parameter_definition_id=header_ids[-1], value=value)
+            return dict(
+                entity_class_id=self._parent.current_class_id,
+                entity_id=header_ids[0],
+                parameter_definition_id=header_ids[-1],
+                value=value,
+            )
 
         def relationship_parameter_value_to_add(header_ids, value, relationship_ids):
             object_id_list = ",".join([str(id_) for id_ in header_ids[:-1]])
             relationship_id = relationship_ids[object_id_list]
-            return dict(relationship_id=relationship_id, parameter_definition_id=header_ids[-1], value=value)
+            return dict(
+                entity_class_id=self._parent.current_class_id,
+                entity_id=relationship_id,
+                parameter_definition_id=header_ids[-1],
+                value=value,
+            )
 
         to_add = []
         to_update = []
@@ -503,13 +513,50 @@ class PivotTableModel(QAbstractTableModel):
                     item = parameter_value_to_add(header_ids, values[row, column], relationship_ids)
                     to_add.append(item)
                 else:
-                    item = dict(id=data[i][j], value=values[row, column])
+                    item = dict(id=data[i][j], value=values[row, column], parameter_definition_id=header_ids[-1])
                     to_update.append(item)
         if not to_add and not to_update:
             return False
-        self.db_mngr.add_parameter_values({self.db_map: to_add})
-        self.db_mngr.update_parameter_values({self.db_map: to_update})
+        if to_add:
+            self._add_parameter_values(to_add)
+        if to_update:
+            self._update_parameter_values(to_update)
         return True
+
+    def _checked_parameter_values(self, items):
+        value_lists = {}
+        par_def_ids = {item["parameter_definition_id"] for item in items}
+        for par_def_id in par_def_ids:
+            param_val_list_id = self.db_mngr.get_item(self.db_map, "parameter definition", par_def_id).get(
+                "parameter_value_list_id"
+            )
+            if not param_val_list_id:
+                continue
+            param_val_list = self.db_mngr.get_item(self.db_map, "parameter value list", param_val_list_id)
+            value_list = param_val_list.get("value_list")
+            if not value_list:
+                continue
+            value_lists[par_def_id] = value_list.split(",")
+        checked_items = []
+        for item in items:
+            par_def_id = item["parameter_definition_id"]
+            value_list = value_lists.get(par_def_id)
+            if value_list and item["value"] not in value_list:
+                continue
+            checked_items.append(item)
+        return checked_items
+
+    def _add_parameter_values(self, items):
+        items = self._checked_parameter_values(items)
+        ids = self.db_map._add_parameter_values(*items)
+        d = {self.db_map: self.db_mngr.get_parameter_values(self.db_map, ids=ids)}
+        self.db_mngr.parameter_values_added.emit(d)
+
+    def _update_parameter_values(self, items):
+        items = self._checked_parameter_values(items)
+        ids = self.db_map._update_parameter_values(*items)
+        d = {self.db_map: self.db_mngr.get_parameter_values(self.db_map, ids=ids)}
+        self.db_mngr.parameter_values_updated.emit(d)
 
     def _batch_set_relationship_data(self, row_map, column_map, data, values):
         def relationship_to_add(header_ids):
@@ -533,8 +580,10 @@ class PivotTableModel(QAbstractTableModel):
                     to_remove.append(item)
         if not to_add and not to_remove:
             return False
-        self.db_mngr.add_relationships({self.db_map: to_add})
-        self.db_mngr.remove_items({self.db_map: {"relationship": to_remove}})
+        if to_add:
+            self.db_mngr.add_relationships({self.db_map: to_add})
+        if to_remove:
+            self.db_mngr.remove_items({self.db_map: {"relationship": to_remove}})
         return True
 
     def _batch_set_header_data(self, header_data):
@@ -550,8 +599,10 @@ class PivotTableModel(QAbstractTableModel):
                 objects.append(item)
         if not objects and not param_defs:
             return False
-        self.db_mngr.update_objects({self.db_map: objects})
-        self.db_mngr.update_parameter_definitions({self.db_map: param_defs})
+        if objects:
+            self.db_mngr.update_objects({self.db_map: objects})
+        if param_defs:
+            self.db_mngr.update_parameter_definitions({self.db_map: param_defs})
         return True
 
     def _batch_set_empty_header_data(self, header_data, get_top_left_id):
@@ -571,8 +622,10 @@ class PivotTableModel(QAbstractTableModel):
                 objects.append(item)
         if not objects and not param_defs:
             return False
-        self.db_mngr.add_objects({self.db_map: objects})
-        self.db_mngr.add_parameter_definitions({self.db_map: param_defs})
+        if objects:
+            self.db_mngr.add_objects({self.db_map: objects})
+        if param_defs:
+            self.db_mngr.add_parameter_definitions({self.db_map: param_defs})
         return True
 
 
