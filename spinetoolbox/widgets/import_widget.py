@@ -16,17 +16,10 @@ ImportDialog class.
 :date:   1.6.2019
 """
 
-from PySide2.QtWidgets import (
-    QWidget,
-    QApplication,
-    QVBoxLayout,
-    QDialogButtonBox,
-    QMainWindow,
-    QDialog,
-    QPushButton,
-    QLabel,
-)
-from PySide2.QtCore import Qt
+from collections import namedtuple
+from PySide2.QtWidgets import QDialog, QWidget, QVBoxLayout, QDialogButtonBox, QPushButton, QLabel
+from PySide2.QtCore import Qt, Slot
+from PySide2.QtGui import QGuiApplication
 import spinedb_api
 from ..helpers import busy_effect
 from ..spine_io.connection_manager import ConnectionManager
@@ -40,17 +33,26 @@ from .import_errors_widget import ImportErrorWidget
 
 class ImportDialog(QDialog):
     """
-    A widget for importing data into a Spine db. Currently used by TreeViewForm.
+    A widget for importing data into a Spine db. Currently used by DataStoreForm.
     It embeds three widgets that alternate depending on user's actions:
     - `select_widget` is a `QWidget` for selecting the source data type (CSV, Excel, etc.)
     - `_import_preview` is an `ImportPreviewWidget` for defining Mappings to associate with the source data
     - `_error_widget` is an `ImportErrorWidget` to show errors from import operations
     """
 
-    def __init__(self, parent=None):
+    _SETTINGS_GROUP_NAME = "importDialog"
+
+    def __init__(self, settings, parent):
+        """
+        Args:
+            settings (QSettings): settings for storing/restoring window state
+            parent (QWidget): parent widget
+        """
         from ..ui.import_source_selector import Ui_ImportSourceSelector
 
         super().__init__(parent)
+        self.setWindowFlag(Qt.Window, True)
+        self.setWindowFlag(Qt.WindowMinMaxButtonsHint, True)
         self.setWindowTitle("Import data")
         # DB mapping
         if parent is not None:
@@ -64,6 +66,8 @@ class ImportDialog(QDialog):
         self._selected_connector = None
         self.active_connector = None
         self._current_view = "connector"
+        self._settings = settings
+        self._preview_window_state = None
 
         # create widgets
         self._import_preview = None
@@ -111,6 +115,7 @@ class ImportDialog(QDialog):
     def mapping_errors(self):
         return self._mapping_errors
 
+    @Slot()
     def connector_selected(self, selection):
         connector = None
         if selection:
@@ -153,10 +158,12 @@ class ImportDialog(QDialog):
             return False
         return True
 
+    @Slot()
     def data_ready(self, data, errors):
         if self.import_data(data, errors):
             self.accept()
 
+    @Slot()
     def ok_clicked(self):
         if self._current_view == "connector":
             self.launch_import_preview()
@@ -165,14 +172,19 @@ class ImportDialog(QDialog):
         elif self._current_view == "error":
             self.accept()
 
+    @Slot()
     def cancel_clicked(self):
-        self._db_map.rollback_session()
+        if self._db_map.has_pending_changes():
+            self._db_map.rollback_session()
         self.reject()
 
+    @Slot()
     def back_clicked(self):
-        self._db_map.rollback_session()
+        if self._db_map.has_pending_changes():
+            self._db_map.rollback_session()
         self.set_preview_as_main_widget()
 
+    @Slot()
     def launch_import_preview(self):
         if self._selected_connector:
             # create instance of connector
@@ -195,6 +207,7 @@ class ImportDialog(QDialog):
                 self.active_connector.deleteLater()
                 self.active_connector = None
 
+    @Slot(str)
     def _handle_failed_connection(self, msg):
         """Handle failed connection, show error message and select widget
 
@@ -230,28 +243,61 @@ class ImportDialog(QDialog):
         self.select_widget.hide()
         self._error_widget.hide()
         self._import_preview.show()
+        self._restore_preview_ui()
         self._dialog_buttons.button(QDialogButtonBox.Abort).hide()
         self.set_ok_button_availability()
 
     def set_error_widget_as_main_widget(self):
         self._current_view = "error"
+        if self._import_preview is not None and not self._import_preview.isHidden():
+            if self._preview_window_state is None:
+                self._preview_window_state = namedtuple(
+                    "WindowState", ["size", "position", "maximized"], defaults=[None, None, None]
+                )
+            self._preview_window_state.maximized = self.windowState() == Qt.WindowMaximized
+            self._preview_window_state.size = self.size()
+            self._preview_window_state.position = self.pos()
         self.select_widget.hide()
         self._error_widget.show()
         self._import_preview.hide()
         self._dialog_buttons.button(QDialogButtonBox.Abort).show()
         self.set_ok_button_availability()
 
+    def _restore_preview_ui(self):
+        """Restore UI state from previous session."""
+        if self._preview_window_state is None:
+            self._settings.beginGroup(self._SETTINGS_GROUP_NAME)
+            window_size = self._settings.value("windowSize")
+            window_pos = self._settings.value("windowPosition")
+            n_screens = self._settings.value("n_screens", defaultValue=1)
+            window_maximized = self._settings.value("windowMaximized", defaultValue='false')
+            self._settings.endGroup()
+            if window_size:
+                self.resize(window_size)
+            if window_pos:
+                self.move(window_pos)
+            if window_maximized == 'true':
+                self.setWindowState(Qt.WindowMaximized)
+            if len(QGuiApplication.screens()) < int(n_screens):
+                # There are less screens available now than on previous application startup
+                self.move(0, 0)  # Move this widget to primary screen position (0,0)
+        else:
+            self.resize(self._preview_window_state.size)
+            self.move(self._preview_window_state.position)
+            self.setWindowState(self._preview_window_state.maximized)
 
-if __name__ == '__main__':
-    import sys
-
-    app = QApplication(sys.argv)
-    m = QMainWindow()
-    m.setAttribute(Qt.WA_DeleteOnClose, True)
-    w = ImportDialog()
-    m.show()
-    w.exec()
-    # m.setCentralWidget(w)
-    # m.setLayout(QVBoxLayout())
-
-    sys.exit(app.exec_())
+    def closeEvent(self, event):
+        """Stores window's settings and accepts the event."""
+        if self._import_preview is not None:
+            self._settings.beginGroup(self._SETTINGS_GROUP_NAME)
+            self._settings.setValue("n_screens", len(QGuiApplication.screens()))
+            if not self._import_preview.isHidden():
+                self._settings.setValue("windowSize", self.size())
+                self._settings.setValue("windowPosition", self.pos())
+                self._settings.setValue("windowMaximized", self.windowState() == Qt.WindowMaximized)
+            elif self._preview_window_state is not None:
+                self._settings.setValue("windowSize", self._preview_window_state.size)
+                self._settings.setValue("windowPosition", self._preview_window_state.position)
+                self._settings.setValue("windowMaximized", self._preview_window_state.maximized)
+            self._settings.endGroup()
+        event.accept()

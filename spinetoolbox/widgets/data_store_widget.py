@@ -258,12 +258,14 @@ class DataStoreFormBase(QMainWindow):
             commit_warning.setStandardButtons(QMessageBox.Ok)
             commit_warning.exec()
             return
-        dialog = ImportDialog(parent=self)
+        dialog = ImportDialog(self.qsettings, parent=self)
         # assume that dialog is modal, if not use accepted, rejected signals
         if dialog.exec() == QDialog.Accepted:
             if db_map.has_pending_changes():
                 self.msg.emit("Import successful")
                 self.init_models()
+        dialog.close()
+        dialog.deleteLater()
 
     @Slot(bool)
     def export_database(self, checked=False):
