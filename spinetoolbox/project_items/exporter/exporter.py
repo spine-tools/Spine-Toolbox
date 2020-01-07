@@ -24,6 +24,7 @@ import os.path
 from PySide2.QtCore import Slot
 from spinedb_api.database_mapping import DatabaseMapping
 from spinetoolbox.project_item import ProjectItem, ProjectItemResource
+from spinetoolbox.spine_io import gdx_utils
 from spinetoolbox.spine_io.exporters import gdx
 from .widgets.gdx_export_settings import GdxExportSettings
 from .widgets.export_list_item import ExportListItem
@@ -246,7 +247,7 @@ class Exporter(ProjectItem):
         """Returns GAMS system path from Toolbox settings or None if GAMS default is to be used."""
         path = self._toolbox.qsettings().value("appSettings/gamsPath", defaultValue=None)
         if not path:
-            path = gdx.find_gams_directory()
+            path = gdx_utils.find_gams_directory()
         if path is not None and os.path.isfile(path):
             path = os.path.dirname(path)
         return path
