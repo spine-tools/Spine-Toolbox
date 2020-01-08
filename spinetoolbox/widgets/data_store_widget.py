@@ -42,7 +42,6 @@ from ..widgets.tabular_view_mixin import TabularViewMixin
 from ..widgets.toolbars import ParameterTagToolBar
 from ..mvcmodels.parameter_value_list_model import ParameterValueListModel
 from ..helpers import busy_effect, format_string_list
-from ..ui.data_store_view import Ui_MainWindow
 from .import_widget import ImportDialog
 from ..excel_import_export import export_spine_database_to_xlsx
 from ..config import DEFAULT_PROJECT_DIR
@@ -62,6 +61,7 @@ class DataStoreFormBase(QMainWindow):
             *db_urls (tuple): Database url, codename.
         """
         super().__init__(flags=Qt.Window)
+        from ..ui.data_store_view import Ui_MainWindow
         self.db_urls = list(db_urls)
         self.db_url = self.db_urls[0]
         self.db_mngr = db_mngr
