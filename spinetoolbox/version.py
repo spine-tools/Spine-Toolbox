@@ -9,8 +9,30 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-spinetoolbox package.
+"""Version info for Spine Toolbox package. Inspired by python sys.version and sys.version_info.
+
+:author: P. Savolainen (VTT)
+:date: 8.1.2020
 """
 
-from .version import __version__, __version_info__
+from typing import NamedTuple
+
+
+class VersionInfo(NamedTuple):
+    """A class for a named tuple containing the five components of the version number: major, minor,
+    micro, releaselevel, and serial. All values except releaselevel are integers; the release level is
+    'alpha', 'beta', 'candidate', or 'final'."""
+    major: int
+    minor: int
+    micro: int
+    releaselevel: str
+    serial: int
+
+
+major = 0
+minor = 3
+micro = 3
+releaselevel = "alpha"
+serial = 0
+__version_info__ = VersionInfo(major, minor, micro, releaselevel, serial)
+__version__ = ".".join([str(a) for a in __version_info__[:3]])

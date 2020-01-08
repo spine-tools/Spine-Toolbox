@@ -17,10 +17,14 @@ Setup script for Python's setuptools.
 """
 
 from setuptools import setup, find_packages
-from spinetoolbox.config import REQUIRED_SPINEDB_API_VERSION, REQUIRED_SPINE_ENGINE_VERSION, SPINE_TOOLBOX_VERSION
+from spinetoolbox.config import REQUIRED_SPINEDB_API_VERSION, REQUIRED_SPINE_ENGINE_VERSION
 
 with open("README.md", encoding="utf8") as readme_file:
     readme = readme_file.read()
+
+version = {}
+with open("spinetoolbox/version.py") as fp:
+    exec(fp.read(), version)
 
 requirements = [
     'pyside2 < 5.12',
@@ -47,7 +51,7 @@ requirements = [
 
 setup(
     name="spinetoolbox",
-    version=SPINE_TOOLBOX_VERSION,
+    version=version["__version__"],
     description="An application to define, manage, and execute various energy system simulation models",
     long_description=readme,
     author="Spine Project consortium",

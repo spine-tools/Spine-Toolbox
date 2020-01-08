@@ -54,7 +54,7 @@ from .widgets.julia_repl_widget import JuliaREPLWidget
 from .widgets.python_repl_widget import PythonReplWidget
 from .widgets import toolbars
 from .project import SpineToolboxProject
-from .config import SPINE_TOOLBOX_VERSION, STATUSBAR_SS, TEXTBROWSER_SS, MAINWINDOW_SS, DOCUMENTATION_PATH
+from .config import STATUSBAR_SS, TEXTBROWSER_SS, MAINWINDOW_SS, DOCUMENTATION_PATH
 from .helpers import project_dir, get_datetime, erase_dir, busy_effect, set_taskbar_icon, supported_img_formats
 from .project_item import RootProjectItem, CategoryProjectItem
 from .project_items import data_store, data_connection, exporter, tool, view, importer
@@ -1137,7 +1137,7 @@ class ToolboxUI(QMainWindow):
     @Slot(name="show_about")
     def show_about(self):
         """Show About Spine Toolbox form."""
-        form = AboutWidget(self, SPINE_TOOLBOX_VERSION)
+        form = AboutWidget(self)
         form.show()
 
     @Slot(name="show_user_guide")

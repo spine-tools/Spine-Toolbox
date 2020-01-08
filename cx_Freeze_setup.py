@@ -25,7 +25,11 @@ Usage:
 import os
 import sys
 from cx_Freeze import setup, Executable
-from spinetoolbox.config import SPINE_TOOLBOX_VERSION, APPLICATION_PATH
+from spinetoolbox.config import APPLICATION_PATH
+
+version = {}
+with open("spinetoolbox/version.py") as fp:
+    exec(fp.read(), version)
 
 
 def main(argv):
@@ -77,6 +81,7 @@ def main(argv):
             "pymysql",
             "tabulator.loaders.local",
             "tabulator.parsers.csv",
+            "spine_engine.version",
         ],
         "include_files": [
             (doc_path, "docs/"),
@@ -92,7 +97,7 @@ def main(argv):
     }
     # Windows specific options
     if os.name == "nt":  # Windows specific options
-        base = "Win32GUI"  # set this to "Win32GUI" to not show console, "Console" shows console
+        base = "Console"  # set this to "Win32GUI" to not show console, "Console" shows console
         # Set Windows .msi installer default install path to C:\SpineToolbox-version
         systemdrive = os.environ['SYSTEMDRIVE']
         # Hardcoded path to msvcr120.dll because include_msvcr option does not seem to do anything
@@ -108,7 +113,7 @@ def main(argv):
     executables = [Executable("spinetoolbox.py", base=base, icon="spinetoolbox/ui/resources/app.ico")]
     setup(
         name="Spine Toolbox",
-        version=SPINE_TOOLBOX_VERSION,
+        version=version["__version__"],
         description="An application to define, manage, and execute various energy system simulation models.",
         author="Spine project consortium",
         options={"build_exe": build_exe_options},

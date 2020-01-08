@@ -19,7 +19,6 @@ Application constants and style sheets
 import sys
 import os
 
-SPINE_TOOLBOX_VERSION = "0.3.2"
 REQUIRED_SPINE_ENGINE_VERSION = "0.2.0"
 REQUIRED_SPINEDB_API_VERSION = "0.1.9"
 # SPINE GREEN HTML: #99cc33 RGBa: 153, 204, 51, 255
