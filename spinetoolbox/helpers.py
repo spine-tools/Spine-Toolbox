@@ -41,7 +41,8 @@ from PySide2.QtGui import (
     QStandardItem,
 )
 import spinedb_api
-from .config import DEFAULT_PROJECT_DIR, REQUIRED_SPINEDB_API_VERSION
+import spine_engine
+from .config import DEFAULT_PROJECT_DIR, REQUIRED_SPINEDB_API_VERSION, REQUIRED_SPINE_ENGINE_VERSION
 
 if os.name == "nt":
     import ctypes
@@ -99,9 +100,10 @@ def spinedb_api_version_check():
             return True
     except AttributeError:
         current_version = "not reported"
-    script = "upgrade_spinedb_api.bat" if sys.platform == "win32" else "upgrade_spinedb_api.sh"
+    script = "upgrade_spinedb_api.bat" if sys.platform == "win32" else "upgrade_spinedb_api.py"
     print(
-        """ERROR:
+        """SPINEDB_API OUTDATED.
+
         Spine Toolbox failed to start because spinedb_api is outdated.
         (Required version is {0}, whereas current is {1})
         Please upgrade spinedb_api to v{0} and start Spine Toolbox again.
@@ -114,6 +116,37 @@ def spinedb_api_version_check():
 
         """.format(
             REQUIRED_SPINEDB_API_VERSION, current_version, script
+        )
+    )
+    return False
+
+
+def spine_engine_version_check():
+    """Check if spine engine package is the correct version and explain how to upgrade if it is not."""
+    try:
+        current_version = spine_engine.__version__
+        current_split = [int(x) for x in current_version.split(".")]
+        required_split = [int(x) for x in REQUIRED_SPINE_ENGINE_VERSION.split(".")]
+        if current_split >= required_split:
+            return True
+    except AttributeError:
+        current_version = "not reported"
+    script = "upgrade_spine_engine.bat" if sys.platform == "win32" else "upgrade_spine_engine.py"
+    print(
+        """SPINE ENGINE OUTDATED.
+
+        Spine Toolbox failed to start because spine_engine is outdated.
+        (Required version is {0}, whereas current is {1})
+        Please upgrade spine_engine to v{0} and start Spine Toolbox again.
+
+        To upgrade, run script '{2}' in the '/bin' folder.
+
+        Or upgrade it manually by running,
+
+            pip install --upgrade git+https://github.com/Spine-project/spine-engine.git#egg=spine_engine
+
+        """.format(
+            REQUIRED_SPINE_ENGINE_VERSION, current_version, script
         )
     )
     return False

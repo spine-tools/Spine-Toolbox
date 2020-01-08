@@ -9,7 +9,7 @@ from spinetoolbox.helpers import spinedb_api_version_check, pyside2_version_chec
 
 
 def main(argv):
-    """Launch application.
+    """Launches Data Store view as it's own application.
 
     Args:
         argv (list): Command line arguments

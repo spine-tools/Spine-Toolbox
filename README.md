@@ -81,30 +81,48 @@ The recommended way to install dependencies using Anaconda or Miniconda is:
 
         pip install -r dev-requirements.txt
 
-### Upgrading spinedb_api
+### Upgrading Requirements
 
-The package `spinedb_api` is required for running Spine Toolbox. It is being 
-actively developed in 
-[Spine-Database-API](https://github.com/Spine-project/Spine-Database-API) GitHub 
-project by the Spine project consortium. Starting the application may require 
-upgrading this package to the latest version. You can either upgrade the package 
-manually or run an upgrade script, which has been added for convenience.  
+The requirements include two packages (`spinedb_api` and `spine_engine`) developed by 
+the Spine project consortium. Since they are developed very actively at the moment, you 
+may need to upgrade these regularly.
 
-To upgrade `spinedb_api` manually, run
+#### Upgrading [spinedb_api](https://github.com/Spine-project/Spine-Database-API)
+
+The package `spinedb_api` is required for running Spine Toolbox. Whenever you 
+merge the latest changes from the remote server onto your local copy of the 
+application (i.e. do a `git pull`), the application may request you to upgrade 
+this package. You can either do this manually or by running an upgrade script, 
+which has been added for convenience.
+
+To upgrade with a script, run `upgrade_spinedb_api.bat` on Windows or 
+`upgrade_spinedb_api.py` on Linux and Mac OS X. The scripts are located in the
+`bin` directory.
+
+To upgrade manually, run
 
     pip install --upgrade git+https://github.com/Spine-project/Spine-Database-API.git
 
-Or run `upgrade_spinedb_api.bat` on Windows or `upgrade_spinedb_api.sh` 
+#### Upgrading [spine_engine](https://github.com/Spine-project/spine-engine)
+
+Package `spine_engine` is required for running Spine Toolbox. The application 
+may request you to upgrade this package. You can either do this manually or by 
+running an upgrade script, which has been added for convenience.
+
+To upgrade with a script, run `upgrade_spine_engine.bat` on Windows or `upgrade_spinedb_api.py` 
 on Linux and Mac OS X. The scripts are located in the `bin` directory.
 
-**Note:** You don't need to clone or download the `spinedb_api` source code. 
-*pip* takes care of installing the latest version from GitHub to your system 
-automatically.
+To upgrade `spine_engine` manually, run
 
-### Upgrading all dependencies
+    pip install --upgrade git+https://github.com/Spine-project/spine-engine.git#egg=spine_engine
 
-You can upgrade all required packages for Spine Toolbox to the newest available 
-version with a single command
+**Note:** You don't need to clone or download the `spinedb_api` nor the 
+`spine_engine` source codes. *pip* takes care of installing the latest 
+version from GitHub to your system automatically.
+
+#### Upgrading all dependencies
+
+To upgrade all required packages for Spine Toolbox, run
 
     pip install --upgrade -r requirements.txt
 
