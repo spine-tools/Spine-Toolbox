@@ -530,7 +530,7 @@ class LinkBase(QGraphicsPathItem):
         """Sets the path for this item.
 
         Args:
-            curved_links (bool): Whether the path should follow a smooth curve or just a straight line
+            curved_links (bool): Whether the path should follow a curvy line or a straight line
         """
         ellipse_path = self._make_ellipse_path()
         guide_path = self._make_guide_path(curved_links)
@@ -567,32 +567,23 @@ class LinkBase(QGraphicsPathItem):
         return {"left": QPointF(-1, 0), "bottom": QPointF(0, 1), "right": QPointF(1, 0)}[self.dst_connector.position]
 
     def _make_guide_path(self, curved_links):
-        """
-        Returns a 'narrow' path conneting this item's source and destination.
+        """Returns a 'narrow' path connecting this item's source and destination.
 
         Args:
-            curved_links (bool): Whether the path should follow a smooth curve or just a straight line
+            curved_links (bool): Whether the path should follow a curved line or just a straight line
 
         Returns:
             QPainterPath
         """
-        try:
-            feedback = self.dst_connector.parentItem() == self.src_connector.parentItem()
-        except AttributeError:
-            feedback = False
-        curved_links |= feedback
         path = QPainterPath(self.src_center)
         if not curved_links:
             path.lineTo(self.dst_center)
             return path
         c_min = 2 * self.magic_number
         c_max = 8 * self.magic_number
-        if not feedback:
-            c_factor = QLineF(self.src_center, self.dst_center).length() / 2
-            c_factor = min(c_factor, c_max)
-            c_factor = max(c_factor, c_min)
-        else:
-            c_factor = c_max
+        c_factor = QLineF(self.src_center, self.dst_center).length() / 2
+        c_factor = min(c_factor, c_max)
+        c_factor = max(c_factor, c_min)
         c1 = self.src_center + c_factor * self._get_src_offset()
         c2 = self.dst_center + c_factor * self._get_dst_offset(c1)
         path.cubicTo(c1, c2, self.dst_center)
@@ -884,6 +875,12 @@ class LinkDrawer(LinkBase):
     @property
     def dst_connector(self):
         items = self.scene().items(self.tip)
+        # Now that feedback loops are disabled, we don't want the tip to 'snap' to any of the src
+        # connector buttons.
+        src_connectors = self.src_connector._parent.connectors.values()
+        for conn in src_connectors:
+            if conn in items:
+                return None  # Return None if the tip is on any source connector button
         return next(iter(x for x in items if isinstance(x, ConnectorButton)), None)
 
     @property
@@ -896,4 +893,6 @@ class LinkDrawer(LinkBase):
     def dst_center(self):
         if not self.dst_connector:
             return self.tip
+        # If link drawer tip is on a connector button, this makes
+        # the tip 'snap' to the center of the connector button
         return self.dst_rect.center()

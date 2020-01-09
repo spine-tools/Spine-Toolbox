@@ -230,14 +230,14 @@ class CustomQGraphicsView(QGraphicsView):
 
 
 class DesignQGraphicsView(CustomQGraphicsView):
-    """QGraphicsView for the Design View.
-
-    Attributes:
-        parent (QWidget): Graph View Form's (QMainWindow) central widget (self.centralwidget)
-    """
+    """QGraphicsView for the Design View."""
 
     def __init__(self, parent):
-        """Initialize DesignQGraphicsView."""
+        """
+
+        Args:
+            parent (QWidget): Graph View Form's (QMainWindow) central widget (self.centralwidget)
+        """
         super().__init__(parent=parent)  # Parent is passed to QWidget's constructor
         self._scene = None
         self._toolbox = None
@@ -259,6 +259,10 @@ class DesignQGraphicsView(CustomQGraphicsView):
         # This below will trigger connector button if any
         super().mousePressEvent(event)
         if was_drawing:
+            # Enable source connector buttons
+            src_connectors = self.src_connector._parent.connectors.values()
+            for conn in src_connectors:
+                conn.setEnabled(True)
             self.link_drawer.hide()
             # If `drawing` is still `True` here, it means we didn't hit a connector
             if self.link_drawer.drawing:
@@ -336,7 +340,7 @@ class DesignQGraphicsView(CustomQGraphicsView):
             src_connector (ConnectorButton): Source connector button
             dst_connector (ConnectorButton): Destination connector button
         """
-        # Remove existing links betwen the same items
+        # Remove existing links between the same items
         for link in src_connector._parent.outgoing_links():
             if link.dst_connector._parent == dst_connector._parent:
                 link.wipe_out()
@@ -422,6 +426,9 @@ class DesignQGraphicsView(CustomQGraphicsView):
         for conn in connections:
             src_name, src_anchor = conn["from"]
             dst_name, dst_anchor = conn["to"]
+            # Do not restore feedback links
+            if src_name == dst_name:
+                continue
             src_ind = self._project_item_model.find_item(src_name)
             dst_ind = self._project_item_model.find_item(dst_name)
             if not src_ind or not dst_ind:
@@ -444,6 +451,12 @@ class DesignQGraphicsView(CustomQGraphicsView):
             self.link_drawer.drawing = True
             self.link_drawer.start_drawing_at(connector)
             self.src_connector = connector
+            # Disable source connector buttons
+            # These are enabled again in DesignQGraphicsView.mousePressEvent
+            parent_icon = self.src_connector._parent  # ProjectItemIcon
+            for conn in parent_icon.connectors.values():
+                conn.setEnabled(False)
+                conn.setBrush(conn.brush)  # Remove hover brush from src connector that was clicked
         else:
             # stop drawing and make connection
             self.link_drawer.drawing = False
@@ -456,20 +469,17 @@ class DesignQGraphicsView(CustomQGraphicsView):
 
     def notify_destination_items(self):
         """Notify destination items that they have been connected to a source item."""
-        if self.src_item_name == self.dst_item_name:
-            self._toolbox.msg_warning.emit("Link established. Feedback link functionality not implemented.")
-        else:
-            src_index = self._project_item_model.find_item(self.src_item_name)
-            if not src_index:
-                logging.error("Item %s not found", self.src_item_name)
-                return
-            dst_index = self._project_item_model.find_item(self.dst_item_name)
-            if not dst_index:
-                logging.error("Item %s not found", self.dst_item_name)
-                return
-            src_item = self._project_item_model.project_item(src_index)
-            dst_item = self._project_item_model.project_item(dst_index)
-            dst_item.notify_destination(src_item)
+        src_index = self._project_item_model.find_item(self.src_item_name)
+        if not src_index:
+            logging.error("Item %s not found", self.src_item_name)
+            return
+        dst_index = self._project_item_model.find_item(self.dst_item_name)
+        if not dst_index:
+            logging.error("Item %s not found", self.dst_item_name)
+            return
+        src_item = self._project_item_model.project_item(src_index)
+        dst_item = self._project_item_model.project_item(dst_index)
+        dst_item.notify_destination(src_item)
 
 
 class GraphQGraphicsView(CustomQGraphicsView):
