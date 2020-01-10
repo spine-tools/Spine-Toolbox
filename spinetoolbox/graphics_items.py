@@ -740,6 +740,7 @@ class Link(LinkBase):
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
         self.setFlag(QGraphicsItem.ItemIsFocusable, enabled=True)
         self.setCursor(Qt.PointingHandCursor)
+        self.setZValue(0.5)  # This makes links appear on top of items because item zValue == 0.0
         self.update_geometry()
 
     def make_execution_animation(self):
@@ -858,6 +859,7 @@ class LinkDrawer(LinkBase):
         self.drawing = False
         self.setBrush(QBrush(QColor(255, 0, 255, 204)))
         self.setPen(QPen(Qt.black, 0.5))
+        self.setZValue(1)  # LinkDrawer should be on top of every other item
         self.hide()
 
     def start_drawing_at(self, src_connector):
