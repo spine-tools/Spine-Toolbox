@@ -27,6 +27,7 @@ from spinetoolbox.project_item import ProjectItem
 from spinetoolbox.helpers import create_dir
 from spinetoolbox.spine_io.importers.csv_reader import CSVConnector
 from spinetoolbox.spine_io.importers.excel_reader import ExcelConnector
+from spinetoolbox.spine_io.importers.gdx_connector import GdxConnector
 from spinetoolbox.widgets.import_preview_window import ImportPreviewWindow
 from . import importer_program
 
@@ -195,7 +196,7 @@ class Importer(ProjectItem):
         """Shows a QDialog to select a connector for the given source file.
         Mimics similar routine in `spine_io.widgets.import_widget.ImportDialog`
         """
-        connector_list = [CSVConnector, ExcelConnector]  # TODO: add others as needed
+        connector_list = [CSVConnector, ExcelConnector, GdxConnector]  # add others as needed
         connector_names = [c.DISPLAY_NAME for c in connector_list]
         dialog = QDialog(self._toolbox)
         dialog.setLayout(QVBoxLayout())
@@ -207,6 +208,8 @@ class Importer(ProjectItem):
             row = connector_list.index(ExcelConnector)
         elif file_extension.lower() == ".csv":
             row = connector_list.index(CSVConnector)
+        elif file_extension.lower() == ".gdx":
+            row = connector_list.index(GdxConnector)
         else:
             row = None
         if row:
