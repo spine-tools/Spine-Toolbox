@@ -16,9 +16,18 @@ ImportDialog class.
 :date:   1.6.2019
 """
 
-from collections import namedtuple
-from PySide2.QtWidgets import QDialog, QWidget, QVBoxLayout, QDialogButtonBox, QPushButton, QLabel
-from PySide2.QtCore import Qt, Slot
+from PySide2.QtWidgets import (
+    QApplication,
+    QDialog,
+    QWidget,
+    QVBoxLayout,
+    QDialogButtonBox,
+    QPushButton,
+    QLabel,
+    QSplitter,
+    QStyle,
+)
+from PySide2.QtCore import QSize, Qt, Slot
 from PySide2.QtGui import QGuiApplication
 import spinedb_api
 from ..helpers import busy_effect
@@ -67,7 +76,7 @@ class ImportDialog(QDialog):
         self.active_connector = None
         self._current_view = "connector"
         self._settings = settings
-        self._preview_window_state = None
+        self._preview_window_state = {}
 
         # create widgets
         self._import_preview = None
@@ -250,13 +259,13 @@ class ImportDialog(QDialog):
     def set_error_widget_as_main_widget(self):
         self._current_view = "error"
         if self._import_preview is not None and not self._import_preview.isHidden():
-            if self._preview_window_state is None:
-                self._preview_window_state = namedtuple(
-                    "WindowState", ["size", "position", "maximized"], defaults=[None, None, None]
-                )
-            self._preview_window_state.maximized = self.windowState() == Qt.WindowMaximized
-            self._preview_window_state.size = self.size()
-            self._preview_window_state.position = self.pos()
+            self._preview_window_state["maximized"] = self.windowState() == Qt.WindowMaximized
+            self._preview_window_state["size"] = self.size()
+            self._preview_window_state["position"] = self.pos()
+            splitters = dict()
+            self._preview_window_state["splitters"] = splitters
+            for splitter in self._import_preview.findChildren(QSplitter):
+                splitters[splitter.objectName()] = splitter.saveState()
         self.select_widget.hide()
         self._error_widget.show()
         self._import_preview.hide()
@@ -265,26 +274,41 @@ class ImportDialog(QDialog):
 
     def _restore_preview_ui(self):
         """Restore UI state from previous session."""
-        if self._preview_window_state is None:
+        if not self._preview_window_state:
             self._settings.beginGroup(self._SETTINGS_GROUP_NAME)
             window_size = self._settings.value("windowSize")
             window_pos = self._settings.value("windowPosition")
             n_screens = self._settings.value("n_screens", defaultValue=1)
             window_maximized = self._settings.value("windowMaximized", defaultValue='false')
+            splitter_state = {}
+            for splitter in self._import_preview.findChildren(QSplitter):
+                splitter_state[splitter] = self._settings.value(splitter.objectName() + "_splitterState")
             self._settings.endGroup()
             if window_size:
                 self.resize(window_size)
+            else:
+                self.setGeometry(
+                    QStyle.alignedRect(
+                        Qt.LeftToRight, Qt.AlignCenter, QSize(1000, 700), QApplication.desktop().availableGeometry(self)
+                    )
+                )
             if window_pos:
                 self.move(window_pos)
             if window_maximized == 'true':
                 self.setWindowState(Qt.WindowMaximized)
+            for splitter, state in splitter_state.items():
+                if state:
+                    splitter.restoreState(state)
             if len(QGuiApplication.screens()) < int(n_screens):
                 # There are less screens available now than on previous application startup
                 self.move(0, 0)  # Move this widget to primary screen position (0,0)
         else:
-            self.resize(self._preview_window_state.size)
-            self.move(self._preview_window_state.position)
-            self.setWindowState(self._preview_window_state.maximized)
+            self.resize(self._preview_window_state["size"])
+            self.move(self._preview_window_state["position"])
+            self.setWindowState(self._preview_window_state["maximized"])
+            for splitter in self._import_preview.findChildren(QSplitter):
+                name = splitter.objectName()
+                splitter.restoreState(self._preview_window_state["splitters"][name])
 
     def closeEvent(self, event):
         """Stores window's settings and accepts the event."""
@@ -295,9 +319,13 @@ class ImportDialog(QDialog):
                 self._settings.setValue("windowSize", self.size())
                 self._settings.setValue("windowPosition", self.pos())
                 self._settings.setValue("windowMaximized", self.windowState() == Qt.WindowMaximized)
-            elif self._preview_window_state is not None:
-                self._settings.setValue("windowSize", self._preview_window_state.size)
-                self._settings.setValue("windowPosition", self._preview_window_state.position)
+                for splitter in self._import_preview.findChildren(QSplitter):
+                    self._settings.setValue(splitter.objectName() + "_splitterState", splitter.saveState())
+            elif self._preview_window_state:
+                self._settings.setValue("windowSize", self._preview_window_state["size"])
+                self._settings.setValue("windowPosition", self._preview_window_state["position"])
                 self._settings.setValue("windowMaximized", self._preview_window_state.maximized)
+                for name, state in self._preview_window_state["splitters"]:
+                    self._settings.setValue(name + "_splitterState", state)
             self._settings.endGroup()
         event.accept()
