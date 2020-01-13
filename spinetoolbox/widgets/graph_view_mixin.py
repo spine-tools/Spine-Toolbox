@@ -10,7 +10,7 @@
 ######################################################################################################################
 
 """
-Contains the GraphViewForm class.
+Contains the GraphViewMixin class.
 
 :author: M. Marin (KTH)
 :date:   26.11.2018
@@ -22,25 +22,17 @@ from numpy import atleast_1d as arr
 from scipy.sparse.csgraph import dijkstra
 from PySide2.QtCore import Qt, Signal, Slot
 from PySide2.QtWidgets import QGraphicsTextItem
-from .data_store_widget import DataStoreForm
-from .custom_menus import (
-    SimpleEditableParameterValueContextMenu,
-    GraphViewContextMenu,
-    ObjectItemContextMenu,
-    RelationshipItemContextMenu,
-)
+from .custom_menus import GraphViewContextMenu, ObjectItemContextMenu, RelationshipItemContextMenu
 from .custom_qwidgets import ZoomWidgetAction
-from .report_plotting_failure import report_plotting_failure
 from .shrinking_scene import ShrinkingScene
 from .graph_view_graphics_items import EntityItem, ObjectItem, RelationshipItem, ArcItem
 from .graph_view_demo import GraphViewDemo
 from ..mvcmodels.entity_list_models import ObjectClassListModel, RelationshipClassListModel
 from ..helpers import busy_effect
-from ..plotting import plot_selection, PlottingError, GraphAndTreeViewPlottingHints
 
 
-class GraphViewForm(DataStoreForm):
-    """A widget to show Spine databases in a graph."""
+class GraphViewMixin:
+    """Provides the graph view for the DS form."""
 
     graph_created = Signal()
 
@@ -48,83 +40,51 @@ class GraphViewForm(DataStoreForm):
     _arc_width = 0.25 * _node_extent
     _arc_length_hint = 3 * _node_extent
 
-    def __init__(self, db_mngr, *db_urls, read_only=False):
-        """Initializes form.
-
-        Args:
-            db_mngr (SpineDBManager): The manager to use
-            *db_urls (str): Database urls to view.
-            read_only (bool): Whether or not the form should be editable.
-        """
-        from ..ui.graph_view_form import Ui_MainWindow
-
-        tic = time.clock()
-        super().__init__(db_mngr, Ui_MainWindow(), *db_urls)
-        self.db_name = self.db_map.codename
-        self.read_only = read_only
-        # Lookups, used for adding objects and relationships
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self._added_objects = {}
         self._added_relationships = {}
-        # Item palette models
         self.object_class_list_model = ObjectClassListModel(self, self.db_mngr, self.db_map)
         self.relationship_class_list_model = RelationshipClassListModel(self, self.db_mngr, self.db_map)
         self.ui.listView_object_class.setModel(self.object_class_list_model)
         self.ui.listView_relationship_class.setModel(self.relationship_class_list_model)
-        # Hidden and rejected items
         self.hidden_items = list()
         self.rejected_items = list()
-        # Current item selection
         self.entity_item_selection = list()
-        # Zoom widget and action
         self.zoom_widget_action = None
-        # Set up splitters
         area = self.dockWidgetArea(self.ui.dockWidget_item_palette)
         self._handle_item_palette_dock_location_changed(area)
-        # Override mouse press event of object tree view
         self.ui.treeView_object.qsettings = self.qsettings
-        # Set up dock widgets
-        self.restore_dock_widgets()
         self.live_demo = GraphViewDemo(self)
-        # Initialize stuff
-        self.init_models()
-        self.setup_delegates()
-        self.add_toggle_view_actions()
         self.setup_zoom_widget_action()
-        self.connect_signals()
-        self.settings_group = "graphViewWidget" if not self.read_only else "graphViewWidgetReadOnly"
-        self.restore_ui()
-        self.init_commit_rollback_actions()
-        title = self.db_name + " (read only) " if read_only else self.db_name
-        self.setWindowTitle("Data store graph view    -- {} --".format(title))
-        toc = time.clock()
-        self.msg.emit("Graph view form created in {} seconds\t".format(toc - tic))
+
+    def add_toggle_view_actions(self):
+        """Adds toggle view actions to View menu."""
+        super().add_toggle_view_actions()
+        self.ui.menuView.addSeparator()
+        self.ui.menuView.addAction(self.ui.dockWidget_entity_graph.toggleViewAction())
+        self.ui.menuView.addAction(self.ui.dockWidget_item_palette.toggleViewAction())
+
+    def restore_dock_widgets(self):
+        super().restore_dock_widgets()
+        self.live_demo.hide()
 
     def connect_signals(self):
         """Connects signals."""
         super().connect_signals()
         self.ui.graphicsView.context_menu_requested.connect(self.show_graph_view_context_menu)
         self.ui.graphicsView.item_dropped.connect(self._handle_item_dropped)
+        self.ui.dockWidget_entity_graph.visibilityChanged.connect(self._handle_entity_graph_visibility_changed)
+        self.ui.dockWidget_item_palette.visibilityChanged.connect(self._handle_item_palette_visibility_changed)
         self.ui.dockWidget_item_palette.dockLocationChanged.connect(self._handle_item_palette_dock_location_changed)
-        self.ui.actionView_hide_selected.triggered.connect(self.hide_selected_items)
-        self.ui.actionView_show_hidden.triggered.connect(self.show_hidden_items)
-        self.ui.actionView_prune_selected.triggered.connect(self.prune_selected_items)
-        self.ui.actionView_reinstate_pruned.triggered.connect(self.reinstate_pruned_items)
-        self.ui.actionHelp_live_demo.triggered.connect(self.show_demo)
-        self.ui.tableView_object_parameter_value.customContextMenuRequested.connect(
-            self.show_object_parameter_value_context_menu
-        )
-        self.ui.tableView_object_parameter_definition.customContextMenuRequested.connect(
-            self.show_object_parameter_definition_context_menu
-        )
-        self.ui.tableView_relationship_parameter_value.customContextMenuRequested.connect(
-            self.show_relationship_parameter_value_context_menu
-        )
-        self.ui.tableView_relationship_parameter_definition.customContextMenuRequested.connect(
-            self.show_relationship_parameter_definition_context_menu
-        )
+        self.ui.actionHide_selected.triggered.connect(self.hide_selected_items)
+        self.ui.actionShow_hidden.triggered.connect(self.show_hidden_items)
+        self.ui.actionPrune_selected.triggered.connect(self.prune_selected_items)
+        self.ui.actionRestore_pruned.triggered.connect(self.restore_pruned_items)
+        self.ui.actionLive_graph_demo.triggered.connect(self.show_demo)
         # Dock Widgets menu action
-        self.ui.actionRestore_Dock_Widgets.triggered.connect(self.restore_dock_widgets)
-        self.ui.menuView.aboutToShow.connect(self._handle_menu_about_to_show)
+        self.ui.menuGraph.aboutToShow.connect(self._handle_menu_graph_about_to_show)
+        self.ui.menuHelp.aboutToShow.connect(self._handle_menu_help_about_to_show)
         self.zoom_widget_action.minus_pressed.connect(self._handle_zoom_minus_pressed)
         self.zoom_widget_action.plus_pressed.connect(self._handle_zoom_plus_pressed)
         self.zoom_widget_action.reset_pressed.connect(self._handle_zoom_reset_pressed)
@@ -135,61 +95,14 @@ class GraphViewForm(DataStoreForm):
     def setup_zoom_widget_action(self):
         """Setups zoom widget action in view menu."""
         self.zoom_widget_action = ZoomWidgetAction(self.ui.menuView)
-        self.ui.menuView.addSeparator()
-        self.ui.menuView.addAction(self.zoom_widget_action)
-
-    @Slot(name="restore_dock_widgets")
-    def restore_dock_widgets(self):
-        """Docks all floating and or hidden QDockWidgets back to the window at 'factory' positions."""
-        # Place docks
-        self.ui.dockWidget_object_parameter_value.setVisible(True)
-        self.ui.dockWidget_object_parameter_value.setFloating(False)
-        self.addDockWidget(Qt.BottomDockWidgetArea, self.ui.dockWidget_object_parameter_value)
-        self.ui.dockWidget_object_parameter_definition.setVisible(True)
-        self.ui.dockWidget_object_parameter_definition.setFloating(False)
-        self.addDockWidget(Qt.BottomDockWidgetArea, self.ui.dockWidget_object_parameter_definition)
-        self.ui.dockWidget_relationship_parameter_value.setVisible(True)
-        self.ui.dockWidget_relationship_parameter_value.setFloating(False)
-        self.addDockWidget(Qt.BottomDockWidgetArea, self.ui.dockWidget_relationship_parameter_value)
-        self.ui.dockWidget_relationship_parameter_definition.setVisible(True)
-        self.ui.dockWidget_relationship_parameter_definition.setFloating(False)
-        self.addDockWidget(Qt.BottomDockWidgetArea, self.ui.dockWidget_relationship_parameter_definition)
-        self.ui.dockWidget_object_tree.setVisible(True)
-        self.ui.dockWidget_object_tree.setFloating(False)
-        self.addDockWidget(Qt.LeftDockWidgetArea, self.ui.dockWidget_object_tree)
-        self.ui.dockWidget_item_palette.setVisible(True)
-        self.ui.dockWidget_item_palette.setFloating(False)
-        self.addDockWidget(Qt.RightDockWidgetArea, self.ui.dockWidget_item_palette)
-        self.ui.dockWidget_parameter_value_list.setVisible(True)
-        self.ui.dockWidget_parameter_value_list.setFloating(False)
-        self.addDockWidget(Qt.RightDockWidgetArea, self.ui.dockWidget_parameter_value_list)
-        # Tabify
-        self.tabifyDockWidget(self.ui.dockWidget_object_parameter_value, self.ui.dockWidget_object_parameter_definition)
-        self.tabifyDockWidget(
-            self.ui.dockWidget_relationship_parameter_value, self.ui.dockWidget_relationship_parameter_definition
-        )
-        self.ui.dockWidget_object_parameter_value.raise_()
-        self.ui.dockWidget_relationship_parameter_value.raise_()
+        self.ui.menuGraph.addSeparator()
+        self.ui.menuGraph.addAction(self.zoom_widget_action)
 
     def init_models(self):
         """Initializes models."""
         super().init_models()
         self.object_class_list_model.populate_list()
         self.relationship_class_list_model.populate_list()
-
-    def init_parameter_value_models(self):
-        """Initializes parameter value models from source database."""
-        # FIXME:
-        self.object_parameter_value_model.has_empty_row = not self.read_only
-        self.relationship_parameter_value_model.has_empty_row = not self.read_only
-        super().init_parameter_value_models()
-
-    def init_parameter_definition_models(self):
-        """Initializes parameter (definition) models from source database."""
-        # FIXME:
-        self.object_parameter_definition_model.has_empty_row = not self.read_only
-        self.relationship_parameter_definition_model.has_empty_row = not self.read_only
-        super().init_parameter_definition_models()
 
     def receive_object_classes_added(self, db_map_data):
         super().receive_object_classes_added(db_map_data)
@@ -286,7 +199,7 @@ class GraphViewForm(DataStoreForm):
             if isinstance(item, EntityItem) and item.entity_class_id in updated_ids:
                 item.refresh_icon()
 
-    @Slot("QModelIndex", name="_add_more_object_classes")
+    @Slot("QModelIndex")
     def _add_more_object_classes(self, index):
         """Runs when the user clicks on the Item palette Object class view.
         Opens the form  to add more object classes if the index is the one that sayes 'New...'.
@@ -297,7 +210,7 @@ class GraphViewForm(DataStoreForm):
         if index == index.model().new_index:
             self.show_add_object_classes_form()
 
-    @Slot("QModelIndex", name="_add_more_relationship_classes")
+    @Slot("QModelIndex")
     def _add_more_relationship_classes(self, index):
         """Runs when the user clicks on the Item palette Relationship class view.
         Opens the form to add more relationship classes if the index is the one that sayes 'New...'.
@@ -308,33 +221,37 @@ class GraphViewForm(DataStoreForm):
         if index == index.model().new_index:
             self.show_add_relationship_classes_form()
 
-    @Slot(name="_handle_zoom_minus_pressed")
+    @Slot()
     def _handle_zoom_minus_pressed(self):
         """Performs a zoom out on the view."""
         self.ui.graphicsView.zoom_out()
 
-    @Slot(name="_handle_zoom_plus_pressed")
+    @Slot()
     def _handle_zoom_plus_pressed(self):
         """Performs a zoom in on the view."""
         self.ui.graphicsView.zoom_in()
 
-    @Slot(name="_handle_zoom_reset_pressed")
+    @Slot()
     def _handle_zoom_reset_pressed(self):
         """Resets the zoom on the view."""
         self.ui.graphicsView.reset_zoom()
 
-    @Slot(name="_handle_menu_about_to_show")
-    def _handle_menu_about_to_show(self):
-        """Runs when a menu from the main menubar is about to show.
-        Enables or disables the menu actions according to current status of the form.
-        """
-        self.ui.actionView_hide_selected.setEnabled(bool(self.entity_item_selection))
-        self.ui.actionView_show_hidden.setEnabled(bool(self.hidden_items))
-        self.ui.actionView_prune_selected.setEnabled(bool(self.entity_item_selection))
-        self.ui.actionView_reinstate_pruned.setEnabled(bool(self.rejected_items))
-        self.ui.actionHelp_live_demo.setEnabled(not self.live_demo.is_running())
+    @Slot()
+    def _handle_menu_graph_about_to_show(self):
+        """Enables or disables actions according to current selection in the graph."""
+        visible = self.ui.dockWidget_entity_graph.isVisible()
+        self.ui.actionHide_selected.setEnabled(visible and bool(self.entity_item_selection))
+        self.ui.actionShow_hidden.setEnabled(visible and bool(self.hidden_items))
+        self.ui.actionPrune_selected.setEnabled(visible and bool(self.entity_item_selection))
+        self.ui.actionRestore_pruned.setEnabled(visible and bool(self.rejected_items))
+        self.zoom_widget_action.setEnabled(visible)
 
-    @Slot("Qt.DockWidgetArea", name="_handle_item_palette_dock_location_changed")
+    @Slot()
+    def _handle_menu_help_about_to_show(self):
+        """Enables or disables action according to current status of the demo."""
+        self.ui.actionLive_graph_demo.setEnabled(not self.live_demo.is_running())
+
+    @Slot("Qt.DockWidgetArea")
     def _handle_item_palette_dock_location_changed(self, area):
         """Runs when the item palette dock widget location changes.
         Adjusts splitter orientation accordingly."""
@@ -343,26 +260,23 @@ class GraphViewForm(DataStoreForm):
         else:
             self.ui.splitter_object_relationship_class.setOrientation(Qt.Horizontal)
 
-    def add_toggle_view_actions(self):
-        """Adds toggle view actions to View menu."""
-        super().add_toggle_view_actions()
-        self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_object_tree.toggleViewAction())
-        if not self.read_only:
-            self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_item_palette.toggleViewAction())
-        else:
-            self.ui.dockWidget_item_palette.hide()
+    @Slot(bool)
+    def _handle_entity_graph_visibility_changed(self, visible):
+        if visible:
+            self.build_graph()
+        self.ui.dockWidget_item_palette.setVisible(self.ui.dockWidget_entity_graph.isVisible())
 
-    def init_commit_rollback_actions(self):
-        """Initializes commit and rollback actions."""
-        if self.read_only:
-            self.ui.menuSession.removeAction(self.ui.actionCommit)
-            self.ui.menuSession.removeAction(self.ui.actionRollback)
+    @Slot(bool)
+    def _handle_item_palette_visibility_changed(self, visible):
+        if visible:
+            self.ui.dockWidget_entity_graph.show()
 
-    @Slot("QItemSelection", "QItemSelection", name="_handle_object_tree_selection_changed")
+    @Slot("QItemSelection", "QItemSelection")
     def _handle_object_tree_selection_changed(self, selected, deselected):
         """Builds graph."""
         super()._handle_object_tree_selection_changed(selected, deselected)
-        self.build_graph()
+        if self.ui.dockWidget_entity_graph.isVisible():
+            self.build_graph()
 
     @busy_effect
     def build_graph(self, timeit=False):
@@ -597,7 +511,7 @@ class GraphViewForm(DataStoreForm):
         maxstep = 1 / np.min(weights[mask])
         minstep = 1 / np.max(weights[mask])
         lambda_ = np.log(minstep / maxstep) / (iterations - 1)  # exponential decay of allowed adjustment
-        sets = GraphViewForm.sets(N)  # construct sets of bus pairs
+        sets = GraphViewMixin.sets(N)  # construct sets of bus pairs
         for iteration in range(iterations):
             step = maxstep * np.exp(lambda_ * iteration)  # how big adjustments are allowed?
             rand_order = np.random.permutation(N)  # we don't want to use the same pair order each iteration
@@ -642,6 +556,7 @@ class GraphViewForm(DataStoreForm):
         """Filters parameters by selected objects in the graph."""
         scene = self.ui.graphicsView.scene()
         selected_items = scene.selectedItems()
+        self.entity_item_selection = [x for x in selected_items if isinstance(x, EntityItem)]
         selected_objs = {self.db_map: []}
         selected_rels = {self.db_map: []}
         for item in selected_items:
@@ -802,26 +717,26 @@ class GraphViewForm(DataStoreForm):
         """
         menu = GraphViewContextMenu(self, global_pos)
         option = menu.get_action()
-        if option == "Hide selected items":
+        if option == "Hide selected":
             self.hide_selected_items()
-        elif option == "Show hidden items":
+        elif option == "Show hidden":
             self.show_hidden_items()
-        elif option == "Prune selected items":
+        elif option == "Prune selected":
             self.prune_selected_items()
-        elif option == "Reinstate pruned items":
-            self.reinstate_pruned_items()
+        elif option == "Restore pruned":
+            self.restore_pruned_items()
         else:
             pass
         menu.deleteLater()
 
-    @Slot("bool", name="reinstate_pruned_items")
+    @Slot(bool)
     def hide_selected_items(self, checked=False):
         """Hides selected items."""
         self.hidden_items.extend(self.entity_item_selection)
         for item in self.entity_item_selection:
             item.set_all_visible(False)
 
-    @Slot("bool", name="reinstate_pruned_items")
+    @Slot(bool)
     def show_hidden_items(self, checked=False):
         """Shows hidden items."""
         if not self.ui.graphicsView.scene():
@@ -830,19 +745,19 @@ class GraphViewForm(DataStoreForm):
             item.set_all_visible(True)
         self.hidden_items.clear()
 
-    @Slot("bool", name="reinstate_pruned_items")
+    @Slot(bool)
     def prune_selected_items(self, checked=False):
         """Prunes selected items."""
         self.rejected_items.extend(self.entity_item_selection)
         self.build_graph()
 
-    @Slot("bool", name="reinstate_pruned_items")
-    def reinstate_pruned_items(self, checked=False):
+    @Slot(bool)
+    def restore_pruned_items(self, checked=False):
         """Reinstates pruned items."""
         self.rejected_items.clear()
         self.build_graph()
 
-    @Slot("bool")
+    @Slot(bool)
     def show_demo(self, checked=False):
         self.live_demo.show()
 
@@ -904,80 +819,6 @@ class GraphViewForm(DataStoreForm):
                 db_item = item.db_representation
                 db_map_typed_data[self.db_map].setdefault(item.entity_type, []).append(db_item)
         self.db_mngr.remove_items(db_map_typed_data)
-
-    @Slot("QPoint", name="show_object_parameter_value_context_menu")
-    def show_object_parameter_value_context_menu(self, pos):
-        """Shows context menu for object parameter value table.
-
-        Args:
-            pos (QPoint)
-        """
-        self._show_table_context_menu(pos, self.ui.tableView_object_parameter_value, 'value')
-
-    @Slot("QPoint", name="show_object_parameter_definition_context_menu")
-    def show_object_parameter_definition_context_menu(self, pos):
-        """Shows context menu for object parameter definition table.
-
-        Args:
-            pos (QPoint)
-        """
-        self._show_table_context_menu(pos, self.ui.tableView_object_parameter_definition, 'default_value')
-
-    @Slot("QPoint", name="show_relationship_parameter_value_context_menu")
-    def show_relationship_parameter_value_context_menu(self, pos):
-        """Shows context menu for relationship parameter value table.
-
-        Args:
-            pos (QPoint)
-        """
-        self._show_table_context_menu(pos, self.ui.tableView_relationship_parameter_value, 'value')
-
-    @Slot("QPoint", name="show_relationship_parameter_definition_context_menu")
-    def show_relationship_parameter_definition_context_menu(self, pos):
-        """Shows context menu for relationship parameter definition table.
-
-        Args:
-            pos (QPoint)
-        """
-        self._show_table_context_menu(pos, self.ui.tableView_relationship_parameter_definition, 'default_value')
-
-    def _show_table_context_menu(self, position, table_view, column_name):
-        index = table_view.indexAt(position)
-        global_pos = table_view.viewport().mapToGlobal(position)
-        model = table_view.model()
-        flags = model.flags(index)
-        editable = (flags & Qt.ItemIsEditable) == Qt.ItemIsEditable
-        is_value = model.headerData(index.column(), Qt.Horizontal) == column_name
-        if editable and is_value:
-            menu = SimpleEditableParameterValueContextMenu(self, global_pos, index)
-        else:
-            return
-        option = menu.get_action()
-        if option == "Open in editor...":
-            self.show_parameter_value_editor(index, table_view)
-        elif option == "Plot":
-            selection = table_view.selectedIndexes()
-            try:
-                hints = GraphAndTreeViewPlottingHints(table_view)
-                plot_widget = plot_selection(model, selection, hints)
-            except PlottingError as error:
-                report_plotting_failure(error, self)
-                return
-            if (
-                table_view is self.ui.tableView_object_parameter_value
-                or table_view is self.ui.tableView_object_parameter_definition
-            ):
-                plot_window_title = "Object parameter plot    -- {} --".format(column_name)
-            elif (
-                table_view is self.ui.tableView_relationship_parameter_value
-                or table_view is self.ui.tableView_relationship_parameter_definition
-            ):
-                plot_window_title = "Relationship parameter plot    -- {} --".format(column_name)
-            else:
-                plot_window_title = "Plot"
-            plot_widget.setWindowTitle(plot_window_title)
-            plot_widget.show()
-        menu.deleteLater()
 
     def closeEvent(self, event=None):
         """Handles close window event.

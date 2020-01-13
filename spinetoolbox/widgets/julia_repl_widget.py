@@ -18,7 +18,7 @@ Class for a custom SpineConsoleWidget to use as julia REPL.
 
 import logging
 from PySide2.QtWidgets import QMessageBox, QAction, QApplication
-from PySide2.QtCore import Slot, Signal, Qt, QTimer
+from PySide2.QtCore import Slot, Signal, Qt
 from qtconsole.manager import QtKernelManager, QtKernelRestarter
 from jupyter_client.kernelspec import find_kernel_specs, NoSuchKernel
 from ..execution_managers import QProcessExecutionManager

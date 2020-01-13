@@ -23,6 +23,7 @@ from gdx2py import GdxFile
 from PySide2.QtWidgets import QApplication
 from spinedb_api import import_functions as dbmanip
 from spinedb_api import create_new_spine_database, DiffDatabaseMapping
+from spinetoolbox.spine_io import gdx_utils
 from spinetoolbox.spine_io.exporters import gdx
 
 
@@ -187,14 +188,14 @@ class TextGdx(unittest.TestCase):
         self.assertEqual(parameter.name, 'parameter')
         self.assertEqual(parameter.value, 3.14)
 
-    @unittest.skipIf(gdx.find_gams_directory() is None, "No working GAMS installation found.")
+    @unittest.skipIf(gdx_utils.find_gams_directory() is None, "No working GAMS installation found.")
     def test_domains_to_gams(self):
         domain = gdx.DomainSet(self._MockObjectClass())
         record = gdx.Record(self._MockObject())
         parameter = gdx.Parameter(self._MockParameter())
         record.parameters.append(parameter)
         domain.records.append(record)
-        gams_directory = gdx.find_gams_directory()
+        gams_directory = gdx_utils.find_gams_directory()
         with TemporaryDirectory() as temp_directory:
             path_to_gdx = Path(temp_directory).joinpath("test_domains_to_gams.gdx")
             with GdxFile(path_to_gdx, 'w', gams_directory) as gdx_file:
@@ -210,7 +211,7 @@ class TextGdx(unittest.TestCase):
                     self.assertEqual(key, "mock_object_name")
                     self.assertEqual(value, 2.3)
 
-    @unittest.skipIf(gdx.find_gams_directory() is None, "No working GAMS installation found.")
+    @unittest.skipIf(gdx_utils.find_gams_directory() is None, "No working GAMS installation found.")
     def test_sets_to_gams(self):
         domain = gdx.DomainSet(self._MockObjectClass())
         record = gdx.Record(self._MockObject())
@@ -220,7 +221,7 @@ class TextGdx(unittest.TestCase):
         set_item.records.append(record)
         parameter = gdx.Parameter(self._MockParameter())
         record.parameters.append(parameter)
-        gams_directory = gdx.find_gams_directory()
+        gams_directory = gdx_utils.find_gams_directory()
         with TemporaryDirectory() as temp_directory:
             path_to_gdx = Path(temp_directory).joinpath("test_sets_to_gams.gdx")
             with GdxFile(path_to_gdx, 'w', gams_directory) as gdx_file:
@@ -240,14 +241,14 @@ class TextGdx(unittest.TestCase):
                     self.assertEqual(key, "mock_object_name")
                     self.assertEqual(value, 2.3)
 
-    @unittest.skipIf(gdx.find_gams_directory() is None, "No working GAMS installation found.")
+    @unittest.skipIf(gdx_utils.find_gams_directory() is None, "No working GAMS installation found.")
     def test_domain_parameters_to_gams(self):
         domain = gdx.DomainSet(self._MockObjectClass())
         record = gdx.Record(self._MockObject())
         domain.records.append(record)
         parameter = gdx.Parameter(self._MockParameter())
         record.parameters.append(parameter)
-        gams_directory = gdx.find_gams_directory()
+        gams_directory = gdx_utils.find_gams_directory()
         with TemporaryDirectory() as temp_directory:
             path_to_gdx = Path(temp_directory).joinpath("test_domain_parameters_to_gams.gdx")
             with GdxFile(path_to_gdx, 'w', gams_directory) as gdx_file:
@@ -299,9 +300,9 @@ class TextGdx(unittest.TestCase):
         self.assertFalse(domains)
         self.assertEqual(extracted.name, "domain1")
 
-    @unittest.skipIf(gdx.find_gams_directory() is None, "No working GAMS installation found.")
+    @unittest.skipIf(gdx_utils.find_gams_directory() is None, "No working GAMS installation found.")
     def test_to_gdx_file_sorts_domains_and_sets_and_records_correctly(self):
-        gams_directory = gdx.find_gams_directory()
+        gams_directory = gdx_utils.find_gams_directory()
         with TemporaryDirectory() as tmp_dir_name:
             database_map = self._make_database_map(tmp_dir_name, "test_to_gams_workspace.sqlite")
             dbmanip.import_object_classes(database_map, ['domain1', 'domain2'])
@@ -356,9 +357,9 @@ class TextGdx(unittest.TestCase):
                 for gams_record, expected_name in zip(gams_set, expected_records):
                     self.assertEqual(gams_record, expected_name)
 
-    @unittest.skipIf(gdx.find_gams_directory() is None, "No working GAMS installation found.")
+    @unittest.skipIf(gdx_utils.find_gams_directory() is None, "No working GAMS installation found.")
     def test_to_gdx_file_exports_global_parameters_only_not_the_corresponding_domain(self):
-        gams_directory = gdx.find_gams_directory()
+        gams_directory = gdx_utils.find_gams_directory()
         with TemporaryDirectory() as tmp_dir_name:
             database_map = self._make_database_map(
                 tmp_dir_name,

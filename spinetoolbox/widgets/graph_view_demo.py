@@ -67,7 +67,7 @@ class GraphViewDemo(LiveDemo):
         simulate = QState(select_more)
         finalize = QFinalState(select_more)
         begin.assignProperty(self.parent().ui.dockWidget_object_tree, "visible", True)
-        sticky = self.parent().qsettings().value("appSettings/stickySelection", defaultValue="false")
+        sticky = self.parent().qsettings.value("appSettings/stickySelection", defaultValue="false")
         note = " (by holding down the <b>Ctrl</b> key)" if sticky == "false" else ""
         text = f"""
             <html>

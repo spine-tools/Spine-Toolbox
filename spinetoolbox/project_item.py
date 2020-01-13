@@ -20,10 +20,9 @@ import os
 import logging
 from urllib.parse import urlparse
 from urllib.request import url2pathname
-from PySide2.QtCore import Qt, Signal, QUrl, QParallelAnimationGroup
+from PySide2.QtCore import Qt, Signal, QUrl, QParallelAnimationGroup, QEventLoop
 from PySide2.QtWidgets import QInputDialog
 from PySide2.QtGui import QDesktopServices
-from .executioner import ExecutionState
 from .helpers import create_dir
 from .metaobject import MetaObject
 from .widgets.custom_menus import CategoryProjectItemContextMenu, ProjectItemContextMenu
@@ -141,6 +140,14 @@ class RootProjectItem(BaseProjectItem):
         logging.error("You can only add a category item as a child of the root item")
         return False
 
+    def custom_context_menu(self, parent, pos):
+        """See base class."""
+        raise NotImplementedError()
+
+    def apply_context_menu_action(self, parent, action):
+        """See base class."""
+        raise NotImplementedError()
+
 
 class CategoryProjectItem(BaseProjectItem):
     """Class for category project items.
@@ -182,7 +189,7 @@ class CategoryProjectItem(BaseProjectItem):
         if isinstance(child_item, ProjectItem):
             self._children.append(child_item)
             child_item._parent = self
-            icon = self._icon_maker(child_item._toolbox, child_item.x - 35, child_item.y - 35, 70, 70, child_item.name)
+            icon = self._icon_maker(child_item._toolbox, child_item.x - 35, child_item.y - 35, 70, 70, child_item)
             child_item.set_icon(icon)
             child_item.set_properties_ui(self._properties_ui)
             return True
@@ -318,49 +325,109 @@ class ProjectItem(BaseProjectItem):
         else:
             self.get_icon().rank_icon.set_rank("X")
 
-    def prepare_for_resource_discovery(self):
-        """
-        Prepares this item for resource discovery.
-        Called by the execution instance before collecting resources for this item.
+    def stop_execution(self):
+        """Stops executing this View."""
+        self._toolbox.msg.emit("Stopping {0}".format(self.name))
 
-        The default implementation does nothing.
+    def execute(self, resources, direction):
         """
+        Executes this item in the given direction using the given resources and returns a boolean
+        indicating the outcome.
 
-    def execute(self, resources_upstream, resources_downstream):
-        """
-        Executes this item.
-
-        Subclasses should overwrite the _do_execute() method to do actual work here.
+        Subclasses need to implement execute_forward and execute_backward to do the appropriate work
+        in each direction.
 
         Args:
-            resources_upstream (list): a list of ProjectItemResources available from upstream items
-            resources_downstream (list): a list of ProjectItemResources available from downstream items
+            resources (list): a list of ProjectItemResources available for execution
+            direction (str): either "forward" or "backward"
+        Returns:
+            bool: True if execution succeeded, False otherwise
         """
-        self._toolbox.msg.emit("")
-        self._toolbox.msg.emit("Executing {} <b>{}</b>".format(self.item_type(), self.name))
-        self._toolbox.msg.emit("***")
-        execution_state = self._do_execute(resources_upstream, resources_downstream)
-        if not self._toolbox.project().execution_instance:
-            # Happens when pressing stop
-            return
-        self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(execution_state)
+        if direction == "forward":
+            self._toolbox.msg.emit("")
+            self._toolbox.msg.emit("Executing {0} <b>{1}</b>".format(self.item_type(), self.name))
+            self._toolbox.msg.emit("***")
+            if self.execute_forward(resources):
+                self.run_leave_animation()
+                return True
+            return False
+        return self.execute_backward(resources)
+
+    def run_leave_animation(self):
+        """
+        Runs the animation that represents execution leaving this item.
+        Blocks until the animation is finished.
+        """
+        loop = QEventLoop()
+        animation = self.make_execution_leave_animation()
+        animation.finished.connect(loop.quit)
+        animation.start()
+        if animation.state() == QParallelAnimationGroup.Running:
+            loop.exec_()
+
+    def execute_forward(self, resources):
+        """
+        Executes this item in the forward direction.
+
+        The default implementation just returns True.
+
+        Args:
+            resources (list): a list of ProjectItemResources available for execution
+        Returns:
+            bool: True if execution succeeded, False otherwise
+        """
+        return True
+
+    def execute_backward(self, resources):
+        """
+        Executes this item in the backward direction.
+
+        The default implementation just returns True.
+
+        Args:
+            resources (list): a list of ProjectItemResources available for execution
+        Returns:
+            bool: True if execution succeeded, False otherwise
+        """
+        return True
+
+    def output_resources(self, direction):
+        """
+        Returns output resources for execution in the given direction.
+
+        Subclasses need to implement output_resources_backward and/or output_resources_forward
+        if they want to provide resources in any direction.
+
+        Returns:
+            a list of ProjectItemResources
+        """
+        return {"backward": self.output_resources_backward, "forward": self.output_resources_forward}[direction]()
 
     # pylint: disable=no-self-use
-    def _do_execute(self, resources_upstream, resources_downstream):
+    def output_resources_forward(self):
         """
-        Does the actual work during execution.
+        Returns output resources for forward execution.
 
-        The default implementation just returns ExecutionState.CONTINUE
+        The default implementation returns an empty list.
 
-        Args:
-            resources_upstream (list): a list of ProjectItemResources available from upstream items
-            resources_downstream (list): a list of ProjectItemResources available from downstream items
         Returns:
-            ExecutionState to indicate the status of the execution
+            a list of ProjectItemResources
         """
-        return ExecutionState.CONTINUE
+        return list()
 
-    def handle_dag_changed(self, rank, resources_upstream):
+    # pylint: disable=no-self-use
+    def output_resources_backward(self):
+        """
+        Returns output resources for backward execution.
+
+        The default implementation returns an empty list.
+
+        Returns:
+            a list of ProjectItemResources
+        """
+        return list()
+
+    def handle_dag_changed(self, rank, resources):
         """
         Handles changes in the DAG.
 
@@ -368,13 +435,13 @@ class ProjectItem(BaseProjectItem):
 
         Args:
             rank (int): item's execution order
-            resources_upstream (list): resources available from upstream items
+            resources (list): resources available from input items
         """
         self.clear_notifications()
         self.set_rank(rank)
-        self._do_handle_dag_changed(resources_upstream)
+        self._do_handle_dag_changed(resources)
 
-    def _do_handle_dag_changed(self, resources_upstream):
+    def _do_handle_dag_changed(self, resources):
         """
         Handles changes in the DAG.
 
@@ -382,7 +449,7 @@ class ProjectItem(BaseProjectItem):
         The default implementation does nothing.
 
         Args:
-            resources_upstream (list): resources available from upstream items
+            resources (list): resources available from input items
         """
 
     def make_execution_leave_animation(self):

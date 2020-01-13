@@ -143,7 +143,7 @@ class DraggableWidget(QLabel):
             item_type (str): Item type (e.g. Data Store, Data Connection, etc...)
             category (str): Item category (e.g. Data Stores, Data Connetions, etc...)
         """
-        super().__init__(parent=parent)  # Parent passed to QFrame constructor. Inherits stylesheet from ToolboxUI.
+        super().__init__(parent=parent)  # Parent passed to QLabel constructor. Inherits stylesheet from ToolboxUI.
         self.category = category
         self.setPixmap(pixmap)
         self.drag_start_pos = None
@@ -237,7 +237,7 @@ class ParameterTagToolBar(QToolBar):
             button = self.widgetForAction(action)
             self.tag_button_group.addButton(button, id=len(self.db_map_ids))
             self.actions.append(action)
-            self.db_map_ids.append([(db_map, id_) for db_map, id_ in db_map_data.items()])
+            self.db_map_ids.append(list(db_map_data.items()))
         self.tag_button_group.buttonToggled["int", "bool"].connect(
             lambda i, checked: self.tag_button_toggled.emit(self.db_map_ids[i], checked)
         )

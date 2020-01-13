@@ -16,7 +16,7 @@ List models for object and relationship classes.
 :date:   28.6.2019
 """
 
-from PySide2.QtCore import Qt, Slot
+from PySide2.QtCore import Qt
 from PySide2.QtGui import QStandardItem, QStandardItemModel, QBrush, QIcon, QColor
 
 
@@ -64,10 +64,15 @@ class EntityListModel(QStandardItemModel):
         """Returns the data stored under the given role for the item referred to by the index."""
         if index != self.new_index:
             if role == Qt.DisplayRole:
-                return self.db_mngr.get_item(self.db_map, self.entity_type, index.data(Qt.UserRole + 1)).get("name")
+                return self._data(index)
             if role == Qt.DecorationRole:
                 return self.db_mngr.entity_class_icon(self.db_map, self.entity_type, index.data(Qt.UserRole + 1))
+            if role == Qt.ToolTipRole:
+                return f"<html>Drag-and-drop this icon onto the Entity graph to create a new <b>{self._data(index)}</b></html>"
         return super().data(index, role)
+
+    def _data(self, index):
+        return self.db_mngr.get_item(self.db_map, self.entity_type, index.data(Qt.UserRole + 1)).get("name")
 
     def receive_entity_classes_added(self, db_map_data):
         """Runs when entity classes are added."""
@@ -87,6 +92,9 @@ class EntityListModel(QStandardItemModel):
         for item in self.findItems("*", Qt.MatchWildcard):
             if item.data(Qt.UserRole + 1) in ids:
                 self.removeRow(item.index().row())
+
+    def flags(self, index):
+        return super().flags(index) & ~Qt.ItemIsSelectable
 
 
 class ObjectClassListModel(EntityListModel):

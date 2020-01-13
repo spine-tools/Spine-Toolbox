@@ -78,7 +78,6 @@ class SpineDBSignaller:
         # Commit, rollback
         self.db_mngr.session_committed.connect(self.receive_session_committed)
         self.db_mngr.session_rolled_back.connect(self.receive_session_rolled_back)
-        self.db_mngr.session_closed.connect(self.receive_session_closed)
 
     @Slot("QVariant")
     def receive_object_classes_added(self, db_map_data):
@@ -261,10 +260,3 @@ class SpineDBSignaller:
             shared_db_maps = self.listeners[listener].intersection(db_maps)
             if shared_db_maps:
                 listener.receive_session_rolled_back(shared_db_maps)
-
-    @Slot(set)
-    def receive_session_closed(self, db_maps):
-        for listener in self.listeners:
-            shared_db_maps = self.listeners[listener].intersection(db_maps)
-            if shared_db_maps:
-                listener.receive_session_closed(shared_db_maps)

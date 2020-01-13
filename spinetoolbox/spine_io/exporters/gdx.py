@@ -24,14 +24,8 @@ to_gdx_file() that does basically everything needed for exporting is provided fo
 :date:   30.8.2019
 """
 
-import os
-import os.path
-import sys
 from gdx2py import GAMSSet, GAMSScalar, GAMSParameter, GdxFile
 from spinedb_api import from_database, ParameterValueFormatError
-
-if sys.platform == 'win32':
-    import winreg
 
 
 class GdxExportException(Exception):
@@ -144,48 +138,6 @@ class Parameter:
         except ParameterValueFormatError:
             value = None
         self.value = float(value) if isinstance(value, (int, float)) else None
-
-
-def _python_interpreter_bitness():
-    """Returns 64 for 64bit Python interpreter or 32 for 32bit interpreter."""
-    # As recommended in Python's docs:
-    # https://docs.python.org/3/library/platform.html#cross-platform
-    return 64 if sys.maxsize > 2 ** 32 else 32
-
-
-def _windows_dlls_exist(gams_path):
-    """Returns True if requred DLL files exist in given GAMS installation path."""
-    bitness = _python_interpreter_bitness()
-    # This DLL must exist on Windows installation
-    dll_name = "gdxdclib{}.dll".format(bitness)
-    dll_path = os.path.join(gams_path, dll_name)
-    return os.path.isfile(dll_path)
-
-
-def find_gams_directory():
-    """
-    Returns GAMS installation directory or None if not found.
-
-    On Windows systems, this function looks for `gams.location` in registry;
-    on other systems the `PATH` environment variable is checked.
-
-    Returns:
-        a path to GAMS installation directory or None if not found.
-    """
-    if sys.platform == "win32":
-        try:
-            with winreg.OpenKey(winreg.HKEY_CLASSES_ROOT, "gams.location") as gams_location_key:
-                gams_path, _ = winreg.QueryValueEx(gams_location_key, None)
-                if not _windows_dlls_exist(gams_path):
-                    return None
-                return gams_path
-        except FileNotFoundError:
-            return None
-    executable_paths = os.get_exec_path()
-    for path in executable_paths:
-        if "gams" in path.casefold():
-            return path
-    return None
 
 
 def domains_to_gams(gdx_file, domains):

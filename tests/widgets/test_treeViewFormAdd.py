@@ -15,6 +15,7 @@ Unit tests for TreeViewForm and GraphViewForm classes.
 :author: M. Marin (KTH)
 :date:   6.12.2018
 """
+from PySide2.QtCore import Qt
 
 
 class TestTreeViewFormAddMixin:
@@ -34,7 +35,7 @@ class TestTreeViewFormAddMixin:
     def test_add_objects_to_object_tree_model(self):
         """Test that objects are added to the object tree model."""
         self.put_mock_object_classes_in_db_mngr()
-        self.tree_view_form.init_object_tree_model()
+        self.tree_view_form.init_models()
         for item in self.tree_view_form.object_tree_model.visit_all():
             item.fetch_more()
         objects = [self.nemo_object, self.pluto_object, self.scooby_object]
@@ -56,7 +57,7 @@ class TestTreeViewFormAddMixin:
         """Test that relationship classes are added to the object tree model."""
         self.put_mock_object_classes_in_db_mngr()
         self.put_mock_objects_in_db_mngr()
-        self.tree_view_form.init_object_tree_model()
+        self.tree_view_form.init_models()
         for item in self.tree_view_form.object_tree_model.visit_all():
             item.fetch_more()
         relationship_classes = [self.fish_dog_class, self.dog_fish_class]
@@ -79,7 +80,7 @@ class TestTreeViewFormAddMixin:
         self.put_mock_object_classes_in_db_mngr()
         self.put_mock_objects_in_db_mngr()
         self.put_mock_relationship_classes_in_db_mngr()
-        self.tree_view_form.init_object_tree_model()
+        self.tree_view_form.init_models()
         for item in self.tree_view_form.object_tree_model.visit_all():
             item.fetch_more()
         relationships = [self.pluto_nemo_rel, self.nemo_pluto_rel, self.nemo_scooby_rel]
@@ -104,17 +105,17 @@ class TestTreeViewFormAddMixin:
         self.assertEqual(scooby_dog_fish_item.child_count(), 0)
         self.assertEqual(scooby_fish_dog_item.child_count(), 1)
         self.assertEqual(pluto_nemo_item1.item_type, "relationship")
-        self.assertEqual(pluto_nemo_item1.display_name, 'pluto,nemo')
+        self.assertEqual(pluto_nemo_item1.display_name, 'nemo')
         self.assertEqual(pluto_nemo_item2.item_type, "relationship")
-        self.assertEqual(pluto_nemo_item2.display_name, 'pluto,nemo')
+        self.assertEqual(pluto_nemo_item2.display_name, 'pluto')
         self.assertEqual(nemo_pluto_item1.item_type, "relationship")
-        self.assertEqual(nemo_pluto_item1.display_name, 'nemo,pluto')
+        self.assertEqual(nemo_pluto_item1.display_name, 'nemo')
         self.assertEqual(nemo_pluto_item2.item_type, "relationship")
-        self.assertEqual(nemo_pluto_item2.display_name, 'nemo,pluto')
+        self.assertEqual(nemo_pluto_item2.display_name, 'pluto')
         self.assertEqual(nemo_scooby_item1.item_type, "relationship")
-        self.assertEqual(nemo_scooby_item1.display_name, 'nemo,scooby')
+        self.assertEqual(nemo_scooby_item1.display_name, 'nemo')
         self.assertEqual(nemo_scooby_item2.item_type, "relationship")
-        self.assertEqual(nemo_scooby_item2.display_name, 'nemo,scooby')
+        self.assertEqual(nemo_scooby_item2.display_name, 'scooby')
 
     def test_add_object_parameter_definitions_to_model(self):
         """Test that object parameter definitions are added to the model."""
@@ -185,7 +186,7 @@ class TestTreeViewFormAddMixin:
         for row in range(model.rowCount()):
             parameters.append(
                 (
-                    model.index(row, h("object_name_list")).data(),
+                    model.index(row, h("object_name_list")).data(Qt.EditRole),
                     model.index(row, h("parameter_name")).data(),
                     model.index(row, h("value")).data(),
                 )

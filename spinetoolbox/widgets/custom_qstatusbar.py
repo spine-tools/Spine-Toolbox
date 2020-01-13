@@ -16,20 +16,11 @@ Custom QWidgets for Filtering and Zooming.
 :date:   2.11.2019
 """
 
-from PySide2.QtWidgets import (
-    QWidget,
-    QVBoxLayout,
-    QHBoxLayout,
-    QMenu,
-    QToolButton,
-    QTextEdit,
-    QWidgetAction,
-    QLabel,
-    QStatusBar,
-)
+from PySide2.QtWidgets import QWidget, QVBoxLayout, QMenu, QToolButton, QWidgetAction, QLabel, QStatusBar
 from PySide2.QtGui import QIcon
+from .custom_qtextbrowser import CustomQTextBrowser
 from ..helpers import get_datetime
-from ..config import STATUSBAR_SS
+from ..config import STATUSBAR_SS, TEXTBROWSER_SS
 
 
 class NotificationStatusBar(QStatusBar):
@@ -55,10 +46,9 @@ class NotificationStatusBar(QStatusBar):
         self.notification_count += 1
         self.notification_label.setText(f"{self.notification_count} new notification(s)")
 
-    def decrease_notification_count(self):
-        self.notification_count -= 1
-        msg = f"{self.notification_count} new notification(s)" if self.notification_count else ""
-        self.notification_label.setText(msg)
+    def reset_notification_count(self):
+        self.notification_count = 0
+        self.notification_label.setText("")
 
 
 class NotificationButton(QToolButton):
@@ -76,51 +66,21 @@ class NotificationButton(QToolButton):
         self.setPopupMode(QToolButton.InstantPopup)
         self._menu = QMenu()
         self.setMenu(self._menu)
-        self.setEnabled(True)
-
-    def add_notification(self, msg):
-        # Container
         widget = QWidget(self)
         layout = QVBoxLayout(widget)
         margin = 3
         layout.setContentsMargins(margin, margin, margin, margin)
         layout.setSpacing(1)
-        # Time and close button
-        button_widget = QWidget(self)
-        button_layout = QHBoxLayout(button_widget)
-        button_layout.setContentsMargins(0, 0, 0, 0)
-        button = QToolButton()
-        button.setIcon(QIcon(":/icons/menu_icons/times.svg"))
-        button.setStyleSheet("QToolButton {border: 0px;}")
-        time_str = get_datetime(show=True, date=False)
-        time_label = QLabel(time_str)
-        button_layout.addWidget(time_label)
-        button_layout.addStretch()
-        button_layout.addWidget(button)
-        layout.addWidget(button_widget)
-        # Text edit
-        text_edit = QTextEdit(widget)
-        text_edit.setHtml(msg)
-        text_edit.setReadOnly(True)
-        text_edit.setStyleSheet("QTextEdit {background-color: #19232D; color: #F0F0F0;}")
-        fm = text_edit.fontMetrics()
-        width = fm.width(msg)
-        height = fm.height()
-        line_count = width / text_edit.width()
-        text_edit.setMaximumHeight(line_count * height)
-        layout.addWidget(text_edit)
-        # Action
+        self.text_edit = CustomQTextBrowser(widget)
+        self.text_edit.setStyleSheet(TEXTBROWSER_SS)
+        layout.addWidget(self.text_edit)
         action = QWidgetAction(self)
         action.setDefaultWidget(widget)
         self._menu.addAction(action)
-        sep = self._menu.addSeparator()
-        button.clicked.connect(lambda checked=False, action=action, sep=sep: self._handle_action_closed(action, sep))
-        self.setEnabled(True)
+        self._menu.aboutToHide.connect(self.parent().reset_notification_count)
 
-    def _handle_action_closed(self, action, sep):
-        self._menu.removeAction(action)
-        self._menu.removeAction(sep)
-        self.parent().decrease_notification_count()
-        self._menu.hide()
-        self.setEnabled(bool(self._menu.actions()))
-        self.click()
+    def add_notification(self, msg):
+        open_tag = "<p><span style='color:white; white-space: pre;'>"
+        date_str = get_datetime(show=True, date=False)
+        message = open_tag + date_str + msg + "</span></p>"
+        self.text_edit.append(message)

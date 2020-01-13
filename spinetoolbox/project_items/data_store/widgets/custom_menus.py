@@ -31,6 +31,4 @@ class DataStoreContextMenu(ProjectItemContextMenu):
         """Class constructor."""
         super().__init__(parent, position)
         self.addSeparator()
-        self.add_action("Open tree view...")
-        self.add_action("Open graph view...")
-        self.add_action("Open tabular view...")
+        self.add_action("Open view...")

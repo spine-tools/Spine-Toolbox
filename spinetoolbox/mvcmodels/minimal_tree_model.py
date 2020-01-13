@@ -109,6 +109,7 @@ class TreeItem:
             return None
         return self.parent_item.child(self.child_number() - 1)
 
+    # pylint: disable=no-self-use
     def column_count(self):
         """Returns 1."""
         return 1
@@ -155,10 +156,12 @@ class TreeItem:
         """Clear children list."""
         self.children.clear()
 
+    # pylint: disable=no-self-use
     def flags(self, column):
         """Enables the item and makes it selectable."""
         return Qt.ItemIsSelectable | Qt.ItemIsEnabled
 
+    # pylint: disable=no-self-use
     def data(self, column, role=Qt.DisplayRole):
         """Returns data for given column and role."""
         return None

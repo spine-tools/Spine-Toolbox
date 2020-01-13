@@ -10,13 +10,12 @@
 ######################################################################################################################
 
 """
-Contains classes for handling project item execution.
+Contains classes for handling DAGs.
 
 :author: P. Savolainen (VTT)
 :date:   8.4.2019
 """
 
-from enum import Enum
 import logging
 import random
 from PySide2.QtCore import Signal, Slot, QObject, QTimer
@@ -24,17 +23,16 @@ import networkx as nx
 
 
 class DirectedGraphHandler(QObject):
-    """Class for manipulating graphs according to user's actions.
-
-    Args:
-        toolbox (ToolboxUI): QMainWindow instance
-    """
+    """Class for manipulating graphs according to user's actions."""
 
     dag_simulation_requested = Signal("QVariant")
 
     def __init__(self, toolbox):
-        """Class constructor."""
-        QObject.__init__(self)
+        """
+        Args:
+            toolbox (ToolboxUI): ToolboxUI instance
+        """
+        super().__init__()
         self._toolbox = toolbox
         self._dags = list()
 
@@ -47,6 +45,7 @@ class DirectedGraphHandler(QObject):
 
         Args:
             dag (DiGraph): Graph to add
+            request_simulation (bool): if True, emits dag_simulation_requested
         """
         self._dags.append(dag)
         if request_simulation:
@@ -207,30 +206,29 @@ class DirectedGraphHandler(QObject):
         return None
 
     @staticmethod
-    def calc_exec_order(g):
-        """Returns a dict of nodes in the given graph in topological sort order.
-        Key is the node, value is a list of its direct successors
-        (the successors are important to do the advertising).
-        A topological sort is a nonunique permutation of the nodes such that an edge from u to v
-        implies that u appears before v in the topological sort order.
+    def node_successors(g):
+        """Returns a dict mapping nodes in the given graph to a list of its direct successors.
+        The nodes are in topological sort order.
+        Topological sort in the words of networkx:
+        "a nonunique permutation of the nodes, such that an edge from u to v
+        implies that u appears before v in the topological sort order."
 
         Args:
             g (DiGraph): Directed graph to process
 
         Returns:
-            dict: key is the node name, value is its direct successors
+            dict: key is the node name, value is list of successor names
             Empty dict if given graph is not a DAG.
         """
         if not nx.is_directed_acyclic_graph(g):
             return {}
         return {n: list(g.successors(n)) for n in nx.topological_sort(g)}
 
-    def calc_exec_order_to_node(self, g, node):
-        # NOTE: Not in use at the moment
-        """Like calc_exec_order but only until node,
+    def successors_til_node(self, g, node):
+        """Like node_successors but only until the given node,
         and ignoring all nodes that are not its ancestors."""
         bunch = list(nx.ancestors(g, node)) + [node]
-        return self.calc_exec_order(g.subgraph(bunch))
+        return self.node_successors(g.subgraph(bunch))
 
     def node_is_isolated(self, node, allow_self_loop=False):
         """Checks if the project item with the given name has any connections.
@@ -310,65 +308,6 @@ class DirectedGraphHandler(QObject):
         nx.write_graphml(g, path, prettyprint=True)
         return True
 
-
-class ExecutionState(Enum):
-    """An enumeration to control the execution."""
-
-    WAIT = 1
-    """Execution should wait for another signal from the project item."""
-    CONTINUE = 0
-    """Execution can continue with the next project item in the DAG."""
-    ABORT = -1
-    """Execution should be aborted due to unrecoverable error."""
-    STOP_REQUESTED = -2
-    """User has requested to stop the execution."""
-
-
-class ExecutionInstance(QObject):
-    """Class for the graph that is being executed
-
-    Contains references to files and resources advertised by project items
-    so that project items downstream can find them.
-    """
-
-    graph_execution_finished_signal = Signal("QVariant")
-    project_item_execution_finished_signal = Signal("QVariant")
-
-    def __init__(self, toolbox, ordered_nodes):
-        """
-        Args:
-            toolbox (ToolboxUI): QMainWindow instance
-            ordered_nodes (dict): dict of nodes to execute; key is the node, value is its direct successors
-        """
-        QObject.__init__(self)
-        self._toolbox = toolbox
-        self._ordered_nodes = ordered_nodes
-        self.execution_list = list(ordered_nodes)  # Ordered list of nodes to execute. First node at index 0
-        self.running_item = None
-        # Resources available to project items
-        self.resources = dict()  # Key is item name, value is resource list
-        self.rank = 0  # The number in the list of the item currently simulated
-        self._resource_map = ResourceMap(ordered_nodes, toolbox.project_item_model)
-
-    def start_execution(self):
-        """Pops the next item from the execution list and starts executing it."""
-        for node in self._ordered_nodes:
-            index = self._toolbox.project_item_model.find_item(node)
-            item = self._toolbox.project_item_model.project_item(index)
-            item.prepare_for_resource_discovery()
-        self._resource_map.update()
-        item_name = self.execution_list.pop(0)
-        self.execute_project_item(item_name)
-
-    def execute_project_item(self, item_name):
-        """Starts executing project item."""
-        item_ind = self._toolbox.project_item_model.find_item(item_name)
-        self.running_item = self._toolbox.project_item_model.project_item(item_ind)
-        self.project_item_execution_finished_signal.connect(self.receive_item_execution_finished)
-        resources_upstream = self._resource_map.available_upstream_resources(self.running_item.name)
-        resources_downstream = self._resource_map.available_downstream_resources(self.running_item.name)
-        self.running_item.execute(resources_upstream, resources_downstream)
-
     @Slot("QVariant")
     def receive_item_execution_finished(self, item_finish_state):
         """Pop next project item to execute or finish current graph if there are no items left.
@@ -376,125 +315,6 @@ class ExecutionInstance(QObject):
         Args:
             item_finish_state (ExecutionState): an enumeration to indicate if execution should continue or not
         """
-        if item_finish_state == ExecutionState.WAIT:
-            # Expecting another call to this function.
-            return
-        self.project_item_execution_finished_signal.disconnect(self.receive_item_execution_finished)
-        if item_finish_state == ExecutionState.ABORT:
-            # Item execution failed due to e.g. Tool did not find input files or something
-            self.graph_execution_finished_signal.emit(ExecutionState.ABORT)
-            return
-        if item_finish_state == ExecutionState.STOP_REQUESTED:
-            # User pressed Stop button
-            self.graph_execution_finished_signal.emit(ExecutionState.STOP_REQUESTED)
-            return
         anim = self.running_item.make_execution_leave_animation()
         anim.finished.connect(lambda: QTimer.singleShot(0, self._execute_next_item))
         anim.start()
-
-    @Slot()
-    def _execute_next_item(self):
-        try:
-            item_name = self.execution_list.pop(0)
-        except IndexError:
-            self.graph_execution_finished_signal.emit(ExecutionState.CONTINUE)
-            return
-        self.execute_project_item(item_name)
-
-    def stop(self):
-        """Stops running project item and terminates current graph execution."""
-        if not self.running_item:
-            self.graph_execution_finished_signal.emit(ExecutionState.STOP_REQUESTED)
-            return
-        self.running_item.stop_execution()
-        return
-
-
-class ResourceMap:
-    """Enables queries about which resources are available to project items."""
-
-    def __init__(self, ordered_nodes, project_item_model):
-        """Inits map.
-
-        Args:
-            ordered_nodes (dict): item execution order; key is the *upstream* item, while value is a list of downstream items
-            project_item_model (ProjectItemModel): Toolbox's project item model
-        """
-        # Key is item name, value is resource list
-        self._ordered_nodes = ordered_nodes
-        self._inv_ordered_nodes = self._inverted(ordered_nodes)
-        self._project_item_model = project_item_model
-        self._available_upstream_resources = dict()
-        self._available_downstream_resources = dict()
-
-    def _project_item_from_name(self, name):
-        """Returns a ProjectItem instance from name."""
-        index = self._project_item_model.find_item(name)
-        return self._project_item_model.project_item(index)
-
-    @staticmethod
-    def _inverted(source):
-        """Inverts a dictionary that maps keys to a list of values.
-        The result maps values to a list of keys in the original dictionary that include the value.
-        """
-        result = dict()
-        for key, value_list in source.items():
-            for value in value_list:
-                result.setdefault(value, list()).append(key)
-        return result
-
-    def update(self):
-        """
-        Updates the resource mapping.
-        """
-        # Pass resources downstream
-        for upstream_node, downstream_nodes in self._ordered_nodes.items():
-            project_item = self._project_item_from_name(upstream_node)
-            available_upstream_resources = self.available_upstream_resources(upstream_node)
-            resources = project_item.available_resources_downstream(available_upstream_resources)
-            if resources:
-                self._pass_upstream_resources(downstream_nodes, resources)
-        # Pass resources upstream
-        for downstream_node, upstream_nodes in self._inv_ordered_nodes.items():
-            project_item = self._project_item_from_name(downstream_node)
-            resources = project_item.available_resources_upstream()
-            if resources:
-                self._pass_downstream_resources(upstream_nodes, resources)
-
-    def _pass_upstream_resources(self, downstream_nodes, upstream_resources):
-        """
-        Makes upstream resources available to downstream nodes.
-
-        Args:
-            downstream_nodes (Iterable): the nodes to which the resources should be available
-            upstream_resources (Iterable): the upstream resource(s) to make available
-        """
-        for node in downstream_nodes:
-            self._available_upstream_resources.setdefault(node, list()).extend(upstream_resources)
-
-    def _pass_downstream_resources(self, upstream_nodes, downstream_resources):
-        """
-        Makes downstream resources available to upstream nodes.
-
-        Args:
-            upstream_nodes (Iterable): the nodes to which the resources should be available
-            downstream_resources (Iterable): the downstream resource(s) to make available
-        """
-        for node in upstream_nodes:
-            self._available_downstream_resources.setdefault(node, list()).extend(downstream_resources)
-
-    def available_upstream_resources(self, item):
-        """Returns the list of upstream resources available to the given item.
-
-        Args:
-            item (str): the name of the item that asks
-        """
-        return self._available_upstream_resources.get(item, list())
-
-    def available_downstream_resources(self, item):
-        """Returns the list of downstream resources available to the given item.
-
-        Args:
-            item (str): the name of the item that asks
-        """
-        return self._available_downstream_resources.get(item, list())

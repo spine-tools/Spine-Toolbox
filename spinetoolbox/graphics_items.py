@@ -153,7 +153,6 @@ class ExclamationIcon(QGraphicsSvgItem):
         self.setScale(0.2 * rect_w / dim_max)
         self.setGraphicsEffect(self.colorizer)
         self._notification_list_item = NotificationListItem()
-        self._notification_list_item.setZValue(2)
         self.setAcceptHoverEvents(True)
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=False)
         self.hide()
@@ -201,6 +200,7 @@ class NotificationListItem(QGraphicsTextItem):
         self.bg.setBrush(bg_brush)
         self.bg.setFlag(QGraphicsItem.ItemStacksBehindParent)
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=False)
+        self.setZValue(2)
 
     def setHtml(self, html):
         super().setHtml(html)
@@ -248,7 +248,7 @@ class RankIcon(QGraphicsTextItem):
 
 
 class ProjectItemIcon(QGraphicsRectItem):
-    def __init__(self, toolbox, x, y, w, h, name, icon_file, icon_color, background_color):
+    def __init__(self, toolbox, x, y, w, h, project_item, icon_file, icon_color, background_color):
         """Base class for project item icons drawn in Design View.
 
         Args:
@@ -257,13 +257,14 @@ class ProjectItemIcon(QGraphicsRectItem):
             y (float): Icon y coordinate
             w (float): Icon width
             h (float): Icon height
-            name (str): Item name
+            project_item (ProjectItem): Item
             icon_file (str): Path to icon resource
             icon_color (QColor): Icon's color
             background_color (QColor): Background color
         """
         super().__init__()
         self._toolbox = toolbox
+        self._project_item = project_item
         self._moved_on_scene = False
         self.renderer = QSvgRenderer()
         self.svg_item = QGraphicsSvgItem()
@@ -271,6 +272,7 @@ class ProjectItemIcon(QGraphicsRectItem):
         self.setRect(QRectF(x, y, w, h))  # Set ellipse coordinates and size
         self.text_font_size = 10  # point size
         # Make item name graphics item.
+        name = project_item.name if project_item else ""
         self.name_item = QGraphicsSimpleTextItem(name)
         shadow_effect = QGraphicsDropShadowEffect()
         shadow_effect.setOffset(1)
@@ -339,7 +341,7 @@ class ProjectItemIcon(QGraphicsRectItem):
 
     def name(self):
         """Returns name of the item that is represented by this icon."""
-        return self.name_item.text()
+        return self._project_item.name
 
     def update_name_item(self, new_name):
         """Set a new text to name item. Used when a project item is renamed."""
@@ -348,7 +350,6 @@ class ProjectItemIcon(QGraphicsRectItem):
 
     def set_name_attributes(self):
         """Set name QGraphicsSimpleTextItem attributes (font, size, position, etc.)"""
-        self.name_item.setZValue(3)
         # Set font size and style
         font = self.name_item.font()
         font.setPointSize(self.text_font_size)
@@ -407,7 +408,9 @@ class ProjectItemIcon(QGraphicsRectItem):
     def mouseReleaseEvent(self, event):
         if self._moved_on_scene:
             self._moved_on_scene = False
-            self.scene().shrink_if_needed()
+            scene = self.scene()
+            scene.shrink_if_needed()
+            scene.item_move_finished.emit(self)
         super().mouseReleaseEvent(event)
 
     def contextMenuEvent(self, event):
@@ -527,7 +530,7 @@ class LinkBase(QGraphicsPathItem):
         """Sets the path for this item.
 
         Args:
-            curved_links (bool): Whether the path should follow a smooth curve or just a straight line
+            curved_links (bool): Whether the path should follow a curvy line or a straight line
         """
         ellipse_path = self._make_ellipse_path()
         guide_path = self._make_guide_path(curved_links)
@@ -564,21 +567,23 @@ class LinkBase(QGraphicsPathItem):
         return {"left": QPointF(-1, 0), "bottom": QPointF(0, 1), "right": QPointF(1, 0)}[self.dst_connector.position]
 
     def _make_guide_path(self, curved_links):
-        """
-        Returns a 'narrow' path conneting this item's source and destination.
+        """Returns a 'narrow' path connecting this item's source and destination.
 
         Args:
-            curved_links (bool): Whether the path should follow a smooth curve or just a straight line
+            curved_links (bool): Whether the path should follow a curved line or just a straight line
 
         Returns:
             QPainterPath
         """
-        curved_links |= self.dst_connector == self.src_connector
         path = QPainterPath(self.src_center)
         if not curved_links:
             path.lineTo(self.dst_center)
             return path
-        c_factor = 8 * self.magic_number
+        c_min = 2 * self.magic_number
+        c_max = 8 * self.magic_number
+        c_factor = QLineF(self.src_center, self.dst_center).length() / 2
+        c_factor = min(c_factor, c_max)
+        c_factor = max(c_factor, c_min)
         c1 = self.src_center + c_factor * self._get_src_offset()
         c2 = self.dst_center + c_factor * self._get_dst_offset(c1)
         path.cubicTo(c1, c2, self.dst_center)
@@ -697,10 +702,10 @@ class LinkBase(QGraphicsPathItem):
         arrow_path.closeSubpath()
         return arrow_path
 
-    @staticmethod
-    def _get_joint_line(guide_path):
-        src = guide_path.pointAtPercent(0.99)
-        dst = guide_path.pointAtPercent(1.0)
+    def _get_joint_line(self, guide_path):
+        t = 1.0 - guide_path.percentAtLength(self.src_rect.width() / 2)
+        src = guide_path.pointAtPercent(t - 0.01)
+        dst = guide_path.pointAtPercent(t)
         return QLineF(src, dst)
 
     def _get_joint_angle(self, guide_path):
@@ -722,7 +727,6 @@ class Link(LinkBase):
         self.dst_connector = dst_connector
         self.src_icon = src_connector._parent
         self.dst_icon = dst_connector._parent
-        self.setZValue(1)
         # Path parameters
         self.magic_number = 0.625 * self.src_rect.width()
         self.setToolTip(
@@ -736,6 +740,7 @@ class Link(LinkBase):
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
         self.setFlag(QGraphicsItem.ItemIsFocusable, enabled=True)
         self.setCursor(Qt.PointingHandCursor)
+        self.setZValue(0.5)  # This makes links appear on top of items because item zValue == 0.0
         self.update_geometry()
 
     def make_execution_animation(self):
@@ -854,7 +859,7 @@ class LinkDrawer(LinkBase):
         self.drawing = False
         self.setBrush(QBrush(QColor(255, 0, 255, 204)))
         self.setPen(QPen(Qt.black, 0.5))
-        self.setZValue(2)
+        self.setZValue(1)  # LinkDrawer should be on top of every other item
         self.hide()
 
     def start_drawing_at(self, src_connector):
@@ -872,6 +877,12 @@ class LinkDrawer(LinkBase):
     @property
     def dst_connector(self):
         items = self.scene().items(self.tip)
+        # Now that feedback loops are disabled, we don't want the tip to 'snap' to any of the src
+        # connector buttons.
+        src_connectors = self.src_connector._parent.connectors.values()
+        for conn in src_connectors:
+            if conn in items:
+                return None  # Return None if the tip is on any source connector button
         return next(iter(x for x in items if isinstance(x, ConnectorButton)), None)
 
     @property
@@ -884,4 +895,6 @@ class LinkDrawer(LinkBase):
     def dst_center(self):
         if not self.dst_connector:
             return self.tip
+        # If link drawer tip is on a connector button, this makes
+        # the tip 'snap' to the center of the connector button
         return self.dst_rect.center()

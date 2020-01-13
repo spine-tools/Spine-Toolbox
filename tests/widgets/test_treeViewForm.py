@@ -10,7 +10,7 @@
 ######################################################################################################################
 
 """
-Unit tests for TreeViewForm and GraphViewForm classes.
+Unit tests for DataStoreForm classes.
 
 :author: M. Marin (KTH)
 :date:   6.12.2018
@@ -23,7 +23,7 @@ import sys
 from PySide2.QtWidgets import QApplication
 from PySide2.QtCore import QItemSelectionModel
 import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
-from spinetoolbox.widgets.tree_view_widget import TreeViewForm
+from spinetoolbox.widgets.data_store_widget import DataStoreForm
 from spinetoolbox.spine_db_manager import SpineDBManager
 from .test_treeViewFormAdd import TestTreeViewFormAddMixin
 from .test_treeViewFormUpdate import TestTreeViewFormUpdateMixin
@@ -264,9 +264,9 @@ class TestTreeViewForm(
         )
 
     def setUp(self):
-        """Overridden method. Runs before each test. Makes instances of TreeViewForm and GraphViewForm classes."""
+        """Overridden method. Runs before each test. Makes instances of DataStoreForm classes."""
         with mock.patch("spinetoolbox.spine_db_manager.DiffDatabaseMapping") as mock_DiffDBMapping, mock.patch(
-            "spinetoolbox.widgets.tree_view_widget.TreeViewForm.restore_ui"
+            "spinetoolbox.widgets.data_store_widget.DataStoreForm.restore_ui"
         ):
             self.db_mngr = SpineDBManager()
 
@@ -276,7 +276,7 @@ class TestTreeViewForm(
                 return mock_db_map
 
             mock_DiffDBMapping.side_effect = DiffDBMapping_side_effect
-            self.tree_view_form = TreeViewForm(self.db_mngr, ("mock_url", "mock_db"))
+            self.tree_view_form = DataStoreForm(self.db_mngr, ("mock_url", "mock_db"))
             self.mock_db_map = self.tree_view_form.db_map
 
     def tearDown(self):
@@ -284,7 +284,7 @@ class TestTreeViewForm(
         Use this to free resources after a test if needed.
         """
         with mock.patch(
-            "spinetoolbox.widgets.tree_view_widget.TreeViewForm.save_window_state"
+            "spinetoolbox.widgets.data_store_widget.DataStoreForm.save_window_state"
         ) as mock_save_w_s, mock.patch("spinetoolbox.spine_db_manager.QMessageBox"):
             self.tree_view_form.close()
             mock_save_w_s.assert_called_once()
@@ -438,7 +438,7 @@ class TestTreeViewForm(
     def test_set_object_parameter_definition_defaults(self):
         """Test that defaults are set in object parameter definition models according the object tree selection."""
         self.put_mock_object_classes_in_db_mngr()
-        self.tree_view_form.init_object_tree_model()
+        self.tree_view_form.init_models()
         for item in self.tree_view_form.object_tree_model.visit_all():
             item.fetch_more()
         # Select fish item in object tree

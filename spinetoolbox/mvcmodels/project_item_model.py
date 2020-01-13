@@ -20,7 +20,7 @@ import logging
 import os
 from PySide2.QtCore import Qt, QModelIndex, QAbstractItemModel
 from PySide2.QtWidgets import QMessageBox
-from ..config import INVALID_CHARS, TOOL_OUTPUT_DIR
+from ..config import INVALID_CHARS
 from ..helpers import rename_dir
 
 
@@ -169,6 +169,20 @@ class ProjectItemModel(QAbstractItemModel):
             elif len(matching_index) == 1:
                 return matching_index[0]
         return None
+
+    def get_item(self, name):
+        """Returns the item that has the given name or None if it doesn't exist.
+
+        Args:
+            name (str)
+
+        Returns:
+            ProjectItem, NoneType
+        """
+        ind = self.find_item(name)
+        if ind is None:
+            return None
+        return self.project_item(ind)
 
     def category_of_item(self, name):
         """

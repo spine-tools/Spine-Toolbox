@@ -199,6 +199,7 @@ class EntityItem(QGraphicsPixmapItem):
         ]
         return next(iter(colliding), None)
 
+    # pylint: disable=no-self-use
     def _is_target_valid(self):
         """Whether or not the registered merge target is valid.
 
@@ -207,6 +208,7 @@ class EntityItem(QGraphicsPixmapItem):
         """
         return False
 
+    # pylint: disable=no-self-use
     def merge_into_target(self, force=False):
         """Merges this item into the registered target if valid.
 
@@ -250,7 +252,7 @@ class EntityItem(QGraphicsPixmapItem):
                 except KeyError:
                     pass
                 continue
-            elif self._is_target_valid():
+            if self._is_target_valid():
                 view.viewport().setCursor(Qt.DragCopyCursor)
             else:
                 view.viewport().setCursor(Qt.ForbiddenCursor)
@@ -277,7 +279,9 @@ class EntityItem(QGraphicsPixmapItem):
             self._bounce_back(self.pos())
         if self._moved_on_scene:
             self._moved_on_scene = False
-            self.scene().shrink_if_needed()
+            scene = self.scene()
+            scene.shrink_if_needed()
+            scene.item_move_finished.emit(self)
 
     def _bounce_back(self, current_pos):
         """Bounces the item back from given position to its original position.

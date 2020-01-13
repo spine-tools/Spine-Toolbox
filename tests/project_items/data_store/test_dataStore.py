@@ -25,7 +25,7 @@ from spinedb_api import create_new_spine_database
 from PySide2.QtWidgets import QApplication, QMessageBox
 from networkx import DiGraph
 import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
-from spinetoolbox.widgets.tree_view_widget import TreeViewForm
+from spinetoolbox.widgets.data_store_widget import DataStoreForm
 from spinetoolbox.project_items.data_store.data_store import DataStore
 from ...mock_helpers import clean_up_toolboxui_with_project, create_toolboxui_with_project
 
@@ -102,7 +102,7 @@ class TestDataStore(unittest.TestCase):
         # Assert that checkbox is unchecked
         self.assertFalse(self.ds_properties_ui.checkBox_for_spine_model.isChecked())
         # Click New Spine db button
-        self.ds_properties_ui.toolButton_create_new_spine_db.click()
+        self.ds_properties_ui.pushButton_create_new_spine_db.click()
         expected_db_path = os.path.join(self.ds.data_dir, self.ds.name + ".sqlite")
         self.assertEqual(cb_dialect.currentText(), "sqlite")
         self.assertEqual(expected_db_path, le_db.text())
@@ -128,7 +128,7 @@ class TestDataStore(unittest.TestCase):
         # Click New Spine db button. This overwrites the existing sqlite file!
         with mock.patch("spinetoolbox.spine_db_manager.QMessageBox") as mock_qmessagebox:
             mock_qmessagebox.exec_().return_value = QMessageBox.AcceptRole
-            self.ds_properties_ui.toolButton_create_new_spine_db.click()
+            self.ds_properties_ui.pushButton_create_new_spine_db.click()
             mock_qmessagebox.assert_called_once()
         self.assertEqual("sqlite", cb_dialect.currentText())
         self.assertEqual(temp_path, le_db.text())
@@ -147,7 +147,7 @@ class TestDataStore(unittest.TestCase):
         self.ds_properties_ui.checkBox_for_spine_model.setChecked(True)
         self.assertTrue(self.ds_properties_ui.checkBox_for_spine_model.isChecked())
         # Click New Spine db button
-        self.ds_properties_ui.toolButton_create_new_spine_db.click()
+        self.ds_properties_ui.pushButton_create_new_spine_db.click()
         expected_db_path = os.path.join(self.ds.data_dir, self.ds.name + ".sqlite")
         self.assertEqual(cb_dialect.currentText(), "sqlite")
         self.assertEqual(expected_db_path, le_db.text())
@@ -174,7 +174,7 @@ class TestDataStore(unittest.TestCase):
         # Click New Spine db button. This overwrites the existing sqlite file!
         with mock.patch("spinetoolbox.spine_db_manager.QMessageBox") as mock_qmessagebox:
             mock_qmessagebox.exec_().return_value = QMessageBox.AcceptRole
-            self.ds_properties_ui.toolButton_create_new_spine_db.click()
+            self.ds_properties_ui.pushButton_create_new_spine_db.click()
             mock_qmessagebox.assert_called_once()
         self.assertEqual("sqlite", cb_dialect.currentText())
         self.assertEqual(temp_path, le_db.text())
@@ -217,7 +217,7 @@ class TestDataStore(unittest.TestCase):
         """Test that the database url from current selections is copied to clipboard."""
         QApplication.clipboard().clear()
         self.ds.activate()
-        self.ds_properties_ui.toolButton_create_new_spine_db.click()
+        self.ds_properties_ui.pushButton_create_new_spine_db.click()
         self.ds_properties_ui.toolButton_copy_url.click()
         # noinspection PyArgumentList
         clipboard_text = QApplication.clipboard().text()
@@ -230,7 +230,7 @@ class TestDataStore(unittest.TestCase):
         """
         temp_db_path = self.create_temp_db()
         self.ds.activate()
-        self.assertIsNone(self.ds.views.get("tree"))
+        self.assertIsNone(self.ds.ds_view)
         # Select the sqlite dialect
         self.ds_properties_ui.comboBox_dialect.activated[str].emit("sqlite")
         # Browse to an existing db file
@@ -239,11 +239,11 @@ class TestDataStore(unittest.TestCase):
             self.ds_properties_ui.toolButton_open_sqlite_file.click()
             mock_qfile_dialog.getOpenFileName.assert_called_once()
         # Open treeview
-        self.ds_properties_ui.pushButton_ds_tree_view.click()
-        self.assertIsInstance(self.ds.views["tree"], TreeViewForm)
+        self.ds_properties_ui.pushButton_ds_view.click()
+        self.assertIsInstance(self.ds.ds_view, DataStoreForm)
         expected_url = "sqlite:///" + temp_db_path
-        self.assertEqual(expected_url, str(self.ds.views["tree"].db_map.db_url))
-        self.ds.views["tree"].close()
+        self.assertEqual(expected_url, str(self.ds.ds_view.db_map.db_url))
+        self.ds.ds_view.close()
         self.ds._project.db_mngr.close_all_sessions()
 
     def test_open_treeview2(self):
@@ -252,18 +252,18 @@ class TestDataStore(unittest.TestCase):
         """
         temp_db_path = self.create_temp_db()
         self.ds.activate()
-        self.assertIsNone(self.ds.views.get("tree"))
+        self.assertIsNone(self.ds.ds_view)
         # Select the sqlite dialect
         self.ds_properties_ui.comboBox_dialect.activated[str].emit("sqlite")
         # Type the path to an existing db file
         self.ds_properties_ui.lineEdit_database.setText(temp_db_path)
         self.ds_properties_ui.lineEdit_database.editingFinished.emit()
         # Open treeview
-        self.ds_properties_ui.pushButton_ds_tree_view.click()
-        self.assertIsInstance(self.ds.views["tree"], TreeViewForm)
+        self.ds_properties_ui.pushButton_ds_view.click()
+        self.assertIsInstance(self.ds.ds_view, DataStoreForm)
         expected_url = "sqlite:///" + temp_db_path
-        self.assertEqual(expected_url, str(self.ds.views["tree"].db_maps[0].db_url))
-        self.ds.views["tree"].close()
+        self.assertEqual(expected_url, str(self.ds.ds_view.db_maps[0].db_url))
+        self.ds.ds_view.close()
         self.ds._project.db_mngr.close_all_sessions()
 
     def test_notify_destination(self):
@@ -306,7 +306,7 @@ class TestDataStore(unittest.TestCase):
         le_db = self.ds_properties_ui.lineEdit_database  # Database lineEdit
         self.ds.activate()
         # Click New Spine db button
-        self.ds_properties_ui.toolButton_create_new_spine_db.click()
+        self.ds_properties_ui.pushButton_create_new_spine_db.click()
         # Check that DS is connected to an existing DS.sqlite file that is in data_dir
         self.assertEqual("sqlite", cb_dialect.currentText())
         self.assertEqual(os.path.join(self.ds.data_dir, "DS.sqlite"), le_db.text())  # data_dir before rename

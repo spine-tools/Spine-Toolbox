@@ -20,7 +20,7 @@ import logging
 import math
 from PySide2.QtWidgets import QGraphicsView
 from PySide2.QtGui import QCursor
-from PySide2.QtCore import Signal, Slot, Qt, QRectF, QTimeLine, QMarginsF
+from PySide2.QtCore import Signal, Slot, Qt, QRectF, QTimeLine, QMarginsF, QSettings
 from ..graphics_items import LinkDrawer, Link
 from .custom_qlistview import DragListView
 from .custom_qgraphicsscene import CustomQGraphicsScene
@@ -43,6 +43,7 @@ class CustomQGraphicsView(QGraphicsView):
         self._scene_fitting_zoom = 1.0
         self._max_zoom = 10.0
         self._min_zoom = 0.1
+        self._qsettings = QSettings("SpineProject", "Spine Toolbox")
 
     def keyPressEvent(self, event):
         """Overridden method. Enable zooming with plus and minus keys (comma resets zoom).
@@ -101,9 +102,7 @@ class CustomQGraphicsView(QGraphicsView):
             event.ignore()
             return
         event.accept()
-        ui = self.parent().parent()
-        qsettings = ui.qsettings()
-        smooth_zoom = qsettings.value("appSettings/smoothZoom", defaultValue="false")
+        smooth_zoom = self._qsettings.value("appSettings/smoothZoom", defaultValue="false")
         if smooth_zoom == "true":
             num_degrees = event.delta() / 8
             num_steps = num_degrees / 15
@@ -148,10 +147,11 @@ class CustomQGraphicsView(QGraphicsView):
         Sets a new scene to this view.
 
         Args:
-            scene (QGraphicsScene): a new scene
+            scene (ShrinkingScene): a new scene
         """
         super().setScene(scene)
         scene.sceneRectChanged.connect(self._update_zoom_limits)
+        scene.item_move_finished.connect(self._ensure_item_visible)
 
     @Slot("QRectF")
     def _update_zoom_limits(self, rect):
@@ -222,16 +222,22 @@ class CustomQGraphicsView(QGraphicsView):
         self.centerOn(center_on_scene - focus_diff)
         return True
 
+    @Slot("QGraphicsItem")
+    def _ensure_item_visible(self, item):
+        """Resets zoom if item is not visible."""
+        if not self.viewport().geometry().contains(self.mapFromScene(item.pos())):
+            self.reset_zoom()
+
 
 class DesignQGraphicsView(CustomQGraphicsView):
-    """QGraphicsView for the Design View.
-
-    Attributes:
-        parent (QWidget): Graph View Form's (QMainWindow) central widget (self.centralwidget)
-    """
+    """QGraphicsView for the Design View."""
 
     def __init__(self, parent):
-        """Initialize DesignQGraphicsView."""
+        """
+
+        Args:
+            parent (QWidget): Graph View Form's (QMainWindow) central widget (self.centralwidget)
+        """
         super().__init__(parent=parent)  # Parent is passed to QWidget's constructor
         self._scene = None
         self._toolbox = None
@@ -253,6 +259,10 @@ class DesignQGraphicsView(CustomQGraphicsView):
         # This below will trigger connector button if any
         super().mousePressEvent(event)
         if was_drawing:
+            # Enable source connector buttons
+            src_connectors = self.src_connector._parent.connectors.values()
+            for conn in src_connectors:
+                conn.setEnabled(True)
             self.link_drawer.hide()
             # If `drawing` is still `True` here, it means we didn't hit a connector
             if self.link_drawer.drawing:
@@ -330,7 +340,7 @@ class DesignQGraphicsView(CustomQGraphicsView):
             src_connector (ConnectorButton): Source connector button
             dst_connector (ConnectorButton): Destination connector button
         """
-        # Remove existing links betwen the same items
+        # Remove existing links between the same items
         for link in src_connector._parent.outgoing_links():
             if link.dst_connector._parent == dst_connector._parent:
                 link.wipe_out()
@@ -340,8 +350,8 @@ class DesignQGraphicsView(CustomQGraphicsView):
         src_connector.links.append(link)
         dst_connector.links.append(link)
         # Add edge (connection link) to a dag as well
-        src_name = link.src_icon.name()
-        dst_name = link.dst_icon.name()
+        src_name = link.src_icon._project_item.name
+        dst_name = link.dst_icon._project_item.name
         self._toolbox.project().dag_handler.add_graph_edge(src_name, dst_name)
 
     def remove_link(self, link):
@@ -380,6 +390,9 @@ class DesignQGraphicsView(CustomQGraphicsView):
         for conn in connections:
             src_name, src_anchor = conn["from"]
             dst_name, dst_anchor = conn["to"]
+            # Do not restore feedback links
+            if src_name == dst_name:
+                continue
             src_ind = self._project_item_model.find_item(src_name)
             dst_ind = self._project_item_model.find_item(dst_name)
             if not src_ind or not dst_ind:
@@ -402,6 +415,12 @@ class DesignQGraphicsView(CustomQGraphicsView):
             self.link_drawer.drawing = True
             self.link_drawer.start_drawing_at(connector)
             self.src_connector = connector
+            # Disable source connector buttons
+            # These are enabled again in DesignQGraphicsView.mousePressEvent
+            parent_icon = self.src_connector._parent  # ProjectItemIcon
+            for conn in parent_icon.connectors.values():
+                conn.setEnabled(False)
+                conn.setBrush(conn.brush)  # Remove hover brush from src connector that was clicked
         else:
             # stop drawing and make connection
             self.link_drawer.drawing = False
@@ -414,20 +433,17 @@ class DesignQGraphicsView(CustomQGraphicsView):
 
     def notify_destination_items(self):
         """Notify destination items that they have been connected to a source item."""
-        if self.src_item_name == self.dst_item_name:
-            self._toolbox.msg_warning.emit("Link established. Feedback link functionality not implemented.")
-        else:
-            src_index = self._project_item_model.find_item(self.src_item_name)
-            if not src_index:
-                logging.error("Item %s not found", self.src_item_name)
-                return
-            dst_index = self._project_item_model.find_item(self.dst_item_name)
-            if not dst_index:
-                logging.error("Item %s not found", self.dst_item_name)
-                return
-            src_item = self._project_item_model.project_item(src_index)
-            dst_item = self._project_item_model.project_item(dst_index)
-            dst_item.notify_destination(src_item)
+        src_index = self._project_item_model.find_item(self.src_item_name)
+        if not src_index:
+            logging.error("Item %s not found", self.src_item_name)
+            return
+        dst_index = self._project_item_model.find_item(self.dst_item_name)
+        if not dst_index:
+            logging.error("Item %s not found", self.dst_item_name)
+            return
+        src_item = self._project_item_model.project_item(src_index)
+        dst_item = self._project_item_model.project_item(dst_index)
+        dst_item.notify_destination(src_item)
 
 
 class GraphQGraphicsView(CustomQGraphicsView):

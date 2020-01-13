@@ -30,19 +30,23 @@ from PySide2.QtWidgets import (
     QDialogButtonBox,
     QWidgetAction,
 )
-from PySide2.QtCore import Qt, QTimer, Signal, Slot, QEvent, QRect
-from PySide2.QtGui import QPainter, QColor, QPainterPath
-from ..mvcmodels.filter_checkbox_list_model import FilterCheckboxListModel
+from PySide2.QtCore import QTimer, Signal, Slot
+from PySide2.QtGui import QPainter
+from ..mvcmodels.filter_checkbox_list_model import SimpleFilterCheckboxListModel, TabularViewFilterCheckboxListModel
 
 
-class FilterWidget(QWidget):
+class FilterWidgetBase(QWidget):
     """Filter widget class."""
 
     okPressed = Signal()
     cancelPressed = Signal()
 
-    def __init__(self, parent=None, show_empty=True):
-        """Init class."""
+    def __init__(self, parent):
+        """Init class.
+
+        Args:
+            parent (QWidget)
+        """
         super().__init__(parent)
         # parameters
         self._filter_state = set()
@@ -65,10 +69,9 @@ class FilterWidget(QWidget):
         self._search_timer = QTimer()  # Used to limit search so it doesn't search when typing
         self._search_timer.setSingleShot(True)
 
-        self._filter_model = FilterCheckboxListModel(show_empty=show_empty)
-        self._filter_model.set_list(self._filter_state)
-        self._ui_list.setModel(self._filter_model)
+        self._filter_model = None
 
+    def connect_signals(self):
         # connect signals
         self._ui_list.clicked.connect(self._filter_model.click_index)
         self._search_timer.timeout.connect(self._filter_list)
@@ -100,10 +103,7 @@ class FilterWidget(QWidget):
     def set_filter_list(self, data):
         """Sets the list of items to filter."""
         self._filter_state = set(data)
-        if self._filter_model._show_empty:
-            self._filter_empty_state = True
-        else:
-            self._filter_empty_state = False
+        self._filter_empty_state = bool(self._filter_model._show_empty)
         self._filter_model.set_list(self._filter_state)
 
     def _apply_filter(self):
@@ -131,6 +131,35 @@ class FilterWidget(QWidget):
         """
         self._search_text = new_text
         self._search_timer.start(self.search_delay)
+
+
+class SimpleFilterWidget(FilterWidgetBase):
+    def __init__(self, parent, show_empty=True):
+        """Init class.
+
+        Args:
+            parent (QWidget)
+        """
+        super().__init__(parent)
+        self._filter_model = SimpleFilterCheckboxListModel(parent, show_empty=show_empty)
+        self._filter_model.set_list(self._filter_state)
+        self._ui_list.setModel(self._filter_model)
+        self.connect_signals()
+
+
+class TabularViewFilterWidget(FilterWidgetBase):
+    def __init__(self, parent, item_type, show_empty=True):
+        """Init class.
+
+        Args:
+            parent (QWidget)
+            item_type (str): either "object" or "parameter definition"
+        """
+        super().__init__(parent)
+        self._filter_model = TabularViewFilterCheckboxListModel(parent, item_type, show_empty=show_empty)
+        self._filter_model.set_list(self._filter_state)
+        self._ui_list.setModel(self._filter_model)
+        self.connect_signals()
 
 
 class ZoomWidgetAction(QWidgetAction):
@@ -202,71 +231,3 @@ class ZoomWidget(QWidget):
         painter = QPainter(self)
         self.style().drawControl(QStyle.CE_MenuItem, self.option, painter)
         super().paintEvent(event)
-
-
-class OverlayWidget(QWidget):
-    def __init__(self, target=None, color=QColor(100, 100, 100, 50), rect=QRect(0, 0, 1, 1)):
-        super().__init__(target)
-        self._target = None
-        self._color = None
-        self._rect = None
-        self.setAttribute(Qt.WA_NoSystemBackground)
-        self.setAttribute(Qt.WA_TransparentForMouseEvents)
-        self.setAttribute(Qt.WA_TranslucentBackground)
-        self.setProperty("target", target)
-        self.setProperty("color", color)
-        self.setProperty("rect", rect)
-
-    @property
-    def color(self):
-        return self._color
-
-    @color.setter
-    def color(self, color):
-        self._color = color
-
-    @property
-    def target(self):
-        return self.parent()
-
-    @target.setter
-    def target(self, target):
-        if self.target:
-            self.target.removeEventFilter(self)
-        self.setParent(target)
-        if not target:
-            return
-        self.target.installEventFilter(self)
-        self.raise_()
-        QTimer.singleShot(0, self.show)
-
-    @property
-    def rectangle(self):
-        return self._rect
-
-    @rectangle.setter
-    def rectangle(self, rect):
-        self._rect = rect
-        QTimer.singleShot(0, self.repaint)
-
-    def eventFilter(self, obj, ev):
-        if obj == self.parent():
-            if ev.type() == QEvent.Resize:
-                self.resize(ev.size())
-            elif ev.type() == QEvent.ChildAdded:
-                self.raise_()
-        return super().eventFilter(obj, ev)
-
-    def event(self, ev):
-        if ev.type() == QEvent.DynamicPropertyChange:
-            name = ev.propertyName().data().decode()
-            setattr(self, name, self.property(name))
-        return super().event(ev)
-
-    def paintEvent(self, ev):
-        rect = self.rectangle if self.rectangle else self.rect()
-        p = QPainter(self)
-        p.setRenderHint(QPainter.Antialiasing)
-        path = QPainterPath()
-        path.addRoundedRect(rect, 4, 4)
-        p.fillPath(path, self.color)

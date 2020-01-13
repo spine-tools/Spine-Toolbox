@@ -23,6 +23,7 @@ class ConvertToDBMixin:
     def build_lookup_dictionary(self, db_map_data):
         """Begins an operation to convert items."""
 
+    # pylint: disable=no-self-use
     def _convert_to_db(self, item, db_map):
         """Returns a db item (id-based) from the given model item (name-based).
 

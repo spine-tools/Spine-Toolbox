@@ -25,7 +25,6 @@ import shutil
 import glob
 import json
 import urllib.parse
-import spinedb_api
 from PySide2.QtCore import Qt, Slot, QFile, QIODevice, QSize, QRect, QPoint
 from PySide2.QtCore import __version__ as qt_version
 from PySide2.QtCore import __version_info__ as qt_version_info
@@ -42,14 +41,17 @@ from PySide2.QtGui import (
     QStandardItemModel,
     QStandardItem,
 )
-from .config import REQUIRED_SPINEDB_API_VERSION
+import spinedb_api
+import spine_engine
+from .config import REQUIRED_SPINEDB_API_VERSION, REQUIRED_SPINE_ENGINE_VERSION
+
+if os.name == "nt":
+    import ctypes
 
 
 def set_taskbar_icon():
     """Set application icon to Windows taskbar."""
     if os.name == "nt":
-        import ctypes
-
         myappid = "{6E794A8A-E508-47C4-9319-1113852224D3}"
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
 
@@ -99,9 +101,10 @@ def spinedb_api_version_check():
             return True
     except AttributeError:
         current_version = "not reported"
-    script = "upgrade_spinedb_api.bat" if sys.platform == "win32" else "upgrade_spinedb_api.sh"
+    script = "upgrade_spinedb_api.bat" if sys.platform == "win32" else "upgrade_spinedb_api.py"
     print(
-        """ERROR:
+        """SPINEDB_API OUTDATED.
+
         Spine Toolbox failed to start because spinedb_api is outdated.
         (Required version is {0}, whereas current is {1})
         Please upgrade spinedb_api to v{0} and start Spine Toolbox again.
@@ -114,6 +117,37 @@ def spinedb_api_version_check():
 
         """.format(
             REQUIRED_SPINEDB_API_VERSION, current_version, script
+        )
+    )
+    return False
+
+
+def spine_engine_version_check():
+    """Check if spine engine package is the correct version and explain how to upgrade if it is not."""
+    try:
+        current_version = spine_engine.__version__
+        current_split = [int(x) for x in current_version.split(".")]
+        required_split = [int(x) for x in REQUIRED_SPINE_ENGINE_VERSION.split(".")]
+        if current_split >= required_split:
+            return True
+    except AttributeError:
+        current_version = "not reported"
+    script = "upgrade_spine_engine.bat" if sys.platform == "win32" else "upgrade_spine_engine.py"
+    print(
+        """SPINE ENGINE OUTDATED.
+
+        Spine Toolbox failed to start because spine_engine is outdated.
+        (Required version is {0}, whereas current is {1})
+        Please upgrade spine_engine to v{0} and start Spine Toolbox again.
+
+        To upgrade, run script '{2}' in the '/bin' folder.
+
+        Or upgrade it manually by running,
+
+            pip install --upgrade git+https://github.com/Spine-project/spine-engine.git#egg=spine_engine
+
+        """.format(
+            REQUIRED_SPINE_ENGINE_VERSION, current_version, script
         )
     )
     return False
@@ -415,6 +449,17 @@ def rows_to_row_count_tuples(rows):
     break_points = [0] + break_points + [len(sorted_rows)]
     ranges = [(break_points[l], break_points[l + 1]) for l in range(len(break_points) - 1)]
     return [(sorted_rows[start], stop - start) for start, stop in ranges]
+
+
+def inverted(input_):
+    """Inverts a dictionary that maps keys to a list of values.
+    The output maps values to a list of keys that include the value in the input.
+    """
+    output = dict()
+    for key, value_list in input_.items():
+        for value in value_list:
+            output.setdefault(value, list()).append(key)
+    return output
 
 
 class Singleton(type):

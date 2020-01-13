@@ -22,7 +22,7 @@ import logging
 import json
 import pathlib
 import numpy as np
-from PySide2.QtCore import QByteArray, QMimeData, Qt, Signal, Slot, QSettings, QUrl, SIGNAL, QStandardPaths, QDir
+from PySide2.QtCore import QByteArray, QMimeData, Qt, Signal, Slot, QSettings, QUrl, SIGNAL, QStandardPaths
 from PySide2.QtWidgets import (
     QMainWindow,
     QApplication,
@@ -53,11 +53,11 @@ from .widgets.python_repl_widget import PythonReplWidget
 from .widgets import toolbars
 from .widgets.open_project_widget import OpenProjectDialog
 from .project import SpineToolboxProject
-from .config import SPINE_TOOLBOX_VERSION, STATUSBAR_SS, \
-    TEXTBROWSER_SS, MAINWINDOW_SS, DOCUMENTATION_PATH, _program_root, LATEST_PROJECT_VERSION, DEFAULT_WORK_DIR
+from .config import STATUSBAR_SS, TEXTBROWSER_SS, MAINWINDOW_SS, \
+    DOCUMENTATION_PATH, _program_root, LATEST_PROJECT_VERSION, DEFAULT_WORK_DIR
 from .helpers import get_datetime, erase_dir, busy_effect, set_taskbar_icon, \
     supported_img_formats, create_dir, recursive_overwrite, serialize_path, \
-    deserialize_path, ProjectDirectoryIconProvider
+    deserialize_path
 from .project_item import RootProjectItem, CategoryProjectItem
 from .project_upgrader import ProjectUpgrader
 from .project_items import data_store, data_connection, exporter, tool, view, importer
@@ -82,7 +82,7 @@ class ToolboxUI(QMainWindow):
         super().__init__(flags=Qt.Window)
         self._qsettings = QSettings("SpineProject", "Spine Toolbox")
         # Set number formatting to use user's default settings
-        locale.setlocale(locale.LC_NUMERIC, "")
+        locale.setlocale(locale.LC_NUMERIC, 'C')
         # Setup the user interface from Qt Designer files
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
@@ -1292,7 +1292,7 @@ class ToolboxUI(QMainWindow):
     @Slot(name="show_about")
     def show_about(self):
         """Show About Spine Toolbox form."""
-        form = AboutWidget(self, SPINE_TOOLBOX_VERSION)
+        form = AboutWidget(self)
         form.show()
 
     @Slot(name="show_user_guide")
@@ -1664,7 +1664,8 @@ class ToolboxUI(QMainWindow):
             shift_y = -15.0
         return shift_x, shift_y
 
-    def _set_deserialized_item_position(self, item_dict, shift_x, shift_y, scene_rect):
+    @staticmethod
+    def _set_deserialized_item_position(item_dict, shift_x, shift_y, scene_rect):
         """Moves item's position by shift_x and shift_y while keeping it within the limits of scene_rect."""
         new_x = np.clip(item_dict["x"] - shift_x, scene_rect.left(), scene_rect.right())
         new_y = np.clip(item_dict["y"] - shift_y, scene_rect.top(), scene_rect.bottom())

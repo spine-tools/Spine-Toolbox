@@ -17,7 +17,7 @@ These models concatenate several 'single' models and one 'empty' model.
 :date:   28.6.2019
 """
 
-from PySide2.QtCore import Qt, Signal, QModelIndex
+from PySide2.QtCore import Qt, Signal
 from PySide2.QtGui import QFont, QIcon
 from ..helpers import busy_effect, rows_to_row_count_tuples
 from .compound_table_model import CompoundWithEmptyTableModel
@@ -374,8 +374,6 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
             for model in self._models_with_db_map(db_map):
                 if model.entity_class_id in ids:
                     self.sub_models.remove(model)
-                    if not model.canFetchMore(QModelIndex()):
-                        self._fetched_count -= 1
         self.do_refresh()
         self.layoutChanged.emit()
 
@@ -441,7 +439,8 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
             for entity_class_id, ids in entity_ids_per_class_id.items():
                 model = self._single_model_type(self, self.header, self.db_mngr, db_map, entity_class_id, lazy=False)
                 model.reset_model(ids)
-                self._handle_single_model_reset(model)
+                single_row_map = super()._row_map_for_model(model)  # NOTE: super() prevents filtering
+                self._insert_single_row_map(single_row_map)
                 new_models.append(model)
         pos = len(self.single_models)
         self.sub_models[pos:pos] = new_models
@@ -458,6 +457,23 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         except ValueError:
             return
         self.dataChanged.emit(self.index(0, column), self.index(self.rowCount() - 1, column), [Qt.DisplayRole])
+
+    def db_item(self, index):
+        id_ = self.item_at_row(index.row())
+        db_map = self.sub_model_at_row(index.row()).db_map
+        return self.db_mngr.get_item(db_map, self.item_type, id_)
+
+    def value_name(self, index):
+        item = self.db_item(index)
+        entity_name_key = {
+            "parameter definition": {
+                "object class": "object_class_name",
+                "relationship class": "relationship_class_name",
+            },
+            "parameter value": {"object class": "object_name", "relationship class": "object_name_list"},
+        }[self.item_type][self.entity_class_type]
+        entity_name = item[entity_name_key].replace(",", self.db_mngr._GROUP_SEP)
+        return entity_name + " - " + item["parameter_name"]
 
 
 class CompoundObjectParameterMixin:

@@ -64,6 +64,8 @@ class ToolIcon(ProjectItemIcon):
     def start_animation(self):
         """Start the animation that plays when the Tool associated to this GraphicsItem is running.
         """
+        if self.timer.state() == QTimeLine.Running:
+            return
         self.svg_item.moveBy(0, -self.delta)
         offset = 0.75 * self.svg_item.sceneBoundingRect().height()
         for angle in range(1, 45):
@@ -76,6 +78,8 @@ class ToolIcon(ProjectItemIcon):
 
     def stop_animation(self):
         """Stop animation"""
+        if self.timer.state() != QTimeLine.Running:
+            return
         self.timer.stop()
         self.svg_item.moveBy(0, self.delta)
         self.timer.setCurrentTime(999)

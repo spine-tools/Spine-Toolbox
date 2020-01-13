@@ -18,8 +18,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1077</width>
-    <height>774</height>
+    <width>872</width>
+    <height>814</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -61,7 +61,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1077</width>
+     <width>872</width>
      <height>28</height>
     </rect>
    </property>
@@ -111,25 +111,33 @@
     <property name="title">
      <string>View</string>
     </property>
-    <widget class="QMenu" name="menuToolbars">
-     <property name="title">
-      <string>Toolbars</string>
-     </property>
-    </widget>
-    <widget class="QMenu" name="menuDock_Widgets">
-     <property name="title">
-      <string>Dock Widgets</string>
-     </property>
-     <addaction name="actionRestore_Dock_Widgets"/>
-     <addaction name="separator"/>
-    </widget>
-    <addaction name="menuToolbars"/>
-    <addaction name="menuDock_Widgets"/>
+    <addaction name="separator"/>
+    <addaction name="actionTree_style"/>
+    <addaction name="actionTabular_style"/>
+    <addaction name="actionGraph_style"/>
+   </widget>
+   <widget class="QMenu" name="menuGraph">
+    <property name="title">
+     <string>Graph</string>
+    </property>
+    <addaction name="actionHide_selected"/>
+    <addaction name="actionShow_hidden"/>
+    <addaction name="separator"/>
+    <addaction name="actionPrune_selected"/>
+    <addaction name="actionRestore_pruned"/>
+   </widget>
+   <widget class="QMenu" name="menuHelp">
+    <property name="title">
+     <string>Help</string>
+    </property>
+    <addaction name="actionLive_graph_demo"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
    <addaction name="menuView"/>
+   <addaction name="menuGraph"/>
    <addaction name="menuSession"/>
+   <addaction name="menuHelp"/>
   </widget>
   <widget class="NotificationStatusBar" name="statusbar"/>
   <widget class="QDockWidget" name="dockWidget_parameter_value_list">
@@ -492,7 +500,7 @@
       <number>0</number>
      </property>
      <item>
-      <widget class="ObjectTreeView" name="treeView_object">
+      <widget class="StickySelectionEntityTreeView" name="treeView_object">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
          <horstretch>1</horstretch>
@@ -510,6 +518,9 @@
        </property>
        <property name="selectionMode">
         <enum>QAbstractItemView::ExtendedSelection</enum>
+       </property>
+       <property name="selectionBehavior">
+        <enum>QAbstractItemView::SelectItems</enum>
        </property>
        <property name="iconSize">
         <size>
@@ -553,7 +564,7 @@
       <number>0</number>
      </property>
      <item>
-      <widget class="ObjectTreeView" name="treeView_relationship">
+      <widget class="EntityTreeView" name="treeView_relationship">
        <property name="contextMenuPolicy">
         <enum>Qt::CustomContextMenu</enum>
        </property>
@@ -566,6 +577,9 @@
        <property name="selectionMode">
         <enum>QAbstractItemView::ExtendedSelection</enum>
        </property>
+       <property name="selectionBehavior">
+        <enum>QAbstractItemView::SelectItems</enum>
+       </property>
        <property name="iconSize">
         <size>
          <width>20</width>
@@ -573,6 +587,396 @@
         </size>
        </property>
       </widget>
+     </item>
+    </layout>
+   </widget>
+  </widget>
+  <widget class="QDockWidget" name="dockWidget_entity_graph">
+   <property name="windowTitle">
+    <string>Entity graph</string>
+   </property>
+   <attribute name="dockWidgetArea">
+    <number>1</number>
+   </attribute>
+   <widget class="QWidget" name="dockWidgetContents_8">
+    <layout class="QVBoxLayout" name="verticalLayout_7">
+     <property name="spacing">
+      <number>0</number>
+     </property>
+     <property name="leftMargin">
+      <number>0</number>
+     </property>
+     <property name="topMargin">
+      <number>0</number>
+     </property>
+     <property name="rightMargin">
+      <number>0</number>
+     </property>
+     <property name="bottomMargin">
+      <number>0</number>
+     </property>
+     <item>
+      <widget class="GraphQGraphicsView" name="graphicsView">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+         <horstretch>2</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="mouseTracking">
+        <bool>true</bool>
+       </property>
+       <property name="frameShape">
+        <enum>QFrame::NoFrame</enum>
+       </property>
+       <property name="dragMode">
+        <enum>QGraphicsView::ScrollHandDrag</enum>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </widget>
+  </widget>
+  <widget class="QDockWidget" name="dockWidget_item_palette">
+   <property name="windowTitle">
+    <string>Item palette</string>
+   </property>
+   <attribute name="dockWidgetArea">
+    <number>1</number>
+   </attribute>
+   <widget class="QWidget" name="dockWidgetContents_9">
+    <layout class="QVBoxLayout" name="verticalLayout_12">
+     <property name="spacing">
+      <number>0</number>
+     </property>
+     <property name="leftMargin">
+      <number>0</number>
+     </property>
+     <property name="topMargin">
+      <number>0</number>
+     </property>
+     <property name="rightMargin">
+      <number>0</number>
+     </property>
+     <property name="bottomMargin">
+      <number>0</number>
+     </property>
+     <item>
+      <widget class="QSplitter" name="splitter_object_relationship_class">
+       <property name="orientation">
+        <enum>Qt::Vertical</enum>
+       </property>
+       <widget class="QFrame" name="frame">
+        <property name="frameShape">
+         <enum>QFrame::StyledPanel</enum>
+        </property>
+        <property name="frameShadow">
+         <enum>QFrame::Raised</enum>
+        </property>
+        <layout class="QVBoxLayout" name="verticalLayout_9">
+         <property name="spacing">
+          <number>0</number>
+         </property>
+         <property name="leftMargin">
+          <number>0</number>
+         </property>
+         <property name="topMargin">
+          <number>0</number>
+         </property>
+         <property name="rightMargin">
+          <number>0</number>
+         </property>
+         <property name="bottomMargin">
+          <number>0</number>
+         </property>
+         <item>
+          <widget class="QLabel" name="label">
+           <property name="font">
+            <font>
+             <pointsize>10</pointsize>
+            </font>
+           </property>
+           <property name="frameShadow">
+            <enum>QFrame::Sunken</enum>
+           </property>
+           <property name="text">
+            <string>Object class</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="DragListView" name="listView_object_class">
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>0</height>
+            </size>
+           </property>
+           <property name="font">
+            <font>
+             <pointsize>10</pointsize>
+            </font>
+           </property>
+           <property name="mouseTracking">
+            <bool>true</bool>
+           </property>
+           <property name="sizeAdjustPolicy">
+            <enum>QAbstractScrollArea::AdjustIgnored</enum>
+           </property>
+           <property name="editTriggers">
+            <set>QAbstractItemView::NoEditTriggers</set>
+           </property>
+           <property name="showDropIndicator" stdset="0">
+            <bool>false</bool>
+           </property>
+           <property name="dragEnabled">
+            <bool>false</bool>
+           </property>
+           <property name="dragDropMode">
+            <enum>QAbstractItemView::NoDragDrop</enum>
+           </property>
+           <property name="defaultDropAction">
+            <enum>Qt::CopyAction</enum>
+           </property>
+           <property name="iconSize">
+            <size>
+             <width>24</width>
+             <height>24</height>
+            </size>
+           </property>
+           <property name="textElideMode">
+            <enum>Qt::ElideRight</enum>
+           </property>
+           <property name="movement">
+            <enum>QListView::Static</enum>
+           </property>
+           <property name="flow">
+            <enum>QListView::LeftToRight</enum>
+           </property>
+           <property name="isWrapping" stdset="0">
+            <bool>true</bool>
+           </property>
+           <property name="resizeMode">
+            <enum>QListView::Adjust</enum>
+           </property>
+           <property name="gridSize">
+            <size>
+             <width>96</width>
+             <height>48</height>
+            </size>
+           </property>
+           <property name="viewMode">
+            <enum>QListView::IconMode</enum>
+           </property>
+           <property name="uniformItemSizes">
+            <bool>false</bool>
+           </property>
+           <property name="wordWrap">
+            <bool>true</bool>
+           </property>
+           <property name="selectionRectVisible">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+       <widget class="QFrame" name="frame_2">
+        <property name="frameShape">
+         <enum>QFrame::StyledPanel</enum>
+        </property>
+        <property name="frameShadow">
+         <enum>QFrame::Raised</enum>
+        </property>
+        <layout class="QVBoxLayout" name="verticalLayout_11">
+         <property name="spacing">
+          <number>0</number>
+         </property>
+         <property name="leftMargin">
+          <number>0</number>
+         </property>
+         <property name="topMargin">
+          <number>0</number>
+         </property>
+         <property name="rightMargin">
+          <number>0</number>
+         </property>
+         <property name="bottomMargin">
+          <number>0</number>
+         </property>
+         <item>
+          <widget class="QLabel" name="label_2">
+           <property name="font">
+            <font>
+             <pointsize>10</pointsize>
+             <weight>50</weight>
+             <bold>false</bold>
+            </font>
+           </property>
+           <property name="text">
+            <string>Relationship class</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="DragListView" name="listView_relationship_class">
+           <property name="font">
+            <font>
+             <pointsize>10</pointsize>
+            </font>
+           </property>
+           <property name="editTriggers">
+            <set>QAbstractItemView::NoEditTriggers</set>
+           </property>
+           <property name="showDropIndicator" stdset="0">
+            <bool>false</bool>
+           </property>
+           <property name="dragEnabled">
+            <bool>false</bool>
+           </property>
+           <property name="dragDropMode">
+            <enum>QAbstractItemView::NoDragDrop</enum>
+           </property>
+           <property name="iconSize">
+            <size>
+             <width>24</width>
+             <height>24</height>
+            </size>
+           </property>
+           <property name="textElideMode">
+            <enum>Qt::ElideMiddle</enum>
+           </property>
+           <property name="movement">
+            <enum>QListView::Static</enum>
+           </property>
+           <property name="flow">
+            <enum>QListView::LeftToRight</enum>
+           </property>
+           <property name="isWrapping" stdset="0">
+            <bool>true</bool>
+           </property>
+           <property name="resizeMode">
+            <enum>QListView::Adjust</enum>
+           </property>
+           <property name="gridSize">
+            <size>
+             <width>96</width>
+             <height>48</height>
+            </size>
+           </property>
+           <property name="viewMode">
+            <enum>QListView::IconMode</enum>
+           </property>
+           <property name="uniformItemSizes">
+            <bool>false</bool>
+           </property>
+           <property name="wordWrap">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </widget>
+     </item>
+    </layout>
+   </widget>
+  </widget>
+  <widget class="QDockWidget" name="dockWidget_pivot_table">
+   <property name="windowTitle">
+    <string>Pivot table</string>
+   </property>
+   <attribute name="dockWidgetArea">
+    <number>2</number>
+   </attribute>
+   <widget class="QWidget" name="dockWidgetContents_10">
+    <layout class="QVBoxLayout" name="verticalLayout_13">
+     <property name="spacing">
+      <number>0</number>
+     </property>
+     <property name="leftMargin">
+      <number>0</number>
+     </property>
+     <property name="topMargin">
+      <number>0</number>
+     </property>
+     <property name="rightMargin">
+      <number>0</number>
+     </property>
+     <property name="bottomMargin">
+      <number>0</number>
+     </property>
+     <item>
+      <layout class="QHBoxLayout" name="horizontalLayout">
+       <property name="spacing">
+        <number>3</number>
+       </property>
+       <item>
+        <widget class="QLabel" name="label_3">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="text">
+          <string>Input type:</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QComboBox" name="comboBox_pivot_table_input_type">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>180</width>
+           <height>23</height>
+          </size>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <widget class="PivotTableView" name="pivot_table"/>
+     </item>
+    </layout>
+   </widget>
+  </widget>
+  <widget class="QDockWidget" name="dockWidget_frozen_table">
+   <property name="windowTitle">
+    <string>Frozen table</string>
+   </property>
+   <attribute name="dockWidgetArea">
+    <number>2</number>
+   </attribute>
+   <widget class="QWidget" name="dockWidgetContents_11">
+    <layout class="QVBoxLayout" name="verticalLayout_14">
+     <property name="spacing">
+      <number>0</number>
+     </property>
+     <property name="leftMargin">
+      <number>0</number>
+     </property>
+     <property name="topMargin">
+      <number>0</number>
+     </property>
+     <property name="rightMargin">
+      <number>0</number>
+     </property>
+     <property name="bottomMargin">
+      <number>0</number>
+     </property>
+     <item>
+      <widget class="FrozenTableView" name="frozen_table"/>
      </item>
     </layout>
    </widget>
@@ -670,7 +1074,7 @@
   <action name="actionImport">
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
-     <normaloff>:/icons/menu_icons/file-import.svg</normaloff>:/icons/menu_icons/file-import.svg</iconset>
+     <normaloff>:/icons/project_item_icons/database-import.svg</normaloff>:/icons/project_item_icons/database-import.svg</iconset>
    </property>
    <property name="text">
     <string>Import</string>
@@ -682,7 +1086,7 @@
    </property>
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
-     <normaloff>:/icons/menu_icons/file-export.svg</normaloff>:/icons/menu_icons/file-export.svg</iconset>
+     <normaloff>:/icons/project_item_icons/database-export.svg</normaloff>:/icons/project_item_icons/database-export.svg</iconset>
    </property>
    <property name="text">
     <string>Export</string>
@@ -794,9 +1198,56 @@
     <string>Ctrl+Del</string>
    </property>
   </action>
-  <action name="actionRestore_Dock_Widgets">
+  <action name="actionHide_selected">
    <property name="text">
-    <string>Restore Dock Widgets</string>
+    <string>Hide selected</string>
+   </property>
+  </action>
+  <action name="actionShow_hidden">
+   <property name="text">
+    <string>Show hidden items</string>
+   </property>
+  </action>
+  <action name="actionPrune_selected">
+   <property name="text">
+    <string>Prune selected items</string>
+   </property>
+  </action>
+  <action name="actionRestore_pruned">
+   <property name="text">
+    <string>Restore pruned</string>
+   </property>
+  </action>
+  <action name="actionLive_graph_demo">
+   <property name="text">
+    <string>Live graph demo</string>
+   </property>
+  </action>
+  <action name="actionTree_style">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/symbols/menu_icons/tree.svg</normaloff>:/symbols/menu_icons/tree.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Tree style</string>
+   </property>
+  </action>
+  <action name="actionGraph_style">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/project-diagram.svg</normaloff>:/icons/project-diagram.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Graph style</string>
+   </property>
+  </action>
+  <action name="actionTabular_style">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/symbols/menu_icons/table.svg</normaloff>:/symbols/menu_icons/table.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Tabular style</string>
    </property>
   </action>
  </widget>
@@ -807,7 +1258,22 @@
    <header>spinetoolbox/widgets/custom_qtableview.h</header>
   </customwidget>
   <customwidget>
-   <class>ObjectTreeView</class>
+   <class>NotificationStatusBar</class>
+   <extends>QStatusBar</extends>
+   <header>spinetoolbox/widgets/custom_qstatusbar.h</header>
+  </customwidget>
+  <customwidget>
+   <class>GraphQGraphicsView</class>
+   <extends>QGraphicsView</extends>
+   <header>spinetoolbox/widgets/custom_qgraphicsviews.h</header>
+  </customwidget>
+  <customwidget>
+   <class>DragListView</class>
+   <extends>QListView</extends>
+   <header>spinetoolbox/widgets/custom_qlistview.h</header>
+  </customwidget>
+  <customwidget>
+   <class>EntityTreeView</class>
    <extends>QTreeView</extends>
    <header>spinetoolbox/widgets/custom_qtreeview.h</header>
   </customwidget>
@@ -817,9 +1283,19 @@
    <header>spinetoolbox/widgets/custom_qtreeview.h</header>
   </customwidget>
   <customwidget>
-   <class>NotificationStatusBar</class>
-   <extends>QStatusBar</extends>
-   <header>spinetoolbox/widgets/custom_qstatusbar.h</header>
+   <class>FrozenTableView</class>
+   <extends>QTableView</extends>
+   <header>spinetoolbox/widgets/frozen_table_view.h</header>
+  </customwidget>
+  <customwidget>
+   <class>StickySelectionEntityTreeView</class>
+   <extends>QTreeView</extends>
+   <header>spinetoolbox/widgets/custom_qtreeview.h</header>
+  </customwidget>
+  <customwidget>
+   <class>PivotTableView</class>
+   <extends>QTableView</extends>
+   <header>spinetoolbox/widgets/custom_qtableview.h</header>
   </customwidget>
  </customwidgets>
  <tabstops>

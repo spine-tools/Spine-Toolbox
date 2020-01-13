@@ -23,7 +23,6 @@ import logging
 import sys
 from PySide2.QtCore import QItemSelectionModel, QVariantAnimation
 from PySide2.QtWidgets import QApplication
-from spinetoolbox.executioner import ExecutionState
 from .mock_helpers import clean_up_toolboxui_with_project, create_toolboxui_with_project, \
     add_ds, add_dc, add_tool, add_view, add_importer, add_exporter
 from spinetoolbox.tool_specifications import PythonTool
@@ -169,56 +168,55 @@ class TestSpineToolboxProject(unittest.TestCase):
         add_tool(self.toolbox.project(), item_name)
         item_index = self.toolbox.project_item_model.find_item(item_name)
         item = self.toolbox.project_item_model.project_item(item_index)
-        item._do_execute = mock.MagicMock(return_value=ExecutionState.CONTINUE)
+        item._do_execute = mock.MagicMock(return_value=True)
         anim = QVariantAnimation()
         anim.setDuration(0)
         item.make_execution_leave_animation = mock.MagicMock(return_value=anim)
         self.toolbox.project().execute_project()
-        qApp.processEvents()
-        item._do_execute.assert_called_with([], [])
+        item.execute_forward.assert_called_with([])
 
     def test_execute_project_with_two_dags(self):
-        item1_name = "Tool"
-        add_tool(self.toolbox.project(), item1_name)
-        item1_index = self.toolbox.project_item_model.find_item(item1_name)
-        item1 = self.toolbox.project_item_model.project_item(item1_index)
-        item1._do_execute = mock.MagicMock(return_value=ExecutionState.CONTINUE)
-        item2_name = "View"
-        add_view(self.toolbox.project(), item2_name)
-        item2_index = self.toolbox.project_item_model.find_item(item2_name)
-        item2 = self.toolbox.project_item_model.project_item(item2_index)
-        item2._do_execute = mock.MagicMock(return_value=ExecutionState.CONTINUE)
+        item1_name = self.add_tool()
+        item1 = self.toolbox.project_item_model.get_item(item1_name)
+        item1.execute_forward = mock.MagicMock(return_value=True)
+        item2_name = self.add_view()
+        item2 = self.toolbox.project_item_model.get_item(item2_name)
+        item2.execute_forward = mock.MagicMock(return_value=True)
         anim = QVariantAnimation()
         anim.setDuration(0)
         item1.make_execution_leave_animation = mock.MagicMock(return_value=anim)
         item2.make_execution_leave_animation = mock.MagicMock(return_value=anim)
         self.toolbox.project().execute_project()
-        # We have to process events for each item that gets executed
-        qApp.processEvents()
-        qApp.processEvents()
-        item1._do_execute.assert_called_with([], [])
-        item2._do_execute.assert_called_with([], [])
+        item1.execute_forward.assert_called_with([])
+        item2.execute_forward.assert_called_with([])
 
     def test_execute_selected(self):
         item1_name = "Tool"
         add_tool(self.toolbox.project(), item1_name)
         item1_index = self.toolbox.project_item_model.find_item(item1_name)
         item1 = self.toolbox.project_item_model.project_item(item1_index)
-        item1._do_execute = mock.MagicMock(return_value=ExecutionState.CONTINUE)
+        item1._do_execute = mock.MagicMock(return_value=True)
         item2_name = "View"
         add_view(self.toolbox.project(), item2_name)
         item2_index = self.toolbox.project_item_model.find_item(item2_name)
         item2 = self.toolbox.project_item_model.project_item(item2_index)
-        item2._do_execute = mock.MagicMock(return_value=ExecutionState.CONTINUE)
+        item2._do_execute = mock.MagicMock(return_value=True)
+
+    def test_execute_selected_dag(self):
+        item1_name = self.add_tool()
+        item1 = self.toolbox.project_item_model.get_item(item1_name)
+        item1.execute_forward = mock.MagicMock(return_value=True)
+        item2_name = self.add_view()
+        item2 = self.toolbox.project_item_model.get_item(item2_name)
+        item2.execute_forward = mock.MagicMock(return_value=True)
         anim = QVariantAnimation()
         anim.setDuration(0)
         item1.make_execution_leave_animation = mock.MagicMock(return_value=anim)
         item2.make_execution_leave_animation = mock.MagicMock(return_value=anim)
-        self.toolbox.ui.treeView_project.selectionModel().select(item2_index, QItemSelectionModel.Select)
+        self.toolbox.project().set_item_selected(item2)
         self.toolbox.project().execute_selected()
-        qApp.processEvents()
-        item1._do_execute.assert_not_called()
-        item2._do_execute.assert_called_with([], [])
+        item1.execute_forward.assert_not_called()
+        item2.execute_forward.assert_called_with([])
 
     def test_change_name(self):
         """Tests renaming a project."""
@@ -239,6 +237,55 @@ class TestSpineToolboxProject(unittest.TestCase):
         spec_path = os.path.abspath(os.path.join(os.curdir, "tests", "test_resources", "test_tool_spec.json"))
         tool_spec = self.toolbox.project().load_tool_specification_from_file(spec_path)
         self.assertIsInstance(tool_spec, PythonTool)
+
+    def test_execute_selected_item_within_single_dag(self):
+        data_store_name = self.add_ds()
+        data_store = self.toolbox.project_item_model.get_item(data_store_name)
+        data_store.execute_forward = mock.MagicMock(return_value=True)
+        tool_name = self.add_tool()
+        tool = self.toolbox.project_item_model.get_item(tool_name)
+        tool.execute_forward = mock.MagicMock(return_value=True)
+        view_name = self.add_view()
+        view = self.toolbox.project_item_model.get_item(view_name)
+        view.execute_forward = mock.MagicMock(return_value=True)
+        anim = QVariantAnimation()
+        anim.setDuration(0)
+        tool.make_execution_leave_animation = mock.MagicMock(return_value=anim)
+        self.toolbox.project().dag_handler.add_graph_edge(data_store_name, tool_name)
+        self.toolbox.project().dag_handler.add_graph_edge(tool_name, view_name)
+        self.toolbox.project().set_item_selected(tool)
+        self.toolbox.project().execute_selected()
+        data_store.execute_forward.assert_not_called()
+        tool.execute_forward.assert_called()
+        view.execute_forward.assert_not_called()
+
+    def add_ds(self):
+        """Helper method to add Data Store. Returns created items name."""
+        item = dict(name="DS", description="", url=dict(), x=0, y=0)
+        with mock.patch("spinetoolbox.project_item.create_dir"):
+            self.toolbox.project().add_project_items("Data Stores", item)
+        return "DS"
+
+    def add_dc(self):
+        """Helper method to add Data Connection. Returns created items name."""
+        item = dict(name="DC", description="", references=list(), x=0, y=0)
+        with mock.patch("spinetoolbox.project_item.create_dir"):
+            self.toolbox.project().add_project_items("Data Connections", item)
+        return "DC"
+
+    def add_tool(self):
+        """Helper method to add Tool. Returns created items name."""
+        item = dict(name="tool", description="", tool="", execute_in_work=False, x=0, y=0)
+        with mock.patch("spinetoolbox.project_item.create_dir"):
+            self.toolbox.project().add_project_items("Tools", item)
+        return "tool"
+
+    def add_view(self):
+        """Helper method to add View. Returns created items name."""
+        item = dict(name="view", description="", x=0, y=0)
+        with mock.patch("spinetoolbox.project_item.create_dir"):
+            self.toolbox.project().add_project_items("Views", item)
+        return "view"
 
 
 if __name__ == '__main__':

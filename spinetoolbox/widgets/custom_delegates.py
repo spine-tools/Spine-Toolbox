@@ -104,12 +104,12 @@ class CheckBoxDelegate(QItemDelegate):
         centered (bool): whether or not the checkbox should be center-aligned in the widget
     """
 
-    data_committed = Signal("QModelIndex", name="data_committed")
+    data_committed = Signal("QModelIndex")
 
     def __init__(self, parent, centered=True):
         super().__init__(parent)
         self._centered = centered
-        self.mouse_press_point = QPoint()
+        self._checkbox_pressed = None
 
     def createEditor(self, parent, option, index):
         """Important, otherwise an editor is created if the user clicks in this cell.
@@ -146,17 +146,12 @@ class CheckBoxDelegate(QItemDelegate):
         if event.type() == QEvent.MouseButtonDblClick:
             return True
         if event.type() == QEvent.MouseButtonPress:
-            if event.button() == Qt.LeftButton and self.get_checkbox_rect(option).contains(event.pos()):
-                self.mouse_press_point = event.pos()
+            self._checkbox_pressed = self.get_checkbox_rect(option).contains(event.pos())
+        if event.type() == QEvent.MouseButtonPress:
+            if self._checkbox_pressed and self.get_checkbox_rect(option).contains(event.pos()):
+                self._checkbox_pressed = False
+                self.data_committed.emit(index, not index.data(Qt.EditRole))
                 return True
-        if event.type() == QEvent.MouseButtonRelease:
-            checkbox_rect = self.get_checkbox_rect(option)
-            if checkbox_rect.contains(self.mouse_press_point) and checkbox_rect.contains(event.pos()):
-                # Change the checkbox-state
-                self.data_committed.emit(index)
-                self.mouse_press_point = QPoint()
-                return True
-            self.mouse_press_point = QPoint()
         return False
 
     def setModelData(self, editor, model, index):
@@ -175,6 +170,44 @@ class CheckBoxDelegate(QItemDelegate):
                 option.rect.x() + checkbox_rect.width() / 2, option.rect.y() + checkbox_rect.height() / 2
             )
         return QRect(checkbox_anchor, checkbox_rect.size())
+
+
+class PivotTableDelegate(CheckBoxDelegate):
+
+    parameter_value_editor_requested = Signal("QModelIndex", str, object)
+    data_committed = Signal("QModelIndex", "QVariant")
+
+    def setModelData(self, editor, model, index):
+        """Send signal."""
+        self.data_committed.emit(index, editor.data())
+
+    def _is_entity_index(self, index):
+        return not self.parent().is_value_input_type() and index.model().sourceModel().index_in_data(index)
+
+    def paint(self, painter, option, index):
+        if self._is_entity_index(index):
+            super().paint(painter, option, index)
+        else:
+            QItemDelegate.paint(self, painter, option, index)
+
+    def editorEvent(self, event, model, option, index):
+        if self._is_entity_index(index):
+            return super().editorEvent(event, model, option, index)
+        return QItemDelegate.editorEvent(self, event, model, option, index)
+
+    def createEditor(self, parent, option, index):
+        if self._is_entity_index(index):
+            return super().createEditor(parent, option, index)
+        if self.parent().pivot_table_model.index_in_data(index):
+            try:
+                value = from_database(index.data(role=Qt.EditRole))
+            except ParameterValueFormatError:
+                value = None
+            if isinstance(value, (DateTime, Duration, TimePattern, TimeSeries)) or value is None:
+                value_name = index.model().sourceModel().value_name(index)  # FIXME: get the actual name
+                self.parameter_value_editor_requested.emit(index, value_name, value)
+                return None
+        return CustomLineEditor(parent)
 
 
 class GetObjectClassIdMixin:
@@ -256,7 +289,7 @@ class DatabaseNameDelegate(ParameterDelegate):
 class ParameterValueOrDefaultValueDelegate(ParameterDelegate):
     """A delegate for the either the value or the default value."""
 
-    parameter_value_editor_requested = Signal("QModelIndex", "QVariant")
+    parameter_value_editor_requested = Signal("QModelIndex", str, object)
 
     def setModelData(self, editor, model, index):
         """Emits the data_committed signal with new data."""
@@ -285,7 +318,8 @@ class ParameterValueOrDefaultValueDelegate(ParameterDelegate):
         except ParameterValueFormatError:
             value = None
         if isinstance(value, (DateTime, Duration, TimePattern, TimeSeries)):
-            self.parameter_value_editor_requested.emit(index, value)
+            value_name = index.model().value_name(index)
+            self.parameter_value_editor_requested.emit(index, value_name, value)
             return None
         if isinstance(value, (float, int)):
             editor = NumberParameterInlineEditor(parent)
@@ -310,7 +344,7 @@ class ParameterValueDelegate(ParameterValueOrDefaultValueDelegate):
     """A delegate for the parameter value."""
 
     def _get_entity_class_id(self, index, db_map):
-        return NotImplementedError()
+        raise NotImplementedError()
 
     def _get_value_list(self, index, db_map):
         """Returns a value list item for the given index and db_map."""
@@ -507,9 +541,6 @@ class ManageItemsDelegate(QItemDelegate):
     """
 
     data_committed = Signal("QModelIndex", "QVariant", name="data_committed")
-
-    def __init__(self, parent):
-        super().__init__(parent)
 
     def setModelData(self, editor, model, index):
         """Send signal."""

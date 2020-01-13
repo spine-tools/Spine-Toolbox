@@ -34,13 +34,12 @@ def select_csv_file(parent=None):
 class CSVConnector(SourceConnection):
     """Template class to read data from another QThread."""
 
-    # name of data source, ex: "Text/CSV"
     DISPLAY_NAME = "Text/CSV"
+    """name of data source, ex: "Text/CSV"""""
 
-    # List of available text encodings
     _ENCODINGS = ['utf-8', 'utf-16', 'utf-32', 'ascii', 'iso-8859-1', 'iso-8859-2']
+    """List of available text encodings"""
 
-    # dict with option specification for source.
     OPTIONS = {
         "encoding": {'type': list, 'label': "Encoding", 'Items': _ENCODINGS, 'default': _ENCODINGS[0]},
         "delimiter": {'type': list, 'label': "Delimiter", 'Items': [",", ";", "Tab"], 'default': ','},
@@ -49,9 +48,10 @@ class CSVConnector(SourceConnection):
         "has_header": {'type': bool, 'label': 'Has header', 'default': False},
         "skip": {'type': int, 'label': 'Skip rows', 'Minimum': 0, 'default': 0},
     }
+    """dict with option specification for source."""
 
-    # Modal widget that returns source object and action (OK, CANCEL)
     SELECT_SOURCE_UI = select_csv_file
+    """Modal widget that returns source object and action (OK, CANCEL)"""
 
     def __init__(self):
         super(CSVConnector, self).__init__()
@@ -61,7 +61,7 @@ class CSVConnector(SourceConnection):
         """saves filepath
 
         Arguments:
-            source {str} -- filepath
+            source (str): filepath
         """
         self._filename = source
 
@@ -70,36 +70,44 @@ class CSVConnector(SourceConnection):
         """
 
     def get_tables(self):
-        """Method that should return a list of table names, list(str)
+        """
+        Returns a mapping from file name to options.
 
         Returns:
-            list(str): Table names in list
+            dict
         """
         options = {}
         # try to find options for file
         with open(self._filename, 'rb') as input_file:
             sniff_result = chardet.detect(input_file.read(1024))
         sniffed_encoding = sniff_result["encoding"].lower()
+        # The sniffed encoding is not always correct. We may still need to try other options too.
         if sniffed_encoding in self._ENCODINGS:
-            options["encoding"] = sniffed_encoding
+            try_encodings = [sniffed_encoding] + [encoding for encoding in self._ENCODINGS if encoding != sniffed_encoding]
         else:
-            options["encoding"] = self._ENCODINGS[0]
-        with open(self._filename, encoding=options["encoding"]) as csvfile:
-            try:
-                dialect = csv.Sniffer().sniff(csvfile.read(1024))
-                if dialect.delimiter in [',', ';']:
-                    options["delimiter"] = dialect.delimiter
-                elif dialect.delimiter == '\t':
-                    options["delimiter"] = 'Tab'
-                else:
-                    options["delimiter_custom"] = dialect.delimiter
-                options.update({"quotechar": dialect.quotechar, "skip": 0})
-            except csv.Error:
-                pass
-            try:
-                options["has_header"] = csv.Sniffer().has_header(csvfile.read(1024))
-            except csv.Error:
-                pass
+            try_encodings = self._ENCODINGS
+        options["encoding"] = try_encodings[0]
+        for encoding in try_encodings:
+            with open(self._filename, encoding=encoding) as csvfile:
+                try:
+                    dialect = csv.Sniffer().sniff(csvfile.read(1024))
+                    if dialect.delimiter in [',', ';']:
+                        options["delimiter"] = dialect.delimiter
+                    elif dialect.delimiter == '\t':
+                        options["delimiter"] = 'Tab'
+                    else:
+                        options["delimiter_custom"] = dialect.delimiter
+                    options.update({"quotechar": dialect.quotechar, "skip": 0})
+                except csv.Error:
+                    pass
+                except UnicodeDecodeError:
+                    continue
+                try:
+                    options["has_header"] = csv.Sniffer().has_header(csvfile.read(1024))
+                except csv.Error:
+                    pass
+                options["encoding"] = encoding
+                break
         return {self._filename: {"options": options}}
 
     @staticmethod
@@ -107,7 +115,7 @@ class CSVConnector(SourceConnection):
         """Parses options dict to dialect and quotechar options for csv.reader
 
         Arguments:
-            options {dict} -- dict with options:
+            options (dict): dict with options:
                 "encoding": file text encoding
                 "delimiter": file delimiter
                 "quotechar": file quotechar
@@ -115,9 +123,9 @@ class CSVConnector(SourceConnection):
                 "skip": how many rows should be skipped
 
         Returns:
-            tuple(dict, bool, integer) -- tuple dialect for csv.reader,
-                                          quotechar for csv.reader and
-                                          number of rows to skip
+            tuple(dict, bool, integer): tuple dialect for csv.reader,
+                                        quotechar for csv.reader and
+                                        number of rows to skip
         """
         encoding = options.get("encoding", None)
         delimiter = options.get("delimiter_custom", "")
@@ -139,11 +147,11 @@ class CSVConnector(SourceConnection):
         """creates an iterator that reads max_rows number of rows from text file
 
         Arguments:
-            options {dict} -- dict with options:
-            max_rows {integer} -- max number of rows to read, if -1 then read all rows
+            options (dict): dict with options:
+            max_rows (integer): max number of rows to read, if -1 then read all rows
 
         Returns:
-            iterator -- iterator of csv file
+            iterator: iterator of csv file
         """
         if not self._filename:
             return []
@@ -158,17 +166,17 @@ class CSVConnector(SourceConnection):
             yield from csv_reader
 
     def get_data_iterator(self, table, options, max_rows=-1):
-        """Creates a iterator for the file in self.filename
+        """Creates an iterator for the file in self.filename
 
         Arguments:
-            table {string} -- ignored, used in abstract IOWorker class
-            options {dict} -- dict with options
+            table (string): ignored, used in abstract IOWorker class
+            options (dict): dict with options
 
         Keyword Arguments:
-            max_rows {int} -- how many rows of data to read, if -1 read all rows (default: {-1})
+            max_rows (int): how many rows of data to read, if -1 read all rows (default: {-1})
 
         Returns:
-            [type] -- [description]
+            tuple:
         """
         csv_iter = self.file_iterator(options, max_rows)
         # Iterate once to get num_cols

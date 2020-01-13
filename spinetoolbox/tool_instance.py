@@ -21,14 +21,13 @@ import sys
 import shutil
 from PySide2.QtCore import QObject, Signal, Slot
 from .config import GAMS_EXECUTABLE, JULIA_EXECUTABLE, PYTHON_EXECUTABLE
-from .executioner import ExecutionState
 from .execution_managers import ConsoleExecutionManager, QProcessExecutionManager
 
 
 class ToolInstance(QObject):
     """Tool instance base class."""
 
-    instance_finished_signal = Signal(int, name="instance_finished_signal")
+    instance_finished = Signal(int)
     """Signal to emit when a Tool instance has finished processing"""
 
     def __init__(self, toolbox, tool_specification, basedir):
@@ -47,16 +46,15 @@ class ToolInstance(QObject):
         self.program = None  # Program to start in the subprocess
         self.args = list()  # List of command line arguments for the program
 
+    def is_running(self):
+        return self.exec_mngr is not None
+
     def terminate_instance(self):
         """Terminates Tool instance execution."""
-        self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(
-            ExecutionState.STOP_REQUESTED
-        )
         if not self.exec_mngr:
             return
-        # Disconnect tool_process signals
-        self.exec_mngr.execution_finished.disconnect()
         self.exec_mngr.stop_execution()
+        self.exec_mngr = None
 
     def remove(self):
         """[Obsolete] Removes Tool instance files from work directory."""
@@ -135,7 +133,7 @@ class GAMSToolInstance(ToolInstance):
             self._toolbox.msg.emit("\tTool specification execution finished")
         self.exec_mngr.deleteLater()
         self.exec_mngr = None
-        self.instance_finished_signal.emit(ret)
+        self.instance_finished.emit(ret)
 
 
 class JuliaToolInstance(ToolInstance):
@@ -212,8 +210,9 @@ class JuliaToolInstance(ToolInstance):
                 self._toolbox.msg_error.emit("\tUnknown return code ({0})".format(ret))
         else:
             self._toolbox.msg.emit("\tTool specification execution finished")
+        self.exec_mngr.deleteLater()
         self.exec_mngr = None
-        self.instance_finished_signal.emit(ret)
+        self.instance_finished.emit(ret)
 
     @Slot(int)
     def handle_execution_finished(self, ret):
@@ -239,7 +238,7 @@ class JuliaToolInstance(ToolInstance):
             self._toolbox.msg.emit("\tTool specification execution finished")
         self.exec_mngr.deleteLater()
         self.exec_mngr = None
-        self.instance_finished_signal.emit(ret)
+        self.instance_finished.emit(ret)
 
 
 class PythonToolInstance(ToolInstance):
@@ -307,13 +306,14 @@ class PythonToolInstance(ToolInstance):
         if ret != 0:
             try:
                 return_msg = self.tool_specification.return_codes[ret]
-                self._toolbox.msg_error.emit("\t<b>{0}</b> [exit code:{1}]".format(return_msg, ret))
+                self._toolbox.msg_error.emit("\t<b>{0}</b> [exit code: {1}]".format(return_msg, ret))
             except KeyError:
                 self._toolbox.msg_error.emit("\tUnknown return code ({0})".format(ret))
         else:
             self._toolbox.msg.emit("\tTool specification execution finished")
+        self.exec_mngr.deleteLater()
         self.exec_mngr = None
-        self.instance_finished_signal.emit(ret)
+        self.instance_finished.emit(ret)
 
     @Slot(int)
     def handle_execution_finished(self, ret):
@@ -339,7 +339,7 @@ class PythonToolInstance(ToolInstance):
             self._toolbox.msg.emit("\tTool specification execution finished")
         self.exec_mngr.deleteLater()
         self.exec_mngr = None
-        self.instance_finished_signal.emit(ret)
+        self.instance_finished.emit(ret)
 
 
 class ExecutableToolInstance(ToolInstance):
@@ -382,4 +382,4 @@ class ExecutableToolInstance(ToolInstance):
             self._toolbox.msg.emit("\tTool specification execution finished")
         self.exec_mngr.deleteLater()
         self.exec_mngr = None
-        self.instance_finished_signal.emit(ret)
+        self.instance_finished.emit(ret)

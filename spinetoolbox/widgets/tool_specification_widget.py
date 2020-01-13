@@ -23,14 +23,7 @@ import json
 from PySide2.QtGui import QDesktopServices, QStandardItemModel, QStandardItem
 from PySide2.QtWidgets import QWidget, QStatusBar, QInputDialog, QFileDialog, QFileIconProvider, QMessageBox
 from PySide2.QtCore import Slot, Qt, QUrl, QFileInfo
-from ..config import (
-    STATUSBAR_SS,
-    TREEVIEW_HEADER_SS,
-    APPLICATION_PATH,
-    TOOL_TYPES,
-    REQUIRED_KEYS,
-    INVALID_FILENAME_CHARS,
-)
+from ..config import STATUSBAR_SS, TREEVIEW_HEADER_SS, APPLICATION_PATH, TOOL_TYPES, REQUIRED_KEYS
 from ..helpers import busy_effect
 from .custom_menus import AddIncludesPopupMenu, CreateMainProgramPopupMenu
 

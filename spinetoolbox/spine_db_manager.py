@@ -39,6 +39,12 @@ from .spine_db_signaller import SpineDBSignaller
 from .widgets.manage_db_items_dialog import CommitDialog
 
 
+@busy_effect
+def do_create_new_spine_database(url, for_spine_model):
+    """Creates a new spine database at the given url."""
+    create_new_spine_database(url, for_spine_model=for_spine_model)
+
+
 class SpineDBManager(QObject):
     """Class to manage DBs within a project.
 
@@ -46,7 +52,6 @@ class SpineDBManager(QObject):
     """
 
     msg_error = Signal("QVariant")
-    session_closed = Signal(set)
     session_committed = Signal(set)
     session_rolled_back = Signal(set)
     # Added
@@ -82,6 +87,8 @@ class SpineDBManager(QObject):
     parameter_tags_updated = Signal("QVariant")
     parameter_definition_tags_set = Signal("QVariant")
 
+    _GROUP_SEP = " \u01C0 "
+
     def __init__(self, parent=None):
         """Initializes the instance.
 
@@ -104,6 +111,10 @@ class SpineDBManager(QObject):
         return set(self._db_maps.values())
 
     def create_new_spine_database(self, url, for_spine_model=False):
+        if url in self._db_maps:
+            message = f"The url <b>{url}</b> is being viewed. Please close all windows viewing this url and try again."
+            QMessageBox.critical(self.parent()._toolbox, "Error", message)
+            return
         try:
             if not is_empty(url):
                 msg = QMessageBox(self.parent()._toolbox)
@@ -116,26 +127,21 @@ class SpineDBManager(QObject):
                 ret = msg.exec_()  # Show message box
                 if ret != QMessageBox.AcceptRole:
                     return
-            self.close_session(url)
-            self.do_create_new_spine_database(url, for_spine_model)
+            do_create_new_spine_database(url, for_spine_model)
             self.parent()._toolbox.msg_success.emit("New Spine db successfully created at '{0}'.".format(url))
         except SpineDBAPIError as e:
             self.parent()._toolbox.msg_error.emit("Unable to create new Spine db at '{0}': {1}.".format(url, e))
 
-    @busy_effect
-    def do_create_new_spine_database(self, url, for_spine_model):
-        """Creates a new spine database at the given url."""
-        create_new_spine_database(url, for_spine_model=for_spine_model)
+    def close_session(self, url):
+        """Pops any db map on the given url and closes its connection.
 
-    def close_session(self, url, silent=False):
-        """Closes a connection to given database mapping."""
+        Args:
+            url (str)
+        """
         db_map = self._db_maps.pop(url, None)
         if db_map is None:
             return
         db_map.connection.close()
-        if silent:
-            return
-        self.session_closed.emit({db_map})
 
     def close_all_sessions(self):
         """Closes connections to all database mappings."""
@@ -180,7 +186,7 @@ class SpineDBManager(QObject):
 
     @busy_effect
     def do_get_db_map(self, url, upgrade, codename):
-        """Returns a memoized DiffDatabaseMapping instance from url.
+        """Returns a memorized DiffDatabaseMapping instance from url.
         Called by `get_db_map`.
 
         Args:
@@ -205,7 +211,7 @@ class SpineDBManager(QObject):
         if not listeners:
             if not self.ok_to_close(db_map):
                 return False
-            self.close_session(db_map.db_url, silent=True)
+            self.close_session(db_map.db_url)
         self.signaller.remove_db_map_listener(db_map, listener)
         return True
 
@@ -230,7 +236,7 @@ class SpineDBManager(QObject):
 
     @staticmethod
     def _get_commit_msg(db_map):
-        dialog = CommitDialog(db_map.codename)
+        dialog = CommitDialog(qApp.activeWindow(), db_map.codename)
         answer = dialog.exec_()
         if answer == QDialog.Accepted:
             return dialog.commit_msg
@@ -284,7 +290,7 @@ class SpineDBManager(QObject):
             return self._rollback_db_map_session(db_map)
         if commit_at_exit == 1:  # Default
             # Show message box
-            msg = QMessageBox()
+            msg = QMessageBox(qApp.activeWindow())
             msg.setIcon(QMessageBox.Question)
             msg.setWindowTitle("Commit Pending Changes")
             msg.setText("The current session has uncommitted changes. Do you want to commit them now?")
@@ -324,17 +330,7 @@ class SpineDBManager(QObject):
             lambda db_map_data: self.cache_items("parameter definition", db_map_data)
         )
         self.parameter_values_added.connect(lambda db_map_data: self.cache_items("parameter value", db_map_data))
-        # Remove from cache
-        self.object_classes_removed.connect(lambda db_map_data: self.uncache_items("object class", db_map_data))
-        self.objects_removed.connect(lambda db_map_data: self.uncache_items("object", db_map_data))
-        self.relationship_classes_removed.connect(
-            lambda db_map_data: self.uncache_items("relationship class", db_map_data)
-        )
-        self.relationships_removed.connect(lambda db_map_data: self.uncache_items("relationship", db_map_data))
-        self.parameter_definitions_removed.connect(
-            lambda db_map_data: self.uncache_items("parameter definition", db_map_data)
-        )
-        self.parameter_values_removed.connect(lambda db_map_data: self.uncache_items("parameter value", db_map_data))
+
         # Update in cache
         self.object_classes_updated.connect(lambda db_map_data: self.cache_items("object class", db_map_data))
         self.objects_updated.connect(lambda db_map_data: self.cache_items("object", db_map_data))
@@ -382,6 +378,17 @@ class SpineDBManager(QObject):
         self.parameter_value_lists_removed.connect(self.cascade_refresh_parameter_definitions_by_value_list)
         self.parameter_tags_updated.connect(self.cascade_refresh_parameter_definitions_by_tag)
         self.parameter_tags_removed.connect(self.cascade_refresh_parameter_definitions_by_tag)
+        # Remove from cache (last, because of how cascade removal works at the moment)
+        self.object_classes_removed.connect(lambda db_map_data: self.uncache_items("object class", db_map_data))
+        self.objects_removed.connect(lambda db_map_data: self.uncache_items("object", db_map_data))
+        self.relationship_classes_removed.connect(
+            lambda db_map_data: self.uncache_items("relationship class", db_map_data)
+        )
+        self.relationships_removed.connect(lambda db_map_data: self.uncache_items("relationship", db_map_data))
+        self.parameter_definitions_removed.connect(
+            lambda db_map_data: self.uncache_items("parameter definition", db_map_data)
+        )
+        self.parameter_values_removed.connect(lambda db_map_data: self.uncache_items("parameter value", db_map_data))
         # Do this last, so cache is ready when listeners receive signals
         self.signaller.connect_signals()
 
@@ -415,13 +422,15 @@ class SpineDBManager(QObject):
         """
         for db_map, items in db_map_data.items():
             for item in items:
-                if db_map in self._cache:
-                    cached_map = self._cache[db_map]
-                    if item_type in cached_map:
-                        cached_items = cached_map[item_type]
-                        item_id = item["id"]
-                        if item_id in cached_items:
-                            del cached_items[item_id]
+                if db_map not in self._cache:
+                    continue
+                cached_map = self._cache[db_map]
+                if item_type not in cached_map:
+                    continue
+                cached_items = cached_map[item_type]
+                item_id = item["id"]
+                if item_id in cached_items:
+                    del cached_items[item_id]
 
     def update_icons(self, db_map_data):
         """Runs when object classes are added or updated. Setups icons for those classes.
@@ -498,10 +507,10 @@ class SpineDBManager(QObject):
         Returns:
             list
         """
-        items = [x for x in self.get_items(db_map, item_type) if x[field] == value]
+        items = [x for x in self.get_items(db_map, item_type) if x.get(field) == value]
         if items:
             return items
-        return [x for x in self._get_items_from_db(db_map, item_type) if x[field] == value]
+        return [x for x in self._get_items_from_db(db_map, item_type) if x.get(field) == value]
 
     def get_items(self, db_map, item_type):
         """Returns all the items of the given type in the given db map,
@@ -539,6 +548,15 @@ class SpineDBManager(QObject):
         return getattr(self, method_name)(db_map)
 
     def get_value(self, db_map, item_type, id_, field, role=Qt.DisplayRole):
+        """Returns the value or default value of a parameter.
+
+        Args:
+            db_map (DiffDatabaseMapping)
+            item_type (str): either "parameter definition" or "parameter value"
+            id_ (int)
+            field (str): either "value" or "default_value"
+            role (int, optional)
+        """
         item = self.get_item(db_map, item_type, id_)
         key = "formatted_" + field
         if key not in item:

@@ -42,7 +42,7 @@ class CopyTreeView(QTreeView):
         return True
 
 
-class ObjectTreeView(CopyTreeView):
+class EntityTreeView(CopyTreeView):
     """Custom QTreeView class for object tree in TreeViewForm.
 
     Attributes:
@@ -66,8 +66,8 @@ class ObjectTreeView(CopyTreeView):
         return False
 
 
-class StickySelectionObjectTreeView(CopyTreeView):
-    """Custom QTreeView class for object tree in TreeViewForm.
+class StickySelectionEntityTreeView(EntityTreeView):
+    """Custom QTreeView class for object tree in DataStoreForm.
 
     Attributes:
         parent (QWidget): The parent of this view

@@ -15,10 +15,49 @@ Classes for handling models in PySide2's model/view framework.
 :author: P. Vennström (VTT)
 :date:   1.6.2019
 """
-from spinedb_api import ObjectClassMapping, RelationshipClassMapping, ParameterMapping, Mapping
-from PySide2.QtCore import QModelIndex, Qt, QAbstractTableModel, QAbstractListModel
-from PySide2.QtGui import QColor
+from collections import namedtuple
+from six import unichr
+
+from spinedb_api import (
+    ObjectClassMapping,
+    RelationshipClassMapping,
+    ParameterMapping,
+    Mapping,
+    ParameterValueFormatError,
+    mapping_non_pivoted_columns,
+)
+from PySide2.QtWidgets import QHeaderView, QMenu, QAction, QTableView, QToolButton
+from PySide2.QtCore import QModelIndex, Qt, QAbstractTableModel, QAbstractListModel, Signal
+from PySide2.QtGui import QColor, QFont
 from ..mvcmodels.minimal_table_model import MinimalTableModel
+from .io_api import TYPE_STRING_TO_CLASS
+from .type_conversion import value_to_convert_spec, NewIntegerSequenceDateTimeConvertSpecDialog, ConvertSpec
+
+Margin = namedtuple("Margin", ("left", "right", "top", "bottom"))
+
+
+_MAPPING_COLORS = {
+    "entity": QColor(223, 194, 125),
+    "parameter value": QColor(1, 133, 113),
+    "parameter extra dimension": QColor(128, 205, 193),
+    "parameter name": QColor(128, 205, 193),
+    "entity class": QColor(166, 97, 26),
+}
+_ERROR_COLOR = QColor(Qt.red)
+
+
+_COLUMN_TYPE_ROLE = Qt.UserRole
+_COLUMN_NUMBER_ROLE = Qt.UserRole + 1
+_ALLOWED_TYPES = list(sorted(TYPE_STRING_TO_CLASS.keys()))
+_ALLOWED_TYPES.append("integer sequence datetime")
+
+_TYPE_TO_FONT_AWESOME_ICON = {
+    "integer sequence datetime": unichr(int('f073', 16)),
+    "string": unichr(int('f031', 16)),
+    "datetime": unichr(int('f073', 16)),
+    "duration": unichr(int('f017', 16)),
+    "float": unichr(int('f534', 16)),
+}
 
 _DISPLAY_TYPE_TO_TYPE = {
     "Single value": "single value",
@@ -27,6 +66,7 @@ _DISPLAY_TYPE_TO_TYPE = {
     "Time pattern": "time pattern",
     "Definition": "definition",
 }
+
 _TYPE_TO_DISPLAY_TYPE = {value: key for key, value in _DISPLAY_TYPE_TO_TYPE.items()}
 
 
@@ -35,11 +75,36 @@ class MappingPreviewModel(MinimalTableModel):
     Used by ImportPreviewWidget.
     """
 
+    columnTypesUpdated = Signal()
+    rowTypesUpdated = Signal()
+    mappingChanged = Signal()
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.default_flags = Qt.ItemIsEnabled | Qt.ItemIsSelectable
         self._mapping = None
         self._data_changed_signal = None
+        self._column_types = {}
+        self._row_types = {}
+        self._column_type_errors = {}
+        self._row_type_errors = {}
+
+    def mapping(self):
+        return self._mapping
+
+    def clear(self):
+        self._column_type_errors = {}
+        self._row_type_errors = {}
+        self._column_types = {}
+        self._row_types = {}
+        super().clear()
+
+    def reset_model(self, main_data=None):
+        self._column_type_errors = {}
+        self._row_type_errors = {}
+        self._column_types = {}
+        self._row_types = {}
+        super().reset_model(main_data)
 
     def set_mapping(self, mapping):
         """Set mapping to display colors from
@@ -47,18 +112,110 @@ class MappingPreviewModel(MinimalTableModel):
         Arguments:
             mapping {MappingSpecModel} -- mapping model
         """
+        if not isinstance(mapping, MappingSpecModel):
+            raise TypeError(f"mapping must be instance of 'MappingSpecModel', instead got: '{type(mapping).__name__}'")
         if self._data_changed_signal is not None and self._mapping:
-            self._mapping.dataChanged.disconnect(self.update_colors)
+            self._mapping.dataChanged.disconnect(self._mapping_data_changed)
             self._data_changed_signal = None
         self._mapping = mapping
         if self._mapping:
-            self._data_changed_signal = self._mapping.dataChanged.connect(self.update_colors)
+            self._data_changed_signal = self._mapping.dataChanged.connect(self._mapping_data_changed)
+        self._mapping_data_changed()
+
+    def validate(self, section, orientation=Qt.Horizontal):
+        type_class = self.get_type(section, orientation)
+        if type_class is None:
+            return
+        if orientation == Qt.Horizontal:
+            other_orientation_count = self.rowCount()
+            correct_index_order = lambda x: (x[1], x[0])
+            error_dict = self._column_type_errors
+        else:
+            other_orientation_count = self.columnCount()
+            correct_index_order = lambda x: (x[0], x[1])
+            error_dict = self._row_type_errors
+        converter = type_class.convert_function()
+        for other_index in range(other_orientation_count):
+            index_tuple = correct_index_order((section, other_index))
+            index = self.index(*index_tuple)
+            error_dict.pop(index_tuple, None)
+            data = self.data(index)
+            try:
+                if isinstance(data, str) and not data:
+                    data = None
+                if data is not None:
+                    converter(data)
+            except (ValueError, ParameterValueFormatError) as e:
+                error_dict[index_tuple] = e
+        data_changed_start = correct_index_order((section, 0))
+        data_changed_end = correct_index_order((section, other_orientation_count))
+        self.dataChanged.emit(self.index(*data_changed_start), self.index(*data_changed_end))
+
+    def get_type(self, section, orientation=Qt.Horizontal):
+        if orientation == Qt.Horizontal:
+            return self._column_types.get(section, None)
+        return self._row_types.get(section, None)
+
+    def get_types(self, orientation=Qt.Horizontal):
+        if orientation == Qt.Horizontal:
+            return self._column_types
+        return self._row_types
+
+    def set_type(self, section, section_type, orientation=Qt.Horizontal):
+        if orientation == Qt.Horizontal:
+            count = self.columnCount()
+            emit_signal = self.columnTypesUpdated
+            type_dict = self._column_types
+        else:
+            count = self.rowCount()
+            emit_signal = self.rowTypesUpdated
+            type_dict = self._row_types
+        if not isinstance(section_type, ConvertSpec):
+            raise TypeError(
+                f"section_type must be a instance of ConvertSpec, instead got {type(section_type).__name__}"
+            )
+        if section < 0 or section > count:
+            raise ValueError(f"section must be within model data")
+        type_dict[section] = section_type
+        emit_signal.emit()
+        self.validate(section, orientation)
+
+    def _mapping_data_changed(self):
         self.update_colors()
+        self.mappingChanged.emit()
 
     def update_colors(self):
         self.dataChanged.emit(QModelIndex, QModelIndex, [Qt.BackgroundColorRole])
 
+    def data_error(self, index, role=Qt.DisplayRole, orientation=Qt.Horizontal):
+        if role == Qt.DisplayRole:
+            return "Error"
+        if role == Qt.ToolTipRole:
+            type_name = self.get_type(index.column(), orientation)
+            return f'Could not parse value: "{self._main_data[index.row()][index.column()]}" as a {type_name}'
+        if role == Qt.BackgroundColorRole:
+            return _ERROR_COLOR
+
     def data(self, index, role=Qt.DisplayRole):
+        if self._mapping:
+            last_pivoted_row = self._mapping.last_pivot_row
+            read_from_row = self._mapping.read_start_row
+        else:
+            last_pivoted_row = -1
+            read_from_row = 0
+
+        if index.row() > max(last_pivoted_row, read_from_row - 1):
+            if (index.row(), index.column()) in self._column_type_errors:
+                return self.data_error(index, role)
+
+        if index.row() <= last_pivoted_row:
+            if (
+                index.column() not in mapping_non_pivoted_columns(self._mapping._model, self.columnCount(), self.header)
+                and index.column() not in self._mapping.skip_columns
+            ):
+                if (index.row(), index.column()) in self._row_type_errors:
+                    return self.data_error(index, role, orientation=Qt.Vertical)
+
         if role == Qt.BackgroundColorRole and self._mapping:
             return self.data_color(index)
         return super().data(index, role)
@@ -77,26 +234,26 @@ class MappingPreviewModel(MinimalTableModel):
             # parameter colors
             if mapping.is_pivoted() and mapping.parameters.parameter_type != "definition":
                 # parameter values color
-                last_row = mapping.last_pivot_row()
+                last_row = max(mapping.last_pivot_row(), mapping.read_start_row - 1)
                 if (
                     last_row is not None
                     and index.row() > last_row
                     and index.column() not in self.mapping_column_ref_int_list()
                 ):
-                    return QColor(1, 133, 113)
+                    return _MAPPING_COLORS["parameter value"]
             elif self.index_in_mapping(mapping.parameters.value, index):
-                return QColor(1, 133, 113)
+                return _MAPPING_COLORS["parameter value"]
             if mapping.parameters.extra_dimensions:
                 # parameter extra dimensions color
                 for ed in mapping.parameters.extra_dimensions:
                     if self.index_in_mapping(ed, index):
-                        return QColor(128, 205, 193)
+                        return _MAPPING_COLORS["parameter extra dimension"]
             if self.index_in_mapping(mapping.parameters.name, index):
                 # parameter name colors
-                return QColor(128, 205, 193)
+                return _MAPPING_COLORS["parameter name"]
         if self.index_in_mapping(mapping.name, index):
             # class name color
-            return QColor(166, 97, 26)
+            return _MAPPING_COLORS["entity class"]
         objects = []
         classes = []
         if isinstance(mapping, ObjectClassMapping):
@@ -109,11 +266,11 @@ class MappingPreviewModel(MinimalTableModel):
         for o in objects:
             # object colors
             if self.index_in_mapping(o, index):
-                return QColor(223, 194, 125)
+                return _MAPPING_COLORS["entity"]
         for c in classes:
             # object colors
             if self.index_in_mapping(c, index):
-                return QColor(166, 97, 26)
+                return _MAPPING_COLORS["entity"]
 
     def index_in_mapping(self, mapping, index):
         """Checks if index is in mapping
@@ -136,10 +293,10 @@ class MappingPreviewModel(MinimalTableModel):
             if index.column() == ref:
                 if self._mapping._model.is_pivoted():
                     # only rows below pivoted rows
-                    last_row = self._mapping._model.last_pivot_row()
+                    last_row = max(self._mapping._model.last_pivot_row(), self._mapping.read_start_row - 1)
                     if last_row is not None and index.row() > last_row:
                         return True
-                else:
+                elif index.row() >= self._mapping.read_start_row:
                     return True
         if mapping.map_type == "row":
             if index.row() == mapping.value_reference:
@@ -185,10 +342,23 @@ class MappingSpecModel(QAbstractTableModel):
             self.set_mapping(model)
 
     @property
+    def skip_columns(self):
+        if self._model.skip_columns is None:
+            return []
+        return list(self._model.skip_columns)
+
+    @property
     def map_type(self):
         if self._model is None:
             return None
         return type(self._model)
+
+    @property
+    def last_pivot_row(self):
+        last_row = self._model.last_pivot_row()
+        if last_row is None:
+            last_row = 0
+        return last_row
 
     @property
     def dimension(self):
@@ -217,6 +387,17 @@ class MappingSpecModel(QAbstractTableModel):
         if self._model:
             return self._model.is_pivoted()
         return False
+
+    @property
+    def read_start_row(self):
+        if self._model:
+            return self._model.read_start_row
+        return 0
+
+    def set_read_start_row(self, row):
+        if self._model:
+            self._model.read_start_row = row
+        self.dataChanged.emit(QModelIndex, QModelIndex, [])
 
     def set_import_objects(self, flag):
         self._model.import_objects = bool(flag)
@@ -319,10 +500,10 @@ class MappingSpecModel(QAbstractTableModel):
         if isinstance(self._model, RelationshipClassMapping):
             display_name.append("Relationship class names")
             if self._model.object_classes:
-                display_name.extend([f"Object class {i+1} names" for i, oc in enumerate(self._model.object_classes)])
+                display_name.extend([f"Object class names {i+1}" for i, oc in enumerate(self._model.object_classes)])
                 mappings.extend(list(self._model.object_classes))
             if self._model.objects:
-                display_name.extend([f"Object {i+1} names" for i, oc in enumerate(self._model.objects)])
+                display_name.extend([f"Object names {i+1}" for i, oc in enumerate(self._model.objects)])
                 mappings.extend(list(self._model.objects))
         else:
             display_name.append("Object class names")
@@ -405,6 +586,22 @@ class MappingSpecModel(QAbstractTableModel):
             ]
             f = func[index.column()]
             return f()
+        if role == Qt.BackgroundColorRole and index.column() == 0:
+            return self.data_color(self._display_names[index.row()])
+
+    def data_color(self, display_name):
+        if display_name == "Relationship class names":
+            return _MAPPING_COLORS["entity class"]
+        if "Object class" in display_name:
+            return _MAPPING_COLORS["entity class"]
+        if "Object names" in display_name:
+            return _MAPPING_COLORS["entity"]
+        if display_name == "Parameter names":
+            return _MAPPING_COLORS["parameter name"]
+        if display_name in ["Parameter time index", "Parameter time pattern index"]:
+            return _MAPPING_COLORS["parameter extra dimension"]
+        if display_name == "Parameter values":
+            return _MAPPING_COLORS["parameter value"]
 
     def rowCount(self, index=None):
         if not self._model:
@@ -646,3 +843,256 @@ class MappingListModel(QAbstractListModel):
             self._qmappings.pop(row)
             self._names.pop(row)
             self.endRemoveRows()
+
+
+class HeaderWithButton(QHeaderView):
+    """Class that reimplements the QHeaderView section paint event to draw a button
+    that is used to display and change the type of that column or row.
+    """
+
+    def __init__(self, orientation, parent=None):
+        super(HeaderWithButton, self).__init__(orientation, parent)
+        self.setHighlightSections(True)
+        self.setSectionsClickable(True)
+        self.setDefaultAlignment(Qt.AlignLeft)
+        self.sectionResized.connect(self._section_resize)
+        self.sectionMoved.connect(self._section_move)
+        self._font = QFont('Font Awesome 5 Free Solid')
+
+        self._display_all = True
+        self._display_sections = []
+
+        self._margin = Margin(left=0, right=0, top=0, bottom=0)
+
+        self._menu = self._create_menu()
+
+        self._button = QToolButton(parent=self)
+        self._button.setMenu(self._menu)
+        self._button.setPopupMode(QToolButton.InstantPopup)
+        self._button.setFont(self._font)
+        self._button.hide()
+
+        self._render_button = QToolButton(parent=self)
+        self._render_button.setFont(self._font)
+        self._render_button.hide()
+
+        self._button_logical_index = None
+        self.setMinimumSectionSize(self.minimumSectionSize() + self.widget_width())
+
+    @property
+    def display_all(self):
+        return self._display_all
+
+    @display_all.setter
+    def display_all(self, display_all):
+        self._display_all = display_all
+        self.viewport().update()
+
+    @property
+    def sections_with_buttons(self):
+        return self._display_sections
+
+    @sections_with_buttons.setter
+    def sections_with_buttons(self, sections):
+        self._display_sections = set(sections)
+        self.viewport().update()
+
+    def _create_menu(self):
+        menu = QMenu(self)
+        for at in _ALLOWED_TYPES:
+            action = QAction(parent=menu)
+            action.setText(at)
+            menu.addAction(action)
+        menu.triggered.connect(self._menu_pressed)
+        return menu
+
+    def _menu_pressed(self, action):
+        type_str = action.text()
+        if type_str == "integer sequence datetime":
+            dialog = NewIntegerSequenceDateTimeConvertSpecDialog()
+            if dialog.exec_():
+                convert_spec = dialog.get_spec()
+            else:
+                return
+        else:
+            convert_spec = value_to_convert_spec(type_str)
+
+        logical_index = self._button_logical_index
+        self.model().set_type(logical_index, convert_spec, self.orientation())
+
+    def widget_width(self):
+        """Width of widget
+
+        Returns:
+            [int] -- Width of widget
+        """
+        if self.orientation() == Qt.Horizontal:
+            return self.height()
+        return self.sectionSize(0)
+
+    def widget_height(self):
+        """Height of widget
+
+        Returns:
+            [int] -- Height of widget
+        """
+        if self.orientation() == Qt.Horizontal:
+            return self.height()
+        return self.sectionSize(0)
+
+    def mouseMoveEvent(self, mouse_event):
+        """Moves the button to the correct section so that interacting with the button works.
+        """
+        log_index = self.logicalIndexAt(mouse_event.x(), mouse_event.y())
+        if not self._display_all and log_index not in self._display_sections:
+            self._button_logical_index = None
+            self._button.hide()
+            super().mouseMoveEvent(mouse_event)
+            return
+
+        if self._button_logical_index != log_index:
+            self._button_logical_index = log_index
+            self._set_button_geometry(self._button, log_index)
+            self._button.show()
+        super().mouseMoveEvent(mouse_event)
+
+    def mousePressEvent(self, mouse_event):
+        """Move the button to the pressed location and show or hide it if button should not be shown.
+        """
+        log_index = self.logicalIndexAt(mouse_event.x(), mouse_event.y())
+        if not self._display_all and log_index not in self._display_sections:
+            self._button_logical_index = None
+            self._button.hide()
+            super().mousePressEvent(mouse_event)
+            return
+
+        if self._button_logical_index != log_index:
+            self._button_logical_index = log_index
+            self._set_button_geometry(self._button, log_index)
+            self._button.show()
+        super().mousePressEvent(mouse_event)
+
+    def leaveEvent(self, event):
+        """Hide button
+        """
+        self._button_logical_index = None
+        self._button.hide()
+        super().leaveEvent(event)
+
+    def _set_button_geometry(self, button, index):
+        """Sets a buttons geometry depending on the index.
+
+        Arguments:
+            button {QWidget} -- QWidget that geometry should be set
+            index {int} -- logical_index to set position and geometry to.
+        """
+        margin = self._margin
+        if self.orientation() == Qt.Horizontal:
+            button.setGeometry(
+                self.sectionViewportPosition(index) + margin.left,
+                margin.top,
+                self.widget_width() - self._margin.left - self._margin.right,
+                self.widget_height() - margin.top - margin.bottom,
+            )
+        else:
+            button.setGeometry(
+                margin.left,
+                self.sectionViewportPosition(index) + margin.top,
+                self.widget_width() - self._margin.left - self._margin.right,
+                self.widget_height() - margin.top - margin.bottom,
+            )
+
+    def _section_resize(self, i):
+        """When a section is resized.
+
+        Arguments:
+            i {int} -- logical index to section being resized
+        """
+        self._button.hide()
+        if i == self._button_logical_index:
+            self._set_button_geometry(self._button, self._button_logical_index)
+
+    def paintSection(self, painter, rect, logical_index):
+        """Paints a section of the QHeader view.
+
+        Works by drawing a pixmap of the button to the left of the orignial paint rectangle.
+        Then shifts the original rect to the right so these two doesn't paint over eachother.
+        """
+        if not self._display_all and logical_index not in self._display_sections:
+            super().paintSection(painter, rect, logical_index)
+            return
+
+        # get the type of the section.
+        type_spec = self.model().get_type(logical_index, self.orientation())
+        if type_spec is None:
+            type_spec = "string"
+        else:
+            type_spec = type_spec.DISPLAY_NAME
+        font_str = _TYPE_TO_FONT_AWESOME_ICON[type_spec]
+
+        # set data for both interaction button and render button.
+        self._button.setText(font_str)
+        self._render_button.setText(font_str)
+        self._set_button_geometry(self._render_button, logical_index)
+
+        # get pixmap from render button and draw into header section.
+        rw = self._render_button.grab()
+        if self.orientation() == Qt.Horizontal:
+            painter.drawPixmap(self.sectionViewportPosition(logical_index), 0, rw)
+        else:
+            painter.drawPixmap(0, self.sectionViewportPosition(logical_index), rw)
+
+        # shift rect that super class should paint in to the right so it doesn't
+        # paint over the button
+        rect.adjust(self.widget_width(), 0, 0, 0)
+        super().paintSection(painter, rect, logical_index)
+
+    def sectionSizeFromContents(self, logical_index):
+        """Add the button width to the section so it displays right.
+
+        Arguments:
+            logical_index {int} -- logical index of section
+
+        Returns:
+            [QSize] -- Size of section
+        """
+        org_size = super().sectionSizeFromContents(logical_index)
+        org_size.setWidth(org_size.width() + self.widget_width())
+        return org_size
+
+    def _section_move(self, logical, old_visual_index, new_visual_index):
+        """Section beeing moved.
+
+        Arguments:
+            logical {int} -- logical index of section beeing moved.
+            old_visual_index {int} -- old visual index of section
+            new_visual_index {int} -- new visual index of section
+        """
+        self._button.hide()
+        if self._button_logical_index is not None:
+            self._set_button_geometry(self._button, self._button_logical_index)
+
+    def fix_widget_positions(self):
+        """Update position of interaction button
+        """
+        if self._button_logical_index is not None:
+            self._set_button_geometry(self._button, self._button_logical_index)
+
+    def set_margins(self, margins):
+        self._margin = margins
+
+
+class TableViewWithButtonHeader(QTableView):
+    def __init__(self, parent=None):
+        super(TableViewWithButtonHeader, self).__init__(parent)
+        self._horizontal_header = HeaderWithButton(Qt.Horizontal, self)
+        self._vertical_header = HeaderWithButton(Qt.Vertical, self)
+        self.setHorizontalHeader(self._horizontal_header)
+        self.setVerticalHeader(self._vertical_header)
+
+    def scrollContentsBy(self, dx, dy):
+        super().scrollContentsBy(dx, dy)
+        if dx != 0:
+            self._horizontal_header.fix_widget_positions()
+        if dy != 0:
+            self._vertical_header.fix_widget_positions()

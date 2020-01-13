@@ -10,13 +10,16 @@
 ######################################################################################################################
 
 """
-Unit tests for the parameter_value_formatting module.
+Unit tests for the spine_db_manager module.
 
 :author: A. Soininen (VTT)
 :date:   12.7.2019
 """
 
 import unittest
+from unittest.mock import Mock
+from PySide2.QtCore import Qt
+from PySide2.QtWidgets import QApplication
 from spinedb_api import (
     to_database,
     DateTime,
@@ -25,128 +28,146 @@ from spinedb_api import (
     TimeSeriesFixedResolution,
     TimeSeriesVariableResolution,
 )
-from spinetoolbox.mvcmodels.parameter_value_formatting import (
-    format_for_DisplayRole,
-    format_for_EditRole,
-    format_for_ToolTipRole,
-)
+from spinetoolbox.spine_db_manager import SpineDBManager
 
 
 class TestParameterValueFormatting(unittest.TestCase):
+    """Tests for parameter value formatting in SpineDBManager."""
+
+    @classmethod
+    def setUpClass(cls):
+        if not QApplication.instance():
+            QApplication()
+
+    def setUp(self):
+        self.db_mngr = SpineDBManager()
+        self.db_mngr.get_item = Mock()
+
+    def get_value(self, role):
+        mock_db_map = Mock()
+        id_ = 0
+        return self.db_mngr.get_value(mock_db_map, "parameter value", id_, "value", role)
+
     def test_plain_number_in_display_role(self):
         value = 2.3
-        value_in_database = to_database(value)
-        formatted = format_for_DisplayRole(value_in_database)
+        self.db_mngr.get_item.return_value = {"value": to_database(value)}
+        formatted = self.get_value(Qt.DisplayRole)
         self.assertEqual(formatted, 2.3)
 
     def test_plain_number_in_edit_role(self):
         value = 2.3
-        value_in_database = to_database(value)
-        formatted = format_for_EditRole(value_in_database)
+        self.db_mngr.get_item.return_value = {"value": to_database(value)}
+        formatted = self.get_value(Qt.EditRole)
         self.assertEqual(formatted, "2.3")
 
     def test_plain_number_in_tool_tip_role(self):
         value = 2.3
-        value_in_database = to_database(value)
-        self.assertIsNone(format_for_ToolTipRole(value_in_database))
+        self.db_mngr.get_item.return_value = {"value": to_database(value)}
+        self.assertIsNone(self.get_value(Qt.ToolTipRole))
 
     def test_date_time_in_display_role(self):
         value = DateTime("2019-07-12T16:00")
-        value_in_database = to_database(value)
-        formatted = format_for_DisplayRole(value_in_database)
+        self.db_mngr.get_item.return_value = {"value": to_database(value)}
+        formatted = self.get_value(Qt.DisplayRole)
         self.assertEqual(formatted, "2019-07-12 16:00:00")
 
     def test_date_time_in_edit_role(self):
         value = DateTime("2019-07-12T16:00")
-        value_in_database = to_database(value)
-        formatted = format_for_EditRole(value_in_database)
+        self.db_mngr.get_item.return_value = {"value": to_database(value)}
+        formatted = self.get_value(Qt.EditRole)
         self.assertEqual(formatted, to_database(value))
 
     def test_date_time_in_tool_tip_role(self):
         value = DateTime("2019-07-12T16:00")
-        value_in_database = to_database(value)
-        self.assertIsNone(format_for_ToolTipRole(value_in_database))
+        self.db_mngr.get_item.return_value = {"value": to_database(value)}
+        self.assertIsNone(self.get_value(Qt.ToolTipRole))
 
     def test_duration_in_display_role(self):
         value = Duration("3Y")
-        value_in_database = to_database(value)
-        formatted = format_for_DisplayRole(value_in_database)
+        self.db_mngr.get_item.return_value = {"value": to_database(value)}
+        formatted = self.get_value(Qt.DisplayRole)
         self.assertEqual(formatted, "3Y")
 
     def test_variable_duration_in_display_role(self):
         value = Duration(["2Y", "3Y"])
-        value_in_database = to_database(value)
-        formatted = format_for_DisplayRole(value_in_database)
+        self.db_mngr.get_item.return_value = {"value": to_database(value)}
+        formatted = self.get_value(Qt.DisplayRole)
         self.assertEqual(formatted, "2Y, 3Y")
 
     def test_duration_in_edit_role(self):
         value = Duration("2M")
-        value_in_database = to_database(value)
-        formatted = format_for_EditRole(value_in_database)
+        self.db_mngr.get_item.return_value = {"value": to_database(value)}
+        formatted = self.get_value(Qt.EditRole)
         self.assertEqual(formatted, to_database(value))
 
     def test_duration_in_tool_tip_role(self):
         value = Duration("13D")
-        value_in_database = to_database(value)
-        self.assertIsNone(format_for_ToolTipRole(value_in_database))
+        self.db_mngr.get_item.return_value = {"value": to_database(value)}
+        self.assertIsNone(self.get_value(Qt.ToolTipRole))
 
     def test_time_pattern_in_display_role(self):
         value = TimePattern(["1-12m"], [5.0])
-        value_in_database = to_database(value)
-        formatted = format_for_DisplayRole(value_in_database)
+        self.db_mngr.get_item.return_value = {"value": to_database(value)}
+        formatted = self.get_value(Qt.DisplayRole)
         self.assertEqual(formatted, "Time pattern")
 
     def test_time_pattern_in_edit_role(self):
         value = TimePattern(["1-12m"], [5.0])
-        value_in_database = to_database(value)
-        formatted = format_for_EditRole(value_in_database)
+        self.db_mngr.get_item.return_value = {"value": to_database(value)}
+        formatted = self.get_value(Qt.EditRole)
         self.assertEqual(formatted, to_database(value))
 
     def test_time_pattern_in_tool_tip_role(self):
         value = TimePattern(["1-12m"], [5.0])
-        value_in_database = to_database(value)
-        self.assertIsNone(format_for_ToolTipRole(value_in_database))
+        self.db_mngr.get_item.return_value = {"value": to_database(value)}
+        self.assertIsNone(self.get_value(Qt.ToolTipRole))
 
     def test_time_series_in_display_role(self):
         value = TimeSeriesFixedResolution("2019-07-12T08:00", "7 hours", [1.1, 2.2, 3.3], False, False)
-        value_in_database = to_database(value)
-        formatted = format_for_DisplayRole(value_in_database)
+        self.db_mngr.get_item.return_value = {"value": to_database(value)}
+        formatted = self.get_value(Qt.DisplayRole)
         self.assertEqual(formatted, "Time series")
         value = TimeSeriesVariableResolution(["2019-07-12T08:00", "2019-07-12T16:00"], [0.0, 100.0], False, False)
-        value_in_database = to_database(value)
-        formatted = format_for_DisplayRole(value_in_database)
+        self.db_mngr.get_item.return_value = {"value": to_database(value)}
+        formatted = self.get_value(Qt.DisplayRole)
         self.assertEqual(formatted, "Time series")
 
     def test_time_series_in_edit_role(self):
         value = TimeSeriesFixedResolution("2019-07-12T08:00", "7 hours", [1.1, 2.2, 3.3], False, False)
-        value_in_database = to_database(value)
-        formatted = format_for_EditRole(value_in_database)
+        self.db_mngr.get_item.return_value = {"value": to_database(value)}
+        formatted = self.get_value(Qt.EditRole)
         self.assertEqual(formatted, to_database(value))
         value = TimeSeriesVariableResolution(["2019-07-12T08:00", "2019-07-12T16:00"], [0.0, 100.0], False, False)
-        value_in_database = to_database(value)
-        formatted = format_for_EditRole(value_in_database)
+        self.db_mngr.get_item.return_value = {"value": to_database(value)}
+        formatted = self.get_value(Qt.EditRole)
         self.assertEqual(formatted, to_database(value))
 
     def test_time_series_in_tool_tip_role(self):
         value = TimeSeriesFixedResolution("2019-07-12T08:00", ["7 hours", "12 hours"], [1.1, 2.2, 3.3], False, False)
-        value_in_database = to_database(value)
-        formatted = format_for_ToolTipRole(value_in_database)
+        self.db_mngr.get_item.return_value = {"value": to_database(value)}
+        formatted = self.get_value(Qt.ToolTipRole)
         self.assertEqual(formatted, "Start: 2019-07-12 08:00:00, resolution: [7h, 12h], length: 3")
         value = TimeSeriesVariableResolution(["2019-07-12T08:00", "2019-07-12T16:00"], [0.0, 100.0], False, False)
-        value_in_database = to_database(value)
-        formatted = format_for_ToolTipRole(value_in_database)
+        self.db_mngr.get_item.return_value = {"value": to_database(value)}
+        formatted = self.get_value(Qt.ToolTipRole)
         self.assertEqual(formatted, "Start: 2019-07-12T08:00:00, resolution: variable, length: 2")
 
     def test_broken_value_in_display_role(self):
-        formatted = format_for_DisplayRole("dubbidubbidu")
+        value = "dubbidubbidu"
+        self.db_mngr.get_item.return_value = {"value": value}
+        formatted = self.get_value(Qt.DisplayRole)
         self.assertEqual(formatted, "Error")
 
     def test_broken_value_in_edit_role(self):
-        formatted = format_for_EditRole("diibadaaba")
+        value = "diibadaaba"
+        self.db_mngr.get_item.return_value = {"value": value}
+        formatted = self.get_value(Qt.EditRole)
         self.assertEqual(formatted, "diibadaaba")
 
     def test_broken_value_in_tool_tip_role(self):
-        formatted = format_for_ToolTipRole("diibadaaba")
+        value = "diibadaaba"
+        self.db_mngr.get_item.return_value = {"value": value}
+        formatted = self.get_value(Qt.ToolTipRole)
         self.assertEqual(formatted, 'Could not decode the value')
 
 

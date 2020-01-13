@@ -111,7 +111,7 @@ class ParameterValueEditor(QDialog):
             return
         self.close()
 
-    @Slot(int, name="_change_parameter_type")
+    @Slot(int)
     def _change_parameter_type(self, selector_index):
         """
         Handles switching between value types.
@@ -189,6 +189,6 @@ class ParameterValueEditor(QDialog):
             message (str, optional)
         """
         if message is not None:
-            QMessageBox.warning(self, "Warning", message)
+            QMessageBox.warning(self.parent(), "Warning", message)
         self._ui.parameter_type_selector.setCurrentIndex(_Editor.PLAIN_VALUE.value)
         self._ui.editor_stack.setCurrentIndex(_Editor.PLAIN_VALUE.value)
