@@ -542,7 +542,7 @@ class Tool(ProjectItem):
             dst_subdir, fname = os.path.split(dst)
             if not dst_subdir:
                 # No subdirectories to create
-                self._toolbox.msg.emit("\tCopying file <b>{0}</b>".format(fname))
+                self._toolbox.msg.emit("\tCopying <b>{0}</b>".format(src_path))
             else:
                 # Create subdirectory structure to work or source directory
                 work_subdir_path = os.path.abspath(os.path.join(self.basedir, dst_subdir))
@@ -555,7 +555,7 @@ class Tool(ProjectItem):
                         )
                         return False
                 self._toolbox.msg.emit(
-                    "\tCopying file <b>{0}</b> into subdirectory <b>{2}{1}</b>".format(fname, dst_subdir, os.path.sep)
+                    "\tCopying <b>{0}</b> into subdirectory <b>{2}{1}</b>".format(src_path, dst_subdir, os.path.sep)
                 )
             try:
                 shutil.copyfile(src_path, dst_path)
@@ -738,11 +738,11 @@ class Tool(ProjectItem):
 
     @staticmethod
     def filepaths_from_resources(resources):
-        """
-        Returns filepaths from given available resources.
+        """Returns file paths from given resources.
 
         Args:
             resources (list): resources available
+
         Returns:
             a list of file paths, possibly including patterns
         """

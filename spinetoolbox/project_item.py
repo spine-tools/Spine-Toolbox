@@ -340,6 +340,7 @@ class ProjectItem(BaseProjectItem):
         Args:
             resources (list): a list of ProjectItemResources available for execution
             direction (str): either "forward" or "backward"
+
         Returns:
             bool: True if execution succeeded, False otherwise
         """
@@ -373,6 +374,7 @@ class ProjectItem(BaseProjectItem):
 
         Args:
             resources (list): a list of ProjectItemResources available for execution
+
         Returns:
             bool: True if execution succeeded, False otherwise
         """
@@ -386,6 +388,7 @@ class ProjectItem(BaseProjectItem):
 
         Args:
             resources (list): a list of ProjectItemResources available for execution
+
         Returns:
             bool: True if execution succeeded, False otherwise
         """
@@ -397,6 +400,9 @@ class ProjectItem(BaseProjectItem):
 
         Subclasses need to implement output_resources_backward and/or output_resources_forward
         if they want to provide resources in any direction.
+
+        Args:
+            direction (str): Direction where output resources are passed
 
         Returns:
             a list of ProjectItemResources
