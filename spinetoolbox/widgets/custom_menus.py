@@ -342,7 +342,7 @@ class ObjectItemContextMenu(EntityItemContextMenu):
         Args:
             parent (QWidget): Parent for menu widget (GraphViewForm)
             position (QPoint): Position on screen
-            graphics_item (ObjectItem (QGraphicsItem)): item that requested the menu
+            graphics_item (spinetoolbox.widgets.graph_view_graphics_items.ObjectItem): item that requested the menu
         """
         super().__init__(parent, position)
         self.addSeparator()

@@ -766,7 +766,7 @@ class GraphViewMixin:
 
         Args:
             global_pos (QPoint)
-            main_item (ObjectItem)
+            main_item (spinetoolbox.widgets.graph_view_graphics_items.ObjectItem)
         """
         menu = ObjectItemContextMenu(self, global_pos, main_item)
         option = menu.get_action()

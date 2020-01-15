@@ -42,8 +42,7 @@ a new project or open an existing one before you can do anything. You can create
 :ref:`project item <Project Items>` types. The |trash| button can be used to remove all items from your project.
 The *Execute* icons control the execution of the items in the *Design view* where you build your project.
 The |play-all| button executes all Directed-Acyclic Graphs (DAG) in the project in a row. The |play-selected| button
-executes the selected DAG. You can select a DAG to be executed by selecting a single project item from the desired
-DAG in the *Design View*. The |stop| button terminates DAG execution (if running).
+executes the selected project items only. The |stop| button terminates the execution (if running).
 
 You can add a new project item to your project by pointing your mouse cursor on any of the draggable items
 in the *Drag & Drop Icon* tool bar, then click-and-drag the item on to the *Design view*.

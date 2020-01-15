@@ -187,7 +187,7 @@ class EntityItem(QGraphicsPixmapItem):
         """Returns a suitable merge target if any.
 
         Returns:
-            EntityItem, NoneType
+            spinetoolbox.widgets.graph_view_graphics_items.EntityItem, NoneType
         """
         scene = self.scene()
         if not scene:
@@ -585,7 +585,7 @@ class EntityLabelItem(QGraphicsTextItem):
         """Initializes item.
 
         Args:
-            entity_item (EntityItem): The parent item.
+            entity_item (spinetoolbox.widgets.graph_view_graphics_items.EntityItem): The parent item.
         """
         super().__init__(entity_item)
         self.entity_item = entity_item
@@ -675,8 +675,8 @@ class ArcItem(QGraphicsLineItem):
         """Initializes item.
 
         Args:
-            rel_item (RelationshipItem): relationship item
-            obj_item (ObjectItem): object item
+            rel_item (spinetoolbox.widgets.graph_view_graphics_items.RelationshipItem): relationship item
+            obj_item (spinetoolbox.widgets.graph_view_graphics_items.ObjectItem): object item
             width (float): Preferred line width
         """
         super().__init__()
