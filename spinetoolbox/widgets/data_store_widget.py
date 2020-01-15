@@ -62,6 +62,7 @@ class DataStoreFormBase(QMainWindow):
         """
         super().__init__(flags=Qt.Window)
         from ..ui.data_store_view import Ui_MainWindow
+
         self.db_urls = list(db_urls)
         self.db_url = self.db_urls[0]
         self.db_mngr = db_mngr

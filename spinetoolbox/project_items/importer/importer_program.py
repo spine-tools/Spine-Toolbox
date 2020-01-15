@@ -24,6 +24,7 @@ import time
 import spinedb_api
 from spinetoolbox.spine_io.importers.csv_reader import CSVConnector
 from spinetoolbox.spine_io.importers.excel_reader import ExcelConnector
+from spinetoolbox.spine_io.importers.gdx_connector import GdxConnector
 from spinetoolbox.spine_io.type_conversion import value_to_convert_spec
 
 
@@ -51,7 +52,9 @@ def run(checked_files, all_settings, urls_downstream, logs_dir, cancel_on_error)
             print("There are no mappings defined for {0}, moving on...".format(source))
             continue
         source_type = settings["source_type"]
-        connector = {"CSVConnector": CSVConnector, "ExcelConnector": ExcelConnector}[source_type]()
+        connector = {"CSVConnector": CSVConnector, "ExcelConnector": ExcelConnector, "GdxConnector": GdxConnector}[
+            source_type
+        ]()
         connector.connect_to_source(source)
         table_mappings = {
             name: mapping

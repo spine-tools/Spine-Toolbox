@@ -10,10 +10,10 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-# Form implementation generated from reading ui file 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\ui\mainwindow.ui',
-# licensing of 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\ui\mainwindow.ui' applies.
+# Form implementation generated from reading ui file 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\mainwindow.ui',
+# licensing of 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\mainwindow.ui' applies.
 #
-# Created: Wed Jan 15 11:12:20 2020
+# Created: Wed Jan 15 13:11:36 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -519,6 +519,6 @@ class Ui_MainWindow(object):
         self.actionLive_tutorial.setText(QtWidgets.QApplication.translate("MainWindow", "Live tutorial", None, -1))
         self.actionLive_tutorial.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Shift+F2", None, -1))
 
-from spinetoolbox.widgets.custom_qtextbrowser import CustomQTextBrowser
 from spinetoolbox.widgets.custom_qgraphicsviews import DesignQGraphicsView
+from spinetoolbox.widgets.custom_qtextbrowser import CustomQTextBrowser
 from spinetoolbox import resources_icons_rc

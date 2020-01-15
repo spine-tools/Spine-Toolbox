@@ -10,10 +10,10 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-# Form implementation generated from reading ui file 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\project_items\importer\ui\importer_properties.ui',
-# licensing of 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\project_items\importer\ui\importer_properties.ui' applies.
+# Form implementation generated from reading ui file 'C:\data\src\toolbox\bin\..\spinetoolbox\project_items\importer\ui\importer_properties.ui',
+# licensing of 'C:\data\src\toolbox\bin\..\spinetoolbox\project_items\importer\ui\importer_properties.ui' applies.
 #
-# Created: Wed Jan 15 11:12:04 2020
+# Created: Wed Jan 15 13:11:30 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!

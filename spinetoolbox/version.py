@@ -22,6 +22,7 @@ class VersionInfo(NamedTuple):
     """A class for a named tuple containing the five components of the version number: major, minor,
     micro, releaselevel, and serial. All values except releaselevel are integers; the release level is
     'alpha', 'beta', 'candidate', or 'final'."""
+
     major: int
     minor: int
     micro: int
