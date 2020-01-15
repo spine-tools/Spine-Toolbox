@@ -29,7 +29,7 @@ MAPPING_CHOICES = ("Constant", "Column", "Row", "Header", "None")
 class MappingWidget(QWidget):
     """
     A widget for managing Mappings (add, remove, edit, visualize, and so on).
-    Intended to be embeded in a ImportPreviewWidget.
+    Intended to be embedded in a ImportPreviewWidget.
     """
 
     mappingChanged = Signal(MappingSpecModel)
@@ -128,7 +128,7 @@ class MappingWidget(QWidget):
 class MappingOptionsWidget(QWidget):
     """
     A widget for managing Mapping options (class type, dimensions, parameter type, ignore columns, and so on).
-    Intended to be embeded in a MappingWidget.
+    Intended to be embedded in a MappingWidget.
     """
 
     def __init__(self, parent=None):
@@ -168,6 +168,10 @@ class MappingOptionsWidget(QWidget):
             self._model.set_skip_columns(skip_cols)
 
     def set_model(self, model):
+        try:
+            self._ui.time_series_repeat_check_box.toggled.disconnect()
+        except RuntimeError:
+            pass
         if self._model:
             if self._model_reset_signal:
                 self._model.modelReset.disconnect(self.update_ui)
@@ -179,6 +183,10 @@ class MappingOptionsWidget(QWidget):
         if self._model:
             self._model_reset_signal = self._model.modelReset.connect(self.update_ui)
             self._model_data_signal = self._model.dataChanged.connect(self.update_ui)
+            model_parameters = self._model.model_parameters()
+            if model_parameters is not None and model_parameters.options is not None:
+                self._ui.time_series_repeat_check_box.setChecked(model_parameters.options.repeat)
+            self._ui.time_series_repeat_check_box.toggled.connect(self._model.set_time_series_repeat)
         self.update_ui()
 
     def update_ui(self):
@@ -239,6 +247,7 @@ class MappingOptionsWidget(QWidget):
     def change_parameter(self, par):
         if self._model and not self.block_signals:
             self._model.change_parameter_type(par)
+        self._update_time_series_options()
 
     def change_import_objects(self, state):
         if self._model and not self.block_signals:
@@ -247,3 +256,9 @@ class MappingOptionsWidget(QWidget):
     def change_read_start_row(self, row):
         if self._model and not self.block_signals:
             self._model.set_read_start_row(row)
+
+    def _update_time_series_options(self):
+        is_time_series = self._ui.parameter_type_combo_box.currentText() == "Time series"
+        self._ui.time_series_repeat_check_box.setEnabled(is_time_series)
+        if not is_time_series:
+            self._ui.time_series_repeat_check_box.setChecked(False)

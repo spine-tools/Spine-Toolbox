@@ -13,7 +13,7 @@
 # Form implementation generated from reading ui file 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\import_errors.ui',
 # licensing of 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\import_errors.ui' applies.
 #
-# Created: Fri Jan  3 13:39:12 2020
+# Created: Mon Jan 13 13:57:31 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
