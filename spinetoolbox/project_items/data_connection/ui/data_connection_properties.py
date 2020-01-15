@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 ######################################################################################################################
-# Copyright (C) 2017 - 2019 Spine project consortium
+# Copyright (C) 2017-2020 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -10,10 +10,10 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-# Form implementation generated from reading ui file 'C:\data\src\toolbox\bin\..\spinetoolbox\project_items\data_connection\ui\data_connection_properties.ui',
-# licensing of 'C:\data\src\toolbox\bin\..\spinetoolbox\project_items\data_connection\ui\data_connection_properties.ui' applies.
+# Form implementation generated from reading ui file 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\project_items\data_connection\ui\data_connection_properties.ui',
+# licensing of 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\project_items\data_connection\ui\data_connection_properties.ui' applies.
 #
-# Created: Fri Jan  3 13:39:07 2020
+# Created: Wed Jan 15 11:11:59 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -210,5 +210,5 @@ class Ui_Form(object):
         self.pushButton_datapackage.setText(QtWidgets.QApplication.translate("Form", "Datapackage", None, -1))
         self.toolButton_dc_open_dir.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Open this Data Connection\'s project directory in file browser</p></body></html>", None, -1))
 
-from spinetoolbox.widgets.custom_qtreeview import ReferencesTreeView, DataTreeView
+from spinetoolbox.widgets.custom_qtreeview import DataTreeView, ReferencesTreeView
 from spinetoolbox import resources_icons_rc

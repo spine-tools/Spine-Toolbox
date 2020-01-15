@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 ######################################################################################################################
-# Copyright (C) 2017 - 2019 Spine project consortium
+# Copyright (C) 2017-2020 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -10,10 +10,10 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-# Form implementation generated from reading ui file '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/data_store_view.ui',
-# licensing of '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/data_store_view.ui' applies.
+# Form implementation generated from reading ui file 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\ui\data_store_view.ui',
+# licensing of 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\ui\data_store_view.ui' applies.
 #
-# Created: Thu Jan  2 21:44:01 2020
+# Created: Wed Jan 15 11:12:10 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -620,10 +620,10 @@ class Ui_MainWindow(object):
         self.actionGraph_style.setText(QtWidgets.QApplication.translate("MainWindow", "Graph style", None, -1))
         self.actionTabular_style.setText(QtWidgets.QApplication.translate("MainWindow", "Tabular style", None, -1))
 
-from spinetoolbox.widgets.custom_qtreeview import EntityTreeView, StickySelectionEntityTreeView, CopyTreeView
-from spinetoolbox.widgets.custom_qgraphicsviews import GraphQGraphicsView
-from spinetoolbox.widgets.custom_qtableview import PivotTableView, AutoFilterCopyPasteTableView
 from spinetoolbox.widgets.frozen_table_view import FrozenTableView
-from spinetoolbox.widgets.custom_qlistview import DragListView
+from spinetoolbox.widgets.custom_qtreeview import StickySelectionEntityTreeView, CopyTreeView, EntityTreeView
+from spinetoolbox.widgets.custom_qtableview import AutoFilterCopyPasteTableView, PivotTableView
+from spinetoolbox.widgets.custom_qgraphicsviews import GraphQGraphicsView
 from spinetoolbox.widgets.custom_qstatusbar import NotificationStatusBar
+from spinetoolbox.widgets.custom_qlistview import DragListView
 from spinetoolbox import resources_icons_rc

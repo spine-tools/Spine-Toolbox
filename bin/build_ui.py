@@ -36,7 +36,7 @@ def fix_resources_imports(path):
 
 print(
     """<Script for Building Spine Toolbox GUI>
-Copyright (C) <2017-2019>  <Spine project consortium>
+Copyright (C) <2017-2020>  <Spine project consortium>
 This program comes with ABSOLUTELY NO WARRANTY; for details see 'about'
 box in the application. This is free software, and you are welcome to
 redistribute it under certain conditions; See files COPYING and

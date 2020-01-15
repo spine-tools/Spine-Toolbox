@@ -310,7 +310,8 @@ class DirectedGraphHandler(QObject):
 
     @Slot("QVariant")
     def receive_item_execution_finished(self, item_finish_state):
-        """Pop next project item to execute or finish current graph if there are no items left.
+        """TODO: Method obsolete?
+        Pop next project item to execute or finish current graph if there are no items left.
 
         Args:
             item_finish_state (ExecutionState): an enumeration to indicate if execution should continue or not

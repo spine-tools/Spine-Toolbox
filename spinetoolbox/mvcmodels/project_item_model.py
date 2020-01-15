@@ -171,10 +171,10 @@ class ProjectItemModel(QAbstractItemModel):
         return None
 
     def get_item(self, name):
-        """Returns the item that has the given name or None if it doesn't exist.
+        """Returns project item with given name or None if it doesn't exist.
 
         Args:
-            name (str)
+            name (str): Project item name
 
         Returns:
             ProjectItem, NoneType
@@ -185,11 +185,10 @@ class ProjectItemModel(QAbstractItemModel):
         return self.project_item(ind)
 
     def category_of_item(self, name):
-        """
-        Returns the category item of the category that contains given project item.
+        """Returns the category item of the category that contains project item with given name
 
         Args:
-            name (str): name of the project item
+            name (str): Project item name
 
         Returns:
             category item or None if the category was not found

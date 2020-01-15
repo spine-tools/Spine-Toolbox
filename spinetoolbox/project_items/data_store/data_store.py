@@ -475,7 +475,7 @@ class DataStore(ProjectItem):
 
     def tear_down(self):
         """Tears down this item. Called by toolbox just before closing.
-        Closes all GraphViewForm, TreeViewForm, and TabularViewForm instances opened by this item.
+        Closes the DataStoreForm instance opened by this item.
         """
         if self.ds_view:
             self.ds_view.close()
