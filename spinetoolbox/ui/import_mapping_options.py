@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 ######################################################################################################################
-# Copyright (C) 2017 - 2019 Spine project consortium
+# Copyright (C) 2017-2020 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -13,7 +13,7 @@
 # Form implementation generated from reading ui file 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\import_mapping_options.ui',
 # licensing of 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\import_mapping_options.ui' applies.
 #
-# Created: Fri Jan  3 13:39:13 2020
+# Created: Wed Jan 15 13:11:34 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -23,13 +23,13 @@ from PySide2 import QtCore, QtGui, QtWidgets
 class Ui_ImportMappingOptions(object):
     def setupUi(self, ImportMappingOptions):
         ImportMappingOptions.setObjectName("ImportMappingOptions")
-        ImportMappingOptions.resize(400, 203)
+        ImportMappingOptions.resize(400, 204)
         self.verticalLayout = QtWidgets.QVBoxLayout(ImportMappingOptions)
         self.verticalLayout.setObjectName("verticalLayout")
         self.options_group = QtWidgets.QGroupBox(ImportMappingOptions)
         self.options_group.setObjectName("options_group")
-        self.verticalLayout_2 = QtWidgets.QVBoxLayout(self.options_group)
-        self.verticalLayout_2.setObjectName("verticalLayout_2")
+        self.horizontalLayout = QtWidgets.QHBoxLayout(self.options_group)
+        self.horizontalLayout.setObjectName("horizontalLayout")
         self.optons_layout = QtWidgets.QFormLayout()
         self.optons_layout.setObjectName("optons_layout")
         self.class_type_label = QtWidgets.QLabel(self.options_group)
@@ -75,7 +75,13 @@ class Ui_ImportMappingOptions(object):
         self.read_start_row_label = QtWidgets.QLabel(self.options_group)
         self.read_start_row_label.setObjectName("read_start_row_label")
         self.optons_layout.setWidget(2, QtWidgets.QFormLayout.LabelRole, self.read_start_row_label)
-        self.verticalLayout_2.addLayout(self.optons_layout)
+        self.horizontalLayout.addLayout(self.optons_layout)
+        self.time_series_options_layout = QtWidgets.QFormLayout()
+        self.time_series_options_layout.setObjectName("time_series_options_layout")
+        self.time_series_repeat_check_box = QtWidgets.QCheckBox(self.options_group)
+        self.time_series_repeat_check_box.setObjectName("time_series_repeat_check_box")
+        self.time_series_options_layout.setWidget(0, QtWidgets.QFormLayout.FieldRole, self.time_series_repeat_check_box)
+        self.horizontalLayout.addLayout(self.time_series_options_layout)
         self.verticalLayout.addWidget(self.options_group)
 
         self.retranslateUi(ImportMappingOptions)
@@ -98,4 +104,6 @@ class Ui_ImportMappingOptions(object):
         self.dimension_label.setText(QtWidgets.QApplication.translate("ImportMappingOptions", "Dimension:", None, -1))
         self.import_objects_check_box.setText(QtWidgets.QApplication.translate("ImportMappingOptions", "Import objects", None, -1))
         self.read_start_row_label.setText(QtWidgets.QApplication.translate("ImportMappingOptions", "Read data from row:", None, -1))
+        self.time_series_repeat_check_box.setToolTip(QtWidgets.QApplication.translate("ImportMappingOptions", "Set the repeat flag for all imported time series", None, -1))
+        self.time_series_repeat_check_box.setText(QtWidgets.QApplication.translate("ImportMappingOptions", "Repeat time series", None, -1))
 

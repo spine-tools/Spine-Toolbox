@@ -1,5 +1,5 @@
 ######################################################################################################################
-# Copyright (C) 2017 - 2019 Spine project consortium
+# Copyright (C) 2017-2020 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -475,7 +475,7 @@ class DataStore(ProjectItem):
 
     def tear_down(self):
         """Tears down this item. Called by toolbox just before closing.
-        Closes all GraphViewForm, TreeViewForm, and TabularViewForm instances opened by this item.
+        Closes the DataStoreForm instance opened by this item.
         """
         if self.ds_view:
             self.ds_view.close()

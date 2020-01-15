@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <!--
 ######################################################################################################################
 # Copyright (C) 2017 - 2019 Spine project consortium
@@ -19,7 +19,7 @@
     <x>0</x>
     <y>0</y>
     <width>400</width>
-    <height>203</height>
+    <height>204</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -31,7 +31,7 @@
      <property name="title">
       <string>Options</string>
      </property>
-     <layout class="QVBoxLayout" name="verticalLayout_2">
+     <layout class="QHBoxLayout" name="horizontalLayout">
       <item>
        <layout class="QFormLayout" name="optons_layout">
         <item row="0" column="0">
@@ -138,6 +138,20 @@
          <widget class="QLabel" name="read_start_row_label">
           <property name="text">
            <string>Read data from row:</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <layout class="QFormLayout" name="time_series_options_layout">
+        <item row="0" column="1">
+         <widget class="QCheckBox" name="time_series_repeat_check_box">
+          <property name="toolTip">
+           <string>Set the repeat flag for all imported time series</string>
+          </property>
+          <property name="text">
+           <string>Repeat time series</string>
           </property>
          </widget>
         </item>

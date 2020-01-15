@@ -1,5 +1,5 @@
 ######################################################################################################################
-# Copyright (C) 2017 - 2019 Spine project consortium
+# Copyright (C) 2017-2020 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -35,7 +35,7 @@ class CSVConnector(SourceConnection):
     """Template class to read data from another QThread."""
 
     DISPLAY_NAME = "Text/CSV"
-    """name of data source, ex: "Text/CSV"""""
+    """name of data source, ex: "Text/CSV""" ""
 
     _ENCODINGS = ['utf-8', 'utf-16', 'utf-32', 'ascii', 'iso-8859-1', 'iso-8859-2']
     """List of available text encodings"""
@@ -83,7 +83,9 @@ class CSVConnector(SourceConnection):
         sniffed_encoding = sniff_result["encoding"].lower()
         # The sniffed encoding is not always correct. We may still need to try other options too.
         if sniffed_encoding in self._ENCODINGS:
-            try_encodings = [sniffed_encoding] + [encoding for encoding in self._ENCODINGS if encoding != sniffed_encoding]
+            try_encodings = [sniffed_encoding] + [
+                encoding for encoding in self._ENCODINGS if encoding != sniffed_encoding
+            ]
         else:
             try_encodings = self._ENCODINGS
         options["encoding"] = try_encodings[0]

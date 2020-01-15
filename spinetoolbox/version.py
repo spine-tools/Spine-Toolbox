@@ -1,5 +1,5 @@
 ######################################################################################################################
-# Copyright (C) 2017 - 2019 Spine project consortium
+# Copyright (C) 2017-2020 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -22,6 +22,7 @@ class VersionInfo(NamedTuple):
     """A class for a named tuple containing the five components of the version number: major, minor,
     micro, releaselevel, and serial. All values except releaselevel are integers; the release level is
     'alpha', 'beta', 'candidate', or 'final'."""
+
     major: int
     minor: int
     micro: int

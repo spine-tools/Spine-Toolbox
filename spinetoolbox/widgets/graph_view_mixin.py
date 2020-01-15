@@ -1,5 +1,5 @@
 ######################################################################################################################
-# Copyright (C) 2017 - 2019 Spine project consortium
+# Copyright (C) 2017-2020 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -766,7 +766,7 @@ class GraphViewMixin:
 
         Args:
             global_pos (QPoint)
-            main_item (ObjectItem)
+            main_item (spinetoolbox.widgets.graph_view_graphics_items.ObjectItem)
         """
         menu = ObjectItemContextMenu(self, global_pos, main_item)
         option = menu.get_action()

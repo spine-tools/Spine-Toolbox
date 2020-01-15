@@ -1,5 +1,5 @@
 ######################################################################################################################
-# Copyright (C) 2017 - 2019 Spine project consortium
+# Copyright (C) 2017-2020 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -20,7 +20,7 @@ import sys
 import os
 
 REQUIRED_SPINE_ENGINE_VERSION = "0.2.0"
-REQUIRED_SPINEDB_API_VERSION = "0.1.9"
+REQUIRED_SPINEDB_API_VERSION = "0.1.10"
 # SPINE GREEN HTML: #99cc33 RGBa: 153, 204, 51, 255
 # SPINE BLUE HTML: #004ac2 RGBa: 0, 74, 194, 255
 # Invalid characters for directory names

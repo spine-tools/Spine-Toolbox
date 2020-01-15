@@ -3,7 +3,7 @@
 
 .. |data_connection| image:: ../../spinetoolbox/ui/resources/project_item_icons/file-alt.svg
    :width: 16
-.. |importer| image:: ../../spinetoolbox/ui/resources/project_item_icons/map-solid.svg
+.. |importer| image:: ../../spinetoolbox/ui/resources/project_item_icons/database-import.svg
    :width: 16
 .. |data_store| image:: ../../spinetoolbox/ui/resources/project_item_icons/database.svg
    :width: 16
@@ -11,7 +11,7 @@
    :width: 16
 .. |execute-selected| image:: ../../spinetoolbox/ui/resources/project_item_icons/play-circle-regular.svg
    :width: 16
-.. |exporter| image:: ../../spinetoolbox/ui/resources/project_item_icons/file-export-solid.svg
+.. |exporter| image:: ../../spinetoolbox/ui/resources/project_item_icons/database-export.svg
    :width: 16
 .. |tool| image:: ../../spinetoolbox/ui/resources/project_item_icons/hammer.svg
    :width: 16
@@ -66,7 +66,7 @@ Note that the data is opened in read-only mode so modifications are not possible
 Importer |importer|
 -------------------
 
-This item provides mapping from tabulated data (comma separated values, Excel) to the Spine data model.
+This item provides mapping from tabulated data such as comma separated values or Excel to the Spine data model.
 
 Exporter |exporter|
 -------------------
