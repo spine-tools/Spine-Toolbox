@@ -472,7 +472,7 @@ class MappingSpecModel(QAbstractTableModel):
             else:
                 # convert relationship mapping to object mapping
                 self._model = ObjectClassMapping(
-                    name=self._model.object_classes[0], obj=self._model.objects[0], parameters=parameters
+                    name=self._model.object_classes[0], objects=self._model.objects[0], parameters=parameters
                 )
 
         self.update_display_table()
@@ -785,9 +785,10 @@ class MappingSpecModel(QAbstractTableModel):
     @Slot(bool)
     def set_time_series_repeat(self, repeat):
         """Toggles the repeat flag in the parameter's options."""
-        if self._model is None or self._model.parameters is None or self._model.parameters.options is None:
+        if self._model is None or not isinstance(self._model.parameters, ParameterTimeSeriesMapping):
             return
         self._model.parameters.options.repeat = repeat
+        self.dataChanged.emit(0, 0, [])
 
     def model_parameters(self):
         """Returns the mapping's parameters."""
