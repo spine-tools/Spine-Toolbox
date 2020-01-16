@@ -1,5 +1,5 @@
 ######################################################################################################################
-# Copyright (C) 2017 - 2019 Spine project consortium
+# Copyright (C) 2017-2020 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -27,7 +27,7 @@ from spinedb_api import (
     mapping_non_pivoted_columns,
 )
 from PySide2.QtWidgets import QHeaderView, QMenu, QAction, QTableView, QToolButton
-from PySide2.QtCore import QModelIndex, Qt, QAbstractTableModel, QAbstractListModel, Signal
+from PySide2.QtCore import QModelIndex, Qt, QAbstractTableModel, QAbstractListModel, Signal, Slot
 from PySide2.QtGui import QColor, QFont
 from ..mvcmodels.minimal_table_model import MinimalTableModel
 from .io_api import TYPE_STRING_TO_CLASS
@@ -787,6 +787,17 @@ class MappingSpecModel(QAbstractTableModel):
             columns = []
         self._model.skip_columns = list(set(columns))
         self.dataChanged.emit(0, 0, [])
+
+    @Slot(bool)
+    def set_time_series_repeat(self, repeat):
+        """Toggles the repeat flag in the parameter's options."""
+        if self._model is None or self._model.parameters is None or self._model.parameters.options is None:
+            return
+        self._model.parameters.options.repeat = repeat
+
+    def model_parameters(self):
+        """Returns the mapping's parameters."""
+        return self._model.parameters if self._model is not None else None
 
 
 class MappingListModel(QAbstractListModel):

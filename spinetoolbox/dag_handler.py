@@ -1,5 +1,5 @@
 ######################################################################################################################
-# Copyright (C) 2017 - 2019 Spine project consortium
+# Copyright (C) 2017-2020 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -310,7 +310,8 @@ class DirectedGraphHandler(QObject):
 
     @Slot("QVariant")
     def receive_item_execution_finished(self, item_finish_state):
-        """Pop next project item to execute or finish current graph if there are no items left.
+        """TODO: Method obsolete?
+        Pop next project item to execute or finish current graph if there are no items left.
 
         Args:
             item_finish_state (ExecutionState): an enumeration to indicate if execution should continue or not

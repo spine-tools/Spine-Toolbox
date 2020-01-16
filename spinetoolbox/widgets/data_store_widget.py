@@ -1,5 +1,5 @@
 ######################################################################################################################
-# Copyright (C) 2017 - 2019 Spine project consortium
+# Copyright (C) 2017-2020 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -61,6 +61,7 @@ class DataStoreFormBase(QMainWindow):
         """
         super().__init__(flags=Qt.Window)
         from ..ui.data_store_view import Ui_MainWindow
+
         self.db_urls = list(db_urls)
         self.db_url = self.db_urls[0]
         self.db_mngr = db_mngr

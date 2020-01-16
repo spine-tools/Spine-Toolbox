@@ -23,7 +23,7 @@ X axis for plain values
 -----------------------
 
 It is possible to plot plain values against X values given by a designated column
-in the pivot table of the Tabular view.
+in the pivot table.
 
 To set a column as the X column **right click** the top empty area above the column header
 and select *Use as X* from the popup menu.

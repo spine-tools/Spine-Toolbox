@@ -1,5 +1,5 @@
 ######################################################################################################################
-# Copyright (C) 2017 - 2019 Spine project consortium
+# Copyright (C) 2017-2020 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -19,17 +19,12 @@ Spine Toolbox project class.
 import os
 import logging
 import json
-from .metaobject import MetaObject
-from .helpers import create_dir
-from .tool_specifications import JuliaTool, PythonTool, GAMSTool, ExecutableTool
-from .config import LATEST_PROJECT_VERSION, PROJECT_FILENAME
 from PySide2.QtCore import Slot, Signal
-from PySide2.QtWidgets import QMessageBox
 from spine_engine import SpineEngine, SpineEngineState
 from .metaobject import MetaObject
-from .helpers import create_dir, copy_dir, inverted
+from .helpers import create_dir, inverted
 from .tool_specifications import JuliaTool, PythonTool, GAMSTool, ExecutableTool
-from .config import DEFAULT_WORK_DIR, INVALID_CHARS
+from .config import LATEST_PROJECT_VERSION, PROJECT_FILENAME
 from .dag_handler import DirectedGraphHandler
 from .spine_db_manager import SpineDBManager
 

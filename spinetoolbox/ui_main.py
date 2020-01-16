@@ -1,5 +1,5 @@
 ######################################################################################################################
-# Copyright (C) 2017 - 2019 Spine project consortium
+# Copyright (C) 2017-2020 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -257,34 +257,35 @@ class ToolboxUI(QMainWindow):
         return self._qsettings
 
     @Slot(name="init_project")
-    def init_project(self):
+    def init_project(self, project_dir):
         """Initializes project at application start-up. Opens the last project that was open
         when app was closed (if enabled in Settings) or starts the app without a project.
         """
-        open_previous_project = int(self._qsettings.value("appSettings/openPreviousProject", defaultValue="0"))
         p = os.path.join(DOCUMENTATION_PATH, "getting_started.html")
         getting_started_anchor = (
                 "<a style='color:#99CCFF;' title='" + p + "' href='file:///" + p + "'>Getting Started</a>"
         )
         wlcme_msg = "Welcome to Spine Toolbox! If you need help, please read the {0} guide."\
             .format(getting_started_anchor)
-        if open_previous_project != 2:  # 2: Qt.Checked, ie. open_previous_project==True
-            self.msg.emit(wlcme_msg)
-            return
-        # Get previous project (directory)
-        previous_project = self._qsettings.value("appSettings/previousProject", defaultValue="")
-        if not previous_project:
-            return
-        if os.path.isfile(previous_project) and previous_project.endswith(".proj"):
+        if not project_dir:
+            open_previous_project = int(self._qsettings.value("appSettings/openPreviousProject", defaultValue="0"))
+            if open_previous_project != 2:  # 2: Qt.Checked, ie. open_previous_project==True
+                self.msg.emit(wlcme_msg)
+                return
+            # Get previous project (directory)
+            project_dir = self._qsettings.value("appSettings/previousProject", defaultValue="")
+            if not project_dir:
+                return
+        if os.path.isfile(project_dir) and project_dir.endswith(".proj"):
             # Previous project was a .proj file -> Show welcome message instead
             self.msg.emit(wlcme_msg)
             return
-        elif not os.path.isdir(previous_project):
+        elif not os.path.isdir(project_dir):
             self.ui.statusbar.showMessage("Opening previous project failed", 10000)
             self.msg_error.emit("Cannot open previous project. Directory <b>{0}</b> may have been moved."
-                                .format(previous_project))
+                                .format(project_dir))
             return
-        self.open_project(previous_project, clear_logs=False)
+        self.open_project(project_dir, clear_logs=False)
 
     @Slot()
     def new_project(self):
@@ -490,17 +491,19 @@ class ToolboxUI(QMainWindow):
         Project upgrading should happen later automatically when opening a project.
         """
         msg = (
-            "This tool upgrades your legacy Spine Toolbox projects from .proj files to "
+            "This option upgrades your legacy Spine Toolbox projects from .proj files to "
             "<br/>Spine Toolbox project <b>directories</b>."
-            "<br/><br/>Steps:"
-            "<br/><b>1.</b> Please select a project you<br/> want to upgrade by selecting a <i>.proj</i> <b>file</b>"
-            "<br/><b>2.</b> Please select a <b>directory</b> for the upgraded project."
+            "<br/><br/>Next, you will be presented two file dialogs:"
+            "<br/><b>1.</b>From the first dialog, select a project you<br/> want "
+            "to upgrade by selecting a <i>.proj</i> <b>file</b>"
+            "<br/><b>2.</b>From the second dialog, select a <b>directory</b> "
+            "for the upgraded project."
             "<br/><br/>Project item data will be copied to the new project directory."
-            "<br/><b>P.S.</b> You only need to do this once per project."
+            "<br/><br/><b>P.S.</b> You only need to do this once per project."
         )
-        QMessageBox.information(self, "Project upgrade tool", msg)
+        QMessageBox.information(self, "Project upgrade wizard", msg)
         # noinspection PyCallByClass
-        answer = QFileDialog.getOpenFileName(self, "Select a project (.proj file) to upgrade",
+        answer = QFileDialog.getOpenFileName(self, "Select an old project (.proj file) to upgrade",
                                              _program_root, "Project file (*.proj)")
         if not answer[0]:
             return
