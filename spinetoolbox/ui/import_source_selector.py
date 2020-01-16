@@ -13,7 +13,7 @@
 # Form implementation generated from reading ui file 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\import_source_selector.ui',
 # licensing of 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\import_source_selector.ui' applies.
 #
-# Created: Wed Jan 15 16:33:49 2020
+# Created: Thu Jan 16 08:36:11 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!

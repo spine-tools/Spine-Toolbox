@@ -13,7 +13,7 @@
 # Form implementation generated from reading ui file 'C:\data\src\toolbox\bin\..\spinetoolbox\project_items\exporter\ui\parameter_index_settings.ui',
 # licensing of 'C:\data\src\toolbox\bin\..\spinetoolbox\project_items\exporter\ui\parameter_index_settings.ui' applies.
 #
-# Created: Wed Jan 15 16:33:43 2020
+# Created: Thu Jan 16 08:36:05 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -31,11 +31,14 @@ class Ui_Form(object):
         self.verticalLayout_3 = QtWidgets.QVBoxLayout(self.box)
         self.verticalLayout_3.setObjectName("verticalLayout_3")
         self.message_label = QtWidgets.QLabel(self.box)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.message_label.sizePolicy().hasHeightForWidth())
+        self.message_label.setSizePolicy(sizePolicy)
         self.message_label.setTextFormat(QtCore.Qt.RichText)
         self.message_label.setObjectName("message_label")
         self.verticalLayout_3.addWidget(self.message_label)
-        spacerItem = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
-        self.verticalLayout_3.addItem(spacerItem)
         self.horizontalLayout_2 = QtWidgets.QHBoxLayout()
         self.horizontalLayout_2.setObjectName("horizontalLayout_2")
         self.label = QtWidgets.QLabel(self.box)
@@ -51,8 +54,8 @@ class Ui_Form(object):
         self.move_domain_right_button = QtWidgets.QPushButton(self.box)
         self.move_domain_right_button.setObjectName("move_domain_right_button")
         self.horizontalLayout_2.addWidget(self.move_domain_right_button)
-        spacerItem1 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
-        self.horizontalLayout_2.addItem(spacerItem1)
+        spacerItem = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        self.horizontalLayout_2.addItem(spacerItem)
         self.verticalLayout_3.addLayout(self.horizontalLayout_2)
         self.splitter = QtWidgets.QSplitter(self.box)
         self.splitter.setOrientation(QtCore.Qt.Horizontal)
@@ -121,9 +124,9 @@ class Ui_Form(object):
         self.extract_indexes_button.setObjectName("extract_indexes_button")
         self.verticalLayout_2.addWidget(self.extract_indexes_button)
         self.verticalLayout.addLayout(self.verticalLayout_2)
-        spacerItem2 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
-        self.verticalLayout.addItem(spacerItem2)
         self.verticalLayout_4.addLayout(self.verticalLayout)
+        spacerItem1 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
+        self.verticalLayout_4.addItem(spacerItem1)
         self.index_table_view = QtWidgets.QTableView(self.splitter)
         self.index_table_view.setSelectionMode(QtWidgets.QAbstractItemView.MultiSelection)
         self.index_table_view.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
