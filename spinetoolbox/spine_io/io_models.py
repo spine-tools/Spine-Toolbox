@@ -287,7 +287,7 @@ class MappingPreviewModel(MinimalTableModel):
         for c in classes:
             # object colors
             if self.index_in_mapping(c, index):
-                return _MAPPING_COLORS["entity"]
+                return _MAPPING_COLORS["entity class"]
 
     def index_in_mapping(self, mapping, index):
         """Checks if index is in mapping
@@ -301,12 +301,15 @@ class MappingPreviewModel(MinimalTableModel):
         """
         if not isinstance(mapping, MappingBase):
             return False
+        if isinstance(mapping, ColumnHeaderMapping):
+            # column header can't be in data
+            return False
         if isinstance(mapping, ColumnMapping):
             ref = mapping.reference
             if isinstance(ref, str):
                 # find header reference
-                if ref in self._headers:
-                    ref = self._headers.index(ref)
+                if ref in self.header:
+                    ref = self.header.index(ref)
             if index.column() == ref:
                 if self._mapping._model.is_pivoted():
                     # only rows below pivoted rows
