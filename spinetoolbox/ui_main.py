@@ -229,31 +229,35 @@ class ToolboxUI(QMainWindow):
         return self._qsettings
 
     @Slot(name="init_project")
-    def init_project(self):
-        """Initializes project at application start-up. Loads the last project that was open
-        when app was closed or starts without a project if app is started for the first time.
+    def init_project(self, project_file_path):
         """
-        open_previous_project = int(self._qsettings.value("appSettings/openPreviousProject", defaultValue="0"))
-        if open_previous_project != 2:  # 2: Qt.Checked, ie. open_previous_project==True
-            p = os.path.join(DOCUMENTATION_PATH, "getting_started.html")
-            getting_started_anchor = (
-                "<a style='color:#99CCFF;' title='" + p + "' href='file:///" + p + "'>Getting Started</a>"
-            )
-            self.msg.emit(
-                "Welcome to Spine Toolbox! If you need help, please read the {0} guide.".format(getting_started_anchor)
-            )
-            return
-        # Get path to previous project file
-        project_file_path = self._qsettings.value("appSettings/previousProject", defaultValue="")
+        Initializes project at application start-up.
+
+        Loads the project stored in the given project_path.
+        If the path is empty, loads the last project that was open  when app was closed
+        or starts without a project if app is started for the first time.
+        """
         if not project_file_path:
-            return
+            open_previous_project = int(self._qsettings.value("appSettings/openPreviousProject", defaultValue="0"))
+            if open_previous_project != Qt.Checked:
+                p = os.path.join(DOCUMENTATION_PATH, "getting_started.html")
+                getting_started_anchor = (
+                    "<a style='color:#99CCFF;' title='" + p + "' href='file:///" + p + "'>Getting Started</a>"
+                )
+                self.msg.emit(
+                    "Welcome to Spine Toolbox! If you need help, please read the {0} guide.".format(getting_started_anchor)
+                )
+                return
+            # Get path to previous project file
+            project_file_path = self._qsettings.value("appSettings/previousProject", defaultValue="")
+            if not project_file_path:
+                return
         if not os.path.isfile(project_file_path):
             msg = "Could not load previous project. File '{0}' not found.".format(project_file_path)
             self.ui.statusbar.showMessage(msg, 10000)
             return
         if not self.open_project(project_file_path, clear_event_log=False):
             self.msg_error.emit("Loading project file <b>{0}</b> failed".format(project_file_path))
-        return
 
     @Slot(name="new_project")
     def new_project(self):
