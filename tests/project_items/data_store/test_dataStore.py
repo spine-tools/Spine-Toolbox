@@ -57,7 +57,7 @@ class TestDataStore(unittest.TestCase):
         item_dict = dict(name="DS", description="", x=0, y=0, url=None, reference=None)
         self.toolbox.project().add_project_items("Data Stores", item_dict)
         self.ds_index = self.toolbox.project_item_model.find_item("DS")
-        self.ds = self.toolbox.project_item_model.project_item(self.ds_index)
+        self.ds = self.toolbox.project_item_model.item(self.ds_index).project_item
 
     def tearDown(self):
         """Overridden method. Runs after each test.
@@ -326,11 +326,6 @@ class TestDataStore(unittest.TestCase):
         self.assertEqual(expected_db_path, le_db.text())
         # Check that the db file has actually been moved
         self.assertTrue(os.path.exists(le_db.text()))
-        # Check there's a dag containing a node with the new name and that no dag contains a node with the old name
-        dag_with_new_node_name = self.toolbox.project().dag_handler.dag_with_node(expected_name)
-        self.assertIsInstance(dag_with_new_node_name, DiGraph)
-        dag_with_old_node_name = self.toolbox.project().dag_handler.dag_with_node("DS")
-        self.assertIsNone(dag_with_old_node_name)
 
 
 if __name__ == '__main__':

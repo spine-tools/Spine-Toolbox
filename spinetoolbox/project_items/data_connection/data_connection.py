@@ -382,7 +382,7 @@ class DataConnection(ProjectItem):
         resources = [ProjectItemResource(self, "file", url=pathlib.Path(ref).as_uri()) for ref in refs + f_list]
         return resources
 
-    def _do_handle_dag_changed(self, resources_upstream):
+    def _do_handle_dag_changed(self, resources):
         """See base class."""
         if not self.file_references() and not self.data_files():
             self.add_notification(
@@ -401,12 +401,11 @@ class DataConnection(ProjectItem):
 
         Args:
             new_name (str): New name
-
         Returns:
-            bool: Boolean value depending on success
+            bool: True if renaming succeeded, False otherwise
         """
-        ret = super().rename(new_name)
-        if not ret:
+        success = super().rename(new_name)
+        if not success:
             return False
         self.data_dir_watcher.removePaths(self.data_dir_watcher.directories())
         self.data_dir_watcher.addPath(self.data_dir)

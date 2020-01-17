@@ -539,7 +539,7 @@ class Tool(ProjectItem):
             # Join work directory path to dst (dst is the filename including possible subfolders, e.g. 'input/f.csv')
             dst_path = os.path.abspath(os.path.join(self.basedir, dst))
             # Create subdirectories if necessary
-            dst_subdir, fname = os.path.split(dst)
+            dst_subdir, _ = os.path.split(dst)
             if not dst_subdir:
                 # No subdirectories to create
                 self._toolbox.msg.emit("\tCopying <b>{0}</b>".format(src_path))
@@ -1027,8 +1027,8 @@ class Tool(ProjectItem):
         Returns:
             bool: Boolean value depending on success
         """
-        ret = super().rename(new_name)
-        if not ret:
+        success = super().rename(new_name)
+        if not success:
             return False
         self.output_dir = os.path.join(self.data_dir, TOOL_OUTPUT_DIR)
         if self.output_files_watcher.files():

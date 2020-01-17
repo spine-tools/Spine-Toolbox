@@ -19,6 +19,11 @@ MetaObject class.
 from PySide2.QtCore import QObject
 
 
+def shorten(name):
+    """Returns a 'shortened' version of given name."""
+    return name.lower().replace(' ', '_')
+
+
 class MetaObject(QObject):
     def __init__(self, name, description):
         """Class for an object which has a name, type, and some description.
@@ -29,7 +34,7 @@ class MetaObject(QObject):
         """
         QObject.__init__(self)
         self.name = name
-        self.short_name = name.lower().replace(' ', '_')
+        self.short_name = shorten(name)
         self.description = description
 
     def set_name(self, new_name):
@@ -41,7 +46,7 @@ class MetaObject(QObject):
             new_name (str): New (long) name for this object
         """
         self.name = new_name
-        self.short_name = new_name.lower().replace(' ', '_')
+        self.short_name = shorten(new_name)
 
     def set_description(self, desc):
         """Set object description.

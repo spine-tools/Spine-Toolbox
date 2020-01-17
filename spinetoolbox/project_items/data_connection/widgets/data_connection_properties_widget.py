@@ -64,7 +64,7 @@ class DataConnectionPropertiesWidget(QWidget):
         option = self.dc_ref_context_menu.get_action()
         # Get selected Data Connection from project item model
         curr_index = self._toolbox.ui.treeView_project.currentIndex()
-        dc = self._toolbox.project_item_model.project_item(curr_index)
+        dc = self._toolbox.project_item_model.item(curr_index)
         if not dc:
             self._toolbox.msg_error.emit("FIXME: Data Connection {0} not found in project items".format(curr_index))
             return
@@ -96,7 +96,7 @@ class DataConnectionPropertiesWidget(QWidget):
         option = self.dc_data_context_menu.get_action()
         # Get selected Data Connection from project item model
         curr_index = self._toolbox.ui.treeView_project.currentIndex()
-        dc = self._toolbox.project_item_model.project_item(curr_index)
+        dc = self._toolbox.project_item_model.item(curr_index)
         if not dc:
             self._toolbox.msg_error.emit("FIXME: Data Connection {0} not found in project items".format(curr_index))
             return

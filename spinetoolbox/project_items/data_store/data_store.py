@@ -453,13 +453,12 @@ class DataStore(ProjectItem):
 
         Args:
             new_name (str): New name
-
         Returns:
-            bool: Boolean value depending on success
+            bool: True if renaming succeeded, False otherwise
         """
         old_data_dir = os.path.abspath(self.data_dir)  # Old data_dir before rename
-        ret_val = super().rename(new_name)
-        if not ret_val:
+        success = super().rename(new_name)
+        if not success:
             return False
         # For a Data Store, logs_dir must be updated and the database line edit may need to be updated
         db_dir, db_filename = os.path.split(os.path.abspath(self._properties_ui.lineEdit_database.text().strip()))

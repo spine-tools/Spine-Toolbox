@@ -43,7 +43,7 @@ class TestTool(unittest.TestCase):
         item_dict = dict(name="T", description="", x=0, y=0)
         self.toolbox.project().add_project_items("Tools", item_dict)
         index = self.toolbox.project_item_model.find_item("T")
-        self.tool = self.toolbox.project_item_model.project_item(index)
+        self.tool = self.toolbox.project_item_model.item(index).project_item
 
     def tearDown(self):
         """Clean up."""
@@ -112,11 +112,6 @@ class TestTool(unittest.TestCase):
         # Check data_dir
         expected_data_dir = os.path.join(self.toolbox.project().project_dir, expected_short_name)
         self.assertEqual(expected_data_dir, self.tool.data_dir)  # Check data dir
-        # Check there's a dag containing a node with the new name and that no dag contains a node with the old name
-        dag_with_new_node_name = self.toolbox.project().dag_handler.dag_with_node(expected_name)
-        self.assertIsInstance(dag_with_new_node_name, DiGraph)
-        dag_with_old_node_name = self.toolbox.project().dag_handler.dag_with_node("T")
-        self.assertIsNone(dag_with_old_node_name)
         # Check that output_dir has been updated
         expected_output_dir = os.path.join(self.tool.data_dir, TOOL_OUTPUT_DIR)
         self.assertEqual(expected_output_dir, self.tool.output_dir)
@@ -327,7 +322,7 @@ class TestToolExecution(unittest.TestCase):
         item = dict(name="Tool", description="", x=0, y=0, tool="simple_exec")
         self.toolbox.project().add_project_items("Tools", item)  # Add Tool to project
         ind = self.toolbox.project_item_model.find_item("Tool")
-        tool = self.toolbox.project_item_model.project_item(ind)  # Find item from project item model
+        tool = self.toolbox.project_item_model.item(ind).project_item
         tool.activate()
         self.assert_is_simple_exec_tool(tool)
 
@@ -337,7 +332,7 @@ class TestToolExecution(unittest.TestCase):
         item = dict(name="Tool", description="", x=0, y=0, tool="")
         self.toolbox.project().add_project_items("Tools", item)  # Add Tool to project
         ind = self.toolbox.project_item_model.find_item("Tool")
-        tool = self.toolbox.project_item_model.project_item(ind)  # Find item from project item model
+        tool = self.toolbox.project_item_model.item(ind).project_item
         tool.activate()
         self.assert_is_no_tool(tool)
         tool._properties_ui.comboBox_tool.setCurrentIndex(0)  # Set the simple_exec tool specification
@@ -351,7 +346,7 @@ class TestToolExecution(unittest.TestCase):
         item = dict(name="Tool", description="", x=0, y=0, tool="")
         self.toolbox.project().add_project_items("Tools", item)  # Add Tool to project
         ind = self.toolbox.project_item_model.find_item("Tool")
-        tool = self.toolbox.project_item_model.project_item(ind)  # Find item from project item model
+        tool = self.toolbox.project_item_model.item(ind).project_item
         self.assertFalse(tool.execute_forward(resources=[]))
 
     def test_input_file_not_found_at_execution(self):
@@ -359,7 +354,7 @@ class TestToolExecution(unittest.TestCase):
         item = dict(name="Tool", description="", x=0, y=0, tool="simple_exec")
         self.toolbox.project().add_project_items("Tools", item)  # Add Tool to project
         ind = self.toolbox.project_item_model.find_item("Tool")
-        tool = self.toolbox.project_item_model.project_item(ind)  # Find item from project item model
+        tool = self.toolbox.project_item_model.item(ind).project_item
         # Collect some information
         input_files = [x.text() for x in tool.input_file_model.findItems("*", Qt.MatchWildcard)]
         project_dir = tool._project.project_dir
@@ -384,7 +379,7 @@ class TestToolExecution(unittest.TestCase):
         self.toolbox.project().add_project_items("Tools", item)  # Add Tool to project
         self.toolbox.project().execution_instance = mock.NonCallableMagicMock()
         ind = self.toolbox.project_item_model.find_item("Tool")
-        tool = self.toolbox.project_item_model.project_item(ind)  # Find item from project item model
+        tool = self.toolbox.project_item_model.item(ind).project_item
         # Collect some information
         basedir = tool.tool_specification().path
         project_dir = tool._project.project_dir
@@ -433,9 +428,9 @@ class TestToolExecution(unittest.TestCase):
         work_dir = self.toolbox.project().work_dir
         os.makedirs(work_dir, exist_ok=True)
         item = dict(name="Tool", description="", x=0, y=0, tool="complex_exec")
-        self.toolbox.project().add_project_items("Tools", item)  # Add Tool to project
+        self.toolbox.project().add_project_items("Tools", item)
         ind = self.toolbox.project_item_model.find_item("Tool")
-        tool = self.toolbox.project_item_model.project_item(ind)  # Find item from project item model
+        tool = self.toolbox.project_item_model.item(ind).project_item
         self.toolbox.project().execution_instance = mock.NonCallableMagicMock()
         project_dir = self.toolbox.project().project_dir
         source_files = [x.text() for x in tool.source_file_model.findItems("*", Qt.MatchWildcard)]
