@@ -46,7 +46,7 @@ class TestProjectItem(unittest.TestCase):
     def test_notify_destination(self):
         self.toolbox.msg_warning = NonCallableMagicMock()
         self.toolbox.msg_warning.attach_mock(MagicMock(), "emit")
-        item = ProjectItem(self.toolbox, "name", "description", 0.0, 0.0)
+        item = ProjectItem("name", "description", 0.0, 0.0, self.toolbox.project(), self.toolbox)
         item.item_type = MagicMock(return_value="item_type")
         item.notify_destination(item)
         self.toolbox.msg_warning.emit.assert_called_with(

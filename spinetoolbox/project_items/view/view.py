@@ -27,18 +27,19 @@ from spinetoolbox.widgets.data_store_widget import DataStoreForm
 
 
 class View(ProjectItem):
-    def __init__(self, toolbox, name, description, x, y):
+    def __init__(self, name, description, x, y, toolbox, logger):
         """
         View class.
 
         Args:
-            toolbox (ToolboxUI): QMainWindow instance
             name (str): Object name
             description (str): Object description
             x (float): Initial X coordinate of item icon
             y (float): Initial Y coordinate of item icon
+            toolbox (ToolboxUI): a toolbox instance
+            logger (LoggingSignals): a logger instance
         """
-        super().__init__(toolbox, name, description, x, y)
+        super().__init__(name, description, x, y, toolbox.project(), logger)
         self._ds_views = {}
         self._references = dict()
         self.reference_model = QStandardItemModel()  # References to databases
@@ -170,7 +171,7 @@ class View(ProjectItem):
         try:
             return DataStoreForm(self._project.db_mngr, *db_maps)
         except SpineDBAPIError as e:
-            self._toolbox.msg_error.emit(e.msg)
+            self._logger.msg_error.emit(e.msg)
 
     def tear_down(self):
         """Tears down this item. Called by toolbox just before closing. Closes all view windows."""
@@ -180,14 +181,14 @@ class View(ProjectItem):
     def notify_destination(self, source_item):
         """See base class."""
         if source_item.item_type() == "Tool":
-            self._toolbox.msg.emit(
+            self._logger.msg.emit(
                 "Link established. You can visualize the ouput from Tool "
-                "<b>{0}</b> in View <b>{1}</b>.".format(source_item.name, self.name)
+                f"<b>{source_item.name}</b> in View <b>{self.name}</b>."
             )
         elif source_item.item_type() == "Data Store":
-            self._toolbox.msg.emit(
+            self._logger.msg.emit(
                 "Link established. You can visualize Data Store "
-                "<b>{0}</b> in View <b>{1}</b>.".format(source_item.name, self.name)
+                f"<b>{source_item.name}</b> in View <b>{self.name}</b>."
             )
         else:
             super().notify_destination(source_item)

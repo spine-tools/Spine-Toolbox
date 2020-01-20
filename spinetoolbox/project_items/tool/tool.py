@@ -33,19 +33,21 @@ from spinetoolbox.helpers import create_dir, create_output_dir_timestamp
 
 
 class Tool(ProjectItem):
-    def __init__(self, toolbox, name, description, x, y, tool="", execute_in_work=True):
+    def __init__(self, name, description, x, y, toolbox, logger, tool="", execute_in_work=True):
         """Tool class.
 
         Args:
-            toolbox (ToolboxUI): QMainWindow instance
             name (str): Object name
             description (str): Object description
             x (float): Initial X coordinate of item icon
             y (float): Initial Y coordinate of item icon
+            toolbox (ToolboxUI): QMainWindow instance
+            logger (LoggingSignals): a logger instance
             tool (str): Name of this Tool's Tool specification
             execute_in_work (bool): Execute associated Tool specification in work (True) or source directory (False)
         """
-        super().__init__(toolbox, name, description, x, y)
+        super().__init__(name, description, x, y, toolbox.project(), logger)
+        self._toolbox = toolbox
         self.last_return_code = None
         self.source_file_model = QStandardItemModel()
         self.populate_source_file_model(None)
@@ -61,10 +63,8 @@ class Tool(ProjectItem):
         self.execute_in_work = execute_in_work
         self._tool_specification = self._toolbox.tool_specification_model.find_tool_specification(tool)
         if tool != "" and not self._tool_specification:
-            # Clarifications for user
-            self._toolbox.msg_error.emit(
-                "Tool <b>{0}</b> should have a Tool "
-                "specification <b>{1}</b> but it was not found".format(self.name, tool)
+            self._logger.msg_error.emit(
+                f"Tool <b>{self.name}</b> should have a Tool specification <b>{tool}</b> but it was not found"
             )
         if self._tool_specification:
             self.execute_in_work = self._tool_specification.execute_in_work
@@ -210,15 +210,13 @@ class Tool(ProjectItem):
     def open_results(self, checked=False):
         """Open output directory in file browser."""
         if not os.path.exists(self.output_dir):
-            self._toolbox.msg_warning.emit(
-                "Tool <b>{0}</b> has no results. " "Click Execute to generate them.".format(self.name)
-            )
+            self._logger.msg_warning.emit(f"Tool <b>{self.name}</b> has no results. Click Execute to generate them.")
             return
         url = "file:///" + self.output_dir
         # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
         res = QDesktopServices.openUrl(QUrl(url, QUrl.TolerantMode))
         if not res:
-            self._toolbox.msg_error.emit("Failed to open directory: {0}".format(self.output_dir))
+            self._logger.msg_error.emit(f"Failed to open directory: {self.output_dir}")
 
     @Slot(name="edit_tool_specification")
     def edit_tool_specification(self):
@@ -401,67 +399,68 @@ class Tool(ProjectItem):
 
     def execute_forward(self, resources):
         if not self.tool_specification():
-            self._toolbox.msg_warning.emit("Tool <b>{0}</b> has no Tool specification to execute".format(self.name))
+            self._logger.msg_warning.emit(f"Tool <b>{self.name}</b> has no Tool specification to execute")
             return False
         self._update_base_directory()
         if self.execute_in_work:
             work_or_source = "work"
             if not self.copy_program_files():
-                self._toolbox.msg_error.emit("Copying program files to base directory failed.")
+                self._logger.msg_error.emit("Copying program files to base directory failed.")
                 return False
         else:
             work_or_source = "source"
         # Make source directory anchor with path as tooltip
-        anchor = "<a style='color:#99CCFF;' title='{0}' href='file:///{0}'>{1} directory</a>".format(
-            self.basedir, work_or_source
+        anchor = (
+            f"<a style='color:#99CCFF;' title='{self.basedir}'"
+            f"href='file:///{self.basedir}'>{work_or_source} directory</a>"
         )
-        self._toolbox.msg.emit(
-            "*** Executing Tool specification <b>{0}</b> in {1} ***".format(self.tool_specification().name, anchor)
+        self._logger.msg.emit(
+            f"*** Executing Tool specification <b>{self.tool_specification().name}</b> in {anchor} ***"
         )
         # Find required input files for ToolInstance (if any)
         if self.input_file_model.rowCount() > 0:
-            self._toolbox.msg.emit("*** Checking Tool specification requirements ***")
+            self._logger.msg.emit("*** Checking Tool specification requirements ***")
             n_dirs, n_files = self.count_files_and_dirs()
             # logging.debug("Tool requires {0} dirs and {1} files".format(n_dirs, n_files))
             if n_files > 0:
-                self._toolbox.msg.emit("*** Searching for required input files ***")
+                self._logger.msg.emit("*** Searching for required input files ***")
                 file_paths = self.find_input_files(resources)
                 not_found = [k for k, v in file_paths.items() if v is None]
                 if not_found:
-                    self._toolbox.msg_error.emit("Required file(s) <b>{0}</b> not found".format(", ".join(not_found)))
+                    self._logger.msg_error.emit(f"Required file(s) <b>{', '.join(not_found)}</b> not found")
                     return False
                 # Required files and dirs should have been found at this point, so create instance
-                self._toolbox.msg.emit("*** Copying input files to {0} directory ***".format(work_or_source))
+                self._logger.msg.emit(f"*** Copying input files to {work_or_source} directory ***")
                 # Copy input files to ToolInstance work or source directory
                 if not self.copy_input_files(file_paths):
-                    self._toolbox.msg_error.emit("Copying input files failed. Tool execution aborted.")
+                    self._logger.msg_error.emit("Copying input files failed. Tool execution aborted.")
                     return False
             else:  # just for testing
                 # logging.debug("No input files to copy")
                 pass
             if n_dirs > 0:
-                self._toolbox.msg.emit("*** Creating input subdirectories to {0} directory ***".format(work_or_source))
+                self._logger.msg.emit(f"*** Creating input subdirectories to {work_or_source} directory ***")
                 if not self.create_input_dirs():
                     # Creating directories failed -> abort
-                    self._toolbox.msg_error.emit("Creating input subdirectories failed. Tool execution aborted.")
+                    self._logger.msg_error.emit("Creating input subdirectories failed. Tool execution aborted.")
                     return False
         # Check if there are any optional input files to copy
         if self.opt_input_file_model.rowCount() > 0:
-            self._toolbox.msg.emit("*** Searching for optional input files ***")
+            self._logger.msg.emit("*** Searching for optional input files ***")
             optional_file_paths = self.find_optional_input_files(resources)
             for k, v in optional_file_paths.items():
-                self._toolbox.msg.emit("\tFound <b>{0}</b> files matching pattern <b>{1}</b>".format(len(v), k))
+                self._logger.msg.emit(f"\tFound <b>{len(v)}</b> files matching pattern <b>{k}</b>")
             if not self.copy_optional_input_files(optional_file_paths):
-                self._toolbox.msg_warning.emit("Copying optional input files failed")
+                self._logger.msg_warning.emit("Copying optional input files failed")
         if not self.create_output_dirs():
-            self._toolbox.msg_error.emit("Creating output subdirectories failed. Tool execution aborted.")
+            self._logger.msg_error.emit("Creating output subdirectories failed. Tool execution aborted.")
             return False
         self.get_icon().start_animation()
         self.instance = self.tool_specification().create_tool_instance(self.basedir)
         self.instance.prepare()  # Make command and stuff
         self.instance.instance_finished.connect(self.handle_execution_finished)
-        self._toolbox.msg.emit(
-            "*** Starting instance of Tool specification <b>{0}</b> ***".format(self.tool_specification().name)
+        self._logger.msg.emit(
+            f"*** Starting instance of Tool specification <b>{self.tool_specification().name}</b> ***"
         )
         # Wait for finished right here
         loop = QEventLoop()
@@ -511,11 +510,11 @@ class Tool(ProjectItem):
                 try:
                     create_dir(path_to_create)
                 except OSError:
-                    self._toolbox.msg_error.emit(
-                        "[OSError] Creating directory {0} failed." " Check permissions.".format(path_to_create)
+                    self._logger.msg_error.emit(
+                        f"[OSError] Creating directory {path_to_create} failed. Check permissions."
                     )
                     return False
-                self._toolbox.msg.emit("\tDirectory <b>{0}{1}</b> created".format(os.path.sep, path))
+                self._logger.msg.emit(f"\tDirectory <b>{os.path.sep}{path}</b> created")
             else:
                 # It's a file -> skip
                 pass
@@ -534,7 +533,7 @@ class Tool(ProjectItem):
         n_copied_files = 0
         for dst, src_path in paths.items():
             if not os.path.exists(src_path):
-                self._toolbox.msg_error.emit("\tFile <b>{0}</b> does not exist".format(src_path))
+                self._logger.msg_error.emit(f"\tFile <b>{src_path}</b> does not exist")
                 return False
             # Join work directory path to dst (dst is the filename including possible subfolders, e.g. 'input/f.csv')
             dst_path = os.path.abspath(os.path.join(self.basedir, dst))
@@ -542,7 +541,7 @@ class Tool(ProjectItem):
             dst_subdir, _ = os.path.split(dst)
             if not dst_subdir:
                 # No subdirectories to create
-                self._toolbox.msg.emit("\tCopying <b>{0}</b>".format(src_path))
+                self._logger.msg.emit(f"\tCopying <b>{src_path}</b>")
             else:
                 # Create subdirectory structure to work or source directory
                 work_subdir_path = os.path.abspath(os.path.join(self.basedir, dst_subdir))
@@ -550,19 +549,15 @@ class Tool(ProjectItem):
                     try:
                         create_dir(work_subdir_path)
                     except OSError:
-                        self._toolbox.msg_error.emit(
-                            "[OSError] Creating directory <b>{0}</b> failed.".format(work_subdir_path)
-                        )
+                        self._logger.msg_error.emit(f"[OSError] Creating directory <b>{work_subdir_path}</b> failed.")
                         return False
-                self._toolbox.msg.emit(
-                    "\tCopying <b>{0}</b> into subdirectory <b>{2}{1}</b>".format(src_path, dst_subdir, os.path.sep)
-                )
+                self._logger.msg.emit(f"\tCopying <b>{src_path}</b> into subdirectory <b>{os.path.sep}{dst_subdir}</b>")
             try:
                 shutil.copyfile(src_path, dst_path)
                 n_copied_files += 1
             except OSError as e:
-                self._toolbox.msg_error.emit("Copying file <b>{0}</b> to <b>{1}</b> failed".format(src_path, dst_path))
-                self._toolbox.msg_error.emit("{0}".format(e))
+                self._logger.msg_error.emit(f"Copying file <b>{src_path}</b> to <b>{dst_path}</b> failed")
+                self._logger.msg_error.emit(f"{e}")
                 if e.errno == 22:
                     msg = (
                         "The reason might be:\n"
@@ -575,9 +570,9 @@ class Tool(ProjectItem):
                         "[3] Close any other background application(s) that may have locked the file.\n"
                         "And try again.\n"
                     )
-                    self._toolbox.msg_warning.emit(msg)
+                    self._logger.msg_warning.emit(msg)
                 return False
-        self._toolbox.msg.emit("\tCopied <b>{0}</b> input file(s)".format(n_copied_files))
+        self._logger.msg.emit(f"\tCopied <b>{n_copied_files}</b> input file(s)")
         return True
 
     def copy_optional_input_files(self, paths):
@@ -593,11 +588,11 @@ class Tool(ProjectItem):
         n_copied_files = 0
         for dst, src_paths in paths.items():
             if not isinstance(src_paths, list):
-                self._toolbox.msg_error.emit("Copying optional input files failed. src_paths should be a list.")
+                self._logger.msg_error.emit("Copying optional input files failed. src_paths should be a list.")
                 return False
             for src_path in src_paths:
                 if not os.path.exists(src_path):
-                    self._toolbox.msg_error.emit("\tFile <b>{0}</b> does not exist".format(src_path))
+                    self._logger.msg_error.emit(f"\tFile <b>{src_path}</b> does not exist")
                     continue
                 # Get file name that matched the search pattern
                 _, dst_fname = os.path.split(src_path)
@@ -607,7 +602,7 @@ class Tool(ProjectItem):
                 dst_subdir, _search_pattern = os.path.split(dst)
                 if not dst_subdir:
                     # No subdirectories to create
-                    self._toolbox.msg.emit("\tCopying optional file <b>{0}</b>".format(dst_fname))
+                    self._logger.msg.emit(f"\tCopying optional file <b>{dst_fname}</b>")
                     dst_path = os.path.abspath(os.path.join(self.basedir, dst_fname))
                 else:
                     # Create subdirectory structure to work or source directory
@@ -616,24 +611,20 @@ class Tool(ProjectItem):
                         try:
                             create_dir(work_subdir_path)
                         except OSError:
-                            self._toolbox.msg_error.emit(
-                                "[OSError] Creating directory <b>{0}</b> failed.".format(work_subdir_path)
+                            self._logger.msg_error.emit(
+                                f"[OSError] Creating directory <b>{work_subdir_path}</b> failed."
                             )
                             continue
-                    self._toolbox.msg.emit(
-                        "\tCopying optional file <b>{0}</b> into subdirectory <b>{2}{1}</b>".format(
-                            dst_fname, dst_subdir, os.path.sep
-                        )
+                    self._logger.msg.emit(
+                        f"\tCopying optional file <b>{dst_fname}</b> into subdirectory <b>{os.path.sep}{dst_subdir}</b>"
                     )
                     dst_path = os.path.abspath(os.path.join(work_subdir_path, dst_fname))
                 try:
                     shutil.copyfile(src_path, dst_path)
                     n_copied_files += 1
                 except OSError as e:
-                    self._toolbox.msg_error.emit(
-                        "Copying optional file <b>{0}</b> to <b>{1}</b> failed".format(src_path, dst_path)
-                    )
-                    self._toolbox.msg_error.emit("{0}".format(e))
+                    self._logger.msg_error.emit(f"Copying optional file <b>{src_path}</b> to <b>{dst_path}</b> failed")
+                    self._logger.msg_error.emit(f"{e}")
                     if e.errno == 22:
                         msg = (
                             "The reason might be:\n"
@@ -646,18 +637,16 @@ class Tool(ProjectItem):
                             "[3] Close any other background application(s) that may have locked the file.\n"
                             "And try again.\n"
                         )
-                        self._toolbox.msg_warning.emit(msg)
-        self._toolbox.msg.emit("\tCopied <b>{0}</b> optional input file(s)".format(n_copied_files))
+                        self._logger.msg_warning.emit(msg)
+        self._logger.msg.emit(f"\tCopied <b>{n_copied_files}</b> optional input file(s)")
         return True
 
     def copy_program_files(self):
         """Copies Tool specification source files to base directory."""
         # Make work directory anchor with path as tooltip
         work_anchor = "<a style='color:#99CCFF;' title='{0}' href='file:///{0}'>work directory</a>".format(self.basedir)
-        self._toolbox.msg.emit(
-            "*** Copying Tool specification <b>{0}</b> program files to {1} ***".format(
-                self.tool_specification().name, work_anchor
-            )
+        self._logger.msg.emit(
+            f"*** Copying Tool specification <b>{self.tool_specification().name}</b> program files to {work_anchor} ***"
         )
         n_copied_files = 0
         for i in range(self.source_file_model.rowCount()):
@@ -669,7 +658,7 @@ class Tool(ProjectItem):
             try:
                 create_dir(dst_dir)
             except OSError:
-                self._toolbox.msg_error.emit("Creating directory <b>{0}</b> failed".format(dst_dir))
+                self._logger.msg_error.emit(f"Creating directory <b>{dst_dir}</b> failed")
                 return False
             # Copy file if necessary
             if file_pattern:
@@ -681,14 +670,12 @@ class Tool(ProjectItem):
                         n_copied_files += 1
                     except OSError as e:
                         logging.error(e)
-                        self._toolbox.msg_error.emit(
-                            "\tCopying file <b>{0}</b> to <b>{1}</b> failed".format(src_file, dst_file)
-                        )
+                        self._logger.msg_error.emit(f"\tCopying file <b>{src_file}</b> to <b>{dst_file}</b> failed")
                         return False
         if n_copied_files == 0:
-            self._toolbox.msg_warning.emit("Warning: No files copied")
+            self._logger.msg_warning.emit("Warning: No files copied")
         else:
-            self._toolbox.msg.emit("\tCopied <b>{0}</b> file(s)".format(n_copied_files))
+            self._logger.msg.emit(f"\tCopied <b>{n_copied_files}</b> file(s)")
         return True
 
     def find_input_files(self, resources):
@@ -731,7 +718,7 @@ class Tool(ProjectItem):
                 continue
             found_files = self.find_optional_files(pattern, resources)
             if not found_files:
-                self._toolbox.msg_warning.emit("\tNo files matching pattern <b>{0}</b> found".format(pattern))
+                self._logger.msg_warning.emit(f"\tNo files matching pattern <b>{pattern}</b> found")
             else:
                 file_paths[file_path] = found_files
         return file_paths
@@ -809,9 +796,9 @@ class Tool(ProjectItem):
         # Disconnect instance finished signal
         self.instance.instance_finished.disconnect(self.handle_execution_finished)
         if return_code == 0:
-            self._toolbox.msg_success.emit("Tool <b>{0}</b> execution finished".format(self.name))
+            self._logger.msg_success.emit(f"Tool <b>{self.name}</b> execution finished")
         else:
-            self._toolbox.msg_error.emit("Tool <b>{0}</b> execution failed".format(self.name))
+            self._logger.msg_error.emit(f"Tool <b>{self.name}</b> execution failed")
         self.handle_output_files(return_code)
 
     def handle_output_files(self, ret):
@@ -829,43 +816,41 @@ class Tool(ProjectItem):
         try:
             create_dir(result_path)
         except OSError:
-            self._toolbox.msg_error.emit(
+            self._logger.msg_error.emit(
                 "\tError creating timestamped output directory. "
                 "Tool specification output files not copied. Please check directory permissions."
             )
             return
         # Make link to output folder
-        result_anchor = "<a style='color:#BB99FF;' title='{0}' href='file:///{0}'>results directory</a>".format(
-            result_path
+        result_anchor = (
+            f"<a style='color:#BB99FF;' title='{result_path}'" f"href='file:///{result_path}'>results directory</a>"
         )
-        self._toolbox.msg.emit("*** Archiving output files to {0} ***".format(result_anchor))
+        self._logger.msg.emit(f"*** Archiving output files to {result_anchor} ***")
         if self.output_file_model.rowCount() > 0:
             saved_files, failed_files = self.copy_output_files(result_path)
             if not saved_files:
                 # If no files were saved
-                self._toolbox.msg_error.emit("\tNo files saved")
+                self._logger.msg_error.emit("\tNo files saved")
             else:
                 # If there are saved files
                 # Split list into filenames and their paths
                 filenames, _ = zip(*saved_files)
-                self._toolbox.msg.emit("\tThe following output files were saved to results directory")
+                self._logger.msg.emit("\tThe following output files were saved to results directory")
                 for filename in filenames:
-                    self._toolbox.msg.emit("\t\t<b>{0}</b>".format(filename))
+                    self._logger.msg.emit(f"\t\t<b>{filename}</b>")
             if failed_files:
                 # If saving some or all files failed
-                self._toolbox.msg_warning.emit("\tThe following output files were not found")
+                self._logger.msg_warning.emit("\tThe following output files were not found")
                 for failed_file in failed_files:
                     failed_fname = os.path.split(failed_file)[1]
-                    self._toolbox.msg_warning.emit("\t\t<b>{0}</b>".format(failed_fname))
+                    self._logger.msg_warning.emit(f"\t\t<b>{failed_fname}</b>")
         else:
             tip_anchor = (
                 "<a style='color:#99CCFF;' title='When you add output files to the Tool specification,\n "
                 "they will be archived into results directory. Also, output files are passed to\n "
                 "subsequent project items.' href='#'>Tip</a>"
             )
-            self._toolbox.msg_warning.emit(
-                "\tNo output files defined for this Tool specification. {0}".format(tip_anchor)
-            )
+            self.logger.msg_warning.emit(f"\tNo output files defined for this Tool specification. {tip_anchor}")
 
     def create_output_dirs(self):
         """Makes sure that work directory has the necessary output directories for Tool output files.
@@ -888,7 +873,7 @@ class Tool(ProjectItem):
             try:
                 create_dir(dst_dir)
             except OSError:
-                self._toolbox.msg_error.emit("Creating work output directory '{}' failed".format(dst_dir))
+                self._logger.msg_error.emit(f"Creating work output directory '{dst_dir}' failed")
                 return False
         return True
 
@@ -908,20 +893,18 @@ class Tool(ProjectItem):
         """
         failed_files = list()
         saved_files = list()
-        # logging.debug("Saving result files to <{0}>".format(target_dir))
         for i in range(self.output_file_model.rowCount()):
             pattern = self.output_file_model.item(i, 0).data(Qt.DisplayRole)
             # Create subdirectories if necessary
             dst_subdir, fname_pattern = os.path.split(pattern)
-            # logging.debug("pattern:{0} dst_subdir:{1} fname_pattern:{2}".format(pattern, dst_subdir, fname_pattern))
             target = os.path.abspath(os.path.join(target_dir, dst_subdir))
             if not os.path.exists(target):
                 try:
                     create_dir(target)
                 except OSError:
-                    self._toolbox.msg_error.emit("[OSError] Creating directory <b>{0}</b> failed.".format(target))
+                    self._logger.msg_error.emit(f"[OSError] Creating directory <b>{target}</b> failed.")
                     continue
-                self._toolbox.msg.emit("\tCreated result subdirectory <b>{0}{1}</b>".format(os.path.sep, dst_subdir))
+                self._logger.msg.emit(f"\tCreated result subdirectory <b>{os.path.sep}{dst_subdir}</b>")
             # Check for wildcards in pattern
             if ('*' in pattern) or ('?' in pattern):
                 for fname_path in glob.glob(os.path.abspath(os.path.join(self.basedir, pattern))):
@@ -933,26 +916,19 @@ class Tool(ProjectItem):
                         shutil.copyfile(fname_path, dst)
                         saved_files.append((full_fname, dst))
                     except OSError:
-                        self._toolbox.msg_error.emit(
-                            "[OSError] Copying pattern {0} to {1} failed".format(fname_path, dst)
-                        )
+                        self._logger.msg_error.emit(f"[OSError] Copying pattern {fname_path} to {dst} failed")
                         failed_files.append(full_fname)
             else:
                 output_file = os.path.abspath(os.path.join(self.basedir, pattern))
-                # logging.debug("Looking for {0}".format(output_file))
                 if not os.path.isfile(output_file):
                     failed_files.append(pattern)
                     continue
-                # logging.debug("Saving file {0}".format(fname_pattern))
                 dst = os.path.abspath(os.path.join(target, fname_pattern))
-                # logging.debug("Copying to {0}".format(dst))
                 try:
                     shutil.copyfile(output_file, dst)
                     saved_files.append((pattern, dst))
                 except OSError:
-                    self._toolbox.msg_error.emit(
-                        "[OSError] Copying output file {0} to {1} failed".format(output_file, dst)
-                    )
+                    self._logger.msg_error.emit(f"[OSError] Copying output file {output_file} to {dst} failed")
                     failed_files.append(pattern)
         return saved_files, failed_files
 
@@ -1010,7 +986,7 @@ class Tool(ProjectItem):
         elif action == "Stop":
             # Check that the wheel is still visible, because execution may have stopped before the user clicks Stop
             if self.get_icon().timer.state() != QTimeLine.Running:
-                self._toolbox.msg.emit("Tool <b>{0}</b> is not running".format(self.name))
+                self._logger.msg.emit(f"Tool <b>{self.name}</b> is not running")
             else:
                 self.stop_execution()  # Proceed with stopping
         elif action == "Edit Tool specification":
@@ -1039,22 +1015,22 @@ class Tool(ProjectItem):
     def notify_destination(self, source_item):
         """See base class."""
         if source_item.item_type() == "Data Store":
-            self._toolbox.msg.emit(
-                "Link established. Data Store <b>{0}</b> url will "
-                "be passed to Tool <b>{1}</b> when executing.".format(source_item.name, self.name)
+            self._logger.msg.emit(
+                f"Link established. Data Store <b>{source_item.name}</b> url will "
+                f"be passed to Tool <b>{self.name}</b> when executing."
             )
         elif source_item.item_type() == "Data Connection":
-            self._toolbox.msg.emit(
-                "Link established. Tool <b>{0}</b> will look for input "
-                "files from <b>{1}</b>'s references and data directory.".format(self.name, source_item.name)
+            self._logger.msg.emit(
+                f"Link established. Tool <b>{self.name}</b> will look for input "
+                f"files from <b>{source_item.name}</b>'s references and data directory."
             )
         elif source_item.item_type() == "Exporter":
-            self._toolbox.msg.emit(
-                "Link established. The file exported by <b>{0}</b> will "
-                "be passed to Tool <b>{1}</b> when executing.".format(source_item.name, self.name)
+            self._logger.msg.emit(
+                f"Link established. The file exported by <b>{source_item.name}</b> will "
+                f"be passed to Tool <b>{self.name}</b> when executing."
             )
         elif source_item.item_type() == "Tool":
-            self._toolbox.msg.emit("Link established.")
+            self._logger.msg.emit("Link established.")
         else:
             super().notify_destination(source_item)
 

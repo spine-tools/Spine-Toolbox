@@ -63,14 +63,16 @@ from .project_items import data_store, data_connection, exporter, tool, view, im
 class ToolboxUI(QMainWindow):
     """Class for application main GUI functions."""
 
-    # Custom signals
-    msg = Signal(str, name="msg")
-    msg_success = Signal(str, name="msg_success")
-    msg_error = Signal(str, name="msg_error")
-    msg_warning = Signal(str, name="msg_warning")
-    msg_proc = Signal(str, name="msg_proc")
-    msg_proc_error = Signal(str, name="msg_proc_error")
-    tool_specification_model_changed = Signal("QVariant", name="tool_specification_model_changed")
+    # Signals to comply with the spinetoolbox.spine_logger.LoggingSignals interface.
+    msg = Signal(str)
+    msg_error = Signal(str)
+    msg_warning = Signal(str)
+    dialog = Signal(str)
+    # The rest of the msg_* signals should be moved to LoggingSignals in the long run.
+    msg_success = Signal(str)
+    msg_proc = Signal(str)
+    msg_proc_error = Signal(str)
+    tool_specification_model_changed = Signal("QVariant")
 
     def __init__(self):
         """ Initialize application and main window."""
@@ -148,6 +150,8 @@ class ToolboxUI(QMainWindow):
         self.msg_warning.connect(self.add_warning_message)
         self.msg_proc.connect(self.add_process_message)
         self.msg_proc_error.connect(self.add_process_error_message)
+        # Message box signals
+        self.dialog.connect(self._show_message_box)
         # Menu commands
         self.ui.actionNew.triggered.connect(self.new_project)
         self.ui.actionOpen.triggered.connect(self.open_project)
@@ -1632,3 +1636,8 @@ class ToolboxUI(QMainWindow):
         mirror_action_to_project_tree_view(copy_action)
         mirror_action_to_project_tree_view(paste_action)
         mirror_action_to_project_tree_view(duplicate_action)
+
+    @Slot(str, str)
+    def _show_message_box(self, title, message):
+        """Shows an information message box."""
+        QMessageBox.information(self, title, message)

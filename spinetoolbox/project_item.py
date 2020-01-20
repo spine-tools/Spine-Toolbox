@@ -37,32 +37,31 @@ class ProjectItem(MetaObject):
 
     item_changed = Signal()
 
-    def __init__(self, toolbox, name, description, x, y):
+    def __init__(self, name, description, x, y, project, logger):
         """
         Args:
-            toolbox (ToolboxUI): QMainWindow instance
             name (str): item name
             description (str): item description
             x (float): horizontal position on the scene
             y (float): vertical position on the scene
+            project (SpineToolboxProject): project item's project
+            logger (LoggingSignals): a logger instance
         """
         super().__init__(name, description)
-        self._toolbox = toolbox
-        self._project = self._toolbox.project()
+        self._project = project
         self.x = x
         self.y = y
+        self._logger = logger
         self._properties_ui = None
         self._icon = None
         self._sigs = None
-        self.item_changed.connect(lambda: self._toolbox.project().notify_changes_in_containing_dag(self.name))
+        self.item_changed.connect(lambda: self._project.notify_changes_in_containing_dag(self.name))
         # Make project directory for this Item
         self.data_dir = os.path.join(self._project.project_dir, self.short_name)
         try:
             create_dir(self.data_dir)
         except OSError:
-            self._toolbox.msg_error.emit(
-                "[OSError] Creating directory {0} failed." " Check permissions.".format(self.data_dir)
-            )
+            self._logger.msg_error.emit(f"[OSError] Creating directory {self.data_dir} failed. Check permissions.")
 
     @staticmethod
     def item_type():
@@ -93,11 +92,11 @@ class ProjectItem(MetaObject):
             try:
                 ret = signal.disconnect(handler)
             except RuntimeError:
-                self._toolbox.msg_error.emit("RuntimeError in disconnecting <b>{0}</b> signals".format(self.name))
+                self._logger.msg_error.emit(f"RuntimeError in disconnecting <b>{self.name}</b> signals")
                 logging.error("RuntimeError in disconnecting signal %s from handler %s", signal, handler)
                 return False
             if not ret:
-                self._toolbox.msg_error.emit("Disconnecting signal in {0} failed".format(self.name))
+                self._logger.msg_error.emit(f"Disconnecting signal in <b>{self.name}</b> failed")
                 logging.error("Disconnecting signal %s from handler %s failed", signal, handler)
                 return False
         return True
@@ -130,7 +129,7 @@ class ProjectItem(MetaObject):
 
     def stop_execution(self):
         """Stops executing this View."""
-        self._toolbox.msg.emit("Stopping {0}".format(self.name))
+        self._logger.msg.emit(f"Stopping {self.name}")
 
     def execute(self, resources, direction):
         """
@@ -148,9 +147,9 @@ class ProjectItem(MetaObject):
             bool: True if execution succeeded, False otherwise
         """
         if direction == "forward":
-            self._toolbox.msg.emit("")
-            self._toolbox.msg.emit("Executing {0} <b>{1}</b>".format(self.item_type(), self.name))
-            self._toolbox.msg.emit("***")
+            self._logger.msg.emit("")
+            self._logger.msg.emit(f"Executing {self.item_type()} <b>{self.name}</b>")
+            self._logger.msg.emit("***")
             if self.execute_forward(resources):
                 self.run_leave_animation()
                 return True
@@ -321,7 +320,7 @@ class ProjectItem(MetaObject):
         old_data_dir = self.data_dir  # Full path to data dir that shall be renamed
         project_path = os.path.split(old_data_dir)[0]  # Get project path from the old data dir path
         new_data_dir = os.path.join(project_path, new_short_name)  # Make path for new data dir
-        if not rename_dir(self._toolbox, old_data_dir, new_data_dir):
+        if not rename_dir(old_data_dir, new_data_dir, self._logger):
             return False
         # Rename project item
         self.set_name(new_name)
@@ -340,7 +339,7 @@ class ProjectItem(MetaObject):
         # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
         res = QDesktopServices.openUrl(QUrl(url, QUrl.TolerantMode))
         if not res:
-            self._toolbox.msg_error.emit("Failed to open directory: {0}".format(self.data_dir))
+            self._logger.msg_error.emit(f"Failed to open directory: {self.data_dir}")
 
     def tear_down(self):
         """Tears down this item. Called by toolbox just before closing.
@@ -365,10 +364,10 @@ class ProjectItem(MetaObject):
         Args:
             source_item (ProjectItem): connection source item
         """
-        self._toolbox.msg_warning.emit(
+        self._logger.msg_warning.emit(
             "Link established. Interaction between a "
-            "<b>{0}</b> and a <b>{1}</b> has not been "
-            "implemented yet.".format(source_item.item_type(), self.item_type())
+            f"<b>{source_item.item_type()}</b> and a <b>{self.item_type()}</b> has not been "
+            "implemented yet."
         )
 
 

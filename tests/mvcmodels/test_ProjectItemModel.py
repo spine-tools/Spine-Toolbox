@@ -97,7 +97,7 @@ class TestProjectItemModel(unittest.TestCase):
         root.add_child(category)
         model = ProjectItemModel(self.toolbox, root)
         self.assertEqual(model.category_of_item("nonexistent item"), None)
-        project_item = ProjectItem(self.toolbox, "item", "item description", 0.0, 0.0)
+        project_item = ProjectItem("item", "item description", 0.0, 0.0, self.toolbox.project(), self.toolbox)
         item = LeafProjectTreeItem(project_item, self.toolbox)
         category.add_child(item)
         found_category = model.category_of_item("item")

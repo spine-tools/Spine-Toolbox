@@ -132,7 +132,7 @@ class TestLeafProjectTreeItem(unittest.TestCase):
     def _leaf_item(toolbox=None):
         if toolbox is None:
             toolbox = create_toolboxui_with_project()
-        project_item = View(toolbox, "View", "A View item", 0.0, 0.0)
+        project_item = View("View", "A View item", 0.0, 0.0, toolbox, toolbox)
         item = LeafProjectTreeItem(project_item, toolbox)
         return toolbox, item
 

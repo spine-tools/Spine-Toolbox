@@ -33,26 +33,27 @@ from . import importer_program
 
 
 class Importer(ProjectItem):
-    def __init__(self, toolbox, name, description, mappings, x, y, cancel_on_error=True):
+    def __init__(self, name, description, mappings, x, y, toolbox, logger, cancel_on_error=True):
         """Importer class.
 
         Args:
-            toolbox (ToolboxUI): QMainWindow instance
             name (str): Project item name
             description (str): Project item description
             mappings (dict): dict with mapping settings
             x (float): Initial icon scene X coordinate
             y (float): Initial icon scene Y coordinate
-        """
-        super().__init__(toolbox, name, description, x, y)
+            toolbox (ToolboxUI): QMainWindow instance
+            logger (LoggingSignals): a logger instance
+            cancel_on_error (bool): if True the item's execution will stop on import error
+       """
+        super().__init__(name, description, x, y, toolbox.project(), logger)
         # Make logs subdirectory for this item
+        self._toolbox = toolbox
         self.logs_dir = os.path.join(self.data_dir, "logs")
         try:
             create_dir(self.logs_dir)
         except OSError:
-            self._toolbox.msg_error.emit(
-                "[OSError] Creating directory {0} failed. Check permissions.".format(self.logs_dir)
-            )
+            self._logger.msg_error.emit(f"[OSError] Creating directory {self.logs_dir} failed. Check permissions.")
         # Variables for saving selections when item is (de)activated
         if mappings is None:
             mappings = dict()
@@ -93,13 +94,11 @@ class Importer(ProjectItem):
     def _handle_file_model_item_changed(self, item):
         if item.checkState() == Qt.Checked:
             self.unchecked_files.remove(item.text())
-            self._toolbox.msg.emit(
-                "<b>{0}:</b> Source file '{1}' will be processed at execution.".format(self.name, item.text())
-            )
+            self._logger.msg.emit(f"<b>{self.name}:</b> Source file '{item.text()}' will be processed at execution.")
         elif item.checkState() != Qt.Checked:
             self.unchecked_files.append(item.text())
-            self._toolbox.msg.emit(
-                "<b>{0}:</b> Source file '{1}' will *NOT* be processed at execution.".format(self.name, item.text())
+            self._logger.msg.emit(
+                f"<b>{self.name}:</b> Source file '{item.text()}' will *NOT* be processed at execution."
             )
 
     def make_signal_handler_dict(self):
@@ -156,10 +155,10 @@ class Importer(ProjectItem):
         """Opens Import editor for the given index."""
         importee = index.data()
         if importee is None:
-            self._toolbox.msg_error.emit("Please select a source file from the list first.")
+            self._logger.msg_error.emit("Please select a source file from the list first.")
             return
         if not os.path.exists(importee):
-            self._toolbox.msg_error.emit("Invalid path: {0}".format(importee))
+            self._logger.msg_error.emit(f"Invalid path: {importee}")
             return
         # Raise current form for the selected file if any
         preview_widget = self._preview_widget.get(importee, None)
@@ -183,7 +182,7 @@ class Importer(ProjectItem):
             if not connector:
                 # Aborted by the user
                 return
-        self._toolbox.msg.emit("Opening Import editor for file: {0}".format(importee))
+        self._logger.msg.emit(f"Opening Import editor for file: {importee}")
         preview_widget = self._preview_widget[importee] = ImportPreviewWindow(
             self, importee, connector, settings, self._toolbox
         )
@@ -238,7 +237,7 @@ class Importer(ProjectItem):
         settings["source_type"] = connector.__name__
 
     def _connection_failed(self, msg, importee):
-        self._toolbox.msg.emit(msg)
+        self._logger.msg.emit(msg)
         preview_widget = self._preview_widget.pop(importee, None)
         if preview_widget:
             preview_widget.close()
@@ -287,12 +286,12 @@ class Importer(ProjectItem):
     @Slot()
     def _log_importer_process_stdout(self):
         output = str(self.importer_process.readAllStandardOutput().data(), "utf-8").strip()
-        self._toolbox.msg.emit("<b>{0}</b>: {1}".format(self.name, output))
+        self._logger.msg.emit(f"<b>{self.name}</b>: {output}")
 
     @Slot()
     def _log_importer_process_stderr(self):
         output = str(self.importer_process.readAllStandardError().data(), "utf-8").strip()
-        self._toolbox.msg_error.emit("<b>{0}</b>: {1}".format(self.name, output))
+        self._logger.msg_error.emit(f"<b>{self.name}</b>: {output}")
 
     def execute_backward(self, resources):
         """see base class."""
@@ -340,13 +339,13 @@ class Importer(ProjectItem):
     def notify_destination(self, source_item):
         """See base class."""
         if source_item.item_type() == "Data Connection":
-            self._toolbox.msg.emit(
+            self._logger.msg.emit(
                 "Link established. You can define mappings on data from "
-                "<b>{0}</b> using item <b>{1}</b>.".format(source_item.name, self.name)
+                f"<b>{source_item.name}</b> using item <b>{self.name}</b>."
             )
         elif source_item.item_type() == "Data Store":
             # Does this type of link do anything?
-            self._toolbox.msg.emit("Link established.")
+            self._logger.msg.emit("Link established.")
         else:
             super().notify_destination(source_item)
 

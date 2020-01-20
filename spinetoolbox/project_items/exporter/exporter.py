@@ -43,27 +43,30 @@ class Exporter(ProjectItem):
 
     def __init__(
         self,
-        toolbox,
         name,
         description,
+        x,
+        y,
+        toolbox,
+        logger,
         database_urls=None,
         database_to_file_name_map=None,
         settings_file_names=None,
-        x=0.0,
-        y=0.0,
     ):
         """
         Args:
-            toolbox (ToolboxUI): a ToolboxUI instance
             name (str): item name
             description (str): item description
+            x (float): initial X coordinate of item icon
+            y (float): initial Y coordinate of item icon
+            toolbox (ToolboxUI): a ToolboxUI instance
+            logger (LoggingSignals): a logger instance
             database_urls (list): a list of connected database urls
             database_to_file_name_map (dict): mapping from database path (str) to an output file name (str)
             settings_file_names (dict): mapping from database path (str) to export settings file name (str)
-            x (float): initial X coordinate of item icon
-            y (float): initial Y coordinate of item icon
         """
-        super().__init__(toolbox, name, description, x, y)
+        super().__init__(name, description, x, y, toolbox.project(), logger)
+        self._toolbox = toolbox
         self._settings_windows = dict()
         self._settings = dict()
         self._database_urls = database_urls if database_urls is not None else list()
@@ -77,7 +80,7 @@ class Exporter(ProjectItem):
                         settings = gdx.Settings.from_dict(data)
                         self._settings[database_path] = settings
                 except FileNotFoundError:
-                    self._toolbox.msg_error.emit("{} not found. Skipping.".format(file_name))
+                    self._logger.msg_error.emit(f"{file_name} not found. Skipping.")
         self._activated = False
 
     @staticmethod
@@ -142,12 +145,12 @@ class Exporter(ProjectItem):
         self._database_urls = [r.url for r in resources if r.type_ == "database"]
         gams_system_directory = self._resolve_gams_system_directory()
         if gams_system_directory is None:
-            self._toolbox.msg_error.emit("<b>{}</b>: Cannot proceed. No GAMS installation found.")
+            self._logger.msg_error.emit(f"<b>{self.name}</b>: Cannot proceed. No GAMS installation found.")
             return False
         for url in self._database_urls:
             file_name = self._database_to_file_name_map.get(url, None)
             if file_name is None:
-                self._toolbox.msg_error.emit("No file name given to export database {}.".format(url))
+                self._logger.msg_error.emit(f"No file name given to export database {url}.")
                 return False
             database_map = DatabaseMapping(url)
             settings = self._settings.get(url, None)
@@ -157,7 +160,7 @@ class Exporter(ProjectItem):
             out_path = os.path.join(self.data_dir, file_name)
             gdx.to_gdx_file(database_map, out_path, settings, gams_system_directory)
             database_map.connection.close()
-            self._toolbox.msg_success.emit("File <b>{0}</b> written".format(out_path))
+            self._logger.msg_success.emit(f"File <b>{out_path}</b> written")
         return True
 
     def _do_handle_dag_changed(self, resources):
@@ -255,9 +258,9 @@ class Exporter(ProjectItem):
     def notify_destination(self, source_item):
         """See base class."""
         if source_item.item_type() == "Data Store":
-            self._toolbox.msg.emit(
-                "Link established. Data Store <b>{0}</b> will be "
-                "exported to a .gdx file by <b>{1}</b> when executing.".format(source_item.name, self.name)
+            self._logger.msg.emit(
+                f"Link established. Data Store <b>{source_item.name}</b> will be "
+                f"exported to a .gdx file by <b>{self.name}</b> when executing."
             )
         else:
             super().notify_destination(source_item)
