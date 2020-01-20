@@ -498,7 +498,7 @@ class SpineToolboxProject(MetaObject):
             edges = self.dag_handler.edges_causing_loops(dag)
             for node in dag.nodes():
                 ind = self._toolbox.project_item_model.find_item(node)
-                project_item = self._toolbox.project_item_model.item(ind)
+                project_item = self._toolbox.project_item_model.item(ind).project_item
                 project_item.invalidate_workflow(edges)
             return
         # Make resource map and run simulation
