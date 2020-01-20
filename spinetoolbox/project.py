@@ -529,6 +529,10 @@ class SpineToolboxProject(MetaObject):
                 "[BUG] Could not find a graph containing {0}. " "<b>Please reopen the project.</b>".format(item)
             )
 
+    @property
+    def settings(self):
+        return self._qsettings
+
 
 def _update_if_changed(category_name):
     """

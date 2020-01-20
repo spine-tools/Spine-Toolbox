@@ -248,7 +248,7 @@ class Exporter(ProjectItem):
 
     def _resolve_gams_system_directory(self):
         """Returns GAMS system path from Toolbox settings or None if GAMS default is to be used."""
-        path = self._toolbox.qsettings().value("appSettings/gamsPath", defaultValue=None)
+        path = self._project.settings.value("appSettings/gamsPath", defaultValue=None)
         if not path:
             path = gdx_utils.find_gams_directory()
         if path is not None and os.path.isfile(path):
