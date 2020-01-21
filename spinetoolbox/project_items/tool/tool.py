@@ -850,7 +850,7 @@ class Tool(ProjectItem):
                 "they will be archived into results directory. Also, output files are passed to\n "
                 "subsequent project items.' href='#'>Tip</a>"
             )
-            self.logger.msg_warning.emit(f"\tNo output files defined for this Tool specification. {tip_anchor}")
+            self._logger.msg_warning.emit(f"\tNo output files defined for this Tool specification. {tip_anchor}")
 
     def create_output_dirs(self):
         """Makes sure that work directory has the necessary output directories for Tool output files.
