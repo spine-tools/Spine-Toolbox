@@ -55,7 +55,7 @@ class ImporterPropertiesWidget(QWidget):
         """
         ind = self.ui.treeView_files.indexAt(pos)  # Index of selected item in references tree view.
         cur_index = self._toolbox.ui.treeView_project.currentIndex()  # Get selected Importer item
-        importer = self._toolbox.project_item_model.project_item(cur_index)
+        importer = self._toolbox.project_item_model.item(cur_index)
         global_pos = self.ui.treeView_files.viewport().mapToGlobal(pos)
         self.files_context_menu = FilesContextMenu(self, global_pos, ind)
         option = self.files_context_menu.get_action()

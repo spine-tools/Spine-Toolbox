@@ -38,17 +38,19 @@ class Exporter(ProjectItem):
     Currently, only .gdx format is supported.
     """
 
-    def __init__(self, toolbox, name, description, settings_packs, x=0.0, y=0.0):
+    def __init__(self, name, description, settings_packs, x, y, toolbox, logger):
         """
         Args:
-            toolbox (ToolboxUI): a ToolboxUI instance
             name (str): item name
             description (str): item description
             settings_packs (list): dicts mapping database URL to _SettingsPack objects
             x (float): initial X coordinate of item icon
             y (float): initial Y coordinate of item icon
+            toolbox (ToolboxUI): a ToolboxUI instance
+            logger (LoggingSignals): a logger instance
         """
-        super().__init__(toolbox, name, description, x, y)
+        super().__init__(name, description, x, y, toolbox.project(), logger)
+        self._toolbox = toolbox
         self._settings_packs = dict()
         self._workers = dict()
         if settings_packs is None:
@@ -109,26 +111,26 @@ class Exporter(ProjectItem):
         database_urls = [r.url for r in resources if r.type_ == "database"]
         gams_system_directory = self._resolve_gams_system_directory()
         if gams_system_directory is None:
-            self._toolbox.msg_error.emit(f"<b>{self.name}</b>: Cannot proceed. No GAMS installation found.")
+            self._logger.msg_error.emit(f"<b>{self.name}</b>: Cannot proceed. No GAMS installation found.")
             return False
         for url in database_urls:
             settings_pack = self._settings_packs.get(url, None)
             if settings_pack is None:
-                self._toolbox.msg_error.emit(f"<b>{self.name}</b>: No export settings defined for database {url}.")
+                self._logger.msg_error.emit(f"<b>{self.name}</b>: No export settings defined for database {url}.")
                 return False
             if not settings_pack.output_file_name:
-                self._toolbox.msg_error.emit(f"<b>{self.name}</b>: No file name given to export database {url}.")
+                self._logger.msg_error.emit(f"<b>{self.name}</b>: No file name given to export database {url}.")
                 return False
             if settings_pack.state == SettingsState.FETCHING:
-                self._toolbox.msg_error.emit(f"<b>{self.name}</b>: Settings not ready for database {url}.")
+                self._logger.msg_error.emit(f"<b>{self.name}</b>: Settings not ready for database {url}.")
                 return False
             if settings_pack.state == SettingsState.INDEXING_PROBLEM:
-                self._toolbox.msg_error.emit(
+                self._logger.msg_error.emit(
                     f"<b>{self.name}</b>: Parameters missing indexing information for database {url}."
                 )
                 return False
             if settings_pack.state == SettingsState.ERROR:
-                self._toolbox.msg_error.emit(f"<b>{self.name}</b>: Ill formed database {url}.")
+                self._logger.msg_error.emit(f"<b>{self.name}</b>: Ill formed database {url}.")
                 return False
             out_path = os.path.join(self.data_dir, settings_pack.output_file_name)
             database_map = DatabaseMapping(url)
@@ -142,11 +144,11 @@ class Exporter(ProjectItem):
                     gams_system_directory,
                 )
             except gdx.GdxExportException as error:
-                self._toolbox.msg_error.emit(f"Failed to export <b>{url}</b> to .gdx: {error}")
+                self._logger.msg_error.emit(f"Failed to export <b>{url}</b> to .gdx: {error}")
                 return False
             finally:
                 database_map.connection.close()
-            self._toolbox.msg_success.emit(f"File <b>{out_path}</b> written")
+            self._logger.msg_success.emit(f"File <b>{out_path}</b> written")
         return True
 
     def _do_handle_dag_changed(self, resources):
@@ -221,7 +223,7 @@ class Exporter(ProjectItem):
     def _worker_failed(self, database_url, exception):
         """Clean up after a worker has failed fetching export settings."""
         if database_url in self._settings_packs:
-            self._toolbox.msg_error.emit(f"Failed to initialize settings from database {database_url}: {exception}")
+            self._logger.msg_error.emit(f"Failed to initialize settings from database {database_url}: {exception}")
             self._settings_packs[database_url].state = SettingsState.ERROR
             self._report_notifications()
         if database_url in self._workers:
@@ -369,7 +371,7 @@ class Exporter(ProjectItem):
 
     def _resolve_gams_system_directory(self):
         """Returns GAMS system path from Toolbox settings or None if GAMS default is to be used."""
-        path = self._toolbox.qsettings().value("appSettings/gamsPath", defaultValue=None)
+        path = self._project.settings.value("appSettings/gamsPath", defaultValue=None)
         if not path:
             path = gdx_utils.find_gams_directory()
         if path is not None and os.path.isfile(path):
@@ -379,9 +381,9 @@ class Exporter(ProjectItem):
     def notify_destination(self, source_item):
         """See base class."""
         if source_item.item_type() == "Data Store":
-            self._toolbox.msg.emit(
-                "Link established. Data Store <b>{0}</b> will be "
-                "exported to a .gdx file by <b>{1}</b> when executing.".format(source_item.name, self.name)
+            self._logger.msg.emit(
+                f"Link established. Data Store <b>{source_item.name}</b> will be "
+                f"exported to a .gdx file by <b>{self.name}</b> when executing."
             )
         else:
             super().notify_destination(source_item)

@@ -33,7 +33,7 @@ class TestExporter(unittest.TestCase):
         item_dict = dict(name="exporter", description="", settings_packs=None, x=0, y=0)
         self.toolbox.project().add_project_items("Exporters", item_dict)
         index = self.toolbox.project_item_model.find_item("exporter")
-        self.exporter = self.toolbox.project_item_model.project_item(index)
+        self.exporter = self.toolbox.project_item_model.item(index).project_item
 
     def tearDown(self):
         """Clean up."""
@@ -100,11 +100,6 @@ class TestExporter(unittest.TestCase):
         # Check data_dir
         expected_data_dir = os.path.join(self.toolbox.project().project_dir, expected_short_name)
         self.assertEqual(expected_data_dir, self.exporter.data_dir)  # Check data dir
-        # Check there's a dag containing a node with the new name and that no dag contains a node with the old name
-        dag_with_new_node_name = self.toolbox.project().dag_handler.dag_with_node(expected_name)
-        self.assertIsInstance(dag_with_new_node_name, DiGraph)
-        dag_with_old_node_name = self.toolbox.project().dag_handler.dag_with_node("Exporter")
-        self.assertIsNone(dag_with_old_node_name)
 
     def test_activation_populates_properties_tab(self):
         self.exporter._start_worker = MagicMock()
@@ -127,7 +122,7 @@ class TestExporter(unittest.TestCase):
         item_dict = dict(name="2nd exporter", description="", settings_packs=None, x=0, y=0)
         self.toolbox.project().add_project_items("Exporters", item_dict)
         index = self.toolbox.project_item_model.find_item("2nd exporter")
-        exporter2 = self.toolbox.project_item_model.project_item(index)
+        exporter2 = self.toolbox.project_item_model.item(index).project_item
         exporter2._start_worker = MagicMock()
         resources = [
             ProjectItemResource(None, "database", "first url to database"),
