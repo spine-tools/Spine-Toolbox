@@ -685,7 +685,7 @@ class ToolboxUI(QMainWindow):
             self.msg_error.emit("Could not find Tool specification <b>{0}</b>".format(tool_specification.name))
             return
         # Get all Tool project items
-        tools = self.project_item_model.items("Tools")
+        tools = [item.project_item for item in self.project_item_model.items("Tools")]
         for tool_item in tools:
             if not tool_item.tool_specification():
                 continue
