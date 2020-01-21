@@ -65,11 +65,11 @@ class ToolboxUI(QMainWindow):
 
     # Signals to comply with the spinetoolbox.spine_logger.LoggingSignals interface.
     msg = Signal(str)
+    msg_success = Signal(str)
     msg_error = Signal(str)
     msg_warning = Signal(str)
     dialog = Signal(str)
     # The rest of the msg_* signals should be moved to LoggingSignals in the long run.
-    msg_success = Signal(str)
     msg_proc = Signal(str)
     msg_proc_error = Signal(str)
     tool_specification_model_changed = Signal("QVariant")

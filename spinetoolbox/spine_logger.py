@@ -31,6 +31,8 @@ class LoggingSignals(QObject):
 
     msg = Signal(str)
     """Emits a notification message."""
+    msg_success = Signal(str)
+    """Emits a message on success"""
     msg_warning = Signal(str)
     """Emits a warning message."""
     msg_error = Signal(str)
