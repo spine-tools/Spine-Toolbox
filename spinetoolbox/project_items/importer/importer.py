@@ -16,6 +16,7 @@ Contains Importer project item class.
 :date:   10.6.2019
 """
 
+from collections import Counter
 import os
 import logging
 import json
@@ -322,6 +323,7 @@ class Importer(ProjectItem):
     def _do_handle_dag_changed(self, resources):
         """See base class."""
         file_list = [r.path for r in resources if r.type_ == "file" and not r.metadata.get("future")]
+        self._notify_if_duplicate_file_paths(file_list)
         self.update_file_model(set(file_list))
         if not file_list:
             self.add_notification(
@@ -359,3 +361,13 @@ class Importer(ProjectItem):
         """
         for widget in self._preview_widget.values():
             widget.close()
+
+    def _notify_if_duplicate_file_paths(self, file_list):
+        """Adds a notification if file_list contains duplicate entries."""
+        file_counter = Counter(file_list)
+        duplicates = list()
+        for file_name, count in file_counter.items():
+            if count > 1:
+                duplicates.append(file_name)
+        if duplicates:
+            self.add_notification("Duplicate input files from upstream items:<br>{}".format("<br>".join(duplicates)))
