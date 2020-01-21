@@ -58,7 +58,7 @@ class TestSpineToolboxProject(unittest.TestCase):
         add_ds(self.toolbox.project(), name)
         # Check that an item with the created name is found from project item model
         found_index = self.toolbox.project_item_model.find_item(name)
-        found_item = self.toolbox.project_item_model.project_item(found_index)
+        found_item = self.toolbox.project_item_model.item(found_index).project_item
         self.assertEqual(found_item.name, name)
         # Check that the created item is a Data Store
         self.assertEqual(found_item.item_type(), "Data Store")
@@ -82,7 +82,7 @@ class TestSpineToolboxProject(unittest.TestCase):
         add_dc(self.toolbox.project(), name)
         # Check that an item with the created name is found from project item model
         found_index = self.toolbox.project_item_model.find_item(name)
-        found_item = self.toolbox.project_item_model.project_item(found_index)
+        found_item = self.toolbox.project_item_model.item(found_index).project_item
         self.assertEqual(found_item.name, name)
         # Check that the created item is a Data Connection
         self.assertEqual(found_item.item_type(), "Data Connection")
@@ -95,7 +95,7 @@ class TestSpineToolboxProject(unittest.TestCase):
         add_tool(self.toolbox.project(), name)
         # Check that an item with the created name is found from project item model
         found_index = self.toolbox.project_item_model.find_item(name)
-        found_item = self.toolbox.project_item_model.project_item(found_index)
+        found_item = self.toolbox.project_item_model.item(found_index).project_item
         self.assertEqual(found_item.name, name)
         # Check that the created item is a Tool
         self.assertEqual(found_item.item_type(), "Tool")
@@ -108,7 +108,7 @@ class TestSpineToolboxProject(unittest.TestCase):
         add_view(self.toolbox.project(), name)
         # Check that an item with the created name is found from project item model
         found_index = self.toolbox.project_item_model.find_item(name)
-        found_item = self.toolbox.project_item_model.project_item(found_index)
+        found_item = self.toolbox.project_item_model.item(found_index).project_item
         self.assertEqual(found_item.name, name)
         # Check that the created item is a View
         self.assertEqual(found_item.item_type(), "View")
@@ -133,17 +133,17 @@ class TestSpineToolboxProject(unittest.TestCase):
         add_importer(p, imp_name)
         add_exporter(p, exp_name)
         # Check that the items are found from project item model
-        ds = self.toolbox.project_item_model.project_item(self.toolbox.project_item_model.find_item(ds_name))
+        ds = self.toolbox.project_item_model.item(self.toolbox.project_item_model.find_item(ds_name))
         self.assertEqual(ds_name, ds.name)
-        dc = self.toolbox.project_item_model.project_item(self.toolbox.project_item_model.find_item(dc_name))
+        dc = self.toolbox.project_item_model.item(self.toolbox.project_item_model.find_item(dc_name))
         self.assertEqual(dc_name, dc.name)
-        tool = self.toolbox.project_item_model.project_item(self.toolbox.project_item_model.find_item(tool_name))
+        tool = self.toolbox.project_item_model.item(self.toolbox.project_item_model.find_item(tool_name))
         self.assertEqual(tool_name, tool.name)
-        view = self.toolbox.project_item_model.project_item(self.toolbox.project_item_model.find_item(view_name))
+        view = self.toolbox.project_item_model.item(self.toolbox.project_item_model.find_item(view_name))
         self.assertEqual(view_name, view.name)
-        importer = self.toolbox.project_item_model.project_item(self.toolbox.project_item_model.find_item(imp_name))
+        importer = self.toolbox.project_item_model.item(self.toolbox.project_item_model.find_item(imp_name))
         self.assertEqual(imp_name, importer.name)
-        exporter = self.toolbox.project_item_model.project_item(self.toolbox.project_item_model.find_item(exp_name))
+        exporter = self.toolbox.project_item_model.item(self.toolbox.project_item_model.find_item(exp_name))
         self.assertEqual(exp_name, exporter.name)
         # DAG handler should now have six graphs, each with one item
         dag_hndlr = self.toolbox.project().dag_handler
@@ -164,11 +164,9 @@ class TestSpineToolboxProject(unittest.TestCase):
         self.assertIsNotNone(exporter_graph)
 
     def test_execute_project_with_single_item(self):
-        item_name = "Tool"
-        add_tool(self.toolbox.project(), item_name)
-        item_index = self.toolbox.project_item_model.find_item(item_name)
-        item = self.toolbox.project_item_model.project_item(item_index)
-        item._do_execute = mock.MagicMock(return_value=True)
+        item_name = self.add_tool()
+        item = self.toolbox.project_item_model.get_item(item_name).project_item
+        item.execute_forward = mock.MagicMock(return_value=True)
         anim = QVariantAnimation()
         anim.setDuration(0)
         item.make_execution_leave_animation = mock.MagicMock(return_value=anim)
@@ -177,10 +175,10 @@ class TestSpineToolboxProject(unittest.TestCase):
 
     def test_execute_project_with_two_dags(self):
         item1_name = self.add_tool()
-        item1 = self.toolbox.project_item_model.get_item(item1_name)
+        item1 = self.toolbox.project_item_model.get_item(item1_name).project_item
         item1.execute_forward = mock.MagicMock(return_value=True)
         item2_name = self.add_view()
-        item2 = self.toolbox.project_item_model.get_item(item2_name)
+        item2 = self.toolbox.project_item_model.get_item(item2_name).project_item
         item2.execute_forward = mock.MagicMock(return_value=True)
         anim = QVariantAnimation()
         anim.setDuration(0)
@@ -204,10 +202,10 @@ class TestSpineToolboxProject(unittest.TestCase):
 
     def test_execute_selected_dag(self):
         item1_name = self.add_tool()
-        item1 = self.toolbox.project_item_model.get_item(item1_name)
+        item1 = self.toolbox.project_item_model.get_item(item1_name).project_item
         item1.execute_forward = mock.MagicMock(return_value=True)
         item2_name = self.add_view()
-        item2 = self.toolbox.project_item_model.get_item(item2_name)
+        item2 = self.toolbox.project_item_model.get_item(item2_name).project_item
         item2.execute_forward = mock.MagicMock(return_value=True)
         anim = QVariantAnimation()
         anim.setDuration(0)
@@ -240,13 +238,13 @@ class TestSpineToolboxProject(unittest.TestCase):
 
     def test_execute_selected_item_within_single_dag(self):
         data_store_name = self.add_ds()
-        data_store = self.toolbox.project_item_model.get_item(data_store_name)
+        data_store = self.toolbox.project_item_model.get_item(data_store_name).project_item
         data_store.execute_forward = mock.MagicMock(return_value=True)
         tool_name = self.add_tool()
-        tool = self.toolbox.project_item_model.get_item(tool_name)
+        tool = self.toolbox.project_item_model.get_item(tool_name).project_item
         tool.execute_forward = mock.MagicMock(return_value=True)
         view_name = self.add_view()
-        view = self.toolbox.project_item_model.get_item(view_name)
+        view = self.toolbox.project_item_model.get_item(view_name).project_item
         view.execute_forward = mock.MagicMock(return_value=True)
         anim = QVariantAnimation()
         anim.setDuration(0)

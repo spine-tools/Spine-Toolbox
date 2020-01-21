@@ -26,6 +26,7 @@ from .helpers import create_dir, inverted
 from .tool_specifications import JuliaTool, PythonTool, GAMSTool, ExecutableTool
 from .config import LATEST_PROJECT_VERSION, PROJECT_FILENAME
 from .dag_handler import DirectedGraphHandler
+from .project_tree_item import LeafProjectTreeItem
 from .spine_db_manager import SpineDBManager
 
 
@@ -143,8 +144,8 @@ class SpineToolboxProject(MetaObject):
             category = category_item.name
             category_dict = items_dict[category] = dict()
             for item in self._toolbox.project_item_model.items(category):
-                category_dict[item.name] = item.item_dict()
-        # Write project on disk
+                category_dict[item.name] = item.project_item.item_dict()
+        # Save project to file
         saved_dict = dict(project=project_dict, objects=items_dict)
         # Write into JSON file
         with open(self.config_file, "w") as fp:
@@ -242,24 +243,25 @@ class SpineToolboxProject(MetaObject):
         if not category_ind:
             self._toolbox.msg_error.emit("Category {0} not found".format(category_name))
             return
-        category_item = self._toolbox.project_item_model.project_item(category_ind)
+        category_item = self._toolbox.project_item_model.item(category_ind)
         item_maker = category_item.item_maker()
         for item_dict in items:
             try:
-                item = item_maker(self._toolbox, **item_dict)
+                item = item_maker(**item_dict, toolbox=self._toolbox, logger=self._toolbox)
+                tree_item = LeafProjectTreeItem(item, self._toolbox)
             except TypeError:
                 self._toolbox.msg_error.emit(
                     "Loading project item <b>{0}</b> into category <b>{1}</b> failed. "
                     "This is most likely caused by an outdated project file.".format(item_dict["name"], category_name)
                 )
                 continue
-            self._toolbox.project_item_model.insert_item(item, category_ind)
+            self._toolbox.project_item_model.insert_item(tree_item, category_ind)
             # Append new node to networkx graph
             self.add_to_dag(item.name)
             if verbosity:
                 self._toolbox.msg.emit("{0} <b>{1}</b> added to project.".format(item.item_type(), item.name))
             if set_selected:
-                self.set_item_selected(item)
+                self.set_item_selected(tree_item)
 
     def add_to_dag(self, item_name):
         """Add new node (project item) to the directed graph."""
@@ -269,7 +271,7 @@ class SpineToolboxProject(MetaObject):
         """Sets item selected and shows its info screen.
 
         Args:
-            item (ProjectItem): Project item to select
+            item (BaseProjectTreeItem): Project item to select
         """
         ind = self._toolbox.project_item_model.find_item(item.name)
         self._toolbox.ui.treeView_project.setCurrentIndex(ind)
@@ -321,7 +323,7 @@ class SpineToolboxProject(MetaObject):
                 "Possible fix: remove connection(s) {0}.".format(", ".join(edges))
             )
             return
-        items = [self._toolbox.project_item_model.get_item(name) for name in node_successors]
+        items = [self._toolbox.project_item_model.get_item(name).project_item for name in node_successors]
         self.engine = SpineEngine(items, node_successors, execution_permits)
         self._toolbox.msg.emit("<b>Starting DAG {0}</b>".format(dag_identifier))
         self._toolbox.msg.emit("Order: {0}".format(" -> ".join(list(node_successors))))
@@ -350,7 +352,7 @@ class SpineToolboxProject(MetaObject):
         dags = set()
         executable_item_names = list()
         for ind in selected_indexes:
-            item = self._toolbox.project_item_model.project_item(ind)
+            item = self._toolbox.project_item_model.item(ind)
             executable_item_names.append(item.name)
             dag = self.dag_handler.dag_with_node(item.name)
             if not dag:
@@ -425,16 +427,16 @@ class SpineToolboxProject(MetaObject):
             edges = self.dag_handler.edges_causing_loops(dag)
             for node in dag.nodes():
                 ind = self._toolbox.project_item_model.find_item(node)
-                project_item = self._toolbox.project_item_model.project_item(ind)
+                project_item = self._toolbox.project_item_model.item(ind).project_item
                 project_item.invalidate_workflow(edges)
             return
         # Make resource map and run simulation
         node_predecessors = inverted(node_successors)
         for rank, item_name in enumerate(node_successors):
-            item = self._toolbox.project_item_model.get_item(item_name)
+            item = self._toolbox.project_item_model.get_item(item_name).project_item
             resources = []
             for parent_name in node_predecessors.get(item_name, set()):
-                parent_item = self._toolbox.project_item_model.get_item(parent_name)
+                parent_item = self._toolbox.project_item_model.get_item(parent_name).project_item
                 resources += parent_item.output_resources_forward()
             item.handle_dag_changed(rank, resources)
 
@@ -455,6 +457,10 @@ class SpineToolboxProject(MetaObject):
             self._toolbox.msg_error.emit(
                 "[BUG] Could not find a graph containing {0}. " "<b>Please reopen the project.</b>".format(item)
             )
+
+    @property
+    def settings(self):
+        return self._qsettings
 
 
 def _update_if_changed(category_name):

@@ -34,7 +34,7 @@ class TestImporter(unittest.TestCase):
         item_dict = dict(name="importer", description="", mappings=dict(), x=0, y=0)
         self.toolbox.project().add_project_items("Importers", item_dict)
         index = self.toolbox.project_item_model.find_item("importer")
-        self.importer = self.toolbox.project_item_model.project_item(index)
+        self.importer = self.toolbox.project_item_model.item(index).project_item
 
     def tearDown(self):
         """Clean up."""
@@ -97,11 +97,6 @@ class TestImporter(unittest.TestCase):
         # Check data_dir
         expected_data_dir = os.path.join(self.toolbox.project().items_dir, expected_short_name)
         self.assertEqual(expected_data_dir, self.importer.data_dir)  # Check data dir
-        # Check there's a dag containing a node with the new name and that no dag contains a node with the old name
-        dag_with_new_node_name = self.toolbox.project().dag_handler.dag_with_node(expected_name)
-        self.assertIsInstance(dag_with_new_node_name, DiGraph)
-        dag_with_old_node_name = self.toolbox.project().dag_handler.dag_with_node("DI")
-        self.assertIsNone(dag_with_old_node_name)
 
     def test_handle_dag_changed(self):
         """Tests that upstream resource files are listed in the Importer view."""

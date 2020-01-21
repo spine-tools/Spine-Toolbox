@@ -58,22 +58,24 @@ from .config import STATUSBAR_SS, TEXTBROWSER_SS, MAINWINDOW_SS, \
 from .helpers import get_datetime, erase_dir, busy_effect, set_taskbar_icon, \
     supported_img_formats, create_dir, recursive_overwrite, serialize_path, \
     deserialize_path
-from .project_item import RootProjectItem, CategoryProjectItem
 from .project_upgrader import ProjectUpgrader
+from .project_tree_item import CategoryProjectTreeItem, LeafProjectTreeItem, RootProjectTreeItem
 from .project_items import data_store, data_connection, exporter, tool, view, importer
 
 
 class ToolboxUI(QMainWindow):
     """Class for application main GUI functions."""
 
-    # Custom signals
-    msg = Signal(str, name="msg")
-    msg_success = Signal(str, name="msg_success")
-    msg_error = Signal(str, name="msg_error")
-    msg_warning = Signal(str, name="msg_warning")
-    msg_proc = Signal(str, name="msg_proc")
-    msg_proc_error = Signal(str, name="msg_proc_error")
-    tool_specification_model_changed = Signal("QVariant", name="tool_specification_model_changed")
+    # Signals to comply with the spinetoolbox.spine_logger.LoggingSignals interface.
+    msg = Signal(str)
+    msg_success = Signal(str)
+    msg_error = Signal(str)
+    msg_warning = Signal(str)
+    dialog = Signal(str)
+    # The rest of the msg_* signals should be moved to LoggingSignals in the long run.
+    msg_proc = Signal(str)
+    msg_proc_error = Signal(str)
+    tool_specification_model_changed = Signal("QVariant")
 
     def __init__(self):
         """ Initialize application and main window."""
@@ -152,7 +154,9 @@ class ToolboxUI(QMainWindow):
         self.msg_proc.connect(self.add_process_message)
         self.msg_proc_error.connect(self.add_process_error_message)
         self.ui.textBrowser_eventlog.anchorClicked.connect(self.open_anchor)
-        # Menu actions
+        # Message box signals
+        self.dialog.connect(self._show_message_box)
+        # Menu commands
         self.ui.actionNew.triggered.connect(self.new_project)
         self.ui.actionOpen.triggered.connect(self.open_project)
         self.ui.actionOpen_recent.setMenu(self.recent_projects_menu)
@@ -548,14 +552,14 @@ class ToolboxUI(QMainWindow):
     def init_project_item_model(self):
         """Initializes project item model. Create root and category items and
         add them to the model."""
-        root_item = RootProjectItem()
+        root_item = RootProjectTreeItem()
         self.project_item_model = ProjectItemModel(self, root=root_item)
         for category, category_dict in self.categories.items():
             item_maker = category_dict["item_maker"]
             icon_maker = category_dict["icon_maker"]
             add_form_maker = category_dict["add_form_maker"]
             properties_ui = category_dict["properties_ui"]
-            category_item = CategoryProjectItem(category, "", item_maker, icon_maker, add_form_maker, properties_ui)
+            category_item = CategoryProjectTreeItem(category, "", item_maker, icon_maker, add_form_maker, properties_ui)
             self.project_item_model.insert_item(category_item)
         self.ui.treeView_project.setModel(self.project_item_model)
         self.ui.treeView_project.header().hide()
@@ -701,7 +705,7 @@ class ToolboxUI(QMainWindow):
         and show correct properties tab for the latter.
         """
         inds = self.ui.treeView_project.selectedIndexes()
-        proj_items = [self.project_item_model.project_item(i) for i in inds]
+        proj_items = [self.project_item_model.item(i).project_item for i in inds]
         # NOTE: Category items are not selectable anymore
         # Sync selection with the scene
         if proj_items:
@@ -832,7 +836,7 @@ class ToolboxUI(QMainWindow):
             self.msg_error.emit("Could not find Tool specification <b>{0}</b>".format(tool_specification.name))
             return
         # Get all Tool project items
-        tools = self.project_item_model.items("Tools")
+        tools = [item.project_item for item in self.project_item_model.items("Tools")]
         for tool_item in tools:
             if not tool_item.tool_specification():
                 continue
@@ -967,8 +971,8 @@ class ToolboxUI(QMainWindow):
             delete_item (bool): If set to True, deletes the directories and data associated with the item
             check_dialog (bool): If True, shows 'Are you sure?' message box
         """
-        project_item = self.project_item_model.project_item(ind)
-        name = project_item.name
+        item = self.project_item_model.item(ind)
+        name = item.name
         if check_dialog:
             if not delete_item:
                 msg = (
@@ -987,17 +991,17 @@ class ToolboxUI(QMainWindow):
             if answer != QMessageBox.Ok:
                 return
         try:
-            data_dir = project_item.data_dir
+            data_dir = item.data_dir
         except AttributeError:
             data_dir = None
         # Remove item from project model
-        if not self.project_item_model.remove_item(project_item, parent=ind.parent()):
+        if not self.project_item_model.remove_item(item, parent=ind.parent()):
             self.msg_error.emit("Removing item <b>{0}</b> from project failed".format(name))
         # Remove item icon and connected links (QGraphicsItems) from scene
-        icon = project_item.get_icon()
+        icon = item.project_item.get_icon()
         self.ui.graphicsView.remove_icon(icon)
         self._project.dag_handler.remove_node_from_graph(name)
-        project_item.tear_down()
+        item.project_item.tear_down()
         if delete_item:
             if data_dir:
                 # Remove data directory and all its contents
@@ -1267,7 +1271,7 @@ class ToolboxUI(QMainWindow):
         if not category_ind:
             self.msg_error.emit("Category {0} not found".format(item_category))
             return
-        category = self.project_item_model.project_item(category_ind)
+        category = self.project_item_model.item(category_ind)
         self.add_project_item_form = category._add_form_maker(self, x, y)
         self.add_project_item_form.show()
 
@@ -1364,7 +1368,7 @@ class ToolboxUI(QMainWindow):
                 pass
         else:
             # Clicked on an item, show the custom context menu for that item
-            item = self.project_item_model.project_item(ind)
+            item = self.project_item_model.item(ind)
             self.project_item_context_menu = item.custom_context_menu(self, pos)
             action = self.project_item_context_menu.get_action()
             item.apply_context_menu_action(self, action)
@@ -1426,7 +1430,8 @@ class ToolboxUI(QMainWindow):
         if not self._project:
             return
         for item in self.project_item_model.items():
-            item.tear_down()
+            if isinstance(item, LeafProjectTreeItem):
+                item.project_item.tear_down()
 
     def _tasks_before_exit(self):
         """
@@ -1630,10 +1635,10 @@ class ToolboxUI(QMainWindow):
                 continue
             name = item_icon.name()
             index = self.project_item_model.find_item(name)
-            item = self.project_item_model.project_item(index)
+            item = self.project_item_model.item(index)
             category = self.project_item_model.category_of_item(item.name)
             category_items = serialized_items.setdefault(category.name, list())
-            item_dict = item.item_dict()
+            item_dict = item.project_item.item_dict()
             item_dict["name"] = item.name
             category_items.append(item_dict)
         return serialized_items
@@ -1784,3 +1789,8 @@ class ToolboxUI(QMainWindow):
         mirror_action_to_project_tree_view(copy_action)
         mirror_action_to_project_tree_view(paste_action)
         mirror_action_to_project_tree_view(duplicate_action)
+
+    @Slot(str, str)
+    def _show_message_box(self, title, message):
+        """Shows an information message box."""
+        QMessageBox.information(self, title, message)

@@ -36,5 +36,5 @@ class AddExporterWidget(AddProjectItemWidget):
 
     def call_add_item(self):
         """Creates new Item according to user's selections."""
-        item = dict(name=self.name, description=self.description, x=self._x, y=self._y)
+        item = dict(name=self.name, description=self.description, settings_packs=None, x=self._x, y=self._y)
         self._project.add_project_items("Exporters", item, set_selected=True)

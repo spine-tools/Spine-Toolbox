@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <!--
 ######################################################################################################################
 # Copyright (C) 2017 - 2019 Spine project consortium
@@ -22,7 +22,7 @@
     <x>0</x>
     <y>0</y>
     <width>603</width>
-    <height>325</height>
+    <height>367</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -34,7 +34,7 @@
      <property name="orientation">
       <enum>Qt::Horizontal</enum>
      </property>
-     <widget class="QGroupBox" name="groupBox">
+     <widget class="QGroupBox" name="set_group_box">
       <property name="title">
        <string>Sets</string>
       </property>
@@ -72,13 +72,6 @@
           </widget>
          </item>
          <item>
-          <widget class="QPushButton" name="set_as_global_parameters_object_class_button">
-           <property name="text">
-            <string>As Global</string>
-           </property>
-          </widget>
-         </item>
-         <item>
           <spacer name="verticalSpacer_2">
            <property name="orientation">
             <enum>Qt::Vertical</enum>
@@ -95,7 +88,7 @@
        </item>
       </layout>
      </widget>
-     <widget class="QGroupBox" name="groupBox_2">
+     <widget class="QGroupBox" name="contents_group_box">
       <property name="title">
        <string>Set Contents</string>
       </property>
@@ -117,6 +110,16 @@
             </size>
            </property>
           </spacer>
+         </item>
+         <item>
+          <widget class="QPushButton" name="record_sort_alphabetic">
+           <property name="toolTip">
+            <string>Sort set contents alphabetically.</string>
+           </property>
+           <property name="text">
+            <string>Alphabetic</string>
+           </property>
+          </widget>
          </item>
          <item>
           <widget class="QPushButton" name="record_move_up_button">
@@ -152,55 +155,93 @@
     </widget>
    </item>
    <item>
-    <layout class="QHBoxLayout" name="horizontalLayout_3">
-     <item>
-      <widget class="QGroupBox" name="groupBox_3">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
-       <property name="title">
-        <string>Global Parameters</string>
-       </property>
-       <layout class="QVBoxLayout" name="verticalLayout_3">
+    <widget class="QWidget" name="misc_control_holder" native="true">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout_3">
+      <item>
+       <layout class="QHBoxLayout" name="horizontalLayout_4">
+        <item>
+         <widget class="QPushButton" name="open_indexed_parameter_settings_button">
+          <property name="toolTip">
+           <string>Set up indexing for time series and other indexed parameters.</string>
+          </property>
+          <property name="text">
+           <string>Indexed parameters...</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="indexing_status_label">
+          <property name="text">
+           <string/>
+          </property>
+          <property name="textFormat">
+           <enum>Qt::RichText</enum>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <spacer name="horizontalSpacer_2">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <layout class="QHBoxLayout" name="horizontalLayout_3">
         <item>
          <layout class="QFormLayout" name="formLayout">
           <item row="0" column="0">
            <widget class="QLabel" name="label">
+            <property name="toolTip">
+             <string>Selected domain's parameters are exported as GAMS scalars.
+The domain itself is not exported.</string>
+            </property>
             <property name="text">
-             <string>Object Class:</string>
+             <string>Global parameters domain:</string>
             </property>
            </widget>
           </item>
           <item row="0" column="1">
-           <widget class="QLineEdit" name="global_parameters_object_class_line_edit"/>
+           <widget class="QComboBox" name="global_parameters_combo_box"/>
           </item>
          </layout>
         </item>
+        <item>
+         <spacer name="horizontalSpacer">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
        </layout>
-      </widget>
-     </item>
-     <item>
-      <spacer name="horizontalSpacer">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-       <property name="sizeHint" stdset="0">
-        <size>
-         <width>40</width>
-         <height>20</height>
-        </size>
-       </property>
-      </spacer>
-     </item>
-    </layout>
+      </item>
+     </layout>
+    </widget>
    </item>
    <item>
     <widget class="QDialogButtonBox" name="button_box">
      <property name="standardButtons">
-      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
+      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok|QDialogButtonBox::RestoreDefaults</set>
      </property>
     </widget>
    </item>

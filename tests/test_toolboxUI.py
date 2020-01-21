@@ -27,7 +27,7 @@ from PySide2.QtCore import SIGNAL, Qt, QPoint, QItemSelectionModel
 from PySide2.QtTest import QTest
 from spinetoolbox.project import SpineToolboxProject
 from spinetoolbox.graphics_items import ProjectItemIcon, Link
-from spinetoolbox.project_item import RootProjectItem
+from spinetoolbox.project_tree_item import RootProjectTreeItem
 from spinetoolbox.resources_icons_rc import qInitResources
 from .mock_helpers import create_toolboxui, create_project, add_ds, add_dc
 
@@ -91,32 +91,32 @@ class TestToolboxUI(unittest.TestCase):
         item1 = self.toolbox.project_item_model.root().child(0)
         self.assertTrue(item1.name == "Data Stores", "Item on row 0 is not 'Data Stores'")
         self.assertTrue(
-            isinstance(item1.parent(), RootProjectItem), "Parent item of category item on row 0 should be root"
+            isinstance(item1.parent(), RootProjectTreeItem), "Parent item of category item on row 0 should be root"
         )
         item2 = self.toolbox.project_item_model.root().child(1)
         self.assertTrue(item2.name == "Data Connections", "Item on row 1 is not 'Data Connections'")
         self.assertTrue(
-            isinstance(item2.parent(), RootProjectItem), "Parent item of category item on row 1 should be root"
+            isinstance(item2.parent(), RootProjectTreeItem), "Parent item of category item on row 1 should be root"
         )
         item3 = self.toolbox.project_item_model.root().child(2)
         self.assertTrue(item3.name == "Tools", "Item on row 2 is not 'Tools'")
         self.assertTrue(
-            isinstance(item3.parent(), RootProjectItem), "Parent item of category item on row 2 should be root"
+            isinstance(item3.parent(), RootProjectTreeItem), "Parent item of category item on row 2 should be root"
         )
         item4 = self.toolbox.project_item_model.root().child(3)
         self.assertTrue(item4.name == "Views", "Item on row 3 is not 'Views'")
         self.assertTrue(
-            isinstance(item4.parent(), RootProjectItem), "Parent item of category item on row 3 should be root"
+            isinstance(item4.parent(), RootProjectTreeItem), "Parent item of category item on row 3 should be root"
         )
         item5 = self.toolbox.project_item_model.root().child(4)
         self.assertTrue(item5.name == "Importers", "Item on row 4 is not 'Importers'")
         self.assertTrue(
-            isinstance(item5.parent(), RootProjectItem), "Parent item of category item on row 4 should be root"
+            isinstance(item5.parent(), RootProjectTreeItem), "Parent item of category item on row 4 should be root"
         )
         item6 = self.toolbox.project_item_model.root().child(5)
         self.assertTrue(item6.name == "Exporters", "Item on row 5 is not 'Exporters'")
         self.assertTrue(
-            isinstance(item6.parent(), RootProjectItem), "Parent item of category item on row 5 should be root"
+            isinstance(item6.parent(), RootProjectTreeItem), "Parent item of category item on row 5 should be root"
         )
 
     def test_init_tool_specification_model(self):
@@ -180,19 +180,19 @@ class TestToolboxUI(unittest.TestCase):
         self.assertEqual(len(links), 3)
         # Check project items have the right links
         index_a = self.toolbox.project_item_model.find_item("a")
-        item_a = self.toolbox.project_item_model.project_item(index_a)
+        item_a = self.toolbox.project_item_model.item(index_a).project_item
         icon_a = item_a.get_icon()
         links_a = [link for conn in icon_a.connectors.values() for link in conn.links]
         index_b = self.toolbox.project_item_model.find_item("b")
-        item_b = self.toolbox.project_item_model.project_item(index_b)
+        item_b = self.toolbox.project_item_model.item(index_b).project_item
         icon_b = item_b.get_icon()
         links_b = [link for conn in icon_b.connectors.values() for link in conn.links]
         index_c = self.toolbox.project_item_model.find_item("c")
-        item_c = self.toolbox.project_item_model.project_item(index_c)
+        item_c = self.toolbox.project_item_model.item(index_c).project_item
         icon_c = item_c.get_icon()
         links_c = [link for conn in icon_c.connectors.values() for link in conn.links]
         index_d = self.toolbox.project_item_model.find_item("d")
-        item_d = self.toolbox.project_item_model.project_item(index_d)
+        item_d = self.toolbox.project_item_model.item(index_d).project_item
         icon_d = item_d.get_icon()
         links_d = [link for conn in icon_d.connectors.values() for link in conn.links]
         self.assertEqual(len(links_a), 1)
@@ -248,7 +248,7 @@ class TestToolboxUI(unittest.TestCase):
         self.assertEqual(tv_sm.currentIndex(), ds_ind)
         self.assertEqual(1, len(tv_sm.selectedIndexes()))
         # Active project item should be DS1
-        self.assertEqual(self.toolbox.project_item_model.project_item(ds_ind), self.toolbox.active_project_item)
+        self.assertEqual(self.toolbox.project_item_model.item(ds_ind).project_item, self.toolbox.active_project_item)
 
     def test_selection_in_project_item_list_2(self):
         """Test item selection in treeView_project. Simulates mouse clicks on a Data Store items.
@@ -278,7 +278,7 @@ class TestToolboxUI(unittest.TestCase):
         self.assertEqual(tv_sm.currentIndex(), ds2_ind)
         self.assertEqual(1, len(tv_sm.selectedIndexes()))
         # Active project item should be DS2
-        self.assertEqual(self.toolbox.project_item_model.project_item(ds2_ind), self.toolbox.active_project_item)
+        self.assertEqual(self.toolbox.project_item_model.item(ds2_ind).project_item, self.toolbox.active_project_item)
 
     def test_selection_in_project_item_list_3(self):
         """Test item selection in treeView_project. Simulates mouse clicks on a Data Store items.
@@ -326,7 +326,7 @@ class TestToolboxUI(unittest.TestCase):
         self.assertEqual(n_items, 1)  # Check that the project contains one item
         dc1_index = self.toolbox.project_item_model.find_item(dc1)
         gv = self.toolbox.ui.graphicsView
-        dc1_item = self.toolbox.project_item_model.project_item(dc1_index)
+        dc1_item = self.toolbox.project_item_model.item(dc1_index).project_item
         dc1_center_point = self.find_click_point_of_pi(dc1_item, gv)  # Center point in graphics view viewport coords.
         # Simulate mouse click on Data Connection in Design View
         QTest.mouseClick(gv.viewport(), Qt.LeftButton, Qt.NoModifier, dc1_center_point)
@@ -336,7 +336,7 @@ class TestToolboxUI(unittest.TestCase):
         self.assertEqual(1, len(tv_sm.selectedIndexes()))
         self.assertEqual(1, len(gv.scene().selectedItems()))
         # Active project item should be DC1
-        self.assertEqual(self.toolbox.project_item_model.project_item(dc1_index), self.toolbox.active_project_item)
+        self.assertEqual(self.toolbox.project_item_model.item(dc1_index).project_item, self.toolbox.active_project_item)
 
     def test_selection_in_design_view_2(self):
         """Test item selection in Design View.
@@ -352,8 +352,8 @@ class TestToolboxUI(unittest.TestCase):
         dc1_index = self.toolbox.project_item_model.find_item(dc1)
         dc2_index = self.toolbox.project_item_model.find_item(dc2)
         gv = self.toolbox.ui.graphicsView
-        dc1_item = self.toolbox.project_item_model.project_item(dc1_index)
-        dc2_item = self.toolbox.project_item_model.project_item(dc2_index)
+        dc1_item = self.toolbox.project_item_model.item(dc1_index).project_item
+        dc2_item = self.toolbox.project_item_model.item(dc2_index).project_item
         dc1_center_point = self.find_click_point_of_pi(dc1_item, gv)
         dc2_center_point = self.find_click_point_of_pi(dc2_item, gv)
         # Mouse click on dc1
@@ -366,7 +366,7 @@ class TestToolboxUI(unittest.TestCase):
         self.assertEqual(1, len(tv_sm.selectedIndexes()))
         self.assertEqual(1, len(gv.scene().selectedItems()))
         # Active project item should be DC2
-        self.assertEqual(self.toolbox.project_item_model.project_item(dc2_index), self.toolbox.active_project_item)
+        self.assertEqual(self.toolbox.project_item_model.item(dc2_index).project_item, self.toolbox.active_project_item)
 
     def test_selection_in_design_view_3(self):
         """Test item selection in Design View.
@@ -377,7 +377,7 @@ class TestToolboxUI(unittest.TestCase):
         add_dc(self.toolbox.project(), dc1, x=0, y=0)
         dc1_index = self.toolbox.project_item_model.find_item(dc1)
         gv = self.toolbox.ui.graphicsView
-        dc1_item = self.toolbox.project_item_model.project_item(dc1_index)
+        dc1_item = self.toolbox.project_item_model.item(dc1_index).project_item
         dc1_center_point = self.find_click_point_of_pi(dc1_item, gv)
         # Mouse click on dc1
         QTest.mouseClick(gv.viewport(), Qt.LeftButton, Qt.NoModifier, dc1_center_point)
@@ -405,8 +405,8 @@ class TestToolboxUI(unittest.TestCase):
         dc1_index = self.toolbox.project_item_model.find_item(dc1)
         dc2_index = self.toolbox.project_item_model.find_item(dc2)
         gv = self.toolbox.ui.graphicsView
-        dc1_item = self.toolbox.project_item_model.project_item(dc1_index)
-        dc2_item = self.toolbox.project_item_model.project_item(dc2_index)
+        dc1_item = self.toolbox.project_item_model.item(dc1_index).project_item
+        dc2_item = self.toolbox.project_item_model.item(dc2_index).project_item
         # Add link between dc1 and dc2
         gv.add_link(dc1_item.get_icon().conn_button("bottom"), dc2_item.get_icon().conn_button("bottom"))
         # Find link
@@ -447,8 +447,8 @@ class TestToolboxUI(unittest.TestCase):
         dc1_index = self.toolbox.project_item_model.find_item(dc1)
         dc2_index = self.toolbox.project_item_model.find_item(dc2)
         gv = self.toolbox.ui.graphicsView
-        dc1_item = self.toolbox.project_item_model.project_item(dc1_index)
-        dc2_item = self.toolbox.project_item_model.project_item(dc2_index)
+        dc1_item = self.toolbox.project_item_model.item(dc1_index).project_item
+        dc2_item = self.toolbox.project_item_model.item(dc2_index).project_item
         # Add link between dc1 and dc2
         gv.add_link(dc1_item.get_icon().conn_button("bottom"), dc2_item.get_icon().conn_button("bottom"))
         # Find link
@@ -493,8 +493,8 @@ class TestToolboxUI(unittest.TestCase):
         dc1_index = self.toolbox.project_item_model.find_item(dc1)
         dc2_index = self.toolbox.project_item_model.find_item(dc2)
         gv = self.toolbox.ui.graphicsView
-        dc1_item = self.toolbox.project_item_model.project_item(dc1_index)
-        dc2_item = self.toolbox.project_item_model.project_item(dc2_index)
+        dc1_item = self.toolbox.project_item_model.item(dc1_index).project_item
+        dc2_item = self.toolbox.project_item_model.item(dc2_index).project_item
         dc1_center_point = self.find_click_point_of_pi(dc1_item, gv)
         dc2_center_point = self.find_click_point_of_pi(dc2_item, gv)
         # Mouse click on dc1

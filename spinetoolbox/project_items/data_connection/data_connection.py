@@ -30,17 +30,20 @@ from spinetoolbox.config import APPLICATION_PATH, INVALID_FILENAME_CHARS
 
 
 class DataConnection(ProjectItem):
-    def __init__(self, toolbox, name, description, x, y, references=None):
+    def __init__(self, name, description, x, y, toolbox, logger, references=None):
         """Data Connection class.
 
         Args:
-            toolbox (ToolboxUI): QMainWindow instance
             name (str): Object name
             description (str): Object description
             x (float): Initial X coordinate of item icon
             y (float): Initial Y coordinate of item icon
+            toolbox (ToolboxUI): QMainWindow instance
+            logger (LoggingSignals): a logger instance
+            references (list): a list of file paths
         """
-        super().__init__(toolbox, name, description, x, y)
+        super().__init__(name, description, x, y, toolbox.project(), logger)
+        self._toolbox = toolbox
         self.reference_model = QStandardItemModel()  # References to files
         self.data_model = QStandardItemModel()  # Paths of project internal files. These are found in DC data directory
         self.datapackage_icon = QIcon(QPixmap(":/icons/datapkg.png"))
@@ -121,7 +124,7 @@ class DataConnection(ProjectItem):
         """
         for path in paths:
             if path in self.references:
-                self._toolbox.msg_warning.emit("Reference to file <b>{0}</b> already available".format(path))
+                self._logger.msg_warning.emit(f"Reference to file <b>{path}</b> already available")
                 return
             self.references.append(os.path.abspath(path))
         self.populate_reference_list(self.references)
@@ -138,11 +141,11 @@ class DataConnection(ProjectItem):
         """Add files to data directory"""
         for file_path in file_paths:
             filename = os.path.split(file_path)[1]
-            self._toolbox.msg.emit("Copying file <b>{0}</b> to <b>{1}</b>".format(filename, self.name))
+            self._logger.msg.emit(f"Copying file <b>{filename}</b> to <b>{self.name}</b>")
             try:
                 shutil.copy(file_path, self.data_dir)
             except OSError:
-                self._toolbox.msg_error.emit("[OSError] Copying failed")
+                self._logger.msg_error.emit("[OSError] Copying failed")
                 return
 
     @Slot(bool, name="add_references")
@@ -155,7 +158,7 @@ class DataConnection(ProjectItem):
             return
         for path in file_paths:
             if path in self.references:
-                self._toolbox.msg_warning.emit("Reference to file <b>{0}</b> already available".format(path))
+                self._logger.msg_warning.emit(f"Reference to file <b>{path}</b> already available")
                 continue
             self.references.append(os.path.abspath(path))
         self.populate_reference_list(self.references)
@@ -167,13 +170,13 @@ class DataConnection(ProjectItem):
         """
         indexes = self._properties_ui.treeView_dc_references.selectedIndexes()
         if not indexes:  # Nothing selected
-            self._toolbox.msg.emit("Please select references to remove")
+            self._logger.msg.emit("Please select references to remove")
             return
         rows = [ind.row() for ind in indexes]
         rows.sort(reverse=True)
         for row in rows:
             self.references.pop(row)
-        self._toolbox.msg.emit("Selected references removed")
+        self._logger.msg.emit("Selected references removed")
         self.populate_reference_list(self.references)
 
     @Slot(bool, name="copy_to_project")
@@ -181,19 +184,19 @@ class DataConnection(ProjectItem):
         """Copy selected file references to this Data Connection's data directory."""
         selected_indexes = self._properties_ui.treeView_dc_references.selectedIndexes()
         if not selected_indexes:
-            self._toolbox.msg_warning.emit("No files to copy")
+            self._logger.msg_warning.emit("No files to copy")
             return
         for index in selected_indexes:
             file_path = self.reference_model.itemFromIndex(index).data(Qt.DisplayRole)
             if not os.path.exists(file_path):
-                self._toolbox.msg_error.emit("File <b>{0}</b> does not exist".format(file_path))
+                self._logger.msg_error.emit(f"File <b>{file_path}</b> does not exist")
                 continue
             filename = os.path.split(file_path)[1]
-            self._toolbox.msg.emit("Copying file <b>{0}</b> to Data Connection <b>{1}</b>".format(filename, self.name))
+            self._logger.msg.emit(f"Copying file <b>{filename}</b> to Data Connection <b>{self.name}</b>")
             try:
                 shutil.copy(file_path, self.data_dir)
             except OSError:
-                self._toolbox.msg_error.emit("[OSError] Copying failed")
+                self._logger.msg_error.emit("[OSError] Copying failed")
                 continue
 
     @Slot("QModelIndex", name="open_reference")
@@ -209,7 +212,7 @@ class DataConnection(ProjectItem):
         # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
         res = QDesktopServices.openUrl(QUrl(url, QUrl.TolerantMode))
         if not res:
-            self._toolbox.msg_error.emit("Failed to open reference:<b>{0}</b>".format(reference))
+            self._logger.msg_error.emit(f"Failed to open reference:<b>{reference}</b>")
 
     @Slot("QModelIndex", name="open_data_file")
     def open_data_file(self, index):
@@ -224,7 +227,7 @@ class DataConnection(ProjectItem):
         # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
         res = QDesktopServices.openUrl(QUrl(url, QUrl.TolerantMode))
         if not res:
-            self._toolbox.msg_error.emit("Opening file <b>{0}</b> failed".format(data_file))
+            self._logger.msg_error.emit(f"Opening file <b>{data_file}</b> failed")
 
     @busy_effect
     def show_spine_datapackage_form(self):
@@ -263,31 +266,26 @@ class DataConnection(ProjectItem):
         # Check that file name has no invalid chars
         if any(True for x in file_name if x in INVALID_FILENAME_CHARS):
             msg = "File name <b>{0}</b> contains invalid characters.".format(file_name)
-            # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
-            QMessageBox.information(self._toolbox, "Creating file failed", msg)
+            self._logger.dialog.emit("Creating file failed", msg)
             return
         file_path = os.path.join(self.data_dir, file_name)
         if os.path.exists(file_path):
             msg = "File <b>{0}</b> already exists.".format(file_name)
-            # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
-            QMessageBox.information(self._toolbox, "Creating file failed", msg)
+            self._logger.dialog.emit("Creating file failed", msg)
             return
         try:
             with open(file_path, "w"):
-                self._toolbox.msg.emit(
-                    "File <b>{0}</b> created to Data Connection <b>{1}</b>".format(file_name, self.name)
-                )
+                self._logger.msg.emit(f"File <b>{file_name}</b> created to Data Connection <b>{self.name}</b>")
         except OSError:
             msg = "Please check directory permissions."
-            # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
-            QMessageBox.information(self._toolbox, "Creating file failed", msg)
+            self._logger.dialog.emit("Creating file failed", msg)
         return
 
     def remove_files(self):
         """Remove selected files from data directory."""
         indexes = self._properties_ui.treeView_dc_data.selectedIndexes()
         if not indexes:  # Nothing selected
-            self._toolbox.msg.emit("Please select files to remove")
+            self._logger.msg.emit("Please select files to remove")
             return
         file_list = list()
         for index in indexes:
@@ -311,9 +309,9 @@ class DataConnection(ProjectItem):
             path_to_remove = os.path.join(self.data_dir, filename)
             try:
                 os.remove(path_to_remove)
-                self._toolbox.msg.emit("File <b>{0}</b> removed".format(path_to_remove))
+                self._logger.msg.emit(f"File <b>{path_to_remove}</b> removed")
             except OSError:
-                self._toolbox.msg_error.emit("Removing file {0} failed.\nCheck permissions.".format(path_to_remove))
+                self._logger.msg_error.emit(f"Removing file {path_to_remove} failed.\nCheck permissions.")
         return
 
     def file_references(self):
@@ -384,7 +382,7 @@ class DataConnection(ProjectItem):
         resources = [ProjectItemResource(self, "file", url=pathlib.Path(ref).as_uri()) for ref in refs + f_list]
         return resources
 
-    def _do_handle_dag_changed(self, resources_upstream):
+    def _do_handle_dag_changed(self, resources):
         """See base class."""
         if not self.file_references() and not self.data_files():
             self.add_notification(
@@ -404,12 +402,11 @@ class DataConnection(ProjectItem):
 
         Args:
             new_name (str): New name
-
         Returns:
-            bool: Boolean value depending on success
+            bool: True if renaming succeeded, False otherwise
         """
-        ret = super().rename(new_name)
-        if not ret:
+        success = super().rename(new_name)
+        if not success:
             return False
         self.data_dir_watcher.removePaths(self.data_dir_watcher.directories())
         self.data_dir_watcher.addPath(self.data_dir)
@@ -428,13 +425,13 @@ class DataConnection(ProjectItem):
     def notify_destination(self, source_item):
         """See base class."""
         if source_item.item_type() == "Tool":
-            self._toolbox.msg.emit(
-                "Link established. Tool <b>{0}</b> output files will be "
-                "passed as references to item <b>{1}</b> after execution.".format(source_item.name, self.name)
+            self._logger.msg.emit(
+                f"Link established. Tool <b>{source_item.name}</b> output files will be "
+                f"passed as references to item <b>{self.name}</b> after execution."
             )
         elif source_item.item_type() in ["Data Store", "Importer"]:
             # Does this type of link do anything?
-            self._toolbox.msg.emit("Link established.")
+            self._logger.msg.emit("Link established.")
         else:
             super().notify_destination(source_item)
 

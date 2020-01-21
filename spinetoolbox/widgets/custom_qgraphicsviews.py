@@ -398,9 +398,9 @@ class DesignQGraphicsView(CustomQGraphicsView):
             if not src_ind or not dst_ind:
                 self._toolbox.msg_warning.emit("Restoring a connection failed")
                 continue
-            src_item = self._project_item_model.project_item(src_ind)
+            src_item = self._project_item_model.item(src_ind).project_item
             src_connector = src_item.get_icon().conn_button(src_anchor)
-            dst_item = self._project_item_model.project_item(dst_ind)
+            dst_item = self._project_item_model.item(dst_ind).project_item
             dst_connector = dst_item.get_icon().conn_button(dst_anchor)
             self.add_link(src_connector, dst_connector)
 
@@ -441,8 +441,8 @@ class DesignQGraphicsView(CustomQGraphicsView):
         if not dst_index:
             logging.error("Item %s not found", self.dst_item_name)
             return
-        src_item = self._project_item_model.project_item(src_index)
-        dst_item = self._project_item_model.project_item(dst_index)
+        src_item = self._project_item_model.item(src_index).project_item
+        dst_item = self._project_item_model.item(dst_index).project_item
         dst_item.notify_destination(src_item)
 
 

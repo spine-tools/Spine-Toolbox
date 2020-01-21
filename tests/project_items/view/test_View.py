@@ -33,7 +33,7 @@ class TestView(unittest.TestCase):
         item_dict = dict(name="V", description="", x=0, y=0)
         self.toolbox.project().add_project_items("Views", item_dict)
         index = self.toolbox.project_item_model.find_item("V")
-        self.view = self.toolbox.project_item_model.project_item(index)
+        self.view = self.toolbox.project_item_model.item(index).project_item
 
     def tearDown(self):
         """Clean up."""
@@ -98,11 +98,6 @@ class TestView(unittest.TestCase):
         # Check data_dir
         expected_data_dir = os.path.join(self.toolbox.project().items_dir, expected_short_name)
         self.assertEqual(expected_data_dir, self.view.data_dir)  # Check data dir
-        # Check there's a dag containing a node with the new name and that no dag contains a node with the old name
-        dag_with_new_node_name = self.toolbox.project().dag_handler.dag_with_node(expected_name)
-        self.assertIsInstance(dag_with_new_node_name, DiGraph)
-        dag_with_old_node_name = self.toolbox.project().dag_handler.dag_with_node("V")
-        self.assertIsNone(dag_with_old_node_name)
 
 
 if __name__ == '__main__':

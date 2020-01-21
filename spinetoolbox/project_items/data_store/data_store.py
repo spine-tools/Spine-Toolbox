@@ -30,22 +30,24 @@ from .widgets.custom_menus import DataStoreContextMenu
 
 
 class DataStore(ProjectItem):
-    def __init__(self, toolbox, name, description, x, y, url=None):
+    def __init__(self, name, description, x, y, toolbox, logger, url=None):
         """Data Store class.
 
         Args:
-            toolbox (ToolboxUI): QMainWindow instance
             name (str): Object name
             description (str): Object description
             x (float): Initial X coordinate of item icon
             y (float): Initial Y coordinate of item icon
+            toolbox (ToolboxUI): QMainWindow instance
+            logger (LoggingSignals): a logger instance
             url (str or dict): SQLAlchemy url
         """
-        super().__init__(toolbox, name, description, x, y)
+        super().__init__(name, description, x, y, toolbox.project(), logger)
         if url is None:
             url = dict()
         if url and not isinstance(url["database"], str):
             url["database"] = deserialize_path(url["database"], self._project.project_dir)
+        self._toolbox = toolbox
         self._url = self.parse_url(url)
         self._sa_url = None
         self.ds_view = None
@@ -55,9 +57,7 @@ class DataStore(ProjectItem):
         try:
             create_dir(self.logs_dir)
         except OSError:
-            self._toolbox.msg_error.emit(
-                "[OSError] Creating directory {0} failed. Check permissions.".format(self.logs_dir)
-            )
+            self._logger.msg_error.emit(f"[OSError] Creating directory {self.logs_dir} failed. Check permissions.")
 
     @staticmethod
     def item_type():
@@ -126,8 +126,8 @@ class DataStore(ProjectItem):
         """Returns a sqlalchemy url from the current url attribute or None if not valid."""
         if not self._url:
             if log_errors:
-                self._toolbox.msg_error.emit(
-                    "No URL specified for <b>{0}</b>. Please specify one and try again".format(self.name)
+                self._logger.msg_error.emit(
+                    f"No URL specified for <b>{self.name}</b>. Please specify one and try again"
                 )
             return None
         try:
@@ -135,9 +135,9 @@ class DataStore(ProjectItem):
             dialect = url_copy.pop("dialect")
             if not dialect:
                 if log_errors:
-                    self._toolbox.msg_error.emit(
-                        "Unable to generate URL from <b>{0}</b> selections: invalid dialect {1}. "
-                        "<br>Please select a new dialect and try again.".format(self.name, dialect)
+                    self._logger.msg_error.emit(
+                        f"Unable to generate URL from <b>{self.name}</b> selections: invalid dialect {dialect}. "
+                        "<br>Please select a new dialect and try again."
                     )
                 return None
             if dialect == 'sqlite':
@@ -149,16 +149,16 @@ class DataStore(ProjectItem):
         except Exception as e:  # pylint: disable=broad-except
             # This is in case one of the keys has invalid format
             if log_errors:
-                self._toolbox.msg_error.emit(
-                    "Unable to generate URL from <b>{0}</b> selections: {1} "
-                    "<br>Please make new selections and try again.".format(self.name, e)
+                self._logger.msg_error.emit(
+                    f"Unable to generate URL from <b>{self.name}</b> selections: {e} "
+                    "<br>Please make new selections and try again."
                 )
             return None
         if not url.database:
             if log_errors:
-                self._toolbox.msg_error.emit(
-                    "Unable to generate URL from <b>{0}</b> selections: database missing. "
-                    "<br>Please select a database and try again.".format(self.name)
+                self._logger.msg_error.emit(
+                    f"Unable to generate URL from <b>{self.name}</b> selections: database missing. "
+                    "<br>Please select a database and try again."
                 )
             return None
         # Small hack to make sqlite file paths relative to this DS directory
@@ -173,9 +173,9 @@ class DataStore(ProjectItem):
                 pass
         except Exception as e:  # pylint: disable=broad-except
             if log_errors:
-                self._toolbox.msg_error.emit(
-                    "Unable to generate URL from <b>{0}</b> selections: {1} "
-                    "<br>Please make new selections and try again.".format(self.name, e)
+                self._logger.msg_error.emit(
+                    f"Unable to generate URL from <b>{self.name}</b> selections: {e} "
+                    "<br>Please make new selections and try again."
                 )
             return None
         return url
@@ -291,7 +291,7 @@ class DataStore(ProjectItem):
                 self.enable_mssql()
             else:
                 msg = "Please create a SQL Server ODBC Data Source first."
-                self._toolbox.msg_warning.emit(msg)
+                self._logger.msg_warning.emit(msg)
         else:
             self.enable_common()
 
@@ -370,7 +370,7 @@ class DataStore(ProjectItem):
         try:
             self.ds_view = DataStoreForm(self._project.db_mngr, (self._sa_url, self.name))
         except spinedb_api.SpineDBAPIError as e:
-            self._toolbox.msg_error.emit(e.msg)
+            self._logger.msg_error.emit(e.msg)
             return
         self.ds_view.destroyed.connect(self._handle_ds_view_destroyed)
         self.ds_view.show()
@@ -393,7 +393,7 @@ class DataStore(ProjectItem):
             return
         self._sa_url.password = None
         QApplication.clipboard().setText(str(self._sa_url))
-        self._toolbox.msg.emit("Database url <b>{0}</b> copied to clipboard".format(self._sa_url))
+        self._logger.msg.emit(f"Database url <b>{self._sa_url}</b> copied to clipboard")
 
     @Slot(bool, name="create_new_spine_database")
     def create_new_spine_database(self, checked=False):
@@ -402,8 +402,8 @@ class DataStore(ProjectItem):
         # Try to make an url from the current status
         self._update_sa_url(log_errors=False)
         if not self._sa_url:
-            self._toolbox.msg_warning.emit(
-                "Unable to generate URL from <b>{0}</b> selections. Defaults will be used...".format(self.name)
+            self._logger.msg_warning.emit(
+                f"Unable to generate URL from <b>{self.name}</b> selections. Defaults will be used..."
             )
             dialect = "sqlite"
             database = os.path.abspath(os.path.join(self.data_dir, self.name + ".sqlite"))
@@ -486,13 +486,12 @@ class DataStore(ProjectItem):
 
         Args:
             new_name (str): New name
-
         Returns:
-            bool: Boolean value depending on success
+            bool: True if renaming succeeded, False otherwise
         """
         old_data_dir = os.path.abspath(self.data_dir)  # Old data_dir before rename
-        ret_val = super().rename(new_name)
-        if not ret_val:
+        success = super().rename(new_name)
+        if not success:
             return False
         # For a Data Store, logs_dir must be updated and the database line edit may need to be updated
         db_dir, db_filename = os.path.split(os.path.abspath(self._properties_ui.lineEdit_database.text().strip()))
@@ -516,13 +515,13 @@ class DataStore(ProjectItem):
     def notify_destination(self, source_item):
         """See base class."""
         if source_item.item_type() == "Importer":
-            self._toolbox.msg.emit(
-                "Link established. Mappings generated by <b>{0}</b> will be "
-                "imported in <b>{1}</b> when executing.".format(source_item.name, self.name)
+            self._logger.msg.emit(
+                f"Link established. Mappings generated by <b>{source_item.name}</b> will be "
+                f"imported in <b>{self.name}</b> when executing."
             )
         elif source_item.item_type() in ["Data Connection", "Tool"]:
             # Does this type of link do anything?
-            self._toolbox.msg.emit("Link established.")
+            self._logger.msg.emit("Link established.")
         else:
             super().notify_destination(source_item)
 

@@ -43,7 +43,7 @@ class TestTool(unittest.TestCase):
         item_dict = dict(name="T", description="", x=0, y=0)
         self.toolbox.project().add_project_items("Tools", item_dict)
         index = self.toolbox.project_item_model.find_item("T")
-        self.tool = self.toolbox.project_item_model.project_item(index)
+        self.tool = self.toolbox.project_item_model.item(index).project_item
 
     def tearDown(self):
         """Clean up."""
@@ -112,11 +112,6 @@ class TestTool(unittest.TestCase):
         # Check data_dir
         expected_data_dir = os.path.join(self.toolbox.project().items_dir, expected_short_name)
         self.assertEqual(expected_data_dir, self.tool.data_dir)  # Check data dir
-        # Check there's a dag containing a node with the new name and that no dag contains a node with the old name
-        dag_with_new_node_name = self.toolbox.project().dag_handler.dag_with_node(expected_name)
-        self.assertIsInstance(dag_with_new_node_name, DiGraph)
-        dag_with_old_node_name = self.toolbox.project().dag_handler.dag_with_node("T")
-        self.assertIsNone(dag_with_old_node_name)
         # Check that output_dir has been updated
         expected_output_dir = os.path.join(self.tool.data_dir, TOOL_OUTPUT_DIR)
         self.assertEqual(expected_output_dir, self.tool.output_dir)
@@ -126,39 +121,42 @@ class TestTool(unittest.TestCase):
         fake_dc_dir = os.path.join("C:", os.path.sep, "fake_dc")
         fake_fnames = ["a.ini", "bc.ini", "xyz.txt", "123.txt"]
         fake_available_filepaths = [os.path.join(fake_dc_dir, fname) for fname in fake_fnames]
-        # Mock available_filepath_resources so that it returns a list of paths
-        with mock.patch(
-            "spinetoolbox.project_items.tool.tool.Tool.filepaths_from_resources"
-        ) as mock_filepaths_from_resources:
-            # Test with *.ini
-            mock_filepaths_from_resources.return_value = fake_available_filepaths
-            matches = self.tool.find_optional_files("*.ini", mock.MagicMock())
-            expected_matches = [os.path.join(fake_dc_dir, fn) for fn in ("a.ini", "bc.ini")]
-            self.assertEqual(expected_matches, matches)
-            # Test with *
-            matches = self.tool.find_optional_files("*", mock.MagicMock())
-            expected_matches = fake_available_filepaths
-            self.assertEqual(expected_matches, matches)
-            # Test with ?.ini
-            matches = self.tool.find_optional_files("?.ini", mock.MagicMock())
-            expected_matches = [os.path.join(fake_dc_dir, "a.ini")]
-            self.assertEqual(expected_matches, matches)
-            # Test with ???.txt
-            matches = self.tool.find_optional_files("???.txt", mock.MagicMock())
-            expected_matches = [os.path.join(fake_dc_dir, fn) for fn in ("xyz.txt", "123.txt")]
-            self.assertEqual(expected_matches, matches)
-            # Test with ??.txt
-            matches = self.tool.find_optional_files("??.txt", mock.MagicMock())
-            expected_matches = []
-            self.assertEqual(expected_matches, matches)
-            # Test with x?z
-            matches = self.tool.find_optional_files("x?z", mock.MagicMock())
-            expected_matches = []
-            self.assertEqual(expected_matches, matches)
-            # Test with x?z.*
-            matches = self.tool.find_optional_files("x?z.*", mock.MagicMock())
-            expected_matches = [os.path.join(fake_dc_dir, "xyz.txt")]
-            self.assertEqual(expected_matches, matches)
+        # Test with a.ini
+        matches = self.tool._find_optional_files("a.ini", fake_available_filepaths)
+        expected_matches = [os.path.join(fake_dc_dir, "a.ini")]
+        self.assertEqual(expected_matches, matches)
+        # Test with a.*
+        matches = self.tool._find_optional_files("a.*", fake_available_filepaths)
+        expected_matches = [os.path.join(fake_dc_dir, "a.ini")]
+        self.assertEqual(expected_matches, matches)
+        # Test with *.ini
+        matches = self.tool._find_optional_files("*.ini", fake_available_filepaths)
+        expected_matches = [os.path.join(fake_dc_dir, fn) for fn in ("a.ini", "bc.ini")]
+        self.assertEqual(expected_matches, matches)
+        # Test with *
+        matches = self.tool._find_optional_files("*", fake_available_filepaths)
+        expected_matches = fake_available_filepaths
+        self.assertEqual(expected_matches, matches)
+        # Test with ?.ini
+        matches = self.tool._find_optional_files("?.ini", fake_available_filepaths)
+        expected_matches = [os.path.join(fake_dc_dir, "a.ini")]
+        self.assertEqual(expected_matches, matches)
+        # Test with ???.txt
+        matches = self.tool._find_optional_files("???.txt", fake_available_filepaths)
+        expected_matches = [os.path.join(fake_dc_dir, fn) for fn in ("xyz.txt", "123.txt")]
+        self.assertEqual(expected_matches, matches)
+        # Test with ??.txt
+        matches = self.tool._find_optional_files("??.txt", fake_available_filepaths)
+        expected_matches = []
+        self.assertEqual(expected_matches, matches)
+        # Test with x?z
+        matches = self.tool._find_optional_files("x?z", fake_available_filepaths)
+        expected_matches = []
+        self.assertEqual(expected_matches, matches)
+        # Test with x?z.*
+        matches = self.tool._find_optional_files("x?z.*", fake_available_filepaths)
+        expected_matches = [os.path.join(fake_dc_dir, "xyz.txt")]
+        self.assertEqual(expected_matches, matches)
 
 
 class _MockToolSpecModel(QStandardItemModel):
@@ -327,7 +325,7 @@ class TestToolExecution(unittest.TestCase):
         item = dict(name="Tool", description="", x=0, y=0, tool="simple_exec")
         self.toolbox.project().add_project_items("Tools", item)  # Add Tool to project
         ind = self.toolbox.project_item_model.find_item("Tool")
-        tool = self.toolbox.project_item_model.project_item(ind)  # Find item from project item model
+        tool = self.toolbox.project_item_model.item(ind).project_item
         tool.activate()
         self.assert_is_simple_exec_tool(tool)
 
@@ -337,7 +335,7 @@ class TestToolExecution(unittest.TestCase):
         item = dict(name="Tool", description="", x=0, y=0, tool="")
         self.toolbox.project().add_project_items("Tools", item)  # Add Tool to project
         ind = self.toolbox.project_item_model.find_item("Tool")
-        tool = self.toolbox.project_item_model.project_item(ind)  # Find item from project item model
+        tool = self.toolbox.project_item_model.item(ind).project_item
         tool.activate()
         self.assert_is_no_tool(tool)
         tool._properties_ui.comboBox_tool.setCurrentIndex(0)  # Set the simple_exec tool specification
@@ -351,7 +349,7 @@ class TestToolExecution(unittest.TestCase):
         item = dict(name="Tool", description="", x=0, y=0, tool="")
         self.toolbox.project().add_project_items("Tools", item)  # Add Tool to project
         ind = self.toolbox.project_item_model.find_item("Tool")
-        tool = self.toolbox.project_item_model.project_item(ind)  # Find item from project item model
+        tool = self.toolbox.project_item_model.item(ind).project_item
         self.assertFalse(tool.execute_forward(resources=[]))
 
     def test_input_file_not_found_at_execution(self):
@@ -359,7 +357,7 @@ class TestToolExecution(unittest.TestCase):
         item = dict(name="Tool", description="", x=0, y=0, tool="simple_exec")
         self.toolbox.project().add_project_items("Tools", item)  # Add Tool to project
         ind = self.toolbox.project_item_model.find_item("Tool")
-        tool = self.toolbox.project_item_model.project_item(ind)  # Find item from project item model
+        tool = self.toolbox.project_item_model.item(ind).project_item
         # Collect some information
         input_files = [x.text() for x in tool.input_file_model.findItems("*", Qt.MatchWildcard)]
         project_dir = tool._project.project_dir
@@ -384,7 +382,7 @@ class TestToolExecution(unittest.TestCase):
         self.toolbox.project().add_project_items("Tools", item)  # Add Tool to project
         self.toolbox.project().execution_instance = mock.NonCallableMagicMock()
         ind = self.toolbox.project_item_model.find_item("Tool")
-        tool = self.toolbox.project_item_model.project_item(ind)  # Find item from project item model
+        tool = self.toolbox.project_item_model.item(ind).project_item
         # Collect some information
         basedir = tool.tool_specification().path
         project_dir = tool._project.project_dir
@@ -433,9 +431,9 @@ class TestToolExecution(unittest.TestCase):
         work_dir = self.toolbox.work_dir
         os.makedirs(work_dir, exist_ok=True)
         item = dict(name="Tool", description="", x=0, y=0, tool="complex_exec")
-        self.toolbox.project().add_project_items("Tools", item)  # Add Tool to project
+        self.toolbox.project().add_project_items("Tools", item)
         ind = self.toolbox.project_item_model.find_item("Tool")
-        tool = self.toolbox.project_item_model.project_item(ind)  # Find item from project item model
+        tool = self.toolbox.project_item_model.item(ind).project_item
         self.toolbox.project().execution_instance = mock.NonCallableMagicMock()
         project_dir = self.toolbox.project().project_dir
         source_files = [x.text() for x in tool.source_file_model.findItems("*", Qt.MatchWildcard)]
