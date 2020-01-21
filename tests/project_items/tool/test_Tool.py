@@ -121,39 +121,42 @@ class TestTool(unittest.TestCase):
         fake_dc_dir = os.path.join("C:", os.path.sep, "fake_dc")
         fake_fnames = ["a.ini", "bc.ini", "xyz.txt", "123.txt"]
         fake_available_filepaths = [os.path.join(fake_dc_dir, fname) for fname in fake_fnames]
-        # Mock available_filepath_resources so that it returns a list of paths
-        with mock.patch(
-            "spinetoolbox.project_items.tool.tool.Tool.filepaths_from_resources"
-        ) as mock_filepaths_from_resources:
-            # Test with *.ini
-            mock_filepaths_from_resources.return_value = fake_available_filepaths
-            matches = self.tool.find_optional_files("*.ini", mock.MagicMock())
-            expected_matches = [os.path.join(fake_dc_dir, fn) for fn in ("a.ini", "bc.ini")]
-            self.assertEqual(expected_matches, matches)
-            # Test with *
-            matches = self.tool.find_optional_files("*", mock.MagicMock())
-            expected_matches = fake_available_filepaths
-            self.assertEqual(expected_matches, matches)
-            # Test with ?.ini
-            matches = self.tool.find_optional_files("?.ini", mock.MagicMock())
-            expected_matches = [os.path.join(fake_dc_dir, "a.ini")]
-            self.assertEqual(expected_matches, matches)
-            # Test with ???.txt
-            matches = self.tool.find_optional_files("???.txt", mock.MagicMock())
-            expected_matches = [os.path.join(fake_dc_dir, fn) for fn in ("xyz.txt", "123.txt")]
-            self.assertEqual(expected_matches, matches)
-            # Test with ??.txt
-            matches = self.tool.find_optional_files("??.txt", mock.MagicMock())
-            expected_matches = []
-            self.assertEqual(expected_matches, matches)
-            # Test with x?z
-            matches = self.tool.find_optional_files("x?z", mock.MagicMock())
-            expected_matches = []
-            self.assertEqual(expected_matches, matches)
-            # Test with x?z.*
-            matches = self.tool.find_optional_files("x?z.*", mock.MagicMock())
-            expected_matches = [os.path.join(fake_dc_dir, "xyz.txt")]
-            self.assertEqual(expected_matches, matches)
+        # Test with a.ini
+        matches = self.tool._find_optional_files("a.ini", fake_available_filepaths)
+        expected_matches = [os.path.join(fake_dc_dir, "a.ini")]
+        self.assertEqual(expected_matches, matches)
+        # Test with a.*
+        matches = self.tool._find_optional_files("a.*", fake_available_filepaths)
+        expected_matches = [os.path.join(fake_dc_dir, "a.ini")]
+        self.assertEqual(expected_matches, matches)
+        # Test with *.ini
+        matches = self.tool._find_optional_files("*.ini", fake_available_filepaths)
+        expected_matches = [os.path.join(fake_dc_dir, fn) for fn in ("a.ini", "bc.ini")]
+        self.assertEqual(expected_matches, matches)
+        # Test with *
+        matches = self.tool._find_optional_files("*", fake_available_filepaths)
+        expected_matches = fake_available_filepaths
+        self.assertEqual(expected_matches, matches)
+        # Test with ?.ini
+        matches = self.tool._find_optional_files("?.ini", fake_available_filepaths)
+        expected_matches = [os.path.join(fake_dc_dir, "a.ini")]
+        self.assertEqual(expected_matches, matches)
+        # Test with ???.txt
+        matches = self.tool._find_optional_files("???.txt", fake_available_filepaths)
+        expected_matches = [os.path.join(fake_dc_dir, fn) for fn in ("xyz.txt", "123.txt")]
+        self.assertEqual(expected_matches, matches)
+        # Test with ??.txt
+        matches = self.tool._find_optional_files("??.txt", fake_available_filepaths)
+        expected_matches = []
+        self.assertEqual(expected_matches, matches)
+        # Test with x?z
+        matches = self.tool._find_optional_files("x?z", fake_available_filepaths)
+        expected_matches = []
+        self.assertEqual(expected_matches, matches)
+        # Test with x?z.*
+        matches = self.tool._find_optional_files("x?z.*", fake_available_filepaths)
+        expected_matches = [os.path.join(fake_dc_dir, "xyz.txt")]
+        self.assertEqual(expected_matches, matches)
 
 
 class _MockToolSpecModel(QStandardItemModel):

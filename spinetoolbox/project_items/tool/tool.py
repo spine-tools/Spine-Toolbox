@@ -421,10 +421,9 @@ class Tool(ProjectItem):
         if self.input_file_model.rowCount() > 0:
             self._logger.msg.emit("*** Checking Tool specification requirements ***")
             n_dirs, n_files = self.count_files_and_dirs()
-            # logging.debug("Tool requires {0} dirs and {1} files".format(n_dirs, n_files))
             if n_files > 0:
                 self._logger.msg.emit("*** Searching for required input files ***")
-                file_paths = self.find_input_files(resources)
+                file_paths = self._flatten_file_path_duplicates(self._find_input_files(resources), log_duplicates=True)
                 not_found = [k for k, v in file_paths.items() if v is None]
                 if not_found:
                     self._logger.msg_error.emit(f"Required file(s) <b>{', '.join(not_found)}</b> not found")
@@ -435,9 +434,6 @@ class Tool(ProjectItem):
                 if not self.copy_input_files(file_paths):
                     self._logger.msg_error.emit("Copying input files failed. Tool execution aborted.")
                     return False
-            else:  # just for testing
-                # logging.debug("No input files to copy")
-                pass
             if n_dirs > 0:
                 self._logger.msg.emit(f"*** Creating input subdirectories to {work_or_source} directory ***")
                 if not self.create_input_dirs():
@@ -447,7 +443,7 @@ class Tool(ProjectItem):
         # Check if there are any optional input files to copy
         if self.opt_input_file_model.rowCount() > 0:
             self._logger.msg.emit("*** Searching for optional input files ***")
-            optional_file_paths = self.find_optional_input_files(resources)
+            optional_file_paths = self._find_optional_input_files(resources)
             for k, v in optional_file_paths.items():
                 self._logger.msg.emit(f"\tFound <b>{len(v)}</b> files matching pattern <b>{k}</b>")
             if not self.copy_optional_input_files(optional_file_paths):
@@ -678,7 +674,7 @@ class Tool(ProjectItem):
             self._logger.msg.emit(f"\tCopied <b>{n_copied_files}</b> file(s)")
         return True
 
-    def find_input_files(self, resources):
+    def _find_input_files(self, resources):
         """Iterates files in required input files model and looks for them in the given resources.
 
         Args:
@@ -695,10 +691,10 @@ class Tool(ProjectItem):
             if not filename:
                 # It's a directory
                 continue
-            file_paths[req_file_path] = self.find_file(filename, resources)
+            file_paths[req_file_path] = self._find_file(filename, resources)
         return file_paths
 
-    def find_optional_input_files(self, resources):
+    def _find_optional_input_files(self, resources):
         """Tries to find optional input files from previous project items in the DAG. Returns found paths.
 
         Args:
@@ -709,6 +705,7 @@ class Tool(ProjectItem):
             optional input item and value is a list of paths that matches the item.
         """
         file_paths = dict()
+        file_paths_from_resources = self._filepaths_from_resources(resources)
         for i in range(self.opt_input_file_model.rowCount()):
             file_path = self.opt_input_file_model.item(i, 0).data(Qt.DisplayRole)
             # Just get the filename if there is a path attached to the file
@@ -716,7 +713,7 @@ class Tool(ProjectItem):
             if not pattern:
                 # It's a directory -> skip
                 continue
-            found_files = self.find_optional_files(pattern, resources)
+            found_files = self._find_optional_files(pattern, file_paths_from_resources)
             if not found_files:
                 self._logger.msg_warning.emit(f"\tNo files matching pattern <b>{pattern}</b> found")
             else:
@@ -724,7 +721,7 @@ class Tool(ProjectItem):
         return file_paths
 
     @staticmethod
-    def filepaths_from_resources(resources):
+    def _filepaths_from_resources(resources):
         """Returns file paths from given resources.
 
         Args:
@@ -739,51 +736,35 @@ class Tool(ProjectItem):
                 filepaths += glob.glob(resource.path)
         return filepaths
 
-    def find_file(self, filename, resources):
-        """Returns the first occurrence of full path to given file name in resources available.
+    def _find_file(self, filename, resources):
+        """Returns all occurrences of full paths to given file name in resources available.
 
         Args:
-            filename (str): Searched file name (no path) TODO: Change to pattern
+            filename (str): Searched file name (no path)
             resources (list): list of resources available from upstream items
 
         Returns:
-            str: Full path to file if found, None if not found
+            list: Full paths to file if found, None if not found
         """
-        for filepath in self.filepaths_from_resources(resources):
+        found_file_paths = list()
+        for filepath in self._filepaths_from_resources(resources):
             _, file_candidate = os.path.split(filepath)
             if file_candidate == filename:
-                # logging.debug("Found path for {0} from dc refs: {1}".format(filename, dc_ref))
-                return filepath
-        return None
+                found_file_paths.append(filepath)
+        return found_file_paths if found_file_paths else None
 
-    def find_optional_files(self, pattern, resources):
+    def _find_optional_files(self, pattern, available_file_paths):
         """Returns a list of found paths to files that match the given pattern in files available
         from the execution instance.
 
         Args:
             pattern (str): file pattern
-            resources (list): list of resources available from upstream items
+            available_file_paths (list): list of available file paths from upstream items
         Returns:
             list: List of (full) paths
         """
-        filepaths = self.filepaths_from_resources(resources)
-        # Find matches when pattern includes wildcards
-        if "*" in pattern and not "?" in pattern:
-            return fnmatch.filter(filepaths, pattern)  # Returns matches in list
-        if "?" in pattern:
-            # Separate file names from paths
-            matches = list()
-            for filepath in filepaths:
-                _, fname = os.path.split(filepath)
-                # Match just the filename to pattern
-                if fnmatch.fnmatch(fname, pattern):  # Returns True or False if pattern matches fname
-                    matches.append(filepath)
-            return matches
-        # Pattern is an exact filename (no wildcards)
-        match = self.find_file(pattern, resources)
-        if match is not None:
-            return [match]
-        return []
+        extended_pattern = os.path.join("*", pattern)  # Match all absolute paths.
+        return fnmatch.filter(available_file_paths, extended_pattern)
 
     @Slot(int)
     def handle_execution_finished(self, return_code):
@@ -946,7 +927,10 @@ class Tool(ProjectItem):
                 "This Tool is not connected to a Tool specification. Set it in the Tool Properties Panel."
             )
             return
-        file_paths = self.find_input_files(resources)
+        file_paths = self._find_input_files(resources)
+        duplicates = self._file_path_duplicates(file_paths)
+        self._notify_if_duplicate_file_paths(duplicates)
+        file_paths = self._flatten_file_path_duplicates(file_paths)
         not_found = [k for k, v in file_paths.items() if v is None]
         if not_found:
             self.add_notification(
@@ -1038,3 +1022,32 @@ class Tool(ProjectItem):
     def default_name_prefix():
         """see base class"""
         return "Tool"
+
+    @staticmethod
+    def _file_path_duplicates(file_paths):
+        """Returns a list of lists of duplicate items in file_paths."""
+        duplicates = list()
+        for paths in file_paths.values():
+            if paths is not None and len(paths) > 1:
+                duplicates.append(paths)
+        return duplicates
+
+    def _notify_if_duplicate_file_paths(self, duplicates):
+        """Adds a notification if duplicates contains items."""
+        if not duplicates:
+            return
+        for duplicate in duplicates:
+            self.add_notification("Duplicate input files from upstream items:<br>{}".format("<br>".join(duplicate)))
+
+    def _flatten_file_path_duplicates(self, file_paths, log_duplicates=False):
+        """Flattens the extra duplicate dimension in file_paths."""
+        flattened = dict()
+        for required_file, paths in file_paths.items():
+            if paths is not None:
+                pick = paths[0]
+                if len(paths) > 1 and log_duplicates:
+                    self._logger.msg_warning.emit(f"Multiple input files satisfy {required_file}; using {pick}")
+                flattened[required_file] = pick
+            else:
+                flattened[required_file] = None
+        return flattened
