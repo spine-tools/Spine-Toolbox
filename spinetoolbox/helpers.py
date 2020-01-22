@@ -690,8 +690,9 @@ def serialize_path(path, project_dir):
     Args:
         path (str): path to serialize
         project_dir (str): path to the project directory
+
     Returns:
-        a dict representing the given path
+        dict: Dictionary representing the given path
     """
     is_relative = path_in_dir(path, project_dir)
     serialized = {
@@ -711,8 +712,9 @@ def serialize_url(url, project_dir):
     Args:
         url (str): a URL to serialize
         project_dir (str): path to the project directory
+
     Returns:
-        a dict representing the URL
+        dict: Dictionary representing the URL
     """
     parsed = urllib.parse.urlparse(url)
     path = urllib.parse.unquote(parsed.path)
@@ -738,8 +740,9 @@ def deserialize_path(serialized, project_dir):
     Args:
         serialized (dict): a serialized path or URL
         project_dir (str): path to the project directory
+
     Returns:
-        a path or URL as string
+        str: Path or URL as string
     """
     if not isinstance(serialized, dict):
         return serialized

@@ -41,6 +41,7 @@ class Exporter(ProjectItem):
 
     def __init__(self, name, description, settings_packs, x, y, toolbox, logger):
         """
+
         Args:
             name (str): item name
             description (str): item description
@@ -50,46 +51,6 @@ class Exporter(ProjectItem):
             toolbox (ToolboxUI): a ToolboxUI instance
             logger (LoggingSignals): a logger instance
         """
-# <<<<<<< HEAD
-#         super().__init__(toolbox, name, description, x, y)
-#         self._settings_windows = dict()
-#         self._settings = dict()
-#         if database_urls is None:
-#             database_urls = list()
-#         self._database_urls = [deserialize_path(path, self._project.project_dir) for path in database_urls]
-#         if database_to_file_name_map is None:
-#             self._database_to_file_name_map = dict()
-#         else:
-#             path_to_url_map = {
-#                 serialized["path"]: deserialized for serialized, deserialized in zip(database_urls, self._database_urls)
-#             }
-#             normalized_db_to_file_name_map = dict()
-#             for db_path, rel_output_file_path in database_to_file_name_map.items():
-#                 file_path = os.path.abspath(os.path.join(self._project.project_dir, rel_output_file_path))
-#                 file_path = os.path.relpath(file_path, self.data_dir)
-#                 try:
-#                     normalized_db_to_file_name_map[path_to_url_map[db_path]] = file_path
-#                 except KeyError as error:
-#                     self._toolbox.msg_warning.emit("Could not resolve export file name for database {}".format(error))
-#             self._database_to_file_name_map = normalized_db_to_file_name_map
-#
-#         # Convert settings file paths to absolute (if available)
-#         if settings_file_names is not None:
-#             abs_settings_paths = [
-#                 os.path.abspath(os.path.join(self._project.project_dir, s)) for s in settings_file_names
-#             ]
-#             for file_name in abs_settings_paths:
-#                 try:
-#                     with open(file_name) as input_file:
-#                         data = json.load(input_file)
-#                         database_path = data["database path"]
-#                         settings = gdx.Settings.from_dict(data)
-#                         self._settings[database_path] = settings
-#                 except FileNotFoundError:
-#                     self._toolbox.msg_warning.emit(
-#                         "{} not found. Using default settings for exporting.".format(file_name)
-#                     )
-# =======
         super().__init__(name, description, x, y, toolbox.project(), logger)
         self._toolbox = toolbox
         self._settings_packs = dict()
@@ -97,7 +58,8 @@ class Exporter(ProjectItem):
         if settings_packs is None:
             settings_packs = list()
         for pack in settings_packs:
-            url = pack["database_url"]
+            serialized_url = pack["database_url"]
+            url = deserialize_path(serialized_url, self._project.project_dir)
             settings_pack = _SettingsPack.from_dict(pack, url)
             settings_pack.notifications.changed_due_to_settings_state.connect(self._report_notifications)
             self._settings_packs[url] = settings_pack
@@ -392,7 +354,8 @@ class Exporter(ProjectItem):
         packs = list()
         for url, pack in self._settings_packs.items():
             pack_dict = pack.to_dict()
-            pack_dict["database_url"] = url
+            serialized_url = serialize_url(url, self._project.project_dir)
+            pack_dict["database_url"] = serialized_url
             packs.append(pack_dict)
         d["settings_packs"] = packs
         return d
