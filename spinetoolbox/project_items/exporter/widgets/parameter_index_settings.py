@@ -293,7 +293,7 @@ class ParameterIndexSettings(QWidget):
         try:
             for index in range(len(self._indexing_setting.parameter.values[0])):
                 indexes.append(str(eval(expression, {}, {"i": index + 1})))  # pylint: disable=eval-used
-        except (AttributeError, NameError, SyntaxError):
+        except (AttributeError, NameError, SyntaxError, ValueError):
             return
         self._indexing_table_model.set_indexes(indexes)
         self._ui.index_table_view.selectAll()
