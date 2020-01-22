@@ -837,7 +837,7 @@ class ToolboxUI(QMainWindow):
             if answer != QMessageBox.Ok:
                 return
         try:
-            data_dir = item.data_dir
+            data_dir = item.project_item.data_dir
         except AttributeError:
             data_dir = None
         # Remove item from project model

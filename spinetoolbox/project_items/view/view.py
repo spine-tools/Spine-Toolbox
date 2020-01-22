@@ -60,7 +60,7 @@ class View(ProjectItem):
         This is to enable simpler connecting and disconnecting."""
         s = super().make_signal_handler_dict()
         s[self._properties_ui.toolButton_view_open_dir.clicked] = lambda checked=False: self.open_directory()
-        s[self._properties_ui.pushButton_view_open_ds_view.clicked] = self._open_view
+        s[self._properties_ui.pushButton_view_open_ds_view.clicked] = self.open_view
         return s
 
     def activate(self):
@@ -86,7 +86,7 @@ class View(ProjectItem):
         self._properties_ui.treeView_view.setModel(None)
 
     @Slot(bool)
-    def _open_view(self, checked=False):
+    def open_view(self, checked=False):
         """Opens references in a view window.
         """
         indexes = self._selected_indexes()
