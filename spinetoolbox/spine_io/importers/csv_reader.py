@@ -110,7 +110,7 @@ class CSVConnector(SourceConnection):
                     pass
                 options["encoding"] = encoding
                 break
-        return {self._filename: {"options": options}}
+        return {"csv": {"options": options}}
 
     @staticmethod
     def parse_options(options):

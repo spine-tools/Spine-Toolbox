@@ -31,6 +31,9 @@ from spinetoolbox.spine_io.importers.excel_reader import ExcelConnector
 from spinetoolbox.spine_io.importers.gdx_connector import GdxConnector
 from spinetoolbox.widgets.import_preview_window import ImportPreviewWindow
 from . import importer_program
+from spinetoolbox.helpers import serialize_path, deserialize_path
+
+_CONNECTOR_NAME_TO_CLASS = {"CSVConnector": CSVConnector, "ExcelConnector": ExcelConnector, "GdxConnector": GdxConnector}
 
 
 class Importer(ProjectItem):
@@ -56,21 +59,23 @@ class Importer(ProjectItem):
         except OSError:
             self._logger.msg_error.emit(f"[OSError] Creating directory {self.logs_dir} failed. Check permissions.")
         # Variables for saving selections when item is (de)activated
-        if mappings is None:
-            mappings = dict()
-        else:
-            # convert table_types and table_row_types keys to int since json always has strings as keys.
-            for table_settings in mappings.values():
-                table_types = table_settings.get("table_types", {})
-                table_settings["table_types"] = {
+
+        if not mappings:
+            mappings = {"sources": [], "version": "1"}
+        # convert table_types and table_row_types keys to int since json always has strings as keys.
+        if mappings["sources"] is None:
+            for _, mapping in mappings["sources"]:
+                table_types = mapping.get("table_types", {})
+                mapping["table_types"] = {
                     table_name: {int(col): t for col, t in col_types.items()}
                     for table_name, col_types in table_types.items()
                 }
-                table_row_types = table_settings.get("table_row_types", {})
-                table_settings["table_row_types"] = {
+                table_row_types = mapping.get("table_row_types", {})
+                mapping["table_row_types"] = {
                     table_name: {int(row): t for row, t in row_types.items()}
                     for table_name, row_types in table_row_types.items()
                 }
+        
         self.settings = mappings
         self.cancel_on_error = cancel_on_error
         self.resources_from_downstream = list()
@@ -172,11 +177,11 @@ class Importer(ProjectItem):
                 preview_widget.raise_()
             return
         # Create a new form for the selected file
-        settings = self.settings.setdefault(importee, {})
+        settings = self.get_settings(importee)
         # Try and get connector from settings
         source_type = settings.get("source_type", None)
         if source_type is not None:
-            connector = eval(source_type)  # pylint: disable=eval-used
+            connector = _CONNECTOR_NAME_TO_CLASS[source_type]
         else:
             # Ask user
             connector = self.get_connector(importee)
@@ -234,7 +239,7 @@ class Importer(ProjectItem):
         if not connector:
             # Aborted by the user
             return
-        settings = self.settings.setdefault(importee, {})
+        settings = self.get_settings(importee)
         settings["source_type"] = connector.__name__
 
     def _connection_failed(self, msg, importee):
@@ -243,8 +248,20 @@ class Importer(ProjectItem):
         if preview_widget:
             preview_widget.close()
 
+    def get_settings(self, importee):
+        importee_relpath = serialize_path(importee, self._project.project_dir)
+        importee_settings = [s for s in self.settings["sources"] if s[0] == importee_relpath]
+        if importee_settings:
+            return importee_settings[0][1]
+        return {}
+        
     def save_settings(self, settings, importee):
-        self.settings[importee].update(settings)
+        importee_relpath = serialize_path(importee, self._project.project_dir)
+        importee_settings = [s for s in self.settings["sources"] if s[0] == importee_relpath]
+        if importee_settings:
+            importee_settings[0][1].update(settings)
+        else:
+            self.settings["sources"].append([importee_relpath, settings])
 
     def _preview_destroyed(self, importee):
         self._preview_widget.pop(importee, None)
@@ -304,7 +321,7 @@ class Importer(ProjectItem):
         self.get_icon().start_animation()
         args = [
             [f for f in self.all_files if f not in self.unchecked_files],
-            self.settings,
+            mappings_to_abs_path_mappings(self.settings, self._project.project_dir),
             [r.url for r in self.resources_from_downstream if r.type_ == "database"],
             self.logs_dir,
             self._properties_ui.cancel_on_error_checkBox.isChecked(),
@@ -371,3 +388,88 @@ class Importer(ProjectItem):
                 duplicates.append(file_name)
         if duplicates:
             self.add_notification("Duplicate input files from upstream items:<br>{}".format("<br>".join(duplicates)))
+    
+    @staticmethod
+    def upgrade_from_no_version_to_version_1(item_name, old_item_dict, old_project_dir):
+        """See base class."""
+        new_importer = dict(old_item_dict)
+        mappings = new_importer.get("mappings", {})
+        new_importer["mappings"] = _upgrade_mappings_to_v1(mappings, old_project_dir)
+        return new_importer
+
+def mappings_to_abs_path_mappings(mappings, project_path):
+    """returns a mapping settings as dict with absolute paths as keys
+
+    :param mappings: dictionary with mapping settings
+    :type mappings: dictionary
+    :param project_path: path to project folder
+    :type project_path: str
+    :return: dictionary with absolute paths as keys and mapping settings as values
+    :rtype: dict
+    """
+    abs_path_mappings = {}
+    for source, mapping in mappings["sources"]:
+        abs_path_mappings[deserialize_path(source, project_path)] = mapping
+    return abs_path_mappings
+
+
+def _upgrade_mappings_to_v1(mappings, project_path):
+    """Upgrade mapping json settings to v1 from unversioned
+
+    :param mappings: dictionary with mapping specifications
+    :type mappings: dict
+    :param project_path: path to project directory
+    :type project_path: str
+    :return: dict
+    :rtype: dictionary with mapping specification
+    """
+    if "version" in mappings:
+        if mappings["version"] == "1":
+            return dict(mappings)
+        else:
+            raise TypeError("'mappings' settings contains unknown version number")
+    new_dict = {}
+    new_dict["version"] = "1"
+    new_dict["sources"] = []
+    paths = list(mappings.keys())
+    for path in paths:
+        mapping = mappings[path]
+        if "source_type" in mapping and mapping["source_type"] == "CSVConnector":
+            _fix_CSVConnector_settings(mapping)
+        new_path = serialize_path(path, project_path)
+        if new_path["relative"]:
+            new_path["path"] = os.path.join(".spinetoolbox", "items", new_path["path"])
+        new_dict["sources"].append([new_path, mapping])
+    return new_dict
+
+def _fix_CSVConnector_settings(settings):
+    """CSVConnector saved the table names as the filepath, change that
+    to 'csv' instead. This function will mutate the dictionary.
+
+    :param settings: mapping settings that should be updated
+    :type settings: dict
+    """
+    table_mappings = settings.get("table_mappings", {})
+    k = list(table_mappings)
+    if len(k) == 1 and k[0] != "csv":
+        table_mappings["csv"] = table_mappings.pop(k[0])
+
+    table_types = settings.get("table_types", {})
+    k = list(table_types.keys())
+    if len(k) == 1 and k[0] != "csv":
+        table_types["csv"] = table_types.pop(k[0])
+
+    table_row_types = settings.get("table_row_types", {})
+    k = list(table_row_types.keys())
+    if len(k) == 1 and k[0] != "csv":
+        table_row_types["csv"] = table_row_types.pop(k[0])
+
+    table_options = settings.get("table_options", {})
+    k = list(table_options.keys())
+    if len(k) == 1 and k[0] != "csv":
+        table_options["csv"] = table_options.pop(k[0])
+
+    selected_tables = settings.get("selected_tables", [])
+    if len(selected_tables) == 1 and selected_tables[0] != "csv":
+        selected_tables.pop(0)
+        selected_tables.append("csv")
