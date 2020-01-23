@@ -32,7 +32,7 @@ class AddExporterWidget(AddProjectItemWidget):
         """
         initial_name = toolbox.propose_item_name(Exporter.default_name_prefix())
         super().__init__(toolbox, x, y, initial_name)
-        self.setWindowTitle(f"Add Gdx Export")
+        self.setWindowTitle(f"Add Exporter")
 
     def call_add_item(self):
         """Creates new Item according to user's selections."""
