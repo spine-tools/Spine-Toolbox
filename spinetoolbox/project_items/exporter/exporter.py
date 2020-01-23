@@ -86,6 +86,9 @@ class Exporter(ProjectItem):
         self._properties_ui.item_name_label.setText(self.name)
         self._update_properties_tab()
         super().connect_signals()
+        for url, pack in self._settings_packs.items():
+            if pack.state == SettingsState.ERROR:
+                self._start_worker(url)
         self._activated = True
 
     def deactivate(self):
