@@ -21,6 +21,7 @@ import math
 from PySide2.QtWidgets import QGraphicsView
 from PySide2.QtGui import QCursor
 from PySide2.QtCore import Signal, Slot, Qt, QRectF, QTimeLine, QMarginsF, QSettings
+from spine_engine import ExecutionDirection
 from ..graphics_items import LinkDrawer, Link
 from .custom_qlistview import DragListView
 from .custom_qgraphicsscene import CustomQGraphicsScene
@@ -433,17 +434,43 @@ class DesignQGraphicsView(CustomQGraphicsView):
 
     def notify_destination_items(self):
         """Notify destination items that they have been connected to a source item."""
-        src_index = self._project_item_model.find_item(self.src_item_name)
-        if not src_index:
+        src_leaf_item = self._project_item_model.get_item(self.src_item_name)
+        if src_leaf_item is None:
             logging.error("Item %s not found", self.src_item_name)
             return
-        dst_index = self._project_item_model.find_item(self.dst_item_name)
-        if not dst_index:
+        dst_leaf_item = self._project_item_model.get_item(self.dst_item_name)
+        if dst_leaf_item is None:
             logging.error("Item %s not found", self.dst_item_name)
             return
-        src_item = self._project_item_model.item(src_index).project_item
-        dst_item = self._project_item_model.item(dst_index).project_item
+        src_item = src_leaf_item.project_item
+        dst_item = dst_leaf_item.project_item
         dst_item.notify_destination(src_item)
+
+    @Slot("QVariant")
+    def connect_engine_signals(self, engine):
+        """Connects signals needed for icon animations from given engine."""
+        engine.dag_node_execution_started.connect(self._start_animation)
+        engine.dag_node_execution_finished.connect(self._stop_animation)
+
+    @Slot(str, "QVariant")
+    def _start_animation(self, item_name, direction):
+        """Starts item icon animation when executing forward."""
+        if direction == ExecutionDirection.BACKWARD:
+            return
+        item = self._project_item_model.get_item(item_name).project_item
+        icon = item.get_icon()
+        if hasattr(icon, "start_animation"):
+            icon.start_animation()
+
+    @Slot(str, "QVariant")
+    def _stop_animation(self, item_name, direction):
+        """Stops item icon animation when executing forward."""
+        if direction == ExecutionDirection.BACKWARD:
+            return
+        item = self._project_item_model.get_item(item_name).project_item
+        icon = item.get_icon()
+        if hasattr(icon, "stop_animation"):
+            icon.stop_animation()
 
 
 class GraphQGraphicsView(CustomQGraphicsView):

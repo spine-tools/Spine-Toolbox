@@ -345,7 +345,6 @@ class Importer(ProjectItem):
 
     def execute_forward(self, resources):
         """see base class."""
-        self.get_icon().start_animation()
         args = [
             [f for f in self.all_files if f not in self.unchecked_files],
             self.settings,
@@ -354,7 +353,6 @@ class Importer(ProjectItem):
             self._properties_ui.cancel_on_error_checkBox.isChecked(),
         ]
         exit_code = self._run_importer_program(args)
-        self.get_icon().stop_animation()
         return exit_code == 0
 
     def stop_execution(self):

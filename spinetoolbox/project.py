@@ -34,6 +34,8 @@ class SpineToolboxProject(MetaObject):
     """Class for Spine Toolbox projects."""
 
     dag_execution_finished = Signal()
+    dag_execution_about_to_start = Signal("QVariant")
+    """Emitted just before an engine runs. Provides a reference to the engine."""
 
     def __init__(self, toolbox, name, description, p_dir):
 
@@ -51,6 +53,7 @@ class SpineToolboxProject(MetaObject):
         self.dag_handler = DirectedGraphHandler(self._toolbox)
         self.db_mngr = SpineDBManager(self)
         self.engine = None
+        self._execution_stopped = True
         self._dag_execution_list = None
         self._dag_execution_permits_list = None
         self._dag_execution_index = None
@@ -159,7 +162,7 @@ class SpineToolboxProject(MetaObject):
             objects_dict (dict): Dictionary containing all project items in JSON format
 
         Returns:
-            bool: True if successfull, False otherwise
+            bool: True if successful, False otherwise
         """
         self._toolbox.msg.emit("Loading project items...")
         empty = True
@@ -291,8 +294,7 @@ class SpineToolboxProject(MetaObject):
 
     @Slot()
     def execute_next_dag(self):
-        """Executes next dag in the execution list.
-        """
+        """Executes next dag in the execution list."""
         if self._execution_stopped:
             return
         try:
@@ -325,6 +327,7 @@ class SpineToolboxProject(MetaObject):
             return
         items = [self._toolbox.project_item_model.get_item(name).project_item for name in node_successors]
         self.engine = SpineEngine(items, node_successors, execution_permits)
+        self.dag_execution_about_to_start.emit(self.engine)
         self._toolbox.msg.emit("<b>Starting DAG {0}</b>".format(dag_identifier))
         self._toolbox.msg.emit("Order: {0}".format(" -> ".join(list(node_successors))))
         self.engine.run()
@@ -336,8 +339,7 @@ class SpineToolboxProject(MetaObject):
         self._toolbox.msg.emit("<b>DAG {0} {1}</b>".format(dag_identifier, outcome))
 
     def execute_selected(self):
-        """Executes DAGs corresponding to all selected project items.
-        """
+        """Executes DAGs corresponding to all selected project items."""
         self._toolbox.ui.textBrowser_eventlog.verticalScrollBar().setValue(
             self._toolbox.ui.textBrowser_eventlog.verticalScrollBar().maximum()
         )
@@ -375,8 +377,7 @@ class SpineToolboxProject(MetaObject):
         self.execute_dags(dags, execution_permit_list)
 
     def execute_project(self):
-        """Executes all dags in the project.
-        """
+        """Executes all dags in the project."""
         self._toolbox.ui.textBrowser_eventlog.verticalScrollBar().setValue(
             self._toolbox.ui.textBrowser_eventlog.verticalScrollBar().maximum()
         )
