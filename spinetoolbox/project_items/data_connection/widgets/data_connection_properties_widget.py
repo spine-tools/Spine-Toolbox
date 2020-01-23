@@ -64,10 +64,11 @@ class DataConnectionPropertiesWidget(QWidget):
         option = self.dc_ref_context_menu.get_action()
         # Get selected Data Connection from project item model
         curr_index = self._toolbox.ui.treeView_project.currentIndex()
-        dc = self._toolbox.project_item_model.item(curr_index)
-        if not dc:
-            self._toolbox.msg_error.emit("FIXME: Data Connection {0} not found in project items".format(curr_index))
+        leaf_item = self._toolbox.project_item_model.item(curr_index)
+        if not leaf_item:
+            self._toolbox.msg_error.emit("FIXME: Data Connection {0} not found in project item tree".format(curr_index))
             return
+        dc = leaf_item.project_item
         if option == "Open containing directory...":
             ref_path = self.ui.treeView_dc_references.model().itemFromIndex(ind).data(Qt.DisplayRole)
             ref_dir = os.path.split(ref_path)[0]
@@ -96,10 +97,11 @@ class DataConnectionPropertiesWidget(QWidget):
         option = self.dc_data_context_menu.get_action()
         # Get selected Data Connection from project item model
         curr_index = self._toolbox.ui.treeView_project.currentIndex()
-        dc = self._toolbox.project_item_model.item(curr_index)
-        if not dc:
+        leaf_item = self._toolbox.project_item_model.item(curr_index)
+        if not leaf_item:
             self._toolbox.msg_error.emit("FIXME: Data Connection {0} not found in project items".format(curr_index))
             return
+        dc = leaf_item.project_item
         if option == "New file...":
             dc.make_new_file()
         elif option == "Edit...":

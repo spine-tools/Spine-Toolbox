@@ -324,6 +324,7 @@ class ToolboxUI(QMainWindow):
         self.clear_ui()
         self._project = SpineToolboxProject(self, name, description, location)
         self._project.connect_signals()
+        self._connect_project_to_design_view()
         self.init_models(tool_specification_paths=list())  # Start project with no tool specifications
         self.setWindowTitle("Spine Toolbox    -- {} --".format(self._project.name))
         self.ui.graphicsView.init_scene(empty=True)
@@ -394,6 +395,8 @@ class ToolboxUI(QMainWindow):
         project_items = project_info["objects"]
         # Create project
         self._project = SpineToolboxProject(self, name, desc, project_dir)
+        self._connect_project_to_design_view()
+        # Init models and views
         self.setWindowTitle("Spine Toolbox    -- {} --".format(self._project.name))
         # Clear text browsers
         if clear_logs:
@@ -690,7 +693,7 @@ class ToolboxUI(QMainWindow):
                        "Would you like to make this directory into a Spine Toolbox project?".format(project_dir)
                 box2 = QMessageBox(
                     QMessageBox.Question, "Not empty", msg2,
-                        buttons=QMessageBox.Ok | QMessageBox.Cancel, parent=self
+                    buttons=QMessageBox.Ok | QMessageBox.Cancel, parent=self
                 )
                 box2.button(QMessageBox.Ok).setText("Go ahead")
                 answer2 = box2.exec_()
@@ -991,7 +994,7 @@ class ToolboxUI(QMainWindow):
             if answer != QMessageBox.Ok:
                 return
         try:
-            data_dir = item.data_dir
+            data_dir = item.project_item.data_dir
         except AttributeError:
             data_dir = None
         # Remove item from project model
@@ -1794,3 +1797,7 @@ class ToolboxUI(QMainWindow):
     def _show_message_box(self, title, message):
         """Shows an information message box."""
         QMessageBox.information(self, title, message)
+
+    def _connect_project_to_design_view(self):
+        """Connects execution start signals to design view to control icon animations."""
+        self._project.dag_execution_about_to_start.connect(self.ui.graphicsView.connect_engine_signals)
