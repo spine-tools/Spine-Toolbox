@@ -17,7 +17,7 @@ A worker based machinery to construct the settings data structures needed for gd
 """
 
 from PySide2.QtCore import QThread, Signal
-from spinedb_api import DatabaseMapping
+from spinedb_api import DatabaseMapping, SpineDBAPIError
 from spinetoolbox.spine_io.exporters import gdx
 
 
@@ -43,7 +43,11 @@ class Worker(QThread):
 
     def run(self):
         """Constructs settings and parameter index settings and sends them away using signals."""
-        database_map = DatabaseMapping(self._database_url)
+        try:
+            database_map = DatabaseMapping(self._database_url)
+        except SpineDBAPIError as error:
+            self.errored.emit(self._database_url, error)
+            return
         try:
             if not self.isInterruptionRequested():
                 settings = gdx.make_settings(database_map)

@@ -23,7 +23,7 @@ import os.path
 from PySide2.QtCore import QObject, Signal, Slot
 from spinedb_api.database_mapping import DatabaseMapping
 from spinetoolbox.project_item import ProjectItem, ProjectItemResource
-from spinetoolbox.helpers import deserialize_path, serialize_path, serialize_url
+from spinetoolbox.helpers import deserialize_path, serialize_url
 from spinetoolbox.spine_io import gdx_utils
 from spinetoolbox.spine_io.exporters import gdx
 from .settings_state import SettingsState
@@ -465,8 +465,10 @@ class _SettingsPack(QObject):
         """Stores the settings pack into a JSON compatible dictionary."""
         d = dict()
         d["output_file_name"] = self.output_file_name
-        d["state"] = self.state.value
-        if self.state in (SettingsState.FETCHING, SettingsState.ERROR):
+        # Override ERROR by FETCHING so we'll retry reading the database when reopening the project.
+        state_to_save = self.state if self.state != SettingsState.ERROR else SettingsState.FETCHING
+        d["state"] = state_to_save.value
+        if state_to_save == SettingsState.FETCHING:
             return d
         d["settings"] = self.settings.to_dict()
         d["indexing_settings"] = gdx.indexing_settings_to_dict(self.indexing_settings)
