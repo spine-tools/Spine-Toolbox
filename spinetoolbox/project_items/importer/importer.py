@@ -43,7 +43,7 @@ class Importer(ProjectItem):
         Args:
             name (str): Project item name
             description (str): Project item description
-            mappings (dict): dict with mapping settings
+            mappings (list): List where each element contains two dicts (path dict and mapping dict)
             x (float): Initial icon scene X coordinate
             y (float): Initial icon scene Y coordinate
             toolbox (ToolboxUI): QMainWindow instance
@@ -59,24 +59,23 @@ class Importer(ProjectItem):
         except OSError:
             self._logger.msg_error.emit(f"[OSError] Creating directory {self.logs_dir} failed. Check permissions.")
         # Variables for saving selections when item is (de)activated
-
         if not mappings:
-            mappings = {"sources": [], "version": "1"}
+            mappings = list()
         # convert table_types and table_row_types keys to int since json always has strings as keys.
-        if mappings["sources"] is None:
-            for _, mapping in mappings["sources"]:
-                table_types = mapping.get("table_types", {})
-                mapping["table_types"] = {
-                    table_name: {int(col): t for col, t in col_types.items()}
-                    for table_name, col_types in table_types.items()
-                }
-                table_row_types = mapping.get("table_row_types", {})
-                mapping["table_row_types"] = {
-                    table_name: {int(row): t for row, t in row_types.items()}
-                    for table_name, row_types in table_row_types.items()
-                }
-        
-        self.settings = mappings
+        for _, mapping in mappings:
+            table_types = mapping.get("table_types", {})
+            mapping["table_types"] = {
+                table_name: {int(col): t for col, t in col_types.items()}
+                for table_name, col_types in table_types.items()
+            }
+            table_row_types = mapping.get("table_row_types", {})
+            mapping["table_row_types"] = {
+                table_name: {int(row): t for row, t in row_types.items()}
+                for table_name, row_types in table_row_types.items()
+            }
+        # Convert serialized paths to absolute in mappings
+        self.settings = self.deserialize_mappings(mappings, self._project.project_dir)
+        # self.settings is now a dictionary, where elements have the absolute path as the key and the mapping as value
         self.cancel_on_error = cancel_on_error
         self.resources_from_downstream = list()
         self.file_model = QStandardItemModel()
@@ -118,7 +117,6 @@ class Importer(ProjectItem):
 
     def activate(self):
         """Restores selections, cancel on error checkbox and connects signals."""
-        # set cancel on error checkbox state
         self._properties_ui.cancel_on_error_checkBox.setCheckState(Qt.Checked if self.cancel_on_error else Qt.Unchecked)
         self.restore_selections()
         super().connect_signals()
@@ -249,26 +247,50 @@ class Importer(ProjectItem):
             preview_widget.close()
 
     def get_settings(self, importee):
-        importee_relpath = serialize_path(importee, self._project.project_dir)
-        importee_settings = [s for s in self.settings["sources"] if s[0] == importee_relpath]
-        if importee_settings:
-            return importee_settings[0][1]
-        return {}
-        
+        """Returns the mapping dictionary for the file in given path.
+
+        Args:
+            importee (str): Absolute path to a file, whose mapping is queried
+
+        Returns:
+            dict: Mapping dictionary for the requested importee or an empty dict if not found
+        """
+        importee_settings = None
+        for p in self.settings.keys():
+            if p == importee:
+                importee_settings = self.settings[p]
+        if not importee_settings:
+            return {}
+        return importee_settings
+
     def save_settings(self, settings, importee):
-        importee_relpath = serialize_path(importee, self._project.project_dir)
-        importee_settings = [s for s in self.settings["sources"] if s[0] == importee_relpath]
-        if importee_settings:
-            importee_settings[0][1].update(settings)
+        """Updates an existing mapping or adds a new mapping
+         (settings) after closing the import preview window.
+
+        Args:
+            settings (dict): Updated mapping (settings) dictionary
+            importee (str): Absolute path to a file, whose mapping has been updated
+        """
+        if importee in self.settings.keys():
+            self.settings[importee].update(settings)
         else:
-            self.settings["sources"].append([importee_relpath, settings])
+            self.settings[importee] = settings
 
     def _preview_destroyed(self, importee):
+        """Destroys preview widget instance for the given importee.
+
+        Args:
+            importee (str): Absolute path to a file, whose preview widget is destroyed
+        """
         self._preview_widget.pop(importee, None)
 
     def update_file_model(self, items):
-        """Add given list of items to the file model. If None or
-        an empty list given, the model is cleared."""
+        """Adds given list of items to the file model. If None or
+        an empty list is given, the model is cleared.
+
+        Args:
+            items (set): Set of absolute file paths
+        """
         self.all_files = items
         self.file_model.clear()
         self.file_model.setHorizontalHeaderItem(0, QStandardItem("Source files"))  # Add header
@@ -285,6 +307,11 @@ class Importer(ProjectItem):
                 self.file_model.appendRow(qitem)
 
     def _run_importer_program(self, args):
+        """Starts and runs the importer program in a separate process.
+
+        Args:
+            args (list): List of arguments for the importer program
+        """
         self.importer_process = QProcess()
         self.importer_process.readyReadStandardOutput.connect(self._log_importer_process_stdout)
         self.importer_process.readyReadStandardError.connect(self._log_importer_process_stderr)
@@ -321,7 +348,7 @@ class Importer(ProjectItem):
         self.get_icon().start_animation()
         args = [
             [f for f in self.all_files if f not in self.unchecked_files],
-            mappings_to_abs_path_mappings(self.settings, self._project.project_dir),
+            self.settings,
             [r.url for r in self.resources_from_downstream if r.type_ == "database"],
             self.logs_dir,
             self._properties_ui.cancel_on_error_checkBox.isChecked(),
@@ -351,7 +378,8 @@ class Importer(ProjectItem):
     def item_dict(self):
         """Returns a dictionary corresponding to this item."""
         d = super().item_dict()
-        d["mappings"] = self.settings
+        # Serialize mappings before saving
+        d["mappings"] = self.serialize_mappings(self.settings, self._project.project_dir)
         d["cancel_on_error"] = self._properties_ui.cancel_on_error_checkBox.isChecked()
         return d
 
@@ -374,8 +402,7 @@ class Importer(ProjectItem):
         return "Importer"
 
     def tear_down(self):
-        """Close all preview widgets
-        """
+        """Closes all preview widgets."""
         for widget in self._preview_widget.values():
             widget.close()
 
@@ -391,63 +418,64 @@ class Importer(ProjectItem):
     
     @staticmethod
     def upgrade_from_no_version_to_version_1(item_name, old_item_dict, old_project_dir):
-        """See base class."""
+        """Converts mappings to a list, where each element contains two dictionaries,
+        the serialized path dictionary and the mapping dictionary for the file in that
+        path."""
         new_importer = dict(old_item_dict)
         mappings = new_importer.get("mappings", {})
-        new_importer["mappings"] = _upgrade_mappings_to_v1(mappings, old_project_dir)
+        list_of_mappings = list()
+        paths = list(mappings.keys())
+        for path in paths:
+            mapping = mappings[path]
+            if "source_type" in mapping and mapping["source_type"] == "CSVConnector":
+                _fix_csv_connector_settings(mapping)
+            new_path = serialize_path(path, old_project_dir)
+            if new_path["relative"]:
+                new_path["path"] = os.path.join(".spinetoolbox", "items", new_path["path"])
+            list_of_mappings.append([new_path, mapping])
+        new_importer["mappings"] = list_of_mappings
         return new_importer
 
-def mappings_to_abs_path_mappings(mappings, project_path):
-    """returns a mapping settings as dict with absolute paths as keys
+    @staticmethod
+    def deserialize_mappings(mappings, project_path):
+        """Returns mapping settings as dict with absolute paths as keys.
 
-    :param mappings: dictionary with mapping settings
-    :type mappings: dictionary
-    :param project_path: path to project folder
-    :type project_path: str
-    :return: dictionary with absolute paths as keys and mapping settings as values
-    :rtype: dict
-    """
-    abs_path_mappings = {}
-    for source, mapping in mappings["sources"]:
-        abs_path_mappings[deserialize_path(source, project_path)] = mapping
-    return abs_path_mappings
+        Args:
+            mappings (list): List where each element contains two dictionaries (path dict and mapping dict)
+            project_path (str): Path to project directory
+
+        Returns:
+            dict: Dictionary with absolute paths as keys and mapping settings as values
+        """
+        abs_path_mappings = {}
+        for source, mapping in mappings:
+            abs_path_mappings[deserialize_path(source, project_path)] = mapping
+        return abs_path_mappings
+
+    @staticmethod
+    def serialize_mappings(mappings, project_path):
+        """Returns a list of mappings, where each element contains two dictionaries,
+        the 'serialized' path in a dictionary and the mapping dictionary.
+
+        Args:
+            mappings (dict): Dictionary with mapping specifications
+            project_path (str): Path to project directory
+
+        Returns:
+            list: List where each element contains two dictionaries.
+        """
+        serialized_mappings = list()
+        for source, mapping in mappings.items():  # mappings is a dict with absolute paths as keys and mapping as values
+            serialized_mappings.append([serialize_path(source, project_path), mapping])
+        return serialized_mappings
 
 
-def _upgrade_mappings_to_v1(mappings, project_path):
-    """Upgrade mapping json settings to v1 from unversioned
-
-    :param mappings: dictionary with mapping specifications
-    :type mappings: dict
-    :param project_path: path to project directory
-    :type project_path: str
-    :return: dict
-    :rtype: dictionary with mapping specification
-    """
-    if "version" in mappings:
-        if mappings["version"] == "1":
-            return dict(mappings)
-        else:
-            raise TypeError("'mappings' settings contains unknown version number")
-    new_dict = {}
-    new_dict["version"] = "1"
-    new_dict["sources"] = []
-    paths = list(mappings.keys())
-    for path in paths:
-        mapping = mappings[path]
-        if "source_type" in mapping and mapping["source_type"] == "CSVConnector":
-            _fix_CSVConnector_settings(mapping)
-        new_path = serialize_path(path, project_path)
-        if new_path["relative"]:
-            new_path["path"] = os.path.join(".spinetoolbox", "items", new_path["path"])
-        new_dict["sources"].append([new_path, mapping])
-    return new_dict
-
-def _fix_CSVConnector_settings(settings):
+def _fix_csv_connector_settings(settings):
     """CSVConnector saved the table names as the filepath, change that
     to 'csv' instead. This function will mutate the dictionary.
 
-    :param settings: mapping settings that should be updated
-    :type settings: dict
+    Args:
+        settings (dict): Mapping settings that should be updated
     """
     table_mappings = settings.get("table_mappings", {})
     k = list(table_mappings)

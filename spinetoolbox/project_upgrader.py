@@ -126,7 +126,7 @@ class ProjectUpgrader:
         Args:
             old (dict): Project information JSON
             old_project_dir (str): Path to old project directory
-            new_project_dir (str): Path tol new project directory
+            new_project_dir (str): Path to new project directory
 
         Returns:
              dict: Project information JSON upgraded to version 1

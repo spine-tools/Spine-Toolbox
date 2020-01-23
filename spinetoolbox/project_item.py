@@ -410,7 +410,9 @@ class ProjectItem(MetaObject):
         Args:
             item_name (str): item's name
             old_item_dict (str): no version item dictionary
-            old_project_dir (str): path to the previous project dir
+            old_project_dir (str): path to the previous project dir. We use old project directory
+                here since the new project directory may be empty at this point and the directories
+                for the new project items have not been created yet.
 
         Returns:
             version 1 item dictionary
