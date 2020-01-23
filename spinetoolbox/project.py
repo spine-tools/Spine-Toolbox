@@ -35,6 +35,8 @@ class SpineToolboxProject(MetaObject):
     """Class for Spine Toolbox projects."""
 
     dag_execution_finished = Signal()
+    dag_execution_about_to_start = Signal("QVariant")
+    """Emitted just before an engine runs. Provides a reference to the engine."""
 
     def __init__(self, toolbox, name, description, work_dir=None, ext='.proj'):
         """
@@ -395,6 +397,7 @@ class SpineToolboxProject(MetaObject):
             return
         items = [self._toolbox.project_item_model.get_item(name).project_item for name in node_successors]
         self.engine = SpineEngine(items, node_successors, execution_permits)
+        self.dag_execution_about_to_start.emit(self.engine)
         logging.debug("execution_permits: %s", execution_permits)
         self._toolbox.msg.emit("<b>Starting DAG {0}</b>".format(dag_identifier))
         self._toolbox.msg.emit("Order: {0}".format(" -> ".join(list(node_successors))))
