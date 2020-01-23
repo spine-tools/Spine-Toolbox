@@ -133,17 +133,17 @@ class TestSpineToolboxProject(unittest.TestCase):
         add_importer(p, imp_name)
         add_exporter(p, exp_name)
         # Check that the items are found from project item model
-        ds = self.toolbox.project_item_model.item(self.toolbox.project_item_model.find_item(ds_name))
+        ds = self.toolbox.project_item_model.get_item(ds_name)
         self.assertEqual(ds_name, ds.name)
-        dc = self.toolbox.project_item_model.item(self.toolbox.project_item_model.find_item(dc_name))
+        dc = self.toolbox.project_item_model.get_item(dc_name)
         self.assertEqual(dc_name, dc.name)
-        tool = self.toolbox.project_item_model.item(self.toolbox.project_item_model.find_item(tool_name))
+        tool = self.toolbox.project_item_model.get_item(tool_name)
         self.assertEqual(tool_name, tool.name)
-        view = self.toolbox.project_item_model.item(self.toolbox.project_item_model.find_item(view_name))
+        view = self.toolbox.project_item_model.get_item(view_name)
         self.assertEqual(view_name, view.name)
-        importer = self.toolbox.project_item_model.item(self.toolbox.project_item_model.find_item(imp_name))
+        importer = self.toolbox.project_item_model.get_item(imp_name)
         self.assertEqual(imp_name, importer.name)
-        exporter = self.toolbox.project_item_model.item(self.toolbox.project_item_model.find_item(exp_name))
+        exporter = self.toolbox.project_item_model.get_item(exp_name)
         self.assertEqual(exp_name, exporter.name)
         # DAG handler should now have six graphs, each with one item
         dag_hndlr = self.toolbox.project().dag_handler
@@ -187,18 +187,6 @@ class TestSpineToolboxProject(unittest.TestCase):
         self.toolbox.project().execute_project()
         item1.execute_forward.assert_called_with([])
         item2.execute_forward.assert_called_with([])
-
-    def test_execute_selected(self):
-        item1_name = "Tool"
-        add_tool(self.toolbox.project(), item1_name)
-        item1_index = self.toolbox.project_item_model.find_item(item1_name)
-        item1 = self.toolbox.project_item_model.project_item(item1_index)
-        item1._do_execute = mock.MagicMock(return_value=True)
-        item2_name = "View"
-        add_view(self.toolbox.project(), item2_name)
-        item2_index = self.toolbox.project_item_model.find_item(item2_name)
-        item2 = self.toolbox.project_item_model.project_item(item2_index)
-        item2._do_execute = mock.MagicMock(return_value=True)
 
     def test_execute_selected_dag(self):
         item1_name = self.add_tool()

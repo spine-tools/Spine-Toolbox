@@ -154,7 +154,7 @@ def add_importer(project, name, x=0, y=0):
 
 def add_exporter(project, name, x=0, y=0):
     """Helper function to add an exporter to given project."""
-    item = dict(name=name, description="", x=x, y=y)
+    item = dict(name=name, description="", x=x, y=y, settings_packs=None)
     with mock.patch("spinetoolbox.project_item.create_dir"):
         project.add_project_items("Exporters", item)
     return
