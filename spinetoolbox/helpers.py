@@ -698,7 +698,7 @@ def serialize_path(path, project_dir):
     serialized = {
         "type": "path",
         "relative": is_relative,
-        "path": os.path.relpath(path, project_dir) if is_relative else path,
+        "path": os.path.relpath(path, project_dir).replace(os.sep, "/") if is_relative else path.replace(os.sep, "/"),
     }
     return serialized
 
@@ -725,7 +725,7 @@ def serialize_url(url, project_dir):
         serialized = {
             "type": "file_url",
             "relative": is_relative,
-            "path": os.path.relpath(path, project_dir) if is_relative else path,
+            "path": os.path.relpath(path, project_dir).replace(os.sep, "/") if is_relative else path.replace(os.sep, "/"),
             "scheme": parsed.scheme,
         }
     else:
