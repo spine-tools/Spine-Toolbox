@@ -451,7 +451,6 @@ class Tool(ProjectItem):
         if not self.create_output_dirs():
             self._logger.msg_error.emit("Creating output subdirectories failed. Tool execution aborted.")
             return False
-        self.get_icon().start_animation()
         self.instance = self.tool_specification().create_tool_instance(self.basedir)
         self.instance.prepare()  # Make command and stuff
         self.instance.instance_finished.connect(self.handle_execution_finished)
@@ -464,7 +463,6 @@ class Tool(ProjectItem):
         self.instance.execute()
         if self.instance.is_running():
             loop.exec_()
-        self.get_icon().stop_animation()
         return self.last_return_code == 0
 
     def count_files_and_dirs(self):
