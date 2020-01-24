@@ -65,6 +65,9 @@ class Exporter(ProjectItem):
             self._settings_packs[url] = settings_pack
         self._activated = False
         self._project.db_mngr.session_committed.connect(self._update_settings_after_db_commit)
+        for url, pack in self._settings_packs.items():
+            if pack.state != SettingsState.OK:
+                self._start_worker(url)
 
     @staticmethod
     def item_type():
@@ -291,6 +294,8 @@ class Exporter(ProjectItem):
     @Slot()
     def _report_notifications(self):
         """Updates the exclamation icon and notifications labels."""
+        if self._icon is None:
+            return
         self.clear_notifications()
         merged = _Notifications()
         for pack in self._settings_packs.values():
@@ -470,9 +475,8 @@ class _SettingsPack(QObject):
         d = dict()
         d["output_file_name"] = self.output_file_name
         # Override ERROR by FETCHING so we'll retry reading the database when reopening the project.
-        state_to_save = self.state if self.state != SettingsState.ERROR else SettingsState.FETCHING
-        d["state"] = state_to_save.value
-        if state_to_save == SettingsState.FETCHING:
+        d["state"] = self.state.value
+        if self.state != SettingsState.OK:
             return d
         d["settings"] = self.settings.to_dict()
         d["indexing_settings"] = gdx.indexing_settings_to_dict(self.indexing_settings)
@@ -484,7 +488,7 @@ class _SettingsPack(QObject):
         """Restores the settings pack from a dictionary."""
         pack = _SettingsPack(pack_dict["output_file_name"])
         pack.state = SettingsState(pack_dict["state"])
-        if pack.state in (SettingsState.FETCHING, SettingsState.ERROR):
+        if pack.state != SettingsState.OK:
             return pack
         pack.settings = gdx.Settings.from_dict(pack_dict["settings"])
         db_map = DatabaseMapping(database_url)
