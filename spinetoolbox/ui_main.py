@@ -910,7 +910,7 @@ class ToolboxUI(QMainWindow):
             tool_spec_paths = project_dict["tool_specifications"]
             # Deserialize paths, remove tool spec path, serialize paths again
             des_paths = [deserialize_path(p, self._project.project_dir) for p in tool_spec_paths]
-            des_paths.remove(tool_def_path)
+            des_paths.remove(tool_def_path.replace(os.sep, "/"))
             ser_paths = [serialize_path(pa, self._project.project_dir) for pa in des_paths]
             project_dict["tool_specifications"] = ser_paths
         except KeyError:
