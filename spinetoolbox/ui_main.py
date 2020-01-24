@@ -530,14 +530,14 @@ class ToolboxUI(QMainWindow):
             return
         # Upgrade project info dict to latest version
         upgraded_proj_info = upgrader.upgrade(proj_info, old_project_dir, proj_dir)
-        # Open the upgraded project
-        if not self.restore_project(upgraded_proj_info, proj_dir, clear_logs=True):
-            return
         # Copy project item data from old project to new project directory
         if not upgrader.copy_data(fp, proj_dir):
             self.msg_warning.emit("Copying data to project <b>{0}</b> failed. "
                                   "Please copy project item directories to directory <b>{1}</b> manually."
                                   .format(proj_dir, os.path.join(proj_dir, ".spinetoolbox", "items")))
+        # Open the upgraded project
+        if not self.restore_project(upgraded_proj_info, proj_dir, clear_logs=False):
+            return
         # Save project to finish the upgrade process
         self.save_project()
         return
