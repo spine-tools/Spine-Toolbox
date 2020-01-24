@@ -57,7 +57,7 @@ class ProjectItem(MetaObject):
         self._sigs = None
         self.item_changed.connect(lambda: self._project.notify_changes_in_containing_dag(self.name))
         # Make project directory for this Item
-        self.data_dir = os.path.join(self._project.project_dir, self.short_name)
+        self.data_dir = os.path.join(self._project.items_dir, self.short_name)
         try:
             create_dir(self.data_dir)
         except OSError:
@@ -369,6 +369,55 @@ class ProjectItem(MetaObject):
             f"<b>{source_item.item_type()}</b> and a <b>{self.item_type()}</b> has not been "
             "implemented yet."
         )
+
+    # pylint: disable=no-self-use
+    def available_resources_downstream(self, upstream_resources):
+        """
+        Returns resources available to downstream items.
+
+        Should be reimplemented by subclasses if they want to offer resources
+        to downstream items. The default implementation returns an empty list.
+
+        Args:
+            upstream_resources (list): a list of resources available from upstream items
+
+        Returns:
+            a list of ProjectItemResources
+        """
+        return list()
+
+    # pylint: disable=no-self-use
+    def available_resources_upstream(self):
+        """
+        Returns resources available to upstream items.
+
+        Should be reimplemented by subclasses if they want to offer resources
+        to upstream items. The default implementation returns an empty list.
+
+        Returns:
+            a list of ProjectItemResources
+        """
+        return list()
+
+    @staticmethod
+    def upgrade_from_no_version_to_version_1(item_name, old_item_dict, old_project_dir):
+        """
+        Upgrades item's dictionary from no version to version 1.
+
+        Subclasses should reimplement this method if their JSON format changed between no version
+        and version 1 .proj files.
+
+        Args:
+            item_name (str): item's name
+            old_item_dict (str): no version item dictionary
+            old_project_dir (str): path to the previous project dir. We use old project directory
+                here since the new project directory may be empty at this point and the directories
+                for the new project items have not been created yet.
+
+        Returns:
+            version 1 item dictionary
+        """
+        return old_item_dict
 
 
 class ProjectItemResource:

@@ -44,7 +44,6 @@ from ..mvcmodels.parameter_value_list_model import ParameterValueListModel
 from ..helpers import busy_effect, format_string_list
 from .import_widget import ImportDialog
 from ..excel_import_export import export_spine_database_to_xlsx
-from ..config import DEFAULT_PROJECT_DIR
 
 
 class DataStoreFormBase(QMainWindow):
@@ -275,8 +274,9 @@ class DataStoreFormBase(QMainWindow):
         db_map = self._select_database()
         if db_map is None:  # Database selection cancelled
             return
+        proj_dir = self.db_mngr.parent().project_dir  # Parent should be SpineToolboxProject
         file_path, selected_filter = QFileDialog.getSaveFileName(
-            self, "Export to file", DEFAULT_PROJECT_DIR, "Excel file (*.xlsx);;SQlite database (*.sqlite *.db)"
+            self, "Export to file", proj_dir, "Excel file (*.xlsx);;SQlite database (*.sqlite *.db)"
         )
         if not file_path:  # File selection cancelled
             return

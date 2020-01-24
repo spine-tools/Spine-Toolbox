@@ -112,7 +112,8 @@ def _import(all_data, url, logs_dir, cancel_on_error):
         import_num, import_errors = spinedb_api.import_data(db_map, **data)
         all_import_errors += import_errors
         if import_errors and cancel_on_error:
-            db_map.rollback_session()
+            if db_map.has_pending_changes():
+                db_map.rollback_session()
         elif import_num:
             db_map.commit_session("imported with mapper")
             print("Inserted {0} data with {1} errors into {2}".format(import_num, len(import_errors), url))

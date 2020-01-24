@@ -1,0 +1,13 @@
+{
+    "name": "Python Tool Specification",
+    "description": "Python Tool Specification for unit tests.",
+    "tooltype": "python",
+    "execute_in_work": true,
+    "includes": [
+        "script.py"
+    ],
+    "inputfiles": [],
+    "inputfiles_opt": [],
+    "outputfiles": [],
+    "cmdline_args": ""
+}

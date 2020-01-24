@@ -10,10 +10,10 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-# Form implementation generated from reading ui file 'C:\data\src\toolbox\bin\..\spinetoolbox\project_items\data_store\ui\data_store_properties.ui',
-# licensing of 'C:\data\src\toolbox\bin\..\spinetoolbox\project_items\data_store\ui\data_store_properties.ui' applies.
+# Form implementation generated from reading ui file 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\project_items\data_store\ui\data_store_properties.ui',
+# licensing of 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\project_items\data_store\ui\data_store_properties.ui' applies.
 #
-# Created: Tue Jan 21 15:31:20 2020
+# Created: Tue Jan 21 17:01:20 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!

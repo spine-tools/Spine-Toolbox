@@ -381,6 +381,18 @@ class RelationshipItemContextMenu(EntityItemContextMenu):
         self.add_action("Remove")
 
 
+class OpenProjectDialogComboBoxContextMenu(CustomContextMenu):
+    def __init__(self, parent, position):
+        """Class constructor.
+
+        Args:
+            parent (QWidget): Parent for menu widget
+            position (QPoint): Position on screen
+        """
+        super().__init__(parent, position)
+        self.add_action("Clear history")
+
+
 class CustomPopupMenu(QMenu):
     """Popup menu master class for several popup menus.
 
@@ -393,17 +405,20 @@ class CustomPopupMenu(QMenu):
         super().__init__(parent=parent)
         self._parent = parent
 
-    def add_action(self, text, slot, enabled=True):
+    def add_action(self, text, slot, enabled=True, tooltip=None):
         """Adds an action to the popup menu.
 
         Args:
             text (str): Text description of the action
             slot (method): Method to connect to action's triggered signal
             enabled (bool): Is action enabled?
+            tooltip (str): Tool tip for the action
         """
         action = self.addAction(text)
         action.setEnabled(enabled)
         action.triggered.connect(slot)
+        if tooltip is not None:
+            action.setToolTip(tooltip)
 
 
 class AddToolSpecificationPopupMenu(CustomPopupMenu):
@@ -485,10 +500,11 @@ class RecentProjectsPopupMenu(CustomPopupMenu):
         """
         super().__init__(parent=parent)
         self._parent = parent
+        self.setToolTipsVisible(True)
         self.add_recent_projects()
 
     def add_recent_projects(self):
-        """Reads the previous project names and paths from QSettings. Ads them to the QMenu as QActions."""
+        """Reads the previous project names and paths from QSettings. Adds them to the QMenu as QActions."""
         recents = self._parent.qsettings().value("appSettings/recentProjects", defaultValue=None)
         if recents:
             recents = str(recents)
@@ -496,7 +512,9 @@ class RecentProjectsPopupMenu(CustomPopupMenu):
             for entry in recents_list:
                 name, filepath = entry.split("<>")
                 self.add_action(
-                    name, lambda checked=False, filepath=filepath: self.call_open_project(checked, filepath)
+                        name,
+                        lambda checked=False, filepath=filepath: self.call_open_project(checked, filepath),
+                        tooltip=filepath
                 )
 
     @Slot(bool, str, name="call_open_project")
@@ -510,10 +528,13 @@ class RecentProjectsPopupMenu(CustomPopupMenu):
         if not os.path.exists(p):
             # Project has been removed, remove it from recent projects list
             self._parent.remove_path_from_recent_projects(p)
+            self._parent.msg_error.emit(
+                    "Opening selected project failed. Project file <b>{0}</b> may have been removed.".format(p)
+            )
             return
         # Check if the same project is already open
         if self._parent.project():
-            if p == self._parent.project().path:
+            if p == self._parent.project().project_dir:
                 self._parent.msg.emit("Project already open")
                 return
         if not self._parent.open_project(p):

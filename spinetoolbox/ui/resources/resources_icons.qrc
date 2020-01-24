@@ -11,6 +11,13 @@
     <file>fontawesome5-searchterms.json</file>
   </qresource>
   <qresource prefix="icons">
+    <file>menu_icons/history.svg</file>
+    <file>menu_icons/level-up-alt.svg</file>
+    <file>book.svg</file>
+    <file>slash.svg</file>
+    <file>home.svg</file>
+    <file>desktop.svg</file>
+    <file>folder-plus.svg</file>
     <file>eye.svg</file>
     <file>sliders-h.svg</file>
     <file>tools.svg</file>

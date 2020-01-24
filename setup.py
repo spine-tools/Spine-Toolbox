@@ -27,26 +27,26 @@ with open("spinetoolbox/version.py") as fp:
     exec(fp.read(), version)
 
 requirements = [
-    'pyside2 < 5.12',
-    'datapackage >= 1.2.3',
-    'jupyter-client < 5.3.2',
-    'qtconsole >= 4.3.1',
-    'sqlalchemy >= 1.2.6',
-    'spinedb_api >= {}'.format(REQUIRED_SPINEDB_API_VERSION),
-    'spine_engine >= {}'.format(REQUIRED_SPINE_ENGINE_VERSION),
-    'openpyxl >= 2.5.0',
-    'numpy >= 1.15.1',
-    'matplotlib >= 3.0',
-    'scipy >= 1.1.0',
-    'networkx > 2.2',
-    'pymysql >= 0.9.2',
-    'pyodbc >= 4.0.23',
-    'psycopg2 >= 2.7.4',
-    'cx_Oracle >= 6.3.1',
-    'python-dateutil >= 2.8.0',
-    'pandas >= 0.24.0',
-    'jsonschema == 2.6',
-    'gdx2py >= 2.0.2',
+    "pyside2 < 5.12",
+    "datapackage >= 1.2.3",
+    "jupyter-client < 5.3.2",
+    "qtconsole >= 4.3.1",
+    "sqlalchemy >= 1.2.6",
+    "spinedb_api >= {}".format(REQUIRED_SPINEDB_API_VERSION),
+    "spine_engine >= {}".format(REQUIRED_SPINE_ENGINE_VERSION),
+    "openpyxl >= 2.5.0",
+    "numpy >= 1.15.1",
+    "matplotlib >= 3.0",
+    "scipy >= 1.1.0",
+    "networkx > 2.2",
+    "pymysql >= 0.9.2",
+    "pyodbc >= 4.0.23",
+    "psycopg2 >= 2.7.4",
+    "cx_Oracle >= 6.3.1",
+    "python-dateutil >= 2.8.0",
+    "pandas >= 0.24.0",
+    "jsonschema == 2.6",
+    "gdx2py >= 2.0.2",
 ]
 
 setup(
@@ -55,15 +55,20 @@ setup(
     description="An application to define, manage, and execute various energy system simulation models",
     long_description=readme,
     author="Spine Project consortium",
-    author_email='spine_info@vtt.fi',
-    url='https://github.com/Spine-project/Spine-Toolbox',
+    author_email="spine_info@vtt.fi",
+    url="https://github.com/Spine-project/Spine-Toolbox",
     packages=find_packages(),
-    entry_points={'console_scripts': ['spinetoolbox=spinetoolbox.main:main']},
+    entry_points={
+        "console_scripts": [
+            "spinetoolbox=spinetoolbox.main:main"
+        ]
+    },
     include_package_data=True,
     license="LGPL-3.0-or-later",
     zip_safe=False,
-    keywords='',
-    classifiers=[],
+    keywords="",
+    classifiers=[
+    ],
     install_requires=requirements,
-    test_suite='tests',
+    test_suite="tests",
 )

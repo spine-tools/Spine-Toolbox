@@ -24,10 +24,11 @@ import time
 import shutil
 import glob
 import json
+import urllib.parse
 from PySide2.QtCore import Qt, Slot, QFile, QIODevice, QSize, QRect, QPoint
 from PySide2.QtCore import __version__ as qt_version
 from PySide2.QtCore import __version_info__ as qt_version_info
-from PySide2.QtWidgets import QApplication, QMessageBox, QGraphicsScene
+from PySide2.QtWidgets import QApplication, QMessageBox, QGraphicsScene, QFileIconProvider
 from PySide2.QtGui import (
     QCursor,
     QImageReader,
@@ -42,7 +43,7 @@ from PySide2.QtGui import (
 )
 import spinedb_api
 import spine_engine
-from .config import DEFAULT_PROJECT_DIR, REQUIRED_SPINEDB_API_VERSION, REQUIRED_SPINE_ENGINE_VERSION
+from .config import REQUIRED_SPINEDB_API_VERSION, REQUIRED_SPINE_ENGINE_VERSION
 
 if os.name == "nt":
     import ctypes
@@ -171,20 +172,6 @@ def busy_effect(func):
     return new_function
 
 
-def project_dir(qsettings):
-    """Returns current project directory.
-
-    Args:
-        qsettings (QSettings): Settings object
-    """
-    # NOTE: This is not actually used. The key is not saved to qsettings anywhere. This is a placeholder for code
-    # if we want to be able to change the projects directory at some point.
-    proj_dir = qsettings.value("appSettings/projectsDir", defaultValue="")
-    if not proj_dir:
-        return DEFAULT_PROJECT_DIR
-    return proj_dir
-
-
 def get_datetime(show, date=True):
     """Returns date and time string for appending into Event Log messages.
 
@@ -245,7 +232,7 @@ def create_output_dir_timestamp():
 
 @busy_effect
 def copy_files(src_dir, dst_dir, includes=None, excludes=None):
-    """Method for copying files. Does not copy folders.
+    """Function for copying files. Does not copy folders.
 
     Args:
         src_dir (str): Source directory
@@ -278,7 +265,7 @@ def copy_files(src_dir, dst_dir, includes=None, excludes=None):
 
 @busy_effect
 def erase_dir(path, verbosity=False):
-    """Delete directory and all its contents without prompt.
+    """Deletes a directory and all its contents without prompt.
 
     Args:
         path (str): Path to directory
@@ -296,7 +283,8 @@ def erase_dir(path, verbosity=False):
 
 @busy_effect
 def copy_dir(widget, src_dir, dst_dir):
-    """Make a copy of a directory. All files and folders are copied.
+    """Makes a copy of a directory. All files and folders are copied.
+    Destination directory must not exist. Does not overwrite files.
 
     Args:
         widget (QWidget): Parent widget for QMessageBoxes
@@ -339,6 +327,39 @@ def copy_dir(widget, src_dir, dst_dir):
         QMessageBox.information(widget, "OS Error", msg)
         return False
     return True
+
+
+@busy_effect
+def recursive_overwrite(widget, src, dst, ignore=None, silent=True):
+    """Copies everything from source directory to destination directory recursively.
+    Overwrites existing files.
+
+    Args:
+        widget (QWidget): Enables e.g. printing to Event Log
+        src (str): Source directory
+        dst (str): Destination directory
+        ignore: Ignore function
+        silent (bool): If False, messages are sent to Event Log, If True, copying is done in silence
+    """
+    if os.path.isdir(src):
+        if not os.path.isdir(dst):
+            if not silent:
+                widget.msg.emit("Creating directory <b>{0}</b>".format(dst))
+            os.makedirs(dst)
+        files = os.listdir(src)
+        if ignore is not None:
+            ignored = ignore(src, files)
+        else:
+            ignored = set()
+        for f in files:
+            if f not in ignored:
+                recursive_overwrite(widget, os.path.join(src, f), os.path.join(dst, f), ignore, silent)
+    else:
+        if not silent:
+            _, src_filename = os.path.split(src)
+            dst_dir, _ = os.path.split(dst)
+            widget.msg.emit("Copying <b>{0}</b> -> <b>{1}</b>".format(src_filename, dst_dir))
+        shutil.copyfile(src, dst)
 
 
 def rename_dir(old_dir, new_dir, logger):
@@ -621,3 +642,124 @@ def interpret_icon_id(display_icon):
 
 def default_icon_id():
     return make_icon_id(*interpret_icon_id(None))
+
+
+class ProjectDirectoryIconProvider(QFileIconProvider):
+    """QFileIconProvider that provides a Spine icon to the
+    Open Project Dialog when a Spine Toolbox project
+    directory is encountered."""
+
+    def __init__(self):
+        super().__init__()
+        self.spine_icon = QIcon(":/symbols/Spine_symbol.png")
+
+    def icon(self, info):
+        """Returns an icon for the file described by info.
+
+        Args:
+            info (QFileInfo): File (or directory) info
+
+        Returns:
+            QIcon: Icon for a file system resource with the given info
+        """
+        if isinstance(info, QFileIconProvider.IconType):
+            return super().icon(info)  # Because there are two icon() methods
+        if not info.isDir():
+            return super().icon(info)
+        p = info.filePath()
+        # logging.debug("In dir:{0}".format(p))
+        if os.path.exists(os.path.join(p, ".spinetoolbox")):
+            # logging.debug("found project dir:{0}".format(p))
+            return self.spine_icon
+        else:
+            return super().icon(info)
+
+
+def path_in_dir(path, directory):
+    """Returns True if the given path is in the given directory."""
+    return os.path.samefile(os.path.commonpath((path, directory)), directory)
+
+
+def serialize_path(path, project_dir):
+    """
+    Returns a dict representation of the given path.
+
+    If path is in project_dir, converts the path to relative.
+    If path does not exist returns it as-is.
+
+    Args:
+        path (str): path to serialize
+        project_dir (str): path to the project directory
+
+    Returns:
+        dict: Dictionary representing the given path
+    """
+    is_relative = path_in_dir(path, project_dir)
+    serialized = {
+        "type": "path",
+        "relative": is_relative,
+        "path": os.path.relpath(path, project_dir).replace(os.sep, "/") if is_relative else path.replace(os.sep, "/"),
+    }
+    return serialized
+
+
+def serialize_url(url, project_dir):
+    """
+    Return a dict representation of the given URL.
+
+    If the URL is a file that is in project dir, the URL is converted to a relative path.
+
+    Args:
+        url (str): a URL to serialize
+        project_dir (str): path to the project directory
+
+    Returns:
+        dict: Dictionary representing the URL
+    """
+    parsed = urllib.parse.urlparse(url)
+    path = urllib.parse.unquote(parsed.path)
+    if sys.platform == "win32":
+        path = path[1:]  # Remove extra '/' from the beginning
+    if os.path.isfile(path):
+        is_relative = path_in_dir(path, project_dir)
+        serialized = {
+            "type": "file_url",
+            "relative": is_relative,
+            "path": os.path.relpath(path, project_dir).replace(os.sep, "/") if is_relative else path.replace(os.sep, "/"),
+            "scheme": parsed.scheme,
+        }
+    else:
+        serialized = {"type": "url", "relative": False, "path": url}
+    return serialized
+
+
+def deserialize_path(serialized, project_dir):
+    """
+    Returns a deserialized path or URL.
+
+    Args:
+        serialized (dict): a serialized path or URL
+        project_dir (str): path to the project directory
+
+    Returns:
+        str: Path or URL as string
+    """
+    if not isinstance(serialized, dict):
+        return serialized
+    try:
+        path_type = serialized["type"]
+        if path_type == "path":
+            path = serialized["path"]
+            return os.path.normpath(os.path.join(project_dir, path) if serialized["relative"] else path)
+        if path_type == "file_url":
+            path = serialized["path"]
+            if serialized["relative"]:
+                path = os.path.normpath(os.path.join(project_dir, path))
+            if sys.platform == "win32":
+                path = "/" + path
+            return serialized["scheme"] + "://" + path
+        if path_type == "url":
+            return serialized["path"]
+    except KeyError as error:
+        raise RuntimeError("Key missing from serialized path: {}".format(error))
+    raise RuntimeError("Cannot deserialize: unknown path type '{}'.".format(path_type))

@@ -20,12 +20,11 @@ import os
 import logging
 import json
 from PySide2.QtCore import Slot, Signal
-from PySide2.QtWidgets import QMessageBox
 from spine_engine import SpineEngine, SpineEngineState
 from .metaobject import MetaObject
-from .helpers import project_dir, create_dir, copy_dir, inverted
+from .helpers import create_dir, inverted
 from .tool_specifications import JuliaTool, PythonTool, GAMSTool, ExecutableTool
-from .config import DEFAULT_WORK_DIR, INVALID_CHARS
+from .config import LATEST_PROJECT_VERSION, PROJECT_FILENAME
 from .dag_handler import DirectedGraphHandler
 from .project_tree_item import LeafProjectTreeItem
 from .spine_db_manager import SpineDBManager
@@ -38,14 +37,15 @@ class SpineToolboxProject(MetaObject):
     dag_execution_about_to_start = Signal("QVariant")
     """Emitted just before an engine runs. Provides a reference to the engine."""
 
-    def __init__(self, toolbox, name, description, work_dir=None, ext='.proj'):
+    def __init__(self, toolbox, name, description, p_dir):
+
         """
+
         Args:
             toolbox (ToolboxUI): toolbox of this project
             name (str): Project name
             description (str): Project description
-            work_dir (str): Project work directory
-            ext (str): Project save file extension (.proj)
+            p_dir (str): Project directory
         """
         super().__init__(name, description)
         self._toolbox = toolbox
@@ -53,138 +53,82 @@ class SpineToolboxProject(MetaObject):
         self.dag_handler = DirectedGraphHandler(self._toolbox)
         self.db_mngr = SpineDBManager(self)
         self.engine = None
+        self._execution_stopped = True
         self._dag_execution_list = None
         self._dag_execution_permits_list = None
         self._dag_execution_index = None
-        self.project_dir = os.path.join(project_dir(self._qsettings), self.short_name)
-        if not work_dir:
-            self.work_dir = DEFAULT_WORK_DIR
-        else:
-            self.work_dir = work_dir
-        self.filename = self.short_name + ext
-        self.path = os.path.join(project_dir(self._qsettings), self.filename)
-        self.dirty = False  # TODO: Indicates if project has changed since loading
-        self._execution_stopped = True
-        # Make project directory
-        try:
-            create_dir(self.project_dir)
-        except OSError:
-            self._toolbox.msg_error.emit(
-                f"[OSError] Creating project directory {self.project_dir} failed. Check permissions."
-            )
-        # Make work directory
-        try:
-            create_dir(self.work_dir)
-        except OSError:
-            self._toolbox.msg_error.emit(
-                f"[OSError] Creating work directory {self.work_dir} failed. Check permissions."
-            )
+        self.project_dir = None  # Full path to project directory
+        self.config_dir = None  # Full path to .spinetoolbox directory
+        self.items_dir = None  # Full path to items directory
+        self.config_file = None  # Full path to .spinetoolbox/project.json file
+        if not self._create_project_structure(p_dir):
+            self._toolbox.msg_error.emit("Creating project directory "
+                                         "structure to <b>{0}</b> failed"
+                                         .format(p_dir))
 
     def connect_signals(self):
         """Connect signals to slots."""
         self.dag_handler.dag_simulation_requested.connect(self.notify_changes_in_dag)
         self.dag_execution_finished.connect(self.execute_next_dag)
 
-    def change_name(self, name):
-        """Changes project name and updates project dir and save file name.
+    def _create_project_structure(self, directory):
+        """Makes the given directory a Spine Toolbox project directory.
+        Creates directories and files that are common to all projects.
 
         Args:
-            name (str): Project (long) name
+            directory (str): Abs. path to a directory that should be made into a project directory
+
+        Returns:
+            bool: True if project structure was created successfully, False otherwise
+        """
+        self.project_dir = directory
+        self.config_dir = os.path.abspath(os.path.join(self.project_dir, ".spinetoolbox"))
+        self.items_dir = os.path.abspath(os.path.join(self.config_dir, "items"))
+        self.config_file = os.path.abspath(os.path.join(self.config_dir, PROJECT_FILENAME))
+        try:
+            create_dir(self.project_dir)  # Make project directory
+        except OSError:
+            self._toolbox.msg_error.emit("Creating directory {0} failed".format(self.project_dir))
+            return False
+        try:
+            create_dir(self.config_dir)  # Make project config directory
+        except OSError:
+            self._toolbox.msg_error.emit("Creating directory {0} failed".format(self.config_dir))
+            return False
+        try:
+            create_dir(self.items_dir)  # Make project items directory
+        except OSError:
+            self._toolbox.msg_error.emit("Creating directory {0} failed".format(self.items_dir))
+            return False
+        return True
+
+    def change_name(self, name):
+        """Changes project name.
+
+        Args:
+            name (str): New project name
         """
         super().set_name(name)
-        # Update project dir instance variable
-        self.project_dir = os.path.join(project_dir(self._qsettings), self.short_name)
-        # Update file name and path
-        self.change_filename(self.short_name + ".proj")
-
-    def change_filename(self, new_filename):
-        """Change the save filename associated with this project.
-
-        Args:
-            new_filename (str): Filename used in saving the project. No full path. Example 'project.proj'
-        """
-        self.filename = new_filename
-        self.path = os.path.join(project_dir(self._qsettings), self.filename)
-
-    def change_work_dir(self, new_work_path):
-        """Change project work directory.
-
-        Args:
-            new_work_path (str): Absolute path to new work directory
-
-        Returns:
-            bool: True if successful, False otherwise
-        """
-        if not new_work_path:
-            self.work_dir = DEFAULT_WORK_DIR
-            return False
-        if not create_dir(new_work_path):
-            return False
-        self.work_dir = new_work_path
-        return True
-
-    def rename_project(self, name):
-        """Saves project under a new name. Used with File->Save As... menu command.
-        Checks if given project name is valid.
-
-        Args:
-            name (str): New (long) name for project
-
-        Returns:
-            bool: True if successful, False otherwise
-        """
-        # Check for illegal characters
-        if name.strip() == '' or name.lower() == self.name.lower():
-            self._toolbox.msg_warning.emit("Renaming project cancelled")
-            return False
-        # Check if new short name is the same as the current one
-        new_short_name = name.lower().replace(" ", "_")
-        if new_short_name == self.short_name:
-            msg = "<b>{0}</b> project directory already taken.".format(new_short_name)
-            # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
-            QMessageBox.information(self._toolbox, "Try again", msg)
-            return False
-        # Check that new name is legal
-        if any(True for x in name if x in INVALID_CHARS):
-            msg = "<b>{0}</b> contains invalid characters.".format(name)
-            # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
-            QMessageBox.information(self._toolbox, "Invalid characters", msg)
-            return False
-        # Check that the new project name directory is not taken
-        projects_path = project_dir(self._qsettings)  # Path to directory where project files (.proj) are
-        new_project_dir = os.path.join(projects_path, new_short_name)  # New project directory
-        taken_dirs = list()
-        dir_contents = [os.path.join(projects_path, x) for x in os.listdir(projects_path)]
-        for path in dir_contents:
-            if os.path.isdir(path):
-                taken_dirs.append(os.path.split(path)[1])
-        if new_short_name in taken_dirs:
-            msg = "Project directory <b>{0}</b> already exists.".format(new_project_dir)
-            # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
-            QMessageBox.information(self._toolbox, "Try again", msg)
-            return False
-        # Copy project directory to new project directory
-        if not copy_dir(self._toolbox, self.project_dir, new_project_dir):
-            self._toolbox.msg_error.emit("Copying project directory failed")
-            return False
-        # Change name
-        self.change_name(name)
-        return True
+        # Update Window Title
+        self._toolbox.setWindowTitle("Spine Toolbox    -- {} --".format(self.name))
+        self._toolbox.msg.emit("Project name changed to <b>{0}</b>".format(self.name))
 
     def save(self, tool_def_paths):
         """Collects project information and objects
         into a dictionary and writes it to a JSON file.
 
         Args:
-            tool_def_paths (list): List of paths to tool definition files
+            tool_def_paths (list): List of absolute paths to tool specification files
+
+        Returns:
+            bool: True or False depending on success
         """
-        # Clear dictionary
         project_dict = dict()  # Dictionary for storing project info
-        project_dict['name'] = self.name
-        project_dict['description'] = self.description
-        project_dict['work_dir'] = self.work_dir
-        project_dict['tool_specifications'] = tool_def_paths
-        # Compute connections directly from Links in scene
+        project_dict["version"] = LATEST_PROJECT_VERSION
+        project_dict["name"] = self.name
+        project_dict["description"] = self.description
+        project_dict["tool_specifications"] = tool_def_paths
+        # Compute connections directly from Links on scene
         connections = list()
         for link in self._toolbox.ui.graphicsView.links():
             src_connector = link.src_connector
@@ -195,23 +139,8 @@ class SpineToolboxProject(MetaObject):
             dst_name = dst_connector.parent_name()
             conn = {"from": [src_name, src_anchor], "to": [dst_name, dst_anchor]}
             connections.append(conn)
-        # Save connections in old format, to keep compatibility with old toolbox versions
-        # If and when we're ready to adopt the new format, this can be removed
-        item_names = [item.name for item in self._toolbox.project_item_model.items()]
-        n_items = len(item_names)
-        connections_old = [[False for _ in range(n_items)] for __ in range(n_items)]
-        for conn in connections:
-            src_name, src_anchor = conn["from"]
-            dst_name, dst_anchor = conn["to"]
-            i = item_names.index(src_name)
-            j = item_names.index(dst_name)
-            connections_old[i][j] = [src_anchor, dst_anchor]
-        project_dict['connections'] = connections_old
+        project_dict["connections"] = connections
         scene_rect = self._toolbox.ui.graphicsView.scene().sceneRect()
-        project_dict["scene_y"] = scene_rect.y()
-        project_dict["scene_w"] = scene_rect.width()
-        project_dict["scene_h"] = scene_rect.height()
-        project_dict["scene_x"] = scene_rect.x()
         items_dict = dict()  # Dictionary for storing project items
         # Traverse all items in project model by category
         for category_item in self._toolbox.project_item_model.root().children():
@@ -222,8 +151,9 @@ class SpineToolboxProject(MetaObject):
         # Save project to file
         saved_dict = dict(project=project_dict, objects=items_dict)
         # Write into JSON file
-        with open(self.path, 'w') as fp:
+        with open(self.config_file, "w") as fp:
             json.dump(saved_dict, fp, indent=4)
+        return True
 
     def load(self, objects_dict):
         """Populates project item model with items loaded from project file.
@@ -232,12 +162,11 @@ class SpineToolboxProject(MetaObject):
             objects_dict (dict): Dictionary containing all project items in JSON format
 
         Returns:
-            bool: True if successfull, False otherwise
+            bool: True if successful, False otherwise
         """
         self._toolbox.msg.emit("Loading project items...")
         empty = True
         for category_name, category_dict in objects_dict.items():
-            category_name = _update_if_changed(category_name)
             items = []
             for name, item_dict in category_dict.items():
                 item_dict.pop("short name", None)
@@ -256,10 +185,10 @@ class SpineToolboxProject(MetaObject):
             jsonfile (str): Path of the tool specification definition file
 
         Returns:
-            Instance of a subclass if Tool
+            ToolSpecification or None if reading the file failed
         """
         try:
-            with open(jsonfile, 'r') as fp:
+            with open(jsonfile, "r") as fp:
                 try:
                     definition = json.load(fp)
                 except ValueError:
@@ -279,7 +208,7 @@ class SpineToolboxProject(MetaObject):
 
         Args:
             definition (dict): Dictionary with the tool definition
-            path (str): Folder of the main program file
+            path (str): Directory where main program file is located
 
         Returns:
             ToolSpecification, NoneType
@@ -288,7 +217,8 @@ class SpineToolboxProject(MetaObject):
             _tooltype = definition["tooltype"].lower()
         except KeyError:
             self._toolbox.msg_error.emit(
-                "No tool type defined in tool definition file. Supported types are " "'gams', 'julia' and 'executable'"
+                "No tool type defined in tool definition file. Supported types "
+                "are 'python', 'gams', 'julia' and 'executable'"
             )
             return None
         if _tooltype == "julia":
@@ -336,7 +266,7 @@ class SpineToolboxProject(MetaObject):
                 self.set_item_selected(tree_item)
 
     def add_to_dag(self, item_name):
-        """Adds new directed graph object."""
+        """Add new node (project item) to the directed graph."""
         self.dag_handler.add_dag_node(item_name)
 
     def set_item_selected(self, item):
@@ -363,8 +293,7 @@ class SpineToolboxProject(MetaObject):
 
     @Slot()
     def execute_next_dag(self):
-        """Executes next dag in the execution list.
-        """
+        """Executes next dag in the execution list."""
         if self._execution_stopped:
             return
         try:
@@ -398,7 +327,6 @@ class SpineToolboxProject(MetaObject):
         items = [self._toolbox.project_item_model.get_item(name).project_item for name in node_successors]
         self.engine = SpineEngine(items, node_successors, execution_permits)
         self.dag_execution_about_to_start.emit(self.engine)
-        logging.debug("execution_permits: %s", execution_permits)
         self._toolbox.msg.emit("<b>Starting DAG {0}</b>".format(dag_identifier))
         self._toolbox.msg.emit("Order: {0}".format(" -> ".join(list(node_successors))))
         self.engine.run()
@@ -410,8 +338,7 @@ class SpineToolboxProject(MetaObject):
         self._toolbox.msg.emit("<b>DAG {0} {1}</b>".format(dag_identifier, outcome))
 
     def execute_selected(self):
-        """Executes DAGs corresponding to all selected project items.
-        """
+        """Executes DAGs corresponding to all selected project items."""
         self._toolbox.ui.textBrowser_eventlog.verticalScrollBar().setValue(
             self._toolbox.ui.textBrowser_eventlog.verticalScrollBar().maximum()
         )
@@ -449,8 +376,7 @@ class SpineToolboxProject(MetaObject):
         self.execute_dags(dags, execution_permit_list)
 
     def execute_project(self):
-        """Executes all dags in the project.
-        """
+        """Executes all dags in the project."""
         self._toolbox.ui.textBrowser_eventlog.verticalScrollBar().setValue(
             self._toolbox.ui.textBrowser_eventlog.verticalScrollBar().maximum()
         )
@@ -535,22 +461,3 @@ class SpineToolboxProject(MetaObject):
     @property
     def settings(self):
         return self._qsettings
-
-
-def _update_if_changed(category_name):
-    """
-    Checks if category name has been changed.
-
-    This allows old project files to be loaded.
-
-    Args:
-        category_name (str): category name
-
-    Returns:
-        category's new name if it has changed or category_name
-    """
-    if category_name == "Data Interfaces":
-        return "Importers"
-    if category_name == "Data Exporters":
-        return "Exporters"
-    return category_name

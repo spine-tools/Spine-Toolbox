@@ -98,7 +98,7 @@ class TestExporter(unittest.TestCase):
         self.assertEqual(expected_name, self.exporter._properties_ui.item_name_label.text())  # name label in props
         self.assertEqual(expected_name, self.exporter.get_icon().name_item.text())  # name item on Design View
         # Check data_dir
-        expected_data_dir = os.path.join(self.toolbox.project().project_dir, expected_short_name)
+        expected_data_dir = os.path.join(self.toolbox.project().items_dir, expected_short_name)
         self.assertEqual(expected_data_dir, self.exporter.data_dir)  # Check data dir
 
     def test_activation_populates_properties_tab(self):

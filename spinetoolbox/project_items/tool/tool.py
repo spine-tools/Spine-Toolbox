@@ -347,7 +347,7 @@ class Tool(ProjectItem):
         """Updates the path to the base directory, depending on `execute_in_work`.
         """
         if self.execute_in_work:
-            work_dir = self._project.work_dir
+            work_dir = self._toolbox.work_dir
             self.basedir = tempfile.mkdtemp(
                 suffix='__toolbox', prefix=self.tool_specification().short_name + '__', dir=work_dir
             )
@@ -404,6 +404,27 @@ class Tool(ProjectItem):
         self._update_base_directory()
         if self.execute_in_work:
             work_or_source = "work"
+            work_dir = self._toolbox.work_dir
+            if not work_dir:
+                self._toolbox.msg_error.emit("Work directory missing. Please check Settings.")
+                return ExecutionState.ABORT
+            if not self.basedir:
+                self.basedir = tempfile.mkdtemp(
+                    suffix='__toolbox', prefix=self.tool_specification().short_name + '__', dir=work_dir
+            )
+            # Make work directory anchor with path as tooltip
+            work_anchor = (
+                "<a style='color:#99CCFF;' title='"
+                + self.basedir
+                + "' href='file:///"
+                + self.basedir
+                + "'>work directory</a>"
+            )
+            self._toolbox.msg.emit(
+                "*** Copying Tool specification <b>{0}</b> source files to {1} ***".format(
+                    self.tool_specification().name, work_anchor
+                )
+            )
             if not self.copy_program_files():
                 self._logger.msg_error.emit("Copying program files to base directory failed.")
                 return False
