@@ -143,7 +143,7 @@ class ProjectUpgrader:
                 spec_paths = old["project"]["tool_templates"]
             except KeyError:
                 spec_paths = list()
-        new["tool_specifications"] = self.upgrade_tool_specification_paths(spec_paths, new_project_dir)
+        new["tool_specifications"] = self.upgrade_tool_specification_paths(spec_paths, old_project_dir)
         # Old projects may have obsolete category names that need to be updated
         if "Data Interfaces" in old["objects"].keys():
             old["objects"]["Importers"] = old["objects"]["Data Interfaces"]
@@ -230,15 +230,18 @@ class ProjectUpgrader:
                 connections.append(entry_new)
         return connections
 
-    def upgrade_tool_specification_paths(self, spec_paths, new_project_dir):
+    def upgrade_tool_specification_paths(self, spec_paths, old_project_dir):
         """Upgrades a list of tool specifications paths to new format.
-        Paths in project directory are converted to relative, others as absolute.
+        Paths in (old) project directory (yes, old is correct) are converted
+        to relative, others as absolute.
         """
         if not spec_paths:
             return list()
         new_paths = list()
         for p in spec_paths:
-            ser_path = serialize_path(p, new_project_dir)
+            ser_path = serialize_path(p, old_project_dir)
+            if ser_path["relative"]:
+                ser_path["path"] = os.path.join(".spinetoolbox", "items", ser_path["path"])
             new_paths.append(ser_path)
         return new_paths
 
