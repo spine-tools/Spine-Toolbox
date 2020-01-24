@@ -144,6 +144,13 @@ class ProjectUpgrader:
             except KeyError:
                 spec_paths = list()
         new["tool_specifications"] = self.upgrade_tool_specification_paths(spec_paths, new_project_dir)
+        # Old projects may have obsolete category names that need to be updated
+        if "Data Interfaces" in old["objects"].keys():
+            old["objects"]["Importers"] = old["objects"]["Data Interfaces"]
+            old["objects"].pop("Data Interfaces")
+        if "Data Exporters" in old["objects"].keys():
+            old["objects"]["Exporters"] = old["objects"]["Data Exporters"]
+            old["objects"].pop("Data Exporters")
         # Get all item names to a list from old project dict. Needed for upgrading connections.
         item_names = list()
         for category_name in old["objects"]:
@@ -159,6 +166,7 @@ class ProjectUpgrader:
         else:
             # old connections maybe of two types, convert them to the newer format
             new["connections"] = self.upgrade_connections(item_names, old_connections)
+        # Upgrade objects dict
         new_objects = dict(old["objects"])
         for category_name in old["objects"]:
             if category_name not in self._toolbox.categories:

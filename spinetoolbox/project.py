@@ -167,7 +167,6 @@ class SpineToolboxProject(MetaObject):
         self._toolbox.msg.emit("Loading project items...")
         empty = True
         for category_name, category_dict in objects_dict.items():
-            category_name = _update_if_changed(category_name)
             items = []
             for name, item_dict in category_dict.items():
                 item_dict.pop("short name", None)
@@ -462,22 +461,3 @@ class SpineToolboxProject(MetaObject):
     @property
     def settings(self):
         return self._qsettings
-
-
-def _update_if_changed(category_name):
-    """
-    Checks if category name has been changed.
-
-    This allows old project files to be loaded.
-
-    Args:
-        category_name (str): Category name
-
-    Returns:
-        str: New category name if it has changed or category_name
-    """
-    if category_name == "Data Interfaces":
-        return "Importers"
-    if category_name == "Data Exporters":
-        return "Exporters"
-    return category_name
