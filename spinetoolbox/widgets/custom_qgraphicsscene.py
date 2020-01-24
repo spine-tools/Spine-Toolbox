@@ -1,5 +1,5 @@
 ######################################################################################################################
-# Copyright (C) 2017 - 2019 Spine project consortium
+# Copyright (C) 2017-2020 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -16,7 +16,7 @@ Custom QGraphicsScene used in the Design View.
 :date:   13.2.2019
 """
 
-from PySide2.QtCore import Signal, Slot, QItemSelectionModel
+from PySide2.QtCore import Slot, QItemSelectionModel
 from PySide2.QtGui import QColor, QPen, QBrush
 from ..graphics_items import ProjectItemIcon
 from .shrinking_scene import ShrinkingScene
@@ -138,7 +138,7 @@ class CustomQGraphicsScene(ShrinkingScene):
         x = pos.x() - w / 2
         y = pos.y() - h / 2
         icon_maker = self._toolbox.categories[category]["icon_maker"]
-        self.item_shadow = icon_maker(self._toolbox, x, y, w, h, "...")
+        self.item_shadow = icon_maker(self._toolbox, x, y, w, h, None)
         self._toolbox.show_add_project_item_form(category, pos.x(), pos.y())
 
     def drawBackground(self, painter, rect):

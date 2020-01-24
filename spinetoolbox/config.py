@@ -1,5 +1,5 @@
 ######################################################################################################################
-# Copyright (C) 2017 - 2019 Spine project consortium
+# Copyright (C) 2017-2020 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -19,8 +19,9 @@ Application constants and style sheets
 import sys
 import os
 
-SPINE_TOOLBOX_VERSION = "0.3.2"
-REQUIRED_SPINEDB_API_VERSION = "0.1.1"
+REQUIRED_SPINE_ENGINE_VERSION = "0.3.0"
+REQUIRED_SPINEDB_API_VERSION = "0.1.10"
+LATEST_PROJECT_VERSION = 1
 # SPINE GREEN HTML: #99cc33 RGBa: 153, 204, 51, 255
 # SPINE BLUE HTML: #004ac2 RGBa: 0, 74, 194, 255
 # Invalid characters for directory names
@@ -35,7 +36,6 @@ _frozen = getattr(sys, "frozen", False)
 _path_to_executable = os.path.dirname(sys.executable if _frozen else __file__)
 APPLICATION_PATH = os.path.realpath(_path_to_executable)
 _program_root = APPLICATION_PATH if _frozen else os.path.join(APPLICATION_PATH, os.path.pardir)
-DEFAULT_PROJECT_DIR = os.path.abspath(os.path.join(_program_root, "projects"))
 DEFAULT_WORK_DIR = os.path.abspath(os.path.join(_program_root, "work"))
 if _frozen:
     DOCUMENTATION_PATH = os.path.abspath(os.path.join(_program_root, "docs", "html"))
@@ -86,6 +86,9 @@ LIST_REQUIRED_KEYS = ['includes', 'inputfiles', 'inputfiles_opt', 'outputfiles']
 JL_REPL_TIME_TO_DEAD = 5.0
 JL_REPL_RESTART_LIMIT = 3
 
+# Project constants
+PROJECT_FILENAME = "project.json"
+
 # Stylesheets
 STATUSBAR_SS = (
     "QStatusBar{" "background-color: #EBEBE0;" "border-width: 1px;" "border-color: gray;" "border-style: groove;}"
@@ -114,6 +117,10 @@ SETTINGS_SS = (
     "QPushButton:focus{background-color: #637683; border: 1px solid #148CD2;}"
     "QPushButton:hover{border: 1px solid #148CD2; color: #F0F0F0;}"
     "QPushButton:pressed{background-color: #19232D; border: 1px solid #19232D;}"
+    "QSlider::groove:horizontal{background: #e1e1e1; border: 1px solid #a4a4a4; height: 5px; margin: 2px 0; border-radius: 2px;}"
+    "QSlider::handle:horizontal{background: #fafafa; border: 1px solid #a4a4a4; width: 12px; margin: -5px 0; border-radius: 2px;}"
+    "QSlider::add-page:horizontal{background: transparent;}"
+    "QSlider::sub-page:horizontal{background: transparent;}"
 )
 
 # NOTE: border-style property needs to be set for QToolBar so the lineargradient works on GNOME desktop environment
@@ -128,6 +135,7 @@ ICON_TOOLBAR_SS = (
     "border-style: inset;"
     "border-color: darkslategray;"
     "border-radius: 2px;}"
+    "QToolButton:pressed {background-color: lightGray;}"
     "QLabel{color:black;"
     "padding: 3px;}"
 )
@@ -166,3 +174,5 @@ MAINWINDOW_SS = (
 )
 
 TREEVIEW_HEADER_SS = "QHeaderView::section{background-color: #ecd8c6; font-size: 12px;}"
+
+PIVOT_TABLE_HEADER_COLOR = "#efefef"

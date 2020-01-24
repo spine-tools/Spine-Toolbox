@@ -1,5 +1,5 @@
 ######################################################################################################################
-# Copyright (C) 2017 - 2019 Spine project consortium
+# Copyright (C) 2017-2020 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -83,12 +83,12 @@ class TestExcelIntegration(unittest.TestCase):
         oc = set(oc.id for oc in db_map_test.object_class_list().all())
         if oc:
             db_map_test.remove_items(object_class_ids=oc)
-        db_map_test.commit_session('empty database')
+            db_map_test.commit_session('empty database')
 
         oc = set(oc.id for oc in db_map.object_class_list().all())
         if oc:
             db_map.remove_items(object_class_ids=oc)
-        db_map.commit_session('empty database')
+            db_map.commit_session('empty database')
 
         # create object classes
         oc_1 = db_map.add_object_class(**{'name': 'object_class_1'})

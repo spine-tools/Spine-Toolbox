@@ -1,5 +1,5 @@
 ######################################################################################################################
-# Copyright (C) 2017 - 2019 Spine project consortium
+# Copyright (C) 2017-2020 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -72,7 +72,7 @@ class TimePatternModel(IndexedValueTableModel):
             row (int): an index where to remove the data
             count (int): number of time period - value pairs to remove
             parent (QModelIndex): an index to a parent model
-            
+
         Returns:
             True if the operation was successful
         """
@@ -98,7 +98,7 @@ class TimePatternModel(IndexedValueTableModel):
 
         Column index 0 corresponds to the time periods while 1 corresponds to the values.
 
-        Attributes:
+        Args:
             index (QModelIndex): an index to the model
             value (str, float): a new time period or value
             role (int): a role

@@ -1,5 +1,5 @@
 ######################################################################################################################
-# Copyright (C) 2017 - 2019 Spine project consortium
+# Copyright (C) 2017-2020 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -16,7 +16,11 @@ Contains a class template for a data source connector used in import ui.
 :date:   1.6.2019
 """
 
-from spinedb_api import read_with_mapping
+from spinedb_api import read_with_mapping, DateTime, Duration
+
+TYPE_STRING_TO_CLASS = {"string": str, "datetime": DateTime, "duration": Duration, "float": float}
+
+TYPE_CLASS_TO_STRING = {type_class: string for string, type_class in TYPE_STRING_TO_CLASS.items()}
 
 
 class SourceConnection:
@@ -68,7 +72,7 @@ class SourceConnection:
         data = list(data_iter)
         return data, header
 
-    def get_mapped_data(self, tables_mappings, options, max_rows=-1):
+    def get_mapped_data(self, tables_mappings, options, table_types, table_row_types, max_rows=-1):
         """
         Reads all mappings in dict tables_mappings, where key is name of table
         and value is the mappings for that table.
@@ -86,10 +90,15 @@ class SourceConnection:
         }
         errors = []
         for table, mapping in tables_mappings.items():
+            types = {col: spec.convert_function() for col, spec in table_types.get(table, {}).items()}
+            row_types = {row: spec.convert_function() for row, spec in table_row_types.get(table, {}).items()}
             opt = options.get(table, {})
             data, header, num_cols = self.get_data_iterator(table, opt, max_rows)
-            data, t_errors = read_with_mapping(data, mapping, num_cols, header)
+            data, t_errors = read_with_mapping(data, mapping, num_cols, header, types, row_types)
             for key, value in data.items():
                 mapped_data[key].extend(value)
-            errors.extend([(table, err) for err in t_errors])
+            errors.extend(
+                [(table, f"Could not map row: {row_number}, Error: {err.msg}") for row_number, err in t_errors]
+            )
+
         return mapped_data, errors

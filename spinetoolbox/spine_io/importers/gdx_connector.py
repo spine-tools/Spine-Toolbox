@@ -1,5 +1,5 @@
 ######################################################################################################################
-# Copyright (C) 2017 - 2019 Spine project consortium
+# Copyright (C) 2017-2020 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -16,35 +16,10 @@ Contains GDXConnector class and a help function.
 :date:   1.6.2019
 """
 
-from enum import Enum
-from collections import defaultdict
-import sys
+from gdx2py import GdxFile, GAMSParameter, GAMSScalar, GAMSSet
 from PySide2.QtWidgets import QFileDialog
 from ..io_api import SourceConnection
-
-IMPORT_ERROR = ""
-try:
-    import gdxcc
-
-    class GamsDataType(Enum):
-        Set = gdxcc.GMS_DT_SET
-        Parameter = gdxcc.GMS_DT_PAR
-        Variable = gdxcc.GMS_DT_VAR
-        Equation = gdxcc.GMS_DT_EQU
-        Alias = gdxcc.GMS_DT_ALIAS
-
-    class GamsValueType(Enum):
-        Level = gdxcc.GMS_VAL_LEVEL  # .l
-        Marginal = gdxcc.GMS_VAL_MARGINAL  # .m
-        Lower = gdxcc.GMS_VAL_LOWER  # .lo
-        Upper = gdxcc.GMS_VAL_UPPER  # .ub
-        Scale = gdxcc.GMS_VAL_SCALE  # .scale
-
-    GAMS_VALUE_COLS_MAP = defaultdict(lambda: [('Value', GamsValueType.Level.value)])
-    GAMS_VALUE_COLS_MAP[GamsDataType.Variable] = [(value_type.name, value_type.value) for value_type in GamsValueType]
-    GAMS_VALUE_COLS_MAP[GamsDataType.Equation] = GAMS_VALUE_COLS_MAP[GamsDataType.Variable]
-except ImportError as err:
-    IMPORT_ERROR = err
+from ..gdx_utils import find_gams_directory
 
 
 def select_gdx_file(parent=None):
@@ -57,21 +32,20 @@ def select_gdx_file(parent=None):
 class GdxConnector(SourceConnection):
     """Template class to read data from another QThread."""
 
-    # name of data source, ex: "Text/CSV"
     DISPLAY_NAME = "Gdx"
+    """name of data source"""
 
-    # dict with option specification for source.
     OPTIONS = {}
+    """dict with option specification for source"""
 
-    # Modal widget that returns source object and action (OK, CANCEL)
     SELECT_SOURCE_UI = select_gdx_file
+    """Modal widget that returns source object and action (OK, CANCEL)."""
 
     def __init__(self):
-        super(GdxConnector, self).__init__()
+        super().__init__()
         self._filename = None
-        self._handle = None
-        self._file_handle = None
-        self._gams_dir = r"c:\GAMS\win64\27.2"
+        self._gdx_file = None
+        self._gams_dir = find_gams_directory()
 
     def __exit__(self, exc_type, exc_value, traceback):
         self.disconnect()
@@ -80,102 +54,90 @@ class GdxConnector(SourceConnection):
         self.disconnect()
 
     def connect_to_source(self, source):
-        """saves filepath
-
-        Arguments:
-            source {str} -- filepath
         """
-        # create gdx pointer
-        if "gdxcc" not in sys.modules:
-            raise IOError(
-                f"Could not find gdxcc, make sure that you have installed the gams python plugin. Error message: {IMPORT_ERROR}"
-            )
+        Connects to given .gdx file.
 
+        Args:
+            source (str): path to .gdx file.
+        """
+        if self._gams_dir is None:
+            raise IOError(f"Could not find GAMS directory. Make sure that you have GAMS installed.")
         self._filename = source
-        self._handle = gdxcc.new_gdxHandle_tp()
-        rc = gdxcc.gdxCreateD(self._handle, self._gams_dir, gdxcc.GMS_SSSIZE)
-        if not rc:
-            self._handle = None
-            self._filename = None
-            msg = (
-                "Could not create Gdx object: "
-                + rc[1]
-                + " "
-                + gdxcc.gdxErrorStr(self._handle, gdxcc.gdxGetLastError(self._handle))[1]
-                + "."
-            )
-            raise IOError(msg)
-
-        rc = gdxcc.gdxOpenRead(self._handle, self._filename)
-        if not rc[0]:
-            self._handle = None
-            self._filename = None
-            raise IOError(f"Could not open file {self._filename}")
+        self._gdx_file = GdxFile(source, gams_dir=self._gams_dir)
 
     def disconnect(self):
-        """Disconnect from connected source.
-        """
-        if self._handle:
-            gdxcc.gdxFree(self._handle)
-            self._handle = None
+        """Disconnects from connected source."""
+        if self._gdx_file is not None:
+            self._gdx_file.close()
 
     def get_tables(self):
-        """Method that should return a list of table names, list(str)
+        """
+        Returns a list of table names.
+
+        GAMS scalars are also regarded as tables.
 
         Returns:
             list(str): Table names in list
         """
         tables = []
-        _ret, symbol_count, _element_count = gdxcc.gdxSystemInfo(self._handle)
-        for i in range(symbol_count):
-            _ret, name, _dims, _data_type = gdxcc.gdxSymbolInfo(self._handle, i)
-            tables.append(name)
+        for symbol in self._gdx_file:
+            tables.append(symbol[0])
         return tables
 
     def get_data_iterator(self, table, options, max_rows=-1):
-        """Creates a iterator for the file in self.filename
+        """Creates an iterator for the data source
 
         Arguments:
-            table {string} -- ignored, used in abstract IOWorker class
-            options {dict} -- dict with options
+            table (string): table name
+            options (dict): dict with options
 
         Keyword Arguments:
-            max_rows {int} -- how many rows of data to read, if -1 read all rows (default: {-1})
+            max_rows (int): ignored
 
         Returns:
-            [type] -- [description]
+            tuple: data iterator, list of column names, number of columns
         """
-        _ret, symbol_count, _element_count = gdxcc.gdxSystemInfo(self._handle)
-
-        symbol_found = False
-        symbol_index = None
-        header = []
-        for i in range(symbol_count):
-            _ret, name, _dims, data_type = gdxcc.gdxSymbolInfo(self._handle, i)
-            if name == table:
-                symbol_found = True
-                symbol_index = i
-                _ret, gdx_domain = gdxcc.gdxSymbolGetDomainX(self._handle, i)
-                header = list(gdx_domain)
-                data_type = GamsDataType(data_type)
-                break
-        if not symbol_found:
+        if not table in self._gdx_file:
             return iter([]), [], 0
+        symbol = self._gdx_file[table]
+        header = list(symbol.domain) if symbol.domain is not None else []
+        if isinstance(symbol, GAMSSet):
+            if not header:
+                # It is domain, use generalized index '*'.
+                header.append("*")
+            if symbol.elements and isinstance(symbol.elements[0], str):
 
-        _ret, records = gdxcc.gdxDataReadStrStart(self._handle, symbol_index)
-        if data_type == GamsDataType.Set:
+                def gdx_data():
+                    for key in symbol.elements:
+                        yield [key]
+
+            else:
+
+                def gdx_data():
+                    for keys in symbol.elements:
+                        yield list(keys)
+
+        elif isinstance(symbol, GAMSParameter):
+            header.append("Value")
+            symbol_keys = list(symbol.keys())
+            if symbol_keys and isinstance(symbol_keys[0], str):
+
+                def gdx_data():
+                    for keys, value in zip(symbol_keys, symbol.values()):
+                        yield [keys] + [value]
+
+            else:
+
+                def gdx_data():
+                    for keys, value in zip(symbol_keys, symbol.values()):
+                        yield list(keys) + [value]
+
+        elif isinstance(symbol, GAMSScalar):
+            header.append("Value")
 
             def gdx_data():
-                for _ in range(records):
-                    _ret, elements, _values, _afdim = gdxcc.gdxDataReadStr(self._handle)
-                    yield elements
+                yield [float(symbol)]
 
         else:
-            header = header + [col_name for col_name, col_ind in GAMS_VALUE_COLS_MAP[data_type]]
-
-            def gdx_data():
-                for _ in range(records):
-                    _ret, elements, values, _afdim = gdxcc.gdxDataReadStr(self._handle)
-                    yield elements + [values[col_ind] for col_name, col_ind in GAMS_VALUE_COLS_MAP[data_type]]
-
+            raise RuntimeError("Unknown GAMS symbol type.")
         return gdx_data(), header, len(header)

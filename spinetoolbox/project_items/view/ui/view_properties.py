@@ -1,5 +1,6 @@
+# -*- coding: utf-8 -*-
 ######################################################################################################################
-# Copyright (C) 2017 - 2019 Spine project consortium
+# Copyright (C) 2017-2020 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,11 +10,11 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-# -*- coding: utf-8 -*-
-
-# Form implementation generated from reading ui file 'spinetoolbox/project_items/view/ui/view_properties.ui',
-# licensing of 'spinetoolbox/project_items/view/ui/view_properties.ui' applies.
+# Form implementation generated from reading ui file 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\project_items\view\ui\view_properties.ui',
+# licensing of 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\project_items\view\ui\view_properties.ui' applies.
 #
+# Created: Tue Jan 21 17:01:31 2020
+#      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -69,40 +70,18 @@ class Ui_Form(object):
         self.horizontalLayout_8 = QtWidgets.QHBoxLayout()
         self.horizontalLayout_8.setSpacing(6)
         self.horizontalLayout_8.setObjectName("horizontalLayout_8")
-        self.pushButton_view_open_tree_view = QtWidgets.QPushButton(self.scrollAreaWidgetContents_4)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Fixed)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.pushButton_view_open_tree_view.sizePolicy().hasHeightForWidth())
-        self.pushButton_view_open_tree_view.setSizePolicy(sizePolicy)
-        self.pushButton_view_open_tree_view.setMinimumSize(QtCore.QSize(75, 23))
-        self.pushButton_view_open_tree_view.setMaximumSize(QtCore.QSize(16777215, 23))
-        self.pushButton_view_open_tree_view.setObjectName("pushButton_view_open_tree_view")
-        self.horizontalLayout_8.addWidget(self.pushButton_view_open_tree_view)
         spacerItem = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
         self.horizontalLayout_8.addItem(spacerItem)
-        self.pushButton_view_open_graph_view = QtWidgets.QPushButton(self.scrollAreaWidgetContents_4)
+        self.pushButton_view_open_ds_view = QtWidgets.QPushButton(self.scrollAreaWidgetContents_4)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.pushButton_view_open_graph_view.sizePolicy().hasHeightForWidth())
-        self.pushButton_view_open_graph_view.setSizePolicy(sizePolicy)
-        self.pushButton_view_open_graph_view.setMinimumSize(QtCore.QSize(75, 23))
-        self.pushButton_view_open_graph_view.setMaximumSize(QtCore.QSize(16777215, 23))
-        self.pushButton_view_open_graph_view.setObjectName("pushButton_view_open_graph_view")
-        self.horizontalLayout_8.addWidget(self.pushButton_view_open_graph_view)
-        spacerItem1 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
-        self.horizontalLayout_8.addItem(spacerItem1)
-        self.pushButton_view_open_tabular_view = QtWidgets.QPushButton(self.scrollAreaWidgetContents_4)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Fixed)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.pushButton_view_open_tabular_view.sizePolicy().hasHeightForWidth())
-        self.pushButton_view_open_tabular_view.setSizePolicy(sizePolicy)
-        self.pushButton_view_open_tabular_view.setMinimumSize(QtCore.QSize(75, 23))
-        self.pushButton_view_open_tabular_view.setMaximumSize(QtCore.QSize(16777215, 23))
-        self.pushButton_view_open_tabular_view.setObjectName("pushButton_view_open_tabular_view")
-        self.horizontalLayout_8.addWidget(self.pushButton_view_open_tabular_view)
+        sizePolicy.setHeightForWidth(self.pushButton_view_open_ds_view.sizePolicy().hasHeightForWidth())
+        self.pushButton_view_open_ds_view.setSizePolicy(sizePolicy)
+        self.pushButton_view_open_ds_view.setMinimumSize(QtCore.QSize(75, 23))
+        self.pushButton_view_open_ds_view.setMaximumSize(QtCore.QSize(16777215, 23))
+        self.pushButton_view_open_ds_view.setObjectName("pushButton_view_open_ds_view")
+        self.horizontalLayout_8.addWidget(self.pushButton_view_open_ds_view)
         self.verticalLayout_18.addLayout(self.horizontalLayout_8)
         self.line_5 = QtWidgets.QFrame(self.scrollAreaWidgetContents_4)
         self.line_5.setFrameShape(QtWidgets.QFrame.HLine)
@@ -111,8 +90,8 @@ class Ui_Form(object):
         self.verticalLayout_18.addWidget(self.line_5)
         self.horizontalLayout_16 = QtWidgets.QHBoxLayout()
         self.horizontalLayout_16.setObjectName("horizontalLayout_16")
-        spacerItem2 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
-        self.horizontalLayout_16.addItem(spacerItem2)
+        spacerItem1 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        self.horizontalLayout_16.addItem(spacerItem1)
         self.toolButton_view_open_dir = QtWidgets.QToolButton(self.scrollAreaWidgetContents_4)
         self.toolButton_view_open_dir.setMinimumSize(QtCore.QSize(22, 22))
         self.toolButton_view_open_dir.setMaximumSize(QtCore.QSize(22, 22))
@@ -131,12 +110,8 @@ class Ui_Form(object):
     def retranslateUi(self, Form):
         Form.setWindowTitle(QtWidgets.QApplication.translate("Form", "Form", None, -1))
         self.label_view_name.setText(QtWidgets.QApplication.translate("Form", "Name", None, -1))
-        self.pushButton_view_open_tree_view.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Open Tree view for selected db references (read-only)</p></body></html>", None, -1))
-        self.pushButton_view_open_tree_view.setText(QtWidgets.QApplication.translate("Form", "Tree view", None, -1))
-        self.pushButton_view_open_graph_view.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Open Graph view for selected db references (read-only)</p></body></html>", None, -1))
-        self.pushButton_view_open_graph_view.setText(QtWidgets.QApplication.translate("Form", "Graph view", None, -1))
-        self.pushButton_view_open_tabular_view.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Open Tabular view for selected db references (read-only)</p></body></html>", None, -1))
-        self.pushButton_view_open_tabular_view.setText(QtWidgets.QApplication.translate("Form", "Tabular view", None, -1))
+        self.pushButton_view_open_ds_view.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Open Data store view for selected db references</p></body></html>", None, -1))
+        self.pushButton_view_open_ds_view.setText(QtWidgets.QApplication.translate("Form", "Open view", None, -1))
         self.toolButton_view_open_dir.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Open this View\'s project directory in file browser</p></body></html>", None, -1))
 
 from spinetoolbox.widgets.custom_qtreeview import ReferencesTreeView

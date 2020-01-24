@@ -1,5 +1,5 @@
 ######################################################################################################################
-# Copyright (C) 2017 - 2019 Spine project consortium
+# Copyright (C) 2017-2020 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -25,23 +25,25 @@ from PySide2.QtGui import QDesktopServices, QStandardItem, QStandardItemModel, Q
 from PySide2.QtWidgets import QFileDialog, QStyle, QFileIconProvider, QInputDialog, QMessageBox
 from spinetoolbox.project_item import ProjectItem, ProjectItemResource
 from spinetoolbox.widgets.spine_datapackage_widget import SpineDatapackageWidget
-from spinetoolbox.helpers import busy_effect
+from spinetoolbox.helpers import busy_effect, deserialize_path, serialize_path
 from spinetoolbox.config import APPLICATION_PATH, INVALID_FILENAME_CHARS
 
 
 class DataConnection(ProjectItem):
-    def __init__(self, toolbox, name, description, x, y, references=None):
+    def __init__(self, name, description, x, y, toolbox, logger, references=None):
         """Data Connection class.
 
         Args:
-            toolbox (ToolboxUI): QMainWindow instance
             name (str): Object name
             description (str): Object description
             x (float): Initial X coordinate of item icon
             y (float): Initial Y coordinate of item icon
-            references (list): List of file references
+            toolbox (ToolboxUI): QMainWindow instance
+            logger (LoggingSignals): a logger instance
+            references (list): a list of file paths
         """
-        super().__init__(toolbox, "Data Connection", name, description, x, y)
+        super().__init__(name, description, x, y, toolbox.project(), logger)
+        self._toolbox = toolbox
         self.reference_model = QStandardItemModel()  # References to files
         self.data_model = QStandardItemModel()  # Paths of project internal files. These are found in DC data directory
         self.datapackage_icon = QIcon(QPixmap(":/icons/datapkg.png"))
@@ -51,12 +53,25 @@ class DataConnection(ProjectItem):
         # Populate references model
         if references is None:
             references = list()
-        self.references = references
+        # Convert relative paths to absolute
+        absolute_refs = [deserialize_path(r, self._project.project_dir) for r in references]
+        self.references = absolute_refs
         self.populate_reference_list(self.references)
         # Populate data (files) model
         data_files = self.data_files()
         self.populate_data_list(data_files)
         self.spine_datapackage_form = None
+        self.data_dir_watcher.directoryChanged.connect(self.refresh)
+
+    @staticmethod
+    def item_type():
+        """See base class."""
+        return "Data Connection"
+
+    @staticmethod
+    def category():
+        """See base class."""
+        return "Data Connections"
 
     def make_signal_handler_dict(self):
         """Returns a dictionary of all shared signals and their handlers.
@@ -70,7 +85,6 @@ class DataConnection(ProjectItem):
         s[self._properties_ui.pushButton_datapackage.clicked] = self.show_spine_datapackage_form
         s[self._properties_ui.treeView_dc_references.doubleClicked] = self.open_reference
         s[self._properties_ui.treeView_dc_data.doubleClicked] = self.open_data_file
-        s[self.data_dir_watcher.directoryChanged] = self.refresh
         s[self._properties_ui.treeView_dc_references.files_dropped] = self.add_files_to_references
         s[self._properties_ui.treeView_dc_data.files_dropped] = self.add_files_to_data_dir
         s[self.get_icon().files_dropped_on_icon] = self.receive_files_dropped_on_icon
@@ -110,7 +124,7 @@ class DataConnection(ProjectItem):
         """
         for path in paths:
             if path in self.references:
-                self._toolbox.msg_warning.emit("Reference to file <b>{0}</b> already available".format(path))
+                self._logger.msg_warning.emit(f"Reference to file <b>{path}</b> already available")
                 return
             self.references.append(os.path.abspath(path))
         self.populate_reference_list(self.references)
@@ -127,11 +141,11 @@ class DataConnection(ProjectItem):
         """Add files to data directory"""
         for file_path in file_paths:
             filename = os.path.split(file_path)[1]
-            self._toolbox.msg.emit("Copying file <b>{0}</b> to <b>{1}</b>".format(filename, self.name))
+            self._logger.msg.emit(f"Copying file <b>{filename}</b> to <b>{self.name}</b>")
             try:
                 shutil.copy(file_path, self.data_dir)
             except OSError:
-                self._toolbox.msg_error.emit("[OSError] Copying failed")
+                self._logger.msg_error.emit("[OSError] Copying failed")
                 return
 
     @Slot(bool, name="add_references")
@@ -144,7 +158,7 @@ class DataConnection(ProjectItem):
             return
         for path in file_paths:
             if path in self.references:
-                self._toolbox.msg_warning.emit("Reference to file <b>{0}</b> already available".format(path))
+                self._logger.msg_warning.emit(f"Reference to file <b>{path}</b> already available")
                 continue
             self.references.append(os.path.abspath(path))
         self.populate_reference_list(self.references)
@@ -156,13 +170,13 @@ class DataConnection(ProjectItem):
         """
         indexes = self._properties_ui.treeView_dc_references.selectedIndexes()
         if not indexes:  # Nothing selected
-            self._toolbox.msg.emit("Please select references to remove")
+            self._logger.msg.emit("Please select references to remove")
             return
         rows = [ind.row() for ind in indexes]
         rows.sort(reverse=True)
         for row in rows:
             self.references.pop(row)
-        self._toolbox.msg.emit("Selected references removed")
+        self._logger.msg.emit("Selected references removed")
         self.populate_reference_list(self.references)
 
     @Slot(bool, name="copy_to_project")
@@ -170,19 +184,19 @@ class DataConnection(ProjectItem):
         """Copy selected file references to this Data Connection's data directory."""
         selected_indexes = self._properties_ui.treeView_dc_references.selectedIndexes()
         if not selected_indexes:
-            self._toolbox.msg_warning.emit("No files to copy")
+            self._logger.msg_warning.emit("No files to copy")
             return
         for index in selected_indexes:
             file_path = self.reference_model.itemFromIndex(index).data(Qt.DisplayRole)
             if not os.path.exists(file_path):
-                self._toolbox.msg_error.emit("File <b>{0}</b> does not exist".format(file_path))
+                self._logger.msg_error.emit(f"File <b>{file_path}</b> does not exist")
                 continue
             filename = os.path.split(file_path)[1]
-            self._toolbox.msg.emit("Copying file <b>{0}</b> to Data Connection <b>{1}</b>".format(filename, self.name))
+            self._logger.msg.emit(f"Copying file <b>{filename}</b> to Data Connection <b>{self.name}</b>")
             try:
                 shutil.copy(file_path, self.data_dir)
             except OSError:
-                self._toolbox.msg_error.emit("[OSError] Copying failed")
+                self._logger.msg_error.emit("[OSError] Copying failed")
                 continue
 
     @Slot("QModelIndex", name="open_reference")
@@ -198,7 +212,7 @@ class DataConnection(ProjectItem):
         # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
         res = QDesktopServices.openUrl(QUrl(url, QUrl.TolerantMode))
         if not res:
-            self._toolbox.msg_error.emit("Failed to open reference:<b>{0}</b>".format(reference))
+            self._logger.msg_error.emit(f"Failed to open reference:<b>{reference}</b>")
 
     @Slot("QModelIndex", name="open_data_file")
     def open_data_file(self, index):
@@ -213,7 +227,7 @@ class DataConnection(ProjectItem):
         # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
         res = QDesktopServices.openUrl(QUrl(url, QUrl.TolerantMode))
         if not res:
-            self._toolbox.msg_error.emit("Opening file <b>{0}</b> failed".format(data_file))
+            self._logger.msg_error.emit(f"Opening file <b>{data_file}</b> failed")
 
     @busy_effect
     def show_spine_datapackage_form(self):
@@ -247,36 +261,31 @@ class DataConnection(ProjectItem):
         file_name = answer[0]
         if not file_name:  # Cancel button clicked
             return
-        if file_name.strip() == "":
+        if not file_name.strip():
             return
         # Check that file name has no invalid chars
         if any(True for x in file_name if x in INVALID_FILENAME_CHARS):
             msg = "File name <b>{0}</b> contains invalid characters.".format(file_name)
-            # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
-            QMessageBox.information(self._toolbox, "Creating file failed", msg)
+            self._logger.dialog.emit("Creating file failed", msg)
             return
         file_path = os.path.join(self.data_dir, file_name)
         if os.path.exists(file_path):
             msg = "File <b>{0}</b> already exists.".format(file_name)
-            # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
-            QMessageBox.information(self._toolbox, "Creating file failed", msg)
+            self._logger.dialog.emit("Creating file failed", msg)
             return
         try:
             with open(file_path, "w"):
-                self._toolbox.msg.emit(
-                    "File <b>{0}</b> created to Data Connection <b>{1}</b>".format(file_name, self.name)
-                )
+                self._logger.msg.emit(f"File <b>{file_name}</b> created to Data Connection <b>{self.name}</b>")
         except OSError:
             msg = "Please check directory permissions."
-            # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
-            QMessageBox.information(self._toolbox, "Creating file failed", msg)
+            self._logger.dialog.emit("Creating file failed", msg)
         return
 
     def remove_files(self):
         """Remove selected files from data directory."""
         indexes = self._properties_ui.treeView_dc_data.selectedIndexes()
         if not indexes:  # Nothing selected
-            self._toolbox.msg.emit("Please select files to remove")
+            self._logger.msg.emit("Please select files to remove")
             return
         file_list = list()
         for index in indexes:
@@ -300,9 +309,9 @@ class DataConnection(ProjectItem):
             path_to_remove = os.path.join(self.data_dir, filename)
             try:
                 os.remove(path_to_remove)
-                self._toolbox.msg.emit("File <b>{0}</b> removed".format(path_to_remove))
+                self._logger.msg.emit(f"File <b>{path_to_remove}</b> removed")
             except OSError:
-                self._toolbox.msg_error.emit("Removing file {0} failed.\nCheck permissions.".format(path_to_remove))
+                self._logger.msg_error.emit(f"Removing file {path_to_remove} failed.\nCheck permissions.")
         return
 
     def file_references(self):
@@ -320,8 +329,8 @@ class DataConnection(ProjectItem):
                     files.append(entry.path)
         return files
 
-    @Slot(name="refresh")
-    def refresh(self):
+    @Slot("QString")
+    def refresh(self, path=None):
         """Refresh data files in Data Connection Properties.
         NOTE: Might lead to performance issues."""
         d = self.data_files()
@@ -366,44 +375,16 @@ class DataConnection(ProjectItem):
         """Update Data Connection tab name label. Used only when renaming project items."""
         self._properties_ui.label_dc_name.setText(self.name)
 
-    def resources_for_advertising(self):
-        """Returns list of references and files to advertise to the execution instance."""
+    def output_resources_forward(self):
+        """see base class"""
         refs = self.file_references()
         f_list = [os.path.join(self.data_dir, f) for f in self.data_files()]
-        resources = [ProjectItemResource(self, "file", url=pathlib.Path(ref).as_uri()) for ref in refs]
-        resources += [ProjectItemResource(self, "file", url=pathlib.Path(path).as_uri()) for path in f_list]
+        resources = [ProjectItemResource(self, "file", url=pathlib.Path(ref).as_uri()) for ref in refs + f_list]
         return resources
 
-    def execute(self):
-        """Executes this Data Connection."""
-        self._toolbox.msg.emit("")
-        self._toolbox.msg.emit("Executing Data Connection <b>{0}</b>".format(self.name))
-        self._toolbox.msg.emit("***")
-        inst = self._toolbox.project().execution_instance
-        # Update Data Connection based on project items that are already executed
-        # Add previously executed Tool's output file paths to references
-        tool_output_files = [
-            r.path for r in inst.available_resources(self.name) if r.type_ == "file" and r.metadata.get("is_output")
-        ]
-        self.references += tool_output_files
-        self.populate_reference_list(self.references, emit_item_changed=False)
-        # Update execution instance for project items downstream
-        # Add data file references and data files into execution instance
-        resources = self.resources_for_advertising()
-        inst.advertise_resources(self.name, *resources)
-        self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(0)  # 0 success
-
-    def stop_execution(self):
-        """Stops executing this Data Connection."""
-        self._toolbox.msg.emit("Stopping {0}".format(self.name))
-        self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(-2)
-
-    def simulate_execution(self, inst):
-        """Simulates executing this Data Connection."""
-        super().simulate_execution(inst)
-        resources = self.resources_for_advertising()
-        inst.advertise_resources(self.name, *resources)
-        if not resources:
+    def _do_handle_dag_changed(self, resources):
+        """See base class."""
+        if not self.file_references() and not self.data_files():
             self.add_notification(
                 "This Data Connection does not have any references or data. "
                 "Add some in the Data Connection Properties panel."
@@ -412,7 +393,8 @@ class DataConnection(ProjectItem):
     def item_dict(self):
         """Returns a dictionary corresponding to this item."""
         d = super().item_dict()
-        d["references"] = self.file_references()
+        # Convert paths to relative before saving
+        d["references"] = [serialize_path(f, self._project.project_dir) for f in self.file_references()]
         return d
 
     def rename(self, new_name):
@@ -420,12 +402,11 @@ class DataConnection(ProjectItem):
 
         Args:
             new_name (str): New name
-
         Returns:
-            bool: Boolean value depending on success
+            bool: True if renaming succeeded, False otherwise
         """
-        ret = super().rename(new_name)
-        if not ret:
+        success = super().rename(new_name)
+        if not success:
             return False
         self.data_dir_watcher.removePaths(self.data_dir_watcher.directories())
         self.data_dir_watcher.addPath(self.data_dir)
@@ -443,18 +424,18 @@ class DataConnection(ProjectItem):
 
     def notify_destination(self, source_item):
         """See base class."""
-        if source_item.item_type == "Tool":
-            self._toolbox.msg.emit(
-                "Link established. Tool <b>{0}</b> output files will be "
-                "passed as references to item <b>{1}</b> after execution.".format(source_item.name, self.name)
+        if source_item.item_type() == "Tool":
+            self._logger.msg.emit(
+                f"Link established. Tool <b>{source_item.name}</b> output files will be "
+                f"passed as references to item <b>{self.name}</b> after execution."
             )
-        elif source_item.item_type in ["Data Store", "Data Interface"]:
+        elif source_item.item_type() in ["Data Store", "Importer"]:
             # Does this type of link do anything?
-            self._toolbox.msg.emit("Link established.")
+            self._logger.msg.emit("Link established.")
         else:
             super().notify_destination(source_item)
 
     @staticmethod
     def default_name_prefix():
-        """see base class"""
+        """See base class."""
         return "Data Connection"

@@ -1,5 +1,6 @@
+# -*- coding: utf-8 -*-
 ######################################################################################################################
-# Copyright (C) 2017 - 2019 Spine project consortium
+# Copyright (C) 2017-2020 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,11 +10,11 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-# -*- coding: utf-8 -*-
-
-# Form implementation generated from reading ui file 'spinetoolbox/ui/import_preview.ui',
-# licensing of 'spinetoolbox/ui/import_preview.ui' applies.
+# Form implementation generated from reading ui file 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\ui\import_preview.ui',
+# licensing of 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\ui\import_preview.ui' applies.
 #
+# Created: Tue Jan 21 17:01:43 2020
+#      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -47,7 +48,7 @@ class Ui_ImportPreview(object):
         self.table_page.setObjectName("table_page")
         self.verticalLayout_2 = QtWidgets.QVBoxLayout(self.table_page)
         self.verticalLayout_2.setObjectName("verticalLayout_2")
-        self.source_data_table = QtWidgets.QTableView(self.table_page)
+        self.source_data_table = TableViewWithButtonHeader(self.table_page)
         self.source_data_table.setObjectName("source_data_table")
         self.verticalLayout_2.addWidget(self.source_data_table)
         self.source_preview_widget_stack.addWidget(self.table_page)
@@ -72,7 +73,7 @@ class Ui_ImportPreview(object):
         self.verticalLayout.addWidget(self.main_splitter)
 
         self.retranslateUi(ImportPreview)
-        self.source_preview_widget_stack.setCurrentIndex(0)
+        self.source_preview_widget_stack.setCurrentIndex(1)
         QtCore.QMetaObject.connectSlotsByName(ImportPreview)
 
     def retranslateUi(self, ImportPreview):
@@ -81,3 +82,4 @@ class Ui_ImportPreview(object):
         self.waiting_label.setText(QtWidgets.QApplication.translate("ImportPreview", "Loading preview...", None, -1))
         self.mappings_box.setTitle(QtWidgets.QApplication.translate("ImportPreview", "Mappings", None, -1))
 
+from spinetoolbox.spine_io.io_models import TableViewWithButtonHeader

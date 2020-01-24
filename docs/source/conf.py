@@ -15,23 +15,22 @@
 
 import os
 import sys
+from spinetoolbox import __version__, __version_info__
 
-#app_path = os.path.join(os.path.dirname(__file__), os.path.pardir, os.path.pardir, "spinetoolbox")
 app_path = os.path.join(os.path.dirname(__file__), os.path.pardir, os.path.pardir)
 sys.path.insert(0, os.path.abspath(app_path))
-from spinetoolbox.config import SPINE_TOOLBOX_VERSION
 
 # -- Project information -----------------------------------------------------
 
 project = 'Spine Toolbox'
 author = 'P. Savolainen, M. Marin, E. Rinne, P. Vennström, A. Soininen'
-copyright = '2019, {}'.format(author)
+copyright = '2020, {}'.format(author)
 
 
 # The short X.Y version
-version = SPINE_TOOLBOX_VERSION.rpartition('.')[0]
+version = str(__version_info__.major) + "." + str(__version_info__.minor)
 # The full version, including alpha/beta/rc tags
-release = SPINE_TOOLBOX_VERSION
+release = __version__ + "-" + __version_info__.releaselevel + "." + str(__version_info__.serial)
 
 
 # -- General configuration ---------------------------------------------------

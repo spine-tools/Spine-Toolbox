@@ -1,5 +1,5 @@
 ######################################################################################################################
-# Copyright (C) 2017 - 2019 Spine project consortium
+# Copyright (C) 2017-2020 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -28,20 +28,25 @@ from PySide2.QtWidgets import (
     QListView,
     QLineEdit,
     QDialogButtonBox,
+    QWidgetAction,
 )
-from PySide2.QtCore import QTimer, Signal
+from PySide2.QtCore import QTimer, Signal, Slot
 from PySide2.QtGui import QPainter
-from ..mvcmodels.filter_checkbox_list_model import FilterCheckboxListModel
+from ..mvcmodels.filter_checkbox_list_model import SimpleFilterCheckboxListModel, TabularViewFilterCheckboxListModel
 
 
-class FilterWidget(QWidget):
+class FilterWidgetBase(QWidget):
     """Filter widget class."""
 
     okPressed = Signal()
     cancelPressed = Signal()
 
-    def __init__(self, parent=None, show_empty=True):
-        """Init class."""
+    def __init__(self, parent):
+        """Init class.
+
+        Args:
+            parent (QWidget)
+        """
         super().__init__(parent)
         # parameters
         self._filter_state = set()
@@ -64,10 +69,9 @@ class FilterWidget(QWidget):
         self._search_timer = QTimer()  # Used to limit search so it doesn't search when typing
         self._search_timer.setSingleShot(True)
 
-        self._filter_model = FilterCheckboxListModel(show_empty=show_empty)
-        self._filter_model.set_list(self._filter_state)
-        self._ui_list.setModel(self._filter_model)
+        self._filter_model = None
 
+    def connect_signals(self):
         # connect signals
         self._ui_list.clicked.connect(self._filter_model.click_index)
         self._search_timer.timeout.connect(self._filter_list)
@@ -99,10 +103,7 @@ class FilterWidget(QWidget):
     def set_filter_list(self, data):
         """Sets the list of items to filter."""
         self._filter_state = set(data)
-        if self._filter_model._show_empty:
-            self._filter_empty_state = True
-        else:
-            self._filter_empty_state = False
+        self._filter_empty_state = bool(self._filter_model._show_empty)
         self._filter_model.set_list(self._filter_state)
 
     def _apply_filter(self):
@@ -132,19 +133,78 @@ class FilterWidget(QWidget):
         self._search_timer.start(self.search_delay)
 
 
-class ZoomWidget(QWidget):
-    """A widget for a QWidgetAction providing zoom actions for a graph view.
+class SimpleFilterWidget(FilterWidgetBase):
+    def __init__(self, parent, show_empty=True):
+        """Init class.
 
-    Attributes
-        parent (QWidget): the widget's parent
-    """
+        Args:
+            parent (QWidget)
+        """
+        super().__init__(parent)
+        self._filter_model = SimpleFilterCheckboxListModel(parent, show_empty=show_empty)
+        self._filter_model.set_list(self._filter_state)
+        self._ui_list.setModel(self._filter_model)
+        self.connect_signals()
 
-    minus_pressed = Signal(name="minus_pressed")
-    plus_pressed = Signal(name="plus_pressed")
-    reset_pressed = Signal(name="reset_pressed")
+
+class TabularViewFilterWidget(FilterWidgetBase):
+    def __init__(self, parent, item_type, show_empty=True):
+        """Init class.
+
+        Args:
+            parent (QWidget)
+            item_type (str): either "object" or "parameter definition"
+        """
+        super().__init__(parent)
+        self._filter_model = TabularViewFilterCheckboxListModel(parent, item_type, show_empty=show_empty)
+        self._filter_model.set_list(self._filter_state)
+        self._ui_list.setModel(self._filter_model)
+        self.connect_signals()
+
+
+class ZoomWidgetAction(QWidgetAction):
+    """A zoom widget action."""
+
+    minus_pressed = Signal()
+    plus_pressed = Signal()
+    reset_pressed = Signal()
 
     def __init__(self, parent=None):
-        """Init class."""
+        """Class constructor.
+
+        Args:
+            parent (QWidget): the widget's parent
+        """
+        super().__init__(parent)
+        zoom_widget = ZoomWidget(parent)
+        self.setDefaultWidget(zoom_widget)
+        zoom_widget.minus_pressed.connect(self.minus_pressed)
+        zoom_widget.plus_pressed.connect(self.plus_pressed)
+        zoom_widget.reset_pressed.connect(self.reset_pressed)
+        self.hovered.connect(self._handle_hovered)
+
+    @Slot()
+    def _handle_hovered(self):
+        """Runs when the zoom widget action is hovered. Hides other menus under the parent widget
+        which are being shown. This is the default behavior for hovering QAction,
+        but for some reason it's not the case for hovering QWidgetAction."""
+        for menu in self.parentWidget().findChildren(QMenu):
+            if menu.isVisible():
+                menu.hide()
+
+
+class ZoomWidget(QWidget):
+
+    minus_pressed = Signal()
+    plus_pressed = Signal()
+    reset_pressed = Signal()
+
+    def __init__(self, parent=None):
+        """Class constructor.
+
+        Args:
+            parent (QWidget): the widget's parent
+        """
         super().__init__(parent)
         self.option = QStyleOptionMenuItem()
         zoom_action = QAction("Zoom")

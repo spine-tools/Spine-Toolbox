@@ -1,5 +1,5 @@
 ######################################################################################################################
-# Copyright (C) 2017 - 2019 Spine project consortium
+# Copyright (C) 2017-2020 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -16,7 +16,7 @@ A QGraphicsScene that can shrink sometimes.
 :date:   18.10.2019
 """
 
-from PySide2.QtCore import QMarginsF
+from PySide2.QtCore import QMarginsF, Signal
 from PySide2.QtWidgets import QGraphicsScene
 
 
@@ -28,6 +28,9 @@ class ShrinkingScene(QGraphicsScene):
     which control how far the items need to be from the scene rectangle's edges
     to trigger the shrinking.
     """
+
+    item_move_finished = Signal("QGraphicsItem")
+    """Emitted when an item has finished moving."""
 
     def __init__(self, horizontal_shrinking_threshold, vertical_shrinking_threshold, parent):
         """

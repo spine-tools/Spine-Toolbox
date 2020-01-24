@@ -1,5 +1,5 @@
 ######################################################################################################################
-# Copyright (C) 2017 - 2019 Spine project consortium
+# Copyright (C) 2017-2020 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -24,11 +24,11 @@ import time
 import shutil
 import glob
 import json
-import spinedb_api
+import urllib.parse
 from PySide2.QtCore import Qt, Slot, QFile, QIODevice, QSize, QRect, QPoint
 from PySide2.QtCore import __version__ as qt_version
 from PySide2.QtCore import __version_info__ as qt_version_info
-from PySide2.QtWidgets import QApplication, QMessageBox, QGraphicsScene
+from PySide2.QtWidgets import QApplication, QMessageBox, QGraphicsScene, QFileIconProvider
 from PySide2.QtGui import (
     QCursor,
     QImageReader,
@@ -41,14 +41,17 @@ from PySide2.QtGui import (
     QStandardItemModel,
     QStandardItem,
 )
-from .config import DEFAULT_PROJECT_DIR, REQUIRED_SPINEDB_API_VERSION
+import spinedb_api
+import spine_engine
+from .config import REQUIRED_SPINEDB_API_VERSION, REQUIRED_SPINE_ENGINE_VERSION
+
+if os.name == "nt":
+    import ctypes
 
 
 def set_taskbar_icon():
     """Set application icon to Windows taskbar."""
     if os.name == "nt":
-        import ctypes
-
         myappid = "{6E794A8A-E508-47C4-9319-1113852224D3}"
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
 
@@ -98,9 +101,10 @@ def spinedb_api_version_check():
             return True
     except AttributeError:
         current_version = "not reported"
-    script = "upgrade_spinedb_api.bat" if sys.platform == "win32" else "upgrade_spinedb_api.sh"
+    script = "upgrade_spinedb_api.bat" if sys.platform == "win32" else "upgrade_spinedb_api.py"
     print(
-        """ERROR:
+        """SPINEDB_API OUTDATED.
+
         Spine Toolbox failed to start because spinedb_api is outdated.
         (Required version is {0}, whereas current is {1})
         Please upgrade spinedb_api to v{0} and start Spine Toolbox again.
@@ -113,6 +117,37 @@ def spinedb_api_version_check():
 
         """.format(
             REQUIRED_SPINEDB_API_VERSION, current_version, script
+        )
+    )
+    return False
+
+
+def spine_engine_version_check():
+    """Check if spine engine package is the correct version and explain how to upgrade if it is not."""
+    try:
+        current_version = spine_engine.__version__
+        current_split = [int(x) for x in current_version.split(".")]
+        required_split = [int(x) for x in REQUIRED_SPINE_ENGINE_VERSION.split(".")]
+        if current_split >= required_split:
+            return True
+    except AttributeError:
+        current_version = "not reported"
+    script = "upgrade_spine_engine.bat" if sys.platform == "win32" else "upgrade_spine_engine.py"
+    print(
+        """SPINE ENGINE OUTDATED.
+
+        Spine Toolbox failed to start because spine_engine is outdated.
+        (Required version is {0}, whereas current is {1})
+        Please upgrade spine_engine to v{0} and start Spine Toolbox again.
+
+        To upgrade, run script '{2}' in the '/bin' folder.
+
+        Or upgrade it manually by running,
+
+            pip install --upgrade git+https://github.com/Spine-project/spine-engine.git#egg=spine_engine
+
+        """.format(
+            REQUIRED_SPINE_ENGINE_VERSION, current_version, script
         )
     )
     return False
@@ -137,29 +172,20 @@ def busy_effect(func):
     return new_function
 
 
-def project_dir(qsettings):
-    """Returns current project directory.
-
-    Args:
-        qsettings (QSettings): Settings object
-    """
-    # NOTE: This is not actually used. The key is not saved to qsettings anywhere. This is a placeholder for code
-    # if we want to be able to change the projects directory at some point.
-    proj_dir = qsettings.value("appSettings/projectsDir", defaultValue="")
-    if not proj_dir:
-        return DEFAULT_PROJECT_DIR
-    return proj_dir
-
-
-def get_datetime(show):
+def get_datetime(show, date=True):
     """Returns date and time string for appending into Event Log messages.
 
     Args:
-        show (boolean): True returns date and time string. False returns empty string.
+        show (bool): True returns date and time string. False returns empty string.
+        date (bool): Whether or not the date should be included in the result
     """
     if show:
         t = datetime.datetime.now()
-        return "[{}-{:02d}-{:02d} {:02d}:{:02d}:{:02d}] ".format(t.day, t.month, t.year, t.hour, t.minute, t.second)
+        time_str = "{:02d}:{:02d}:{:02d}".format(t.hour, t.minute, t.second)
+        if not date:
+            return "[{}] ".format(time_str)
+        date_str = "{}-{:02d}-{:02d}".format(t.day, t.month, t.year)
+        return "[{} {}] ".format(date_str, time_str)
     return ""
 
 
@@ -204,25 +230,9 @@ def create_output_dir_timestamp():
     return extension
 
 
-def create_log_file_timestamp():
-    """ Creates a new timestamp string that is used as Data Interface and Data Store error log file.
-
-    Returns:
-        Timestamp string or empty string if failed.
-    """
-    try:
-        # Create timestamp
-        stamp = datetime.datetime.fromtimestamp(time.time())
-    except OverflowError:
-        logging.error('Timestamp out of range.')
-        return ''
-    extension = stamp.strftime('%Y%m%dT%H%M%S')
-    return extension
-
-
 @busy_effect
 def copy_files(src_dir, dst_dir, includes=None, excludes=None):
-    """Method for copying files. Does not copy folders.
+    """Function for copying files. Does not copy folders.
 
     Args:
         src_dir (str): Source directory
@@ -255,7 +265,7 @@ def copy_files(src_dir, dst_dir, includes=None, excludes=None):
 
 @busy_effect
 def erase_dir(path, verbosity=False):
-    """Delete directory and all its contents without prompt.
+    """Deletes a directory and all its contents without prompt.
 
     Args:
         path (str): Path to directory
@@ -273,7 +283,8 @@ def erase_dir(path, verbosity=False):
 
 @busy_effect
 def copy_dir(widget, src_dir, dst_dir):
-    """Make a copy of a directory. All files and folders are copied.
+    """Makes a copy of a directory. All files and folders are copied.
+    Destination directory must not exist. Does not overwrite files.
 
     Args:
         widget (QWidget): Parent widget for QMessageBoxes
@@ -318,21 +329,53 @@ def copy_dir(widget, src_dir, dst_dir):
     return True
 
 
-def rename_dir(widget, old_dir, new_dir):
+@busy_effect
+def recursive_overwrite(widget, src, dst, ignore=None, silent=True):
+    """Copies everything from source directory to destination directory recursively.
+    Overwrites existing files.
+
+    Args:
+        widget (QWidget): Enables e.g. printing to Event Log
+        src (str): Source directory
+        dst (str): Destination directory
+        ignore: Ignore function
+        silent (bool): If False, messages are sent to Event Log, If True, copying is done in silence
+    """
+    if os.path.isdir(src):
+        if not os.path.isdir(dst):
+            if not silent:
+                widget.msg.emit("Creating directory <b>{0}</b>".format(dst))
+            os.makedirs(dst)
+        files = os.listdir(src)
+        if ignore is not None:
+            ignored = ignore(src, files)
+        else:
+            ignored = set()
+        for f in files:
+            if f not in ignored:
+                recursive_overwrite(widget, os.path.join(src, f), os.path.join(dst, f), ignore, silent)
+    else:
+        if not silent:
+            _, src_filename = os.path.split(src)
+            dst_dir, _ = os.path.split(dst)
+            widget.msg.emit("Copying <b>{0}</b> -> <b>{1}</b>".format(src_filename, dst_dir))
+        shutil.copyfile(src, dst)
+
+
+def rename_dir(old_dir, new_dir, logger):
     """Rename directory. Note: This is not used in renaming projects due to unreliability.
     Looks like it works fine in renaming project items though.
 
     Args:
-        widget (QWidget): Parent widget for QMessageBoxes
         old_dir (str): Absolute path to directory that will be renamed
         new_dir (str): Absolute path to new directory
+        logger (LoggingSignals): A logger instance
     """
     try:
         shutil.move(old_dir, new_dir)
     except FileExistsError:
         msg = "Directory<br/><b>{0}</b><br/>already exists".format(new_dir)
-        # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
-        QMessageBox.information(widget, "Renaming directory failed", msg)
+        logger.dialog.emit("Renaming directory failed", msg)
         return False
     except PermissionError as pe_e:
         logging.error(pe_e)
@@ -343,8 +386,7 @@ def rename_dir(widget, old_dir, new_dir):
             "<br/>2. Windows Explorer is open in the directory"
             "<br/><br/>Check these and try again.".format(old_dir)
         )
-        # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
-        QMessageBox.information(widget, "Renaming directory failed (Permission Error)", msg)
+        logger.dialog.emit("Renaming directory failed (Permission Error)", msg)
         return False
     except OSError as os_e:
         logging.error(os_e)
@@ -359,23 +401,23 @@ def rename_dir(widget, old_dir, new_dir):
             "<br/>2. A file in the directory is open in another program. "
             "<br/><br/>Check these and try again.".format(old_dir, new_dir)
         )
-        # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
-        QMessageBox.information(widget, "Renaming directory failed (OS Error)", msg)
+        logger.dialog.emit("Renaming directory failed (OS Error)", msg)
         return False
     return True
 
 
-def fix_name_ambiguity(name_list, offset=0):
+def fix_name_ambiguity(input_list, offset=0):
     """Modify repeated entries in name list by appending an increasing integer."""
-    ref_name_list = name_list.copy()
+    result = []
     ocurrences = {}
-    for i, name in enumerate(name_list):
-        n_ocurrences = ref_name_list.count(name)
-        if n_ocurrences == 1:
-            continue
-        ocurrence = ocurrences.setdefault(name, 1)
-        name_list[i] = name + str(offset + ocurrence)
-        ocurrences[name] = ocurrence + 1
+    for item in input_list:
+        n_ocurrences = input_list.count(item)
+        if n_ocurrences > 1:
+            ocurrence = ocurrences.get(item, 1)
+            ocurrences[item] = ocurrence + 1
+            item += str(offset + ocurrence)
+        result.append(item)
+    return result
 
 
 def tuple_itemgetter(itemgetter_func, num_indexes):
@@ -393,52 +435,39 @@ def format_string_list(str_list):
     return "<ul>" + "".join(["<li>" + str(x) + "</li>" for x in str_list]) + "</ul>"
 
 
-def get_db_map(url, upgrade=False):
-    """Returns a DiffDatabaseMapping instance from url.
-    If the db is not the latest version, asks the user if they want to upgrade it.
+def rows_to_row_count_tuples(rows):
+    """Breaks a list of rows into a list of (row, count) tuples corresponding
+    to chunks of successive rows.
     """
-    try:
-        db_map = do_get_db_map(url, upgrade)
-        return db_map
-    except spinedb_api.SpineDBVersionError:
-        msg = QMessageBox()
-        msg.setIcon(QMessageBox.Question)
-        msg.setWindowTitle("Incompatible database version")
-        msg.setText(
-            "The database at <b>{}</b> is from an older version of Spine "
-            "and needs to be upgraded in order to be used with the current version.".format(url)
-        )
-        msg.setInformativeText(
-            "Do you want to upgrade it now?"
-            "<p><b>WARNING</b>: After the upgrade, "
-            "the database may no longer be used "
-            "with previous versions of Spine."
-        )
-        msg.addButton(QMessageBox.Cancel)
-        msg.addButton("Upgrade", QMessageBox.YesRole)
-        ret = msg.exec_()  # Show message box
-        if ret == QMessageBox.Cancel:
-            return None
-        return get_db_map(url, upgrade=True)
-
-
-@busy_effect
-def do_get_db_map(url, upgrade):
-    """Returns a DiffDatabaseMapping instance from url.
-    Called by `get_db_map`.
-    """
-    return spinedb_api.DiffDatabaseMapping(url, upgrade=upgrade)
-
-
-def int_list_to_row_count_tuples(int_list):
-    """Breaks a list of integers into a list of tuples (row, count) corresponding
-    to chunks of successive elements.
-    """
-    sorted_list = sorted(set(int_list))
-    break_points = [k + 1 for k in range(len(sorted_list) - 1) if sorted_list[k] + 1 != sorted_list[k + 1]]
-    break_points = [0] + break_points + [len(sorted_list)]
+    if not rows:
+        return []
+    sorted_rows = sorted(set(rows))
+    break_points = [k + 1 for k in range(len(sorted_rows) - 1) if sorted_rows[k] + 1 != sorted_rows[k + 1]]
+    break_points = [0] + break_points + [len(sorted_rows)]
     ranges = [(break_points[l], break_points[l + 1]) for l in range(len(break_points) - 1)]
-    return [(sorted_list[start], stop - start) for start, stop in ranges]
+    return [(sorted_rows[start], stop - start) for start, stop in ranges]
+
+
+def inverted(input_):
+    """Inverts a dictionary that maps keys to a list of values.
+    The output maps values to a list of keys that include the value in the input.
+    """
+    output = dict()
+    for key, value_list in input_.items():
+        for value in value_list:
+            output.setdefault(value, list()).append(key)
+    return output
+
+
+class Singleton(type):
+    """A singleton class from SO."""
+
+    _instances = {}
+
+    def __call__(cls, *args, **kwargs):
+        if cls not in cls._instances:
+            cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
+        return cls._instances[cls]
 
 
 class IconListManager:
@@ -514,9 +543,9 @@ class IconManager:
         Create the corresponding object pixmaps and clear obsolete entries
         from the relationship class icon cache."""
         for object_class in object_classes:
-            self.create_object_pixmap(object_class.display_icon)
-            self.obj_cls_icon_cache[object_class.name] = object_class.display_icon
-        object_class_names = [x.name for x in object_classes]
+            self.create_object_pixmap(object_class["display_icon"])
+            self.obj_cls_icon_cache[object_class["name"]] = object_class["display_icon"]
+        object_class_names = [x["name"] for x in object_classes]
         dirty_keys = [k for k in self.rel_cls_icon_cache if any(x in object_class_names for x in k)]
         for k in dirty_keys:
             del self.rel_cls_icon_cache[k]
@@ -613,3 +642,124 @@ def interpret_icon_id(display_icon):
 
 def default_icon_id():
     return make_icon_id(*interpret_icon_id(None))
+
+
+class ProjectDirectoryIconProvider(QFileIconProvider):
+    """QFileIconProvider that provides a Spine icon to the
+    Open Project Dialog when a Spine Toolbox project
+    directory is encountered."""
+
+    def __init__(self):
+        super().__init__()
+        self.spine_icon = QIcon(":/symbols/Spine_symbol.png")
+
+    def icon(self, info):
+        """Returns an icon for the file described by info.
+
+        Args:
+            info (QFileInfo): File (or directory) info
+
+        Returns:
+            QIcon: Icon for a file system resource with the given info
+        """
+        if isinstance(info, QFileIconProvider.IconType):
+            return super().icon(info)  # Because there are two icon() methods
+        if not info.isDir():
+            return super().icon(info)
+        p = info.filePath()
+        # logging.debug("In dir:{0}".format(p))
+        if os.path.exists(os.path.join(p, ".spinetoolbox")):
+            # logging.debug("found project dir:{0}".format(p))
+            return self.spine_icon
+        else:
+            return super().icon(info)
+
+
+def path_in_dir(path, directory):
+    """Returns True if the given path is in the given directory."""
+    return os.path.samefile(os.path.commonpath((path, directory)), directory)
+
+
+def serialize_path(path, project_dir):
+    """
+    Returns a dict representation of the given path.
+
+    If path is in project_dir, converts the path to relative.
+    If path does not exist returns it as-is.
+
+    Args:
+        path (str): path to serialize
+        project_dir (str): path to the project directory
+
+    Returns:
+        dict: Dictionary representing the given path
+    """
+    is_relative = path_in_dir(path, project_dir)
+    serialized = {
+        "type": "path",
+        "relative": is_relative,
+        "path": os.path.relpath(path, project_dir).replace(os.sep, "/") if is_relative else path.replace(os.sep, "/"),
+    }
+    return serialized
+
+
+def serialize_url(url, project_dir):
+    """
+    Return a dict representation of the given URL.
+
+    If the URL is a file that is in project dir, the URL is converted to a relative path.
+
+    Args:
+        url (str): a URL to serialize
+        project_dir (str): path to the project directory
+
+    Returns:
+        dict: Dictionary representing the URL
+    """
+    parsed = urllib.parse.urlparse(url)
+    path = urllib.parse.unquote(parsed.path)
+    if sys.platform == "win32":
+        path = path[1:]  # Remove extra '/' from the beginning
+    if os.path.isfile(path):
+        is_relative = path_in_dir(path, project_dir)
+        serialized = {
+            "type": "file_url",
+            "relative": is_relative,
+            "path": os.path.relpath(path, project_dir).replace(os.sep, "/") if is_relative else path.replace(os.sep, "/"),
+            "scheme": parsed.scheme,
+        }
+    else:
+        serialized = {"type": "url", "relative": False, "path": url}
+    return serialized
+
+
+def deserialize_path(serialized, project_dir):
+    """
+    Returns a deserialized path or URL.
+
+    Args:
+        serialized (dict): a serialized path or URL
+        project_dir (str): path to the project directory
+
+    Returns:
+        str: Path or URL as string
+    """
+    if not isinstance(serialized, dict):
+        return serialized
+    try:
+        path_type = serialized["type"]
+        if path_type == "path":
+            path = serialized["path"]
+            return os.path.normpath(os.path.join(project_dir, path) if serialized["relative"] else path)
+        if path_type == "file_url":
+            path = serialized["path"]
+            if serialized["relative"]:
+                path = os.path.normpath(os.path.join(project_dir, path))
+            if sys.platform == "win32":
+                path = "/" + path
+            return serialized["scheme"] + "://" + path
+        if path_type == "url":
+            return serialized["path"]
+    except KeyError as error:
+        raise RuntimeError("Key missing from serialized path: {}".format(error))
+    raise RuntimeError("Cannot deserialize: unknown path type '{}'.".format(path_type))

@@ -1,5 +1,5 @@
 ######################################################################################################################
-# Copyright (C) 2017 - 2019 Spine project consortium
+# Copyright (C) 2017-2020 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -31,6 +31,4 @@ class DataStoreContextMenu(ProjectItemContextMenu):
         """Class constructor."""
         super().__init__(parent, position)
         self.addSeparator()
-        self.add_action("Open tree view...")
-        self.add_action("Open graph view...")
-        self.add_action("Open tabular view...")
+        self.add_action("Open view...")

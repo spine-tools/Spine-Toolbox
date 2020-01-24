@@ -1,5 +1,5 @@
 ######################################################################################################################
-# Copyright (C) 2017 - 2019 Spine project consortium
+# Copyright (C) 2017-2020 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -22,8 +22,8 @@ from .widgets.data_store_properties_widget import DataStorePropertiesWidget
 from .widgets.add_data_store_widget import AddDataStoreWidget
 
 item_rank = 0
-item_category = "Data Stores"
-item_type = "Data Store"
+item_category = item_maker.category()
+item_type = item_maker.item_type()
 item_icon = ":/icons/project_item_icons/database.svg"
 icon_maker = DataStoreIcon
 properties_widget_maker = DataStorePropertiesWidget

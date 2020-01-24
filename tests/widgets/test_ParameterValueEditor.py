@@ -1,5 +1,5 @@
 ######################################################################################################################
-# Copyright (C) 2017 - 2019 Spine project consortium
+# Copyright (C) 2017-2020 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -100,7 +100,7 @@ class TestParameterValueEditor(unittest.TestCase):
         self._check_parent_model_updated_when_closed(time_series)
 
     def test_editor_sets_variable_resolution_time_series_in_parent_model(self):
-        indexes = np.array([np.datetime64("2019-07-03T12:22:00.000000"), np.datetime64("2019-07-03T12:23:00.000000")])
+        indexes = np.array([np.datetime64("2019-07-03T12:22:00"), np.datetime64("2019-07-03T12:23:00")])
         values = np.array([23.0, 5.0])
         time_series = TimeSeriesVariableResolution(indexes, values, True, False)
         self._check_parent_model_updated_when_closed(time_series)

@@ -1,5 +1,5 @@
 ######################################################################################################################
-# Copyright (C) 2017 - 2019 Spine project consortium
+# Copyright (C) 2017-2020 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -69,7 +69,7 @@ class ToolSpecificationModel(QAbstractListModel):
         return Qt.ItemIsEnabled | Qt.ItemIsSelectable
 
     def insertRow(self, tool, row=None, parent=QModelIndex()):
-        """Insert row (tool) into model.
+        """Insert row (tool specification) into model.
 
         Args:
             tool (Tool): Tool added to the model
@@ -86,7 +86,7 @@ class ToolSpecificationModel(QAbstractListModel):
         self.endInsertRows()
 
     def removeRow(self, row, parent=QModelIndex()):
-        """Remove row (tool) from model.
+        """Remove row (tool specification) from model.
 
         Args:
             row (int): Row to remove the tool from

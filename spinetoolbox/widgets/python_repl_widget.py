@@ -1,5 +1,5 @@
 ######################################################################################################################
-# Copyright (C) 2017 - 2019 Spine project consortium
+# Copyright (C) 2017-2020 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -10,7 +10,7 @@
 ######################################################################################################################
 
 """
-Class for a custom RichJupyterWidget to use as Python REPL.
+Class for a custom SpineConsoleWidget to use as Python REPL.
 
 :author: P. Savolainen (VTT)
 :date:   14.3.2019
@@ -18,41 +18,36 @@ Class for a custom RichJupyterWidget to use as Python REPL.
 
 import os.path
 import subprocess
-from PySide2.QtCore import Qt, Signal, Slot
+from PySide2.QtCore import Qt, Slot
 from PySide2.QtWidgets import QAction, QMessageBox
-from qtconsole.rich_jupyter_widget import RichJupyterWidget
 from qtconsole.manager import QtKernelManager
 from jupyter_client.kernelspec import find_kernel_specs, get_kernel_spec, NoSuchKernel
 from .toolbars import DraggableWidget
 from ..helpers import busy_effect
 from ..config import PYTHON_EXECUTABLE
-from .. import qsubprocess
+from ..execution_managers import QProcessExecutionManager
+from .spine_console_widget import SpineConsoleWidget
 
 
-class PythonReplWidget(RichJupyterWidget):
+class PythonReplWidget(SpineConsoleWidget):
     """Python Repl Widget class.
 
     Attributes:
         toolbox (ToolboxUI): App main window (QMainWindow) instance
     """
 
-    execution_finished_signal = Signal(int, name="execution_finished_signal")
+    name = "Python Console"
 
     def __init__(self, toolbox):
         """Class constructor."""
-        super().__init__()
-        self._toolbox = toolbox
+        super().__init__(toolbox)
         self._kernel_starting = False  # Warning: Do not use self._starting (protected class variable in JupyterWidget)
-        self._running = False  # Not used
-        self.execution_failed_to_start = False  # Set this somewhere. Used in ToolInstance()
-        self._kernel_state = None  # Not used
         self.kernel_name = None
         self.kernel_display_name = ""
         self.kernel_manager = None
         self.kernel_client = None
         self.python_cmd = None  # Contains the path to selected python executable (i.e. pythondir/python.exe on Win.)
-        self.install_process = None  # QSubProcess instance for installing required packages
-        self.commands = list()  # FIFO command queue (buffer)
+        self.install_proc_exec_mngr = None  # QSubProcess instance for installing required packages
         self.may_need_restart = True  # Has the user changed the Python environment in Settings
         self.normal_cursor = self._control.viewport().cursor()
         # QActions
@@ -63,16 +58,16 @@ class PythonReplWidget(RichJupyterWidget):
 
     def connect_signals(self):
         """Connect signals."""
-        self.executing.connect(self.execution_in_progress)  # Signal defined in FrontEndWidget class
-        self.executed.connect(self.execution_done)  # Signal defined in FrontEndWidget class
-        self.kernel_client.iopub_channel.message_received.connect(self.iopub_msg_received)
+        self.executing.connect(self.handle_executing)  # Signal defined in FrontEndWidget class
+        self.executed.connect(self.handle_executed)  # Signal defined in FrontEndWidget class
+        self.kernel_client.iopub_channel.message_received.connect(self.receive_iopub_msg)
 
     def disconnect_signals(self):
         """Disconnect signals. Needed before
         switching to another Python kernel."""
-        self.executing.disconnect(self.execution_in_progress)
-        self.executed.disconnect(self.execution_done)
-        self.kernel_client.iopub_channel.message_received.disconnect(self.iopub_msg_received)
+        self.executing.disconnect(self.handle_executing)
+        self.executed.disconnect(self.handle_executed)
+        self.kernel_client.iopub_channel.message_received.disconnect(self.receive_iopub_msg)
 
     @busy_effect
     def python_kernel_name(self):
@@ -90,17 +85,17 @@ class PythonReplWidget(RichJupyterWidget):
         program = str(self.python_cmd)
         args = list()
         args.append("-V")
-        q_process = qsubprocess.QSubProcess(self._toolbox, program, args, silent=True)
-        q_process.start_process()
-        if not q_process.wait_for_finished(msecs=5000):
+        proc_exec_mngr = QProcessExecutionManager(self._toolbox, program, args, silent=True)
+        proc_exec_mngr.start_execution()
+        if not proc_exec_mngr.wait_for_process_finished(msecs=5000):
             self._toolbox.msg_error.emit(
                 "Couldn't determine Python version. Please check " "the <b>Python interpreter</b> option in Settings."
             )
             return None
-        python_version_str = q_process.output
+        python_version_str = proc_exec_mngr.process_output
         if not python_version_str:
             # The version str might be in stderr instead of stdout (happens at least with Python 2.7.14)
-            python_version_str = q_process.error_output
+            python_version_str = proc_exec_mngr.error_output
         p_v_list = python_version_str.split()
         ver = p_v_list[1]  # version e.g. 3.7.1
         kernel_name = "python-" + ver[:3]
@@ -108,7 +103,7 @@ class PythonReplWidget(RichJupyterWidget):
         self.may_need_restart = False
         return kernel_name, kernel_display_name
 
-    @Slot(name="setup_python_kernel")
+    @Slot()
     def setup_python_kernel(self):
         """Context menu Start action handler."""
         k_tuple = self.python_kernel_name()
@@ -186,7 +181,7 @@ class PythonReplWidget(RichJupyterWidget):
             self._toolbox.msg.emit("*** Installing IPython kernel <b>{0}</b> specs ***".format(self.kernel_name))
             self.start_kernelspec_install_process()
             # New specs installed, update the variable
-            if self.install_process.wait_for_finished():
+            if self.install_proc_exec_mngr.wait_for_process_finished():
                 kernel_specs = find_kernel_specs()
             else:
                 self._toolbox.msg_error.emit("Failed to install IPython kernel specifications.")
@@ -227,20 +222,20 @@ class PythonReplWidget(RichJupyterWidget):
         args.append("pip")
         args.append("install")
         args.append(package_name)
-        self.install_process = qsubprocess.QSubProcess(self._toolbox, program, args, semisilent=True)
-        self.install_process.subprocess_finished_signal.connect(self.package_install_process_finished)
-        self.install_process.start_process()
+        self.install_proc_exec_mngr = QProcessExecutionManager(self._toolbox, program, args, semisilent=True)
+        self.install_proc_exec_mngr.execution_finished.connect(self.handle_package_install_process_finished)
+        self.install_proc_exec_mngr.start_execution()
 
-    @Slot(int, name="package_install_process_finished")
-    def package_install_process_finished(self, retval):
-        """Installing package finished.
+    @Slot(int)
+    def handle_package_install_process_finished(self, retval):
+        """Handles installing package finished.
 
         Args:
             retval (int): Process return value. 0: success, !0: failure
         """
-        self.install_process.subprocess_finished_signal.disconnect()
-        self.install_process.deleteLater()
-        self.install_process = None
+        self.install_proc_exec_mngr.execution_finished.disconnect()
+        self.install_proc_exec_mngr.deleteLater()
+        self.install_proc_exec_mngr = None
         if retval != 0:
             self._toolbox.msg_error.emit("\tInstalling required package failed. Please install it manually.")
             return
@@ -262,20 +257,20 @@ class PythonReplWidget(RichJupyterWidget):
         args.append(self.kernel_name)
         args.append("--display-name")
         args.append(self.kernel_display_name)
-        self.install_process = qsubprocess.QSubProcess(self._toolbox, program, args, semisilent=True)
-        self.install_process.subprocess_finished_signal.connect(self.kernelspec_install_process_finished)
-        self.install_process.start_process()
+        self.install_proc_exec_mngr = QProcessExecutionManager(self._toolbox, program, args, semisilent=True)
+        self.install_proc_exec_mngr.execution_finished.connect(self.handle_kernelspec_install_process_finished)
+        self.install_proc_exec_mngr.start_execution()
 
-    @Slot(int, name="kernelspec_install_process_finished")
-    def kernelspec_install_process_finished(self, retval):
-        """Installing package finished.
+    @Slot(int)
+    def handle_kernelspec_install_process_finished(self, retval):
+        """Handles installing package finished.
 
         Args:
             retval (int): Process return value. 0: success, !0: failure
         """
-        self.install_process.subprocess_finished_signal.disconnect()
-        self.install_process.deleteLater()
-        self.install_process = None
+        self.install_proc_exec_mngr.execution_finished.disconnect()
+        self.install_proc_exec_mngr.deleteLater()
+        self.install_proc_exec_mngr = None
         if retval != 0:
             self._toolbox.msg_error.emit("\tInstalling kernel specs failed. Please install them manually.")
             return
@@ -306,14 +301,21 @@ class PythonReplWidget(RichJupyterWidget):
             self._kernel_starting = False
             return False
 
-    def execute_instance(self, commands):
-        """Start executing the first command in the command queue in Python Console."""
-        self.commands = commands
-        cmd = self.commands.pop(0)
-        self.execute(cmd)
+    def wake_up(self):
+        """See base class."""
+        k_tuple = self.python_kernel_name()
+        if not k_tuple:
+            self.execution_failed.emit(-1)
+            return
+        # Check if this kernel is already running
+        kernel_name, kernel_display_name = k_tuple
+        if self.kernel_manager and self.kernel_name == kernel_name:
+            self.ready_to_execute.emit()
+        else:
+            self.launch_kernel(kernel_name, kernel_display_name)
 
-    @Slot(str, name="execution_in_progress")
-    def execution_in_progress(self, code):
+    @Slot(str)
+    def handle_executing(self, code):
         """Slot for handling the 'executing' signal. Signal is emitted
         when a user visible 'execute_request' has been submitted to the
         kernel from the FrontendWidget.
@@ -322,15 +324,9 @@ class PythonReplWidget(RichJupyterWidget):
             code (str): Code to be executed (actually not 'str' but 'object')
         """
         self._control.viewport().setCursor(Qt.BusyCursor)
-        self._running = True
-        if not self.commands:
-            # self._toolbox.msg.emit("Executing code:{0}".format(code))
-            pass  # Happens when users type commands directly to iPython Console
-        else:
-            self._toolbox.msg_warning.emit("\tExecution in progress. See <b>Python Console</b> for messages.")
 
-    @Slot(dict, name="execution_done")
-    def execution_done(self, msg):
+    @Slot(dict)
+    def handle_executed(self, msg):
         """Slot for handling the 'executed' signal. Signal is emitted
         when a user-visible 'execute_reply' has been received from the
         kernel and processed by the FrontendWidget.
@@ -339,22 +335,15 @@ class PythonReplWidget(RichJupyterWidget):
             msg (dict): Response message (actually not 'dict' but 'object')
         """
         self._control.viewport().setCursor(self.normal_cursor)
-        self._running = False
         if msg['content']['status'] == 'ok':
             # TODO: If user Stops execution, it should be handled here
-            # Run next command or finish up if no more commands to execute
-            if not self.commands:
-                self.execution_finished_signal.emit(0)
-            else:
-                cmd = self.commands.pop(0)
-                self.execute(cmd)
+            self.ready_to_execute.emit()
         else:
             # TODO: if status='error' you can get the exception and more info from msg
-            # TODO: If there are more commands to execute should we stop or continue to next command
-            self.execution_finished_signal.emit(-9999)  # any error code
+            self.execution_failed.emit(-1)
 
-    @Slot(dict, name="iopub_msg_received")
-    def iopub_msg_received(self, msg):
+    @Slot(dict)
+    def receive_iopub_msg(self, msg):
         """Message received from the IOPUB channel.
         Note: We are only monitoring when the kernel has started
         successfully and ready for action here. Alternatively, this
@@ -370,7 +359,7 @@ class PythonReplWidget(RichJupyterWidget):
             # When msg_type:'status, content has the kernel execution_state
             # When msg_type:'execute_input', content has the code to be executed
             # When msg_type:'stream', content has the stream name (e.g. stdout) and the text
-            self._kernel_state = msg['content']['execution_state']
+            execution_state = msg['content']['execution_state']
             try:
                 parent_msg_type = msg["parent_header"]["msg_type"]  # msg that the received msg is replying to
             except KeyError:
@@ -388,31 +377,21 @@ class PythonReplWidget(RichJupyterWidget):
             elif parent_msg_type == "execute_request":
                 # If kernel_state:'busy', execute_request is being processed (i.e. execution or start-up in progress)
                 # If kernel_state:'idle', execute_request is done
-                if self._kernel_state == "busy":
+                if execution_state == "busy":
                     # kernel is busy starting up or executing
                     pass
-                elif self._kernel_state == "idle":
+                elif execution_state == "idle":
                     # Kernel is idle after execution
                     if self._kernel_starting:
                         # Kernel is idle after starting up -> execute pending command
                         self._kernel_starting = False
                         # Start executing the first command (if available) from the command buffer immediately
-                        if not self.commands:  # Happens if Python console is started from context-menu
-                            return
-                        # Happens if Python console is started by clicking on Tool's Execute button
-                        cmd = self.commands.pop(0)
-                        self.execute(cmd)
+                    self.ready_to_execute.emit()
                 else:
                     # This should probably happen when _kernel_state is 'starting' but it doesn't seem to show up
                     self._toolbox.msg_error.emit(
-                        "Unhandled execution_state '{0}' after " "execute_request".format(self._kernel_state)
+                        "Unhandled execution_state '{0}' after " "execute_request".format(execution_state)
                     )
-
-    def terminate_process(self):
-        """Send interrupt signal to kernel."""
-        self.kernel_manager.interrupt_kernel()
-        # TODO: Block execution until kernel has been interrupted and then emit the signal
-        self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(-2)
 
     def shutdown_kernel(self, hush=False):
         """Shut down Python kernel."""
@@ -440,7 +419,7 @@ class PythonReplWidget(RichJupyterWidget):
         self.execute("{0}={1}".format(var_name, var_value))
         return True
 
-    @Slot(name="test_push_vars")
+    @Slot()
     def test_push_vars(self):
         """QAction slot to test pushing variables to Python Console."""
         a = dict()

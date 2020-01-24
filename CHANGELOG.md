@@ -11,17 +11,40 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - A small icon is painted next to the project items in the design view to show the order in which they will be
   executed
 - Main Window menu 'File -> Open recent'. Shortcut for opening a recent project.
-- A new project item *Gdx Export* allows a database contained in a *Data Store* to be exported as GAMS `.gdx` file.
-- It is now possible to copy, paste and duplicate project items on the Design View.
+- A new project item *Exporter* allows a database contained in a *Data Store* to be exported as GAMS `.gdx` file.
+- It is now possible to copy and paste project items for example between projects.
+- It is now possible to duplicate project items.
+- Changes made in the tree view are also seen in the graph view and viceversa.
 - New Setting: *Sticky selection in Graph View*. Enables users to select if they want to use multi-selection or 
   single selection in the Graph view Object tree when selecting items with the **left-mouse button**.
+- Projects can be saved to any directory
+- Project name can be changed in Settings
+- The graph view features a short live demonstration that new users can follow to discover the basic functionality.
+- New Setting: *Smooth links*. When active, links on the Design View follow a smooth curve rather than a straight line.
+- When execution traverses a link, a small animation is played to denote the flow of data. Users can set how quick
+  they want this animation to be in Settings. The fastest setting effectively disables the animation.
 
 ### Changed
-- spinetoolbox is now a Python package.
-- spinetoolbox.py has been moved to repository root. To start the app, use command 'python -m spinetoolbox'.
+- spinetoolbox is now a Python package. To start the app, use command `python -m spinetoolbox` or
+  `python spinetoolbox.py` as spinetoolbox.py has been moved to repository root. 
 - Tool templates are now called Tool specifications
+- File->Open Project opens a file dialog, where you can open projects by selecting an old 
+  <project_name>.proj file or a Spine Toolbox Project directory. Valid Spine Toolbox projects are 
+  decorated with the Spine logo.
+- When opening an old style project (.proj file), the project must be upgraded to a new style project 
+  by selecting a new directory for the project.
+- Project information is not saved to a <project_name>.proj file anymore. This information is now located 
+  in file <project_dir>/.spinetoolbox/project.json. Every Spine Toolbox project has this file.
+- Work directory is now a global setting instead of a project setting
+- Renamed *Data Interface* project item to *Importer*.
+  The corresponding category *Data Importers* was renamed to *Importers*.
+- The status bar of tree and graph views now has a notification icon. Click on this icon to see the list of 
+  notifications in a popup.
+- Tree, graph, and tabular views have been merged into one consolidated view. You can chose your preferred style
+  from the View menu.
 
 ### Deprecated
+- Saving project information to .proj files
 
 ### Removed
 

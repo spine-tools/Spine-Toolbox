@@ -1,5 +1,5 @@
 ######################################################################################################################
-# Copyright (C) 2017 - 2019 Spine project consortium
+# Copyright (C) 2017-2020 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -163,11 +163,13 @@ class ExcelConnector(SourceConnection):
 
         return data_iterator, header, num_cols
 
-    def get_mapped_data(self, tables_mappings, options, max_rows=-1):
+    def get_mapped_data(self, tables_mappings, options, table_types, table_row_types, max_rows=-1):
         """
         Overrides io_api method to check for some parameter value types.
         """
-        mapped_data, errors = super(ExcelConnector, self).get_mapped_data(tables_mappings, options, max_rows)
+        mapped_data, errors = super(ExcelConnector, self).get_mapped_data(
+            tables_mappings, options, table_types, table_row_types, max_rows
+        )
         for key in ("object_parameter_values", "relationship_parameter_values"):
             for index, value in enumerate(mapped_data[key]):
                 val = value[-1]

@@ -1,5 +1,5 @@
 ######################################################################################################################
-# Copyright (C) 2017 - 2019 Spine project consortium
+# Copyright (C) 2017-2020 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -10,7 +10,7 @@
 ######################################################################################################################
 
 """
-Unit tests for TreeViewForm and GraphViewForm classes.
+Unit tests for DataStoreForm classes.
 
 :author: M. Marin (KTH)
 :date:   6.12.2018
@@ -21,9 +21,10 @@ from unittest import mock
 import logging
 import os
 import sys
-from PySide2.QtWidgets import QApplication, QToolButton
-from spinetoolbox.widgets.tree_view_widget import TreeViewForm
-from spinetoolbox.widgets.custom_qdialog import AddObjectClassesDialog
+from PySide2.QtWidgets import QApplication
+import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
+from spinetoolbox.widgets.data_store_widget import DataStoreForm
+from spinetoolbox.widgets.add_db_items_dialogs import AddObjectClassesDialog
 
 
 class TestAddItemsDialog(unittest.TestCase):
@@ -42,67 +43,73 @@ class TestAddItemsDialog(unittest.TestCase):
         )
 
     def setUp(self):
-        """Overridden method. Runs before each test. Makes instance of TreeViewForm class."""
-        with mock.patch("spinetoolbox.project.SpineToolboxProject") as mock_project, mock.patch(
-            "spinedb_api.DiffDatabaseMapping"
-        ) as mock_db_map, mock.patch(
-            "spinetoolbox.widgets.tree_view_widget.TreeViewForm.restore_ui"
-        ) as mock_restore_ui:
-            self.tree_view_form = TreeViewForm(mock_project, {"mock_db": mock_db_map})
+        """Overridden method. Runs before each test. Makes instance of DataStoreForm class."""
+        with mock.patch("spinetoolbox.spine_db_manager.QMessageBox"), mock.patch(
+            "spinetoolbox.widgets.data_store_widget.DataStoreForm.restore_ui"
+        ):
+            self.mock_db_mngr = mock.MagicMock()
+
+            def get_db_map_for_listener_side_effect(listener, url, codename=None):
+                mock_db_map = mock.MagicMock()
+                mock_db_map.codename = codename
+                return mock_db_map
+
+            self.mock_db_mngr.get_db_map_for_listener.side_effect = get_db_map_for_listener_side_effect
+            self.ds_view_form = DataStoreForm(self.mock_db_mngr, ("mock_url", "mock_db"))
+            self.mock_db_map = self.ds_view_form.db_map
 
     def tearDown(self):
         """Overridden method. Runs after each test.
         Use this to free resources after a test if needed.
         """
-        with mock.patch(
-            "spinetoolbox.widgets.data_store_widget.DataStoreForm._prompt_close_and_commit"
-        ) as mock_p_c_and_c, mock.patch(
-            "spinetoolbox.widgets.tree_view_widget.TreeViewForm.save_window_state"
-        ) as mock_save_w_s:
-            mock_p_c_and_c.return_value = True
-            self.tree_view_form.close()
-            mock_p_c_and_c.assert_called_once()
+        with mock.patch("spinetoolbox.widgets.data_store_widget.DataStoreForm.save_window_state") as mock_save_w_s:
+            self.ds_view_form.close()
             mock_save_w_s.assert_called_once()
-        self.tree_view_form.deleteLater()
-        self.tree_view_form = None
+        self.ds_view_form.deleteLater()
+        self.ds_view_form = None
         try:
             os.remove('mock_db.sqlite')
         except OSError:
             pass
 
-    @unittest.skip("Test currently broken.")
-    def test_empty_row_has_remove_row_button(self):
-        """Test that the model is loaded with an empty row, and this row has a button to remove it in the last column.
-        """
-        dialog = AddObjectClassesDialog(self.tree_view_form)
-        self.assertEqual(dialog.model.rowCount(), 1)
-        self.assertEqual(dialog.model.columnCount(), 4)
-        button_index = dialog.model.index(0, 3)
-        button = dialog.table_view.indexWidget(button_index)
-        self.assertTrue(isinstance(button, QToolButton))
-
-    @unittest.skip("TODO: Fix this. Does not work on Windows nor on Travis")
-    def test_paste_data(self):
-        """Test that data is pasted and the model grows.
-        """
-        dialog = AddObjectClassesDialog(self.tree_view_form)
-        self.assertEqual(dialog.model.rowCount(), 1)
-        self.assertEqual(dialog.model.columnCount(), 3)
+    def test_add_object_classes(self):
+        """Test object classes are added through the manager when accepting the dialog."""
+        dialog = AddObjectClassesDialog(self.ds_view_form, self.mock_db_mngr, self.mock_db_map)
         model = dialog.model
-        view = dialog.table_view
-        header_index = model.horizontal_header_labels().index
-        clipboard_text = "fish\ndog\ncat\nmouse\noctopus\nchicken\n"
-        QApplication.clipboard().setText(clipboard_text)
-        obj_cls_name_index = model.index(0, header_index('object class name'))
-        view.setCurrentIndex(obj_cls_name_index)
-        view.paste()
-        self.assertEqual(model.rowCount(), 7)
-        self.assertEqual(model.index(0, header_index('object class name')).data(), 'fish')
-        self.assertEqual(model.index(1, header_index('object class name')).data(), 'dog')
-        self.assertEqual(model.index(2, header_index('object class name')).data(), 'cat')
-        self.assertEqual(model.index(3, header_index('object class name')).data(), 'mouse')
-        self.assertEqual(model.index(4, header_index('object class name')).data(), 'octopus')
-        self.assertEqual(model.index(5, header_index('object class name')).data(), 'chicken')
+        header = model.header
+        model.fetchMore()
+        self.assertEqual(header, ['object class name', 'description', 'display icon', 'databases'])
+        indexes = [model.index(0, header.index(field)) for field in ('object class name', 'databases')]
+        values = ['fish', 'mock_db']
+        model.batch_set_data(indexes, values)
+
+        def _add_object_classes(db_map_data):
+            self.assertTrue(self.mock_db_map in db_map_data)
+            data = db_map_data[self.mock_db_map]
+            self.assertEqual(len(data), 1)
+            item = data[0]
+            self.assertTrue("name" in item)
+            self.assertEqual(item["name"], "fish")
+
+        self.mock_db_mngr.add_object_classes.side_effect = _add_object_classes
+        dialog.accept()
+        self.mock_db_mngr.add_object_classes.assert_called_once()
+
+    def test_do_not_add_object_classes_with_invalid_db(self):
+        """Test object classes aren't added when the database is not correct."""
+        dialog = AddObjectClassesDialog(self.ds_view_form, self.mock_db_mngr, self.mock_db_map)
+        self.ds_view_form.msg_error = mock.NonCallableMagicMock()
+        self.ds_view_form.msg_error.attach_mock(mock.MagicMock(), "emit")
+        model = dialog.model
+        header = model.header
+        model.fetchMore()
+        self.assertEqual(header, ['object class name', 'description', 'display icon', 'databases'])
+        indexes = [model.index(0, header.index(field)) for field in ('object class name', 'databases')]
+        values = ['fish', 'gibberish']
+        model.batch_set_data(indexes, values)
+        dialog.accept()
+        self.mock_db_mngr.add_object_classes.assert_not_called()
+        self.ds_view_form.msg_error.emit.assert_called_with("Invalid database 'gibberish' at row 1")
 
 
 if __name__ == '__main__':

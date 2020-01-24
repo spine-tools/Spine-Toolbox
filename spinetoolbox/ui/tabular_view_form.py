@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 ######################################################################################################################
 # Copyright (C) 2017 - 2019 Spine project consortium
 # This file is part of Spine Toolbox.
@@ -9,11 +10,11 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-# -*- coding: utf-8 -*-
-
-# Form implementation generated from reading ui file 'spinetoolbox/ui/tabular_view_form.ui',
-# licensing of 'spinetoolbox/ui/tabular_view_form.ui' applies.
+# Form implementation generated from reading ui file 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\ui\tabular_view_form.ui',
+# licensing of 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\ui\tabular_view_form.ui' applies.
 #
+# Created: Tue Dec 17 10:16:21 2019
+#      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -52,12 +53,6 @@ class Ui_MainWindow(object):
         self.list_select_class = QtWidgets.QListWidget(self.verticalLayoutWidget)
         self.list_select_class.setObjectName("list_select_class")
         self.verticalLayout.addWidget(self.list_select_class)
-        self.pushButton_add_object_class = QtWidgets.QPushButton(self.verticalLayoutWidget)
-        self.pushButton_add_object_class.setObjectName("pushButton_add_object_class")
-        self.verticalLayout.addWidget(self.pushButton_add_object_class)
-        self.pushButton_add_relationship_class = QtWidgets.QPushButton(self.verticalLayoutWidget)
-        self.pushButton_add_relationship_class.setObjectName("pushButton_add_relationship_class")
-        self.verticalLayout.addWidget(self.pushButton_add_relationship_class)
         self.splitter_2 = QtWidgets.QSplitter(self.splitter_3)
         self.splitter_2.setOrientation(QtCore.Qt.Vertical)
         self.splitter_2.setOpaqueResize(True)
@@ -75,7 +70,7 @@ class Ui_MainWindow(object):
         self.label = QtWidgets.QLabel(self.horizontalLayoutWidget)
         self.label.setObjectName("label")
         self.verticalLayout_2.addWidget(self.label)
-        self.list_index = TestListView(self.horizontalLayoutWidget)
+        self.list_index = PivotListWidget(self.horizontalLayoutWidget)
         self.list_index.setObjectName("list_index")
         self.verticalLayout_2.addWidget(self.list_index)
         self.horizontalLayout.addLayout(self.verticalLayout_2)
@@ -84,7 +79,7 @@ class Ui_MainWindow(object):
         self.label_2 = QtWidgets.QLabel(self.horizontalLayoutWidget)
         self.label_2.setObjectName("label_2")
         self.verticalLayout_3.addWidget(self.label_2)
-        self.list_column = TestListView(self.horizontalLayoutWidget)
+        self.list_column = PivotListWidget(self.horizontalLayoutWidget)
         self.list_column.setObjectName("list_column")
         self.verticalLayout_3.addWidget(self.list_column)
         self.horizontalLayout.addLayout(self.verticalLayout_3)
@@ -93,7 +88,7 @@ class Ui_MainWindow(object):
         self.label_3 = QtWidgets.QLabel(self.horizontalLayoutWidget)
         self.label_3.setObjectName("label_3")
         self.verticalLayout_4.addWidget(self.label_3)
-        self.list_frozen = TestListView(self.horizontalLayoutWidget)
+        self.list_frozen = PivotListWidget(self.horizontalLayoutWidget)
         self.list_frozen.setObjectName("list_frozen")
         self.verticalLayout_4.addWidget(self.list_frozen)
         self.horizontalLayout.addLayout(self.verticalLayout_4)
@@ -122,7 +117,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_7.addWidget(self.splitter_3)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 800, 28))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 800, 21))
         self.menubar.setObjectName("menubar")
         self.menuSession = QtWidgets.QMenu(self.menubar)
         self.menuSession.setObjectName("menuSession")
@@ -170,8 +165,6 @@ class Ui_MainWindow(object):
         MainWindow.setWindowTitle(QtWidgets.QApplication.translate("MainWindow", "MainWindow", None, -1))
         self.label_6.setText(QtWidgets.QApplication.translate("MainWindow", "Select input type:", None, -1))
         self.label_5.setText(QtWidgets.QApplication.translate("MainWindow", "Select object/relationship class:", None, -1))
-        self.pushButton_add_object_class.setText(QtWidgets.QApplication.translate("MainWindow", "Add object class", None, -1))
-        self.pushButton_add_relationship_class.setText(QtWidgets.QApplication.translate("MainWindow", "Add relationship class", None, -1))
         self.label.setText(QtWidgets.QApplication.translate("MainWindow", "Rows:", None, -1))
         self.label_2.setText(QtWidgets.QApplication.translate("MainWindow", "Columns:", None, -1))
         self.label_3.setText(QtWidgets.QApplication.translate("MainWindow", "Frozen:", None, -1))
@@ -187,6 +180,6 @@ class Ui_MainWindow(object):
         self.actionClose.setText(QtWidgets.QApplication.translate("MainWindow", "Close", None, -1))
         self.actionClose.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+W", None, -1))
 
+from spinetoolbox.widgets.custom_qlistview import PivotListWidget
 from spinetoolbox.widgets.custom_qtableview import FrozenTableView, SimpleCopyPasteTableView
-from spinetoolbox.widgets.custom_qlistview import TestListView
 from spinetoolbox import resources_icons_rc

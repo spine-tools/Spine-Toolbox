@@ -1,12 +1,24 @@
-dist: xenial  # Use Ubuntu 16.04 (Xenial Xerus)
-services:
-  - xvfb  # X Virtual Framebuffer for tests that require display
-language: python
-python:
-  - "3.7"
+jobs:
+  include:
+    - name: "Unit tests with Python 3.7 on Ubuntu Xenial"
+      os: linux
+      dist: xenial  # Use Ubuntu 16.04 (Xenial Xerus)
+      language: python
+      python: 3.7
+      before_install:
+      - sudo apt-get install -y unixodbc-dev  # Install to get sql.h headers
+      services:
+      - xvfb  # X Virtual Framebuffer for tests that require display
+    - name: "Unit tests with Python 3.7 on Windows"
+      os: windows
+      language: shell  # No native support for Python on Windows yet.
+      before_install:
+        - choco install python --version=3.7.5  # chocolatey package manager is available
+        - python -m pip install --upgrade pip
+      env:
+        - PATH=/c/Python37:/c/Python37/Scripts:$PATH
+        - PYTHONUTF8=1  # gdxcc fails to install without this
 cache: pip
-before_install:
-  - sudo apt-get install -y unixodbc-dev  # Install to get sql.h headers
 install:
   - pip install -r requirements.txt
 script:

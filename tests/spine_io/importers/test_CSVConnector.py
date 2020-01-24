@@ -1,5 +1,5 @@
 ######################################################################################################################
-# Copyright (C) 2017 - 2019 Spine project consortium
+# Copyright (C) 2017-2020 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -39,8 +39,8 @@ class TestCSVConnector(unittest.TestCase):
             connector.connect_to_source(file_name)
             tables = connector.get_tables()
             self.assertEqual(len(tables), 1)
-            self.assertTrue(file_name in tables)
-            options = tables[file_name]["options"]
+            self.assertTrue("csv" in tables)
+            options = tables["csv"]["options"]
             self.assertEqual(options["encoding"], "ascii")
             self.assertEqual(options["delimiter"], ",")
             self.assertEqual(options["quotechar"], '"')
@@ -54,7 +54,7 @@ class TestCSVConnector(unittest.TestCase):
             connector = CSVConnector()
             connector.connect_to_source(file_name)
             tables = connector.get_tables()
-            options = tables[file_name]["options"]
+            options = tables["csv"]["options"]
             _, header, num_cols = connector.get_data_iterator("", options)
             self.assertTrue(not header)
             self.assertEqual(num_cols, 3)
@@ -66,7 +66,7 @@ class TestCSVConnector(unittest.TestCase):
             connector = CSVConnector()
             connector.connect_to_source(file_name)
             tables = connector.get_tables()
-            options = tables[file_name]["options"]
+            options = tables["csv"]["options"]
             data, header = connector.get_data("", options)
             self.assertTrue(not header)
             self.assertEqual(len(data), 2)

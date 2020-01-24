@@ -1,5 +1,5 @@
 ######################################################################################################################
-# Copyright (C) 2017 - 2019 Spine project consortium
+# Copyright (C) 2017-2020 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -146,16 +146,14 @@ class TestTimeSeriesModelFixedStep(unittest.TestCase):
             TimeSeriesFixedResolution("2019-07-05T12:00", "2 hours", [2.3, -5.0, 7.0], True, False)
         )
         self.assertTrue(model.removeRows(0, 3))
-        self.assertEqual(
-            model.value, TimeSeriesFixedResolution("2019-07-05T12:00", "2 hours", [2.3, -5.0], True, False)
-        )
-        np.testing.assert_equal(model.indexes, np.array(["2019-07-05T12:00", "2019-07-05T14:00"], dtype="datetime64"))
+        self.assertEqual(model.value, TimeSeriesFixedResolution("2019-07-05T12:00", "2 hours", [2.3], True, False))
+        np.testing.assert_equal(model.indexes, np.array(["2019-07-05T12:00"], dtype="datetime64"))
 
-    def test_removing_last_rows_fails(self):
+    def test_removing_last_row_fails(self):
         model = TimeSeriesModelFixedResolution(
-            TimeSeriesFixedResolution("2019-07-05T12:00", "2 hours", [2.3, -5.0], True, False)
+            TimeSeriesFixedResolution("2019-07-05T12:00", "2 hours", [2.3], True, False)
         )
-        self.assertFalse(model.removeRows(0, 2))
+        self.assertFalse(model.removeRows(0, 1))
 
     def test_reset_updates_indexes(self):
         model = TimeSeriesModelFixedResolution(

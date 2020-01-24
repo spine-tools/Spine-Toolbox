@@ -1,5 +1,5 @@
 ######################################################################################################################
-# Copyright (C) 2017 - 2019 Spine project consortium
+# Copyright (C) 2017-2020 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -19,19 +19,19 @@ A widget for presenting basic information about the application.
 from PySide2.QtWidgets import QWidget
 from PySide2.QtCore import Qt, QPoint
 from PySide2.QtGui import QTextCursor
+from spinetoolbox import __version__
 import spinedb_api
 
 
 class AboutWidget(QWidget):
-    """About widget class.
+    """About widget class."""
 
-    Attributes:
-        toolbox (ToolboxUI): QMainWindow instance
-        version (str): Application version number
-    """
+    def __init__(self, toolbox):
+        """
 
-    def __init__(self, toolbox, version):
-        """Initializes About widget."""
+        Args:
+            toolbox (ToolboxUI): QMainWindow instance
+        """
         from ..ui import about
 
         super().__init__(parent=toolbox, f=Qt.Popup)  # Setting the parent inherits the stylesheet
@@ -42,7 +42,7 @@ class AboutWidget(QWidget):
         self.setWindowFlags(Qt.Popup)
         # Ensure this window gets garbage-collected when closed
         self.setAttribute(Qt.WA_DeleteOnClose)
-        self.ui.label_version_str.setText("v{0}".format(version))
+        self.ui.label_version_str.setText("v{0}".format(__version__))
         self.ui.label_api_version_str.setText("v{0}".format(spinedb_api.__version__))
         self.setup_license_text()
         self._mousePressPos = None

@@ -1,14 +1,14 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <!--
 ######################################################################################################################
 # Copyright (C) 2017 - 2019 Spine project consortium
 # This file is part of Spine Toolbox.
-# Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
+# Spine Toolbox is free software: you can redistribute it and\/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
 # any later version. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
 # without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General
 # Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
-# this program. If not, see <http://www.gnu.org/licenses/>.
+# this program. If not, see <http:\/\/www.gnu.org\/licenses\/>.
 ######################################################################################################################
 -->
 <ui version="4.0">
@@ -137,11 +137,16 @@
     <property name="title">
      <string>File</string>
     </property>
+    <property name="toolTipsVisible">
+     <bool>true</bool>
+    </property>
     <addaction name="actionNew"/>
     <addaction name="actionOpen"/>
     <addaction name="actionOpen_recent"/>
     <addaction name="actionSave"/>
     <addaction name="actionSave_As"/>
+    <addaction name="separator"/>
+    <addaction name="actionUpgrade_project"/>
     <addaction name="actionExport_project_to_GraphML"/>
     <addaction name="separator"/>
     <addaction name="actionSettings"/>
@@ -425,7 +430,7 @@
   <widget class="QDockWidget" name="dockWidget_project">
    <property name="minimumSize">
     <size>
-     <width>135</width>
+     <width>136</width>
      <height>320</height>
     </size>
    </property>
@@ -744,9 +749,6 @@
    <property name="text">
     <string>Save project as...</string>
    </property>
-   <property name="toolTip">
-    <string>Duplicate project under a new name</string>
-   </property>
    <property name="shortcut">
     <string>Ctrl+Shift+S</string>
    </property>
@@ -903,13 +905,16 @@
     <string>Export project to GraphML</string>
    </property>
   </action>
-  <action name="actionAdd_Data_Interface">
+  <action name="actionAdd_Importer">
    <property name="icon">
-    <iconset resource="resources/resources_icons.qrc">
+    <iconset>
      <normaloff>:/icons/project_item_icons/map-solid.svg</normaloff>:/icons/project_item_icons/map-solid.svg</iconset>
    </property>
    <property name="text">
-    <string>Add Data Interface</string>
+    <string>Add Importer</string>
+   </property>
+   <property name="toolTip">
+    <string>Add Importer</string>
    </property>
   </action>
   <action name="actionGetting_started">
@@ -925,6 +930,10 @@
    </property>
   </action>
   <action name="actionOpen_recent">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/menu_icons/history.svg</normaloff>:/icons/menu_icons/history.svg</iconset>
+   </property>
    <property name="text">
     <string>Open recent</string>
    </property>
@@ -954,6 +963,30 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+D</string>
+   </property>
+  </action>
+  <action name="actionLive_tutorial">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/menu_icons/question-circle.svg</normaloff>:/icons/menu_icons/question-circle.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Live tutorial</string>
+   </property>
+   <property name="shortcut">
+    <string>Shift+F2</string>
+   </property>
+  </action>
+  <action name="actionUpgrade_project">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/menu_icons/level-up-alt.svg</normaloff>:/icons/menu_icons/level-up-alt.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Upgrade project</string>
+   </property>
+   <property name="toolTip">
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Upgrade old (.proj) Spine Toolbox project into a new style directory based project&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
   </action>
  </widget>

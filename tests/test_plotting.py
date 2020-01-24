@@ -1,5 +1,5 @@
 ######################################################################################################################
-# Copyright (C) 2017 - 2019 Spine project consortium
+# Copyright (C) 2017-2020 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -17,7 +17,7 @@ Unit tests for the plotting module.
 """
 
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock, MagicMock
 from PySide2.QtCore import QAbstractTableModel, QModelIndex, Qt
 from PySide2.QtWidgets import QApplication
 from spinedb_api import TimeSeriesVariableResolution
@@ -26,40 +26,44 @@ from spinetoolbox.plotting import (
     plot_pivot_column,
     plot_selection,
     PlottingError,
-    GraphAndTreeViewPlottingHints,
+    ParameterTablePlottingHints,
     PivotTablePlottingHints,
 )
-from spinetoolbox.mvcmodels.pivot_table_models import PivotTableModel
 from spinetoolbox.widgets.plot_widget import PlotWidget
+from spinetoolbox.widgets.data_store_widget import DataStoreForm
 
 
-def _make_pivot_model():
+def _make_pivot_proxy_model():
     """Returns a prefilled PivotTableModel."""
-    model = PivotTableModel()
-    data = [
-        ['1', 'int_col', '-3'],
-        ['2', 'int_col', '-1'],
-        ['3', 'int_col', '2'],
-        ['1', 'float_col', '1.1'],
-        ['2', 'float_col', '1.2'],
-        ['3', 'float_col', '1.3'],
-        ['1', 'time_series_col', '{"type": "time_series", "data": {"2019-07-10T13:00": 2.3, "2019-07-10T13:20": 5.0}}'],
-        [
+    db_mngr = MagicMock()
+    db_mngr.get_value.side_effect = lambda db_map, item_type, id_, field, role: id_
+    mock_db_map = Mock()
+    mock_db_map.codename = "codename"
+    db_mngr.get_db_map_for_listener.side_effect = lambda *args, **kwargs: mock_db_map
+    data_store_widget = DataStoreForm(db_mngr, ("sqlite://", "codename"))
+    data_store_widget.create_header_widget = lambda *args, **kwargs: None
+    model = data_store_widget.pivot_table_model
+    data = {
+        ('1', 'int_col'): '-3',
+        ('2', 'int_col'): '-1',
+        ('3', 'int_col'): '2',
+        ('1', 'float_col'): '1.1',
+        ('2', 'float_col'): '1.2',
+        ('3', 'float_col'): '1.3',
+        ('1', 'time_series_col'): '{"type": "time_series", "data": {"2019-07-10T13:00": 2.3, "2019-07-10T13:20": 5.0}}',
+        (
             '2',
             'time_series_col',
-            '{"type": "time_series", "index": {"start": "2019-07-10T13:00", "resolution": "20 minutes"}, "data": [3.3, 4.0]}',
-        ],
-        ['3', 'time_series_col', '{"type": "time_series", "data": {"2019-07-10T13:00": 4.3, "2019-07-10T13:20": 3.0}}'],
-    ]
-    index_names = ['rows', 'col_types']
-    index_real_names = ['real_id', 'real_col_types']
-    index_types = [str, str]
-    model.set_data(data, index_names, index_types, index_real_names=index_real_names)
-    model.set_pivot(['rows'], ['col_types'], [], ())
-    return model
+        ): '{"type": "time_series", "index": {"start": "2019-07-10T13:00", "resolution": "20 minutes"}, "data": [3.3, 4.0]}',
+        ('3', 'time_series_col'): '{"type": "time_series", "data": {"2019-07-10T13:00": 4.3, "2019-07-10T13:20": 3.0}}',
+    }
+    index_ids = ['rows', 'col_types']
+    model.reset_model(data, index_ids, ['rows'], ['col_types'], [], ())
+    model.fetchMore(QModelIndex())
+    return data_store_widget.pivot_table_proxy
 
 
-class _MockTreeGraphViewModel(QAbstractTableModel):
+class _MockParameterModel(QAbstractTableModel):
     """A mock model for testing purposes."""
 
     def __init__(self):
@@ -94,11 +98,8 @@ class _MockTreeGraphViewModel(QAbstractTableModel):
         self._table[index.row()][index.column()] = value
         return True
 
-
-def mock_graph_tree_view_plotting_support():
-    mock_table_view = Mock()
-    mock_table_view.isColumnHidden.return_value = False
-    return GraphAndTreeViewPlottingHints(mock_table_view)
+    def value_name(self, index):
+        return "entity - parameter"
 
 
 class TestPlotting(unittest.TestCase):
@@ -108,7 +109,7 @@ class TestPlotting(unittest.TestCase):
             QApplication()
 
     def test_plot_pivot_column_float_type(self):
-        model = _make_pivot_model()
+        model = _make_pivot_proxy_model()
         support = PivotTablePlottingHints()
         plot_widget = plot_pivot_column(model, 1, support)
         lines = plot_widget.canvas.axes.get_lines()
@@ -116,7 +117,7 @@ class TestPlotting(unittest.TestCase):
         self.assertTrue(all(lines[0].get_ydata(orig=True) == [1.1, 1.2, 1.3]))
 
     def test_plot_pivot_column_int_type(self):
-        model = _make_pivot_model()
+        model = _make_pivot_proxy_model()
         support = PivotTablePlottingHints()
         plot_widget = plot_pivot_column(model, 2, support)
         lines = plot_widget.canvas.axes.get_lines()
@@ -124,7 +125,7 @@ class TestPlotting(unittest.TestCase):
         self.assertTrue(all(lines[0].get_ydata(orig=True) == [-3.0, -1.0, 2.0]))
 
     def test_plot_pivot_column_time_series_type(self):
-        model = _make_pivot_model()
+        model = _make_pivot_proxy_model()
         support = PivotTablePlottingHints()
         plot_widget = plot_pivot_column(model, 3, support)
         lines = plot_widget.canvas.axes.get_lines()
@@ -133,8 +134,26 @@ class TestPlotting(unittest.TestCase):
         self.assertTrue(all(lines[1].get_ydata(orig=True) == [3.3, 4.0]))
         self.assertTrue(all(lines[2].get_ydata(orig=True) == [4.3, 3.0]))
 
+    def test_plot_pivot_column_with_row_filtering(self):
+        model = _make_pivot_proxy_model()
+        model.set_filter("rows", {"1", "3"})
+        support = PivotTablePlottingHints()
+        plot_widget = plot_pivot_column(model, 1, support)
+        lines = plot_widget.canvas.axes.get_lines()
+        self.assertEqual(len(lines), 1)
+        self.assertTrue(all(lines[0].get_ydata(orig=True) == [1.1, 1.3]))
+
+    def test_plot_pivot_column_with_column_filtering(self):
+        model = _make_pivot_proxy_model()
+        model.set_filter("col_types", {"int_col"})
+        support = PivotTablePlottingHints()
+        plot_widget = plot_pivot_column(model, 1, support)
+        lines = plot_widget.canvas.axes.get_lines()
+        self.assertEqual(len(lines), 1)
+        self.assertTrue(all(lines[0].get_ydata(orig=True) == [-3.0, -1.0, 2.0]))
+
     def test_plot_pivot_selection(self):
-        model = _make_pivot_model()
+        model = _make_pivot_proxy_model()
         selected_indexes = list()
         for row in range(2, 5):
             for column in range(1, 3):
@@ -147,8 +166,8 @@ class TestPlotting(unittest.TestCase):
         self.assertTrue(all(lines[1].get_ydata(orig=True) == [-3.0, -1.0, 2.0]))
 
     def test_plot_pivot_column_with_x_column(self):
-        model = _make_pivot_model()
-        model.set_plot_x_column(1, True)
+        model = _make_pivot_proxy_model()
+        model.sourceModel().set_plot_x_column(1, True)
         support = PivotTablePlottingHints()
         plot_widget = plot_pivot_column(model, 2, support)
         lines = plot_widget.canvas.axes.get_lines()
@@ -156,23 +175,34 @@ class TestPlotting(unittest.TestCase):
         self.assertTrue(all(lines[0].get_xdata(orig=True) == [1.1, 1.2, 1.3]))
         self.assertTrue(all(lines[0].get_ydata(orig=True) == [-3.0, -1.0, 2.0]))
 
+    def test_plot_pivot_column_when_x_column_hidden(self):
+        model = _make_pivot_proxy_model()
+        model.sourceModel().set_plot_x_column(1, True)
+        model.set_filter("col_types", {"int_col"})
+        support = PivotTablePlottingHints()
+        plot_widget = plot_pivot_column(model, 1, support)
+        lines = plot_widget.canvas.axes.get_lines()
+        self.assertEqual(len(lines), 1)
+        self.assertTrue(all(lines[0].get_xdata(orig=True) == [1.0, 2.0, 3.0]))
+        self.assertTrue(all(lines[0].get_ydata(orig=True) == [-3.0, -1.0, 2.0]))
+
     def test_plot_tree_view_selection_of_floats(self):
-        model = _MockTreeGraphViewModel()
+        model = _MockParameterModel()
         selected_indexes = list()
         selected_indexes.append(model.index(0, 1))
         selected_indexes.append(model.index(1, 1))
-        support = mock_graph_tree_view_plotting_support()
+        support = ParameterTablePlottingHints()
         plot_widget = plot_selection(model, selected_indexes, support)
         lines = plot_widget.canvas.axes.get_lines()
         self.assertEqual(len(lines), 1)
         self.assertTrue(all(lines[0].get_ydata(orig=True) == [-2.3, -0.5]))
 
     def test_plot_tree_view_selection_of_time_series(self):
-        model = _MockTreeGraphViewModel()
+        model = _MockParameterModel()
         selected_indexes = list()
         selected_indexes.append(model.index(2, 1))
         selected_indexes.append(model.index(3, 1))
-        support = mock_graph_tree_view_plotting_support()
+        support = ParameterTablePlottingHints()
         plot_widget = plot_selection(model, selected_indexes, support)
         lines = plot_widget.canvas.axes.get_lines()
         self.assertEqual(len(lines), 2)
@@ -180,19 +210,19 @@ class TestPlotting(unittest.TestCase):
         self.assertTrue(all(lines[1].get_ydata(orig=True) == [-5.0, -3.3]))
 
     def test_plot_tree_view_selection_raises_with_mixed_data(self):
-        model = _MockTreeGraphViewModel()
+        model = _MockParameterModel()
         selected_indexes = list()
         selected_indexes.append(model.index(1, 1))
         selected_indexes.append(model.index(2, 1))
-        support = mock_graph_tree_view_plotting_support()
+        support = ParameterTablePlottingHints()
         self.assertRaises(PlottingError, plot_selection, model, selected_indexes, support)
 
     def test_plot_single_plain_number(self):
         """Test that a selection containing a single plain number gets plotted."""
-        model = _MockTreeGraphViewModel()
+        model = _MockParameterModel()
         selected_indexes = list()
         selected_indexes.append(model.index(0, 1))
-        support = mock_graph_tree_view_plotting_support()
+        support = ParameterTablePlottingHints()
         plot_widget = plot_selection(model, selected_indexes, support)
         lines = plot_widget.canvas.axes.get_lines()
         self.assertEqual(len(lines), 1)

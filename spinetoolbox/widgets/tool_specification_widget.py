@@ -1,5 +1,5 @@
 ######################################################################################################################
-# Copyright (C) 2017 - 2019 Spine project consortium
+# Copyright (C) 2017-2020 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -23,14 +23,7 @@ import json
 from PySide2.QtGui import QDesktopServices, QStandardItemModel, QStandardItem
 from PySide2.QtWidgets import QWidget, QStatusBar, QInputDialog, QFileDialog, QFileIconProvider, QMessageBox
 from PySide2.QtCore import Slot, Qt, QUrl, QFileInfo
-from ..config import (
-    STATUSBAR_SS,
-    TREEVIEW_HEADER_SS,
-    APPLICATION_PATH,
-    TOOL_TYPES,
-    REQUIRED_KEYS,
-    INVALID_FILENAME_CHARS,
-)
+from ..config import STATUSBAR_SS, TREEVIEW_HEADER_SS, APPLICATION_PATH, TOOL_TYPES, REQUIRED_KEYS
 from ..helpers import busy_effect
 from .custom_menus import AddIncludesPopupMenu, CreateMainProgramPopupMenu
 
@@ -64,16 +57,6 @@ class ToolSpecificationWidget(QWidget):
         self.statusbar.setStyleSheet(STATUSBAR_SS)
         self.ui.horizontalLayout_statusbar_placeholder.addWidget(self.statusbar)
         # init ui
-        # NOTE: Trying out fontawesome icons
-        # self.ui.toolButton_add_source_files.setIcon(self.style().standardIcon(QStyle.SP_FileLinkIcon))
-        # self.ui.toolButton_add_source_dirs.setIcon(self.style().standardIcon(QStyle.SP_FileDialogNewFolder))
-        # self.ui.toolButton_minus_source_files.setIcon(self.style().standardIcon(QStyle.SP_DialogDiscardButton))
-        # self.ui.toolButton_plus_inputfiles.setIcon(self.style().standardIcon(QStyle.SP_FileLinkIcon))
-        # self.ui.toolButton_minus_inputfiles.setIcon(self.style().standardIcon(QStyle.SP_DialogDiscardButton))
-        # self.ui.toolButton_plus_inputfiles_opt.setIcon(self.style().standardIcon(QStyle.SP_FileLinkIcon))
-        # self.ui.toolButton_minus_inputfiles_opt.setIcon(self.style().standardIcon(QStyle.SP_DialogDiscardButton))
-        # self.ui.toolButton_plus_outputfiles.setIcon(self.style().standardIcon(QStyle.SP_FileLinkIcon))
-        # self.ui.toolButton_minus_outputfiles.setIcon(self.style().standardIcon(QStyle.SP_DialogDiscardButton))
         self.ui.treeView_sourcefiles.setModel(self.sourcefiles_model)
         self.ui.treeView_inputfiles.setModel(self.inputfiles_model)
         self.ui.treeView_inputfiles_opt.setModel(self.inputfiles_opt_model)
@@ -90,7 +73,7 @@ class ToolSpecificationWidget(QWidget):
             check_state = Qt.Checked if tool_specification.execute_in_work else Qt.Unchecked
             self.ui.checkBox_execute_in_work.setCheckState(check_state)
             self.ui.textEdit_description.setPlainText(tool_specification.description)
-            self.ui.lineEdit_args.setText(tool_specification.cmdline_args)
+            self.ui.lineEdit_args.setText(" ".join(tool_specification.cmdline_args))
             tool_types = [x.lower() for x in TOOL_TYPES]
             index = tool_types.index(tool_specification.tooltype) + 1
             self.ui.comboBox_tooltype.setCurrentIndex(index)
@@ -140,7 +123,7 @@ class ToolSpecificationWidget(QWidget):
         self.ui.toolButton_minus_inputfiles_opt.clicked.connect(self.remove_inputfiles_opt)
         self.ui.toolButton_plus_outputfiles.clicked.connect(self.add_outputfiles)
         self.ui.toolButton_minus_outputfiles.clicked.connect(self.remove_outputfiles)
-        self.ui.pushButton_ok.clicked.connect(self.ok_clicked)
+        self.ui.pushButton_ok.clicked.connect(self.handle_ok_clicked)
         self.ui.pushButton_cancel.clicked.connect(self.close)
         # Enable removing items from QTreeViews by pressing the Delete key
         self.ui.treeView_sourcefiles.del_key_pressed.connect(self.remove_source_files_with_del)
@@ -216,79 +199,34 @@ class ToolSpecificationWidget(QWidget):
         self.ui.lineEdit_main_program.setText(file_path)
         self.ui.label_mainpath.setText(self.program_path)
 
-    @Slot(name="new_main_program_file")
+    @Slot()
     def new_main_program_file(self):
-        """Create a new blank main program file. Let user decide the file name and location."""
-        msg = "Main program file name?"
-        # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-        answer = QInputDialog.getText(
-            self, "New main program", msg, flags=Qt.WindowTitleHint | Qt.WindowCloseButtonHint
-        )
-        file_name = answer[0]
-        if not file_name:  # Cancel button clicked
+        """Creates a new blank main program file. Let's user decide the file name and path.
+         Alternative version using only one getSaveFileName dialog.
+         """
+        # noinspection PyCallByClass
+        answer = QFileDialog.getSaveFileName(self, "Create new main program", APPLICATION_PATH)
+        file_path = answer[0]
+        if not file_path:  # Cancel button clicked
             return
-        if file_name.strip() == "":
-            return
-        # Check that file name has no invalid chars
-        if any(True for x in file_name if x in INVALID_FILENAME_CHARS):
-            msg = "File name <b>{0}</b> contains invalid characters.".format(file_name)
-            # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
-            QMessageBox.information(self, "Creating file failed", msg)
-            return
-        # Let user select the directory where the new main program is saved.
-        dir_msg = "Please choose a directory where the main program file is saved"
-        # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
-        main_dir = QFileDialog.getExistingDirectory(self, dir_msg, APPLICATION_PATH, QFileDialog.ShowDirsOnly)
-        if not main_dir:  # Cancel button clicked
-            return
-        # Make new file
-        file_path = os.path.abspath(os.path.join(main_dir, file_name))
-        if os.path.exists(file_path):
-            msg = "File <b>{0}</b> already exists.".format(file_name)
-            # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
-            QMessageBox.information(self, "Creating file failed", msg)
-            return
+        # Remove file if it exists. getSaveFileName has asked confirmation for us.
+        try:
+            os.remove(file_path)
+        except OSError:
+            pass
         try:
             with open(file_path, "w"):
-                self.statusbar.showMessage("New main program file {0} now available".format(file_path), 8000)
+                pass
         except OSError:
             msg = "Please check directory permissions."
             # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
             QMessageBox.information(self, "Creating file failed", msg)
             return
+        main_dir = os.path.dirname(file_path)
         self.program_path = os.path.abspath(main_dir)
         # Update UI
         self.ui.lineEdit_main_program.setText(file_path)
         self.ui.label_mainpath.setText(self.program_path)
-
-    # @Slot(name="new_main_program_file")
-    # def new_main_program_file(self):
-    #     """Creates a new blank main program file. Let's user decide the file name and path.
-    #     Alternative version using only one getSaveFileName dialog.
-    #     """
-    #     # noinspection PyCallByClass
-    #     answer = QFileDialog.getSaveFileName(self, "Create new main program", APPLICATION_PATH)
-    #     file_path = answer[0]
-    #     if not file_path:  # Cancel button clicked
-    #         return
-    #     # Remove file if it exists. getSaveFileName has asked confirmation for us.
-    #     try:
-    #         os.remove(file_path)
-    #     except OSError:
-    #         pass
-    #     try:
-    #         with open(file_path, "w"):
-    #             pass
-    #     except OSError:
-    #         msg = "Please check directory permissions."
-    #         # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
-    #         QMessageBox.information(self, "Creating file failed", msg)
-    #         return
-    #     main_dir = os.path.dirname(file_path)
-    #     self.program_path = os.path.abspath(main_dir)
-    #     # Update UI
-    #     self.ui.lineEdit_main_program.setText(file_path)
-    #     self.ui.label_mainpath.setText(self.program_path)
 
     @Slot(name="new_source_file")
     def new_source_file(self):
@@ -539,9 +477,9 @@ class ToolSpecificationWidget(QWidget):
                 self.outputfiles_model.removeRow(row)
             self.statusbar.showMessage("Selected output files removed", 3000)
 
-    @Slot(name="ok_clicked")
-    def ok_clicked(self):
-        """Check that everything is valid, create Tool spec definition dictionary and add Tool spec to project."""
+    @Slot()
+    def handle_ok_clicked(self):
+        """Checks that everything is valid, creates Tool spec definition dictionary and adds Tool spec to project."""
         # Check that tool type is selected
         if self.ui.comboBox_tooltype.currentIndex() == 0:
             self.statusbar.showMessage("Tool type not selected", 3000)
@@ -578,10 +516,10 @@ class ToolSpecificationWidget(QWidget):
             self.close()
 
     def call_add_tool_specification(self):
-        """Add or update Tool specification according to user's selections.
+        """Adds or updates Tool specification according to user's selections.
         If the name is the same as an existing tool specification, it is updated and
         auto-saved to the definition file. (User is editing an existing
-        tool specification.) If the name is not in the tool specification model, create
+        tool specification.) If the name is not in the tool specification model, creates
         a new tool specification and offer to save the definition file. (User is
         creating a new tool specification from scratch or spawning from an existing one).
         """

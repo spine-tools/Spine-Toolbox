@@ -1,5 +1,7 @@
 <RCC>
   <qresource prefix="symbols">
+    <file>menu_icons/tree.svg</file>
+    <file>menu_icons/table.svg</file>
     <file>Spine_symbol.png</file>
     <file>app.ico</file>
   </qresource>
@@ -9,7 +11,18 @@
     <file>fontawesome5-searchterms.json</file>
   </qresource>
   <qresource prefix="icons">
+    <file>menu_icons/history.svg</file>
+    <file>menu_icons/level-up-alt.svg</file>
+    <file>book.svg</file>
+    <file>slash.svg</file>
+    <file>home.svg</file>
+    <file>desktop.svg</file>
+    <file>folder-plus.svg</file>
+    <file>eye.svg</file>
+    <file>sliders-h.svg</file>
+    <file>tools.svg</file>
     <file>wrench.svg</file>
+    <file>project-diagram.svg</file>
     <file>wrench_minus.svg</file>
     <file>wrench_plus.svg</file>
     <file>datapkg.png</file>
@@ -24,10 +37,10 @@
     <file>project_item_icons/stop-circle-regular.svg</file>
     <file>project_item_icons/play-circle-regular.svg</file>
     <file>project_item_icons/play-circle-solid.svg</file>
-    <file>project_item_icons/tree.svg</file>
-    <file>project_item_icons/map-solid.svg</file>
     <file>project_item_icons/binoculars.svg</file>
     <file>project_item_icons/database.svg</file>
+    <file>project_item_icons/database-export.svg</file>
+    <file>project_item_icons/database-import.svg</file>
     <file>project_item_icons/file-alt.svg</file>
     <file>project_item_icons/hammer.svg</file>
     <file>project_item_icons/exclamation-circle.svg</file>
@@ -58,7 +71,7 @@
     <file>menu_icons/paste.svg</file>
     <file>menu_icons/sync.svg</file>
     <file>menu_icons/trash-alt.svg</file>
+    <file>menu_icons/times.svg</file>
     <file>menu_icons/undo.svg</file>
-    <file>project_item_icons/file-export-solid.svg</file>
   </qresource>
 </RCC>

@@ -1,5 +1,5 @@
 ######################################################################################################################
-# Copyright (C) 2017-2019 Spine project consortium
+# Copyright (C) 2017-2020 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -95,7 +95,7 @@ class ParameterValueEditor(QDialog):
             try:
                 value = from_database(self._parent_model.data(parent_index, Qt.EditRole))
             except ParameterValueFormatError as error:
-                self._warn_and_select_default_view("Failed to load value: {}".format(error))
+                self._select_default_view(message="Failed to load value: {}".format(error))
                 return
         self._select_editor(value)
 
@@ -111,7 +111,7 @@ class ParameterValueEditor(QDialog):
             return
         self.close()
 
-    @Slot(int, name="_change_parameter_type")
+    @Slot(int)
     def _change_parameter_type(self, selector_index):
         """
         Handles switching between value types.
@@ -180,10 +180,15 @@ class ParameterValueEditor(QDialog):
             self._ui.editor_stack.setCurrentIndex(_Editor.DURATION.value)
             self._duration_editor.set_value(value)
         else:
-            self._warn_and_select_default_view("Unknown parameter type. Opening an empty editor.")
+            self._select_default_view()
 
-    def _warn_and_select_default_view(self, message):
-        """Displays a warning dialog and opens the default editor widget after user clicks OK."""
-        QMessageBox.warning(self, "Warning", message)
+    def _select_default_view(self, message=None):
+        """Opens the default editor widget. Optionally, displays a warning dialog indicating the problem.
+
+        Args:
+            message (str, optional)
+        """
+        if message is not None:
+            QMessageBox.warning(self.parent(), "Warning", message)
         self._ui.parameter_type_selector.setCurrentIndex(_Editor.PLAIN_VALUE.value)
         self._ui.editor_stack.setCurrentIndex(_Editor.PLAIN_VALUE.value)

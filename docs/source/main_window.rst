@@ -42,8 +42,7 @@ a new project or open an existing one before you can do anything. You can create
 :ref:`project item <Project Items>` types. The |trash| button can be used to remove all items from your project.
 The *Execute* icons control the execution of the items in the *Design view* where you build your project.
 The |play-all| button executes all Directed-Acyclic Graphs (DAG) in the project in a row. The |play-selected| button
-executes the selected DAG. You can select a DAG to be executed by selecting a single project item from the desired
-DAG in the *Design View*. The |stop| button terminates DAG execution (if running).
+executes the selected project items only. The |stop| button terminates the execution (if running).
 
 You can add a new project item to your project by pointing your mouse cursor on any of the draggable items
 in the *Drag & Drop Icon* tool bar, then click-and-drag the item on to the *Design view*.
@@ -58,8 +57,8 @@ resize the views to fit your needs and display size or resolution.
 
 Below is an example on how you can customize the main window. In the picture, a user has created a project *My First
 Project*, and created one project item from each of the six categories. A Data Store called *Database*, a Data
-Connection called *Data files*, A Tool called *Julia model*, a View called *View*, a Data Interface called *Mapper*,
-and a Data Exporter called *Gdx Exporter*. The project items are also listed in the *Project* dock widget.
+Connection called *Data files*, A Tool called *Julia model*, a View called *View*, an Importer called *Mapper*,
+and an Exporter called *Exporter*. The project items are also listed in the *Project* dock widget.
 
 .. image:: img/main_window_my_first_project_six_project_items.png
    :align: center

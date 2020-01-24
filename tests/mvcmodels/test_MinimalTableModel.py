@@ -1,5 +1,5 @@
 ######################################################################################################################
-# Copyright (C) 2017 - 2019 Spine project consortium
+# Copyright (C) 2017-2020 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -106,8 +106,8 @@ class TestMinimalTableModel(unittest.TestCase):
         self.assertTrue(model.setHeaderData(0, Qt.Horizontal, 'b'))
         self.assertEqual(model.horizontal_header_labels(), ['b'])
         self.assertFalse(model.setHeaderData(0, Qt.Vertical, 'c'))
-        self.assertTrue(model.setHeaderData(0, Qt.Horizontal, 'd', role=Qt.ToolTipRole))
-        self.assertTrue(model.headerData(0, role=Qt.ToolTipRole), 'c')
+        self.assertFalse(model.setHeaderData(0, Qt.Horizontal, 'd', role=Qt.ToolTipRole))
+        self.assertIsNone(model.headerData(0, role=Qt.ToolTipRole))
 
     def test_data(self):
         """Test the data() method of MinimalTableModel."""
@@ -128,31 +128,6 @@ class TestMinimalTableModel(unittest.TestCase):
             index = model.index(0, column)
             model.setData(index, data[column])
         self.assertEqual(model.row_data(0), data)
-
-    def test_column_data(self):
-        """Test the column_data() method of MinimalTableModel."""
-        model = MinimalTableModel()
-        n_rows = 3
-        model.insertRows(0, 3)
-        data = ['a', 'b', 'c']
-        for row in range(n_rows):
-            index = model.index(row, 0)
-            model.setData(index, data[row])
-        self.assertEqual(model.column_data(0), data)
-
-    def test_model_data(self):
-        """Test the model_data() method of MinimalTableModel."""
-        model = MinimalTableModel()
-        n_rows = 3
-        model.insertRows(0, n_rows)
-        n_columns = 2
-        model.insertColumns(0, n_columns - 1)
-        data = [['a', 'b'], ['c', 'd'], ['e', 'f']]
-        for row in range(n_rows):
-            for column in range(n_columns):
-                index = model.index(row, column)
-                model.setData(index, data[row][column])
-        self.assertEqual(model.model_data(), data)
 
     def test_setData(self):
         """Test the setData() method of MinimalTableModel."""

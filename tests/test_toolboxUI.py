@@ -1,5 +1,5 @@
 ######################################################################################################################
-# Copyright (C) 2017 - 2019 Spine project consortium
+# Copyright (C) 2017-2020 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -22,14 +22,14 @@ from unittest import mock
 import logging
 import os
 import sys
-from PySide2.QtWidgets import QApplication
+from PySide2.QtWidgets import QApplication, QMessageBox
 from PySide2.QtCore import SIGNAL, Qt, QPoint, QItemSelectionModel
 from PySide2.QtTest import QTest
 from spinetoolbox.project import SpineToolboxProject
-from spinetoolbox.config import APPLICATION_PATH
 from spinetoolbox.graphics_items import ProjectItemIcon, Link
-from spinetoolbox.project_item import RootProjectItem
-from .mock_helpers import create_toolboxui
+from spinetoolbox.project_tree_item import RootProjectTreeItem
+from spinetoolbox.resources_icons_rc import qInitResources
+from .mock_helpers import create_toolboxui, create_project, add_ds, add_dc
 
 
 # noinspection PyUnusedLocal,DuplicatedCode
@@ -37,6 +37,7 @@ class TestToolboxUI(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         """Overridden method. Runs once before all tests in this class."""
+        qInitResources()
         try:
             cls.app = QApplication().processEvents()
         except RuntimeError:
@@ -61,7 +62,7 @@ class TestToolboxUI(unittest.TestCase):
         self.toolbox = None
 
     def test_init_project_item_model_without_project(self):
-        """Test that a new project item model contains 4 items (Data Stores, Data Connections, Tools, and Views).
+        """Test that a new project item model contains 6 category items.
         Note: This test is done WITHOUT a project open.
         """
         self.assertIsNone(self.toolbox.project())  # Make sure that there is no project open
@@ -74,10 +75,7 @@ class TestToolboxUI(unittest.TestCase):
         Mock save_project() and create_dir() so that .proj file and project directory (and work directory) are
         not actually created.
         """
-        with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project") as mock_save_project, mock.patch(
-            "spinetoolbox.project.create_dir"
-        ) as mock_create_dir:
-            self.toolbox.create_project("UnitTest Project", "Project for unit tests.")
+        create_project(self.toolbox)
         self.assertIsInstance(self.toolbox.project(), SpineToolboxProject)  # Check that a project is open
         self.toolbox.init_project_item_model()
         self.check_init_project_item_model()
@@ -85,7 +83,7 @@ class TestToolboxUI(unittest.TestCase):
     def check_init_project_item_model(self):
         """Checks that category items are created as expected."""
         n = self.toolbox.project_item_model.rowCount()
-        # Data Stores, Data Connections, Tools, Views, Data Interfaces, Exporting
+        # Data Stores, Data Connections, Tools, Views, Importers, Exporters
         self.assertEqual(n, 6)
         # Check that there's only one column
         self.assertEqual(self.toolbox.project_item_model.columnCount(), 1)
@@ -93,32 +91,32 @@ class TestToolboxUI(unittest.TestCase):
         item1 = self.toolbox.project_item_model.root().child(0)
         self.assertTrue(item1.name == "Data Stores", "Item on row 0 is not 'Data Stores'")
         self.assertTrue(
-            isinstance(item1.parent(), RootProjectItem), "Parent item of category item on row 0 should be root"
+            isinstance(item1.parent(), RootProjectTreeItem), "Parent item of category item on row 0 should be root"
         )
         item2 = self.toolbox.project_item_model.root().child(1)
         self.assertTrue(item2.name == "Data Connections", "Item on row 1 is not 'Data Connections'")
         self.assertTrue(
-            isinstance(item2.parent(), RootProjectItem), "Parent item of category item on row 1 should be root"
+            isinstance(item2.parent(), RootProjectTreeItem), "Parent item of category item on row 1 should be root"
         )
         item3 = self.toolbox.project_item_model.root().child(2)
         self.assertTrue(item3.name == "Tools", "Item on row 2 is not 'Tools'")
         self.assertTrue(
-            isinstance(item3.parent(), RootProjectItem), "Parent item of category item on row 2 should be root"
+            isinstance(item3.parent(), RootProjectTreeItem), "Parent item of category item on row 2 should be root"
         )
         item4 = self.toolbox.project_item_model.root().child(3)
         self.assertTrue(item4.name == "Views", "Item on row 3 is not 'Views'")
         self.assertTrue(
-            isinstance(item4.parent(), RootProjectItem), "Parent item of category item on row 3 should be root"
+            isinstance(item4.parent(), RootProjectTreeItem), "Parent item of category item on row 3 should be root"
         )
         item5 = self.toolbox.project_item_model.root().child(4)
-        self.assertTrue(item5.name == "Data Interfaces", "Item on row 4 is not 'Data Interfaces'")
+        self.assertTrue(item5.name == "Importers", "Item on row 4 is not 'Importers'")
         self.assertTrue(
-            isinstance(item5.parent(), RootProjectItem), "Parent item of category item on row 4 should be root"
+            isinstance(item5.parent(), RootProjectTreeItem), "Parent item of category item on row 4 should be root"
         )
         item6 = self.toolbox.project_item_model.root().child(5)
-        self.assertTrue(item6.name == "Data Exporters", "Item on row 5 is not 'Data Exporters'")
+        self.assertTrue(item6.name == "Exporters", "Item on row 5 is not 'Exporters'")
         self.assertTrue(
-            isinstance(item6.parent(), RootProjectItem), "Parent item of category item on row 5 should be root"
+            isinstance(item6.parent(), RootProjectTreeItem), "Parent item of category item on row 5 should be root"
         )
 
     def test_init_tool_specification_model(self):
@@ -153,31 +151,27 @@ class TestToolboxUI(unittest.TestCase):
 
     def test_create_project(self):
         """Test that create_project method makes a SpineToolboxProject instance.
-        Skips creating a .proj file and creating directories.
+        Does not actually create a project directory nor project.json file.
         """
-        with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project") as mock_save_project, mock.patch(
-            "spinetoolbox.project.create_dir"
-        ) as mock_create_dir:
-            self.toolbox.create_project("UnitTest Project", "Project for unit tests.")
+        create_project(self.toolbox)
         self.assertIsInstance(self.toolbox.project(), SpineToolboxProject)  # Check that a project is open
 
     def test_open_project(self):
-        """Test that opening a project file works.
+        """Test that opening a project directory works.
+        This test uses an actual Spine Toolbox project.
         The project should contain four items. Data Store 'a',
         Data Connection 'b', Tool 'c', and View 'd'. The items are connected
         a->b->c->d.
         """
-        test_project_path = os.path.join(
-            APPLICATION_PATH, os.path.pardir, "tests", "project_files", "unit_test_project.proj"
-        )
-        if not os.path.exists(test_project_path):
-            self.skipTest("Test project file not found in path:'{0}'".format(test_project_path))
+        project_dir = os.path.abspath(os.path.join(os.curdir, "tests", "test_resources", "Project Directory"))
+        if not os.path.exists(project_dir):
+            self.skipTest("Test project directory '{0}' does not exist".format(project_dir))
             return
         self.assertIsNone(self.toolbox.project())
         with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project") as mock_save_project, mock.patch(
             "spinetoolbox.project.create_dir"
         ) as mock_create_dir, mock.patch("spinetoolbox.project_item.create_dir") as mock_create_dir:
-            self.toolbox.open_project(test_project_path)
+            self.toolbox.open_project(project_dir)
         self.assertIsInstance(self.toolbox.project(), SpineToolboxProject)
         # Check that project contains four items
         self.assertEqual(self.toolbox.project_item_model.n_items(), 4)
@@ -186,19 +180,19 @@ class TestToolboxUI(unittest.TestCase):
         self.assertEqual(len(links), 3)
         # Check project items have the right links
         index_a = self.toolbox.project_item_model.find_item("a")
-        item_a = self.toolbox.project_item_model.project_item(index_a)
+        item_a = self.toolbox.project_item_model.item(index_a).project_item
         icon_a = item_a.get_icon()
         links_a = [link for conn in icon_a.connectors.values() for link in conn.links]
         index_b = self.toolbox.project_item_model.find_item("b")
-        item_b = self.toolbox.project_item_model.project_item(index_b)
+        item_b = self.toolbox.project_item_model.item(index_b).project_item
         icon_b = item_b.get_icon()
         links_b = [link for conn in icon_b.connectors.values() for link in conn.links]
         index_c = self.toolbox.project_item_model.find_item("c")
-        item_c = self.toolbox.project_item_model.project_item(index_c)
+        item_c = self.toolbox.project_item_model.item(index_c).project_item
         icon_c = item_c.get_icon()
         links_c = [link for conn in icon_c.connectors.values() for link in conn.links]
         index_d = self.toolbox.project_item_model.find_item("d")
-        item_d = self.toolbox.project_item_model.project_item(index_d)
+        item_d = self.toolbox.project_item_model.item(index_d).project_item
         icon_d = item_d.get_icon()
         links_d = [link for conn in icon_d.connectors.values() for link in conn.links]
         self.assertEqual(len(links_a), 1)
@@ -234,13 +228,9 @@ class TestToolboxUI(unittest.TestCase):
         """Test item selection in treeView_project. Simulates a mouse click on a Data Store item
         in the project Tree View widget (i.e. the project item list).
         """
-        with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project") as mock_save_project, mock.patch(
-            "spinetoolbox.project.create_dir"
-        ) as mock_create_dir:
-            self.toolbox.create_project("UnitTest Project", "")
-        # self.toolbox.create_project("UnitTest Project", "")
+        create_project(self.toolbox)
         ds1 = "DS1"
-        self.add_ds(ds1)
+        add_ds(self.toolbox.project(), ds1)
         n_items = self.toolbox.project_item_model.n_items()
         self.assertEqual(n_items, 1)  # Check that the project contains one item
         ds_ind = self.toolbox.project_item_model.find_item(ds1)
@@ -258,17 +248,17 @@ class TestToolboxUI(unittest.TestCase):
         self.assertEqual(tv_sm.currentIndex(), ds_ind)
         self.assertEqual(1, len(tv_sm.selectedIndexes()))
         # Active project item should be DS1
-        self.assertEqual(self.toolbox.project_item_model.project_item(ds_ind), self.toolbox.active_project_item)
+        self.assertEqual(self.toolbox.project_item_model.item(ds_ind).project_item, self.toolbox.active_project_item)
 
     def test_selection_in_project_item_list_2(self):
         """Test item selection in treeView_project. Simulates mouse clicks on a Data Store items.
         Click on a project item and then on another project item.
         """
-        self.toolbox.create_project("UnitTest Project", "")
+        create_project(self.toolbox)
         ds1 = "DS1"
         ds2 = "DS2"
-        self.add_ds(ds1)
-        self.add_ds(ds2)
+        add_ds(self.toolbox.project(), ds1)
+        add_ds(self.toolbox.project(), ds2)
         n_items = self.toolbox.project_item_model.n_items()
         self.assertEqual(n_items, 2)
         ds1_ind = self.toolbox.project_item_model.find_item(ds1)
@@ -288,17 +278,17 @@ class TestToolboxUI(unittest.TestCase):
         self.assertEqual(tv_sm.currentIndex(), ds2_ind)
         self.assertEqual(1, len(tv_sm.selectedIndexes()))
         # Active project item should be DS2
-        self.assertEqual(self.toolbox.project_item_model.project_item(ds2_ind), self.toolbox.active_project_item)
+        self.assertEqual(self.toolbox.project_item_model.item(ds2_ind).project_item, self.toolbox.active_project_item)
 
     def test_selection_in_project_item_list_3(self):
         """Test item selection in treeView_project. Simulates mouse clicks on a Data Store items.
         Test multiple selection (Ctrl-pressed) with two Data Store items.
         """
-        self.toolbox.create_project("UnitTest Project", "")
+        create_project(self.toolbox)
         ds1 = "DS1"
         ds2 = "DS2"
-        self.add_ds(ds1)
-        self.add_ds(ds2)
+        add_ds(self.toolbox.project(), ds1)
+        add_ds(self.toolbox.project(), ds2)
         n_items = self.toolbox.project_item_model.n_items()
         self.assertEqual(n_items, 2)
         ds1_ind = self.toolbox.project_item_model.find_item(ds1)
@@ -329,14 +319,14 @@ class TestToolboxUI(unittest.TestCase):
         """Test item selection in Design View. Simulates mouse click on a Data Connection item.
         Test a single item selection.
         """
-        self.toolbox.create_project("UnitTest Project", "")
+        create_project(self.toolbox)
         dc1 = "DC1"
-        self.add_dc(dc1, x=0, y=0)
+        add_dc(self.toolbox.project(), dc1, x=0, y=0)
         n_items = self.toolbox.project_item_model.n_items()
         self.assertEqual(n_items, 1)  # Check that the project contains one item
         dc1_index = self.toolbox.project_item_model.find_item(dc1)
         gv = self.toolbox.ui.graphicsView
-        dc1_item = self.toolbox.project_item_model.project_item(dc1_index)
+        dc1_item = self.toolbox.project_item_model.item(dc1_index).project_item
         dc1_center_point = self.find_click_point_of_pi(dc1_item, gv)  # Center point in graphics view viewport coords.
         # Simulate mouse click on Data Connection in Design View
         QTest.mouseClick(gv.viewport(), Qt.LeftButton, Qt.NoModifier, dc1_center_point)
@@ -346,24 +336,24 @@ class TestToolboxUI(unittest.TestCase):
         self.assertEqual(1, len(tv_sm.selectedIndexes()))
         self.assertEqual(1, len(gv.scene().selectedItems()))
         # Active project item should be DC1
-        self.assertEqual(self.toolbox.project_item_model.project_item(dc1_index), self.toolbox.active_project_item)
+        self.assertEqual(self.toolbox.project_item_model.item(dc1_index).project_item, self.toolbox.active_project_item)
 
     def test_selection_in_design_view_2(self):
         """Test item selection in Design View.
         First mouse click on project item. Second mouse click on a project item.
         """
-        self.toolbox.create_project("UnitTest Project", "")
+        create_project(self.toolbox)
         dc1 = "DC1"
         dc2 = "DC2"
-        self.add_dc(dc1, x=0, y=0)
-        self.add_dc(dc2, x=100, y=100)
+        add_dc(self.toolbox.project(), dc1, x=0, y=0)
+        add_dc(self.toolbox.project(), dc2, x=100, y=100)
         n_items = self.toolbox.project_item_model.n_items()
         self.assertEqual(n_items, 2)  # Check the number of project items
         dc1_index = self.toolbox.project_item_model.find_item(dc1)
         dc2_index = self.toolbox.project_item_model.find_item(dc2)
         gv = self.toolbox.ui.graphicsView
-        dc1_item = self.toolbox.project_item_model.project_item(dc1_index)
-        dc2_item = self.toolbox.project_item_model.project_item(dc2_index)
+        dc1_item = self.toolbox.project_item_model.item(dc1_index).project_item
+        dc2_item = self.toolbox.project_item_model.item(dc2_index).project_item
         dc1_center_point = self.find_click_point_of_pi(dc1_item, gv)
         dc2_center_point = self.find_click_point_of_pi(dc2_item, gv)
         # Mouse click on dc1
@@ -376,18 +366,18 @@ class TestToolboxUI(unittest.TestCase):
         self.assertEqual(1, len(tv_sm.selectedIndexes()))
         self.assertEqual(1, len(gv.scene().selectedItems()))
         # Active project item should be DC2
-        self.assertEqual(self.toolbox.project_item_model.project_item(dc2_index), self.toolbox.active_project_item)
+        self.assertEqual(self.toolbox.project_item_model.item(dc2_index).project_item, self.toolbox.active_project_item)
 
     def test_selection_in_design_view_3(self):
         """Test item selection in Design View.
         First mouse click on project item. Second mouse click on design view.
         """
-        self.toolbox.create_project("UnitTest Project", "")
+        create_project(self.toolbox)
         dc1 = "DC1"
-        self.add_dc(dc1, x=0, y=0)
+        add_dc(self.toolbox.project(), dc1, x=0, y=0)
         dc1_index = self.toolbox.project_item_model.find_item(dc1)
         gv = self.toolbox.ui.graphicsView
-        dc1_item = self.toolbox.project_item_model.project_item(dc1_index)
+        dc1_item = self.toolbox.project_item_model.item(dc1_index).project_item
         dc1_center_point = self.find_click_point_of_pi(dc1_item, gv)
         # Mouse click on dc1
         QTest.mouseClick(gv.viewport(), Qt.LeftButton, Qt.NoModifier, dc1_center_point)
@@ -405,18 +395,18 @@ class TestToolboxUI(unittest.TestCase):
         """Test item selection in Design View.
         Mouse click on a link. Check that Link is selected.
         """
-        self.toolbox.create_project("UnitTest Project", "")
+        create_project(self.toolbox)
         dc1 = "DC1"
         dc2 = "DC2"
-        self.add_dc(dc1, x=0, y=0)
-        self.add_dc(dc2, x=100, y=100)
+        add_dc(self.toolbox.project(), dc1, x=0, y=0)
+        add_dc(self.toolbox.project(), dc2, x=100, y=100)
         n_items = self.toolbox.project_item_model.n_items()
         self.assertEqual(n_items, 2)  # Check the number of project items
         dc1_index = self.toolbox.project_item_model.find_item(dc1)
         dc2_index = self.toolbox.project_item_model.find_item(dc2)
         gv = self.toolbox.ui.graphicsView
-        dc1_item = self.toolbox.project_item_model.project_item(dc1_index)
-        dc2_item = self.toolbox.project_item_model.project_item(dc2_index)
+        dc1_item = self.toolbox.project_item_model.item(dc1_index).project_item
+        dc2_item = self.toolbox.project_item_model.item(dc2_index).project_item
         # Add link between dc1 and dc2
         gv.add_link(dc1_item.get_icon().conn_button("bottom"), dc2_item.get_icon().conn_button("bottom"))
         # Find link
@@ -448,18 +438,18 @@ class TestToolboxUI(unittest.TestCase):
         """Test item selection in Design View.
         First mouse click on project item, then mouse click on a Link.
         """
-        self.toolbox.create_project("UnitTest Project", "")
+        create_project(self.toolbox)
         dc1 = "DC1"
         dc2 = "DC2"
-        self.add_dc(dc1, x=0, y=0)
-        self.add_dc(dc2, x=100, y=100)
+        add_dc(self.toolbox.project(), dc1, x=0, y=0)
+        add_dc(self.toolbox.project(), dc2, x=100, y=100)
         n_items = self.toolbox.project_item_model.n_items()
         self.assertEqual(n_items, 2)  # Check the number of project items
         dc1_index = self.toolbox.project_item_model.find_item(dc1)
         dc2_index = self.toolbox.project_item_model.find_item(dc2)
         gv = self.toolbox.ui.graphicsView
-        dc1_item = self.toolbox.project_item_model.project_item(dc1_index)
-        dc2_item = self.toolbox.project_item_model.project_item(dc2_index)
+        dc1_item = self.toolbox.project_item_model.item(dc1_index).project_item
+        dc2_item = self.toolbox.project_item_model.item(dc2_index).project_item
         # Add link between dc1 and dc2
         gv.add_link(dc1_item.get_icon().conn_button("bottom"), dc2_item.get_icon().conn_button("bottom"))
         # Find link
@@ -494,18 +484,18 @@ class TestToolboxUI(unittest.TestCase):
         First mouse click on project item (Ctrl-key pressed).
         Second mouse click on a project item (Ctrl-key pressed).
         """
-        self.toolbox.create_project("UnitTest Project", "")
+        create_project(self.toolbox)
         dc1 = "DC1"
         dc2 = "DC2"
-        self.add_dc(dc1, x=0, y=0)
-        self.add_dc(dc2, x=100, y=100)
+        add_dc(self.toolbox.project(), dc1, x=0, y=0)
+        add_dc(self.toolbox.project(), dc2, x=100, y=100)
         n_items = self.toolbox.project_item_model.n_items()
         self.assertEqual(n_items, 2)  # Check the number of project items
         dc1_index = self.toolbox.project_item_model.find_item(dc1)
         dc2_index = self.toolbox.project_item_model.find_item(dc2)
         gv = self.toolbox.ui.graphicsView
-        dc1_item = self.toolbox.project_item_model.project_item(dc1_index)
-        dc2_item = self.toolbox.project_item_model.project_item(dc2_index)
+        dc1_item = self.toolbox.project_item_model.item(dc1_index).project_item
+        dc2_item = self.toolbox.project_item_model.item(dc2_index).project_item
         dc1_center_point = self.find_click_point_of_pi(dc1_item, gv)
         dc2_center_point = self.find_click_point_of_pi(dc2_item, gv)
         # Mouse click on dc1
@@ -523,9 +513,9 @@ class TestToolboxUI(unittest.TestCase):
 
     def test_remove_item(self):
         """Test removing a single project item."""
-        self.toolbox.create_project("UnitTest Project", "")
+        create_project(self.toolbox)
         dc1 = "DC1"
-        self.add_dc(dc1)
+        add_dc(self.toolbox.project(), dc1)
         dc1_index = self.toolbox.project_item_model.find_item(dc1)
         # Check the size of project item model
         n_items = self.toolbox.project_item_model.n_items()
@@ -547,13 +537,36 @@ class TestToolboxUI(unittest.TestCase):
         n_items_in_design_view = len([item for item in items_in_design_view if isinstance(item, ProjectItemIcon)])
         self.assertEqual(n_items_in_design_view, 0)
 
-    @unittest.skip("TODO")
-    def test_add_tool_specification(self):
-        self.fail()
-
-    @unittest.skip("TODO")
-    def test_remove_tool_specification(self):
-        self.fail()
+    def test_add_and_remove_tool_specification(self):
+        """Tests that adding and removing a tool specification
+        to project works from a valid tool specification file.
+        Uses an actual Spine Toolbox Project in order to actually
+        test something."""
+        project_dir = os.path.abspath(os.path.join(os.curdir, "tests", "test_resources", "Project Directory"))
+        if not os.path.exists(project_dir):
+            self.skipTest("Test project directory '{0}' does not exist".format(project_dir))
+            return
+        self.assertIsNone(self.toolbox.project())
+        with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project") as mock_save_project, mock.patch(
+            "spinetoolbox.project.create_dir"
+        ) as mock_create_dir, mock.patch("spinetoolbox.project_item.create_dir") as mock_create_dir:
+            self.toolbox.open_project(project_dir)
+        self.assertEqual(0, self.toolbox.tool_specification_model.rowCount())  # Tool spec model is empty
+        tool_spec_path = os.path.abspath(os.path.join(os.curdir, "tests", "test_resources", "test_tool_spec.json"))
+        with mock.patch("spinetoolbox.ui_main.QFileDialog.getOpenFileName") as mock_filename:
+            mock_filename.return_value = [tool_spec_path]
+            self.toolbox.open_tool_specification()
+        self.assertEqual(1, self.toolbox.tool_specification_model.rowCount())  # Tool spec model has one entry now
+        # Find tool spec on row 0 from model and check that the name matches
+        tool_spec = self.toolbox.tool_specification_model.tool_specification(0)
+        self.assertEqual("Python Tool Specification", tool_spec.name)
+        # Now remove the Tool Specification
+        index = self.toolbox.tool_specification_model.tool_specification_index("Python Tool Specification")
+        self.assertTrue(index.isValid())
+        with mock.patch("spinetoolbox.ui_main.QMessageBox.exec_") as mock_msgbox:
+            mock_msgbox.return_value = QMessageBox.Ok
+            self.toolbox.remove_tool_specification(index)
+        self.assertEqual(0, self.toolbox.tool_specification_model.rowCount())  # Tool spec model is empty again
 
     def test_tasks_before_exit_without_open_project(self):
         """_tasks_before_exit is called with every possible combination of the two QSettings values that it uses.
@@ -660,11 +673,12 @@ class TestToolboxUI(unittest.TestCase):
         self.assertEqual(name, "prefix 3")
 
     def test_copy_project_item_to_clipboard(self):
-        self.toolbox.create_project("UnitTest Project", "Project for test_project_item_to_clipboard()")
-        self.add_dc("data_connection")
+        create_project(self.toolbox)
+        add_dc(self.toolbox.project(), "data_connection")
         item_index = self.toolbox.project_item_model.find_item("data_connection")
         self.toolbox.ui.treeView_project.selectionModel().select(item_index, QItemSelectionModel.Select)
         self.toolbox.ui.actionCopy.triggered.emit()
+        # noinspection PyArgumentList
         clipboard = QApplication.clipboard()
         mime_data = clipboard.mimeData()
         mime_formats = mime_data.formats()
@@ -674,42 +688,29 @@ class TestToolboxUI(unittest.TestCase):
         self.assertTrue(item_dump)
 
     def test_paste_project_item_from_clipboard(self):
-        self.toolbox.create_project("UnitTest Project", "Project for test_project_item_to_clipboard()")
-        self.add_dc("data_connection")
+        create_project(self.toolbox)
+        add_dc(self.toolbox.project(), "data_connection")
         self.assertEqual(self.toolbox.project_item_model.n_items(), 1)
         item_index = self.toolbox.project_item_model.find_item("data_connection")
         self.toolbox.ui.treeView_project.selectionModel().select(item_index, QItemSelectionModel.Select)
-        self.toolbox.ui.actionCopy.triggered.emit()
-        self.toolbox.ui.actionPaste.triggered.emit()
+        with mock.patch("spinetoolbox.project_item.create_dir") as mock_create_dir:
+            self.toolbox.ui.actionCopy.triggered.emit()
+            self.toolbox.ui.actionPaste.triggered.emit()
         self.assertEqual(self.toolbox.project_item_model.n_items(), 2)
         new_item_index = self.toolbox.project_item_model.find_item("data_connection 1")
         self.assertIsNotNone(new_item_index)
 
     def test_duplicate_project_item(self):
-        self.toolbox.create_project("UnitTest Project", "Project for test_project_item_to_clipboard()")
-        self.add_dc("data_connection")
+        create_project(self.toolbox)
+        add_dc(self.toolbox.project(), "data_connection")
         self.assertEqual(self.toolbox.project_item_model.n_items(), 1)
         item_index = self.toolbox.project_item_model.find_item("data_connection")
         self.toolbox.ui.treeView_project.selectionModel().select(item_index, QItemSelectionModel.Select)
-        self.toolbox.ui.actionDuplicate.triggered.emit()
+        with mock.patch("spinetoolbox.project_item.create_dir") as mock_create_dir:
+            self.toolbox.ui.actionDuplicate.triggered.emit()
         self.assertEqual(self.toolbox.project_item_model.n_items(), 2)
         new_item_index = self.toolbox.project_item_model.find_item("data_connection 1")
         self.assertIsNotNone(new_item_index)
-
-    def add_ds(self, name, x=0, y=0):
-        """Helper method to create a Data Store with the given name and coordinates."""
-        item = dict(name=name, description="", url=dict(), x=x, y=y)
-        # TODO: Mocking create_dir does not work here since DataStore class was moved to project_items directory
-        with mock.patch("spinetoolbox.project_item.create_dir") as mock_create_dir:
-            self.toolbox.project().add_project_items("Data Stores", item)
-        return
-
-    def add_dc(self, name, x=0, y=0):
-        """Helper method to create a Data Connection with the given name and coordinates."""
-        item = dict(name=name, description="", references=list(), x=x, y=y)
-        with mock.patch("spinetoolbox.project_item.create_dir") as mock_create_dir:
-            self.toolbox.project().add_project_items("Data Connections", item)
-        return
 
     @staticmethod
     def find_click_point_of_pi(pi, gv):
@@ -742,6 +743,8 @@ class TestToolboxUI(unittest.TestCase):
         Returns:
             (QPoint): Center point of the Link in graphics view viewport coordinates.
         """
+        # Make sure the boundingRect's center point is *on* the link
+        link.do_update_geometry(curved_links=False)
         # We need to map item coordinates to scene coordinates to graphics view viewport coordinates
         # Get project item icon rectangle
         qrectf = link.boundingRect()  # Returns a rectangle in item coordinate system
@@ -755,7 +758,7 @@ class TestToolboxUI(unittest.TestCase):
     def _tasks_before_exit_scenario_1(key, defaultValue="2"):
         if key == "appSettings/showExitPrompt":
             return "0"
-        elif key == "appSettings/saveAtExit":
+        if key == "appSettings/saveAtExit":
             return "0"
 
     @staticmethod

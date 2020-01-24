@@ -1,5 +1,5 @@
 ######################################################################################################################
-# Copyright (C) 2017 - 2019 Spine project consortium
+# Copyright (C) 2017-2020 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -19,6 +19,11 @@ MetaObject class.
 from PySide2.QtCore import QObject
 
 
+def shorten(name):
+    """Returns a 'shortened' version of given name."""
+    return name.lower().replace(' ', '_')
+
+
 class MetaObject(QObject):
     def __init__(self, name, description):
         """Class for an object which has a name, type, and some description.
@@ -29,7 +34,7 @@ class MetaObject(QObject):
         """
         QObject.__init__(self)
         self.name = name
-        self.short_name = name.lower().replace(' ', '_')
+        self.short_name = shorten(name)
         self.description = description
 
     def set_name(self, new_name):
@@ -41,7 +46,7 @@ class MetaObject(QObject):
             new_name (str): New (long) name for this object
         """
         self.name = new_name
-        self.short_name = new_name.lower().replace(' ', '_')
+        self.short_name = shorten(new_name)
 
     def set_description(self, desc):
         """Set object description.

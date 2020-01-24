@@ -1,5 +1,5 @@
 ######################################################################################################################
-# Copyright (C) 2017 - 2019 Spine project consortium
+# Copyright (C) 2017-2020 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -392,7 +392,7 @@ def get_unstacked_relationships(db):
         if rel:
             parameters = par_names[2:]
         else:
-            parameters = list(set([p[2] for p in values]))
+            parameters = list(set(p[2] for p in values))
         rel = [r[1].split(',') + list(r[2:]) for r in rel]
         object_classes = class_2_obj_list[k]
         stacked_rels.append([k, rel, object_classes, parameters])
@@ -458,7 +458,7 @@ def get_unstacked_objects(db):
         if obj:
             parameters = par_names[2:]
         else:
-            parameters = list(set([p[2] for p in values if p[2] is not None]))
+            parameters = list(set(p[2] for p in values if p[2] is not None))
         obj = [[o[1]] + list(o[2:]) for o in obj]
         object_classes = [k]
         stacked_obj.append([k, obj, object_classes, parameters])
@@ -793,55 +793,54 @@ def merge_spine_xlsx_data(data):
             # only one sheet
             new_data.append(values[0])
             continue
-        else:
-            # if more than one SheetData with same class_name
-            sheet_name = values[0].sheet_name
-            object_classes = values[0].object_classes
-            parameters = values[0].parameters
-            parameter_values = values[0].parameter_values
-            objects = values[0].objects
-            class_type = values[0].class_type
+        # if more than one SheetData with same class_name
+        sheet_name = values[0].sheet_name
+        object_classes = values[0].object_classes
+        parameters = values[0].parameters
+        parameter_values = values[0].parameter_values
+        objects = values[0].objects
+        class_type = values[0].class_type
 
-            # skip first sheet
-            iter_values = iter(values)
-            next(iter_values)
-            for v in iter_values:
-                # make sure that the new sheet has same object_classes that first
-                if v.object_classes != object_classes:
-                    error_log.append(
-                        [
-                            "sheet",
-                            v.sheet_name,
-                            "sheet {} as different "
-                            "object_classes than sheet {} for class {}".format(v.sheet_name, sheet_name, class_name),
-                        ]
-                    )
-                    continue
-                parameters = parameters + v.parameters
-                objects = objects + v.objects
-                parameter_values = parameter_values + v.parameter_values
-
-            # make unique again
-            parameters = list(set(parameters))
-
-            if len(object_classes) > 1:
-                keyfunc = lambda x: [x[i] for i, _ in enumerate(object_classes)]
-                objects = sorted(objects, key=keyfunc)
-                objects = list(k for k, _ in groupby(objects, key=keyfunc))
-            else:
-                objects = list(set(objects))
-
-            new_data.append(
-                SheetData(
-                    sheet_name=sheet_name,
-                    class_name=class_name,
-                    object_classes=object_classes,
-                    parameters=parameters,
-                    parameter_values=parameter_values,
-                    objects=objects,
-                    class_type=class_type,
+        # skip first sheet
+        iter_values = iter(values)
+        next(iter_values)
+        for v in iter_values:
+            # make sure that the new sheet has same object_classes that first
+            if v.object_classes != object_classes:
+                error_log.append(
+                    [
+                        "sheet",
+                        v.sheet_name,
+                        "sheet {} as different "
+                        "object_classes than sheet {} for class {}".format(v.sheet_name, sheet_name, class_name),
+                    ]
                 )
+                continue
+            parameters = parameters + v.parameters
+            objects = objects + v.objects
+            parameter_values = parameter_values + v.parameter_values
+
+        # make unique again
+        parameters = list(set(parameters))
+
+        if len(object_classes) > 1:
+            keyfunc = lambda x: [x[i] for i, _ in enumerate(object_classes)]
+            objects = sorted(objects, key=keyfunc)
+            objects = list(k for k, _ in groupby(objects, key=keyfunc))
+        else:
+            objects = list(set(objects))
+
+        new_data.append(
+            SheetData(
+                sheet_name=sheet_name,
+                class_name=class_name,
+                object_classes=object_classes,
+                parameters=parameters,
+                parameter_values=parameter_values,
+                objects=objects,
+                class_type=class_type,
             )
+        )
 
     return new_data, error_log
 
@@ -1089,7 +1088,7 @@ def read_parameter_sheet(ws):
     for c, cell in enumerate(ws[4]):
         if cell.value is None:
             break
-        elif c >= dim:
+        if c >= dim:
             parameters.append(cell.value)
     read_cols = range(0, c + 1)
 

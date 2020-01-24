@@ -1,5 +1,5 @@
 ######################################################################################################################
-# Copyright (C) 2017 - 2019 Spine project consortium
+# Copyright (C) 2017-2020 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -24,14 +24,13 @@ from .custom_menus import DcRefContextMenu, DcDataContextMenu
 
 
 class DataConnectionPropertiesWidget(QWidget):
-    """Widget for the Data Connection Item Properties.
-
-    Args:
-        toolbox (ToolboxUI): The toolbox instance where this widget should be embeded
-    """
+    """Widget for the Data Connection Item Properties."""
 
     def __init__(self, toolbox):
-        """Init class."""
+        """
+        Args:
+            toolbox (ToolboxUI): The toolbox instance where this widget should be embedded
+        """
         from ..ui.data_connection_properties import Ui_Form
 
         super().__init__()
@@ -65,10 +64,11 @@ class DataConnectionPropertiesWidget(QWidget):
         option = self.dc_ref_context_menu.get_action()
         # Get selected Data Connection from project item model
         curr_index = self._toolbox.ui.treeView_project.currentIndex()
-        dc = self._toolbox.project_item_model.project_item(curr_index)
-        if not dc:
-            self._toolbox.msg_error.emit("FIXME: Data Connection {0} not found in project items".format(curr_index))
+        leaf_item = self._toolbox.project_item_model.item(curr_index)
+        if not leaf_item:
+            self._toolbox.msg_error.emit("FIXME: Data Connection {0} not found in project item tree".format(curr_index))
             return
+        dc = leaf_item.project_item
         if option == "Open containing directory...":
             ref_path = self.ui.treeView_dc_references.model().itemFromIndex(ind).data(Qt.DisplayRole)
             ref_dir = os.path.split(ref_path)[0]
@@ -97,10 +97,11 @@ class DataConnectionPropertiesWidget(QWidget):
         option = self.dc_data_context_menu.get_action()
         # Get selected Data Connection from project item model
         curr_index = self._toolbox.ui.treeView_project.currentIndex()
-        dc = self._toolbox.project_item_model.project_item(curr_index)
-        if not dc:
+        leaf_item = self._toolbox.project_item_model.item(curr_index)
+        if not leaf_item:
             self._toolbox.msg_error.emit("FIXME: Data Connection {0} not found in project items".format(curr_index))
             return
+        dc = leaf_item.project_item
         if option == "New file...":
             dc.make_new_file()
         elif option == "Edit...":

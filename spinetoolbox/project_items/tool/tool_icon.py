@@ -1,5 +1,5 @@
 ######################################################################################################################
-# Copyright (C) 2017 - 2019 Spine project consortium
+# Copyright (C) 2017-2020 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -54,7 +54,6 @@ class ToolIcon(ProjectItemIcon):
         self.tool_animation = QGraphicsItemAnimation()
         self.tool_animation.setItem(self.svg_item)
         self.tool_animation.setTimeLine(self.timer)
-        # self.timer.frameChanged.connect(self.test)
         self.delta = 0.25 * self.svg_item.sceneBoundingRect().height()
 
     @staticmethod
@@ -65,6 +64,8 @@ class ToolIcon(ProjectItemIcon):
     def start_animation(self):
         """Start the animation that plays when the Tool associated to this GraphicsItem is running.
         """
+        if self.timer.state() == QTimeLine.Running:
+            return
         self.svg_item.moveBy(0, -self.delta)
         offset = 0.75 * self.svg_item.sceneBoundingRect().height()
         for angle in range(1, 45):
@@ -77,6 +78,8 @@ class ToolIcon(ProjectItemIcon):
 
     def stop_animation(self):
         """Stop animation"""
+        if self.timer.state() != QTimeLine.Running:
+            return
         self.timer.stop()
         self.svg_item.moveBy(0, self.delta)
         self.timer.setCurrentTime(999)

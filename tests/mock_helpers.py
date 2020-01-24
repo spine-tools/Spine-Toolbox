@@ -1,5 +1,5 @@
 ######################################################################################################################
-# Copyright (C) 2017 - 2019 Spine project consortium
+# Copyright (C) 2017-2020 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -16,16 +16,17 @@ Classes and functions that can be shared among unit test modules.
 :date:   18.4.2019
 """
 
+import os
+import os.path
+import shutil
 from unittest import mock
 from PySide2.QtWidgets import QWidget
+import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
 from spinetoolbox.ui_main import ToolboxUI
 
 
 class MockQWidget(QWidget):
     """Dummy QWidget for mocking test_push_vars method in PythonReplWidget class."""
-
-    def __init__(self):
-        super().__init__()
 
     # noinspection PyMethodMayBeStatic
     def test_push_vars(self):
@@ -45,6 +46,17 @@ def create_toolboxui():
     return toolbox
 
 
+def create_project(toolbox):
+    """Creates a project for the given ToolboxUI."""
+    with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project") as mock_save_project, mock.patch(
+            "spinetoolbox.project.create_dir"
+    ) as mock_create_dir:
+        project_dir = os.path.abspath(os.path.join(os.curdir, "tests", "test_resources",
+                                                   "This dir should not exist after tests"))
+        toolbox.create_project("UnitTest Project", "Project for unit tests.", project_dir)
+    return
+
+
 def create_toolboxui_with_project():
     """Returns ToolboxUI with a project instance where
     QSettings among others has been mocked."""
@@ -62,8 +74,21 @@ def create_toolboxui_with_project():
         mock_python_repl.return_value = MockQWidget()
         mock_qsettings_value.side_effect = qsettings_value_side_effect
         toolbox = ToolboxUI()
-        toolbox.create_project("UnitTest Project", "")
+        project_dir = os.path.abspath(os.path.join(os.curdir, "tests", "test_resources",
+                                                   "This dir should not exist after tests"))
+        toolbox.create_project("UnitTest Project", "Project for unit tests.", project_dir)
     return toolbox
+
+
+def clean_up_toolboxui_with_project(toolbox):
+    """Removes project directories and work directory."""
+    project_dir = toolbox.project().project_dir
+    if os.path.exists(project_dir):
+        shutil.rmtree(project_dir)
+    work_dir = toolbox.work_dir
+    if os.path.exists(work_dir):
+        shutil.rmtree(work_dir)
+    toolbox.deleteLater()
 
 
 # noinspection PyMethodMayBeStatic, PyPep8Naming,SpellCheckingInspection
@@ -81,3 +106,55 @@ def qsettings_value_side_effect(key, defaultValue="0"):
     if key == "appSettings/openPreviousProject":
         return "0"  # Do not open previos project when instantiating ToolboxUI
     return defaultValue
+
+
+def add_ds(project, name, x=0, y=0):
+    """Helper function to create a Data Store to given project with given name and coordinates."""
+    item = dict(name=name, description="", url=dict(), x=x, y=y)
+    # This mocks create_dir in both project_item.py and in data_store.py
+    with mock.patch("spinetoolbox.project_item.create_dir") as mock_create_dir, \
+            mock.patch("spinetoolbox.project_items.data_store.data_store.create_dir") as mock_create_dir2:
+        project.add_project_items("Data Stores", item)
+    return
+
+
+def add_dc(project, name, x=0, y=0):
+    """Helper function to create a Data Connection to given project with given name and coordinates."""
+    item = dict(name=name, description="", references=list(), x=x, y=y)
+    with mock.patch("spinetoolbox.project_item.create_dir") as mock_create_dir:
+        project.add_project_items("Data Connections", item)
+    return
+
+
+def add_tool(project, name, tool_spec="", x=0, y=0):
+    """Helper function to add a Tool to given project."""
+    item = dict(name=name, description="", tool=tool_spec, execute_in_work=False, x=x, y=y)
+    with mock.patch("spinetoolbox.project_item.create_dir"):
+        project.add_project_items("Tools", item)
+    return
+
+
+def add_view(project, name, x=0, y=0):
+    """Helper function to add a View to given project."""
+    item = dict(name=name, description="", x=x, y=y)
+    with mock.patch("spinetoolbox.project_item.create_dir"):
+        project.add_project_items("Views", item)
+    return
+
+
+def add_importer(project, name, x=0, y=0):
+    """Helper function to add an Importer View to given project."""
+    item = dict(name=name, description="", mappings=None, x=x, y=y)
+    # This mocks create_dir in both project_item.py and in importer.py
+    with mock.patch("spinetoolbox.project_item.create_dir") as mock_create_dir, \
+            mock.patch("spinetoolbox.project_items.importer.importer.create_dir") as mock_create_dir2:
+        project.add_project_items("Importers", item)
+    return
+
+
+def add_exporter(project, name, x=0, y=0):
+    """Helper function to add an exporter to given project."""
+    item = dict(name=name, description="", x=x, y=y, settings_packs=None)
+    with mock.patch("spinetoolbox.project_item.create_dir"):
+        project.add_project_items("Exporters", item)
+    return

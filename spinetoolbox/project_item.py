@@ -1,5 +1,5 @@
 ######################################################################################################################
-# Copyright (C) 2017 - 2019 Spine project consortium
+# Copyright (C) 2017-2020 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -10,7 +10,7 @@
 ######################################################################################################################
 
 """
-BaseProjectItem and ProjectItem classes.
+ProjectItem and ProjectItemResource classes.
 
 :authors: P. Savolainen (VTT)
 :date:   4.10.2018
@@ -20,198 +20,13 @@ import os
 import logging
 from urllib.parse import urlparse
 from urllib.request import url2pathname
-from PySide2.QtCore import Qt, Signal, QUrl
-from PySide2.QtWidgets import QInputDialog
+from PySide2.QtCore import Signal, QUrl, QParallelAnimationGroup, QEventLoop
 from PySide2.QtGui import QDesktopServices
-from .helpers import create_dir
-from .metaobject import MetaObject
-from .widgets.custom_menus import CategoryProjectItemContextMenu, ProjectItemContextMenu
+from .helpers import create_dir, rename_dir
+from .metaobject import MetaObject, shorten
 
 
-class BaseProjectItem(MetaObject):
-    def __init__(self, name, description):
-        """Base class for all project items.
-
-        Args:
-            name (str): Object name
-            description (str): Object description
-        """
-        super().__init__(name, description)
-        self._parent = None  # Parent BaseProjectItem. Set when add_child is called
-        self._children = list()  # Child BaseProjectItems. Appended when new items are inserted into model.
-
-    def flags(self):  # pylint: disable=no-self-use
-        """Returns the item flags."""
-        return Qt.NoItemFlags
-
-    def parent(self):
-        """Returns parent project item."""
-        return self._parent
-
-    def child_count(self):
-        """Returns the number of child project items."""
-        return len(self._children)
-
-    def children(self):
-        """Returns the children of this project item."""
-        return self._children
-
-    def child(self, row):
-        """Returns child BaseProjectItem on given row.
-
-        Args:
-            row (int): Row of child to return
-
-        Returns:
-            BaseProjectItem on given row or None if it does not exist
-        """
-        try:
-            item = self._children[row]
-        except IndexError:
-            logging.error("[%s] has no child on row %s", self.name, row)
-            return None
-        return item
-
-    def row(self):
-        """Returns the row on which this project item is located."""
-        if self._parent is not None:
-            r = self._parent.children().index(self)
-            # logging.debug("{0} is on row:{1}".format(self.name, r))
-            return r
-        return 0
-
-    def add_child(self, child_item):  # pylint: disable=no-self-use
-        """Base method that shall be overridden in subclasses."""
-        return False
-
-    def remove_child(self, row):
-        """Remove the child of this BaseProjectItem from given row. Do not call this method directly.
-        This method is called by ProjectItemModel when items are removed.
-
-        Args:
-            row (int): Row of child to remove
-
-        Returns:
-            True if operation succeeded, False otherwise
-        """
-        if row < 0 or row > len(self._children):
-            return False
-        child = self._children.pop(row)
-        child._parent = None
-        return True
-
-    def custom_context_menu(self, parent, pos):
-        """Returns the context menu for this item. Implement in subclasses as needed.
-        Args:
-            parent (QWidget): The widget that is controlling the menu
-            pos (QPoint): Position on screen
-        """
-        raise NotImplementedError()
-
-    def apply_context_menu_action(self, parent, action):
-        """Applies given action from context menu. Implement in subclasses as needed.
-
-        Args:
-            parent (QWidget): The widget that is controlling the menu
-            action (str): The selected action
-        """
-        raise NotImplementedError()
-
-
-class RootProjectItem(BaseProjectItem):
-    """Class for the root project item."""
-
-    def __init__(self):
-        super().__init__("root", "The Root Project Item.")
-
-    def add_child(self, child_item):
-        """Adds given category item as the child of this root project item. New item is added as the last item.
-
-        Args:
-            child_item (CategoryProjectItem): Item to add
-
-        Returns:
-            True for success, False otherwise
-        """
-        if isinstance(child_item, CategoryProjectItem):
-            self._children.append(child_item)
-            child_item._parent = self
-            return True
-        logging.error("You can only add a category item as a child of the root item")
-        return False
-
-
-class CategoryProjectItem(BaseProjectItem):
-    """Class for category project items.
-
-    Attributes:
-        name (str): Category name
-        description (str): Category description
-        item_maker (function): A function for creating items in this category
-        icon_maker (function): A function for creating icons (QGraphicsItems) for items in this category
-        add_form_maker (function): A function for creating the form to add items to this category
-        properties_ui (object): An object holding the Item Properties UI
-    """
-
-    def __init__(self, name, description, item_maker, icon_maker, add_form_maker, properties_ui):
-        """Class constructor."""
-        super().__init__(name, description)
-        self._item_maker = item_maker
-        self._icon_maker = icon_maker
-        self._add_form_maker = add_form_maker
-        self._properties_ui = properties_ui
-
-    def flags(self):
-        """Returns the item flags."""
-        return Qt.ItemIsEnabled
-
-    def item_maker(self):
-        """Returns the item maker method."""
-        return self._item_maker
-
-    def add_child(self, child_item):
-        """Adds given project item as the child of this category item. New item is added as the last item.
-
-        Args:
-            child_item (ProjectItem): Item to add
-
-        Returns:
-            True for success, False otherwise
-        """
-        if isinstance(child_item, ProjectItem):
-            self._children.append(child_item)
-            child_item._parent = self
-            icon = self._icon_maker(child_item._toolbox, child_item.x - 35, child_item.y - 35, 70, 70, child_item.name)
-            child_item.set_icon(icon)
-            child_item.set_properties_ui(self._properties_ui)
-            return True
-        logging.error("You can only add a project item as a child of a category item")
-        return False
-
-    def custom_context_menu(self, parent, pos):
-        """Returns the context menu for this item.
-
-        Args:
-            parent (QWidget): The widget that is controlling the menu
-            pos (QPoint): Position on screen
-        """
-        return CategoryProjectItemContextMenu(parent, pos)
-
-    def apply_context_menu_action(self, parent, action):
-        """Applies given action from context menu. Implement in subclasses as needed.
-
-        Args:
-            parent (QWidget): The widget that is controlling the menu
-            action (str): The selected action
-        """
-        if action == "Open project directory...":
-            file_url = "file:///" + parent._project.project_dir
-            parent.open_anchor(QUrl(file_url, QUrl.TolerantMode))
-        else:  # No option selected
-            pass
-
-
-class ProjectItem(BaseProjectItem):
+class ProjectItem(MetaObject):
     """Class for project items that are not category nor root.
     These items can be executed, refreshed, and so on.
 
@@ -220,45 +35,45 @@ class ProjectItem(BaseProjectItem):
         y (float): vertical position in the screen
     """
 
-    item_changed = Signal(name="item_changed")
+    item_changed = Signal()
 
-    def __init__(self, toolbox, item_type, name, description, x, y):
+    def __init__(self, name, description, x, y, project, logger):
         """
         Args:
-            toolbox (ToolboxUI): QMainWindow instance
-            item_type (str): item type identifier
             name (str): item name
             description (str): item description
             x (float): horizontal position on the scene
             y (float): vertical position on the scene
+            project (SpineToolboxProject): project item's project
+            logger (LoggingSignals): a logger instance
         """
         super().__init__(name, description)
-        self._toolbox = toolbox
-        self._item_type = item_type
-        self._project = self._toolbox.project()
+        self._project = project
         self.x = x
         self.y = y
+        self._logger = logger
         self._properties_ui = None
         self._icon = None
         self._sigs = None
+        self.item_changed.connect(lambda: self._project.notify_changes_in_containing_dag(self.name))
         # Make project directory for this Item
-        self.data_dir = os.path.join(self._project.project_dir, self.short_name)
+        self.data_dir = os.path.join(self._project.items_dir, self.short_name)
         try:
             create_dir(self.data_dir)
         except OSError:
-            self._toolbox.msg_error.emit(
-                "[OSError] Creating directory {0} failed." " Check permissions.".format(self.data_dir)
-            )
+            self._logger.msg_error.emit(f"[OSError] Creating directory {self.data_dir} failed. Check permissions.")
 
-    @property
-    def item_type(self):
+    @staticmethod
+    def item_type():
         """Item's type identifier string."""
-        return self._item_type
+        raise NotImplementedError()
 
-    def flags(self):
-        """Returns the item flags."""
-        return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsEditable
+    @staticmethod
+    def category():
+        """Item's category identifier string."""
+        raise NotImplementedError()
 
+    # pylint: disable=no-self-use
     def make_signal_handler_dict(self):
         """Returns a dictionary of all shared signals and their handlers.
         This is to enable simpler connecting and disconnecting.
@@ -268,8 +83,6 @@ class ProjectItem(BaseProjectItem):
 
     def connect_signals(self):
         """Connect signals to handlers."""
-        # NOTE: item_changed is not shared with other proj. items so there's no need to disconnect it
-        self.item_changed.connect(lambda: self._toolbox.project().simulate_item_execution(self.name))
         for signal, handler in self._sigs.items():
             signal.connect(handler)
 
@@ -279,11 +92,11 @@ class ProjectItem(BaseProjectItem):
             try:
                 ret = signal.disconnect(handler)
             except RuntimeError:
-                self._toolbox.msg_error.emit("RuntimeError in disconnecting <b>{0}</b> signals".format(self.name))
+                self._logger.msg_error.emit(f"RuntimeError in disconnecting <b>{self.name}</b> signals")
                 logging.error("RuntimeError in disconnecting signal %s from handler %s", signal, handler)
                 return False
             if not ret:
-                self._toolbox.msg_error.emit("Disconnecting signal in {0} failed".format(self.name))
+                self._logger.msg_error.emit(f"Disconnecting signal in <b>{self.name}</b> failed")
                 logging.error("Disconnecting signal %s from handler %s failed", signal, handler)
                 return False
         return True
@@ -309,15 +122,157 @@ class ProjectItem(BaseProjectItem):
 
     def set_rank(self, rank):
         """Set rank of this item for displaying in the design view."""
-        self.get_icon().rank_icon.set_rank(rank)
+        if rank is not None:
+            self.get_icon().rank_icon.set_rank(rank + 1)
+        else:
+            self.get_icon().rank_icon.set_rank("X")
 
-    def execute(self):
-        """Executes this item."""
+    def stop_execution(self):
+        """Stops executing this View."""
+        self._logger.msg.emit(f"Stopping {self.name}")
 
-    def simulate_execution(self, inst):
-        """Simulates executing this item."""
+    def execute(self, resources, direction):
+        """
+        Executes this item in the given direction using the given resources and returns a boolean
+        indicating the outcome.
+
+        Subclasses need to implement execute_forward and execute_backward to do the appropriate work
+        in each direction.
+
+        Args:
+            resources (list): a list of ProjectItemResources available for execution
+            direction (str): either "forward" or "backward"
+
+        Returns:
+            bool: True if execution succeeded, False otherwise
+        """
+        if direction == "forward":
+            self._logger.msg.emit("")
+            self._logger.msg.emit(f"Executing {self.item_type()} <b>{self.name}</b>")
+            self._logger.msg.emit("***")
+            if self.execute_forward(resources):
+                self.run_leave_animation()
+                return True
+            return False
+        return self.execute_backward(resources)
+
+    def run_leave_animation(self):
+        """
+        Runs the animation that represents execution leaving this item.
+        Blocks until the animation is finished.
+        """
+        loop = QEventLoop()
+        animation = self.make_execution_leave_animation()
+        animation.finished.connect(loop.quit)
+        animation.start()
+        if animation.state() == QParallelAnimationGroup.Running:
+            loop.exec_()
+
+    def execute_forward(self, resources):
+        """
+        Executes this item in the forward direction.
+
+        The default implementation just returns True.
+
+        Args:
+            resources (list): a list of ProjectItemResources available for execution
+
+        Returns:
+            bool: True if execution succeeded, False otherwise
+        """
+        return True
+
+    def execute_backward(self, resources):
+        """
+        Executes this item in the backward direction.
+
+        The default implementation just returns True.
+
+        Args:
+            resources (list): a list of ProjectItemResources available for execution
+
+        Returns:
+            bool: True if execution succeeded, False otherwise
+        """
+        return True
+
+    def output_resources(self, direction):
+        """
+        Returns output resources for execution in the given direction.
+
+        Subclasses need to implement output_resources_backward and/or output_resources_forward
+        if they want to provide resources in any direction.
+
+        Args:
+            direction (str): Direction where output resources are passed
+
+        Returns:
+            a list of ProjectItemResources
+        """
+        return {"backward": self.output_resources_backward, "forward": self.output_resources_forward}[direction]()
+
+    # pylint: disable=no-self-use
+    def output_resources_forward(self):
+        """
+        Returns output resources for forward execution.
+
+        The default implementation returns an empty list.
+
+        Returns:
+            a list of ProjectItemResources
+        """
+        return list()
+
+    # pylint: disable=no-self-use
+    def output_resources_backward(self):
+        """
+        Returns output resources for backward execution.
+
+        The default implementation returns an empty list.
+
+        Returns:
+            a list of ProjectItemResources
+        """
+        return list()
+
+    def handle_dag_changed(self, rank, resources):
+        """
+        Handles changes in the DAG.
+
+        Subclasses should reimplement the _do_handle_dag_changed() method.
+
+        Args:
+            rank (int): item's execution order
+            resources (list): resources available from input items
+        """
         self.clear_notifications()
-        self.set_rank(inst.rank)
+        self.set_rank(rank)
+        self._do_handle_dag_changed(resources)
+
+    def _do_handle_dag_changed(self, resources):
+        """
+        Handles changes in the DAG.
+
+        Usually this entails validating the input resources and populating file references etc.
+        The default implementation does nothing.
+
+        Args:
+            resources (list): resources available from input items
+        """
+
+    def make_execution_leave_animation(self):
+        """
+        Returns animation to play when execution leaves this item.
+
+        Returns:
+            QParallelAnimationGroup
+        """
+        icon = self.get_icon()
+        links = set(link for conn in icon.connectors.values() for link in conn.links if link.src_connector == conn)
+        anim_group = QParallelAnimationGroup(self)
+        for link in links:
+            anim_group.addAnimation(link.make_execution_animation())
+        return anim_group
 
     def invalidate_workflow(self, edges):
         """Notifies that this item's workflow is not acyclic.
@@ -327,7 +282,7 @@ class ProjectItem(BaseProjectItem):
         """
         edges = ["{0} -> {1}".format(*edge) for edge in edges]
         self.clear_notifications()
-        self.set_rank("x")
+        self.set_rank(None)
         self.add_notification(
             "The workflow defined for this item has loops and thus cannot be executed. "
             "Possible fix: remove link(s) {0}.".format(", ".join(edges))
@@ -342,51 +297,15 @@ class ProjectItem(BaseProjectItem):
             "y": self.get_icon().sceneBoundingRect().center().y(),
         }
 
-    def custom_context_menu(self, parent, pos):
-        """Returns the context menu for this item.
-
-        Args:
-            parent (QWidget): The widget that is controlling the menu
-            pos (QPoint): Position on screen
-        """
-        return ProjectItemContextMenu(parent, pos)
-
-    def apply_context_menu_action(self, parent, action):
-        """Applies given action from context menu. Implement in subclasses as needed.
-
-        Args:
-            parent (QWidget): The widget that is controlling the menu
-            action (str): The selected action
-        """
-        if action == "Open directory...":
-            self.open_directory()
-        elif action == "Rename":
-            # noinspection PyCallByClass
-            answer = QInputDialog.getText(
-                self._toolbox,
-                "Rename Item",
-                "New name:",
-                text=self.name,
-                flags=Qt.WindowTitleHint | Qt.WindowCloseButtonHint,
-            )
-            if not answer[1]:
-                pass
-            else:
-                new_name = answer[0]
-                self.rename(new_name)
-        elif action == "Remove item":
-            delete_int = int(self._toolbox._qsettings.value("appSettings/deleteData", defaultValue="0"))
-            delete_bool = delete_int != 0
-            ind = self._toolbox.project_item_model.find_item(self.name)
-            self._toolbox.remove_item(ind, delete_item=delete_bool, check_dialog=True)
-
     @staticmethod
     def default_name_prefix():
         """prefix for default item name"""
         raise NotImplementedError()
 
     def rename(self, new_name):
-        """Renames this item. This is a common rename method for all Project items.
+        """
+        Renames this item.
+
         If the project item needs any additional steps in renaming, override this
         method in subclass. See e.g. rename() method in DataStore class.
 
@@ -394,10 +313,25 @@ class ProjectItem(BaseProjectItem):
             new_name(str): New name
 
         Returns:
-            bool: True if renaming was successful, False if renaming fails
+            bool: True if renaming succeeded, False otherwise
         """
-        ind = self._toolbox.project_item_model.find_item(self.name)
-        return self._toolbox.project_item_model.setData(ind, new_name)
+        new_short_name = shorten(new_name)
+        # Rename project item data directory
+        old_data_dir = self.data_dir  # Full path to data dir that shall be renamed
+        project_path = os.path.split(old_data_dir)[0]  # Get project path from the old data dir path
+        new_data_dir = os.path.join(project_path, new_short_name)  # Make path for new data dir
+        if not rename_dir(old_data_dir, new_data_dir, self._logger):
+            return False
+        # Rename project item
+        self.set_name(new_name)
+        # Update project item directory variable
+        self.data_dir = new_data_dir
+        # Update name label in tab
+        self.update_name_label()
+        # Update name item of the QGraphicsItem
+        self.get_icon().update_name_item(new_name)
+        # Rename node and edges in the graph (dag) that contains this project item
+        return True
 
     def open_directory(self):
         """Open this item's data directory in file explorer."""
@@ -405,7 +339,7 @@ class ProjectItem(BaseProjectItem):
         # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
         res = QDesktopServices.openUrl(QUrl(url, QUrl.TolerantMode))
         if not res:
-            self._toolbox.msg_error.emit("Failed to open directory: {0}".format(self.data_dir))
+            self._logger.msg_error.emit(f"Failed to open directory: {self.data_dir}")
 
     def tear_down(self):
         """Tears down this item. Called by toolbox just before closing.
@@ -430,34 +364,80 @@ class ProjectItem(BaseProjectItem):
         Args:
             source_item (ProjectItem): connection source item
         """
-        self._toolbox.msg_warning.emit(
+        self._logger.msg_warning.emit(
             "Link established. Interaction between a "
-            "<b>{0}</b> and a <b>{1}</b> has not been "
-            "implemented yet.".format(source_item.item_type, self.item_type)
+            f"<b>{source_item.item_type()}</b> and a <b>{self.item_type()}</b> has not been "
+            "implemented yet."
         )
+
+    # pylint: disable=no-self-use
+    def available_resources_downstream(self, upstream_resources):
+        """
+        Returns resources available to downstream items.
+
+        Should be reimplemented by subclasses if they want to offer resources
+        to downstream items. The default implementation returns an empty list.
+
+        Args:
+            upstream_resources (list): a list of resources available from upstream items
+
+        Returns:
+            a list of ProjectItemResources
+        """
+        return list()
+
+    # pylint: disable=no-self-use
+    def available_resources_upstream(self):
+        """
+        Returns resources available to upstream items.
+
+        Should be reimplemented by subclasses if they want to offer resources
+        to upstream items. The default implementation returns an empty list.
+
+        Returns:
+            a list of ProjectItemResources
+        """
+        return list()
+
+    @staticmethod
+    def upgrade_from_no_version_to_version_1(item_name, old_item_dict, old_project_dir):
+        """
+        Upgrades item's dictionary from no version to version 1.
+
+        Subclasses should reimplement this method if their JSON format changed between no version
+        and version 1 .proj files.
+
+        Args:
+            item_name (str): item's name
+            old_item_dict (str): no version item dictionary
+            old_project_dir (str): path to the previous project dir. We use old project directory
+                here since the new project directory may be empty at this point and the directories
+                for the new project items have not been created yet.
+
+        Returns:
+            version 1 item dictionary
+        """
+        return old_item_dict
 
 
 class ProjectItemResource:
     """Class to hold a resource made available by a project item
     and that may be consumed by another project item."""
 
-    def __init__(self, provider, type_, url="", data=None, metadata=None):
+    def __init__(self, provider, type_, url="", metadata=None):
         """Init class.
 
         Args:
             provider (ProjectItem): The item that provides the resource
-            type_ (str): The resource type, either "file", "database", or "data" (for now)
+            type_ (str): The resource type, either "file" or "database" (for now)
             url (str): The url of the resource
-            data (object): The data in the resource
-            metadata (dict): Some metadata providing extra information about the resource. For now it has two keys:
-                - is_output (bool): whether the resource is an output from a process, e.g., a Tool ouput file
-                - for_import (bool): whether the resource is data to be imported into a Spine db
+            metadata (dict): Some metadata providing extra information about the resource. For now it has one key:
+                - future (bool): whether the resource is from the future, e.g. Tool output files advertised beforehand
         """
         self.provider = provider
         self.type_ = type_
         self.url = url
         self.parsed_url = urlparse(url)
-        self.data = data
         if not metadata:
             metadata = dict()
         self.metadata = metadata
@@ -470,7 +450,6 @@ class ProjectItemResource:
             self.provider == other.provider
             and self.type_ == other.type_
             and self.url == other.url
-            and self.data == other.data
             and self.metadata == other.metadata
         )
 
@@ -479,7 +458,6 @@ class ProjectItemResource:
         result += f"provider={self.provider}, "
         result += f"type_={self.type_}, "
         result += f"url={self.url}, "
-        result += f"data={self.data}, "
         result += f"metadata={self.metadata})"
         return result
 

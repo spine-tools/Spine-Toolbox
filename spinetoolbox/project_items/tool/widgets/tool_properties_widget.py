@@ -1,5 +1,5 @@
 ######################################################################################################################
-# Copyright (C) 2017 - 2019 Spine project consortium
+# Copyright (C) 2017-2020 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -60,7 +60,7 @@ class ToolPropertiesWidget(QWidget):
             pos
         )  # Index of selected QStandardItem in Tool properties tree view.
         curr_index = self._toolbox.ui.treeView_project.currentIndex()  # Get selected Tool
-        tool = self._toolbox.project_item_model.project_item(curr_index)
+        tool = self._toolbox.project_item_model.item(curr_index).project_item
         if not tool.tool_specification():
             return
         # Find index of Tool specification
