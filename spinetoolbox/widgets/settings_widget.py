@@ -20,7 +20,7 @@ import os
 from PySide2.QtWidgets import QWidget, QFileDialog, QMessageBox, QColorDialog
 from PySide2.QtCore import Slot, Qt, QSize
 from PySide2.QtGui import QPixmap
-from ..config import DEFAULT_PROJECT_DIR, DEFAULT_WORK_DIR, SETTINGS_SS
+from ..config import DEFAULT_WORK_DIR, SETTINGS_SS
 
 
 class SettingsWidget(QWidget):
@@ -80,7 +80,7 @@ class SettingsWidget(QWidget):
         """Open file browser where user can select a GAMS program."""
         # noinspection PyCallByClass, PyArgumentList
         answer = QFileDialog.getOpenFileName(
-            self, "Select GAMS Program (e.g. gams.exe on Windows)", os.path.abspath('C:\\')
+            self, "Select GAMS Program (e.g. gams.exe on Windows)", os.path.abspath("C:\\")
         )
         if answer[0] == "":  # Canceled (american-english), cancelled (british-english)
             return
@@ -140,8 +140,8 @@ class SettingsWidget(QWidget):
     @Slot(bool, name="browse_julia_project_path")
     def browse_julia_project_path(self, checked=False):
         """Open file browser where user can select a Julia project path."""
-        answer = QFileDialog.getExistingDirectory(self, "Select Julia project directory", os.path.abspath('C:\\'))
-        if answer == "":  # Canceled (american-english), cancelled (british-english)
+        answer = QFileDialog.getExistingDirectory(self, "Select Julia project directory", os.path.abspath("C:\\"))
+        if not answer:  # Canceled (american-english), cancelled (british-english)
             return
         self.ui.lineEdit_julia_project_path.setText(answer)
 
@@ -150,7 +150,7 @@ class SettingsWidget(QWidget):
         """Open file browser where user can select a python interpreter (i.e. python.exe on Windows)."""
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
         answer = QFileDialog.getOpenFileName(
-            self, "Select Python Interpreter (e.g. python.exe on Windows)", os.path.abspath('C:\\')
+            self, "Select Python Interpreter (e.g. python.exe on Windows)", os.path.abspath("C:\\")
         )
         if answer[0] == "":  # Canceled
             return
@@ -174,7 +174,7 @@ class SettingsWidget(QWidget):
     def browse_work_path(self, checked=False):
         """Open file browser where user can select the path to wanted work directory."""
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-        answer = QFileDialog.getExistingDirectory(self, 'Select Work Directory', os.path.abspath('C:\\'))
+        answer = QFileDialog.getExistingDirectory(self, "Select Work Directory", os.path.abspath("C:\\"))
         if answer == '':  # Cancel button clicked
             return
         selected_path = os.path.abspath(answer)
@@ -248,6 +248,7 @@ class SettingsWidget(QWidget):
         python_path = self._qsettings.value("appSettings/pythonPath", defaultValue="")
         commit_at_exit = int(self._qsettings.value("appSettings/commitAtExit", defaultValue="1"))  # tri-state
         sticky_selection = self._qsettings.value("appSettings/stickySelection", defaultValue="false")
+        work_dir = self._qsettings.value("appSettings/workDir", defaultValue="")
         if open_previous_project == 2:
             self.ui.checkBox_open_previous_project.setCheckState(Qt.Checked)
         if show_exit_prompt == 2:
@@ -284,10 +285,6 @@ class SettingsWidget(QWidget):
             self.ui.checkBox_commit_at_exit.setCheckState(Qt.Checked)
         if sticky_selection == "true":
             self.ui.checkBox_object_tree_sticky_selection.setCheckState(Qt.Checked)
-        proj_dir = ""  # Unused. Save/read this using QSettings, if we want to change the projects dir at some point
-        if not proj_dir:
-            proj_dir = DEFAULT_PROJECT_DIR
-        self.ui.lineEdit_project_dir.setText(proj_dir)
         self.ui.lineEdit_gams_path.setText(gams_path)
         if use_embedded_julia == "2":
             self.ui.checkBox_use_embedded_julia.setCheckState(Qt.Checked)
@@ -297,16 +294,14 @@ class SettingsWidget(QWidget):
             self.ui.checkBox_use_embedded_python.setCheckState(Qt.Checked)
         self.ui.lineEdit_python_path.setText(python_path)
         self.orig_python_env = python_path
+        self.ui.lineEdit_work_dir.setText(work_dir)
+        self.orig_work_dir = work_dir
 
     def read_project_settings(self):
-        """Read project settings from config object and update settings widgets accordingly."""
-        work_dir = DEFAULT_WORK_DIR
+        """Get project name and description and update widgets accordingly."""
         if self._project:
             self.ui.lineEdit_project_name.setText(self._project.name)
             self.ui.textEdit_project_description.setText(self._project.description)
-            work_dir = self._project.work_dir
-        self.ui.lineEdit_work_dir.setText(work_dir)
-        self.orig_work_dir = work_dir
 
     @Slot()
     def handle_ok_clicked(self):
@@ -365,29 +360,31 @@ class SettingsWidget(QWidget):
         self._qsettings.setValue("appSettings/commitAtExit", commit_at_exit)
         sticky_selection = "true" if int(self.ui.checkBox_object_tree_sticky_selection.checkState()) else "false"
         self._qsettings.setValue("appSettings/stickySelection", sticky_selection)
+        # Work directory
+        work_dir = self.ui.lineEdit_work_dir.text().strip()
+        self._qsettings.setValue("appSettings/workDir", work_dir)
         # Check if something in the app needs to be updated
         self._toolbox.show_datetime = self._toolbox.update_datetime()
+        self.check_if_work_dir_changed(work_dir)
         self.check_if_python_env_changed(python_path)
         # Project
         self.update_project_settings()
         self.close()
 
     def update_project_settings(self):
-        """Update project settings when Ok has been clicked."""
+        """Update project name and description if these have been changed."""
         if not self._project:
             return
         save = False
-        if not self.ui.lineEdit_work_dir.text():
-            work_dir = DEFAULT_WORK_DIR
-        else:
-            work_dir = self.ui.lineEdit_work_dir.text()
-        # Check if work directory was changed
-        if not self.orig_work_dir == work_dir:
-            if not self._project.change_work_dir(work_dir):
-                self._toolbox.msg_error.emit(
-                    "Could not change project work directory. Creating new dir:{0} failed.".format(work_dir)
-                )
-            else:
+        new_name = self.ui.lineEdit_project_name.text().strip()
+        if self._project.name != new_name:
+            # Change project name
+            if not new_name == "":
+                self._project.change_name(new_name)
+                # Remove entry with the old name from File->Open recent menu
+                self._toolbox.remove_path_from_recent_projects(self._project.project_dir)
+                # Add entry with the new name back to File->Open recent menu
+                self._toolbox.update_recent_projects()
                 save = True
         if not self._project.description == self.ui.textEdit_project_description.toPlainText():
             # Set new project description
@@ -402,6 +399,18 @@ class SettingsWidget(QWidget):
         This indicates that the Python Console may need a restart."""
         if self.orig_python_env != new_path:
             self._toolbox.python_repl.may_need_restart = True
+
+    def check_if_work_dir_changed(self, new_work_dir):
+        """Checks if work directory was changed.
+
+        Args:
+            new_work_dir (str): Possibly a new work directory
+        """
+        if self.orig_work_dir != new_work_dir:
+            if not new_work_dir:  # Happens when clearing the work dir line edit
+                # This is here because I don't want to see this message every time app is started
+                self._toolbox.msg.emit("Work directory is now <b>{0}</b>".format(DEFAULT_WORK_DIR))
+            self._toolbox.set_work_directory(new_work_dir)
 
     def file_is_valid(self, file_path, msgbox_title):
         """Checks that given path is not a directory and it's a file that actually exists.

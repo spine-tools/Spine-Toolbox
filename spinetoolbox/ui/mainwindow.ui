@@ -127,7 +127,7 @@
      <x>0</x>
      <y>0</y>
      <width>862</width>
-     <height>28</height>
+     <height>21</height>
     </rect>
    </property>
    <property name="nativeMenuBar">
@@ -137,11 +137,16 @@
     <property name="title">
      <string>File</string>
     </property>
+    <property name="toolTipsVisible">
+     <bool>true</bool>
+    </property>
     <addaction name="actionNew"/>
     <addaction name="actionOpen"/>
     <addaction name="actionOpen_recent"/>
     <addaction name="actionSave"/>
     <addaction name="actionSave_As"/>
+    <addaction name="separator"/>
+    <addaction name="actionUpgrade_project"/>
     <addaction name="actionExport_project_to_GraphML"/>
     <addaction name="separator"/>
     <addaction name="actionSettings"/>
@@ -744,9 +749,6 @@
    <property name="text">
     <string>Save project as...</string>
    </property>
-   <property name="toolTip">
-    <string>Duplicate project under a new name</string>
-   </property>
    <property name="shortcut">
     <string>Ctrl+Shift+S</string>
    </property>
@@ -905,7 +907,7 @@
   </action>
   <action name="actionAdd_Importer">
    <property name="icon">
-    <iconset resource="resources/resources_icons.qrc">
+    <iconset>
      <normaloff>:/icons/project_item_icons/map-solid.svg</normaloff>:/icons/project_item_icons/map-solid.svg</iconset>
    </property>
    <property name="text">
@@ -928,6 +930,10 @@
    </property>
   </action>
   <action name="actionOpen_recent">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/menu_icons/history.svg</normaloff>:/icons/menu_icons/history.svg</iconset>
+   </property>
    <property name="text">
     <string>Open recent</string>
    </property>
@@ -969,6 +975,18 @@
    </property>
    <property name="shortcut">
     <string>Shift+F2</string>
+   </property>
+  </action>
+  <action name="actionUpgrade_project">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/menu_icons/level-up-alt.svg</normaloff>:/icons/menu_icons/level-up-alt.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Upgrade project</string>
+   </property>
+   <property name="toolTip">
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Upgrade old (.proj) Spine Toolbox project into a new style directory based project&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
   </action>
  </widget>

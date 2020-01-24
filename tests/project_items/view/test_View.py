@@ -96,7 +96,7 @@ class TestView(unittest.TestCase):
         self.assertEqual(expected_name, self.view._properties_ui.label_view_name.text())  # name label in props
         self.assertEqual(expected_name, self.view.get_icon().name_item.text())  # name item on Design View
         # Check data_dir
-        expected_data_dir = os.path.join(self.toolbox.project().project_dir, expected_short_name)
+        expected_data_dir = os.path.join(self.toolbox.project().items_dir, expected_short_name)
         self.assertEqual(expected_data_dir, self.view.data_dir)  # Check data dir
 
 

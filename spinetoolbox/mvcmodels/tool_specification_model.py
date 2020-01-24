@@ -69,7 +69,7 @@ class ToolSpecificationModel(QAbstractListModel):
         return Qt.ItemIsEnabled | Qt.ItemIsSelectable
 
     def insertRow(self, tool, row=None, parent=QModelIndex()):
-        """Insert row (tool) into model.
+        """Insert row (tool specification) into model.
 
         Args:
             tool (Tool): Tool added to the model
@@ -86,7 +86,7 @@ class ToolSpecificationModel(QAbstractListModel):
         self.endInsertRows()
 
     def removeRow(self, row, parent=QModelIndex()):
-        """Remove row (tool) from model.
+        """Remove row (tool specification) from model.
 
         Args:
             row (int): Row to remove the tool from

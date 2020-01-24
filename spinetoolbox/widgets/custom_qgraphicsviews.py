@@ -373,19 +373,8 @@ class DesignQGraphicsView(CustomQGraphicsView):
 
     def restore_links(self, connections):
         """Creates Links from the given connections list.
-        Two formats are accepted.
 
-        - Old format. List of lists, e.g.
-
-        .. code-block::
-
-            [
-                [False, False, ["right", "left"], False],
-                [False, ["bottom", "left"], False, False],
-                ...
-            ]
-
-        - New format. List of dicts, e.g.
+        - List of dicts is accepted, e.g.
 
         .. code-block::
 
@@ -395,35 +384,10 @@ class DesignQGraphicsView(CustomQGraphicsView):
             ]
 
         Args:
-            connections (list): list of connections.
+            connections (list): List of connections.
         """
         if not connections:
             return
-        # Convert old format to new format
-        if isinstance(connections[0], list):
-            connections_old = connections.copy()
-            connections.clear()
-            items = self._project_item_model.items()
-            for i, row in enumerate(connections_old):
-                for j, entry in enumerate(row):
-                    if entry is False:
-                        continue
-                    try:
-                        src_item = items[i]
-                        dst_item = items[j]
-                    except IndexError:
-                        # Might happen when e.g. the project file contains project items
-                        # that couldn't be restored because the corresponding project item plugin wasn't found
-                        self._toolbox.msg_warning.emit("Restoring a connection failed")
-                        continue
-                    try:
-                        src_anchor, dst_anchor = entry
-                    except TypeError:
-                        # Happens when first loading a project that wasn't saved with the current version
-                        src_anchor = dst_anchor = "bottom"
-                    entry_new = {"from": [src_item.name, src_anchor], "to": [dst_item.name, dst_anchor]}
-                    connections.append(entry_new)
-        # Now just assume new format
         for conn in connections:
             src_name, src_anchor = conn["from"]
             dst_name, dst_anchor = conn["to"]

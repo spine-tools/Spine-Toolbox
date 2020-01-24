@@ -17,21 +17,20 @@ Widget shown to user when a new project is created.
 """
 
 import os
-from PySide2.QtWidgets import QWidget, QStatusBar
-from PySide2.QtCore import Slot, Qt
-from ..config import INVALID_CHARS, STATUSBAR_SS
-from ..helpers import project_dir
+from PySide2.QtWidgets import QWidget, QFileDialog, QMessageBox
+from PySide2.QtCore import Slot, Qt, QStandardPaths
+from ..config import INVALID_CHARS, APPLICATION_PATH
 
 
 class NewProjectForm(QWidget):
-    """Class for a new project widget.
-
-    Attributes:
-        toolbox (ToolboxUI): Parent widget.
-    """
+    """Class for a new project widget."""
 
     def __init__(self, toolbox):
-        """Initialize class."""
+        """
+
+        Args:
+            toolbox (ToolboxUI): Parent widget.
+        """
         from ..ui import project_form
 
         super().__init__(parent=toolbox, f=Qt.Window)  # Inherits stylesheet from parent
@@ -39,56 +38,77 @@ class NewProjectForm(QWidget):
         # Set up the user interface from Designer.
         self.ui = project_form.Ui_Form()
         self.ui.setupUi(self)
-        # Add status bar to form
-        self.statusbar = QStatusBar(self)
-        self.statusbar.setFixedHeight(20)
-        self.statusbar.setSizeGripEnabled(False)
-        self.statusbar.setStyleSheet(STATUSBAR_SS)
-        self.ui.horizontalLayout_statusbar_placeholder.addWidget(self.statusbar)
         # Class attributes
-        self.name = ''  # Project name
-        self.description = ''  # Project description
+        self.dir = ""
+        self.name = ""  # Project name
+        self.description = ""  # Project description
         self.connect_signals()
         self.ui.pushButton_ok.setDefault(True)
-        self.ui.lineEdit_project_name.setFocus()
         # Ensure this window gets garbage-collected when closed
         self.setAttribute(Qt.WA_DeleteOnClose)
 
     def connect_signals(self):
         """Connect signals to slots."""
-        self.ui.lineEdit_project_name.textChanged.connect(self.name_changed)
+        self.ui.toolButton_select_project_dir.clicked.connect(self.select_project_dir)
         self.ui.pushButton_ok.clicked.connect(self.ok_clicked)
         self.ui.pushButton_cancel.clicked.connect(self.close)
 
-    @Slot(name='name_changed')
-    def name_changed(self):
-        """Update label to show a preview of the project directory name."""
-        project_name = self.ui.lineEdit_project_name.text()
-        default = "Project folder:"
-        if project_name == '':
-            self.ui.label_folder.setText(default)
-        else:
-            folder_name = project_name.lower().replace(' ', '_')
-            msg = default + " " + folder_name
-            self.ui.label_folder.setText(msg)
+    @Slot(bool, name="select_project_dir")
+    def select_project_dir(self, checked=False):
+        """Opens a file browser, where user can select a directory for the new project."""
+        # noinspection PyCallByClass, PyArgumentList
+        start_dir = QStandardPaths.writableLocation(QStandardPaths.DocumentsLocation)
+        if not start_dir:
+            start_dir = APPLICATION_PATH
+        answer = QFileDialog.getExistingDirectory(
+            self, "Select a project directory", start_dir
+        )
+        if not answer:  # Canceled (american-english), cancelled (british-english)
+            return
+        # Check that it's a directory
+        if not os.path.isdir(answer):
+            msg = "Selected thing is not a directory, please try again"
+            # noinspection PyCallByClass, PyArgumentList
+            QMessageBox.warning(self, "Invalid selection", msg)
+            return
+        self.ui.lineEdit_project_dir.setText(answer)
+        # Set a suggested name for the project
+        _, suggested_name = os.path.split(answer)
+        self.ui.lineEdit_project_name.setText(suggested_name)
+        self.ui.lineEdit_project_name.selectAll()
+        self.ui.lineEdit_project_name.setFocus()
 
-    @Slot(name='ok_clicked')
+    @Slot(name="ok_clicked")
     def ok_clicked(self):
         """Check that project name is valid and create project."""
+        self.dir = self.ui.lineEdit_project_dir.text()
+        if self.dir == "":
+            # noinspection PyCallByClass, PyArgumentList
+            QMessageBox.information(self, "Note", "Please select a project directory")
+            return
+        if os.path.isdir(os.path.join(self.dir, ".spinetoolbox")):
+            msg = "Directory \n\n{0}\n\nalready contains a Spine Toolbox project." \
+                  "\nWould you like to overwrite the existing project?".format(self.dir)
+            message_box = QMessageBox(
+                QMessageBox.Question, "Overwrite?", msg, buttons=QMessageBox.Ok | QMessageBox.Cancel, parent=self
+            )
+            message_box.button(QMessageBox.Ok).setText("Overwrite")
+            answer = message_box.exec_()
+            if answer != QMessageBox.Ok:
+                return
         self.name = self.ui.lineEdit_project_name.text()
         self.description = self.ui.textEdit_description.toPlainText()
-        if self.name == '':
-            self.statusbar.showMessage("No project name given", 5000)
+        if self.name == "":
+            # noinspection PyCallByClass, PyArgumentList
+            QMessageBox.information(self, "Note", "Please give the project a name")
             return
         # Check for invalid characters for a folder name
         if any((True for x in self.name if x in INVALID_CHARS)):
-            self.statusbar.showMessage("Project name contains invalid character(s) for a folder name", 5000)
-            return
-        # Check if project with same name already exists
-        short_name = self.name.lower().replace(' ', '_')
-        project_folder = os.path.join(project_dir(self._toolbox.qsettings()), short_name)
-        if os.path.isdir(project_folder):
-            self.statusbar.showMessage("Project already exists", 5000)
+            # noinspection PyCallByClass, PyArgumentList
+            QMessageBox.warning(self,
+                                "Invalid name",
+                                "Project name contains invalid character(s)."
+                                "\nCharacters {0} are not allowed.".format(" ".join(INVALID_CHARS)))
             return
         # Create new project
         self.call_create_project()
@@ -96,7 +116,7 @@ class NewProjectForm(QWidget):
 
     def call_create_project(self):
         """Call ToolboxUI method create_project()."""
-        self._toolbox.create_project(self.name, self.description)
+        self._toolbox.create_project(self.name, self.description, self.dir)
 
     def keyPressEvent(self, e):
         """Close project form when escape key is pressed.

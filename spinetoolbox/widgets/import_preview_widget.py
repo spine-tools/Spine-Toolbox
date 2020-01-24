@@ -315,9 +315,7 @@ class ImportPreviewWidget(QWidget):
         return settings
 
     def close_connection(self):
-        """
-        close connector connection
-        """
+        """Close connector connection."""
         self.connector.close_connection()
 
     def _new_column_types(self):

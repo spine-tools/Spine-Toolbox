@@ -23,6 +23,7 @@ import os.path
 from PySide2.QtCore import QObject, Signal, Slot
 from spinedb_api.database_mapping import DatabaseMapping
 from spinetoolbox.project_item import ProjectItem, ProjectItemResource
+from spinetoolbox.helpers import deserialize_path, serialize_url
 from spinetoolbox.spine_io import gdx_utils
 from spinetoolbox.spine_io.exporters import gdx
 from .settings_state import SettingsState
@@ -40,10 +41,11 @@ class Exporter(ProjectItem):
 
     def __init__(self, name, description, settings_packs, x, y, toolbox, logger):
         """
+
         Args:
             name (str): item name
             description (str): item description
-            settings_packs (list): dicts mapping database URL to _SettingsPack objects
+            settings_packs (list): dicts mapping database URLs to _SettingsPack objects
             x (float): initial X coordinate of item icon
             y (float): initial Y coordinate of item icon
             toolbox (ToolboxUI): a ToolboxUI instance
@@ -56,12 +58,17 @@ class Exporter(ProjectItem):
         if settings_packs is None:
             settings_packs = list()
         for pack in settings_packs:
-            url = pack["database_url"]
+            serialized_url = pack["database_url"]
+            url = deserialize_path(serialized_url, self._project.project_dir)
+            url = _normalize_url(url)
             settings_pack = _SettingsPack.from_dict(pack, url)
             settings_pack.notifications.changed_due_to_settings_state.connect(self._report_notifications)
             self._settings_packs[url] = settings_pack
         self._activated = False
         self._project.db_mngr.session_committed.connect(self._update_settings_after_db_commit)
+        for url, pack in self._settings_packs.items():
+            if pack.state != SettingsState.OK:
+                self._start_worker(url)
 
     @staticmethod
     def item_type():
@@ -83,6 +90,9 @@ class Exporter(ProjectItem):
         self._properties_ui.item_name_label.setText(self.name)
         self._update_properties_tab()
         super().connect_signals()
+        for url, pack in self._settings_packs.items():
+            if pack.state == SettingsState.ERROR:
+                self._start_worker(url)
         self._activated = True
 
     def deactivate(self):
@@ -223,7 +233,8 @@ class Exporter(ProjectItem):
     def _worker_failed(self, database_url, exception):
         """Clean up after a worker has failed fetching export settings."""
         if database_url in self._settings_packs:
-            self._logger.msg_error.emit(f"Failed to initialize settings from database {database_url}: {exception}")
+            self._logger.msg_error.emit(f"<b>[{self.name}]</b> Initializing settings for database {database_url}"
+                                        f" failed: {exception}")
             self._settings_packs[database_url].state = SettingsState.ERROR
             self._report_notifications()
         if database_url in self._workers:
@@ -284,6 +295,8 @@ class Exporter(ProjectItem):
     @Slot()
     def _report_notifications(self):
         """Updates the exclamation icon and notifications labels."""
+        if self._icon is None:
+            return
         self.clear_notifications()
         merged = _Notifications()
         for pack in self._settings_packs.values():
@@ -351,10 +364,15 @@ class Exporter(ProjectItem):
         packs = list()
         for url, pack in self._settings_packs.items():
             pack_dict = pack.to_dict()
-            pack_dict["database_url"] = url
+            serialized_url = serialize_url(url, self._project.project_dir)
+            pack_dict["database_url"] = serialized_url
             packs.append(pack_dict)
         d["settings_packs"] = packs
         return d
+
+    def _discard_settings_window(self, database_path):
+        """Discards the settings window for given database."""
+        del self._settings_windows[database_path]
 
     def _send_settings_to_window(self, database_url):
         """Resets settings in given export settings window."""
@@ -457,8 +475,9 @@ class _SettingsPack(QObject):
         """Stores the settings pack into a JSON compatible dictionary."""
         d = dict()
         d["output_file_name"] = self.output_file_name
+        # Override ERROR by FETCHING so we'll retry reading the database when reopening the project.
         d["state"] = self.state.value
-        if self.state in (SettingsState.FETCHING, SettingsState.ERROR):
+        if self.state != SettingsState.OK:
             return d
         d["settings"] = self.settings.to_dict()
         d["indexing_settings"] = gdx.indexing_settings_to_dict(self.indexing_settings)
@@ -470,7 +489,7 @@ class _SettingsPack(QObject):
         """Restores the settings pack from a dictionary."""
         pack = _SettingsPack(pack_dict["output_file_name"])
         pack.state = SettingsState(pack_dict["state"])
-        if pack.state in (SettingsState.FETCHING, SettingsState.ERROR):
+        if pack.state != SettingsState.OK:
             return pack
         pack.settings = gdx.Settings.from_dict(pack_dict["settings"])
         db_map = DatabaseMapping(database_url)
@@ -528,3 +547,13 @@ class _Notifications(QObject):
             changed = True
         if changed:
             self.changed_due_to_settings_state.emit()
+
+
+def _normalize_url(url):
+    """
+    Normalized url's path separators to their OS specific characters.
+
+    This function is needed during the transition period from no-version to version 1 project files.
+    It should be removed once we are using version 1 files.
+    """
+    return "sqlite:///" + url[10:].replace("/", os.sep)

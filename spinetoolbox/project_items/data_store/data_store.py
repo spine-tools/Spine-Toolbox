@@ -25,12 +25,12 @@ from sqlalchemy.engine.url import make_url, URL
 import spinedb_api
 from spinetoolbox.project_item import ProjectItem, ProjectItemResource
 from spinetoolbox.widgets.data_store_widget import DataStoreForm
-from spinetoolbox.helpers import create_dir, busy_effect
+from spinetoolbox.helpers import create_dir, busy_effect, serialize_path, deserialize_path
 from .widgets.custom_menus import DataStoreContextMenu
 
 
 class DataStore(ProjectItem):
-    def __init__(self, name, description, x, y, toolbox, logger, url=None, reference=None):
+    def __init__(self, name, description, x, y, toolbox, logger, url=None):
         """Data Store class.
 
         Args:
@@ -41,12 +41,13 @@ class DataStore(ProjectItem):
             toolbox (ToolboxUI): QMainWindow instance
             logger (LoggingSignals): a logger instance
             url (str or dict): SQLAlchemy url
-            reference (dict): reference, contains SQLAlchemy url (keeps compatibility with older project files)
         """
         super().__init__(name, description, x, y, toolbox.project(), logger)
+        if url is None:
+            url = dict()
+        if url and not isinstance(url["database"], str):
+            url["database"] = deserialize_path(url["database"], self._project.project_dir)
         self._toolbox = toolbox
-        if isinstance(reference, dict) and "url" in reference:
-            url = reference["url"]
         self._url = self.parse_url(url)
         self._sa_url = None
         self.ds_view = None
@@ -68,16 +69,16 @@ class DataStore(ProjectItem):
         """See base class."""
         return "Data Stores"
 
-    @staticmethod
-    def parse_url(url):
+    def parse_url(self, url):
         """Return a complete url dictionary from the given dict or string"""
         base_url = dict(dialect=None, username=None, password=None, host=None, port=None, database=None)
         if isinstance(url, dict):
+            if "database" in url and url["database"] is not None:
+                if url["database"].lower().endswith(".sqlite"):
+                    # Convert relative database path back to absolute
+                    abs_path = os.path.abspath(os.path.join(self._project.project_dir, url["database"]))
+                    url["database"] = abs_path
             base_url.update(url)
-        elif isinstance(url, str):
-            sa_url = make_url(url)
-            base_url["dialect"] = sa_url.get_dialect().name
-            base_url.update(sa_url.translate_connect_args())
         return base_url
 
     def make_signal_handler_dict(self):
@@ -161,6 +162,7 @@ class DataStore(ProjectItem):
                 )
             return None
         # Small hack to make sqlite file paths relative to this DS directory
+        # TODO: Check if this is still needed
         if dialect == "sqlite" and not os.path.isabs(url.database):
             url.database = os.path.join(self.data_dir, url.database)
             self._properties_ui.lineEdit_database.setText(url.database)
@@ -185,8 +187,9 @@ class DataStore(ProjectItem):
     @Slot("QString", name="set_path_to_sqlite_file")
     def set_path_to_sqlite_file(self, file_path):
         """Set path to SQLite file."""
-        self._properties_ui.lineEdit_database.setText(file_path)
-        self.set_url_key("database", file_path)
+        abs_path = os.path.abspath(file_path)
+        self._properties_ui.lineEdit_database.setText(abs_path)
+        self.set_url_key("database", abs_path)
 
     @Slot(bool, name='open_sqlite_file')
     def open_sqlite_file(self, checked=False):
@@ -221,7 +224,8 @@ class DataStore(ProjectItem):
         if self._url["port"]:
             self._properties_ui.lineEdit_port.setText(str(self._url["port"]))
         if self._url["database"]:
-            self._properties_ui.lineEdit_database.setText(self._url["database"])
+            abs_db_path = os.path.abspath(self._url["database"])
+            self._properties_ui.lineEdit_database.setText(abs_db_path)
         if self._url["username"]:
             self._properties_ui.lineEdit_username.setText(self._url["username"])
         if self._url["password"]:
@@ -402,7 +406,7 @@ class DataStore(ProjectItem):
                 f"Unable to generate URL from <b>{self.name}</b> selections. Defaults will be used..."
             )
             dialect = "sqlite"
-            database = os.path.join(self.data_dir, self.name + ".sqlite")
+            database = os.path.abspath(os.path.join(self.data_dir, self.name + ".sqlite"))
             self._properties_ui.comboBox_dialect.setCurrentText(dialect)
             self._properties_ui.lineEdit_database.setText(database)
             self._url["dialect"] = dialect
@@ -425,8 +429,37 @@ class DataStore(ProjectItem):
     def item_dict(self):
         """Returns a dictionary corresponding to this item."""
         d = super().item_dict()
-        d["url"] = self.url()
+        d["url"] = dict(self.url())
+        db = d["url"]["database"]
+        # If database key is a file, change the path to relative
+        if d["url"]["dialect"] == "sqlite" and db is not None:
+            d["url"]["database"] = serialize_path(db, self._project.project_dir)
         return d
+
+    @staticmethod
+    def upgrade_from_no_version_to_version_1(item_name, old_item_dict, old_project_dir):
+        """See base class."""
+        new_data_store = dict(old_item_dict)
+        if "reference" in new_data_store:
+            url_path = new_data_store["reference"]
+            url = {
+                "dialect": "sqlite",
+                "username": None,
+                "host": None,
+                "port": None,
+            }
+        else:
+            url = new_data_store["url"]
+            url_path = url["database"]
+        if not url_path:
+            url["database"] = None
+        else:
+            serialized_url_path = serialize_path(url_path, old_project_dir)
+            if serialized_url_path["relative"]:
+                serialized_url_path["path"] = os.path.join(".spinetoolbox", "items", serialized_url_path["path"])
+            url["database"] = serialized_url_path
+        new_data_store["url"] = url
+        return new_data_store
 
     def custom_context_menu(self, parent, pos):
         """Returns the context menu for this item.

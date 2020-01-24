@@ -110,7 +110,7 @@ class TestTool(unittest.TestCase):
         self.assertEqual(expected_name, self.tool._properties_ui.label_tool_name.text())  # name label in props
         self.assertEqual(expected_name, self.tool.get_icon().name_item.text())  # name item on Design View
         # Check data_dir
-        expected_data_dir = os.path.join(self.toolbox.project().project_dir, expected_short_name)
+        expected_data_dir = os.path.join(self.toolbox.project().items_dir, expected_short_name)
         self.assertEqual(expected_data_dir, self.tool.data_dir)  # Check data dir
         # Check that output_dir has been updated
         expected_output_dir = os.path.join(self.tool.data_dir, TOOL_OUTPUT_DIR)
@@ -428,7 +428,7 @@ class TestToolExecution(unittest.TestCase):
     def test_execute_complex_tool_in_work_dir(self):
         """Tests execution of a Tool with the 'complex_exec' specification."""
         # Make work directory in case it does not exist. This may be needed by Travis CI.
-        work_dir = self.toolbox.project().work_dir
+        work_dir = self.toolbox.work_dir
         os.makedirs(work_dir, exist_ok=True)
         item = dict(name="Tool", description="", x=0, y=0, tool="complex_exec")
         self.toolbox.project().add_project_items("Tools", item)

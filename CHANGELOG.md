@@ -17,6 +17,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - Changes made in the tree view are also seen in the graph view and viceversa.
 - New Setting: *Sticky selection in Graph View*. Enables users to select if they want to use multi-selection or 
   single selection in the Graph view Object tree when selecting items with the **left-mouse button**.
+- Projects can be saved to any directory
+- Project name can be changed in Settings
 - The graph view features a short live demonstration that new users can follow to discover the basic functionality.
 - New Setting: *Smooth links*. When active, links on the Design View follow a smooth curve rather than a straight line.
 - When execution traverses a link, a small animation is played to denote the flow of data. Users can set how quick
@@ -26,6 +28,14 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - spinetoolbox is now a Python package. To start the app, use command `python -m spinetoolbox` or
   `python spinetoolbox.py` as spinetoolbox.py has been moved to repository root. 
 - Tool templates are now called Tool specifications
+- File->Open Project opens a file dialog, where you can open projects by selecting an old 
+  <project_name>.proj file or a Spine Toolbox Project directory. Valid Spine Toolbox projects are 
+  decorated with the Spine logo.
+- When opening an old style project (.proj file), the project must be upgraded to a new style project 
+  by selecting a new directory for the project.
+- Project information is not saved to a <project_name>.proj file anymore. This information is now located 
+  in file <project_dir>/.spinetoolbox/project.json. Every Spine Toolbox project has this file.
+- Work directory is now a global setting instead of a project setting
 - Renamed *Data Interface* project item to *Importer*.
   The corresponding category *Data Importers* was renamed to *Importers*.
 - The status bar of tree and graph views now has a notification icon. Click on this icon to see the list of 
@@ -34,6 +44,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
   from the View menu.
 
 ### Deprecated
+- Saving project information to .proj files
 
 ### Removed
 
