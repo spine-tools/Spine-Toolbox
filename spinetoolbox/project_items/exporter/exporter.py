@@ -45,7 +45,7 @@ class Exporter(ProjectItem):
         Args:
             name (str): item name
             description (str): item description
-            settings_packs (list): dicts mapping database URL to _SettingsPack objects
+            settings_packs (list): dicts mapping database URLs to _SettingsPack objects
             x (float): initial X coordinate of item icon
             y (float): initial Y coordinate of item icon
             toolbox (ToolboxUI): a ToolboxUI instance
@@ -60,6 +60,7 @@ class Exporter(ProjectItem):
         for pack in settings_packs:
             serialized_url = pack["database_url"]
             url = deserialize_path(serialized_url, self._project.project_dir)
+            url = _normalize_url(url)
             settings_pack = _SettingsPack.from_dict(pack, url)
             settings_pack.notifications.changed_due_to_settings_state.connect(self._report_notifications)
             self._settings_packs[url] = settings_pack
@@ -546,3 +547,13 @@ class _Notifications(QObject):
             changed = True
         if changed:
             self.changed_due_to_settings_state.emit()
+
+
+def _normalize_url(url):
+    """
+    Normalized url's path separators to their OS specific characters.
+
+    This function is needed during the transition period from no-version to version 1 project files.
+    It should be removed once we are using version 1 files.
+    """
+    return "sqlite:///" + url[10:].replace("/", os.sep)

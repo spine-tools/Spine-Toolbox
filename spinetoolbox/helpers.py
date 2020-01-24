@@ -750,7 +750,7 @@ def deserialize_path(serialized, project_dir):
         path_type = serialized["type"]
         if path_type == "path":
             path = serialized["path"]
-            return os.path.normpath(os.path.join(project_dir, path)) if serialized["relative"] else path
+            return os.path.normpath(os.path.join(project_dir, path) if serialized["relative"] else path)
         if path_type == "file_url":
             path = serialized["path"]
             if serialized["relative"]:
