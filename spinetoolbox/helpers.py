@@ -341,21 +341,20 @@ def copy_dir(widget, src_dir, dst_dir):
     return True
 
 
-def rename_dir(widget, old_dir, new_dir):
+def rename_dir(old_dir, new_dir, logger):
     """Rename directory. Note: This is not used in renaming projects due to unreliability.
     Looks like it works fine in renaming project items though.
 
     Args:
-        widget (QWidget): Parent widget for QMessageBoxes
         old_dir (str): Absolute path to directory that will be renamed
         new_dir (str): Absolute path to new directory
+        logger (LoggingSignals): A logger instance
     """
     try:
         shutil.move(old_dir, new_dir)
     except FileExistsError:
         msg = "Directory<br/><b>{0}</b><br/>already exists".format(new_dir)
-        # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
-        QMessageBox.information(widget, "Renaming directory failed", msg)
+        logger.dialog.emit("Renaming directory failed", msg)
         return False
     except PermissionError as pe_e:
         logging.error(pe_e)
@@ -366,8 +365,7 @@ def rename_dir(widget, old_dir, new_dir):
             "<br/>2. Windows Explorer is open in the directory"
             "<br/><br/>Check these and try again.".format(old_dir)
         )
-        # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
-        QMessageBox.information(widget, "Renaming directory failed (Permission Error)", msg)
+        logger.dialog.emit("Renaming directory failed (Permission Error)", msg)
         return False
     except OSError as os_e:
         logging.error(os_e)
@@ -382,8 +380,7 @@ def rename_dir(widget, old_dir, new_dir):
             "<br/>2. A file in the directory is open in another program. "
             "<br/><br/>Check these and try again.".format(old_dir, new_dir)
         )
-        # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
-        QMessageBox.information(widget, "Renaming directory failed (OS Error)", msg)
+        logger.dialog.emit("Renaming directory failed (OS Error)", msg)
         return False
     return True
 

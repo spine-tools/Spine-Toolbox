@@ -36,7 +36,7 @@ class TestProjectItem(unittest.TestCase):
         item_dict = dict(name="DC", description="", x=0, y=0)
         self.toolbox.project().add_project_items("Data Connections", item_dict)
         index = self.toolbox.project_item_model.find_item("DC")
-        self.data_connection = self.toolbox.project_item_model.project_item(index)
+        self.data_connection = self.toolbox.project_item_model.item(index).project_item
 
     def tearDown(self):
         """Clean up."""
@@ -46,7 +46,7 @@ class TestProjectItem(unittest.TestCase):
     def test_notify_destination(self):
         self.toolbox.msg_warning = NonCallableMagicMock()
         self.toolbox.msg_warning.attach_mock(MagicMock(), "emit")
-        item = ProjectItem(self.toolbox, "name", "description", 0.0, 0.0)
+        item = ProjectItem("name", "description", 0.0, 0.0, self.toolbox.project(), self.toolbox)
         item.item_type = MagicMock(return_value="item_type")
         item.notify_destination(item)
         self.toolbox.msg_warning.emit.assert_called_with(

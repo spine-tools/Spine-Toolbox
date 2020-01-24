@@ -60,7 +60,7 @@ class ToolPropertiesWidget(QWidget):
             pos
         )  # Index of selected QStandardItem in Tool properties tree view.
         curr_index = self._toolbox.ui.treeView_project.currentIndex()  # Get selected Tool
-        tool = self._toolbox.project_item_model.project_item(curr_index)
+        tool = self._toolbox.project_item_model.item(curr_index).project_item
         if not tool.tool_specification():
             return
         # Find index of Tool specification

@@ -56,15 +56,11 @@ class ViewPropertiesWidget(QWidget):
         """
         ind = self.ui.treeView_view.indexAt(pos)  # Index of selected item in View references tree view.
         curr_index = self._toolbox.ui.treeView_project.currentIndex()  # Get selected View
-        view = self._toolbox.project_item_model.project_item(curr_index)
+        view = self._toolbox.project_item_model.item(curr_index).project_item
         global_pos = self.ui.treeView_view.viewport().mapToGlobal(pos)
         self.view_prop_context_menu = ViewPropertiesContextMenu(self, global_pos, ind)
         option = self.view_prop_context_menu.get_action()
-        if option == "Open tree view":
-            view.open_tree_view_btn_clicked()
-        elif option == "Open graph view":
-            view.open_graph_view_btn_clicked()
-        elif option == "Open tabular view":
-            view.open_tabular_view_btn_clicked()
+        if option == "Open view":
+            view.open_view()
         self.view_prop_context_menu.deleteLater()
         self.view_prop_context_menu = None

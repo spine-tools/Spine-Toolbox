@@ -21,6 +21,7 @@ import math
 from PySide2.QtWidgets import QGraphicsView
 from PySide2.QtGui import QCursor
 from PySide2.QtCore import Signal, Slot, Qt, QRectF, QTimeLine, QMarginsF, QSettings
+from spine_engine import ExecutionDirection
 from ..graphics_items import LinkDrawer, Link
 from .custom_qlistview import DragListView
 from .custom_qgraphicsscene import CustomQGraphicsScene
@@ -434,9 +435,9 @@ class DesignQGraphicsView(CustomQGraphicsView):
             if not src_ind or not dst_ind:
                 self._toolbox.msg_warning.emit("Restoring a connection failed")
                 continue
-            src_item = self._project_item_model.project_item(src_ind)
+            src_item = self._project_item_model.item(src_ind).project_item
             src_connector = src_item.get_icon().conn_button(src_anchor)
-            dst_item = self._project_item_model.project_item(dst_ind)
+            dst_item = self._project_item_model.item(dst_ind).project_item
             dst_connector = dst_item.get_icon().conn_button(dst_anchor)
             self.add_link(src_connector, dst_connector)
 
@@ -469,17 +470,43 @@ class DesignQGraphicsView(CustomQGraphicsView):
 
     def notify_destination_items(self):
         """Notify destination items that they have been connected to a source item."""
-        src_index = self._project_item_model.find_item(self.src_item_name)
-        if not src_index:
+        src_leaf_item = self._project_item_model.get_item(self.src_item_name)
+        if src_leaf_item is None:
             logging.error("Item %s not found", self.src_item_name)
             return
-        dst_index = self._project_item_model.find_item(self.dst_item_name)
-        if not dst_index:
+        dst_leaf_item = self._project_item_model.get_item(self.dst_item_name)
+        if dst_leaf_item is None:
             logging.error("Item %s not found", self.dst_item_name)
             return
-        src_item = self._project_item_model.project_item(src_index)
-        dst_item = self._project_item_model.project_item(dst_index)
+        src_item = src_leaf_item.project_item
+        dst_item = dst_leaf_item.project_item
         dst_item.notify_destination(src_item)
+
+    @Slot("QVariant")
+    def connect_engine_signals(self, engine):
+        """Connects signals needed for icon animations from given engine."""
+        engine.dag_node_execution_started.connect(self._start_animation)
+        engine.dag_node_execution_finished.connect(self._stop_animation)
+
+    @Slot(str, "QVariant")
+    def _start_animation(self, item_name, direction):
+        """Starts item icon animation when executing forward."""
+        if direction == ExecutionDirection.BACKWARD:
+            return
+        item = self._project_item_model.get_item(item_name).project_item
+        icon = item.get_icon()
+        if hasattr(icon, "start_animation"):
+            icon.start_animation()
+
+    @Slot(str, "QVariant")
+    def _stop_animation(self, item_name, direction):
+        """Stops item icon animation when executing forward."""
+        if direction == ExecutionDirection.BACKWARD:
+            return
+        item = self._project_item_model.get_item(item_name).project_item
+        icon = item.get_icon()
+        if hasattr(icon, "stop_animation"):
+            icon.stop_animation()
 
 
 class GraphQGraphicsView(CustomQGraphicsView):

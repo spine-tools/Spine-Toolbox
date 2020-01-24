@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <!--
 ######################################################################################################################
 # Copyright (C) 2017 - 2019 Spine project consortium
@@ -61,7 +61,11 @@
          </widget>
         </item>
         <item row="0" column="1">
-         <widget class="QLineEdit" name="out_file_name_edit"/>
+         <widget class="QLineEdit" name="out_file_name_edit">
+          <property name="placeholderText">
+           <string>Type output file name here...</string>
+          </property>
+         </widget>
         </item>
        </layout>
       </item>
@@ -81,9 +85,12 @@
          </spacer>
         </item>
         <item>
-         <widget class="QPushButton" name="refresh_button">
+         <widget class="QLabel" name="notification_label">
           <property name="text">
-           <string>Refresh</string>
+           <string/>
+          </property>
+          <property name="textFormat">
+           <enum>Qt::RichText</enum>
           </property>
          </widget>
         </item>

@@ -13,7 +13,7 @@
 # Form implementation generated from reading ui file 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\tool_specification_form.ui',
 # licensing of 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\tool_specification_form.ui' applies.
 #
-# Created: Wed Jan 15 13:11:39 2020
+# Created: Tue Jan 21 15:31:31 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
