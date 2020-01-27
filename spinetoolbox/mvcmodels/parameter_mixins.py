@@ -17,6 +17,15 @@ Miscelaneous mixins for parameter models
 """
 
 
+def _parse_csv_list(csv_list):
+    if not csv_list:
+        return []
+    try:
+        return csv_list.split(",")
+    except AttributeError:
+        return None
+
+
 class ConvertToDBMixin:
     """Base class for all mixins that convert model items (name-based) into database items (id-based)."""
 
@@ -141,7 +150,7 @@ class MakeParameterTagMixin(ConvertToDBMixin):
         for db_map, items in db_map_data.items():
             for item in items:
                 parameter_tag_list = item.get("parameter_tag_list")
-                parameter_tag_list = self._parse_parameter_tag_list(parameter_tag_list)
+                parameter_tag_list = _parse_csv_list(parameter_tag_list)
                 if parameter_tag_list:
                     db_map_parameter_tags.setdefault(db_map, set()).update(parameter_tag_list)
         # Build lookup dict
@@ -164,8 +173,8 @@ class MakeParameterTagMixin(ConvertToDBMixin):
             list: error log
         """
         parameter_tag_list = item.pop("parameter_tag_list", None)
-        parsed_parameter_tag_list = self._parse_parameter_tag_list(parameter_tag_list)
-        if not parsed_parameter_tag_list:
+        parsed_parameter_tag_list = _parse_csv_list(parameter_tag_list)
+        if parsed_parameter_tag_list is None:
             return None, [f"Unable to parse {parameter_tag_list}"] if parameter_tag_list else []
         parameter_tag_id_list = []
         for tag in parsed_parameter_tag_list:
@@ -174,13 +183,6 @@ class MakeParameterTagMixin(ConvertToDBMixin):
                 return None, [f"Unknown tag {tag}"]
             parameter_tag_id_list.append(str(tag_item["id"]))
         return ({"parameter_definition_id": item["id"], "parameter_tag_id_list": ",".join(parameter_tag_id_list)}, [])
-
-    @staticmethod
-    def _parse_parameter_tag_list(parameter_tag_list):
-        try:
-            return parameter_tag_list.split(",")
-        except AttributeError:
-            return None
 
 
 class FillInEntityClassIdMixin(ConvertToDBMixin):
@@ -454,7 +456,7 @@ class MakeRelationshipOnTheFlyMixin:
         for db_map, items in db_map_data.items():
             for item in items:
                 object_name_list = item.get("object_name_list")
-                parsed_object_name_list = self._parse_object_name_list(object_name_list)
+                parsed_object_name_list = _parse_csv_list(object_name_list)
                 if parsed_object_name_list:
                     db_map_object_names.setdefault(db_map, set()).update(parsed_object_name_list)
                 relationship_class_name = item.get("relationship_class_name")
@@ -496,8 +498,8 @@ class MakeRelationshipOnTheFlyMixin:
         relationship_class = self._db_map_rel_cls_lookup.get(db_map, {}).get(relationship_class_name)
         if not relationship_class:
             return None, [f"Unknown relationship class {relationship_class_name}"] if relationship_class_name else []
-        parsed_object_name_list = self._parse_object_name_list(object_name_list)
-        if not parsed_object_name_list:
+        parsed_object_name_list = _parse_csv_list(object_name_list)
+        if parsed_object_name_list is None:
             return None, [f"Unable to parse {object_name_list}"] if object_name_list else []
         object_id_list = []
         for name in parsed_object_name_list:
@@ -507,10 +509,3 @@ class MakeRelationshipOnTheFlyMixin:
             object_id_list.append(object_["id"])
         relationship_name = relationship_class_name + "__" + "_".join(parsed_object_name_list)
         return {"class_id": relationship_class["id"], "object_id_list": object_id_list, "name": relationship_name}, []
-
-    @staticmethod
-    def _parse_object_name_list(object_name_list):
-        try:
-            return object_name_list.split(",")
-        except AttributeError:
-            return None
