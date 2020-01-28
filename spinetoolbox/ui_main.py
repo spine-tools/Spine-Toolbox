@@ -526,7 +526,7 @@ class ToolboxUI(QMainWindow):
         old_project_dir = os.path.normpath(os.path.join(os.path.dirname(fp), fp[:-5]))
         if not os.path.isdir(old_project_dir):
             self.msg_error.emit("Project upgrade failed")
-            self.msg_warning.emit("Project directory <b>{0}</b> does not exist")
+            self.msg_warning.emit("Project directory <b>{0}</b> does not exist".format(old_project_dir))
             return
         # Upgrade project info dict to latest version
         upgraded_proj_info = upgrader.upgrade(proj_info, old_project_dir, proj_dir)

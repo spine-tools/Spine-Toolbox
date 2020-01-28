@@ -260,7 +260,7 @@ class ProjectUpgrader:
                     proj_info = json.load(fh)
                 except json.decoder.JSONDecodeError:
                     self._toolbox.msg_error.emit(
-                        "Error in project file <b>{0}</b>. Invalid JSON. {0}".format(proj_file_path)
+                        "Error in project file <b>{0}</b>. Invalid JSON.".format(proj_file_path)
                     )
                     return None
         except OSError:

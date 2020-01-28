@@ -347,6 +347,12 @@ def recursive_overwrite(widget, src, dst, ignore=None, silent=True):
                 widget.msg.emit("Creating directory <b>{0}</b>".format(dst))
             os.makedirs(dst)
         files = os.listdir(src)
+        for file_name in list(files):
+            # Avoid ending up in 'dst' as this would result in infinite recursion.
+            file_path = os.path.join(src, file_name)
+            if os.path.samefile(os.path.commonpath((file_path, dst)), file_path):
+                files.remove(file_name)
+                break
         if ignore is not None:
             ignored = ignore(src, files)
         else:
