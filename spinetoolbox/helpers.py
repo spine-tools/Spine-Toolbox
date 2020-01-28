@@ -677,7 +677,11 @@ class ProjectDirectoryIconProvider(QFileIconProvider):
 
 def path_in_dir(path, directory):
     """Returns True if the given path is in the given directory."""
-    return os.path.samefile(os.path.commonpath((path, directory)), directory)
+    try:
+        retval = os.path.samefile(os.path.commonpath((path, directory)), directory)
+    except ValueError:
+        return False
+    return retval
 
 
 def serialize_path(path, project_dir):
