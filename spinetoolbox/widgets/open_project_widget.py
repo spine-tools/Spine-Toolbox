@@ -125,8 +125,15 @@ class OpenProjectDialog(QDialog):
             state = self.ui.comboBox_current_path.validator().state
             fm_current_index = self.ui.treeView_file_system.currentIndex()
             if state == QValidator.Intermediate:
-                # Remove entry from qsettings and combobox if present
-                self.remove_directory_from_recents(os.path.abspath(self.selection()))
+                # Remove path from qsettings
+                self.remove_directory_from_recents(os.path.abspath(self.selection()), self._toolbox.qsettings())
+                # Remove path from combobox as well
+                cb_index = self.ui.comboBox_current_path.findText(os.path.abspath(self.selection()))
+                if cb_index == -1:
+                    pass
+                    # logging.error("{0} not found in combobox")
+                else:
+                    self.ui.comboBox_current_path.removeItem(cb_index)
                 notification = Notification(self, "Path does not exist")
                 notification.show()
             elif state == QValidator.Acceptable:
@@ -169,6 +176,9 @@ class OpenProjectDialog(QDialog):
             i (int): Selected row in combobox
         """
         p = self.ui.comboBox_current_path.itemText(i)
+        if not os.path.isdir(p):
+            self.remove_directory_from_recents(p, self._toolbox.qsettings())
+            return
         fm_index = self.file_model.index(p)
         self.ui.treeView_file_system.setCurrentIndex(fm_index)
         QTimer.singleShot(150, self.update_filesystem_treeview)
@@ -273,17 +283,20 @@ class OpenProjectDialog(QDialog):
                 return
             # self.selection() now contains a valid Spine Toolbox project directory.
             # Add the parent directory of selected directory to qsettings
-            self.update_recents(os.path.abspath(os.path.join(self.selection(), os.path.pardir)))
+            self.update_recents(os.path.abspath(os.path.join(self.selection(), os.path.pardir)),
+                                self._toolbox.qsettings())
         super().done(r)
 
-    def update_recents(self, entry):
+    @staticmethod
+    def update_recents(entry, qsettings):
         """Adds a new entry to QSettings variable that remembers the five most recent project storages.
 
         Args:
-            entry (str): Abs. path to a directory that will be added to the combobox the next time the
-            open project dialog is opened.
+            entry (str): Abs. path to a directory that most likely contains other Spine Toolbox Projects as well.
+                First entry is also used as the initial path for File->New Project dialog.
+            qsettings (QSettings): Toolbox qsettings object
         """
-        recents = self._toolbox.qsettings().value("appSettings/recentProjectStorages", defaultValue=None)
+        recents = qsettings.value("appSettings/recentProjectStorages", defaultValue=None)
         if not recents:
             updated_recents = entry
         else:
@@ -299,32 +312,28 @@ class OpenProjectDialog(QDialog):
                 recents_list.insert(0, recents_list.pop(recents_list.index(entry)))
             updated_recents = "\n".join(recents_list)
         # Save updated recent paths
-        self._toolbox.qsettings().setValue("appSettings/recentProjectStorages", updated_recents)
-        self._toolbox.qsettings().sync()  # Commit change immediately
+        qsettings.setValue("appSettings/recentProjectStorages", updated_recents)
+        qsettings.sync()  # Commit change immediately
 
-    def remove_directory_from_recents(self, p):
+    @staticmethod
+    def remove_directory_from_recents(p, qsettings):
         """Removes directory from the recent project storages.
 
         Args:
             p (str): Full path to a project directory
+            qsettings (QSettings): Toolbox qsettings object
         """
-        recents = self._toolbox.qsettings().value("appSettings/recentProjectStorages", defaultValue=None)
+        recents = qsettings.value("appSettings/recentProjectStorages", defaultValue=None)
         if not recents:
             return
         recents = str(recents)
         recents_list = recents.split("\n")
         if p in recents_list:
             recents_list.pop(recents_list.index(p))
-            # Remove it from combobox as well
-            cb_index = self.ui.comboBox_current_path.findText(p)
-            if cb_index == -1:
-                logging.error("{0} not found in combobox")
-            else:
-                self.ui.comboBox_current_path.removeItem(cb_index)
         updated_recents = "\n".join(recents_list)
         # Save updated recent paths
-        self._toolbox.qsettings().setValue("appSettings/recentProjectStorages", updated_recents)
-        self._toolbox.qsettings().sync()  # Commit change immediately
+        qsettings.setValue("appSettings/recentProjectStorages", updated_recents)
+        qsettings.sync()  # Commit change immediately
 
     @Slot("QPoint")
     def show_context_menu(self, pos):

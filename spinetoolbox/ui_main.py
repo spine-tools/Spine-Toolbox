@@ -297,9 +297,17 @@ class ToolboxUI(QMainWindow):
         Pops up a question box if selected directory is not empty or if it already contains
         a Spine Toolbox project. Initial project name is the directory name.
         """
-        initial_path = QStandardPaths.writableLocation(QStandardPaths.DocumentsLocation)  # Documents
-        if not initial_path:
+        recents = self.qsettings().value("appSettings/recentProjectStorages", defaultValue=None)
+        if not recents:
             initial_path = _program_root
+        else:
+            recents_lst = str(recents).split("\n")
+            if not os.path.isdir(recents_lst[0]):
+                # Remove obsolete entry from recentProjectStorages
+                OpenProjectDialog.remove_directory_from_recents(recents_lst[0], self.qsettings())
+                initial_path = _program_root
+            else:
+                initial_path = recents_lst[0]
         # noinspection PyCallByClass
         project_dir = QFileDialog.getExistingDirectory(self, "Select project directory (New project...)", initial_path)
         if not project_dir:
@@ -328,7 +336,10 @@ class ToolboxUI(QMainWindow):
         self.init_models(tool_specification_paths=list())  # Start project with no tool specifications
         self.setWindowTitle("Spine Toolbox    -- {} --".format(self._project.name))
         self.ui.graphicsView.init_scene(empty=True)
+        # Update recentProjects
         self.update_recent_projects()
+        # Update recentProjectStorages
+        OpenProjectDialog.update_recents(os.path.abspath(os.path.join(location, os.path.pardir)), self.qsettings())
         self.save_project()
 
     @Slot(name="open_project")
