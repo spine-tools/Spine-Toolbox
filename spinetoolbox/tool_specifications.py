@@ -16,11 +16,10 @@ Contains Tool specification classes.
 :date:   24.1.2018
 """
 
-from collections import ChainMap
+from collections import ChainMap, OrderedDict
 import logging
 import os
 import re
-from collections import OrderedDict
 from .metaobject import MetaObject
 from .config import REQUIRED_KEYS, OPTIONAL_KEYS, LIST_REQUIRED_KEYS
 from .tool_instance import GAMSToolInstance, JuliaToolInstance, PythonToolInstance, ExecutableToolInstance

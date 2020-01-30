@@ -16,7 +16,7 @@ Contains ImportPreviewWidget, and MappingTableMenu classes.
 :date:   1.6.2019
 """
 
-from spinedb_api import ObjectClassMapping, MappingBase, dict_to_map, mapping_from_dict
+from spinedb_api import ObjectClassMapping, dict_to_map, mapping_from_dict
 from PySide2.QtWidgets import QWidget, QVBoxLayout, QMenu, QListWidgetItem, QErrorMessage
 from PySide2.QtCore import Signal, Qt, QItemSelectionModel, QPoint
 from .mapping_widget import MappingWidget
@@ -353,11 +353,6 @@ class MappingTableMenu(QMenu):
             return
         mapping = mapping_from_dict({"map_type": map_type, "value_reference": value})
         self._model.set_mapping_from_name(name, mapping)
-
-    def ignore_columns(self, columns=None):
-        # TODO: implement this, add selected columns to ignored columns in current mapping.
-        if columns is None:
-            columns = []
 
     def request_menu(self, QPos=None):
         if not self._model:

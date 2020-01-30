@@ -48,7 +48,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         """Initializes model.
 
         Args:
-            parent (TreeViewForm, GraphViewForm): the parent object
+            parent (DataStoreForm): the parent object
             db_mngr (SpineDBManager): the database manager
             *db_maps (DiffDatabaseMapping): the database maps included in the model
         """
@@ -553,7 +553,6 @@ class CompoundObjectParameterDefinitionModel(
             "database",
         ]
 
-
 class CompoundRelationshipParameterDefinitionModel(
     CompoundRelationshipParameterMixin, CompoundParameterDefinitionMixin, CompoundParameterModel
 ):
@@ -574,7 +573,6 @@ class CompoundRelationshipParameterDefinitionModel(
             "database",
         ]
 
-
 class CompoundObjectParameterValueModel(
     CompoundObjectParameterMixin, CompoundParameterValueMixin, CompoundParameterModel
 ):
@@ -590,7 +588,6 @@ class CompoundObjectParameterValueModel(
     @property
     def entity_type(self):
         return "object"
-
 
 class CompoundRelationshipParameterValueModel(
     CompoundRelationshipParameterMixin, CompoundParameterValueMixin, CompoundParameterModel

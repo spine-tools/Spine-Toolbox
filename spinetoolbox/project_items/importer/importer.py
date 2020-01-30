@@ -25,13 +25,12 @@ from PySide2.QtCore import Qt, Slot, QFileInfo, QEventLoop, QProcess
 from PySide2.QtGui import QStandardItem, QStandardItemModel
 from PySide2.QtWidgets import QFileIconProvider, QListWidget, QDialog, QVBoxLayout, QDialogButtonBox
 from spinetoolbox.project_item import ProjectItem
-from spinetoolbox.helpers import create_dir
+from spinetoolbox.helpers import create_dir, deserialize_path, serialize_path
 from spinetoolbox.spine_io.importers.csv_reader import CSVConnector
 from spinetoolbox.spine_io.importers.excel_reader import ExcelConnector
 from spinetoolbox.spine_io.importers.gdx_connector import GdxConnector
 from spinetoolbox.widgets.import_preview_window import ImportPreviewWindow
 from . import importer_program
-from spinetoolbox.helpers import serialize_path, deserialize_path
 
 _CONNECTOR_NAME_TO_CLASS = {
     "CSVConnector": CSVConnector,
@@ -260,7 +259,7 @@ class Importer(ProjectItem):
             dict: Mapping dictionary for the requested importee or an empty dict if not found
         """
         importee_settings = None
-        for p in self.settings.keys():
+        for p in self.settings:
             if p == importee:
                 importee_settings = self.settings[p]
         if not importee_settings:

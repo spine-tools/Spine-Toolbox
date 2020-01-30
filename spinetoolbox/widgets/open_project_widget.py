@@ -19,7 +19,7 @@ Contains a class for a widget that presents a 'Select Project Directory' dialog.
 import logging
 import os
 from PySide2.QtWidgets import QDialog, QFileSystemModel, QAbstractItemView, QAction, QComboBox
-from PySide2.QtCore import Qt, Slot, QDir, QStandardPaths, QTimer, QModelIndex, QItemSelectionModel
+from PySide2.QtCore import Qt, Slot, QDir, QStandardPaths, QTimer, QModelIndex
 from PySide2.QtGui import QKeySequence, QValidator
 from spinetoolbox.helpers import ProjectDirectoryIconProvider
 from spinetoolbox.widgets.notification import Notification
@@ -369,9 +369,6 @@ class OpenProjectDialog(QDialog):
 class CustomQFileSystemModel(QFileSystemModel):
     """Custom file system model."""
 
-    def __init__(self, parent=None):
-        super().__init__(parent)
-
     def columnCount(self, parent=QModelIndex()):
         """Returns one."""
         return 1
@@ -406,8 +403,7 @@ class DirValidator(QValidator):
             if not previous_state == self.state:
                 self.changed.emit()
             return self.state
-        else:
-            self.state = QValidator.Intermediate
-            if not previous_state == self.state:
-                self.changed.emit()
-            return self.state
+        self.state = QValidator.Intermediate
+        if not previous_state == self.state:
+            self.changed.emit()
+        return self.state

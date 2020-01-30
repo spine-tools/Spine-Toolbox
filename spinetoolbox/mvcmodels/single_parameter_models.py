@@ -98,6 +98,18 @@ class SingleParameterModel(MinimalTableModel):
             return flags & ~Qt.ItemIsEditable
         return flags
 
+    def fetchMore(self, parent=None):
+        """Fetch data and use it to reset the model."""
+        data = self._fetch_data()
+        self.reset_model(data)
+        self._fetched = True
+
+    def _fetch_data(self):
+        """Returns data to reset the model with and call it fetched.
+        Reimplement in subclasses if you want to populate your model automatically.
+        """
+        raise NotImplementedError()
+
     def data(self, index, role=Qt.DisplayRole):
         """Gets the id and database for the row, and reads data from the db manager
         using the item_type property.
@@ -256,7 +268,7 @@ class SingleObjectParameterDefinitionModel(
 ):
     """An object parameter definition model for a single object class."""
 
-    def fetch_data(self):
+    def _fetch_data(self):
         """Returns object parameter definition ids."""
         return [
             x["id"]
@@ -269,7 +281,7 @@ class SingleRelationshipParameterDefinitionModel(
 ):
     """A relationship parameter definition model for a single relationship class."""
 
-    def fetch_data(self):
+    def _fetch_data(self):
         """Returns relationship parameter definition ids."""
         return [
             x["id"]
@@ -282,7 +294,7 @@ class SingleRelationshipParameterDefinitionModel(
 class SingleObjectParameterValueModel(SingleObjectParameterMixin, SingleParameterValueMixin, SingleParameterModel):
     """An object parameter value model for a single object class."""
 
-    def fetch_data(self):
+    def _fetch_data(self):
         """Returns object parameter value ids."""
         return [
             x["id"] for x in self.db_mngr.get_object_parameter_values(self.db_map, object_class_id=self.entity_class_id)
@@ -294,7 +306,7 @@ class SingleRelationshipParameterValueModel(
 ):
     """A relationship parameter value model for a single relationship class."""
 
-    def fetch_data(self):
+    def _fetch_data(self):
         """Returns relationship parameter value ids."""
         return [
             x["id"]

@@ -661,7 +661,7 @@ class DataStoreForm(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
 
     def end_style_change(self):
         """Ends a style change operation."""
-        qApp.processEvents()
+        qApp.processEvents()  # pylint: disable=undefined-variable
         self.resize(self._size)
 
     @Slot(bool)

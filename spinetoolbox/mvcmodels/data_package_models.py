@@ -32,7 +32,7 @@ class DatapackageResourcesModel(MinimalTableModel):
 
         super().__init__(parent)
 
-    def reset_model(self, resources):
+    def reset_model(self, resources):  # pylint: disable=arguments-differ
         self.clear()
         self.set_horizontal_header_labels(["name", "source"])
         data = list()
@@ -57,7 +57,7 @@ class DatapackageFieldsModel(MinimalTableModel):
         """
         super().__init__(parent)
 
-    def reset_model(self, schema):
+    def reset_model(self, schema):  # pylint: disable=arguments-differ
         self.clear()
         self.set_horizontal_header_labels(["name", "type", "primary key?"])
         data = list()
@@ -79,7 +79,7 @@ class DatapackageForeignKeysModel(EmptyRowModel):
         super().__init__(parent)
         self._parent = parent
 
-    def reset_model(self, foreign_keys):
+    def reset_model(self, foreign_keys):  # pylint: disable=arguments-differ
         self.clear()
         self.set_horizontal_header_labels(["fields", "reference resource", "reference fields", ""])
         data = list()

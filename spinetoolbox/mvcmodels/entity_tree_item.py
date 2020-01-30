@@ -23,6 +23,8 @@ from .minimal_tree_model import TreeItem
 class MultiDBTreeItem(TreeItem):
     """A tree item that may belong in multiple databases."""
 
+    item_type = None
+    """Item type identifier string. Should be set to a meaningful value by subclasses."""
     visual_key = ["name"]
 
     def __init__(self, model=None, db_map_id=None):
@@ -553,3 +555,7 @@ class RelationshipItem(EntityItem):
             object_name_list=self.db_map_data_field(self.first_db_map, "object_name_list"),
             database=self.first_db_map.codename,
         )
+
+    def _get_children_ids(self, db_map):
+        """See base class."""
+        raise NotImplementedError()

@@ -50,7 +50,7 @@ class TestToolSpecificationWidget(unittest.TestCase):
         )
 
     def setUp(self):
-        """Overridden method. Runs before each test. Makes instance of TreeViewForm class."""
+        """Overridden method. Runs before each test."""
         self.toolbox = create_toolboxui()
         self.tool_specification_widget = ToolSpecificationWidget(self.toolbox)
 

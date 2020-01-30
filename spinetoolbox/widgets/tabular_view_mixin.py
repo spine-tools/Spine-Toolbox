@@ -413,8 +413,8 @@ class TabularViewMixin:
             widget = self.create_header_widget(proxy_index.data(Qt.DisplayRole), "rows")
             self.ui.pivot_table.setIndexWidget(proxy_index, widget)
         # TODO: find out why we need two processEvents when changing the frozen value
-        qApp.processEvents()
-        qApp.processEvents()
+        qApp.processEvents()  # pylint: disable=undefined-variable
+        qApp.processEvents()  # pylint: disable=undefined-variable
         self.ui.pivot_table.resizeColumnsToContents()
 
     def make_frozen_headers(self):

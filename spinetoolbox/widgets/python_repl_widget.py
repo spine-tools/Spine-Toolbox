@@ -447,3 +447,7 @@ class PythonReplWidget(SpineConsoleWidget):
             e.ignore()
         else:
             super().dragEnterEvent(e)
+
+    def _is_complete(self, source, interactive):
+        """See base class."""
+        raise NotImplementedError()

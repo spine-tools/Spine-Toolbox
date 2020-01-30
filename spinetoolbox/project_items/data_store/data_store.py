@@ -21,7 +21,7 @@ import logging
 from PySide2.QtCore import Slot, Qt
 from PySide2.QtWidgets import QFileDialog, QApplication
 from sqlalchemy import create_engine
-from sqlalchemy.engine.url import make_url, URL
+from sqlalchemy.engine.url import URL
 import spinedb_api
 from spinetoolbox.project_item import ProjectItem, ProjectItemResource
 from spinetoolbox.widgets.data_store_widget import DataStoreForm
@@ -276,7 +276,7 @@ class DataStore(ProjectItem):
         if dialect == 'sqlite':
             self.enable_sqlite()
         elif dialect == 'mssql':
-            import pyodbc
+            import pyodbc  # pylint: disable=import-outside-toplevel
 
             dsns = pyodbc.dataSources()
             # Collect dsns which use the msodbcsql driver
@@ -456,7 +456,8 @@ class DataStore(ProjectItem):
         new_data_store["url"] = url
         return new_data_store
 
-    def custom_context_menu(self, parent, pos):
+    @staticmethod
+    def custom_context_menu(parent, pos):
         """Returns the context menu for this item.
 
         Args:

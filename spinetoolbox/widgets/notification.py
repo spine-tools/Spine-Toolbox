@@ -16,7 +16,6 @@ Contains a notification widget.
 :date: 12.12.2019
 """
 
-import logging
 from PySide2.QtWidgets import QWidget, QLabel, QHBoxLayout, QGraphicsOpacityEffect
 from PySide2.QtCore import Qt, Slot, QTimer, QPropertyAnimation, Property
 

@@ -43,7 +43,7 @@ class CopyTreeView(QTreeView):
 
 
 class EntityTreeView(CopyTreeView):
-    """Custom QTreeView class for object tree in TreeViewForm.
+    """Custom QTreeView class for object tree in DataStoreForm.
 
     Attributes:
         parent (QWidget): The parent of this view
@@ -58,7 +58,7 @@ class EntityTreeView(CopyTreeView):
     @Slot("QModelIndex", "EditTrigger", "QEvent")
     def edit(self, index, trigger, event):
         """Send signal instead of editing item, so
-        the TreeViewForm can catch this signal and open a custom QDialog
+        DataStoreForm can catch this signal and open a custom QDialog
         for edition.
         """
         if trigger == QTreeView.EditKeyPressed:

@@ -22,16 +22,8 @@ import logging
 import json
 import pathlib
 import numpy as np
-from PySide2.QtCore import QByteArray, QMimeData, Qt, Signal, Slot, QSettings, QUrl, SIGNAL, QStandardPaths
-from PySide2.QtWidgets import (
-    QMainWindow,
-    QApplication,
-    QFileDialog,
-    QMessageBox,
-    QCheckBox,
-    QDockWidget,
-    QAction,
-)
+from PySide2.QtCore import QByteArray, QMimeData, Qt, Signal, Slot, QSettings, QUrl, SIGNAL
+from PySide2.QtWidgets import QMainWindow, QApplication, QFileDialog, QMessageBox, QCheckBox, QDockWidget, QAction
 from PySide2.QtGui import QDesktopServices, QGuiApplication, QKeySequence, QStandardItemModel, QIcon, QCursor
 from .graphics_items import ProjectItemIcon
 from .mvcmodels.project_item_model import ProjectItemModel
@@ -53,11 +45,26 @@ from .widgets.python_repl_widget import PythonReplWidget
 from .widgets import toolbars
 from .widgets.open_project_widget import OpenProjectDialog
 from .project import SpineToolboxProject
-from .config import STATUSBAR_SS, TEXTBROWSER_SS, MAINWINDOW_SS, \
-    DOCUMENTATION_PATH, _program_root, LATEST_PROJECT_VERSION, DEFAULT_WORK_DIR
-from .helpers import get_datetime, erase_dir, busy_effect, set_taskbar_icon, \
-    supported_img_formats, create_dir, recursive_overwrite, serialize_path, \
-    deserialize_path
+from .config import (
+    STATUSBAR_SS,
+    TEXTBROWSER_SS,
+    MAINWINDOW_SS,
+    DOCUMENTATION_PATH,
+    _program_root,
+    LATEST_PROJECT_VERSION,
+    DEFAULT_WORK_DIR,
+)
+from .helpers import (
+    get_datetime,
+    erase_dir,
+    busy_effect,
+    set_taskbar_icon,
+    supported_img_formats,
+    create_dir,
+    recursive_overwrite,
+    serialize_path,
+    deserialize_path,
+)
 from .project_upgrader import ProjectUpgrader
 from .project_tree_item import CategoryProjectTreeItem, LeafProjectTreeItem, RootProjectTreeItem
 from .project_items import data_store, data_connection, exporter, tool, view, importer
@@ -267,10 +274,11 @@ class ToolboxUI(QMainWindow):
         """
         p = os.path.join(DOCUMENTATION_PATH, "getting_started.html")
         getting_started_anchor = (
-                "<a style='color:#99CCFF;' title='" + p + "' href='file:///" + p + "'>Getting Started</a>"
+            "<a style='color:#99CCFF;' title='" + p + "' href='file:///" + p + "'>Getting Started</a>"
         )
-        wlcme_msg = "Welcome to Spine Toolbox! If you need help, please read the {0} guide."\
-            .format(getting_started_anchor)
+        wlcme_msg = "Welcome to Spine Toolbox! If you need help, please read the {0} guide.".format(
+            getting_started_anchor
+        )
         if not project_dir:
             open_previous_project = int(self._qsettings.value("appSettings/openPreviousProject", defaultValue="0"))
             if open_previous_project != 2:  # 2: Qt.Checked, ie. open_previous_project==True
@@ -284,10 +292,11 @@ class ToolboxUI(QMainWindow):
             # Previous project was a .proj file -> Show welcome message instead
             self.msg.emit(wlcme_msg)
             return
-        elif not os.path.isdir(project_dir):
+        if not os.path.isdir(project_dir):
             self.ui.statusbar.showMessage("Opening previous project failed", 10000)
-            self.msg_error.emit("Cannot open previous project. Directory <b>{0}</b> may have been moved."
-                                .format(project_dir))
+            self.msg_error.emit(
+                "Cannot open previous project. Directory <b>{0}</b> may have been moved.".format(project_dir)
+            )
             return
         self.open_project(project_dir, clear_logs=False)
 
@@ -467,9 +476,9 @@ class ToolboxUI(QMainWindow):
         # Ask for a new directory
         # noinspection PyCallByClass, PyArgumentList
         answer = QFileDialog.getExistingDirectory(
-                self,
-                "Select new project directory (Save as...)",
-                os.path.abspath(os.path.join(self._project.project_dir, os.path.pardir))
+            self,
+            "Select new project directory (Save as...)",
+            os.path.abspath(os.path.join(self._project.project_dir, os.path.pardir)),
         )
         if not answer:  # Canceled
             return
@@ -498,8 +507,7 @@ class ToolboxUI(QMainWindow):
         if not self.restore_project(proj_info, answer, clear_logs=False):
             return
         # noinspection PyCallByClass, PyArgumentList
-        QMessageBox.information(self, "Project saved".format(self._project.name),
-                                "Project directory is now\n\n{0}".format(answer))
+        QMessageBox.information(self, f"Project {self._project.name} saved", f"Project directory is now\n\n{answer}")
         return
 
     @Slot(bool)
@@ -521,8 +529,9 @@ class ToolboxUI(QMainWindow):
         )
         QMessageBox.information(self, "Project upgrade wizard", msg)
         # noinspection PyCallByClass
-        answer = QFileDialog.getOpenFileName(self, "Select an old project (.proj file) to upgrade",
-                                             _program_root, "Project file (*.proj)")
+        answer = QFileDialog.getOpenFileName(
+            self, "Select an old project (.proj file) to upgrade", _program_root, "Project file (*.proj)"
+        )
         if not answer[0]:
             return
         fp = answer[0]
@@ -543,9 +552,12 @@ class ToolboxUI(QMainWindow):
         upgraded_proj_info = upgrader.upgrade(proj_info, old_project_dir, proj_dir)
         # Copy project item data from old project to new project directory
         if not upgrader.copy_data(fp, proj_dir):
-            self.msg_warning.emit("Copying data to project <b>{0}</b> failed. "
-                                  "Please copy project item directories to directory <b>{1}</b> manually."
-                                  .format(proj_dir, os.path.join(proj_dir, ".spinetoolbox", "items")))
+            self.msg_warning.emit(
+                "Copying data to project <b>{0}</b> failed. "
+                "Please copy project item directories to directory <b>{1}</b> manually.".format(
+                    proj_dir, os.path.join(proj_dir, ".spinetoolbox", "items")
+                )
+            )
         # Open the upgraded project
         if not self.restore_project(upgraded_proj_info, proj_dir, clear_logs=False):
             return
@@ -687,11 +699,13 @@ class ToolboxUI(QMainWindow):
         """
         # Check if directory is empty and/or a project directory
         is_project_dir = os.path.isdir(os.path.join(project_dir, ".spinetoolbox"))
-        empty = False if len(os.listdir(project_dir)) > 0 else True
+        empty = not bool(os.listdir(project_dir))
         if not empty:
             if is_project_dir:
-                msg1 = "Directory <b>{0}</b> already contains a Spine Toolbox project.<br/><br/>" \
-                       "Would you like to overwrite the existing project?".format(project_dir)
+                msg1 = (
+                    "Directory <b>{0}</b> already contains a Spine Toolbox project.<br/><br/>"
+                    "Would you like to overwrite the existing project?".format(project_dir)
+                )
                 box1 = QMessageBox(
                     QMessageBox.Question, "Overwrite?", msg1, buttons=QMessageBox.Ok | QMessageBox.Cancel, parent=self
                 )
@@ -700,11 +714,12 @@ class ToolboxUI(QMainWindow):
                 if answer1 != QMessageBox.Ok:
                     return False
             else:
-                msg2 = "Directory <b>{0}</b> is not empty.<br/><br/>" \
-                       "Would you like to make this directory into a Spine Toolbox project?".format(project_dir)
+                msg2 = (
+                    "Directory <b>{0}</b> is not empty.<br/><br/>"
+                    "Would you like to make this directory into a Spine Toolbox project?".format(project_dir)
+                )
                 box2 = QMessageBox(
-                    QMessageBox.Question, "Not empty", msg2,
-                    buttons=QMessageBox.Ok | QMessageBox.Cancel, parent=self
+                    QMessageBox.Question, "Not empty", msg2, buttons=QMessageBox.Ok | QMessageBox.Cancel, parent=self
                 )
                 box2.button(QMessageBox.Ok).setText("Go ahead")
                 answer2 = box2.exec_()
