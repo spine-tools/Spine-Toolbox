@@ -23,30 +23,62 @@ from spinetoolbox.tool_specifications import ToolSpecification
 class TestToolSpecification(unittest.TestCase):
     def test_get_cmdline_args_without_expansion(self):
         specification = ToolSpecification(None, "", "", "", [])
-        self.assertFalse(specification.get_cmdline_args([], {}))
+        self.assertFalse(specification.get_cmdline_args([], {}, {}))
         specification.cmdline_args = ["-a", "--version", "-xvf"]
-        self.assertEqual(specification.get_cmdline_args([], {}), ["-a", "--version", "-xvf"])
+        self.assertEqual(specification.get_cmdline_args([], {}, {}), ["-a", "--version", "-xvf"])
 
     def test_get_cmdline_args_with_optional_inputs(self):
         specification = ToolSpecification(None, "", "", "", [])
         specification.cmdline_args = ["@@optional_inputs@@"]
-        args = specification.get_cmdline_args([], {})
+        args = specification.get_cmdline_args([], {}, {})
         self.assertEqual(args, [""])
         specification.cmdline_args = ["@@optional_inputs@@"]
-        args = specification.get_cmdline_args(["file.dat", "table.csv"], {})
+        args = specification.get_cmdline_args(["file.dat", "table.csv"], {}, {})
         self.assertEqual(args, ["file.dat", "table.csv"])
         specification.cmdline_args = ["--inputs=@@optional_inputs@@"]
-        args = specification.get_cmdline_args(["file.dat", "table.csv"], {})
+        args = specification.get_cmdline_args(["file.dat", "table.csv"], {}, {})
         self.assertEqual(args, ["--inputs=file.dat", "table.csv"])
 
     def test_get_cmdline_args_with_datastore_urls(self):
         specification = ToolSpecification(None, "", "", "", [])
         specification.cmdline_args = ["@@url:ds1@@"]
-        args = specification.get_cmdline_args([], {"ds1": "sqlite:///Q:\\databases\\base.sqlite"})
+        args = specification.get_cmdline_args([], {"ds1": "sqlite:///Q:\\databases\\base.sqlite"}, {})
         self.assertEqual(args, ["sqlite:///Q:\\databases\\base.sqlite"])
         specification.cmdline_args = ["--url=@@url:ds1@@"]
-        args = specification.get_cmdline_args([], {"ds1": "sqlite:///Q:\\databases\\base.sqlite"})
+        args = specification.get_cmdline_args([], {}, {"ds1": "sqlite:///Q:\\databases\\base.sqlite"})
         self.assertEqual(args, ["--url=sqlite:///Q:\\databases\\base.sqlite"])
+
+    def test_get_cmdline_args_with_input_datastore_urls(self):
+        specification = ToolSpecification(None, "", "", "", [])
+        specification.cmdline_args = ["@@url_inputs@@"]
+        args = specification.get_cmdline_args(
+            [], {"ds1": "sqlite:///Q:\\databases\\input.sqlite"}, {"ds2": "sqlite:///Q:\\databases\\output.sqlite"}
+        )
+        self.assertEqual(args, ["sqlite:///Q:\\databases\\input.sqlite"])
+        specification.cmdline_args = ["@@url_inputs@@"]
+        args = specification.get_cmdline_args(
+            [], {"ds1": "sqlite:///Q:\\databases\\input1.sqlite", "ds2": "sqlite:///Q:\\databases\\input2.sqlite"}, {}
+        )
+        self.assertEqual(args, ["sqlite:///Q:\\databases\\input1.sqlite", "sqlite:///Q:\\databases\\input2.sqlite"])
+        specification.cmdline_args = ["--url=@@url_inputs@@"]
+        args = specification.get_cmdline_args([], {"ds1": "sqlite:///Q:\\databases\\input.sqlite"}, {})
+        self.assertEqual(args, ["--url=sqlite:///Q:\\databases\\input.sqlite"])
+
+    def test_get_cmdline_args_with_output_datastore_urls(self):
+        specification = ToolSpecification(None, "", "", "", [])
+        specification.cmdline_args = ["@@url_outputs@@"]
+        args = specification.get_cmdline_args(
+            [], {"ds1": "sqlite:///Q:\\databases\\input.sqlite"}, {"ds2": "sqlite:///Q:\\databases\\output.sqlite"}
+        )
+        self.assertEqual(args, ["sqlite:///Q:\\databases\\output.sqlite"])
+        specification.cmdline_args = ["@@url_outputs@@"]
+        args = specification.get_cmdline_args(
+            [], {}, {"ds1": "sqlite:///Q:\\databases\\output1.sqlite", "ds2": "sqlite:///Q:\\databases\\output2.sqlite"}
+        )
+        self.assertEqual(args, ["sqlite:///Q:\\databases\\output1.sqlite", "sqlite:///Q:\\databases\\output2.sqlite"])
+        specification.cmdline_args = ["--url=@@url_outputs@@"]
+        args = specification.get_cmdline_args([], {}, {"ds1": "sqlite:///Q:\\databases\\output.sqlite"})
+        self.assertEqual(args, ["--url=sqlite:///Q:\\databases\\output.sqlite"])
 
     def test_split_cmdline_args(self):
         splitted = ToolSpecification.split_cmdline_args("")

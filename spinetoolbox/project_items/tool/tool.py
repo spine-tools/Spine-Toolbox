@@ -480,10 +480,11 @@ class Tool(ProjectItem):
         if not self.create_output_dirs():
             self._logger.msg_error.emit("Creating output subdirectories failed. Tool execution aborted.")
             return False
-        database_urls = self._database_urls(resources + self._downstream_resources)
+        input_database_urls = self._database_urls(resources)
+        output_database_urls = self._database_urls(self._downstream_resources)
         self.instance = self.tool_specification().create_tool_instance(self.basedir)
         try:
-            self.instance.prepare(list(optional_file_copy_paths.values()), database_urls)
+            self.instance.prepare(list(optional_file_copy_paths.values()), input_database_urls, output_database_urls)
         except RuntimeError as error:
             self._logger.msg_error.emit(f"Failed to prepare tool instance: {error}")
             return False

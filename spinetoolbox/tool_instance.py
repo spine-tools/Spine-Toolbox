@@ -60,14 +60,15 @@ class ToolInstance(QObject):
         """[Obsolete] Removes Tool instance files from work directory."""
         shutil.rmtree(self.basedir, ignore_errors=True)
 
-    def prepare(self, optional_input_files, database_urls):
+    def prepare(self, optional_input_files, input_database_urls, output_database_urls):
         """Prepares this instance for execution.
 
         Implement in subclasses to perform specific initialization.
 
         Args:
             optional_input_files (list): list of tool's optional input files
-            database_urls (dict): a mapping from Data Store name to database URL
+            input_database_urls (dict): a mapping from upstream Data Store name to database URL
+            output_database_urls (dict): a mapping from downstream Data Store name to database URL
         """
         raise NotImplementedError()
 
@@ -84,21 +85,24 @@ class ToolInstance(QObject):
         """
         raise NotImplementedError()
 
-    def append_cmdline_args(self, optional_input_files, database_urls):
+    def append_cmdline_args(self, optional_input_files, input_database_urls, output_database_urls):
         """
         Appends Tool specification command line args into instance args list.
 
         Args:
             optional_input_files (list): list of tool's optional input files
-            database_urls (dict): a mapping from Data Store name to database URL
+            input_database_urls (dict): a mapping from upstream Data Store name to database URL
+            output_database_urls (dict): a mapping from downstream Data Store name to database URL
         """
-        self.args += self.tool_specification.get_cmdline_args(optional_input_files, database_urls)
+        self.args += self.tool_specification.get_cmdline_args(
+            optional_input_files, input_database_urls, output_database_urls
+        )
 
 
 class GAMSToolInstance(ToolInstance):
     """Class for GAMS Tool instances."""
 
-    def prepare(self, optional_input_files, database_urls):
+    def prepare(self, optional_input_files, input_database_urls, output_database_urls):
         """See base class."""
         gams_path = self._toolbox.qsettings().value("appSettings/gamsPath", defaultValue="")
         if gams_path != '':
@@ -110,7 +114,7 @@ class GAMSToolInstance(ToolInstance):
         self.args.append("curDir=")
         self.args.append(self.basedir)
         self.args.append("logoption=3")  # TODO: This should be an option in Settings
-        self.append_cmdline_args(optional_input_files, database_urls)
+        self.append_cmdline_args(optional_input_files, input_database_urls, output_database_urls)
 
     def execute(self, **kwargs):
         """Executes a prepared instance."""
@@ -160,14 +164,16 @@ class JuliaToolInstance(ToolInstance):
         super().__init__(toolbox, tool_specification, basedir)
         self.ijulia_command_list = list()
 
-    def prepare(self, optional_input_files, database_urls):
+    def prepare(self, optional_input_files, input_database_urls, output_database_urls):
         """See base class."""
         work_dir = self.basedir
         use_embedded_julia = self._toolbox.qsettings().value("appSettings/useEmbeddedJulia", defaultValue="2")
         if use_embedded_julia == "2":
             # Prepare Julia REPL command
             mod_work_dir = repr(work_dir).strip("'")
-            cmdline_args = self.tool_specification.get_cmdline_args(optional_input_files, database_urls)
+            cmdline_args = self.tool_specification.get_cmdline_args(
+                optional_input_files, input_database_urls, output_database_urls
+            )
             args = '["' + repr('", "'.join(cmdline_args)).strip("'") + '"]'
             self.ijulia_command_list += [
                 f'cd("{mod_work_dir}");',
@@ -189,7 +195,7 @@ class JuliaToolInstance(ToolInstance):
             self.program = julia_exe
             self.args.append(f"--project={julia_project_path}")
             self.args.append(script_path)
-            self.append_cmdline_args(optional_input_files, database_urls)
+            self.append_cmdline_args(optional_input_files, input_database_urls, output_database_urls)
 
     def execute(self, **kwargs):
         """Executes a prepared instance."""
@@ -265,7 +271,7 @@ class PythonToolInstance(ToolInstance):
         super().__init__(toolbox, tool_specification, basedir)
         self.ipython_command_list = list()
 
-    def prepare(self, optional_input_files, database_urls):
+    def prepare(self, optional_input_files, input_database_urls, output_database_urls):
         """See base class."""
         work_dir = self.basedir
         use_embedded_python = self._toolbox.qsettings().value("appSettings/useEmbeddedPython", defaultValue="0")
@@ -274,7 +280,15 @@ class PythonToolInstance(ToolInstance):
             # 1st cmd: Change current work directory
             # 2nd cmd: Run script with given args
             # Cast args in list to strings and combine them to a single string
-            args = " ".join(self.tool_specification.get_cmdline_args(optional_input_files, database_urls))
+            args = (
+                '"'
+                + '" "'.join(
+                    self.tool_specification.get_cmdline_args(
+                        optional_input_files, input_database_urls, output_database_urls
+                    )
+                )
+                + '"'
+            )
             cd_work_dir_cmd = "%cd -q {0} ".format(work_dir)  # -q: quiet
             run_script_cmd = "%run \"{0}\" {1}".format(self.tool_specification.main_prgm, args)
             # Populate FIFO command queue
@@ -290,7 +304,7 @@ class PythonToolInstance(ToolInstance):
             script_path = os.path.join(work_dir, self.tool_specification.main_prgm)
             self.program = python_cmd
             self.args.append(script_path)  # First argument for the Python interpreter is path to the tool script
-            self.append_cmdline_args(optional_input_files, database_urls)
+            self.append_cmdline_args(optional_input_files, input_database_urls, output_database_urls)
 
     def execute(self, **kwargs):
         """Executes a prepared instance."""
@@ -355,7 +369,7 @@ class PythonToolInstance(ToolInstance):
 class ExecutableToolInstance(ToolInstance):
     """Class for Executable Tool instances."""
 
-    def prepare(self, optional_input_files, database_urls):
+    def prepare(self, optional_input_files, input_database_urls, output_database_urls):
         """See base class."""
         batch_path = os.path.join(self.basedir, self.tool_specification.main_prgm)
         if sys.platform != "win32":
@@ -363,7 +377,7 @@ class ExecutableToolInstance(ToolInstance):
             self.args.append(batch_path)
         else:
             self.program = batch_path
-        self.append_cmdline_args(optional_input_files, database_urls)
+        self.append_cmdline_args(optional_input_files, input_database_urls, output_database_urls)
 
     def execute(self, **kwargs):
         """Executes a prepared instance."""

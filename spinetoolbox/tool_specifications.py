@@ -16,6 +16,7 @@ Contains Tool specification classes.
 :date:   24.1.2018
 """
 
+from collections import ChainMap
 import logging
 import os
 import re
@@ -125,13 +126,13 @@ class ToolSpecification(MetaObject):
             if p in LIST_REQUIRED_KEYS:
                 try:
                     if not isinstance(data[p], list):
-                        ui.msg_error.emit("Keyword '{0}' value must be a list".format(p), 2)
+                        ui.msg_error.emit("Keyword '{0}' value must be a list".format(p))
                         return None
                 except KeyError:
                     pass
         return kwargs
 
-    def get_cmdline_args(self, optional_input_files, database_urls):
+    def get_cmdline_args(self, optional_input_files, input_urls, output_urls):
         """
         Returns tool's command line args as list.
 
@@ -139,39 +140,55 @@ class ToolSpecification(MetaObject):
 
         - @@optional_inputs@@ expands to a space-separated list of Tool's optional input files
         - @@url:<Data Store name>@@ expands to the URL provided by a named data store
+        - @@url_inputs@@ expands to a space-separated list of Tool's input database URLs
+        - @@url_outputs@@ expands to a space-separated list of Tool's output database URLs
 
         Args:
             optional_input_files (list): a list of Tool's optional input file names
-            database_urls (dict): a mapping from URL provider (Data Store name) to URL string
+            input_urls (dict): a mapping from URL provider (input Data Store name) to URL string
+            output_urls (dict): a mapping from URL provider (output Data Store name) to URL string
         Returns:
             list: a list of expanded command line arguments
         """
-        expanded_args = list()
-        tag_fingerprint = re.compile("@@url:.+@@")
-        for arg in self.cmdline_args:
-            preface, tag, postscript = arg.partition("@@optional_inputs@@")
-            if tag:
-                if optional_input_files:
-                    first_input_arg = preface + optional_input_files[0]
+
+        def expand_list(arg, tag, things, expanded_args):
+            preface, tag_found, postscript = arg.partition(tag)
+            if tag_found:
+                if things:
+                    first_input_arg = preface + things[0]
                     expanded_args.append(first_input_arg)
-                    expanded_args += optional_input_files[1:]
+                    expanded_args += things[1:]
                     expanded_args[-1] = expanded_args[-1] + postscript
                 else:
                     expanded_args.append(preface + postscript)
+                return True
+            return False
+
+        expanded_args = list()
+        named_data_store_tag_fingerprint = re.compile("@@url:.+@@")
+        all_urls = ChainMap(input_urls, output_urls)
+        input_url_list = list(input_urls.values())
+        output_url_list = list(output_urls.values())
+        for arg in self.cmdline_args:
+            if expand_list(arg, "@@optional_inputs@@", optional_input_files, expanded_args):
+                continue
+            if expand_list(arg, "@@url_inputs@@", input_url_list, expanded_args):
+                continue
+            if expand_list(arg, "@@url_outputs@@", output_url_list, expanded_args):
+                continue
+            match = named_data_store_tag_fingerprint.search(arg)
+            if match:
+                preface = arg[: match.start()]
+                tag = match.group()
+                postscript = arg[match.end() :]
+                data_store_name = tag[6:-2]
+                try:
+                    url = all_urls[data_store_name]
+                except KeyError:
+                    raise RuntimeError(f"Cannot replace tag '{tag}' since '{data_store_name}' was not found.")
+                expanded_args.append(preface + url + postscript)
             else:
-                match = tag_fingerprint.search(arg)
-                if match:
-                    preface = arg[: match.start()]
-                    tag = match.group()
-                    postscript = arg[match.end() :]
-                    data_store_name = tag[6:-2]
-                    try:
-                        url = database_urls[data_store_name]
-                    except KeyError:
-                        raise RuntimeError(f"Cannot replace tag '{tag}' since '{data_store_name}' was not found.")
-                    expanded_args.append(preface + url + postscript)
-                else:
-                    expanded_args.append(arg)
+                expanded_args.append(arg)
         return expanded_args
 
     def create_tool_instance(self, basedir):
