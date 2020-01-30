@@ -25,6 +25,7 @@ from PySide2.QtWidgets import QWidget, QStatusBar, QInputDialog, QFileDialog, QF
 from PySide2.QtCore import Slot, Qt, QUrl, QFileInfo
 from ..config import STATUSBAR_SS, TREEVIEW_HEADER_SS, APPLICATION_PATH, TOOL_TYPES, REQUIRED_KEYS
 from ..helpers import busy_effect
+from ..tool_specifications import ToolSpecification
 from .custom_menus import AddIncludesPopupMenu, CreateMainProgramPopupMenu
 
 
@@ -504,7 +505,7 @@ class ToolSpecificationWidget(QWidget):
         self.definition["inputfiles_opt"] = [i.text() for i in self.inputfiles_opt_model.findItems("", flags)]
         self.definition["outputfiles"] = [i.text() for i in self.outputfiles_model.findItems("", flags)]
         # Strip whitespace from args before saving it to JSON
-        self.definition["cmdline_args"] = " ".join(self.ui.lineEdit_args.text().split())
+        self.definition["cmdline_args"] = ToolSpecification.split_cmdline_args(self.ui.lineEdit_args.text())
         for k in REQUIRED_KEYS:
             if not self.definition[k]:
                 self.statusbar.showMessage("{} missing".format(k), 3000)

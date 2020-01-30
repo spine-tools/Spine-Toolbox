@@ -48,6 +48,7 @@ class Tool(ProjectItem):
         """
         super().__init__(name, description, x, y, toolbox.project(), logger)
         self._toolbox = toolbox
+        self._downstream_resources = list()
         self.last_return_code = None
         self.source_file_model = QStandardItemModel()
         self.populate_source_file_model(None)
@@ -397,7 +398,13 @@ class Tool(ProjectItem):
                         return output_files
         return output_files
 
+    def execute_backward(self, resources):
+        """See base class."""
+        self._downstream_resources = resources.copy()
+        return True
+
     def execute_forward(self, resources):
+        """See base class."""
         if not self.tool_specification():
             self._logger.msg_warning.emit(f"Tool <b>{self.name}</b> has no Tool specification to execute")
             return False
@@ -407,11 +414,11 @@ class Tool(ProjectItem):
             work_dir = self._toolbox.work_dir
             if not work_dir:
                 self._toolbox.msg_error.emit("Work directory missing. Please check Settings.")
-                return ExecutionState.ABORT
+                return False
             if not self.basedir:
                 self.basedir = tempfile.mkdtemp(
                     suffix='__toolbox', prefix=self.tool_specification().short_name + '__', dir=work_dir
-            )
+                )
             # Make work directory anchor with path as tooltip
             work_anchor = (
                 "<a style='color:#99CCFF;' title='"
@@ -461,19 +468,25 @@ class Tool(ProjectItem):
                     # Creating directories failed -> abort
                     self._logger.msg_error.emit("Creating input subdirectories failed. Tool execution aborted.")
                     return False
+        optional_file_copy_paths = dict()
         # Check if there are any optional input files to copy
         if self.opt_input_file_model.rowCount() > 0:
             self._logger.msg.emit("*** Searching for optional input files ***")
             optional_file_paths = self._find_optional_input_files(resources)
             for k, v in optional_file_paths.items():
                 self._logger.msg.emit(f"\tFound <b>{len(v)}</b> files matching pattern <b>{k}</b>")
-            if not self.copy_optional_input_files(optional_file_paths):
-                self._logger.msg_warning.emit("Copying optional input files failed")
+            optional_file_copy_paths = self._optional_output_destination_paths(optional_file_paths)
+            self._copy_optional_input_files(optional_file_copy_paths)
         if not self.create_output_dirs():
             self._logger.msg_error.emit("Creating output subdirectories failed. Tool execution aborted.")
             return False
+        database_urls = self._database_urls(resources + self._downstream_resources)
         self.instance = self.tool_specification().create_tool_instance(self.basedir)
-        self.instance.prepare()  # Make command and stuff
+        try:
+            self.instance.prepare(list(optional_file_copy_paths.values()), database_urls)
+        except RuntimeError as error:
+            self._logger.msg_error.emit(f"Failed to prepare tool instance: {error}")
+            return False
         self.instance.instance_finished.connect(self.handle_execution_finished)
         self._logger.msg.emit(
             f"*** Starting instance of Tool specification <b>{self.tool_specification().name}</b> ***"
@@ -505,6 +518,49 @@ class Tool(ProjectItem):
                 # It's a file
                 n_file += 1
         return n_dir, n_file
+
+    def _optional_output_destination_paths(self, paths):
+        """
+        Returns a dictionary telling where optional output files should be copied to before execution.
+
+        Args:
+            paths (dict): key is the optional file name pattern, value is a list of paths to source files
+        Returns:
+            dict: a map from source path to destination path
+        """
+        destination_paths = dict()
+        for dst, src_paths in paths.items():
+            for src_path in src_paths:
+                if not os.path.exists(src_path):
+                    self._logger.msg_error.emit(f"\tFile <b>{src_path}</b> does not exist")
+                    continue
+                # Get file name that matched the search pattern
+                _, dst_fname = os.path.split(src_path)
+                # Check if the search pattern included subdirectories (e.g. 'input/*.csv')
+                # This means that /input/ directory should be created to work (or source) directory
+                # before copying the files
+                dst_subdir, _search_pattern = os.path.split(dst)
+                if not dst_subdir:
+                    # No subdirectories to create
+                    self._logger.msg.emit(f"\tCopying optional file <b>{dst_fname}</b>")
+                    dst_path = os.path.abspath(os.path.join(self.basedir, dst_fname))
+                else:
+                    # Create subdirectory structure to work or source directory
+                    work_subdir_path = os.path.abspath(os.path.join(self.basedir, dst_subdir))
+                    if not os.path.exists(work_subdir_path):
+                        try:
+                            create_dir(work_subdir_path)
+                        except OSError:
+                            self._logger.msg_error.emit(
+                                f"[OSError] Creating directory <b>{work_subdir_path}</b> failed."
+                            )
+                            continue
+                    self._logger.msg.emit(
+                        f"\tCopying optional file <b>{dst_fname}</b> into subdirectory <b>{os.path.sep}{dst_subdir}</b>"
+                    )
+                    dst_path = os.path.abspath(os.path.join(work_subdir_path, dst_fname))
+                destination_paths[src_path] = dst_path
+        return destination_paths
 
     def create_input_dirs(self):
         """Iterate items in required input files and check
@@ -590,71 +646,35 @@ class Tool(ProjectItem):
         self._logger.msg.emit(f"\tCopied <b>{n_copied_files}</b> input file(s)")
         return True
 
-    def copy_optional_input_files(self, paths):
+    def _copy_optional_input_files(self, paths):
         """Copy optional input files from given paths to work or source directory, depending on
         where the Tool specification requires them to be.
 
         Args:
-            paths (dict): Key is the optional file name pattern, value is a list of paths to source files.
-
-        Returns:
-            Boolean variable depending on operation success
+            paths (dict): key is the source path, value is the destination path
         """
         n_copied_files = 0
-        for dst, src_paths in paths.items():
-            if not isinstance(src_paths, list):
-                self._logger.msg_error.emit("Copying optional input files failed. src_paths should be a list.")
-                return False
-            for src_path in src_paths:
-                if not os.path.exists(src_path):
-                    self._logger.msg_error.emit(f"\tFile <b>{src_path}</b> does not exist")
-                    continue
-                # Get file name that matched the search pattern
-                _, dst_fname = os.path.split(src_path)
-                # Check if the search pattern included subdirectories (e.g. 'input/*.csv')
-                # This means that /input/ directory should be created to work (or source) directory
-                # before copying the files
-                dst_subdir, _search_pattern = os.path.split(dst)
-                if not dst_subdir:
-                    # No subdirectories to create
-                    self._logger.msg.emit(f"\tCopying optional file <b>{dst_fname}</b>")
-                    dst_path = os.path.abspath(os.path.join(self.basedir, dst_fname))
-                else:
-                    # Create subdirectory structure to work or source directory
-                    work_subdir_path = os.path.abspath(os.path.join(self.basedir, dst_subdir))
-                    if not os.path.exists(work_subdir_path):
-                        try:
-                            create_dir(work_subdir_path)
-                        except OSError:
-                            self._logger.msg_error.emit(
-                                f"[OSError] Creating directory <b>{work_subdir_path}</b> failed."
-                            )
-                            continue
-                    self._logger.msg.emit(
-                        f"\tCopying optional file <b>{dst_fname}</b> into subdirectory <b>{os.path.sep}{dst_subdir}</b>"
+        for src_path, dst_path in paths.items():
+            try:
+                shutil.copyfile(src_path, dst_path)
+                n_copied_files += 1
+            except OSError as e:
+                self._logger.msg_error.emit(f"Copying optional file <b>{src_path}</b> to <b>{dst_path}</b> failed")
+                self._logger.msg_error.emit(f"{e}")
+                if e.errno == 22:
+                    msg = (
+                        "The reason might be:\n"
+                        "[1] The destination file already exists and it cannot be "
+                        "overwritten because it is locked by Julia or some other application.\n"
+                        "[2] You don't have the necessary permissions to overwrite the file.\n"
+                        "To solve the problem, you can try the following:\n[1] Execute the Tool in work "
+                        "directory.\n[2] If you are executing a Julia Tool with Julia 0.6.x, upgrade to "
+                        "Julia 0.7 or newer.\n"
+                        "[3] Close any other background application(s) that may have locked the file.\n"
+                        "And try again.\n"
                     )
-                    dst_path = os.path.abspath(os.path.join(work_subdir_path, dst_fname))
-                try:
-                    shutil.copyfile(src_path, dst_path)
-                    n_copied_files += 1
-                except OSError as e:
-                    self._logger.msg_error.emit(f"Copying optional file <b>{src_path}</b> to <b>{dst_path}</b> failed")
-                    self._logger.msg_error.emit(f"{e}")
-                    if e.errno == 22:
-                        msg = (
-                            "The reason might be:\n"
-                            "[1] The destination file already exists and it cannot be "
-                            "overwritten because it is locked by Julia or some other application.\n"
-                            "[2] You don't have the necessary permissions to overwrite the file.\n"
-                            "To solve the problem, you can try the following:\n[1] Execute the Tool in work "
-                            "directory.\n[2] If you are executing a Julia Tool with Julia 0.6.x, upgrade to "
-                            "Julia 0.7 or newer.\n"
-                            "[3] Close any other background application(s) that may have locked the file.\n"
-                            "And try again.\n"
-                        )
-                        self._logger.msg_warning.emit(msg)
+                    self._logger.msg_warning.emit(msg)
         self._logger.msg.emit(f"\tCopied <b>{n_copied_files}</b> optional input file(s)")
-        return True
 
     def copy_program_files(self):
         """Copies Tool specification source files to base directory."""
@@ -772,7 +792,8 @@ class Tool(ProjectItem):
                 found_file_paths.append(filepath)
         return found_file_paths if found_file_paths else None
 
-    def _find_optional_files(self, pattern, available_file_paths):
+    @staticmethod
+    def _find_optional_files(pattern, available_file_paths):
         """Returns a list of found paths to files that match the given pattern in files available
         from the execution instance.
 
@@ -1070,3 +1091,19 @@ class Tool(ProjectItem):
             else:
                 flattened[required_file] = None
         return flattened
+
+    @staticmethod
+    def _database_urls(resources):
+        """
+        Pries database URLs and their providers' names from resources.
+
+        Args:
+            resources (list): a list of ProjectItemResource objects
+        Returns:
+            dict: a mapping from resource provider's name to a database URL.
+        """
+        urls = dict()
+        for resource in resources:
+            if resource.type_ == "database":
+                urls[resource.provider.name] = resource.url
+        return urls

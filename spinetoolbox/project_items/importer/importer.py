@@ -33,7 +33,11 @@ from spinetoolbox.widgets.import_preview_window import ImportPreviewWindow
 from . import importer_program
 from spinetoolbox.helpers import serialize_path, deserialize_path
 
-_CONNECTOR_NAME_TO_CLASS = {"CSVConnector": CSVConnector, "ExcelConnector": ExcelConnector, "GdxConnector": GdxConnector}
+_CONNECTOR_NAME_TO_CLASS = {
+    "CSVConnector": CSVConnector,
+    "ExcelConnector": ExcelConnector,
+    "GdxConnector": GdxConnector,
+}
 
 
 class Importer(ProjectItem):
@@ -413,7 +417,7 @@ class Importer(ProjectItem):
                 duplicates.append(file_name)
         if duplicates:
             self.add_notification("Duplicate input files from upstream items:<br>{}".format("<br>".join(duplicates)))
-    
+
     @staticmethod
     def upgrade_from_no_version_to_version_1(item_name, old_item_dict, old_project_dir):
         """Converts mappings to a list, where each element contains two dictionaries,

@@ -46,8 +46,12 @@ class Notification(QWidget):
         layout.addWidget(self.label)
         self.setLayout(layout)
         self.setFixedSize(self.w, self.h)
-        ss = "QWidget{background-color: #ffc2b3;" "border-width: 2px;" "border-color: #ffebe6;" \
-             "border-style: groove; border-radius: 16px;}"
+        ss = (
+            "QWidget{background-color: #ffc2b3;"
+            "border-width: 2px;"
+            "border-color: #ffebe6;"
+            "border-style: groove; border-radius: 16px;}"
+        )
         self.setStyleSheet(ss)
         self.setAttribute(Qt.WA_DeleteOnClose)
         # Get combobox size and position to calculate the position for the pop-up

@@ -23,8 +23,16 @@ import logging
 import sys
 from PySide2.QtCore import QItemSelectionModel, QVariantAnimation
 from PySide2.QtWidgets import QApplication
-from .mock_helpers import clean_up_toolboxui_with_project, create_toolboxui_with_project, \
-    add_ds, add_dc, add_tool, add_view, add_importer, add_exporter
+from .mock_helpers import (
+    clean_up_toolboxui_with_project,
+    create_toolboxui_with_project,
+    add_ds,
+    add_dc,
+    add_tool,
+    add_view,
+    add_importer,
+    add_exporter,
+)
 from spinetoolbox.tool_specifications import PythonTool
 
 

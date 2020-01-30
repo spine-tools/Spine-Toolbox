@@ -55,9 +55,9 @@ class TestProjectUpgrader(unittest.TestCase):
 
     def test_is_valid1(self):
         """Tests that the pre-made project information dictionary is valid according to project version 1."""
-        project_config_file = os.path.abspath(os.path.join(os.curdir, "tests", "test_resources",
-                                                           "Project Directory", ".spinetoolbox",
-                                                           "project.json"))
+        project_config_file = os.path.abspath(
+            os.path.join(os.curdir, "tests", "test_resources", "Project Directory", ".spinetoolbox", "project.json")
+        )
         project_upgrader = ProjectUpgrader(self.toolbox)
         project_dict = project_upgrader.open_proj_json(project_config_file)
         retval = project_upgrader.is_valid(project_dict)

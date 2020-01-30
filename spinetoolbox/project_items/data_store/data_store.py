@@ -442,12 +442,7 @@ class DataStore(ProjectItem):
         new_data_store = dict(old_item_dict)
         if "reference" in new_data_store:
             url_path = new_data_store["reference"]
-            url = {
-                "dialect": "sqlite",
-                "username": None,
-                "host": None,
-                "port": None,
-            }
+            url = {"dialect": "sqlite", "username": None, "host": None, "port": None}
         else:
             url = new_data_store["url"]
             url_path = url["database"]

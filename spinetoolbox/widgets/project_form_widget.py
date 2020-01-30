@@ -60,9 +60,7 @@ class NewProjectForm(QWidget):
         start_dir = QStandardPaths.writableLocation(QStandardPaths.DocumentsLocation)
         if not start_dir:
             start_dir = APPLICATION_PATH
-        answer = QFileDialog.getExistingDirectory(
-            self, "Select a project directory", start_dir
-        )
+        answer = QFileDialog.getExistingDirectory(self, "Select a project directory", start_dir)
         if not answer:  # Canceled (american-english), cancelled (british-english)
             return
         # Check that it's a directory
@@ -87,8 +85,10 @@ class NewProjectForm(QWidget):
             QMessageBox.information(self, "Note", "Please select a project directory")
             return
         if os.path.isdir(os.path.join(self.dir, ".spinetoolbox")):
-            msg = "Directory \n\n{0}\n\nalready contains a Spine Toolbox project." \
-                  "\nWould you like to overwrite the existing project?".format(self.dir)
+            msg = (
+                "Directory \n\n{0}\n\nalready contains a Spine Toolbox project."
+                "\nWould you like to overwrite the existing project?".format(self.dir)
+            )
             message_box = QMessageBox(
                 QMessageBox.Question, "Overwrite?", msg, buttons=QMessageBox.Ok | QMessageBox.Cancel, parent=self
             )
@@ -105,10 +105,12 @@ class NewProjectForm(QWidget):
         # Check for invalid characters for a folder name
         if any((True for x in self.name if x in INVALID_CHARS)):
             # noinspection PyCallByClass, PyArgumentList
-            QMessageBox.warning(self,
-                                "Invalid name",
-                                "Project name contains invalid character(s)."
-                                "\nCharacters {0} are not allowed.".format(" ".join(INVALID_CHARS)))
+            QMessageBox.warning(
+                self,
+                "Invalid name",
+                "Project name contains invalid character(s)."
+                "\nCharacters {0} are not allowed.".format(" ".join(INVALID_CHARS)),
+            )
             return
         # Create new project
         self.call_create_project()

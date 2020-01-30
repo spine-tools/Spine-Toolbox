@@ -264,4 +264,3 @@ class MappingOptionsWidget(QWidget):
         self._ui.time_series_repeat_check_box.setCheckState(
             Qt.Checked if is_time_series and par.options.repeat else Qt.Unchecked
         )
-

@@ -677,8 +677,7 @@ class ProjectDirectoryIconProvider(QFileIconProvider):
         if os.path.exists(os.path.join(p, ".spinetoolbox")):
             # logging.debug("found project dir:{0}".format(p))
             return self.spine_icon
-        else:
-            return super().icon(info)
+        return super().icon(info)
 
 
 def path_in_dir(path, directory):
@@ -735,7 +734,9 @@ def serialize_url(url, project_dir):
         serialized = {
             "type": "file_url",
             "relative": is_relative,
-            "path": os.path.relpath(path, project_dir).replace(os.sep, "/") if is_relative else path.replace(os.sep, "/"),
+            "path": os.path.relpath(path, project_dir).replace(os.sep, "/")
+            if is_relative
+            else path.replace(os.sep, "/"),
             "scheme": parsed.scheme,
         }
     else:

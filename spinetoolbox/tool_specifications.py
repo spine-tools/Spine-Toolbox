@@ -16,8 +16,9 @@ Contains Tool specification classes.
 :date:   24.1.2018
 """
 
-import os
 import logging
+import os
+import re
 from collections import OrderedDict
 from .metaobject import MetaObject
 from .config import REQUIRED_KEYS, OPTIONAL_KEYS, LIST_REQUIRED_KEYS
@@ -64,9 +65,12 @@ class ToolSpecification(MetaObject):
         else:
             self.path = path
         self.includes = includes
-        # TODO: Deal with cmdline arguments that have spaces. They should be stored in a list in the definition file
-        if (cmdline_args is not None) and (cmdline_args != ''):
-            self.cmdline_args = cmdline_args.split(" ")
+        if cmdline_args is not None:
+            if isinstance(cmdline_args, str):
+                # Old project files may have the command line arguments as plain strings.
+                self.cmdline_args = self.split_cmdline_args(cmdline_args)
+            else:
+                self.cmdline_args = cmdline_args
         else:
             self.cmdline_args = []
         self.inputfiles = set(inputfiles) if inputfiles else set()
@@ -127,9 +131,48 @@ class ToolSpecification(MetaObject):
                     pass
         return kwargs
 
-    def get_cmdline_args(self):
-        """Returns tool specification args as list."""
-        return self.cmdline_args
+    def get_cmdline_args(self, optional_input_files, database_urls):
+        """
+        Returns tool's command line args as list.
+
+        Replaces special tags in arguments:
+
+        - @@optional_inputs@@ expands to a space-separated list of Tool's optional input files
+        - @@url:<Data Store name>@@ expands to the URL provided by a named data store
+
+        Args:
+            optional_input_files (list): a list of Tool's optional input file names
+            database_urls (dict): a mapping from URL provider (Data Store name) to URL string
+        Returns:
+            list: a list of expanded command line arguments
+        """
+        expanded_args = list()
+        tag_fingerprint = re.compile("@@url:.+@@")
+        for arg in self.cmdline_args:
+            preface, tag, postscript = arg.partition("@@optional_inputs@@")
+            if tag:
+                if optional_input_files:
+                    first_input_arg = preface + optional_input_files[0]
+                    expanded_args.append(first_input_arg)
+                    expanded_args += optional_input_files[1:]
+                    expanded_args[-1] = expanded_args[-1] + postscript
+                else:
+                    expanded_args.append(preface + postscript)
+            else:
+                match = tag_fingerprint.search(arg)
+                if match:
+                    preface = arg[: match.start()]
+                    tag = match.group()
+                    postscript = arg[match.end() :]
+                    data_store_name = tag[6:-2]
+                    try:
+                        url = database_urls[data_store_name]
+                    except KeyError:
+                        raise RuntimeError(f"Cannot replace tag '{tag}' since '{data_store_name}' was not found.")
+                    expanded_args.append(preface + url + postscript)
+                else:
+                    expanded_args.append(arg)
+        return expanded_args
 
     def create_tool_instance(self, basedir):
         """Returns an instance of the tool specification configured to run in the given directory.
@@ -139,6 +182,51 @@ class ToolSpecification(MetaObject):
             basedir (str): Path to directory where the instance will run
         """
         raise NotImplementedError
+
+    @staticmethod
+    def split_cmdline_args(arg_string):
+        """
+        Splits a string of command line into a list of tokens.
+
+        Things in single ('') and double ("") quotes are kept as single tokens
+        while the quotes themselves are stripped away.
+        Thus, `--file="a long quoted 'file' name.txt` becomes ["--file=a long quoted 'file' name.txt"]
+
+        Args:
+            arg_string (str): command line arguments as a string
+        Returns:
+            list: a list of tokens
+        """
+        # The expandable tags may include whitespaces, particularly in Data Store names.
+        # We replace the tags temporarily by '@@@' to simplify splitting
+        # and put them back to the args list after the string has been split.
+        tag_safe = list()
+        tag_fingerprint = re.compile("@@url:.+?@@")
+        match = tag_fingerprint.search(arg_string)
+        while match:
+            tag_safe.append(match.group())
+            arg_string = arg_string[: match.start()] + "@@@" + arg_string[match.end() :]
+            match = tag_fingerprint.search(arg_string)
+        tokens = list()
+        current_word = ""
+        quoted_context = False
+        for character in arg_string:
+            if character in ("'", '"') and not quoted_context:
+                quoted_context = character
+            elif character == quoted_context:
+                quoted_context = False
+            elif not character.isspace() or quoted_context:
+                current_word = current_word + character
+            else:
+                tokens.append(current_word)
+                current_word = ""
+        if current_word:
+            tokens.append(current_word)
+        for index, token in enumerate(tokens):
+            preface, tag_token, prologue = token.partition("@@@")
+            if tag_token:
+                tokens[index] = preface + tag_safe.pop(0) + prologue
+        return tokens
 
 
 class GAMSTool(ToolSpecification):

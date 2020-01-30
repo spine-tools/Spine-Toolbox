@@ -49,10 +49,11 @@ def create_toolboxui():
 def create_project(toolbox):
     """Creates a project for the given ToolboxUI."""
     with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project") as mock_save_project, mock.patch(
-            "spinetoolbox.project.create_dir"
+        "spinetoolbox.project.create_dir"
     ) as mock_create_dir:
-        project_dir = os.path.abspath(os.path.join(os.curdir, "tests", "test_resources",
-                                                   "This dir should not exist after tests"))
+        project_dir = os.path.abspath(
+            os.path.join(os.curdir, "tests", "test_resources", "This dir should not exist after tests")
+        )
         toolbox.create_project("UnitTest Project", "Project for unit tests.", project_dir)
     return
 
@@ -74,8 +75,9 @@ def create_toolboxui_with_project():
         mock_python_repl.return_value = MockQWidget()
         mock_qsettings_value.side_effect = qsettings_value_side_effect
         toolbox = ToolboxUI()
-        project_dir = os.path.abspath(os.path.join(os.curdir, "tests", "test_resources",
-                                                   "This dir should not exist after tests"))
+        project_dir = os.path.abspath(
+            os.path.join(os.curdir, "tests", "test_resources", "This dir should not exist after tests")
+        )
         toolbox.create_project("UnitTest Project", "Project for unit tests.", project_dir)
     return toolbox
 
@@ -112,8 +114,9 @@ def add_ds(project, name, x=0, y=0):
     """Helper function to create a Data Store to given project with given name and coordinates."""
     item = dict(name=name, description="", url=dict(), x=x, y=y)
     # This mocks create_dir in both project_item.py and in data_store.py
-    with mock.patch("spinetoolbox.project_item.create_dir") as mock_create_dir, \
-            mock.patch("spinetoolbox.project_items.data_store.data_store.create_dir") as mock_create_dir2:
+    with mock.patch("spinetoolbox.project_item.create_dir") as mock_create_dir, mock.patch(
+        "spinetoolbox.project_items.data_store.data_store.create_dir"
+    ) as mock_create_dir2:
         project.add_project_items("Data Stores", item)
     return
 
@@ -146,8 +149,9 @@ def add_importer(project, name, x=0, y=0):
     """Helper function to add an Importer View to given project."""
     item = dict(name=name, description="", mappings=None, x=x, y=y)
     # This mocks create_dir in both project_item.py and in importer.py
-    with mock.patch("spinetoolbox.project_item.create_dir") as mock_create_dir, \
-            mock.patch("spinetoolbox.project_items.importer.importer.create_dir") as mock_create_dir2:
+    with mock.patch("spinetoolbox.project_item.create_dir") as mock_create_dir, mock.patch(
+        "spinetoolbox.project_items.importer.importer.create_dir"
+    ) as mock_create_dir2:
         project.add_project_items("Importers", item)
     return
 

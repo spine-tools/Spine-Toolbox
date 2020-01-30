@@ -512,9 +512,9 @@ class RecentProjectsPopupMenu(CustomPopupMenu):
             for entry in recents_list:
                 name, filepath = entry.split("<>")
                 self.add_action(
-                        name,
-                        lambda checked=False, filepath=filepath: self.call_open_project(checked, filepath),
-                        tooltip=filepath
+                    name,
+                    lambda checked=False, filepath=filepath: self.call_open_project(checked, filepath),
+                    tooltip=filepath,
                 )
 
     @Slot(bool, str, name="call_open_project")
@@ -529,7 +529,7 @@ class RecentProjectsPopupMenu(CustomPopupMenu):
             # Project has been removed, remove it from recent projects list
             self._parent.remove_path_from_recent_projects(p)
             self._parent.msg_error.emit(
-                    "Opening selected project failed. Project file <b>{0}</b> may have been removed.".format(p)
+                "Opening selected project failed. Project file <b>{0}</b> may have been removed.".format(p)
             )
             return
         # Check if the same project is already open

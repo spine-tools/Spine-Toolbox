@@ -378,7 +378,6 @@ class CustomQFileSystemModel(QFileSystemModel):
 
 
 class DirValidator(QValidator):
-
     def __init__(self, parent=None):
         super().__init__(parent)
         self.state = None

@@ -62,9 +62,7 @@ class SpineToolboxProject(MetaObject):
         self.items_dir = None  # Full path to items directory
         self.config_file = None  # Full path to .spinetoolbox/project.json file
         if not self._create_project_structure(p_dir):
-            self._toolbox.msg_error.emit("Creating project directory "
-                                         "structure to <b>{0}</b> failed"
-                                         .format(p_dir))
+            self._toolbox.msg_error.emit("Creating project directory " "structure to <b>{0}</b> failed".format(p_dir))
 
     def connect_signals(self):
         """Connect signals to slots."""
@@ -140,7 +138,6 @@ class SpineToolboxProject(MetaObject):
             conn = {"from": [src_name, src_anchor], "to": [dst_name, dst_anchor]}
             connections.append(conn)
         project_dict["connections"] = connections
-        scene_rect = self._toolbox.ui.graphicsView.scene().sceneRect()
         items_dict = dict()  # Dictionary for storing project items
         # Traverse all items in project model by category
         for category_item in self._toolbox.project_item_model.root().children():

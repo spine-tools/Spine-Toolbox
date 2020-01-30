@@ -73,7 +73,7 @@ _MAPTYPE_DISPLAY_NAME = {
     ConstantMapping: "Constant",
     ColumnMapping: "Column",
     ColumnHeaderMapping: "Column Header",
-    RowMapping: "Row"
+    RowMapping: "Row",
 }
 
 _DISPLAY_TYPE_TO_TYPE = {
@@ -82,7 +82,7 @@ _DISPLAY_TYPE_TO_TYPE = {
     "Time series": ParameterTimeSeriesMapping,
     "Time pattern": ParameterTimePatternMapping,
     "Definition": ParameterDefinitionMapping,
-    "None": NoneMapping
+    "None": NoneMapping,
 }
 
 _TYPE_TO_DISPLAY_TYPE = {value: key for key, value in _DISPLAY_TYPE_TO_TYPE.items()}
@@ -265,7 +265,9 @@ class MappingPreviewModel(MinimalTableModel):
             for ed in mapping.parameters.extra_dimensions:
                 if self.index_in_mapping(ed, index):
                     return _MAPPING_COLORS["parameter extra dimension"]
-        if isinstance(mapping.parameters, ParameterDefinitionMapping) and self.index_in_mapping(mapping.parameters.name, index):
+        if isinstance(mapping.parameters, ParameterDefinitionMapping) and self.index_in_mapping(
+            mapping.parameters.name, index
+        ):
             # parameter name colors
             return _MAPPING_COLORS["parameter name"]
         if self.index_in_mapping(mapping.name, index):

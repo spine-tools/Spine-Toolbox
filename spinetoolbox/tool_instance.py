@@ -38,7 +38,7 @@ class ToolInstance(QObject):
             tool_specification (ToolSpecification): the tool specification for this instance
             basedir (str): the path to the directory where this instance should run
         """
-        super().__init__()  # TODO: Should this be QObject.__init__(self) like in MetaObject class?
+        super().__init__()
         self._toolbox = toolbox
         self.tool_specification = tool_specification
         self.basedir = basedir
@@ -60,9 +60,14 @@ class ToolInstance(QObject):
         """[Obsolete] Removes Tool instance files from work directory."""
         shutil.rmtree(self.basedir, ignore_errors=True)
 
-    def prepare(self):
+    def prepare(self, optional_input_files, database_urls):
         """Prepares this instance for execution.
+
         Implement in subclasses to perform specific initialization.
+
+        Args:
+            optional_input_files (list): list of tool's optional input files
+            database_urls (dict): a mapping from Data Store name to database URL
         """
         raise NotImplementedError()
 
@@ -79,16 +84,22 @@ class ToolInstance(QObject):
         """
         raise NotImplementedError()
 
-    def append_cmdline_args(self):
-        """Appends Tool specification command line args into instance args list."""
-        self.args += self.tool_specification.get_cmdline_args()
+    def append_cmdline_args(self, optional_input_files, database_urls):
+        """
+        Appends Tool specification command line args into instance args list.
+
+        Args:
+            optional_input_files (list): list of tool's optional input files
+            database_urls (dict): a mapping from Data Store name to database URL
+        """
+        self.args += self.tool_specification.get_cmdline_args(optional_input_files, database_urls)
 
 
 class GAMSToolInstance(ToolInstance):
     """Class for GAMS Tool instances."""
 
-    def prepare(self):
-        """Prepares this instance for execution."""
+    def prepare(self, optional_input_files, database_urls):
+        """See base class."""
         gams_path = self._toolbox.qsettings().value("appSettings/gamsPath", defaultValue="")
         if gams_path != '':
             gams_exe = gams_path
@@ -97,9 +108,9 @@ class GAMSToolInstance(ToolInstance):
         self.program = gams_exe
         self.args.append(self.tool_specification.main_prgm)
         self.args.append("curDir=")
-        self.args.append("{0}".format(self.basedir))
+        self.args.append(self.basedir)
         self.args.append("logoption=3")  # TODO: This should be an option in Settings
-        self.append_cmdline_args()  # Append Tool specific cmd line args into args list
+        self.append_cmdline_args(optional_input_files, database_urls)
 
     def execute(self, **kwargs):
         """Executes a prepared instance."""
@@ -119,16 +130,16 @@ class GAMSToolInstance(ToolInstance):
         if self.exec_mngr.process_failed:  # process_failed should be True if ret != 0
             if self.exec_mngr.process_failed_to_start:
                 self._toolbox.msg_error.emit(
-                    "\t<b>{0}</b> failed to start. Make sure that "
+                    f"\t<b>{self.exec_mngr.program()}</b> failed to start. Make sure that "
                     "GAMS is installed properly on your computer "
-                    "and GAMS directory is given in Settings (F1).".format(self.exec_mngr.program())
+                    "and GAMS directory is given in Settings (F1)."
                 )
             else:
                 try:
                     return_msg = self.tool_specification.return_codes[ret]
-                    self._toolbox.msg_error.emit("\t<b>{0}</b> [exit code:{1}]".format(return_msg, ret))
+                    self._toolbox.msg_error.emit(f"\t<b>{return_msg}</b> [exit code:{ret}]")
                 except KeyError:
-                    self._toolbox.msg_error.emit("\tUnknown return code ({0})".format(ret))
+                    self._toolbox.msg_error.emit(f"\tUnknown return code ({ret})")
         else:  # Return code 0: success
             self._toolbox.msg.emit("\tTool specification execution finished")
         self.exec_mngr.deleteLater()
@@ -141,7 +152,6 @@ class JuliaToolInstance(ToolInstance):
 
     def __init__(self, toolbox, tool_specification, basedir):
         """
-
         Args:
             toolbox (ToolboxUI): QMainWindow instance
             tool_specification (ToolSpecification): the tool specification for this instance
@@ -150,20 +160,20 @@ class JuliaToolInstance(ToolInstance):
         super().__init__(toolbox, tool_specification, basedir)
         self.ijulia_command_list = list()
 
-    def prepare(self):
-        """Prepares this instance for execution."""
+    def prepare(self, optional_input_files, database_urls):
+        """See base class."""
         work_dir = self.basedir
         use_embedded_julia = self._toolbox.qsettings().value("appSettings/useEmbeddedJulia", defaultValue="2")
         if use_embedded_julia == "2":
             # Prepare Julia REPL command
-            # TODO: See if this can be simplified
-            mod_work_dir = work_dir.__repr__().strip("'")
-            args = r'["' + r'", "'.join(self.tool_specification.get_cmdline_args()) + r'"]'
+            mod_work_dir = repr(work_dir).strip("'")
+            cmdline_args = self.tool_specification.get_cmdline_args(optional_input_files, database_urls)
+            args = '["' + repr('", "'.join(cmdline_args)).strip("'") + '"]'
             self.ijulia_command_list += [
-                r'cd("{}");'.format(mod_work_dir),
-                r'empty!(ARGS);',
-                r'append!(ARGS, {});'.format(args),
-                r'include("{}")'.format(self.tool_specification.main_prgm),
+                f'cd("{mod_work_dir}");',
+                'empty!(ARGS);',
+                f'append!(ARGS, {args});',
+                f'include("{self.tool_specification.main_prgm}")',
             ]
         else:
             # Prepare command "julia --project={PROJECT_DIR} script.jl"
@@ -179,7 +189,7 @@ class JuliaToolInstance(ToolInstance):
             self.program = julia_exe
             self.args.append(f"--project={julia_project_path}")
             self.args.append(script_path)
-            self.append_cmdline_args()
+            self.append_cmdline_args(optional_input_files, database_urls)
 
     def execute(self, **kwargs):
         """Executes a prepared instance."""
@@ -205,9 +215,9 @@ class JuliaToolInstance(ToolInstance):
         if ret != 0:
             try:
                 return_msg = self.tool_specification.return_codes[ret]
-                self._toolbox.msg_error.emit("\t<b>{0}</b> [exit code: {1}]".format(return_msg, ret))
+                self._toolbox.msg_error.emit(f"\t<b>{return_msg}</b> [exit code: {ret}]")
             except KeyError:
-                self._toolbox.msg_error.emit("\tUnknown return code ({0})".format(ret))
+                self._toolbox.msg_error.emit(f"\tUnknown return code ({ret})")
         else:
             self._toolbox.msg.emit("\tTool specification execution finished")
         self.exec_mngr.deleteLater()
@@ -225,15 +235,15 @@ class JuliaToolInstance(ToolInstance):
         if self.exec_mngr.process_failed:  # process_failed should be True if ret != 0
             if self.exec_mngr.process_failed_to_start:
                 self._toolbox.msg_error.emit(
-                    "\t<b>{0}</b> failed to start. Make sure that "
-                    "Julia is installed properly on your computer.".format(self.exec_mngr.program())
+                    f"\t<b>{self.exec_mngr.program()}</b> failed to start. Make sure that "
+                    "Julia is installed properly on your computer."
                 )
             else:
                 try:
                     return_msg = self.tool_specification.return_codes[ret]
-                    self._toolbox.msg_error.emit("\t<b>{0}</b> [exit code:{1}]".format(return_msg, ret))
+                    self._toolbox.msg_error.emit(f"\t<b>{return_msg}</b> [exit code:{ret}]")
                 except KeyError:
-                    self._toolbox.msg_error.emit("\tUnknown return code ({0})".format(ret))
+                    self._toolbox.msg_error.emit(f"\tUnknown return code ({ret})")
         else:  # Return code 0: success
             self._toolbox.msg.emit("\tTool specification execution finished")
         self.exec_mngr.deleteLater()
@@ -255,8 +265,8 @@ class PythonToolInstance(ToolInstance):
         super().__init__(toolbox, tool_specification, basedir)
         self.ipython_command_list = list()
 
-    def prepare(self):
-        """Prepares this instance for execution."""
+    def prepare(self, optional_input_files, database_urls):
+        """See base class."""
         work_dir = self.basedir
         use_embedded_python = self._toolbox.qsettings().value("appSettings/useEmbeddedPython", defaultValue="0")
         if use_embedded_python == "2":
@@ -264,14 +274,14 @@ class PythonToolInstance(ToolInstance):
             # 1st cmd: Change current work directory
             # 2nd cmd: Run script with given args
             # Cast args in list to strings and combine them to a single string
-            args = " ".join([repr(x) for x in self.tool_specification.get_cmdline_args()])
+            args = " ".join(self.tool_specification.get_cmdline_args(optional_input_files, database_urls))
             cd_work_dir_cmd = "%cd -q {0} ".format(work_dir)  # -q: quiet
             run_script_cmd = "%run \"{0}\" {1}".format(self.tool_specification.main_prgm, args)
             # Populate FIFO command queue
             self.ipython_command_list.append(cd_work_dir_cmd)
             self.ipython_command_list.append(run_script_cmd)
         else:
-            # Prepare command "python script.py"
+            # Prepare command "python script.py script_arguments"
             python_path = self._toolbox.qsettings().value("appSettings/pythonPath", defaultValue="")
             if python_path != "":
                 python_cmd = python_path
@@ -279,8 +289,8 @@ class PythonToolInstance(ToolInstance):
                 python_cmd = PYTHON_EXECUTABLE
             script_path = os.path.join(work_dir, self.tool_specification.main_prgm)
             self.program = python_cmd
-            self.args.append(script_path)  # TODO: Why are we doing this?
-            self.append_cmdline_args()
+            self.args.append(script_path)  # First argument for the Python interpreter is path to the tool script
+            self.append_cmdline_args(optional_input_files, database_urls)
 
     def execute(self, **kwargs):
         """Executes a prepared instance."""
@@ -306,9 +316,9 @@ class PythonToolInstance(ToolInstance):
         if ret != 0:
             try:
                 return_msg = self.tool_specification.return_codes[ret]
-                self._toolbox.msg_error.emit("\t<b>{0}</b> [exit code: {1}]".format(return_msg, ret))
+                self._toolbox.msg_error.emit(f"\t<b>{return_msg}</b> [exit code: {ret}]")
             except KeyError:
-                self._toolbox.msg_error.emit("\tUnknown return code ({0})".format(ret))
+                self._toolbox.msg_error.emit(f"\tUnknown return code ({ret})")
         else:
             self._toolbox.msg.emit("\tTool specification execution finished")
         self.exec_mngr.deleteLater()
@@ -326,15 +336,15 @@ class PythonToolInstance(ToolInstance):
         if self.exec_mngr.process_failed:  # process_failed should be True if ret != 0
             if self.exec_mngr.process_failed_to_start:
                 self._toolbox.msg_error.emit(
-                    "\t<b>{0}</b> failed to start. Make sure that "
-                    "Python is installed properly on your computer.".format(self.exec_mngr.program())
+                    f"\t<b>{self.exec_mngr.program()}</b> failed to start. Make sure that "
+                    "Python is installed properly on your computer."
                 )
             else:
                 try:
                     return_msg = self.tool_specification.return_codes[ret]
-                    self._toolbox.msg_error.emit("\t<b>{0}</b> [exit code:{1}]".format(return_msg, ret))
+                    self._toolbox.msg_error.emit(f"\t<b>{return_msg}</b> [exit code:{ret}]")
                 except KeyError:
-                    self._toolbox.msg_error.emit("\tUnknown return code ({0})".format(ret))
+                    self._toolbox.msg_error.emit(f"\tUnknown return code ({ret})")
         else:  # Return code 0: success
             self._toolbox.msg.emit("\tTool specification execution finished")
         self.exec_mngr.deleteLater()
@@ -345,15 +355,15 @@ class PythonToolInstance(ToolInstance):
 class ExecutableToolInstance(ToolInstance):
     """Class for Executable Tool instances."""
 
-    def prepare(self):
-        """Prepares this instance for execution."""
+    def prepare(self, optional_input_files, database_urls):
+        """See base class."""
         batch_path = os.path.join(self.basedir, self.tool_specification.main_prgm)
         if sys.platform != "win32":
             self.program = "sh"
             self.args.append(batch_path)
         else:
             self.program = batch_path
-        self.append_cmdline_args()  # Append Tool specific cmd line args into args list
+        self.append_cmdline_args(optional_input_files, database_urls)
 
     def execute(self, **kwargs):
         """Executes a prepared instance."""
@@ -371,13 +381,13 @@ class ExecutableToolInstance(ToolInstance):
         self.exec_mngr.execution_finished.disconnect(self.handle_execution_finished)
         if self.exec_mngr.process_failed:  # process_failed should be True if ret != 0
             if self.exec_mngr.process_failed_to_start:
-                self._toolbox.msg_error.emit("\t<b>{0}</b> failed to start.".format(self.exec_mngr.program()))
+                self._toolbox.msg_error.emit(f"\t<b>{self.exec_mngr.program()}</b> failed to start.")
             else:
                 try:
                     return_msg = self.tool_specification.return_codes[ret]
-                    self._toolbox.msg_error.emit("\t<b>{0}</b> [exit code:{1}]".format(return_msg, ret))
+                    self._toolbox.msg_error.emit(f"\t<b>{return_msg}</b> [exit code:{ret}]")
                 except KeyError:
-                    self._toolbox.msg_error.emit("\tUnknown return code ({0})".format(ret))
+                    self._toolbox.msg_error.emit(f"\tUnknown return code ({ret})")
         else:  # Return code 0: success
             self._toolbox.msg.emit("\tTool specification execution finished")
         self.exec_mngr.deleteLater()
