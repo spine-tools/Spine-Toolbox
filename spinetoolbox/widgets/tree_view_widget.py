@@ -35,7 +35,7 @@ from .edit_db_items_dialogs import RemoveEntitiesDialog
 from ..mvcmodels.entity_tree_models import RelationshipTreeModel
 from ..excel_import_export import export_spine_database_to_xlsx
 from ..helpers import busy_effect
-from ..plotting import plot_selection, PlottingError, GraphAndTreeViewPlottingHints
+from ..plotting import plot_selection, PlottingError, ParameterTablePlottingHints
 from ..config import APPLICATION_PATH
 
 
@@ -704,7 +704,7 @@ class TreeViewForm(DataStoreForm):
         elif option == "Plot":
             selection = table_view.selectedIndexes()
             try:
-                hints = GraphAndTreeViewPlottingHints(table_view)
+                hints = ParameterTablePlottingHints()
                 plot_widget = plot_selection(model, selection, hints)
             except PlottingError as error:
                 report_plotting_failure(error, self)

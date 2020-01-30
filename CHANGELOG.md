@@ -23,6 +23,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - New Setting: *Smooth links*. When active, links on the Design View follow a smooth curve rather than a straight line.
 - When execution traverses a link, a small animation is played to denote the flow of data. Users can set how quick
   they want this animation to be in Settings. The fastest setting effectively disables the animation.
+- Special 'tag' command line arguments are now available in Tool Specification which expand to, for example,
+  input database URLS or paths to optional input files when a Tool is executed.
 
 ### Changed
 - spinetoolbox is now a Python package. To start the app, use command `python -m spinetoolbox` or
