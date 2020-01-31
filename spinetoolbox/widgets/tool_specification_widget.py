@@ -21,7 +21,7 @@ is filled with all the information from the specification being edited.
 import os
 import json
 from PySide2.QtGui import QDesktopServices, QStandardItemModel, QStandardItem
-from PySide2.QtWidgets import QWidget, QStatusBar, QInputDialog, QFileDialog, QFileIconProvider, QMessageBox
+from PySide2.QtWidgets import QWidget, QStatusBar, QInputDialog, QFileDialog, QFileIconProvider, QMessageBox, QMenu
 from PySide2.QtCore import Slot, Qt, QUrl, QFileInfo
 from ..config import STATUSBAR_SS, TREEVIEW_HEADER_SS, APPLICATION_PATH, TOOL_TYPES, REQUIRED_KEYS
 from ..helpers import busy_effect
@@ -108,6 +108,7 @@ class ToolSpecificationWidget(QWidget):
         self.add_main_prgm_popup_menu = CreateMainProgramPopupMenu(self)
         self.ui.toolButton_add_main_program.setMenu(self.add_main_prgm_popup_menu)
         self.ui.toolButton_add_source_files.setStyleSheet('QToolButton::menu-indicator { image: none; }')
+        self.ui.toolButton_add_cmdline_tag.setMenu(self._make_add_cmdline_tag_menu())
         self.connect_signals()
 
     def connect_signals(self):
@@ -581,3 +582,46 @@ class ToolSpecificationWidget(QWidget):
         """
         if event:
             event.accept()
+
+    def _make_add_cmdline_tag_menu(self):
+        """Constructs a popup menu for the '@@' button."""
+        menu = QMenu(self.ui.toolButton_add_cmdline_tag)
+        action = menu.addAction("@@url_inputs@@")
+        action.triggered.connect(self._add_cmdline_tag_url_inputs)
+        action.setToolTip("Insert a tag that is replaced by all input database URLs.")
+        action = menu.addAction("@@url_outputs@@")
+        action.triggered.connect(self._add_cmdline_tag_url_outputs)
+        action.setToolTip("Insert a tag that is replaced be all output database URLs.")
+        action = menu.addAction("@@url:<data-store-name>@@")
+        action.triggered.connect(self._add_cmdline_tag_data_store_url)
+        action.setToolTip("Insert a tag that is replaced by the URL provided by Data Store '<data-store-name>'.")
+        action = menu.addAction("@@optional_inputs@@")
+        action.triggered.connect(self._add_cmdline_tag_optional_inputs)
+        action.setToolTip("Insert a tag that is replaced by a list of optional input files.")
+        return menu
+
+    @Slot("QAction")
+    def _add_cmdline_tag_url_inputs(self, _):
+        """Inserts @@url_inputs@@ tag to command line arguments."""
+        self.ui.lineEdit_args.insert("@@url_inputs@@")
+
+    @Slot("QAction")
+    def _add_cmdline_tag_url_outputs(self, _):
+        """Inserts @@url_outputs@@ tag to command line arguments."""
+        self.ui.lineEdit_args.insert("@@url_outputs@@")
+
+    @Slot("QAction")
+    def _add_cmdline_tag_data_store_url(self, _):
+        """Inserts @@url:<data-store-name>@@ tag to command line arguments and selects '<data-store-name>'."""
+        args_edit = self.ui.lineEdit_args
+        if args_edit.hasSelectedText():
+            cursor_position = args_edit.selectionStart()
+        else:
+            cursor_position = args_edit.cursorPosition()
+        args_edit.insert("@@url:<data-store-name>@@")
+        args_edit.setSelection(cursor_position + len("@@url:"), len("<data-store_name>"))
+
+    @Slot("QAction")
+    def _add_cmdline_tag_optional_inputs(self, _):
+        """Inserts @@optional_inputs@@ tag to command line arguments."""
+        self.ui.lineEdit_args.insert("@@optional_inputs@@")

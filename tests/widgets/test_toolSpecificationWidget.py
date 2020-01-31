@@ -78,6 +78,45 @@ class TestToolSpecificationWidget(unittest.TestCase):
         mock_add.assert_called_once()
         mock_close.assert_called_once()
 
+    def test_add_cmdline_tag_url_inputs(self):
+        menu = self.tool_specification_widget.ui.toolButton_add_cmdline_tag.menu()
+        url_inputs_action = self._find_action("@@url_inputs@@", menu.actions())
+        url_inputs_action.trigger()
+        args = self.tool_specification_widget.ui.lineEdit_args.text()
+        self.assertEqual(args, "@@url_inputs@@")
+
+    def test_add_cmdline_tag_url_outputs(self):
+        menu = self.tool_specification_widget.ui.toolButton_add_cmdline_tag.menu()
+        url_inputs_action = self._find_action("@@url_outputs@@", menu.actions())
+        url_inputs_action.trigger()
+        args = self.tool_specification_widget.ui.lineEdit_args.text()
+        self.assertEqual(args, "@@url_outputs@@")
+
+    def test_add_cmdline_tag_data_store_url(self):
+        menu = self.tool_specification_widget.ui.toolButton_add_cmdline_tag.menu()
+        url_inputs_action = self._find_action("@@url:<data-store-name>@@", menu.actions())
+        url_inputs_action.trigger()
+        args = self.tool_specification_widget.ui.lineEdit_args.text()
+        self.assertEqual(args, "@@url:<data-store-name>@@")
+        selection = self.tool_specification_widget.ui.lineEdit_args.selectedText()
+        self.assertEqual(selection, "<data-store-name>")
+
+    def test_add_cmdline_tag_optional_inputs(self):
+        menu = self.tool_specification_widget.ui.toolButton_add_cmdline_tag.menu()
+        url_inputs_action = self._find_action("@@optional_inputs@@", menu.actions())
+        url_inputs_action.trigger()
+        args = self.tool_specification_widget.ui.lineEdit_args.text()
+        self.assertEqual(args, "@@optional_inputs@@")
+
+    def _find_action(self, action_text, actions):
+        found_action = None
+        for action in actions:
+            if action.text() == action_text:
+                found_action = action
+                break
+        self.assertIsNotNone(found_action)
+        return found_action
+
 
 if __name__ == '__main__':
     unittest.main()

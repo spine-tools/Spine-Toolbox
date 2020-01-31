@@ -553,6 +553,7 @@ class CompoundObjectParameterDefinitionModel(
             "database",
         ]
 
+
 class CompoundRelationshipParameterDefinitionModel(
     CompoundRelationshipParameterMixin, CompoundParameterDefinitionMixin, CompoundParameterModel
 ):
@@ -573,6 +574,7 @@ class CompoundRelationshipParameterDefinitionModel(
             "database",
         ]
 
+
 class CompoundObjectParameterValueModel(
     CompoundObjectParameterMixin, CompoundParameterValueMixin, CompoundParameterModel
 ):
@@ -588,6 +590,7 @@ class CompoundObjectParameterValueModel(
     @property
     def entity_type(self):
         return "object"
+
 
 class CompoundRelationshipParameterValueModel(
     CompoundRelationshipParameterMixin, CompoundParameterValueMixin, CompoundParameterModel
