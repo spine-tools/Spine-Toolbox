@@ -7,6 +7,8 @@
    :width: 16
 .. |play-selected| image:: ../../spinetoolbox/ui/resources/project_item_icons/play-circle-regular.svg
    :width: 16
+.. |insert-tag| image:: ../../spinetoolbox/ui/resources/double-at.svg
+   :width: 16
 
 .. _Tool specification editor:
 
@@ -130,10 +132,13 @@ relevant to a Tool's current connections. For example, the :literal:`@@url-input
 database URLs. If the command line arguments for the *Model* tool in the image below were
 :literal:`--input-database=@@url-inputs@@` the tool would be executed by
 :literal:`python tool_script.py --input_database=sqlite:///input_database.sqlite` command
-if *Input data*'s database URL was :literal:`sqlite:///input_database.sqlite`.
+in case *Input data*'s database URL was :literal:`sqlite:///input_database.sqlite`.
 
 .. image:: img/partial_dag_input_datastore-tool-output_data_store.png
    :align: center
+
+The |insert-tag| button next to the command line arguments field in Tool Specification editor
+gives a quick access to insert the tags into the field.
 
 Below is a list of the command line argument tags that are currently available:
 
