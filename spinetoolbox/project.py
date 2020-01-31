@@ -20,6 +20,9 @@ import os
 import logging
 import json
 from PySide2.QtCore import Slot, Signal
+from PySide2.QtWidgets import QMessageBox
+from dagster.core.definitions.utils import check_valid_name
+from dagster.core.errors import DagsterInvalidDefinitionError
 from spine_engine import SpineEngine, SpineEngineState
 from .metaobject import MetaObject
 from .helpers import create_dir, inverted
@@ -307,9 +310,9 @@ class SpineToolboxProject(MetaObject):
         """Executes given dag.
 
         Args:
-            dag (DiGraph)
-            execution_permits (dict)
-            dag_identifier (str)
+            dag (DiGraph): Executed DAG
+            execution_permits (dict): Dictionary, where keys are node names in dag and value is a boolean
+            dag_identifier (str): Identifier number for printing purposes
         """
         node_successors = self.dag_handler.node_successors(dag)
         if not node_successors:
@@ -322,6 +325,10 @@ class SpineToolboxProject(MetaObject):
             )
             return
         items = [self._toolbox.project_item_model.get_item(name).project_item for name in node_successors]
+        self._toolbox.msg.emit(f"items:{items}, node_successors:{node_successors}, execution_permits:{execution_permits}")
+        if not self.check_invalid_names(execution_permits):
+            self._toolbox.msg_error.emit("Execution terminated")
+            return
         self.engine = SpineEngine(items, node_successors, execution_permits)
         self.dag_execution_about_to_start.emit(self.engine)
         self._toolbox.msg.emit("<b>Starting DAG {0}</b>".format(dag_identifier))
@@ -333,6 +340,32 @@ class SpineToolboxProject(MetaObject):
             SpineEngineState.COMPLETED: "completed successfully",
         }[self.engine.state()]
         self._toolbox.msg.emit("<b>DAG {0} {1}</b>".format(dag_identifier, outcome))
+
+    def check_invalid_names(self, execution_permits):
+        """Checks project item names for invalid names and
+        invalid characters. The resrictions come from
+        dagster. Invalid names are in
+        dagster.utils.DISALLOWED_NAMES and the name should
+        be in Regex ^[A-Za-z0-9_]+$
+
+        Args:
+            execution_permits (dict): Key is project item name, value is a boolean
+            boolean value. If value is True, the project item is executed.
+        """
+        invalid_names = list()
+        for name in execution_permits.keys():
+            try:
+                check_valid_name(name)
+            except DagsterInvalidDefinitionError:
+                invalid_names.append(name)
+        if not invalid_names:
+            return True
+        msg = "DAG contains project items with invalid names" \
+              "<br/><br/><b>{0}</b><br/><br/>" \
+              "Please rename them and restart execution.".format(invalid_names)
+        # noinspection PyCallByClass, PyArgumentList
+        QMessageBox.warning(self._toolbox, "Invalid names", msg)
+        return False
 
     def execute_selected(self):
         """Executes DAGs corresponding to all selected project items."""
