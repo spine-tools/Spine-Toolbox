@@ -43,7 +43,7 @@ from ..widgets.toolbars import ParameterTagToolBar
 from ..mvcmodels.parameter_value_list_model import ParameterValueListModel
 from ..helpers import busy_effect, format_string_list
 from .import_widget import ImportDialog
-from ..excel_import_export import export_spine_database_to_xlsx
+from ..spine_io.exporters.excel import export_spine_database_to_xlsx
 
 
 class DataStoreFormBase(QMainWindow):
