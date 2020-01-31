@@ -167,9 +167,7 @@ class ExcelConnector(SourceConnection):
         """
         Overrides io_api method to check for some parameter value types.
         """
-        mapped_data, errors = super(ExcelConnector, self).get_mapped_data(
-            tables_mappings, options, table_types, table_row_types, max_rows
-        )
+        mapped_data, errors = super().get_mapped_data(tables_mappings, options, table_types, table_row_types, max_rows)
         for key in ("object_parameter_values", "relationship_parameter_values"):
             for index, value in enumerate(mapped_data[key]):
                 val = value[-1]

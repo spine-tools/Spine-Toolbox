@@ -342,12 +342,12 @@ class Importer(ProjectItem):
         self._logger.msg_error.emit(f"<b>{self.name}</b>: {output}")
 
     def execute_backward(self, resources):
-        """see base class."""
+        """See base class."""
         self.resources_from_downstream = resources.copy()
         return True
 
     def execute_forward(self, resources):
-        """see base class."""
+        """See base class."""
         args = [
             [f for f in self.all_files if f not in self.unchecked_files],
             self.settings,
