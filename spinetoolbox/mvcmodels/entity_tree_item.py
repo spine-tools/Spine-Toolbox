@@ -530,11 +530,14 @@ class RelationshipItem(EntityItem):
         self._fetched = True
 
     @property
+    def object_name_list(self):
+        return self.db_map_data_field(self.first_db_map, "object_name_list", default="")
+
+    @property
     def display_name(self):
         """"Returns the name for display."""
         return (
-            self.db_map_data_field(self.first_db_map, "object_name_list", default="")
-            .replace(self.parent_item.parent_item.display_name + ",", "")
+            self.object_name_list.replace(self.parent_item.parent_item.display_name + ",", "")
             .replace("," + self.parent_item.parent_item.display_name, "")
             .replace(",", self.db_mngr._GROUP_SEP)
         )

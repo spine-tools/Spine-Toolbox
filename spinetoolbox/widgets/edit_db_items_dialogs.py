@@ -275,7 +275,7 @@ class EditRelationshipsDialog(GetObjectsMixin, EditOrRemoveItemsDialog):
         self.db_maps = set()
         for item in selected:
             self.db_maps.update(item.db_maps)
-            object_name_list = item.display_name.split(",")
+            object_name_list = item.object_name_list.split(",")
             data = item.db_map_data(item.first_db_map)
             row_data = [*object_name_list, data["name"]]
             self.orig_data.append(row_data.copy())
