@@ -70,9 +70,9 @@ class TabularViewMixin:
         delegate.parameter_value_editor_requested.connect(self.show_parameter_value_editor)
         delegate.data_committed.connect(self._set_model_data)
 
-    def add_toggle_view_actions(self):
+    def add_menu_actions(self):
         """Adds toggle view actions to View menu."""
-        super().add_toggle_view_actions()
+        super().add_menu_actions()
         self.ui.menuView.addSeparator()
         self.ui.menuView.addAction(self.ui.dockWidget_pivot_table.toggleViewAction())
         self.ui.menuView.addAction(self.ui.dockWidget_frozen_table.toggleViewAction())

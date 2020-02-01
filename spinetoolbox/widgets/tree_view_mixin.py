@@ -47,9 +47,9 @@ class TreeViewMixin:
         self.ui.treeView_object.setModel(self.object_tree_model)
         self.ui.treeView_relationship.setModel(self.relationship_tree_model)
 
-    def add_toggle_view_actions(self):
+    def add_menu_actions(self):
         """Adds toggle view actions to View menu."""
-        super().add_toggle_view_actions()
+        super().add_menu_actions()
         self.ui.menuView.addSeparator()
         self.ui.menuView.addAction(self.ui.dockWidget_relationship_tree.toggleViewAction())
 

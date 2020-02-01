@@ -30,7 +30,7 @@ from PySide2.QtWidgets import (
     QTableView,
 )
 from PySide2.QtCore import Qt, Signal, Slot, QSettings
-from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QIcon
+from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QIcon, QKeySequence
 from spinedb_api import copy_database
 from ..config import MAINWINDOW_SS
 from .edit_db_items_dialogs import ManageParameterTagsDialog
@@ -96,11 +96,21 @@ class DataStoreFormBase(QMainWindow):
         self._focusable_childs = [self.ui.treeView_parameter_value_list]
         self.settings_group = 'treeViewWidget'
 
-    def add_toggle_view_actions(self):
-        """Adds toggle view actions to View menu."""
+    def add_menu_actions(self):
+        """Adds actions to View and Edit menu."""
         self.ui.menuView.addSeparator()
         self.ui.menuView.addAction(self.ui.dockWidget_parameter_value_list.toggleViewAction())
         self.ui.menuView.addAction(self.parameter_tag_toolbar.toggleViewAction())
+        before = self.ui.menuEdit.actions()[0]
+        undo_action = self.db_mngr.undo_stack.createUndoAction(self)
+        redo_action = self.db_mngr.undo_stack.createRedoAction(self)
+        undo_action.setShortcuts(QKeySequence.Undo)
+        redo_action.setShortcuts(QKeySequence.Redo)
+        undo_action.setIcon(QIcon(":/icons/menu_icons/undo.svg"))
+        redo_action.setIcon(QIcon(":/icons/menu_icons/redo.svg"))
+        self.ui.menuEdit.insertAction(before, undo_action)
+        self.ui.menuEdit.insertAction(before, redo_action)
+        self.ui.menuEdit.insertSeparator(before)
 
     def connect_signals(self):
         """Connects signals to slots."""
@@ -630,7 +640,7 @@ class DataStoreForm(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         super().__init__(db_mngr, *db_urls)
         self._size = None
         self.init_models()
-        self.add_toggle_view_actions()
+        self.add_menu_actions()
         self.connect_signals()
         self.apply_tree_style()
         self.restore_ui()

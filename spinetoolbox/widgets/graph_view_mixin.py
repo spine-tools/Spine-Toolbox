@@ -58,9 +58,9 @@ class GraphViewMixin:
         self.live_demo = GraphViewDemo(self)
         self.setup_zoom_widget_action()
 
-    def add_toggle_view_actions(self):
+    def add_menu_actions(self):
         """Adds toggle view actions to View menu."""
-        super().add_toggle_view_actions()
+        super().add_menu_actions()
         self.ui.menuView.addSeparator()
         self.ui.menuView.addAction(self.ui.dockWidget_entity_graph.toggleViewAction())
         self.ui.menuView.addAction(self.ui.dockWidget_item_palette.toggleViewAction())
