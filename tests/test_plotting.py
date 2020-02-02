@@ -19,7 +19,7 @@ Unit tests for the plotting module.
 import unittest
 from unittest.mock import Mock, MagicMock
 from PySide2.QtCore import QAbstractTableModel, QModelIndex, Qt
-from PySide2.QtWidgets import QApplication
+from PySide2.QtWidgets import QApplication, QAction
 from spinedb_api import TimeSeriesVariableResolution
 from spinetoolbox.plotting import (
     add_time_series_plot,
@@ -40,6 +40,8 @@ def _make_pivot_proxy_model():
     mock_db_map = Mock()
     mock_db_map.codename = "codename"
     db_mngr.get_db_map_for_listener.side_effect = lambda *args, **kwargs: mock_db_map
+    db_mngr.undo_stack.createUndoAction.side_effect = lambda w: QAction(w)
+    db_mngr.undo_stack.createRedoAction.side_effect = lambda w: QAction(w)
     data_store_widget = DataStoreForm(db_mngr, ("sqlite://", "codename"))
     data_store_widget.create_header_widget = lambda *args, **kwargs: None
     model = data_store_widget.pivot_table_model
