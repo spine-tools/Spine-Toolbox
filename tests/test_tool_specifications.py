@@ -80,6 +80,18 @@ class TestToolSpecification(unittest.TestCase):
         args = specification.get_cmdline_args([], {}, {"ds1": "sqlite:///Q:\\databases\\output.sqlite"})
         self.assertEqual(args, ["--url=sqlite:///Q:\\databases\\output.sqlite"])
 
+    def test_get_cmdline_args_consecutive_tags(self):
+        specification = ToolSpecification(None, "", "", "", [])
+        specification.cmdline_args = ["@@optional_inputs@@@@optional_inputs@@"]
+        args = specification.get_cmdline_args([], {}, {})
+        self.assertEqual(args, [""])
+        specification.cmdline_args = ["@@optional_inputs@@@@optional_inputs@@"]
+        args = specification.get_cmdline_args(["file.dat", "table.csv"], {}, {})
+        self.assertEqual(args, ['file.dat', 'table.csvfile.dat', 'table.csv'])
+        specification.cmdline_args = ["--inputs=@@optional_inputs@@@@optional_inputs@@"]
+        args = specification.get_cmdline_args(["file.dat", "table.csv"], {}, {})
+        self.assertEqual(args, ["--inputs=file.dat", "table.csvfile.dat", "table.csv"])
+
     def test_split_cmdline_args(self):
         splitted = ToolSpecification.split_cmdline_args("")
         self.assertFalse(bool(splitted))
@@ -101,6 +113,10 @@ class TestToolSpecification(unittest.TestCase):
         self.assertEqual(splitted, ["@@url:database name with spaces@@"])
         splitted = ToolSpecification.split_cmdline_args("@@url:spaced name@@ -a @@url:another spaced tag@@")
         self.assertEqual(splitted, ["@@url:spaced name@@", "-a", "@@url:another spaced tag@@"])
+
+    def test_split_cmdline_args_with_consecutive_tags(self):
+        splitted = ToolSpecification.split_cmdline_args("@@optional_inputs@@@@optional_inputs@@")
+        self.assertEqual(splitted, ["@@optional_inputs@@@@optional_inputs@@"])
 
 
 if __name__ == '__main__':
