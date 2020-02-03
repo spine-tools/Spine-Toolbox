@@ -46,7 +46,7 @@ class TestDirectedGraphHandler(unittest.TestCase):
         We want the ToolboxUI to start with the default settings and without a project
         """
         self.toolbox = create_toolboxui_with_project()
-        self.dag_handler = DirectedGraphHandler(self.toolbox)
+        self.dag_handler = DirectedGraphHandler()
 
     def tearDown(self):
         """Runs after each test. Use this to free resources after a test if needed."""

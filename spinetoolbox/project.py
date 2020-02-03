@@ -53,7 +53,7 @@ class SpineToolboxProject(MetaObject):
         super().__init__(name, description)
         self._toolbox = toolbox
         self._qsettings = self._toolbox.qsettings()
-        self.dag_handler = DirectedGraphHandler(self._toolbox)
+        self.dag_handler = DirectedGraphHandler()
         self.db_mngr = SpineDBManager(self)
         self.engine = None
         self._execution_stopped = True
