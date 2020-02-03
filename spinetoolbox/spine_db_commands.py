@@ -21,6 +21,51 @@ from PySide2.QtCore import Slot
 from PySide2.QtWidgets import QUndoCommand
 
 
+def _cache_to_db_relationship_class(item):
+    item = deepcopy(item)
+    item["object_class_id_list"] = [int(id_) for id_ in item["object_class_id_list"].split(",")]
+    del item["object_class_name_list"]
+    return item
+
+
+def _cache_to_db_relationship(item):
+    item = deepcopy(item)
+    item["object_id_list"] = [int(id_) for id_ in item["object_id_list"].split(",")]
+    del item["object_name_list"]
+    return item
+
+
+def _cache_to_db_parameter_value(item):
+    item = {k: v for k, v in item.items() if k != "formatted_value"}
+    item = deepcopy(item)
+    if "parameter_id" in item:
+        item["parameter_definition_id"] = item.pop("parameter_id")
+    return item
+
+
+def _cache_to_db_parameter_definition(item):
+    item = {k: v for k, v in item.items() if k != "formatted_default_value"}
+    item = deepcopy(item)
+    if "parameter_name" in item:
+        item["name"] = item.pop("parameter_name")
+    return item
+
+
+def _cache_to_db_parameter_value_list(item):
+    item = deepcopy(item)
+    item["value_list"] = item["value_list"].split(",")
+    return item
+
+
+def _cache_to_db_item(item_type, item):
+    return {
+        "relationship class": _cache_to_db_relationship_class,
+        "relationship": _cache_to_db_relationship,
+        "parameter definition": _cache_to_db_parameter_definition,
+        "parameter value list": _cache_to_db_parameter_value_list,
+    }.get(item_type, lambda x: x)(item)
+
+
 class AddItemsCommand(QUndoCommand):
     _command_name = {
         "object class": "add object classes",
@@ -41,6 +86,16 @@ class AddItemsCommand(QUndoCommand):
         "parameter value": "add_parameter_values",
         "parameter value list": "add_wide_parameter_value_lists",
         "parameter tag": "add_parameter_tags",
+    }
+    _redo_method_name = {
+        "object class": "readd_object_classes",
+        "object": "readd_objects",
+        "relationship class": "readd_wide_relationship_classes",
+        "relationship": "readd_wide_relationships",
+        "parameter definition": "readd_parameter_definitions",
+        "parameter value": "readd_parameter_values",
+        "parameter value list": "readd_wide_parameter_value_lists",
+        "parameter tag": "readd_parameter_tags",
     }
     _emit_signal_name = {
         "object class": "object_classes_added",
@@ -84,10 +139,14 @@ class AddItemsCommand(QUndoCommand):
             self.setObsolete(True)
 
     def undo(self):
-        self.db_mngr.remove_items(self.undo_db_map_data)
+        self.db_mngr.do_remove_items(self.undo_db_map_data)
 
     @Slot(object)
     def receive_items_added(self, db_map_data):
+        self.redo_db_map_data = {
+            db_map: [_cache_to_db_item(self.item_type, item) for item in data] for db_map, data in db_map_data.items()
+        }
+        self.method_name = self._redo_method_name[self.item_type]
         self.undo_db_map_data = {db_map: {self.item_type: data} for db_map, data in db_map_data.items()}
         self._completed = True
 
@@ -154,42 +213,13 @@ class UpdateItemsCommand(QUndoCommand):
         self.receive_signal = getattr(db_mngr, self.emit_signal_name)
         self.setText(self._command_name[item_type])
         self.undo_db_map_data = {
-            db_map: [self._get_undo_item(db_map, item["id"]) for item in data] for db_map, data in db_map_data.items()
+            db_map: [self._undo_item(db_map, item["id"]) for item in data] for db_map, data in db_map_data.items()
         }
         self._completed = False
 
-    def _get_undo_item(self, db_map, id_):
-        def _get_undo_relationship_class_from_cache(item):
-            item = deepcopy(item)
-            item["object_class_id_list"] = [int(id_) for id_ in item["object_class_id_list"].split(",")]
-            del item["object_class_name_list"]
-            return item
-
-        def _get_undo_relationship_from_cache(item):
-            item = deepcopy(item)
-            item["object_id_list"] = [int(id_) for id_ in item["object_id_list"].split(",")]
-            del item["object_name_list"]
-            return item
-
-        def _get_undo_parameter_definition_from_cache(item):
-            item = {k: v for k, v in item.items() if k != "formatted_default_value"}
-            item = deepcopy(item)
-            if "parameter_name" in item:
-                item["name"] = item.pop("parameter_name")
-            return item
-
-        def _get_undo_parameter_value_list_from_cache(item):
-            item = deepcopy(item)
-            item["value_list"] = item["value_list"].split(",")
-            return item
-
+    def _undo_item(self, db_map, id_):
         item = self.db_mngr.get_item(db_map, self.item_type, id_)
-        return {
-            "relationship class": _get_undo_relationship_class_from_cache,
-            "relationship": _get_undo_relationship_from_cache,
-            "parameter definition": _get_undo_parameter_definition_from_cache,
-            "parameter value list": _get_undo_parameter_value_list_from_cache,
-        }.get(self.item_type, lambda x: x)(item)
+        return _cache_to_db_item(self.item_type, item)
 
     def redo(self):
         self.receive_signal.connect(self.receive_items_updated)
@@ -218,3 +248,53 @@ class UpdateCheckedParameterValuesCommand(UpdateItemsCommand):
         self.db_mngr.parameter_values_updated.disconnect(self.receive_items_updated)
         if not self._completed:
             self.setObsolete(True)
+
+
+class RemoveItemsCommand(QUndoCommand):
+
+    _undo_method_name = {
+        "object class": "readd_object_classes",
+        "object": "readd_objects",
+        "relationship class": "readd_wide_relationship_classes",
+        "relationship": "readd_wide_relationships",
+        "parameter definition": "readd_parameter_definitions",
+        "parameter value": "readd_parameter_values",
+        "parameter value list": "readd_wide_parameter_value_lists",
+        "parameter tag": "readd_parameter_tags",
+    }
+    _emit_signal_name = {
+        "object class": "object_classes_added",
+        "object": "objects_added",
+        "relationship class": "relationship_classes_added",
+        "relationship": "relationships_added",
+        "parameter definition": "_parameter_definitions_added",
+        "parameter value": "_parameter_values_added",
+        "parameter value list": "parameter_value_lists_added",
+        "parameter tag": "parameter_tags_added",
+    }
+
+    def __init__(self, db_mngr, db_map_typed_data):
+        super().__init__()
+        self.db_mngr = db_mngr
+        self.redo_db_map_typed_data = db_map_typed_data
+        self.undo_typed_db_map_data = {}
+        self.setText("remove items")
+
+    def redo(self):
+        self.db_mngr.items_removed_from_cache.connect(self.receive_items_removed_from_cache)
+        self.db_mngr.do_remove_items(self.redo_db_map_typed_data)
+        self.db_mngr.items_removed_from_cache.connect(self.receive_items_removed_from_cache)
+
+    def undo(self):
+        for item_type in reversed(list(self.undo_typed_db_map_data.keys())):
+            db_map_data = self.undo_typed_db_map_data[item_type]
+            method_name = self._undo_method_name[item_type]
+            emit_signal_name = self._emit_signal_name[item_type]
+            self.db_mngr.add_or_update_items(db_map_data, method_name, emit_signal_name)
+
+    @Slot(object)
+    def receive_items_removed_from_cache(self, db_map_typed_data):
+        for db_map, typed_data in db_map_typed_data.items():
+            for item_type, data in typed_data.items():
+                data = [_cache_to_db_item(item_type, item) for item in data]
+                self.undo_typed_db_map_data.setdefault(item_type, {}).setdefault(db_map, []).extend(data)

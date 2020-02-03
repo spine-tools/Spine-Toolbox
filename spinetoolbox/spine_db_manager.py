@@ -41,6 +41,7 @@ from .spine_db_commands import (
     AddCheckedParameterValuesCommand,
     UpdateItemsCommand,
     UpdateCheckedParameterValuesCommand,
+    RemoveItemsCommand,
 )
 from .widgets.manage_db_items_dialog import CommitDialog
 
@@ -92,6 +93,8 @@ class SpineDBManager(QObject):
     parameter_value_lists_updated = Signal("QVariant")
     parameter_tags_updated = Signal("QVariant")
     parameter_definition_tags_set = Signal("QVariant")
+    # Uncached
+    items_removed_from_cache = Signal("QVariant")
 
     _GROUP_SEP = " \u01C0 "
 
@@ -365,7 +368,6 @@ class SpineDBManager(QObject):
         self.relationship_classes_removed.connect(self.cascade_remove_relationships_by_class)
         self.relationship_classes_removed.connect(self.cascade_remove_parameter_definitions)
         self.relationship_classes_removed.connect(self.cascade_remove_parameter_values_by_entity_class)
-        self.relationship_classes_removed.connect(self.cascade_remove_relationships_by_class)
         self.objects_removed.connect(self.cascade_remove_relationships_by_object)
         self.objects_removed.connect(self.cascade_remove_parameter_values_by_entity)
         self.relationships_removed.connect(self.cascade_remove_parameter_values_by_entity)
@@ -426,6 +428,7 @@ class SpineDBManager(QObject):
             item_type (str)
             db_map_data (dict): lists of dictionary items keyed by DiffDatabaseMapping
         """
+        db_map_typed_data = {}
         for db_map, items in db_map_data.items():
             for item in items:
                 if db_map not in self._cache:
@@ -436,7 +439,9 @@ class SpineDBManager(QObject):
                 cached_items = cached_map[item_type]
                 item_id = item["id"]
                 if item_id in cached_items:
-                    del cached_items[item_id]
+                    item = cached_items.pop(item_id)
+                    db_map_typed_data.setdefault(db_map, {}).setdefault(item_type, []).append(item)
+        self.items_removed_from_cache.emit(db_map_typed_data)
 
     def update_icons(self, db_map_data):
         """Runs when object classes are added or updated. Setups icons for those classes.
@@ -996,12 +1001,25 @@ class SpineDBManager(QObject):
             getattr(self, signal_name).emit(db_map_data_out)
 
     def add_checked_parameter_values(self, db_map_data):
+        """Adds parameter values in db without checking integrity.
+
+        Args:
+            db_map_data (dict): lists of items to add keyed by DiffDatabaseMapping
+        """
         self.undo_stack.push(AddCheckedParameterValuesCommand(self, db_map_data))
 
     def update_checked_parameter_values(self, db_map_data):
+        """Updates parameter values in db without checking integrity.
+
+        Args:
+            db_map_data (dict): lists of items to update keyed by DiffDatabaseMapping
+        """
         self.undo_stack.push(UpdateCheckedParameterValuesCommand(self, db_map_data))
 
     def remove_items(self, db_map_typed_data):
+        self.undo_stack.push(RemoveItemsCommand(self, db_map_typed_data))
+
+    def do_remove_items(self, db_map_typed_data):
         """Removes items from database.
 
         Args:
@@ -1090,7 +1108,8 @@ class SpineDBManager(QObject):
             db_map_data (dict): lists of removed items keyed by DiffDatabaseMapping
         """
         db_map_cascading_data = self.find_cascading_relationship_classes(self._to_ids(db_map_data))
-        self.relationship_classes_removed.emit(db_map_cascading_data)
+        if any(db_map_cascading_data.values()):
+            self.relationship_classes_removed.emit(db_map_cascading_data)
 
     @Slot("QVariant", name="cascade_remove_relationships_by_class")
     def cascade_remove_relationships_by_class(self, db_map_data):
