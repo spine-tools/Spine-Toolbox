@@ -24,7 +24,7 @@ from PySide2.QtWidgets import QMessageBox
 from dagster.core.definitions.utils import check_valid_name
 from dagster.core.errors import DagsterInvalidDefinitionError
 from spine_engine import SpineEngine, SpineEngineState
-from .metaobject import MetaObject
+from .metaobject import MetaObject, shorten
 from .helpers import create_dir, inverted
 from .tool_specifications import JuliaTool, PythonTool, GAMSTool, ExecutableTool
 from .config import LATEST_PROJECT_VERSION, PROJECT_FILENAME
@@ -355,7 +355,8 @@ class SpineToolboxProject(MetaObject):
             boolean value. If value is True, the project item is executed.
         """
         invalid_names = list()
-        for name in execution_permits.keys():
+        short_names = [shorten(n) for n in execution_permits.keys()]
+        for name in short_names:
             try:
                 check_valid_name(name)
             except DagsterInvalidDefinitionError:
