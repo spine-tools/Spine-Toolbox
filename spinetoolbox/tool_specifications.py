@@ -25,6 +25,16 @@ from .config import REQUIRED_KEYS, OPTIONAL_KEYS, LIST_REQUIRED_KEYS
 from .tool_instance import GAMSToolInstance, JuliaToolInstance, PythonToolInstance, ExecutableToolInstance
 
 
+CMDLINE_TAG_EDGE = "@@"
+
+
+class CmdlineTag:
+    URL = CMDLINE_TAG_EDGE + "url:<data-store-name>" + CMDLINE_TAG_EDGE
+    URL_INPUTS = CMDLINE_TAG_EDGE + "url_inputs" + CMDLINE_TAG_EDGE
+    URL_OUTPUTS = CMDLINE_TAG_EDGE + "url_outputs" + CMDLINE_TAG_EDGE
+    OPTIONAL_INPUTS = CMDLINE_TAG_EDGE + "optional_inputs" + CMDLINE_TAG_EDGE
+
+
 class ToolSpecification(MetaObject):
     """Super class for all tool specifications."""
 
@@ -182,7 +192,7 @@ class ToolSpecification(MetaObject):
         # We replace the tags temporarily by '@_@_@' to simplify splitting
         # and put them back to the args list after the string has been split.
         tag_safe = list()
-        tag_fingerprint = re.compile("@@url:.+?@@")
+        tag_fingerprint = re.compile(CMDLINE_TAG_EDGE + "url:.+?" + CMDLINE_TAG_EDGE)
         match = tag_fingerprint.search(arg_string)
         while match:
             tag_safe.append(match.group())
@@ -223,6 +233,7 @@ class ToolSpecification(MetaObject):
             tuple: a boolean flag, if True, indicates that tags were expanded and a list of
                 expanded command line arguments
         """
+
         def expand_list(arg, tag, things, expanded_args):
             preface, tag_found, postscript = arg.partition(tag)
             if tag_found:
@@ -237,19 +248,19 @@ class ToolSpecification(MetaObject):
             return False
 
         expanded_args = list()
-        named_data_store_tag_fingerprint = re.compile("@@url:.+@@")
+        named_data_store_tag_fingerprint = re.compile(CMDLINE_TAG_EDGE + "url:.+" + CMDLINE_TAG_EDGE)
         all_urls = ChainMap(input_urls, output_urls)
         input_url_list = list(input_urls.values())
         output_url_list = list(output_urls.values())
         did_expand = False
         for arg in args:
-            if expand_list(arg, "@@optional_inputs@@", optional_input_files, expanded_args):
+            if expand_list(arg, CmdlineTag.OPTIONAL_INPUTS, optional_input_files, expanded_args):
                 did_expand = True
                 continue
-            if expand_list(arg, "@@url_inputs@@", input_url_list, expanded_args):
+            if expand_list(arg, CmdlineTag.URL_INPUTS, input_url_list, expanded_args):
                 did_expand = True
                 continue
-            if expand_list(arg, "@@url_outputs@@", output_url_list, expanded_args):
+            if expand_list(arg, CmdlineTag.URL_OUTPUTS, output_url_list, expanded_args):
                 did_expand = True
                 continue
             match = named_data_store_tag_fingerprint.search(arg)

@@ -25,7 +25,7 @@ from PySide2.QtWidgets import QWidget, QStatusBar, QInputDialog, QFileDialog, QF
 from PySide2.QtCore import Slot, Qt, QUrl, QFileInfo
 from ..config import STATUSBAR_SS, TREEVIEW_HEADER_SS, APPLICATION_PATH, TOOL_TYPES, REQUIRED_KEYS
 from ..helpers import busy_effect
-from ..tool_specifications import ToolSpecification
+from ..tool_specifications import CmdlineTag, CMDLINE_TAG_EDGE, ToolSpecification
 from .custom_menus import AddIncludesPopupMenu, CreateMainProgramPopupMenu
 
 
@@ -586,42 +586,74 @@ class ToolSpecificationWidget(QWidget):
     def _make_add_cmdline_tag_menu(self):
         """Constructs a popup menu for the '@@' button."""
         menu = QMenu(self.ui.toolButton_add_cmdline_tag)
-        action = menu.addAction("@@url_inputs@@")
+        action = menu.addAction(str(CmdlineTag.URL_INPUTS))
         action.triggered.connect(self._add_cmdline_tag_url_inputs)
         action.setToolTip("Insert a tag that is replaced by all input database URLs.")
-        action = menu.addAction("@@url_outputs@@")
+        action = menu.addAction(str(CmdlineTag.URL_OUTPUTS))
         action.triggered.connect(self._add_cmdline_tag_url_outputs)
         action.setToolTip("Insert a tag that is replaced be all output database URLs.")
-        action = menu.addAction("@@url:<data-store-name>@@")
+        action = menu.addAction(str(CmdlineTag.URL))
         action.triggered.connect(self._add_cmdline_tag_data_store_url)
         action.setToolTip("Insert a tag that is replaced by the URL provided by Data Store '<data-store-name>'.")
-        action = menu.addAction("@@optional_inputs@@")
+        action = menu.addAction(str(CmdlineTag.OPTIONAL_INPUTS))
         action.triggered.connect(self._add_cmdline_tag_optional_inputs)
         action.setToolTip("Insert a tag that is replaced by a list of optional input files.")
         return menu
 
+    def _insert_spaces_around_tag_in_args_edit(self, tag_length, restore_cursor_to_tag_end=False):
+        """
+        Inserts spaces before/after @@ around cursor position/selection
+
+        Expects cursor to be at the end of the tag.
+        """
+        args_edit = self.ui.lineEdit_args
+        text = args_edit.text()
+        cursor_position = args_edit.cursorPosition()
+        if cursor_position == len(text) or (cursor_position < len(text) - 1 and not text[cursor_position].isspace()):
+            args_edit.insert(" ")
+            appended_spaces = 1
+            text = args_edit.text()
+        else:
+            appended_spaces = 0
+        tag_start = cursor_position - tag_length
+        if tag_start > 1 and text[tag_start - 2 : tag_start] == CMDLINE_TAG_EDGE:
+            args_edit.setCursorPosition(tag_start)
+            args_edit.insert(" ")
+            prepended_spaces = 1
+        else:
+            prepended_spaces = 0
+        if restore_cursor_to_tag_end:
+            args_edit.setCursorPosition(cursor_position + prepended_spaces)
+        else:
+            args_edit.setCursorPosition(cursor_position + appended_spaces + prepended_spaces)
+
     @Slot("QAction")
     def _add_cmdline_tag_url_inputs(self, _):
         """Inserts @@url_inputs@@ tag to command line arguments."""
-        self.ui.lineEdit_args.insert("@@url_inputs@@")
+        tag = CmdlineTag.URL_INPUTS
+        self.ui.lineEdit_args.insert(tag)
+        self._insert_spaces_around_tag_in_args_edit(len(tag))
 
     @Slot("QAction")
     def _add_cmdline_tag_url_outputs(self, _):
         """Inserts @@url_outputs@@ tag to command line arguments."""
-        self.ui.lineEdit_args.insert("@@url_outputs@@")
+        tag = CmdlineTag.URL_OUTPUTS
+        self.ui.lineEdit_args.insert(tag)
+        self._insert_spaces_around_tag_in_args_edit(len(tag))
 
     @Slot("QAction")
     def _add_cmdline_tag_data_store_url(self, _):
         """Inserts @@url:<data-store-name>@@ tag to command line arguments and selects '<data-store-name>'."""
         args_edit = self.ui.lineEdit_args
-        if args_edit.hasSelectedText():
-            cursor_position = args_edit.selectionStart()
-        else:
-            cursor_position = args_edit.cursorPosition()
-        args_edit.insert("@@url:<data-store-name>@@")
-        args_edit.setSelection(cursor_position + len("@@url:"), len("<data-store_name>"))
+        tag = CmdlineTag.URL
+        args_edit.insert(tag)
+        self._insert_spaces_around_tag_in_args_edit(len(tag), restore_cursor_to_tag_end=True)
+        cursor_position = args_edit.cursorPosition()
+        args_edit.setSelection(cursor_position - len(CMDLINE_TAG_EDGE + "<data-store_name>"), len("<data-store_name>"))
 
     @Slot("QAction")
     def _add_cmdline_tag_optional_inputs(self, _):
         """Inserts @@optional_inputs@@ tag to command line arguments."""
-        self.ui.lineEdit_args.insert("@@optional_inputs@@")
+        tag = CmdlineTag.OPTIONAL_INPUTS
+        self.ui.lineEdit_args.insert(tag)
+        self._insert_spaces_around_tag_in_args_edit(len(tag))

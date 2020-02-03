@@ -325,7 +325,9 @@ class SpineToolboxProject(MetaObject):
             )
             return
         items = [self._toolbox.project_item_model.get_item(name).project_item for name in node_successors]
-        self._toolbox.msg.emit(f"items:{items}, node_successors:{node_successors}, execution_permits:{execution_permits}")
+        self._toolbox.msg.emit(
+            f"items:{items}, node_successors:{node_successors}, execution_permits:{execution_permits}"
+        )
         if not self.check_invalid_names(execution_permits):
             self._toolbox.msg_error.emit("Execution terminated")
             return
@@ -360,9 +362,11 @@ class SpineToolboxProject(MetaObject):
                 invalid_names.append(name)
         if not invalid_names:
             return True
-        msg = "DAG contains project items with invalid names" \
-              "<br/><br/><b>{0}</b><br/><br/>" \
-              "Please rename them and restart execution.".format(invalid_names)
+        msg = (
+            "DAG contains project items with invalid names"
+            "<br/><br/><b>{0}</b><br/><br/>"
+            "Please rename them and restart execution.".format(invalid_names)
+        )
         # noinspection PyCallByClass, PyArgumentList
         QMessageBox.warning(self._toolbox, "Invalid names", msg)
         return False

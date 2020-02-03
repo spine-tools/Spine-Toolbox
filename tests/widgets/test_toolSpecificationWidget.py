@@ -79,34 +79,46 @@ class TestToolSpecificationWidget(unittest.TestCase):
         mock_close.assert_called_once()
 
     def test_add_cmdline_tag_url_inputs(self):
-        menu = self.tool_specification_widget.ui.toolButton_add_cmdline_tag.menu()
-        url_inputs_action = self._find_action("@@url_inputs@@", menu.actions())
-        url_inputs_action.trigger()
-        args = self.tool_specification_widget.ui.lineEdit_args.text()
-        self.assertEqual(args, "@@url_inputs@@")
+        self._test_add_cmdline_tag_on_empty_args_field("@@url_inputs@@")
+
+    def test_add_cmdline_tag_url_inputs_middle_of_other_tags(self):
+        self._test_add_cmdline_tag_middle_of_other_tags("@@url_inputs@@")
+
+    def test_add_cmdline_tag_url_inputs_no_space_before_regular_arg(self):
+        self._test_add_cmdline_tag_adds_no_space_before_regular_arg("@@url_inputs@@")
 
     def test_add_cmdline_tag_url_outputs(self):
-        menu = self.tool_specification_widget.ui.toolButton_add_cmdline_tag.menu()
-        url_inputs_action = self._find_action("@@url_outputs@@", menu.actions())
-        url_inputs_action.trigger()
-        args = self.tool_specification_widget.ui.lineEdit_args.text()
-        self.assertEqual(args, "@@url_outputs@@")
+        self._test_add_cmdline_tag_on_empty_args_field("@@url_outputs@@")
+
+    def test_add_cmdline_tag_url_outputs_middle_of_other_tags(self):
+        self._test_add_cmdline_tag_middle_of_other_tags("@@url_outputs@@")
+
+    def test_add_cmdline_tag_url_outputs_no_space_before_regular_arg(self):
+        self._test_add_cmdline_tag_adds_no_space_before_regular_arg("@@url_outputs@@")
 
     def test_add_cmdline_tag_data_store_url(self):
-        menu = self.tool_specification_widget.ui.toolButton_add_cmdline_tag.menu()
-        url_inputs_action = self._find_action("@@url:<data-store-name>@@", menu.actions())
-        url_inputs_action.trigger()
-        args = self.tool_specification_widget.ui.lineEdit_args.text()
-        self.assertEqual(args, "@@url:<data-store-name>@@")
+        self._test_add_cmdline_tag_on_empty_args_field("@@url:<data-store-name>@@")
+        selection = self.tool_specification_widget.ui.lineEdit_args.selectedText()
+        self.assertEqual(selection, "<data-store-name>")
+
+    def test_add_cmdline_tag_data_store_url_middle_of_other_tags(self):
+        self._test_add_cmdline_tag_middle_of_other_tags("@@url:<data-store-name>@@")
+        selection = self.tool_specification_widget.ui.lineEdit_args.selectedText()
+        self.assertEqual(selection, "<data-store-name>")
+
+    def test_add_cmdline_tag_data_store_url_no_space_before_regular_arg(self):
+        self._test_add_cmdline_tag_adds_no_space_before_regular_arg("@@url:<data-store-name>@@")
         selection = self.tool_specification_widget.ui.lineEdit_args.selectedText()
         self.assertEqual(selection, "<data-store-name>")
 
     def test_add_cmdline_tag_optional_inputs(self):
-        menu = self.tool_specification_widget.ui.toolButton_add_cmdline_tag.menu()
-        url_inputs_action = self._find_action("@@optional_inputs@@", menu.actions())
-        url_inputs_action.trigger()
-        args = self.tool_specification_widget.ui.lineEdit_args.text()
-        self.assertEqual(args, "@@optional_inputs@@")
+        self._test_add_cmdline_tag_on_empty_args_field("@@optional_inputs@@")
+
+    def test_add_cmdline_tag_optional_inputs_middle_of_other_tags(self):
+        self._test_add_cmdline_tag_middle_of_other_tags("@@optional_inputs@@")
+
+    def test_add_cmdline_tag_optional_inputs_no_space_before_regular_arg(self):
+        self._test_add_cmdline_tag_adds_no_space_before_regular_arg("@@optional_inputs@@")
 
     def _find_action(self, action_text, actions):
         found_action = None
@@ -116,6 +128,41 @@ class TestToolSpecificationWidget(unittest.TestCase):
                 break
         self.assertIsNotNone(found_action)
         return found_action
+
+    def _test_add_cmdline_tag_on_empty_args_field(self, tag):
+        menu = self.tool_specification_widget.ui.toolButton_add_cmdline_tag.menu()
+        url_inputs_action = self._find_action(tag, menu.actions())
+        url_inputs_action.trigger()
+        args = self.tool_specification_widget.ui.lineEdit_args.text()
+        expected = tag + " "
+        self.assertEqual(args, expected)
+        if not self.tool_specification_widget.ui.lineEdit_args.hasSelectedText():
+            cursor_position = self.tool_specification_widget.ui.lineEdit_args.cursorPosition()
+            self.assertEqual(cursor_position, len(expected))
+
+    def _test_add_cmdline_tag_middle_of_other_tags(self, tag):
+        self.tool_specification_widget.ui.lineEdit_args.setText("@@optional_inputs@@@@url_outputs@@")
+        self.tool_specification_widget.ui.lineEdit_args.setCursorPosition(len("@@optional_inputs@@"))
+        menu = self.tool_specification_widget.ui.toolButton_add_cmdline_tag.menu()
+        url_inputs_action = self._find_action(tag, menu.actions())
+        url_inputs_action.trigger()
+        args = self.tool_specification_widget.ui.lineEdit_args.text()
+        self.assertEqual(args, f"@@optional_inputs@@ {tag} @@url_outputs@@")
+        if not self.tool_specification_widget.ui.lineEdit_args.hasSelectedText():
+            cursor_position = self.tool_specification_widget.ui.lineEdit_args.cursorPosition()
+            self.assertEqual(cursor_position, len(f"@@optional_inputs@@ {tag} "))
+
+    def _test_add_cmdline_tag_adds_no_space_before_regular_arg(self, tag):
+        self.tool_specification_widget.ui.lineEdit_args.setText("--tag=")
+        self.tool_specification_widget.ui.lineEdit_args.setCursorPosition(len("--tag="))
+        menu = self.tool_specification_widget.ui.toolButton_add_cmdline_tag.menu()
+        url_inputs_action = self._find_action(tag, menu.actions())
+        url_inputs_action.trigger()
+        args = self.tool_specification_widget.ui.lineEdit_args.text()
+        self.assertEqual(args, f"--tag={tag} ")
+        if not self.tool_specification_widget.ui.lineEdit_args.hasSelectedText():
+            cursor_position = self.tool_specification_widget.ui.lineEdit_args.cursorPosition()
+            self.assertEqual(cursor_position, len(f"--tag={tag} "))
 
 
 if __name__ == '__main__':
