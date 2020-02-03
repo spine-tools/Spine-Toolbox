@@ -35,19 +35,19 @@ def _cache_to_db_relationship(item):
     return item
 
 
-def _cache_to_db_parameter_value(item):
-    item = {k: v for k, v in item.items() if k != "formatted_value"}
-    item = deepcopy(item)
-    if "parameter_id" in item:
-        item["parameter_definition_id"] = item.pop("parameter_id")
-    return item
-
-
 def _cache_to_db_parameter_definition(item):
     item = {k: v for k, v in item.items() if k != "formatted_default_value"}
     item = deepcopy(item)
     if "parameter_name" in item:
         item["name"] = item.pop("parameter_name")
+    return item
+
+
+def _cache_to_db_parameter_value(item):
+    item = {k: v for k, v in item.items() if k != "formatted_value"}
+    item = deepcopy(item)
+    if "parameter_id" in item:
+        item["parameter_definition_id"] = item.pop("parameter_id")
     return item
 
 
@@ -62,11 +62,37 @@ def _cache_to_db_item(item_type, item):
         "relationship class": _cache_to_db_relationship_class,
         "relationship": _cache_to_db_relationship,
         "parameter definition": _cache_to_db_parameter_definition,
+        "parameter value": _cache_to_db_parameter_value,
         "parameter value list": _cache_to_db_parameter_value_list,
     }.get(item_type, lambda x: x)(item)
 
 
-class AddItemsCommand(QUndoCommand):
+class MemoryCommand(QUndoCommand):
+    def __init__(self):
+        super().__init__()
+        self.receive_signal = None
+        self._completed = False
+
+    @staticmethod
+    def redo(func):
+        def redo(self):
+            if self._completed:
+                func(self)
+                return
+            self.receive_signal.connect(self.receive_items_changed)
+            func(self)
+            self.receive_signal.disconnect(self.receive_items_changed)
+            if not self._completed:
+                self.setObsolete(True)
+
+        return redo
+
+    @Slot(object)
+    def receive_items_changed(self, db_map_data):
+        self._completed = True
+
+
+class AddItemsCommand(MemoryCommand):
     _command_name = {
         "object class": "add object classes",
         "object": "add objects",
@@ -129,20 +155,17 @@ class AddItemsCommand(QUndoCommand):
         self.receive_signal = getattr(db_mngr, receive_signal_name)
         self.setText(self._command_name[item_type])
         self.undo_db_map_data = None
-        self._completed = False
 
+    @MemoryCommand.redo
     def redo(self):
-        self.receive_signal.connect(self.receive_items_added)
         self.db_mngr.add_or_update_items(self.redo_db_map_data, self.method_name, self.emit_signal_name)
-        self.receive_signal.disconnect(self.receive_items_added)
-        if not self._completed:
-            self.setObsolete(True)
 
     def undo(self):
         self.db_mngr.do_remove_items(self.undo_db_map_data)
 
     @Slot(object)
-    def receive_items_added(self, db_map_data):
+    def receive_items_changed(self, db_map_data):
+        super().receive_items_changed(db_map_data)
         self.redo_db_map_data = {
             db_map: [_cache_to_db_item(self.item_type, item) for item in data] for db_map, data in db_map_data.items()
         }
@@ -154,18 +177,10 @@ class AddItemsCommand(QUndoCommand):
 class AddCheckedParameterValuesCommand(AddItemsCommand):
     def __init__(self, db_mngr, db_map_data):
         super().__init__(db_mngr, db_map_data, "parameter value")
-
-    def redo(self):
-        self.db_mngr.parameter_values_added.connect(self.receive_items_added)
-        self.db_mngr.add_or_update_checked_parameter_values(
-            self.redo_db_map_data, "_add_parameter_values", "parameter_values_added"
-        )
-        self.db_mngr.parameter_values_added.disconnect(self.receive_items_added)
-        if not self._completed:
-            self.setObsolete(True)
+        self.method_name = "add_checked_parameter_values"
 
 
-class UpdateItemsCommand(QUndoCommand):
+class UpdateItemsCommand(MemoryCommand):
     _command_name = {
         "object class": "update object classes",
         "object": "update objects",
@@ -221,36 +236,21 @@ class UpdateItemsCommand(QUndoCommand):
         item = self.db_mngr.get_item(db_map, self.item_type, id_)
         return _cache_to_db_item(self.item_type, item)
 
+    @MemoryCommand.redo
     def redo(self):
-        self.receive_signal.connect(self.receive_items_updated)
         self.db_mngr.add_or_update_items(self.redo_db_map_data, self.method_name, self.emit_signal_name)
-        self.receive_signal.disconnect(self.receive_items_updated)
-        if not self._completed:
-            self.setObsolete(True)
 
     def undo(self):
         self.db_mngr.add_or_update_items(self.undo_db_map_data, self.method_name, self.emit_signal_name)
-
-    @Slot(object)
-    def receive_items_updated(self, db_map_data):
-        self._completed = True
 
 
 class UpdateCheckedParameterValuesCommand(UpdateItemsCommand):
     def __init__(self, db_mngr, db_map_data):
         super().__init__(db_mngr, db_map_data, "parameter value")
-
-    def redo(self):
-        self.db_mngr.parameter_values_updated.connect(self.receive_items_updated)
-        self.db_mngr.add_or_update_checked_parameter_values(
-            self.redo_db_map_data, "_update_parameter_values", "parameter_values_updated"
-        )
-        self.db_mngr.parameter_values_updated.disconnect(self.receive_items_updated)
-        if not self._completed:
-            self.setObsolete(True)
+        self.method_name = "update_checked_parameter_values"
 
 
-class RemoveItemsCommand(QUndoCommand):
+class RemoveItemsCommand(MemoryCommand):
 
     _undo_method_name = {
         "object class": "readd_object_classes",
@@ -279,11 +279,11 @@ class RemoveItemsCommand(QUndoCommand):
         self.redo_db_map_typed_data = db_map_typed_data
         self.undo_typed_db_map_data = {}
         self.setText("remove items")
+        self.receive_signal = self.db_mngr.items_removed_from_cache
 
+    @MemoryCommand.redo
     def redo(self):
-        self.db_mngr.items_removed_from_cache.connect(self.receive_items_removed_from_cache)
         self.db_mngr.do_remove_items(self.redo_db_map_typed_data)
-        self.db_mngr.items_removed_from_cache.connect(self.receive_items_removed_from_cache)
 
     def undo(self):
         for item_type in reversed(list(self.undo_typed_db_map_data.keys())):
@@ -293,7 +293,9 @@ class RemoveItemsCommand(QUndoCommand):
             self.db_mngr.add_or_update_items(db_map_data, method_name, emit_signal_name)
 
     @Slot(object)
-    def receive_items_removed_from_cache(self, db_map_typed_data):
+    def receive_items_changed(self, db_map_data):
+        db_map_typed_data = db_map_data
+        super().receive_items_changed(db_map_data)
         for db_map, typed_data in db_map_typed_data.items():
             for item_type, data in typed_data.items():
                 data = [_cache_to_db_item(item_type, item) for item in data]

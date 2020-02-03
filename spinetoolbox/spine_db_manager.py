@@ -895,6 +895,14 @@ class SpineDBManager(QObject):
         """
         self.undo_stack.push(AddItemsCommand(self, db_map_data, "parameter value"))
 
+    def add_checked_parameter_values(self, db_map_data):
+        """Adds parameter values in db without checking integrity.
+
+        Args:
+            db_map_data (dict): lists of items to add keyed by DiffDatabaseMapping
+        """
+        self.undo_stack.push(AddCheckedParameterValuesCommand(self, db_map_data))
+
     def add_parameter_value_lists(self, db_map_data):
         """Adds parameter value lists to db.
 
@@ -959,6 +967,14 @@ class SpineDBManager(QObject):
         """
         self.undo_stack.push(UpdateItemsCommand(self, db_map_data, "parameter value"))
 
+    def update_checked_parameter_values(self, db_map_data):
+        """Updates parameter values in db without checking integrity.
+
+        Args:
+            db_map_data (dict): lists of items to update keyed by DiffDatabaseMapping
+        """
+        self.undo_stack.push(UpdateCheckedParameterValuesCommand(self, db_map_data))
+
     def update_parameter_value_lists(self, db_map_data):
         """Updates parameter value lists in db.
 
@@ -982,39 +998,6 @@ class SpineDBManager(QObject):
             db_map_data (dict): lists of items to set keyed by DiffDatabaseMapping
         """
         self.add_or_update_items(db_map_data, "set_parameter_definition_tags", "parameter_definition_tags_set")
-
-    def add_or_update_checked_parameter_values(self, db_map_data, method_name, signal_name):
-        """Adds or updates parameter values in db without checking integrity.
-
-        Args:
-            db_map_data (dict): lists of items to add or update keyed by DiffDatabaseMapping
-            method_name (str): attribute of DiffDatabaseMapping to call for performing the operation
-            signal_name (str) : signal attribute of SpineDBManager to emit if successful
-        """
-        db_map_data_out = dict()
-        for db_map, items in db_map_data.items():
-            ids = getattr(db_map, method_name)(*items)
-            if not ids:
-                continue
-            db_map_data_out[db_map] = self.get_parameter_values(db_map, ids=ids)
-        if any(db_map_data_out.values()):
-            getattr(self, signal_name).emit(db_map_data_out)
-
-    def add_checked_parameter_values(self, db_map_data):
-        """Adds parameter values in db without checking integrity.
-
-        Args:
-            db_map_data (dict): lists of items to add keyed by DiffDatabaseMapping
-        """
-        self.undo_stack.push(AddCheckedParameterValuesCommand(self, db_map_data))
-
-    def update_checked_parameter_values(self, db_map_data):
-        """Updates parameter values in db without checking integrity.
-
-        Args:
-            db_map_data (dict): lists of items to update keyed by DiffDatabaseMapping
-        """
-        self.undo_stack.push(UpdateCheckedParameterValuesCommand(self, db_map_data))
 
     def remove_items(self, db_map_typed_data):
         self.undo_stack.push(RemoveItemsCommand(self, db_map_typed_data))
