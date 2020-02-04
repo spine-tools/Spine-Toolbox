@@ -63,21 +63,25 @@ The recommended way to install dependencies using Anaconda or Miniconda is:
 
 1. Open Anaconda prompt
 
-2. Create a new environment by typing
+2. Install **git** into the base environment
+
+        conda install -c anaconda git
+
+3. Create a new environment by typing
 
         conda create -n spinetoolbox python=3.7
 
-3. Activate the new environment
+4. Activate the new environment
 
         conda activate spinetoolbox
 
-4. cd to Spine Toolbox root directory (the one with requirements.txt)
+5. cd to Spine Toolbox root directory (the one with requirements.txt)
 
-5. Install requirements using **pip**
+6. Install requirements using **pip**
 
         pip install -r requirements.txt
 
-6. If needed, to install the developer requirements run
+7. If needed, to install the developer requirements run
 
         pip install -r dev-requirements.txt
 
