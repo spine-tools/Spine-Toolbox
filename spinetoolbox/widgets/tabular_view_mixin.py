@@ -285,7 +285,7 @@ class TabularViewMixin:
         else:
             entity_ids = [(e["id"],) for e in entities]
         if not entity_ids:
-            entity_ids = [(None,)]
+            entity_ids = [tuple(None for _ in self.current_object_class_id_list())]
         if not parameter_ids:
             parameter_ids = [None]
         return {entity_id + (parameter_id,): None for entity_id in entity_ids for parameter_id in parameter_ids}
@@ -605,6 +605,7 @@ class TabularViewMixin:
             self.pivot_table_model.remove_from_model(data)
         for identifier, menu in self.filter_menus.items():
             current = set(self.pivot_table_model.model.index_values.get(identifier, []))
+            current.discard(None)
             previous = menu._filter._filter_model._id_data_set
             if action == "add":
                 menu.add_items_to_filter_list(list(current - previous))
