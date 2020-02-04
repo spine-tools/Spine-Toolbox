@@ -325,9 +325,9 @@ class SpineToolboxProject(MetaObject):
             )
             return
         items = [self._toolbox.project_item_model.get_item(name).project_item for name in node_successors]
-        self._toolbox.msg.emit(
-            f"items:{items}, node_successors:{node_successors}, execution_permits:{execution_permits}"
-        )
+        # self._toolbox.msg.emit(
+        #     f"items:{items}, node_successors:{node_successors}, execution_permits:{execution_permits}"
+        # )
         if not self.check_invalid_names(execution_permits):
             self._toolbox.msg_error.emit("Execution terminated")
             return
