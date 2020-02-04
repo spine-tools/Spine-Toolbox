@@ -624,7 +624,7 @@ class SpineDBManager(QObject):
             return "Start: {}, resolution: variable, length: {}".format(parsed_value.indexes[0], len(parsed_value))
         return None
 
-    def get_object_classes(self, db_map):
+    def get_object_classes(self, db_map, cache=True):
         """Returns object classes from database.
 
         Args:
@@ -635,11 +635,11 @@ class SpineDBManager(QObject):
         """
         qry = db_map.query(db_map.object_class_sq)
         items = [x._asdict() for x in qry]
-        self.cache_items("object class", {db_map: items})
+        _ = cache and self.cache_items("object class", {db_map: items})
         self.update_icons({db_map: items})
         return items
 
-    def get_objects(self, db_map, class_id=None):
+    def get_objects(self, db_map, class_id=None, cache=True):
         """Returns objects from database.
 
         Args:
@@ -653,10 +653,10 @@ class SpineDBManager(QObject):
         if class_id:
             qry = qry.filter_by(class_id=class_id)
         items = [x._asdict() for x in qry]
-        self.cache_items("object", {db_map: items})
+        _ = cache and self.cache_items("object", {db_map: items})
         return items
 
-    def get_relationship_classes(self, db_map, ids=None, object_class_id=None):
+    def get_relationship_classes(self, db_map, ids=None, object_class_id=None, cache=True):
         """Returns relationship classes from database.
 
         Args:
@@ -674,10 +674,10 @@ class SpineDBManager(QObject):
             ids = {x.id for x in db_map.query(db_map.relationship_class_sq).filter_by(object_class_id=object_class_id)}
             qry = qry.filter(db_map.wide_relationship_class_sq.c.id.in_(ids))
         items = [x._asdict() for x in qry]
-        self.cache_items("relationship class", {db_map: items})
+        _ = cache and self.cache_items("relationship class", {db_map: items})
         return items
 
-    def get_relationships(self, db_map, ids=None, class_id=None, object_id=None):
+    def get_relationships(self, db_map, ids=None, class_id=None, object_id=None, cache=True):
         """Returns relationships from database.
 
         Args:
@@ -698,10 +698,10 @@ class SpineDBManager(QObject):
         if class_id:
             qry = qry.filter_by(class_id=class_id)
         items = [x._asdict() for x in qry]
-        self.cache_items("relationship", {db_map: items})
+        _ = cache and self.cache_items("relationship", {db_map: items})
         return items
 
-    def get_object_parameter_definitions(self, db_map, ids=None, object_class_id=None):
+    def get_object_parameter_definitions(self, db_map, ids=None, object_class_id=None, cache=True):
         """Returns object parameter definitions from database.
 
         Args:
@@ -719,10 +719,10 @@ class SpineDBManager(QObject):
         if ids:
             qry = qry.filter(sq.c.id.in_(ids))
         items = [x._asdict() for x in qry]
-        self.cache_items("parameter definition", {db_map: items})
+        _ = cache and self.cache_items("parameter definition", {db_map: items})
         return items
 
-    def get_relationship_parameter_definitions(self, db_map, ids=None, relationship_class_id=None):
+    def get_relationship_parameter_definitions(self, db_map, ids=None, relationship_class_id=None, cache=True):
         """Returns relationship parameter definitions from database.
 
         Args:
@@ -740,10 +740,10 @@ class SpineDBManager(QObject):
         if ids:
             qry = qry.filter(sq.c.id.in_(ids))
         items = [x._asdict() for x in qry]
-        self.cache_items("parameter definition", {db_map: items})
+        _ = cache and self.cache_items("parameter definition", {db_map: items})
         return items
 
-    def get_object_parameter_values(self, db_map, ids=None, object_class_id=None):
+    def get_object_parameter_values(self, db_map, ids=None, object_class_id=None, cache=True):
         """Returns object parameter values from database.
 
         Args:
@@ -761,10 +761,10 @@ class SpineDBManager(QObject):
         if ids:
             qry = qry.filter(sq.c.id.in_(ids))
         items = [x._asdict() for x in qry]
-        self.cache_items("parameter value", {db_map: items})
+        _ = cache and self.cache_items("parameter value", {db_map: items})
         return items
 
-    def get_relationship_parameter_values(self, db_map, ids=None, relationship_class_id=None):
+    def get_relationship_parameter_values(self, db_map, ids=None, relationship_class_id=None, cache=True):
         """Returns relationship parameter values from database.
 
         Args:
@@ -782,10 +782,10 @@ class SpineDBManager(QObject):
         if ids:
             qry = qry.filter(sq.c.id.in_(ids))
         items = [x._asdict() for x in qry]
-        self.cache_items("parameter value", {db_map: items})
+        _ = cache and self.cache_items("parameter value", {db_map: items})
         return items
 
-    def get_parameter_definitions(self, db_map, ids=None, entity_class_id=None):
+    def get_parameter_definitions(self, db_map, ids=None, entity_class_id=None, cache=True):
         """Returns both object and relationship parameter definitions.
 
         Args:
@@ -797,10 +797,12 @@ class SpineDBManager(QObject):
             list: dictionary items
         """
         return self.get_object_parameter_definitions(
-            db_map, ids=ids, object_class_id=entity_class_id
-        ) + self.get_relationship_parameter_definitions(db_map, ids=ids, relationship_class_id=entity_class_id)
+            db_map, ids=ids, object_class_id=entity_class_id, cache=cache
+        ) + self.get_relationship_parameter_definitions(
+            db_map, ids=ids, relationship_class_id=entity_class_id, cache=cache
+        )
 
-    def get_parameter_values(self, db_map, ids=None, entity_class_id=None):
+    def get_parameter_values(self, db_map, ids=None, entity_class_id=None, cache=True):
         """Returns both object and relationship parameter values.
 
         Args:
@@ -812,10 +814,10 @@ class SpineDBManager(QObject):
             list: dictionary items
         """
         return self.get_object_parameter_values(
-            db_map, ids=ids, object_class_id=entity_class_id
-        ) + self.get_relationship_parameter_values(db_map, ids=ids, relationship_class_id=entity_class_id)
+            db_map, ids=ids, object_class_id=entity_class_id, cache=cache
+        ) + self.get_relationship_parameter_values(db_map, ids=ids, relationship_class_id=entity_class_id, cache=cache)
 
-    def get_parameter_value_lists(self, db_map):
+    def get_parameter_value_lists(self, db_map, cache=True):
         """Returns parameter value lists from database.
 
         Args:
@@ -826,10 +828,10 @@ class SpineDBManager(QObject):
         """
         qry = db_map.query(db_map.wide_parameter_value_list_sq)
         items = [x._asdict() for x in qry]
-        self.cache_items("parameter value list", {db_map: items})
+        _ = cache and self.cache_items("parameter value list", {db_map: items})
         return items
 
-    def get_parameter_tags(self, db_map):
+    def get_parameter_tags(self, db_map, cache=True):
         """Get parameter tags from database.
 
         Args:
@@ -840,7 +842,7 @@ class SpineDBManager(QObject):
         """
         qry = db_map.query(db_map.parameter_tag_sq)
         items = [x._asdict() for x in qry]
-        self.cache_items("parameter tag", {db_map: items})
+        _ = cache and self.cache_items("parameter tag", {db_map: items})
         return items
 
     def add_or_update_items(self, db_map_data, method_name, signal_name):
@@ -1205,9 +1207,10 @@ class SpineDBManager(QObject):
         db_map_cascading_data = self.find_cascading_relationship_classes(self._to_ids(db_map_data))
         if not any(db_map_cascading_data.values()):
             return
-        for db_map, data in db_map_cascading_data.items():
-            ids = {x["id"] for x in data}
-            self.get_relationship_classes(db_map, ids=ids)
+        db_map_cascading_data = {
+            db_map: self.get_relationship_classes(db_map, ids={x["id"] for x in data}, cache=False)
+            for db_map, data in db_map_cascading_data.items()
+        }
         self.relationship_classes_updated.emit(db_map_cascading_data)
 
     @Slot("QVariant", name="cascade_refresh_relationships_by_object")
@@ -1220,9 +1223,10 @@ class SpineDBManager(QObject):
         db_map_cascading_data = self.find_cascading_relationships(self._to_ids(db_map_data))
         if not any(db_map_cascading_data.values()):
             return
-        for db_map, data in db_map_cascading_data.items():
-            ids = {x["id"] for x in data}
-            self.get_relationships(db_map, ids=ids)
+        db_map_cascading_data = {
+            db_map: self.get_relationships(db_map, ids={x["id"] for x in data}, cache=False)
+            for db_map, data in db_map_cascading_data.items()
+        }
         self.relationships_updated.emit(db_map_cascading_data)
 
     @Slot("QVariant", name="cascade_refresh_parameter_definitions")
@@ -1235,9 +1239,10 @@ class SpineDBManager(QObject):
         db_map_cascading_data = self.find_cascading_parameter_data(self._to_ids(db_map_data), "parameter definition")
         if not any(db_map_cascading_data.values()):
             return
-        for db_map, data in db_map_cascading_data.items():
-            ids = {x["id"] for x in data}
-            self.get_parameter_definitions(db_map, ids=ids)
+        db_map_cascading_data = {
+            db_map: self.get_parameter_definitions(db_map, ids={x["id"] for x in data}, cache=False)
+            for db_map, data in db_map_cascading_data.items()
+        }
         self._parameter_definitions_updated.emit(db_map_cascading_data)
 
     @Slot("QVariant", name="cascade_refresh_parameter_definitions_by_value_list")
@@ -1250,9 +1255,10 @@ class SpineDBManager(QObject):
         db_map_cascading_data = self.find_cascading_parameter_definitions_by_value_list(self._to_ids(db_map_data))
         if not any(db_map_cascading_data.values()):
             return
-        for db_map, data in db_map_cascading_data.items():
-            ids = {x["id"] for x in data}
-            self.get_parameter_definitions(db_map, ids=ids)
+        db_map_cascading_data = {
+            db_map: self.get_parameter_definitions(db_map, ids={x["id"] for x in data}, cache=False)
+            for db_map, data in db_map_cascading_data.items()
+        }
         self._parameter_definitions_updated.emit(db_map_cascading_data)
 
     @Slot("QVariant", name="cascade_refresh_parameter_definitions_by_tag")
@@ -1265,9 +1271,10 @@ class SpineDBManager(QObject):
         db_map_cascading_data = self.find_cascading_parameter_definitions_by_tag(self._to_ids(db_map_data))
         if not any(db_map_cascading_data.values()):
             return
-        for db_map, data in db_map_cascading_data.items():
-            ids = {x["id"] for x in data}
-            self.get_parameter_definitions(db_map, ids=ids)
+        db_map_cascading_data = {
+            db_map: self.get_parameter_definitions(db_map, ids={x["id"] for x in data}, cache=False)
+            for db_map, data in db_map_cascading_data.items()
+        }
         self._parameter_definitions_updated.emit(db_map_cascading_data)
 
     @Slot("QVariant", name="cascade_refresh_parameter_values_by_entity_class")
@@ -1280,9 +1287,10 @@ class SpineDBManager(QObject):
         db_map_cascading_data = self.find_cascading_parameter_data(self._to_ids(db_map_data), "parameter value")
         if not any(db_map_cascading_data.values()):
             return
-        for db_map, data in db_map_cascading_data.items():
-            ids = {x["id"] for x in data}
-            self.get_parameter_values(db_map, ids=ids)
+        db_map_cascading_data = {
+            db_map: self.get_parameter_values(db_map, ids={x["id"] for x in data}, cache=False)
+            for db_map, data in db_map_cascading_data.items()
+        }
         self._parameter_values_updated.emit(db_map_cascading_data)
 
     @Slot("QVariant", name="cascade_refresh_parameter_values_by_entity")
@@ -1295,9 +1303,10 @@ class SpineDBManager(QObject):
         db_map_cascading_data = self.find_cascading_parameter_values_by_entity(self._to_ids(db_map_data))
         if not any(db_map_cascading_data.values()):
             return
-        for db_map, data in db_map_cascading_data.items():
-            ids = {x["id"] for x in data}
-            self.get_parameter_values(db_map, ids=ids)
+        db_map_cascading_data = {
+            db_map: self.get_parameter_values(db_map, ids={x["id"] for x in data}, cache=False)
+            for db_map, data in db_map_cascading_data.items()
+        }
         self._parameter_values_updated.emit(db_map_cascading_data)
 
     @Slot("QVariant", name="cascade_refresh_parameter_values_by_definition")
@@ -1310,9 +1319,10 @@ class SpineDBManager(QObject):
         db_map_cascading_data = self.find_cascading_parameter_values_by_definition(self._to_ids(db_map_data))
         if not any(db_map_cascading_data.values()):
             return
-        for db_map, data in db_map_cascading_data.items():
-            ids = {x["id"] for x in data}
-            self.get_parameter_values(db_map, ids=ids)
+        db_map_cascading_data = {
+            db_map: self.get_parameter_values(db_map, ids={x["id"] for x in data}, cache=False)
+            for db_map, data in db_map_cascading_data.items()
+        }
         self._parameter_values_updated.emit(db_map_cascading_data)
 
     def find_cascading_relationship_classes(self, db_map_ids):
