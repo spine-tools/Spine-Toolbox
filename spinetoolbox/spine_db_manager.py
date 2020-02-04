@@ -251,6 +251,7 @@ class SpineDBManager(QObject):
             try:
                 db_map.commit_session(commit_msg)
                 committed_db_maps.add(db_map)
+                self.undo_stack[db_map].setClean()
             except SpineDBAPIError as e:
                 error_log[db_map] = e.msg
         if any(error_log.values()):
@@ -274,6 +275,7 @@ class SpineDBManager(QObject):
             try:
                 db_map.rollback_session()
                 rolled_db_maps.add(db_map)
+                self.undo_stack[db_map].clear()
             except SpineDBAPIError as e:
                 error_log[db_map] = e.msg
         if any(error_log.values()):

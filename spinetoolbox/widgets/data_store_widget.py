@@ -74,7 +74,6 @@ class DataStoreFormBase(QMainWindow):
         self.ui.setupUi(self)
         self.takeCentralWidget()
         self.setWindowIcon(QIcon(":/symbols/app.ico"))
-        self.setWindowTitle("Data store view    -- {} --".format(", ".join([x.codename for x in self.db_maps])))
         self.setStyleSheet(MAINWINDOW_SS)
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.qsettings = QSettings("SpineProject", "Spine Toolbox")
@@ -97,6 +96,7 @@ class DataStoreFormBase(QMainWindow):
         self.settings_group = 'treeViewWidget'
         self.undo_action = None
         self.redo_action = None
+        self.update_commit_enabled_and_window_title()
 
     def add_menu_actions(self):
         """Adds actions to View and Edit menu."""
@@ -116,7 +116,6 @@ class DataStoreFormBase(QMainWindow):
         self.msg.connect(self.add_message)
         self.msg_error.connect(self.err_msg.showMessage)
         # Menu actions
-        self.ui.menuSession.aboutToShow.connect(self._handle_menu_session_about_to_show)
         self.ui.actionCommit.triggered.connect(self.commit_session)
         self.ui.actionRollback.triggered.connect(self.rollback_session)
         self.ui.actionRefresh.triggered.connect(self.refresh_session)
@@ -139,6 +138,7 @@ class DataStoreFormBase(QMainWindow):
         self.parameter_value_list_model.remove_selection_requested.connect(self.remove_parameter_value_lists)
         for db_map in self.db_maps:
             self.db_mngr.undo_stack[db_map].indexChanged.connect(self.update_undo_redo_actions)
+            self.db_mngr.undo_stack[db_map].cleanChanged.connect(self.update_commit_enabled_and_window_title)
 
     @Slot(int)
     def update_undo_redo_actions(self, index):
@@ -155,6 +155,23 @@ class DataStoreFormBase(QMainWindow):
             self.ui.menuEdit.insertAction(self.redo_action, new_redo_action)
             self.ui.menuEdit.removeAction(self.redo_action)
             self.redo_action = new_redo_action
+
+    @Slot(bool)
+    def update_commit_enabled_and_window_title(self, _clean=False):
+        db_map_clean = {db_map: self.db_mngr.undo_stack[db_map].isClean() for db_map in self.db_maps}
+        disabled = all(db_map_clean.values())
+        self.ui.actionCommit.setDisabled(disabled)
+        self.ui.actionRollback.setDisabled(disabled)
+        self.setWindowTitle(
+            "{0} - Data store view ".format(
+                ", ".join(
+                    [
+                        "{0}{1}".format(db_map.codename, "" if clean else " \u25CF")
+                        for db_map, clean in db_map_clean.items()
+                    ]
+                )
+            )
+        )
 
     def init_models(self):
         """Initializes models."""
@@ -351,15 +368,6 @@ class DataStoreFormBase(QMainWindow):
         dst_url = 'sqlite:///{0}'.format(file_path)
         copy_database(dst_url, db_map, overwrite=True)
         self.msg.emit("SQlite file successfully exported.")
-
-    @Slot()
-    def _handle_menu_session_about_to_show(self):
-        on = self.commit_enabled()
-        self.ui.actionCommit.setEnabled(on)
-        self.ui.actionRollback.setEnabled(on)
-
-    def commit_enabled(self):
-        return any(db_map.has_pending_changes() for db_map in self.db_maps)
 
     @Slot(bool)
     def commit_session(self, checked=False):
