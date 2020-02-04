@@ -45,7 +45,7 @@ class ProjectItem(MetaObject):
             x (float): horizontal position on the scene
             y (float): vertical position on the scene
             project (SpineToolboxProject): project item's project
-            logger (LoggingSignals): a logger instance
+            logger (LoggerInterface): a logger instance
         """
         super().__init__(name, description)
         self._project = project

@@ -43,7 +43,7 @@ class Tool(ProjectItem):
             y (float): Initial Y coordinate of item icon
             toolbox (ToolboxUI): QMainWindow instance
             project (SpineToolboxProject): the project this item belongs to
-            logger (LoggingSignals): a logger instance
+            logger (LoggerInterface): a logger instance
             tool (str): Name of this Tool's Tool specification
             execute_in_work (bool): Execute associated Tool specification in work (True) or source directory (False)
         """

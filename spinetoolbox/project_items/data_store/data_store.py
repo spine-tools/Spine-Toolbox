@@ -40,7 +40,7 @@ class DataStore(ProjectItem):
             y (float): Initial Y coordinate of item icon
             toolbox (ToolboxUI): QMainWindow instance
             project (SpineToolboxProject): the project this item belongs to
-            logger (LoggingSignals): a logger instance
+            logger (LoggerInterface): a logger instance
             url (str or dict): SQLAlchemy url
         """
         super().__init__(name, description, x, y, project, logger)

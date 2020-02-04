@@ -550,6 +550,8 @@ class TestToolboxUI(unittest.TestCase):
             "spinetoolbox.project.create_dir"
         ) as mock_create_dir, mock.patch("spinetoolbox.project_item.create_dir") as mock_create_dir:
             self.toolbox.open_project(project_dir)
+        specification_index = self.toolbox.tool_specification_model.index(0, 0)
+        self.toolbox.remove_tool_specification(specification_index, ask_verification=False)
         self.assertEqual(0, self.toolbox.tool_specification_model.rowCount())  # Tool spec model is empty
         tool_spec_path = os.path.abspath(os.path.join(os.curdir, "tests", "test_resources", "test_tool_spec.json"))
         with mock.patch("spinetoolbox.ui_main.QFileDialog.getOpenFileName") as mock_filename:

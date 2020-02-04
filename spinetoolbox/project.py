@@ -20,11 +20,8 @@ import os
 import logging
 import json
 from PySide2.QtCore import Slot, Signal
-from PySide2.QtWidgets import QMessageBox
-from dagster.core.definitions.utils import check_valid_name
-from dagster.core.errors import DagsterInvalidDefinitionError
 from spine_engine import SpineEngine, SpineEngineState
-from .metaobject import MetaObject, shorten
+from .metaobject import MetaObject
 from .helpers import create_dir, inverted
 from .tool_specifications import JuliaTool, PythonTool, GAMSTool, ExecutableTool
 from .config import LATEST_PROJECT_VERSION, PROJECT_FILENAME
@@ -39,8 +36,10 @@ class SpineToolboxProject(MetaObject):
     dag_execution_finished = Signal()
     dag_execution_about_to_start = Signal("QVariant")
     """Emitted just before an engine runs. Provides a reference to the engine."""
+    project_execution_about_to_start = Signal()
+    """Emitted just before the entire project is executed."""
 
-    def __init__(self, toolbox, name, description, p_dir):
+    def __init__(self, toolbox, name, description, p_dir, project_item_model, settings, logger):
 
         """
 
@@ -49,12 +48,17 @@ class SpineToolboxProject(MetaObject):
             name (str): Project name
             description (str): Project description
             p_dir (str): Project directory
+            project_item_model (ProjectItemModel): project item tree model
+            settings (QSettings): Toolbox settings
+            logger (LoggerInterface): a logger instance
         """
         super().__init__(name, description)
         self._toolbox = toolbox
-        self._qsettings = self._toolbox.qsettings()
+        self._project_item_model = project_item_model
+        self._logger = logger
+        self._settings = settings
         self.dag_handler = DirectedGraphHandler()
-        self.db_mngr = SpineDBManager(self)
+        self.db_mngr = SpineDBManager(logger, self)
         self.engine = None
         self._execution_stopped = True
         self._dag_execution_list = None
@@ -65,7 +69,7 @@ class SpineToolboxProject(MetaObject):
         self.items_dir = None  # Full path to items directory
         self.config_file = None  # Full path to .spinetoolbox/project.json file
         if not self._create_project_structure(p_dir):
-            self._toolbox.msg_error.emit("Creating project directory " "structure to <b>{0}</b> failed".format(p_dir))
+            self._logger.msg_error.emit("Creating project directory " "structure to <b>{0}</b> failed".format(p_dir))
 
     def connect_signals(self):
         """Connect signals to slots."""
@@ -89,17 +93,17 @@ class SpineToolboxProject(MetaObject):
         try:
             create_dir(self.project_dir)  # Make project directory
         except OSError:
-            self._toolbox.msg_error.emit("Creating directory {0} failed".format(self.project_dir))
+            self._logger.msg_error.emit("Creating directory {0} failed".format(self.project_dir))
             return False
         try:
             create_dir(self.config_dir)  # Make project config directory
         except OSError:
-            self._toolbox.msg_error.emit("Creating directory {0} failed".format(self.config_dir))
+            self._logger.msg_error.emit("Creating directory {0} failed".format(self.config_dir))
             return False
         try:
             create_dir(self.items_dir)  # Make project items directory
         except OSError:
-            self._toolbox.msg_error.emit("Creating directory {0} failed".format(self.items_dir))
+            self._logger.msg_error.emit("Creating directory {0} failed".format(self.items_dir))
             return False
         return True
 
@@ -112,7 +116,7 @@ class SpineToolboxProject(MetaObject):
         super().set_name(name)
         # Update Window Title
         self._toolbox.setWindowTitle("Spine Toolbox    -- {} --".format(self.name))
-        self._toolbox.msg.emit("Project name changed to <b>{0}</b>".format(self.name))
+        self._logger.msg.emit("Project name changed to <b>{0}</b>".format(self.name))
 
     def save(self, tool_def_paths):
         """Collects project information and objects
@@ -143,10 +147,10 @@ class SpineToolboxProject(MetaObject):
         project_dict["connections"] = connections
         items_dict = dict()  # Dictionary for storing project items
         # Traverse all items in project model by category
-        for category_item in self._toolbox.project_item_model.root().children():
+        for category_item in self._project_item_model.root().children():
             category = category_item.name
             category_dict = items_dict[category] = dict()
-            for item in self._toolbox.project_item_model.items(category):
+            for item in self._project_item_model.items(category):
                 category_dict[item.name] = item.project_item.item_dict()
         # Save project to file
         saved_dict = dict(project=project_dict, objects=items_dict)
@@ -164,7 +168,7 @@ class SpineToolboxProject(MetaObject):
         Returns:
             bool: True if successful, False otherwise
         """
-        self._toolbox.msg.emit("Loading project items...")
+        self._logger.msg.emit("Loading project items...")
         empty = True
         for category_name, category_dict in objects_dict.items():
             items = []
@@ -175,7 +179,7 @@ class SpineToolboxProject(MetaObject):
                 empty = False
             self.add_project_items(category_name, *items, verbosity=False)
         if empty:
-            self._toolbox.msg_warning.emit("Project has no items")
+            self._logger.msg_warning.emit("Project has no items")
         return True
 
     def load_tool_specification_from_file(self, jsonfile):
@@ -192,11 +196,11 @@ class SpineToolboxProject(MetaObject):
                 try:
                     definition = json.load(fp)
                 except ValueError:
-                    self._toolbox.msg_error.emit("Tool specification file not valid")
+                    self._logger.msg_error.emit("Tool specification file not valid")
                     logging.exception("Loading JSON data failed")
                     return None
         except FileNotFoundError:
-            self._toolbox.msg_error.emit("Tool specification file <b>{0}</b> does not exist".format(jsonfile))
+            self._logger.msg_error.emit("Tool specification file <b>{0}</b> does not exist".format(jsonfile))
             return None
         # Path to main program relative to definition file
         includes_main_path = definition.get("includes_main_path", ".")
@@ -216,20 +220,20 @@ class SpineToolboxProject(MetaObject):
         try:
             _tooltype = definition["tooltype"].lower()
         except KeyError:
-            self._toolbox.msg_error.emit(
+            self._logger.msg_error.emit(
                 "No tool type defined in tool definition file. Supported types "
                 "are 'python', 'gams', 'julia' and 'executable'"
             )
             return None
         if _tooltype == "julia":
-            return JuliaTool.load(self._toolbox, path, definition)
+            return JuliaTool.load(self._toolbox, path, definition, self._settings, self._logger)
         if _tooltype == "python":
-            return PythonTool.load(self._toolbox, path, definition)
+            return PythonTool.load(self._toolbox, path, definition, self._settings, self._logger)
         if _tooltype == "gams":
-            return GAMSTool.load(self._toolbox, path, definition)
+            return GAMSTool.load(path, definition, self._settings, self._logger)
         if _tooltype == "executable":
-            return ExecutableTool.load(self._toolbox, path, definition)
-        self._toolbox.msg_warning.emit("Tool type <b>{}</b> not available".format(_tooltype))
+            return ExecutableTool.load(path, definition, self._settings, self._logger)
+        self._logger.msg_warning.emit("Tool type <b>{}</b> not available".format(_tooltype))
         return None
 
     def add_project_items(self, category_name, *items, set_selected=False, verbosity=True):
@@ -241,27 +245,27 @@ class SpineToolboxProject(MetaObject):
             set_selected (bool): Whether to set item selected after the item has been added to project
             verbosity (bool): If True, prints message
         """
-        category_ind = self._toolbox.project_item_model.find_category(category_name)
+        category_ind = self._project_item_model.find_category(category_name)
         if not category_ind:
-            self._toolbox.msg_error.emit("Category {0} not found".format(category_name))
+            self._logger.msg_error.emit("Category {0} not found".format(category_name))
             return
-        category_item = self._toolbox.project_item_model.item(category_ind)
+        category_item = self._project_item_model.item(category_ind)
         item_maker = category_item.item_maker()
         for item_dict in items:
             try:
-                item = item_maker(**item_dict, toolbox=self._toolbox, project=self, logger=self._toolbox)
+                item = item_maker(**item_dict, toolbox=self._toolbox, project=self, logger=self._logger)
                 tree_item = LeafProjectTreeItem(item, self._toolbox)
             except TypeError:
-                self._toolbox.msg_error.emit(
+                self._logger.msg_error.emit(
                     "Loading project item <b>{0}</b> into category <b>{1}</b> failed. "
                     "This is most likely caused by an outdated project file.".format(item_dict["name"], category_name)
                 )
                 continue
-            self._toolbox.project_item_model.insert_item(tree_item, category_ind)
+            self._project_item_model.insert_item(tree_item, category_ind)
             # Append new node to networkx graph
             self.add_to_dag(item.name)
             if verbosity:
-                self._toolbox.msg.emit("{0} <b>{1}</b> added to project.".format(item.item_type(), item.name))
+                self._logger.msg.emit("{0} <b>{1}</b> added to project.".format(item.item_type(), item.name))
             if set_selected:
                 self.set_item_selected(tree_item)
 
@@ -275,7 +279,7 @@ class SpineToolboxProject(MetaObject):
         Args:
             item (BaseProjectTreeItem): Project item to select
         """
-        ind = self._toolbox.project_item_model.find_item(item.name)
+        ind = self._project_item_model.find_item(item.name)
         self._toolbox.ui.treeView_project.setCurrentIndex(ind)
 
     def execute_dags(self, dags, execution_permits):
@@ -316,26 +320,26 @@ class SpineToolboxProject(MetaObject):
         """
         node_successors = self.dag_handler.node_successors(dag)
         if not node_successors:
-            self._toolbox.msg_warning.emit("<b>Graph {0} is not a Directed Acyclic Graph</b>".format(dag_identifier))
-            self._toolbox.msg.emit("Items in graph: {0}".format(", ".join(dag.nodes())))
+            self._logger.msg_warning.emit("<b>Graph {0} is not a Directed Acyclic Graph</b>".format(dag_identifier))
+            self._logger.msg.emit("Items in graph: {0}".format(", ".join(dag.nodes())))
             edges = ["{0} -> {1}".format(*edge) for edge in self.dag_handler.edges_causing_loops(dag)]
-            self._toolbox.msg.emit(
+            self._logger.msg.emit(
                 "Please edit connections in Design View to execute it. "
                 "Possible fix: remove connection(s) {0}.".format(", ".join(edges))
             )
             return
-        items = [self._toolbox.project_item_model.get_item(name).project_item for name in node_successors]
+        items = [self._project_item_model.get_item(name).project_item for name in node_successors]
         self.engine = SpineEngine(items, node_successors, execution_permits)
         self.dag_execution_about_to_start.emit(self.engine)
-        self._toolbox.msg.emit("<b>Starting DAG {0}</b>".format(dag_identifier))
-        self._toolbox.msg.emit("Order: {0}".format(" -> ".join(list(node_successors))))
+        self._logger.msg.emit("<b>Starting DAG {0}</b>".format(dag_identifier))
+        self._logger.msg.emit("Order: {0}".format(" -> ".join(list(node_successors))))
         self.engine.run()
         outcome = {
             SpineEngineState.USER_STOPPED: "stopped by the user",
             SpineEngineState.FAILED: "failed",
             SpineEngineState.COMPLETED: "completed successfully",
         }[self.engine.state()]
-        self._toolbox.msg.emit("<b>DAG {0} {1}</b>".format(dag_identifier, outcome))
+        self._logger.msg.emit("<b>DAG {0} {1}</b>".format(dag_identifier, outcome))
 
     def execute_selected(self):
         """Executes DAGs corresponding to all selected project items."""
@@ -343,21 +347,21 @@ class SpineToolboxProject(MetaObject):
             self._toolbox.ui.textBrowser_eventlog.verticalScrollBar().maximum()
         )
         if not self.dag_handler.dags():
-            self._toolbox.msg_warning.emit("Project has no items to execute")
+            self._logger.msg_warning.emit("Project has no items to execute")
             return
         # Get selected item
         selected_indexes = self._toolbox.ui.treeView_project.selectedIndexes()
         if not selected_indexes:
-            self._toolbox.msg_warning.emit("Please select a project item and try again.")
+            self._logger.msg_warning.emit("Please select a project item and try again.")
             return
         dags = set()
         executable_item_names = list()
         for ind in selected_indexes:
-            item = self._toolbox.project_item_model.item(ind)
+            item = self._project_item_model.item(ind)
             executable_item_names.append(item.name)
             dag = self.dag_handler.dag_with_node(item.name)
             if not dag:
-                self._toolbox.msg_error.emit(
+                self._logger.msg_error.emit(
                     "[BUG] Could not find a graph containing {0}. "
                     "<b>Please reopen the project.</b>".format(item.name)
                 )
@@ -369,36 +373,34 @@ class SpineToolboxProject(MetaObject):
             for item_name in dag.nodes:
                 execution_permits[item_name] = item_name in executable_item_names
             execution_permit_list.append(execution_permits)
-        self._toolbox.msg.emit("")
-        self._toolbox.msg.emit("-------------------------------------------------")
-        self._toolbox.msg.emit("<b>Executing Selected Directed Acyclic Graphs</b>")
-        self._toolbox.msg.emit("-------------------------------------------------")
+        self._logger.msg.emit("")
+        self._logger.msg.emit("-------------------------------------------------")
+        self._logger.msg.emit("<b>Executing Selected Directed Acyclic Graphs</b>")
+        self._logger.msg.emit("-------------------------------------------------")
         self.execute_dags(dags, execution_permit_list)
 
     def execute_project(self):
         """Executes all dags in the project."""
-        self._toolbox.ui.textBrowser_eventlog.verticalScrollBar().setValue(
-            self._toolbox.ui.textBrowser_eventlog.verticalScrollBar().maximum()
-        )
+        self.project_execution_about_to_start.emit()
         dags = self.dag_handler.dags()
         if not dags:
-            self._toolbox.msg_warning.emit("Project has no items to execute")
+            self._logger.msg_warning.emit("Project has no items to execute")
             return
         execution_permit_list = list()
         for dag in dags:
             execution_permit_list.append({item_name: True for item_name in dag.nodes})
-        self._toolbox.msg.emit("")
-        self._toolbox.msg.emit("--------------------------------------------")
-        self._toolbox.msg.emit("<b>Executing All Directed Acyclic Graphs</b>")
-        self._toolbox.msg.emit("--------------------------------------------")
+        self._logger.msg.emit("")
+        self._logger.msg.emit("--------------------------------------------")
+        self._logger.msg.emit("<b>Executing All Directed Acyclic Graphs</b>")
+        self._logger.msg.emit("--------------------------------------------")
         self.execute_dags(dags, execution_permit_list)
 
     def stop(self):
         """Stops execution. Slot for the main window Stop tool button in the toolbar."""
         if self._execution_stopped:
-            self._toolbox.msg.emit("No execution in progress")
+            self._logger.msg.emit("No execution in progress")
             return
-        self._toolbox.msg.emit("Stopping...")
+        self._logger.msg.emit("Stopping...")
         self._execution_stopped = True
         if self.engine:
             self.engine.stop()
@@ -406,16 +408,16 @@ class SpineToolboxProject(MetaObject):
     def export_graphs(self):
         """Exports all valid directed acyclic graphs in project to GraphML files."""
         if not self.dag_handler.dags():
-            self._toolbox.msg_warning.emit("Project has no graphs to export")
+            self._logger.msg_warning.emit("Project has no graphs to export")
             return
         i = 0
         for g in self.dag_handler.dags():
             fn = str(i) + ".graphml"
             path = os.path.join(self.project_dir, fn)
             if not self.dag_handler.export_to_graphml(g, path):
-                self._toolbox.msg_warning.emit("Exporting graph nr. {0} failed. Not a directed acyclic graph".format(i))
+                self._logger.msg_warning.emit("Exporting graph nr. {0} failed. Not a directed acyclic graph".format(i))
             else:
-                self._toolbox.msg.emit("Graph nr. {0} exported to {1}".format(i, path))
+                self._logger.msg.emit("Graph nr. {0} exported to {1}".format(i, path))
             i += 1
 
     @Slot("QVariant")
@@ -426,17 +428,17 @@ class SpineToolboxProject(MetaObject):
             # Not a dag, invalidate workflow
             edges = self.dag_handler.edges_causing_loops(dag)
             for node in dag.nodes():
-                ind = self._toolbox.project_item_model.find_item(node)
-                project_item = self._toolbox.project_item_model.item(ind).project_item
+                ind = self._project_item_model.find_item(node)
+                project_item = self._project_item_model.item(ind).project_item
                 project_item.invalidate_workflow(edges)
             return
         # Make resource map and run simulation
         node_predecessors = inverted(node_successors)
         for rank, item_name in enumerate(node_successors):
-            item = self._toolbox.project_item_model.get_item(item_name).project_item
+            item = self._project_item_model.get_item(item_name).project_item
             resources = []
             for parent_name in node_predecessors.get(item_name, set()):
-                parent_item = self._toolbox.project_item_model.get_item(parent_name).project_item
+                parent_item = self._project_item_model.get_item(parent_name).project_item
                 resources += parent_item.output_resources_forward()
             item.handle_dag_changed(rank, resources)
 
@@ -453,11 +455,11 @@ class SpineToolboxProject(MetaObject):
         # In those cases we don't need to notify other items.
         if dag:
             self.notify_changes_in_dag(dag)
-        elif self._toolbox.project_item_model.find_item(item) is not None:
-            self._toolbox.msg_error.emit(
-                "[BUG] Could not find a graph containing {0}. " "<b>Please reopen the project.</b>".format(item)
+        elif self._project_item_model.find_item(item) is not None:
+            self._logger.msg_error.emit(
+                f"[BUG] Could not find a graph containing {item}. <b>Please reopen the project.</b>"
             )
 
     @property
     def settings(self):
-        return self._qsettings
+        return self._settings

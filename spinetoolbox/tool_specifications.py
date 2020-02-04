@@ -40,11 +40,12 @@ class ToolSpecification(MetaObject):
 
     def __init__(
         self,
-        toolbox,
         name,
         tooltype,
         path,
         includes,
+        settings,
+        logger,
         description=None,
         inputfiles=None,
         inputfiles_opt=None,
@@ -55,11 +56,12 @@ class ToolSpecification(MetaObject):
         """
 
         Args:
-            toolbox (ToolboxUI): QMainWindow instance
             name (str): Name of the tool
             tooltype (str): Type of Tool (e.g. Python, Julia, ..)
             path (str): Path to tool
             includes (list): List of files belonging to the tool specification (relative to 'path')
+            settings (QSettings): Toolbox settings
+            logger (LoggerInterface): a logger instance
             description (str): Description of the Tool specification
             inputfiles (list): List of required data files
             inputfiles_opt (list, optional): List of optional data files (wildcards may be used)
@@ -68,7 +70,8 @@ class ToolSpecification(MetaObject):
             execute_in_work (bool): Execute in work folder
         """
         super().__init__(name, description)
-        self._toolbox = toolbox
+        self._settings = settings
+        self._logger = logger
         self.tooltype = tooltype
         if not os.path.exists(path):
             pass
@@ -112,13 +115,13 @@ class ToolSpecification(MetaObject):
         return self.def_file_path
 
     @staticmethod
-    def check_definition(ui, data):
+    def check_definition(data, logger):
         """Checks that a tool specification contains
         the required keys and that it is in correct format.
 
         Args:
-            ui (ToolboxUI): QMainWindow instance
             data (dict): Tool specification
+            logger (LoggerInterface): A logger instance
 
         Returns:
             Dictionary or None if there was a problem in the tool definition.
@@ -129,13 +132,13 @@ class ToolSpecification(MetaObject):
                 kwargs[p] = data[p]
             except KeyError:
                 if p in REQUIRED_KEYS:
-                    ui.msg_error.emit("Required keyword '{0}' missing".format(p))
+                    logger.msg_error.emit("Required keyword '{0}' missing".format(p))
                     return None
             # Check that some values are lists
             if p in LIST_REQUIRED_KEYS:
                 try:
                     if not isinstance(data[p], list):
-                        ui.msg_error.emit("Keyword '{0}' value must be a list".format(p))
+                        logger.msg_error.emit("Keyword '{0}' value must be a list".format(p))
                         return None
                 except KeyError:
                     pass
@@ -285,11 +288,12 @@ class GAMSTool(ToolSpecification):
 
     def __init__(
         self,
-        toolbox,
         name,
         tooltype,
         path,
         includes,
+        settings,
+        logger,
         description=None,
         inputfiles=None,
         inputfiles_opt=None,
@@ -300,11 +304,12 @@ class GAMSTool(ToolSpecification):
         """
 
         Args:
-            toolbox (ToolboxUI): QMainWindow instance
             name (str): GAMS Tool name
             tooltype (str): Tool specification type
             path (str): Path to model main file
             includes (list): List of files belonging to the tool (relative to 'path').  # TODO: Change to src_files
+            settings (QSettings): Toolbox settings
+            logger (LoggerInterface): a logger instance
             First file in the list is the main GAMS program.
             description (str): GAMS Tool description
             inputfiles (list): List of required data files
@@ -313,11 +318,12 @@ class GAMSTool(ToolSpecification):
             cmdline_args (str, optional): GAMS tool command line arguments (read from tool definition file)
         """
         super().__init__(
-            toolbox,
             name,
             tooltype,
             path,
             includes,
+            settings,
+            logger,
             description,
             inputfiles,
             inputfiles_opt,
@@ -370,21 +376,22 @@ class GAMSTool(ToolSpecification):
             logging.error("Updating GAMS options failed. Unknown key: %s", key)
 
     @staticmethod
-    def load(toolbox, path, data):
+    def load(path, data, settings, logger):
         """Creates a GAMSTool according to a tool specification file.
 
         Args:
-            toolbox (ToolboxUI): QMainWindow instance
             path (str): Base path to tool files
             data (dict): Dictionary of tool definitions
+            settings (QSettings): Toolbox settings
+            logger (LoggerInterface): A logger instance
 
         Returns:
             GAMSTool instance or None if there was a problem in the tool specification file.
         """
-        kwargs = GAMSTool.check_definition(toolbox, data)
+        kwargs = GAMSTool.check_definition(data, logger)
         if kwargs is not None:
             # Return an executable model instance
-            return GAMSTool(toolbox=toolbox, path=path, **kwargs)
+            return GAMSTool(path=path, settings=settings, logger=logger, **kwargs)
         return None
 
     def create_tool_instance(self, basedir):
@@ -393,7 +400,7 @@ class GAMSTool(ToolSpecification):
         Args:
             basedir (str): the path to the directory where the instance will run
         """
-        return GAMSToolInstance(self._toolbox, self, basedir)
+        return GAMSToolInstance(self, basedir, self._settings, self._logger)
 
 
 class JuliaTool(ToolSpecification):
@@ -406,6 +413,8 @@ class JuliaTool(ToolSpecification):
         tooltype,
         path,
         includes,
+        settings,
+        logger,
         description=None,
         inputfiles=None,
         inputfiles_opt=None,
@@ -422,6 +431,8 @@ class JuliaTool(ToolSpecification):
             path (str): Path to model main file
             includes (list): List of files belonging to the tool (relative to 'path').  # TODO: Change to src_files
             First file in the list is the main Julia program.
+            settings (QSettings): Toolbox settings
+            logger (LoggerInterface): A logger instance
             description (str): Julia Tool description
             inputfiles (list): List of required data files
             inputfiles_opt (list, optional): List of optional data files (wildcards may be used)
@@ -429,11 +440,12 @@ class JuliaTool(ToolSpecification):
             cmdline_args (str, optional): Julia tool command line arguments (read from tool definition file)
         """
         super().__init__(
-            toolbox,
             name,
             tooltype,
             path,
             includes,
+            settings,
+            logger,
             description,
             inputfiles,
             inputfiles_opt,
@@ -441,6 +453,7 @@ class JuliaTool(ToolSpecification):
             cmdline_args,
             execute_in_work,
         )
+        self._toolbox = toolbox
         main_file = includes[0]
         self.main_dir, self.main_prgm = os.path.split(main_file)
         self.julia_options = OrderedDict()
@@ -459,21 +472,23 @@ class JuliaTool(ToolSpecification):
         """
 
     @staticmethod
-    def load(toolbox, path, data):
+    def load(toolbox, path, data, settings, logger):
         """Creates a JuliaTool according to a tool specification file.
 
         Args:
             toolbox (ToolboxUI): QMainWindow instance
             path (str): Base path to tool files
             data (dict): Dictionary of tool definitions
+            settings (QSetting): Toolbox settings
+            logger (LoggerInterface): A logger instance
 
         Returns:
             JuliaTool instance or None if there was a problem in the tool definition file.
         """
-        kwargs = JuliaTool.check_definition(toolbox, data)
+        kwargs = JuliaTool.check_definition(data, logger)
         if kwargs is not None:
             # Return an executable model instance
-            return JuliaTool(toolbox=toolbox, path=path, **kwargs)
+            return JuliaTool(toolbox=toolbox, path=path, settings=settings, logger=logger, **kwargs)
         return None
 
     def create_tool_instance(self, basedir):
@@ -482,7 +497,7 @@ class JuliaTool(ToolSpecification):
         Args:
             basedir (str): the path to the directory where the instance will run
         """
-        return JuliaToolInstance(self._toolbox, self, basedir)
+        return JuliaToolInstance(self._toolbox, self, basedir, self._settings, self._logger)
 
 
 class PythonTool(ToolSpecification):
@@ -495,6 +510,8 @@ class PythonTool(ToolSpecification):
         tooltype,
         path,
         includes,
+        settings,
+        logger,
         description=None,
         inputfiles=None,
         inputfiles_opt=None,
@@ -510,6 +527,8 @@ class PythonTool(ToolSpecification):
             tooltype (str): Tool specification type
             path (str): Path to model main file
             includes (list): List of files belonging to the tool (relative to 'path').  # TODO: Change to src_files
+            settings (QSettings): Toolbox settings
+            logger (LoggerInterface): A logger instance
             First file in the list is the main Python program.
             description (str): Python Tool description
             inputfiles (list): List of required data files
@@ -518,11 +537,12 @@ class PythonTool(ToolSpecification):
             cmdline_args (str, optional): Python tool command line arguments (read from tool definition file)
         """
         super().__init__(
-            toolbox,
             name,
             tooltype,
             path,
             includes,
+            settings,
+            logger,
             description,
             inputfiles,
             inputfiles_opt,
@@ -530,6 +550,7 @@ class PythonTool(ToolSpecification):
             cmdline_args,
             execute_in_work,
         )
+        self._toolbox = toolbox
         main_file = includes[0]
         self.main_dir, self.main_prgm = os.path.split(main_file)
         self.python_options = OrderedDict()
@@ -548,21 +569,23 @@ class PythonTool(ToolSpecification):
         """
 
     @staticmethod
-    def load(toolbox, path, data):
+    def load(toolbox, path, data, settings, logger):
         """Creates a PythonTool according to a tool specification file.
 
         Args:
-            toolbox (ToolboxUI): QMainWindow instance
+            toolbox (ToolboxUI): Toolbox main window
             path (str): Base path to tool files
             data (dict): Dictionary of tool definitions
+            settings (QSettings): Toolbox settings
+            logger (LoggerInterface): A logger instance
 
         Returns:
             PythonTool instance or None if there was a problem in the tool definition file.
         """
-        kwargs = PythonTool.check_definition(toolbox, data)
+        kwargs = PythonTool.check_definition(data, logger)
         if kwargs is not None:
             # Return an executable model instance
-            return PythonTool(toolbox=toolbox, path=path, **kwargs)
+            return PythonTool(toolbox=toolbox, path=path, settings=settings, logger=logger, **kwargs)
         return None
 
     def create_tool_instance(self, basedir):
@@ -571,7 +594,7 @@ class PythonTool(ToolSpecification):
         Args:
             basedir (str): the path to the directory where the instance will run
         """
-        return PythonToolInstance(self._toolbox, self, basedir)
+        return PythonToolInstance(self._toolbox, self, basedir, self._settings, self._logger)
 
 
 class ExecutableTool(ToolSpecification):
@@ -579,11 +602,12 @@ class ExecutableTool(ToolSpecification):
 
     def __init__(
         self,
-        toolbox,
         name,
         tooltype,
         path,
         includes,
+        settings,
+        logger,
         description=None,
         inputfiles=None,
         inputfiles_opt=None,
@@ -594,12 +618,13 @@ class ExecutableTool(ToolSpecification):
         """
         Args:
 
-            toolbox (ToolboxUI): QMainWindow instance
             name (str): Tool name
             tooltype (str): Tool specification type
             path (str): Path to main script file
             includes (list): List of files belonging to the tool (relative to 'path').  # TODO: Change to src_files
             First file in the list is the main script file.
+            settings (QSettings): Toolbox settings
+            logger (LoggerInterface): A logger instance
             description (str): Tool description
             inputfiles (list): List of required data files
             inputfiles_opt (list, optional): List of optional data files (wildcards may be used)
@@ -607,11 +632,12 @@ class ExecutableTool(ToolSpecification):
             cmdline_args (str, optional): Tool command line arguments (read from tool definition file)
         """
         super().__init__(
-            toolbox,
             name,
             tooltype,
             path,
             includes,
+            settings,
+            logger,
             description,
             inputfiles,
             inputfiles_opt,
@@ -630,21 +656,22 @@ class ExecutableTool(ToolSpecification):
         return "ExecutableTool('{}')".format(self.name)
 
     @staticmethod
-    def load(toolbox, path, data):
+    def load(path, data, settings, logger):
         """Creates an ExecutableTool according to a tool specification file.
 
         Args:
-            toolbox (ToolboxUI): QMainWindow instance
             path (str): Base path to tool files
             data (dict): Tool specification
+            settings (QSettings): Toolbox settings
+            logger (LoggerInterface): A logger instance
 
         Returns:
             ExecutableTool instance or None if there was a problem in the tool specification.
         """
-        kwargs = ExecutableTool.check_definition(toolbox, data)
+        kwargs = ExecutableTool.check_definition(data, logger)
         if kwargs is not None:
             # Return an executable model instance
-            return ExecutableTool(toolbox=toolbox, path=path, **kwargs)
+            return ExecutableTool(path=path, settings=settings, logger=logger, **kwargs)
         return None
 
     def create_tool_instance(self, basedir):
@@ -653,4 +680,4 @@ class ExecutableTool(ToolSpecification):
         Args:
             basedir (str): the path to the directory where the instance will run
         """
-        return ExecutableToolInstance(self._toolbox, self, basedir)
+        return ExecutableToolInstance(self, basedir, self._settings, self._logger)

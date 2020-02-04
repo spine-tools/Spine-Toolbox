@@ -30,18 +30,20 @@ class ToolInstance(QObject):
     instance_finished = Signal(int)
     """Signal to emit when a Tool instance has finished processing"""
 
-    def __init__(self, toolbox, tool_specification, basedir):
+    def __init__(self, tool_specification, basedir, settings, logger):
         """
 
         Args:
-            toolbox (ToolboxUI): QMainWindow instance
             tool_specification (ToolSpecification): the tool specification for this instance
             basedir (str): the path to the directory where this instance should run
+            settings (QSettings): Toolbox settings
+            logger (LoggerInterface): a logger instance
         """
         super().__init__()
-        self._toolbox = toolbox
         self.tool_specification = tool_specification
         self.basedir = basedir
+        self._settings = settings
+        self._logger = logger
         self.exec_mngr = None
         self.program = None  # Program to start in the subprocess
         self.args = list()  # List of command line arguments for the program
@@ -104,7 +106,7 @@ class GAMSToolInstance(ToolInstance):
 
     def prepare(self, optional_input_files, input_database_urls, output_database_urls):
         """See base class."""
-        gams_path = self._toolbox.qsettings().value("appSettings/gamsPath", defaultValue="")
+        gams_path = self._settings().value("appSettings/gamsPath", defaultValue="")
         if gams_path != '':
             gams_exe = gams_path
         else:
@@ -118,7 +120,7 @@ class GAMSToolInstance(ToolInstance):
 
     def execute(self, **kwargs):
         """Executes a prepared instance."""
-        self.exec_mngr = QProcessExecutionManager(self._toolbox, self.program, self.args, **kwargs)
+        self.exec_mngr = QProcessExecutionManager(self._logger, self.program, self.args, **kwargs)
         self.exec_mngr.execution_finished.connect(self.handle_execution_finished)
         # TODO: Check if this sets the curDir argument. Is the curDir arg now useless?
         self.exec_mngr.start_execution(workdir=self.basedir)
@@ -133,7 +135,7 @@ class GAMSToolInstance(ToolInstance):
         self.exec_mngr.execution_finished.disconnect(self.handle_execution_finished)
         if self.exec_mngr.process_failed:  # process_failed should be True if ret != 0
             if self.exec_mngr.process_failed_to_start:
-                self._toolbox.msg_error.emit(
+                self._logger.msg_error.emit(
                     f"\t<b>{self.exec_mngr.program()}</b> failed to start. Make sure that "
                     "GAMS is installed properly on your computer "
                     "and GAMS directory is given in Settings (F1)."
@@ -141,11 +143,11 @@ class GAMSToolInstance(ToolInstance):
             else:
                 try:
                     return_msg = self.tool_specification.return_codes[ret]
-                    self._toolbox.msg_error.emit(f"\t<b>{return_msg}</b> [exit code:{ret}]")
+                    self._logger.msg_error.emit(f"\t<b>{return_msg}</b> [exit code:{ret}]")
                 except KeyError:
-                    self._toolbox.msg_error.emit(f"\tUnknown return code ({ret})")
+                    self._logger.msg_error.emit(f"\tUnknown return code ({ret})")
         else:  # Return code 0: success
-            self._toolbox.msg.emit("\tTool specification execution finished")
+            self._logger.msg.emit("\tTool specification execution finished")
         self.exec_mngr.deleteLater()
         self.exec_mngr = None
         self.instance_finished.emit(ret)
@@ -154,20 +156,23 @@ class GAMSToolInstance(ToolInstance):
 class JuliaToolInstance(ToolInstance):
     """Class for Julia Tool instances."""
 
-    def __init__(self, toolbox, tool_specification, basedir):
+    def __init__(self, toolbox, tool_specification, basedir, settings, logger):
         """
         Args:
             toolbox (ToolboxUI): QMainWindow instance
             tool_specification (ToolSpecification): the tool specification for this instance
             basedir (str): the path to the directory where this instance should run
+            settings (QSettings): Toolbox settings
+            logger (LoggerInterface): a logger instance
         """
-        super().__init__(toolbox, tool_specification, basedir)
+        super().__init__(tool_specification, basedir, settings, logger)
+        self._toolbox = toolbox
         self.ijulia_command_list = list()
 
     def prepare(self, optional_input_files, input_database_urls, output_database_urls):
         """See base class."""
         work_dir = self.basedir
-        use_embedded_julia = self._toolbox.qsettings().value("appSettings/useEmbeddedJulia", defaultValue="2")
+        use_embedded_julia = self._settings.value("appSettings/useEmbeddedJulia", defaultValue="2")
         if use_embedded_julia == "2":
             # Prepare Julia REPL command
             mod_work_dir = repr(work_dir).strip("'")
@@ -183,12 +188,12 @@ class JuliaToolInstance(ToolInstance):
             ]
         else:
             # Prepare command "julia --project={PROJECT_DIR} script.jl"
-            julia_path = self._toolbox.qsettings().value("appSettings/juliaPath", defaultValue="")
+            julia_path = self._settings.value("appSettings/juliaPath", defaultValue="")
             if julia_path != "":
                 julia_exe = julia_path
             else:
                 julia_exe = JULIA_EXECUTABLE
-            julia_project_path = self._toolbox.qsettings().value("appSettings/juliaProjectPath", defaultValue="")
+            julia_project_path = self._settings.value("appSettings/juliaProjectPath", defaultValue="")
             if julia_project_path == "":
                 julia_project_path = "@."
             script_path = os.path.join(work_dir, self.tool_specification.main_prgm)
@@ -199,12 +204,12 @@ class JuliaToolInstance(ToolInstance):
 
     def execute(self, **kwargs):
         """Executes a prepared instance."""
-        if self._toolbox.qsettings().value("appSettings/useEmbeddedJulia", defaultValue="2") == "2":
-            self.exec_mngr = ConsoleExecutionManager(self._toolbox, self._toolbox.julia_repl, self.ijulia_command_list)
+        if self._settings.value("appSettings/useEmbeddedJulia", defaultValue="2") == "2":
+            self.exec_mngr = ConsoleExecutionManager(self._toolbox.julia_repl, self.ijulia_command_list, self._logger)
             self.exec_mngr.execution_finished.connect(self.handle_repl_execution_finished)
             self.exec_mngr.start_execution()
         else:
-            self.exec_mngr = QProcessExecutionManager(self._toolbox, self.program, self.args, **kwargs)
+            self.exec_mngr = QProcessExecutionManager(self._logger, self.program, self.args, **kwargs)
             self.exec_mngr.execution_finished.connect(self.handle_execution_finished)
             # On Julia the Qprocess workdir must be set to the path where the main script is
             # Otherwise it doesn't find input files in subdirectories
@@ -221,11 +226,11 @@ class JuliaToolInstance(ToolInstance):
         if ret != 0:
             try:
                 return_msg = self.tool_specification.return_codes[ret]
-                self._toolbox.msg_error.emit(f"\t<b>{return_msg}</b> [exit code: {ret}]")
+                self._logger.msg_error.emit(f"\t<b>{return_msg}</b> [exit code: {ret}]")
             except KeyError:
-                self._toolbox.msg_error.emit(f"\tUnknown return code ({ret})")
+                self._logger.msg_error.emit(f"\tUnknown return code ({ret})")
         else:
-            self._toolbox.msg.emit("\tTool specification execution finished")
+            self._logger.msg.emit("\tTool specification execution finished")
         self.exec_mngr.deleteLater()
         self.exec_mngr = None
         self.instance_finished.emit(ret)
@@ -240,18 +245,18 @@ class JuliaToolInstance(ToolInstance):
         self.exec_mngr.execution_finished.disconnect(self.handle_execution_finished)
         if self.exec_mngr.process_failed:  # process_failed should be True if ret != 0
             if self.exec_mngr.process_failed_to_start:
-                self._toolbox.msg_error.emit(
+                self._logger.msg_error.emit(
                     f"\t<b>{self.exec_mngr.program()}</b> failed to start. Make sure that "
                     "Julia is installed properly on your computer."
                 )
             else:
                 try:
                     return_msg = self.tool_specification.return_codes[ret]
-                    self._toolbox.msg_error.emit(f"\t<b>{return_msg}</b> [exit code:{ret}]")
+                    self._logger.msg_error.emit(f"\t<b>{return_msg}</b> [exit code:{ret}]")
                 except KeyError:
-                    self._toolbox.msg_error.emit(f"\tUnknown return code ({ret})")
+                    self._logger.msg_error.emit(f"\tUnknown return code ({ret})")
         else:  # Return code 0: success
-            self._toolbox.msg.emit("\tTool specification execution finished")
+            self._logger.msg.emit("\tTool specification execution finished")
         self.exec_mngr.deleteLater()
         self.exec_mngr = None
         self.instance_finished.emit(ret)
@@ -260,21 +265,24 @@ class JuliaToolInstance(ToolInstance):
 class PythonToolInstance(ToolInstance):
     """Class for Python Tool instances."""
 
-    def __init__(self, toolbox, tool_specification, basedir):
+    def __init__(self, toolbox, tool_specification, basedir, settings, logger):
         """
 
         Args:
             toolbox (ToolboxUI): QMainWindow instance
             tool_specification (ToolSpecification): the tool specification for this instance
             basedir (str): the path to the directory where this instance should run
+            settings (QSettings): Toolbox settings
+            logger (LoggerInterface): A logger instance
         """
-        super().__init__(toolbox, tool_specification, basedir)
+        super().__init__(tool_specification, basedir, settings, logger)
+        self._toolbox = toolbox
         self.ipython_command_list = list()
 
     def prepare(self, optional_input_files, input_database_urls, output_database_urls):
         """See base class."""
         work_dir = self.basedir
-        use_embedded_python = self._toolbox.qsettings().value("appSettings/useEmbeddedPython", defaultValue="0")
+        use_embedded_python = self._settings.value("appSettings/useEmbeddedPython", defaultValue="0")
         if use_embedded_python == "2":
             # Prepare a command list (FIFO queue) with two commands for Python Console
             # 1st cmd: Change current work directory
@@ -296,7 +304,7 @@ class PythonToolInstance(ToolInstance):
             self.ipython_command_list.append(run_script_cmd)
         else:
             # Prepare command "python script.py script_arguments"
-            python_path = self._toolbox.qsettings().value("appSettings/pythonPath", defaultValue="")
+            python_path = self._settings.value("appSettings/pythonPath", defaultValue="")
             if python_path != "":
                 python_cmd = python_path
             else:
@@ -308,14 +316,14 @@ class PythonToolInstance(ToolInstance):
 
     def execute(self, **kwargs):
         """Executes a prepared instance."""
-        if self._toolbox.qsettings().value("appSettings/useEmbeddedPython", defaultValue="0") == "2":
+        if self._settings.value("appSettings/useEmbeddedPython", defaultValue="0") == "2":
             self.exec_mngr = ConsoleExecutionManager(
-                self._toolbox, self._toolbox.python_repl, self.ipython_command_list
+                self._toolbox.python_repl, self.ipython_command_list, self._logger
             )
             self.exec_mngr.execution_finished.connect(self.handle_console_execution_finished)
             self.exec_mngr.start_execution()
         else:
-            self.exec_mngr = QProcessExecutionManager(self._toolbox, self.program, self.args, **kwargs)
+            self.exec_mngr = QProcessExecutionManager(self._logger, self.program, self.args, **kwargs)
             self.exec_mngr.execution_finished.connect(self.handle_execution_finished)
             self.exec_mngr.start_execution(workdir=self.basedir)
 
@@ -330,11 +338,11 @@ class PythonToolInstance(ToolInstance):
         if ret != 0:
             try:
                 return_msg = self.tool_specification.return_codes[ret]
-                self._toolbox.msg_error.emit(f"\t<b>{return_msg}</b> [exit code: {ret}]")
+                self._logger.msg_error.emit(f"\t<b>{return_msg}</b> [exit code: {ret}]")
             except KeyError:
-                self._toolbox.msg_error.emit(f"\tUnknown return code ({ret})")
+                self._logger.msg_error.emit(f"\tUnknown return code ({ret})")
         else:
-            self._toolbox.msg.emit("\tTool specification execution finished")
+            self._logger.msg.emit("\tTool specification execution finished")
         self.exec_mngr.deleteLater()
         self.exec_mngr = None
         self.instance_finished.emit(ret)
@@ -349,18 +357,18 @@ class PythonToolInstance(ToolInstance):
         self.exec_mngr.execution_finished.disconnect(self.handle_execution_finished)
         if self.exec_mngr.process_failed:  # process_failed should be True if ret != 0
             if self.exec_mngr.process_failed_to_start:
-                self._toolbox.msg_error.emit(
+                self._logger.msg_error.emit(
                     f"\t<b>{self.exec_mngr.program()}</b> failed to start. Make sure that "
                     "Python is installed properly on your computer."
                 )
             else:
                 try:
                     return_msg = self.tool_specification.return_codes[ret]
-                    self._toolbox.msg_error.emit(f"\t<b>{return_msg}</b> [exit code:{ret}]")
+                    self._logger.msg_error.emit(f"\t<b>{return_msg}</b> [exit code:{ret}]")
                 except KeyError:
-                    self._toolbox.msg_error.emit(f"\tUnknown return code ({ret})")
+                    self._logger.msg_error.emit(f"\tUnknown return code ({ret})")
         else:  # Return code 0: success
-            self._toolbox.msg.emit("\tTool specification execution finished")
+            self._logger.msg.emit("\tTool specification execution finished")
         self.exec_mngr.deleteLater()
         self.exec_mngr = None
         self.instance_finished.emit(ret)
@@ -381,7 +389,7 @@ class ExecutableToolInstance(ToolInstance):
 
     def execute(self, **kwargs):
         """Executes a prepared instance."""
-        self.exec_mngr = QProcessExecutionManager(self._toolbox, self.program, self.args, **kwargs)
+        self.exec_mngr = QProcessExecutionManager(self._logger, self.program, self.args, **kwargs)
         self.exec_mngr.execution_finished.connect(self.handle_execution_finished)
         self.exec_mngr.start_execution(workdir=self.basedir)
 
@@ -395,15 +403,15 @@ class ExecutableToolInstance(ToolInstance):
         self.exec_mngr.execution_finished.disconnect(self.handle_execution_finished)
         if self.exec_mngr.process_failed:  # process_failed should be True if ret != 0
             if self.exec_mngr.process_failed_to_start:
-                self._toolbox.msg_error.emit(f"\t<b>{self.exec_mngr.program()}</b> failed to start.")
+                self._logger.msg_error.emit(f"\t<b>{self.exec_mngr.program()}</b> failed to start.")
             else:
                 try:
                     return_msg = self.tool_specification.return_codes[ret]
-                    self._toolbox.msg_error.emit(f"\t<b>{return_msg}</b> [exit code:{ret}]")
+                    self._logger.msg_error.emit(f"\t<b>{return_msg}</b> [exit code:{ret}]")
                 except KeyError:
-                    self._toolbox.msg_error.emit(f"\tUnknown return code ({ret})")
+                    self._logger.msg_error.emit(f"\tUnknown return code ({ret})")
         else:  # Return code 0: success
-            self._toolbox.msg.emit("\tTool specification execution finished")
+            self._logger.msg.emit("\tTool specification execution finished")
         self.exec_mngr.deleteLater()
         self.exec_mngr = None
         self.instance_finished.emit(ret)

@@ -23,8 +23,17 @@ import json
 import pathlib
 import numpy as np
 from PySide2.QtCore import QByteArray, QMimeData, Qt, Signal, Slot, QSettings, QUrl, SIGNAL
-from PySide2.QtWidgets import QMainWindow, QApplication, QFileDialog, QMessageBox, QCheckBox, QDockWidget, QAction
 from PySide2.QtGui import QDesktopServices, QGuiApplication, QKeySequence, QStandardItemModel, QIcon, QCursor
+from PySide2.QtWidgets import (
+    QMainWindow,
+    QApplication,
+    QErrorMessage,
+    QFileDialog,
+    QMessageBox,
+    QCheckBox,
+    QDockWidget,
+    QAction,
+)
 from .graphics_items import ProjectItemIcon
 from .mvcmodels.project_item_model import ProjectItemModel
 from .mvcmodels.tool_specification_model import ToolSpecificationModel
@@ -73,14 +82,15 @@ from .project_items import data_store, data_connection, exporter, tool, view, im
 class ToolboxUI(QMainWindow):
     """Class for application main GUI functions."""
 
-    # Signals to comply with the spinetoolbox.spine_logger.LoggingSignals interface.
+    # Signals to comply with the spinetoolbox.logger_interface.LoggerInteface interface.
     msg = Signal(str)
     msg_success = Signal(str)
     msg_error = Signal(str)
     msg_warning = Signal(str)
-    dialog = Signal(str)
-    # The rest of the msg_* signals should be moved to LoggingSignals in the long run.
     msg_proc = Signal(str)
+    information_box = Signal(str, str)
+    error_box = Signal(str, str)
+    # The rest of the msg_* signals should be moved to LoggerInterface in the long run.
     msg_proc_error = Signal(str)
     tool_specification_model_changed = Signal("QVariant")
 
@@ -162,7 +172,8 @@ class ToolboxUI(QMainWindow):
         self.msg_proc_error.connect(self.add_process_error_message)
         self.ui.textBrowser_eventlog.anchorClicked.connect(self.open_anchor)
         # Message box signals
-        self.dialog.connect(self._show_message_box)
+        self.information_box.connect(self._show_message_box)
+        self.error_box.connect(self._show_error_box)
         # Menu commands
         self.ui.actionNew.triggered.connect(self.new_project)
         self.ui.actionOpen.triggered.connect(self.open_project)
@@ -339,10 +350,14 @@ class ToolboxUI(QMainWindow):
             location (str): Path to project directory
         """
         self.clear_ui()
-        self._project = SpineToolboxProject(self, name, description, location)
+        self.init_project_item_model()
+        self.ui.treeView_project.selectionModel().selectionChanged.connect(self.item_selection_changed)
+        self._project = SpineToolboxProject(
+            self, name, description, location, self.project_item_model, settings=self._qsettings, logger=self
+        )
         self._project.connect_signals()
-        self._connect_project_to_design_view()
-        self.init_models(tool_specification_paths=list())  # Start project with no tool specifications
+        self._connect_project_signals()
+        self.init_tool_specification_model(list())  # Start project with no tool specifications
         self.setWindowTitle("Spine Toolbox    -- {} --".format(self._project.name))
         self.ui.graphicsView.init_scene(empty=True)
         # Update recentProjects
@@ -382,9 +397,7 @@ class ToolboxUI(QMainWindow):
             self.remove_path_from_recent_projects(load_dir)
             self.msg_error.emit("Project file <b>{0}</b> missing".format(load_path))
             return False
-        if not self.restore_project(proj_info, load_dir, clear_logs):
-            return False
-        return True
+        return self.restore_project(proj_info, load_dir, clear_logs)
 
     def restore_project(self, project_info, project_dir, clear_logs):
         """Initializes UI, Creates project, models, connections, etc., when opening a project.
@@ -413,19 +426,22 @@ class ToolboxUI(QMainWindow):
         tool_spec_paths = project_info["project"]["tool_specifications"]
         connections = project_info["project"]["connections"]
         project_items = project_info["objects"]
+        # Init project item model
+        self.init_project_item_model()
+        self.ui.treeView_project.selectionModel().selectionChanged.connect(self.item_selection_changed)
         # Create project
-        self._project = SpineToolboxProject(self, name, desc, project_dir)
-        self._connect_project_to_design_view()
-        # Init models and views
+        self._project = SpineToolboxProject(
+            self, name, desc, project_dir, self.project_item_model, settings=self._qsettings, logger=self
+        )
+        self._connect_project_signals()
         self.setWindowTitle("Spine Toolbox    -- {} --".format(self._project.name))
+        # Init tool spec model
+        deserialized_paths = [deserialize_path(spec, self._project.project_dir) for spec in tool_spec_paths]
+        self.init_tool_specification_model(deserialized_paths)
         # Clear text browsers
         if clear_logs:
             self.ui.textBrowser_eventlog.clear()
             self.ui.textBrowser_process_output.clear()
-        # Init models
-        # Deserialize tool spec paths
-        deserialized_paths = [deserialize_path(spec, self._project.project_dir) for spec in tool_spec_paths]
-        self.init_models(deserialized_paths)
         # Populate project model with project items
         if not self._project.load(project_items):
             self.msg_error.emit("Loading project items failed")
@@ -565,16 +581,6 @@ class ToolboxUI(QMainWindow):
         self.save_project()
         return
 
-    def init_models(self, tool_specification_paths):
-        """Initialize application internal data models.
-
-        Args:
-            tool_specification_paths (list): List of tool definition file paths used in this project
-        """
-        self.init_project_item_model()
-        self.ui.treeView_project.selectionModel().selectionChanged.connect(self.item_selection_changed)
-        self.init_tool_specification_model(tool_specification_paths)
-
     def init_project_item_model(self):
         """Initializes project item model. Create root and category items and
         add them to the model."""
@@ -602,7 +608,7 @@ class ToolboxUI(QMainWindow):
         n_tools = 0
         self.msg.emit("Loading Tool specifications...")
         for path in tool_specification_paths:
-            if path == "" or not path:
+            if not path:
                 continue
             # Add tool specification into project
             tool_cand = self._project.load_tool_specification_from_file(path)
@@ -895,7 +901,7 @@ class ToolboxUI(QMainWindow):
         self.remove_tool_specification(index)
 
     @Slot("QModelIndex", name="remove_tool_specification")
-    def remove_tool_specification(self, index):
+    def remove_tool_specification(self, index, ask_verification=True):
         """Removes tool specification from ToolSpecificationModel
         and tool specification file path from project file.
         Removes also Tool specifications from all Tool items
@@ -903,21 +909,23 @@ class ToolboxUI(QMainWindow):
 
         Args:
             index (QModelIndex): Index of selected Tool specification in ToolSpecificationModel
+            ask_verification (bool): If True, displays a dialog box asking user to verify the removal
         """
         sel_tool = self.tool_specification_model.tool_specification(index.row())
         tool_def_path = sel_tool.def_file_path
-        message = "Remove Tool Specification <b>{0}</b> from Project?".format(sel_tool.name)
-        message_box = QMessageBox(
-            QMessageBox.Question,
-            "Remove Tool Specification",
-            message,
-            buttons=QMessageBox.Ok | QMessageBox.Cancel,
-            parent=self,
-        )
-        message_box.button(QMessageBox.Ok).setText("Remove Specification")
-        answer = message_box.exec_()
-        if answer != QMessageBox.Ok:
-            return
+        if ask_verification:
+            message = "Remove Tool Specification <b>{0}</b> from Project?".format(sel_tool.name)
+            message_box = QMessageBox(
+                QMessageBox.Question,
+                "Remove Tool Specification",
+                message,
+                buttons=QMessageBox.Ok | QMessageBox.Cancel,
+                parent=self,
+            )
+            message_box.button(QMessageBox.Ok).setText("Remove Specification")
+            answer = message_box.exec_()
+            if answer != QMessageBox.Ok:
+                return
         # Remove tool def file path from the project.json file
         conf_file = self._project.config_file
         try:
@@ -1819,11 +1827,26 @@ class ToolboxUI(QMainWindow):
         mirror_action_to_project_tree_view(paste_action)
         mirror_action_to_project_tree_view(duplicate_action)
 
+    @Slot()
+    def _scroll_event_log_to_end(self):
+        self.ui.textBrowser_eventlog.verticalScrollBar().setValue(
+            self.ui.textBrowser_eventlog.verticalScrollBar().maximum()
+        )
+
     @Slot(str, str)
     def _show_message_box(self, title, message):
         """Shows an information message box."""
         QMessageBox.information(self, title, message)
 
-    def _connect_project_to_design_view(self):
-        """Connects execution start signals to design view to control icon animations."""
+    @Slot(str, str)
+    def _show_error_box(self, title, message):
+        box = QErrorMessage(self)
+        box.setWindowTitle(title)
+        box.setWindowModality(Qt.ApplicationModal)
+        box.showMessage(message)
+        box.deleteLater()
+
+    def _connect_project_signals(self):
+        """Connects signals emitted by project."""
         self._project.dag_execution_about_to_start.connect(self.ui.graphicsView.connect_engine_signals)
+        self._project.project_execution_about_to_start.connect(self._scroll_event_log_to_end)

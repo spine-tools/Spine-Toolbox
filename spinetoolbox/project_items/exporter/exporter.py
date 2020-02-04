@@ -50,7 +50,7 @@ class Exporter(ProjectItem):
             y (float): initial Y coordinate of item icon
             toolbox (ToolboxUI): a ToolboxUI instance
             project (SpineToolboxProject): the project this item belongs to
-            logger (LoggingSignals): a logger instance
+            logger (LoggerInterface): a logger instance
         """
         super().__init__(name, description, x, y, project, logger)
         self._toolbox = toolbox

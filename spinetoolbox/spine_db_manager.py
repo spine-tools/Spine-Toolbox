@@ -17,7 +17,7 @@ The SpineDBManager class
 """
 
 from PySide2.QtCore import Qt, QObject, Signal, Slot, QSettings
-from PySide2.QtWidgets import QMessageBox, QDialog, QCheckBox, QErrorMessage
+from PySide2.QtWidgets import QMessageBox, QDialog, QCheckBox
 from PySide2.QtGui import QKeySequence, QIcon
 from spinedb_api import (
     SpineDBAPIError,
@@ -100,13 +100,15 @@ class SpineDBManager(QObject):
 
     _GROUP_SEP = " \u01C0 "
 
-    def __init__(self, parent=None):
+    def __init__(self, logger, project):
         """Initializes the instance.
 
         Args:
-            parent (QObject, NoneType)
+            logger (LoggingInterface)
+            project (SpineToolboxProject)
         """
-        super().__init__(parent)
+        super().__init__(project)
+        self._logger = logger
         self._db_maps = {}
         self._cache = {}
         self.qsettings = QSettings("SpineProject", "Spine Toolbox")
@@ -115,9 +117,6 @@ class SpineDBManager(QObject):
         self.undo_action = {}
         self.redo_action = {}
         self.icon_mngr = IconManager()
-        self.err_msg = QErrorMessage()
-        self.err_msg.setWindowModality(Qt.ApplicationModal)
-        self.err_msg.setWindowTitle("Error")
         self.connect_signals()
 
     @property
@@ -423,7 +422,7 @@ class SpineDBManager(QObject):
             database = "From " + db_map.codename + ":"
             formatted_log = format_string_list(error_log)
             msg += format_string_list([database, formatted_log])
-        self.err_msg.showMessage(msg)
+        self._logger.error_box.emit("Error", msg)
 
     def cache_items(self, item_type, db_map_data):
         """Caches data for a given type.

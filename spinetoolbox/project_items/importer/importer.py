@@ -51,7 +51,7 @@ class Importer(ProjectItem):
             y (float): Initial icon scene Y coordinate
             toolbox (ToolboxUI): QMainWindow instance
             project (SpineToolboxProject): the project this item belongs to
-            logger (LoggingSignals): a logger instance
+            logger (LoggerInterface): a logger instance
             cancel_on_error (bool): if True the item's execution will stop on import error
        """
         super().__init__(name, description, x, y, project, logger)

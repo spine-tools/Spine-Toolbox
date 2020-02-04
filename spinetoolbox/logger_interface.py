@@ -19,7 +19,7 @@ A logger interface.
 from PySide2.QtCore import QObject, Signal
 
 
-class LoggingSignals(QObject):
+class LoggerInterface(QObject):
     """
     Placeholder for signals that can be emitted to send messages to an output device.
 
@@ -37,5 +37,9 @@ class LoggingSignals(QObject):
     """Emits a warning message."""
     msg_error = Signal(str)
     """Emits an error message."""
-    dialog = Signal(str, str)
-    """Requests an 'information dialog' to be opened with a given title and message"""
+    msg_proc = Signal(str)
+    """Emits a message originating from a subprocess (usually something printed to stdout)."""
+    information_box = Signal(str, str)
+    """Requests an 'information message box' (e.g. a message window) to be opened with a given title and message."""
+    error_box = Signal(str, str)
+    """Requests an 'error message box' to be opened with a given title and message."""

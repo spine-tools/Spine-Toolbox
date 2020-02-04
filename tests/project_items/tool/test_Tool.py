@@ -165,11 +165,12 @@ class _MockToolSpecModel(QStandardItemModel):
         super().__init__()
         specifications = [
             ExecutableTool(
-                toolbox=toolbox,
                 name="simple_exec",
                 tooltype="executable",
                 path=path,
                 includes=['main.sh'],
+                settings=toolbox.qsettings(),
+                logger=toolbox,
                 description="A simple executable tool.",
                 inputfiles=['input1.csv', 'input2.csv'],
                 inputfiles_opt=['opt_input.csv'],
@@ -178,11 +179,12 @@ class _MockToolSpecModel(QStandardItemModel):
                 execute_in_work=False,
             ),
             ExecutableTool(
-                toolbox=toolbox,
                 name="complex_exec",
                 tooltype="executable",
                 path=path,
                 includes=['MakeFile', 'src/a.c', 'src/a.h', 'src/subunit/x.c', 'src/subunit/x.h'],
+                settings=toolbox.qsettings(),
+                logger=toolbox,
                 description="A more complex executable tool.",
                 inputfiles=['input1.csv', 'input/input2.csv'],
                 inputfiles_opt=['opt/*.ini', '?abc.txt'],
