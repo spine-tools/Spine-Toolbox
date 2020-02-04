@@ -14,20 +14,22 @@ Guide.
 
 ## Running Spine Toolbox
 
-### Releases
+### Official releases
 
 Release versions of Spine Toolbox can be found 
 [here](https://drive.google.com/drive/folders/1t-AIIwRMl3HiYgka4ex5bCccI2gpbspK).
 (only available for 64-bit Windows for now). Download the latest version, install and
 run `spinetoolbox.exe`.
 
-### Getting the latest development version
+### Latest development version
 
 To get the latest features and bug fixes you need to 
 [clone](https://help.github.com/articles/cloning-a-repository/) or download the latest 
 version of the source code to your computer.
 The `master` branch contains the latest release version of the application. The 
 development happens on the `dev` branch.
+
+
 
 Step-by-step instructions:
 
@@ -44,25 +46,11 @@ Step-by-step instructions:
 Remember to update your clone occasionally with the 
 [git pull](https://www.atlassian.com/git/tutorials/syncing/git-pull) command.
 
-## Requirements
+#### Anaconda & Miniconda Python
 
-Python 3.6 or higher is required.
-
-See file `setup.py` for packages needed to use Spinetoolbox. These can be installed by
-
-    pip install -r requirements.txt
-
-Additional packages needed for development are listed in `dev-requirements.txt`.
-To install the development requirements, run:
-
-    pip install -r dev-requirements.txt
-
-### Installing requirements for Anaconda & Miniconda Python
-
-The recommended way to install dependencies using Anaconda or Miniconda is:
+The recommended way to install and run Spine Toolbox in Anaconda or Miniconda environment is:
 
 1. Open Anaconda prompt
-
 2. Install **git** into the base environment
 
         conda install -c anaconda git
@@ -75,17 +63,39 @@ The recommended way to install dependencies using Anaconda or Miniconda is:
 
         conda activate spinetoolbox
 
-5. cd to Spine Toolbox root directory (the one with requirements.txt)
-
-6. Install requirements using **pip**
+5. Clone either the `master` or `dev` branch onto your computer
+6. cd to Spine Toolbox root directory (the one with requirements.txt)
+7. Install requirements using **pip**
 
         pip install -r requirements.txt
 
-7. If needed, to install the developer requirements run
+8. Run
 
-        pip install -r dev-requirements.txt
+        python -m spinetoolbox
 
-### Upgrading Requirements
+#### Requirements
+
+Python 3.6 or higher is required.
+
+See file `setup.py` and `requirements.txt` for packages needed to use Spinetoolbox.
+
+Additional packages needed for development are listed in `dev-requirements.txt`.
+To install the development requirements, run:
+
+    pip install -r dev-requirements.txt
+
+#### Upgrading Requirements
+
+To upgrade all required packages for Spine Toolbox, run
+
+    pip install --upgrade -r requirements.txt
+
+You may want to do this occasionally if it has been a long time (i.e. several months) 
+since you first installed the requirements.
+
+The developer requirements can be updated similarly by running
+
+    pip install --upgrade -r dev-requirements.txt
 
 The requirements include two packages (`spinedb_api` and `spine_engine`) developed by 
 the Spine project consortium. Since they are developed very actively at the moment, you 
@@ -123,15 +133,6 @@ To upgrade `spine_engine` manually, run
 **Note:** You don't need to clone or download the `spinedb_api` nor the 
 `spine_engine` source codes. *pip* takes care of installing the latest 
 version from GitHub to your system automatically.
-
-#### Upgrading all dependencies
-
-To upgrade all required packages for Spine Toolbox, run
-
-    pip install --upgrade -r requirements.txt
-
-You may want to do this occasionally if it has been a long time (i.e. several months) 
-since you first installed the requirements.
 
 ## Building the User Guide
 
