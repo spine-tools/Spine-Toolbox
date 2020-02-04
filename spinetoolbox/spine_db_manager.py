@@ -17,7 +17,8 @@ The SpineDBManager class
 """
 
 from PySide2.QtCore import Qt, QObject, Signal, Slot, QSettings
-from PySide2.QtWidgets import QMessageBox, QDialog, QCheckBox, QErrorMessage, QUndoStack
+from PySide2.QtWidgets import QMessageBox, QDialog, QCheckBox, QErrorMessage
+from PySide2.QtGui import QKeySequence, QIcon
 from spinedb_api import (
     SpineDBAPIError,
     SpineDBVersionError,
@@ -37,6 +38,7 @@ from spinedb_api import (
 from .helpers import IconManager, busy_effect, format_string_list
 from .spine_db_signaller import SpineDBSignaller
 from .spine_db_commands import (
+    AgedUndoStack,
     AddItemsCommand,
     AddCheckedParameterValuesCommand,
     UpdateItemsCommand,
@@ -109,7 +111,9 @@ class SpineDBManager(QObject):
         self._cache = {}
         self.qsettings = QSettings("SpineProject", "Spine Toolbox")
         self.signaller = SpineDBSignaller(self)
-        self.undo_stack = QUndoStack(self)
+        self.undo_stack = {}
+        self.undo_action = {}
+        self.redo_action = {}
         self.icon_mngr = IconManager()
         self.err_msg = QErrorMessage()
         self.err_msg.setWindowModality(Qt.ApplicationModal)
@@ -214,6 +218,13 @@ class SpineDBManager(QObject):
     def get_db_map_for_listener(self, listener, url, upgrade=False, codename=None):
         db_map = self.get_db_map(url, upgrade=upgrade, codename=codename)
         self.signaller.add_db_map_listener(db_map, listener)
+        stack = self.undo_stack[db_map] = AgedUndoStack(self)
+        undo_action = self.undo_action[db_map] = stack.createUndoAction(self)
+        redo_action = self.redo_action[db_map] = stack.createRedoAction(self)
+        undo_action.setShortcuts(QKeySequence.Undo)
+        redo_action.setShortcuts(QKeySequence.Redo)
+        undo_action.setIcon(QIcon(":/icons/menu_icons/undo.svg"))
+        redo_action.setIcon(QIcon(":/icons/menu_icons/redo.svg"))
         return db_map
 
     def remove_db_map_listener(self, db_map, listener):
@@ -222,6 +233,9 @@ class SpineDBManager(QObject):
             if not self.ok_to_close(db_map):
                 return False
             self.close_session(db_map.db_url)
+            del self.undo_stack[db_map]
+            del self.undo_action[db_map]
+            del self.redo_action[db_map]
         self.signaller.remove_db_map_listener(db_map, listener)
         return True
 
@@ -853,7 +867,8 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of items to add keyed by DiffDatabaseMapping
         """
-        self.undo_stack.push(AddItemsCommand(self, db_map_data, "object class"))
+        for db_map, data in db_map_data.items():
+            self.undo_stack[db_map].push(AddItemsCommand(self, db_map, data, "object class"))
 
     def add_objects(self, db_map_data):
         """Adds objects to db.
@@ -861,7 +876,8 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of items to add keyed by DiffDatabaseMapping
         """
-        self.undo_stack.push(AddItemsCommand(self, db_map_data, "object"))
+        for db_map, data in db_map_data.items():
+            self.undo_stack[db_map].push(AddItemsCommand(self, db_map, data, "object"))
 
     def add_relationship_classes(self, db_map_data):
         """Adds relationship classes to db.
@@ -869,7 +885,8 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of items to add keyed by DiffDatabaseMapping
         """
-        self.undo_stack.push(AddItemsCommand(self, db_map_data, "relationship class"))
+        for db_map, data in db_map_data.items():
+            self.undo_stack[db_map].push(AddItemsCommand(self, db_map, data, "relationship class"))
 
     def add_relationships(self, db_map_data):
         """Adds relationships to db.
@@ -877,7 +894,8 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of items to add keyed by DiffDatabaseMapping
         """
-        self.undo_stack.push(AddItemsCommand(self, db_map_data, "relationship"))
+        for db_map, data in db_map_data.items():
+            self.undo_stack[db_map].push(AddItemsCommand(self, db_map, data, "relationship"))
 
     def add_parameter_definitions(self, db_map_data):
         """Adds parameter definitions to db.
@@ -885,7 +903,8 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of items to add keyed by DiffDatabaseMapping
         """
-        self.undo_stack.push(AddItemsCommand(self, db_map_data, "parameter definition"))
+        for db_map, data in db_map_data.items():
+            self.undo_stack[db_map].push(AddItemsCommand(self, db_map, data, "parameter definition"))
 
     def add_parameter_values(self, db_map_data):
         """Adds parameter values to db.
@@ -893,7 +912,8 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of items to add keyed by DiffDatabaseMapping
         """
-        self.undo_stack.push(AddItemsCommand(self, db_map_data, "parameter value"))
+        for db_map, data in db_map_data.items():
+            self.undo_stack[db_map].push(AddItemsCommand(self, db_map, data, "parameter value"))
 
     def add_checked_parameter_values(self, db_map_data):
         """Adds parameter values in db without checking integrity.
@@ -901,7 +921,8 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of items to add keyed by DiffDatabaseMapping
         """
-        self.undo_stack.push(AddCheckedParameterValuesCommand(self, db_map_data))
+        for db_map, data in db_map_data.items():
+            self.undo_stack[db_map].push(AddCheckedParameterValuesCommand(self, db_map, data))
 
     def add_parameter_value_lists(self, db_map_data):
         """Adds parameter value lists to db.
@@ -909,7 +930,8 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of items to add keyed by DiffDatabaseMapping
         """
-        self.undo_stack.push(AddItemsCommand(self, db_map_data, "parameter value list"))
+        for db_map, data in db_map_data.items():
+            self.undo_stack[db_map].push(AddItemsCommand(self, db_map, data, "parameter value list"))
 
     def add_parameter_tags(self, db_map_data):
         """Adds parameter tags to db.
@@ -917,7 +939,8 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of items to add keyed by DiffDatabaseMapping
         """
-        self.undo_stack.push(AddItemsCommand(self, db_map_data, "parameter tag"))
+        for db_map, data in db_map_data.items():
+            self.undo_stack[db_map].push(AddItemsCommand(self, db_map, data, "parameter tag"))
 
     def update_object_classes(self, db_map_data):
         """Updates object classes in db.
@@ -925,7 +948,8 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of items to update keyed by DiffDatabaseMapping
         """
-        self.undo_stack.push(UpdateItemsCommand(self, db_map_data, "object class"))
+        for db_map, data in db_map_data.items():
+            self.undo_stack[db_map].push(UpdateItemsCommand(self, db_map, data, "object class"))
 
     def update_objects(self, db_map_data):
         """Updates objects in db.
@@ -933,7 +957,8 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of items to update keyed by DiffDatabaseMapping
         """
-        self.undo_stack.push(UpdateItemsCommand(self, db_map_data, "object"))
+        for db_map, data in db_map_data.items():
+            self.undo_stack[db_map].push(UpdateItemsCommand(self, db_map, data, "object"))
 
     def update_relationship_classes(self, db_map_data):
         """Updates relationship classes in db.
@@ -941,7 +966,8 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of items to update keyed by DiffDatabaseMapping
         """
-        self.undo_stack.push(UpdateItemsCommand(self, db_map_data, "relationship class"))
+        for db_map, data in db_map_data.items():
+            self.undo_stack[db_map].push(UpdateItemsCommand(self, db_map, data, "relationship class"))
 
     def update_relationships(self, db_map_data):
         """Updates relationships in db.
@@ -949,7 +975,8 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of items to update keyed by DiffDatabaseMapping
         """
-        self.undo_stack.push(UpdateItemsCommand(self, db_map_data, "relationship"))
+        for db_map, data in db_map_data.items():
+            self.undo_stack[db_map].push(UpdateItemsCommand(self, db_map, data, "relationship"))
 
     def update_parameter_definitions(self, db_map_data):
         """Updates parameter definitions in db.
@@ -957,7 +984,8 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of items to update keyed by DiffDatabaseMapping
         """
-        self.undo_stack.push(UpdateItemsCommand(self, db_map_data, "parameter definition"))
+        for db_map, data in db_map_data.items():
+            self.undo_stack[db_map].push(UpdateItemsCommand(self, db_map, data, "parameter definition"))
 
     def update_parameter_values(self, db_map_data):
         """Updates parameter values in db.
@@ -965,7 +993,8 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of items to update keyed by DiffDatabaseMapping
         """
-        self.undo_stack.push(UpdateItemsCommand(self, db_map_data, "parameter value"))
+        for db_map, data in db_map_data.items():
+            self.undo_stack[db_map].push(UpdateItemsCommand(self, db_map, data, "parameter value"))
 
     def update_checked_parameter_values(self, db_map_data):
         """Updates parameter values in db without checking integrity.
@@ -973,7 +1002,8 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of items to update keyed by DiffDatabaseMapping
         """
-        self.undo_stack.push(UpdateCheckedParameterValuesCommand(self, db_map_data))
+        for db_map, data in db_map_data.items():
+            self.undo_stack[db_map].push(UpdateCheckedParameterValuesCommand(self, db_map, data))
 
     def update_parameter_value_lists(self, db_map_data):
         """Updates parameter value lists in db.
@@ -981,7 +1011,8 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of items to update keyed by DiffDatabaseMapping
         """
-        self.undo_stack.push(UpdateItemsCommand(self, db_map_data, "parameter value list"))
+        for db_map, data in db_map_data.items():
+            self.undo_stack[db_map].push(UpdateItemsCommand(self, db_map, data, "parameter value list"))
 
     def update_parameter_tags(self, db_map_data):
         """Updates parameter tags in db.
@@ -989,7 +1020,8 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of items to update keyed by DiffDatabaseMapping
         """
-        self.undo_stack.push(UpdateItemsCommand(self, db_map_data, "parameter tag"))
+        for db_map, data in db_map_data.items():
+            self.undo_stack[db_map].push(UpdateItemsCommand(self, db_map, data, "parameter tag"))
 
     def set_parameter_definition_tags(self, db_map_data):
         """Sets parameter definition tags in db.
@@ -1000,7 +1032,8 @@ class SpineDBManager(QObject):
         self.add_or_update_items(db_map_data, "set_parameter_definition_tags", "parameter_definition_tags_set")
 
     def remove_items(self, db_map_typed_data):
-        self.undo_stack.push(RemoveItemsCommand(self, db_map_typed_data))
+        for db_map, typed_data in db_map_typed_data.items():
+            self.undo_stack[db_map].push(RemoveItemsCommand(self, db_map, typed_data))
 
     def do_remove_items(self, db_map_typed_data):
         """Removes items from database.

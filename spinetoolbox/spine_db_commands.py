@@ -16,9 +16,10 @@ QUndoCommand subclasses for modifying the db.
 :date:   31.1.2020
 """
 
+import time
 from copy import deepcopy
 from PySide2.QtCore import Slot
-from PySide2.QtWidgets import QUndoCommand
+from PySide2.QtWidgets import QUndoCommand, QUndoStack
 
 
 def _cache_to_db_relationship_class(item):
@@ -67,14 +68,28 @@ def _cache_to_db_item(item_type, item):
     }.get(item_type, lambda x: x)(item)
 
 
-class MemoryCommand(QUndoCommand):
+class AgedUndoStack(QUndoStack):
+    @property
+    def age(self):
+        cmd = self.command(self.index())
+        if cmd is None:
+            return time.time() + 1
+        return cmd.age
+
+
+class CommandBase(QUndoCommand):
     def __init__(self):
         super().__init__()
         self.receive_signal = None
         self._completed = False
+        self._age = time.time()
+
+    @property
+    def age(self):
+        return self._age
 
     @staticmethod
-    def redo(func):
+    def redomethod(func):
         def redo(self):
             if self._completed:
                 func(self)
@@ -92,7 +107,7 @@ class MemoryCommand(QUndoCommand):
         self._completed = True
 
 
-class AddItemsCommand(MemoryCommand):
+class AddItemsCommand(CommandBase):
     _command_name = {
         "object class": "add object classes",
         "object": "add objects",
@@ -138,25 +153,26 @@ class AddItemsCommand(MemoryCommand):
         "parameter value": "parameter_values_added",
     }
 
-    def __init__(self, db_mngr, db_map_data, item_type):
+    def __init__(self, db_mngr, db_map, data, item_type):
         """
         Args:
             db_mngr (SpineDBManager): SpineDBManager instance
-            db_map_data (dict): lists of items to add keyed by DiffDatabaseMapping
+            db_map (DiffDatabaseMapping): DiffDatabaseMapping instance
+            data (list): list of dict-items to add
             item_type (str): the item type
         """
         super().__init__()
         self.db_mngr = db_mngr
-        self.redo_db_map_data = db_map_data
+        self.redo_db_map_data = {db_map: data}
         self.item_type = item_type
         self.method_name = self._method_name[item_type]
         self.emit_signal_name = self._emit_signal_name[item_type]
         receive_signal_name = self._receive_signal_name.get(item_type, self.emit_signal_name)
         self.receive_signal = getattr(db_mngr, receive_signal_name)
-        self.setText(self._command_name[item_type])
+        self.setText(self._command_name[item_type] + f" to '{db_map.codename}'")
         self.undo_db_map_data = None
 
-    @MemoryCommand.redo
+    @CommandBase.redomethod
     def redo(self):
         self.db_mngr.add_or_update_items(self.redo_db_map_data, self.method_name, self.emit_signal_name)
 
@@ -175,12 +191,12 @@ class AddItemsCommand(MemoryCommand):
 
 
 class AddCheckedParameterValuesCommand(AddItemsCommand):
-    def __init__(self, db_mngr, db_map_data):
-        super().__init__(db_mngr, db_map_data, "parameter value")
+    def __init__(self, db_mngr, db_map, data):
+        super().__init__(db_mngr, db_map, data, "parameter value")
         self.method_name = "add_checked_parameter_values"
 
 
-class UpdateItemsCommand(MemoryCommand):
+class UpdateItemsCommand(CommandBase):
     _command_name = {
         "object class": "update object classes",
         "object": "update objects",
@@ -212,31 +228,30 @@ class UpdateItemsCommand(MemoryCommand):
         "parameter tag": "parameter_tags_updated",
     }
 
-    def __init__(self, db_mngr, db_map_data, item_type):
+    def __init__(self, db_mngr, db_map, data, item_type):
         """
         Args:
             db_mngr (SpineDBManager): SpineDBManager instance
-            db_map_data (dict): lists of items to update keyed by DiffDatabaseMapping
+            db_map (DiffDatabaseMapping): DiffDatabaseMapping instance
+            data (list): list of dict-items to update
             item_type (str): the item type
         """
         super().__init__()
         self.db_mngr = db_mngr
-        self.redo_db_map_data = db_map_data
+        self.redo_db_map_data = {db_map: data}
         self.item_type = item_type
         self.method_name = self._method_name[item_type]
         self.emit_signal_name = self._emit_signal_name[item_type]
         self.receive_signal = getattr(db_mngr, self.emit_signal_name)
-        self.setText(self._command_name[item_type])
-        self.undo_db_map_data = {
-            db_map: [self._undo_item(db_map, item["id"]) for item in data] for db_map, data in db_map_data.items()
-        }
+        self.setText(self._command_name[item_type] + f" in '{db_map.codename}'")
+        self.undo_db_map_data = {db_map: [self._undo_item(db_map, item["id"]) for item in data]}
         self._completed = False
 
     def _undo_item(self, db_map, id_):
         item = self.db_mngr.get_item(db_map, self.item_type, id_)
         return _cache_to_db_item(self.item_type, item)
 
-    @MemoryCommand.redo
+    @CommandBase.redomethod
     def redo(self):
         self.db_mngr.add_or_update_items(self.redo_db_map_data, self.method_name, self.emit_signal_name)
 
@@ -245,12 +260,12 @@ class UpdateItemsCommand(MemoryCommand):
 
 
 class UpdateCheckedParameterValuesCommand(UpdateItemsCommand):
-    def __init__(self, db_mngr, db_map_data):
-        super().__init__(db_mngr, db_map_data, "parameter value")
+    def __init__(self, db_mngr, db_map, data):
+        super().__init__(db_mngr, db_map, data, "parameter value")
         self.method_name = "update_checked_parameter_values"
 
 
-class RemoveItemsCommand(MemoryCommand):
+class RemoveItemsCommand(CommandBase):
 
     _undo_method_name = {
         "object class": "readd_object_classes",
@@ -273,15 +288,21 @@ class RemoveItemsCommand(MemoryCommand):
         "parameter tag": "parameter_tags_added",
     }
 
-    def __init__(self, db_mngr, db_map_typed_data):
+    def __init__(self, db_mngr, db_map, typed_data):
+        """
+        Args:
+            db_mngr (SpineDBManager): SpineDBManager instance
+            db_map (DiffDatabaseMapping): DiffDatabaseMapping instance
+            typed_data (dict): lists of dict-items to remove keyed by string type
+        """
         super().__init__()
         self.db_mngr = db_mngr
-        self.redo_db_map_typed_data = db_map_typed_data
+        self.redo_db_map_typed_data = {db_map: typed_data}
         self.undo_typed_db_map_data = {}
-        self.setText("remove items")
+        self.setText(f"remove items from '{db_map.codename}'")
         self.receive_signal = self.db_mngr.items_removed_from_cache
 
-    @MemoryCommand.redo
+    @CommandBase.redomethod
     def redo(self):
         self.db_mngr.do_remove_items(self.redo_db_map_typed_data)
 

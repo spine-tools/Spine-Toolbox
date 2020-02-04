@@ -30,7 +30,7 @@ from PySide2.QtWidgets import (
     QTableView,
 )
 from PySide2.QtCore import Qt, Signal, Slot, QSettings
-from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QIcon, QKeySequence
+from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QIcon
 from spinedb_api import copy_database
 from ..config import MAINWINDOW_SS
 from .edit_db_items_dialogs import ManageParameterTagsDialog
@@ -95,6 +95,8 @@ class DataStoreFormBase(QMainWindow):
         self._selection_locked = False
         self._focusable_childs = [self.ui.treeView_parameter_value_list]
         self.settings_group = 'treeViewWidget'
+        self.undo_action = None
+        self.redo_action = None
 
     def add_menu_actions(self):
         """Adds actions to View and Edit menu."""
@@ -102,14 +104,10 @@ class DataStoreFormBase(QMainWindow):
         self.ui.menuView.addAction(self.ui.dockWidget_parameter_value_list.toggleViewAction())
         self.ui.menuView.addAction(self.parameter_tag_toolbar.toggleViewAction())
         before = self.ui.menuEdit.actions()[0]
-        undo_action = self.db_mngr.undo_stack.createUndoAction(self)
-        redo_action = self.db_mngr.undo_stack.createRedoAction(self)
-        undo_action.setShortcuts(QKeySequence.Undo)
-        redo_action.setShortcuts(QKeySequence.Redo)
-        undo_action.setIcon(QIcon(":/icons/menu_icons/undo.svg"))
-        redo_action.setIcon(QIcon(":/icons/menu_icons/redo.svg"))
-        self.ui.menuEdit.insertAction(before, undo_action)
-        self.ui.menuEdit.insertAction(before, redo_action)
+        self.undo_action = self.db_mngr.undo_action[self.db_map]
+        self.redo_action = self.db_mngr.redo_action[self.db_map]
+        self.ui.menuEdit.insertAction(before, self.undo_action)
+        self.ui.menuEdit.insertAction(before, self.redo_action)
         self.ui.menuEdit.insertSeparator(before)
 
     def connect_signals(self):
@@ -139,6 +137,24 @@ class DataStoreFormBase(QMainWindow):
             self.show_parameter_value_list_context_menu
         )
         self.parameter_value_list_model.remove_selection_requested.connect(self.remove_parameter_value_lists)
+        for db_map in self.db_maps:
+            self.db_mngr.undo_stack[db_map].indexChanged.connect(self.update_undo_redo_actions)
+
+    @Slot(int)
+    def update_undo_redo_actions(self, index):
+        ages = {db_map: self.db_mngr.undo_stack[db_map].age for db_map in self.db_maps}
+        max_db_map = max(ages, key=ages.get)
+        min_db_map = min(ages, key=ages.get)
+        new_undo_action = self.db_mngr.undo_action[max_db_map]
+        new_redo_action = self.db_mngr.redo_action[min_db_map]
+        if new_undo_action != self.undo_action:
+            self.ui.menuEdit.insertAction(self.undo_action, new_undo_action)
+            self.ui.menuEdit.removeAction(self.undo_action)
+            self.undo_action = new_undo_action
+        if new_redo_action != self.redo_action:
+            self.ui.menuEdit.insertAction(self.redo_action, new_redo_action)
+            self.ui.menuEdit.removeAction(self.redo_action)
+            self.redo_action = new_redo_action
 
     def init_models(self):
         """Initializes models."""
