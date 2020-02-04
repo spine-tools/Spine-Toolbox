@@ -225,7 +225,7 @@ class OpenProjectDialog(QDialog):
 
     def selection(self):
         """Returns the selected path from dialog."""
-        return self.selected_path
+        return os.path.abspath(self.selected_path)
 
     @Slot(bool, name="go_root")
     def go_root(self, checked=False):
