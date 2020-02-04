@@ -70,42 +70,6 @@ class EntityTreeModel(MinimalTreeModel):
         self._root_item = self.root_item_type(self, dict.fromkeys(self.db_maps))
         self._invisible_root_item.append_children(self._root_item)
 
-    def _fill_selection_buffer(self, item, from_pos):
-        """Pops indexes out of selection dictionary and add items into buffer."""
-        selected = self.selected_indexes.get(item.child_item_type)
-        if not selected:
-            return
-        self._selection_buffer.clear()
-        for child in item.children[from_pos:]:
-            if selected.pop(self.index_from_item(child), None) is not None:
-                self._selection_buffer.append(child)
-
-    def _empty_selection_buffer(self):
-        """Selects all indexes corresponding to items in the selection buffer."""
-        for item in self._selection_buffer:
-            self.select_index(self.index_from_item(item))
-        self._selection_buffer.clear()
-
-    def beginInsertRows(self, parent, first, last):
-        """Begin an operation to insert rows."""
-        super().beginInsertRows(parent, first, last)
-        self._fill_selection_buffer(self.item_from_index(parent), last + 1)
-
-    def endInsertRows(self):
-        """End an operation to insert rows."""
-        super().endInsertRows()
-        self._empty_selection_buffer()
-
-    def beginRemoveRows(self, parent, first, last):
-        """Begin an operation to remove rows."""
-        super().beginRemoveRows(parent, first, last)
-        self._fill_selection_buffer(self.item_from_index(parent), last + 1)
-
-    def endRemoveRows(self):
-        """End an operation to remove rows. Stop tracking all removed items."""
-        super().endRemoveRows()
-        self._empty_selection_buffer()
-
     def columnCount(self, parent=QModelIndex()):
         return 2
 
@@ -123,19 +87,18 @@ class EntityTreeModel(MinimalTreeModel):
             return ("name", "database")[section]
         return None
 
-    def deselect_index(self, index):
-        """Marks the index as deselected."""
-        if not index.isValid() or index.column() != 0:
-            return
-        item_type = type(self.item_from_index(index))
-        self.selected_indexes[item_type].pop(index)
-
-    def select_index(self, index):
+    def _select_index(self, index):
         """Marks the index as selected."""
         if not index.isValid() or index.column() != 0:
             return
         item_type = type(self.item_from_index(index))
         self.selected_indexes.setdefault(item_type, {})[index] = None
+
+    def select_indexes(self, indexes):
+        """Marks given indexes as selected."""
+        self.selected_indexes.clear()
+        for index in indexes:
+            self._select_index(index)
 
     def cascade_filter_nodes_by_id(self, db_map, *ids_set, parent_items=(), fetch=False, return_unfetched=False):
         """Filter nodes by ids in cascade starting from the list of parent items.

@@ -90,10 +90,8 @@ class TreeViewMixin:
     @Slot("QItemSelection", "QItemSelection")
     def _handle_object_tree_selection_changed(self, selected, deselected):
         """Updates object filter and sets default rows."""
-        for index in deselected.indexes():
-            self.object_tree_model.deselect_index(index)
-        for index in selected.indexes():
-            self.object_tree_model.select_index(index)
+        indexes = self.ui.treeView_object.selectionModel().selectedIndexes()
+        self.object_tree_model.select_indexes(indexes)
         if not self._accept_selection(self.ui.treeView_object):
             return
         self.set_default_parameter_data(self.ui.treeView_object.currentIndex())
@@ -102,10 +100,8 @@ class TreeViewMixin:
     @Slot("QItemSelection", "QItemSelection")
     def _handle_relationship_tree_selection_changed(self, selected, deselected):
         """Updates relationship filter and sets default rows."""
-        for index in deselected.indexes():
-            self.relationship_tree_model.deselect_index(index)
-        for index in selected.indexes():
-            self.relationship_tree_model.select_index(index)
+        indexes = self.ui.treeView_relationship.selectionModel().selectedIndexes()
+        self.relationship_tree_model.select_indexes(indexes)
         if not self._accept_selection(self.ui.treeView_relationship):
             return
         self.set_default_parameter_data(self.ui.treeView_relationship.currentIndex())
