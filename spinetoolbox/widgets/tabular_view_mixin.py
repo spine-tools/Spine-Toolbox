@@ -591,10 +591,6 @@ class TabularViewMixin:
         bottom_right = table_view.indexAt(table_view.rect().bottomRight())
         table_view.model().dataChanged.emit(top_left, bottom_right)
 
-    def _check_db_map_data(self, db_map_data):
-        if self.db_map not in db_map_data:
-            raise RuntimeError("Data Store view received signal from wrong database.")
-
     @staticmethod
     def _group_by_class(items, get_class_id):
         d = dict()
@@ -617,25 +613,25 @@ class TabularViewMixin:
         self.reload_frozen_table()
 
     def receive_objects_added_or_removed(self, db_map_data, action):
-        self._check_db_map_data(db_map_data)
+        items = db_map_data.get(self.db_map, set())
         if self.current_input_type == self._RELATIONSHIP and self.current_class_type == "relationship class":
-            objects_per_class = self._group_by_class(db_map_data[self.db_map], lambda x: x["class_id"])
+            objects_per_class = self._group_by_class(items, lambda x: x["class_id"])
             if not set(objects_per_class.keys()).intersection(self.current_object_class_id_list()):
                 return
             data = self.load_empty_relationship_data(objects_per_class=objects_per_class)
             self.receive_data_added_or_removed(data, action)
         elif self.current_input_type == self._PARAMETER_VALUE and self.current_class_type == "object class":
-            objects = [x for x in db_map_data[self.db_map] if x["class_id"] == self.current_class_id]
+            objects = [x for x in items if x["class_id"] == self.current_class_id]
             if not objects:
                 return
             data = self.load_empty_parameter_value_data(entities=objects)
             self.receive_data_added_or_removed(data, action)
 
     def receive_relationships_added_or_removed(self, db_map_data, action):
-        self._check_db_map_data(db_map_data)
+        items = db_map_data.get(self.db_map, set())
         if self.current_class_type != "relationship class":
             return
-        relationships = [x for x in db_map_data[self.db_map] if x["class_id"] == self.current_class_id]
+        relationships = [x for x in items if x["class_id"] == self.current_class_id]
         if not relationships:
             return
         if self.current_input_type == self._RELATIONSHIP:
@@ -647,13 +643,11 @@ class TabularViewMixin:
             self.receive_data_added_or_removed(data, action)
 
     def receive_parameter_definitions_added_or_removed(self, db_map_data, action):
-        self._check_db_map_data(db_map_data)
+        items = db_map_data.get(self.db_map, set())
         if self.current_input_type != self._PARAMETER_VALUE:
             return
         parameters = [
-            x
-            for x in db_map_data[self.db_map]
-            if (x.get("object_class_id") or x.get("relationship_class_id")) == self.current_class_id
+            x for x in items if (x.get("object_class_id") or x.get("relationship_class_id")) == self.current_class_id
         ]
         if not parameters:
             return
@@ -662,13 +656,11 @@ class TabularViewMixin:
         self.receive_data_added_or_removed(data, action)
 
     def receive_parameter_values_added_or_removed(self, db_map_data, action):
-        self._check_db_map_data(db_map_data)
+        items = db_map_data.get(self.db_map, set())
         if self.current_input_type != self._PARAMETER_VALUE:
             return
         parameter_values = [
-            x
-            for x in db_map_data[self.db_map]
-            if (x.get("object_class_id") or x.get("relationship_class_id")) == self.current_class_id
+            x for x in items if (x.get("object_class_id") or x.get("relationship_class_id")) == self.current_class_id
         ]
         if not parameter_values:
             return
@@ -677,8 +669,7 @@ class TabularViewMixin:
         self.refresh_table_view(self.ui.pivot_table)
 
     def receive_db_map_data_updated(self, db_map_data, get_class_id):
-        self._check_db_map_data(db_map_data)
-        items = db_map_data[self.db_map]
+        items = db_map_data.get(self.db_map, set())
         for item in items:
             if get_class_id(item) == self.current_class_id:
                 self.refresh_table_view(self.ui.pivot_table)
@@ -686,8 +677,7 @@ class TabularViewMixin:
                 break
 
     def receive_classes_removed(self, db_map_data):
-        self._check_db_map_data(db_map_data)
-        items = db_map_data[self.db_map]
+        items = db_map_data.get(self.db_map, set())
         for item in items:
             if item["id"] == self.current_class_id:
                 self.current_class_type = None
