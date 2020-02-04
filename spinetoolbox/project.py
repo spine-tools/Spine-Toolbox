@@ -249,7 +249,7 @@ class SpineToolboxProject(MetaObject):
         item_maker = category_item.item_maker()
         for item_dict in items:
             try:
-                item = item_maker(**item_dict, toolbox=self._toolbox, logger=self._toolbox)
+                item = item_maker(**item_dict, toolbox=self._toolbox, project=self, logger=self._toolbox)
                 tree_item = LeafProjectTreeItem(item, self._toolbox)
             except TypeError:
                 self._toolbox.msg_error.emit(

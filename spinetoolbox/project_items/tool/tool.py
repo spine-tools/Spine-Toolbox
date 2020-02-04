@@ -33,7 +33,7 @@ from spinetoolbox.helpers import create_dir, create_output_dir_timestamp
 
 
 class Tool(ProjectItem):
-    def __init__(self, name, description, x, y, toolbox, logger, tool="", execute_in_work=True):
+    def __init__(self, name, description, x, y, toolbox, project, logger, tool="", execute_in_work=True):
         """Tool class.
 
         Args:
@@ -42,11 +42,12 @@ class Tool(ProjectItem):
             x (float): Initial X coordinate of item icon
             y (float): Initial Y coordinate of item icon
             toolbox (ToolboxUI): QMainWindow instance
+            project (SpineToolboxProject): the project this item belongs to
             logger (LoggingSignals): a logger instance
             tool (str): Name of this Tool's Tool specification
             execute_in_work (bool): Execute associated Tool specification in work (True) or source directory (False)
         """
-        super().__init__(name, description, x, y, toolbox.project(), logger)
+        super().__init__(name, description, x, y, project, logger)
         self._toolbox = toolbox
         self._downstream_resources = list()
         self.last_return_code = None

@@ -27,7 +27,7 @@ from spinetoolbox.widgets.data_store_widget import DataStoreForm
 
 
 class View(ProjectItem):
-    def __init__(self, name, description, x, y, toolbox, logger):
+    def __init__(self, name, description, x, y, toolbox, project, logger):
         """
         View class.
 
@@ -37,9 +37,10 @@ class View(ProjectItem):
             x (float): Initial X coordinate of item icon
             y (float): Initial Y coordinate of item icon
             toolbox (ToolboxUI): a toolbox instance
+            project (SpineToolboxProject): the project this item belongs to
             logger (LoggingSignals): a logger instance
         """
-        super().__init__(name, description, x, y, toolbox.project(), logger)
+        super().__init__(name, description, x, y, project, logger)
         self._ds_views = {}
         self._references = dict()
         self.reference_model = QStandardItemModel()  # References to databases

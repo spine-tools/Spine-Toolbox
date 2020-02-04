@@ -30,7 +30,7 @@ from spinetoolbox.config import APPLICATION_PATH, INVALID_FILENAME_CHARS
 
 
 class DataConnection(ProjectItem):
-    def __init__(self, name, description, x, y, toolbox, logger, references=None):
+    def __init__(self, name, description, x, y, toolbox, project, logger, references=None):
         """Data Connection class.
 
         Args:
@@ -39,10 +39,11 @@ class DataConnection(ProjectItem):
             x (float): Initial X coordinate of item icon
             y (float): Initial Y coordinate of item icon
             toolbox (ToolboxUI): QMainWindow instance
+            project (SpineToolboxProject): the project this item belongs to
             logger (LoggingSignals): a logger instance
             references (list): a list of file paths
         """
-        super().__init__(name, description, x, y, toolbox.project(), logger)
+        super().__init__(name, description, x, y, project, logger)
         self._toolbox = toolbox
         self.reference_model = QStandardItemModel()  # References to files
         self.data_model = QStandardItemModel()  # Paths of project internal files. These are found in DC data directory

@@ -40,7 +40,7 @@ _CONNECTOR_NAME_TO_CLASS = {
 
 
 class Importer(ProjectItem):
-    def __init__(self, name, description, mappings, x, y, toolbox, logger, cancel_on_error=True):
+    def __init__(self, name, description, mappings, x, y, toolbox, project, logger, cancel_on_error=True):
         """Importer class.
 
         Args:
@@ -50,10 +50,11 @@ class Importer(ProjectItem):
             x (float): Initial icon scene X coordinate
             y (float): Initial icon scene Y coordinate
             toolbox (ToolboxUI): QMainWindow instance
+            project (SpineToolboxProject): the project this item belongs to
             logger (LoggingSignals): a logger instance
             cancel_on_error (bool): if True the item's execution will stop on import error
        """
-        super().__init__(name, description, x, y, toolbox.project(), logger)
+        super().__init__(name, description, x, y, project, logger)
         # Make logs subdirectory for this item
         self._toolbox = toolbox
         self.logs_dir = os.path.join(self.data_dir, "logs")

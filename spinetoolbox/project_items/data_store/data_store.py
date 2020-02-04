@@ -30,7 +30,7 @@ from .widgets.custom_menus import DataStoreContextMenu
 
 
 class DataStore(ProjectItem):
-    def __init__(self, name, description, x, y, toolbox, logger, url=None):
+    def __init__(self, name, description, x, y, toolbox, project, logger, url=None):
         """Data Store class.
 
         Args:
@@ -39,10 +39,11 @@ class DataStore(ProjectItem):
             x (float): Initial X coordinate of item icon
             y (float): Initial Y coordinate of item icon
             toolbox (ToolboxUI): QMainWindow instance
+            project (SpineToolboxProject): the project this item belongs to
             logger (LoggingSignals): a logger instance
             url (str or dict): SQLAlchemy url
         """
-        super().__init__(name, description, x, y, toolbox.project(), logger)
+        super().__init__(name, description, x, y, project, logger)
         if url is None:
             url = dict()
         if url and not isinstance(url["database"], str):
