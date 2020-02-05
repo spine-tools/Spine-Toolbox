@@ -40,7 +40,7 @@ class TestExcelIntegration(unittest.TestCase):
     @staticmethod
     def _sqlite_url(file_name, directory):
         path = PurePath(directory, file_name)
-        return path.as_uri().replace("file", "sqlite", 1)
+        return path.as_uri().replace("file://", "sqlite:///", 1)
 
     @staticmethod
     def _create_database(directory):
@@ -114,30 +114,74 @@ class TestExcelIntegration(unittest.TestCase):
         ].first()
 
         # add parameter values
-        db_map.add_parameter_value(**{'parameter_definition_id': p1.id, 'object_id': oc1_obj1.id, 'value': '0'})
-        db_map.add_parameter_value(**{'parameter_definition_id': p2.id, 'object_id': oc1_obj2.id, 'value': '3.5'})
         db_map.add_parameter_value(
-            **{'parameter_definition_id': p3.id, 'object_id': oc2_obj1.id, 'value': '[1, 2, 3, 4]'}
-        )
-        db_map.add_parameter_value(**{'parameter_definition_id': p4.id, 'object_id': oc2_obj2.id, 'value': '[5, 6, 7]'})
-        db_map.add_parameter_value(**{'parameter_definition_id': rel_p1.id, 'relationship_id': rel1.id, 'value': '0'})
-        db_map.add_parameter_value(**{'parameter_definition_id': rel_p2.id, 'relationship_id': rel2.id, 'value': '4'})
-        db_map.add_parameter_value(
-            **{'parameter_definition_id': rel_p3.id, 'relationship_id': rel1.id, 'value': '[5, 6, 7]'}
+            **{'parameter_definition_id': p1.id, 'object_id': oc1_obj1.id, 'object_class_id': oc_1.id, 'value': '0'}
         )
         db_map.add_parameter_value(
-            **{'parameter_definition_id': rel_p4.id, 'relationship_id': rel2.id, 'value': '[1, 2, 3, 4]'}
+            **{'parameter_definition_id': p2.id, 'object_id': oc1_obj2.id, 'object_class_id': oc_1.id, 'value': '3.5'}
+        )
+        db_map.add_parameter_value(
+            **{
+                'parameter_definition_id': p3.id,
+                'object_id': oc2_obj1.id,
+                'object_class_id': oc_2.id,
+                'value': '[1, 2, 3, 4]',
+            }
+        )
+        db_map.add_parameter_value(
+            **{
+                'parameter_definition_id': p4.id,
+                'object_id': oc2_obj2.id,
+                'object_class_id': oc_2.id,
+                'value': '[5, 6, 7]',
+            }
+        )
+        db_map.add_parameter_value(
+            **{
+                'parameter_definition_id': rel_p1.id,
+                'relationship_id': rel1.id,
+                'relationship_class_id': relc1.id,
+                'value': '0',
+            }
+        )
+        db_map.add_parameter_value(
+            **{
+                'parameter_definition_id': rel_p2.id,
+                'relationship_id': rel2.id,
+                'relationship_class_id': relc1.id,
+                'value': '4',
+            }
+        )
+        db_map.add_parameter_value(
+            **{
+                'parameter_definition_id': rel_p3.id,
+                'relationship_id': rel1.id,
+                'relationship_class_id': relc1.id,
+                'value': '[5, 6, 7]',
+            }
+        )
+        db_map.add_parameter_value(
+            **{
+                'parameter_definition_id': rel_p4.id,
+                'relationship_id': rel2.id,
+                'relationship_class_id': relc1.id,
+                'value': '[1, 2, 3, 4]',
+            }
         )
 
         time = [np.datetime64('2005-02-25T00:00'), np.datetime64('2005-02-25T01:00'), np.datetime64('2005-02-25T02:00')]
         value = [1, 2, 3]
         ts_val = to_database(TimeSeriesVariableResolution(time, value, False, False))
-        db_map.add_parameter_value(**{'parameter_definition_id': p5.id, 'object_id': oc3_obj1.id, 'value': ts_val})
+        db_map.add_parameter_value(
+            **{'parameter_definition_id': p5.id, 'object_id': oc3_obj1.id, 'object_class_id': oc_3.id, 'value': ts_val}
+        )
 
         timepattern = ['m1', 'm2', 'm3']
         value = [1.1, 2.2, 3.3]
         ts_val = to_database(TimePattern(timepattern, value))
-        db_map.add_parameter_value(**{'parameter_definition_id': p6.id, 'object_id': oc3_obj1.id, 'value': ts_val})
+        db_map.add_parameter_value(
+            **{'parameter_definition_id': p6.id, 'object_id': oc3_obj1.id, 'object_class_id': oc_3.id, 'value': ts_val}
+        )
 
         # commit
         db_map.commit_session('test')
@@ -263,7 +307,7 @@ class TestExcelIntegration(unittest.TestCase):
 
                 # reimport data
                 import_num = self._import_xlsx_to_database(excel_file_name, db_map)
-                self.assertEqual(import_num, 23)
+                self.assertEqual(import_num, 19)
 
                 # compare dbs
                 self._compare_dbs(empty_db_map, db_map)
