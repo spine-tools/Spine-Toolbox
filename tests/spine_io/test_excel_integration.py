@@ -16,6 +16,7 @@ Integration tests for Excel import and export.
 :date:   31.1.2020
 """
 
+import os
 from pathlib import PurePath
 from tempfile import TemporaryDirectory
 import unittest
@@ -39,8 +40,7 @@ _TEMP_SQLITE_TEST_FILENAME = 'second.sqlite'
 class TestExcelIntegration(unittest.TestCase):
     @staticmethod
     def _sqlite_url(file_name, directory):
-        path = PurePath(directory, file_name)
-        return path.as_uri().replace("file://", "sqlite:///", 1)
+        return "sqlite:///" + os.path.abspath(os.path.join(directory, file_name))
 
     @staticmethod
     def _create_database(directory):
