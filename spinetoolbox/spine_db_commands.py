@@ -70,11 +70,16 @@ def _cache_to_db_item(item_type, item):
 
 class AgedUndoStack(QUndoStack):
     @property
-    def age(self):
-        cmd = self.command(self.index())
-        if cmd is None:
-            return time.time() + 1
-        return cmd.age
+    def redo_age(self):
+        if self.canRedo():
+            return self.command(self.index()).age
+        return None
+
+    @property
+    def undo_age(self):
+        if self.canUndo():
+            return self.command(self.index() - 1).age
+        return None
 
 
 class CommandBase(QUndoCommand):
