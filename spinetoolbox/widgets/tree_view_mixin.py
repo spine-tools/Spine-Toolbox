@@ -224,6 +224,8 @@ class TreeViewMixin:
             pos (QPoint): Mouse position
         """
         index = self.ui.treeView_object.indexAt(pos)
+        if index.column() != 0:
+            return
         global_pos = self.ui.treeView_object.viewport().mapToGlobal(pos)
         object_tree_context_menu = ObjectTreeContextMenu(self, global_pos, index)
         option = object_tree_context_menu.get_action()
@@ -265,6 +267,8 @@ class TreeViewMixin:
             pos (QPoint): Mouse position
         """
         index = self.ui.treeView_relationship.indexAt(pos)
+        if index.column() != 0:
+            return
         global_pos = self.ui.treeView_relationship.viewport().mapToGlobal(pos)
         relationship_tree_context_menu = RelationshipTreeContextMenu(self, global_pos, index)
         option = relationship_tree_context_menu.get_action()

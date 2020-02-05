@@ -364,7 +364,8 @@ class TabularViewMixin:
             self.current_class_type = class_type
             selected_item = selected.model().item_from_index(selected)
             self.current_class_id = selected_item.db_map_id(self.db_map)
-            self.do_reload_pivot_table()
+            if self.current_class_id is not None:
+                self.do_reload_pivot_table()
 
     @busy_effect
     def do_reload_pivot_table(self):

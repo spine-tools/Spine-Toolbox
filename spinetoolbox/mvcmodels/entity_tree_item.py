@@ -93,12 +93,20 @@ class MultiDBTreeItem(TreeItem):
     def add_db_map_id(self, db_map, id_):
         """Adds id for this item in the given db_map."""
         self._db_map_id[db_map] = id_
+        index = self.index()
+        sibling = index.sibling(index.row(), 1)
+        self.model.dataChanged.emit(sibling, sibling)
 
     def take_db_map(self, db_map):
         """Removes the mapping for given db_map and returns it."""
-        if [*self._db_map_id.keys()] == [db_map]:
+        id_ = self._db_map_id.pop(db_map, None)
+        if self._db_map_id:
+            index = self.index()
+            sibling = index.sibling(index.row(), 1)
+            self.model.dataChanged.emit(sibling, sibling)
+        else:
             self.parent_item.remove_children(self.child_number(), 1)
-        return self._db_map_id.pop(db_map, None)
+        return id_
 
     def deep_remove_db_map(self, db_map):
         """Removes given db_map from this item and all its descendants."""

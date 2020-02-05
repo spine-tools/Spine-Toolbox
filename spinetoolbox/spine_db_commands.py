@@ -319,9 +319,8 @@ class RemoveItemsCommand(CommandBase):
             self.db_mngr.add_or_update_items(db_map_data, method_name, emit_signal_name)
 
     @Slot(object)
-    def receive_items_changed(self, db_map_data):
-        db_map_typed_data = db_map_data
-        super().receive_items_changed(db_map_data)
+    def receive_items_changed(self, db_map_typed_data):  # pylint: disable=arguments-differ
+        super().receive_items_changed(db_map_typed_data)
         for db_map, typed_data in db_map_typed_data.items():
             for item_type, data in typed_data.items():
                 data = [_cache_to_db_item(item_type, item) for item in data]

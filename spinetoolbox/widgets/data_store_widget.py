@@ -163,16 +163,10 @@ class DataStoreFormBase(QMainWindow):
         disabled = all(db_map_clean.values())
         self.ui.actionCommit.setDisabled(disabled)
         self.ui.actionRollback.setDisabled(disabled)
-        self.setWindowTitle(
-            "{0} - Data store view ".format(
-                ", ".join(
-                    [
-                        "{0}{1}".format(db_map.codename, "" if clean else " \u25CF")
-                        for db_map, clean in db_map_clean.items()
-                    ]
-                )
-            )
+        db_names = ", ".join(
+            ["{0}{1}".format(db_map.codename, "" if clean else "*") for db_map, clean in db_map_clean.items()]
         )
+        self.setWindowTitle("{0} - Data store view ".format(db_names))
 
     def init_models(self):
         """Initializes models."""
