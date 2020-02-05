@@ -16,7 +16,7 @@ Unit tests for the TreeViewFormFilterMixin class.
 :date:   6.12.2018
 """
 
-from PySide2.QtCore import QItemSelection, Qt
+from PySide2.QtCore import Qt, QItemSelectionModel
 
 
 class TestTreeViewFormFilterMixin:
@@ -74,9 +74,7 @@ class TestTreeViewFormFilterMixin:
         root_item = self.tree_view_form.object_tree_model.root_item
         fish_item = root_item.child(0)
         fish_index = self.tree_view_form.object_tree_model.index_from_item(fish_item)
-        self.tree_view_form._handle_object_tree_selection_changed(
-            QItemSelection(fish_index, fish_index), QItemSelection()
-        )
+        self.tree_view_form.ui.treeView_object.selectionModel().select(fish_index, QItemSelectionModel.Select)
         filtered_values = {
             self.tree_view_form.object_parameter_definition_model: [('dog',)],
             self.tree_view_form.object_parameter_value_model: [('dog', 'pluto'), ('dog', 'scooby')],
@@ -99,9 +97,7 @@ class TestTreeViewFormFilterMixin:
         dog_item = root_item.child(1)
         pluto_item = dog_item.child(0)
         pluto_index = self.tree_view_form.object_tree_model.index_from_item(pluto_item)
-        self.tree_view_form._handle_object_tree_selection_changed(
-            QItemSelection(pluto_index, pluto_index), QItemSelection()
-        )
+        self.tree_view_form.ui.treeView_object.selectionModel().select(pluto_index, QItemSelectionModel.Select)
         filtered_values = {
             self.tree_view_form.object_parameter_definition_model: [('fish',)],
             self.tree_view_form.object_parameter_value_model: [('fish', 'nemo'), ('dog', 'scooby')],
@@ -125,9 +121,7 @@ class TestTreeViewFormFilterMixin:
         pluto_item = dog_item.child(0)
         pluto_fish_dog_item = pluto_item.child(0)
         pluto_fish_dog_index = self.tree_view_form.object_tree_model.index_from_item(pluto_fish_dog_item)
-        self.tree_view_form._handle_object_tree_selection_changed(
-            QItemSelection(pluto_fish_dog_index, pluto_fish_dog_index), QItemSelection()
-        )
+        self.tree_view_form.ui.treeView_object.selectionModel().select(pluto_fish_dog_index, QItemSelectionModel.Select)
         filtered_values = {
             self.tree_view_form.object_parameter_definition_model: [],
             self.tree_view_form.object_parameter_value_model: [],
@@ -152,8 +146,8 @@ class TestTreeViewFormFilterMixin:
         pluto_fish_dog_item = pluto_item.child(0)
         fish_dog_nemo_pluto_item = pluto_fish_dog_item.child(0)
         fish_dog_nemo_pluto_index = self.tree_view_form.object_tree_model.index_from_item(fish_dog_nemo_pluto_item)
-        self.tree_view_form._handle_object_tree_selection_changed(
-            QItemSelection(fish_dog_nemo_pluto_index, fish_dog_nemo_pluto_index), QItemSelection()
+        self.tree_view_form.ui.treeView_object.selectionModel().select(
+            fish_dog_nemo_pluto_index, QItemSelectionModel.Select
         )
         filtered_values = {
             self.tree_view_form.object_parameter_definition_model: [],
