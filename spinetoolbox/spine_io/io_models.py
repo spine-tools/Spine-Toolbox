@@ -130,6 +130,8 @@ class MappingPreviewModel(MinimalTableModel):
         Arguments:
             mapping {MappingSpecModel} -- mapping model
         """
+        if not mapping:
+            return
         if not isinstance(mapping, MappingSpecModel):
             raise TypeError(f"mapping must be instance of 'MappingSpecModel', instead got: '{type(mapping).__name__}'")
         if self._data_changed_signal is not None and self._mapping:
