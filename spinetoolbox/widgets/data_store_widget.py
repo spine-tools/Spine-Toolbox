@@ -32,7 +32,7 @@ from PySide2.QtWidgets import (
 from PySide2.QtCore import Qt, Signal, Slot, QSettings
 from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QIcon
 from spinedb_api import copy_database
-from ..config import MAINWINDOW_SS
+from ..config import MAINWINDOW_SS, STATUSBAR_SS
 from .edit_db_items_dialogs import ManageParameterTagsDialog
 from .custom_menus import ParameterValueListContextMenu
 from ..widgets.parameter_view_mixin import ParameterViewMixin
@@ -40,8 +40,9 @@ from ..widgets.tree_view_mixin import TreeViewMixin
 from ..widgets.graph_view_mixin import GraphViewMixin
 from ..widgets.tabular_view_mixin import TabularViewMixin
 from ..widgets.toolbars import ParameterTagToolBar
+from ..widgets.db_session_history_dialog import DBSessionHistoryDialog
 from ..mvcmodels.parameter_value_list_model import ParameterValueListModel
-from ..helpers import busy_effect, format_string_list
+from ..helpers import busy_effect
 from .import_widget import ImportDialog
 from ..spine_io.exporters.excel import export_spine_database_to_xlsx
 
@@ -72,6 +73,8 @@ class DataStoreFormBase(QMainWindow):
         # Setup UI from Qt Designer file
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
+        self.ui.statusbar.setStyleSheet(STATUSBAR_SS)
+        self.ui.statusbar.setFixedHeight(20)
         self.takeCentralWidget()
         self.setWindowIcon(QIcon(":/symbols/app.ico"))
         self.setStyleSheet(MAINWINDOW_SS)
@@ -119,6 +122,7 @@ class DataStoreFormBase(QMainWindow):
         self.ui.actionCommit.triggered.connect(self.commit_session)
         self.ui.actionRollback.triggered.connect(self.rollback_session)
         self.ui.actionRefresh.triggered.connect(self.refresh_session)
+        self.ui.actionView_history.triggered.connect(self.show_history_dialog)
         self.ui.actionClose.triggered.connect(self.close)
         self.ui.menuEdit.aboutToShow.connect(self._handle_menu_edit_about_to_show)
         self.ui.actionImport.triggered.connect(self.show_import_file_dialog)
@@ -163,10 +167,16 @@ class DataStoreFormBase(QMainWindow):
         disabled = all(db_map_clean.values())
         self.ui.actionCommit.setDisabled(disabled)
         self.ui.actionRollback.setDisabled(disabled)
+        self.ui.actionView_history.setDisabled(disabled)
         db_names = ", ".join(
             ["{0}{1}".format(db_map.codename, "" if clean else "*") for db_map, clean in db_map_clean.items()]
         )
         self.setWindowTitle("{0} - Data store view ".format(db_names))
+
+    @Slot(bool)
+    def show_history_dialog(self, checked=False):
+        dialog = DBSessionHistoryDialog(self, self.db_mngr, *self.db_maps)
+        dialog.show()
 
     def init_models(self):
         """Initializes models."""
@@ -185,7 +195,7 @@ class DataStoreFormBase(QMainWindow):
         Args:
             msg (str): String to show in QStatusBar
         """
-        self.ui.statusbar.add_notification(msg)
+        self.ui.statusbar.showMessage(msg, 5000)
 
     def restore_dock_widgets(self):
         """Docks all floating and or hidden QDockWidgets back to the window."""
@@ -504,21 +514,8 @@ class DataStoreFormBase(QMainWindow):
 
     def notify_items_changed(self, action, item_type, db_map_data):
         """Enables or disables actions and informs the user about what just happened."""
-        msg = f"Successfully {action}"
-        name_keys = {
-            "parameter tag": "tag",
-            "parameter value": None,
-            "parameter definition": "parameter_name",
-            "relationship": "object_name_list",
-        }
-        name_key = name_keys.get(item_type, "name")
-        if name_key:
-            names = {item[name_key] for data in db_map_data.values() for item in data}
-            msg += f" the following {item_type} item(s):" + format_string_list(names)
-        else:
-            count = sum(len(data) for data in db_map_data.values())
-            msg += f" {count} {item_type} item(s)"
-        msg += "<br />"
+        count = sum(len(data) for data in db_map_data.values())
+        msg = f"Successfully {action} {count} {item_type} item(s)"
         self.msg.emit(msg)
 
     def receive_object_classes_added(self, db_map_data):

@@ -81,6 +81,9 @@ class AgedUndoStack(QUndoStack):
             return self.command(self.index() - 1).age
         return None
 
+    def commands(self):
+        return [self.command(idx) for idx in range(self.index())]
+
 
 class CommandBase(QUndoCommand):
     def __init__(self):
@@ -110,6 +113,9 @@ class CommandBase(QUndoCommand):
     @Slot(object)
     def receive_items_changed(self, db_map_data):
         self._completed = True
+
+    def data(self):
+        raise NotImplementedError()
 
 
 class AddItemsCommand(CommandBase):
@@ -194,6 +200,9 @@ class AddItemsCommand(CommandBase):
         self.undo_db_map_data = {db_map: {self.item_type: data} for db_map, data in db_map_data.items()}
         self._completed = True
 
+    def data(self):
+        return {item["name"]: [] for item in next(iter(self.redo_db_map_data.values()))}
+
 
 class AddCheckedParameterValuesCommand(AddItemsCommand):
     def __init__(self, db_mngr, db_map, data):
@@ -263,6 +272,9 @@ class UpdateItemsCommand(CommandBase):
     def undo(self):
         self.db_mngr.add_or_update_items(self.undo_db_map_data, self.method_name, self.emit_signal_name)
 
+    def data(self):
+        return {item["name"]: [] for item in next(iter(self.redo_db_map_data.values()))}
+
 
 class UpdateCheckedParameterValuesCommand(UpdateItemsCommand):
     def __init__(self, db_mngr, db_map, data):
@@ -325,3 +337,9 @@ class RemoveItemsCommand(CommandBase):
             for item_type, data in typed_data.items():
                 data = [_cache_to_db_item(item_type, item) for item in data]
                 self.undo_typed_db_map_data.setdefault(item_type, {}).setdefault(db_map, []).extend(data)
+
+    def data(self):
+        return {
+            item_type: [item.get("name") for item in next(iter(db_map_data.values()))]
+            for item_type, db_map_data in self.undo_typed_db_map_data.items()
+        }
