@@ -202,6 +202,12 @@ class Importer(ProjectItem):
     def get_connector(self, importee):
         """Shows a QDialog to select a connector for the given source file.
         Mimics similar routine in `spine_io.widgets.import_widget.ImportDialog`
+
+        Args:
+            importee (str): Path to file acting as an importee
+
+        Returns:
+            Asynchronous data reader class for the given importee
         """
         connector_list = [CSVConnector, ExcelConnector, GdxConnector]  # add others as needed
         connector_names = [c.DISPLAY_NAME for c in connector_list]
