@@ -18,7 +18,7 @@ The SpineDBManager class
 
 from PySide2.QtCore import Qt, QObject, Signal, Slot, QSettings
 from PySide2.QtWidgets import QMessageBox, QDialog, QCheckBox
-from PySide2.QtGui import QKeySequence, QIcon
+from PySide2.QtGui import QKeySequence, QIcon, QFontMetrics, QFont
 from spinedb_api import (
     SpineDBAPIError,
     SpineDBVersionError,
@@ -594,6 +594,9 @@ class SpineDBManager(QObject):
             else:
                 display_data = self._display_data(parsed_value)
                 tool_tip_data = self._tool_tip_data(parsed_value)
+            fm = QFontMetrics(QFont("", 0))
+            display_data = fm.elidedText(str(display_data), Qt.ElideRight, 400)
+            tool_tip_data = fm.elidedText(str(tool_tip_data), Qt.ElideRight, 400)
             item[key] = {Qt.DisplayRole: display_data, Qt.ToolTipRole: tool_tip_data, Qt.EditRole: str(item[field])}
         return item[key].get(role)
 
