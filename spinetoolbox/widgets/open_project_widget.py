@@ -278,7 +278,7 @@ class OpenProjectDialog(QDialog):
                 return
             project_json_fp = os.path.abspath(os.path.join(self.selection(), ".spinetoolbox", "project.json"))
             if not os.path.isfile(project_json_fp):
-                notification = Notification(self, "Not a valid Spine Toolbox project", width=140, height=70)
+                notification = Notification(self, "Not a valid Spine Toolbox project")
                 notification.show()
                 return
             # self.selection() now contains a valid Spine Toolbox project directory.

@@ -982,7 +982,6 @@
     </layout>
    </widget>
   </widget>
-  <widget class="QStatusBar" name="statusbar"/>
   <action name="actionCommit">
    <property name="enabled">
     <bool>true</bool>

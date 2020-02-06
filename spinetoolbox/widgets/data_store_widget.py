@@ -32,7 +32,7 @@ from PySide2.QtWidgets import (
 from PySide2.QtCore import Qt, Signal, Slot, QSettings
 from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QIcon
 from spinedb_api import copy_database
-from ..config import MAINWINDOW_SS, STATUSBAR_SS
+from ..config import MAINWINDOW_SS
 from .edit_db_items_dialogs import ManageParameterTagsDialog
 from .custom_menus import ParameterValueListContextMenu
 from ..widgets.parameter_view_mixin import ParameterViewMixin
@@ -41,6 +41,7 @@ from ..widgets.graph_view_mixin import GraphViewMixin
 from ..widgets.tabular_view_mixin import TabularViewMixin
 from ..widgets.toolbars import ParameterTagToolBar
 from ..widgets.db_session_history_dialog import DBSessionHistoryDialog
+from ..widgets.notification import NotificationStack
 from ..mvcmodels.parameter_value_list_model import ParameterValueListModel
 from ..helpers import busy_effect
 from .import_widget import ImportDialog
@@ -73,14 +74,13 @@ class DataStoreFormBase(QMainWindow):
         # Setup UI from Qt Designer file
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
-        self.ui.statusbar.setStyleSheet(STATUSBAR_SS)
-        self.ui.statusbar.setFixedHeight(20)
         self.takeCentralWidget()
         self.setWindowIcon(QIcon(":/symbols/app.ico"))
         self.setStyleSheet(MAINWINDOW_SS)
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.qsettings = QSettings("SpineProject", "Spine Toolbox")
         self.err_msg = QErrorMessage(self)
+        self.notification_stack = NotificationStack(self)
         self.err_msg.setWindowTitle("Error")
         self.parameter_tag_toolbar = ParameterTagToolBar(self, self.db_mngr, *self.db_maps)
         self.addToolBar(Qt.TopToolBarArea, self.parameter_tag_toolbar)
@@ -195,7 +195,7 @@ class DataStoreFormBase(QMainWindow):
         Args:
             msg (str): String to show in QStatusBar
         """
-        self.ui.statusbar.showMessage(msg, 5000)
+        self.notification_stack.push(msg)
 
     def restore_dock_widgets(self):
         """Docks all floating and or hidden QDockWidgets back to the window."""
@@ -661,7 +661,7 @@ class DataStoreForm(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         self.apply_tree_style()
         self.restore_ui()
         toc = time.process_time()
-        self.msg.emit("Data store view created in {} seconds".format(toc - tic))
+        self.msg.emit("Data store view created in {0:.2f} seconds".format(toc - tic))
 
     def connect_signals(self):
         super().connect_signals()
