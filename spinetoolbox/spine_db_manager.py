@@ -595,8 +595,10 @@ class SpineDBManager(QObject):
                 display_data = self._display_data(parsed_value)
                 tool_tip_data = self._tool_tip_data(parsed_value)
             fm = QFontMetrics(QFont("", 0))
-            display_data = fm.elidedText(str(display_data), Qt.ElideRight, 400)
-            tool_tip_data = fm.elidedText(str(tool_tip_data), Qt.ElideRight, 400)
+            if isinstance(display_data, str):
+                display_data = fm.elidedText(display_data, Qt.ElideRight, 500)
+            if isinstance(tool_tip_data, str):
+                tool_tip_data = fm.elidedText(tool_tip_data, Qt.ElideRight, 500)
             item[key] = {Qt.DisplayRole: display_data, Qt.ToolTipRole: tool_tip_data, Qt.EditRole: str(item[field])}
         return item[key].get(role)
 
