@@ -30,7 +30,7 @@
     <item>
      <widget class="QDialogButtonBox" name="buttonBox">
       <property name="standardButtons">
-       <set>QDialogButtonBox::Apply|QDialogButtonBox::Cancel</set>
+       <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
       </property>
       <property name="centerButtons">
        <bool>false</bool>
@@ -52,25 +52,35 @@
     <property name="title">
      <string>File</string>
     </property>
-    <addaction name="actionExportMapping"/>
-    <addaction name="actionImportMapping"/>
+    <addaction name="actionExportMappings"/>
+    <addaction name="actionImportMappings"/>
+    <addaction name="separator"/>
+    <addaction name="actionClose"/>
    </widget>
    <addaction name="menuFile"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
-  <action name="actionExportMapping">
+  <action name="actionExportMappings">
    <property name="text">
-    <string>Export mapping...</string>
+    <string>Export mappings...</string>
    </property>
   </action>
-  <action name="actionImportMapping">
+  <action name="actionImportMappings">
    <property name="text">
-    <string>Import mapping...</string>
+    <string>Import mappings...</string>
    </property>
   </action>
   <action name="actionSave">
    <property name="text">
     <string>Save</string>
+   </property>
+  </action>
+  <action name="actionClose">
+   <property name="text">
+    <string>Close</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+W</string>
    </property>
   </action>
  </widget>

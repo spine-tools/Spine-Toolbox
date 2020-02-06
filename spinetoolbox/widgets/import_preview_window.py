@@ -44,24 +44,25 @@ class ImportPreviewWindow(QMainWindow):
         super().__init__(parent=toolbox, flags=Qt.Window)
         self._importer = importer
         self._toolbox = toolbox
-        self.setAttribute(Qt.WA_DeleteOnClose)
-        self.setWindowTitle("Import Editor    -- {} --".format(importer.name))
         self._qsettings = self._toolbox.qsettings()
         self._connection_manager = ConnectionManager(connector)
         self._connection_manager.source = filepath
         self._ui = Ui_MainWindow()
         self._ui.setupUi(self)
+        self.setAttribute(Qt.WA_DeleteOnClose)
+        self.setWindowTitle("Import Editor    -- {} --".format(importer.name))
         self._preview_widget = ImportPreviewWidget(self._connection_manager, parent=self)
         self._preview_widget.use_settings(settings)
         self._ui.centralwidget.layout().insertWidget(0, self._preview_widget)
         self.settings_group = "mappingPreviewWindow"
         self.restore_ui()
-        self._ui.buttonBox.button(QDialogButtonBox.Apply).clicked.connect(self.apply_and_close)
+        self._ui.buttonBox.button(QDialogButtonBox.Ok).clicked.connect(self.apply_and_close)
         self._ui.buttonBox.button(QDialogButtonBox.Cancel).clicked.connect(self.close)
-        self._ui.buttonBox.button(QDialogButtonBox.Apply).setAutoDefault(True)
-        self._ui.buttonBox.button(QDialogButtonBox.Apply).setFocus()
-        self._ui.actionExportMapping.triggered.connect(self.export_mapping_to_file)
-        self._ui.actionImportMapping.triggered.connect(self.import_mapping_from_file)
+        # self._ui.buttonBox.button(QDialogButtonBox.Ok).setAutoDefault(True)
+        # self._ui.buttonBox.button(QDialogButtonBox.Ok).setFocus()
+        self._ui.actionExportMappings.triggered.connect(self.export_mapping_to_file)
+        self._ui.actionImportMappings.triggered.connect(self.import_mapping_from_file)
+        self._ui.actionClose.triggered.connect(self.close)
         self._connection_manager.connectionReady.connect(self.show)
         self._connection_manager.connectionFailed.connect(self.connection_failed.emit)
 
