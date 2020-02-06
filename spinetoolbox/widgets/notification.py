@@ -126,7 +126,7 @@ class NotificationStack(QObject):
         offset = sum((x.height() for x in self.notifications), 0)
         life_span = self._life_span
         if self.notifications:
-            life_span += self.notifications[-1].remaining_time() - life_span / 2
+            life_span += 0.8 * self.notifications[-1].remaining_time()
         notification = Notification(self._parent, txt, anim_duration=self._anim_duration, life_span=life_span)
         notification.move(notification.pos().x(), offset)
         self.notifications.append(notification)

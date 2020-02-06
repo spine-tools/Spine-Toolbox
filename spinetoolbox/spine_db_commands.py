@@ -70,7 +70,6 @@ def _cache_to_db_item(item_type, item):
 
 def _format_item(item_type, item):
     return {
-        "relationship": lambda x: x["object_name_list"],
         "parameter value": lambda x: "<"
         + ", ".join([x["object_name"] or x["object_name_list"], x["parameter_name"]])
         + ">",
