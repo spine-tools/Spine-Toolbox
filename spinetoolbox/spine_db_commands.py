@@ -68,6 +68,16 @@ def _cache_to_db_item(item_type, item):
     }.get(item_type, lambda x: x)(item)
 
 
+def _format_item(item_type, item):
+    return {
+        "relationship": lambda x: x["object_name_list"],
+        "parameter value": lambda x: "<"
+        + ", ".join([x["object_name"] or x["object_name_list"], x["parameter_name"]])
+        + ">",
+        "parameter tag": lambda x: x["tag"],
+    }.get(item_type, lambda x: x["name"])(item)
+
+
 class AgedUndoStack(QUndoStack):
     @property
     def redo_age(self):
@@ -86,8 +96,15 @@ class AgedUndoStack(QUndoStack):
 
 
 class CommandBase(QUndoCommand):
-    def __init__(self):
+    def __init__(self, db_mngr, db_map):
+        """
+        Args:
+            db_mngr (SpineDBManager): SpineDBManager instance
+            db_map (DiffDatabaseMapping): DiffDatabaseMapping instance
+        """
         super().__init__()
+        self.db_mngr = db_mngr
+        self.db_map = db_map
         self.receive_signal = None
         self._completed = False
         self._age = time.time()
@@ -172,8 +189,7 @@ class AddItemsCommand(CommandBase):
             data (list): list of dict-items to add
             item_type (str): the item type
         """
-        super().__init__()
-        self.db_mngr = db_mngr
+        super().__init__(db_mngr, db_map)
         self.redo_db_map_data = {db_map: data}
         self.item_type = item_type
         self.method_name = self._method_name[item_type]
@@ -201,7 +217,7 @@ class AddItemsCommand(CommandBase):
         self._completed = True
 
     def data(self):
-        return {item["name"]: [] for item in next(iter(self.redo_db_map_data.values()))}
+        return {_format_item(self.item_type, item): [] for item in self.undo_db_map_data[self.db_map][self.item_type]}
 
 
 class AddCheckedParameterValuesCommand(AddItemsCommand):
@@ -250,8 +266,7 @@ class UpdateItemsCommand(CommandBase):
             data (list): list of dict-items to update
             item_type (str): the item type
         """
-        super().__init__()
-        self.db_mngr = db_mngr
+        super().__init__(db_mngr, db_map)
         self.redo_db_map_data = {db_map: data}
         self.item_type = item_type
         self.method_name = self._method_name[item_type]
@@ -273,7 +288,7 @@ class UpdateItemsCommand(CommandBase):
         self.db_mngr.add_or_update_items(self.undo_db_map_data, self.method_name, self.emit_signal_name)
 
     def data(self):
-        return {item["name"]: [] for item in next(iter(self.redo_db_map_data.values()))}
+        return {_format_item(self.item_type, item): [] for item in self.undo_db_map_data[self.db_map]}
 
 
 class UpdateCheckedParameterValuesCommand(UpdateItemsCommand):
@@ -312,8 +327,7 @@ class RemoveItemsCommand(CommandBase):
             db_map (DiffDatabaseMapping): DiffDatabaseMapping instance
             typed_data (dict): lists of dict-items to remove keyed by string type
         """
-        super().__init__()
-        self.db_mngr = db_mngr
+        super().__init__(db_mngr, db_map)
         self.redo_db_map_typed_data = {db_map: typed_data}
         self.undo_typed_db_map_data = {}
         self.setText(f"remove items from '{db_map.codename}'")
@@ -340,6 +354,6 @@ class RemoveItemsCommand(CommandBase):
 
     def data(self):
         return {
-            item_type: [item.get("name") for item in next(iter(db_map_data.values()))]
-            for item_type, db_map_data in self.undo_typed_db_map_data.items()
+            item_type: [_format_item(item_type, item) for item in self.undo_typed_db_map_data[item_type][self.db_map]]
+            for item_type in reversed(list(self.undo_typed_db_map_data.keys()))
         }
