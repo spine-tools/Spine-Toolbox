@@ -584,6 +584,8 @@ class SpineDBManager(QObject):
             role (int, optional)
         """
         item = self.get_item(db_map, item_type, id_)
+        if not item:
+            return None
         key = "formatted_" + field
         if key not in item:
             try:
