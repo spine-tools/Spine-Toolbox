@@ -20,12 +20,14 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - Projects can be saved to any directory
 - Project name can be changed in Settings
 - The graph view features a short live demonstration that new users can follow to discover the basic functionality.
-- New Setting: *Smooth links*. When active, links on the Design View follow a smooth curve rather than a straight line.
+- New Setting: *Curved links*. When active, links on the Design View follow a smooth curve rather than a straight line.
 - When execution traverses a link, a small animation is played to denote the flow of data. Users can set how quick
   they want this animation to be in Settings. The fastest setting effectively disables the animation.
 - Special 'tag' command line arguments are now available in Tool Specification which expand to, for example,
   input database URLS or paths to optional input files when a Tool is executed.
-- The history of changes during a session with the Data Store form is now accessible from the Session menu.
+- It is now possible to undo/redo database changes in the Data Store form.
+- It is now possible to visualize the history of database changes in the Data Store form. The option is 
+  available in the Session menu.
 
 ### Changed
 - spinetoolbox is now a Python package. To start the app, use command `python -m spinetoolbox` or
