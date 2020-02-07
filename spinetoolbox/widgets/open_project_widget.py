@@ -10,16 +10,15 @@
 ######################################################################################################################
 
 """
-Contains a class for a widget that presents a 'Select Project Directory' dialog.
+Contains a class for a widget that represents a 'Open Project Directory' dialog.
 
 :author: P. Savolainen (VTT)
 :date: 1.11.2019
 """
 
-import logging
 import os
 from PySide2.QtWidgets import QDialog, QFileSystemModel, QAbstractItemView, QAction, QComboBox
-from PySide2.QtCore import Qt, Slot, QDir, QStandardPaths, QTimer, QModelIndex
+from PySide2.QtCore import Qt, Slot, QDir, QStandardPaths, QModelIndex
 from PySide2.QtGui import QKeySequence, QValidator
 from spinetoolbox.helpers import ProjectDirectoryIconProvider
 from spinetoolbox.widgets.notification import Notification
@@ -60,21 +59,9 @@ class OpenProjectDialog(QDialog):
         self.file_model.setIconProvider(self.icon_provider)
         self.file_model.setRootPath(QDir.rootPath())
         self.ui.treeView_file_system.setModel(self.file_model)
-        # Read recent project directories and populate combobox
-        recents = self._toolbox.qsettings().value("appSettings/recentProjectStorages", defaultValue=None)
-        if recents:
-            recents_lst = str(recents).split("\n")
-            self.ui.comboBox_current_path.insertItems(0, recents_lst)
-        self.ui.comboBox_current_path.setCurrentIndex(-1)
-        # Go and select root immediately
-        root_index = self.file_model.index(QDir.rootPath())
-        self.ui.treeView_file_system.setCurrentIndex(root_index)
-        self.ui.treeView_file_system.expand(root_index)
-        self.ui.treeView_file_system.resizeColumnToContents(0)
         self.file_model.sort(0, Qt.AscendingOrder)
-        self.set_selected_path(root_index)
         # Enable validator (experimental, not very useful here)
-        # Validator prevents typing Invalid strings to combobox. (Not in use)
+        # Validator prevents typing Invalid strings to combobox. (not in use)
         # When text in combobox is Intermediate, the validator prevents emitting
         # currentIndexChanged signal when enter is pressed.
         # Pressing enter still triggers the done() slot of the QDialog.
@@ -83,6 +70,23 @@ class OpenProjectDialog(QDialog):
         self.ui.comboBox_current_path.setInsertPolicy(QComboBox.NoInsert)
         # Override QCombobox keyPressEvent to catch the Enter key press
         self.ui.comboBox_current_path.keyPressEvent = self.combobox_key_press_event
+        # Read recent project directories and populate combobox
+        recents = self._toolbox.qsettings().value("appSettings/recentProjectStorages", defaultValue=None)
+        if recents:
+            recents_lst = str(recents).split("\n")
+            self.ui.comboBox_current_path.insertItems(0, recents_lst)
+            # Set start index to most recent project storage or to root if it does not exist
+            p = self.ui.comboBox_current_path.itemText(0)
+            if os.path.isdir(p):
+                start_index = self.file_model.index(p)
+            else:
+                start_index = self.file_model.index(QDir.rootPath())
+        else:
+            start_index = self.file_model.index(QDir.rootPath())
+            self.ui.comboBox_current_path.setCurrentIndex(-1)
+        self.file_model.directoryLoaded.connect(self.expand_and_resize)
+        # Start browsing to start index immediately when dialog is shown
+        self.ui.treeView_file_system.setCurrentIndex(start_index)
         self.connect_signals()
 
     def set_keyboard_shortcuts(self):
@@ -113,6 +117,22 @@ class OpenProjectDialog(QDialog):
         self.go_documents_action.triggered.connect(self.go_documents)
         self.go_desktop_action.triggered.connect(self.go_desktop)
 
+    @Slot(str)
+    def expand_and_resize(self, p):
+        """Expands, resizes, and scrolls the tree view to the current directory
+        when the file model has finished loading the path. Slot for the file
+        model's directoryLoaded signal. The directoryLoaded signal is emitted only
+        if the directory has not been cached already.
+
+        Args:
+             p (str): Directory that has been loaded
+        """
+        current_index = self.ui.treeView_file_system.currentIndex()
+        self.ui.treeView_file_system.expand(current_index)
+        self.ui.treeView_file_system.scrollTo(current_index, hint=QAbstractItemView.PositionAtTop)
+        self.ui.treeView_file_system.resizeColumnToContents(0)
+        self.set_selected_path(current_index)
+
     def combobox_key_press_event(self, e):
         """Interrupts Enter and Return key presses when QComboBox is in focus.
         This is needed to prevent showing the 'Not a valid Spine Toolbox project'
@@ -140,8 +160,10 @@ class OpenProjectDialog(QDialog):
                 p = self.ui.comboBox_current_path.currentText()
                 fm_index = self.file_model.index(p)
                 if not fm_current_index == fm_index:
+                    self.ui.treeView_file_system.collapseAll()
                     self.ui.treeView_file_system.setCurrentIndex(fm_index)
-                    QTimer.singleShot(150, self.update_filesystem_treeview)
+                    self.ui.treeView_file_system.expand(fm_index)
+                    self.ui.treeView_file_system.scrollTo(fm_index, hint=QAbstractItemView.PositionAtTop)
                 else:
                     project_json_fp = os.path.abspath(os.path.join(self.selection(), ".spinetoolbox", "project.json"))
                     if os.path.isfile(project_json_fp):
@@ -162,7 +184,7 @@ class OpenProjectDialog(QDialog):
         elif state == QValidator.Intermediate:
             ss = "QComboBox {border: 1px solid #ff704d}"
             self.ui.comboBox_current_path.setStyleSheet(ss)
-        else:  # Invalid. This is never returned.
+        else:  # Invalid. This is never returned (on purpose).
             ss = "QComboBox {border: 1px solid #ff3300}"
             self.ui.comboBox_current_path.setStyleSheet(ss)
 
@@ -180,13 +202,15 @@ class OpenProjectDialog(QDialog):
             self.remove_directory_from_recents(p, self._toolbox.qsettings())
             return
         fm_index = self.file_model.index(p)
+        self.ui.treeView_file_system.collapseAll()
         self.ui.treeView_file_system.setCurrentIndex(fm_index)
-        QTimer.singleShot(150, self.update_filesystem_treeview)
+        self.ui.treeView_file_system.expand(fm_index)
+        self.ui.treeView_file_system.scrollTo(fm_index, hint=QAbstractItemView.PositionAtTop)
 
     @Slot("QModelIndex", "QModelIndex", name="current_changed")
     def current_changed(self, current, previous):
         """Processed when the current item in file system tree view has been
-        changed with keyboard or mouse. Updates the text in combobox the combobox.
+        changed with keyboard or mouse. Updates the text in combobox.
 
         Args:
             current (QModelIndex): Currently selected index
@@ -214,54 +238,59 @@ class OpenProjectDialog(QDialog):
         """
         self.selected_path = text
 
-    def update_filesystem_treeview(self):
-        """Scrolls the file system tree view to the current index (path)."""
-        self.ui.treeView_file_system.collapseAll()
-        index = self.ui.treeView_file_system.currentIndex()
-        self.ui.treeView_file_system.scrollTo(index, hint=QAbstractItemView.PositionAtTop)
-        self.ui.treeView_file_system.expand(index)
-        self.ui.treeView_file_system.resizeColumnToContents(0)
-        self.set_selected_path(index)
-
     def selection(self):
         """Returns the selected path from dialog."""
         return os.path.abspath(self.selected_path)
 
     @Slot(bool, name="go_root")
     def go_root(self, checked=False):
-        """Slot for the 'Root' button. Scrolls the treeview to show and select the user's root directory."""
+        """Slot for the 'Root' button. Scrolls the treeview to show and select the user's root directory.
+
+        Note: We need to expand and scroll the tree view here after setCurrentIndex
+        just in case the directory has been loaded already.
+        """
+        self.ui.comboBox_current_path.setCurrentIndex(-1)
         root_index = self.file_model.index(QDir.rootPath())
+        self.ui.treeView_file_system.collapseAll()
         self.ui.treeView_file_system.setCurrentIndex(root_index)
-        QTimer.singleShot(150, self.update_filesystem_treeview)
+        self.ui.treeView_file_system.expand(root_index)
+        self.ui.treeView_file_system.scrollTo(root_index, hint=QAbstractItemView.PositionAtTop)
 
     @Slot(bool, name="go_home")
     def go_home(self, checked=False):
         """Slot for the 'Home' button. Scrolls the treeview to show and select the user's home directory."""
+        self.ui.comboBox_current_path.setCurrentIndex(-1)
         home_index = self.file_model.index(QDir.homePath())
+        self.ui.treeView_file_system.collapseAll()
         self.ui.treeView_file_system.setCurrentIndex(home_index)
-        QTimer.singleShot(150, self.update_filesystem_treeview)
+        self.ui.treeView_file_system.expand(home_index)
+        self.ui.treeView_file_system.scrollTo(home_index, hint=QAbstractItemView.PositionAtTop)
 
     @Slot(bool, name="go_documents")
     def go_documents(self, checked=False):
         """Slot for the 'Documents' button. Scrolls the treeview to show and select the user's documents directory."""
         docs = QStandardPaths.writableLocation(QStandardPaths.DocumentsLocation)
         if not docs:
-            logging.error("No documents found on your OS")
             return
+        self.ui.comboBox_current_path.setCurrentIndex(-1)
         docs_index = self.file_model.index(docs)
+        self.ui.treeView_file_system.collapseAll()
         self.ui.treeView_file_system.setCurrentIndex(docs_index)
-        QTimer.singleShot(150, self.update_filesystem_treeview)
+        self.ui.treeView_file_system.expand(docs_index)
+        self.ui.treeView_file_system.scrollTo(docs_index, hint=QAbstractItemView.PositionAtTop)
 
     @Slot(bool, name="go_desktop")
     def go_desktop(self, checked=False):
         """Slot for the 'Desktop' button. Scrolls the treeview to show and select the user's desktop directory."""
         desktop = QStandardPaths.writableLocation(QStandardPaths.DesktopLocation)  # Return a list
         if not desktop:
-            logging.error("No desktop found on your OS")
             return
+        self.ui.comboBox_current_path.setCurrentIndex(-1)
         desktop_index = self.file_model.index(desktop)
+        self.ui.treeView_file_system.collapseAll()
         self.ui.treeView_file_system.setCurrentIndex(desktop_index)
-        QTimer.singleShot(150, self.update_filesystem_treeview)
+        self.ui.treeView_file_system.expand(desktop_index)
+        self.ui.treeView_file_system.scrollTo(desktop_index, hint=QAbstractItemView.PositionAtTop)
 
     def done(self, r):
         """Checks that selected path exists and is a valid
