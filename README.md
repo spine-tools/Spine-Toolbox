@@ -63,7 +63,7 @@ repository on GitHub onto your computer.
 
 Optionally, you can also install Spine Toolbox on a Python without using 
 Anaconda or Miniconda. If you run into problems by following the instructions 
-here, please see [Troubleshooting](#Troubleshooting) section below.
+here, please see [Troubleshooting](#troubleshooting) section below.
 
 Step-by-step instructions:
 
