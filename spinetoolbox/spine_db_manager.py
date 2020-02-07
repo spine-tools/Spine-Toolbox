@@ -851,6 +851,7 @@ class SpineDBManager(QObject):
         _ = cache and self.cache_items("parameter tag", {db_map: items})
         return items
 
+    @busy_effect
     def add_or_update_items(self, db_map_data, method_name, signal_name):
         """Adds or updates items in db.
 
@@ -1045,6 +1046,7 @@ class SpineDBManager(QObject):
         for db_map, typed_data in db_map_typed_data.items():
             self.undo_stack[db_map].push(RemoveItemsCommand(self, db_map, typed_data))
 
+    @busy_effect
     def do_remove_items(self, db_map_typed_data):
         """Removes items from database.
 

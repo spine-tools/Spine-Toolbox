@@ -447,7 +447,6 @@ class ParameterViewMixin:
         """Removes selected rows from relationship parameter definition table."""
         self._remove_parameter_data(self.ui.tableView_relationship_parameter_definition, "parameter definition")
 
-    @busy_effect
     def _remove_parameter_data(self, table_view, item_type):
         """
         Removes selected rows from parameter table.

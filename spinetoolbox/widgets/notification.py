@@ -133,6 +133,13 @@ class NotificationStack(QObject):
             life_span += 0.8 * self.notifications[-1].remaining_time()
         notification = Notification(self._parent, txt, anim_duration=self._anim_duration, life_span=life_span)
         notification.move(notification.pos().x(), offset)
-        notification.destroyed.connect(lambda obj=None, n=notification: self.notifications.remove(notification))
+        notification.destroyed.connect(
+            lambda obj=None, n=notification, h=notification.height(): self.handle_notification_destroyed(n, h)
+        )
         self.notifications.append(notification)
         notification.show()
+
+    def handle_notification_destroyed(self, notification, height):
+        self.notifications.remove(notification)
+        for n in self.notifications:
+            n.move(n.pos().x(), n.pos().y() - height)
