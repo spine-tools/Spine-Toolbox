@@ -25,6 +25,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
   they want this animation to be in Settings. The fastest setting effectively disables the animation.
 - Special 'tag' command line arguments are now available in Tool Specification which expand to, for example,
   input database URLS or paths to optional input files when a Tool is executed.
+- The history of changes during a session with the Data Store form is now accessible from the Session menu.
 
 ### Changed
 - spinetoolbox is now a Python package. To start the app, use command `python -m spinetoolbox` or
@@ -40,8 +41,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - Work directory is now a global setting instead of a project setting
 - Renamed *Data Interface* project item to *Importer*.
   The corresponding category *Data Importers* was renamed to *Importers*.
-- The status bar of tree and graph views now has a notification icon. Click on this icon to see the list of 
-  notifications in a popup.
+- The status bar of the Data store view is gone. Instead, notifications are printed in a box on the right side of
+  the form.
 - Tree, graph, and tabular views have been merged into one consolidated view. You can chose your preferred style
   from the View menu.
 

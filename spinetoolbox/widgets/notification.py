@@ -54,7 +54,6 @@ class Notification(QWidget):
         x = self._parent.size().width() - self.width()
         self.move(x, 0)
         self.setAttribute(Qt.WA_DeleteOnClose)
-        self.setAttribute(Qt.WA_TransparentForMouseEvents)
         self.setAttribute(Qt.WA_TranslucentBackground)
         ss = (
             "QWidget{background-color: rgba(255, 194, 179, 0.8);"
@@ -103,6 +102,11 @@ class Notification(QWidget):
     def start_self_destruction(self):
         """Starts fade-out animation and closing of the notification."""
         self.fade_out_anim.start(QPropertyAnimation.DeleteWhenStopped)
+
+    def enterEvent(self, e):
+        super().enterEvent(e)
+        self.start_self_destruction()
+        self.setAttribute(Qt.WA_TransparentForMouseEvents)
 
     def remaining_time(self):
         if self.timer.isActive():
