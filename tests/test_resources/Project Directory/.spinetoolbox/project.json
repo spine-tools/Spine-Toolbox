@@ -3,13 +3,7 @@
         "version": 1,
         "name": "UnitTest Project",
         "description": "Project for testing open_project() method in ToolboxUI.",
-        "tool_specifications": [
-            {
-                "type": "path",
-                "relative": false,
-                "path": "C:/data/src/toolbox/tests/test_resources/test_tool_spec.json"
-            }
-        ],
+        "tool_specifications": [],
         "connections": [
             {
                 "from": [
