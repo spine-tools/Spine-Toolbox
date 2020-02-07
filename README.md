@@ -5,36 +5,70 @@
 
 An application to define, manage, and execute various energy system simulation models.
 
+## Programming language
+
+- Python 3.6
+- Python 3.7
+
+Please note that Python 3.8 is **not** supported yet.
+
 ## License
 
 Spine Toolbox is released under the GNU Lesser General Public License (LGPL) license. All accompanying
-documentation, original graphics and other material are released under the [Creative Commons BY-SA 4.0 license](https://creativecommons.org/licenses/by-sa/4.0/).
+documentation, original graphics and other material are released under the 
+[Creative Commons BY-SA 4.0 license](https://creativecommons.org/licenses/by-sa/4.0/).
 Licenses of all packages used by Spine Toolbox are listed in the Spine Toolbox User 
 Guide.
 
-## Running Spine Toolbox
+## Installing Spine Toolbox
 
-### Official releases
+Installing requires you to [clone](https://help.github.com/articles/cloning-a-repository/) or 
+download the latest version of the source code to your computer.
 
-Release versions of Spine Toolbox can be found 
-[here](https://drive.google.com/drive/folders/1t-AIIwRMl3HiYgka4ex5bCccI2gpbspK).
-(only available for 64-bit Windows for now). Download the latest version, install and
-run `spinetoolbox.exe`.
+The development happens on the `dev` branch and all the latest features and bug fixes will be added there
+first. The `master` branch contains the most stable version of the application. 
 
-### Latest development version
+The **recommended** way to install and run Spine Toolbox is by using Anaconda or Miniconda environments.
 
-To get the latest features and bug fixes you need to 
-[clone](https://help.github.com/articles/cloning-a-repository/) or download the latest 
-version of the source code to your computer.
-The `master` branch contains the latest release version of the application. The 
-development happens on the `dev` branch.
+Step-by-step instructions:
 
+1. Install either [anaconda](https://www.anaconda.com/distribution/) or 
+[miniconda](https://docs.conda.io/en/latest/miniconda.html)
 
+2. Open Anaconda prompt
+3. Install **git** into the base environment
+
+        conda install -c anaconda git
+
+4. Create a new environment by typing
+
+        conda create -n spinetoolbox python=3.7
+
+5. Activate the new environment
+
+        conda activate spinetoolbox
+
+6. Clone either the `master` or `dev` branch from Spine Toolbox 
+repository on GitHub onto your computer. 
+7. cd to Spine Toolbox root directory (the one with requirements.txt)
+8. Install requirements using **pip**
+
+        pip install -r requirements.txt
+
+9. Run
+
+        python -m spinetoolbox
+
+### Installing from the shell (i.e. command prompt on Windows)
+
+Optionally, you can also install Spine Toolbox on a Python without using 
+Anaconda or Miniconda. If you run into problems by following the instructions 
+here, please see [Troubleshooting](#Troubleshooting) section below.
 
 Step-by-step instructions:
 
 1. Clone either the `master` or `dev` branch onto your computer
-2. Install Python (3.6->)
+2. Install either Python 3.6 or Python 3.7
 3. Install requirements
 
         pip install -r requirements.txt
@@ -46,38 +80,19 @@ Step-by-step instructions:
 Remember to update your clone occasionally with the 
 [git pull](https://www.atlassian.com/git/tutorials/syncing/git-pull) command.
 
-#### Anaconda & Miniconda Python
 
-The recommended way to install and run Spine Toolbox in Anaconda or Miniconda environment is:
+### Official releases
 
-1. Open Anaconda prompt
-2. Install **git** into the base environment
+Release versions of Spine Toolbox can be found 
+[here](https://drive.google.com/drive/folders/1t-AIIwRMl3HiYgka4ex5bCccI2gpbspK).
+(only available for 64-bit Windows for now). Download the latest version, install and
+run `spinetoolbox.exe`.
 
-        conda install -c anaconda git
+### About requirements
 
-3. Create a new environment by typing
+Python 3.6 or Python 3.7 is required.
 
-        conda create -n spinetoolbox python=3.7
-
-4. Activate the new environment
-
-        conda activate spinetoolbox
-
-5. Clone either the `master` or `dev` branch onto your computer
-6. cd to Spine Toolbox root directory (the one with requirements.txt)
-7. Install requirements using **pip**
-
-        pip install -r requirements.txt
-
-8. Run
-
-        python -m spinetoolbox
-
-#### Requirements
-
-Python 3.6 or higher is required.
-
-See file `setup.py` and `requirements.txt` for packages needed to use Spinetoolbox.
+See file `setup.py` and `requirements.txt` for packages required to run Spinetoolbox.
 
 Additional packages needed for development are listed in `dev-requirements.txt`.
 To install the development requirements, run:
@@ -134,6 +149,7 @@ To upgrade `spine_engine` manually, run
 `spine_engine` source codes. *pip* takes care of installing the latest 
 version from GitHub to your system automatically.
 
+
 ## Building the User Guide
 
 Source files for the User Guide can be found in `docs/source` directory. In order to 
@@ -147,7 +163,11 @@ be opened from Spine Toolbox menu Help->User Guide (F2).
 
 ## Troubleshooting
 
-### Installation on Linux
+### Installation fails
+
+Please make sure you are using Python 3.6 or Python 3.7 to install the requirements.
+
+### Installation fails on Linux
 If Python runs into errors while installing on Linux systems, running the 
 following commands in a terminal may help:
 ```shell
@@ -188,7 +208,7 @@ Below are the bare minimum things you need to know.
 1. Install the developer requirements.
 2. Optionally, run `pre-commit install` in project's root directory. This sets up some git hooks.
 
-### Coding Style
+### Coding style
 
 - [Black](https://github.com/python/black) is used for Python code formatting.
   The project's GitHub page includes instructions on how to integrate Black in IDEs.
@@ -200,7 +220,7 @@ It is advisable to run [`pylint`](https://pylint.readthedocs.io/en/latest/) regu
 The project root includes a configuration file for `pylint`.
 `pylint`'s user guide includes instructions on how to [integrate the tool in IDEs](https://pylint.readthedocs.io/en/latest/user_guide/ide-integration.html#pylint-in-pycharm).
 
-### Unit Tests
+### Unit tests
 
 Unit tests are located in the `tests` directory.
 You can run the entire test suite from project root by
@@ -229,7 +249,7 @@ What to put in your bug report:
     output from the Event Log and debug messages from the console of your run, should 
     also be included.
 
-### Feature Requests
+### Feature requests
 The developers of Spine Toolbox are happy to hear new ideas for features or improvements 
 to existing functionality. The format for requesting new features is free. Just fill 
 out the required fields on the issue tracker and give a description of the new feature. 
