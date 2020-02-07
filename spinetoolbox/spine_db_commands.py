@@ -71,8 +71,9 @@ def _cache_to_db_item(item_type, item):
 def _format_item(item_type, item):
     return {
         "parameter value": lambda x: "<"
-        + ", ".join([x["object_name"] or x["object_name_list"], x["parameter_name"]])
+        + ", ".join([x.get("object_name") or x.get("object_name_list"), x["parameter_name"]])
         + ">",
+        "parameter definition": lambda x: x.get("parameter_name") or x.get("name"),
         "parameter tag": lambda x: x["tag"],
     }.get(item_type, lambda x: x["name"])(item)
 

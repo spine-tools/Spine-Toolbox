@@ -600,7 +600,7 @@ class SpineDBManager(QObject):
             if isinstance(display_data, str):
                 display_data = fm.elidedText(display_data, Qt.ElideRight, 500)
             if isinstance(tool_tip_data, str):
-                tool_tip_data = fm.elidedText(tool_tip_data, Qt.ElideRight, 500)
+                tool_tip_data = fm.elidedText(tool_tip_data, Qt.ElideRight, 800)
             item[key] = {Qt.DisplayRole: display_data, Qt.ToolTipRole: tool_tip_data, Qt.EditRole: str(item[field])}
         return item[key].get(role)
 
