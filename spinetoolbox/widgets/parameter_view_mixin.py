@@ -518,10 +518,6 @@ class ParameterViewMixin:
         self.qsettings.setValue("relParValHeaderState", h.saveState())
         self.qsettings.endGroup()
 
-    def receive_relationships_added(self, db_map_data):
-        super().receive_relationships_added(db_map_data)
-        self.relationship_parameter_value_model.receive_relationships_added(db_map_data)
-
     def receive_parameter_definitions_added(self, db_map_data):
         super().receive_parameter_definitions_added(db_map_data)
         self.object_parameter_definition_model.receive_parameter_data_added(db_map_data)

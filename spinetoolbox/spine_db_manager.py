@@ -275,6 +275,7 @@ class SpineDBManager(QObject):
                 db_map.rollback_session()
                 rolled_db_maps.add(db_map)
                 self.undo_stack[db_map].clear()
+                del self._cache[db_map]
             except SpineDBAPIError as e:
                 error_log[db_map] = e.msg
         if any(error_log.values()):

@@ -18,7 +18,7 @@ Miscelaneous mixins for parameter models
 
 
 def _parse_csv_list(csv_list):
-    if not csv_list:
+    if csv_list == "":
         return []
     try:
         return csv_list.split(",")

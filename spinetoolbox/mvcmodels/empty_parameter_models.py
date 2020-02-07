@@ -291,24 +291,6 @@ class EmptyRelationshipParameterValueModel(MakeRelationshipOnTheFlyMixin, EmptyP
         """Returns relationship parameter values. Used by receive_parameter_data_added."""
         return self.db_mngr.get_relationship_parameter_values(db_map, ids=ids)
 
-    def receive_relationships_added(self, db_map_data):
-        """Runs when relationships are added.
-        Finds affected rows and call add_items_to_db with them."""
-        added_ids = set()
-        for db_map, items in db_map_data.items():
-            for item in items:
-                database = db_map.codename
-                unique_id = (database, *self._make_unique_relationship_id(item))
-                added_ids.add(unique_id)
-        affected_rows = set()
-        for row, data in enumerate(self._main_data):
-            item = dict(zip(self.header, data))
-            database = item.get("database")
-            unique_id = (database, item["relationship_class_name"], item["object_name_list"])
-            if unique_id in added_ids:
-                affected_rows.add(row)
-        super().add_items_to_db(affected_rows)
-
     def add_items_to_db(self, rows):
         """Add items to db.
 
@@ -330,5 +312,6 @@ class EmptyRelationshipParameterValueModel(MakeRelationshipOnTheFlyMixin, EmptyP
                     db_map_error_log.setdefault(db_map, []).extend(err)
         if any(db_map_relationships.values()):
             self.db_mngr.add_relationships(db_map_relationships)
+            super().add_items_to_db(rows)
         if db_map_error_log:
             self.db_mngr.msg_error.emit(db_map_error_log)

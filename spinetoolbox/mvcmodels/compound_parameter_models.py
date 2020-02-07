@@ -607,12 +607,3 @@ class CompoundRelationshipParameterValueModel(
     @property
     def entity_type(self):
         return "relationship"
-
-    def receive_relationships_added(self, db_map_data):
-        """Runs when relationships are added to the dbs.
-        Notifies the empty model.
-
-        Args:
-            db_map_data (dict): list of removed dict-items keyed by DiffDatabaseMapping
-        """
-        self.empty_model.receive_relationships_added(db_map_data)
