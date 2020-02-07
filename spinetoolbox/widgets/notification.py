@@ -105,11 +105,11 @@ class Notification(QWidget):
         self.fade_out_anim.start(QPropertyAnimation.DeleteWhenStopped)
 
     def remaining_time(self):
-        if self.fade_in_anim.state() == QPropertyAnimation.Running:
-            return self.timer.interval()
+        if self.timer.isActive():
+            return self.timer.remainingTime()
         if self.fade_out_anim.state() == QPropertyAnimation.Running:
             return 0
-        return self.timer.remainingTime()
+        return self.timer.interval()
 
     opacity = Property(float, get_opacity, set_opacity)
 
@@ -129,6 +129,6 @@ class NotificationStack(QObject):
             life_span += 0.8 * self.notifications[-1].remaining_time()
         notification = Notification(self._parent, txt, anim_duration=self._anim_duration, life_span=life_span)
         notification.move(notification.pos().x(), offset)
+        notification.destroyed.connect(lambda obj=None, n=notification: self.notifications.remove(notification))
         self.notifications.append(notification)
         notification.show()
-        notification.destroyed.connect(lambda obj=None, n=notification: self.notifications.remove(notification))
