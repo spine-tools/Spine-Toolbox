@@ -47,11 +47,11 @@ class Notification(QWidget):
         layout = QHBoxLayout()
         layout.addWidget(self.label)
         layout.setSizeConstraint(QLayout.SetFixedSize)
-        layout.setContentsMargins(3, 3, 3, 3)
+        layout.setContentsMargins(1, 0, 1, 0)
         self.setLayout(layout)
         self.adjustSize()
         # Move to the top right corner of the parent
-        x = self._parent.size().width() - self.width()
+        x = self._parent.size().width() - self.width() - 2
         self.move(x, 0)
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setAttribute(Qt.WA_TranslucentBackground)

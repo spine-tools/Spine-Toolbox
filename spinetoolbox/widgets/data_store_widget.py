@@ -99,7 +99,9 @@ class DataStoreFormBase(QMainWindow):
         self.settings_group = 'treeViewWidget'
         self.undo_action = None
         self.redo_action = None
-        self.update_commit_enabled_and_window_title()
+        db_names = ", ".join(["{0}[*]".format(db_map.codename) for db_map in self.db_maps])
+        self.setWindowTitle("{0} - Data store view ".format(db_names))
+        self.update_commit_enabled()
 
     def add_menu_actions(self):
         """Adds actions to View and Edit menu."""
@@ -142,7 +144,7 @@ class DataStoreFormBase(QMainWindow):
         self.parameter_value_list_model.remove_selection_requested.connect(self.remove_parameter_value_lists)
         for db_map in self.db_maps:
             self.db_mngr.undo_stack[db_map].indexChanged.connect(self.update_undo_redo_actions)
-            self.db_mngr.undo_stack[db_map].cleanChanged.connect(self.update_commit_enabled_and_window_title)
+            self.db_mngr.undo_stack[db_map].cleanChanged.connect(self.update_commit_enabled)
 
     @Slot(int)
     def update_undo_redo_actions(self, index):
@@ -162,16 +164,12 @@ class DataStoreFormBase(QMainWindow):
             self.redo_action = new_redo_action
 
     @Slot(bool)
-    def update_commit_enabled_and_window_title(self, _clean=False):
-        db_map_clean = {db_map: self.db_mngr.undo_stack[db_map].isClean() for db_map in self.db_maps}
-        disabled = all(db_map_clean.values())
-        self.ui.actionCommit.setDisabled(disabled)
-        self.ui.actionRollback.setDisabled(disabled)
-        self.ui.actionView_history.setDisabled(disabled)
-        db_names = ", ".join(
-            ["{0}{1}".format(db_map.codename, "" if clean else "*") for db_map, clean in db_map_clean.items()]
-        )
-        self.setWindowTitle("{0} - Data store view ".format(db_names))
+    def update_commit_enabled(self, _clean=False):
+        dirty = not all(self.db_mngr.undo_stack[db_map].isClean() for db_map in self.db_maps)
+        self.ui.actionCommit.setEnabled(dirty)
+        self.ui.actionRollback.setEnabled(dirty)
+        self.ui.actionView_history.setEnabled(dirty)
+        self.setWindowModified(dirty)
 
     @Slot(bool)
     def show_history_dialog(self, checked=False):
