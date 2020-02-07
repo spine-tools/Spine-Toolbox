@@ -52,20 +52,7 @@ class MinimalTableModel(QAbstractTableModel):
 
     def fetchMore(self, parent=None):
         """Fetch data and use it to reset the model."""
-        try:
-            data = self.fetch_data()
-        except NotImplementedError:
-            pass
-        else:
-            self.reset_model(data)
-        finally:
-            self._fetched = True
-
-    def fetch_data(self):
-        """Returns data to reset the model with and call it fetched.
-        Reimplement in subclasses if you want to populate your model automatically.
-        """
-        raise NotImplementedError()
+        self._fetched = True
 
     def rowCount(self, parent=QModelIndex()):
         """Number of rows in the model."""

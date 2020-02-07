@@ -70,6 +70,13 @@ class AddObjectClassesDialog(ShowIconColorEditorMixin, AddItemsDialog):
     """A dialog to query user's preferences for new object classes."""
 
     def __init__(self, parent, db_mngr, *db_maps):
+        """Init class.
+
+        Args
+            parent (DataStoreForm)
+            db_mngr (SpineDBManager)
+            db_maps (iter) DiffDatabaseMapping instances
+        """
         super().__init__(parent, db_mngr, *db_maps)
         self.setWindowTitle("Add object classes")
         self.model = EmptyRowModel(self)

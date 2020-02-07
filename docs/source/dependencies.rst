@@ -5,7 +5,7 @@
 Dependencies
 ************
 
-Spine Toolbox requires Python 3.6 or higher.
+Spine Toolbox requires Python 3.6 or Python 3.7. Python 3.8 is not supported yet.
 
 Spine Toolbox uses code from packages and/or projects listed in the table below. Required packages
 must be installed for the application to start. Users can choose the SQL dialect API (pymysql,

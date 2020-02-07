@@ -168,9 +168,10 @@ class TestToolboxUI(unittest.TestCase):
             self.skipTest("Test project directory '{0}' does not exist".format(project_dir))
             return
         self.assertIsNone(self.toolbox.project())
-        with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project") as mock_save_project, mock.patch(
-            "spinetoolbox.project.create_dir"
-        ) as mock_create_dir, mock.patch("spinetoolbox.project_item.create_dir") as mock_create_dir:
+        with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project") as mock_save_project, \
+                mock.patch("spinetoolbox.project.create_dir") as mock_create_dir, \
+                mock.patch("spinetoolbox.project_item.create_dir") as mock_create_dir, \
+                mock.patch("spinetoolbox.ui_main.ToolboxUI.update_recent_projects") as mock_upd_rec_projs:
             self.toolbox.open_project(project_dir)
         self.assertIsInstance(self.toolbox.project(), SpineToolboxProject)
         # Check that project contains four items
@@ -541,18 +542,24 @@ class TestToolboxUI(unittest.TestCase):
         """Tests that adding and removing a tool specification
         to project works from a valid tool specification file.
         Uses an actual Spine Toolbox Project in order to actually
-        test something."""
+        test something.
+
+        Note: Test 'project.json' file should not have any
+        tool_specifications when this test starts and ends."""
         project_dir = os.path.abspath(os.path.join(os.curdir, "tests", "test_resources", "Project Directory"))
         if not os.path.exists(project_dir):
             self.skipTest("Test project directory '{0}' does not exist".format(project_dir))
             return
         self.assertIsNone(self.toolbox.project())
-        with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project") as mock_save_project, mock.patch(
-            "spinetoolbox.project.create_dir"
-        ) as mock_create_dir, mock.patch("spinetoolbox.project_item.create_dir") as mock_create_dir:
+        with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project") as mock_save_project, \
+                mock.patch("spinetoolbox.project.create_dir") as mock_create_dir, \
+                mock.patch("spinetoolbox.project_item.create_dir") as mock_create_dir, \
+                mock.patch("spinetoolbox.ui_main.ToolboxUI.update_recent_projects") as mock_update_recent_project:
             self.toolbox.open_project(project_dir)
-        self.assertEqual(0, self.toolbox.tool_specification_model.rowCount())  # Tool spec model is empty
+        # Tool spec model must be empty at this point
+        self.assertEqual(0, self.toolbox.tool_specification_model.rowCount())
         tool_spec_path = os.path.abspath(os.path.join(os.curdir, "tests", "test_resources", "test_tool_spec.json"))
+        # Add a Tool spec to 'project.json' file
         with mock.patch("spinetoolbox.ui_main.QFileDialog.getOpenFileName") as mock_filename:
             mock_filename.return_value = [tool_spec_path]
             self.toolbox.open_tool_specification()
@@ -560,13 +567,12 @@ class TestToolboxUI(unittest.TestCase):
         # Find tool spec on row 0 from model and check that the name matches
         tool_spec = self.toolbox.tool_specification_model.tool_specification(0)
         self.assertEqual("Python Tool Specification", tool_spec.name)
-        # Now remove the Tool Specification
+        # Now, remove the Tool Spec from the model
         index = self.toolbox.tool_specification_model.tool_specification_index("Python Tool Specification")
         self.assertTrue(index.isValid())
-        with mock.patch("spinetoolbox.ui_main.QMessageBox.exec_") as mock_msgbox:
-            mock_msgbox.return_value = QMessageBox.Ok
-            self.toolbox.remove_tool_specification(index)
-        self.assertEqual(0, self.toolbox.tool_specification_model.rowCount())  # Tool spec model is empty again
+        self.toolbox.remove_tool_specification(index, ask_verification=False)
+        # Tool spec model must be empty again
+        self.assertEqual(0, self.toolbox.tool_specification_model.rowCount())
 
     def test_tasks_before_exit_without_open_project(self):
         """_tasks_before_exit is called with every possible combination of the two QSettings values that it uses.

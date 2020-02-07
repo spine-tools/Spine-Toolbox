@@ -10,13 +10,13 @@
 ######################################################################################################################
 
 """
-Contains DataInterface class.
+Contains ImportPreviewWindow class.
 
-:authors: P. Savolainen (VTT)
+:authors: P. Savolainen (VTT), A. Soininen (VTT), P. Vennström (VTT)
 :date:   10.6.2019
 """
-import json
 
+import json
 from PySide2.QtCore import Qt, Signal
 from PySide2.QtGui import QGuiApplication
 from PySide2.QtWidgets import QMainWindow, QDialogButtonBox, QSplitter, QFileDialog
@@ -25,49 +25,54 @@ from .import_preview_widget import ImportPreviewWidget
 
 
 class ImportPreviewWindow(QMainWindow):
-    """
-    A QMainWindow to let users define Mappings for an Importer item.
+    """A QMainWindow to let users define Mappings for an Importer item.
+
+    Args:
+        importer (Importer): Project item that owns this preview window
+        filepath (str): Importee path
+        connector (SourceConnection): Asynchronous data reader
+        settings (dict): Default mapping specification
+        toolbox (QMainWindow): ToolboxUI class
     """
 
     settings_updated = Signal(dict)
     connection_failed = Signal(str)
 
-    def __init__(self, importer, filepath, connector, settings, parent):
+    def __init__(self, importer, filepath, connector, settings, toolbox):
         from ..ui.import_preview_window import Ui_MainWindow
 
-        super().__init__(parent=parent, flags=Qt.Window)
+        super().__init__(parent=toolbox, flags=Qt.Window)
         self._importer = importer
-        self.setAttribute(Qt.WA_DeleteOnClose)
-        self.setWindowTitle("Import Editor    -- {} --".format(importer.name))
-        self._qsettings = importer._toolbox._qsettings
-
+        self._toolbox = toolbox
+        self._qsettings = self._toolbox.qsettings()
         self._connection_manager = ConnectionManager(connector)
         self._connection_manager.source = filepath
         self._ui = Ui_MainWindow()
         self._ui.setupUi(self)
-
+        self.setAttribute(Qt.WA_DeleteOnClose)
+        self.setWindowTitle("Import Editor    -- {} --".format(importer.name))
         self._preview_widget = ImportPreviewWidget(self._connection_manager, parent=self)
         self._preview_widget.use_settings(settings)
         self._ui.centralwidget.layout().insertWidget(0, self._preview_widget)
-
-        self._dialog_buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Apply | QDialogButtonBox.Cancel)
-        self._ui.buttonBox.button(QDialogButtonBox.SaveAll).setText("Save and close")
-
         self.settings_group = "mappingPreviewWindow"
         self.restore_ui()
-
-        self._ui.buttonBox.button(QDialogButtonBox.SaveAll).clicked.connect(self.save_and_close)
-        self._ui.buttonBox.button(QDialogButtonBox.Close).clicked.connect(self.close)
-        self._ui.buttonBox.button(QDialogButtonBox.Save).clicked.connect(self.save)
-        self._ui.actionSave.triggered.connect(self.save)
-        self._ui.actionSave_as.triggered.connect(self.save_as)
-        self._ui.actionOpen.triggered.connect(self.open)
-
+        self._ui.buttonBox.button(QDialogButtonBox.Ok).clicked.connect(self.apply_and_close)
+        self._ui.buttonBox.button(QDialogButtonBox.Cancel).clicked.connect(self.close)
+        # self._ui.buttonBox.button(QDialogButtonBox.Ok).setAutoDefault(True)
+        # self._ui.buttonBox.button(QDialogButtonBox.Ok).setFocus()
+        self._ui.actionExportMappings.triggered.connect(self.export_mapping_to_file)
+        self._ui.actionImportMappings.triggered.connect(self.import_mapping_from_file)
+        self._ui.actionClose.triggered.connect(self.close)
         self._connection_manager.connectionReady.connect(self.show)
         self._connection_manager.connectionFailed.connect(self.connection_failed.emit)
 
-    def open(self):
-        filename = QFileDialog.getOpenFileName(self, "Open mapping spec", "", "Mapping options (*.json)")
+    def import_mapping_from_file(self):
+        """Imports mapping spec from a user selected .json file to the preview window."""
+        start_dir = self._toolbox.project().project_dir
+        # noinspection PyCallByClass
+        filename = QFileDialog.getOpenFileName(
+            self, "Import mapping specification", start_dir, "Mapping options (*.json)"
+        )
         if not filename[0]:
             return
         with open(filename[0]) as file_p:
@@ -76,16 +81,19 @@ class ImportPreviewWindow(QMainWindow):
             except json.JSONDecodeError:
                 self._ui.statusbar.showMessage(f"Could not open {filename[0]}", 10000)
                 return
-
         expected_options = ("table_mappings", "table_types", "table_row_types", "table_options", "selected_tables")
-
         if not isinstance(settings, dict) or not any(key in expected_options for key in settings.keys()):
             self._ui.statusbar.showMessage(f"{filename[0]} does not contain mapping options", 10000)
         self._preview_widget.use_settings(settings)
         self._ui.statusbar.showMessage(f"Mapping loaded from {filename[0]}", 10000)
 
-    def save_as(self):
-        filename = QFileDialog.getSaveFileName(self, "Save mapping", "", "Mapping options (*.json)")
+    def export_mapping_to_file(self):
+        """Exports all mapping specs in current preview window to .json file."""
+        start_dir = self._toolbox.project().project_dir
+        # noinspection PyCallByClass
+        filename = QFileDialog.getSaveFileName(
+            self, "Export mapping spec to a file", start_dir, "Mapping options (*.json)"
+        )
         if not filename[0]:
             return
         with open(filename[0], 'w') as file_p:
@@ -93,12 +101,10 @@ class ImportPreviewWindow(QMainWindow):
             json.dump(settings, file_p)
         self._ui.statusbar.showMessage(f"Mapping saved to: {filename[0]}", 10000)
 
-    def save(self):
+    def apply_and_close(self):
+        """Apply changes to mappings and close preview window."""
         settings = self._preview_widget.get_settings_dict()
         self.settings_updated.emit(settings)
-
-    def save_and_close(self):
-        self.save()
         self.close()
 
     def start_ui(self):
@@ -139,7 +145,6 @@ class ImportPreviewWindow(QMainWindow):
         Args:
             event (QEvent): Closing event if 'X' is clicked.
         """
-        # save qsettings
         qsettings = self._qsettings
         qsettings.beginGroup(self.settings_group)
         for splitter in self.findChildren(QSplitter):

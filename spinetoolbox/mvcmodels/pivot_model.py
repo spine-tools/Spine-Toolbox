@@ -133,7 +133,7 @@ class PivotModel:
             result = set(index_getter(k) for k in self._data if frozen_getter(k) == self.frozen_value)
         else:
             result = set(index_getter(k) for k in self._data)
-        result.discard((None,))
+        result = {x for x in result if None not in x}
         return sorted(result)
 
     def set_pivot(self, rows, columns, frozen, frozen_value):

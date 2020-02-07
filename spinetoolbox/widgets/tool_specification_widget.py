@@ -21,10 +21,11 @@ is filled with all the information from the specification being edited.
 import os
 import json
 from PySide2.QtGui import QDesktopServices, QStandardItemModel, QStandardItem
-from PySide2.QtWidgets import QWidget, QStatusBar, QInputDialog, QFileDialog, QFileIconProvider, QMessageBox
+from PySide2.QtWidgets import QWidget, QStatusBar, QInputDialog, QFileDialog, QFileIconProvider, QMessageBox, QMenu
 from PySide2.QtCore import Slot, Qt, QUrl, QFileInfo
 from ..config import STATUSBAR_SS, TREEVIEW_HEADER_SS, APPLICATION_PATH, TOOL_TYPES, REQUIRED_KEYS
 from ..helpers import busy_effect
+from ..tool_specifications import CmdlineTag, CMDLINE_TAG_EDGE, ToolSpecification
 from .custom_menus import AddIncludesPopupMenu, CreateMainProgramPopupMenu
 
 
@@ -107,6 +108,7 @@ class ToolSpecificationWidget(QWidget):
         self.add_main_prgm_popup_menu = CreateMainProgramPopupMenu(self)
         self.ui.toolButton_add_main_program.setMenu(self.add_main_prgm_popup_menu)
         self.ui.toolButton_add_source_files.setStyleSheet('QToolButton::menu-indicator { image: none; }')
+        self.ui.toolButton_add_cmdline_tag.setMenu(self._make_add_cmdline_tag_menu())
         self.connect_signals()
 
     def connect_signals(self):
@@ -504,7 +506,7 @@ class ToolSpecificationWidget(QWidget):
         self.definition["inputfiles_opt"] = [i.text() for i in self.inputfiles_opt_model.findItems("", flags)]
         self.definition["outputfiles"] = [i.text() for i in self.outputfiles_model.findItems("", flags)]
         # Strip whitespace from args before saving it to JSON
-        self.definition["cmdline_args"] = " ".join(self.ui.lineEdit_args.text().split())
+        self.definition["cmdline_args"] = ToolSpecification.split_cmdline_args(self.ui.lineEdit_args.text())
         for k in REQUIRED_KEYS:
             if not self.definition[k]:
                 self.statusbar.showMessage("{} missing".format(k), 3000)
@@ -580,3 +582,78 @@ class ToolSpecificationWidget(QWidget):
         """
         if event:
             event.accept()
+
+    def _make_add_cmdline_tag_menu(self):
+        """Constructs a popup menu for the '@@' button."""
+        menu = QMenu(self.ui.toolButton_add_cmdline_tag)
+        action = menu.addAction(str(CmdlineTag.URL_INPUTS))
+        action.triggered.connect(self._add_cmdline_tag_url_inputs)
+        action.setToolTip("Insert a tag that is replaced by all input database URLs.")
+        action = menu.addAction(str(CmdlineTag.URL_OUTPUTS))
+        action.triggered.connect(self._add_cmdline_tag_url_outputs)
+        action.setToolTip("Insert a tag that is replaced be all output database URLs.")
+        action = menu.addAction(str(CmdlineTag.URL))
+        action.triggered.connect(self._add_cmdline_tag_data_store_url)
+        action.setToolTip("Insert a tag that is replaced by the URL provided by Data Store '<data-store-name>'.")
+        action = menu.addAction(str(CmdlineTag.OPTIONAL_INPUTS))
+        action.triggered.connect(self._add_cmdline_tag_optional_inputs)
+        action.setToolTip("Insert a tag that is replaced by a list of optional input files.")
+        return menu
+
+    def _insert_spaces_around_tag_in_args_edit(self, tag_length, restore_cursor_to_tag_end=False):
+        """
+        Inserts spaces before/after @@ around cursor position/selection
+
+        Expects cursor to be at the end of the tag.
+        """
+        args_edit = self.ui.lineEdit_args
+        text = args_edit.text()
+        cursor_position = args_edit.cursorPosition()
+        if cursor_position == len(text) or (cursor_position < len(text) - 1 and not text[cursor_position].isspace()):
+            args_edit.insert(" ")
+            appended_spaces = 1
+            text = args_edit.text()
+        else:
+            appended_spaces = 0
+        tag_start = cursor_position - tag_length
+        if tag_start > 1 and text[tag_start - 2 : tag_start] == CMDLINE_TAG_EDGE:
+            args_edit.setCursorPosition(tag_start)
+            args_edit.insert(" ")
+            prepended_spaces = 1
+        else:
+            prepended_spaces = 0
+        if restore_cursor_to_tag_end:
+            args_edit.setCursorPosition(cursor_position + prepended_spaces)
+        else:
+            args_edit.setCursorPosition(cursor_position + appended_spaces + prepended_spaces)
+
+    @Slot("QAction")
+    def _add_cmdline_tag_url_inputs(self, _):
+        """Inserts @@url_inputs@@ tag to command line arguments."""
+        tag = CmdlineTag.URL_INPUTS
+        self.ui.lineEdit_args.insert(tag)
+        self._insert_spaces_around_tag_in_args_edit(len(tag))
+
+    @Slot("QAction")
+    def _add_cmdline_tag_url_outputs(self, _):
+        """Inserts @@url_outputs@@ tag to command line arguments."""
+        tag = CmdlineTag.URL_OUTPUTS
+        self.ui.lineEdit_args.insert(tag)
+        self._insert_spaces_around_tag_in_args_edit(len(tag))
+
+    @Slot("QAction")
+    def _add_cmdline_tag_data_store_url(self, _):
+        """Inserts @@url:<data-store-name>@@ tag to command line arguments and selects '<data-store-name>'."""
+        args_edit = self.ui.lineEdit_args
+        tag = CmdlineTag.URL
+        args_edit.insert(tag)
+        self._insert_spaces_around_tag_in_args_edit(len(tag), restore_cursor_to_tag_end=True)
+        cursor_position = args_edit.cursorPosition()
+        args_edit.setSelection(cursor_position - len(CMDLINE_TAG_EDGE + "<data-store_name>"), len("<data-store_name>"))
+
+    @Slot("QAction")
+    def _add_cmdline_tag_optional_inputs(self, _):
+        """Inserts @@optional_inputs@@ tag to command line arguments."""
+        tag = CmdlineTag.OPTIONAL_INPUTS
+        self.ui.lineEdit_args.insert(tag)
+        self._insert_spaces_around_tag_in_args_edit(len(tag))

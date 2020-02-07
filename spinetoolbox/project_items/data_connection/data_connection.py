@@ -30,7 +30,7 @@ from spinetoolbox.config import APPLICATION_PATH, INVALID_FILENAME_CHARS
 
 
 class DataConnection(ProjectItem):
-    def __init__(self, name, description, x, y, toolbox, logger, references=None):
+    def __init__(self, name, description, x, y, toolbox, project, logger, references=None):
         """Data Connection class.
 
         Args:
@@ -39,10 +39,11 @@ class DataConnection(ProjectItem):
             x (float): Initial X coordinate of item icon
             y (float): Initial Y coordinate of item icon
             toolbox (ToolboxUI): QMainWindow instance
-            logger (LoggingSignals): a logger instance
+            project (SpineToolboxProject): the project this item belongs to
+            logger (LoggerInterface): a logger instance
             references (list): a list of file paths
         """
-        super().__init__(name, description, x, y, toolbox.project(), logger)
+        super().__init__(name, description, x, y, project, logger)
         self._toolbox = toolbox
         self.reference_model = QStandardItemModel()  # References to files
         self.data_model = QStandardItemModel()  # Paths of project internal files. These are found in DC data directory
@@ -266,19 +267,19 @@ class DataConnection(ProjectItem):
         # Check that file name has no invalid chars
         if any(True for x in file_name if x in INVALID_FILENAME_CHARS):
             msg = "File name <b>{0}</b> contains invalid characters.".format(file_name)
-            self._logger.dialog.emit("Creating file failed", msg)
+            self._logger.information_box.emit("Creating file failed", msg)
             return
         file_path = os.path.join(self.data_dir, file_name)
         if os.path.exists(file_path):
             msg = "File <b>{0}</b> already exists.".format(file_name)
-            self._logger.dialog.emit("Creating file failed", msg)
+            self._logger.information_box.emit("Creating file failed", msg)
             return
         try:
             with open(file_path, "w"):
                 self._logger.msg.emit(f"File <b>{file_name}</b> created to Data Connection <b>{self.name}</b>")
         except OSError:
             msg = "Please check directory permissions."
-            self._logger.dialog.emit("Creating file failed", msg)
+            self._logger.information_box.emit("Creating file failed", msg)
         return
 
     def remove_files(self):

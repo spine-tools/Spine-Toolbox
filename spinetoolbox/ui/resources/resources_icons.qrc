@@ -1,16 +1,16 @@
 <RCC>
-  <qresource prefix="symbols">
+  <qresource prefix="/symbols">
     <file>menu_icons/tree.svg</file>
     <file>menu_icons/table.svg</file>
     <file>Spine_symbol.png</file>
     <file>app.ico</file>
   </qresource>
-  <qresource prefix="fonts">
+  <qresource prefix="/fonts">
     <file>fontawesome5-solid-webfont.ttf</file>
     <file>fontawesome5-codepoints.json</file>
     <file>fontawesome5-searchterms.json</file>
   </qresource>
-  <qresource prefix="icons">
+  <qresource prefix="/icons">
     <file>menu_icons/history.svg</file>
     <file>menu_icons/level-up-alt.svg</file>
     <file>book.svg</file>
@@ -72,6 +72,8 @@
     <file>menu_icons/sync.svg</file>
     <file>menu_icons/trash-alt.svg</file>
     <file>menu_icons/times.svg</file>
+    <file>menu_icons/redo.svg</file>
     <file>menu_icons/undo.svg</file>
+    <file>double-at.svg</file>
   </qresource>
 </RCC>

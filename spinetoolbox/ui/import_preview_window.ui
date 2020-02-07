@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
 ######################################################################################################################
-# Copyright (C) 2017 - 2019 Spine project consortium
+# Copyright (C) 2017-2020 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and\/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -30,7 +30,7 @@
     <item>
      <widget class="QDialogButtonBox" name="buttonBox">
       <property name="standardButtons">
-       <set>QDialogButtonBox::Close|QDialogButtonBox::Save|QDialogButtonBox::SaveAll</set>
+       <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
       </property>
       <property name="centerButtons">
        <bool>false</bool>
@@ -52,26 +52,35 @@
     <property name="title">
      <string>File</string>
     </property>
-    <addaction name="actionSave"/>
-    <addaction name="actionSave_as"/>
-    <addaction name="actionOpen"/>
+    <addaction name="actionExportMappings"/>
+    <addaction name="actionImportMappings"/>
+    <addaction name="separator"/>
+    <addaction name="actionClose"/>
    </widget>
    <addaction name="menuFile"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
-  <action name="actionSave_as">
+  <action name="actionExportMappings">
    <property name="text">
-    <string>Save as</string>
+    <string>Export mappings...</string>
    </property>
   </action>
-  <action name="actionOpen">
+  <action name="actionImportMappings">
    <property name="text">
-    <string>Open</string>
+    <string>Import mappings...</string>
    </property>
   </action>
   <action name="actionSave">
    <property name="text">
     <string>Save</string>
+   </property>
+  </action>
+  <action name="actionClose">
+   <property name="text">
+    <string>Close</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+W</string>
    </property>
   </action>
  </widget>

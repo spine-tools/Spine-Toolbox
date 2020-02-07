@@ -21,8 +21,17 @@ from six import unichr
 from spinedb_api import (
     ObjectClassMapping,
     RelationshipClassMapping,
-    ParameterMapping,
-    Mapping,
+    ParameterDefinitionMapping,
+    ParameterValueMapping,
+    ParameterTimeSeriesMapping,
+    ParameterTimePatternMapping,
+    ParameterListMapping,
+    MappingBase,
+    NoneMapping,
+    ConstantMapping,
+    ColumnHeaderMapping,
+    ColumnMapping,
+    RowMapping,
     ParameterValueFormatError,
     mapping_non_pivoted_columns,
 )
@@ -59,12 +68,21 @@ _TYPE_TO_FONT_AWESOME_ICON = {
     "float": unichr(int('f534', 16)),
 }
 
+_MAPTYPE_DISPLAY_NAME = {
+    NoneMapping: "None",
+    ConstantMapping: "Constant",
+    ColumnMapping: "Column",
+    ColumnHeaderMapping: "Column Header",
+    RowMapping: "Row",
+}
+
 _DISPLAY_TYPE_TO_TYPE = {
-    "Single value": "single value",
-    "List": "1d array",
-    "Time series": "time series",
-    "Time pattern": "time pattern",
-    "Definition": "definition",
+    "Single value": ParameterValueMapping,
+    "List": ParameterListMapping,
+    "Time series": ParameterTimeSeriesMapping,
+    "Time pattern": ParameterTimePatternMapping,
+    "Definition": ParameterDefinitionMapping,
+    "None": NoneMapping,
 }
 
 _TYPE_TO_DISPLAY_TYPE = {value: key for key, value in _DISPLAY_TYPE_TO_TYPE.items()}
@@ -112,6 +130,8 @@ class MappingPreviewModel(MinimalTableModel):
         Arguments:
             mapping {MappingSpecModel} -- mapping model
         """
+        if not mapping:
+            return
         if not isinstance(mapping, MappingSpecModel):
             raise TypeError(f"mapping must be instance of 'MappingSpecModel', instead got: '{type(mapping).__name__}'")
         if self._data_changed_signal is not None and self._mapping:
@@ -230,10 +250,9 @@ class MappingPreviewModel(MinimalTableModel):
             [QColor] -- QColor of index
         """
         mapping = self._mapping._model
-        if mapping.parameters is not None:
-            # parameter colors
-            if mapping.is_pivoted() and mapping.parameters.parameter_type != "definition":
-                # parameter values color
+        if isinstance(mapping.parameters, ParameterValueMapping):
+            # parameter values color
+            if mapping.is_pivoted():
                 last_row = max(mapping.last_pivot_row(), mapping.read_start_row - 1)
                 if (
                     last_row is not None
@@ -243,21 +262,23 @@ class MappingPreviewModel(MinimalTableModel):
                     return _MAPPING_COLORS["parameter value"]
             elif self.index_in_mapping(mapping.parameters.value, index):
                 return _MAPPING_COLORS["parameter value"]
-            if mapping.parameters.extra_dimensions:
-                # parameter extra dimensions color
-                for ed in mapping.parameters.extra_dimensions:
-                    if self.index_in_mapping(ed, index):
-                        return _MAPPING_COLORS["parameter extra dimension"]
-            if self.index_in_mapping(mapping.parameters.name, index):
-                # parameter name colors
-                return _MAPPING_COLORS["parameter name"]
+        if isinstance(mapping.parameters, ParameterListMapping) and mapping.parameters.extra_dimensions:
+            # parameter extra dimensions color
+            for ed in mapping.parameters.extra_dimensions:
+                if self.index_in_mapping(ed, index):
+                    return _MAPPING_COLORS["parameter extra dimension"]
+        if isinstance(mapping.parameters, ParameterDefinitionMapping) and self.index_in_mapping(
+            mapping.parameters.name, index
+        ):
+            # parameter name colors
+            return _MAPPING_COLORS["parameter name"]
         if self.index_in_mapping(mapping.name, index):
             # class name color
             return _MAPPING_COLORS["entity class"]
         objects = []
         classes = []
         if isinstance(mapping, ObjectClassMapping):
-            objects = [mapping.object]
+            objects = [mapping.objects]
         else:
             if mapping.objects:
                 objects = mapping.objects
@@ -270,7 +291,7 @@ class MappingPreviewModel(MinimalTableModel):
         for c in classes:
             # object colors
             if self.index_in_mapping(c, index):
-                return _MAPPING_COLORS["entity"]
+                return _MAPPING_COLORS["entity class"]
 
     def index_in_mapping(self, mapping, index):
         """Checks if index is in mapping
@@ -282,14 +303,17 @@ class MappingPreviewModel(MinimalTableModel):
         Returns:
             [bool] -- returns True if mapping is in index
         """
-        if not isinstance(mapping, Mapping):
+        if not isinstance(mapping, MappingBase):
             return False
-        if mapping.map_type == "column":
-            ref = mapping.value_reference
+        if isinstance(mapping, ColumnHeaderMapping):
+            # column header can't be in data
+            return False
+        if isinstance(mapping, ColumnMapping):
+            ref = mapping.reference
             if isinstance(ref, str):
                 # find header reference
-                if ref in self._headers:
-                    ref = self._headers.index(ref)
+                if ref in self.header:
+                    ref = self.header.index(ref)
             if index.column() == ref:
                 if self._mapping._model.is_pivoted():
                     # only rows below pivoted rows
@@ -298,8 +322,8 @@ class MappingPreviewModel(MinimalTableModel):
                         return True
                 elif index.row() >= self._mapping.read_start_row:
                     return True
-        if mapping.map_type == "row":
-            if index.row() == mapping.value_reference:
+        if isinstance(mapping, RowMapping):
+            if index.row() == mapping.reference:
                 if index.column() not in self.mapping_column_ref_int_list():
                     return True
         return False
@@ -378,9 +402,7 @@ class MappingSpecModel(QAbstractTableModel):
 
     @property
     def parameter_type(self):
-        if self._model.parameters is None:
-            return "None"
-        return _TYPE_TO_DISPLAY_TYPE[self._model.parameters.parameter_type]
+        return _TYPE_TO_DISPLAY_TYPE[type(self._model.parameters)]
 
     @property
     def is_pivoted(self):
@@ -425,11 +447,11 @@ class MappingSpecModel(QAbstractTableModel):
             return
         self.beginResetModel()
         if len(self._model.objects) >= dim:
-            self._model.objects = self._model.objects[:dim]
             self._model.object_classes = self._model.object_classes[:dim]
+            self._model.objects = self._model.objects[:dim]
         else:
-            self._model.objects = self._model.objects + [None]
             self._model.object_classes = self._model.object_classes + [None]
+            self._model.objects = self._model.objects + [None]
         self.update_display_table()
         self.dataChanged.emit(QModelIndex, QModelIndex, [])
         self.endResetModel()
@@ -449,7 +471,7 @@ class MappingSpecModel(QAbstractTableModel):
             parameters = self._model.parameters
             if new_class == RelationshipClassMapping:
                 # convert object mapping to relationship mapping
-                obj = [self._model.object]
+                obj = [self._model.objects]
                 object_class = [self._model.name]
                 self._model = RelationshipClassMapping(
                     name=None, object_classes=object_class, objects=obj, parameters=parameters
@@ -457,7 +479,7 @@ class MappingSpecModel(QAbstractTableModel):
             else:
                 # convert relationship mapping to object mapping
                 self._model = ObjectClassMapping(
-                    name=self._model.object_classes[0], obj=self._model.objects[0], parameters=parameters
+                    name=self._model.object_classes[0], objects=self._model.objects[0], parameters=parameters
                 )
 
         self.update_display_table()
@@ -472,22 +494,16 @@ class MappingSpecModel(QAbstractTableModel):
         self.beginResetModel()
         if new_type == "None":
             self._model.parameters = None
-        elif new_type in ("Single value", "List", "Definition"):
-            if self._model.parameters is None:
-                self._model.parameters = ParameterMapping()
-            self._model.parameters.extra_dimensions = None
-            if new_type == "Definition":
-                self._model.parameters.value = None
-            self._model.parameters.parameter_type = _DISPLAY_TYPE_TO_TYPE[new_type]
-        elif new_type in ("Time series", "Time pattern"):
-            if self._model.parameters is None:
-                self._model.parameters = ParameterMapping(extra_dimensions=[None])
-
-            if self._model.parameters.extra_dimensions is None:
-                self._model.parameters.extra_dimensions = [None]
-            else:
-                self._model.parameters.extra_dimensions = self._model.parameters.extra_dimensions[:1]
-            self._model.parameters.parameter_type = _DISPLAY_TYPE_TO_TYPE[new_type]
+        elif new_type == "Single value":
+            self._model.parameters = ParameterValueMapping()
+        elif new_type == "List":
+            self._model.parameters = ParameterListMapping()
+        elif new_type == "Definition":
+            self._model.parameters = ParameterDefinitionMapping()
+        elif new_type == "Time series":
+            self._model.parameters = ParameterTimeSeriesMapping()
+        elif new_type == "Time pattern":
+            self._model.parameters = ParameterTimePatternMapping()
 
         self.update_display_table()
         self.dataChanged.emit(QModelIndex, QModelIndex, [])
@@ -505,71 +521,59 @@ class MappingSpecModel(QAbstractTableModel):
             if self._model.objects:
                 display_name.extend([f"Object names {i+1}" for i, oc in enumerate(self._model.objects)])
                 mappings.extend(list(self._model.objects))
-        else:
+        if isinstance(self._model, ObjectClassMapping):
             display_name.append("Object class names")
             display_name.append("Object names")
-            mappings.append(self._model.object)
-        if self._model.parameters:
+            mappings.append(self._model.objects)
+        if isinstance(self._model.parameters, ParameterDefinitionMapping):
             display_name.append("Parameter names")
             mappings.append(self._model.parameters.name)
-            if self._model.parameters.parameter_type != "definition":
-                display_name.append("Parameter values")
-                mappings.append(self._model.parameters.value)
-            if self._model.parameters.parameter_type == "time series":
-                display_name.append("Parameter time index")
-                mappings.append(self._model.parameters.extra_dimensions[0])
-            if self._model.parameters.parameter_type == "time pattern":
-                display_name.append("Parameter time pattern index")
-                mappings.append(self._model.parameters.extra_dimensions[0])
+        if isinstance(self._model.parameters, ParameterValueMapping):
+            display_name.append("Parameter values")
+            mappings.append(self._model.parameters.value)
+        if isinstance(self._model.parameters, ParameterTimeSeriesMapping):
+            display_name.append("Parameter time index")
+            mappings.append(self._model.parameters.extra_dimensions[0])
+        if isinstance(self._model.parameters, ParameterTimePatternMapping):
+            display_name.append("Parameter time pattern index")
+            mappings.append(self._model.parameters.extra_dimensions[0])
         self._display_names = display_name
         self._mappings = mappings
 
     def get_map_type_display(self, mapping, name):
         if name == "Parameter values" and self._model.is_pivoted():
             mapping_type = "Pivoted"
-        elif mapping is None:
-            mapping_type = "None"
-        elif isinstance(mapping, str):
-            mapping_type = "Constant"
-        elif isinstance(mapping, Mapping):
-            if mapping.map_type == "column":
-                mapping_type = "Column"
-            elif mapping.map_type == "column_name":
-                mapping_type = "Header"
-            elif mapping.map_type == "row":
+        elif isinstance(mapping, RowMapping):
+            if mapping.reference == -1:
+                mapping_type = "Headers"
+            else:
                 mapping_type = "Row"
+        else:
+            mapping_type = _MAPTYPE_DISPLAY_NAME[type(mapping)]
         return mapping_type
 
     def get_map_value_display(self, mapping, name):
         if name == "Parameter values" and self._model.is_pivoted():
             mapping_value = "Pivoted values"
-        elif mapping is None:
+        elif isinstance(mapping, NoneMapping):
             mapping_value = ""
-        elif isinstance(mapping, str):
-            mapping_value = mapping
-        elif isinstance(mapping, Mapping):
-            if mapping.map_type == "row":
-                if mapping.value_reference == -1:
-                    mapping_value = "Headers"
-                else:
-                    mapping_value = str(mapping.value_reference)
-            elif mapping.map_type == "column":
-                mapping_value = str(mapping.value_reference)
-            else:
-                mapping_value = str(mapping.value_reference)
+        elif isinstance(mapping, RowMapping) and mapping.reference == -1:
+            mapping_value = "Headers"
+        else:
+            mapping_value = str(mapping.reference)
         return mapping_value
 
     # pylint: disable=no-self-use
     def get_map_append_display(self, mapping, name):
         append_str = ""
-        if isinstance(mapping, Mapping):
+        if isinstance(mapping, MappingBase):
             append_str = mapping.append_str
         return append_str
 
     # pylint: disable=no-self-use
     def get_map_prepend_display(self, mapping, name):
         prepend_str = ""
-        if isinstance(mapping, Mapping):
+        if isinstance(mapping, MappingBase):
             prepend_str = mapping.prepend_str
         return prepend_str
 
@@ -611,7 +615,7 @@ class MappingSpecModel(QAbstractTableModel):
     def columnCount(self, index=None):
         if not self._model:
             return 0
-        return 5
+        return 3
 
     def headerData(self, section, orientation, role):
         if role == Qt.DisplayRole:
@@ -631,7 +635,7 @@ class MappingSpecModel(QAbstractTableModel):
             if self._display_names[index.row()] == "Parameter values":
                 return non_editable
 
-        if mapping is None:
+        if mapping is None or isinstance(mapping, NoneMapping):
             if index.column() <= 2:
                 return editable
             return non_editable
@@ -640,7 +644,7 @@ class MappingSpecModel(QAbstractTableModel):
             if index.column() <= 2:
                 return editable
             return non_editable
-        if isinstance(mapping, Mapping) and mapping.map_type == "row" and mapping.value_reference == -1:
+        if isinstance(mapping, RowMapping) and mapping.reference == -1:
             if index.column() == 2:
                 return non_editable
             return editable
@@ -660,60 +664,57 @@ class MappingSpecModel(QAbstractTableModel):
 
     def set_type(self, name, value):
         if value in ("None", "", None):
-            value = None
+            value = NoneMapping()
         elif value == "Constant":
-            value = ""
+            value = ConstantMapping()
         elif value == "Column":
-            value = Mapping(map_type="column")
+            value = ColumnMapping()
         elif value == "Header":
-            value = Mapping(map_type="column_name")
+            value = ColumnHeaderMapping()
         elif value == "Pivoted Headers":
-            value = Mapping(map_type="row", value_reference=-1)
+            value = RowMapping(reference=-1)
         elif value == "Row":
-            value = Mapping(map_type="row")
+            value = RowMapping()
         else:
             return False
         return self.set_mapping_from_name(name, value)
 
     def set_value(self, name, value):
         mapping = self.get_mapping_from_name(name)
-        if mapping is None and value.isdigit():
+        if isinstance(mapping, NoneMapping):
             # create new mapping
-            mapping = Mapping(map_type="column", value_reference=int(value))
-        elif mapping is None:
-            # string mapping
-            if value == "":
-                return False
-            mapping = value
-        else:
-            # update mapping value
-            if isinstance(mapping, str):
-                if value == "":
-                    mapping = None
-                else:
-                    mapping = value
+            if value.isdigit():
+                mapping = ColumnMapping(reference=int(value))
+            elif value:
+                mapping = ConstantMapping(reference=value)
             else:
-                if mapping.map_type == "row" and value.lower() == "header":
-                    value = -1
-                if value == "":
-                    value = None
-                try:
-                    if value is not None:
-                        value = int(value)
-                        if mapping.map_type == "row":
-                            value = max(-1, value)
-                        else:
-                            value = max(0, value)
-                except ValueError:
-                    return False
-
-                mapping.value_reference = value
+                return False
+        elif isinstance(mapping, (ConstantMapping, ColumnHeaderMapping)):
+            if value == "":
+                mapping = NoneMapping()
+            else:
+                mapping.reference = str(value)
+        elif isinstance(mapping, RowMapping) and value.lower() == "header":
+            mapping.reference = -1
+        elif isinstance(mapping, (RowMapping, ColumnMapping)):
+            if value == "":
+                value = None
+            try:
+                if value is not None:
+                    value = int(value)
+                    if isinstance(mapping, RowMapping):
+                        value = max(-1, value)
+                    else:
+                        value = max(0, value)
+            except ValueError:
+                return False
+            mapping.reference = value
         return self.set_mapping_from_name(name, mapping)
 
     def set_append_str(self, name, value):
         mapping = self.get_mapping_from_name(name)
         if mapping:
-            if isinstance(mapping, Mapping):
+            if isinstance(mapping, MappingBase):
                 if value == "":
                     value = None
                 mapping.append_str = value
@@ -723,7 +724,7 @@ class MappingSpecModel(QAbstractTableModel):
     def set_prepend_str(self, name, value):
         mapping = self.get_mapping_from_name(name)
         if mapping:
-            if isinstance(mapping, Mapping):
+            if isinstance(mapping, MappingBase):
                 if value == "":
                     value = None
                 mapping.prepend_str = value
@@ -736,7 +737,7 @@ class MappingSpecModel(QAbstractTableModel):
         if name in ("Relationship class names", "Object class names"):
             mapping = self._model.name
         elif name == "Object names":
-            mapping = self._model.object
+            mapping = self._model.objects
         elif "Object class " in name:
             index = [int(s) - 1 for s in name.split() if s.isdigit()]
             if index:
@@ -759,7 +760,7 @@ class MappingSpecModel(QAbstractTableModel):
         if name in ("Relationship class names", "Object class names"):
             self._model.name = mapping
         elif name == "Object names":
-            self._model.object = mapping
+            self._model.objects = mapping
         elif "Object class " in name:
             index = [int(s) - 1 for s in name.split() if s.isdigit()]
             if index:
@@ -791,9 +792,10 @@ class MappingSpecModel(QAbstractTableModel):
     @Slot(bool)
     def set_time_series_repeat(self, repeat):
         """Toggles the repeat flag in the parameter's options."""
-        if self._model is None or self._model.parameters is None or self._model.parameters.options is None:
+        if self._model is None or not isinstance(self._model.parameters, ParameterTimeSeriesMapping):
             return
         self._model.parameters.options.repeat = repeat
+        self.dataChanged.emit(0, 0, [])
 
     def model_parameters(self):
         """Returns the mapping's parameters."""

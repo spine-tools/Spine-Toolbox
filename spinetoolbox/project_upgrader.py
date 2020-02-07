@@ -114,9 +114,7 @@ class ProjectUpgrader:
             dict: Upgraded project information JSON
         """
         logging.debug(
-            "Implementation of upgrading project JSON from version {0}->{1} is missing".format(
-                v, LATEST_PROJECT_VERSION
-            )
+            "Implementation of upgrading project JSON from version %s->%s is missing", v, LATEST_PROJECT_VERSION
         )
         raise NotImplementedError()
 
@@ -230,7 +228,8 @@ class ProjectUpgrader:
                 connections.append(entry_new)
         return connections
 
-    def upgrade_tool_specification_paths(self, spec_paths, old_project_dir):
+    @staticmethod
+    def upgrade_tool_specification_paths(spec_paths, old_project_dir):
         """Upgrades a list of tool specifications paths to new format.
         Paths in (old) project directory (yes, old is correct) are converted
         to relative, others as absolute.
@@ -260,7 +259,7 @@ class ProjectUpgrader:
                     proj_info = json.load(fh)
                 except json.decoder.JSONDecodeError:
                     self._toolbox.msg_error.emit(
-                        "Error in project file <b>{0}</b>. Invalid JSON. {0}".format(proj_file_path)
+                        "Error in project file <b>{0}</b>. Invalid JSON.".format(proj_file_path)
                     )
                     return None
         except OSError:
@@ -319,8 +318,8 @@ class ProjectUpgrader:
             return False
         name = proj_info["project"]["name"]
         dir_name = name.lower().replace(" ", "_")
-        dir, proj_file = os.path.split(proj_file_path)
-        old_project_dir = os.path.join(dir, dir_name)
+        proj_file_dir, _ = os.path.split(proj_file_path)
+        old_project_dir = os.path.join(proj_file_dir, dir_name)
         if not os.path.isdir(old_project_dir):
             return False
         self._toolbox.msg.emit("Copying data to new project directory")

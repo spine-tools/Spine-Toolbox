@@ -347,6 +347,12 @@ def recursive_overwrite(widget, src, dst, ignore=None, silent=True):
                 widget.msg.emit("Creating directory <b>{0}</b>".format(dst))
             os.makedirs(dst)
         files = os.listdir(src)
+        for file_name in list(files):
+            # Avoid ending up in 'dst' as this would result in infinite recursion.
+            file_path = os.path.join(src, file_name)
+            if os.path.samefile(os.path.commonpath((file_path, dst)), file_path):
+                files.remove(file_name)
+                break
         if ignore is not None:
             ignored = ignore(src, files)
         else:
@@ -369,13 +375,13 @@ def rename_dir(old_dir, new_dir, logger):
     Args:
         old_dir (str): Absolute path to directory that will be renamed
         new_dir (str): Absolute path to new directory
-        logger (LoggingSignals): A logger instance
+        logger (LoggerInterface): A logger instance
     """
     try:
         shutil.move(old_dir, new_dir)
     except FileExistsError:
         msg = "Directory<br/><b>{0}</b><br/>already exists".format(new_dir)
-        logger.dialog.emit("Renaming directory failed", msg)
+        logger.information_box.emit("Renaming directory failed", msg)
         return False
     except PermissionError as pe_e:
         logging.error(pe_e)
@@ -386,7 +392,7 @@ def rename_dir(old_dir, new_dir, logger):
             "<br/>2. Windows Explorer is open in the directory"
             "<br/><br/>Check these and try again.".format(old_dir)
         )
-        logger.dialog.emit("Renaming directory failed (Permission Error)", msg)
+        logger.information_box.emit("Renaming directory failed (Permission Error)", msg)
         return False
     except OSError as os_e:
         logging.error(os_e)
@@ -401,7 +407,7 @@ def rename_dir(old_dir, new_dir, logger):
             "<br/>2. A file in the directory is open in another program. "
             "<br/><br/>Check these and try again.".format(old_dir, new_dir)
         )
-        logger.dialog.emit("Renaming directory failed (OS Error)", msg)
+        logger.information_box.emit("Renaming directory failed (OS Error)", msg)
         return False
     return True
 
@@ -671,13 +677,16 @@ class ProjectDirectoryIconProvider(QFileIconProvider):
         if os.path.exists(os.path.join(p, ".spinetoolbox")):
             # logging.debug("found project dir:{0}".format(p))
             return self.spine_icon
-        else:
-            return super().icon(info)
+        return super().icon(info)
 
 
 def path_in_dir(path, directory):
     """Returns True if the given path is in the given directory."""
-    return os.path.samefile(os.path.commonpath((path, directory)), directory)
+    try:
+        retval = os.path.samefile(os.path.commonpath((path, directory)), directory)
+    except ValueError:
+        return False
+    return retval
 
 
 def serialize_path(path, project_dir):
@@ -725,7 +734,9 @@ def serialize_url(url, project_dir):
         serialized = {
             "type": "file_url",
             "relative": is_relative,
-            "path": os.path.relpath(path, project_dir).replace(os.sep, "/") if is_relative else path.replace(os.sep, "/"),
+            "path": os.path.relpath(path, project_dir).replace(os.sep, "/")
+            if is_relative
+            else path.replace(os.sep, "/"),
             "scheme": parsed.scheme,
         }
     else:

@@ -22,10 +22,9 @@ from PySide2.QtCore import Qt, QModelIndex, QAbstractListModel
 class ToolSpecificationModel(QAbstractListModel):
     """Class to store tools that are available in a project e.g. GAMS or Julia models."""
 
-    def __init__(self, toolbox=None):
+    def __init__(self):
         super().__init__()
         self._tools = list()
-        self._toolbox = toolbox
 
     def rowCount(self, parent=None):
         """Must be reimplemented when subclassing. Returns

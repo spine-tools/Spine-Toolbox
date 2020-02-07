@@ -32,7 +32,7 @@ class MetaObject(QObject):
             name (str): Object name
             description (str): Object description
         """
-        QObject.__init__(self)
+        super().__init__()
         self.name = name
         self.short_name = shorten(name)
         self.description = description

@@ -18,7 +18,7 @@ MappingWidget and MappingOptionsWidget class.
 
 from PySide2.QtWidgets import QWidget
 from PySide2.QtCore import Qt, Signal
-from spinedb_api import RelationshipClassMapping
+from spinedb_api import RelationshipClassMapping, ParameterTimeSeriesMapping
 from .custom_menus import SimpleFilterMenu
 from .custom_delegates import ComboBoxDelegate
 from ..spine_io.io_models import MappingSpecModel
@@ -183,9 +183,6 @@ class MappingOptionsWidget(QWidget):
         if self._model:
             self._model_reset_signal = self._model.modelReset.connect(self.update_ui)
             self._model_data_signal = self._model.dataChanged.connect(self.update_ui)
-            model_parameters = self._model.model_parameters()
-            if model_parameters is not None and model_parameters.options is not None:
-                self._ui.time_series_repeat_check_box.setChecked(model_parameters.options.repeat)
             self._ui.time_series_repeat_check_box.toggled.connect(self._model.set_time_series_repeat)
         self.update_ui()
 
@@ -234,6 +231,8 @@ class MappingOptionsWidget(QWidget):
 
         self._ui.start_read_row_spin_box.setValue(self._model.read_start_row)
 
+        self._update_time_series_options()
+
         self.block_signals = False
 
     def change_class(self, new_class):
@@ -247,7 +246,6 @@ class MappingOptionsWidget(QWidget):
     def change_parameter(self, par):
         if self._model and not self.block_signals:
             self._model.change_parameter_type(par)
-        self._update_time_series_options()
 
     def change_import_objects(self, state):
         if self._model and not self.block_signals:
@@ -258,7 +256,11 @@ class MappingOptionsWidget(QWidget):
             self._model.set_read_start_row(row)
 
     def _update_time_series_options(self):
-        is_time_series = self._ui.parameter_type_combo_box.currentText() == "Time series"
+        if self._model is None:
+            return
+        par = self._model.model_parameters()
+        is_time_series = isinstance(par, ParameterTimeSeriesMapping)
         self._ui.time_series_repeat_check_box.setEnabled(is_time_series)
-        if not is_time_series:
-            self._ui.time_series_repeat_check_box.setChecked(False)
+        self._ui.time_series_repeat_check_box.setCheckState(
+            Qt.Checked if is_time_series and par.options.repeat else Qt.Unchecked
+        )

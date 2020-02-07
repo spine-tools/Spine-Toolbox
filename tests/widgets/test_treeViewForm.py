@@ -268,7 +268,7 @@ class TestTreeViewForm(
         with mock.patch("spinetoolbox.spine_db_manager.DiffDatabaseMapping") as mock_DiffDBMapping, mock.patch(
             "spinetoolbox.widgets.data_store_widget.DataStoreForm.restore_ui"
         ):
-            self.db_mngr = SpineDBManager()
+            self.db_mngr = SpineDBManager(None, None)
 
             def DiffDBMapping_side_effect(url, upgrade=False, codename=None):
                 mock_db_map = mock.MagicMock()

@@ -39,7 +39,7 @@ class Exporter(ProjectItem):
     Currently, only .gdx format is supported.
     """
 
-    def __init__(self, name, description, settings_packs, x, y, toolbox, logger):
+    def __init__(self, name, description, settings_packs, x, y, toolbox, project, logger):
         """
 
         Args:
@@ -49,9 +49,10 @@ class Exporter(ProjectItem):
             x (float): initial X coordinate of item icon
             y (float): initial Y coordinate of item icon
             toolbox (ToolboxUI): a ToolboxUI instance
-            logger (LoggingSignals): a logger instance
+            project (SpineToolboxProject): the project this item belongs to
+            logger (LoggerInterface): a logger instance
         """
-        super().__init__(name, description, x, y, toolbox.project(), logger)
+        super().__init__(name, description, x, y, project, logger)
         self._toolbox = toolbox
         self._settings_packs = dict()
         self._workers = dict()
@@ -233,8 +234,9 @@ class Exporter(ProjectItem):
     def _worker_failed(self, database_url, exception):
         """Clean up after a worker has failed fetching export settings."""
         if database_url in self._settings_packs:
-            self._logger.msg_error.emit(f"<b>[{self.name}]</b> Initializing settings for database {database_url}"
-                                        f" failed: {exception}")
+            self._logger.msg_error.emit(
+                f"<b>[{self.name}]</b> Initializing settings for database {database_url}" f" failed: {exception}"
+            )
             self._settings_packs[database_url].state = SettingsState.ERROR
             self._report_notifications()
         if database_url in self._workers:

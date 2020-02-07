@@ -21,7 +21,7 @@ from unittest import mock
 import logging
 import os
 import sys
-from PySide2.QtWidgets import QApplication
+from PySide2.QtWidgets import QApplication, QAction
 import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
 from spinetoolbox.widgets.data_store_widget import DataStoreForm
 from spinetoolbox.widgets.add_db_items_dialogs import AddObjectClassesDialog
@@ -55,6 +55,8 @@ class TestAddItemsDialog(unittest.TestCase):
                 return mock_db_map
 
             self.mock_db_mngr.get_db_map_for_listener.side_effect = get_db_map_for_listener_side_effect
+            self.mock_db_mngr.undo_action.__getitem__.side_effect = lambda key: QAction()
+            self.mock_db_mngr.redo_action.__getitem__.side_effect = lambda key: QAction()
             self.ds_view_form = DataStoreForm(self.mock_db_mngr, ("mock_url", "mock_db"))
             self.mock_db_map = self.ds_view_form.db_map
 

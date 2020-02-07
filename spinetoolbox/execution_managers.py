@@ -25,14 +25,14 @@ class ExecutionManager(QObject):
 
     execution_finished = Signal(int)
 
-    def __init__(self, toolbox):
+    def __init__(self, logger):
         """Class constructor.
 
         Args:
-            toolbox (ToolboxUI): Instance of Main UI class.
+            logger (LoggerInterface): a logger instance
         """
         super().__init__()
-        self._toolbox = toolbox
+        self._logger = logger
 
     # noinspection PyUnresolvedReferences
     def start_execution(self, workdir=None):
@@ -51,15 +51,15 @@ class ExecutionManager(QObject):
 class ConsoleExecutionManager(ExecutionManager):
     """Class to manage tool instance execution using a SpineConsoleWidget."""
 
-    def __init__(self, toolbox, console, commands):
+    def __init__(self, console, commands, logger):
         """Class constructor.
 
         Args:
-            toolbox (ToolboxUI): Instance of Main UI class.
             console (SpineConsoleWidget): Console widget where execution happens
             commands (list): List of commands to execute in the console
+            logger (LoggerInterface): a logger instance
         """
-        super().__init__(toolbox)
+        super().__init__(logger)
         self._console = console
         self._commands = commands
         self._stopped = False
@@ -73,7 +73,7 @@ class ConsoleExecutionManager(ExecutionManager):
     @Slot()
     def _start_execution(self):
         """Starts execution."""
-        self._toolbox.msg_warning.emit(f"\tExecution started. See <b>{self._console.name}</b> for messages.")
+        self._logger.msg_warning.emit(f"\tExecution started. See <b>{self._console.name}</b> for messages.")
         self._console.ready_to_execute.disconnect(self._start_execution)
         self._console.ready_to_execute.connect(self._execute_next_command)
         self._execute_next_command()
@@ -98,16 +98,16 @@ class ConsoleExecutionManager(ExecutionManager):
 class QProcessExecutionManager(ExecutionManager):
     """Class to manage tool instance execution using a PySide2 QProcess."""
 
-    def __init__(self, toolbox, program=None, args=None, silent=False, semisilent=False):
+    def __init__(self, logger, program=None, args=None, silent=False, semisilent=False):
         """Class constructor.
 
         Args:
-            toolbox (ToolboxUI): Instance of Main UI class.
+            logger (LoggerInterface): a logger instance
             program (str): Path to program to run in the subprocess (e.g. julia.exe)
             args (list): List of argument for the program (e.g. path to script file)
-            silent (bool): Whether or not to emit toolbox msg signals
+            silent (bool): Whether or not to emit logger msg signals
         """
-        super().__init__(toolbox)
+        super().__init__(logger)
         self._program = program
         self._args = args
         self._silent = silent  # Do not show Event Log nor Process Log messages
@@ -146,7 +146,6 @@ class QProcessExecutionManager(ExecutionManager):
         elif self._semisilent:  # semi-silent
             self._process.readyReadStandardOutput.connect(self.on_ready_stdout)
             self._process.readyReadStandardError.connect(self.on_ready_stderr)
-        # self._toolbox.msg.emit("\tStarting program: <b>{0}</b>".format(self._program))
         self._process.start(self._program, self._args)
         if not self._process.waitForStarted(msecs=10000):  # This blocks until process starts or timeout happens
             self.process_failed = True
@@ -175,7 +174,6 @@ class QProcessExecutionManager(ExecutionManager):
     @Slot(name="process_started")
     def process_started(self):
         """Run when subprocess has started."""
-        # self._toolbox.msg.emit("\tSubprocess started...")
 
     @Slot("QProcess::ProcessState", name="on_state_changed")
     def on_state_changed(self, new_state):
@@ -185,18 +183,18 @@ class QProcessExecutionManager(ExecutionManager):
             new_state (QProcess::ProcessState): Process state number
         """
         if new_state == QProcess.Starting:
-            self._toolbox.msg.emit("\tStarting program <b>{0}</b>".format(self._program))
+            self._logger.msg.emit("\tStarting program <b>{0}</b>".format(self._program))
             arg_str = " ".join(self._args)
-            self._toolbox.msg.emit("\tArguments: <b>{0}</b>".format(arg_str))
+            self._logger.msg.emit("\tArguments: <b>{0}</b>".format(arg_str))
         elif new_state == QProcess.Running:
-            self._toolbox.msg_warning.emit(
+            self._logger.msg_warning.emit(
                 "\tExecution is in progress. See Process Log for messages " "(stdout&stderr)"
             )
         elif new_state == QProcess.NotRunning:
             # logging.debug("QProcess is not running")
             pass
         else:
-            self._toolbox.msg_error.emit("Process is in an unspecified state")
+            self._logger.msg_error.emit("Process is in an unspecified state")
             logging.error("QProcess unspecified state: %s", new_state)
 
     @Slot("QProcess::ProcessError", name="'on_process_error")
@@ -207,28 +205,27 @@ class QProcessExecutionManager(ExecutionManager):
             process_error (QProcess::ProcessError): Process error number
         """
         if process_error == QProcess.FailedToStart:
-            # self._toolbox.msg_error.emit("Failed to start")
             self.process_failed = True
             self.process_failed_to_start = True
         elif process_error == QProcess.Timedout:
             self.process_failed = True
-            self._toolbox.msg_error.emit("Timed out")
+            self._logger.msg_error.emit("Timed out")
         elif process_error == QProcess.Crashed:
             self.process_failed = True
             if not self._user_stopped:
-                self._toolbox.msg_error.emit("Process crashed")
+                self._logger.msg_error.emit("Process crashed")
         elif process_error == QProcess.WriteError:
-            self._toolbox.msg_error.emit("Process WriteError")
+            self._logger.msg_error.emit("Process WriteError")
         elif process_error == QProcess.ReadError:
-            self._toolbox.msg_error.emit("Process ReadError")
+            self._logger.msg_error.emit("Process ReadError")
         elif process_error == QProcess.UnknownError:
-            self._toolbox.msg_error.emit("Unknown error in process")
+            self._logger.msg_error.emit("Unknown error in process")
         else:
-            self._toolbox.msg_error.emit("Unspecified error in process: {0}".format(process_error))
+            self._logger.msg_error.emit("Unspecified error in process: {0}".format(process_error))
 
     def stop_execution(self):
         """See base class."""
-        self._toolbox.msg_error.emit("Terminating process")
+        self._logger.msg_error.emit("Terminating process")
         self._user_stopped = True
         self.process_failed = True
         if not self._process:
@@ -236,7 +233,7 @@ class QProcessExecutionManager(ExecutionManager):
         try:
             self._process.terminate()
         except Exception as ex:  # pylint: disable=broad-except
-            self._toolbox.msg_error.emit("[{0}] exception when terminating process".format(ex))
+            self._logger.msg_error.emit("[{0}] exception when terminating process".format(ex))
             logging.exception("Exception in closing QProcess: %s", ex)
         finally:
             self._process.deleteLater()
@@ -255,13 +252,13 @@ class QProcessExecutionManager(ExecutionManager):
         exit_status = self._process.exitStatus()  # Normal or crash exit
         if exit_status == QProcess.CrashExit:
             if not self._silent:
-                self._toolbox.msg_error.emit("\tProcess crashed")
+                self._logger.msg_error.emit("\tProcess crashed")
             exit_code = -1
         elif exit_status == QProcess.NormalExit:
             pass
         else:
             if not self._silent:
-                self._toolbox.msg_error.emit("Unknown QProcess exit status [{0}]".format(exit_status))
+                self._logger.msg_error.emit("Unknown QProcess exit status [{0}]".format(exit_status))
             exit_code = -1
         if not exit_code == 0:
             self.process_failed = True
@@ -270,12 +267,12 @@ class QProcessExecutionManager(ExecutionManager):
             errout = str(self._process.readAllStandardError().data(), "utf-8")
             if out is not None:
                 if not self._silent:
-                    self._toolbox.msg_proc.emit(out.strip())
+                    self._logger.msg_proc.emit(out.strip())
                 else:
                     self.process_output = out.strip()
                     self.error_output = errout.strip()
         else:
-            self._toolbox.msg.emit("*** Terminating process ***")
+            self._logger.msg.emit("*** Terminating process ***")
         # Delete QProcess
         self._process.deleteLater()
         self._process = None
@@ -287,7 +284,7 @@ class QProcessExecutionManager(ExecutionManager):
         if not self._process:
             return
         out = str(self._process.readAllStandardOutput().data(), "utf-8")
-        self._toolbox.msg_proc.emit(out.strip())
+        self._logger.msg_proc.emit(out.strip())
 
     @Slot(name="on_ready_stderr")
     def on_ready_stderr(self):
@@ -295,4 +292,4 @@ class QProcessExecutionManager(ExecutionManager):
         if not self._process:
             return
         err = str(self._process.readAllStandardError().data(), "utf-8")
-        self._toolbox.msg_proc_error.emit(err.strip())
+        self._logger.msg_proc_error.emit(err.strip())

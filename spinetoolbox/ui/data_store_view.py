@@ -10,10 +10,10 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-# Form implementation generated from reading ui file 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\ui\data_store_view.ui',
-# licensing of 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\ui\data_store_view.ui' applies.
+# Form implementation generated from reading ui file '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/data_store_view.ui',
+# licensing of '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/data_store_view.ui' applies.
 #
-# Created: Tue Jan 21 17:01:35 2020
+# Created: Thu Feb  6 17:51:31 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -55,9 +55,6 @@ class Ui_MainWindow(object):
         self.menuHelp = QtWidgets.QMenu(self.menubar)
         self.menuHelp.setObjectName("menuHelp")
         MainWindow.setMenuBar(self.menubar)
-        self.statusbar = NotificationStatusBar(MainWindow)
-        self.statusbar.setObjectName("statusbar")
-        MainWindow.setStatusBar(self.statusbar)
         self.dockWidget_parameter_value_list = QtWidgets.QDockWidget(MainWindow)
         self.dockWidget_parameter_value_list.setObjectName("dockWidget_parameter_value_list")
         self.dockWidgetContents = QtWidgets.QWidget()
@@ -505,9 +502,13 @@ class Ui_MainWindow(object):
         icon14.addPixmap(QtGui.QPixmap(":/symbols/menu_icons/table.svg"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.actionTabular_style.setIcon(icon14)
         self.actionTabular_style.setObjectName("actionTabular_style")
+        self.actionView_history = QtWidgets.QAction(MainWindow)
+        self.actionView_history.setObjectName("actionView_history")
         self.menuSession.addAction(self.actionRefresh)
         self.menuSession.addAction(self.actionCommit)
         self.menuSession.addAction(self.actionRollback)
+        self.menuSession.addSeparator()
+        self.menuSession.addAction(self.actionView_history)
         self.menuEdit.addAction(self.actionCopy)
         self.menuEdit.addAction(self.actionPaste)
         self.menuEdit.addSeparator()
@@ -619,11 +620,11 @@ class Ui_MainWindow(object):
         self.actionTree_style.setText(QtWidgets.QApplication.translate("MainWindow", "Tree style", None, -1))
         self.actionGraph_style.setText(QtWidgets.QApplication.translate("MainWindow", "Graph style", None, -1))
         self.actionTabular_style.setText(QtWidgets.QApplication.translate("MainWindow", "Tabular style", None, -1))
+        self.actionView_history.setText(QtWidgets.QApplication.translate("MainWindow", "View history...", None, -1))
 
-from spinetoolbox.widgets.custom_qtreeview import CopyTreeView, StickySelectionEntityTreeView, EntityTreeView
 from spinetoolbox.widgets.custom_qgraphicsviews import GraphQGraphicsView
-from spinetoolbox.widgets.custom_qtableview import AutoFilterCopyPasteTableView, PivotTableView
+from spinetoolbox.widgets.custom_qtreeview import EntityTreeView, CopyTreeView, StickySelectionEntityTreeView
 from spinetoolbox.widgets.custom_qlistview import DragListView
-from spinetoolbox.widgets.custom_qstatusbar import NotificationStatusBar
 from spinetoolbox.widgets.frozen_table_view import FrozenTableView
+from spinetoolbox.widgets.custom_qtableview import PivotTableView, AutoFilterCopyPasteTableView
 from spinetoolbox import resources_icons_rc

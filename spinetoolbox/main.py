@@ -45,9 +45,6 @@ def main():
         return 1
     parser = _make_argument_parser()
     args = parser.parse_args()
-    if args.version:
-        print(f"Spine Toolbox {__version__}")
-        return 0
     app = QApplication(sys.argv)
     status = QFontDatabase.addApplicationFont(":/fonts/fontawesome5-solid-webfont.ttf")
     if status < 0:
@@ -63,6 +60,7 @@ def main():
 def _make_argument_parser():
     """Returns a command line argument parser configured for Toolbox use."""
     parser = ArgumentParser()
-    parser.add_argument("-v", "--version", help="print version information and exit", action="store_true")
+    version = f"Spine Toolbox {__version__}"
+    parser.add_argument("-v", "--version", action="version", version=version)
     parser.add_argument("project", help="project to open at startup", nargs="?", default="")
     return parser

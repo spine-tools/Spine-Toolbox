@@ -23,6 +23,8 @@ from .minimal_tree_model import TreeItem
 class MultiDBTreeItem(TreeItem):
     """A tree item that may belong in multiple databases."""
 
+    item_type = None
+    """Item type identifier string. Should be set to a meaningful value by subclasses."""
     visual_key = ["name"]
 
     def __init__(self, model=None, db_map_id=None):
@@ -91,12 +93,20 @@ class MultiDBTreeItem(TreeItem):
     def add_db_map_id(self, db_map, id_):
         """Adds id for this item in the given db_map."""
         self._db_map_id[db_map] = id_
+        index = self.index()
+        sibling = index.sibling(index.row(), 1)
+        self.model.dataChanged.emit(sibling, sibling)
 
     def take_db_map(self, db_map):
         """Removes the mapping for given db_map and returns it."""
-        if [*self._db_map_id.keys()] == [db_map]:
+        id_ = self._db_map_id.pop(db_map, None)
+        if self._db_map_id:
+            index = self.index()
+            sibling = index.sibling(index.row(), 1)
+            self.model.dataChanged.emit(sibling, sibling)
+        else:
             self.parent_item.remove_children(self.child_number(), 1)
-        return self._db_map_id.pop(db_map, None)
+        return id_
 
     def deep_remove_db_map(self, db_map):
         """Removes given db_map from this item and all its descendants."""
@@ -528,11 +538,14 @@ class RelationshipItem(EntityItem):
         self._fetched = True
 
     @property
+    def object_name_list(self):
+        return self.db_map_data_field(self.first_db_map, "object_name_list", default="")
+
+    @property
     def display_name(self):
         """"Returns the name for display."""
         return (
-            self.db_map_data_field(self.first_db_map, "object_name_list", default="")
-            .replace(self.parent_item.parent_item.display_name + ",", "")
+            self.object_name_list.replace(self.parent_item.parent_item.display_name + ",", "")
             .replace("," + self.parent_item.parent_item.display_name, "")
             .replace(",", self.db_mngr._GROUP_SEP)
         )
@@ -553,3 +566,7 @@ class RelationshipItem(EntityItem):
             object_name_list=self.db_map_data_field(self.first_db_map, "object_name_list"),
             database=self.first_db_map.codename,
         )
+
+    def _get_children_ids(self, db_map):
+        """See base class."""
+        raise NotImplementedError()

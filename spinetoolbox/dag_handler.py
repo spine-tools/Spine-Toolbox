@@ -27,13 +27,8 @@ class DirectedGraphHandler(QObject):
 
     dag_simulation_requested = Signal("QVariant")
 
-    def __init__(self, toolbox):
-        """
-        Args:
-            toolbox (ToolboxUI): ToolboxUI instance
-        """
+    def __init__(self):
         super().__init__()
-        self._toolbox = toolbox
         self._dags = list()
 
     def dags(self):

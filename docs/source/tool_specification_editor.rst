@@ -7,6 +7,8 @@
    :width: 16
 .. |play-selected| image:: ../../spinetoolbox/ui/resources/project_item_icons/play-circle-regular.svg
    :width: 16
+.. |insert-tag| image:: ../../spinetoolbox/ui/resources/double-at.svg
+   :width: 16
 
 .. _Tool specification editor:
 
@@ -39,6 +41,7 @@ selecting *Select existing main program*. Command line arguments will be appende
 Spine Toolbox executes in the background, e.g. if you have a Windows batch file called *do_things.bat*, which
 accepts command line arguments *a* and *b*. If you set *a b* on the command line arguments. This is the equivalent
 of running the batch file in command prompt with the command *do_things.bat a b*.
+See `Command line argument tag expansion`_ for more information on the command line arguments.
 
 *Additional source files* is a list of files that the main program requires in order to run. You can add
 individual files or whole directories at once to this list.
@@ -120,3 +123,26 @@ context-menu.
 You are now ready to execute the Tool specification in Spine Toolbox. You just need to select a Tool item in the
 *Design view*, set the specification *Example Tool specification* to it, and click |play-all| or |play-selected|
 button.
+
+Command line argument tag expansion
+-----------------------------------
+
+Spine Toolbox supports a number of special command line arguments called *tags* that get replaced by information
+relevant to a Tool's current connections. For example, the :literal:`@@url-inputs@@` tag expands to a list of input
+database URLs. If the command line arguments for the *Model* tool in the image below were
+:literal:`--input-database=@@url-inputs@@` the tool would be executed by
+:literal:`python tool_script.py --input_database=sqlite:///input_database.sqlite` command
+in case *Input data*'s database URL was :literal:`sqlite:///input_database.sqlite`.
+
+.. image:: img/partial_dag_input_datastore-tool-output_data_store.png
+   :align: center
+
+The |insert-tag| button next to the command line arguments field in Tool Specification editor
+gives a quick access to insert the tags into the field.
+
+Below is a list of the command line argument tags that are currently available:
+
+- :literal:`@@url_inputs@@`: a space separated list of database URLs provided by all input data stores.
+- :literal:`@@url_outputs@@`: a space separated list of database URLs provided by all output data stores.
+- :literal:`@@url:<data store name>@@`: the url provided by a named data store connected to the tool.
+- :literal:`@@optional_inputs@@`: a space separated list of tool's optional input files.

@@ -162,7 +162,7 @@ class EntityTreeContextMenu(CustomContextMenu):
     """Context menu class for object tree items in tree view form.
 
     Attributes:
-        parent (QWidget): Parent for menu widget (TreeViewForm)
+        parent (QWidget): Parent for menu widget
         position (QPoint): Position on screen
         index (QModelIndex): Index of item that requested the context-menu
     """
@@ -185,7 +185,7 @@ class ObjectTreeContextMenu(EntityTreeContextMenu):
     """Context menu class for object tree items in tree view form.
 
     Attributes:
-        parent (QWidget): Parent for menu widget (TreeViewForm)
+        parent (QWidget): Parent for menu widget
         position (QPoint): Position on screen
         index (QModelIndex): Index of item that requested the context-menu
     """
@@ -204,7 +204,7 @@ class RelationshipTreeContextMenu(EntityTreeContextMenu):
     """Context menu class for relationship tree items in tree view form.
 
     Attributes:
-        parent (QWidget): Parent for menu widget (TreeViewForm)
+        parent (QWidget): Parent for menu widget
         position (QPoint): Position on screen
         index (QModelIndex): Index of item that requested the context-menu
     """
@@ -214,7 +214,7 @@ class ParameterContextMenu(CustomContextMenu):
     """Context menu class for object (relationship) parameter items in tree views.
 
     Attributes:
-        parent (QWidget): Parent for menu widget (TreeViewForm)
+        parent (QWidget): Parent for menu widget
         position (QPoint): Position on screen
         index (QModelIndex): Index of item that requested the context-menu
     """
@@ -238,7 +238,7 @@ class SimpleEditableParameterValueContextMenu(CustomContextMenu):
     Context menu class for object (relationship) parameter value items in graph views.
 
     Attributes:
-        parent (QWidget): Parent for menu widget (TreeViewForm)
+        parent (QWidget): Parent for menu widget
         position (QPoint): Position on screen
         index (QModelIndex): Index of item that requested the context-menu
     """
@@ -258,7 +258,7 @@ class EditableParameterValueContextMenu(CustomContextMenu):
     Context menu class for object (relationship) parameter value items in tree views.
 
     Attributes:
-        parent (QWidget): Parent for menu widget (TreeViewForm)
+        parent (QWidget): Parent for menu widget
         position (QPoint): Position on screen
         index (QModelIndex): Index of item that requested the context-menu
     """
@@ -284,7 +284,7 @@ class ParameterValueListContextMenu(CustomContextMenu):
     """Context menu class for parameter enum view in tree view form.
 
     Attributes:
-        parent (QWidget): Parent for menu widget (TreeViewForm)
+        parent (QWidget): Parent for menu widget
         position (QPoint): Position on screen
         index (QModelIndex): Index of item that requested the context-menu
     """
@@ -512,9 +512,9 @@ class RecentProjectsPopupMenu(CustomPopupMenu):
             for entry in recents_list:
                 name, filepath = entry.split("<>")
                 self.add_action(
-                        name,
-                        lambda checked=False, filepath=filepath: self.call_open_project(checked, filepath),
-                        tooltip=filepath
+                    name,
+                    lambda checked=False, filepath=filepath: self.call_open_project(checked, filepath),
+                    tooltip=filepath,
                 )
 
     @Slot(bool, str, name="call_open_project")
@@ -529,7 +529,7 @@ class RecentProjectsPopupMenu(CustomPopupMenu):
             # Project has been removed, remove it from recent projects list
             self._parent.remove_path_from_recent_projects(p)
             self._parent.msg_error.emit(
-                    "Opening selected project failed. Project file <b>{0}</b> may have been removed.".format(p)
+                "Opening selected project failed. Project file <b>{0}</b> may have been removed.".format(p)
             )
             return
         # Check if the same project is already open

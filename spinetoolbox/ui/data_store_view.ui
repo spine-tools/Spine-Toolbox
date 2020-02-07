@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
 ######################################################################################################################
-# Copyright (C) 2017 - 2019 Spine project consortium
+# Copyright (C) 2017-2020 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and\/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -75,6 +75,8 @@
     <addaction name="actionRefresh"/>
     <addaction name="actionCommit"/>
     <addaction name="actionRollback"/>
+    <addaction name="separator"/>
+    <addaction name="actionView_history"/>
    </widget>
    <widget class="QMenu" name="menuEdit">
     <property name="title">
@@ -139,7 +141,6 @@
    <addaction name="menuSession"/>
    <addaction name="menuHelp"/>
   </widget>
-  <widget class="NotificationStatusBar" name="statusbar"/>
   <widget class="QDockWidget" name="dockWidget_parameter_value_list">
    <property name="windowTitle">
     <string>Parameter value list</string>
@@ -1250,17 +1251,17 @@
     <string>Tabular style</string>
    </property>
   </action>
+  <action name="actionView_history">
+   <property name="text">
+    <string>View history...</string>
+   </property>
+  </action>
  </widget>
  <customwidgets>
   <customwidget>
    <class>AutoFilterCopyPasteTableView</class>
    <extends>QTableView</extends>
    <header>spinetoolbox/widgets/custom_qtableview.h</header>
-  </customwidget>
-  <customwidget>
-   <class>NotificationStatusBar</class>
-   <extends>QStatusBar</extends>
-   <header>spinetoolbox/widgets/custom_qstatusbar.h</header>
   </customwidget>
   <customwidget>
    <class>GraphQGraphicsView</class>

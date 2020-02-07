@@ -548,15 +548,11 @@ class PivotTableModel(QAbstractTableModel):
 
     def _add_parameter_values(self, items):
         items = self._checked_parameter_values(items)
-        ids = self.db_map._add_parameter_values(*items)
-        d = {self.db_map: self.db_mngr.get_parameter_values(self.db_map, ids=ids)}
-        self.db_mngr.parameter_values_added.emit(d)
+        self.db_mngr.add_checked_parameter_values({self.db_map: items})
 
     def _update_parameter_values(self, items):
         items = self._checked_parameter_values(items)
-        ids = self.db_map._update_parameter_values(*items)
-        d = {self.db_map: self.db_mngr.get_parameter_values(self.db_map, ids=ids)}
-        self.db_mngr.parameter_values_updated.emit(d)
+        self.db_mngr.update_checked_parameter_values({self.db_map: items})
 
     def _batch_set_relationship_data(self, row_map, column_map, data, values):
         def relationship_to_add(header_ids):

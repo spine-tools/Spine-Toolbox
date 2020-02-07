@@ -465,3 +465,7 @@ class JuliaREPLWidget(SpineConsoleWidget):
         if was_newline:  # user doesn't need newline
             text = text[:-1]
         QApplication.clipboard().setText(text)
+
+    def _is_complete(self, source, interactive):
+        """See base class."""
+        raise NotImplementedError()

@@ -47,9 +47,9 @@ class TreeViewMixin:
         self.ui.treeView_object.setModel(self.object_tree_model)
         self.ui.treeView_relationship.setModel(self.relationship_tree_model)
 
-    def add_toggle_view_actions(self):
+    def add_menu_actions(self):
         """Adds toggle view actions to View menu."""
-        super().add_toggle_view_actions()
+        super().add_menu_actions()
         self.ui.menuView.addSeparator()
         self.ui.menuView.addAction(self.ui.dockWidget_relationship_tree.toggleViewAction())
 
@@ -90,10 +90,8 @@ class TreeViewMixin:
     @Slot("QItemSelection", "QItemSelection")
     def _handle_object_tree_selection_changed(self, selected, deselected):
         """Updates object filter and sets default rows."""
-        for index in deselected.indexes():
-            self.object_tree_model.deselect_index(index)
-        for index in selected.indexes():
-            self.object_tree_model.select_index(index)
+        indexes = self.ui.treeView_object.selectionModel().selectedIndexes()
+        self.object_tree_model.select_indexes(indexes)
         if not self._accept_selection(self.ui.treeView_object):
             return
         self.set_default_parameter_data(self.ui.treeView_object.currentIndex())
@@ -102,10 +100,8 @@ class TreeViewMixin:
     @Slot("QItemSelection", "QItemSelection")
     def _handle_relationship_tree_selection_changed(self, selected, deselected):
         """Updates relationship filter and sets default rows."""
-        for index in deselected.indexes():
-            self.relationship_tree_model.deselect_index(index)
-        for index in selected.indexes():
-            self.relationship_tree_model.select_index(index)
+        indexes = self.ui.treeView_relationship.selectionModel().selectedIndexes()
+        self.relationship_tree_model.select_indexes(indexes)
         if not self._accept_selection(self.ui.treeView_relationship):
             return
         self.set_default_parameter_data(self.ui.treeView_relationship.currentIndex())
@@ -228,6 +224,8 @@ class TreeViewMixin:
             pos (QPoint): Mouse position
         """
         index = self.ui.treeView_object.indexAt(pos)
+        if index.column() != 0:
+            return
         global_pos = self.ui.treeView_object.viewport().mapToGlobal(pos)
         object_tree_context_menu = ObjectTreeContextMenu(self, global_pos, index)
         option = object_tree_context_menu.get_action()
@@ -269,6 +267,8 @@ class TreeViewMixin:
             pos (QPoint): Mouse position
         """
         index = self.ui.treeView_relationship.indexAt(pos)
+        if index.column() != 0:
+            return
         global_pos = self.ui.treeView_relationship.viewport().mapToGlobal(pos)
         relationship_tree_context_menu = RelationshipTreeContextMenu(self, global_pos, index)
         option = relationship_tree_context_menu.get_action()

@@ -25,19 +25,22 @@ from PySide2.QtCore import Qt, Slot, QFileInfo, QEventLoop, QProcess
 from PySide2.QtGui import QStandardItem, QStandardItemModel
 from PySide2.QtWidgets import QFileIconProvider, QListWidget, QDialog, QVBoxLayout, QDialogButtonBox
 from spinetoolbox.project_item import ProjectItem
-from spinetoolbox.helpers import create_dir
+from spinetoolbox.helpers import create_dir, deserialize_path, serialize_path
 from spinetoolbox.spine_io.importers.csv_reader import CSVConnector
 from spinetoolbox.spine_io.importers.excel_reader import ExcelConnector
 from spinetoolbox.spine_io.importers.gdx_connector import GdxConnector
 from spinetoolbox.widgets.import_preview_window import ImportPreviewWindow
 from . import importer_program
-from spinetoolbox.helpers import serialize_path, deserialize_path
 
-_CONNECTOR_NAME_TO_CLASS = {"CSVConnector": CSVConnector, "ExcelConnector": ExcelConnector, "GdxConnector": GdxConnector}
+_CONNECTOR_NAME_TO_CLASS = {
+    "CSVConnector": CSVConnector,
+    "ExcelConnector": ExcelConnector,
+    "GdxConnector": GdxConnector,
+}
 
 
 class Importer(ProjectItem):
-    def __init__(self, name, description, mappings, x, y, toolbox, logger, cancel_on_error=True):
+    def __init__(self, name, description, mappings, x, y, toolbox, project, logger, cancel_on_error=True):
         """Importer class.
 
         Args:
@@ -47,10 +50,11 @@ class Importer(ProjectItem):
             x (float): Initial icon scene X coordinate
             y (float): Initial icon scene Y coordinate
             toolbox (ToolboxUI): QMainWindow instance
-            logger (LoggingSignals): a logger instance
+            project (SpineToolboxProject): the project this item belongs to
+            logger (LoggerInterface): a logger instance
             cancel_on_error (bool): if True the item's execution will stop on import error
        """
-        super().__init__(name, description, x, y, toolbox.project(), logger)
+        super().__init__(name, description, x, y, project, logger)
         # Make logs subdirectory for this item
         self._toolbox = toolbox
         self.logs_dir = os.path.join(self.data_dir, "logs")
@@ -198,6 +202,12 @@ class Importer(ProjectItem):
     def get_connector(self, importee):
         """Shows a QDialog to select a connector for the given source file.
         Mimics similar routine in `spine_io.widgets.import_widget.ImportDialog`
+
+        Args:
+            importee (str): Path to file acting as an importee
+
+        Returns:
+            Asynchronous data reader class for the given importee
         """
         connector_list = [CSVConnector, ExcelConnector, GdxConnector]  # add others as needed
         connector_names = [c.DISPLAY_NAME for c in connector_list]
@@ -256,7 +266,7 @@ class Importer(ProjectItem):
             dict: Mapping dictionary for the requested importee or an empty dict if not found
         """
         importee_settings = None
-        for p in self.settings.keys():
+        for p in self.settings:
             if p == importee:
                 importee_settings = self.settings[p]
         if not importee_settings:
@@ -339,12 +349,12 @@ class Importer(ProjectItem):
         self._logger.msg_error.emit(f"<b>{self.name}</b>: {output}")
 
     def execute_backward(self, resources):
-        """see base class."""
+        """See base class."""
         self.resources_from_downstream = resources.copy()
         return True
 
     def execute_forward(self, resources):
-        """see base class."""
+        """See base class."""
         args = [
             [f for f in self.all_files if f not in self.unchecked_files],
             self.settings,
@@ -413,7 +423,7 @@ class Importer(ProjectItem):
                 duplicates.append(file_name)
         if duplicates:
             self.add_notification("Duplicate input files from upstream items:<br>{}".format("<br>".join(duplicates)))
-    
+
     @staticmethod
     def upgrade_from_no_version_to_version_1(item_name, old_item_dict, old_project_dir):
         """Converts mappings to a list, where each element contains two dictionaries,

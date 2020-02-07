@@ -83,9 +83,9 @@ class ParameterViewMixin:
             view.horizontalHeader().setSectionsMovable(True)
         self.setup_delegates()
 
-    def add_toggle_view_actions(self):
+    def add_menu_actions(self):
         """Adds toggle view actions to View menu."""
-        super().add_toggle_view_actions()
+        super().add_menu_actions()
         self.ui.menuView.addSeparator()
         self.ui.menuView.addAction(self.ui.dockWidget_object_parameter_value.toggleViewAction())
         self.ui.menuView.addAction(self.ui.dockWidget_object_parameter_definition.toggleViewAction())
@@ -447,7 +447,6 @@ class ParameterViewMixin:
         """Removes selected rows from relationship parameter definition table."""
         self._remove_parameter_data(self.ui.tableView_relationship_parameter_definition, "parameter definition")
 
-    @busy_effect
     def _remove_parameter_data(self, table_view, item_type):
         """
         Removes selected rows from parameter table.

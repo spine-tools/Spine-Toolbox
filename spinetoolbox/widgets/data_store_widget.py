@@ -40,10 +40,12 @@ from ..widgets.tree_view_mixin import TreeViewMixin
 from ..widgets.graph_view_mixin import GraphViewMixin
 from ..widgets.tabular_view_mixin import TabularViewMixin
 from ..widgets.toolbars import ParameterTagToolBar
+from ..widgets.db_session_history_dialog import DBSessionHistoryDialog
+from ..widgets.notification import NotificationStack
 from ..mvcmodels.parameter_value_list_model import ParameterValueListModel
-from ..helpers import busy_effect, format_string_list
+from ..helpers import busy_effect
 from .import_widget import ImportDialog
-from ..excel_import_export import export_spine_database_to_xlsx
+from ..spine_io.exporters.excel import export_spine_database_to_xlsx
 
 
 class DataStoreFormBase(QMainWindow):
@@ -74,11 +76,11 @@ class DataStoreFormBase(QMainWindow):
         self.ui.setupUi(self)
         self.takeCentralWidget()
         self.setWindowIcon(QIcon(":/symbols/app.ico"))
-        self.setWindowTitle("Data store view    -- {} --".format(", ".join([x.codename for x in self.db_maps])))
         self.setStyleSheet(MAINWINDOW_SS)
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.qsettings = QSettings("SpineProject", "Spine Toolbox")
         self.err_msg = QErrorMessage(self)
+        self.notification_stack = NotificationStack(self)
         self.err_msg.setWindowTitle("Error")
         self.parameter_tag_toolbar = ParameterTagToolBar(self, self.db_mngr, *self.db_maps)
         self.addToolBar(Qt.TopToolBarArea, self.parameter_tag_toolbar)
@@ -95,12 +97,23 @@ class DataStoreFormBase(QMainWindow):
         self._selection_locked = False
         self._focusable_childs = [self.ui.treeView_parameter_value_list]
         self.settings_group = 'treeViewWidget'
+        self.undo_action = None
+        self.redo_action = None
+        db_names = ", ".join(["{0}[*]".format(db_map.codename) for db_map in self.db_maps])
+        self.setWindowTitle("{0} - Data store view ".format(db_names))
+        self.update_commit_enabled()
 
-    def add_toggle_view_actions(self):
-        """Adds toggle view actions to View menu."""
+    def add_menu_actions(self):
+        """Adds actions to View and Edit menu."""
         self.ui.menuView.addSeparator()
         self.ui.menuView.addAction(self.ui.dockWidget_parameter_value_list.toggleViewAction())
         self.ui.menuView.addAction(self.parameter_tag_toolbar.toggleViewAction())
+        before = self.ui.menuEdit.actions()[0]
+        self.undo_action = self.db_mngr.undo_action[self.db_map]
+        self.redo_action = self.db_mngr.redo_action[self.db_map]
+        self.ui.menuEdit.insertAction(before, self.undo_action)
+        self.ui.menuEdit.insertAction(before, self.redo_action)
+        self.ui.menuEdit.insertSeparator(before)
 
     def connect_signals(self):
         """Connects signals to slots."""
@@ -108,10 +121,10 @@ class DataStoreFormBase(QMainWindow):
         self.msg.connect(self.add_message)
         self.msg_error.connect(self.err_msg.showMessage)
         # Menu actions
-        self.ui.menuSession.aboutToShow.connect(self._handle_menu_session_about_to_show)
         self.ui.actionCommit.triggered.connect(self.commit_session)
         self.ui.actionRollback.triggered.connect(self.rollback_session)
         self.ui.actionRefresh.triggered.connect(self.refresh_session)
+        self.ui.actionView_history.triggered.connect(self.show_history_dialog)
         self.ui.actionClose.triggered.connect(self.close)
         self.ui.menuEdit.aboutToShow.connect(self._handle_menu_edit_about_to_show)
         self.ui.actionImport.triggered.connect(self.show_import_file_dialog)
@@ -129,6 +142,39 @@ class DataStoreFormBase(QMainWindow):
             self.show_parameter_value_list_context_menu
         )
         self.parameter_value_list_model.remove_selection_requested.connect(self.remove_parameter_value_lists)
+        for db_map in self.db_maps:
+            self.db_mngr.undo_stack[db_map].indexChanged.connect(self.update_undo_redo_actions)
+            self.db_mngr.undo_stack[db_map].cleanChanged.connect(self.update_commit_enabled)
+
+    @Slot(int)
+    def update_undo_redo_actions(self, index):
+        undo_ages = {db_map: self.db_mngr.undo_stack[db_map].undo_age for db_map in self.db_maps}
+        redo_ages = {db_map: self.db_mngr.undo_stack[db_map].redo_age for db_map in self.db_maps}
+        undo_ages = {db_map: age for db_map, age in undo_ages.items() if age is not None}
+        redo_ages = {db_map: age for db_map, age in redo_ages.items() if age is not None}
+        new_undo_action = self.db_mngr.undo_action[max(undo_ages, key=undo_ages.get, default=self.db_map)]
+        new_redo_action = self.db_mngr.redo_action[min(redo_ages, key=redo_ages.get, default=self.db_map)]
+        if new_undo_action != self.undo_action:
+            self.ui.menuEdit.insertAction(self.undo_action, new_undo_action)
+            self.ui.menuEdit.removeAction(self.undo_action)
+            self.undo_action = new_undo_action
+        if new_redo_action != self.redo_action:
+            self.ui.menuEdit.insertAction(self.redo_action, new_redo_action)
+            self.ui.menuEdit.removeAction(self.redo_action)
+            self.redo_action = new_redo_action
+
+    @Slot(bool)
+    def update_commit_enabled(self, _clean=False):
+        dirty = not all(self.db_mngr.undo_stack[db_map].isClean() for db_map in self.db_maps)
+        self.ui.actionCommit.setEnabled(dirty)
+        self.ui.actionRollback.setEnabled(dirty)
+        self.ui.actionView_history.setEnabled(dirty)
+        self.setWindowModified(dirty)
+
+    @Slot(bool)
+    def show_history_dialog(self, checked=False):
+        dialog = DBSessionHistoryDialog(self, self.db_mngr, *self.db_maps)
+        dialog.show()
 
     def init_models(self):
         """Initializes models."""
@@ -147,7 +193,7 @@ class DataStoreFormBase(QMainWindow):
         Args:
             msg (str): String to show in QStatusBar
         """
-        self.ui.statusbar.add_notification(msg)
+        self.notification_stack.push(msg)
 
     def restore_dock_widgets(self):
         """Docks all floating and or hidden QDockWidgets back to the window."""
@@ -326,15 +372,6 @@ class DataStoreFormBase(QMainWindow):
         copy_database(dst_url, db_map, overwrite=True)
         self.msg.emit("SQlite file successfully exported.")
 
-    @Slot()
-    def _handle_menu_session_about_to_show(self):
-        on = self.commit_enabled()
-        self.ui.actionCommit.setEnabled(on)
-        self.ui.actionRollback.setEnabled(on)
-
-    def commit_enabled(self):
-        return any(db_map.has_pending_changes() for db_map in self.db_maps)
-
     @Slot(bool)
     def commit_session(self, checked=False):
         """Commits session."""
@@ -475,21 +512,8 @@ class DataStoreFormBase(QMainWindow):
 
     def notify_items_changed(self, action, item_type, db_map_data):
         """Enables or disables actions and informs the user about what just happened."""
-        msg = f"Successfully {action}"
-        name_keys = {
-            "parameter tag": "tag",
-            "parameter value": None,
-            "parameter definition": "parameter_name",
-            "relationship": "object_name_list",
-        }
-        name_key = name_keys.get(item_type, "name")
-        if name_key:
-            names = {item[name_key] for data in db_map_data.values() for item in data}
-            msg += f" the following {item_type} item(s):" + format_string_list(names)
-        else:
-            count = sum(len(data) for data in db_map_data.values())
-            msg += f" {count} {item_type} item(s)"
-        msg += "<br />"
+        count = sum(len(data) for data in db_map_data.values())
+        msg = f"Successfully {action} {count} {item_type} item(s)"
         self.msg.emit(msg)
 
     def receive_object_classes_added(self, db_map_data):
@@ -630,12 +654,12 @@ class DataStoreForm(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         super().__init__(db_mngr, *db_urls)
         self._size = None
         self.init_models()
-        self.add_toggle_view_actions()
+        self.add_menu_actions()
         self.connect_signals()
         self.apply_tree_style()
         self.restore_ui()
         toc = time.process_time()
-        self.msg.emit("Data store view created in {} seconds".format(toc - tic))
+        self.msg.emit("Data store view created in {0:.2f} seconds".format(toc - tic))
 
     def connect_signals(self):
         super().connect_signals()
@@ -661,7 +685,7 @@ class DataStoreForm(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
 
     def end_style_change(self):
         """Ends a style change operation."""
-        qApp.processEvents()
+        qApp.processEvents()  # pylint: disable=undefined-variable
         self.resize(self._size)
 
     @Slot(bool)

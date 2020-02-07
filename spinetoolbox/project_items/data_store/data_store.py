@@ -21,7 +21,7 @@ import logging
 from PySide2.QtCore import Slot, Qt
 from PySide2.QtWidgets import QFileDialog, QApplication
 from sqlalchemy import create_engine
-from sqlalchemy.engine.url import make_url, URL
+from sqlalchemy.engine.url import URL
 import spinedb_api
 from spinetoolbox.project_item import ProjectItem, ProjectItemResource
 from spinetoolbox.widgets.data_store_widget import DataStoreForm
@@ -30,7 +30,7 @@ from .widgets.custom_menus import DataStoreContextMenu
 
 
 class DataStore(ProjectItem):
-    def __init__(self, name, description, x, y, toolbox, logger, url=None):
+    def __init__(self, name, description, x, y, toolbox, project, logger, url=None):
         """Data Store class.
 
         Args:
@@ -39,10 +39,11 @@ class DataStore(ProjectItem):
             x (float): Initial X coordinate of item icon
             y (float): Initial Y coordinate of item icon
             toolbox (ToolboxUI): QMainWindow instance
-            logger (LoggingSignals): a logger instance
+            project (SpineToolboxProject): the project this item belongs to
+            logger (LoggerInterface): a logger instance
             url (str or dict): SQLAlchemy url
         """
-        super().__init__(name, description, x, y, toolbox.project(), logger)
+        super().__init__(name, description, x, y, project, logger)
         if url is None:
             url = dict()
         if url and not isinstance(url["database"], str):
@@ -276,7 +277,7 @@ class DataStore(ProjectItem):
         if dialect == 'sqlite':
             self.enable_sqlite()
         elif dialect == 'mssql':
-            import pyodbc
+            import pyodbc  # pylint: disable=import-outside-toplevel
 
             dsns = pyodbc.dataSources()
             # Collect dsns which use the msodbcsql driver
@@ -442,12 +443,7 @@ class DataStore(ProjectItem):
         new_data_store = dict(old_item_dict)
         if "reference" in new_data_store:
             url_path = new_data_store["reference"]
-            url = {
-                "dialect": "sqlite",
-                "username": None,
-                "host": None,
-                "port": None,
-            }
+            url = {"dialect": "sqlite", "username": None, "host": None, "port": None}
         else:
             url = new_data_store["url"]
             url_path = url["database"]
@@ -461,7 +457,8 @@ class DataStore(ProjectItem):
         new_data_store["url"] = url
         return new_data_store
 
-    def custom_context_menu(self, parent, pos):
+    @staticmethod
+    def custom_context_menu(parent, pos):
         """Returns the context menu for this item.
 
         Args:

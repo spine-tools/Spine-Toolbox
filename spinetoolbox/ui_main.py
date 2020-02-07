@@ -22,17 +22,18 @@ import logging
 import json
 import pathlib
 import numpy as np
-from PySide2.QtCore import QByteArray, QMimeData, Qt, Signal, Slot, QSettings, QUrl, SIGNAL, QStandardPaths
+from PySide2.QtCore import QByteArray, QMimeData, Qt, Signal, Slot, QSettings, QUrl, SIGNAL
+from PySide2.QtGui import QDesktopServices, QGuiApplication, QKeySequence, QStandardItemModel, QIcon, QCursor
 from PySide2.QtWidgets import (
     QMainWindow,
     QApplication,
+    QErrorMessage,
     QFileDialog,
     QMessageBox,
     QCheckBox,
     QDockWidget,
     QAction,
 )
-from PySide2.QtGui import QDesktopServices, QGuiApplication, QKeySequence, QStandardItemModel, QIcon, QCursor
 from .graphics_items import ProjectItemIcon
 from .mvcmodels.project_item_model import ProjectItemModel
 from .mvcmodels.tool_specification_model import ToolSpecificationModel
@@ -53,11 +54,26 @@ from .widgets.python_repl_widget import PythonReplWidget
 from .widgets import toolbars
 from .widgets.open_project_widget import OpenProjectDialog
 from .project import SpineToolboxProject
-from .config import STATUSBAR_SS, TEXTBROWSER_SS, MAINWINDOW_SS, \
-    DOCUMENTATION_PATH, _program_root, LATEST_PROJECT_VERSION, DEFAULT_WORK_DIR
-from .helpers import get_datetime, erase_dir, busy_effect, set_taskbar_icon, \
-    supported_img_formats, create_dir, recursive_overwrite, serialize_path, \
-    deserialize_path
+from .config import (
+    STATUSBAR_SS,
+    TEXTBROWSER_SS,
+    MAINWINDOW_SS,
+    DOCUMENTATION_PATH,
+    _program_root,
+    LATEST_PROJECT_VERSION,
+    DEFAULT_WORK_DIR,
+)
+from .helpers import (
+    get_datetime,
+    erase_dir,
+    busy_effect,
+    set_taskbar_icon,
+    supported_img_formats,
+    create_dir,
+    recursive_overwrite,
+    serialize_path,
+    deserialize_path,
+)
 from .project_upgrader import ProjectUpgrader
 from .project_tree_item import CategoryProjectTreeItem, LeafProjectTreeItem, RootProjectTreeItem
 from .project_items import data_store, data_connection, exporter, tool, view, importer
@@ -66,14 +82,15 @@ from .project_items import data_store, data_connection, exporter, tool, view, im
 class ToolboxUI(QMainWindow):
     """Class for application main GUI functions."""
 
-    # Signals to comply with the spinetoolbox.spine_logger.LoggingSignals interface.
+    # Signals to comply with the spinetoolbox.logger_interface.LoggerInteface interface.
     msg = Signal(str)
     msg_success = Signal(str)
     msg_error = Signal(str)
     msg_warning = Signal(str)
-    dialog = Signal(str)
-    # The rest of the msg_* signals should be moved to LoggingSignals in the long run.
     msg_proc = Signal(str)
+    information_box = Signal(str, str)
+    error_box = Signal(str, str)
+    # The rest of the msg_* signals should be moved to LoggerInterface in the long run.
     msg_proc_error = Signal(str)
     tool_specification_model_changed = Signal("QVariant")
 
@@ -155,7 +172,8 @@ class ToolboxUI(QMainWindow):
         self.msg_proc_error.connect(self.add_process_error_message)
         self.ui.textBrowser_eventlog.anchorClicked.connect(self.open_anchor)
         # Message box signals
-        self.dialog.connect(self._show_message_box)
+        self.information_box.connect(self._show_message_box)
+        self.error_box.connect(self._show_error_box)
         # Menu commands
         self.ui.actionNew.triggered.connect(self.new_project)
         self.ui.actionOpen.triggered.connect(self.open_project)
@@ -267,10 +285,11 @@ class ToolboxUI(QMainWindow):
         """
         p = os.path.join(DOCUMENTATION_PATH, "getting_started.html")
         getting_started_anchor = (
-                "<a style='color:#99CCFF;' title='" + p + "' href='file:///" + p + "'>Getting Started</a>"
+            "<a style='color:#99CCFF;' title='" + p + "' href='file:///" + p + "'>Getting Started</a>"
         )
-        wlcme_msg = "Welcome to Spine Toolbox! If you need help, please read the {0} guide."\
-            .format(getting_started_anchor)
+        wlcme_msg = "Welcome to Spine Toolbox! If you need help, please read the {0} guide.".format(
+            getting_started_anchor
+        )
         if not project_dir:
             open_previous_project = int(self._qsettings.value("appSettings/openPreviousProject", defaultValue="0"))
             if open_previous_project != 2:  # 2: Qt.Checked, ie. open_previous_project==True
@@ -284,10 +303,11 @@ class ToolboxUI(QMainWindow):
             # Previous project was a .proj file -> Show welcome message instead
             self.msg.emit(wlcme_msg)
             return
-        elif not os.path.isdir(project_dir):
+        if not os.path.isdir(project_dir):
             self.ui.statusbar.showMessage("Opening previous project failed", 10000)
-            self.msg_error.emit("Cannot open previous project. Directory <b>{0}</b> may have been moved."
-                                .format(project_dir))
+            self.msg_error.emit(
+                "Cannot open previous project. Directory <b>{0}</b> may have been moved.".format(project_dir)
+            )
             return
         self.open_project(project_dir, clear_logs=False)
 
@@ -297,9 +317,17 @@ class ToolboxUI(QMainWindow):
         Pops up a question box if selected directory is not empty or if it already contains
         a Spine Toolbox project. Initial project name is the directory name.
         """
-        initial_path = QStandardPaths.writableLocation(QStandardPaths.DocumentsLocation)  # Documents
-        if not initial_path:
+        recents = self.qsettings().value("appSettings/recentProjectStorages", defaultValue=None)
+        if not recents:
             initial_path = _program_root
+        else:
+            recents_lst = str(recents).split("\n")
+            if not os.path.isdir(recents_lst[0]):
+                # Remove obsolete entry from recentProjectStorages
+                OpenProjectDialog.remove_directory_from_recents(recents_lst[0], self.qsettings())
+                initial_path = _program_root
+            else:
+                initial_path = recents_lst[0]
         # noinspection PyCallByClass
         project_dir = QFileDialog.getExistingDirectory(self, "Select project directory (New project...)", initial_path)
         if not project_dir:
@@ -322,13 +350,20 @@ class ToolboxUI(QMainWindow):
             location (str): Path to project directory
         """
         self.clear_ui()
-        self._project = SpineToolboxProject(self, name, description, location)
+        self.init_project_item_model()
+        self.ui.treeView_project.selectionModel().selectionChanged.connect(self.item_selection_changed)
+        self._project = SpineToolboxProject(
+            self, name, description, location, self.project_item_model, settings=self._qsettings, logger=self
+        )
         self._project.connect_signals()
-        self._connect_project_to_design_view()
-        self.init_models(tool_specification_paths=list())  # Start project with no tool specifications
+        self._connect_project_signals()
+        self.init_tool_specification_model(list())  # Start project with no tool specifications
         self.setWindowTitle("Spine Toolbox    -- {} --".format(self._project.name))
         self.ui.graphicsView.init_scene(empty=True)
+        # Update recentProjects
         self.update_recent_projects()
+        # Update recentProjectStorages
+        OpenProjectDialog.update_recents(os.path.abspath(os.path.join(location, os.path.pardir)), self.qsettings())
         self.save_project()
 
     @Slot(name="open_project")
@@ -362,9 +397,7 @@ class ToolboxUI(QMainWindow):
             self.remove_path_from_recent_projects(load_dir)
             self.msg_error.emit("Project file <b>{0}</b> missing".format(load_path))
             return False
-        if not self.restore_project(proj_info, load_dir, clear_logs):
-            return False
-        return True
+        return self.restore_project(proj_info, load_dir, clear_logs)
 
     def restore_project(self, project_info, project_dir, clear_logs):
         """Initializes UI, Creates project, models, connections, etc., when opening a project.
@@ -393,19 +426,22 @@ class ToolboxUI(QMainWindow):
         tool_spec_paths = project_info["project"]["tool_specifications"]
         connections = project_info["project"]["connections"]
         project_items = project_info["objects"]
+        # Init project item model
+        self.init_project_item_model()
+        self.ui.treeView_project.selectionModel().selectionChanged.connect(self.item_selection_changed)
         # Create project
-        self._project = SpineToolboxProject(self, name, desc, project_dir)
-        self._connect_project_to_design_view()
-        # Init models and views
+        self._project = SpineToolboxProject(
+            self, name, desc, project_dir, self.project_item_model, settings=self._qsettings, logger=self
+        )
+        self._connect_project_signals()
         self.setWindowTitle("Spine Toolbox    -- {} --".format(self._project.name))
+        # Init tool spec model
+        deserialized_paths = [deserialize_path(spec, self._project.project_dir) for spec in tool_spec_paths]
+        self.init_tool_specification_model(deserialized_paths)
         # Clear text browsers
         if clear_logs:
             self.ui.textBrowser_eventlog.clear()
             self.ui.textBrowser_process_output.clear()
-        # Init models
-        # Deserialize tool spec paths
-        deserialized_paths = [deserialize_path(spec, self._project.project_dir) for spec in tool_spec_paths]
-        self.init_models(deserialized_paths)
         # Populate project model with project items
         if not self._project.load(project_items):
             self.msg_error.emit("Loading project items failed")
@@ -456,9 +492,9 @@ class ToolboxUI(QMainWindow):
         # Ask for a new directory
         # noinspection PyCallByClass, PyArgumentList
         answer = QFileDialog.getExistingDirectory(
-                self,
-                "Select new project directory (Save as...)",
-                os.path.abspath(os.path.join(self._project.project_dir, os.path.pardir))
+            self,
+            "Select new project directory (Save as...)",
+            os.path.abspath(os.path.join(self._project.project_dir, os.path.pardir)),
         )
         if not answer:  # Canceled
             return
@@ -487,8 +523,7 @@ class ToolboxUI(QMainWindow):
         if not self.restore_project(proj_info, answer, clear_logs=False):
             return
         # noinspection PyCallByClass, PyArgumentList
-        QMessageBox.information(self, "Project saved".format(self._project.name),
-                                "Project directory is now\n\n{0}".format(answer))
+        QMessageBox.information(self, f"Project {self._project.name} saved", f"Project directory is now\n\n{answer}")
         return
 
     @Slot(bool)
@@ -510,8 +545,9 @@ class ToolboxUI(QMainWindow):
         )
         QMessageBox.information(self, "Project upgrade wizard", msg)
         # noinspection PyCallByClass
-        answer = QFileDialog.getOpenFileName(self, "Select an old project (.proj file) to upgrade",
-                                             _program_root, "Project file (*.proj)")
+        answer = QFileDialog.getOpenFileName(
+            self, "Select an old project (.proj file) to upgrade", _program_root, "Project file (*.proj)"
+        )
         if not answer[0]:
             return
         fp = answer[0]
@@ -526,31 +562,24 @@ class ToolboxUI(QMainWindow):
         old_project_dir = os.path.normpath(os.path.join(os.path.dirname(fp), fp[:-5]))
         if not os.path.isdir(old_project_dir):
             self.msg_error.emit("Project upgrade failed")
-            self.msg_warning.emit("Project directory <b>{0}</b> does not exist")
+            self.msg_warning.emit("Project directory <b>{0}</b> does not exist".format(old_project_dir))
             return
         # Upgrade project info dict to latest version
         upgraded_proj_info = upgrader.upgrade(proj_info, old_project_dir, proj_dir)
         # Copy project item data from old project to new project directory
         if not upgrader.copy_data(fp, proj_dir):
-            self.msg_warning.emit("Copying data to project <b>{0}</b> failed. "
-                                  "Please copy project item directories to directory <b>{1}</b> manually."
-                                  .format(proj_dir, os.path.join(proj_dir, ".spinetoolbox", "items")))
+            self.msg_warning.emit(
+                "Copying data to project <b>{0}</b> failed. "
+                "Please copy project item directories to directory <b>{1}</b> manually.".format(
+                    proj_dir, os.path.join(proj_dir, ".spinetoolbox", "items")
+                )
+            )
         # Open the upgraded project
         if not self.restore_project(upgraded_proj_info, proj_dir, clear_logs=False):
             return
         # Save project to finish the upgrade process
         self.save_project()
         return
-
-    def init_models(self, tool_specification_paths):
-        """Initialize application internal data models.
-
-        Args:
-            tool_specification_paths (list): List of tool definition file paths used in this project
-        """
-        self.init_project_item_model()
-        self.ui.treeView_project.selectionModel().selectionChanged.connect(self.item_selection_changed)
-        self.init_tool_specification_model(tool_specification_paths)
 
     def init_project_item_model(self):
         """Initializes project item model. Create root and category items and
@@ -579,7 +608,7 @@ class ToolboxUI(QMainWindow):
         n_tools = 0
         self.msg.emit("Loading Tool specifications...")
         for path in tool_specification_paths:
-            if path == "" or not path:
+            if not path:
                 continue
             # Add tool specification into project
             tool_cand = self._project.load_tool_specification_from_file(path)
@@ -676,11 +705,13 @@ class ToolboxUI(QMainWindow):
         """
         # Check if directory is empty and/or a project directory
         is_project_dir = os.path.isdir(os.path.join(project_dir, ".spinetoolbox"))
-        empty = False if len(os.listdir(project_dir)) > 0 else True
+        empty = not bool(os.listdir(project_dir))
         if not empty:
             if is_project_dir:
-                msg1 = "Directory <b>{0}</b> already contains a Spine Toolbox project.<br/><br/>" \
-                       "Would you like to overwrite the existing project?".format(project_dir)
+                msg1 = (
+                    "Directory <b>{0}</b> already contains a Spine Toolbox project.<br/><br/>"
+                    "Would you like to overwrite the existing project?".format(project_dir)
+                )
                 box1 = QMessageBox(
                     QMessageBox.Question, "Overwrite?", msg1, buttons=QMessageBox.Ok | QMessageBox.Cancel, parent=self
                 )
@@ -689,11 +720,12 @@ class ToolboxUI(QMainWindow):
                 if answer1 != QMessageBox.Ok:
                     return False
             else:
-                msg2 = "Directory <b>{0}</b> is not empty.<br/><br/>" \
-                       "Would you like to make this directory into a Spine Toolbox project?".format(project_dir)
+                msg2 = (
+                    "Directory <b>{0}</b> is not empty.<br/><br/>"
+                    "Would you like to make this directory into a Spine Toolbox project?".format(project_dir)
+                )
                 box2 = QMessageBox(
-                    QMessageBox.Question, "Not empty", msg2,
-                    buttons=QMessageBox.Ok | QMessageBox.Cancel, parent=self
+                    QMessageBox.Question, "Not empty", msg2, buttons=QMessageBox.Ok | QMessageBox.Cancel, parent=self
                 )
                 box2.button(QMessageBox.Ok).setText("Go ahead")
                 answer2 = box2.exec_()
@@ -869,7 +901,7 @@ class ToolboxUI(QMainWindow):
         self.remove_tool_specification(index)
 
     @Slot("QModelIndex", name="remove_tool_specification")
-    def remove_tool_specification(self, index):
+    def remove_tool_specification(self, index, ask_verification=True):
         """Removes tool specification from ToolSpecificationModel
         and tool specification file path from project file.
         Removes also Tool specifications from all Tool items
@@ -877,21 +909,23 @@ class ToolboxUI(QMainWindow):
 
         Args:
             index (QModelIndex): Index of selected Tool specification in ToolSpecificationModel
+            ask_verification (bool): If True, displays a dialog box asking user to verify the removal
         """
         sel_tool = self.tool_specification_model.tool_specification(index.row())
         tool_def_path = sel_tool.def_file_path
-        message = "Remove Tool Specification <b>{0}</b> from Project?".format(sel_tool.name)
-        message_box = QMessageBox(
-            QMessageBox.Question,
-            "Remove Tool Specification",
-            message,
-            buttons=QMessageBox.Ok | QMessageBox.Cancel,
-            parent=self,
-        )
-        message_box.button(QMessageBox.Ok).setText("Remove Specification")
-        answer = message_box.exec_()
-        if answer != QMessageBox.Ok:
-            return
+        if ask_verification:
+            message = "Remove Tool Specification <b>{0}</b> from Project?".format(sel_tool.name)
+            message_box = QMessageBox(
+                QMessageBox.Question,
+                "Remove Tool Specification",
+                message,
+                buttons=QMessageBox.Ok | QMessageBox.Cancel,
+                parent=self,
+            )
+            message_box.button(QMessageBox.Ok).setText("Remove Specification")
+            answer = message_box.exec_()
+            if answer != QMessageBox.Ok:
+                return
         # Remove tool def file path from the project.json file
         conf_file = self._project.config_file
         try:
@@ -910,7 +944,7 @@ class ToolboxUI(QMainWindow):
             tool_spec_paths = project_dict["tool_specifications"]
             # Deserialize paths, remove tool spec path, serialize paths again
             des_paths = [deserialize_path(p, self._project.project_dir) for p in tool_spec_paths]
-            des_paths.remove(tool_def_path.replace(os.sep, "/"))
+            des_paths.remove(tool_def_path)
             ser_paths = [serialize_path(pa, self._project.project_dir) for pa in des_paths]
             project_dict["tool_specifications"] = ser_paths
         except KeyError:
@@ -1793,11 +1827,26 @@ class ToolboxUI(QMainWindow):
         mirror_action_to_project_tree_view(paste_action)
         mirror_action_to_project_tree_view(duplicate_action)
 
+    @Slot()
+    def _scroll_event_log_to_end(self):
+        self.ui.textBrowser_eventlog.verticalScrollBar().setValue(
+            self.ui.textBrowser_eventlog.verticalScrollBar().maximum()
+        )
+
     @Slot(str, str)
     def _show_message_box(self, title, message):
         """Shows an information message box."""
         QMessageBox.information(self, title, message)
 
-    def _connect_project_to_design_view(self):
-        """Connects execution start signals to design view to control icon animations."""
+    @Slot(str, str)
+    def _show_error_box(self, title, message):
+        box = QErrorMessage(self)
+        box.setWindowTitle(title)
+        box.setWindowModality(Qt.ApplicationModal)
+        box.showMessage(message)
+        box.deleteLater()
+
+    def _connect_project_signals(self):
+        """Connects signals emitted by project."""
         self._project.dag_execution_about_to_start.connect(self.ui.graphicsView.connect_engine_signals)
+        self._project.project_execution_about_to_start.connect(self._scroll_event_log_to_end)
