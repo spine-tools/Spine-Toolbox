@@ -69,6 +69,7 @@ setup(
     keywords="",
     classifiers=[
     ],
+    python_requires='>=3.6, <3.8',
     install_requires=requirements,
     test_suite="tests",
 )
