@@ -16,7 +16,7 @@ Contains a notification widget.
 :date: 12.12.2019
 """
 
-from PySide2.QtWidgets import QWidget, QLabel, QHBoxLayout, QGraphicsOpacityEffect, QLayout
+from PySide2.QtWidgets import QWidget, QLabel, QHBoxLayout, QGraphicsOpacityEffect, QLayout, QSizePolicy
 from PySide2.QtCore import Qt, Slot, QTimer, QPropertyAnimation, Property, QObject
 from PySide2.QtGui import QFont
 
@@ -41,18 +41,16 @@ class Notification(QWidget):
         self.label.setAlignment(Qt.AlignCenter)
         self.label.setWordWrap(True)
         self.label.setMargin(8)
+        self.label.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
         font = QFont()
         font.setBold(True)
         self.label.setFont(font)
         layout = QHBoxLayout()
         layout.addWidget(self.label)
-        layout.setSizeConstraint(QLayout.SetFixedSize)
+        layout.setSizeConstraint(QLayout.SetMinimumSize)
         layout.setContentsMargins(1, 0, 1, 0)
         self.setLayout(layout)
         self.adjustSize()
-        # Move to the top right corner of the parent
-        x = self._parent.size().width() - self.width() - 2
-        self.move(x, 0)
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setAttribute(Qt.WA_TranslucentBackground)
         ss = (
@@ -85,6 +83,12 @@ class Notification(QWidget):
         self.fade_out_anim.finished.connect(self.close)
         # Start fade in animation
         self.fade_in_anim.start(QPropertyAnimation.DeleteWhenStopped)
+
+    def show(self):
+        # Move to the top right corner of the parent
+        super().show()
+        x = self._parent.size().width() - self.width() - 2
+        self.move(x, self.pos().y())
 
     def get_opacity(self):
         """opacity getter."""
@@ -127,6 +131,7 @@ class NotificationStack(QObject):
         self.notifications = list()
 
     def push(self, txt):
+        """Pushes a notification to the stack with the given text."""
         offset = sum((x.height() for x in self.notifications), 0)
         life_span = self._life_span
         if self.notifications:
@@ -140,6 +145,10 @@ class NotificationStack(QObject):
         notification.show()
 
     def handle_notification_destroyed(self, notification, height):
+        """Removes from the stack the given notification and move up 
+        subsequent ones.
+        """
+        i = self.notifications.index(notification)
         self.notifications.remove(notification)
-        for n in self.notifications:
+        for n in self.notifications[i:]:
             n.move(n.pos().x(), n.pos().y() - height)
