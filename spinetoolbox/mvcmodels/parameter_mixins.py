@@ -18,8 +18,6 @@ Miscelaneous mixins for parameter models
 
 
 def _parse_csv_list(csv_list):
-    if csv_list == "":
-        return []
     try:
         return csv_list.split(",")
     except AttributeError:
@@ -178,6 +176,8 @@ class MakeParameterTagMixin(ConvertToDBMixin):
             return None, [f"Unable to parse {parameter_tag_list}"] if parameter_tag_list else []
         parameter_tag_id_list = []
         for tag in parsed_parameter_tag_list:
+            if tag == "":
+                break
             tag_item = self._db_map_tag_lookup.get(db_map, {}).get(tag)
             if not tag_item:
                 return None, [f"Unknown tag {tag}"]

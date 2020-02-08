@@ -373,6 +373,10 @@ class DataStoreFormBase(QMainWindow):
         self.msg.emit("SQlite file successfully exported.")
 
     @Slot(bool)
+    def refresh_session(self, checked=False):
+        self.db_mngr.refresh_session(*self.db_maps)
+
+    @Slot(bool)
     def commit_session(self, checked=False):
         """Commits session."""
         self.db_mngr.commit_session(*self.db_maps)
@@ -399,10 +403,12 @@ class DataStoreFormBase(QMainWindow):
         self.msg.emit(msg)
 
     @Slot(bool)
-    def refresh_session(self, checked=False):
+    def receive_session_refreshed(self, db_maps):
+        db_maps = set(self.db_maps) & set(db_maps)
+        if not db_maps:
+            return
         self.init_models()
-        msg = "Session refreshed."
-        self.msg.emit(msg)
+        self.msg.emit("Session refreshed.")
 
     @Slot("QVariant", bool)
     def _handle_tag_button_toggled(self, db_map_ids, checked):
@@ -567,6 +573,9 @@ class DataStoreFormBase(QMainWindow):
     def receive_parameter_tags_updated(self, db_map_data):
         self.notify_items_changed("updated", "parameter tag", db_map_data)
         self.parameter_tag_toolbar.receive_parameter_tags_updated(db_map_data)
+
+    def receive_parameter_definition_tags_set(self, db_map_data):
+        self.notify_items_changed("set", "parameter definition tag", db_map_data)
 
     def receive_object_classes_removed(self, db_map_data):
         self.notify_items_changed("removed", "object class", db_map_data)

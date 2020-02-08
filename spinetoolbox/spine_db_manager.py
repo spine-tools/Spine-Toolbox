@@ -43,6 +43,7 @@ from .spine_db_commands import (
     AddCheckedParameterValuesCommand,
     UpdateItemsCommand,
     UpdateCheckedParameterValuesCommand,
+    SetParameterDefinitionTagsCommand,
     RemoveItemsCommand,
 )
 from .widgets.manage_db_items_dialog import CommitDialog
@@ -60,43 +61,44 @@ class SpineDBManager(QObject):
     TODO: Expand description, how it works, the cache, the signals, etc.
     """
 
-    msg_error = Signal("QVariant")
+    msg_error = Signal(object)
+    session_refreshed = Signal(set)
     session_committed = Signal(set)
     session_rolled_back = Signal(set)
     # Added
-    object_classes_added = Signal("QVariant")
-    objects_added = Signal("QVariant")
-    relationship_classes_added = Signal("QVariant")
-    relationships_added = Signal("QVariant")
-    parameter_definitions_added = Signal("QVariant")
-    _parameter_definitions_added = Signal("QVariant")
-    parameter_values_added = Signal("QVariant")
-    _parameter_values_added = Signal("QVariant")
-    parameter_value_lists_added = Signal("QVariant")
-    parameter_tags_added = Signal("QVariant")
+    object_classes_added = Signal(object)
+    objects_added = Signal(object)
+    relationship_classes_added = Signal(object)
+    relationships_added = Signal(object)
+    parameter_definitions_added = Signal(object)
+    _parameter_definitions_added = Signal(object)
+    parameter_values_added = Signal(object)
+    _parameter_values_added = Signal(object)
+    parameter_value_lists_added = Signal(object)
+    parameter_tags_added = Signal(object)
     # Removed
-    object_classes_removed = Signal("QVariant")
-    objects_removed = Signal("QVariant")
-    relationship_classes_removed = Signal("QVariant")
-    relationships_removed = Signal("QVariant")
-    parameter_definitions_removed = Signal("QVariant")
-    parameter_values_removed = Signal("QVariant")
-    parameter_value_lists_removed = Signal("QVariant")
-    parameter_tags_removed = Signal("QVariant")
+    object_classes_removed = Signal(object)
+    objects_removed = Signal(object)
+    relationship_classes_removed = Signal(object)
+    relationships_removed = Signal(object)
+    parameter_definitions_removed = Signal(object)
+    parameter_values_removed = Signal(object)
+    parameter_value_lists_removed = Signal(object)
+    parameter_tags_removed = Signal(object)
     # Updated
-    object_classes_updated = Signal("QVariant")
-    objects_updated = Signal("QVariant")
-    relationship_classes_updated = Signal("QVariant")
-    relationships_updated = Signal("QVariant")
-    parameter_definitions_updated = Signal("QVariant")
-    _parameter_definitions_updated = Signal("QVariant")
-    parameter_values_updated = Signal("QVariant")
-    _parameter_values_updated = Signal("QVariant")
-    parameter_value_lists_updated = Signal("QVariant")
-    parameter_tags_updated = Signal("QVariant")
-    parameter_definition_tags_set = Signal("QVariant")
+    object_classes_updated = Signal(object)
+    objects_updated = Signal(object)
+    relationship_classes_updated = Signal(object)
+    relationships_updated = Signal(object)
+    parameter_definitions_updated = Signal(object)
+    _parameter_definitions_updated = Signal(object)
+    parameter_values_updated = Signal(object)
+    _parameter_values_updated = Signal(object)
+    parameter_value_lists_updated = Signal(object)
+    parameter_tags_updated = Signal(object)
+    parameter_definition_tags_set = Signal(object)
     # Uncached
-    items_removed_from_cache = Signal("QVariant")
+    items_removed_from_cache = Signal(object)
 
     _GROUP_SEP = " \u01C0 "
 
@@ -238,6 +240,14 @@ class SpineDBManager(QObject):
         self.signaller.remove_db_map_listener(db_map, listener)
         return True
 
+    def refresh_session(self, *db_maps):
+        refreshed_db_maps = set()
+        for db_map in db_maps:
+            if self._cache.pop(db_map, None) is not None:
+                refreshed_db_maps.add(db_map)
+        if refreshed_db_maps:
+            self.session_refreshed.emit(refreshed_db_maps)
+
     def commit_session(self, *db_maps):
         error_log = {}
         committed_db_maps = set()
@@ -356,6 +366,10 @@ class SpineDBManager(QObject):
             lambda db_map_data: self.cache_items("parameter definition", db_map_data)
         )
         self.parameter_values_added.connect(lambda db_map_data: self.cache_items("parameter value", db_map_data))
+        self.parameter_value_lists_added.connect(
+            lambda db_map_data: self.cache_items("parameter value list", db_map_data)
+        )
+        self.parameter_tags_added.connect(lambda db_map_data: self.cache_items("parameter tag", db_map_data))
         # Update in cache
         self.object_classes_updated.connect(lambda db_map_data: self.cache_items("object class", db_map_data))
         self.objects_updated.connect(lambda db_map_data: self.cache_items("object", db_map_data))
@@ -367,6 +381,10 @@ class SpineDBManager(QObject):
             lambda db_map_data: self.cache_items("parameter definition", db_map_data)
         )
         self.parameter_values_updated.connect(lambda db_map_data: self.cache_items("parameter value", db_map_data))
+        self.parameter_value_lists_updated.connect(
+            lambda db_map_data: self.cache_items("parameter value list", db_map_data)
+        )
+        self.parameter_tags_updated.connect(lambda db_map_data: self.cache_items("parameter tag", db_map_data))
         self.parameter_definition_tags_set.connect(self.cache_parameter_definition_tags)
         # Go from compact to extend format
         self._parameter_definitions_added.connect(self.do_add_parameter_definitions)
@@ -413,10 +431,14 @@ class SpineDBManager(QObject):
             lambda db_map_data: self.uncache_items("parameter definition", db_map_data)
         )
         self.parameter_values_removed.connect(lambda db_map_data: self.uncache_items("parameter value", db_map_data))
+        self.parameter_value_lists_removed.connect(
+            lambda db_map_data: self.uncache_items("parameter value list", db_map_data)
+        )
+        self.parameter_tags_removed.connect(lambda db_map_data: self.uncache_items("parameter tag", db_map_data))
         # Do this last, so cache is ready when listeners receive signals
         self.signaller.connect_signals()
 
-    @Slot("QVariant")
+    @Slot(object)
     def receive_error_msg(self, db_map_error_log):
         msg = ""
         for db_map, error_log in db_map_error_log.items():
@@ -435,7 +457,7 @@ class SpineDBManager(QObject):
         """
         for db_map, items in db_map_data.items():
             for item in items:
-                self._cache.setdefault(db_map, {}).setdefault(item_type, {}).update({item["id"]: item})
+                self._cache.setdefault(db_map, {}).setdefault(item_type, {}).setdefault(item["id"], {}).update(item)
 
     def uncache_items(self, item_type, db_map_data):
         """Removes data from cache.
@@ -1041,7 +1063,8 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of items to set keyed by DiffDatabaseMapping
         """
-        self.add_or_update_items(db_map_data, "set_parameter_definition_tags", "parameter_definition_tags_set")
+        for db_map, data in db_map_data.items():
+            self.undo_stack[db_map].push(SetParameterDefinitionTagsCommand(self, db_map, data))
 
     def remove_items(self, db_map_typed_data):
         for db_map, typed_data in db_map_typed_data.items():
@@ -1118,7 +1141,7 @@ class SpineDBManager(QObject):
     def _to_ids(db_map_data):
         return {db_map: {x["id"] for x in data} for db_map, data in db_map_data.items()}
 
-    @Slot("QVariant", name="cascade_remove_objects")
+    @Slot(object)
     def cascade_remove_objects(self, db_map_data):
         """Removes objects in cascade when removing object classes.
 
@@ -1129,7 +1152,7 @@ class SpineDBManager(QObject):
         if any(db_map_cascading_data.values()):
             self.objects_removed.emit(db_map_cascading_data)
 
-    @Slot("QVariant", name="cascade_remove_relationship_classes")
+    @Slot(object)
     def cascade_remove_relationship_classes(self, db_map_data):
         """Removes relationship classes in cascade when removing object classes.
 
@@ -1140,7 +1163,7 @@ class SpineDBManager(QObject):
         if any(db_map_cascading_data.values()):
             self.relationship_classes_removed.emit(db_map_cascading_data)
 
-    @Slot("QVariant", name="cascade_remove_relationships_by_class")
+    @Slot(object)
     def cascade_remove_relationships_by_class(self, db_map_data):
         """Removes relationships in cascade when removing objects.
 
@@ -1151,7 +1174,7 @@ class SpineDBManager(QObject):
         if any(db_map_cascading_data.values()):
             self.relationships_removed.emit(db_map_cascading_data)
 
-    @Slot("QVariant", name="cascade_remove_relationships_by_object")
+    @Slot(object)
     def cascade_remove_relationships_by_object(self, db_map_data):
         """Removes relationships in cascade when removing relationship classes.
 
@@ -1162,7 +1185,7 @@ class SpineDBManager(QObject):
         if any(db_map_cascading_data.values()):
             self.relationships_removed.emit(db_map_cascading_data)
 
-    @Slot("QVariant", name="cascade_remove_parameter_definitions")
+    @Slot(object)
     def cascade_remove_parameter_definitions(self, db_map_data):
         """Removes parameter definitions in cascade when removing entity classes.
 
@@ -1173,7 +1196,7 @@ class SpineDBManager(QObject):
         if any(db_map_cascading_data.values()):
             self.parameter_definitions_removed.emit(db_map_cascading_data)
 
-    @Slot("QVariant", name="cascade_remove_parameter_values_by_entity_class")
+    @Slot(object)
     def cascade_remove_parameter_values_by_entity_class(self, db_map_data):
         """Removes parameter values in cascade when removing entity classes.
 
@@ -1184,7 +1207,7 @@ class SpineDBManager(QObject):
         if any(db_map_cascading_data.values()):
             self.parameter_values_removed.emit(db_map_cascading_data)
 
-    @Slot("QVariant", name="cascade_remove_parameter_values_by_entity")
+    @Slot(object)
     def cascade_remove_parameter_values_by_entity(self, db_map_data):
         """Removes parameter values in cascade when removing entity classes when removing entities.
 
@@ -1195,7 +1218,7 @@ class SpineDBManager(QObject):
         if any(db_map_cascading_data.values()):
             self.parameter_values_removed.emit(db_map_cascading_data)
 
-    @Slot("QVariant", name="cascade_remove_parameter_values_by_definition")
+    @Slot(object)
     def cascade_remove_parameter_values_by_definition(self, db_map_data):
         """Removes parameter values in cascade when when removing parameter definitions.
 
@@ -1206,7 +1229,7 @@ class SpineDBManager(QObject):
         if any(db_map_cascading_data.values()):
             self.parameter_values_removed.emit(db_map_cascading_data)
 
-    @Slot("QVariant", name="cascade_refresh_relationship_classes")
+    @Slot(object)
     def cascade_refresh_relationship_classes(self, db_map_data):
         """Refreshes cached relationship classes when updating object classes.
 
@@ -1222,7 +1245,7 @@ class SpineDBManager(QObject):
         }
         self.relationship_classes_updated.emit(db_map_cascading_data)
 
-    @Slot("QVariant", name="cascade_refresh_relationships_by_object")
+    @Slot(object)
     def cascade_refresh_relationships_by_object(self, db_map_data):
         """Refreshed cached relationships in cascade when updating objects.
 
@@ -1238,7 +1261,7 @@ class SpineDBManager(QObject):
         }
         self.relationships_updated.emit(db_map_cascading_data)
 
-    @Slot("QVariant", name="cascade_refresh_parameter_definitions")
+    @Slot(object)
     def cascade_refresh_parameter_definitions(self, db_map_data):
         """Refreshes cached parameter definitions in cascade when updating entity classes.
 
@@ -1254,7 +1277,7 @@ class SpineDBManager(QObject):
         }
         self._parameter_definitions_updated.emit(db_map_cascading_data)
 
-    @Slot("QVariant", name="cascade_refresh_parameter_definitions_by_value_list")
+    @Slot(object)
     def cascade_refresh_parameter_definitions_by_value_list(self, db_map_data):
         """Refreshes cached parameter definitions when updating parameter value lists.
 
@@ -1270,7 +1293,7 @@ class SpineDBManager(QObject):
         }
         self._parameter_definitions_updated.emit(db_map_cascading_data)
 
-    @Slot("QVariant", name="cascade_refresh_parameter_definitions_by_tag")
+    @Slot(object)
     def cascade_refresh_parameter_definitions_by_tag(self, db_map_data):
         """Refreshes cached parameter definitions when updating parameter tags.
 
@@ -1286,7 +1309,7 @@ class SpineDBManager(QObject):
         }
         self._parameter_definitions_updated.emit(db_map_cascading_data)
 
-    @Slot("QVariant", name="cascade_refresh_parameter_values_by_entity_class")
+    @Slot(object)
     def cascade_refresh_parameter_values_by_entity_class(self, db_map_data):
         """Refreshes cached parameter values in cascade when updating entity classes.
 
@@ -1302,7 +1325,7 @@ class SpineDBManager(QObject):
         }
         self._parameter_values_updated.emit(db_map_cascading_data)
 
-    @Slot("QVariant", name="cascade_refresh_parameter_values_by_entity")
+    @Slot(object)
     def cascade_refresh_parameter_values_by_entity(self, db_map_data):
         """Refreshes cached parameter values in cascade when updating entities.
 
@@ -1318,7 +1341,7 @@ class SpineDBManager(QObject):
         }
         self._parameter_values_updated.emit(db_map_cascading_data)
 
-    @Slot("QVariant", name="cascade_refresh_parameter_values_by_definition")
+    @Slot(object)
     def cascade_refresh_parameter_values_by_definition(self, db_map_data):
         """Refreshes cached parameter values in cascade when updating parameter definitions.
 
@@ -1421,7 +1444,7 @@ class SpineDBManager(QObject):
             ]
         return db_map_cascading_data
 
-    @Slot("QVariant")
+    @Slot(object)
     def do_add_parameter_definitions(self, db_map_data):
         """Adds parameter definitions in extended format given data in compact format.
 
@@ -1434,7 +1457,7 @@ class SpineDBManager(QObject):
         }
         self.parameter_definitions_added.emit(d)
 
-    @Slot("QVariant")
+    @Slot(object)
     def do_add_parameter_values(self, db_map_data):
         """Adds parameter values in extended format given data in compact format.
 
@@ -1447,7 +1470,7 @@ class SpineDBManager(QObject):
         }
         self.parameter_values_added.emit(d)
 
-    @Slot("QVariant")
+    @Slot(object)
     def do_update_parameter_definitions(self, db_map_data):
         """Updates parameter definitions in extended format given data in compact format.
 
@@ -1460,7 +1483,7 @@ class SpineDBManager(QObject):
         }
         self.parameter_definitions_updated.emit(d)
 
-    @Slot("QVariant")
+    @Slot(object)
     def do_update_parameter_values(self, db_map_data):
         """Updates parameter values in extended format given data in compact format.
 
@@ -1473,7 +1496,7 @@ class SpineDBManager(QObject):
         }
         self.parameter_values_updated.emit(d)
 
-    @Slot("QVariant")
+    @Slot(object)
     def cache_parameter_definition_tags(self, db_map_data):
         """Caches parameter definition tags in the parameter definition dictionary.
 

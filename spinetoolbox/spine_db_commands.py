@@ -41,6 +41,8 @@ def _cache_to_db_parameter_definition(item):
     item = deepcopy(item)
     if "parameter_name" in item:
         item["name"] = item.pop("parameter_name")
+    if "value_list_id" in item:
+        item["parameter_value_list_id"] = item.pop("value_list_id")
     return item
 
 
@@ -214,7 +216,6 @@ class AddItemsCommand(CommandBase):
         }
         self.method_name = self._redo_method_name[self.item_type]
         self.undo_db_map_data = {db_map: {self.item_type: data} for db_map, data in db_map_data.items()}
-        self._completed = True
 
     def data(self):
         return {_format_item(self.item_type, item): [] for item in self.undo_db_map_data[self.db_map][self.item_type]}
@@ -267,18 +268,17 @@ class UpdateItemsCommand(CommandBase):
             item_type (str): the item type
         """
         super().__init__(db_mngr, db_map)
-        self.redo_db_map_data = {db_map: data}
         self.item_type = item_type
+        self.redo_db_map_data = {db_map: data}
+        self.undo_db_map_data = {db_map: [self._undo_item(db_map, item) for item in data]}
         self.method_name = self._method_name[item_type]
         self.emit_signal_name = self._emit_signal_name[item_type]
         self.receive_signal = getattr(db_mngr, self.emit_signal_name)
         self.setText(self._command_name[item_type] + f" in '{db_map.codename}'")
-        self.undo_db_map_data = {db_map: [self._undo_item(db_map, item["id"]) for item in data]}
-        self._completed = False
 
-    def _undo_item(self, db_map, id_):
-        item = self.db_mngr.get_item(db_map, self.item_type, id_)
-        return _cache_to_db_item(self.item_type, item)
+    def _undo_item(self, db_map, redo_item):
+        undo_item = self.db_mngr.get_item(db_map, self.item_type, redo_item["id"])
+        return _cache_to_db_item(self.item_type, undo_item)
 
     @CommandBase.redomethod
     def redo(self):
@@ -295,6 +295,28 @@ class UpdateCheckedParameterValuesCommand(UpdateItemsCommand):
     def __init__(self, db_mngr, db_map, data):
         super().__init__(db_mngr, db_map, data, "parameter value")
         self.method_name = "update_checked_parameter_values"
+
+
+class SetParameterDefinitionTagsCommand(CommandBase):
+    def __init__(self, db_mngr, db_map, data):
+        super().__init__(db_mngr, db_map)
+        self.redo_db_map_data = {db_map: data}
+        self.undo_db_map_data = {db_map: [self._undo_item(db_map, item) for item in data]}
+        self.method_name = "set_parameter_definition_tags"
+        self.emit_signal_name = "parameter_definition_tags_set"
+        self.setText(f"set parameter definition tags in '{db_map.codename}'")
+        self.receive_signal = self.db_mngr.parameter_definition_tags_set
+
+    def _undo_item(self, db_map, redo_item):
+        undo_item = self.db_mngr.get_item(db_map, "parameter definition", redo_item["parameter_definition_id"])
+        return {"parameter_definition_id": undo_item["id"], "parameter_tag_id_list": undo_item["parameter_tag_id_list"]}
+
+    @CommandBase.redomethod
+    def redo(self):
+        self.db_mngr.add_or_update_items(self.redo_db_map_data, self.method_name, self.emit_signal_name)
+
+    def undo(self):
+        self.db_mngr.add_or_update_items(self.undo_db_map_data, self.method_name, self.emit_signal_name)
 
 
 class RemoveItemsCommand(CommandBase):
