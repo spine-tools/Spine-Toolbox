@@ -22,9 +22,10 @@ class TestTreeViewFormAddMixin:
     def test_add_object_classes_to_object_tree_model(self):
         """Test that object classes are added to the object tree model.
         """
+        root_item = self.tree_view_form.object_tree_model.root_item
+        root_item.fetch_more()
         object_classes = [self.fish_class, self.dog_class]
         self.db_mngr.object_classes_added.emit({self.mock_db_map: object_classes})
-        root_item = self.tree_view_form.object_tree_model.root_item
         fish_item, dog_item = root_item.children
         self.assertEqual(fish_item.item_type, "object class")
         self.assertEqual(fish_item.display_name, "fish")

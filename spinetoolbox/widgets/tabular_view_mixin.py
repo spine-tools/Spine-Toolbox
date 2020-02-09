@@ -10,7 +10,7 @@
 ######################################################################################################################
 
 """
-Contains TabularViewForm class and some related constants.
+Contains TabularViewMixin class.
 
 :author: P. Vennström (VTT)
 :date:   1.11.2018
@@ -171,6 +171,7 @@ class TabularViewMixin:
         class_item = next(model.root_item.find_children_by_id(self.db_map, class_id))
         if class_item.can_fetch_more():
             class_item.fetch_more()
+            model.layoutChanged.emit()
         return [item.db_map_data(self.db_map) for item in class_item.find_children_by_id(self.db_map, True)]
 
     def load_empty_relationship_data(self, objects_per_class=None):
