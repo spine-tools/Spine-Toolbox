@@ -100,25 +100,25 @@ class EntityTreeModel(MinimalTreeModel):
         for index in indexes:
             self._select_index(index)
 
-    def cascade_filter_nodes_by_id(self, db_map, *ids_set, parent_items=(), fetch=False, return_unfetched=False):
-        """Filter nodes by ids in cascade starting from the list of parent items.
-        Returns the nodes at the lowest level attained.
-        Optionally fetches the nodes as it goes.
+    def find_leaves(self, db_map, *ids_path, parent_items=(), fetch=False):
+        """Returns leaf-nodes following the given path of ids, where each element in ids_path is
+        a set of ids to jump from one level in the tree to the next.
+        Optionally fetches nodes as it goes.
         """
         if not parent_items:
+            # Start from the root node
             parent_items = [self.root_item]
-        for ids in ids_set:
+        for ids in ids_path:
+            # Move to the next level in the ids path
             parent_items = [
                 child for parent_item in parent_items for child in parent_item.find_children_by_id(db_map, *ids)
             ]
-            if fetch:
-                for parent_item in parent_items:
-                    parent = self.index_from_item(parent_item)
-                    self.canFetchMore(parent) and self.fetchMore(parent)  # pylint: disable=expression-not-assigned
-        if not return_unfetched:
-            return [
-                parent_item for parent_item in parent_items if not self.canFetchMore(self.index_from_item(parent_item))
-            ]
+            if not fetch:
+                continue
+            # Fetch
+            for parent_item in parent_items:
+                parent = self.index_from_item(parent_item)
+                self.canFetchMore(parent) and self.fetchMore(parent)  # pylint: disable=expression-not-assigned
         return parent_items
 
 
@@ -164,7 +164,7 @@ class ObjectTreeModel(EntityTreeModel):
                 d.setdefault(item["class_id"], set()).add(item["id"])
             for class_id, ids in d.items():
                 # Find the parents corresponding the this class id and put them in the result
-                for parent_item in self.cascade_filter_nodes_by_id(db_map, (class_id,)):
+                for parent_item in self.find_leaves(db_map, (class_id,)):
                     result.setdefault(parent_item, {})[db_map] = ids
         return result
 
@@ -184,7 +184,7 @@ class ObjectTreeModel(EntityTreeModel):
                 for object_class_id in item["object_class_id_list"].split(","):
                     d.setdefault(int(object_class_id), set()).add(item["id"])
             for object_class_id, ids in d.items():
-                for parent_item in self.cascade_filter_nodes_by_id(db_map, (object_class_id,), (True,)):
+                for parent_item in self.find_leaves(db_map, (object_class_id,), (True,)):
                     result.setdefault(parent_item, {})[db_map] = ids
         return result
 
@@ -205,7 +205,7 @@ class ObjectTreeModel(EntityTreeModel):
                     key = (int(object_id), item["class_id"])
                     d.setdefault(key, set()).add(item["id"])
             for (object_id, class_id), ids in d.items():
-                for parent_item in self.cascade_filter_nodes_by_id(db_map, (True,), (object_id,), (class_id,)):
+                for parent_item in self.find_leaves(db_map, (True,), (object_id,), (class_id,)):
                     result.setdefault(parent_item, {})[db_map] = ids
         return result
 
@@ -285,9 +285,7 @@ class ObjectTreeModel(EntityTreeModel):
         object_id = object_ids[pos]
         object_class_id = object_class_ids[pos]
         # Return first node that passes all cascade fiters
-        for parent_item in self.cascade_filter_nodes_by_id(
-            db_map, (object_class_id,), (object_id,), (rel_cls_id,), fetch=True
-        ):
+        for parent_item in self.find_leaves(db_map, (object_class_id,), (object_id,), (rel_cls_id,), fetch=True):
             for item in parent_item.find_children(lambda child: child.display_id == rel_item.display_id):
                 return self.index_from_item(item)
         return None
@@ -325,7 +323,7 @@ class RelationshipTreeModel(EntityTreeModel):
             for item in items:
                 d.setdefault(item["class_id"], set()).add(item["id"])
             for class_id, ids in d.items():
-                for parent_item in self.cascade_filter_nodes_by_id(db_map, (class_id,)):
+                for parent_item in self.find_leaves(db_map, (class_id,)):
                     result.setdefault(parent_item, {})[db_map] = ids
         return result
 

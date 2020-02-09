@@ -189,9 +189,9 @@ class MultiDBTreeItem(TreeItem):
 
     def fetch_more(self):
         """Fetches children from all associated databases."""
+        super().fetch_more()
         db_map_ids = {db_map: list(self._get_children_ids(db_map)) for db_map in self.db_maps}
         self.append_children_by_id(db_map_ids)
-        self._fetched = True
 
     def _get_children_ids(self, db_map):
         """Returns a set of children ids.
@@ -205,6 +205,9 @@ class MultiDBTreeItem(TreeItem):
         Args:
             db_map_ids (dict): maps DiffDatabaseMapping instances to list of ids
         """
+        if self.can_fetch_more():
+            self.model.layoutChanged.emit()
+            return
         new_children = []
         for db_map, ids in db_map_ids.items():
             new_children += self._create_new_children(db_map, ids)
@@ -217,6 +220,9 @@ class MultiDBTreeItem(TreeItem):
         Args:
             db_map_ids (dict): maps DiffDatabaseMapping instances to list of ids
         """
+        if self.can_fetch_more():
+            self.model.layoutChanged.emit()
+            return
         for db_map, ids in db_map_ids.items():
             for child in self.find_children_by_id(db_map, *ids, reverse=True):
                 child.deep_remove_db_map(db_map)
@@ -236,6 +242,8 @@ class MultiDBTreeItem(TreeItem):
         Args:
             db_map_ids (dict): maps DiffDatabaseMapping instances to list of ids
         """
+        if self.can_fetch_more():
+            return
         # Find updated rows
         updated_rows = []
         for db_map, ids in db_map_ids.items():
@@ -326,9 +334,6 @@ class MultiDBTreeItem(TreeItem):
     def default_parameter_data(self):
         """Returns data to set as default in a parameter table when this item is selected."""
         return {"database": self.first_db_map.codename}
-
-    def column_count(self):
-        return 2
 
 
 class TreeRootItem(MultiDBTreeItem):
