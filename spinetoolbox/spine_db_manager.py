@@ -459,6 +459,18 @@ class SpineDBManager(QObject):
             for item in items:
                 self._cache.setdefault(db_map, {}).setdefault(item_type, {})[item["id"]] = item
 
+    @Slot(object)
+    def cache_parameter_definition_tags(self, db_map_data):
+        """Caches parameter definition tags in the parameter definition dictionary.
+
+        Args:
+            db_map_data (dict): lists of parameter definition items keyed by DiffDatabaseMapping
+        """
+        for db_map, items in db_map_data.items():
+            for item in items:
+                cache_item = self._cache[db_map]["parameter definition"][item.pop("parameter_definition_id")]
+                cache_item.update(item)
+
     def uncache_items(self, item_type, db_map_data):
         """Removes data from cache.
 
@@ -1495,15 +1507,3 @@ class SpineDBManager(QObject):
             for db_map, items in db_map_data.items()
         }
         self.parameter_values_updated.emit(d)
-
-    @Slot(object)
-    def cache_parameter_definition_tags(self, db_map_data):
-        """Caches parameter definition tags in the parameter definition dictionary.
-
-        Args:
-            db_map_data (dict): lists of parameter definition items keyed by DiffDatabaseMapping
-        """
-        for items in db_map_data.values():
-            for item in items:
-                item["id"] = item.pop("parameter_definition_id")
-        self.cache_items("parameter definition", db_map_data)
