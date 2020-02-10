@@ -538,6 +538,11 @@ class ParameterViewMixin:
         self.object_parameter_value_model.receive_parameter_data_updated(db_map_data)
         self.relationship_parameter_value_model.receive_parameter_data_updated(db_map_data)
 
+    def receive_parameter_definition_tags_set(self, db_map_data):
+        super().receive_parameter_definition_tags_set(db_map_data)
+        self.object_parameter_definition_model.receive_parameter_definition_tags_set(db_map_data)
+        self.relationship_parameter_definition_model.receive_parameter_definition_tags_set(db_map_data)
+
     def receive_object_classes_removed(self, db_map_data):
         super().receive_object_classes_removed(db_map_data)
         self.object_parameter_definition_model.receive_entity_classes_removed(db_map_data)

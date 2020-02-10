@@ -505,6 +505,9 @@ class CompoundParameterDefinitionMixin:
     def item_type(self):
         return "parameter definition"
 
+    def receive_parameter_definition_tags_set(self, db_map_data):
+        self._emit_data_changed_for_column("parameter_tag_list")
+
 
 class CompoundParameterValueMixin:
     """Handles signals from db mngr for parameter value models."""
