@@ -68,6 +68,9 @@ class EmptyParameterModel(EmptyRowModel):
     def accepted_rows(self):
         return list(range(self.rowCount()))
 
+    def db_item(self, _index):  # pylint: disable=no-self-use
+        return None
+
     def flags(self, index):
         flags = super().flags(index)
         if self.header[index.column()] == "parameter_tag_list":

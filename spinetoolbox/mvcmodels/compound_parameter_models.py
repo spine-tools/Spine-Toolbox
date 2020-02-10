@@ -459,12 +459,13 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         self.dataChanged.emit(self.index(0, column), self.index(self.rowCount() - 1, column), [Qt.DisplayRole])
 
     def db_item(self, index):
-        id_ = self.item_at_row(index.row())
-        db_map = self.sub_model_at_row(index.row()).db_map
-        return self.db_mngr.get_item(db_map, self.item_type, id_)
+        sub_index = self.map_to_sub(index)
+        return sub_index.model().db_item(sub_index)
 
     def value_name(self, index):
         item = self.db_item(index)
+        if item is None:
+            return ""
         entity_name_key = {
             "parameter definition": {
                 "object class": "object_class_name",

@@ -91,6 +91,10 @@ class SingleParameterModel(MinimalTableModel):
         """This model doesn't support row insertion."""
         return False
 
+    def db_item(self, index):
+        id_ = self._main_data[index.row()]
+        return self.db_mngr.get_item(self.db_map, self.item_type, id_)
+
     def flags(self, index):
         """Make fixed indexes non-editable."""
         flags = super().flags(index)
