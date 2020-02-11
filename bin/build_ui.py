@@ -102,7 +102,7 @@ for entry in os.scandir(resources_dir):
 for qrc_entry in qrc_entries:
     base, _ = os.path.splitext(qrc_entry.name)
     py_path = py_paths.get(base)
-    if py_path is None or args.force:
+    if py_path is None or not os.path.isfile(py_path) or args.force:
         output_name = base + "_rc.py"
         output_path = os.path.join(project_source_dir, output_name)
         build_qrc(qrc_entry.path, output_path, args.force)
