@@ -42,7 +42,6 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
     """
 
     remove_selection_requested = Signal()
-    remove_icon = QIcon(":/icons/menu_icons/cog_minus.svg")
 
     def __init__(self, parent, db_mngr, *db_maps):
         """Initializes model.
@@ -57,6 +56,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         self.db_maps = db_maps
         self._auto_filter = dict()
         self._accepted_entity_class_ids = {}  # Accepted by main filter
+        self.remove_icon = QIcon(":/icons/menu_icons/cog_minus.svg")
 
     @property
     def entity_class_type(self):
