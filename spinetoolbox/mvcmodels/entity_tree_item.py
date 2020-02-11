@@ -354,7 +354,9 @@ class TreeRootItem(MultiDBTreeItem):
 class ObjectTreeRootItem(TreeRootItem):
     """An object tree root item."""
 
-    context_menu_actions = [{"Add object classes": QIcon(":/icons/menu_icons/cube_plus.svg")}]
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.context_menu_actions = [{"Add object classes": QIcon(":/icons/menu_icons/cube_plus.svg")}]
 
     def _get_children_ids(self, db_map):
         """Returns a set of object class ids."""
@@ -369,7 +371,9 @@ class ObjectTreeRootItem(TreeRootItem):
 class RelationshipTreeRootItem(TreeRootItem):
     """A relationship tree root item."""
 
-    context_menu_actions = [{"Add relationship classes": QIcon(":/icons/menu_icons/cubes_plus.svg")}]
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.context_menu_actions = [{"Add relationship classes": QIcon(":/icons/menu_icons/cubes_plus.svg")}]
 
     def _get_children_ids(self, db_map):
         """Returns a set of relationship class ids."""
@@ -402,14 +406,15 @@ class ObjectClassItem(EntityClassItem):
     """An object class item."""
 
     item_type = "object class"
-    context_menu_actions = [
-        {
-            "Add relationship classes": QIcon(":/icons/menu_icons/cubes_plus.svg"),
-            "Add objects": QIcon(":/icons/menu_icons/cube_plus.svg"),
-        },
-        {"Edit object classes": QIcon(":/icons/menu_icons/cube_pen.svg")},
-        {"Remove selection": QIcon(":/icons/menu_icons/cube_minus.svg")},
-    ]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.context_menu_actions = [
+            {"Add relationship classes": QIcon(":/icons/menu_icons/cubes_plus.svg"),
+             "Add objects": QIcon(":/icons/menu_icons/cube_plus.svg"),},
+            {"Edit object classes": QIcon(":/icons/menu_icons/cube_pen.svg")},
+            {"Remove selection": QIcon(":/icons/menu_icons/cube_minus.svg")},
+        ]
 
     @property
     def display_icon(self):
@@ -435,11 +440,14 @@ class RelationshipClassItem(EntityClassItem):
 
     visual_key = ["name", "object_class_name_list"]
     item_type = "relationship class"
-    context_menu_actions = [
-        {"Add relationships": QIcon(":/icons/menu_icons/cubes_plus.svg")},
-        {"Edit relationship classes": QIcon(":/icons/menu_icons/cubes_pen.svg")},
-        {"Remove selection": QIcon(":/icons/menu_icons/cubes_minus.svg")},
-    ]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.context_menu_actions = [
+            {"Add relationships": QIcon(":/icons/menu_icons/cubes_plus.svg")},
+            {"Edit relationship classes": QIcon(":/icons/menu_icons/cubes_pen.svg")},
+            {"Remove selection": QIcon(":/icons/menu_icons/cubes_minus.svg")},
+        ]
 
     @property
     def display_icon(self):
@@ -490,10 +498,13 @@ class ObjectItem(EntityItem):
     """An object item."""
 
     item_type = "object"
-    context_menu_actions = [
-        {"Edit objects": QIcon(":/icons/menu_icons/cube_pen.svg")},
-        {"Remove selection": QIcon(":/icons/menu_icons/cube_minus.svg")},
-    ]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.context_menu_actions = [
+            {"Edit objects": QIcon(":/icons/menu_icons/cube_pen.svg")},
+            {"Remove selection": QIcon(":/icons/menu_icons/cube_minus.svg")},
+        ]
 
     def _get_children_ids(self, db_map):
         """Returns a set of relationship class ids involving this item's class.
@@ -528,19 +539,18 @@ class RelationshipItem(EntityItem):
     """An object item."""
 
     visual_key = ["name", "object_name_list"]
-
     item_type = "relationship"
-    context_menu_actions = [
-        {"Edit relationships": QIcon(":/icons/menu_icons/cubes_pen.svg")},
-        {"Find next": QIcon(":/icons/menu_icons/ellipsis-h.png")},
-        {"Remove selection": QIcon(":/icons/menu_icons/cubes_minus.svg")},
-    ]
 
     def __init__(self, *args, **kwargs):
         """Overridden method to parse some data for convenience later.
         Also make sure we never try to fetch this item."""
         super().__init__(*args, **kwargs)
         self._fetched = True
+        self.context_menu_actions = [
+            {"Edit relationships": QIcon(":/icons/menu_icons/cubes_pen.svg")},
+            {"Find next": QIcon(":/icons/menu_icons/ellipsis-h.png")},
+            {"Remove selection": QIcon(":/icons/menu_icons/cubes_minus.svg")},
+        ]
 
     @property
     def object_name_list(self):

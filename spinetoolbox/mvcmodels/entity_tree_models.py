@@ -125,7 +125,9 @@ class EntityTreeModel(MinimalTreeModel):
 class ObjectTreeModel(EntityTreeModel):
     """An 'object-oriented' tree model."""
 
-    remove_icon = QIcon(":/icons/menu_icons/cube_minus.svg")
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.remove_icon = QIcon(":/icons/menu_icons/cube_minus.svg")
 
     @property
     def root_item_type(self):
@@ -294,7 +296,9 @@ class ObjectTreeModel(EntityTreeModel):
 class RelationshipTreeModel(EntityTreeModel):
     """A relationship-oriented tree model."""
 
-    remove_icon = QIcon(":/icons/menu_icons/cubes_minus.svg")
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.remove_icon = QIcon(":/icons/menu_icons/cubes_minus.svg")
 
     @property
     def root_item_type(self):
