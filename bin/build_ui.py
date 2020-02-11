@@ -2,7 +2,6 @@
 
 import os.path
 import argparse
-import datetime as dt
 from append_license import append_license
 
 
@@ -34,6 +33,24 @@ def fix_resources_imports(path):
         out_file.writelines(lines)
 
 
+def build_ui(input_path, output_path, force):
+    """Converts given .ui file to .py."""
+    output_name = os.path.basename(output_path)
+    print("Building " + output_name)
+    os.system(f"pyside2-uic --from-imports {input_path} -o {output_path}")
+    append_license(output_path)
+    fix_resources_imports(output_path)
+    append_license(input_path, force)
+
+
+def build_qrc(input_path, output_path, force):
+    """Converts given .qrc file to .py."""
+    output_name = os.path.basename(output_path)
+    print("Building " + output_name)
+    os.system(f"pyside2-rcc -o {output_path} {input_path}")
+    append_license(output_path, force)
+
+
 print(
     """<Script for Building Spine Toolbox GUI>
 Copyright (C) <2017-2020>  <Spine project consortium>
@@ -43,38 +60,56 @@ redistribute it under certain conditions; See files COPYING and
 COPYING.LESSER for details."""
 )
 parser = argparse.ArgumentParser()
-parser.add_argument("-m", "--minutes", type=int, help="only build files changed in the last m minutes")
+parser.add_argument("--force", help="force building of all .ui files", action="store_true")
 args = parser.parse_args()
-start = dt.datetime.now() - dt.timedelta(minutes=args.minutes) if args.minutes else None
 script_dir = os.path.dirname(os.path.realpath(__file__))
 project_source_dir = os.path.join(script_dir, os.path.pardir, "spinetoolbox")
 ui_dirs = find_ui_dirs(project_source_dir)
 for ui_dir in ui_dirs:
+    print(f"--- Entering {os.path.abspath(ui_dir)} ---")
+    ui_entries = list()
+    py_entries = dict()
     for entry in os.scandir(ui_dir):
         if entry.is_file():
-            modified = dt.datetime.fromtimestamp(os.stat(entry.path).st_mtime)
-            if start and modified < start:
-                continue
             base, extension = os.path.splitext(entry.name)
             if extension == ".ui":
-                output_name = base + ".py"
-                output_path = os.path.join(ui_dir, output_name)
-                print("Building " + output_name)
-                os.system("pyside2-uic --from-imports {} -o {}".format(entry.path, output_path))
-                append_license(output_path)
-                fix_resources_imports(output_path)
-                append_license(entry.path)
+                ui_entries.append(entry)
+            elif extension == ".py":
+                py_entries[base] = entry
+    for ui_entry in ui_entries:
+        base, _ = os.path.splitext(ui_entry.name)
+        py_entry = py_entries.get(base)
+        if py_entry is None or args.force:
+            output_name = base + ".py"
+            output_path = os.path.join(ui_dir, output_name)
+            build_ui(ui_entry.path, output_path, args.force)
+            continue
+        ui_modification_time = ui_entry.stat().st_mtime
+        py_modification_time = py_entry.stat().st_mtime
+        if ui_modification_time > py_modification_time:
+            build_ui(ui_entry.path, py_entry.path, args.force)
 resources_dir = os.path.join(project_source_dir, "ui", "resources")
+qrc_entries = list()
+py_paths = dict()
 for entry in os.scandir(resources_dir):
     if entry.is_file():
-        modified = dt.datetime.fromtimestamp(os.stat(entry.path).st_mtime)
-        if start and modified < start:
-            continue
         base, extension = os.path.splitext(entry.name)
         if extension == ".qrc":
+            qrc_entries.append(entry)
             output_name = base + "_rc.py"
             output_path = os.path.join(project_source_dir, output_name)
-            print("Building " + output_name)
-            os.system("pyside2-rcc -o {} {}".format(output_path, entry.path))
-            append_license(output_path)
+            py_paths[base] = output_path
+for qrc_entry in qrc_entries:
+    base, _ = os.path.splitext(qrc_entry.name)
+    py_path = py_paths.get(base)
+    if py_path is None or args.force:
+        output_name = base + "_rc.py"
+        output_path = os.path.join(project_source_dir, output_name)
+        build_qrc(qrc_entry.path, output_path, args.force)
+        continue
+    qrc_modification_time = qrc_entry.stat().st_mtime
+    py_modification_time = os.path.getmtime(py_path)
+    if qrc_modification_time > py_modification_time:
+        build_qrc(qrc_entry.path, py_path, args.force)
+
 print("--- Build completed ---")
