@@ -291,7 +291,7 @@ class MultiDBTreeItem(TreeItem):
 
     def clear_children(self):
         """Clear children list."""
-        super.clear_children()
+        super().clear_children()
         self._child_map.clear()
 
     def _refresh_child_map(self):
