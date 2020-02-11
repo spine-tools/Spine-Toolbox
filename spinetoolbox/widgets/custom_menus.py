@@ -29,7 +29,7 @@ from .report_plotting_failure import report_plotting_failure
 class CustomContextMenu(QMenu):
     """Context menu master class for several context menus.
 
-    Attributes:
+    Args:
         parent (QWidget): Parent for menu widget (ToolboxUI)
         position (QPoint): Position on screen
     """
@@ -70,7 +70,7 @@ class CustomContextMenu(QMenu):
 class CategoryProjectItemContextMenu(CustomContextMenu):
     """Context menu for category project items in the QTreeView.
 
-    Attributes:
+    Args:
         parent (QWidget): Parent for menu widget (ToolboxUI)
         position (QPoint): Position on screen
     """
@@ -84,7 +84,7 @@ class CategoryProjectItemContextMenu(CustomContextMenu):
 class ProjectItemModelContextMenu(CustomContextMenu):
     """Context menu for project item model in the QTreeView.
 
-    Attributes:
+    Args:
         parent (QWidget): Parent for menu widget (ToolboxUI)
         position (QPoint): Position on screen
     """
@@ -120,7 +120,7 @@ class ProjectItemContextMenu(CustomContextMenu):
 class LinkContextMenu(CustomContextMenu):
     """Context menu class for connection links.
 
-    Attributes:
+    Args:
         parent (QWidget): Parent for menu widget (ToolboxUI)
         position (QPoint): Position on screen
         link (Link(QGraphicsPathItem)): Link that requested the menu
@@ -138,7 +138,7 @@ class LinkContextMenu(CustomContextMenu):
 class ToolSpecificationContextMenu(CustomContextMenu):
     """Context menu class for Tool specifications.
 
-    Attributes:
+    Args:
         parent (QWidget): Parent for menu widget (ToolboxUI)
         position (QPoint): Position on screen
         index (QModelIndex): Index of item that requested the context-menu
@@ -161,7 +161,7 @@ class ToolSpecificationContextMenu(CustomContextMenu):
 class EntityTreeContextMenu(CustomContextMenu):
     """Context menu class for object tree items in tree view form.
 
-    Attributes:
+    Args:
         parent (QWidget): Parent for menu widget
         position (QPoint): Position on screen
         index (QModelIndex): Index of item that requested the context-menu
@@ -184,7 +184,7 @@ class EntityTreeContextMenu(CustomContextMenu):
 class ObjectTreeContextMenu(EntityTreeContextMenu):
     """Context menu class for object tree items in tree view form.
 
-    Attributes:
+    Args:
         parent (QWidget): Parent for menu widget
         position (QPoint): Position on screen
         index (QModelIndex): Index of item that requested the context-menu
@@ -203,7 +203,7 @@ class ObjectTreeContextMenu(EntityTreeContextMenu):
 class RelationshipTreeContextMenu(EntityTreeContextMenu):
     """Context menu class for relationship tree items in tree view form.
 
-    Attributes:
+    Args:
         parent (QWidget): Parent for menu widget
         position (QPoint): Position on screen
         index (QModelIndex): Index of item that requested the context-menu
@@ -213,7 +213,7 @@ class RelationshipTreeContextMenu(EntityTreeContextMenu):
 class ParameterContextMenu(CustomContextMenu):
     """Context menu class for object (relationship) parameter items in tree views.
 
-    Attributes:
+    Args:
         parent (QWidget): Parent for menu widget
         position (QPoint): Position on screen
         index (QModelIndex): Index of item that requested the context-menu
@@ -237,7 +237,7 @@ class SimpleEditableParameterValueContextMenu(CustomContextMenu):
     """
     Context menu class for object (relationship) parameter value items in graph views.
 
-    Attributes:
+    Args:
         parent (QWidget): Parent for menu widget
         position (QPoint): Position on screen
         index (QModelIndex): Index of item that requested the context-menu
@@ -257,7 +257,7 @@ class EditableParameterValueContextMenu(CustomContextMenu):
     """
     Context menu class for object (relationship) parameter value items in tree views.
 
-    Attributes:
+    Args:
         parent (QWidget): Parent for menu widget
         position (QPoint): Position on screen
         index (QModelIndex): Index of item that requested the context-menu
@@ -283,7 +283,7 @@ class EditableParameterValueContextMenu(CustomContextMenu):
 class ParameterValueListContextMenu(CustomContextMenu):
     """Context menu class for parameter enum view in tree view form.
 
-    Attributes:
+    Args:
         parent (QWidget): Parent for menu widget
         position (QPoint): Position on screen
         index (QModelIndex): Index of item that requested the context-menu
@@ -304,7 +304,7 @@ class ParameterValueListContextMenu(CustomContextMenu):
 class GraphViewContextMenu(CustomContextMenu):
     """Context menu class for qgraphics view in graph view.
 
-    Attributes:
+    Args:
         parent (QWidget): Parent for menu widget (GraphViewForm)
         position (QPoint): Position on screen
     """
@@ -396,7 +396,7 @@ class OpenProjectDialogComboBoxContextMenu(CustomContextMenu):
 class CustomPopupMenu(QMenu):
     """Popup menu master class for several popup menus.
 
-    Attributes:
+    Args:
         parent (QWidget): Parent widget of this pop-up menu
     """
 
@@ -424,7 +424,7 @@ class CustomPopupMenu(QMenu):
 class AddToolSpecificationPopupMenu(CustomPopupMenu):
     """Popup menu class for add Tool specification button.
 
-    Attributes:
+    Args:
         parent (QWidget): parent widget (ToolboxUI)
     """
 
@@ -440,7 +440,7 @@ class AddToolSpecificationPopupMenu(CustomPopupMenu):
 class ToolSpecificationOptionsPopupmenu(CustomPopupMenu):
     """Popup menu class for tool specification options button in Tool item.
 
-    Attributes:
+    Args:
         parent (QWidget): Parent widget of this menu (ToolboxUI)
         tool (Tool): Tool item that is associated with the pressed button
     """
@@ -460,7 +460,7 @@ class ToolSpecificationOptionsPopupmenu(CustomPopupMenu):
 class AddIncludesPopupMenu(CustomPopupMenu):
     """Popup menu class for add includes button in Tool specification editor widget.
 
-    Attributes:
+    Args:
         parent (QWidget): Parent widget (ToolSpecificationWidget)
     """
 
@@ -477,7 +477,7 @@ class AddIncludesPopupMenu(CustomPopupMenu):
 class CreateMainProgramPopupMenu(CustomPopupMenu):
     """Popup menu class for add main program QToolButton in Tool specification editor widget.
 
-    Attributes:
+    Args:
         parent (QWidget): Parent widget (ToolSpecificationWidget)
     """
 
@@ -800,7 +800,7 @@ class PivotTableHorizontalHeaderMenu(QMenu):
     """
     A context menu for the horizontal header of a pivot table.
 
-    Attributes:
+    Args:
          proxy_model (PivotTableSortFilterProxy): a proxy model
          parent (QWidget): a parent widget
     """
