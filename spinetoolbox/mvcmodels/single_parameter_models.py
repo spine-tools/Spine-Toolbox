@@ -255,7 +255,7 @@ class SingleParameterValueMixin:
         if self._selected_entity_ids == set():
             return True
         entity_id_key = {"object class": "object_id", "relationship class": "relationship_id"}[self.entity_class_type]
-        entity_id = self.db_mngr.get_value(self.db_map, self.item_type, self._main_data[row], entity_id_key)
+        entity_id = self.db_mngr.get_item(self.db_map, self.item_type, self._main_data[row])[entity_id_key]
         return entity_id in self._selected_entity_ids
 
     def update_items_in_db(self, items):
