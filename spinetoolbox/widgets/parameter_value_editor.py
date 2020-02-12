@@ -16,7 +16,7 @@ An editor dialog for editing database (relationship) parameter values.
 :date:   28.6.2019
 """
 
-from enum import Enum
+from enum import IntEnum, unique
 from PySide2.QtCore import Qt, Slot
 from PySide2.QtWidgets import QDialog, QMessageBox
 from spinedb_api import (
@@ -24,6 +24,7 @@ from spinedb_api import (
     Duration,
     duration_to_relativedelta,
     from_database,
+    Map,
     ParameterValueFormatError,
     TimePattern,
     TimeSeriesFixedResolution,
@@ -32,21 +33,24 @@ from spinedb_api import (
 )
 from ..widgets.duration_editor import DurationEditor
 from ..widgets.datetime_editor import DatetimeEditor
+from ..widgets.map_editor import MapEditor
 from ..widgets.plain_parameter_value_editor import PlainParameterValueEditor
 from ..widgets.time_pattern_editor import TimePatternEditor
 from ..widgets.time_series_fixed_resolution_editor import TimeSeriesFixedResolutionEditor
 from ..widgets.time_series_variable_resolution_editor import TimeSeriesVariableResolutionEditor
 
 
-class _Editor(Enum):
+@unique
+class _Editor(IntEnum):
     """Indexes for the specialized editors corresponding to the selector combo box and editor stack."""
 
     PLAIN_VALUE = 0
-    TIME_SERIES_FIXED_RESOLUTION = 1
-    TIME_SERIES_VARIABLE_RESOLUTION = 2
-    TIME_PATTERN = 3
-    DATETIME = 4
-    DURATION = 5
+    MAP = 1
+    TIME_SERIES_FIXED_RESOLUTION = 2
+    TIME_SERIES_VARIABLE_RESOLUTION = 3
+    TIME_PATTERN = 4
+    DATETIME = 5
+    DURATION = 6
 
 
 class ParameterValueEditor(QDialog):
@@ -58,15 +62,16 @@ class ParameterValueEditor(QDialog):
     by changing the specialized editor using a combo box.
     When the dialog is closed the value from the currently shown specialized editor is
     written back to the parent model.
-
-    Attributes:
-        parent_index (QModelIndex): an index to a parameter value in parent_model
-        value_name (str): name of the value
-        value: parameter value or None if it should be loaded from parent_index
-        parent_widget (QWidget): a parent widget
     """
 
     def __init__(self, parent_index, value_name="", value=None, parent_widget=None):
+        """
+        Args:
+            parent_index (QModelIndex): an index to a parameter value in parent_model
+            value_name (str): name of the value
+            value: parameter value or None if it should be loaded from parent_index
+            parent_widget (QWidget): a parent widget
+        """
         from ..ui.parameter_value_editor import Ui_ParameterValueEditor
 
         super().__init__(parent_widget)
@@ -74,17 +79,19 @@ class ParameterValueEditor(QDialog):
         self._parent_index = parent_index
         self._ui = Ui_ParameterValueEditor()
         self._ui.setupUi(self)
-        self.setWindowTitle(value_name + " - Edit value")
+        self.setWindowTitle(f"Edit value    -- {value_name} --")
         self.setWindowFlag(Qt.WindowMinMaxButtonsHint)
         self._ui.button_box.accepted.connect(self.accept)
         self._ui.button_box.rejected.connect(self.reject)
         self._time_pattern_editor = TimePatternEditor()
         self._plain_value_editor = PlainParameterValueEditor()
+        self._map_editor = MapEditor()
         self._time_series_fixed_resolution_editor = TimeSeriesFixedResolutionEditor()
         self._time_series_variable_resolution_editor = TimeSeriesVariableResolutionEditor()
         self._datetime_editor = DatetimeEditor()
         self._duration_editor = DurationEditor()
         self._ui.editor_stack.addWidget(self._plain_value_editor)
+        self._ui.editor_stack.addWidget(self._map_editor)
         self._ui.editor_stack.addWidget(self._time_series_fixed_resolution_editor)
         self._ui.editor_stack.addWidget(self._time_series_variable_resolution_editor)
         self._ui.editor_stack.addWidget(self._time_pattern_editor)
@@ -124,8 +131,8 @@ class ParameterValueEditor(QDialog):
         """
         old_index = self._ui.editor_stack.currentIndex()
         if (
-            selector_index == _Editor.TIME_SERIES_VARIABLE_RESOLUTION.value
-            and old_index == _Editor.TIME_SERIES_FIXED_RESOLUTION.value
+            selector_index == _Editor.TIME_SERIES_VARIABLE_RESOLUTION
+            and old_index == _Editor.TIME_SERIES_FIXED_RESOLUTION
         ):
             fixed_resolution_value = self._time_series_fixed_resolution_editor.value()
             stamps = fixed_resolution_value.indexes
@@ -156,28 +163,32 @@ class ParameterValueEditor(QDialog):
     def _select_editor(self, value):
         """Shows the editor widget corresponding to the given value type on the editor stack."""
         if isinstance(value, (int, float, bool)):
-            self._ui.parameter_type_selector.setCurrentIndex(_Editor.PLAIN_VALUE.value)
-            self._ui.editor_stack.setCurrentIndex(_Editor.PLAIN_VALUE.value)
+            self._ui.parameter_type_selector.setCurrentIndex(_Editor.PLAIN_VALUE)
+            self._ui.editor_stack.setCurrentIndex(_Editor.PLAIN_VALUE)
             self._plain_value_editor.set_value(value)
+        elif isinstance(value, Map):
+            self._ui.parameter_type_selector.setCurrentIndex(_Editor.MAP)
+            self._ui.editor_stack.setCurrentIndex(_Editor.MAP)
+            self._map_editor.set_value(value)
         elif isinstance(value, TimeSeriesFixedResolution):
-            self._ui.parameter_type_selector.setCurrentIndex(_Editor.TIME_SERIES_FIXED_RESOLUTION.value)
-            self._ui.editor_stack.setCurrentIndex(_Editor.TIME_SERIES_FIXED_RESOLUTION.value)
+            self._ui.parameter_type_selector.setCurrentIndex(_Editor.TIME_SERIES_FIXED_RESOLUTION)
+            self._ui.editor_stack.setCurrentIndex(_Editor.TIME_SERIES_FIXED_RESOLUTION)
             self._time_series_fixed_resolution_editor.set_value(value)
         elif isinstance(value, TimeSeriesVariableResolution):
-            self._ui.parameter_type_selector.setCurrentIndex(_Editor.TIME_SERIES_VARIABLE_RESOLUTION.value)
-            self._ui.editor_stack.setCurrentIndex(_Editor.TIME_SERIES_VARIABLE_RESOLUTION.value)
+            self._ui.parameter_type_selector.setCurrentIndex(_Editor.TIME_SERIES_VARIABLE_RESOLUTION)
+            self._ui.editor_stack.setCurrentIndex(_Editor.TIME_SERIES_VARIABLE_RESOLUTION)
             self._time_series_variable_resolution_editor.set_value(value)
         elif isinstance(value, TimePattern):
-            self._ui.parameter_type_selector.setCurrentIndex(_Editor.TIME_PATTERN.value)
-            self._ui.editor_stack.setCurrentIndex(_Editor.TIME_PATTERN.value)
+            self._ui.parameter_type_selector.setCurrentIndex(_Editor.TIME_PATTERN)
+            self._ui.editor_stack.setCurrentIndex(_Editor.TIME_PATTERN)
             self._time_pattern_editor.set_value(value)
         elif isinstance(value, DateTime):
-            self._ui.parameter_type_selector.setCurrentIndex(_Editor.DATETIME.value)
-            self._ui.editor_stack.setCurrentIndex(_Editor.DATETIME.value)
+            self._ui.parameter_type_selector.setCurrentIndex(_Editor.DATETIME)
+            self._ui.editor_stack.setCurrentIndex(_Editor.DATETIME)
             self._datetime_editor.set_value(value)
         elif isinstance(value, Duration):
-            self._ui.parameter_type_selector.setCurrentIndex(_Editor.DURATION.value)
-            self._ui.editor_stack.setCurrentIndex(_Editor.DURATION.value)
+            self._ui.parameter_type_selector.setCurrentIndex(_Editor.DURATION)
+            self._ui.editor_stack.setCurrentIndex(_Editor.DURATION)
             self._duration_editor.set_value(value)
         else:
             self._select_default_view()
@@ -190,5 +201,5 @@ class ParameterValueEditor(QDialog):
         """
         if message is not None:
             QMessageBox.warning(self.parent(), "Warning", message)
-        self._ui.parameter_type_selector.setCurrentIndex(_Editor.PLAIN_VALUE.value)
-        self._ui.editor_stack.setCurrentIndex(_Editor.PLAIN_VALUE.value)
+        self._ui.parameter_type_selector.setCurrentIndex(_Editor.PLAIN_VALUE)
+        self._ui.editor_stack.setCurrentIndex(_Editor.PLAIN_VALUE)

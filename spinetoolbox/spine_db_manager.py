@@ -28,6 +28,7 @@ from spinedb_api import (
     ParameterValueFormatError,
     DateTime,
     Duration,
+    Map,
     TimePattern,
     TimeSeries,
     TimeSeriesFixedResolution,
@@ -644,6 +645,8 @@ class SpineDBManager(QObject):
         """Returns the value's database representation formatted for Qt.DisplayRole."""
         if isinstance(parsed_value, TimeSeries):
             return "Time series"
+        if isinstance(parsed_value, Map):
+            return "Map"
         if isinstance(parsed_value, DateTime):
             return str(parsed_value.value)
         if isinstance(parsed_value, Duration):

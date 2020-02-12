@@ -321,9 +321,7 @@ class PythonToolInstance(ToolInstance):
     def execute(self, **kwargs):
         """Executes a prepared instance."""
         if self._settings.value("appSettings/useEmbeddedPython", defaultValue="0") == "2":
-            self.exec_mngr = ConsoleExecutionManager(
-                self._toolbox.python_repl, self.ipython_command_list, self._logger
-            )
+            self.exec_mngr = ConsoleExecutionManager(self._toolbox.python_repl, self.ipython_command_list, self._logger)
             self.exec_mngr.execution_finished.connect(self.handle_console_execution_finished)
             self.exec_mngr.start_execution()
         else:

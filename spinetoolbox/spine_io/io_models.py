@@ -23,6 +23,7 @@ from spinedb_api import (
     RelationshipClassMapping,
     ParameterDefinitionMapping,
     ParameterValueMapping,
+    ParameterMapMapping,
     ParameterTimeSeriesMapping,
     ParameterTimePatternMapping,
     ParameterListMapping,
@@ -79,6 +80,7 @@ _MAPTYPE_DISPLAY_NAME = {
 _DISPLAY_TYPE_TO_TYPE = {
     "Single value": ParameterValueMapping,
     "List": ParameterListMapping,
+    "Map": ParameterMapMapping,
     "Time series": ParameterTimeSeriesMapping,
     "Time pattern": ParameterTimePatternMapping,
     "Definition": ParameterDefinitionMapping,
@@ -500,6 +502,8 @@ class MappingSpecModel(QAbstractTableModel):
             self._model.parameters = ParameterListMapping()
         elif new_type == "Definition":
             self._model.parameters = ParameterDefinitionMapping()
+        elif new_type == "Map":
+            self._model.parameters = ParameterMapMapping()
         elif new_type == "Time series":
             self._model.parameters = ParameterTimeSeriesMapping()
         elif new_type == "Time pattern":
@@ -531,6 +535,9 @@ class MappingSpecModel(QAbstractTableModel):
         if isinstance(self._model.parameters, ParameterValueMapping):
             display_name.append("Parameter values")
             mappings.append(self._model.parameters.value)
+        if isinstance(self._model.parameters, ParameterMapMapping):
+            display_name.append("Parameter map index")
+            mappings.append(self._model.parameters.extra_dimensions[0])
         if isinstance(self._model.parameters, ParameterTimeSeriesMapping):
             display_name.append("Parameter time index")
             mappings.append(self._model.parameters.extra_dimensions[0])
@@ -602,7 +609,7 @@ class MappingSpecModel(QAbstractTableModel):
             return _MAPPING_COLORS["entity"]
         if display_name == "Parameter names":
             return _MAPPING_COLORS["parameter name"]
-        if display_name in ["Parameter time index", "Parameter time pattern index"]:
+        if display_name in ["Parameter map index", "Parameter time index", "Parameter time pattern index"]:
             return _MAPPING_COLORS["parameter extra dimension"]
         if display_name == "Parameter values":
             return _MAPPING_COLORS["parameter value"]
@@ -750,7 +757,7 @@ class MappingSpecModel(QAbstractTableModel):
             mapping = self._model.parameters.name
         elif name == "Parameter values":
             mapping = self._model.parameters.value
-        elif name in ("Parameter time index", "Parameter time pattern index"):
+        elif name in ("Parameter map index", "Parameter time index", "Parameter time pattern index"):
             mapping = self._model.parameters.extra_dimensions[0]
         else:
             return None
@@ -773,7 +780,7 @@ class MappingSpecModel(QAbstractTableModel):
             self._model.parameters.name = mapping
         elif name == "Parameter values":
             self._model.parameters.value = mapping
-        elif name in ("Parameter time index", "Parameter time pattern index"):
+        elif name in ("Parameter map index", "Parameter time index", "Parameter time pattern index"):
             self._model.parameters.extra_dimensions = [mapping]
         else:
             return False

@@ -29,7 +29,7 @@ import os
 import os.path
 import sys
 from gdx2py import GAMSSet, GAMSScalar, GAMSParameter, GdxFile
-from spinedb_api import from_database, IndexedValue, ParameterValueFormatError
+from spinedb_api import from_database, IndexedValue, Map, ParameterValueFormatError
 
 if sys.platform == 'win32':
     import winreg
@@ -429,15 +429,18 @@ def _read_value(value_in_database):
         value = from_database(value_in_database)
     except ParameterValueFormatError:
         raise GdxExportException("Failed to read parameter value.")
-    if isinstance(value, int):
-        value = float(value)
-    if value is not None and not isinstance(value, (float, IndexedValue, bool)):
+    if value is not None and not isinstance(value, (float, IndexedValue)):
         raise GdxExportException(f"Unsupported parameter value type '{type(value).__name__}'.")
+    if isinstance(value, Map):
+        if value.is_nested():
+            raise GdxExportException("Nested maps are not supported.")
+        if not all(isinstance(x, float) for x in value.values):
+            raise GdxExportException("Exporting non-numerical values in map is not supported.")
     return value
 
 
 def _windows_dlls_exist(gams_path):
-    """Returns True if requred DLL files exist in given GAMS installation path."""
+    """Returns True if required DLL files exist in given GAMS installation path."""
     bitness = _python_interpreter_bitness()
     # This DLL must exist on Windows installation
     dll_name = "gdxdclib{}.dll".format(bitness)

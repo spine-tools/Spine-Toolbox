@@ -18,10 +18,12 @@ Unit tests for the plotting module.
 
 import unittest
 from unittest.mock import Mock, MagicMock
+from matplotlib.collections import PathCollection
 from PySide2.QtCore import QAbstractTableModel, QModelIndex, Qt
 from PySide2.QtWidgets import QApplication, QAction
-from spinedb_api import TimeSeriesVariableResolution
+from spinedb_api import Map, TimeSeriesVariableResolution
 from spinetoolbox.plotting import (
+    add_map_plot,
     add_time_series_plot,
     plot_pivot_column,
     plot_selection,
@@ -229,6 +231,19 @@ class TestPlotting(unittest.TestCase):
         lines = plot_widget.canvas.axes.get_lines()
         self.assertEqual(len(lines), 1)
         self.assertTrue(all(lines[0].get_ydata(orig=True) == [-2.3]))
+
+    def test_add_dictionary_plot(self):
+        plot_widget = PlotWidget()
+        dictionary = Map(["key 1 ", "key 2"], [2.3, 5.5])
+        add_map_plot(plot_widget, dictionary)
+        children = plot_widget.canvas.axes.get_children()
+        self.assertTrue(any([isinstance(child, PathCollection) for child in children]))
+        for child in children:
+            if isinstance(child, PathCollection):
+                offsets = child.get_offsets()
+                self.assertEqual(len(offsets), 2)
+                self.assertEqual(list(offsets[0]), [0.0, 2.3])
+                self.assertEqual(list(offsets[1]), [1.0, 5.5])
 
     def test_add_time_series_plot(self):
         plot_widget = PlotWidget()

@@ -62,7 +62,10 @@ class Exporter(ProjectItem):
             serialized_url = pack["database_url"]
             url = deserialize_path(serialized_url, self._project.project_dir)
             url = _normalize_url(url)
-            settings_pack = _SettingsPack.from_dict(pack, url)
+            try:
+                settings_pack = _SettingsPack.from_dict(pack, url)
+            except gdx.GdxExportException:
+                settings_pack = _SettingsPack("")
             settings_pack.notifications.changed_due_to_settings_state.connect(self._report_notifications)
             self._settings_packs[url] = settings_pack
         self._activated = False
