@@ -20,14 +20,16 @@ import os
 import logging
 import json
 from PySide2.QtCore import Slot, Signal
+from PySide2.QtWidgets import QMessageBox
 from spine_engine import SpineEngine, SpineEngineState
 from .metaobject import MetaObject
-from .helpers import create_dir, inverted
+from .helpers import create_dir, inverted, erase_dir
 from .tool_specifications import JuliaTool, PythonTool, GAMSTool, ExecutableTool
 from .config import LATEST_PROJECT_VERSION, PROJECT_FILENAME
 from .dag_handler import DirectedGraphHandler
 from .project_tree_item import LeafProjectTreeItem
 from .spine_db_manager import SpineDBManager
+from .project_commands import AddProjectItemsCommand, RemoveProjectItemCommand
 
 
 class SpineToolboxProject(MetaObject):
@@ -118,6 +120,20 @@ class SpineToolboxProject(MetaObject):
         self._toolbox.setWindowTitle("Spine Toolbox    -- {} --".format(self.name))
         self._logger.msg.emit("Project name changed to <b>{0}</b>".format(self.name))
 
+    @staticmethod
+    def get_connections(links):
+        connections = list()
+        for link in links:
+            src_connector = link.src_connector
+            src_anchor = src_connector.position
+            src_name = src_connector.parent_name()
+            dst_connector = link.dst_connector
+            dst_anchor = dst_connector.position
+            dst_name = dst_connector.parent_name()
+            conn = {"from": [src_name, src_anchor], "to": [dst_name, dst_anchor]}
+            connections.append(conn)
+        return connections
+
     def save(self, tool_def_paths):
         """Collects project information and objects
         into a dictionary and writes it to a JSON file.
@@ -134,17 +150,7 @@ class SpineToolboxProject(MetaObject):
         project_dict["description"] = self.description
         project_dict["tool_specifications"] = tool_def_paths
         # Compute connections directly from Links on scene
-        connections = list()
-        for link in self._toolbox.ui.graphicsView.links():
-            src_connector = link.src_connector
-            src_anchor = src_connector.position
-            src_name = src_connector.parent_name()
-            dst_connector = link.dst_connector
-            dst_anchor = dst_connector.position
-            dst_name = dst_connector.parent_name()
-            conn = {"from": [src_name, src_anchor], "to": [dst_name, dst_anchor]}
-            connections.append(conn)
-        project_dict["connections"] = connections
+        project_dict["connections"] = self.get_connections(self._toolbox.ui.graphicsView.links())
         items_dict = dict()  # Dictionary for storing project items
         # Traverse all items in project model by category
         for category_item in self._project_item_model.root().children():
@@ -177,7 +183,7 @@ class SpineToolboxProject(MetaObject):
                 item_dict["name"] = name
                 items.append(item_dict)
                 empty = False
-            self.add_project_items(category_name, *items, verbosity=False)
+            self.do_add_project_items(category_name, *items, verbosity=False)
         if empty:
             self._logger.msg_warning.emit("Project has no items")
         return True
@@ -237,6 +243,11 @@ class SpineToolboxProject(MetaObject):
         return None
 
     def add_project_items(self, category_name, *items, set_selected=False, verbosity=True):
+        self._toolbox.undo_stack.push(
+            AddProjectItemsCommand(self, category_name, *items, set_selected=set_selected, verbosity=verbosity)
+        )
+
+    def do_add_project_items(self, category_name, *items, set_selected=False, verbosity=True):
         """Adds item to project.
 
         Args:
@@ -272,6 +283,72 @@ class SpineToolboxProject(MetaObject):
     def add_to_dag(self, item_name):
         """Add new node (project item) to the directed graph."""
         self.dag_handler.add_dag_node(item_name)
+
+    def remove_item(self, name, delete_item=False, check_dialog=False):
+        self._toolbox.undo_stack.push(
+            RemoveProjectItemCommand(self, name, delete_item=delete_item, check_dialog=check_dialog)
+        )
+
+    def do_remove_item(self, name, delete_item=False, check_dialog=False):
+        """Removes item from project when its index in the project model is known.
+        To remove all items in project, loop all indices through this method.
+        This method is used in both opening and creating a new project as
+        well as when item(s) are deleted from project.
+        Use delete_item=False when closing the project or creating a new one.
+        Setting delete_item=True deletes the item irrevocably. This means that
+        data directories will be deleted from the hard drive. Handles also
+        removing the node from the dag graph that contains it.
+
+        Args:
+            name (str): Item's name
+            delete_item (bool): If set to True, deletes the directories and data associated with the item
+            check_dialog (bool): If True, shows 'Are you sure?' message box
+        """
+        ind = self._project_item_model.find_item(name)
+        item = self._project_item_model.item(ind)
+        if check_dialog:
+            if not delete_item:
+                msg = (
+                    "Remove item <b>{}</b> from project?".format(name)
+                    + " Item data directory will still be available in the project directory after this operation."
+                )
+            else:
+                msg = "Remove item <b>{}</b> and its data directory from project?".format(name)
+            msg = msg + "<br><br>Tip: Remove items by pressing 'Delete' key to bypass this dialog."
+            # noinspection PyCallByClass, PyTypeChecker
+            message_box = QMessageBox(
+                QMessageBox.Question,
+                "Remove Item",
+                msg,
+                buttons=QMessageBox.Ok | QMessageBox.Cancel,
+                parent=self._toolbox,
+            )
+            message_box.button(QMessageBox.Ok).setText("Remove Item")
+            answer = message_box.exec_()
+            if answer != QMessageBox.Ok:
+                return
+        try:
+            data_dir = item.project_item.data_dir
+        except AttributeError:
+            data_dir = None
+        # Remove item from project model
+        if not self._project_item_model.remove_item(item, parent=ind.parent()):
+            self._logger.msg_error.emit("Removing item <b>{0}</b> from project failed".format(name))
+        # Remove item icon and connected links (QGraphicsItems) from scene
+        icon = item.project_item.get_icon()
+        self._toolbox.ui.graphicsView.remove_icon(icon)
+        self.dag_handler.remove_node_from_graph(name)
+        item.project_item.tear_down()
+        if delete_item:
+            if data_dir:
+                # Remove data directory and all its contents
+                self.msg.emit("Removing directory <b>{0}</b>".format(data_dir))
+                try:
+                    if not erase_dir(data_dir):
+                        self._logger.msg_error.emit("Directory does not exist")
+                except OSError:
+                    self._logger.msg_error.emit("[OSError] Removing directory failed. Check directory permissions.")
+            self._logger.msg.emit("Item <b>{0}</b> removed from project".format(name))
 
     def set_item_selected(self, item):
         """Sets item selected and shows its info screen.

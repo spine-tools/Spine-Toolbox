@@ -23,6 +23,7 @@ from PySide2.QtGui import QCursor
 from PySide2.QtCore import Signal, Slot, Qt, QRectF, QTimeLine, QMarginsF, QSettings
 from spine_engine import ExecutionDirection
 from ..graphics_items import LinkDrawer, Link
+from ..project_commands import AddLinkCommand, RemoveLinkCommand
 from .custom_qlistview import DragListView
 from .custom_qgraphicsscene import CustomQGraphicsScene
 
@@ -335,6 +336,9 @@ class DesignQGraphicsView(CustomQGraphicsView):
         return [item for item in self.items() if isinstance(item, Link)]
 
     def add_link(self, src_connector, dst_connector):
+        self._toolbox.undo_stack.push(AddLinkCommand(self, src_connector, dst_connector))
+
+    def do_add_link(self, src_connector, dst_connector):
         """Draws link between source and destination connectors on scene.
 
         Args:
@@ -342,9 +346,12 @@ class DesignQGraphicsView(CustomQGraphicsView):
             dst_connector (ConnectorButton): Destination connector button
         """
         # Remove existing links between the same items
-        for link in src_connector._parent.outgoing_links():
-            if link.dst_connector._parent == dst_connector._parent:
-                link.wipe_out()
+        for replaced_link in src_connector._parent.outgoing_links():
+            if replaced_link.dst_connector._parent == dst_connector._parent:
+                replaced_link.wipe_out()
+                break
+        else:
+            replaced_link = None
         link = Link(self._toolbox, src_connector, dst_connector)
         self.scene().addItem(link)
         # Store Link in connectors, so it can be found *from* the Project Item
@@ -354,8 +361,12 @@ class DesignQGraphicsView(CustomQGraphicsView):
         src_name = link.src_icon._project_item.name
         dst_name = link.dst_icon._project_item.name
         self._toolbox.project().dag_handler.add_graph_edge(src_name, dst_name)
+        return link, replaced_link
 
     def remove_link(self, link):
+        self._toolbox.undo_stack.push(RemoveLinkCommand(self, link))
+
+    def do_remove_link(self, link):
         """Removes link from scene."""
         link.wipe_out()
         # Remove edge (connection link) from dag
@@ -403,7 +414,7 @@ class DesignQGraphicsView(CustomQGraphicsView):
             src_connector = src_item.get_icon().conn_button(src_anchor)
             dst_item = self._project_item_model.item(dst_ind).project_item
             dst_connector = dst_item.get_icon().conn_button(dst_anchor)
-            self.add_link(src_connector, dst_connector)
+            self.do_add_link(src_connector, dst_connector)
 
     def draw_links(self, connector):
         """Draw links when slot button is clicked.

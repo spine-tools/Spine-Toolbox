@@ -33,6 +33,7 @@ from PySide2.QtWidgets import (
     QCheckBox,
     QDockWidget,
     QAction,
+    QUndoStack,
 )
 from .graphics_items import ProjectItemIcon
 from .mvcmodels.project_item_model import ProjectItemModel
@@ -65,7 +66,6 @@ from .config import (
 )
 from .helpers import (
     get_datetime,
-    erase_dir,
     busy_effect,
     set_taskbar_icon,
     supported_img_formats,
@@ -117,6 +117,7 @@ class ToolboxUI(QMainWindow):
         self.ui.textBrowser_process_output.setStyleSheet(TEXTBROWSER_SS)
         self.setStyleSheet(MAINWINDOW_SS)
         # Class variables
+        self.undo_stack = QUndoStack(self)
         self.categories = dict()  # Holds category data parsed from project item plugins
         self._project = None
         self.project_item_model = None
@@ -147,7 +148,7 @@ class ToolboxUI(QMainWindow):
         self.ui.dockWidgetContents_python_repl.layout().addWidget(self.python_repl)
         # Setup main window menu
         self.setup_zoom_widget_action()
-        self.add_toggle_view_actions()
+        self.add_menu_actions()
         # Hidden QActions for debugging or testing
         self.show_properties_tabbar = QAction(self)
         self.show_supported_img_formats = QAction(self)
@@ -681,8 +682,7 @@ class ToolboxUI(QMainWindow):
             return
         item_names = self.project_item_model.item_names()
         for name in item_names:
-            ind = self.project_item_model.find_item(name)
-            self.remove_item(ind)
+            self.project().do_remove_item(name)
         self.activate_no_selection_tab()  # Clear properties widget
         if self._project:
             self._project.deleteLater()
@@ -984,71 +984,13 @@ class ToolboxUI(QMainWindow):
         if n == 0:
             return
         for name in item_names:
-            ind = self.project_item_model.find_item(name)
             delete_int = int(self._qsettings.value("appSettings/deleteData", defaultValue="0"))
             delete_bool = delete_int != 0
-            self.remove_item(ind, delete_item=delete_bool)
+            self._project.do_remove_item(name, delete_item=delete_bool)
         self.msg.emit("All {0} items removed from project".format(n))
         self.activate_no_selection_tab()
         self.ui.graphicsView.scene().clear()
         self.ui.graphicsView.init_scene()
-
-    def remove_item(self, ind, delete_item=False, check_dialog=False):
-        """Removes item from project when it's index in the project model is known.
-        To remove all items in project, loop all indices through this method.
-        This method is used in both opening and creating a new project as
-        well as when item(s) are deleted from project.
-        Use delete_item=False when closing the project or creating a new one.
-        Setting delete_item=True deletes the item irrevocably. This means that
-        data directories will be deleted from the hard drive. Handles also
-        removing the node from the dag graph that contains it.
-
-        Args:
-            ind (QModelIndex): Index of removed item in project model
-            delete_item (bool): If set to True, deletes the directories and data associated with the item
-            check_dialog (bool): If True, shows 'Are you sure?' message box
-        """
-        item = self.project_item_model.item(ind)
-        name = item.name
-        if check_dialog:
-            if not delete_item:
-                msg = (
-                    "Remove item <b>{}</b> from project?".format(name)
-                    + " Item data directory will still be available in the project directory after this operation."
-                )
-            else:
-                msg = "Remove item <b>{}</b> and its data directory from project?".format(name)
-            msg = msg + "<br><br>Tip: Remove items by pressing 'Delete' key to bypass this dialog."
-            # noinspection PyCallByClass, PyTypeChecker
-            message_box = QMessageBox(
-                QMessageBox.Question, "Remove Item", msg, buttons=QMessageBox.Ok | QMessageBox.Cancel, parent=self
-            )
-            message_box.button(QMessageBox.Ok).setText("Remove Item")
-            answer = message_box.exec_()
-            if answer != QMessageBox.Ok:
-                return
-        try:
-            data_dir = item.project_item.data_dir
-        except AttributeError:
-            data_dir = None
-        # Remove item from project model
-        if not self.project_item_model.remove_item(item, parent=ind.parent()):
-            self.msg_error.emit("Removing item <b>{0}</b> from project failed".format(name))
-        # Remove item icon and connected links (QGraphicsItems) from scene
-        icon = item.project_item.get_icon()
-        self.ui.graphicsView.remove_icon(icon)
-        self._project.dag_handler.remove_node_from_graph(name)
-        item.project_item.tear_down()
-        if delete_item:
-            if data_dir:
-                # Remove data directory and all its contents
-                self.msg.emit("Removing directory <b>{0}</b>".format(data_dir))
-                try:
-                    if not erase_dir(data_dir):
-                        self.msg_error.emit("Directory does not exist")
-                except OSError:
-                    self.msg_error.emit("[OSError] Removing directory failed. Check directory permissions.")
-            self.msg.emit("Item <b>{0}</b> removed from project".format(name))
 
     @Slot("QUrl", name="open_anchor")
     def open_anchor(self, qurl):
@@ -1194,8 +1136,8 @@ class ToolboxUI(QMainWindow):
         self.addAction(self.show_supported_img_formats)
         self.addAction(self.test_variable_push)
 
-    def add_toggle_view_actions(self):
-        """Add toggle view actions to View menu."""
+    def add_menu_actions(self):
+        """Add extra actions to View menu."""
         self.ui.menuToolbars.addAction(self.item_toolbar.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_project.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_eventlog.toggleViewAction())
@@ -1203,6 +1145,16 @@ class ToolboxUI(QMainWindow):
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_item.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_python_repl.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_julia_repl.toggleViewAction())
+        undo_action = self.undo_stack.createUndoAction(self)
+        redo_action = self.undo_stack.createRedoAction(self)
+        undo_action.setShortcuts(QKeySequence.Undo)
+        redo_action.setShortcuts(QKeySequence.Redo)
+        undo_action.setIcon(QIcon(":/icons/menu_icons/undo.svg"))
+        redo_action.setIcon(QIcon(":/icons/menu_icons/redo.svg"))
+        before = self.ui.menuEdit.actions()[0]
+        self.ui.menuEdit.insertAction(before, undo_action)
+        self.ui.menuEdit.insertAction(before, redo_action)
+        self.ui.menuEdit.insertSeparator(before)
 
     def toggle_properties_tabbar_visibility(self):
         """Shows or hides the tab bar in properties dock widget. For debugging purposes."""

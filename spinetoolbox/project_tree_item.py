@@ -287,8 +287,7 @@ class LeafProjectTreeItem(BaseProjectTreeItem):
         elif action == "Remove item":
             delete_int = int(self._toolbox._qsettings.value("appSettings/deleteData", defaultValue="0"))
             delete_bool = delete_int != 0
-            ind = self._toolbox.project_item_model.find_item(self.name)
-            self._toolbox.remove_item(ind, delete_item=delete_bool, check_dialog=True)
+            self._project_item._project.remove_item(self.name, delete_item=delete_bool, check_dialog=True)
 
     def rename(self, new_name):
         """Renames this item.
