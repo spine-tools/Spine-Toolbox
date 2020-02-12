@@ -99,8 +99,8 @@ class DataStoreFormBase(QMainWindow):
         self.settings_group = 'treeViewWidget'
         self.undo_action = None
         self.redo_action = None
-        db_names = ", ".join(["{0}[*]".format(db_map.codename) for db_map in self.db_maps])
-        self.setWindowTitle("{0} - Data store view ".format(db_names))
+        db_names = ", ".join(["{0}".format(db_map.codename) for db_map in self.db_maps])
+        self.setWindowTitle("{0}[*] - Data store view".format(db_names))
         self.update_commit_enabled()
 
     def add_menu_actions(self):

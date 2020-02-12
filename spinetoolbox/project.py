@@ -117,7 +117,7 @@ class SpineToolboxProject(MetaObject):
         """
         super().set_name(name)
         # Update Window Title
-        self._toolbox.setWindowTitle("Spine Toolbox    -- {} --".format(self.name))
+        self._toolbox.update_window_title()
         self._logger.msg.emit("Project name changed to <b>{0}</b>".format(self.name))
 
     @staticmethod

@@ -211,6 +211,14 @@ class ToolboxUI(QMainWindow):
         self.zoom_widget_action.minus_pressed.connect(self._handle_zoom_minus_pressed)
         self.zoom_widget_action.plus_pressed.connect(self._handle_zoom_plus_pressed)
         self.zoom_widget_action.reset_pressed.connect(self._handle_zoom_reset_pressed)
+        # Undo stack
+        self.undo_stack.cleanChanged.connect(self.update_window_modified)
+
+    @Slot(bool)
+    def update_window_modified(self, clean):
+        """Updates window modified status and save actions depending on the state of the undo stack."""
+        self.setWindowModified(not clean)
+        # TODO: update save actions availability whenever we're sure we do everything meaningful through the stack.
 
     def parse_project_item_modules(self):
         """Collects attributes from project item modules into a dict.
@@ -278,6 +286,9 @@ class ToolboxUI(QMainWindow):
     def qsettings(self):
         """Returns application preferences object."""
         return self._qsettings
+
+    def update_window_title(self):
+        self.setWindowTitle("{0}[*] ({1}) - Spine Toolbox".format(self._project.project_dir, self._project.name))
 
     @Slot(name="init_project")
     def init_project(self, project_dir):
@@ -359,7 +370,7 @@ class ToolboxUI(QMainWindow):
         self._project.connect_signals()
         self._connect_project_signals()
         self.init_tool_specification_model(list())  # Start project with no tool specifications
-        self.setWindowTitle("Spine Toolbox    -- {} --".format(self._project.name))
+        self.update_window_title()
         self.ui.graphicsView.init_scene(empty=True)
         # Update recentProjects
         self.update_recent_projects()
@@ -435,7 +446,7 @@ class ToolboxUI(QMainWindow):
             self, name, desc, project_dir, self.project_item_model, settings=self._qsettings, logger=self
         )
         self._connect_project_signals()
-        self.setWindowTitle("Spine Toolbox    -- {} --".format(self._project.name))
+        self.update_window_title()
         # Init tool spec model
         deserialized_paths = [deserialize_path(spec, self._project.project_dir) for spec in tool_spec_paths]
         self.init_tool_specification_model(deserialized_paths)
@@ -483,6 +494,7 @@ class ToolboxUI(QMainWindow):
             self.msg_error.emit("Project saving failed")
             return
         self.msg.emit("Project <b>{0}</b> saved".format(self._project.name))
+        self.undo_stack.setClean()
 
     @Slot(name="save_project_as")
     def save_project_as(self):
@@ -525,7 +537,7 @@ class ToolboxUI(QMainWindow):
             return
         # noinspection PyCallByClass, PyArgumentList
         QMessageBox.information(self, f"Project {self._project.name} saved", f"Project directory is now\n\n{answer}")
-        return
+        self.undo_stack.setClean()
 
     @Slot(bool)
     def upgrade_project(self, checked=False):
