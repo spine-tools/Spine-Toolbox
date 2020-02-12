@@ -274,10 +274,6 @@ class ProjectItemIcon(QGraphicsRectItem):
         # Make item name graphics item.
         name = project_item.name if project_item else ""
         self.name_item = QGraphicsSimpleTextItem(name)
-        shadow_effect = QGraphicsDropShadowEffect()
-        shadow_effect.setOffset(1)
-        shadow_effect.setEnabled(False)
-        self.setGraphicsEffect(shadow_effect)
         self.set_name_attributes()  # Set font, size, position, etc.
         # Make connector buttons
         self.connectors = dict(
@@ -298,9 +294,18 @@ class ProjectItemIcon(QGraphicsRectItem):
         self.rank_icon.setParentItem(self)
         brush = QBrush(background_color)
         self._setup(brush, icon_file, icon_color)
-        # Add items to scene
+        self.activate()
+
+    def activate(self):
+        """Adds items to scene and setup graphics effect.
+        Called in the constructor and when re-adding the item to the project in the context of undo/redo.
+        """
         scene = self._toolbox.ui.graphicsView.scene()
         scene.addItem(self)
+        shadow_effect = QGraphicsDropShadowEffect()
+        shadow_effect.setOffset(1)
+        shadow_effect.setEnabled(False)
+        self.setGraphicsEffect(shadow_effect)
 
     def _setup(self, brush, svg, svg_color):
         """Setup item's attributes.

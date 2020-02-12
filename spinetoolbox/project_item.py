@@ -103,7 +103,8 @@ class ProjectItem(MetaObject):
 
     def set_properties_ui(self, properties_ui):
         self._properties_ui = properties_ui
-        self._sigs = self.make_signal_handler_dict()
+        if self._sigs is None:
+            self._sigs = self.make_signal_handler_dict()
 
     def set_icon(self, icon):
         self._icon = icon
@@ -342,8 +343,13 @@ class ProjectItem(MetaObject):
             self._logger.msg_error.emit(f"Failed to open directory: {self.data_dir}")
 
     def tear_down(self):
-        """Tears down this item. Called by toolbox just before closing.
+        """Tears down this item. Called by toolbox just before closing and removing the item.
         Implement in subclasses to eg close all QMainWindows opened by this item.
+        """
+
+    def set_up(self):
+        """Sets up this item. Called by toolbox just after adding the item.
+        Implement in subclasses to eg recreate attributes destroyed by tear_down.
         """
 
     def update_name_label(self):

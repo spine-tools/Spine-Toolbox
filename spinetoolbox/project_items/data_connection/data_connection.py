@@ -48,9 +48,7 @@ class DataConnection(ProjectItem):
         self.reference_model = QStandardItemModel()  # References to files
         self.data_model = QStandardItemModel()  # Paths of project internal files. These are found in DC data directory
         self.datapackage_icon = QIcon(QPixmap(":/icons/datapkg.png"))
-        self.data_dir_watcher = QFileSystemWatcher(self)
-        if os.path.isdir(self.data_dir):
-            self.data_dir_watcher.addPath(self.data_dir)
+        self.data_dir_watcher = None
         # Populate references model
         if references is None:
             references = list()
@@ -62,6 +60,11 @@ class DataConnection(ProjectItem):
         data_files = self.data_files()
         self.populate_data_list(data_files)
         self.spine_datapackage_form = None
+
+    def set_up(self):
+        self.data_dir_watcher = QFileSystemWatcher(self)
+        if os.path.isdir(self.data_dir):
+            self.data_dir_watcher.addPath(self.data_dir)
         self.data_dir_watcher.directoryChanged.connect(self.refresh)
 
     @staticmethod

@@ -187,9 +187,14 @@ class CategoryProjectTreeItem(BaseProjectTreeItem):
         self._children.append(child_item)
         child_item._parent = self
         project_item = child_item.project_item
-        icon = self._icon_maker(child_item.toolbox, project_item.x - 35, project_item.y - 35, 70, 70, project_item)
-        project_item.set_icon(icon)
+        icon = project_item.get_icon()
+        if isinstance(icon, self._icon_maker):
+            icon.activate()
+        else:
+            icon = self._icon_maker(child_item.toolbox, project_item.x - 35, project_item.y - 35, 70, 70, project_item)
+            project_item.set_icon(icon)
         project_item.set_properties_ui(self._properties_ui)
+        project_item.set_up()
         return True
 
     def custom_context_menu(self, parent, pos):

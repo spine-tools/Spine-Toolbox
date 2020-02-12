@@ -338,6 +338,9 @@ class DesignQGraphicsView(CustomQGraphicsView):
     def add_link(self, src_connector, dst_connector):
         self._toolbox.undo_stack.push(AddLinkCommand(self, src_connector, dst_connector))
 
+    def make_link(self, src_connector, dst_connector):
+        return Link(self._toolbox, src_connector, dst_connector)
+
     def do_add_link(self, src_connector, dst_connector):
         """Draws link between source and destination connectors on scene.
 
@@ -345,23 +348,26 @@ class DesignQGraphicsView(CustomQGraphicsView):
             src_connector (ConnectorButton): Source connector button
             dst_connector (ConnectorButton): Destination connector button
         """
+        link = self.make_link(src_connector, dst_connector)
+        self._add_link(link)
+
+    def _add_link(self, link):
         # Remove existing links between the same items
-        for replaced_link in src_connector._parent.outgoing_links():
-            if replaced_link.dst_connector._parent == dst_connector._parent:
+        for replaced_link in link.src_connector._parent.outgoing_links():
+            if replaced_link.dst_connector._parent == link.dst_connector._parent:
                 replaced_link.wipe_out()
                 break
         else:
             replaced_link = None
-        link = Link(self._toolbox, src_connector, dst_connector)
-        self.scene().addItem(link)
         # Store Link in connectors, so it can be found *from* the Project Item
-        src_connector.links.append(link)
-        dst_connector.links.append(link)
+        link.src_connector.links.append(link)
+        link.dst_connector.links.append(link)
+        self.scene().addItem(link)
         # Add edge (connection link) to a dag as well
         src_name = link.src_icon._project_item.name
         dst_name = link.dst_icon._project_item.name
         self._toolbox.project().dag_handler.add_graph_edge(src_name, dst_name)
-        return link, replaced_link
+        return replaced_link
 
     def remove_link(self, link):
         self._toolbox.undo_stack.push(RemoveLinkCommand(self, link))

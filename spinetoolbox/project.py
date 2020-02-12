@@ -247,6 +247,39 @@ class SpineToolboxProject(MetaObject):
             AddProjectItemsCommand(self, category_name, *items, set_selected=set_selected, verbosity=verbosity)
         )
 
+    def make_project_items(self, category_name, *items):
+        category_ind = self._project_item_model.find_category(category_name)
+        if not category_ind:
+            self._logger.msg_error.emit("Category {0} not found".format(category_name))
+            return []
+        category_item = self._project_item_model.item(category_ind)
+        item_maker = category_item.item_maker()
+        project_items = []
+        for item_dict in items:
+            try:
+                item = item_maker(**item_dict, toolbox=self._toolbox, project=self, logger=self._logger)
+                project_items.append(item)
+            except TypeError:
+                self._logger.msg_error.emit(
+                    "Loading project item <b>{0}</b> into category <b>{1}</b> failed. "
+                    "This is most likely caused by an outdated project file.".format(item_dict["name"], category_name)
+                )
+        return category_ind, project_items
+
+    def _add_project_items(self, category_ind, *project_items, set_selected=False, verbosity=True):
+        tree_items = []
+        for item in project_items:
+            tree_item = LeafProjectTreeItem(item, self._toolbox)
+            self._project_item_model.insert_item(tree_item, category_ind)
+            # Append new node to networkx graph
+            self.add_to_dag(item.name)
+            if verbosity:
+                self._logger.msg.emit("{0} <b>{1}</b> added to project.".format(item.item_type(), item.name))
+            if set_selected:
+                self.set_item_selected(tree_item)
+            tree_items.append(tree_item)
+        return tree_items
+
     def do_add_project_items(self, category_name, *items, set_selected=False, verbosity=True):
         """Adds item to project.
 
@@ -256,29 +289,8 @@ class SpineToolboxProject(MetaObject):
             set_selected (bool): Whether to set item selected after the item has been added to project
             verbosity (bool): If True, prints message
         """
-        category_ind = self._project_item_model.find_category(category_name)
-        if not category_ind:
-            self._logger.msg_error.emit("Category {0} not found".format(category_name))
-            return
-        category_item = self._project_item_model.item(category_ind)
-        item_maker = category_item.item_maker()
-        for item_dict in items:
-            try:
-                item = item_maker(**item_dict, toolbox=self._toolbox, project=self, logger=self._logger)
-                tree_item = LeafProjectTreeItem(item, self._toolbox)
-            except TypeError:
-                self._logger.msg_error.emit(
-                    "Loading project item <b>{0}</b> into category <b>{1}</b> failed. "
-                    "This is most likely caused by an outdated project file.".format(item_dict["name"], category_name)
-                )
-                continue
-            self._project_item_model.insert_item(tree_item, category_ind)
-            # Append new node to networkx graph
-            self.add_to_dag(item.name)
-            if verbosity:
-                self._logger.msg.emit("{0} <b>{1}</b> added to project.".format(item.item_type(), item.name))
-            if set_selected:
-                self.set_item_selected(tree_item)
+        category_ind, project_items = self.make_project_items(category_name, *items)
+        self._add_project_items(category_ind, *project_items, set_selected=set_selected, verbosity=verbosity)
 
     def add_to_dag(self, item_name):
         """Add new node (project item) to the directed graph."""
@@ -305,15 +317,19 @@ class SpineToolboxProject(MetaObject):
             check_dialog (bool): If True, shows 'Are you sure?' message box
         """
         ind = self._project_item_model.find_item(name)
+        category_ind = ind.parent()
         item = self._project_item_model.item(ind)
+        self._remove_item(category_ind, item, delete_item=delete_item, check_dialog=check_dialog)
+
+    def _remove_item(self, category_ind, item, delete_item=False, check_dialog=False):
         if check_dialog:
             if not delete_item:
                 msg = (
-                    "Remove item <b>{}</b> from project?".format(name)
+                    "Remove item <b>{}</b> from project?".format(item.name)
                     + " Item data directory will still be available in the project directory after this operation."
                 )
             else:
-                msg = "Remove item <b>{}</b> and its data directory from project?".format(name)
+                msg = "Remove item <b>{}</b> and its data directory from project?".format(item.name)
             msg = msg + "<br><br>Tip: Remove items by pressing 'Delete' key to bypass this dialog."
             # noinspection PyCallByClass, PyTypeChecker
             message_box = QMessageBox(
@@ -332,12 +348,12 @@ class SpineToolboxProject(MetaObject):
         except AttributeError:
             data_dir = None
         # Remove item from project model
-        if not self._project_item_model.remove_item(item, parent=ind.parent()):
-            self._logger.msg_error.emit("Removing item <b>{0}</b> from project failed".format(name))
+        if not self._project_item_model.remove_item(item, parent=category_ind):
+            self._logger.msg_error.emit("Removing item <b>{0}</b> from project failed".format(item.name))
         # Remove item icon and connected links (QGraphicsItems) from scene
         icon = item.project_item.get_icon()
         self._toolbox.ui.graphicsView.remove_icon(icon)
-        self.dag_handler.remove_node_from_graph(name)
+        self.dag_handler.remove_node_from_graph(item.name)
         item.project_item.tear_down()
         if delete_item:
             if data_dir:
@@ -348,7 +364,7 @@ class SpineToolboxProject(MetaObject):
                         self._logger.msg_error.emit("Directory does not exist")
                 except OSError:
                     self._logger.msg_error.emit("[OSError] Removing directory failed. Check directory permissions.")
-            self._logger.msg.emit("Item <b>{0}</b> removed from project".format(name))
+            self._logger.msg.emit("Item <b>{0}</b> removed from project".format(item.name))
 
     def set_item_selected(self, item):
         """Sets item selected and shows its info screen.
@@ -532,10 +548,6 @@ class SpineToolboxProject(MetaObject):
         # In those cases we don't need to notify other items.
         if dag:
             self.notify_changes_in_dag(dag)
-        elif self._project_item_model.find_item(item) is not None:
-            self._logger.msg_error.emit(
-                f"[BUG] Could not find a graph containing {item}. <b>Please reopen the project.</b>"
-            )
 
     @property
     def settings(self):
