@@ -41,6 +41,7 @@ from PySide2.QtGui import (
     QLinearGradient,
 )
 from PySide2.QtSvg import QGraphicsSvgItem, QSvgRenderer
+from spinetoolbox.project_commands import MoveIconCommand
 
 
 class ConnectorButton(QGraphicsRectItem):
@@ -266,6 +267,9 @@ class ProjectItemIcon(QGraphicsRectItem):
         self._toolbox = toolbox
         self._project_item = project_item
         self._moved_on_scene = False
+        self._previous_pos = None
+        self._current_pos = None
+        self.selected_icons = None
         self.renderer = QSvgRenderer()
         self.svg_item = QGraphicsSvgItem()
         self.colorizer = QGraphicsColorizeEffect()
@@ -397,6 +401,12 @@ class ProjectItemIcon(QGraphicsRectItem):
         self.graphicsEffect().setEnabled(False)
         event.accept()
 
+    def mousePressEvent(self, event):
+        super().mousePressEvent(event)
+        self.selected_icons = set(x for x in self.scene().selectedItems() if isinstance(x, ProjectItemIcon))
+        for icon in self.selected_icons:
+            icon._previous_pos = icon.scenePos()
+
     def mouseMoveEvent(self, event):
         """Moves icon(s) while the mouse button is pressed.
         Update links that are connected to selected icons.
@@ -405,18 +415,27 @@ class ProjectItemIcon(QGraphicsRectItem):
             event (QGraphicsSceneMouseEvent): Event
         """
         super().mouseMoveEvent(event)
-        selected_icons = set(x for x in self.scene().selectedItems() if isinstance(x, ProjectItemIcon))
-        links = set(link for icon in selected_icons for conn in icon.connectors.values() for link in conn.links)
+        self.update_links_geometry()
+
+    def update_links_geometry(self):
+        """Updates geometry of connected links to reflect this item's most recent position."""
+        links = set(link for icon in self.selected_icons for conn in icon.connectors.values() for link in conn.links)
         for link in links:
             link.update_geometry()
 
     def mouseReleaseEvent(self, event):
+        for icon in self.selected_icons:
+            icon._current_pos = icon.scenePos()
+        if (self._current_pos - self._previous_pos).manhattanLength() > qApp.startDragDistance():
+            self._toolbox.undo_stack.push(MoveIconCommand(self))
+        super().mouseReleaseEvent(event)
+
+    def shrink_scene_if_needed(self):
         if self._moved_on_scene:
             self._moved_on_scene = False
             scene = self.scene()
             scene.shrink_if_needed()
             scene.item_move_finished.emit(self)
-        super().mouseReleaseEvent(event)
 
     def contextMenuEvent(self, event):
         """Show item context menu.

@@ -97,3 +97,24 @@ class RemoveLinkCommand(QUndoCommand):
 
     def undo(self):
         self.graphics_view._add_link(self.link)
+
+
+class MoveIconCommand(QUndoCommand):
+    def __init__(self, graphics_item):
+        super().__init__()
+        self.graphics_item = graphics_item
+        self.previous_pos = {x: x._previous_pos for x in graphics_item.selected_icons}
+        self.current_pos = {x: x._current_pos for x in graphics_item.selected_icons}
+        self.setText(f"move {', '.join([x._project_item.name for x in graphics_item.selected_icons])}")
+
+    def redo(self):
+        for item, current_post in self.current_pos.items():
+            item.setPos(current_post)
+        self.graphics_item.update_links_geometry()
+        self.graphics_item.shrink_scene_if_needed()
+
+    def undo(self):
+        for item, previous_pos in self.previous_pos.items():
+            item.setPos(previous_pos)
+        self.graphics_item.update_links_geometry()
+        self.graphics_item.shrink_scene_if_needed()
