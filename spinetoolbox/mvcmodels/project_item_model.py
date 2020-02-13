@@ -17,6 +17,7 @@ Contains a class for storing project items.
 """
 
 import logging
+from copy import copy
 from PySide2.QtCore import Qt, QModelIndex, QAbstractItemModel
 from PySide2.QtWidgets import QMessageBox
 from ..config import INVALID_CHARS
@@ -319,6 +320,15 @@ class ProjectItemModel(QAbstractItemModel):
             obj:'list' of obj:'str': Item names
         """
         return [item.name for item in self.items()]
+
+    def items_per_category(self):
+        """Returns a dict mapping category indexes to a list of items in that category.
+
+        Returns:
+            dict(QModelIndex,list(LeafProjectTreeItem))
+        """
+        category_inds = [self.index(row, 0) for row in range(self.rowCount())]
+        return {ind: copy(ind.internalPointer().children()) for ind in category_inds}
 
     def short_name_reserved(self, short_name):
         """Checks if the directory name derived from the name of the given item is in use.

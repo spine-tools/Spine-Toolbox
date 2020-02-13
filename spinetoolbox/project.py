@@ -318,7 +318,24 @@ class SpineToolboxProject(MetaObject):
     def remove_all_items(self):
         """Pushes a RemoveAllProjectItemsCommand to the toolbox undo stack.
         """
-        self._toolbox.undo_stack.push(RemoveAllProjectItemsCommand(self))
+        items_per_category = self._project_item_model.items_per_category()
+        if not any(v for v in items_per_category.values()):
+            self._logger.msg.emit("No project items to remove")
+            return
+        msg = "Remove all items from project?"
+        message_box = QMessageBox(
+            QMessageBox.Question,
+            "Remove All Items",
+            msg,
+            buttons=QMessageBox.Ok | QMessageBox.Cancel,
+            parent=self._toolbox,
+        )
+        message_box.button(QMessageBox.Ok).setText("Remove Items")
+        answer = message_box.exec_()
+        if answer != QMessageBox.Ok:
+            return
+        links = self._toolbox.ui.graphicsView.links()
+        self._toolbox.undo_stack.push(RemoveAllProjectItemsCommand(self, items_per_category, links))
 
     def remove_item(self, name, delete_item=False, check_dialog=False):
         """Pushes a RemoveProjectItemCommand to the toolbox undo stack.

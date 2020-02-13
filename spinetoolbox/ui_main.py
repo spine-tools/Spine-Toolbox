@@ -983,16 +983,7 @@ class ToolboxUI(QMainWindow):
         if not self._project:
             self.msg.emit("No project items to remove")
             return
-        msg = "Remove all items from project?"
-        message_box = QMessageBox(
-            QMessageBox.Question, "Remove All Items", msg, buttons=QMessageBox.Ok | QMessageBox.Cancel, parent=self
-        )
-        message_box.button(QMessageBox.Ok).setText("Remove Items")
-        answer = message_box.exec_()
-        if answer != QMessageBox.Ok:
-            return
         self._project.remove_all_items()
-        self.msg.emit("All items removed from project")
 
     @Slot("QUrl", name="open_anchor")
     def open_anchor(self, qurl):

@@ -26,6 +26,7 @@ import spinedb_api
 from spinetoolbox.project_item import ProjectItem, ProjectItemResource
 from spinetoolbox.widgets.data_store_widget import DataStoreForm
 from spinetoolbox.helpers import create_dir, busy_effect, serialize_path, deserialize_path
+from spinetoolbox.project_commands import UpdateDSURLCommand
 from .widgets.custom_menus import DataStoreContextMenu
 
 
@@ -72,14 +73,16 @@ class DataStore(ProjectItem):
 
     def parse_url(self, url):
         """Return a complete url dictionary from the given dict or string"""
-        base_url = dict(dialect=None, username=None, password=None, host=None, port=None, database=None)
+        base_url = dict(dialect="", username="", password="", host="", port="", database="")
         if isinstance(url, dict):
             if "database" in url and url["database"] is not None:
                 if url["database"].lower().endswith(".sqlite"):
                     # Convert relative database path back to absolute
                     abs_path = os.path.abspath(os.path.join(self._project.project_dir, url["database"]))
                     url["database"] = abs_path
-            base_url.update(url)
+            for key, value in url.items():
+                if value is not None:
+                    base_url[key] = value
         return base_url
 
     def make_signal_handler_dict(self):
@@ -104,7 +107,7 @@ class DataStore(ProjectItem):
         """Load url into selections and connect signals."""
         self._properties_ui.label_ds_name.setText(self.name)
         self._properties_ui.checkBox_for_spine_model.setCheckState(self._for_spine_model_checkbox_state)
-        self.load_url_into_selections()  # Do this before connecting signals or funny things happen
+        self.load_url_into_selections(self._url)
         super().connect_signals()
 
     def deactivate(self):
@@ -132,8 +135,8 @@ class DataStore(ProjectItem):
                 )
             return None
         try:
-            url_copy = dict(self._url)
-            dialect = url_copy.pop("dialect")
+            url = {key: value for key, value in self._url.items() if value}
+            dialect = url.pop("dialect")
             if not dialect:
                 if log_errors:
                     self._logger.msg_error.emit(
@@ -142,11 +145,11 @@ class DataStore(ProjectItem):
                     )
                 return None
             if dialect == 'sqlite':
-                url = URL('sqlite', **url_copy)  # pylint: disable=unexpected-keyword-arg
+                sa_url = URL('sqlite', **url)  # pylint: disable=unexpected-keyword-arg
             else:
                 db_api = spinedb_api.SUPPORTED_DIALECTS[dialect]
                 drivername = f"{dialect}+{db_api}"
-                url = URL(drivername, **url_copy)  # pylint: disable=unexpected-keyword-arg
+                sa_url = URL(drivername, **url)  # pylint: disable=unexpected-keyword-arg
         except Exception as e:  # pylint: disable=broad-except
             # This is in case one of the keys has invalid format
             if log_errors:
@@ -155,7 +158,7 @@ class DataStore(ProjectItem):
                     "<br>Please make new selections and try again."
                 )
             return None
-        if not url.database:
+        if not sa_url.database:
             if log_errors:
                 self._logger.msg_error.emit(
                     f"Unable to generate URL from <b>{self.name}</b> selections: database missing. "
@@ -164,12 +167,12 @@ class DataStore(ProjectItem):
             return None
         # Small hack to make sqlite file paths relative to this DS directory
         # TODO: Check if this is still needed
-        if dialect == "sqlite" and not os.path.isabs(url.database):
-            url.database = os.path.join(self.data_dir, url.database)
-            self._properties_ui.lineEdit_database.setText(url.database)
+        if dialect == "sqlite" and not os.path.isabs(sa_url.database):
+            sa_url.database = os.path.join(self.data_dir, sa_url.database)
+            self._properties_ui.lineEdit_database.setText(sa_url.database)
         # Final check
         try:
-            engine = create_engine(url)
+            engine = create_engine(sa_url)
             with engine.connect():
                 pass
         except Exception as e:  # pylint: disable=broad-except
@@ -179,20 +182,19 @@ class DataStore(ProjectItem):
                     "<br>Please make new selections and try again."
                 )
             return None
-        return url
+        return sa_url
 
     def project(self):
         """Returns current project or None if no project open."""
         return self._project
 
-    @Slot("QString", name="set_path_to_sqlite_file")
+    @Slot("QString")
     def set_path_to_sqlite_file(self, file_path):
         """Set path to SQLite file."""
         abs_path = os.path.abspath(file_path)
-        self._properties_ui.lineEdit_database.setText(abs_path)
-        self.set_url_key("database", abs_path)
+        self.update_url(database=abs_path)
 
-    @Slot(bool, name='open_sqlite_file')
+    @Slot(bool)
     def open_sqlite_file(self, checked=False):
         """Open file browser where user can select the path to an SQLite
         file that they want to use."""
@@ -204,77 +206,81 @@ class DataStore(ProjectItem):
         # Update UI
         self.set_path_to_sqlite_file(file_path)
 
-    def load_url_into_selections(self):
-        """Load url attribute into shared widget selections.
-        Used when activating the item, and creating a new Spine db."""
-        # TODO: Test what happens when Tool item calls this and this item is selected.
-        self._properties_ui.comboBox_dialect.setCurrentIndex(-1)
-        self._properties_ui.comboBox_dsn.setCurrentIndex(-1)
-        self._properties_ui.lineEdit_host.clear()
-        self._properties_ui.lineEdit_port.clear()
-        self._properties_ui.lineEdit_database.clear()
-        self._properties_ui.lineEdit_username.clear()
-        self._properties_ui.lineEdit_password.clear()
-        if not self._url:
+    def load_url_into_selections(self, url):
+        """Load given url attribute into shared widget selections.
+        """
+        if not url:
             return
-        dialect = self._url["dialect"]
-        self.enable_dialect(dialect)
-        self._properties_ui.comboBox_dialect.setCurrentText(dialect)
-        if self._url["host"]:
-            self._properties_ui.lineEdit_host.setText(self._url["host"])
-        if self._url["port"]:
-            self._properties_ui.lineEdit_port.setText(str(self._url["port"]))
-        if self._url["database"]:
-            abs_db_path = os.path.abspath(self._url["database"])
+        dialect = url.get("dialect")
+        host = url.get("host")
+        port = url.get("port")
+        database = url.get("database")
+        username = url.get("username")
+        password = url.get("password")
+        if dialect is not None:
+            self.enable_dialect(dialect)
+            if dialect == "":
+                self._properties_ui.comboBox_dialect.setCurrentIndex(-1)
+            else:
+                self._properties_ui.comboBox_dialect.setCurrentText(dialect)
+        if host is not None:
+            self._properties_ui.lineEdit_host.setText(host)
+        if port is not None:
+            self._properties_ui.lineEdit_port.setText(str(port))
+        if database is not None:
+            abs_db_path = os.path.abspath(database)
             self._properties_ui.lineEdit_database.setText(abs_db_path)
-        if self._url["username"]:
-            self._properties_ui.lineEdit_username.setText(self._url["username"])
-        if self._url["password"]:
-            self._properties_ui.lineEdit_password.setText(self._url["password"])
+        if username is not None:
+            self._properties_ui.lineEdit_username.setText(username)
+        if password is not None:
+            self._properties_ui.lineEdit_password.setText(password)
 
-    def set_url_key(self, key, value):
+    def update_url(self, **kwargs):
         """Set url key to value."""
-        self._url[key] = value
-        self.item_changed.emit()
+        kwargs = {k: v for k, v in kwargs.items() if v != self._url[k]}
+        if not kwargs:
+            return
+        self._toolbox.undo_stack.push(UpdateDSURLCommand(self, **kwargs))
 
-    @Slot(name="refresh_host")
+    @Slot()
     def refresh_host(self):
         """Refresh host from selections."""
         host = self._properties_ui.lineEdit_host.text()
-        self.set_url_key("host", host)
+        self.update_url(host=host)
 
-    @Slot(name="refresh_port")
+    @Slot()
     def refresh_port(self):
         """Refresh port from selections."""
         port = self._properties_ui.lineEdit_port.text()
-        self.set_url_key("port", port)
+        self.update_url(port=port)
 
-    @Slot(name="refresh_database")
+    @Slot()
     def refresh_database(self):
         """Refresh database from selections."""
         database = self._properties_ui.lineEdit_database.text()
-        self.set_url_key("database", database)
+        self.update_url(database=database)
 
-    @Slot(name="refresh_username")
+    @Slot()
     def refresh_username(self):
         """Refresh username from selections."""
         username = self._properties_ui.lineEdit_username.text()
-        self.set_url_key("username", username)
+        self.update_url(username=username)
 
-    @Slot(name="refresh_password")
+    @Slot()
     def refresh_password(self):
         """Refresh password from selections."""
         password = self._properties_ui.lineEdit_password.text()
-        self.set_url_key("password", password)
+        self.update_url(password=password)
 
-    @Slot("QString", name="refresh_dialect")
+    @Slot("QString")
     def refresh_dialect(self, dialect):
-        self.set_url_key("dialect", dialect)
-        self.enable_dialect(dialect)
+        self.update_url(dialect=dialect)
 
     def enable_dialect(self, dialect):
         """Enable the given dialect in the item controls."""
-        if dialect == 'sqlite':
+        if dialect == "":
+            self.enable_no_dialect()
+        elif dialect == 'sqlite':
             self.enable_sqlite()
         elif dialect == 'mssql':
             import pyodbc  # pylint: disable=import-outside-toplevel
@@ -396,7 +402,7 @@ class DataStore(ProjectItem):
         QApplication.clipboard().setText(str(self._sa_url))
         self._logger.msg.emit(f"Database url <b>{self._sa_url}</b> copied to clipboard")
 
-    @Slot(bool, name="create_new_spine_database")
+    @Slot(bool)
     def create_new_spine_database(self, checked=False):
         """Create new (empty) Spine database."""
         for_spine_model = self._properties_ui.checkBox_for_spine_model.isChecked()
@@ -408,11 +414,7 @@ class DataStore(ProjectItem):
             )
             dialect = "sqlite"
             database = os.path.abspath(os.path.join(self.data_dir, self.name + ".sqlite"))
-            self._properties_ui.comboBox_dialect.setCurrentText(dialect)
-            self._properties_ui.lineEdit_database.setText(database)
-            self._url["dialect"] = dialect
-            self._url["database"] = database
-            self.item_changed.emit()
+            self.update_url(dialect=dialect, database=database)
         self._project.db_mngr.create_new_spine_database(self._sa_url, for_spine_model)
 
     def update_name_label(self):

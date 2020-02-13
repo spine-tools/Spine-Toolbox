@@ -343,12 +343,12 @@ class ProjectItem(MetaObject):
             self._logger.msg_error.emit(f"Failed to open directory: {self.data_dir}")
 
     def tear_down(self):
-        """Tears down this item. Called by toolbox just before closing and removing the item.
+        """Tears down this item. Called both before closing the app and when removing the item from the project.
         Implement in subclasses to eg close all QMainWindows opened by this item.
         """
 
     def set_up(self):
-        """Sets up this item. Called by toolbox just after adding the item.
+        """Sets up this item. Called when adding the item to the project.
         Implement in subclasses to eg recreate attributes destroyed by tear_down.
         """
 

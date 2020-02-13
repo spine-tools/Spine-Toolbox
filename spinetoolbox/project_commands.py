@@ -16,7 +16,6 @@ QUndoCommand subclasses for modifying the project.
 :date:   12.2.2020
 """
 
-from copy import copy
 from PySide2.QtWidgets import QUndoCommand
 
 
@@ -49,7 +48,7 @@ class AddProjectItemsCommand(QUndoCommand):
 
 
 class RemoveAllProjectItemsCommand(QUndoCommand):
-    def __init__(self, project):
+    def __init__(self, project, items_per_category, links):
         """Command to remove all items from project.
 
         Args:
@@ -57,13 +56,8 @@ class RemoveAllProjectItemsCommand(QUndoCommand):
         """
         super().__init__()
         self.project = project
-        m = project._project_item_model
-        category_inds = [m.index(row, 0) for row in range(m.rowCount())]
-        self.items_per_category = {ind: copy(ind.internalPointer().children()) for ind in category_inds}
-        if not any(v for v in self.items_per_category.values()):
-            self.setObsolete(True)
-            return
-        self.links = project._toolbox.ui.graphicsView.links()
+        self.items_per_category = items_per_category
+        self.links = links
         self.setText("remove all items")
 
     def redo(self):
@@ -71,6 +65,7 @@ class RemoveAllProjectItemsCommand(QUndoCommand):
         for category_ind, project_tree_items in self.items_per_category.items():
             for project_tree_item in project_tree_items:
                 self.project._remove_item(category_ind, project_tree_item, delete_item=delete_item)
+        self.project._logger.msg.emit("All items removed from project")
 
     def undo(self):
         for category_ind, project_tree_items in self.items_per_category.items():
@@ -247,3 +242,29 @@ class RemoveDCReferencesCommand(QUndoCommand):
 
     def undo(self):
         self.dc.do_add_files_to_references(self.paths)
+
+
+class UpdateDSURLCommand(QUndoCommand):
+    def __init__(self, ds, **kwargs):
+        """Command to update DS url.
+
+        Args:
+            ds (DataStore): the DS
+            kwargs: url keys and their values
+        """
+        super().__init__()
+        self.ds = ds
+        self.redo_kwargs = kwargs
+        self.undo_kwargs = {k: self.ds._url[k] for k in kwargs}
+        changed_keys = ", ".join(list(kwargs.keys()))
+        self.setText(f"change url {changed_keys} of {ds.name}")
+
+    def redo(self):
+        self.ds._url.update(self.redo_kwargs)
+        self.ds.item_changed.emit()
+        self.ds.load_url_into_selections(self.redo_kwargs)
+
+    def undo(self):
+        self.ds._url.update(self.undo_kwargs)
+        self.ds.item_changed.emit()
+        self.ds.load_url_into_selections(self.undo_kwargs)
