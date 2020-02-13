@@ -13,7 +13,7 @@
 # Form implementation generated from reading ui file 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\project_items\tool\ui\add_tool.ui',
 # licensing of 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\project_items\tool\ui\add_tool.ui' applies.
 #
-# Created: Tue Feb 11 11:01:15 2020
+# Created: Wed Feb 12 13:45:03 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -62,21 +62,21 @@ class Ui_Form(object):
         self.verticalLayout.addWidget(self.lineEdit_description)
         spacerItem = QtWidgets.QSpacerItem(20, 72, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
         self.verticalLayout.addItem(spacerItem)
-        self.comboBox_tool = QtWidgets.QComboBox(Form)
-        self.comboBox_tool.setObjectName("comboBox_tool")
-        self.verticalLayout.addWidget(self.comboBox_tool)
+        self.comboBox_specification = QtWidgets.QComboBox(Form)
+        self.comboBox_specification.setObjectName("comboBox_specification")
+        self.verticalLayout.addWidget(self.comboBox_specification)
         self.horizontalLayout = QtWidgets.QHBoxLayout()
         self.horizontalLayout.setObjectName("horizontalLayout")
         self.label = QtWidgets.QLabel(Form)
         self.label.setObjectName("label")
         self.horizontalLayout.addWidget(self.label)
-        self.lineEdit_tool_args = QtWidgets.QLineEdit(Form)
-        self.lineEdit_tool_args.setEnabled(False)
-        self.lineEdit_tool_args.setCursor(QtCore.Qt.ArrowCursor)
-        self.lineEdit_tool_args.setFocusPolicy(QtCore.Qt.NoFocus)
-        self.lineEdit_tool_args.setReadOnly(True)
-        self.lineEdit_tool_args.setObjectName("lineEdit_tool_args")
-        self.horizontalLayout.addWidget(self.lineEdit_tool_args)
+        self.lineEdit_tool_specification_args = QtWidgets.QLineEdit(Form)
+        self.lineEdit_tool_specification_args.setEnabled(False)
+        self.lineEdit_tool_specification_args.setCursor(QtCore.Qt.ArrowCursor)
+        self.lineEdit_tool_specification_args.setFocusPolicy(QtCore.Qt.NoFocus)
+        self.lineEdit_tool_specification_args.setReadOnly(True)
+        self.lineEdit_tool_specification_args.setObjectName("lineEdit_tool_specification_args")
+        self.horizontalLayout.addWidget(self.lineEdit_tool_specification_args)
         self.verticalLayout.addLayout(self.horizontalLayout)
         self.label_folder = QtWidgets.QLabel(Form)
         self.label_folder.setEnabled(False)
@@ -122,9 +122,9 @@ class Ui_Form(object):
         self.retranslateUi(Form)
         QtCore.QMetaObject.connectSlotsByName(Form)
         Form.setTabOrder(self.lineEdit_name, self.lineEdit_description)
-        Form.setTabOrder(self.lineEdit_description, self.comboBox_tool)
-        Form.setTabOrder(self.comboBox_tool, self.lineEdit_tool_args)
-        Form.setTabOrder(self.lineEdit_tool_args, self.pushButton_ok)
+        Form.setTabOrder(self.lineEdit_description, self.comboBox_specification)
+        Form.setTabOrder(self.comboBox_specification, self.lineEdit_tool_specification_args)
+        Form.setTabOrder(self.lineEdit_tool_specification_args, self.pushButton_ok)
         Form.setTabOrder(self.pushButton_ok, self.pushButton_cancel)
 
     def retranslateUi(self, Form):
@@ -133,8 +133,8 @@ class Ui_Form(object):
         self.lineEdit_name.setPlaceholderText(QtWidgets.QApplication.translate("Form", "Type item name here...", None, -1))
         self.lineEdit_description.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Item description (optional)</p></body></html>", None, -1))
         self.lineEdit_description.setPlaceholderText(QtWidgets.QApplication.translate("Form", "Type item description here...", None, -1))
-        self.label.setText(QtWidgets.QApplication.translate("Form", "Tool args", None, -1))
-        self.lineEdit_tool_args.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Tool command line arguments</p></body></html>", None, -1))
+        self.label.setText(QtWidgets.QApplication.translate("Form", "Args", None, -1))
+        self.lineEdit_tool_specification_args.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Command line arguments of the selected Tool specification</p></body></html>", None, -1))
         self.label_folder.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Folder name that is created to project folder</p></body></html>", None, -1))
         self.label_folder.setText(QtWidgets.QApplication.translate("Form", "Folder:", None, -1))
         self.pushButton_ok.setText(QtWidgets.QApplication.translate("Form", "Ok", None, -1))

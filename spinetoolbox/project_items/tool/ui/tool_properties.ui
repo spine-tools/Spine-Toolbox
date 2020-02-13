@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
 ######################################################################################################################
-# Copyright (C) 2017 - 2019 Spine project consortium
+# Copyright (C) 2017-2020 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and\/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -166,7 +166,7 @@
             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Tool specification options.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
            </property>
            <property name="icon">
-            <iconset resource="../../../../spinetoolbox/ui/resources/resources_icons.qrc">
+            <iconset resource="../../../ui/resources/resources_icons.qrc">
              <normaloff>:/icons/wrench.svg</normaloff>:/icons/wrench.svg</iconset>
            </property>
            <property name="iconSize">
@@ -184,6 +184,19 @@
        </item>
        <item>
         <widget class="QLineEdit" name="lineEdit_tool_args">
+         <property name="toolTip">
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Tool command line arguments&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         </property>
+         <property name="placeholderText">
+          <string>Tool command line args</string>
+         </property>
+         <property name="clearButtonEnabled">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLineEdit" name="lineEdit_tool_spec_args">
          <property name="enabled">
           <bool>true</bool>
          </property>
@@ -199,13 +212,13 @@
           <enum>Qt::NoFocus</enum>
          </property>
          <property name="toolTip">
-          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Command line arguments used when starting the main program. Edit Tool specification to modify these.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Tool specification command line arguments. &lt;/p&gt;&lt;p&gt;Modify by editing the selected Tool specification.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
          </property>
          <property name="readOnly">
           <bool>true</bool>
          </property>
          <property name="placeholderText">
-          <string>Command line arguments</string>
+          <string>Tool Specification command line args</string>
          </property>
         </widget>
        </item>
@@ -337,7 +350,7 @@
             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open this Tool's project directory in file browser&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
            </property>
            <property name="icon">
-            <iconset resource="../../../../spinetoolbox/ui/resources/resources_icons.qrc">
+            <iconset resource="../../../ui/resources/resources_icons.qrc">
              <normaloff>:/icons/menu_icons/folder-open-solid.svg</normaloff>:/icons/menu_icons/folder-open-solid.svg</iconset>
            </property>
           </widget>
@@ -350,8 +363,19 @@
    </item>
   </layout>
  </widget>
+ <tabstops>
+  <tabstop>scrollArea_3</tabstop>
+  <tabstop>comboBox_tool</tabstop>
+  <tabstop>toolButton_tool_specification</tabstop>
+  <tabstop>lineEdit_tool_args</tabstop>
+  <tabstop>treeView_specification</tabstop>
+  <tabstop>pushButton_tool_results</tabstop>
+  <tabstop>radioButton_execute_in_work</tabstop>
+  <tabstop>radioButton_execute_in_source</tabstop>
+  <tabstop>toolButton_tool_open_dir</tabstop>
+ </tabstops>
  <resources>
-  <include location="../../../../spinetoolbox/ui/resources/resources_icons.qrc"/>
+  <include location="../../../ui/resources/resources_icons.qrc"/>
  </resources>
  <connections/>
 </ui>

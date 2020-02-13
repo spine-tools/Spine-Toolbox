@@ -28,6 +28,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - It is now possible to undo/redo database changes in the Data Store form.
 - It is now possible to visualize the history of database changes in the Data Store form. The option is 
   available in the Session menu.
+- Support for Tool command line arguments. You can now give Tool (project item) command 
+  line arguments in addition to Tool Specification command line arguments.
 
 ### Changed
 - spinetoolbox is now a Python package. To start the app, use command `python -m spinetoolbox` or
