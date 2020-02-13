@@ -21,6 +21,15 @@ from PySide2.QtWidgets import QUndoCommand
 
 class AddProjectItemsCommand(QUndoCommand):
     def __init__(self, project, category_name, *items, set_selected=False, verbosity=True):
+        """Command to add items.
+
+        Args:
+            project (SpineToolboxProject): the project
+            category_name (str): The items' category
+            items (dict): one or more dict of items to add
+            set_selected (bool): Whether to set item selected after the item has been added to project
+            verbosity (bool): If True, prints message
+        """
         super().__init__()
         self.project = project
         self.category_ind, self.project_tree_items = project.make_project_tree_items(category_name, *items)
@@ -40,6 +49,14 @@ class AddProjectItemsCommand(QUndoCommand):
 
 class RemoveProjectItemCommand(QUndoCommand):
     def __init__(self, project, name, delete_item=False, check_dialog=False):
+        """Command to remove items.
+
+        Args:
+            project (SpineToolboxProject): the project
+            name (str): Item's name
+            delete_item (bool): If set to True, deletes the directories and data associated with the item
+            check_dialog (bool): If True, shows 'Are you sure?' message box
+        """
         super().__init__()
         self.project = project
         self.name = name
@@ -66,6 +83,13 @@ class RemoveProjectItemCommand(QUndoCommand):
 
 class RenameProjectItemCommand(QUndoCommand):
     def __init__(self, project_item_model, tree_item, new_name):
+        """Command to rename items.
+
+        Args:
+            project_item_model (ProjectItemModel): the project
+            tree_item (LeafProjectTreeItem): the item to rename
+            new_name (str): the new name
+        """
         super().__init__()
         self.project_item_model = project_item_model
         self.tree_index = project_item_model.find_item(tree_item.name)
@@ -83,6 +107,13 @@ class RenameProjectItemCommand(QUndoCommand):
 
 class AddLinkCommand(QUndoCommand):
     def __init__(self, graphics_view, src_connector, dst_connector):
+        """Command to add link.
+
+        Args:
+            graphics_view (DesignQGraphicsView): the view
+            src_connector (ConnectorButton): the source connector
+            dst_connector (ConnectorButton): the destination connector
+        """
         super().__init__()
         self.graphics_view = graphics_view
         self.link = graphics_view.make_link(src_connector, dst_connector)
@@ -102,6 +133,12 @@ class AddLinkCommand(QUndoCommand):
 
 class RemoveLinkCommand(QUndoCommand):
     def __init__(self, graphics_view, link):
+        """Command to remove link.
+
+        Args:
+            graphics_view (DesignQGraphicsView): the view
+            link (Link): the link
+        """
         super().__init__()
         self.graphics_view = graphics_view
         self.link = link
@@ -116,6 +153,11 @@ class RemoveLinkCommand(QUndoCommand):
 
 class MoveIconCommand(QUndoCommand):
     def __init__(self, graphics_item):
+        """Command to move icons in the Design view.
+
+        Args:
+            graphics_item (ProjectItemIcon): the icon
+        """
         super().__init__()
         self.graphics_item = graphics_item
         self.previous_pos = {x: x._previous_pos for x in graphics_item.selected_icons}
@@ -137,6 +179,12 @@ class MoveIconCommand(QUndoCommand):
 
 class AddDCReferencesCommand(QUndoCommand):
     def __init__(self, dc, paths):
+        """Command to add DC references.
+
+        Args:
+            dc (DataConnection): the DC
+            paths (list(str)): list of paths to add
+        """
         super().__init__()
         self.dc = dc
         self.paths = paths
@@ -151,6 +199,12 @@ class AddDCReferencesCommand(QUndoCommand):
 
 class RemoveDCReferencesCommand(QUndoCommand):
     def __init__(self, dc, paths):
+        """Command to remove DC references.
+
+        Args:
+            dc (DataConnection): the DC
+            paths (list(str)): list of paths to remove
+        """
         super().__init__()
         self.dc = dc
         self.paths = paths

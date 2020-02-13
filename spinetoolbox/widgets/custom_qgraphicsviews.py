@@ -336,13 +336,25 @@ class DesignQGraphicsView(CustomQGraphicsView):
         return [item for item in self.items() if isinstance(item, Link)]
 
     def add_link(self, src_connector, dst_connector):
+        """
+        Pushes an AddLinkCommand to the toolbox undo stack.
+        """
         self._toolbox.undo_stack.push(AddLinkCommand(self, src_connector, dst_connector))
 
     def make_link(self, src_connector, dst_connector):
+        """Returns a Link between given connectors.
+
+        Args:
+            src_connector (ConnectorButton): Source connector button
+            dst_connector (ConnectorButton): Destination connector button
+
+        Returns:
+            Link
+        """
         return Link(self._toolbox, src_connector, dst_connector)
 
     def do_add_link(self, src_connector, dst_connector):
-        """Draws link between source and destination connectors on scene.
+        """Makes a Link between given source and destination connectors and adds it to the project.
 
         Args:
             src_connector (ConnectorButton): Source connector button
@@ -352,28 +364,44 @@ class DesignQGraphicsView(CustomQGraphicsView):
         self._add_link(link)
 
     def _add_link(self, link):
-        # Remove existing links between the same items
-        for replaced_link in link.src_connector._parent.outgoing_links():
-            if replaced_link.dst_connector._parent == link.dst_connector._parent:
-                replaced_link.wipe_out()
-                break
-        else:
-            replaced_link = None
-        # Store Link in connectors, so it can be found *from* the Project Item
+        """Adds given Link to the project.
+
+        Args:
+            link (Link): the link to add
+        """
+        replaced_link = self._remove_redundant_link(link)
         link.src_connector.links.append(link)
         link.dst_connector.links.append(link)
         self.scene().addItem(link)
-        # Add edge (connection link) to a dag as well
         src_name = link.src_icon._project_item.name
         dst_name = link.dst_icon._project_item.name
         self._toolbox.project().dag_handler.add_graph_edge(src_name, dst_name)
         return replaced_link
 
+    @staticmethod
+    def _remove_redundant_link(link):
+        """Checks if there's a link with the same source and destination as the given one,
+        wipes it out and returns it.
+
+        Args:
+            link (Link): a new link being added to the project.
+
+        Returns
+            Link, NoneType
+        """
+        for replaced_link in link.src_connector._parent.outgoing_links():
+            if replaced_link.dst_connector._parent == link.dst_connector._parent:
+                replaced_link.wipe_out()
+                return replaced_link
+        return None
+
     def remove_link(self, link):
+        """Pushes a RemoveLinkCommand to the toolbox undo stack.
+        """
         self._toolbox.undo_stack.push(RemoveLinkCommand(self, link))
 
     def do_remove_link(self, link):
-        """Removes link from scene."""
+        """Removes link from the project."""
         link.wipe_out()
         # Remove edge (connection link) from dag
         src_name = link.src_icon.name()
