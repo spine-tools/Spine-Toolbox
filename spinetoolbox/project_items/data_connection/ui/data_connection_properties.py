@@ -13,7 +13,7 @@
 # Form implementation generated from reading ui file 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\project_items\data_connection\ui\data_connection_properties.ui',
 # licensing of 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\project_items\data_connection\ui\data_connection_properties.ui' applies.
 #
-# Created: Wed Feb 12 13:44:55 2020
+# Created: Thu Feb 13 11:53:44 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -210,5 +210,5 @@ class Ui_Form(object):
         self.pushButton_datapackage.setText(QtWidgets.QApplication.translate("Form", "Datapackage", None, -1))
         self.toolButton_dc_open_dir.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Open this Data Connection\'s project directory in file browser</p></body></html>", None, -1))
 
-from spinetoolbox.widgets.custom_qtreeview import DataTreeView, ReferencesTreeView
+from spinetoolbox.widgets.custom_qtreeview import ReferencesTreeView, DataTreeView
 from spinetoolbox import resources_icons_rc

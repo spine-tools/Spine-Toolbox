@@ -13,7 +13,7 @@
 # Form implementation generated from reading ui file 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\ui\mainwindow.ui',
 # licensing of 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\ui\mainwindow.ui' applies.
 #
-# Created: Wed Feb 12 13:45:18 2020
+# Created: Thu Feb 13 11:54:06 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -531,6 +531,6 @@ class Ui_MainWindow(object):
         self.actionUpgrade_project.setText(QtWidgets.QApplication.translate("MainWindow", "Upgrade project", None, -1))
         self.actionUpgrade_project.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Upgrade old (.proj) Spine Toolbox project into a new style directory based project</p></body></html>", None, -1))
 
-from spinetoolbox.widgets.custom_qtextbrowser import CustomQTextBrowser
 from spinetoolbox.widgets.custom_qgraphicsviews import DesignQGraphicsView
+from spinetoolbox.widgets.custom_qtextbrowser import CustomQTextBrowser
 from spinetoolbox import resources_icons_rc
