@@ -30,6 +30,7 @@ from spinetoolbox.spine_io.importers.csv_reader import CSVConnector
 from spinetoolbox.spine_io.importers.excel_reader import ExcelConnector
 from spinetoolbox.spine_io.importers.gdx_connector import GdxConnector
 from spinetoolbox.widgets.import_preview_window import ImportPreviewWindow
+from spinetoolbox.project_commands import UpdateImporterSettingsCommand, UpdateImporterCancelOnErrorCommand
 from . import importer_program
 
 _CONNECTOR_NAME_TO_CLASS = {
@@ -117,7 +118,13 @@ class Importer(ProjectItem):
         s[self._properties_ui.toolButton_open_dir.clicked] = lambda checked=False: self.open_directory()
         s[self._properties_ui.pushButton_import_editor.clicked] = self._handle_import_editor_clicked
         s[self._properties_ui.treeView_files.doubleClicked] = self._handle_files_double_clicked
+        s[self._properties_ui.cancel_on_error_checkBox.stateChanged] = self._handle_cancel_on_error_changed
         return s
+
+    @Slot(int)
+    def _handle_cancel_on_error_changed(self, _state):
+        state = self._properties_ui.cancel_on_error_checkBox.checkState()
+        self._toolbox.undo_stack.push(UpdateImporterCancelOnErrorCommand(self, state))
 
     def activate(self):
         """Restores selections, cancel on error checkbox and connects signals."""
@@ -281,10 +288,9 @@ class Importer(ProjectItem):
             settings (dict): Updated mapping (settings) dictionary
             importee (str): Absolute path to a file, whose mapping has been updated
         """
-        if importee in self.settings.keys():
-            self.settings[importee].update(settings)
-        else:
-            self.settings[importee] = settings
+        if self.settings.get(importee) == settings:
+            return
+        self._toolbox.undo_stack.push(UpdateImporterSettingsCommand(self, settings, importee))
 
     def _preview_destroyed(self, importee):
         """Destroys preview widget instance for the given importee.

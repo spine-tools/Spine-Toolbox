@@ -16,6 +16,8 @@ QUndoCommand subclasses for modifying the project.
 :date:   12.2.2020
 """
 
+import copy
+from PySide2.QtCore import Qt
 from PySide2.QtWidgets import QUndoCommand
 
 
@@ -268,3 +270,74 @@ class UpdateDSURLCommand(QUndoCommand):
         self.ds._url.update(self.undo_kwargs)
         self.ds.item_changed.emit()
         self.ds.load_url_into_selections(self.undo_kwargs)
+
+
+class UpdateImporterSettingsCommand(QUndoCommand):
+    def __init__(self, importer, settings, importee):
+        """Command to update Importer settings.
+
+        Args:
+            importer (Importer): the Importer
+            settings (dict): the new settings
+            importee (str): the filepath
+        """
+        super().__init__()
+        self.importer = importer
+        self.redo_settings = settings
+        self.importee = importee
+        self.undo_settings = copy.deepcopy(importer.settings.get(importee, {}))
+        self.setText(f"change settings of {importer.name}")
+
+    def redo(self):
+        self.importer.settings.setdefault(self.importee, {}).update(self.redo_settings)
+
+    def undo(self):
+        self.importer.settings[self.importee] = self.undo_settings
+
+
+class UpdateImporterCancelOnErrorCommand(QUndoCommand):
+    def __init__(self, importer, state):
+        """Command to update Importer cancel on error setting.
+        This may seem silly but cancel_on_error is saved with the project so we need this command
+        to get the right windowModified state.
+
+        Args:
+            importer (Importer): the Importer
+            state (Qt.CheckState): the new state
+        """
+        super().__init__()
+        self.importer = importer
+        self.redo_state = state
+        self.undo_state = Qt.Unchecked if state == Qt.Checked else Qt.Checked
+        self.setText(f"change cancel on error of {importer.name}")
+
+    def redo(self):
+        self.importer._properties_ui.cancel_on_error_checkBox.blockSignals(True)
+        self.importer._properties_ui.cancel_on_error_checkBox.setCheckState(self.redo_state)
+        self.importer._properties_ui.cancel_on_error_checkBox.blockSignals(False)
+
+    def undo(self):
+        self.importer._properties_ui.cancel_on_error_checkBox.blockSignals(True)
+        self.importer._properties_ui.cancel_on_error_checkBox.setCheckState(self.undo_state)
+        self.importer._properties_ui.cancel_on_error_checkBox.blockSignals(False)
+
+
+class SetToolSpecificationCommand(QUndoCommand):
+    def __init__(self, tool, specification):
+        """Command to set the specification for a Tool.
+
+        Args:
+            tool (Tool): the Tool
+            specification (ToolSpecification): the new tool spec
+        """
+        super().__init__()
+        self.tool = tool
+        self.redo_specification = specification
+        self.undo_specification = tool._tool_specification
+        self.setText(f"set Tool specification for {tool.name}")
+
+    def redo(self):
+        self.tool.do_set_tool_specification(self.redo_specification)
+
+    def undo(self):
+        self.tool.do_set_tool_specification(self.undo_specification)
