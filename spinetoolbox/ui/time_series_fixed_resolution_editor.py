@@ -13,7 +13,7 @@
 # Form implementation generated from reading ui file 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\ui\time_series_fixed_resolution_editor.ui',
 # licensing of 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\ui\time_series_fixed_resolution_editor.ui' applies.
 #
-# Created: Tue Feb 11 11:01:37 2020
+# Created: Wed Feb 12 13:45:29 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!

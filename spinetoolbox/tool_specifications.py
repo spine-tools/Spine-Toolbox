@@ -80,7 +80,7 @@ class ToolSpecification(MetaObject):
         self.includes = includes
         if cmdline_args is not None:
             if isinstance(cmdline_args, str):
-                # Old project files may have the command line arguments as plain strings.
+                # Old tool spec files may have the command line arguments as plain strings.
                 self.cmdline_args = self.split_cmdline_args(cmdline_args)
             else:
                 self.cmdline_args = cmdline_args
@@ -146,7 +146,7 @@ class ToolSpecification(MetaObject):
 
     def get_cmdline_args(self, optional_input_files, input_urls, output_urls):
         """
-        Returns tool's command line args as list.
+        Returns tool specification's command line args as list.
 
         Replaces special tags in arguments:
 

@@ -30,10 +30,12 @@ from spinetoolbox.config import TOOL_OUTPUT_DIR
 from spinetoolbox.widgets.custom_menus import ToolSpecificationOptionsPopupmenu
 from spinetoolbox.project_items.tool.widgets.custom_menus import ToolContextMenu
 from spinetoolbox.helpers import create_dir, create_output_dir_timestamp
+from spinetoolbox.tool_specifications import ToolSpecification
 
 
 class Tool(ProjectItem):
-    def __init__(self, name, description, x, y, toolbox, project, logger, tool="", execute_in_work=True):
+    def __init__(self, name, description, x, y, toolbox, project, logger, tool="", execute_in_work=True,
+                 cmd_line_args=None):
         """Tool class.
 
         Args:
@@ -46,6 +48,7 @@ class Tool(ProjectItem):
             logger (LoggerInterface): a logger instance
             tool (str): Name of this Tool's Tool specification
             execute_in_work (bool): Execute associated Tool specification in work (True) or source directory (False)
+            cmd_line_args (list): Tool command line arguments
         """
         super().__init__(name, description, x, y, project, logger)
         self._toolbox = toolbox
@@ -63,6 +66,7 @@ class Tool(ProjectItem):
         self.populate_specification_model(False)
         self.source_files = list()
         self.execute_in_work = execute_in_work
+        self.cmd_line_args = list() if not cmd_line_args else cmd_line_args
         self._tool_specification = self._toolbox.tool_specification_model.find_tool_specification(tool)
         if tool != "" and not self._tool_specification:
             self._logger.msg_error.emit(
@@ -77,7 +81,6 @@ class Tool(ProjectItem):
             self._tool_specification_name = self.tool_specification().name
         self.tool_specification_options_popup_menu = None
         self.instance = None  # Instance of this Tool that can be sent to a subprocess for processing
-        self.extra_cmdline_args = ''  # This may be used for additional Tool specific command line arguments
         # Base directory for execution, maybe it should be called `execution_dir`
         self.basedir = None
         # Make directory for results
@@ -103,6 +106,7 @@ class Tool(ProjectItem):
         s[self._properties_ui.pushButton_tool_results.clicked] = self.open_results
         s[self._properties_ui.comboBox_tool.currentIndexChanged] = self.update_tool_specification
         s[self._properties_ui.radioButton_execute_in_work.toggled] = self.update_execution_mode
+        s[self._properties_ui.lineEdit_tool_args.textChanged] = self.update_tool_cmd_line_args
         return s
 
     def activate(self):
@@ -123,6 +127,7 @@ class Tool(ProjectItem):
         self._properties_ui.label_tool_name.setText(self.name)
         self._properties_ui.treeView_specification.setModel(self.specification_model)
         self._properties_ui.radioButton_execute_in_work.setChecked(self.execute_in_work)
+        self._properties_ui.lineEdit_tool_args.setText(" ".join(self.cmd_line_args))
         if self._tool_specification_name == "":
             self._properties_ui.comboBox_tool.setCurrentIndex(-1)
             self.set_tool_specification(None)
@@ -140,6 +145,9 @@ class Tool(ProjectItem):
             self._tool_specification_name = ""
         else:
             self._tool_specification_name = self.tool_specification().name
+        # Strip whitespace from tool args lineEdit and save to instance variable
+        tool_args = self._properties_ui.lineEdit_tool_args.text()
+        self.cmd_line_args = ToolSpecification.split_cmdline_args(tool_args)
 
     @Slot(bool)
     def update_execution_mode(self, checked):
@@ -161,6 +169,11 @@ class Tool(ProjectItem):
             self.execute_in_work = new_tool.execute_in_work
             self.set_tool_specification(new_tool)
 
+    @Slot(str)
+    def update_tool_cmd_line_args(self, txt):
+        """Updates tool cmd line args list as line edit text is changed."""
+        self.cmd_line_args = ToolSpecification.split_cmdline_args(txt)
+
     def set_tool_specification(self, tool_specification):
         """Sets Tool specification for this Tool. Removes Tool specification if None given as argument.
 
@@ -180,10 +193,10 @@ class Tool(ProjectItem):
             # because the UI only becomes available *after* adding the item to the project_item_model... problem??
             return
         if not self.tool_specification():
-            self._properties_ui.lineEdit_tool_args.setText("")
+            self._properties_ui.lineEdit_tool_spec_args.setText("")
             self._properties_ui.radioButton_execute_in_work.setChecked(True)
         else:
-            self._properties_ui.lineEdit_tool_args.setText(" ".join(self.tool_specification().cmdline_args))
+            self._properties_ui.lineEdit_tool_spec_args.setText(" ".join(self.tool_specification().cmdline_args))
             if self.execute_in_work:
                 self._properties_ui.radioButton_execute_in_work.setChecked(True)
             else:
@@ -457,7 +470,7 @@ class Tool(ProjectItem):
                 if not_found:
                     self._logger.msg_error.emit(f"Required file(s) <b>{', '.join(not_found)}</b> not found")
                     return False
-                # Required files and dirs should have been found at this point, so create instance
+                # Required files and dirs should have been found at this point
                 self._logger.msg.emit(f"*** Copying input files to {work_or_source} directory ***")
                 # Copy input files to ToolInstance work or source directory
                 if not self.copy_input_files(file_paths):
@@ -484,8 +497,10 @@ class Tool(ProjectItem):
         input_database_urls = self._database_urls(resources)
         output_database_urls = self._database_urls(self._downstream_resources)
         self.instance = self.tool_specification().create_tool_instance(self.basedir)
+
         try:
-            self.instance.prepare(list(optional_file_copy_paths.values()), input_database_urls, output_database_urls)
+            self.instance.prepare(list(optional_file_copy_paths.values()), input_database_urls, output_database_urls,
+                                  self.cmd_line_args)
         except RuntimeError as error:
             self._logger.msg_error.emit(f"Failed to prepare tool instance: {error}")
             return False
@@ -988,6 +1003,7 @@ class Tool(ProjectItem):
         else:
             d["tool"] = self.tool_specification().name
         d["execute_in_work"] = self.execute_in_work
+        d["cmd_line_args"] = ToolSpecification.split_cmdline_args(" ".join(self.cmd_line_args))
         return d
 
     def custom_context_menu(self, parent, pos):
