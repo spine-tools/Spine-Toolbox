@@ -509,8 +509,6 @@ def sets_to_gams(gdx_file, sets, omitted_set=None):
         record_keys = list()
         for record in current_set.records:
             record_keys.append(record.keys)
-        if not record_keys:
-            continue
         gams_set = GAMSSet(record_keys, current_set.domain_names, expl_text=current_set.description)
         gdx_file[current_set.name] = gams_set
 
