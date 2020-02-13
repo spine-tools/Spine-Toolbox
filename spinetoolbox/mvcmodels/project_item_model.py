@@ -298,11 +298,11 @@ class ProjectItemModel(QAbstractItemModel):
             for category in self.root().children():
                 items += category.children()
             return items
-        category_item = self.find_category(category_name)
-        if not category_item:
+        category_index = self.find_category(category_name)
+        if not category_index:
             logging.error("Category item '%s' not found", category_name)
             return list()
-        return category_item.internalPointer().children()
+        return category_index.internalPointer().children()
 
     def n_items(self):
         """Returns the number of all items in the model excluding category items and root.

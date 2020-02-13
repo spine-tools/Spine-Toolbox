@@ -16,6 +16,7 @@ QUndoCommand subclasses for modifying the project.
 :date:   12.2.2020
 """
 
+from copy import copy
 from PySide2.QtWidgets import QUndoCommand
 
 
@@ -45,6 +46,37 @@ class AddProjectItemsCommand(QUndoCommand):
     def undo(self):
         for project_tree_item in self.project_tree_items:
             self.project._remove_item(self.category_ind, project_tree_item)
+
+
+class RemoveAllProjectItemsCommand(QUndoCommand):
+    def __init__(self, project):
+        """Command to remove all items from project.
+
+        Args:
+            project (SpineToolboxProject): the project
+        """
+        super().__init__()
+        self.project = project
+        m = project._project_item_model
+        category_inds = [m.index(row, 0) for row in range(m.rowCount())]
+        self.items_per_category = {ind: copy(ind.internalPointer().children()) for ind in category_inds}
+        if not any(v for v in self.items_per_category.values()):
+            self.setObsolete(True)
+            return
+        self.links = project._toolbox.ui.graphicsView.links()
+        self.setText("remove all items")
+
+    def redo(self):
+        delete_item = int(self.project._settings.value("appSettings/deleteData", defaultValue="0")) != 0
+        for category_ind, project_tree_items in self.items_per_category.items():
+            for project_tree_item in project_tree_items:
+                self.project._remove_item(category_ind, project_tree_item, delete_item=delete_item)
+
+    def undo(self):
+        for category_ind, project_tree_items in self.items_per_category.items():
+            self.project._add_project_tree_items(category_ind, *project_tree_items)
+        for link in self.links:
+            self.project._toolbox.ui.graphicsView._add_link(link)
 
 
 class RemoveProjectItemCommand(QUndoCommand):
@@ -118,7 +150,7 @@ class AddLinkCommand(QUndoCommand):
         self.graphics_view = graphics_view
         self.link = graphics_view.make_link(src_connector, dst_connector)
         self.replaced_link = None
-        self.link_name = f"{src_connector.parent_name()} to {dst_connector.parent_name()}"
+        self.link_name = f"link from {src_connector.parent_name()} to {dst_connector.parent_name()}"
 
     def redo(self):
         self.replaced_link = self.graphics_view._add_link(self.link)

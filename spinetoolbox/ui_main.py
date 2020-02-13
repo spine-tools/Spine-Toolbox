@@ -977,7 +977,7 @@ class ToolboxUI(QMainWindow):
             json.dump(dicts, fp, indent=4)
         self.msg_success.emit("Tool specification removed")
 
-    @Slot(name="remove_all_items")
+    @Slot()
     def remove_all_items(self):
         """Removes all items from project. Slot for Remove All button."""
         if not self._project:
@@ -991,18 +991,8 @@ class ToolboxUI(QMainWindow):
         answer = message_box.exec_()
         if answer != QMessageBox.Ok:
             return
-        item_names = self.project_item_model.item_names()
-        n = len(item_names)
-        if n == 0:
-            return
-        for name in item_names:
-            delete_int = int(self._qsettings.value("appSettings/deleteData", defaultValue="0"))
-            delete_bool = delete_int != 0
-            self._project.do_remove_item(name, delete_item=delete_bool)
-        self.msg.emit("All {0} items removed from project".format(n))
-        self.activate_no_selection_tab()
-        self.ui.graphicsView.scene().clear()
-        self.ui.graphicsView.init_scene()
+        self._project.remove_all_items()
+        self.msg.emit("All items removed from project")
 
     @Slot("QUrl", name="open_anchor")
     def open_anchor(self, qurl):

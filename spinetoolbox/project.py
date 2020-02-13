@@ -29,7 +29,7 @@ from .config import LATEST_PROJECT_VERSION, PROJECT_FILENAME
 from .dag_handler import DirectedGraphHandler
 from .project_tree_item import LeafProjectTreeItem
 from .spine_db_manager import SpineDBManager
-from .project_commands import AddProjectItemsCommand, RemoveProjectItemCommand
+from .project_commands import AddProjectItemsCommand, RemoveProjectItemCommand, RemoveAllProjectItemsCommand
 
 
 class SpineToolboxProject(MetaObject):
@@ -315,6 +315,11 @@ class SpineToolboxProject(MetaObject):
         """Add new node (project item) to the directed graph."""
         self.dag_handler.add_dag_node(item_name)
 
+    def remove_all_items(self):
+        """Pushes a RemoveAllProjectItemsCommand to the toolbox undo stack.
+        """
+        self._toolbox.undo_stack.push(RemoveAllProjectItemsCommand(self))
+
     def remove_item(self, name, delete_item=False, check_dialog=False):
         """Pushes a RemoveProjectItemCommand to the toolbox undo stack.
         """
@@ -323,11 +328,10 @@ class SpineToolboxProject(MetaObject):
         )
 
     def do_remove_item(self, name, delete_item=False, check_dialog=False):
-        """Removes item from project when its index in the project model is known.
-        To remove all items in project, loop all indices through this method.
-        This method is used in both opening and creating a new project as
-        well as when item(s) are deleted from project.
-        Use delete_item=False when closing the project or creating a new one.
+        """Removes item from project given its name.
+        This method is used in both closing the existing project for opening a new one,
+        as well as when item(s) are deleted from project.
+        Use delete_item=False when closing the project for opening a new one.
         Setting delete_item=True deletes the item irrevocably. This means that
         data directories will be deleted from the hard drive. Handles also
         removing the node from the dag graph that contains it.
