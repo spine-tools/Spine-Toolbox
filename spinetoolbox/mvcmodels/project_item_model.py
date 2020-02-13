@@ -277,8 +277,6 @@ class ProjectItemModel(QAbstractItemModel):
             return False
         item.set_name(value)
         self._toolbox.project().dag_handler.rename_node(old_name, value)
-        # Force save project
-        self._toolbox.save_project()
         self._toolbox.msg_success.emit(f"Project item <b>{old_name}</b> renamed to <b>{value}</b>")
         return True
 

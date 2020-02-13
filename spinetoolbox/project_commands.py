@@ -23,20 +23,19 @@ class AddProjectItemsCommand(QUndoCommand):
     def __init__(self, project, category_name, *items, set_selected=False, verbosity=True):
         super().__init__()
         self.project = project
-        self.category_ind, self.project_items = project.make_project_items(category_name, *items)
+        self.category_ind, self.project_tree_items = project.make_project_tree_items(category_name, *items)
         self.set_selected = set_selected
         self.verbosity = verbosity
         self.setText(f"add {', '.join([item['name'] for item in items])}")
-        self.tree_items = None
 
     def redo(self):
-        self.tree_items = self.project._add_project_items(
-            self.category_ind, *self.project_items, set_selected=self.set_selected, verbosity=self.verbosity
+        self.project._add_project_tree_items(
+            self.category_ind, *self.project_tree_items, set_selected=self.set_selected, verbosity=self.verbosity
         )
 
     def undo(self):
-        for tree_item in self.tree_items:
-            self.project._remove_item(self.category_ind, tree_item)
+        for project_tree_item in self.project_tree_items:
+            self.project._remove_item(self.category_ind, project_tree_item)
 
 
 class RemoveProjectItemCommand(QUndoCommand):
@@ -47,23 +46,39 @@ class RemoveProjectItemCommand(QUndoCommand):
         self.delete_item = delete_item
         self.check_dialog = check_dialog
         ind = project._project_item_model.find_item(name)
-        self.tree_item = project._project_item_model.item(ind)
+        self.project_tree_item = project._project_item_model.item(ind)
         self.category_ind = ind.parent()
-        self.project_item = self.tree_item.project_item
-        icon = self.project_item.get_icon()
+        icon = self.project_tree_item.project_item.get_icon()
         self.links = set(link for conn in icon.connectors.values() for link in conn.links)
         self.setText(f"remove {name}")
 
     def redo(self):
         self.project._remove_item(
-            self.category_ind, self.tree_item, delete_item=self.delete_item, check_dialog=self.check_dialog
+            self.category_ind, self.project_tree_item, delete_item=self.delete_item, check_dialog=self.check_dialog
         )
         self.check_dialog = False
 
     def undo(self):
-        self.project._add_project_items(self.category_ind, self.project_item)
+        self.project._add_project_tree_items(self.category_ind, self.project_tree_item)
         for link in self.links:
             self.project._toolbox.ui.graphicsView._add_link(link)
+
+
+class RenameProjectItemCommand(QUndoCommand):
+    def __init__(self, project_item_model, tree_item, new_name):
+        super().__init__()
+        self.project_item_model = project_item_model
+        self.tree_index = project_item_model.find_item(tree_item.name)
+        self.old_name = tree_item.name
+        self.new_name = new_name
+        self.setText(f"rename {self.old_name} to {new_name}")
+
+    def redo(self):
+        if not self.project_item_model.setData(self.tree_index, self.new_name):
+            self.setObsolete(True)
+
+    def undo(self):
+        self.project_item_model.setData(self.tree_index, self.old_name)
 
 
 class AddLinkCommand(QUndoCommand):
@@ -118,3 +133,31 @@ class MoveIconCommand(QUndoCommand):
             item.setPos(previous_pos)
         self.graphics_item.update_links_geometry()
         self.graphics_item.shrink_scene_if_needed()
+
+
+class AddDCReferencesCommand(QUndoCommand):
+    def __init__(self, dc, paths):
+        super().__init__()
+        self.dc = dc
+        self.paths = paths
+        self.setText(f"add references to {dc.name}")
+
+    def redo(self):
+        self.dc.do_add_files_to_references(self.paths)
+
+    def undo(self):
+        self.dc.do_remove_references(self.paths)
+
+
+class RemoveDCReferencesCommand(QUndoCommand):
+    def __init__(self, dc, paths):
+        super().__init__()
+        self.dc = dc
+        self.paths = paths
+        self.setText(f"remove references from {dc.name}")
+
+    def redo(self):
+        self.dc.do_remove_references(self.paths)
+
+    def undo(self):
+        self.dc.do_add_files_to_references(self.paths)

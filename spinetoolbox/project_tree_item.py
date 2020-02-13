@@ -21,6 +21,7 @@ from PySide2.QtCore import Qt, QUrl
 from PySide2.QtWidgets import QInputDialog
 from .metaobject import MetaObject
 from .widgets.custom_menus import CategoryProjectItemContextMenu, ProjectItemContextMenu
+from .project_commands import RenameProjectItemCommand
 
 
 class BaseProjectTreeItem(MetaObject):
@@ -303,5 +304,4 @@ class LeafProjectTreeItem(BaseProjectTreeItem):
         Returns:
             bool: True if renaming was successful, False if renaming failed
         """
-        ind = self._toolbox.project_item_model.find_item(self.name)
-        return self._toolbox.project_item_model.setData(ind, new_name)
+        self._toolbox.undo_stack.push(RenameProjectItemCommand(self._toolbox.project_item_model, self, new_name))

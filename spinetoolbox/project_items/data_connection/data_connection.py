@@ -27,6 +27,7 @@ from spinetoolbox.project_item import ProjectItem, ProjectItemResource
 from spinetoolbox.widgets.spine_datapackage_widget import SpineDatapackageWidget
 from spinetoolbox.helpers import busy_effect, deserialize_path, serialize_path
 from spinetoolbox.config import APPLICATION_PATH, INVALID_FILENAME_CHARS
+from spinetoolbox.project_commands import AddDCReferencesCommand, RemoveDCReferencesCommand
 
 
 class DataConnection(ProjectItem):
@@ -119,17 +120,20 @@ class DataConnection(ProjectItem):
     def save_selections(self):
         """Save selections in shared widgets for this project item into instance variables."""
 
-    @Slot("QVariant", name="add_files_to_references")
+    @Slot("QVariant")
     def add_files_to_references(self, paths):
         """Add multiple file paths to reference list.
 
         Args:
             paths (list): A list of paths to files
         """
+        self._toolbox.undo_stack.push(AddDCReferencesCommand(self, paths))
+
+    def do_add_files_to_references(self, paths):
         for path in paths:
             if path in self.references:
                 self._logger.msg_warning.emit(f"Reference to file <b>{path}</b> already available")
-                return
+                continue
             self.references.append(os.path.abspath(path))
         self.populate_reference_list(self.references)
 
@@ -140,7 +144,7 @@ class DataConnection(ProjectItem):
         if icon == self.get_icon():
             self.add_files_to_data_dir(file_paths)
 
-    @Slot("QVariant", name="add_files_to_data_dir")
+    @Slot("QVariant")
     def add_files_to_data_dir(self, file_paths):
         """Add files to data directory"""
         for file_path in file_paths:
@@ -152,7 +156,7 @@ class DataConnection(ProjectItem):
                 self._logger.msg_error.emit("[OSError] Copying failed")
                 return
 
-    @Slot(bool, name="add_references")
+    @Slot(bool)
     def add_references(self, checked=False):
         """Let user select references to files for this data connection."""
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
@@ -160,14 +164,9 @@ class DataConnection(ProjectItem):
         file_paths = answer[0]
         if not file_paths:  # Cancel button clicked
             return
-        for path in file_paths:
-            if path in self.references:
-                self._logger.msg_warning.emit(f"Reference to file <b>{path}</b> already available")
-                continue
-            self.references.append(os.path.abspath(path))
-        self.populate_reference_list(self.references)
+        self.add_files_to_references(file_paths)
 
-    @Slot(bool, name="remove_references")
+    @Slot(bool)
     def remove_references(self, checked=False):
         """Remove selected references from reference list.
         Do not remove anything if there are no references selected.
@@ -176,14 +175,16 @@ class DataConnection(ProjectItem):
         if not indexes:  # Nothing selected
             self._logger.msg.emit("Please select references to remove")
             return
-        rows = [ind.row() for ind in indexes]
-        rows.sort(reverse=True)
-        for row in rows:
-            self.references.pop(row)
+        references = [ind.data(Qt.DisplayRole) for ind in indexes]
+        self._toolbox.undo_stack.push(RemoveDCReferencesCommand(self, references))
         self._logger.msg.emit("Selected references removed")
+
+    def do_remove_references(self, references):
+        for ref in references:
+            self.references.remove(ref)
         self.populate_reference_list(self.references)
 
-    @Slot(bool, name="copy_to_project")
+    @Slot(bool)
     def copy_to_project(self, checked=False):
         """Copy selected file references to this Data Connection's data directory."""
         selected_indexes = self._properties_ui.treeView_dc_references.selectedIndexes()
@@ -203,7 +204,7 @@ class DataConnection(ProjectItem):
                 self._logger.msg_error.emit("[OSError] Copying failed")
                 continue
 
-    @Slot("QModelIndex", name="open_reference")
+    @Slot("QModelIndex")
     def open_reference(self, index):
         """Open reference in default program."""
         if not index:
@@ -218,7 +219,7 @@ class DataConnection(ProjectItem):
         if not res:
             self._logger.msg_error.emit(f"Failed to open reference:<b>{reference}</b>")
 
-    @Slot("QModelIndex", name="open_data_file")
+    @Slot("QModelIndex")
     def open_data_file(self, index):
         """Open data file in default program."""
         if not index:
@@ -250,7 +251,7 @@ class DataConnection(ProjectItem):
         self.spine_datapackage_form.destroyed.connect(self.datapackage_form_destroyed)
         self.spine_datapackage_form.show()
 
-    @Slot(name="datapackage_form_destroyed")
+    @Slot()
     def datapackage_form_destroyed(self):
         """Notify a connection that datapackage form has been destroyed."""
         self.spine_datapackage_form = None

@@ -70,6 +70,7 @@ class SpineToolboxProject(MetaObject):
         self.config_dir = None  # Full path to .spinetoolbox directory
         self.items_dir = None  # Full path to items directory
         self.config_file = None  # Full path to .spinetoolbox/project.json file
+        self._toolbox.undo_stack.clear()
         if not self._create_project_structure(p_dir):
             self._logger.msg_error.emit("Creating project directory " "structure to <b>{0}</b> failed".format(p_dir))
 
@@ -116,7 +117,6 @@ class SpineToolboxProject(MetaObject):
             name (str): New project name
         """
         super().set_name(name)
-        # Update Window Title
         self._toolbox.update_window_title()
         self._logger.msg.emit("Project name changed to <b>{0}</b>".format(self.name))
 
@@ -243,42 +243,61 @@ class SpineToolboxProject(MetaObject):
         return None
 
     def add_project_items(self, category_name, *items, set_selected=False, verbosity=True):
+        """Pushes an AddProjectItemsCommand to the toolbox undo stack.
+        """
         self._toolbox.undo_stack.push(
             AddProjectItemsCommand(self, category_name, *items, set_selected=set_selected, verbosity=verbosity)
         )
 
-    def make_project_items(self, category_name, *items):
+    def make_project_tree_items(self, category_name, *items):
+        """Creates and returns list of LeafProjectTreeItem instances.
+
+        Args:
+            category_name (str): The items' category
+            items (dict): one or more dict of items to add
+
+        Returns:
+            list(LeafProjectTreeItem)
+        """
         category_ind = self._project_item_model.find_category(category_name)
         if not category_ind:
             self._logger.msg_error.emit("Category {0} not found".format(category_name))
             return []
         category_item = self._project_item_model.item(category_ind)
         item_maker = category_item.item_maker()
-        project_items = []
+        project_tree_items = []
         for item_dict in items:
             try:
                 item = item_maker(**item_dict, toolbox=self._toolbox, project=self, logger=self._logger)
-                project_items.append(item)
+                project_tree_item = LeafProjectTreeItem(item, self._toolbox)
+                project_tree_items.append(project_tree_item)
             except TypeError:
                 self._logger.msg_error.emit(
                     "Loading project item <b>{0}</b> into category <b>{1}</b> failed. "
                     "This is most likely caused by an outdated project file.".format(item_dict["name"], category_name)
                 )
-        return category_ind, project_items
+        return category_ind, project_tree_items
 
-    def _add_project_items(self, category_ind, *project_items, set_selected=False, verbosity=True):
-        tree_items = []
-        for item in project_items:
-            tree_item = LeafProjectTreeItem(item, self._toolbox)
-            self._project_item_model.insert_item(tree_item, category_ind)
+    def _add_project_tree_items(self, category_ind, *project_tree_items, set_selected=False, verbosity=True):
+        """Adds LeafProjectTreeItem instances to project.
+
+        Args:
+            category_ind (QModelIndex): The category index
+            project_tree_items (LeafProjectTreeItem): one or more LeafProjectTreeItem instances to add
+            set_selected (bool): Whether to set item selected after the item has been added to project
+            verbosity (bool): If True, prints message
+        """
+        for project_tree_item in project_tree_items:
+            project_item = project_tree_item.project_item
+            self._project_item_model.insert_item(project_tree_item, category_ind)
             # Append new node to networkx graph
-            self.add_to_dag(item.name)
+            self.add_to_dag(project_item.name)
             if verbosity:
-                self._logger.msg.emit("{0} <b>{1}</b> added to project.".format(item.item_type(), item.name))
+                self._logger.msg.emit(
+                    "{0} <b>{1}</b> added to project.".format(project_item.item_type(), project_item.name)
+                )
             if set_selected:
-                self.set_item_selected(tree_item)
-            tree_items.append(tree_item)
-        return tree_items
+                self.set_item_selected(project_tree_item)
 
     def do_add_project_items(self, category_name, *items, set_selected=False, verbosity=True):
         """Adds item to project.
@@ -289,14 +308,16 @@ class SpineToolboxProject(MetaObject):
             set_selected (bool): Whether to set item selected after the item has been added to project
             verbosity (bool): If True, prints message
         """
-        category_ind, project_items = self.make_project_items(category_name, *items)
-        self._add_project_items(category_ind, *project_items, set_selected=set_selected, verbosity=verbosity)
+        category_ind, project_tree_items = self.make_project_tree_items(category_name, *items)
+        self._add_project_tree_items(category_ind, *project_tree_items, set_selected=set_selected, verbosity=verbosity)
 
     def add_to_dag(self, item_name):
         """Add new node (project item) to the directed graph."""
         self.dag_handler.add_dag_node(item_name)
 
     def remove_item(self, name, delete_item=False, check_dialog=False):
+        """Pushes a RemoveProjectItemCommand to the toolbox undo stack.
+        """
         self._toolbox.undo_stack.push(
             RemoveProjectItemCommand(self, name, delete_item=delete_item, check_dialog=check_dialog)
         )
@@ -322,6 +343,15 @@ class SpineToolboxProject(MetaObject):
         self._remove_item(category_ind, item, delete_item=delete_item, check_dialog=check_dialog)
 
     def _remove_item(self, category_ind, item, delete_item=False, check_dialog=False):
+        """
+        Removes LeafProjectTreeItem from project.
+
+        Args:
+            category_ind (QModelIndex): The category index
+            item (LeafProjectTreeItem): the item to remove
+            delete_item (bool): If set to True, deletes the directories and data associated with the item
+            check_dialog (bool): If True, shows 'Are you sure?' message box
+        """
         if check_dialog:
             if not delete_item:
                 msg = (
