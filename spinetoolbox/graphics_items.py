@@ -628,7 +628,7 @@ class LinkBase(QGraphicsPathItem):
         a = path.angleAtPercent(t)
         percents.append(t)
         angles.append(a)
-        points = [path.pointAtPercent(t) for t in percents]
+        points = list(map(path.pointAtPercent, percents))
         for t in reversed(percents):
             p = path.pointAtPercent(1.0 - t)
             a = path.angleAtPercent(1.0 - t)
@@ -704,6 +704,7 @@ class LinkBase(QGraphicsPathItem):
 
     def _get_joint_line(self, guide_path):
         t = 1.0 - guide_path.percentAtLength(self.src_rect.width() / 2)
+        t = max(t, 0.01)
         src = guide_path.pointAtPercent(t - 0.01)
         dst = guide_path.pointAtPercent(t)
         return QLineF(src, dst)
