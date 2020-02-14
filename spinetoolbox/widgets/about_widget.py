@@ -43,9 +43,17 @@ class AboutWidget(QWidget):
         self.setWindowFlags(Qt.Popup)
         # Ensure this window gets garbage-collected when closed
         self.setAttribute(Qt.WA_DeleteOnClose)
-        full_version = str(__version_info__.major) + "." + str(__version_info__.minor) + "."\
-                       + str(__version_info__.micro) + "." + __version_info__.releaselevel + "."\
-                       + str(__version_info__.serial)
+        full_version = (
+            str(__version_info__.major)
+            + "."
+            + str(__version_info__.minor)
+            + "."
+            + str(__version_info__.micro)
+            + "."
+            + __version_info__.releaselevel
+            + "."
+            + str(__version_info__.serial)
+        )
         self.ui.label_spine_toolbox.setText("Spine Toolbox<br/>v{0}<br/>{1}".format(__version__, full_version))
         self.ui.label_spinedb_api.setText("spinedb_api<br/>v{0}".format(spinedb_api.__version__))
         self.ui.label_spine_engine.setText("spine_engine<br/>v{0}".format(spine_engine.__version__))

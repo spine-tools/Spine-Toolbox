@@ -293,14 +293,11 @@ class PythonToolInstance(ToolInstance):
             # 1st cmd: Change current work directory
             # 2nd cmd: Run script with given args
             # Cast args in list to strings and combine them to a single string
-            tool_spec_args = self.tool_specification.get_cmdline_args(optional_input_files, input_database_urls,
-                                                                      output_database_urls)
-            all_args = tool_spec_args + tool_args
-            args = (
-                '"'
-                + '" "'.join(all_args)
-                + '"'
+            tool_spec_args = self.tool_specification.get_cmdline_args(
+                optional_input_files, input_database_urls, output_database_urls
             )
+            all_args = tool_spec_args + tool_args
+            args = '"' + '" "'.join(all_args) + '"'
             cd_work_dir_cmd = "%cd -q {0} ".format(work_dir)  # -q: quiet
             run_script_cmd = "%run \"{0}\" {1}".format(self.tool_specification.main_prgm, args)
             # Populate FIFO command queue
@@ -321,9 +318,7 @@ class PythonToolInstance(ToolInstance):
     def execute(self, **kwargs):
         """Executes a prepared instance."""
         if self._settings.value("appSettings/useEmbeddedPython", defaultValue="0") == "2":
-            self.exec_mngr = ConsoleExecutionManager(
-                self._toolbox.python_repl, self.ipython_command_list, self._logger
-            )
+            self.exec_mngr = ConsoleExecutionManager(self._toolbox.python_repl, self.ipython_command_list, self._logger)
             self.exec_mngr.execution_finished.connect(self.handle_console_execution_finished)
             self.exec_mngr.start_execution()
         else:
