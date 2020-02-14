@@ -286,7 +286,7 @@ class UpdateImporterSettingsCommand(QUndoCommand):
         self.redo_settings = settings
         self.importee = importee
         self.undo_settings = copy.deepcopy(importer.settings.get(importee, {}))
-        self.setText(f"change settings of {importer.name}")
+        self.setText(f"change mapping settings of {importer.name}")
 
     def redo(self):
         self.importer.settings.setdefault(self.importee, {}).update(self.redo_settings)
@@ -309,7 +309,7 @@ class UpdateImporterCancelOnErrorCommand(QUndoCommand):
         self.importer = importer
         self.redo_state = state
         self.undo_state = Qt.Unchecked if state == Qt.Checked else Qt.Checked
-        self.setText(f"change cancel on error of {importer.name}")
+        self.setText(f"change cancel on error setting of {importer.name}")
 
     def redo(self):
         self.importer._properties_ui.cancel_on_error_checkBox.blockSignals(True)
@@ -334,10 +334,53 @@ class SetToolSpecificationCommand(QUndoCommand):
         self.tool = tool
         self.redo_specification = specification
         self.undo_specification = tool._tool_specification
-        self.setText(f"set Tool specification for {tool.name}")
+        self.undo_execute_in_work = tool.execute_in_work
+        self.setText(f"set Tool specification of {tool.name}")
 
     def redo(self):
         self.tool.do_set_tool_specification(self.redo_specification)
 
     def undo(self):
         self.tool.do_set_tool_specification(self.undo_specification)
+        self.tool.do_update_execution_mode(self.undo_execute_in_work)
+
+
+class UpdateToolExecuteInWorkCommand(QUndoCommand):
+    def __init__(self, tool, execute_in_work):
+        """Command to update execute_in_work for a Tool.
+
+        Args:
+            tool (Tool): the Tool
+            execute_in_work (bool): True or False
+        """
+        super().__init__()
+        self.tool = tool
+        self.execute_in_work = execute_in_work
+        self.setText(f"change execute in work setting of {tool.name}")
+
+    def redo(self):
+        self.tool.do_update_execution_mode(self.execute_in_work)
+
+    def undo(self):
+        self.tool.do_update_execution_mode(not self.execute_in_work)
+
+
+class UpdateToolCmdLineArgsCommand(QUndoCommand):
+    def __init__(self, tool, cmd_line_args):
+        """Command to update execute_in_work for a Tool.
+
+        Args:
+            tool (Tool): the Tool
+            cmd_line_args (list): list of str args
+        """
+        super().__init__()
+        self.tool = tool
+        self.redo_cmd_line_args = cmd_line_args
+        self.undo_cmd_line_args = self.tool.cmd_line_args
+        self.setText(f"change command line arguments of {tool.name}")
+
+    def redo(self):
+        self.tool.do_update_tool_cmd_line_args(self.redo_cmd_line_args)
+
+    def undo(self):
+        self.tool.do_update_tool_cmd_line_args(self.undo_cmd_line_args)

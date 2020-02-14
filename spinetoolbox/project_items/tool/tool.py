@@ -31,7 +31,11 @@ from spinetoolbox.widgets.custom_menus import ToolSpecificationOptionsPopupmenu
 from spinetoolbox.project_items.tool.widgets.custom_menus import ToolContextMenu
 from spinetoolbox.helpers import create_dir, create_output_dir_timestamp
 from spinetoolbox.tool_specifications import ToolSpecification
-from spinetoolbox.project_commands import SetToolSpecificationCommand
+from spinetoolbox.project_commands import (
+    SetToolSpecificationCommand,
+    UpdateToolExecuteInWorkCommand,
+    UpdateToolCmdLineArgsCommand,
+)
 
 
 class Tool(ProjectItem):
@@ -108,7 +112,7 @@ class Tool(ProjectItem):
         s[self._properties_ui.pushButton_tool_results.clicked] = self.open_results
         s[self._properties_ui.comboBox_tool.currentIndexChanged] = self.update_tool_specification
         s[self._properties_ui.radioButton_execute_in_work.toggled] = self.update_execution_mode
-        s[self._properties_ui.lineEdit_tool_args.textChanged] = self.update_tool_cmd_line_args
+        s[self._properties_ui.lineEdit_tool_args.editingFinished] = self.update_tool_cmd_line_args
         return s
 
     def activate(self):
@@ -153,8 +157,20 @@ class Tool(ProjectItem):
 
     @Slot(bool)
     def update_execution_mode(self, checked):
-        """Slot for execute in work radio button toggled signal."""
-        self.execute_in_work = checked
+        """Pushed a new UpdateToolExecuteInWorkCommand to the toolbox stack."""
+        self._toolbox.undo_stack.push(UpdateToolExecuteInWorkCommand(self, checked))
+
+    def do_update_execution_mode(self, execute_in_work):
+        """Updates execute_in_work setting."""
+        if self.execute_in_work == execute_in_work:
+            return
+        self.execute_in_work = execute_in_work
+        self._properties_ui.radioButton_execute_in_work.blockSignals(True)
+        if execute_in_work:
+            self._properties_ui.radioButton_execute_in_work.setChecked(True)
+        else:
+            self._properties_ui.radioButton_execute_in_source.setChecked(True)
+        self._properties_ui.radioButton_execute_in_work.blockSignals(False)
 
     @Slot(int)
     def update_tool_specification(self, row):
@@ -167,13 +183,23 @@ class Tool(ProjectItem):
             self.set_tool_specification(None)
         else:
             new_tool = self._toolbox.tool_specification_model.tool_specification(row)
-            self.execute_in_work = new_tool.execute_in_work
             self.set_tool_specification(new_tool)
+            self.do_update_execution_mode(new_tool.execute_in_work)
 
-    @Slot(str)
-    def update_tool_cmd_line_args(self, txt):
+    @Slot()
+    def update_tool_cmd_line_args(self):
         """Updates tool cmd line args list as line edit text is changed."""
-        self.cmd_line_args = ToolSpecification.split_cmdline_args(txt)
+        txt = self._properties_ui.lineEdit_tool_args.text()
+        cmd_line_args = ToolSpecification.split_cmdline_args(txt)
+        if self.cmd_line_args == cmd_line_args:
+            return
+        self._toolbox.undo_stack.push(UpdateToolCmdLineArgsCommand(self, cmd_line_args))
+
+    def do_update_tool_cmd_line_args(self, cmd_line_args):
+        self.cmd_line_args = cmd_line_args
+        self._properties_ui.lineEdit_tool_args.blockSignals(True)
+        self._properties_ui.lineEdit_tool_args.setText(" ".join(self.cmd_line_args))
+        self._properties_ui.lineEdit_tool_args.blockSignals(False)
 
     def set_tool_specification(self, tool_specification):
         """Pushes a new SetToolSpecificationCommand to the toolbox' undo stack.
@@ -203,14 +229,10 @@ class Tool(ProjectItem):
         if not self.tool_specification():
             self._properties_ui.comboBox_tool.setCurrentIndex(-1)
             self._properties_ui.lineEdit_tool_spec_args.setText("")
-            self._properties_ui.radioButton_execute_in_work.setChecked(True)
+            self.do_update_execution_mode(True)
         else:
             self._properties_ui.comboBox_tool.setCurrentText(self.tool_specification().name)
             self._properties_ui.lineEdit_tool_spec_args.setText(" ".join(self.tool_specification().cmdline_args))
-            if self.execute_in_work:
-                self._properties_ui.radioButton_execute_in_work.setChecked(True)
-            else:
-                self._properties_ui.radioButton_execute_in_source.setChecked(True)
         self.tool_specification_options_popup_menu = ToolSpecificationOptionsPopupmenu(self._toolbox, self)
         self._properties_ui.toolButton_tool_specification.setMenu(self.tool_specification_options_popup_menu)
         self._properties_ui.treeView_specification.expandAll()
@@ -231,7 +253,7 @@ class Tool(ProjectItem):
             self.populate_output_file_model(self.tool_specification().outputfiles)
             self.populate_specification_model(populate=True)
 
-    @Slot(bool, name="open_results")
+    @Slot(bool)
     def open_results(self, checked=False):
         """Open output directory in file browser."""
         if not os.path.exists(self.output_dir):
@@ -243,25 +265,25 @@ class Tool(ProjectItem):
         if not res:
             self._logger.msg_error.emit(f"Failed to open directory: {self.output_dir}")
 
-    @Slot(name="edit_tool_specification")
+    @Slot()
     def edit_tool_specification(self):
         """Open Tool specification editor for the Tool specification attached to this Tool."""
         index = self._toolbox.tool_specification_model.tool_specification_index(self.tool_specification().name)
         self._toolbox.edit_tool_specification(index)
 
-    @Slot(name="open_tool_specification_file")
+    @Slot()
     def open_tool_specification_file(self):
         """Open Tool specification file."""
         index = self._toolbox.tool_specification_model.tool_specification_index(self.tool_specification().name)
         self._toolbox.open_tool_specification_file(index)
 
-    @Slot(name="open_tool_main_program_file")
+    @Slot()
     def open_tool_main_program_file(self):
         """Open Tool specification main program file in an external text edit application."""
         index = self._toolbox.tool_specification_model.tool_specification_index(self.tool_specification().name)
         self._toolbox.open_tool_main_program_file(index)
 
-    @Slot(name="open_tool_main_directory")
+    @Slot()
     def open_tool_main_directory(self):
         """Open directory where the Tool specification main program is located in file explorer."""
         if not self.tool_specification():
