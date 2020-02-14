@@ -34,8 +34,9 @@ from spinetoolbox.tool_specifications import ToolSpecification
 
 
 class Tool(ProjectItem):
-    def __init__(self, name, description, x, y, toolbox, project, logger, tool="", execute_in_work=True,
-                 cmd_line_args=None):
+    def __init__(
+        self, name, description, x, y, toolbox, project, logger, tool="", execute_in_work=True, cmd_line_args=None
+    ):
         """Tool class.
 
         Args:
@@ -499,8 +500,9 @@ class Tool(ProjectItem):
         self.instance = self.tool_specification().create_tool_instance(self.basedir)
 
         try:
-            self.instance.prepare(list(optional_file_copy_paths.values()), input_database_urls, output_database_urls,
-                                  self.cmd_line_args)
+            self.instance.prepare(
+                list(optional_file_copy_paths.values()), input_database_urls, output_database_urls, self.cmd_line_args
+            )
         except RuntimeError as error:
             self._logger.msg_error.emit(f"Failed to prepare tool instance: {error}")
             return False

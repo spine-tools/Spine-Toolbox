@@ -185,7 +185,7 @@ class Exporter(ProjectItem):
             self._update_properties_tab()
         self._check_state()
 
-    def _start_worker(self, database_url):
+    def _start_worker(self, database_url, update_settings=False):
         """Starts fetching settings using a worker in another thread."""
         worker = self._workers.get(database_url, None)
         if worker is not None and worker.isRunning():
@@ -195,25 +195,41 @@ class Exporter(ProjectItem):
             worker = Worker(database_url)
             worker.settings_read.connect(self._update_export_settings)
             worker.indexing_settings_read.connect(self._update_indexing_settings)
+            worker.additional_domains_read.connect(self._update_additional_domains)
             worker.finished.connect(self._worker_finished)
             worker.errored.connect(self._worker_failed)
             self._workers[database_url] = worker
+        if update_settings:
+            pack = self._settings_packs[database_url]
+            worker.set_previous_settings(pack.settings, pack.indexing_settings, pack.additional_domains)
+        else:
+            worker.reset_previous_settings()
         self._settings_packs[database_url].state = SettingsState.FETCHING
         worker.start()
 
     @Slot(str, "QVariant")
     def _update_export_settings(self, database_url, settings):
         """Sets new settings for given database."""
-        if database_url not in self._settings_packs:
+        pack = self._settings_packs.get(database_url)
+        if pack is None:
             return
-        self._settings_packs[database_url].settings = settings
+        pack.settings = settings
 
     @Slot(str, "QVariant")
     def _update_indexing_settings(self, database_url, indexing_settings):
         """Sets new indexing settings for given database."""
-        if database_url not in self._settings_packs:
+        pack = self._settings_packs.get(database_url)
+        if pack is None:
             return
-        self._settings_packs[database_url].indexing_settings = indexing_settings
+        pack.indexing_settings = indexing_settings
+
+    @Slot(str, "QVariant")
+    def _update_additional_domains(self, database_url, additional_domains):
+        """Sets new additional domains for given database."""
+        pack = self._settings_packs.get(database_url)
+        if pack is None:
+            return
+        pack.additional_domains = additional_domains
 
     @Slot(str)
     def _worker_finished(self, database_url):
@@ -414,7 +430,7 @@ class Exporter(ProjectItem):
         for db_map in committed_db_maps:
             url = str(db_map.db_url)
             if url in self._settings_packs:
-                self._start_worker(url)
+                self._start_worker(url, update_settings=True)
 
     @staticmethod
     def default_name_prefix():
