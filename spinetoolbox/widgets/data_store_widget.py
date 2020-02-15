@@ -641,12 +641,11 @@ class DataStoreFormBase(QMainWindow):
             event (QCloseEvent): Closing event
         """
         for db_map in self.db_maps:
-            self.db_mngr.undo_stack[db_map].indexChanged.disconnect(self.update_undo_redo_actions)
-            self.db_mngr.undo_stack[db_map].cleanChanged.disconnect(self.update_commit_enabled)
-        for db_map in self.db_maps:
             if not self.db_mngr.remove_db_map_listener(db_map, self):
                 event.ignore()
                 return
+            self.db_mngr.undo_stack[db_map].indexChanged.disconnect(self.update_undo_redo_actions)
+            self.db_mngr.undo_stack[db_map].cleanChanged.disconnect(self.update_commit_enabled)
         # Save UI form state
         self.save_window_state()
         event.accept()
