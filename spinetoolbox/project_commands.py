@@ -70,10 +70,13 @@ class RemoveAllProjectItemsCommand(QUndoCommand):
         self.project._logger.msg.emit("All items removed from project")
 
     def undo(self):
+        self.project.dag_handler.blockSignals(True)
         for category_ind, project_tree_items in self.items_per_category.items():
             self.project._add_project_tree_items(category_ind, *project_tree_items)
         for link in self.links:
             self.project._toolbox.ui.graphicsView._add_link(link)
+        self.project.dag_handler.blockSignals(False)
+        self.project.notify_changes_in_all_dags()
 
 
 class RemoveProjectItemCommand(QUndoCommand):
@@ -105,9 +108,12 @@ class RemoveProjectItemCommand(QUndoCommand):
         self.check_dialog = False
 
     def undo(self):
+        self.project.dag_handler.blockSignals(True)
         self.project._add_project_tree_items(self.category_ind, self.project_tree_item)
         for link in self.links:
             self.project._toolbox.ui.graphicsView._add_link(link)
+        self.project.dag_handler.blockSignals(False)
+        self.project.notify_changes_in_containing_dag(self.name)
 
 
 class RenameProjectItemCommand(QUndoCommand):

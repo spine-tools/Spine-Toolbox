@@ -180,7 +180,6 @@ class Exporter(ProjectItem):
                 pack = self._settings_packs[database_url]
                 if pack.settings_window is not None:
                     pack.settings_window.close()
-                    pack.settings_window.deleteLater()
                 del self._settings_packs[database_url]
         # Add new databases.
         for database_url in database_urls:
