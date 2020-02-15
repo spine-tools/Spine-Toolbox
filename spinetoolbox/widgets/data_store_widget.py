@@ -142,9 +142,6 @@ class DataStoreFormBase(QMainWindow):
             self.show_parameter_value_list_context_menu
         )
         self.parameter_value_list_model.remove_selection_requested.connect(self.remove_parameter_value_lists)
-        for db_map in self.db_maps:
-            self.db_mngr.undo_stack[db_map].indexChanged.connect(self.update_undo_redo_actions)
-            self.db_mngr.undo_stack[db_map].cleanChanged.connect(self.update_commit_enabled)
 
     @Slot(int)
     def update_undo_redo_actions(self, index):
@@ -644,8 +641,6 @@ class DataStoreFormBase(QMainWindow):
             if not self.db_mngr.remove_db_map_listener(db_map, self):
                 event.ignore()
                 return
-            self.db_mngr.undo_stack[db_map].indexChanged.disconnect(self.update_undo_redo_actions)
-            self.db_mngr.undo_stack[db_map].cleanChanged.disconnect(self.update_commit_enabled)
         # Save UI form state
         self.save_window_state()
         event.accept()
