@@ -215,6 +215,11 @@ class Parameter:
             raise GdxExportException("Not all values are of the same type.")
         self.values = values
 
+    def __eq__(self, other):
+        if not isinstance(other, Parameter):
+            return NotImplemented
+        return other.domain_names == self.domain_names and other.indexes == self.indexes and other.values == self.values
+
     def append_value(self, index, value):
         """
         Appends a new value.
@@ -504,8 +509,6 @@ def sets_to_gams(gdx_file, sets, omitted_set=None):
         record_keys = list()
         for record in current_set.records:
             record_keys.append(record.keys)
-        if not record_keys:
-            continue
         gams_set = GAMSSet(record_keys, current_set.domain_names, expl_text=current_set.description)
         gdx_file[current_set.name] = gams_set
 
@@ -698,8 +701,6 @@ class IndexingSetting:
         """
         Args:
             indexed_parameter (Parameter): a parameter containing indexed values
-            indexing_domain (IndexingDomain): indexing info
-            index_position (int): where to insert the new index when expanding a parameter
         """
         self.parameter = indexed_parameter
         self.indexing_domain = None
@@ -741,6 +742,44 @@ def make_indexing_settings(db_map):
         else:
             settings[relationship_parameter.parameter_name] = IndexingSetting(parameter)
     return settings
+
+
+def update_indexing_settings(old_indexing_settings, new_indexing_settings, settings):
+    """
+    Returns new indexing settings merged from old and new ones.
+
+    Entries that do not exist in old settings will be removed.
+    If entries exist in both settings the old one will be chosen if both entries are 'equal',
+    otherwise the new entry will override the old one.
+    Entries existing in new settings only will be added.
+
+    Args:
+        old_indexing_settings (dict): settings to be updated
+        new_indexing_settings (dict): settings used for updating
+        settings (Settings): new gdx export settings
+    Returns:
+        dict: merged old and new indexing settings
+    """
+    updated = dict()
+    for parameter_name, setting in new_indexing_settings.items():
+        old_setting = old_indexing_settings.get(parameter_name, None)
+        if old_setting is None:
+            updated[parameter_name] = setting
+            continue
+        if setting.parameter != old_setting.parameter:
+            updated[parameter_name] = setting
+            continue
+        if old_setting.indexing_domain is not None:
+            if old_setting.indexing_domain.name in settings.sorted_domain_names:
+                new_records = settings.sorted_record_key_lists(old_setting.indexing_domain.name)
+                indexes = old_setting.indexing_domain.indexes
+                if all(index in new_records for index in indexes):
+                    updated[parameter_name] = old_setting
+                else:
+                    updated[parameter_name] = setting
+                continue
+        updated[parameter_name] = old_setting
+    return updated
 
 
 def indexing_settings_to_dict(settings):

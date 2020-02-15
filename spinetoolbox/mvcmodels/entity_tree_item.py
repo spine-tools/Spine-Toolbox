@@ -410,8 +410,10 @@ class ObjectClassItem(EntityClassItem):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.context_menu_actions = [
-            {"Add relationship classes": QIcon(":/icons/menu_icons/cubes_plus.svg"),
-             "Add objects": QIcon(":/icons/menu_icons/cube_plus.svg"),},
+            {
+                "Add relationship classes": QIcon(":/icons/menu_icons/cubes_plus.svg"),
+                "Add objects": QIcon(":/icons/menu_icons/cube_plus.svg"),
+            },
             {"Edit object classes": QIcon(":/icons/menu_icons/cube_pen.svg")},
             {"Remove selection": QIcon(":/icons/menu_icons/cube_minus.svg")},
         ]
