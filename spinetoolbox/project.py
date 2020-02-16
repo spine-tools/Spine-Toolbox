@@ -134,12 +134,12 @@ class SpineToolboxProject(MetaObject):
             connections.append(conn)
         return connections
 
-    def save(self, tool_def_paths):
+    def save(self, tool_spec_paths):
         """Collects project information and objects
         into a dictionary and writes it to a JSON file.
 
         Args:
-            tool_def_paths (list): List of absolute paths to tool specification files
+            tool_spec_paths (list): List of absolute paths to tool specification files
 
         Returns:
             bool: True or False depending on success
@@ -148,7 +148,7 @@ class SpineToolboxProject(MetaObject):
         project_dict["version"] = LATEST_PROJECT_VERSION
         project_dict["name"] = self.name
         project_dict["description"] = self.description
-        project_dict["tool_specifications"] = tool_def_paths
+        project_dict["tool_specifications"] = tool_spec_paths
         # Compute connections directly from Links on scene
         project_dict["connections"] = self.get_connections(self._toolbox.ui.graphicsView.links())
         items_dict = dict()  # Dictionary for storing project items
