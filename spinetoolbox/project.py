@@ -29,7 +29,13 @@ from .config import LATEST_PROJECT_VERSION, PROJECT_FILENAME
 from .dag_handler import DirectedGraphHandler
 from .project_tree_item import LeafProjectTreeItem
 from .spine_db_manager import SpineDBManager
-from .project_commands import AddProjectItemsCommand, RemoveProjectItemCommand, RemoveAllProjectItemsCommand
+from .project_commands import (
+    SetProjectNameCommand,
+    SetProjectDescriptionCommand,
+    AddProjectItemsCommand,
+    RemoveProjectItemCommand,
+    RemoveAllProjectItemsCommand,
+)
 
 
 class SpineToolboxProject(MetaObject):
@@ -110,7 +116,13 @@ class SpineToolboxProject(MetaObject):
             return False
         return True
 
-    def change_name(self, name):
+    def call_set_name(self, name):
+        self._toolbox.undo_stack.push(SetProjectNameCommand(self, name))
+
+    def call_set_description(self, description):
+        self._toolbox.undo_stack.push(SetProjectDescriptionCommand(self, description))
+
+    def set_name(self, name):
         """Changes project name.
 
         Args:
@@ -118,7 +130,15 @@ class SpineToolboxProject(MetaObject):
         """
         super().set_name(name)
         self._toolbox.update_window_title()
+        # Remove entry with the old name from File->Open recent menu
+        self._toolbox.remove_path_from_recent_projects(self.project_dir)
+        # Add entry with the new name back to File->Open recent menu
+        self._toolbox.update_recent_projects()
         self._logger.msg.emit("Project name changed to <b>{0}</b>".format(self.name))
+
+    def set_description(self, description):
+        super().set_description(description)
+        self._logger.msg.emit("Project description changed to <b>{0}</b>".format(self.description))
 
     @staticmethod
     def get_connections(links):

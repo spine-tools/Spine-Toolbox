@@ -21,6 +21,48 @@ from PySide2.QtCore import Qt
 from PySide2.QtWidgets import QUndoCommand
 
 
+class SetProjectNameCommand(QUndoCommand):
+    def __init__(self, project, name):
+        """Command to set the project name.
+
+        Args:
+            project (SpineToolboxProject): the project
+            name (str): The new name
+        """
+        super().__init__()
+        self.project = project
+        self.redo_name = name
+        self.undo_name = self.project.name
+        self.setText("rename project")
+
+    def redo(self):
+        self.project.set_name(self.redo_name)
+
+    def undo(self):
+        self.project.set_name(self.undo_name)
+
+
+class SetProjectDescriptionCommand(QUndoCommand):
+    def __init__(self, project, description):
+        """Command to set the project description.
+
+        Args:
+            project (SpineToolboxProject): the project
+            description (str): The new description
+        """
+        super().__init__()
+        self.project = project
+        self.redo_description = description
+        self.undo_description = self.project.description
+        self.setText("edit project description")
+
+    def redo(self):
+        self.project.set_description(self.redo_description)
+
+    def undo(self):
+        self.project.set_description(self.undo_description)
+
+
 class AddProjectItemsCommand(QUndoCommand):
     def __init__(self, project, category_name, *items, set_selected=False, verbosity=True):
         """Command to add items.

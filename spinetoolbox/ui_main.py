@@ -162,6 +162,8 @@ class ToolboxUI(QMainWindow):
         self.ui.tabWidget_item_properties.tabBar().hide()  # Hide tab bar in properties dock widget
         # Finalize init
         self._proposed_item_name_counts = dict()
+        self.ui.actionSave.setDisabled(True)
+        self.ui.actionSave_As.setDisabled(True)
         self.connect_signals()
         self.restore_ui()
         self.parse_project_item_modules()
@@ -223,7 +225,7 @@ class ToolboxUI(QMainWindow):
     def update_window_modified(self, clean):
         """Updates window modified status and save actions depending on the state of the undo stack."""
         self.setWindowModified(not clean)
-        # TODO: update save actions availability whenever we're sure we do everything meaningful through the stack.
+        self.ui.actionSave.setDisabled(clean)
 
     def parse_project_item_modules(self):
         """Collects attributes from project item modules into a dict.
@@ -376,6 +378,7 @@ class ToolboxUI(QMainWindow):
         self._connect_project_signals()
         self.init_tool_specification_model(list())  # Start project with no tool specifications
         self.update_window_title()
+        self.ui.actionSave_As.setEnabled(True)
         self.ui.graphicsView.init_scene(empty=True)
         # Update recentProjects
         self.update_recent_projects()
@@ -452,6 +455,8 @@ class ToolboxUI(QMainWindow):
         )
         self._connect_project_signals()
         self.update_window_title()
+        self.ui.actionSave.setDisabled(True)
+        self.ui.actionSave_As.setEnabled(True)
         # Init tool spec model
         deserialized_paths = [deserialize_path(spec, self._project.project_dir) for spec in tool_spec_paths]
         self.init_tool_specification_model(deserialized_paths)
@@ -598,7 +603,6 @@ class ToolboxUI(QMainWindow):
             return
         # Save project to finish the upgrade process
         self.save_project()
-        return
 
     def init_project_item_model(self):
         """Initializes project item model. Create root and category items and
