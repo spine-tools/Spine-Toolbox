@@ -227,7 +227,7 @@ class DataStore(ProjectItem):
             self._properties_ui.lineEdit_host.setText(host)
         if port is not None:
             self._properties_ui.lineEdit_port.setText(str(port))
-        if database is not None:
+        if database:
             abs_db_path = os.path.abspath(database)
             self._properties_ui.lineEdit_database.setText(abs_db_path)
         if username is not None:

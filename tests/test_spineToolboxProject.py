@@ -216,7 +216,7 @@ class TestSpineToolboxProject(unittest.TestCase):
         """Tests renaming a project."""
         new_name = "New Project Name"
         new_short_name = "new_project_name"
-        self.toolbox.project().change_name(new_name)
+        self.toolbox.project().set_name(new_name)
         self.assertEqual(self.toolbox.project().name, new_name)
         self.assertEqual(self.toolbox.project().short_name, new_short_name)
 

@@ -267,9 +267,9 @@ class ProjectItemIcon(QGraphicsRectItem):
         self._toolbox = toolbox
         self._project_item = project_item
         self._moved_on_scene = False
-        self._previous_pos = None
-        self._current_pos = None
-        self.selected_icons = None
+        self._previous_pos = QPointF()
+        self._current_pos = QPointF()
+        self.selected_icons = []
         self.renderer = QSvgRenderer()
         self.svg_item = QGraphicsSvgItem()
         self.colorizer = QGraphicsColorizeEffect()

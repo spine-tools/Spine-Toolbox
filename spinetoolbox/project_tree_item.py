@@ -189,7 +189,7 @@ class CategoryProjectTreeItem(BaseProjectTreeItem):
         child_item._parent = self
         project_item = child_item.project_item
         icon = project_item.get_icon()
-        if isinstance(icon, self._icon_maker):
+        if icon is not None:
             icon.activate()
         else:
             icon = self._icon_maker(child_item.toolbox, project_item.x - 35, project_item.y - 35, 70, 70, project_item)

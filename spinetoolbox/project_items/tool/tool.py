@@ -132,7 +132,7 @@ class Tool(ProjectItem):
         """Restore selections into shared widgets when this project item is selected."""
         self._properties_ui.label_tool_name.setText(self.name)
         self._properties_ui.treeView_specification.setModel(self.specification_model)
-        self._properties_ui.radioButton_execute_in_work.setChecked(self.execute_in_work)
+        self.update_execute_in_work_button()
         self._properties_ui.lineEdit_tool_args.setText(" ".join(self.cmd_line_args))
         if self._tool_specification_name == "":
             self._properties_ui.comboBox_tool.setCurrentIndex(-1)
@@ -165,8 +165,11 @@ class Tool(ProjectItem):
         if self.execute_in_work == execute_in_work:
             return
         self.execute_in_work = execute_in_work
+        self.update_execute_in_work_button()
+
+    def update_execute_in_work_button(self):
         self._properties_ui.radioButton_execute_in_work.blockSignals(True)
-        if execute_in_work:
+        if self.execute_in_work:
             self._properties_ui.radioButton_execute_in_work.setChecked(True)
         else:
             self._properties_ui.radioButton_execute_in_source.setChecked(True)
