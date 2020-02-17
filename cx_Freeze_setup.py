@@ -96,7 +96,7 @@ def main(argv):
     }
     # Windows specific options
     if os.name == "nt":  # Windows specific options
-        base = "Console"  # set this to "Win32GUI" to not show console, "Console" shows console
+        base = "Win32GUI"  # set this to "Win32GUI" to not show console, "Console" shows console
         # Set Windows .msi installer default install path to C:\SpineToolbox-version
         systemdrive = os.environ['SYSTEMDRIVE']
         # Hardcoded path to msvcr120.dll because include_msvcr option does not seem to do anything
