@@ -97,8 +97,6 @@ class SourceConnection:
             data, t_errors = read_with_mapping(data, mapping, num_cols, header, types, row_types)
             for key, value in data.items():
                 mapped_data[key].extend(value)
-            errors.extend(
-                [(table, f"Could not map row: {row_number}, Error: {err.msg}") for row_number, err in t_errors]
-            )
+            errors.extend([(table, f"Could not map row: {row_number}, Error: {err}") for row_number, err in t_errors])
 
         return mapped_data, errors

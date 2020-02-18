@@ -226,17 +226,15 @@ class GdxExportSettings(QWidget):
         """Shows the indexed parameter settings window."""
         if self._indexed_parameter_settings_window is None:
             available_domains = dict()
-            new_domains = dict()
             for domain_name, metadata in zip(self._settings.sorted_domain_names, self._settings.domain_metadatas):
                 if metadata.is_exportable():
                     record_keys = self._settings.sorted_record_key_lists(domain_name)
-                    keys = list()
-                    for key_list in record_keys:
-                        keys.append(key_list[0])
+                    keys = [key_list[0] for key_list in record_keys]
                     if not metadata.is_additional:
-                        available_domains.update({domain_name: keys})
-                    else:
-                        new_domains.update({domain_name: keys})
+                        available_domains[domain_name] = keys
+            new_domains = dict()
+            for domain in self._new_domains_for_indexing:
+                new_domains[domain.name] = [record.keys[0] for record in domain.records]
             indexing_settings = deepcopy(self._indexing_settings)
             self._indexed_parameter_settings_window = ParameterIndexSettingsWindow(
                 indexing_settings, available_domains, new_domains, self._database_path, self

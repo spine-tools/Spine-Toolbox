@@ -227,6 +227,8 @@ class SpineDBManager(QObject):
         redo_action.setShortcuts(QKeySequence.Redo)
         undo_action.setIcon(QIcon(":/icons/menu_icons/undo.svg"))
         redo_action.setIcon(QIcon(":/icons/menu_icons/redo.svg"))
+        stack.indexChanged.connect(listener.update_undo_redo_actions)
+        stack.cleanChanged.connect(listener.update_commit_enabled)
         return db_map
 
     def remove_db_map_listener(self, db_map, listener):
@@ -235,10 +237,13 @@ class SpineDBManager(QObject):
             if not self.ok_to_close(db_map):
                 return False
             self.close_session(db_map.db_url)
+        self.signaller.remove_db_map_listener(db_map, listener)
+        self.undo_stack[db_map].indexChanged.disconnect(listener.update_undo_redo_actions)
+        self.undo_stack[db_map].cleanChanged.disconnect(listener.update_commit_enabled)
+        if not self.signaller.db_map_listeners(db_map):
             del self.undo_stack[db_map]
             del self.undo_action[db_map]
             del self.redo_action[db_map]
-        self.signaller.remove_db_map_listener(db_map, listener)
         return True
 
     def refresh_session(self, *db_maps):
