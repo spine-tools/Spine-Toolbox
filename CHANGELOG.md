@@ -3,7 +3,13 @@ All **notable** changes to this project are documented here.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
-## [0.4.0.beta.0] - 2020-02-17
+## [0.4.0-beta.1] - 2020-02-18
+### Fixed
+- Column indexing in Import Editor. When entering a time or time pattern index column manually in Import
+  Editor's lower right corner table, the colors in the preview table failed to update. This should fix 
+  the bug and allow column selection both by column index or column header text.
+
+## [0.4.0-beta.0] - 2020-02-17
 
 ### Added
 - A small notification icon is painted next to project items in the design view whenever they are missing some
