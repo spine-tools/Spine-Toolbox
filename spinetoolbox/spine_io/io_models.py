@@ -689,15 +689,15 @@ class MappingSpecModel(QAbstractTableModel):
                 mapping = ConstantMapping(reference=value)
             else:
                 return False
-        elif isinstance(mapping, (ConstantMapping, ColumnHeaderMapping)):
-            if value == "":
+        elif type(mapping) in (ConstantMapping, ColumnHeaderMapping):
+            if not value:
                 mapping = NoneMapping()
             else:
                 mapping.reference = str(value)
         elif isinstance(mapping, RowMapping) and value.lower() == "header":
             mapping.reference = -1
         elif isinstance(mapping, (RowMapping, ColumnMapping)):
-            if value == "":
+            if not value:
                 value = None
             try:
                 if value is not None:
@@ -707,7 +707,7 @@ class MappingSpecModel(QAbstractTableModel):
                     else:
                         value = max(0, value)
             except ValueError:
-                return False
+                pass
             mapping.reference = value
         return self.set_mapping_from_name(name, mapping)
 
@@ -780,7 +780,7 @@ class MappingSpecModel(QAbstractTableModel):
 
         self.update_display_table()
         if name in self._display_names:
-            self.dataChanged.emit(QModelIndex, QModelIndex, [])
+            self.dataChanged.emit(QModelIndex(), QModelIndex(), [])
         return True
 
     def set_skip_columns(self, columns=None):
