@@ -392,7 +392,7 @@ class MappingTableMenu(QMenu):
 
 def _sanitize_data(data, header):
     """Fills empty data cells with None."""
-    expected_columns = len(header) if header else len(data[0])
+    expected_columns = len(header) if header else max(len(x) for x in data)
     sanitized_data = list()
     for row in data:
         length_diff = expected_columns - len(row)

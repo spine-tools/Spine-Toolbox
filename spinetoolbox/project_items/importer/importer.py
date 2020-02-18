@@ -30,6 +30,7 @@ from spinetoolbox.helpers import create_dir, deserialize_path, serialize_path
 from spinetoolbox.spine_io.importers.csv_reader import CSVConnector
 from spinetoolbox.spine_io.importers.excel_reader import ExcelConnector
 from spinetoolbox.spine_io.importers.gdx_connector import GdxConnector
+from spinetoolbox.spine_io.importers.json_reader import JSONConnector
 from spinetoolbox.widgets.import_preview_window import ImportPreviewWindow
 from . import importer_program
 
@@ -37,6 +38,7 @@ _CONNECTOR_NAME_TO_CLASS = {
     "CSVConnector": CSVConnector,
     "ExcelConnector": ExcelConnector,
     "GdxConnector": GdxConnector,
+    "JSONConnector": JSONConnector,
 }
 
 
@@ -200,7 +202,7 @@ class Importer(ProjectItem):
         Returns:
             Asynchronous data reader class for the given importee
         """
-        connector_list = [CSVConnector, ExcelConnector, GdxConnector]  # add others as needed
+        connector_list = [CSVConnector, ExcelConnector, GdxConnector, JSONConnector]  # add others as needed
         connector_names = [c.DISPLAY_NAME for c in connector_list]
         dialog = QDialog(self._toolbox)
         dialog.setLayout(QVBoxLayout())
@@ -214,6 +216,8 @@ class Importer(ProjectItem):
             row = connector_list.index(CSVConnector)
         elif file_extension.lower() == ".gdx":
             row = connector_list.index(GdxConnector)
+        elif file_extension.lower() == ".json":
+            row = connector_list.index(JSONConnector)
         else:
             row = None
         if row:
@@ -256,7 +260,7 @@ class Importer(ProjectItem):
         Returns:
             dict: Mapping dictionary for the requested importee or an empty dict if not found
         """
-        return self.settings.get(importee, dict())
+        return self.settings.get(importee, {})
 
     def save_settings(self, settings, importee):
         """Updates an existing mapping or adds a new mapping
@@ -266,10 +270,7 @@ class Importer(ProjectItem):
             settings (dict): Updated mapping (settings) dictionary
             importee (str): Absolute path to a file, whose mapping has been updated
         """
-        if importee in self.settings.keys():
-            self.settings[importee].update(settings)
-        else:
-            self.settings[importee] = settings
+        self.settings.setdefault(importee, {}).update(settings)
 
     def _preview_destroyed(self, importee):
         """Destroys preview widget instance for the given importee.
