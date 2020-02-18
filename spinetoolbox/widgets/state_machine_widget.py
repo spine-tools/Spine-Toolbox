@@ -16,18 +16,15 @@ Contains the GraphViewForm class.
 :date:   26.11.2018
 """
 
-import os
-from PySide2.QtCore import Qt, QStateMachine, QFinalState, QState, QEventTransition, QEvent
-from PySide2.QtGui import QColor, QFont
+from PySide2.QtCore import Qt, Signal, QStateMachine, QFinalState, QState, QEventTransition, QEvent
+from PySide2.QtGui import QFont
 from PySide2.QtWidgets import QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QDockWidget, QWidget
-from .config import APPLICATION_PATH
 
 
-class LiveDemo(QDockWidget):
-    """A widget for showing live demonstrations."""
+class StateMachineWidget(QDockWidget):
+    """A widget with a state machine."""
 
-    _overlay_color = QColor(255, 140, 0, 128)
-    _tutorial_data_path = os.path.join(APPLICATION_PATH, "../tutorial")
+    _advanced = Signal()
 
     def __init__(self, window_title, parent):
         """Initializes class.
@@ -57,25 +54,27 @@ class LiveDemo(QDockWidget):
         layout.addStretch()
         layout.addWidget(button_container)
         self.setWidget(widget)
-        self.hide()
         self.machine = None
         self.run = None
+        self._welcome_text = "Welcome!"
+        self.active_state = None
+        self.setAttribute(Qt.WA_DeleteOnClose)
 
     def is_running(self):
         return self.machine and self.machine.isRunning()
 
-    def show(self):
+    def showEvent(self, event):
+        super().showEvent(event)
         self.setFloating(False)
         self.parent().addDockWidget(Qt.TopDockWidgetArea, self)
         self.setup()
-        super().show()
 
     def _make_welcome(self):
         welcome = QState(self.run)
         begin = QState(welcome)
         finalize = QFinalState(welcome)
         welcome.setInitialState(begin)
-        begin.assignProperty(self.label_msg, "text", "Welcome!")
+        begin.assignProperty(self.label_msg, "text", self._welcome_text)
         begin.assignProperty(self.button_right, "text", "Start")
         begin.assignProperty(self.button_right, "visible", True)
         begin.assignProperty(self.button_left, "visible", False)
@@ -95,11 +94,16 @@ class LiveDemo(QDockWidget):
         transition = QEventTransition(self, QEvent.Close)
         transition.setTargetState(abort)
         self.run.addTransition(transition)
-        welcome = self._make_welcome()
-        welcome.entered.connect(self._handle_welcome_entered)
+        self.active_state = self._make_welcome()
+        self.active_state.finished.connect(self._handle_welcome_finished)
         self.machine.setInitialState(self.run)
-        self.run.setInitialState(welcome)
+        self.run.setInitialState(self.active_state)
         self.machine.start()
 
-    def _handle_welcome_entered(self):
+    def _handle_welcome_finished(self):
         raise NotImplementedError()
+
+    def _goto_state(self, state):
+        self.active_state.addTransition(self._advanced, state)
+        self.active_state = state
+        self._advanced.emit()

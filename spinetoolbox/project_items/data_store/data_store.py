@@ -132,7 +132,7 @@ class DataStore(ProjectItem):
                 )
             return None
         try:
-            url_copy = dict(self._url)
+            url_copy = {key: value for key, value in self._url.items() if value}
             dialect = url_copy.pop("dialect")
             if not dialect:
                 if log_errors:
