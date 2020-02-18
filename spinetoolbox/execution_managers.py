@@ -171,11 +171,11 @@ class QProcessExecutionManager(ExecutionManager):
             return False
         return True
 
-    @Slot(name="process_started")
+    @Slot()
     def process_started(self):
         """Run when subprocess has started."""
 
-    @Slot("QProcess::ProcessState", name="on_state_changed")
+    @Slot("QProcess::ProcessState")
     def on_state_changed(self, new_state):
         """Runs when QProcess state changes.
 
@@ -195,7 +195,7 @@ class QProcessExecutionManager(ExecutionManager):
             self._logger.msg_error.emit("Process is in an unspecified state")
             logging.error("QProcess unspecified state: %s", new_state)
 
-    @Slot("QProcess::ProcessError", name="'on_process_error")
+    @Slot("QProcess::ProcessError")
     def on_process_error(self, process_error):
         """Run if there is an error in the running QProcess.
 
@@ -276,7 +276,7 @@ class QProcessExecutionManager(ExecutionManager):
         self._process = None
         self.execution_finished.emit(exit_code)
 
-    @Slot(name="on_ready_stdout")
+    @Slot()
     def on_ready_stdout(self):
         """Emit data from stdout."""
         if not self._process:
@@ -284,7 +284,7 @@ class QProcessExecutionManager(ExecutionManager):
         out = str(self._process.readAllStandardOutput().data(), "utf-8")
         self._logger.msg_proc.emit(out.strip())
 
-    @Slot(name="on_ready_stderr")
+    @Slot()
     def on_ready_stderr(self):
         """Emit data from stderr."""
         if not self._process:

@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 ## [Unreleased]
 
 ### Added
+### Changed
+### Deprecated
+### Removed
+### Fixed
+### Security
+
+## [0.4.0.beta.0] - 2020-02-17
+
+### Added
 - A small notification icon is painted next to project items in the design view whenever they are missing some
   configuration. Hovering the icon shows tips for completing the configuration.
 - A small icon is painted next to the project items in the design view to show the order in which they will be

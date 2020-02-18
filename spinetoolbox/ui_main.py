@@ -47,7 +47,6 @@ from .widgets.custom_menus import (
     RecentProjectsPopupMenu,
 )
 from .widgets.settings_widget import SettingsWidget
-from .widgets.tool_configuration_assistant_widget import ToolConfigurationAssistantWidget
 from .widgets.tool_specification_widget import ToolSpecificationWidget
 from .widgets.custom_qwidgets import ZoomWidgetAction
 from .widgets.julia_repl_widget import JuliaREPLWidget
@@ -82,6 +81,7 @@ from .project_commands import (
     RemoveToolSpecificationCommand,
     UpdateToolSpecificationCommand,
 )
+from .configuration_assistants import spine_model
 
 
 class ToolboxUI(QMainWindow):
@@ -167,6 +167,7 @@ class ToolboxUI(QMainWindow):
         self.connect_signals()
         self.restore_ui()
         self.parse_project_item_modules()
+        self.parse_assistant_modules()
         self.set_work_directory()
 
     def connect_signals(self):
@@ -192,7 +193,6 @@ class ToolboxUI(QMainWindow):
         self.ui.actionUpgrade_project.triggered.connect(self.upgrade_project)
         self.ui.actionExport_project_to_GraphML.triggered.connect(self.export_as_graphml)
         self.ui.actionSettings.triggered.connect(self.show_settings)
-        self.ui.actionPackages.triggered.connect(self.show_tool_config_asst)
         self.ui.actionQuit.triggered.connect(self.close)
         self.ui.actionRemove_all.triggered.connect(self.remove_all_items)
         self.ui.actionUser_Guide.triggered.connect(self.show_user_guide)
@@ -261,6 +261,12 @@ class ToolboxUI(QMainWindow):
             category_icon.append((item_type, item_category, item_icon))
         # Add draggable widgets to toolbar
         self.item_toolbar.add_draggable_widgets(category_icon)
+
+    def parse_assistant_modules(self):
+        menu = self.ui.menuTool_configuration_assistants
+        for module in (spine_model,):  # NOTE: add others as needed
+            action = menu.addAction(module.assistant_name)
+            action.triggered.connect(lambda checked=False, module=module: module.make_assistant(self))
 
     def set_work_directory(self, new_work_dir=None):
         """Creates a work directory if it does not exist or changes the current work directory to given.
@@ -1227,12 +1233,6 @@ class ToolboxUI(QMainWindow):
         """Show Settings widget."""
         self.settings_form = SettingsWidget(self)
         self.settings_form.show()
-
-    @Slot()
-    def show_tool_config_asst(self):
-        """Show Tool configuration assistant widget."""
-        form = ToolConfigurationAssistantWidget(self)
-        form.show()
 
     @Slot()
     def show_about(self):

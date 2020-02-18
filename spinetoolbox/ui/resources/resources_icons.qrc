@@ -5,6 +5,9 @@
     <file>Spine_symbol.png</file>
     <file>app.ico</file>
   </qresource>
+  <qresource prefix="/animated_gifs">
+    <file>ajax-loader.gif</file>
+  </qresource>
   <qresource prefix="/fonts">
     <file>fontawesome5-solid-webfont.ttf</file>
     <file>fontawesome5-codepoints.json</file>

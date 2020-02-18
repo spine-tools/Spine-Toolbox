@@ -117,22 +117,22 @@ class SettingsWidget(QWidget):
             return
         # Check that it's not a directory
         if os.path.isdir(answer[0]):
-            msg = "Please select a valid Julia interpreter (file) and not a directory"
+            msg = "Please select a valid Julia Executable (file) and not a directory"
             # noinspection PyCallByClass, PyArgumentList
-            QMessageBox.warning(self, "Invalid Julia Interpreter", msg)
+            QMessageBox.warning(self, "Invalid Julia Executable", msg)
             return
         # Check that it's a file that actually exists
         if not os.path.exists(answer[0]):
             msg = "File {0} does not exist".format(answer[0])
             # noinspection PyCallByClass, PyArgumentList
-            QMessageBox.warning(self, "Invalid Julia Interpreter", msg)
+            QMessageBox.warning(self, "Invalid Julia Executable", msg)
             return
         # Check that selected file at least starts with string 'julia'
         _, selected_file = os.path.split(answer[0])
         if not selected_file.lower().startswith("julia"):
-            msg = "Selected file <b>{0}</b> is not a valid Julia interpreter".format(selected_file)
+            msg = "Selected file <b>{0}</b> is not a valid Julia Executable".format(selected_file)
             # noinspection PyCallByClass, PyArgumentList
-            QMessageBox.warning(self, "Invalid Julia Interpreter", msg)
+            QMessageBox.warning(self, "Invalid Julia Executable", msg)
             return
         self.ui.lineEdit_julia_path.setText(answer[0])
         return
