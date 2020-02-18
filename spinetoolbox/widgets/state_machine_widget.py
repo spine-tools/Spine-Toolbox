@@ -63,11 +63,12 @@ class StateMachineWidget(QDockWidget):
     def is_running(self):
         return self.machine and self.machine.isRunning()
 
-    def showEvent(self, event):
-        super().showEvent(event)
+    def show(self):
         self.setFloating(False)
         self.parent().addDockWidget(Qt.TopDockWidgetArea, self)
-        self.setup()
+        if not self.isVisible():
+            self.setup()
+        super().show()
 
     def _make_welcome(self):
         welcome = QState(self.run)

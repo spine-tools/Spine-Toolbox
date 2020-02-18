@@ -252,17 +252,9 @@ class SpineModelConfigurationAssistant(StateMachineWidget):
         args.append("-e")
         args.append("using Pkg; Pkg.update(ARGS[1]);")
         args.append("SpineModel")
-        self.exec_mngr = QProcessExecutionManager(self._toolbox, self.julia_exe, args, silent=False)
-        self.exec_mngr.execution_finished.connect(self._handle_update_spine_model_finished)
+        self.exec_mngr = QProcessExecutionManager(self._toolbox, self.julia_exe, args, semisilent=True)
+        self.exec_mngr.execution_finished.connect(self._handle_spine_model_process_finished)
         self.exec_mngr.start_execution()
-
-    @Slot(int)
-    def _handle_update_spine_model_finished(self, ret):
-        self.exec_mngr.execution_finished.disconnect(self._handle_update_spine_model_finished)
-        if ret == 0:
-            self.spine_model_installed.emit()
-        else:
-            self.spine_model_installation_failed.emit()
 
     def install_spine_model(self):
         args = list()
@@ -271,13 +263,13 @@ class SpineModelConfigurationAssistant(StateMachineWidget):
         args.append("using Pkg; Pkg.add(PackageSpec(url=ARGS[1])); Pkg.add(PackageSpec(url=ARGS[2]));")
         args.append("https://github.com/Spine-project/SpineInterface.jl.git")
         args.append("https://github.com/Spine-project/Spine-Model.git")
-        self.exec_mngr = QProcessExecutionManager(self._toolbox, self.julia_exe, args, silent=True)
-        self.exec_mngr.execution_finished.connect(self._handle_install_spine_model_finished)
+        self.exec_mngr = QProcessExecutionManager(self._toolbox, self.julia_exe, args, semisilent=True)
+        self.exec_mngr.execution_finished.connect(self._handle_spine_model_process_finished)
         self.exec_mngr.start_execution()
 
     @Slot(int)
-    def _handle_install_spine_model_finished(self, ret):
-        self.exec_mngr.execution_finished.disconnect(self._handle_install_spine_model_finished)
+    def _handle_spine_model_process_finished(self, ret):
+        self.exec_mngr.execution_finished.disconnect(self._handle_spine_model_process_finished)
         if ret == 0:
             self.spine_model_installed.emit()
         else:
@@ -314,7 +306,7 @@ class SpineModelConfigurationAssistant(StateMachineWidget):
         args.append("PYTHON")
         args.append(sys.executable)
         args.append("PyCall")
-        self.exec_mngr = QProcessExecutionManager(self._toolbox, self.julia_exe, args, silent=False)
+        self.exec_mngr = QProcessExecutionManager(self._toolbox, self.julia_exe, args, semisilent=True)
         self.exec_mngr.execution_finished.connect(self._handle_reconfigure_py_call_finished)
         self.exec_mngr.start_execution()
 
@@ -334,7 +326,7 @@ class SpineModelConfigurationAssistant(StateMachineWidget):
         args.append("-e")
         args.append("using Pkg; Pkg.add(ARGS[1]);")
         args.append("PyCall")
-        self.exec_mngr = QProcessExecutionManager(self._toolbox, self.julia_exe, args, silent=False)
+        self.exec_mngr = QProcessExecutionManager(self._toolbox, self.julia_exe, args, semisilent=True)
         self.exec_mngr.execution_finished.connect(self._handle_install_py_call_finished)
         self.exec_mngr.start_execution()
 
