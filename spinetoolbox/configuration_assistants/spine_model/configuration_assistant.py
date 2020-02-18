@@ -53,6 +53,7 @@ class SpineModelConfigurationAssistant(StateMachineWidget):
         s = QState(self.run)
         s.assignProperty(self.label_msg, "text", text)
         s.assignProperty(self.button_right, "visible", False)
+        s.assignProperty(self.label_loader, "visible", True)
         s.assignProperty(self.button_left, "visible", False)
         return s
 
@@ -60,6 +61,7 @@ class SpineModelConfigurationAssistant(StateMachineWidget):
         s = QState(self.run)
         s.assignProperty(self.label_msg, "text", text)
         s.assignProperty(self.button_right, "visible", False)
+        s.assignProperty(self.label_loader, "visible", False)
         s.assignProperty(self.button_left, "visible", True)
         s.assignProperty(self.button_left, "text", "Close")
         return s
@@ -69,6 +71,7 @@ class SpineModelConfigurationAssistant(StateMachineWidget):
         s.assignProperty(self.label_msg, "text", text)
         s.assignProperty(self.button_right, "visible", True)
         s.assignProperty(self.button_right, "text", "Allow")
+        s.assignProperty(self.label_loader, "visible", False)
         s.assignProperty(self.button_left, "visible", True)
         s.assignProperty(self.button_left, "text", "Cancel")
         return s

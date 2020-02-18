@@ -17,7 +17,7 @@ Contains the GraphViewForm class.
 """
 
 from PySide2.QtCore import Qt, Signal, QStateMachine, QFinalState, QState, QEventTransition, QEvent
-from PySide2.QtGui import QFont
+from PySide2.QtGui import QFont, QMovie
 from PySide2.QtWidgets import QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QDockWidget, QWidget
 
 
@@ -41,6 +41,11 @@ class StateMachineWidget(QDockWidget):
         self.label_msg.setWordWrap(True)
         self.button_left = QPushButton(self)
         self.button_right = QPushButton(self)
+        self.label_loader = QLabel(self)
+        self.label_loader.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
+        movie = QMovie(":/animated_gifs/ajax-loader.gif")
+        movie.start()
+        self.label_loader.setMovie(movie)
         button_container = QWidget(self)
         button_layout = QHBoxLayout(button_container)
         button_layout.addStretch()
@@ -51,6 +56,8 @@ class StateMachineWidget(QDockWidget):
         layout = QVBoxLayout(widget)
         layout.addStretch()
         layout.addWidget(self.label_msg)
+        layout.addStretch()
+        layout.addWidget(self.label_loader)
         layout.addStretch()
         layout.addWidget(button_container)
         self.setWidget(widget)
@@ -78,6 +85,7 @@ class StateMachineWidget(QDockWidget):
         begin.assignProperty(self.label_msg, "text", self._welcome_text)
         begin.assignProperty(self.button_right, "text", "Start")
         begin.assignProperty(self.button_right, "visible", True)
+        begin.assignProperty(self.label_loader, "visible", False)
         begin.assignProperty(self.button_left, "visible", False)
         begin.addTransition(self.button_right.clicked, finalize)
         return welcome
