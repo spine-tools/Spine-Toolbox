@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "Spine Toolbox"
-#define MyAppVersion "0.4.0.beta.0"
+#define MyAppVersion "0.4.0-beta.0"
 #define MyAppPublisher "Spine Project Consortium"
 #define MyAppURL "https://github.com/Spine-project"
 #define MyAppExeName "spinetoolbox.exe"
@@ -11,8 +11,10 @@
 [Setup]
 ; NOTE: The value of AppId uniquely identifies this application.
 ; Do not use the same AppId value in installers for other applications.
-; (To generate a new GUID, click Tools | Generate GUID inside the IDE.)
-AppId={{6E794A8A-E508-47C4-9319-1113852224D3}
+; AppId for the no console version
+;AppId={{6E794A8A-E508-47C4-9319-1113852224D3}
+; AppId for the console version
+AppId={{CDB23453-4C19-4BAD-8A7F-19B68741E0F2}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 ;AppVerName={#MyAppName} {#MyAppVersion}
