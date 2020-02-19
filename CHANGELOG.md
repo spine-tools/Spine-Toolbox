@@ -3,6 +3,10 @@ All **notable** changes to this project are documented here.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
+## [0.4.0-beta.2] - 2020-02-18
+### Fixed
+- Executing Julia tools in the embedded Julia Console for Windows release versions
+
 ## [0.4.0-beta.1] - 2020-02-18
 ### Fixed
 - Column indexing in Import Editor. When entering a time or time pattern index column manually in Import

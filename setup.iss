@@ -4,7 +4,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "Spine Toolbox"
-#define MyAppVersion "0.4.0-beta.1"
+#define MyAppVersion "0.4.0-beta.2"
 #define MyAppPublisher "Spine Project Consortium"
 #define MyAppURL "https://github.com/Spine-project"
 #define MyAppExeName "spinetoolbox.exe"
