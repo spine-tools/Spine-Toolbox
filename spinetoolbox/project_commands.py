@@ -310,14 +310,10 @@ class UpdateDSURLCommand(QUndoCommand):
         self.setText(f"change url {changed_keys} of {ds.name}")
 
     def redo(self):
-        self.ds._url.update(self.redo_kwargs)
-        self.ds.item_changed.emit()
-        self.ds.load_url_into_selections(self.redo_kwargs)
+        self.ds.do_update_url(**self.redo_kwargs)
 
     def undo(self):
-        self.ds._url.update(self.undo_kwargs)
-        self.ds.item_changed.emit()
-        self.ds.load_url_into_selections(self.undo_kwargs)
+        self.ds.do_update_url(**self.undo_kwargs)
 
 
 class UpdateImporterSettingsCommand(QUndoCommand):
@@ -344,30 +340,26 @@ class UpdateImporterSettingsCommand(QUndoCommand):
 
 
 class UpdateImporterCancelOnErrorCommand(QUndoCommand):
-    def __init__(self, importer, state):
+    def __init__(self, importer, cancel_on_error):
         """Command to update Importer cancel on error setting.
         This may seem silly but cancel_on_error is saved with the project so we need this command
         to get the right windowModified state.
 
         Args:
             importer (Importer): the Importer
-            state (Qt.CheckState): the new state
+            cancel_on_error (bool): the new setting
         """
         super().__init__()
         self.importer = importer
-        self.redo_state = state
-        self.undo_state = Qt.Unchecked if state == Qt.Checked else Qt.Checked
+        self.redo_cancel_on_error = cancel_on_error
+        self.undo_cancel_on_error = not cancel_on_error
         self.setText(f"change cancel on error setting of {importer.name}")
 
     def redo(self):
-        self.importer._properties_ui.cancel_on_error_checkBox.blockSignals(True)
-        self.importer._properties_ui.cancel_on_error_checkBox.setCheckState(self.redo_state)
-        self.importer._properties_ui.cancel_on_error_checkBox.blockSignals(False)
+        self.importer.set_cancel_on_error(self.redo_cancel_on_error)
 
     def undo(self):
-        self.importer._properties_ui.cancel_on_error_checkBox.blockSignals(True)
-        self.importer._properties_ui.cancel_on_error_checkBox.setCheckState(self.undo_state)
-        self.importer._properties_ui.cancel_on_error_checkBox.blockSignals(False)
+        self.importer.set_cancel_on_error(self.undo_cancel_on_error)
 
 
 class SetToolSpecificationCommand(QUndoCommand):

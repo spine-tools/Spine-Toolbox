@@ -125,25 +125,23 @@ class Importer(ProjectItem):
 
     @Slot(int)
     def _handle_cancel_on_error_changed(self, _state):
-        state = self._properties_ui.cancel_on_error_checkBox.checkState()
-        self._toolbox.undo_stack.push(UpdateImporterCancelOnErrorCommand(self, state))
+        cancel_on_error = self._properties_ui.cancel_on_error_checkBox.isChecked()
+        if self.cancel_on_error == cancel_on_error:
+            return
+        self._toolbox.undo_stack.push(UpdateImporterCancelOnErrorCommand(self, cancel_on_error))
 
-    def activate(self):
-        """Restores selections, cancel on error checkbox and connects signals."""
-        self._properties_ui.cancel_on_error_checkBox.setCheckState(Qt.Checked if self.cancel_on_error else Qt.Unchecked)
-        self.restore_selections()
-        super().connect_signals()
-
-    def deactivate(self):
-        """Saves selections and disconnects signals."""
-        self.save_selections()
-        if not super().disconnect_signals():
-            logging.error("Item %s deactivation failed.", self.name)
-            return False
-        return True
+    def set_cancel_on_error(self, cancel_on_error):
+        self.cancel_on_error = cancel_on_error
+        if not self._active:
+            return
+        check_state = Qt.Checked if self.cancel_on_error else Qt.Unchecked
+        self._properties_ui.cancel_on_error_checkBox.blockSignals(True)
+        self._properties_ui.cancel_on_error_checkBox.setCheckState(check_state)
+        self._properties_ui.cancel_on_error_checkBox.blockSignals(False)
 
     def restore_selections(self):
         """Restores selections into shared widgets when this project item is selected."""
+        self._properties_ui.cancel_on_error_checkBox.setCheckState(Qt.Checked if self.cancel_on_error else Qt.Unchecked)
         self._properties_ui.label_name.setText(self.name)
         self._properties_ui.treeView_files.setModel(self.file_model)
         self.file_model.itemChanged.connect(self._handle_file_model_item_changed)

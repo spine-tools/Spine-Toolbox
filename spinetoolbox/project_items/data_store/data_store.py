@@ -103,20 +103,15 @@ class DataStore(ProjectItem):
         s[self._properties_ui.lineEdit_database.editingFinished] = self.refresh_database
         return s
 
-    def activate(self):
-        """Load url into selections and connect signals."""
+    def restore_selections(self):
+        """Load url into selections."""
         self._properties_ui.label_ds_name.setText(self.name)
         self._properties_ui.checkBox_for_spine_model.setCheckState(self._for_spine_model_checkbox_state)
         self.load_url_into_selections(self._url)
-        super().connect_signals()
 
-    def deactivate(self):
-        """Disconnect signals."""
+    def save_selections(self):
+        """Save checkbox state."""
         self._for_spine_model_checkbox_state = self._properties_ui.checkBox_for_spine_model.checkState()
-        if not super().disconnect_signals():
-            logging.error("Item %s deactivation failed", self.name)
-            return False
-        return True
 
     def url(self):
         """Return the url attribute, for saving the project."""
@@ -209,6 +204,8 @@ class DataStore(ProjectItem):
     def load_url_into_selections(self, url):
         """Load given url attribute into shared widget selections.
         """
+        if not self._active:
+            return
         if not url:
             return
         dialect = url.get("dialect")
@@ -241,6 +238,11 @@ class DataStore(ProjectItem):
         if not kwargs:
             return
         self._toolbox.undo_stack.push(UpdateDSURLCommand(self, **kwargs))
+
+    def do_update_url(self, **kwargs):
+        self._url.update(kwargs)
+        self.item_changed.emit()
+        self.load_url_into_selections(kwargs)
 
     @Slot()
     def refresh_host(self):

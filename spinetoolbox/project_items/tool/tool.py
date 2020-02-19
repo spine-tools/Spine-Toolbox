@@ -111,18 +111,6 @@ class Tool(ProjectItem):
         s[self._properties_ui.lineEdit_tool_args.editingFinished] = self.update_tool_cmd_line_args
         return s
 
-    def activate(self):
-        """Restore selections and connect signals."""
-        self.restore_selections()
-        super().connect_signals()
-
-    def deactivate(self):
-        """Save selections and disconnect signals."""
-        if not super().disconnect_signals():
-            logging.error("Item %s deactivation failed.", self.name)
-            return False
-        return True
-
     def restore_selections(self):
         """Restore selections into shared widgets when this project item is selected."""
         self._properties_ui.label_tool_name.setText(self.name)
@@ -143,6 +131,8 @@ class Tool(ProjectItem):
         self.update_execute_in_work_button()
 
     def update_execute_in_work_button(self):
+        if not self._active:
+            return
         self._properties_ui.radioButton_execute_in_work.blockSignals(True)
         if self.execute_in_work:
             self._properties_ui.radioButton_execute_in_work.setChecked(True)
@@ -175,6 +165,8 @@ class Tool(ProjectItem):
 
     def do_update_tool_cmd_line_args(self, cmd_line_args):
         self.cmd_line_args = cmd_line_args
+        if not self._active:
+            return
         self._properties_ui.lineEdit_tool_args.blockSignals(True)
         self._properties_ui.lineEdit_tool_args.setText(" ".join(self.cmd_line_args))
         self._properties_ui.lineEdit_tool_args.blockSignals(False)
@@ -200,6 +192,8 @@ class Tool(ProjectItem):
     def update_tool_ui(self):
         """Updates Tool UI to show Tool specification details. Used when Tool specification is changed.
         Overrides execution mode (work or source) with the specification default."""
+        if not self._active:
+            return
         if not self._properties_ui:
             # This happens when calling self.set_tool_specification() in the __init__ method,
             # because the UI only becomes available *after* adding the item to the project_item_model... problem??

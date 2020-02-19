@@ -64,19 +64,6 @@ class View(ProjectItem):
         s[self._properties_ui.pushButton_view_open_ds_view.clicked] = self.open_view
         return s
 
-    def activate(self):
-        """Restore selections and connect signals."""
-        self.restore_selections()
-        super().connect_signals()
-
-    def deactivate(self):
-        """Save selections and disconnect signals."""
-        self.save_selections()
-        if not super().disconnect_signals():
-            logging.error("Item %s deactivation failed", self.name)
-            return False
-        return True
-
     def restore_selections(self):
         """Restore selections into shared widgets when this project item is selected."""
         self._properties_ui.label_view_name.setText(self.name)

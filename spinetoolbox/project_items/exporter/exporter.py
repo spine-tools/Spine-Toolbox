@@ -67,7 +67,6 @@ class Exporter(ProjectItem):
             settings_pack = _SettingsPack.from_dict(pack, url)
             settings_pack.notifications.changed_due_to_settings_state.connect(self._report_notifications)
             self._settings_packs[url] = settings_pack
-        self._activated = False
         for url, pack in self._settings_packs.items():
             if pack.state != SettingsState.OK:
                 self._start_worker(url)
@@ -91,23 +90,16 @@ class Exporter(ProjectItem):
         s = {self._properties_ui.open_directory_button.clicked: self.open_directory}
         return s
 
-    def activate(self):
+    def restore_selections(self):
         """Restores selections and connects signals."""
         self._properties_ui.item_name_label.setText(self.name)
         self._update_properties_tab()
-        super().connect_signals()
+
+    def _connect_signals(self):
+        super()._connect_signals()
         for url, pack in self._settings_packs.items():
             if pack.state == SettingsState.ERROR:
                 self._start_worker(url)
-        self._activated = True
-
-    def deactivate(self):
-        """Saves selections and disconnects signals."""
-        if not super().disconnect_signals():
-            logging.error("Item %s deactivation failed.", self.name)
-            return False
-        self._activated = False
-        return True
 
     def _update_properties_tab(self):
         """Updates the database list in the properties tab."""
@@ -186,7 +178,7 @@ class Exporter(ProjectItem):
             if database_url not in self._settings_packs:
                 self._settings_packs[database_url] = _SettingsPack("")
                 self._start_worker(database_url)
-        if self._activated:
+        if self._active:
             self._update_properties_tab()
         self._check_state()
 

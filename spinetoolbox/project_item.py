@@ -55,6 +55,7 @@ class ProjectItem(MetaObject):
         self._properties_ui = None
         self._icon = None
         self._sigs = None
+        self._active = False
         self.item_changed.connect(lambda: self._project.notify_changes_in_containing_dag(self.name))
         # Make project directory for this Item
         self.data_dir = os.path.join(self._project.items_dir, self.short_name)
@@ -81,12 +82,33 @@ class ProjectItem(MetaObject):
         """
         return dict()
 
-    def connect_signals(self):
+    def activate(self):
+        """Restore selections and connect signals."""
+        self._active = True
+        self.restore_selections()  # Do this before connecting signals or funny things happen
+        self._connect_signals()
+
+    def deactivate(self):
+        """Save selections and disconnect signals."""
+        self.save_selections()
+        if not self._disconnect_signals():
+            logging.error("Item %s deactivation failed", self.name)
+            return False
+        self._active = False
+        return True
+
+    def restore_selections(self):
+        """Restore selections into shared widgets when this project item is selected."""
+
+    def save_selections(self):
+        """Save selections in shared widgets for this project item into instance variables."""
+
+    def _connect_signals(self):
         """Connect signals to handlers."""
         for signal, handler in self._sigs.items():
             signal.connect(handler)
 
-    def disconnect_signals(self):
+    def _disconnect_signals(self):
         """Disconnect signals from handlers and check for errors."""
         for signal, handler in self._sigs.items():
             try:
@@ -328,7 +350,8 @@ class ProjectItem(MetaObject):
         # Update project item directory variable
         self.data_dir = new_data_dir
         # Update name label in tab
-        self.update_name_label()
+        if self._active:
+            self.update_name_label()
         # Update name item of the QGraphicsItem
         self.get_icon().update_name_item(new_name)
         # Rename node and edges in the graph (dag) that contains this project item

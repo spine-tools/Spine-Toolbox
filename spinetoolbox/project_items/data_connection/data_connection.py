@@ -97,28 +97,12 @@ class DataConnection(ProjectItem):
         s[self._properties_ui.treeView_dc_data.del_key_pressed] = lambda: self.remove_files()
         return s
 
-    def activate(self):
-        """Restore selections and connect signals."""
-        self.restore_selections()  # Do this before connecting signals or funny things happen
-        super().connect_signals()
-
-    def deactivate(self):
-        """Save selections and disconnect signals."""
-        self.save_selections()
-        if not super().disconnect_signals():
-            logging.error("Item %s deactivation failed", self.name)
-            return False
-        return True
-
     def restore_selections(self):
         """Restore selections into shared widgets when this project item is selected."""
         self._properties_ui.label_dc_name.setText(self.name)
         self._properties_ui.treeView_dc_references.setModel(self.reference_model)
         self._properties_ui.treeView_dc_data.setModel(self.data_model)
         self.refresh()
-
-    def save_selections(self):
-        """Save selections in shared widgets for this project item into instance variables."""
 
     @Slot("QVariant")
     def add_files_to_references(self, paths):
@@ -348,6 +332,8 @@ class DataConnection(ProjectItem):
         """List file references in QTreeView.
         If items is None or empty list, model is cleared.
         """
+        if not self._active:
+            return
         self.reference_model.clear()
         self.reference_model.setHorizontalHeaderItem(0, QStandardItem("References"))  # Add header
         if items is not None:
