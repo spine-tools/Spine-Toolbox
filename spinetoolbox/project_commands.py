@@ -260,7 +260,7 @@ class AddDCReferencesCommand(QUndoCommand):
 
         Args:
             dc (DataConnection): the DC
-            paths (list(str)): list of paths to add
+            paths (set(str)): set of paths to add
         """
         super().__init__()
         self.dc = dc

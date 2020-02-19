@@ -127,14 +127,17 @@ class DataConnection(ProjectItem):
         Args:
             paths (list): A list of paths to files
         """
-        self._toolbox.undo_stack.push(AddDCReferencesCommand(self, paths))
+        repeated_paths = set(paths).intersection(self.references)
+        repeated_paths = ", ".join(repeated_paths)
+        paths = set(paths).difference(self.references)
+        if repeated_paths:
+            self._logger.msg_warning.emit(f"Reference to file(s) <b>{repeated_paths}</b> already available")
+        if paths:
+            self._toolbox.undo_stack.push(AddDCReferencesCommand(self, paths))
 
     def do_add_files_to_references(self, paths):
-        for path in paths:
-            if path in self.references:
-                self._logger.msg_warning.emit(f"Reference to file <b>{path}</b> already available")
-                continue
-            self.references.append(os.path.abspath(path))
+        abspaths = [os.path.abspath(path) for path in paths]
+        self.references.extend(abspaths)
         self.populate_reference_list(self.references)
 
     @Slot("QGraphicsItem", list)
