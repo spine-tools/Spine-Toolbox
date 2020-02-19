@@ -10,14 +10,14 @@
 ######################################################################################################################
 
 """
-Widget for assisting the user in configuring tools, such as SpineModel.
+Widget for assisting the user in configuring SpineModel.jl.
 
 :author: M. Marin (KTH)
 :date:   9.1.2019
 """
 
 import sys
-from PySide2.QtCore import Signal, Slot, QState
+from PySide2.QtCore import Signal, Slot
 from spinetoolbox.widgets.state_machine_widget import StateMachineWidget
 from spinetoolbox.execution_managers import QProcessExecutionManager
 from spinetoolbox.config import JULIA_EXECUTABLE
@@ -38,7 +38,6 @@ class SpineModelConfigurationAssistant(StateMachineWidget):
         super().__init__("SpineModel.jl configuration assistant", toolbox)
         self._toolbox = toolbox
         self.exec_mngr = None
-        self._py_call_program = None
         self._welcome_text = (
             "<html><p>Welcome! This assistant will help you configure Spine Toolbox for using SpineModel.jl</p></html>"
         )
@@ -46,6 +45,7 @@ class SpineModelConfigurationAssistant(StateMachineWidget):
         self.julia_project_path = None
         self._julia_version = None
         self._julia_active_project = None
+        self._py_call_program = None
         self.button_left.clicked.connect(self.close)
 
     @busy_effect

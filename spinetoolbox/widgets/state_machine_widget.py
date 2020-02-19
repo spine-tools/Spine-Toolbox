@@ -10,7 +10,7 @@
 ######################################################################################################################
 
 """
-Contains the GraphViewForm class.
+Contains the StateMachineWidget class.
 
 :author: M. Marin (KTH)
 :date:   26.11.2018
@@ -98,10 +98,10 @@ class StateMachineWidget(QDockWidget):
         self.machine = QStateMachine(self)
         self.welcome = self._make_welcome()
         self.machine.setInitialState(self.welcome)
-        abort = QFinalState(self.machine)
-        transition = QEventTransition(self, QEvent.Close)
-        transition.setTargetState(abort)
-        self.machine.addTransition(transition)
+        dead = QFinalState(self.machine)
+        death = QEventTransition(self, QEvent.Close)
+        death.setTargetState(dead)
+        self.machine.addTransition(death)
 
     def get_current_state(self):
         return self._current_state
