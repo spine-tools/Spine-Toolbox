@@ -237,8 +237,8 @@ class QProcessExecutionManager(ExecutionManager):
             self._process.deleteLater()
             self._process = None
 
-    @Slot(int)
-    def on_process_finished(self, exit_code):
+    @Slot(int, "QProcess::ExitStatus")
+    def on_process_finished(self, exit_code, exit_status):
         """Runs when subprocess has finished.
 
         Args:
@@ -247,7 +247,6 @@ class QProcessExecutionManager(ExecutionManager):
         # logging.debug("Error that occurred last: {0}".format(self._process.error()))
         if not self._process:
             return
-        exit_status = self._process.exitStatus()  # Normal or crash exit
         if exit_status == QProcess.CrashExit:
             if not self._silent:
                 self._logger.msg_error.emit("\tProcess crashed")
