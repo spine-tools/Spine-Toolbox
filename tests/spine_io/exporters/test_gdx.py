@@ -547,7 +547,7 @@ class TestGdx(unittest.TestCase):
             path_to_gdx = Path(tmp_dir_name).joinpath(
                 "test_to_gdx_file_sorts_domains_and_sets_and_records_correctly.gdx"
             )
-            gdx.to_gdx_file(database_map, path_to_gdx, [], settings, {}, gams_directory)
+            gdx.to_gdx_file(database_map, path_to_gdx, [], settings, {}, {}, gams_directory)
             database_map.connection.close()
             with GdxFile(path_to_gdx, "r", gams_directory) as gdx_file:
                 self.assertEqual(len(gdx_file), 4)
@@ -592,7 +592,7 @@ class TestGdx(unittest.TestCase):
             path_to_gdx = Path(tmp_dir_name).joinpath(
                 "test_to_gdx_file_sorts_domains_and_sets_and_records_correctly.gdx"
             )
-            gdx.to_gdx_file(database_map, path_to_gdx, [], settings, {}, gams_directory)
+            gdx.to_gdx_file(database_map, path_to_gdx, [], settings, {}, {}, gams_directory)
             database_map.connection.close()
             with GdxFile(path_to_gdx, "r", gams_directory) as gdx_file:
                 self.assertEqual(len(gdx_file), 1)
@@ -611,7 +611,7 @@ class TestGdx(unittest.TestCase):
             additional_domains[0].records.append(gdx.Record(("record2",)))
             settings = gdx.Settings(sorted_domain_names, [], sorted_records)
             path_to_gdx = Path(tmp_dir_name).joinpath("test_to_gdx_file_exports_additional_domains.gdx")
-            gdx.to_gdx_file(database_map, path_to_gdx, additional_domains, settings, {}, gams_directory)
+            gdx.to_gdx_file(database_map, path_to_gdx, additional_domains, settings, {}, {}, gams_directory)
             database_map.connection.close()
             with GdxFile(path_to_gdx, "r", gams_directory) as gdx_file:
                 self.assertEqual(len(gdx_file), 1)
@@ -692,7 +692,9 @@ class TestGdx(unittest.TestCase):
                 "internally_indexed": internally_indexed_setting,
             }
             path_to_gdx = Path(tmp_dir_name).joinpath("test_to_gdx_file_expands_indexed_parameters.gdx")
-            gdx.to_gdx_file(database_map, path_to_gdx, additional_domains, settings, indexing_settings, gams_directory)
+            gdx.to_gdx_file(
+                database_map, path_to_gdx, additional_domains, settings, indexing_settings, {}, gams_directory
+            )
             database_map.connection.close()
             with GdxFile(path_to_gdx, "r", gams_directory) as gdx_file:
                 self.assertEqual(len(gdx_file), 9)
@@ -1163,6 +1165,92 @@ class TestGdx(unittest.TestCase):
         indexing_settings = {"parameter": indexing_setting}
         gdx.sort_indexing_domain_indexes(indexing_settings, settings)
         self.assertEqual(indexing_domain.indexes, [("b2",), ("b3",)])
+
+    def test_MergingSetting_construction(self):
+        setting = gdx.MergingSetting(
+            ["name1", "name2"], "new domain", "A domain of names.", "set_name", ["domain1", "domain2"]
+        )
+        self.assertEqual(setting.parameter_names, ["name1", "name2"])
+        self.assertEqual(setting.new_domain_name, "new domain")
+        self.assertEqual(setting.new_domain_description, "A domain of names.")
+        self.assertEqual(setting.previous_set, "set_name")
+        self.assertEqual(setting.index_position, 2)
+        self.assertEqual(setting.domain_names(), ["domain1", "domain2", "new domain"])
+
+    def test_MergingSetting_index_position(self):
+        setting = gdx.MergingSetting(["name"], "new domain", "A domain of names.", "set_name", ["domain1", "domain2"])
+        setting.index_position = 0
+        self.assertEqual(setting.domain_names(), ["new domain", "domain1", "domain2"])
+        setting.index_position = 1
+        self.assertEqual(setting.domain_names(), ["domain1", "new domain", "domain2"])
+        setting.index_position = 2
+        self.assertEqual(setting.domain_names(), ["domain1", "domain2", "new domain"])
+
+    def test_MergingSettings_to_dict(self):
+        setting = gdx.MergingSetting(["name"], "new_domain", "A domain of names.", "set_name", ["domain"])
+        setting_dict = setting.to_dict()
+        self.assertEqual(
+            setting_dict,
+            {
+                "parameters": ["name"],
+                "new_domain": "new_domain",
+                "domain_description": "A domain of names.",
+                "previous_set": "set_name",
+                "previous_domains": ["domain"],
+                "index_position": 1,
+            },
+        )
+
+    def test_MergingSettings_from_dict(self):
+        setting_dict = {
+            "parameters": ["name"],
+            "new_domain": "new_domain",
+            "domain_description": "A domain of names.",
+            "previous_set": "set_name",
+            "previous_domains": ["domain"],
+            "index_position": 1,
+        }
+        setting = gdx.MergingSetting.from_dict(setting_dict)
+        self.assertEqual(setting.parameter_names, ["name"])
+        self.assertEqual(setting.new_domain_name, "new_domain")
+        self.assertEqual(setting.new_domain_description, "A domain of names.")
+        self.assertEqual(setting.index_position, 1)
+
+    def test_merge_parameters(self):
+        parameters = {
+            "parameter1": gdx.Parameter(["domain1", "domain2"], [("a1", "b1"), ("a2", "b2")], [1.1, 2.2]),
+            "parameter2": gdx.Parameter(["domain1", "domain2"], [("a1", "b1"), ("a2", "b2")], [3.3, 4.4]),
+        }
+        setting = gdx.MergingSetting(
+            ["parameter1", "parameter2"], "new_domain", "A new domain.", "set_name", ["domain1", "domain2"]
+        )
+        settings = {"merged": setting}
+        new_parameters = gdx.merge_parameters(parameters, settings)
+        self.assertFalse(parameters)
+        self.assertEqual(len(new_parameters), 1)
+        self.assertIn("merged", new_parameters)
+        new_parameter = new_parameters["merged"]
+        self.assertEqual(new_parameter.domain_names, ["domain1", "domain2", "new_domain"])
+        self.assertEqual(
+            new_parameter.indexes,
+            [
+                ("a1", "b1", "parameter1"),
+                ("a2", "b2", "parameter1"),
+                ("a1", "b1", "parameter2"),
+                ("a2", "b2", "parameter2"),
+            ],
+        )
+        self.assertEqual(new_parameter.values, [1.1, 2.2, 3.3, 4.4])
+
+    def test_merging_domain(self):
+        setting = gdx.MergingSetting(
+            ["parameter1", "parameter2"], "new_domain", "A new domain.", "set_name", ["domain1", "domain2"]
+        )
+        domain = gdx.merging_domain(setting)
+        self.assertEqual(domain.name, "new_domain")
+        self.assertEqual(domain.description, "A new domain.")
+        self.assertEqual(domain.domain_names, [None])
+        self.assertEqual(domain.records, [gdx.Record(("parameter1",)), gdx.Record(("parameter2",))])
 
     def test_SetMetadata_construction(self):
         metadata = gdx.SetMetadata(gdx.ExportFlag.NON_EXPORTABLE, True)

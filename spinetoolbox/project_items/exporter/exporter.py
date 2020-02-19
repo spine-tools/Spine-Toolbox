@@ -63,7 +63,7 @@ class Exporter(ProjectItem):
             serialized_url = pack["database_url"]
             url = deserialize_path(serialized_url, self._project.project_dir)
             url = _normalize_url(url)
-            settings_pack = _SettingsPack.from_dict(pack, url)
+            settings_pack = SettingsPack.from_dict(pack, url, logger)
             settings_pack.notifications.changed_due_to_settings_state.connect(self._report_notifications)
             self._settings_packs[url] = settings_pack
         for url, pack in self._settings_packs.items():
@@ -83,6 +83,9 @@ class Exporter(ProjectItem):
     def category():
         """See base class."""
         return "Exporters"
+
+    def settings_pack(self, database_path):
+        return self._settings_packs[database_path]
 
     def make_signal_handler_dict(self):
         """Returns a dictionary of all shared signals and their handlers."""
@@ -146,9 +149,10 @@ class Exporter(ProjectItem):
                 gdx.to_gdx_file(
                     database_map,
                     out_path,
-                    settings_pack.additional_domains,
+                    settings_pack.indexing_domains + settings_pack.merging_domains,
                     settings_pack.settings,
                     settings_pack.indexing_settings,
+                    settings_pack.merging_settings,
                     gams_system_directory,
                 )
             except (gdx.GdxExportException, SpineDBAPIError) as error:
@@ -175,7 +179,7 @@ class Exporter(ProjectItem):
         # Add new databases.
         for database_url in database_urls:
             if database_url not in self._settings_packs:
-                self._settings_packs[database_url] = _SettingsPack("")
+                self._settings_packs[database_url] = SettingsPack("")
                 self._start_worker(database_url)
         if self._active:
             self._update_properties_tab()
@@ -191,13 +195,17 @@ class Exporter(ProjectItem):
             worker = Worker(database_url)
             worker.settings_read.connect(self._update_export_settings)
             worker.indexing_settings_read.connect(self._update_indexing_settings)
-            worker.additional_domains_read.connect(self._update_additional_domains)
+            worker.indexing_domains_read.connect(self._update_indexing_domains)
+            worker.merging_settings_read.connect(self._update_merging_settings)
+            worker.merging_domains_read.connect(self._update_merging_domains)
             worker.finished.connect(self._worker_finished)
             worker.errored.connect(self._worker_failed)
             self._workers[database_url] = worker
         if update_settings:
             pack = self._settings_packs[database_url]
-            worker.set_previous_settings(pack.settings, pack.indexing_settings, pack.additional_domains)
+            worker.set_previous_settings(
+                pack.settings, pack.indexing_settings, pack.indexing_domains, pack.merging_settings
+            )
         else:
             worker.reset_previous_settings()
         self._settings_packs[database_url].state = SettingsState.FETCHING
@@ -220,12 +228,28 @@ class Exporter(ProjectItem):
         pack.indexing_settings = indexing_settings
 
     @Slot(str, "QVariant")
-    def _update_additional_domains(self, database_url, additional_domains):
-        """Sets new additional domains for given database."""
+    def _update_indexing_domains(self, database_url, domains):
+        """Sets new indexing domains for given database."""
         pack = self._settings_packs.get(database_url)
         if pack is None:
             return
-        pack.additional_domains = additional_domains
+        pack.indexing_domains = domains
+
+    @Slot(str, "QVariant")
+    def _update_merging_settings(self, database_url, settings):
+        """Sets new merging settings for given database."""
+        pack = self._settings_packs.get(database_url)
+        if pack is None:
+            return
+        pack.merging_settings = settings
+
+    @Slot(str, "QVariant")
+    def _update_merging_domains(self, database_url, domains):
+        """Sets new merging domains for given database."""
+        pack = self._settings_packs.get(database_url)
+        if pack is None:
+            return
+        pack.merging_domains = domains
 
     @Slot(str)
     def _worker_finished(self, database_url):
@@ -333,10 +357,18 @@ class Exporter(ProjectItem):
         # Give window its own settings and indexing domains so Cancel doesn't change anything here.
         settings = deepcopy(settings_pack.settings)
         indexing_settings = deepcopy(settings_pack.indexing_settings)
-        additional_parameter_indexing_domains = list(settings_pack.additional_domains)
+        additional_parameter_indexing_domains = list(settings_pack.indexing_domains)
+        merging_settings = deepcopy(settings_pack.merging_settings)
+        additional_merging_domains = list(settings_pack.merging_domains)
         if settings_pack.settings_window is None:
             settings_pack.settings_window = GdxExportSettings(
-                settings, indexing_settings, additional_parameter_indexing_domains, database_url, self._toolbox
+                settings,
+                indexing_settings,
+                additional_parameter_indexing_domains,
+                merging_settings,
+                additional_merging_domains,
+                database_url,
+                self._toolbox,
             )
             settings_pack.settings_window.settings_accepted.connect(self._update_settings_from_settings_window)
             settings_pack.settings_window.settings_rejected.connect(self._dispose_settings_window)
@@ -359,33 +391,41 @@ class Exporter(ProjectItem):
         """Pushes a new UpdateExporterOutFileNameCommand to the toolbox undo stack."""
         self._toolbox.undo_stack.push(UpdateExporterOutFileNameCommand(self, file_name, database_path))
 
-    def _do_update_out_file_name(self, file_name, database_path):
-        """Updates the output file name for given database"""
-        if self._active:
-            export_list_item = self._export_list_items.get(database_path)
-            export_list_item._ui.out_file_name_edit.setText(file_name)
-        self._settings_packs[database_path].output_file_name = file_name
-        self._settings_packs[database_path].notifications.missing_output_file_name = not file_name
-        self._check_duplicate_file_names()
-        self._report_notifications()
-
     @Slot(str)
     def _update_settings_from_settings_window(self, database_path):
         """Pushes a new UpdateExporterSettingsCommand to the toolbox undo stack."""
         window = self._settings_packs[database_path].settings_window
         settings = window.settings
         indexing_settings = window.indexing_settings
-        additional_domains = window.new_domains
+        indexing_domains = window.indexing_domains
+        merging_settings = window.merging_settings
+        merging_domains = window.merging_domains
         self._toolbox.undo_stack.push(
-            UpdateExporterSettingsCommand(self, settings, indexing_settings, additional_domains, database_path)
+            UpdateExporterSettingsCommand(
+                self, settings, indexing_settings, indexing_domains, merging_settings, merging_domains, database_path
+            )
         )
 
-    def _update_settings(self, settings, indexing_settings, additional_domains, database_path):
+    def undo_redo_out_file_name(self, file_name, database_path):
+        """Updates the output file name for given database"""
+        if self._active:
+            export_list_item = self._export_list_items.get(database_path)
+            export_list_item.out_file_name_edit.setText(file_name)
+        self._settings_packs[database_path].output_file_name = file_name
+        self._settings_packs[database_path].notifications.missing_output_file_name = not file_name
+        self._check_duplicate_file_names()
+        self._report_notifications()
+
+    def undo_or_redo_settings(
+        self, settings, indexing_settings, indexing_domains, merging_settings, merging_domains, database_path
+    ):
         """Updates the export settings for given database."""
         settings_pack = self._settings_packs[database_path]
         settings_pack.settings = settings
         settings_pack.indexing_settings = indexing_settings
-        settings_pack.additional_domains = additional_domains
+        settings_pack.indexing_domains = indexing_domains
+        settings_pack.merging_settings = merging_settings
+        settings_pack.merging_domains = merging_domains
         window = settings_pack.settings_window
         if window is not None:
             self._send_settings_to_window(database_path)
@@ -414,8 +454,10 @@ class Exporter(ProjectItem):
         window = settings_pack.settings_window
         settings = deepcopy(settings_pack.settings)
         indexing_settings = deepcopy(settings_pack.indexing_settings)
-        additional_parameter_indexing_domains = list(settings_pack.additional_domains)
-        window.reset_settings(settings, indexing_settings, additional_parameter_indexing_domains)
+        indexing_domains = list(settings_pack.indexing_domains)
+        merging_settings = deepcopy(settings_pack.merging_settings)
+        merging_domains = list(settings_pack.merging_domains)
+        window.reset_settings(settings, indexing_settings, indexing_domains, merging_settings, merging_domains)
 
     def update_name_label(self):
         """See base class."""
@@ -465,7 +507,7 @@ class Exporter(ProjectItem):
         self._project.db_mngr.session_committed.disconnect(self._update_settings_after_db_commit)
 
 
-class _SettingsPack(QObject):
+class SettingsPack(QObject):
     """
     Keeper of all settings and stuff needed for exporting a database.
 
@@ -473,7 +515,9 @@ class _SettingsPack(QObject):
         output_file_name (str): name of the export file
         settings (Settings): export settings
         indexing_settings (dict): parameter indexing settings
-        additional_domains (list): extra domains needed for parameter indexing
+        indexing_domains (list): extra domains needed for parameter indexing
+        merging_settings (dict): parameter merging settings
+        merging_domains (list): extra domains needed for parameter merging
         settings_window (GdxExportSettings): settings editor window
     """
 
@@ -489,7 +533,9 @@ class _SettingsPack(QObject):
         self.output_file_name = output_file_name
         self.settings = None
         self.indexing_settings = None
-        self.additional_domains = list()
+        self.indexing_domains = list()
+        self.merging_settings = dict()
+        self.merging_domains = list()
         self.settings_window = None
         self._state = SettingsState.FETCHING
         self.notifications = _Notifications()
@@ -515,22 +561,37 @@ class _SettingsPack(QObject):
             return d
         d["settings"] = self.settings.to_dict()
         d["indexing_settings"] = gdx.indexing_settings_to_dict(self.indexing_settings)
-        d["additional_domains"] = [domain.to_dict() for domain in self.additional_domains]
+        d["indexing_domains"] = [domain.to_dict() for domain in self.indexing_domains]
+        d["merging_settings"] = {
+            parameter_name: setting.to_dict() for parameter_name, setting in self.merging_settings.items()
+        }
+        d["merging_domains"] = [domain.to_dict() for domain in self.merging_domains]
         return d
 
     @staticmethod
-    def from_dict(pack_dict, database_url):
+    def from_dict(pack_dict, database_url, logger):
         """Restores the settings pack from a dictionary."""
-        pack = _SettingsPack(pack_dict["output_file_name"])
+        pack = SettingsPack(pack_dict["output_file_name"])
         pack.state = SettingsState(pack_dict["state"])
         if pack.state != SettingsState.OK:
             return pack
         pack.settings = gdx.Settings.from_dict(pack_dict["settings"])
-        # TODO: handle SpineDBAPIError here
-        db_map = DatabaseMapping(database_url)
-        pack.indexing_settings = gdx.indexing_settings_from_dict(pack_dict["indexing_settings"], db_map)
-        db_map.connection.close()
-        pack.additional_domains = [gdx.Set.from_dict(set_dict) for set_dict in pack_dict["additional_domains"]]
+        try:
+            db_map = DatabaseMapping(database_url)
+            pack.indexing_settings = gdx.indexing_settings_from_dict(pack_dict["indexing_settings"], db_map)
+        except SpineDBAPIError as error:
+            logger.msg_error.emit(
+                f"Failed to fully restore Exporter settings. Error while reading database '{database_url}': {error}"
+            )
+            return pack
+        else:
+            db_map.connection.close()
+        pack.indexing_domains = [gdx.Set.from_dict(set_dict) for set_dict in pack_dict["indexing_domains"]]
+        pack.merging_settings = {
+            parameter_name: gdx.MergingSetting.from_dict(setting_dict)
+            for parameter_name, setting_dict in pack_dict["merging_settings"].items()
+        }
+        pack.merging_domains = [gdx.Set.from_dict(set_dict) for set_dict in pack_dict["merging_domains"]]
         return pack
 
 

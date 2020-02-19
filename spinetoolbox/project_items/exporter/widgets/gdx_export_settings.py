@@ -22,9 +22,10 @@ from PySide2.QtCore import QAbstractListModel, QModelIndex, Qt, Signal, Slot
 from PySide2.QtGui import QColor
 from PySide2.QtWidgets import QDialogButtonBox, QMessageBox, QWidget
 import spinetoolbox.spine_io.exporters.gdx as gdx
-from ..list_utils import move_list_elements
+from ..list_utils import move_list_elements, move_selected_elements_by
 from ..settings_state import SettingsState
 from .parameter_index_settings_window import ParameterIndexSettingsWindow
+from .parameter_merging_settings_window import ParameterMergingSettingsWindow
 
 
 class State(enum.Enum):
@@ -46,12 +47,23 @@ class GdxExportSettings(QWidget):
     settings_rejected = Signal(str)
     """Emitted when the Cancel button has been clicked."""
 
-    def __init__(self, settings, indexing_settings, new_indexing_domains, database_path, parent):
+    def __init__(
+        self,
+        settings,
+        indexing_settings,
+        new_indexing_domains,
+        merging_settings,
+        new_merging_domains,
+        database_path,
+        parent,
+    ):
         """
         Args:
             settings (Settings): export settings
             indexing_settings (dict): indexing domain information for indexed parameter values
             new_indexing_domains (list): list of additional domains needed for indexed parameter
+            merging_settings (dict): parameter merging settings
+            new_merging_domains (list): list of additional domains needed for parameter merging
             database_path (str): database URL
             parent (QWidget): a parent widget
         """
@@ -83,9 +95,13 @@ class GdxExportSettings(QWidget):
         self._ui.record_list_view.setModel(record_list_model)
         self._ui.set_list_view.selectionModel().selectionChanged.connect(self._populate_set_contents)
         self._ui.open_indexed_parameter_settings_button.clicked.connect(self._show_indexed_parameter_settings)
+        self._ui.open_parameter_merging_settings_button.clicked.connect(self._show_parameter_merging_settings)
         self._indexing_settings = indexing_settings
         self._new_domains_for_indexing = new_indexing_domains
         self._indexed_parameter_settings_window = None
+        self._merging_settings = merging_settings
+        self._new_domains_for_merging = new_merging_domains
+        self._parameter_merging_settings_window = None
         self._state = State.OK
         self._check_state()
 
@@ -100,24 +116,38 @@ class GdxExportSettings(QWidget):
         return self._indexing_settings
 
     @property
-    def new_domains(self):
-        """list of additional domain needed for indexing"""
+    def indexing_domains(self):
+        """list of additional domains needed for indexing"""
         return self._new_domains_for_indexing
 
-    def reset_settings(self, settings, indexing_settings, new_indexing_domains):
+    @property
+    def merging_settings(self):
+        """dictionary of merging settings"""
+        return self._merging_settings
+
+    @property
+    def merging_domains(self):
+        """list of additional domains needed for parameter merging"""
+        return self._new_domains_for_merging
+
+    def reset_settings(self, settings, indexing_settings, new_indexing_domains, merging_settings, new_merging_domains):
         """Resets all settings."""
         if self._indexed_parameter_settings_window is not None:
             self._indexed_parameter_settings_window.close()
             self._indexed_parameter_settings_window = None
+        if self._parameter_merging_settings_window is not None:
+            self._parameter_merging_settings_window.close()
+            self._parameter_merging_settings_window = None
         self._ui.global_parameters_combo_box.clear()
         self._populate_global_parameters_combo_box(settings)
         self._settings = settings
-        set_list_model = GAMSSetListModel(settings)
-        self._ui.set_list_view.setModel(set_list_model)
+        self._ui.set_list_view.setModel(GAMSSetListModel(settings))
         self._ui.set_list_view.selectionModel().selectionChanged.connect(self._populate_set_contents)
         self._ui.record_list_view.setModel(GAMSRecordListModel())
         self._indexing_settings = indexing_settings
         self._new_domains_for_indexing = new_indexing_domains
+        self._merging_settings = merging_settings
+        self._new_domains_for_merging = new_merging_domains
         self._check_state()
 
     def _check_state(self):
@@ -137,6 +167,28 @@ class GdxExportSettings(QWidget):
             self._ui.global_parameters_combo_box.addItem(domain_name)
         if settings.global_parameters_domain_name:
             self._ui.global_parameters_combo_box.setCurrentText(settings.global_parameters_domain_name)
+
+    def _update_new_domains_list(self, domains, old_list):
+        """Merges entries from new and old domain lists."""
+        model = self._ui.set_list_view.model()
+        for old_domain in old_list:
+            domain_found = False
+            for new_domain in domains:
+                if old_domain.name == new_domain.name:
+                    model.update_domain(new_domain)
+                    domain_found = True
+                    break
+            if not domain_found:
+                model.drop_domain(old_domain)
+        for new_domain in domains:
+            domain_found = False
+            for old_domain in old_list:
+                if new_domain.name == old_domain.name:
+                    domain_found = True
+                    break
+            if not domain_found:
+                model.add_domain(new_domain)
+        old_list[:] = list(domains)
 
     @Slot("QVariant")
     def handle_settings_state_changed(self, state):
@@ -163,22 +215,22 @@ class GdxExportSettings(QWidget):
     @Slot(bool)
     def _move_sets_up(self, checked=False):
         """Moves selected domains and sets up one position."""
-        _move_selected_elements_by(self._ui.set_list_view, -1)
+        move_selected_elements_by(self._ui.set_list_view, -1)
 
     @Slot(bool)
     def _move_sets_down(self, checked=False):
         """Moves selected domains and sets down one position."""
-        _move_selected_elements_by(self._ui.set_list_view, 1)
+        move_selected_elements_by(self._ui.set_list_view, 1)
 
     @Slot(bool)
     def _move_records_up(self, checked=False):
         """Moves selected records up and position."""
-        _move_selected_elements_by(self._ui.record_list_view, -1)
+        move_selected_elements_by(self._ui.record_list_view, -1)
 
     @Slot(bool)
     def _move_records_down(self, checked=False):
         """Moves selected records down on position."""
-        _move_selected_elements_by(self._ui.record_list_view, 1)
+        move_selected_elements_by(self._ui.record_list_view, 1)
 
     @Slot()
     def _reject(self):
@@ -191,12 +243,14 @@ class GdxExportSettings(QWidget):
 
     @Slot("QAbstractButton")
     def _reset_settings(self, button):
+        """Requests for fresh settings to be read from the database."""
         if self._ui.button_box.standardButton(button) != QDialogButtonBox.RestoreDefaults:
             return
         self.reset_requested.emit(self._database_path)
 
     @Slot(str)
     def _update_global_parameters_domain(self, text):
+        """Updates the global parameters domain name."""
         if text == "Nothing selected":
             index = self._ui.set_list_view.model().index_for_domain(self._settings.global_parameters_domain_name)
             self._settings.global_parameters_domain_name = ""
@@ -242,70 +296,53 @@ class GdxExportSettings(QWidget):
             self._indexed_parameter_settings_window = ParameterIndexSettingsWindow(
                 indexing_settings, available_domains, new_domains, self._database_path, self
             )
-            self._indexed_parameter_settings_window.settings_approved.connect(self._approve_parameter_settings)
-            self._indexed_parameter_settings_window.settings_rejected.connect(self._dispose_parameter_settings_window)
+            self._indexed_parameter_settings_window.settings_approved.connect(
+                self._approve_parameter_indexing_settings
+            )
+            self._indexed_parameter_settings_window.settings_rejected.connect(
+                self._dispose_parameter_indexing_settings_window
+            )
             self._ui.record_list_view.model().domain_records_reordered.connect(
                 self._indexed_parameter_settings_window.reorder_indexes
             )
         self._indexed_parameter_settings_window.show()
 
+    @Slot(bool)
+    def _show_parameter_merging_settings(self, _):
+        """Shows the parameter merging settings window."""
+        if self._parameter_merging_settings_window is None:
+            self._parameter_merging_settings_window = ParameterMergingSettingsWindow(
+                self._merging_settings, self._database_path, self
+            )
+            self._parameter_merging_settings_window.settings_approved.connect(self._parameter_merging_approved)
+            self._parameter_merging_settings_window.settings_rejected.connect(self._dispose_parameter_merging_window)
+        self._parameter_merging_settings_window.show()
+
     @Slot()
-    def _approve_parameter_settings(self):
+    def _approve_parameter_indexing_settings(self):
         """Gathers settings from the indexed parameters settings window."""
         self._indexing_settings = self._indexed_parameter_settings_window.indexing_settings
         new_domains = self._indexed_parameter_settings_window.new_domains
-        for old_domain in self._new_domains_for_indexing:
-            model = self._ui.set_list_view.model()
-            domain_found = False
-            for new_domain in new_domains:
-                if old_domain.name == new_domain.name:
-                    model.update_domain(new_domain)
-                    domain_found = True
-                    break
-            if not domain_found:
-                model.drop_domain(old_domain)
-        for new_domain in new_domains:
-            domain_found = False
-            for old_domain in self._new_domains_for_indexing:
-                if new_domain.name == old_domain.name:
-                    domain_found = True
-                    break
-            if not domain_found:
-                self._ui.set_list_view.model().add_domain(new_domain)
-        self._new_domains_for_indexing = list(new_domains)
+        self._update_new_domains_list(new_domains, self._new_domains_for_indexing)
         self._state = State.OK
         self._ui.indexing_status_label.setText("")
 
     @Slot()
-    def _dispose_parameter_settings_window(self):
+    def _parameter_merging_approved(self):
+        """Collects merging settings from the parameter merging window."""
+        self._merging_settings = self._parameter_merging_settings_window.merging_settings
+        new_domains = list(map(gdx.merging_domain, self._merging_settings.values()))
+        self._update_new_domains_list(new_domains, self._new_domains_for_merging)
+
+    @Slot()
+    def _dispose_parameter_indexing_settings_window(self):
         """Removes references to the indexed parameter settings window."""
         self._indexed_parameter_settings_window = None
 
-
-def _move_selected_elements_by(list_view, delta):
-    """
-    Moves selected items in a QListView by given delta.
-
-    Args:
-        list_view (QListView): a list view
-        delta (int): positive values move the items up, negative down
-    """
-    selection_model = list_view.selectionModel()
-    selected_rows = sorted(selection_model.selectedRows())
-    if not selected_rows:
-        return
-    first_row = selected_rows[0].row()
-    contiguous_selections = [[first_row, 1]]
-    current_contiguous_chunk = contiguous_selections[0]
-    for row in selected_rows[1:]:
-        if row == current_contiguous_chunk[0] + 1:
-            current_contiguous_chunk[1] += 1
-        else:
-            contiguous_selections.append((row, 1))
-            current_contiguous_chunk = contiguous_selections[-1]
-    model = list_view.model()
-    for chunk in contiguous_selections:
-        model.moveRows(QModelIndex(), chunk[0], chunk[1], QModelIndex(), chunk[0] + delta)
+    @Slot()
+    def _dispose_parameter_merging_window(self):
+        """Removes references to the parameter merging settings window."""
+        self._parameter_merging_settings_window = None
 
 
 class GAMSSetListModel(QAbstractListModel):
@@ -401,7 +438,7 @@ class GAMSSetListModel(QAbstractListModel):
     def headerData(self, section, orientation, role=Qt.DisplayRole):
         """Returns an empty string for horizontal header and row number for vertical header."""
         if orientation == Qt.Horizontal:
-            return ''
+            return ""
         return section + 1
 
     def index_for_domain(self, domain_name):
@@ -501,7 +538,7 @@ class GAMSRecordListModel(QAbstractListModel):
             return None
         if role == Qt.DisplayRole:
             keys = self._records[index.row()]
-            return ', '.join(keys)
+            return ", ".join(keys)
         return None
 
     def headerData(self, section, orientation, role=Qt.DisplayRole):
