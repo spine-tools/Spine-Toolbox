@@ -45,7 +45,6 @@ class TestSpineModelConfigurationAssistant(unittest.TestCase):
         """Overridden method. Runs before each test."""
         toolbox = create_toolboxui_with_project()
         self.widget = SpineModelConfigurationAssistant(toolbox)
-        self.widget.setup()
 
     def tearDown(self):
         """Overridden method. Runs after each test.
@@ -54,135 +53,144 @@ class TestSpineModelConfigurationAssistant(unittest.TestCase):
         self.widget.deleteLater()
         self.widget = None
 
-    def test_report_julia_version_not_found(self):
+    def goto_welcome(self):
+        self.widget.set_up_machine()
+        self.widget.machine.start()
+        QApplication.processEvents()
+
+    def goto_updating_spine_model(self):
         with patch(
             "spinetoolbox.configuration_assistants.spine_model.configuration_assistant.QProcessExecutionManager"
-        ) as mock_QProcessExecutionManager, patch.object(self.widget, "_goto_report_julia_not_found") as mock_method:
+        ) as mock_QProcessExecutionManager:
+            exec_mngr = Mock()
+            mock_QProcessExecutionManager.side_effect = lambda *args, **kwargs: exec_mngr
+            exec_mngr.process_output = self.widget._required_julia_version
+            self.goto_welcome()
+        with patch.object(QProcessExecutionManager, "start_execution"):
+            self.widget.button_right.click()
+
+    def goto_checking_py_call_program1(self):
+        self.goto_updating_spine_model()
+        with patch.object(QProcessExecutionManager, "start_execution"):
+            self.widget.exec_mngr.execution_finished.emit(0)
+
+    def goto_prompt_to_install_latest_spine_model(self):
+        self.goto_updating_spine_model()
+        self.widget.exec_mngr.execution_finished.emit(-1)
+
+    def goto_installing_latest_spine_model(self):
+        self.goto_prompt_to_install_latest_spine_model()
+        with patch.object(QProcessExecutionManager, "start_execution"):
+            self.widget.button_right.click()
+
+    def goto_report_spine_model_installation_failed(self):
+        self.goto_installing_latest_spine_model()
+        self.widget.exec_mngr.execution_finished.emit(-1)
+
+    def goto_checking_py_call_program2(self):
+        self.goto_installing_latest_spine_model()
+        with patch.object(QProcessExecutionManager, "start_execution"):
+            self.widget.exec_mngr.execution_finished.emit(0)
+
+    def goto_prompt_to_reconfigure_py_call(self):
+        self.goto_checking_py_call_program1()
+        self.widget.exec_mngr.process_output = "otherpython"
+        self.widget.exec_mngr.execution_finished.emit(0)
+
+    def goto_prompt_to_install_py_call(self):
+        self.goto_checking_py_call_program1()
+        self.widget.exec_mngr.execution_finished.emit(-1)
+
+    def goto_reconfiguring_py_call(self):
+        self.goto_prompt_to_reconfigure_py_call()
+        with patch.object(QProcessExecutionManager, "start_execution"):
+            self.widget.button_right.click()
+
+    def goto_installing_py_call(self):
+        self.goto_prompt_to_install_py_call()
+        with patch.object(QProcessExecutionManager, "start_execution"):
+            self.widget.button_right.click()
+
+    def test_report_julia_not_found(self):
+        with patch(
+            "spinetoolbox.configuration_assistants.spine_model.configuration_assistant.QProcessExecutionManager"
+        ) as mock_QProcessExecutionManager:
             exec_mngr = Mock()
             mock_QProcessExecutionManager.side_effect = lambda *args, **kwargs: exec_mngr
             exec_mngr.process_output = None
-            self.widget._handle_welcome_finished()
-        mock_method.assert_called_once()
+            self.goto_welcome()
+        self.assertEqual(self.widget.current_state, "report_julia_not_found")
 
     def test_report_bad_julia_version(self):
         with patch(
             "spinetoolbox.configuration_assistants.spine_model.configuration_assistant.QProcessExecutionManager"
-        ) as mock_QProcessExecutionManager, patch.object(self.widget, "_goto_report_bad_julia_version") as mock_method:
+        ) as mock_QProcessExecutionManager:
             exec_mngr = Mock()
             mock_QProcessExecutionManager.side_effect = lambda *args, **kwargs: exec_mngr
             exec_mngr.process_output = "1.0.0"
-            self.widget._handle_welcome_finished()
-        mock_method.assert_called_once()
+            self.goto_welcome()
+        self.assertEqual(self.widget.current_state, "report_bad_julia_version")
 
     def test_updating_spine_model(self):
-        with patch(
-            "spinetoolbox.configuration_assistants.spine_model.configuration_assistant.QProcessExecutionManager"
-        ) as mock_QProcessExecutionManager, patch.object(self.widget, "_goto_updating_spine_model") as mock_method:
-            exec_mngr = Mock()
-            mock_QProcessExecutionManager.side_effect = lambda *args, **kwargs: exec_mngr
-            exec_mngr.process_output = self.widget._required_julia_version
-            self.widget._handle_welcome_finished()
-        mock_method.assert_called_once()
+        self.goto_updating_spine_model()
+        self.assertEqual(self.widget.current_state, "updating_spine_model")
 
-    def test_prompt_to_install_spine_model(self):
-        with patch.object(QProcessExecutionManager, "start_execution"), patch.object(
-            self.widget, "_goto_prompt_to_install_latest_spine_model"
-        ) as mock_method:
-            self.widget._goto_updating_spine_model()
-            self.widget.exec_mngr.execution_finished.emit(-1)
-        mock_method.assert_called_once()
-
-    def test_checking_py_call_program1(self):
-        with patch.object(QProcessExecutionManager, "start_execution"), patch.object(
-            self.widget, "_goto_checking_py_call_program"
-        ) as mock_method:
-            self.widget._goto_updating_spine_model()
-            self.widget.exec_mngr.execution_finished.emit(0)
-        mock_method.assert_called_once()
-
-    def test_checking_py_call_program2(self):
-        with patch.object(QProcessExecutionManager, "start_execution"), patch.object(
-            self.widget, "_goto_checking_py_call_program"
-        ) as mock_method:
-            self.widget._goto_installing_py_call()
-            self.widget.exec_mngr.execution_finished.emit(0)
-        mock_method.assert_called_once()
+    def test_prompt_to_install_latest_spine_model(self):
+        self.goto_prompt_to_install_latest_spine_model()
+        self.assertEqual(self.widget.current_state, "prompt_to_install_latest_spine_model")
 
     def test_installing_latest_spine_model(self):
-        with patch.object(self.widget, "_goto_installing_latest_spine_model") as mock_method:
-            self.widget._goto_prompt_to_install_latest_spine_model()
-            self.widget.button_right.click()
-        mock_method.assert_called_once()
+        self.goto_installing_latest_spine_model()
+        self.assertEqual(self.widget.current_state, "installing_latest_spine_model")
+
+    def test_checking_py_call_program1(self):
+        self.goto_checking_py_call_program1()
+        self.assertEqual(self.widget.current_state, "checking_py_call_program")
+
+    def test_checking_py_call_program2(self):
+        self.goto_checking_py_call_program2()
+        self.assertEqual(self.widget.current_state, "checking_py_call_program")
 
     def test_prompt_to_reconfigure_py_call(self):
-        with patch.object(QProcessExecutionManager, "start_execution"), patch.object(
-            self.widget, "_goto_prompt_to_reconfigure_py_call"
-        ) as mock_method:
-            self.widget._goto_checking_py_call_program()
-            self.widget.exec_mngr.process_output = "otherpython"
-            self.widget.exec_mngr.execution_finished.emit(0)
-        mock_method.assert_called_once()
+        self.goto_prompt_to_reconfigure_py_call()
+        self.assertEqual(self.widget.current_state, "prompt_to_reconfigure_py_call")
 
     def test_prompt_to_install_py_call(self):
-        with patch.object(QProcessExecutionManager, "start_execution"), patch.object(
-            self.widget, "_goto_prompt_to_install_py_call"
-        ) as mock_method:
-            self.widget._goto_checking_py_call_program()
-            self.widget.exec_mngr.execution_finished.emit(-1)
-        mock_method.assert_called_once()
+        self.goto_prompt_to_install_py_call()
+        self.assertEqual(self.widget.current_state, "prompt_to_install_py_call")
 
     def test_report_spine_model_installation_failed(self):
-        with patch.object(QProcessExecutionManager, "start_execution"), patch.object(
-            self.widget, "_goto_report_spine_model_installation_failed"
-        ) as mock_method:
-            self.widget._goto_installing_latest_spine_model()
-            self.widget.exec_mngr.execution_finished.emit(-1)
-        mock_method.assert_called_once()
+        self.goto_report_spine_model_installation_failed()
+        self.assertEqual(self.widget.current_state, "report_spine_model_installation_failed")
 
     def test_reconfiguring_py_call(self):
-        with patch.object(self.widget, "_goto_reconfiguring_py_call") as mock_method:
-            self.widget._goto_prompt_to_reconfigure_py_call()
-            self.widget.button_right.click()
-        mock_method.assert_called_once()
+        self.goto_reconfiguring_py_call()
+        self.assertEqual(self.widget.current_state, "reconfiguring_py_call")
 
     def test_installing_py_call(self):
-        with patch.object(self.widget, "_goto_installing_py_call") as mock_method:
-            self.widget._goto_prompt_to_install_py_call()
-            self.widget.button_right.click()
-        mock_method.assert_called_once()
+        self.goto_installing_py_call()
+        self.assertEqual(self.widget.current_state, "installing_py_call")
 
     def test_report_spine_model_ready1(self):
-        with patch.object(QProcessExecutionManager, "start_execution"), patch.object(
-            self.widget, "_goto_report_spine_model_ready"
-        ) as mock_method:
-            self.widget._goto_checking_py_call_program()
-            self.widget.exec_mngr.process_output = sys.executable
-            self.widget.exec_mngr.execution_finished.emit(0)
-        mock_method.assert_called_once()
+        self.goto_checking_py_call_program1()
+        self.widget.exec_mngr.process_output = sys.executable
+        self.widget.exec_mngr.execution_finished.emit(0)
+        self.assertEqual(self.widget.current_state, "report_spine_model_ready")
 
     def test_report_spine_model_ready2(self):
-        with patch.object(QProcessExecutionManager, "start_execution"), patch.object(
-            self.widget, "_goto_report_spine_model_ready"
-        ) as mock_method:
-            self.widget._goto_reconfiguring_py_call()
-            self.widget.exec_mngr.execution_finished.emit(0)
-        mock_method.assert_called_once()
+        self.goto_reconfiguring_py_call()
+        self.widget.exec_mngr.execution_finished.emit(0)
+        self.assertEqual(self.widget.current_state, "report_spine_model_ready")
 
     def test_report_py_call_process_failed1(self):
-        with patch.object(QProcessExecutionManager, "start_execution"), patch.object(
-            self.widget, "_goto_report_py_call_process_failed"
-        ) as mock_method:
-            self.widget._goto_reconfiguring_py_call()
-            self.widget.exec_mngr.execution_finished.emit(-1)
-        mock_method.assert_called_once()
+        self.goto_reconfiguring_py_call()
+        self.widget.exec_mngr.execution_finished.emit(-1)
+        self.assertEqual(self.widget.current_state, "report_py_call_process_failed")
 
     def test_report_py_call_process_failed2(self):
-        with patch.object(QProcessExecutionManager, "start_execution"), patch.object(
-            self.widget, "_goto_report_py_call_process_failed"
-        ) as mock_method:
-            self.widget._goto_installing_py_call()
-            self.widget.exec_mngr.execution_finished.emit(-1)
-        mock_method.assert_called_once()
+        self.goto_installing_py_call()
+        self.widget.exec_mngr.execution_finished.emit(-1)
+        self.assertEqual(self.widget.current_state, "report_py_call_process_failed")
 
 
 if __name__ == '__main__':

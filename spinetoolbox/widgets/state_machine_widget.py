@@ -10,21 +10,19 @@
 ######################################################################################################################
 
 """
-Contains the GraphViewForm class.
+Contains the StateMachineWidget class.
 
 :author: M. Marin (KTH)
 :date:   26.11.2018
 """
 
-from PySide2.QtCore import Qt, Signal, QStateMachine, QFinalState, QState, QEventTransition, QEvent
+from PySide2.QtCore import Property, Qt, QStateMachine, QFinalState, QState, QEventTransition, QEvent
 from PySide2.QtGui import QFont, QMovie
 from PySide2.QtWidgets import QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QDockWidget, QWidget
 
 
 class StateMachineWidget(QDockWidget):
     """A widget with a state machine."""
-
-    _advanced = Signal()
 
     def __init__(self, window_title, parent):
         """Initializes class.
@@ -62,9 +60,9 @@ class StateMachineWidget(QDockWidget):
         layout.addWidget(button_container)
         self.setWidget(widget)
         self.machine = None
-        self.run = None
-        self._welcome_text = "Welcome!"
-        self.active_state = None
+        self.welcome = None
+        self._welcome_text = "<html><p>Welcome!</p></html>"
+        self._current_state = None
         self.setAttribute(Qt.WA_DeleteOnClose)
 
     def is_running(self):
@@ -74,11 +72,17 @@ class StateMachineWidget(QDockWidget):
         self.setFloating(False)
         self.parent().addDockWidget(Qt.TopDockWidgetArea, self)
         if not self.isVisible():
-            self.setup()
+            self.set_up_machine()
+            self.machine.start()
         super().show()
 
+    def _make_state(self, name):
+        s = QState(self.machine)
+        s.assignProperty(self, "current_state", name)
+        return s
+
     def _make_welcome(self):
-        welcome = QState(self.run)
+        welcome = self._make_state("welcome")
         begin = QState(welcome)
         finalize = QFinalState(welcome)
         welcome.setInitialState(begin)
@@ -90,29 +94,19 @@ class StateMachineWidget(QDockWidget):
         begin.addTransition(self.button_right.clicked, finalize)
         return welcome
 
-    def _make_abort(self):
-        abort = QState(self.run)
-        dead = QFinalState(self.machine)
-        abort.addTransition(dead)
-        return abort
-
-    def setup(self):
+    def set_up_machine(self):
         self.machine = QStateMachine(self)
-        self.run = QState(self.machine)
-        abort = self._make_abort()
-        transition = QEventTransition(self, QEvent.Close)
-        transition.setTargetState(abort)
-        self.run.addTransition(transition)
-        self.active_state = self._make_welcome()
-        self.active_state.finished.connect(self._handle_welcome_finished)
-        self.machine.setInitialState(self.run)
-        self.run.setInitialState(self.active_state)
-        self.machine.start()
+        self.welcome = self._make_welcome()
+        self.machine.setInitialState(self.welcome)
+        dead = QFinalState(self.machine)
+        death = QEventTransition(self, QEvent.Close)
+        death.setTargetState(dead)
+        self.machine.addTransition(death)
 
-    def _handle_welcome_finished(self):
-        raise NotImplementedError()
+    def get_current_state(self):
+        return self._current_state
 
-    def _goto_state(self, state):
-        self.active_state.addTransition(self._advanced, state)
-        self.active_state = state
-        self._advanced.emit()
+    def set_current_state(self, state):
+        self._current_state = state
+
+    current_state = Property(str, get_current_state, set_current_state)
