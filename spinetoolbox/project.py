@@ -429,7 +429,7 @@ class SpineToolboxProject(MetaObject):
         if delete_item:
             if data_dir:
                 # Remove data directory and all its contents
-                self.msg.emit("Removing directory <b>{0}</b>".format(data_dir))
+                self._logger.msg.emit("Removing directory <b>{0}</b>".format(data_dir))
                 try:
                     if not erase_dir(data_dir):
                         self._logger.msg_error.emit("Directory does not exist")
