@@ -81,10 +81,6 @@ class Tool(ProjectItem):
         if self._tool_specification:
             self.execute_in_work = self._tool_specification.execute_in_work
         self.do_set_tool_specification(self._tool_specification)
-        if not self._tool_specification:
-            self._tool_specification_name = ""
-        else:
-            self._tool_specification_name = self.tool_specification().name
         self.tool_specification_options_popup_menu = None
         self.instance = None  # Instance of this Tool that can be sent to a subprocess for processing
         # Base directory for execution, maybe it should be called `execution_dir`
@@ -122,7 +118,6 @@ class Tool(ProjectItem):
 
     def deactivate(self):
         """Save selections and disconnect signals."""
-        self.save_selections()
         if not super().disconnect_signals():
             logging.error("Item %s deactivation failed.", self.name)
             return False
@@ -133,27 +128,7 @@ class Tool(ProjectItem):
         self._properties_ui.label_tool_name.setText(self.name)
         self._properties_ui.treeView_specification.setModel(self.specification_model)
         self.update_execute_in_work_button()
-        self._properties_ui.lineEdit_tool_args.setText(" ".join(self.cmd_line_args))
-        if self._tool_specification_name == "":
-            self._properties_ui.comboBox_tool.setCurrentIndex(-1)
-            self.do_set_tool_specification(None)
-        else:
-            tool_specification = self._toolbox.tool_specification_model.find_tool_specification(
-                self._tool_specification_name
-            )
-            row = self._toolbox.tool_specification_model.tool_specification_row(self._tool_specification_name)
-            self._properties_ui.comboBox_tool.setCurrentIndex(row)  # Row in tool temp model
-            self.do_set_tool_specification(tool_specification)
-
-    def save_selections(self):
-        """Save selections in shared widgets for this project item into instance variables."""
-        if not self._tool_specification:
-            self._tool_specification_name = ""
-        else:
-            self._tool_specification_name = self.tool_specification().name
-        # Strip whitespace from tool args lineEdit and save to instance variable
-        tool_args = self._properties_ui.lineEdit_tool_args.text()
-        self.cmd_line_args = ToolSpecification.split_cmdline_args(tool_args)
+        self.update_tool_ui()
 
     @Slot(bool)
     def update_execution_mode(self, checked):
@@ -239,6 +214,7 @@ class Tool(ProjectItem):
         self.tool_specification_options_popup_menu = ToolSpecificationOptionsPopupmenu(self._toolbox, self)
         self._properties_ui.toolButton_tool_specification.setMenu(self.tool_specification_options_popup_menu)
         self._properties_ui.treeView_specification.expandAll()
+        self._properties_ui.lineEdit_tool_args.setText(" ".join(self.cmd_line_args))
 
     def update_tool_models(self):
         """Update Tool models with Tool specification details. Used when Tool specification is changed.
