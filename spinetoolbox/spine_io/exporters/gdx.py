@@ -205,8 +205,8 @@ class Parameter:
             indexes (list): parameter's indexes
             values (list): parameter's values
         """
-        if len(domain_names) != len(indexes[0]):
-            raise GdxExportException("Different number of parameter indexing domains and index keys.")
+#        if len(domain_names) != len(indexes[0]) and len(indexes[0]) > 0:
+#            raise GdxExportException("Different number of parameter indexing domains and index keys.")
         self.domain_names = domain_names
         if len(indexes) != len(values):
             raise GdxExportException("Parameter index and value length mismatch.")
@@ -319,6 +319,19 @@ class Parameter:
         domain_names = [name.strip() for name in relationship_parameter.object_class_name_list.split(",")]
         index = tuple(name.strip() for name in relationship_parameter.object_name_list.split(","))
         value = _read_value(relationship_parameter.value)
+        return Parameter(domain_names, [index], [value])
+
+    @staticmethod
+    def from_entity_class_parameter_definition(entity_class):
+        """
+        Constructs an empty GAMS parameter from database's parameter definition row
+
+        Args:
+            entity_class: a parameter definition row from the database
+        """
+        domain_names = [entity_class.name]
+        index = None
+        value = None
         return Parameter(domain_names, [index], [value])
 
 
@@ -527,7 +540,7 @@ def parameters_to_gams(gdx_file, parameters):
     for parameter_name, parameter in parameters.items():
         indexed_values = dict()
         for index, value in zip(parameter.indexes, parameter.values):
-            if not isinstance(value, float):
+            if not isinstance(value, float) and not (index == None and value == None):
                 if isinstance(value, IndexedValue):
                     raise GdxExportException(
                         f"Cannot write parameter '{parameter_name}':"
@@ -537,7 +550,8 @@ def parameters_to_gams(gdx_file, parameters):
                     f"Cannot write parameter '{parameter_name}':"
                     + f" parameter contains unsupported values of type '{type(value)}'."
                 )
-            indexed_values[tuple(index)] = value
+            if isinstance(value, float):
+                indexed_values[tuple(index)] = value
         gams_parameter = GAMSParameter(indexed_values, domain=parameter.domain_names)
         gdx_file[parameter_name] = gams_parameter
 
@@ -601,6 +615,12 @@ def object_classes_to_domains(db_map):
                     parameters[name] = Parameter.from_object_parameter(object_parameter)
                 else:
                     parameter.append_object_parameter(object_parameter)
+        parameter_definitions = db_map.parameter_definition_list(object_class_id=object_class.id).all()
+        for parameter_definition in parameter_definitions:
+            name = parameter_definition.name
+            parameter = parameters.get(name, None)
+            if parameter is None:
+                parameters[name] = from_entity_class_parameter_definition(object_class)
     return domains, parameters
 
 
