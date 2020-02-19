@@ -196,6 +196,7 @@ class CategoryProjectTreeItem(BaseProjectTreeItem):
             project_item.set_icon(icon)
         project_item.set_properties_ui(self._properties_ui)
         project_item.set_up()
+        project_item.create_data_dir()
         return True
 
     def custom_context_menu(self, parent, pos):
@@ -291,9 +292,8 @@ class LeafProjectTreeItem(BaseProjectTreeItem):
                 new_name = answer[0]
                 self.rename(new_name)
         elif action == "Remove item":
-            delete_int = int(self._toolbox._qsettings.value("appSettings/deleteData", defaultValue="0"))
-            delete_bool = delete_int != 0
-            self._project_item._project.remove_item(self.name, delete_item=delete_bool, check_dialog=True)
+            delete_data = int(self._toolbox._qsettings.value("appSettings/deleteData", defaultValue="0")) != 0
+            self._project_item._project.remove_item(self.name, delete_data=delete_data, check_dialog=True)
 
     def rename(self, new_name):
         """Renames this item.

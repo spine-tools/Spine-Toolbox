@@ -17,7 +17,6 @@ QUndoCommand subclasses for modifying the project.
 """
 
 import copy
-from PySide2.QtCore import Qt
 from PySide2.QtWidgets import QUndoCommand
 
 
@@ -88,7 +87,7 @@ class AddProjectItemsCommand(QUndoCommand):
 
     def undo(self):
         for project_tree_item in self.project_tree_items:
-            self.project._remove_item(self.category_ind, project_tree_item)
+            self.project._remove_item(self.category_ind, project_tree_item, delete_data=True)
 
 
 class RemoveAllProjectItemsCommand(QUndoCommand):
@@ -105,10 +104,10 @@ class RemoveAllProjectItemsCommand(QUndoCommand):
         self.setText("remove all items")
 
     def redo(self):
-        delete_item = int(self.project._settings.value("appSettings/deleteData", defaultValue="0")) != 0
+        delete_data = int(self.project._settings.value("appSettings/deleteData", defaultValue="0")) != 0
         for category_ind, project_tree_items in self.items_per_category.items():
             for project_tree_item in project_tree_items:
-                self.project._remove_item(category_ind, project_tree_item, delete_item=delete_item)
+                self.project._remove_item(category_ind, project_tree_item, delete_data=delete_data)
         self.project._logger.msg.emit("All items removed from project")
 
     def undo(self):
@@ -122,19 +121,19 @@ class RemoveAllProjectItemsCommand(QUndoCommand):
 
 
 class RemoveProjectItemCommand(QUndoCommand):
-    def __init__(self, project, name, delete_item=False, check_dialog=False):
+    def __init__(self, project, name, delete_data=False, check_dialog=False):
         """Command to remove items.
 
         Args:
             project (SpineToolboxProject): the project
             name (str): Item's name
-            delete_item (bool): If set to True, deletes the directories and data associated with the item
+            delete_data (bool): If set to True, deletes the directories and data associated with the item
             check_dialog (bool): If True, shows 'Are you sure?' message box
         """
         super().__init__()
         self.project = project
         self.name = name
-        self.delete_item = delete_item
+        self.delete_data = delete_data
         self.check_dialog = check_dialog
         ind = project._project_item_model.find_item(name)
         self.project_tree_item = project._project_item_model.item(ind)
@@ -145,7 +144,7 @@ class RemoveProjectItemCommand(QUndoCommand):
 
     def redo(self):
         self.project._remove_item(
-            self.category_ind, self.project_tree_item, delete_item=self.delete_item, check_dialog=self.check_dialog
+            self.category_ind, self.project_tree_item, delete_data=self.delete_data, check_dialog=self.check_dialog
         )
         self.check_dialog = False
 

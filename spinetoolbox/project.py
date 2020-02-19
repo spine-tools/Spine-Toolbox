@@ -362,44 +362,44 @@ class SpineToolboxProject(MetaObject):
         links = self._toolbox.ui.graphicsView.links()
         self._toolbox.undo_stack.push(RemoveAllProjectItemsCommand(self, items_per_category, links))
 
-    def remove_item(self, name, delete_item=False, check_dialog=False):
+    def remove_item(self, name, delete_data=False, check_dialog=False):
         """Pushes a RemoveProjectItemCommand to the toolbox undo stack.
         """
         self._toolbox.undo_stack.push(
-            RemoveProjectItemCommand(self, name, delete_item=delete_item, check_dialog=check_dialog)
+            RemoveProjectItemCommand(self, name, delete_data=delete_data, check_dialog=check_dialog)
         )
 
-    def do_remove_item(self, name, delete_item=False, check_dialog=False):
+    def do_remove_item(self, name, delete_data=False, check_dialog=False):
         """Removes item from project given its name.
         This method is used in both closing the existing project for opening a new one,
         as well as when item(s) are deleted from project.
-        Use delete_item=False when closing the project for opening a new one.
-        Setting delete_item=True deletes the item irrevocably. This means that
+        Use delete_data=False when closing the project for opening a new one.
+        Setting delete_data=True deletes the item irrevocably. This means that
         data directories will be deleted from the hard drive. Handles also
         removing the node from the dag graph that contains it.
 
         Args:
             name (str): Item's name
-            delete_item (bool): If set to True, deletes the directories and data associated with the item
+            delete_data (bool): If set to True, deletes the directories and data associated with the item
             check_dialog (bool): If True, shows 'Are you sure?' message box
         """
         ind = self._project_item_model.find_item(name)
         category_ind = ind.parent()
         item = self._project_item_model.item(ind)
-        self._remove_item(category_ind, item, delete_item=delete_item, check_dialog=check_dialog)
+        self._remove_item(category_ind, item, delete_data=delete_data, check_dialog=check_dialog)
 
-    def _remove_item(self, category_ind, item, delete_item=False, check_dialog=False):
+    def _remove_item(self, category_ind, item, delete_data=False, check_dialog=False):
         """
         Removes LeafProjectTreeItem from project.
 
         Args:
             category_ind (QModelIndex): The category index
             item (LeafProjectTreeItem): the item to remove
-            delete_item (bool): If set to True, deletes the directories and data associated with the item
+            delete_data (bool): If set to True, deletes the directories and data associated with the item
             check_dialog (bool): If True, shows 'Are you sure?' message box
         """
         if check_dialog:
-            if not delete_item:
+            if not delete_data:
                 msg = (
                     "Remove item <b>{}</b> from project?".format(item.name)
                     + " Item data directory will still be available in the project directory after this operation."
@@ -431,7 +431,7 @@ class SpineToolboxProject(MetaObject):
         self._toolbox.ui.graphicsView.remove_icon(icon)
         self.dag_handler.remove_node_from_graph(item.name)
         item.project_item.tear_down()
-        if delete_item:
+        if delete_data:
             if data_dir:
                 # Remove data directory and all its contents
                 self._logger.msg.emit("Removing directory <b>{0}</b>".format(data_dir))

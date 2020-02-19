@@ -455,9 +455,8 @@ class ProjectItemIcon(QGraphicsRectItem):
             event (QKeyEvent): Key event
         """
         if event.key() == Qt.Key_Delete and self.isSelected():
-            delete_int = int(self._toolbox.qsettings().value("appSettings/deleteData", defaultValue="0"))
-            delete_bool = delete_int != 0
-            self._project_item._project.remove_item(self.name(), delete_item=delete_bool)
+            delete_data = int(self._toolbox.qsettings().value("appSettings/deleteData", defaultValue="0")) != 0
+            self._project_item._project.remove_item(self.name(), delete_data=delete_data)
             event.accept()
         elif event.key() == Qt.Key_R and self.isSelected():
             # TODO:

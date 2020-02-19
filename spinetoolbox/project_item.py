@@ -59,6 +59,8 @@ class ProjectItem(MetaObject):
         self.item_changed.connect(lambda: self._project.notify_changes_in_containing_dag(self.name))
         # Make project directory for this Item
         self.data_dir = os.path.join(self._project.items_dir, self.short_name)
+
+    def create_data_dir(self):
         try:
             create_dir(self.data_dir)
         except OSError:
