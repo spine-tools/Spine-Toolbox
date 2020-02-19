@@ -138,7 +138,12 @@ class SpineToolboxProject(MetaObject):
 
     def set_description(self, description):
         super().set_description(description)
-        self._logger.msg.emit("Project description changed to <b>{0}</b>".format(self.description))
+        msg = "Project description "
+        if description:
+            msg += f"changed to <b>{description}</b>"
+        else:
+            msg += "cleared"
+        self._logger.msg.emit(msg)
 
     @staticmethod
     def get_connections(links):
