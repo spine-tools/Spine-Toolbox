@@ -329,7 +329,13 @@ class Parameter:
         Args:
             entity_class: a parameter definition row from the database
         """
-        domain_names = [entity_class.name]
+        domain_names = list()
+        if hasattr(entity_class, 'object_class_name_list'):
+            domain_list = entity_class.object_class_name_list.split(",")
+            for dimension in domain_list:
+                domain_names.append(dimension)
+        else:
+            domain_names = [entity_class.name]
         index = None
         value = None
         return Parameter(domain_names, [index], [value])
@@ -617,7 +623,7 @@ def object_classes_to_domains(db_map):
             name = parameter_definition.name
             parameter = parameters.get(name, None)
             if parameter is None:
-                parameters[name] = from_entity_class_parameter_definition(object_class)
+                parameters[name] = Parameter.from_entity_class_parameter_definition(object_class)
     return domains, parameters
 
 
@@ -656,6 +662,12 @@ def relationship_classes_to_sets(db_map):
                     parameters[name] = Parameter.from_relationship_parameter(relationship_parameter)
                 else:
                     parameter.append_relationship_parameter(relationship_parameter)
+        parameter_definitions = db_map.parameter_definition_list(relationship_class_id=relationship_class.id).all()
+        for parameter_definition in parameter_definitions:
+            name = parameter_definition.name
+            parameter = parameters.get(name, None)
+            if parameter is None:
+                parameters[name] = Parameter.from_entity_class_parameter_definition(relationship_class)
     return sets, parameters
 
 
