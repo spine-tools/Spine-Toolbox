@@ -91,23 +91,24 @@ class AddProjectItemsCommand(QUndoCommand):
 
 
 class RemoveAllProjectItemsCommand(QUndoCommand):
-    def __init__(self, project, items_per_category, links):
+    def __init__(self, project, items_per_category, links, delete_data=False):
         """Command to remove all items from project.
 
         Args:
             project (SpineToolboxProject): the project
+            delete_data (bool): If True, deletes the directories and data associated with the items
         """
         super().__init__()
         self.project = project
         self.items_per_category = items_per_category
         self.links = links
+        self.delete_data = delete_data
         self.setText("remove all items")
 
     def redo(self):
-        delete_data = int(self.project._settings.value("appSettings/deleteData", defaultValue="0")) != 0
         for category_ind, project_tree_items in self.items_per_category.items():
             for project_tree_item in project_tree_items:
-                self.project._remove_item(category_ind, project_tree_item, delete_data=delete_data)
+                self.project._remove_item(category_ind, project_tree_item, delete_data=self.delete_data)
         self.project._logger.msg.emit("All items removed from project")
 
     def undo(self):
@@ -121,20 +122,18 @@ class RemoveAllProjectItemsCommand(QUndoCommand):
 
 
 class RemoveProjectItemCommand(QUndoCommand):
-    def __init__(self, project, name, delete_data=False, check_dialog=False):
+    def __init__(self, project, name, delete_data=False):
         """Command to remove items.
 
         Args:
             project (SpineToolboxProject): the project
             name (str): Item's name
-            delete_data (bool): If set to True, deletes the directories and data associated with the item
-            check_dialog (bool): If True, shows 'Are you sure?' message box
+            delete_data (bool): If True, deletes the directories and data associated with the item
         """
         super().__init__()
         self.project = project
         self.name = name
         self.delete_data = delete_data
-        self.check_dialog = check_dialog
         ind = project._project_item_model.find_item(name)
         self.project_tree_item = project._project_item_model.item(ind)
         self.category_ind = ind.parent()
@@ -143,10 +142,7 @@ class RemoveProjectItemCommand(QUndoCommand):
         self.setText(f"remove {name}")
 
     def redo(self):
-        self.project._remove_item(
-            self.category_ind, self.project_tree_item, delete_data=self.delete_data, check_dialog=self.check_dialog
-        )
-        self.check_dialog = False
+        self.project._remove_item(self.category_ind, self.project_tree_item, delete_data=self.delete_data)
 
     def undo(self):
         self.project.dag_handler.blockSignals(True)

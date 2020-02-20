@@ -347,7 +347,12 @@ class SpineToolboxProject(MetaObject):
         if not any(v for v in items_per_category.values()):
             self._logger.msg.emit("No project items to remove")
             return
+        delete_data = int(self._settings.value("appSettings/deleteData", defaultValue="0")) != 0
         msg = "Remove all items from project?"
+        if not delete_data:
+            msg += "Item data directory will still be available in the project directory after this operation."
+        else:
+            msg += "<br><br><b>Warning: Item data will be permanently lost after this operation.</b>"
         message_box = QMessageBox(
             QMessageBox.Question,
             "Remove All Items",
@@ -360,53 +365,25 @@ class SpineToolboxProject(MetaObject):
         if answer != QMessageBox.Ok:
             return
         links = self._toolbox.ui.graphicsView.links()
-        self._toolbox.undo_stack.push(RemoveAllProjectItemsCommand(self, items_per_category, links))
-
-    def remove_item(self, name, delete_data=False, check_dialog=False):
-        """Pushes a RemoveProjectItemCommand to the toolbox undo stack.
-        """
         self._toolbox.undo_stack.push(
-            RemoveProjectItemCommand(self, name, delete_data=delete_data, check_dialog=check_dialog)
+            RemoveAllProjectItemsCommand(self, items_per_category, links, delete_data=delete_data)
         )
 
-    def do_remove_item(self, name, delete_data=False, check_dialog=False):
-        """Removes item from project given its name.
-        This method is used in both closing the existing project for opening a new one,
-        as well as when item(s) are deleted from project.
-        Use delete_data=False when closing the project for opening a new one.
-        Setting delete_data=True deletes the item irrevocably. This means that
-        data directories will be deleted from the hard drive. Handles also
-        removing the node from the dag graph that contains it.
+    def remove_item(self, name, check_dialog=False):
+        """Pushes a RemoveProjectItemCommand to the toolbox undo stack.
 
         Args:
             name (str): Item's name
-            delete_data (bool): If set to True, deletes the directories and data associated with the item
             check_dialog (bool): If True, shows 'Are you sure?' message box
         """
-        ind = self._project_item_model.find_item(name)
-        category_ind = ind.parent()
-        item = self._project_item_model.item(ind)
-        self._remove_item(category_ind, item, delete_data=delete_data, check_dialog=check_dialog)
-
-    def _remove_item(self, category_ind, item, delete_data=False, check_dialog=False):
-        """
-        Removes LeafProjectTreeItem from project.
-
-        Args:
-            category_ind (QModelIndex): The category index
-            item (LeafProjectTreeItem): the item to remove
-            delete_data (bool): If set to True, deletes the directories and data associated with the item
-            check_dialog (bool): If True, shows 'Are you sure?' message box
-        """
+        delete_data = int(self._settings.value("appSettings/deleteData", defaultValue="0")) != 0
         if check_dialog:
+            msg = "Remove item <b>{}</b> from project? ".format(name)
             if not delete_data:
-                msg = (
-                    "Remove item <b>{}</b> from project?".format(item.name)
-                    + " Item data directory will still be available in the project directory after this operation."
-                )
+                msg += "Item data directory will still be available in the project directory after this operation."
             else:
-                msg = "Remove item <b>{}</b> and its data directory from project?".format(item.name)
-            msg = msg + "<br><br>Tip: Remove items by pressing 'Delete' key to bypass this dialog."
+                msg += "<br><br><b>Warning: Item data will be permanently lost after this operation.</b>"
+            msg += "<br><br>Tip: Remove items by pressing 'Delete' key to bypass this dialog."
             # noinspection PyCallByClass, PyTypeChecker
             message_box = QMessageBox(
                 QMessageBox.Question,
@@ -419,6 +396,29 @@ class SpineToolboxProject(MetaObject):
             answer = message_box.exec_()
             if answer != QMessageBox.Ok:
                 return
+        self._toolbox.undo_stack.push(RemoveProjectItemCommand(self, name, delete_data=delete_data))
+
+    def do_remove_item(self, name):
+        """Removes item from project given its name.
+        This method is used when closing the existing project for opening a new one.
+
+        Args:
+            name (str): Item's name
+        """
+        ind = self._project_item_model.find_item(name)
+        category_ind = ind.parent()
+        item = self._project_item_model.item(ind)
+        self._remove_item(category_ind, item)
+
+    def _remove_item(self, category_ind, item, delete_data=False):
+        """
+        Removes LeafProjectTreeItem from project.
+
+        Args:
+            category_ind (QModelIndex): The category index
+            item (LeafProjectTreeItem): the item to remove
+            delete_data (bool): If set to True, deletes the directories and data associated with the item
+        """
         try:
             data_dir = item.project_item.data_dir
         except AttributeError:
