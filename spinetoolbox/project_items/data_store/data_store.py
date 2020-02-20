@@ -160,11 +160,6 @@ class DataStore(ProjectItem):
                     "<br>Please select a database and try again."
                 )
             return None
-        # Small hack to make sqlite file paths relative to this DS directory
-        # TODO: Check if this is still needed
-        if dialect == "sqlite" and not os.path.isabs(sa_url.database):
-            sa_url.database = os.path.join(self.data_dir, sa_url.database)
-            self._properties_ui.lineEdit_database.setText(sa_url.database)
         # Final check
         try:
             engine = create_engine(sa_url)
@@ -224,9 +219,10 @@ class DataStore(ProjectItem):
             self._properties_ui.lineEdit_host.setText(host)
         if port is not None:
             self._properties_ui.lineEdit_port.setText(str(port))
-        if database:
-            abs_db_path = os.path.abspath(database)
-            self._properties_ui.lineEdit_database.setText(abs_db_path)
+        if database is not None:
+            if database:
+                database = os.path.abspath(database)
+            self._properties_ui.lineEdit_database.setText(database)
         if username is not None:
             self._properties_ui.lineEdit_username.setText(username)
         if password is not None:
@@ -435,10 +431,9 @@ class DataStore(ProjectItem):
         """Returns a dictionary corresponding to this item."""
         d = super().item_dict()
         d["url"] = dict(self.url())
-        db = d["url"]["database"]
         # If database key is a file, change the path to relative
-        if d["url"]["dialect"] == "sqlite" and db is not None:
-            d["url"]["database"] = serialize_path(db, self._project.project_dir)
+        if d["url"]["dialect"] == "sqlite" and d["url"]["database"]:
+            d["url"]["database"] = serialize_path(d["url"]["database"], self._project.project_dir)
         return d
 
     @staticmethod
