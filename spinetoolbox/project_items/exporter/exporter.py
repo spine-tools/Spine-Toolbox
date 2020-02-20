@@ -362,8 +362,8 @@ class Exporter(ProjectItem):
 
     def _do_update_out_file_name(self, file_name, database_path):
         """Updates the output file name for given database"""
-        export_list_item = self._export_list_items.get(database_path)
-        if export_list_item:
+        if self._active:
+            export_list_item = self._export_list_items.get(database_path)
             export_list_item._ui.out_file_name_edit.setText(file_name)
         self._settings_packs[database_path].output_file_name = file_name
         self._settings_packs[database_path].notifications.missing_output_file_name = not file_name
