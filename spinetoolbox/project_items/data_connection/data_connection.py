@@ -111,13 +111,18 @@ class DataConnection(ProjectItem):
         Args:
             paths (list): A list of paths to files
         """
-        repeated_paths = set(paths).intersection(self.references)
+        repeated_paths = []
+        new_paths = []
+        for path in paths:
+            if any(os.path.samefile(path, ref) for ref in self.references):
+                repeated_paths.append(path)
+            else:
+                new_paths.append(path)
         repeated_paths = ", ".join(repeated_paths)
-        paths = set(paths).difference(self.references)
         if repeated_paths:
             self._logger.msg_warning.emit(f"Reference to file(s) <b>{repeated_paths}</b> already available")
-        if paths:
-            self._toolbox.undo_stack.push(AddDCReferencesCommand(self, paths))
+        if new_paths:
+            self._toolbox.undo_stack.push(AddDCReferencesCommand(self, new_paths))
 
     def do_add_files_to_references(self, paths):
         abspaths = [os.path.abspath(path) for path in paths]
@@ -167,8 +172,7 @@ class DataConnection(ProjectItem):
         self._logger.msg.emit("Selected references removed")
 
     def do_remove_references(self, references):
-        for ref in references:
-            self.references.remove(ref)
+        self.references = [r for r in self.references if not any(os.path.samefile(r, ref) for ref in references)]
         self.populate_reference_list(self.references)
 
     @Slot(bool)
@@ -332,8 +336,6 @@ class DataConnection(ProjectItem):
         """List file references in QTreeView.
         If items is None or empty list, model is cleared.
         """
-        if not self._active:
-            return
         self.reference_model.clear()
         self.reference_model.setHorizontalHeaderItem(0, QStandardItem("References"))  # Add header
         if items is not None:
