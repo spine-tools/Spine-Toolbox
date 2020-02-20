@@ -334,14 +334,12 @@ class Importer(ProjectItem):
         for resource in resources:
             self._file_model.update_file(resource)
         importable_files = self._file_model.all_importables()
-        absolute_paths = dict()
-        for importable_file in importable_files:
-            absolute_paths[importable_file.label] = importable_file.path
+        absolute_paths = {importable.label: importable.path for importable in importable_files}
         absolute_path_settings = dict()
         for label in self.settings:
             absolute_path = absolute_paths.get(label)
             if absolute_path is not None:
-                absolute_path_settings[absolute_paths[label]] = self.settings[label]
+                absolute_path_settings[absolute_path] = self.settings[label]
         args = [
             [f.path for f in importable_files],
             absolute_path_settings,
