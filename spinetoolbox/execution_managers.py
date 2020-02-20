@@ -171,11 +171,11 @@ class QProcessExecutionManager(ExecutionManager):
             return False
         return True
 
-    @Slot(name="process_started")
+    @Slot()
     def process_started(self):
         """Run when subprocess has started."""
 
-    @Slot("QProcess::ProcessState", name="on_state_changed")
+    @Slot("QProcess::ProcessState")
     def on_state_changed(self, new_state):
         """Runs when QProcess state changes.
 
@@ -195,7 +195,7 @@ class QProcessExecutionManager(ExecutionManager):
             self._logger.msg_error.emit("Process is in an unspecified state")
             logging.error("QProcess unspecified state: %s", new_state)
 
-    @Slot("QProcess::ProcessError", name="'on_process_error")
+    @Slot("QProcess::ProcessError")
     def on_process_error(self, process_error):
         """Run if there is an error in the running QProcess.
 
@@ -237,8 +237,8 @@ class QProcessExecutionManager(ExecutionManager):
             self._process.deleteLater()
             self._process = None
 
-    @Slot(int)
-    def on_process_finished(self, exit_code):
+    @Slot(int, "QProcess::ExitStatus")
+    def on_process_finished(self, exit_code, exit_status):
         """Runs when subprocess has finished.
 
         Args:
@@ -247,7 +247,6 @@ class QProcessExecutionManager(ExecutionManager):
         # logging.debug("Error that occurred last: {0}".format(self._process.error()))
         if not self._process:
             return
-        exit_status = self._process.exitStatus()  # Normal or crash exit
         if exit_status == QProcess.CrashExit:
             if not self._silent:
                 self._logger.msg_error.emit("\tProcess crashed")
@@ -276,7 +275,7 @@ class QProcessExecutionManager(ExecutionManager):
         self._process = None
         self.execution_finished.emit(exit_code)
 
-    @Slot(name="on_ready_stdout")
+    @Slot()
     def on_ready_stdout(self):
         """Emit data from stdout."""
         if not self._process:
@@ -284,7 +283,7 @@ class QProcessExecutionManager(ExecutionManager):
         out = str(self._process.readAllStandardOutput().data(), "utf-8")
         self._logger.msg_proc.emit(out.strip())
 
-    @Slot(name="on_ready_stderr")
+    @Slot()
     def on_ready_stderr(self):
         """Emit data from stderr."""
         if not self._process:
