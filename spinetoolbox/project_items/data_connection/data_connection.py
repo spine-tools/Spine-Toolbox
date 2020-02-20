@@ -401,8 +401,7 @@ class DataConnection(ProjectItem):
         Returns:
             bool: True if renaming succeeded, False otherwise
         """
-        success = super().rename(new_name)
-        if not success:
+        if not super().rename(new_name):
             return False
         self.data_dir_watcher.removePaths(self.data_dir_watcher.directories())
         self.data_dir_watcher.addPath(self.data_dir)

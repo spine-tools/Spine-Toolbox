@@ -486,17 +486,16 @@ class DataStore(ProjectItem):
             bool: True if renaming succeeded, False otherwise
         """
         old_data_dir = os.path.abspath(self.data_dir)  # Old data_dir before rename
-        success = super().rename(new_name)
-        if not success:
+        if not super().rename(new_name):
             return False
-        # For a Data Store, logs_dir must be updated and the database line edit may need to be updated
-        db_dir, db_filename = os.path.split(os.path.abspath(self._properties_ui.lineEdit_database.text().strip()))
         # If dialect is sqlite and db line edit refers to a file in the old data_dir, db line edit needs updating
-        if self._properties_ui.comboBox_dialect.currentText() == "sqlite" and db_dir == old_data_dir:
-            new_db_path = os.path.join(self.data_dir, db_filename)  # Note. data_dir has been updated at this point
-            # Check that the db was moved successfully to the new data_dir
-            if os.path.exists(new_db_path):
-                self.set_path_to_sqlite_file(new_db_path)
+        if self._url["dialect"] == "sqlite":
+            db_dir, db_filename = os.path.split(os.path.abspath(self._url["database"].strip()))
+            if db_dir == old_data_dir:
+                database = os.path.join(self.data_dir, db_filename)  # NOTE: data_dir has been updated at this point
+                # Check that the db was moved successfully to the new data_dir
+                if os.path.exists(database):
+                    self.do_update_url(database=database)
         # Update logs dir
         self.logs_dir = os.path.join(self.data_dir, "logs")
         return True

@@ -1051,8 +1051,7 @@ class Tool(ProjectItem):
         Returns:
             bool: Boolean value depending on success
         """
-        success = super().rename(new_name)
-        if not success:
+        if not super().rename(new_name):
             return False
         self.output_dir = os.path.join(self.data_dir, TOOL_OUTPUT_DIR)
         if self.output_files_watcher.files():

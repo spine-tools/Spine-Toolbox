@@ -254,7 +254,7 @@ class ProjectItemModel(QAbstractItemModel):
         if not value.strip() or value == old_name:
             return False
         # Check that new name is legal
-        if any(True for x in value if x in INVALID_CHARS):
+        if any(x in INVALID_CHARS for x in value):
             msg = "<b>{0}</b> contains invalid characters.".format(value)
             # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
             QMessageBox.information(self._toolbox, "Invalid characters", msg)
@@ -273,8 +273,7 @@ class ProjectItemModel(QAbstractItemModel):
             # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
             QMessageBox.information(self._toolbox, "Invalid name", msg)
             return False
-        success = item.project_item.rename(value)
-        if not success:
+        if not item.project_item.rename(value):
             return False
         item.set_name(value)
         self._toolbox.project().dag_handler.rename_node(old_name, value)
@@ -339,8 +338,4 @@ class ProjectItemModel(QAbstractItemModel):
         Returns:
             bool: True if short name is taken, False if it is available.
         """
-        project_items = self.items()
-        for item in project_items:
-            if item.short_name == short_name:
-                return True
-        return False
+        return short_name in set(item.short_name for item in self.items())
