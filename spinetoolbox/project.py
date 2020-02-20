@@ -325,7 +325,7 @@ class SpineToolboxProject(MetaObject):
                 self.set_item_selected(project_tree_item)
 
     def do_add_project_items(self, category_name, *items, set_selected=False, verbosity=True):
-        """Adds item to project.
+        """Adds items to project at loading.
 
         Args:
             category_name (str): The items' category

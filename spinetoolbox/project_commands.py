@@ -53,7 +53,7 @@ class SetProjectDescriptionCommand(QUndoCommand):
         self.project = project
         self.redo_description = description
         self.undo_description = self.project.description
-        self.setText("edit project description")
+        self.setText("change project description")
 
     def redo(self):
         self.project.set_description(self.redo_description)
@@ -78,7 +78,10 @@ class AddProjectItemsCommand(QUndoCommand):
         self.category_ind, self.project_tree_items = project.make_project_tree_items(category_name, *items)
         self.set_selected = set_selected
         self.verbosity = verbosity
-        self.setText(f"add {', '.join([item['name'] for item in items])}")
+        if len(items) == 1:
+            self.setText(f"add {items[0]['name']}")
+        else:
+            self.setText("add multiple items")
 
     def redo(self):
         self.project._add_project_tree_items(
@@ -234,7 +237,10 @@ class MoveIconCommand(QUndoCommand):
         self.graphics_item = graphics_item
         self.previous_pos = {x: x._previous_pos for x in graphics_item.selected_icons}
         self.current_pos = {x: x._current_pos for x in graphics_item.selected_icons}
-        self.setText(f"move {', '.join([x._project_item.name for x in graphics_item.selected_icons])}")
+        if len(graphics_item.selected_icons) == 1:
+            self.setText(f"move {graphics_item.selected_icons[0]._project_item.name}")
+        else:
+            self.setText("move multiple items")
 
     def redo(self):
         for item, current_post in self.current_pos.items():
@@ -301,8 +307,10 @@ class UpdateDSURLCommand(QUndoCommand):
         self.ds = ds
         self.redo_kwargs = kwargs
         self.undo_kwargs = {k: self.ds._url[k] for k in kwargs}
-        changed_keys = ", ".join(list(kwargs.keys()))
-        self.setText(f"change url {changed_keys} of {ds.name}")
+        if len(kwargs) == 1:
+            self.setText(f"change {list(kwargs.keys())[0]} of {ds.name}")
+        else:
+            self.setText(f"change url of {ds.name}")
 
     def redo(self):
         self.ds.do_update_url(**self.redo_kwargs)
