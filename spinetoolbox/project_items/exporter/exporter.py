@@ -17,11 +17,10 @@ Exporter project item.
 """
 
 from copy import deepcopy
-import logging
 import pathlib
 import os.path
 from PySide2.QtCore import QObject, Signal, Slot
-from spinedb_api.database_mapping import DatabaseMapping
+from spinedb_api import DatabaseMapping, SpineDBAPIError
 from spinetoolbox.project_item import ProjectItem, ProjectItemResource
 from spinetoolbox.project_commands import UpdateExporterOutFileNameCommand, UpdateExporterSettingsCommand
 from spinetoolbox.helpers import deserialize_path, serialize_url
@@ -142,8 +141,8 @@ class Exporter(ProjectItem):
                 self._logger.msg_error.emit(f"<b>{self.name}</b>: Ill formed database {url}.")
                 return False
             out_path = os.path.join(self.data_dir, settings_pack.output_file_name)
-            database_map = DatabaseMapping(url)
             try:
+                database_map = DatabaseMapping(url)
                 gdx.to_gdx_file(
                     database_map,
                     out_path,
@@ -152,7 +151,7 @@ class Exporter(ProjectItem):
                     settings_pack.indexing_settings,
                     gams_system_directory,
                 )
-            except gdx.GdxExportException as error:
+            except (gdx.GdxExportException, SpineDBAPIError) as error:
                 self._logger.msg_error.emit(f"Failed to export <b>{url}</b> to .gdx: {error}")
                 return False
             finally:
@@ -527,6 +526,7 @@ class _SettingsPack(QObject):
         if pack.state != SettingsState.OK:
             return pack
         pack.settings = gdx.Settings.from_dict(pack_dict["settings"])
+        # TODO: handle SpineDBAPIError here
         db_map = DatabaseMapping(database_url)
         pack.indexing_settings = gdx.indexing_settings_from_dict(pack_dict["indexing_settings"], db_map)
         db_map.connection.close()

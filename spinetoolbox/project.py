@@ -321,8 +321,10 @@ class SpineToolboxProject(MetaObject):
                 self._logger.msg.emit(
                     "{0} <b>{1}</b> added to project.".format(project_item.item_type(), project_item.name)
                 )
-            if set_selected:
-                self.set_item_selected(project_tree_item)
+        if set_selected:
+            item = list(project_tree_items)[-1]
+            ind = self._project_item_model.find_item(item.name)
+            self._toolbox.ui.treeView_project.setCurrentIndex(ind)
 
     def do_add_project_items(self, category_name, *items, set_selected=False, verbosity=True):
         """Adds items to project at loading.
@@ -441,15 +443,6 @@ class SpineToolboxProject(MetaObject):
                 except OSError:
                     self._logger.msg_error.emit("[OSError] Removing directory failed. Check directory permissions.")
             self._logger.msg.emit("Item <b>{0}</b> removed from project".format(item.name))
-
-    def set_item_selected(self, item):
-        """Sets item selected and shows its info screen.
-
-        Args:
-            item (BaseProjectTreeItem): Project item to select
-        """
-        ind = self._project_item_model.find_item(item.name)
-        self._toolbox.ui.treeView_project.setCurrentIndex(ind)
 
     def execute_dags(self, dags, execution_permits):
         """Executes given dags.

@@ -312,13 +312,13 @@ class ToolboxUI(QMainWindow):
         getting_started_anchor = (
             "<a style='color:#99CCFF;' title='" + p + "' href='file:///" + p + "'>Getting Started</a>"
         )
-        wlcme_msg = "Welcome to Spine Toolbox! If you need help, please read the {0} guide.".format(
+        welcome_msg = "Welcome to Spine Toolbox! If you need help, please read the {0} guide.".format(
             getting_started_anchor
         )
         if not project_dir:
             open_previous_project = int(self._qsettings.value("appSettings/openPreviousProject", defaultValue="0"))
-            if open_previous_project != 2:  # 2: Qt.Checked, ie. open_previous_project==True
-                self.msg.emit(wlcme_msg)
+            if open_previous_project != Qt.Checked:  # 2: Qt.Checked, ie. open_previous_project==True
+                self.msg.emit(welcome_msg)
                 return
             # Get previous project (directory)
             project_dir = self._qsettings.value("appSettings/previousProject", defaultValue="")
@@ -326,7 +326,7 @@ class ToolboxUI(QMainWindow):
                 return
         if os.path.isfile(project_dir) and project_dir.endswith(".proj"):
             # Previous project was a .proj file -> Show welcome message instead
-            self.msg.emit(wlcme_msg)
+            self.msg.emit(welcome_msg)
             return
         if not os.path.isdir(project_dir):
             self.ui.statusbar.showMessage("Opening previous project failed", 10000)
@@ -374,6 +374,7 @@ class ToolboxUI(QMainWindow):
             description (str): Project description
             location (str): Path to project directory
         """
+        self.undo_critical_commands()
         self.clear_ui()
         self.init_project_item_model()
         self.ui.treeView_project.selectionModel().selectionChanged.connect(self.item_selection_changed)
@@ -444,6 +445,7 @@ class ToolboxUI(QMainWindow):
         # Upgrade project dictionary if needed
         if version < LATEST_PROJECT_VERSION:
             project_info = ProjectUpgrader(self).upgrade(project_info, project_dir, project_dir)
+        self.undo_critical_commands()
         # Make room for a new project
         self.clear_ui()
         # Parse project info
@@ -717,6 +719,16 @@ class ToolboxUI(QMainWindow):
         self._project = None
         self.tool_specification_model = None
         self.ui.graphicsView.scene().clear()  # Clear all items from scene
+
+    def undo_critical_commands(self):
+        """Undoes critical commands in the undo stack.
+        """
+        if self.undo_stack.isClean():
+            return
+        for ind in reversed(range(self.undo_stack.index())):
+            cmd = self.undo_stack.command(ind)
+            if cmd.is_critical():
+                cmd.undo()
 
     def overwrite_check(self, project_dir):
         """Checks if given directory is a project directory and/or empty

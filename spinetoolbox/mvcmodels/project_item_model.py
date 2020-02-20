@@ -250,6 +250,9 @@ class ProjectItemModel(QAbstractItemModel):
         if not role == Qt.EditRole:
             return super().setData(index, value, role)
         item = index.internalPointer()
+        if item.parent() is None:
+            # The item has been removed from the model
+            return False
         old_name = item.name
         if not value.strip() or value == old_name:
             return False

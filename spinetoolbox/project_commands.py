@@ -20,7 +20,16 @@ import copy
 from PySide2.QtWidgets import QUndoCommand
 
 
-class SetProjectNameCommand(QUndoCommand):
+class SpineToolboxCommand(QUndoCommand):
+    @staticmethod
+    def is_critical():
+        """Returns True if this command needs to be undone before
+        closing the project without saving changes.
+        """
+        return False
+
+
+class SetProjectNameCommand(SpineToolboxCommand):
     def __init__(self, project, name):
         """Command to set the project name.
 
@@ -41,7 +50,7 @@ class SetProjectNameCommand(QUndoCommand):
         self.project.set_name(self.undo_name)
 
 
-class SetProjectDescriptionCommand(QUndoCommand):
+class SetProjectDescriptionCommand(SpineToolboxCommand):
     def __init__(self, project, description):
         """Command to set the project description.
 
@@ -62,7 +71,7 @@ class SetProjectDescriptionCommand(QUndoCommand):
         self.project.set_description(self.undo_description)
 
 
-class AddProjectItemsCommand(QUndoCommand):
+class AddProjectItemsCommand(SpineToolboxCommand):
     def __init__(self, project, category_name, *items, set_selected=False, verbosity=True):
         """Command to add items.
 
@@ -93,7 +102,7 @@ class AddProjectItemsCommand(QUndoCommand):
             self.project._remove_item(self.category_ind, project_tree_item, delete_data=True)
 
 
-class RemoveAllProjectItemsCommand(QUndoCommand):
+class RemoveAllProjectItemsCommand(SpineToolboxCommand):
     def __init__(self, project, items_per_category, links, delete_data=False):
         """Command to remove all items from project.
 
@@ -124,7 +133,7 @@ class RemoveAllProjectItemsCommand(QUndoCommand):
         self.project.notify_changes_in_all_dags()
 
 
-class RemoveProjectItemCommand(QUndoCommand):
+class RemoveProjectItemCommand(SpineToolboxCommand):
     def __init__(self, project, name, delete_data=False):
         """Command to remove items.
 
@@ -156,7 +165,7 @@ class RemoveProjectItemCommand(QUndoCommand):
         self.project.notify_changes_in_containing_dag(self.name)
 
 
-class RenameProjectItemCommand(QUndoCommand):
+class RenameProjectItemCommand(SpineToolboxCommand):
     def __init__(self, project_item_model, tree_item, new_name):
         """Command to rename items.
 
@@ -179,8 +188,12 @@ class RenameProjectItemCommand(QUndoCommand):
     def undo(self):
         self.project_item_model.setData(self.tree_index, self.old_name)
 
+    @staticmethod
+    def is_critical():
+        return True
 
-class AddLinkCommand(QUndoCommand):
+
+class AddLinkCommand(SpineToolboxCommand):
     def __init__(self, graphics_view, src_connector, dst_connector):
         """Command to add link.
 
@@ -206,7 +219,7 @@ class AddLinkCommand(QUndoCommand):
             self.graphics_view._add_link(self.replaced_link)
 
 
-class RemoveLinkCommand(QUndoCommand):
+class RemoveLinkCommand(SpineToolboxCommand):
     def __init__(self, graphics_view, link):
         """Command to remove link.
 
@@ -226,7 +239,7 @@ class RemoveLinkCommand(QUndoCommand):
         self.graphics_view._add_link(self.link)
 
 
-class MoveIconCommand(QUndoCommand):
+class MoveIconCommand(SpineToolboxCommand):
     def __init__(self, graphics_item):
         """Command to move icons in the Design view.
 
@@ -255,7 +268,7 @@ class MoveIconCommand(QUndoCommand):
         self.graphics_item.shrink_scene_if_needed()
 
 
-class AddDCReferencesCommand(QUndoCommand):
+class AddDCReferencesCommand(SpineToolboxCommand):
     def __init__(self, dc, paths):
         """Command to add DC references.
 
@@ -275,7 +288,7 @@ class AddDCReferencesCommand(QUndoCommand):
         self.dc.do_remove_references(self.paths)
 
 
-class RemoveDCReferencesCommand(QUndoCommand):
+class RemoveDCReferencesCommand(SpineToolboxCommand):
     def __init__(self, dc, paths):
         """Command to remove DC references.
 
@@ -295,7 +308,7 @@ class RemoveDCReferencesCommand(QUndoCommand):
         self.dc.do_add_files_to_references(self.paths)
 
 
-class UpdateDSURLCommand(QUndoCommand):
+class UpdateDSURLCommand(SpineToolboxCommand):
     def __init__(self, ds, **kwargs):
         """Command to update DS url.
 
@@ -319,7 +332,7 @@ class UpdateDSURLCommand(QUndoCommand):
         self.ds.do_update_url(**self.undo_kwargs)
 
 
-class UpdateImporterSettingsCommand(QUndoCommand):
+class UpdateImporterSettingsCommand(SpineToolboxCommand):
     def __init__(self, importer, settings, importee):
         """Command to update Importer settings.
 
@@ -342,7 +355,7 @@ class UpdateImporterSettingsCommand(QUndoCommand):
         self.importer.settings[self.importee] = self.undo_settings
 
 
-class UpdateImporterCancelOnErrorCommand(QUndoCommand):
+class UpdateImporterCancelOnErrorCommand(SpineToolboxCommand):
     def __init__(self, importer, cancel_on_error):
         """Command to update Importer cancel on error setting.
         This may seem silly but cancel_on_error is saved with the project so we need this command
@@ -365,7 +378,7 @@ class UpdateImporterCancelOnErrorCommand(QUndoCommand):
         self.importer.set_cancel_on_error(self.undo_cancel_on_error)
 
 
-class SetToolSpecificationCommand(QUndoCommand):
+class SetToolSpecificationCommand(SpineToolboxCommand):
     def __init__(self, tool, specification):
         """Command to set the specification for a Tool.
 
@@ -388,7 +401,7 @@ class SetToolSpecificationCommand(QUndoCommand):
         self.tool.do_update_execution_mode(self.undo_execute_in_work)
 
 
-class UpdateToolExecuteInWorkCommand(QUndoCommand):
+class UpdateToolExecuteInWorkCommand(SpineToolboxCommand):
     def __init__(self, tool, execute_in_work):
         """Command to update execute_in_work for a Tool.
 
@@ -408,7 +421,7 @@ class UpdateToolExecuteInWorkCommand(QUndoCommand):
         self.tool.do_update_execution_mode(not self.execute_in_work)
 
 
-class UpdateToolCmdLineArgsCommand(QUndoCommand):
+class UpdateToolCmdLineArgsCommand(SpineToolboxCommand):
     def __init__(self, tool, cmd_line_args):
         """Command to update execute_in_work for a Tool.
 
@@ -429,7 +442,7 @@ class UpdateToolCmdLineArgsCommand(QUndoCommand):
         self.tool.do_update_tool_cmd_line_args(self.undo_cmd_line_args)
 
 
-class UpdateExporterOutFileNameCommand(QUndoCommand):
+class UpdateExporterOutFileNameCommand(SpineToolboxCommand):
     def __init__(self, exporter, file_name, database_path):
         """Command to update output file name for a Exporter.
 
@@ -453,7 +466,7 @@ class UpdateExporterOutFileNameCommand(QUndoCommand):
         self.exporter._do_update_out_file_name(self.undo_file_name, self.database_path)
 
 
-class UpdateExporterSettingsCommand(QUndoCommand):
+class UpdateExporterSettingsCommand(SpineToolboxCommand):
     def __init__(self, exporter, settings, indexing_settings, additional_domains, database_path):
         """Command to update settings in an Exporter.
 
@@ -476,7 +489,7 @@ class UpdateExporterSettingsCommand(QUndoCommand):
         self.exporter._update_settings(*self.undo_settings_tuple, self.database_path)
 
 
-class AddToolSpecificationCommand(QUndoCommand):
+class AddToolSpecificationCommand(SpineToolboxCommand):
     def __init__(self, toolbox, tool_specification):
         """Command to add Tool specs to a project.
 
@@ -497,7 +510,7 @@ class AddToolSpecificationCommand(QUndoCommand):
         self.toolbox.do_remove_tool_specification(row, ask_verification=False)
 
 
-class RemoveToolSpecificationCommand(QUndoCommand):
+class RemoveToolSpecificationCommand(SpineToolboxCommand):
     def __init__(self, toolbox, row, ask_verification):
         """Command to remove Tool specs from a project.
 
@@ -521,7 +534,7 @@ class RemoveToolSpecificationCommand(QUndoCommand):
         self.toolbox.do_add_tool_specification(self.tool_specification, row=self.row)
 
 
-class UpdateToolSpecificationCommand(QUndoCommand):
+class UpdateToolSpecificationCommand(SpineToolboxCommand):
     def __init__(self, toolbox, row, tool_specification):
         """Command to update Tool specs in a project.
 
