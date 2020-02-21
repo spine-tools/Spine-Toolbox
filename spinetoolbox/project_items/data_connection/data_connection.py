@@ -403,7 +403,9 @@ class DataConnection(ProjectItem):
         """
         if not super().rename(new_name):
             return False
-        self.data_dir_watcher.removePaths(self.data_dir_watcher.directories())
+        dirs = self.data_dir_watcher.directories()
+        if dirs:
+            self.data_dir_watcher.removePaths(self.data_dir_watcher.directories())
         self.data_dir_watcher.addPath(self.data_dir)
         return True
 

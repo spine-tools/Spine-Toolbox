@@ -323,8 +323,17 @@ class SpineToolboxProject(MetaObject):
                 )
         if set_selected:
             item = list(project_tree_items)[-1]
-            ind = self._project_item_model.find_item(item.name)
-            self._toolbox.ui.treeView_project.setCurrentIndex(ind)
+            self.set_item_selected(item)
+
+    def set_item_selected(self, item):
+        """
+        Selects the given item.
+
+        Args:
+            item (LeafProjectTreeItem)
+        """
+        ind = self._project_item_model.find_item(item.name)
+        self._toolbox.ui.treeView_project.setCurrentIndex(ind)
 
     def do_add_project_items(self, category_name, *items, set_selected=False, verbosity=True):
         """Adds items to project at loading.
