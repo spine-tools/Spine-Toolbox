@@ -358,8 +358,6 @@ class UpdateImporterSettingsCommand(SpineToolboxCommand):
 class UpdateImporterCancelOnErrorCommand(SpineToolboxCommand):
     def __init__(self, importer, cancel_on_error):
         """Command to update Importer cancel on error setting.
-        This may seem silly but cancel_on_error is saved with the project so we need this command
-        to get the right windowModified state.
 
         Args:
             importer (Importer): the Importer
@@ -403,7 +401,7 @@ class SetToolSpecificationCommand(SpineToolboxCommand):
 
 class UpdateToolExecuteInWorkCommand(SpineToolboxCommand):
     def __init__(self, tool, execute_in_work):
-        """Command to update execute_in_work for a Tool.
+        """Command to update Tool execute_in_work setting.
 
         Args:
             tool (Tool): the Tool
@@ -423,7 +421,7 @@ class UpdateToolExecuteInWorkCommand(SpineToolboxCommand):
 
 class UpdateToolCmdLineArgsCommand(SpineToolboxCommand):
     def __init__(self, tool, cmd_line_args):
-        """Command to update execute_in_work for a Tool.
+        """Command to update Tool command line args.
 
         Args:
             tool (Tool): the Tool
@@ -444,7 +442,7 @@ class UpdateToolCmdLineArgsCommand(SpineToolboxCommand):
 
 class UpdateExporterOutFileNameCommand(SpineToolboxCommand):
     def __init__(self, exporter, file_name, database_path):
-        """Command to update output file name for a Exporter.
+        """Command to update Exporter output file name.
 
         Args:
             exporter (Exporter): the Exporter
@@ -468,7 +466,7 @@ class UpdateExporterOutFileNameCommand(SpineToolboxCommand):
 
 class UpdateExporterSettingsCommand(SpineToolboxCommand):
     def __init__(self, exporter, settings, indexing_settings, additional_domains, database_path):
-        """Command to update settings in an Exporter.
+        """Command to update Exporter settings.
 
         Args:
             exporter (Exporter): the Exporter
