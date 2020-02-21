@@ -246,6 +246,26 @@ class ToolboxUI(QMainWindow):
         # Add draggable widgets to toolbar
         self.item_toolbar.add_draggable_widgets(category_icon)
 
+    def parse_assistant_modules(self):
+        """Makes actions to run assistants from assistant modules."""
+        menu = self.ui.menuTool_configuration_assistants
+        for module in (spine_model,):  # NOTE: add others as needed
+            action = menu.addAction(module.assistant_name)
+            action.triggered.connect(
+                lambda checked=False, module=module, action=action: self.show_assistant(module, action)
+            )
+
+    def show_assistant(self, module, action):
+        """Creates and shows the assistant for the given module.
+        Disables the given action while the assistant is shown,
+        enables the action back when the assistant is destroyed.
+        This is to make sure we don't open the same assistant twice.
+        """
+        assistant = module.make_assistant(self)
+        action.setEnabled(False)
+        assistant.destroyed.connect(lambda obj=None: action.setEnabled(True))
+        assistant.show()
+
     def set_work_directory(self, new_work_dir=None):
         """Creates a work directory if it does not exist or changes the current work directory to given.
 

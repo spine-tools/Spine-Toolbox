@@ -55,7 +55,6 @@ class GraphViewMixin:
         area = self.dockWidgetArea(self.ui.dockWidget_item_palette)
         self._handle_item_palette_dock_location_changed(area)
         self.ui.treeView_object.qsettings = self.qsettings
-        self.live_demo = GraphViewDemo(self)
         self.setup_zoom_widget_action()
 
     def add_menu_actions(self):
@@ -64,10 +63,6 @@ class GraphViewMixin:
         self.ui.menuView.addSeparator()
         self.ui.menuView.addAction(self.ui.dockWidget_entity_graph.toggleViewAction())
         self.ui.menuView.addAction(self.ui.dockWidget_item_palette.toggleViewAction())
-
-    def restore_dock_widgets(self):
-        super().restore_dock_widgets()
-        self.live_demo.hide()
 
     def connect_signals(self):
         """Connects signals."""
@@ -84,7 +79,6 @@ class GraphViewMixin:
         self.ui.actionLive_graph_demo.triggered.connect(self.show_demo)
         # Dock Widgets menu action
         self.ui.menuGraph.aboutToShow.connect(self._handle_menu_graph_about_to_show)
-        self.ui.menuHelp.aboutToShow.connect(self._handle_menu_help_about_to_show)
         self.zoom_widget_action.minus_pressed.connect(self._handle_zoom_minus_pressed)
         self.zoom_widget_action.plus_pressed.connect(self._handle_zoom_plus_pressed)
         self.zoom_widget_action.reset_pressed.connect(self._handle_zoom_reset_pressed)
@@ -245,11 +239,6 @@ class GraphViewMixin:
         self.ui.actionPrune_selected.setEnabled(visible and bool(self.entity_item_selection))
         self.ui.actionRestore_pruned.setEnabled(visible and bool(self.rejected_items))
         self.zoom_widget_action.setEnabled(visible)
-
-    @Slot()
-    def _handle_menu_help_about_to_show(self):
-        """Enables or disables action according to current status of the demo."""
-        self.ui.actionLive_graph_demo.setEnabled(not self.live_demo.is_running())
 
     @Slot("Qt.DockWidgetArea")
     def _handle_item_palette_dock_location_changed(self, area):
@@ -759,7 +748,17 @@ class GraphViewMixin:
 
     @Slot(bool)
     def show_demo(self, checked=False):
-        self.live_demo.show()
+        demo = GraphViewDemo(self)
+        self.ui.actionLive_graph_demo.setEnabled(False)
+        demo.destroyed.connect(self._enable_live_graph_demo_action)
+        demo.show()
+
+    @Slot("QObject")
+    def _enable_live_graph_demo_action(self, obj=None):
+        try:
+            self.ui.actionLive_graph_demo.setEnabled(True)
+        except RuntimeError:
+            pass
 
     def show_object_item_context_menu(self, global_pos, main_item):
         """Shows context menu for entity item.
@@ -826,6 +825,5 @@ class GraphViewMixin:
         Args:
             event (QEvent): Closing event if 'X' is clicked.
         """
-        self.live_demo.setFloating(True)
         super().closeEvent(event)
         self.tear_down_scene()
