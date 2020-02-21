@@ -195,8 +195,8 @@ class CategoryProjectTreeItem(BaseProjectTreeItem):
             icon = self._icon_maker(child_item.toolbox, project_item.x - 35, project_item.y - 35, 70, 70, project_item)
             project_item.set_icon(icon)
         project_item.set_properties_ui(self._properties_ui)
-        project_item.set_up()
         project_item.create_data_dir()
+        project_item.set_up()
         return True
 
     def custom_context_menu(self, parent, pos):

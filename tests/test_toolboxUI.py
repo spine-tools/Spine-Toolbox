@@ -22,7 +22,7 @@ from unittest import mock
 import logging
 import os
 import sys
-from PySide2.QtWidgets import QApplication, QMessageBox
+from PySide2.QtWidgets import QApplication
 from PySide2.QtCore import SIGNAL, Qt, QPoint, QItemSelectionModel
 from PySide2.QtTest import QTest
 from spinetoolbox.project import SpineToolboxProject
