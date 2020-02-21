@@ -274,8 +274,9 @@ class ToolboxUI(QMainWindow):
 
     def show_assistant(self, module, action):
         """Creates and shows the assistant for the given module.
-        Disables the given action while the assistant is shown, enables the action back when the assistant 
-        is destroyed. This is to make sure we don't open the same assistant twice.
+        Disables the given action while the assistant is shown,
+        enables the action back when the assistant is destroyed.
+        This is to make sure we don't open the same assistant twice.
         """
         assistant = module.make_assistant(self)
         action.setEnabled(False)
