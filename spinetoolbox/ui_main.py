@@ -301,7 +301,7 @@ class ToolboxUI(QMainWindow):
         return self._qsettings
 
     def update_window_title(self):
-        self.setWindowTitle("{0}[*] ({1}) - Spine Toolbox".format(self._project.project_dir, self._project.name))
+        self.setWindowTitle("{0} [{1}][*] - Spine Toolbox".format(self._project.name, self._project.project_dir))
 
     @Slot()
     def init_project(self, project_dir):
