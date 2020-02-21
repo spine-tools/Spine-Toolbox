@@ -16,11 +16,6 @@ SpineModel.jl config assistant.
 :date:   17.2.2020
 """
 
-from .configuration_assistant import SpineModelConfigurationAssistant
+from .configuration_assistant import SpineModelConfigurationAssistant as make_assistant
 
 assistant_name = "SpineModel.jl"
-
-
-def make_assistant(toolbox):
-    assistant = SpineModelConfigurationAssistant(toolbox)
-    assistant.show()
