@@ -63,8 +63,8 @@ class GdxExportSettings(QWidget):
         self.setWindowTitle("Gdx Export settings    -- {} --".format(database_path))
         self.setAttribute(Qt.WA_DeleteOnClose, True)
         self._database_path = database_path
-        self._ui.button_box.accepted.connect(self._accepted)
-        self._ui.button_box.rejected.connect(self._rejected)
+        self._ui.button_box.accepted.connect(self._accept)
+        self._ui.button_box.rejected.connect(self._reject)
         self._ui.button_box.clicked.connect(self._reset_settings)
         self._ui.button_box.button(QDialogButtonBox.RestoreDefaults).setToolTip(
             "Reset all settings\nby reloading the database."
@@ -139,7 +139,7 @@ class GdxExportSettings(QWidget):
             self._ui.global_parameters_combo_box.setCurrentText(settings.global_parameters_domain_name)
 
     @Slot("QVariant")
-    def settings_state_changed(self, state):
+    def handle_settings_state_changed(self, state):
         enabled = state != SettingsState.FETCHING
         self._ui.set_group_box.setEnabled(enabled)
         self._ui.contents_group_box.setEnabled(enabled)
@@ -148,7 +148,7 @@ class GdxExportSettings(QWidget):
         self._ui.button_box.button(QDialogButtonBox.RestoreDefaults).setEnabled(enabled)
 
     @Slot()
-    def _accepted(self):
+    def _accept(self):
         """Emits the settings_accepted signal."""
         if self._state != State.OK:
             QMessageBox.warning(
@@ -181,10 +181,13 @@ class GdxExportSettings(QWidget):
         _move_selected_elements_by(self._ui.record_list_view, 1)
 
     @Slot()
-    def _rejected(self):
+    def _reject(self):
         """Hides the window."""
-        self.settings_rejected.emit(self._database_path)
         self.close()
+
+    def closeEvent(self, event):
+        super().closeEvent(event)
+        self.settings_rejected.emit(self._database_path)
 
     @Slot("QAbstractButton")
     def _reset_settings(self, button):
@@ -239,7 +242,7 @@ class GdxExportSettings(QWidget):
             self._indexed_parameter_settings_window = ParameterIndexSettingsWindow(
                 indexing_settings, available_domains, new_domains, self._database_path, self
             )
-            self._indexed_parameter_settings_window.settings_approved.connect(self._parameter_settings_approved)
+            self._indexed_parameter_settings_window.settings_approved.connect(self._approve_parameter_settings)
             self._indexed_parameter_settings_window.settings_rejected.connect(self._dispose_parameter_settings_window)
             self._ui.record_list_view.model().domain_records_reordered.connect(
                 self._indexed_parameter_settings_window.reorder_indexes
@@ -247,7 +250,7 @@ class GdxExportSettings(QWidget):
         self._indexed_parameter_settings_window.show()
 
     @Slot()
-    def _parameter_settings_approved(self):
+    def _approve_parameter_settings(self):
         """Gathers settings from the indexed parameters settings window."""
         self._indexing_settings = self._indexed_parameter_settings_window.indexing_settings
         new_domains = self._indexed_parameter_settings_window.new_domains

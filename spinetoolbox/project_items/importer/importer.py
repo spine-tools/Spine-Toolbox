@@ -31,6 +31,7 @@ from spinetoolbox.spine_io.importers.excel_reader import ExcelConnector
 from spinetoolbox.spine_io.importers.gdx_connector import GdxConnector
 from spinetoolbox.spine_io.importers.json_reader import JSONConnector
 from spinetoolbox.widgets.import_preview_window import ImportPreviewWindow
+from spinetoolbox.project_commands import UpdateImporterSettingsCommand, UpdateImporterCancelOnErrorCommand
 from . import importer_program
 
 _CONNECTOR_NAME_TO_CLASS = {
@@ -119,24 +120,28 @@ class Importer(ProjectItem):
         s[self._properties_ui.toolButton_open_dir.clicked] = lambda checked=False: self.open_directory()
         s[self._properties_ui.pushButton_import_editor.clicked] = self._handle_import_editor_clicked
         s[self._properties_ui.treeView_files.doubleClicked] = self._handle_files_double_clicked
+        s[self._properties_ui.cancel_on_error_checkBox.stateChanged] = self._handle_cancel_on_error_changed
         return s
 
-    def activate(self):
-        """Restores selections, cancel on error checkbox and connects signals."""
-        self._properties_ui.cancel_on_error_checkBox.setCheckState(Qt.Checked if self.cancel_on_error else Qt.Unchecked)
-        self.restore_selections()
-        super().connect_signals()
+    @Slot(int)
+    def _handle_cancel_on_error_changed(self, _state):
+        cancel_on_error = self._properties_ui.cancel_on_error_checkBox.isChecked()
+        if self.cancel_on_error == cancel_on_error:
+            return
+        self._toolbox.undo_stack.push(UpdateImporterCancelOnErrorCommand(self, cancel_on_error))
 
-    def deactivate(self):
-        """Saves selections and disconnects signals."""
-        self.save_selections()
-        if not super().disconnect_signals():
-            logging.error("Item %s deactivation failed.", self.name)
-            return False
-        return True
+    def set_cancel_on_error(self, cancel_on_error):
+        self.cancel_on_error = cancel_on_error
+        if not self._active:
+            return
+        check_state = Qt.Checked if self.cancel_on_error else Qt.Unchecked
+        self._properties_ui.cancel_on_error_checkBox.blockSignals(True)
+        self._properties_ui.cancel_on_error_checkBox.setCheckState(check_state)
+        self._properties_ui.cancel_on_error_checkBox.blockSignals(False)
 
     def restore_selections(self):
         """Restores selections into shared widgets when this project item is selected."""
+        self._properties_ui.cancel_on_error_checkBox.setCheckState(Qt.Checked if self.cancel_on_error else Qt.Unchecked)
         self._properties_ui.label_name.setText(self.name)
         self._properties_ui.treeView_files.setModel(self.file_model)
         self.file_model.itemChanged.connect(self._handle_file_model_item_changed)
@@ -279,7 +284,9 @@ class Importer(ProjectItem):
             settings (dict): Updated mapping (settings) dictionary
             importee (str): Absolute path to a file, whose mapping has been updated
         """
-        self.settings.setdefault(importee, {}).update(settings)
+        if self.settings.get(importee) == settings:
+            return
+        self._toolbox.undo_stack.push(UpdateImporterSettingsCommand(self, settings, importee))
 
     def _preview_destroyed(self, importee):
         """Destroys preview widget instance for the given importee.

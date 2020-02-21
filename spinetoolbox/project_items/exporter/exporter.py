@@ -17,12 +17,12 @@ Exporter project item.
 """
 
 from copy import deepcopy
-import logging
 import pathlib
 import os.path
 from PySide2.QtCore import QObject, Signal, Slot
-from spinedb_api.database_mapping import DatabaseMapping
+from spinedb_api import DatabaseMapping, SpineDBAPIError
 from spinetoolbox.project_item import ProjectItem, ProjectItemResource
+from spinetoolbox.project_commands import UpdateExporterOutFileNameCommand, UpdateExporterSettingsCommand
 from spinetoolbox.helpers import deserialize_path, serialize_url
 from spinetoolbox.spine_io import gdx_utils
 from spinetoolbox.spine_io.exporters import gdx
@@ -55,6 +55,7 @@ class Exporter(ProjectItem):
         super().__init__(name, description, x, y, project, logger)
         self._toolbox = toolbox
         self._settings_packs = dict()
+        self._export_list_items = dict()
         self._workers = dict()
         if settings_packs is None:
             settings_packs = list()
@@ -65,11 +66,13 @@ class Exporter(ProjectItem):
             settings_pack = _SettingsPack.from_dict(pack, url)
             settings_pack.notifications.changed_due_to_settings_state.connect(self._report_notifications)
             self._settings_packs[url] = settings_pack
-        self._activated = False
-        self._project.db_mngr.session_committed.connect(self._update_settings_after_db_commit)
         for url, pack in self._settings_packs.items():
             if pack.state != SettingsState.OK:
                 self._start_worker(url)
+
+    def set_up(self):
+        """See base class."""
+        self._project.db_mngr.session_committed.connect(self._update_settings_after_db_commit)
 
     @staticmethod
     def item_type():
@@ -86,23 +89,16 @@ class Exporter(ProjectItem):
         s = {self._properties_ui.open_directory_button.clicked: self.open_directory}
         return s
 
-    def activate(self):
+    def restore_selections(self):
         """Restores selections and connects signals."""
         self._properties_ui.item_name_label.setText(self.name)
         self._update_properties_tab()
-        super().connect_signals()
+
+    def _connect_signals(self):
+        super()._connect_signals()
         for url, pack in self._settings_packs.items():
             if pack.state == SettingsState.ERROR:
                 self._start_worker(url)
-        self._activated = True
-
-    def deactivate(self):
-        """Saves selections and disconnects signals."""
-        if not super().disconnect_signals():
-            logging.error("Item %s deactivation failed.", self.name)
-            return False
-        self._activated = False
-        return True
 
     def _update_properties_tab(self):
         """Updates the database list in the properties tab."""
@@ -110,12 +106,13 @@ class Exporter(ProjectItem):
         while not database_list_storage.isEmpty():
             widget_to_remove = database_list_storage.takeAt(0)
             widget_to_remove.widget().deleteLater()
+        self._export_list_items.clear()
         for url, pack in self._settings_packs.items():
-            item = ExportListItem(url, pack.output_file_name, pack.state)
+            item = self._export_list_items[url] = ExportListItem(url, pack.output_file_name, pack.state)
             database_list_storage.addWidget(item)
             item.open_settings_clicked.connect(self._show_settings)
             item.file_name_changed.connect(self._update_out_file_name)
-            pack.state_changed.connect(item.settings_state_changed)
+            pack.state_changed.connect(item.handle_settings_state_changed)
 
     def execute_forward(self, resources):
         """See base class."""
@@ -144,8 +141,8 @@ class Exporter(ProjectItem):
                 self._logger.msg_error.emit(f"<b>{self.name}</b>: Ill formed database {url}.")
                 return False
             out_path = os.path.join(self.data_dir, settings_pack.output_file_name)
-            database_map = DatabaseMapping(url)
             try:
+                database_map = DatabaseMapping(url)
                 gdx.to_gdx_file(
                     database_map,
                     out_path,
@@ -154,7 +151,7 @@ class Exporter(ProjectItem):
                     settings_pack.indexing_settings,
                     gams_system_directory,
                 )
-            except gdx.GdxExportException as error:
+            except (gdx.GdxExportException, SpineDBAPIError) as error:
                 self._logger.msg_error.emit(f"Failed to export <b>{url}</b> to .gdx: {error}")
                 return False
             finally:
@@ -174,14 +171,13 @@ class Exporter(ProjectItem):
                 pack = self._settings_packs[database_url]
                 if pack.settings_window is not None:
                     pack.settings_window.close()
-                    pack.settings_window.deleteLater()
                 del self._settings_packs[database_url]
         # Add new databases.
         for database_url in database_urls:
             if database_url not in self._settings_packs:
                 self._settings_packs[database_url] = _SettingsPack("")
                 self._start_worker(database_url)
-        if self._activated:
+        if self._active:
             self._update_properties_tab()
         self._check_state()
 
@@ -345,7 +341,7 @@ class Exporter(ProjectItem):
             settings_pack.settings_window.settings_accepted.connect(self._update_settings_from_settings_window)
             settings_pack.settings_window.settings_rejected.connect(self._dispose_settings_window)
             settings_pack.settings_window.reset_requested.connect(self._reset_settings_window)
-            settings_pack.state_changed.connect(settings_pack.settings_window.settings_state_changed)
+            settings_pack.state_changed.connect(settings_pack.settings_window.handle_settings_state_changed)
         settings_pack.settings_window.show()
 
     @Slot(str)
@@ -360,7 +356,14 @@ class Exporter(ProjectItem):
 
     @Slot(str, str)
     def _update_out_file_name(self, file_name, database_path):
+        """Pushes a new UpdateExporterOutFileNameCommand to the toolbox undo stack."""
+        self._toolbox.undo_stack.push(UpdateExporterOutFileNameCommand(self, file_name, database_path))
+
+    def _do_update_out_file_name(self, file_name, database_path):
         """Updates the output file name for given database"""
+        if self._active:
+            export_list_item = self._export_list_items.get(database_path)
+            export_list_item._ui.out_file_name_edit.setText(file_name)
         self._settings_packs[database_path].output_file_name = file_name
         self._settings_packs[database_path].notifications.missing_output_file_name = not file_name
         self._check_duplicate_file_names()
@@ -368,11 +371,24 @@ class Exporter(ProjectItem):
 
     @Slot(str)
     def _update_settings_from_settings_window(self, database_path):
-        """Updates the export settings for given database from the settings window."""
+        """Pushes a new UpdateExporterSettingsCommand to the toolbox undo stack."""
+        window = self._settings_packs[database_path].settings_window
+        settings = window.settings
+        indexing_settings = window.indexing_settings
+        additional_domains = window.new_domains
+        self._toolbox.undo_stack.push(
+            UpdateExporterSettingsCommand(self, settings, indexing_settings, additional_domains, database_path)
+        )
+
+    def _update_settings(self, settings, indexing_settings, additional_domains, database_path):
+        """Updates the export settings for given database."""
         settings_pack = self._settings_packs[database_path]
-        settings_pack.settings = settings_pack.settings_window.settings
-        settings_pack.indexing_settings = settings_pack.settings_window.indexing_settings
-        settings_pack.additional_domains = settings_pack.settings_window.new_domains
+        settings_pack.settings = settings
+        settings_pack.indexing_settings = indexing_settings
+        settings_pack.additional_domains = additional_domains
+        window = settings_pack.settings_window
+        if window is not None:
+            self._send_settings_to_window(database_path)
         self._check_missing_parameter_indexing()
         self._report_notifications()
 
@@ -510,6 +526,7 @@ class _SettingsPack(QObject):
         if pack.state != SettingsState.OK:
             return pack
         pack.settings = gdx.Settings.from_dict(pack_dict["settings"])
+        # TODO: handle SpineDBAPIError here
         db_map = DatabaseMapping(database_url)
         pack.indexing_settings = gdx.indexing_settings_from_dict(pack_dict["indexing_settings"], db_map)
         db_map.connection.close()

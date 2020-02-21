@@ -517,7 +517,6 @@ class TestToolboxUI(unittest.TestCase):
         create_project(self.toolbox)
         dc1 = "DC1"
         add_dc(self.toolbox.project(), dc1)
-        dc1_index = self.toolbox.project_item_model.find_item(dc1)
         # Check the size of project item model
         n_items = self.toolbox.project_item_model.n_items()
         self.assertEqual(n_items, 1)
@@ -530,7 +529,7 @@ class TestToolboxUI(unittest.TestCase):
         n_items_in_design_view = len([item for item in items_in_design_view if isinstance(item, ProjectItemIcon)])
         self.assertEqual(n_items_in_design_view, 1)
         # NOW REMOVE DC1
-        self.toolbox.remove_item(dc1_index, delete_item=False)
+        self.toolbox._project.remove_item(dc1)
         self.assertEqual(self.toolbox.project_item_model.n_items(), 0)  # Check the number of project items
         dags = self.toolbox.project().dag_handler.dags()
         self.assertEqual(0, len(dags))  # Number of DAGs (DiGraph) objects in project
@@ -571,7 +570,7 @@ class TestToolboxUI(unittest.TestCase):
         # Now, remove the Tool Spec from the model
         index = self.toolbox.tool_specification_model.tool_specification_index("Python Tool Specification")
         self.assertTrue(index.isValid())
-        self.toolbox.remove_tool_specification(index, ask_verification=False)
+        self.toolbox.remove_tool_specification(index.row(), ask_verification=False)
         # Tool spec model must be empty again
         self.assertEqual(0, self.toolbox.tool_specification_model.rowCount())
 

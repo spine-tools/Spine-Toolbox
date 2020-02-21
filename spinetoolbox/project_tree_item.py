@@ -21,6 +21,7 @@ from PySide2.QtCore import Qt, QUrl
 from PySide2.QtWidgets import QInputDialog
 from .metaobject import MetaObject
 from .widgets.custom_menus import CategoryProjectItemContextMenu, ProjectItemContextMenu
+from .project_commands import RenameProjectItemCommand
 
 
 class BaseProjectTreeItem(MetaObject):
@@ -187,9 +188,15 @@ class CategoryProjectTreeItem(BaseProjectTreeItem):
         self._children.append(child_item)
         child_item._parent = self
         project_item = child_item.project_item
-        icon = self._icon_maker(child_item.toolbox, project_item.x - 35, project_item.y - 35, 70, 70, project_item)
-        project_item.set_icon(icon)
+        icon = project_item.get_icon()
+        if icon is not None:
+            icon.activate()
+        else:
+            icon = self._icon_maker(child_item.toolbox, project_item.x - 35, project_item.y - 35, 70, 70, project_item)
+            project_item.set_icon(icon)
         project_item.set_properties_ui(self._properties_ui)
+        project_item.set_up()
+        project_item.create_data_dir()
         return True
 
     def custom_context_menu(self, parent, pos):
@@ -285,10 +292,7 @@ class LeafProjectTreeItem(BaseProjectTreeItem):
                 new_name = answer[0]
                 self.rename(new_name)
         elif action == "Remove item":
-            delete_int = int(self._toolbox._qsettings.value("appSettings/deleteData", defaultValue="0"))
-            delete_bool = delete_int != 0
-            ind = self._toolbox.project_item_model.find_item(self.name)
-            self._toolbox.remove_item(ind, delete_item=delete_bool, check_dialog=True)
+            self._project_item._project.remove_item(self.name, check_dialog=True)
 
     def rename(self, new_name):
         """Renames this item.
@@ -299,5 +303,4 @@ class LeafProjectTreeItem(BaseProjectTreeItem):
         Returns:
             bool: True if renaming was successful, False if renaming failed
         """
-        ind = self._toolbox.project_item_model.find_item(self.name)
-        return self._toolbox.project_item_model.setData(ind, new_name)
+        self._toolbox.undo_stack.push(RenameProjectItemCommand(self._toolbox.project_item_model, self, new_name))

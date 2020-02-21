@@ -766,9 +766,7 @@ def deserialize_path(serialized, project_dir):
             path = serialized["path"]
             if serialized["relative"]:
                 path = os.path.normpath(os.path.join(project_dir, path))
-            if sys.platform == "win32":
-                path = "/" + path
-            return serialized["scheme"] + "://" + path
+            return serialized["scheme"] + ":///" + path
         if path_type == "url":
             return serialized["path"]
     except KeyError as error:

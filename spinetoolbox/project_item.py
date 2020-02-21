@@ -55,9 +55,12 @@ class ProjectItem(MetaObject):
         self._properties_ui = None
         self._icon = None
         self._sigs = None
+        self._active = False
         self.item_changed.connect(lambda: self._project.notify_changes_in_containing_dag(self.name))
         # Make project directory for this Item
         self.data_dir = os.path.join(self._project.items_dir, self.short_name)
+
+    def create_data_dir(self):
         try:
             create_dir(self.data_dir)
         except OSError:
@@ -81,12 +84,33 @@ class ProjectItem(MetaObject):
         """
         return dict()
 
-    def connect_signals(self):
+    def activate(self):
+        """Restore selections and connect signals."""
+        self._active = True
+        self.restore_selections()  # Do this before connecting signals or funny things happen
+        self._connect_signals()
+
+    def deactivate(self):
+        """Save selections and disconnect signals."""
+        self.save_selections()
+        if not self._disconnect_signals():
+            logging.error("Item %s deactivation failed", self.name)
+            return False
+        self._active = False
+        return True
+
+    def restore_selections(self):
+        """Restore selections into shared widgets when this project item is selected."""
+
+    def save_selections(self):
+        """Save selections in shared widgets for this project item into instance variables."""
+
+    def _connect_signals(self):
         """Connect signals to handlers."""
         for signal, handler in self._sigs.items():
             signal.connect(handler)
 
-    def disconnect_signals(self):
+    def _disconnect_signals(self):
         """Disconnect signals from handlers and check for errors."""
         for signal, handler in self._sigs.items():
             try:
@@ -103,7 +127,8 @@ class ProjectItem(MetaObject):
 
     def set_properties_ui(self, properties_ui):
         self._properties_ui = properties_ui
-        self._sigs = self.make_signal_handler_dict()
+        if self._sigs is None:
+            self._sigs = self.make_signal_handler_dict()
 
     def set_icon(self, icon):
         self._icon = icon
@@ -317,17 +342,16 @@ class ProjectItem(MetaObject):
         """
         new_short_name = shorten(new_name)
         # Rename project item data directory
-        old_data_dir = self.data_dir  # Full path to data dir that shall be renamed
-        project_path = os.path.split(old_data_dir)[0]  # Get project path from the old data dir path
-        new_data_dir = os.path.join(project_path, new_short_name)  # Make path for new data dir
-        if not rename_dir(old_data_dir, new_data_dir, self._logger):
+        new_data_dir = os.path.join(self._project.items_dir, new_short_name)  # Make path for new data dir
+        if not rename_dir(self.data_dir, new_data_dir, self._logger):
             return False
         # Rename project item
         self.set_name(new_name)
         # Update project item directory variable
         self.data_dir = new_data_dir
         # Update name label in tab
-        self.update_name_label()
+        if self._active:
+            self.update_name_label()
         # Update name item of the QGraphicsItem
         self.get_icon().update_name_item(new_name)
         # Rename node and edges in the graph (dag) that contains this project item
@@ -342,8 +366,13 @@ class ProjectItem(MetaObject):
             self._logger.msg_error.emit(f"Failed to open directory: {self.data_dir}")
 
     def tear_down(self):
-        """Tears down this item. Called by toolbox just before closing.
+        """Tears down this item. Called both before closing the app and when removing the item from the project.
         Implement in subclasses to eg close all QMainWindows opened by this item.
+        """
+
+    def set_up(self):
+        """Sets up this item. Called when adding the item to the project.
+        Implement in subclasses to eg recreate attributes destroyed by tear_down.
         """
 
     def update_name_label(self):
