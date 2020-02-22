@@ -195,7 +195,10 @@ class EntityItem(QGraphicsPixmapItem):
         colliding = [
             x
             for x in scene.items()
-            if isinstance(x, EntityItem) and x is not self and x.device_rect().intersects(self.device_rect())
+            if x.isVisible()
+            and isinstance(x, EntityItem)
+            and x is not self
+            and x.device_rect().intersects(self.device_rect())
         ]
         return next(iter(colliding), None)
 

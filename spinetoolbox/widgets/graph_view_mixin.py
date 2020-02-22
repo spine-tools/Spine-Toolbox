@@ -50,6 +50,7 @@ class GraphViewMixin:
         self.ui.listView_relationship_class.setModel(self.relationship_class_list_model)
         self.hidden_items = list()
         self.rejected_items = list()
+        self.removed_items = list()
         self.entity_item_selection = list()
         self.zoom_widget_action = None
         area = self.dockWidgetArea(self.ui.dockWidget_item_palette)
@@ -118,7 +119,6 @@ class GraphViewMixin:
     def receive_relationship_classes_updated(self, db_map_data):
         super().receive_relationship_classes_updated(db_map_data)
         self.relationship_class_list_model.receive_entity_classes_updated(db_map_data)
-        self.refresh_icons(db_map_data)
 
     def receive_relationship_classes_removed(self, db_map_data):
         super().receive_relationship_classes_removed(db_map_data)
@@ -127,12 +127,23 @@ class GraphViewMixin:
     def receive_objects_added(self, db_map_data):
         """Runs when objects are added to the db.
         Builds a lookup dictionary consumed by ``add_object``.
+        Also, adds the new objects to the graph if needed.
 
         Args:
             db_map_data (dict): list of dictionary-items keyed by DiffDatabaseMapping instance.
         """
         super().receive_objects_added(db_map_data)
-        self._added_objects = {(x["class_id"], x["name"]): x["id"] for x in db_map_data.get(self.db_map, [])}
+        objects = db_map_data.get(self.db_map, [])
+        self._added_objects = {(x["class_id"], x["name"]): x["id"] for x in objects}
+        object_ids = self._added_objects.values()
+        restored_ids = self.restore_removed_entities(object_ids)
+        rem_class_ids = {x["class_id"] for x in objects if x["id"] not in restored_ids}
+        sel_class_ids = {
+            ind.model().item_from_index(ind).db_map_id(self.db_map)
+            for ind in self.object_tree_model.selected_object_class_indexes
+        }
+        if rem_class_ids.intersection(sel_class_ids):
+            self.build_graph()
 
     def receive_objects_updated(self, db_map_data):
         """Runs when objects are updated in the db. Refreshes names of objects in graph.
@@ -153,19 +164,25 @@ class GraphViewMixin:
             db_map_data (dict): list of dictionary-items keyed by DiffDatabaseMapping instance.
         """
         super().receive_objects_removed(db_map_data)
-        self.receive_entities_removed(db_map_data)
+        self.hide_removed_entities(db_map_data)
 
     def receive_relationships_added(self, db_map_data):
         """Runs when relationships are added to the db.
         Builds a lookup dictionary consumed by ``add_relationship``.
+        Also, adds the new relationships to the graph if needed.
 
         Args:
             db_map_data (dict): list of dictionary-items keyed by DiffDatabaseMapping instance.
         """
         super().receive_relationships_added(db_map_data)
-        self._added_relationships = {
-            (x["class_id"], x["object_id_list"]): x["id"] for x in db_map_data.get(self.db_map, [])
-        }
+        relationships = db_map_data.get(self.db_map, [])
+        self._added_relationships = {(x["class_id"], x["object_id_list"]): x["id"] for x in relationships}
+        relationship_ids = self._added_relationships.values()
+        restored_ids = self.restore_removed_entities(relationship_ids)
+        rem_relationships = [x for x in relationships if x["id"] not in restored_ids]
+        object_ids = [x.entity_id for x in self.ui.graphicsView.items() if isinstance(x, ObjectItem)]
+        if any(all(int(id_) in object_ids for id_ in x["object_id_list"].split(",")) for x in rem_relationships):
+            self.build_graph()
 
     def receive_relationships_removed(self, db_map_data):
         """Runs when relationships are removed from the db. Rebuilds graph if needed.
@@ -174,13 +191,36 @@ class GraphViewMixin:
             db_map_data (dict): list of dictionary-items keyed by DiffDatabaseMapping instance.
         """
         super().receive_relationships_removed(db_map_data)
-        self.receive_entities_removed(db_map_data)
+        self.hide_removed_entities(db_map_data)
 
-    def receive_entities_removed(self, db_map_data):
+    def restore_removed_entities(self, added_ids):
+        """Restores any entities that have been previously removed and returns their ids.
+        This happens in the context of undo/redo.
+
+        Args:
+            added_ids (set(int)): Set of newly added ids.
+
+        Returns:
+            set(int)
+        """
+        restored_items = [item for item in self.removed_items if item.entity_id in added_ids]
+        for item in restored_items:
+            self.removed_items.remove(item)
+            item.set_all_visible(True)
+        return {item.entity_id for item in restored_items}
+
+    def hide_removed_entities(self, db_map_data):
+        """Hides removed entities while saving them into a list attribute.
+        This allows entities to be restored in case the user undoes the operation."""
         removed_ids = {x["id"] for x in db_map_data.get(self.db_map, [])}
-        for item in self.ui.graphicsView.items():
-            if isinstance(item, EntityItem) and item.entity_id in removed_ids:
-                item.wipe_out()
+        removed_items = [
+            item
+            for item in self.ui.graphicsView.items()
+            if isinstance(item, EntityItem) and item.entity_id in removed_ids
+        ]
+        self.removed_items.extend(removed_items)
+        for item in removed_items:
+            item.set_all_visible(False)
 
     def refresh_icons(self, db_map_data):
         """Runs when entity classes are updated in the db. Refreshes icons of entities in graph.
@@ -286,6 +326,7 @@ class GraphViewMixin:
             if wip_relationship_items:
                 self._add_wip_relationship_items(scene, wip_relationship_items, object_items)
             self.hidden_items.clear()
+            self.removed_items.clear()
         self.extend_scene()
         toc = time.clock()
         _ = timeit and self.msg.emit("Graph built in {} seconds\t".format(toc - tic))
@@ -540,7 +581,7 @@ class GraphViewMixin:
         self.ui.graphicsView.scene().setSceneRect(bounding_rect)
         self.ui.graphicsView.init_zoom()
 
-    @Slot(name="_handle_scene_selection_changed")
+    @Slot()
     def _handle_scene_selection_changed(self):
         """Filters parameters by selected objects in the graph."""
         scene = self.ui.graphicsView.scene()
@@ -576,7 +617,7 @@ class GraphViewMixin:
             extended_rect = extended_rect.united(rect)
         self.ui.graphicsView.scene().setSceneRect(extended_rect)
 
-    @Slot("QPoint", "QString", name="_handle_item_dropped")
+    @Slot("QPoint", "QString")
     def _handle_item_dropped(self, pos, text):
         """Runs when an item is dropped from Item palette onto the view.
         Creates the object or relationship template.
@@ -652,6 +693,7 @@ class GraphViewMixin:
         if center_item and center_dimension is not None:
             center_item._merge_target = object_items[center_dimension]
             center_item.merge_into_target()
+        self.extend_scene()
 
     def add_object(self, object_class_id, name):
         """Adds object to the database.
@@ -805,7 +847,7 @@ class GraphViewMixin:
             return False
         return True
 
-    @Slot("bool", name="remove_graph_items")
+    @Slot("bool")
     def remove_graph_items(self, checked=False):
         """Removes all selected items in the graph."""
         if not self.entity_item_selection:
