@@ -218,9 +218,17 @@ class GraphViewMixin:
             for item in self.ui.graphicsView.items()
             if isinstance(item, EntityItem) and item.entity_id in removed_ids
         ]
+        if not removed_items:
+            return
         self.removed_items.extend(removed_items)
-        for item in removed_items:
-            item.set_all_visible(False)
+        removed_item = removed_items.pop()
+        if removed_items:
+            scene = self.ui.graphicsView.scene()
+            scene.selectionChanged.disconnect(self._handle_scene_selection_changed)
+            for item in removed_items:
+                item.set_all_visible(False)
+            scene.selectionChanged.connect(self._handle_scene_selection_changed)
+        removed_item.set_all_visible(False)
 
     def refresh_icons(self, db_map_data):
         """Runs when entity classes are updated in the db. Refreshes icons of entities in graph.
