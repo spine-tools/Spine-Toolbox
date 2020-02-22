@@ -345,6 +345,7 @@ class ObjectItemContextMenu(EntityItemContextMenu):
             graphics_item (spinetoolbox.widgets.graph_view_graphics_items.ObjectItem): item that requested the menu
         """
         super().__init__(parent, position)
+        self.relationship_class_dict = dict()
         self.addSeparator()
         if graphics_item.is_wip:
             self.add_action("Set name", enabled=self.selection_count == 1)
@@ -354,7 +355,6 @@ class ObjectItemContextMenu(EntityItemContextMenu):
         if graphics_item.is_wip or self.selection_count > 1:
             return
         self.addSeparator()
-        self.relationship_class_dict = dict()
         for relationship_class in parent.db_mngr.get_items(parent.db_map, "relationship class"):
             object_class_names = relationship_class["object_class_name_list"].split(",")
             fixed_object_class_names = fix_name_ambiguity(object_class_names)
