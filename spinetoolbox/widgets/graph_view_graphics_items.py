@@ -472,6 +472,14 @@ class ObjectItem(EntityItem):
             self.entity_class_name
         )
 
+    def become_whole(self):
+        super().become_whole()
+        self.refresh_description()
+
+    def refresh_description(self):
+        description = self.db_mngr.get_item(self.db_map, "object", self.entity_id).get("description")
+        self.setToolTip(f"<html>{description}</html>")
+
     def edit_name(self):
         """Starts editing the object name."""
         self.setSelected(True)

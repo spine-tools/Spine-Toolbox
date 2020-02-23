@@ -165,6 +165,7 @@ class GraphViewMixin:
         for item in self.ui.graphicsView.items():
             if isinstance(item, ObjectItem) and item.entity_id in updated_ids:
                 item.refresh_name()
+                item.refresh_description()
 
     def receive_objects_removed(self, db_map_data):
         """Runs when objects are removed from the db. Rebuilds graph if needed.
