@@ -340,11 +340,11 @@ class GraphViewMixin:
         """Builds the graph."""
         tic = time.clock()
         new_items = self._get_new_items()
-        wip_relationship_items = self._get_wip_relationship_items()
+        wip_items = self._get_wip_items()
         scene = self.new_scene()
         self.hidden_items.clear()
         self.removed_items.clear()
-        if not new_items and not wip_relationship_items:
+        if not new_items and not wip_items:
             item = QGraphicsTextItem("Nothing to show.")
             scene.addItem(item)
         else:
@@ -353,8 +353,8 @@ class GraphViewMixin:
                 self._add_new_items(scene, *new_items)  # pylint: disable=no-value-for-parameter
             else:
                 object_items = []
-            if wip_relationship_items:
-                self._add_wip_relationship_items(scene, wip_relationship_items, object_items)
+            if wip_items:
+                self._add_wip_items(scene, object_items, *wip_items)  # pylint: disable=no-value-for-parameter
         self.extend_scene()
         toc = time.clock()
         _ = timeit and self.msg.emit("Graph built in {} seconds\t".format(toc - tic))
@@ -445,27 +445,33 @@ class GraphViewMixin:
             arc_items.append(arc_item)
         return object_items, relationship_items, arc_items
 
-    def _get_wip_relationship_items(self):
-        """Removes and returns wip relationship items from the current scene.
+    def _get_wip_items(self):
+        """Removes wip items from the current scene and returns them.
 
         Returns:
+            list: ObjectItem instances
             list: RelationshipItem instances
+            list: ArcItem instances
         """
         scene = self.ui.graphicsView.scene()
         if not scene:
             return []
-        wip_items = []
+        obj_items = set()
+        rel_items = list()
+        arc_items = list()
         for item in scene.items():
             if isinstance(item, RelationshipItem) and item.is_wip:
-                for arc_item in item.arc_items:
-                    scene.removeItem(arc_item)
-                unique_object_items = set(arc_item.obj_item for arc_item in item.arc_items)
-                for obj_item in unique_object_items:
-                    scene.removeItem(obj_item)
-                    obj_item.arc_items = [arc for arc in obj_item.arc_items if arc in item.arc_items]
-                scene.removeItem(item)
-                wip_items.append(item)
-        return wip_items
+                rel_items.append(item)
+                arc_items.extend(item.arc_items)
+                obj_items.update(arc_item.obj_item for arc_item in item.arc_items)
+        for obj_item in obj_items:
+            obj_item.arc_items = [arc for arc in obj_item.arc_items if arc in arc_items]
+            scene.removeItem(obj_item)
+        for arc_item in arc_items:
+            scene.removeItem(arc_item)
+        for rel_item in rel_items:
+            scene.removeItem(rel_item)
+        return list(obj_items), rel_items, arc_items
 
     @staticmethod
     def _add_new_items(scene, object_items, relationship_items, arc_items):
@@ -473,28 +479,25 @@ class GraphViewMixin:
             scene.addItem(item)
 
     @staticmethod
-    def _add_wip_relationship_items(scene, wip_relationship_items, new_object_items):
-        """Adds wip relationship items to the given scene, merging completed members with existing
-        object items by entity id.
+    def _add_wip_items(scene, new_object_items, wip_object_items, wip_relationship_items, wip_arc_items):
+        """Adds wip items to the given scene, merging wip object items with existing ones by entity id.
 
         Args:
             scene (QGraphicsScene)
-            wip_relationship_items (list)
             new_object_items (list)
+            wip_object_items (list)
+            wip_relationship_items (list)
+            wip_arc_items (list)
         """
         object_items_lookup = dict()
         for object_item in new_object_items:
             object_items_lookup[object_item.entity_id] = object_item
-        for rel_item in wip_relationship_items:
-            scene.addItem(rel_item)
-            for arc_item in rel_item.arc_items:
-                scene.addItem(arc_item)
-            unique_object_items = set(arc_item.obj_item for arc_item in rel_item.arc_items)
-            for obj_item in unique_object_items:
-                scene.addItem(obj_item)
-                obj_item._merge_target = object_items_lookup.get(obj_item.entity_id)
-                if obj_item._merge_target:
-                    obj_item.merge_into_target(force=True)
+        for item in wip_object_items + wip_relationship_items + wip_arc_items:
+            scene.addItem(item)
+        for obj_item in wip_object_items:
+            obj_item._merge_target = object_items_lookup.get(obj_item.entity_id)
+            if obj_item._merge_target:
+                obj_item.merge_into_target(force=True)
 
     @staticmethod
     def shortest_path_matrix(N, src_inds, dst_inds, spread):
