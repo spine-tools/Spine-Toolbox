@@ -465,6 +465,7 @@ class GraphViewMixin:
                 unique_object_items = set(arc_item.obj_item for arc_item in item.arc_items)
                 for obj_item in unique_object_items:
                     scene.removeItem(obj_item)
+                    obj_item.arc_items = [arc for arc in obj_item.arc_items if arc in item.arc_items]
                 scene.removeItem(item)
                 wip_items.append(item)
         return wip_items
