@@ -52,6 +52,7 @@ class GraphViewMixin:
         self.rejected_items = list()
         self.removed_items = list()
         self.entity_item_selection = list()
+        self._nothing_item = QGraphicsTextItem("Nothing to show.")
         self.zoom_widget_action = None
         area = self.dockWidgetArea(self.ui.dockWidget_item_palette)
         self._handle_item_palette_dock_location_changed(area)
@@ -345,8 +346,7 @@ class GraphViewMixin:
         self.hidden_items.clear()
         self.removed_items.clear()
         if not new_items and not wip_items:
-            item = QGraphicsTextItem("Nothing to show.")
-            scene.addItem(item)
+            scene.addItem(self._nothing_item)
         else:
             if new_items:
                 object_items = new_items[0]
@@ -657,9 +657,8 @@ class GraphViewMixin:
         scene = self.ui.graphicsView.scene()
         if not scene:
             scene = self.new_scene()
-        for item in scene.items():
-            if isinstance(item, QGraphicsTextItem):
-                scene.removeItem(item)
+        if scene.items() == [self._nothing_item]:
+            scene.removeItem(self._nothing_item)
         scene_pos = self.ui.graphicsView.mapToScene(pos)
         entity_type, entity_class_id = text.split(":")
         entity_class_id = int(entity_class_id)
