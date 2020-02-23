@@ -115,11 +115,29 @@ class CommandBase(QUndoCommand):
     def age(self):
         return self._age
 
+    def block_notifications(self, func):
+        """Calls given function while blocking notifications on the affected Data Store forms.
+        This is so undo() and subsequent redo() calls don't trigger the same notifications over and over.
+        """
+        listeners = self.db_mngr.signaller.db_map_listeners(self.db_map)
+        for listener in listeners:
+            listener.blockSignals(True)
+        func(self)
+        for listener in listeners:
+            listener.blockSignals(False)
+
     @staticmethod
     def redomethod(func):
+        """Wraps the given function with a mechanism to determine this command's completion.
+        The command is considered completed if calling the function triggers a certain signal.
+        Once the command is completed, we don't listen to the signal anymore
+        and we also block notifications on the affected Data Store forms.
+        If the signal is not received, then the command is declared obsolete.
+        """
+
         def redo(self):
             if self._completed:
-                func(self)
+                self.block_notifications(func)
                 return
             self.receive_signal.connect(self.receive_items_changed)
             func(self)
@@ -129,11 +147,23 @@ class CommandBase(QUndoCommand):
 
         return redo
 
+    @staticmethod
+    def undomethod(func):
+        """Wraps the given function with an artifact to block notifications on the affected Data Store forms.
+        """
+
+        def undo(self):
+            self.block_notifications(func)
+
+        return undo
+
     @Slot(object)
-    def receive_items_changed(self, db_map_data):
+    def receive_items_changed(self, _db_map_data):
+        """Marks the command as completed."""
         self._completed = True
 
     def data(self):
+        """Returns data to present this command in a DBHistoryDialog."""
         raise NotImplementedError()
 
 
@@ -205,6 +235,7 @@ class AddItemsCommand(CommandBase):
     def redo(self):
         self.db_mngr.add_or_update_items(self.redo_db_map_data, self.method_name, self.emit_signal_name)
 
+    @CommandBase.undomethod
     def undo(self):
         self.db_mngr.do_remove_items(self.undo_db_map_data)
 
@@ -284,6 +315,7 @@ class UpdateItemsCommand(CommandBase):
     def redo(self):
         self.db_mngr.add_or_update_items(self.redo_db_map_data, self.method_name, self.emit_signal_name)
 
+    @CommandBase.undomethod
     def undo(self):
         self.db_mngr.add_or_update_items(self.undo_db_map_data, self.method_name, self.emit_signal_name)
 
@@ -315,6 +347,7 @@ class SetParameterDefinitionTagsCommand(CommandBase):
     def redo(self):
         self.db_mngr.add_or_update_items(self.redo_db_map_data, self.method_name, self.emit_signal_name)
 
+    @CommandBase.undomethod
     def undo(self):
         self.db_mngr.add_or_update_items(self.undo_db_map_data, self.method_name, self.emit_signal_name)
 
@@ -359,6 +392,7 @@ class RemoveItemsCommand(CommandBase):
     def redo(self):
         self.db_mngr.do_remove_items(self.redo_db_map_typed_data)
 
+    @CommandBase.undomethod
     def undo(self):
         for item_type in reversed(list(self.undo_typed_db_map_data.keys())):
             db_map_data = self.undo_typed_db_map_data[item_type]
