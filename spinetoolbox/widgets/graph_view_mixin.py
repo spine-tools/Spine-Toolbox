@@ -322,6 +322,8 @@ class GraphViewMixin:
         new_items = self._get_new_items()
         wip_relationship_items = self._get_wip_relationship_items()
         scene = self.new_scene()
+        self.hidden_items.clear()
+        self.removed_items.clear()
         if not new_items and not wip_relationship_items:
             item = QGraphicsTextItem("Nothing to show.")
             scene.addItem(item)
@@ -333,8 +335,7 @@ class GraphViewMixin:
                 object_items = []
             if wip_relationship_items:
                 self._add_wip_relationship_items(scene, wip_relationship_items, object_items)
-            self.hidden_items.clear()
-            self.removed_items.clear()
+
         self.extend_scene()
         toc = time.clock()
         _ = timeit and self.msg.emit("Graph built in {} seconds\t".format(toc - tic))
