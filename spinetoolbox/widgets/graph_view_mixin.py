@@ -198,9 +198,10 @@ class GraphViewMixin:
         relationship_ids = self._added_relationships.keys()
         restored_ids = self.restore_removed_entities(relationship_ids)
         rem_relationships = [x for id_, x in self._added_relationships.items() if id_ not in restored_ids]
-        object_ids = [x.entity_id for x in self.ui.graphicsView.items() if isinstance(x, ObjectItem)]
+        rem_object_id_lists = [{int(id_) for id_ in x["object_id_list"].split(",")} for x in rem_relationships]
+        object_ids = {x.entity_id for x in self.ui.graphicsView.items() if isinstance(x, ObjectItem)}
         self._added_relationships.clear()
-        if any(all(int(id_) in object_ids for id_ in x["object_id_list"].split(",")) for x in rem_relationships):
+        if any(object_ids.intersection(object_id_list) for object_id_list in rem_object_id_lists):
             self.build_graph()
 
     def receive_relationships_removed(self, db_map_data):
@@ -360,7 +361,7 @@ class GraphViewMixin:
         self.graph_created.emit()
 
     def _get_selected_object_ids(self):
-        """Returns a set of object ids according to selection in the object tree.
+        """Returns a set of ids corresponding to selected objects in the object tree.
 
         Returns:
             set
@@ -390,26 +391,22 @@ class GraphViewMixin:
             list: arc destination indices
         """
         rejected_entity_ids = {x.entity_id for x in self.rejected_items}
-        object_ids = list(self._get_selected_object_ids() - rejected_entity_ids)
-        src_inds = list()
-        dst_inds = list()
+        object_ids = self._get_selected_object_ids() - rejected_entity_ids
         relationship_ids = list()
-        relationship_ind = len(object_ids)
-        for relationship in self.db_mngr.get_relationships(self.db_map):
+        object_id_lists = list()
+        for relationship in self.db_mngr.find_cascading_relationships({self.db_map: object_ids}).get(self.db_map, []):
             if relationship["id"] in rejected_entity_ids:
                 continue
-            object_id_list = relationship["object_id_list"]
-            object_id_list = [int(x) for x in object_id_list.split(",")]
-            object_inds = list()
-            for object_id in object_id_list:
-                try:
-                    object_ind = object_ids.index(object_id)
-                    object_inds.append(object_ind)
-                except ValueError:
-                    pass
-            if len(object_inds) < 2:
-                continue
             relationship_ids.append(relationship["id"])
+            object_id_list = [int(x) for x in relationship["object_id_list"].split(",")]
+            object_ids.update(object_id_list)
+            object_id_lists.append(object_id_list)
+        src_inds = list()
+        dst_inds = list()
+        object_ids = list(object_ids)
+        relationship_ind = len(object_ids)
+        for object_id_list in object_id_lists:
+            object_inds = [object_ids.index(id_) for id_ in object_id_list]
             for object_ind in object_inds:
                 src_inds.append(relationship_ind)
                 dst_inds.append(object_ind)
