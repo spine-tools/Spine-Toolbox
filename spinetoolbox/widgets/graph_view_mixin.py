@@ -20,7 +20,7 @@ import time
 import numpy as np
 from numpy import atleast_1d as arr
 from scipy.sparse.csgraph import dijkstra
-from PySide2.QtCore import Qt, Signal, Slot
+from PySide2.QtCore import Qt, Signal, Slot, QTimer
 from PySide2.QtWidgets import QGraphicsTextItem
 from .custom_menus import GraphViewContextMenu, ObjectItemContextMenu, RelationshipItemContextMenu
 from .custom_qwidgets import ZoomWidgetAction
@@ -134,14 +134,23 @@ class GraphViewMixin:
         """
         super().receive_objects_added(db_map_data)
         objects = db_map_data.get(self.db_map, [])
-        self._added_objects = {(x["class_id"], x["name"]): x["id"] for x in objects}
-        object_ids = self._added_objects.values()
+        self._added_objects = {x["id"]: x for x in objects}
+        QTimer.singleShot(0, self._ensure_objects_in_graph)
+
+    @Slot()
+    def _ensure_objects_in_graph(self):
+        """Makes sure all objects in ``self._added_objects`` are materialized in the graph if corresponds.
+        It is assumed that ``self._added_objects`` doesn't contain information regarding objects added
+        from the graph itself (through Item Palette etc.). These are materialized in ``add_object()``.
+        """
+        object_ids = self._added_objects.keys()
         restored_ids = self.restore_removed_entities(object_ids)
-        rem_class_ids = {x["class_id"] for x in objects if x["id"] not in restored_ids}
+        rem_class_ids = {x["class_id"] for id_, x in self._added_objects.items() if id_ not in restored_ids}
         sel_class_ids = {
             ind.model().item_from_index(ind).db_map_id(self.db_map)
             for ind in self.object_tree_model.selected_object_class_indexes
         }
+        self._added_objects.clear()
         if rem_class_ids.intersection(sel_class_ids):
             self.build_graph()
 
@@ -176,11 +185,20 @@ class GraphViewMixin:
         """
         super().receive_relationships_added(db_map_data)
         relationships = db_map_data.get(self.db_map, [])
-        self._added_relationships = {(x["class_id"], x["object_id_list"]): x["id"] for x in relationships}
-        relationship_ids = self._added_relationships.values()
+        self._added_relationships = {x["id"]: x for x in relationships}
+        QTimer.singleShot(0, self._ensure_relationships_in_graph)
+
+    @Slot()
+    def _ensure_relationships_in_graph(self):
+        """Makes sure all relationships in ``self._added_relationships`` are materialized in the graph if corresponds.
+        It is assumed that ``self._added_relationships`` doesn't contain information regarding relationships added
+        from the graph itself (through Item Palette etc.). These are materialized in ``add_relationship()``.
+        """
+        relationship_ids = self._added_relationships.keys()
         restored_ids = self.restore_removed_entities(relationship_ids)
-        rem_relationships = [x for x in relationships if x["id"] not in restored_ids]
+        rem_relationships = [x for id_, x in self._added_relationships.items() if id_ not in restored_ids]
         object_ids = [x.entity_id for x in self.ui.graphicsView.items() if isinstance(x, ObjectItem)]
+        self._added_relationships.clear()
         if any(all(int(id_) in object_ids for id_ in x["object_id_list"].split(",")) for x in rem_relationships):
             self.build_graph()
 
@@ -335,7 +353,6 @@ class GraphViewMixin:
                 object_items = []
             if wip_relationship_items:
                 self._add_wip_relationship_items(scene, wip_relationship_items, object_items)
-
         self.extend_scene()
         toc = time.clock()
         _ = timeit and self.msg.emit("Graph built in {} seconds\t".format(toc - tic))
@@ -717,8 +734,10 @@ class GraphViewMixin:
         item = dict(class_id=object_class_id, name=name)
         db_map_data = {self.db_map: [item]}
         self.db_mngr.add_objects(db_map_data)
-        object_id = self._added_objects.get((object_class_id, name))
-        self._added_objects.clear()
+        object_lookup = {(v["class_id"], v["name"]): k for k, v in self._added_objects.items()}
+        object_id = object_lookup.get((object_class_id, name), None)
+        if object_id is not None:
+            self._added_objects.pop(object_id)
         return object_id
 
     def update_object(self, object_id, name):
@@ -744,8 +763,10 @@ class GraphViewMixin:
         relationship = {'name': name, 'object_id_list': object_id_list, 'class_id': class_id}
         self.db_mngr.add_relationships({self.db_map: [relationship]})
         object_id_list = ",".join([str(id_) for id_ in object_id_list])
-        relationship_id = self._added_relationships.get((class_id, object_id_list))
-        self._added_relationships.clear()
+        relationship_lookup = {(v["class_id"], v["object_id_list"]): k for k, v in self._added_relationships.items()}
+        relationship_id = relationship_lookup.get((class_id, object_id_list), None)
+        if relationship_id is not None:
+            self._added_relationships.pop(relationship_id)
         return relationship_id
 
     @Slot("QPoint")
