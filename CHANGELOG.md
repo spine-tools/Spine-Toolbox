@@ -58,6 +58,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
   the form.
 - Tree, graph, and tabular views have been merged into one consolidated view. You can chose your preferred style
   from the View menu.
+- The graph view behavior has changed. Now selecting objects in the object tree not only shows those objects but also 
+  all the cascading relationships. This is to facilitate exploring the system without a previous knowledge.
 
 ### Deprecated
 - Saving project information to .proj files
