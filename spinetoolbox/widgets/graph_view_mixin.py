@@ -397,10 +397,12 @@ class GraphViewMixin:
         for relationship in self.db_mngr.find_cascading_relationships({self.db_map: object_ids}).get(self.db_map, []):
             if relationship["id"] in rejected_entity_ids:
                 continue
+            object_id_list = {int(x) for x in relationship["object_id_list"].split(",")} - rejected_entity_ids
+            if len(object_id_list) < 2:
+                continue
             relationship_ids.append(relationship["id"])
-            object_id_list = [int(x) for x in relationship["object_id_list"].split(",")]
-            object_ids.update(object_id_list)
             object_id_lists.append(object_id_list)
+            object_ids.update(object_id_list)
         src_inds = list()
         dst_inds = list()
         object_ids = list(object_ids)
