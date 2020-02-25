@@ -17,10 +17,9 @@ Contains Importer project item class.
 """
 
 from collections import Counter
-import os
 import logging
+import os
 import json
-import sys
 from PySide2.QtCore import Qt, Slot, QFileInfo, QEventLoop, QProcess
 from PySide2.QtGui import QStandardItem, QStandardItemModel
 from PySide2.QtWidgets import QFileIconProvider, QListWidget, QDialog, QVBoxLayout, QDialogButtonBox
@@ -30,6 +29,7 @@ from spinetoolbox.spine_io.importers.csv_reader import CSVConnector
 from spinetoolbox.spine_io.importers.excel_reader import ExcelConnector
 from spinetoolbox.spine_io.importers.gdx_connector import GdxConnector
 from spinetoolbox.widgets.import_preview_window import ImportPreviewWindow
+from spinetoolbox.config import PYTHON_EXECUTABLE
 from . import importer_program
 
 _CONNECTOR_NAME_TO_CLASS = {
@@ -327,7 +327,12 @@ class Importer(ProjectItem):
         self.importer_process.readyReadStandardError.connect(self._log_importer_process_stderr)
         self.importer_process.finished.connect(self.importer_process.deleteLater)
         program_path = os.path.abspath(importer_program.__file__)
-        self.importer_process.start(sys.executable, [program_path])
+        python_path = self._toolbox.qsettings().value("appSettings/pythonPath", defaultValue="")
+        if python_path != "":
+            python_cmd = python_path
+        else:
+            python_cmd = PYTHON_EXECUTABLE
+        self.importer_process.start(python_cmd, [program_path])
         self.importer_process.waitForStarted()
         self.importer_process.write(json.dumps(args).encode("utf-8"))
         self.importer_process.write(b'\n')

@@ -3,6 +3,9 @@ All **notable** changes to this project are documented here.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
+## [0.4.0-beta.3] - 2020-02-25
+- Executing the Importer project item has been fixed on Windows release version
+
 ## [0.4.0-beta.2] - 2020-02-18
 ### Fixed
 - Executing Julia tools in the embedded Julia Console for Windows release versions
