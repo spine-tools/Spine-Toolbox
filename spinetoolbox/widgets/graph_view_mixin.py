@@ -120,6 +120,7 @@ class GraphViewMixin:
     def receive_relationship_classes_updated(self, db_map_data):
         super().receive_relationship_classes_updated(db_map_data)
         self.relationship_class_list_model.receive_entity_classes_updated(db_map_data)
+        self.refresh_icons(db_map_data)
 
     def receive_relationship_classes_removed(self, db_map_data):
         super().receive_relationship_classes_removed(db_map_data)
