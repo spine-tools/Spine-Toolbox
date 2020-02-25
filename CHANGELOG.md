@@ -72,6 +72,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 ### Fixed
 - Data advertised by a project item during execution is only accessible by its direct children.
   In other words, resources are passed to the next items in line but not beyond.
+- Executing the Importer project item has been fixed on Windows release version
 
 ### Security
 
