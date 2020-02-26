@@ -139,7 +139,7 @@ class TabularViewMixin:
         if visible:
             self.reload_pivot_table()
             self.reload_frozen_table()
-        self.ui.dockWidget_frozen_table.setVisible(self.ui.dockWidget_pivot_table.isVisible())
+            self.ui.dockWidget_frozen_table.setVisible(True)
 
     @Slot(bool)
     def _handle_frozen_table_visibility_changed(self, visible):
@@ -172,7 +172,9 @@ class TabularViewMixin:
         if class_item.can_fetch_more():
             class_item.fetch_more()
             model.layoutChanged.emit()
-        return [item.db_map_data(self.db_map) for item in class_item.find_children_by_id(self.db_map, True)]
+        return [
+            item.db_map_data(self.db_map) for item in class_item.find_children_by_id(self.db_map, True, reverse=False)
+        ]
 
     def load_empty_relationship_data(self, objects_per_class=None):
         """Returns a dict containing all possible relationships in the current class.
@@ -192,8 +194,8 @@ class TabularViewMixin:
             objects = objects_per_class.get(obj_cls_id, None)
             if objects is None:
                 objects = self._get_entities(obj_cls_id, "object class")
-            id_set = {item["id"] for item in objects}
-            object_id_sets.append(id_set)
+            id_set = {item["id"]: None for item in objects}
+            object_id_sets.append(list(id_set.keys()))
         return dict.fromkeys(product(*object_id_sets))
 
     def load_full_relationship_data(self, relationships=None, action="add"):
@@ -252,7 +254,7 @@ class TabularViewMixin:
             if m.canFetchMore():
                 model._fetch_sub_model = m
                 model.fetchMore()
-        return {id_ for m in sub_models for id_ in m._main_data}
+        return [id_ for m in sub_models for id_ in m._main_data]
 
     def _get_parameter_values_or_defs(self, item_type):
         """Returns a list of dict items from the parameter model

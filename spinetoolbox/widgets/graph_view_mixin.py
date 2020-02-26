@@ -322,7 +322,7 @@ class GraphViewMixin:
     def _handle_entity_graph_visibility_changed(self, visible):
         if visible:
             self.build_graph()
-        self.ui.dockWidget_item_palette.setVisible(self.ui.dockWidget_entity_graph.isVisible())
+            self.ui.dockWidget_item_palette.setVisible(True)
 
     @Slot(bool)
     def _handle_item_palette_visibility_changed(self, visible):

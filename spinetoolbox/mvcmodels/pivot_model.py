@@ -130,11 +130,10 @@ class PivotModel:
         index_getter = self._index_key_getter(indexes)
         if self.pivot_frozen:
             frozen_getter = self._index_key_getter(self.pivot_frozen)
-            result = set(index_getter(k) for k in self._data if frozen_getter(k) == self.frozen_value)
+            result = {index_getter(k): None for k in self._data if frozen_getter(k) == self.frozen_value}
         else:
-            result = set(index_getter(k) for k in self._data)
-        result = {x for x in result if None not in x}
-        return sorted(result)
+            result = {index_getter(k): None for k in self._data}
+        return [x for x in result if None not in x]
 
     def set_pivot(self, rows, columns, frozen, frozen_value):
         """Sets pivot."""
