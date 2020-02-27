@@ -17,6 +17,7 @@ Classes to manage tool instance execution in various forms.
 """
 
 import logging
+import json
 from PySide2.QtCore import QObject, QProcess, Slot, Signal
 
 
@@ -118,6 +119,7 @@ class QProcessExecutionManager(ExecutionManager):
         self._process = QProcess(self)
         self.process_output = None  # stdout when running silent
         self.error_output = None  # stderr when running silent
+        self.data_to_inject = None
 
     def program(self):
         """Program getter method."""
@@ -152,7 +154,16 @@ class QProcessExecutionManager(ExecutionManager):
             self.process_failed_to_start = True
             self._process.deleteLater()
             self._process = None
+            self.data_to_inject = None
             self.execution_finished.emit(-9998)
+        if self.data_to_inject is not None:
+            self.inject_data_to_write_channel()
+
+    def inject_data_to_write_channel(self):
+        """Writes data to process write channel and closes it afterwards."""
+        self._process.write(json.dumps(self.data_to_inject).encode("utf-8"))
+        self._process.write(b'\n')
+        self._process.closeWriteChannel()
 
     def wait_for_process_finished(self, msecs=30000):
         """Wait for subprocess to finish.
@@ -236,6 +247,7 @@ class QProcessExecutionManager(ExecutionManager):
         finally:
             self._process.deleteLater()
             self._process = None
+            self.data_to_inject = None
 
     @Slot(int)
     def on_process_finished(self, exit_code):
@@ -274,6 +286,7 @@ class QProcessExecutionManager(ExecutionManager):
         # Delete QProcess
         self._process.deleteLater()
         self._process = None
+        self.data_to_inject = None
         self.execution_finished.emit(exit_code)
 
     @Slot(name="on_ready_stdout")
