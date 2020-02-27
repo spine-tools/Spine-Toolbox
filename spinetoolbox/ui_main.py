@@ -1518,7 +1518,7 @@ class ToolboxUI(QMainWindow):
         recents_list = recents.split("\n")
         for entry in recents_list:
             _, path = entry.split("<>")
-            if path == p:
+            if os.path.normcase(path) == os.path.normcase(p):
                 recents_list.pop(recents_list.index(entry))
                 break
         updated_recents = "\n".join(recents_list)
@@ -1535,14 +1535,17 @@ class ToolboxUI(QMainWindow):
         else:
             recents = str(recents)
             recents_list = recents.split("\n")
-            # Add path only if it's not in the list already
-            if entry not in recents_list:
+            normalized_recents = list(map(os.path.normcase, recents_list))
+            try:
+                index = normalized_recents.index(os.path.normcase(entry))
+            except ValueError:
+                # Add path only if it's not in the list already
                 recents_list.insert(0, entry)
                 if len(recents_list) > 5:
                     recents_list.pop()
             else:
                 # If entry was on the list, move it as the first item
-                recents_list.insert(0, recents_list.pop(recents_list.index(entry)))
+                recents_list.insert(0, recents_list.pop(index))
             updated_recents = "\n".join(recents_list)
         # Save updated recent paths
         self._qsettings.setValue("appSettings/recentProjects", updated_recents)
