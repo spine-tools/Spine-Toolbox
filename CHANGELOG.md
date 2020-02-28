@@ -3,14 +3,20 @@ All **notable** changes to this project are documented here.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
+## [0.4.0-beta.5] - 2020-02-28
+### Fixed
+- A bug that sometimes made duplicate entries to File->Open recents menu
+
 ## [0.4.0-beta.4] - 2020-02-27
-- Importer now uses the same QProcessExecutionManager for running the importer_program.py
+### Fixed
+- Importer now uses QProcessExecutionManager for running the importer_program.py
 - Importer checks if the Python executable in Settings is valid before trying to start
-  the importer_process.py
+  the importer_program.py
 
 ## [0.4.0-beta.3] - 2020-02-25
+### Fixed
 - Executing the Importer project item has been fixed on Windows release version. I.e.
-  running import_process.py now works if Python executable is set up correctly in 
+  running import_program.py now works if Python executable is set up correctly in 
   Settings.
 
 ## [0.4.0-beta.2] - 2020-02-18
