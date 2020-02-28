@@ -108,5 +108,8 @@ class ParameterIndexSettingsWindow(QWidget):
 
     @Slot()
     def _reject_and_close(self):
-        self.settings_rejected.emit()
         self.close()
+
+    def closeEvent(self, event):
+        super().closeEvent(event)
+        self.settings_rejected.emit()

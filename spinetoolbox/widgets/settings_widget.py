@@ -375,24 +375,14 @@ class SettingsWidget(QWidget):
         """Update project name and description if these have been changed."""
         if not self._project:
             return
-        save = False
         new_name = self.ui.lineEdit_project_name.text().strip()
         if self._project.name != new_name:
             # Change project name
-            if not new_name == "":
-                self._project.change_name(new_name)
-                # Remove entry with the old name from File->Open recent menu
-                self._toolbox.remove_path_from_recent_projects(self._project.project_dir)
-                # Add entry with the new name back to File->Open recent menu
-                self._toolbox.update_recent_projects()
-                save = True
+            if new_name != "":
+                self._project.call_set_name(new_name)
         if not self._project.description == self.ui.textEdit_project_description.toPlainText():
             # Set new project description
-            self._project.set_description(self.ui.textEdit_project_description.toPlainText())
-            save = True
-        if save:
-            self._toolbox.msg.emit("Project settings changed. Saving project...")
-            self._toolbox.save_project()
+            self._project.call_set_description(self.ui.textEdit_project_description.toPlainText())
 
     def check_if_python_env_changed(self, new_path):
         """Checks if Python environment was changed.

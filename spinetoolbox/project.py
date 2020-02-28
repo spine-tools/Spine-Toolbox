@@ -20,14 +20,22 @@ import os
 import logging
 import json
 from PySide2.QtCore import Slot, Signal
+from PySide2.QtWidgets import QMessageBox
 from spine_engine import SpineEngine, SpineEngineState
 from .metaobject import MetaObject
-from .helpers import create_dir, inverted
+from .helpers import create_dir, inverted, erase_dir
 from .tool_specifications import JuliaTool, PythonTool, GAMSTool, ExecutableTool
 from .config import LATEST_PROJECT_VERSION, PROJECT_FILENAME
 from .dag_handler import DirectedGraphHandler
 from .project_tree_item import LeafProjectTreeItem
 from .spine_db_manager import SpineDBManager
+from .project_commands import (
+    SetProjectNameCommand,
+    SetProjectDescriptionCommand,
+    AddProjectItemsCommand,
+    RemoveProjectItemCommand,
+    RemoveAllProjectItemsCommand,
+)
 
 
 class SpineToolboxProject(MetaObject):
@@ -68,6 +76,7 @@ class SpineToolboxProject(MetaObject):
         self.config_dir = None  # Full path to .spinetoolbox directory
         self.items_dir = None  # Full path to items directory
         self.config_file = None  # Full path to .spinetoolbox/project.json file
+        self._toolbox.undo_stack.clear()
         if not self._create_project_structure(p_dir):
             self._logger.msg_error.emit("Creating project directory " "structure to <b>{0}</b> failed".format(p_dir))
 
@@ -107,35 +116,39 @@ class SpineToolboxProject(MetaObject):
             return False
         return True
 
-    def change_name(self, name):
+    def call_set_name(self, name):
+        self._toolbox.undo_stack.push(SetProjectNameCommand(self, name))
+
+    def call_set_description(self, description):
+        self._toolbox.undo_stack.push(SetProjectDescriptionCommand(self, description))
+
+    def set_name(self, name):
         """Changes project name.
 
         Args:
             name (str): New project name
         """
         super().set_name(name)
-        # Update Window Title
-        self._toolbox.setWindowTitle("Spine Toolbox    -- {} --".format(self.name))
+        self._toolbox.update_window_title()
+        # Remove entry with the old name from File->Open recent menu
+        self._toolbox.remove_path_from_recent_projects(self.project_dir)
+        # Add entry with the new name back to File->Open recent menu
+        self._toolbox.update_recent_projects()
         self._logger.msg.emit("Project name changed to <b>{0}</b>".format(self.name))
 
-    def save(self, tool_def_paths):
-        """Collects project information and objects
-        into a dictionary and writes it to a JSON file.
+    def set_description(self, description):
+        super().set_description(description)
+        msg = "Project description "
+        if description:
+            msg += f"changed to <b>{description}</b>"
+        else:
+            msg += "cleared"
+        self._logger.msg.emit(msg)
 
-        Args:
-            tool_def_paths (list): List of absolute paths to tool specification files
-
-        Returns:
-            bool: True or False depending on success
-        """
-        project_dict = dict()  # Dictionary for storing project info
-        project_dict["version"] = LATEST_PROJECT_VERSION
-        project_dict["name"] = self.name
-        project_dict["description"] = self.description
-        project_dict["tool_specifications"] = tool_def_paths
-        # Compute connections directly from Links on scene
+    @staticmethod
+    def get_connections(links):
         connections = list()
-        for link in self._toolbox.ui.graphicsView.links():
+        for link in links:
             src_connector = link.src_connector
             src_anchor = src_connector.position
             src_name = src_connector.parent_name()
@@ -144,7 +157,25 @@ class SpineToolboxProject(MetaObject):
             dst_name = dst_connector.parent_name()
             conn = {"from": [src_name, src_anchor], "to": [dst_name, dst_anchor]}
             connections.append(conn)
-        project_dict["connections"] = connections
+        return connections
+
+    def save(self, tool_spec_paths):
+        """Collects project information and objects
+        into a dictionary and writes it to a JSON file.
+
+        Args:
+            tool_spec_paths (list): List of absolute paths to tool specification files
+
+        Returns:
+            bool: True or False depending on success
+        """
+        project_dict = dict()  # Dictionary for storing project info
+        project_dict["version"] = LATEST_PROJECT_VERSION
+        project_dict["name"] = self.name
+        project_dict["description"] = self.description
+        project_dict["tool_specifications"] = tool_spec_paths
+        # Compute connections directly from Links on scene
+        project_dict["connections"] = self.get_connections(self._toolbox.ui.graphicsView.links())
         items_dict = dict()  # Dictionary for storing project items
         # Traverse all items in project model by category
         for category_item in self._project_item_model.root().children():
@@ -177,7 +208,7 @@ class SpineToolboxProject(MetaObject):
                 item_dict["name"] = name
                 items.append(item_dict)
                 empty = False
-            self.add_project_items(category_name, *items, verbosity=False)
+            self.do_add_project_items(category_name, *items, verbosity=False)
         if empty:
             self._logger.msg_warning.emit("Project has no items")
         return True
@@ -237,7 +268,75 @@ class SpineToolboxProject(MetaObject):
         return None
 
     def add_project_items(self, category_name, *items, set_selected=False, verbosity=True):
-        """Adds item to project.
+        """Pushes an AddProjectItemsCommand to the toolbox undo stack.
+        """
+        self._toolbox.undo_stack.push(
+            AddProjectItemsCommand(self, category_name, *items, set_selected=set_selected, verbosity=verbosity)
+        )
+
+    def make_project_tree_items(self, category_name, *items):
+        """Creates and returns list of LeafProjectTreeItem instances.
+
+        Args:
+            category_name (str): The items' category
+            items (dict): one or more dict of items to add
+
+        Returns:
+            list(LeafProjectTreeItem)
+        """
+        category_ind = self._project_item_model.find_category(category_name)
+        if not category_ind:
+            self._logger.msg_error.emit("Category {0} not found".format(category_name))
+            return []
+        category_item = self._project_item_model.item(category_ind)
+        item_maker = category_item.item_maker()
+        project_tree_items = []
+        for item_dict in items:
+            try:
+                item = item_maker(**item_dict, toolbox=self._toolbox, project=self, logger=self._logger)
+                project_tree_item = LeafProjectTreeItem(item, self._toolbox)
+                project_tree_items.append(project_tree_item)
+            except TypeError:
+                self._logger.msg_error.emit(
+                    "Loading project item <b>{0}</b> into category <b>{1}</b> failed. "
+                    "This is most likely caused by an outdated project file.".format(item_dict["name"], category_name)
+                )
+        return category_ind, project_tree_items
+
+    def _add_project_tree_items(self, category_ind, *project_tree_items, set_selected=False, verbosity=True):
+        """Adds LeafProjectTreeItem instances to project.
+
+        Args:
+            category_ind (QModelIndex): The category index
+            project_tree_items (LeafProjectTreeItem): one or more LeafProjectTreeItem instances to add
+            set_selected (bool): Whether to set item selected after the item has been added to project
+            verbosity (bool): If True, prints message
+        """
+        for project_tree_item in project_tree_items:
+            project_item = project_tree_item.project_item
+            self._project_item_model.insert_item(project_tree_item, category_ind)
+            # Append new node to networkx graph
+            self.add_to_dag(project_item.name)
+            if verbosity:
+                self._logger.msg.emit(
+                    "{0} <b>{1}</b> added to project.".format(project_item.item_type(), project_item.name)
+                )
+        if set_selected:
+            item = list(project_tree_items)[-1]
+            self.set_item_selected(item)
+
+    def set_item_selected(self, item):
+        """
+        Selects the given item.
+
+        Args:
+            item (LeafProjectTreeItem)
+        """
+        ind = self._project_item_model.find_item(item.name)
+        self._toolbox.ui.treeView_project.setCurrentIndex(ind)
+
+    def do_add_project_items(self, category_name, *items, set_selected=False, verbosity=True):
+        """Adds items to project at loading.
 
         Args:
             category_name (str): The items' category
@@ -245,42 +344,114 @@ class SpineToolboxProject(MetaObject):
             set_selected (bool): Whether to set item selected after the item has been added to project
             verbosity (bool): If True, prints message
         """
-        category_ind = self._project_item_model.find_category(category_name)
-        if not category_ind:
-            self._logger.msg_error.emit("Category {0} not found".format(category_name))
-            return
-        category_item = self._project_item_model.item(category_ind)
-        item_maker = category_item.item_maker()
-        for item_dict in items:
-            try:
-                item = item_maker(**item_dict, toolbox=self._toolbox, project=self, logger=self._logger)
-                tree_item = LeafProjectTreeItem(item, self._toolbox)
-            except TypeError:
-                self._logger.msg_error.emit(
-                    "Loading project item <b>{0}</b> into category <b>{1}</b> failed. "
-                    "This is most likely caused by an outdated project file.".format(item_dict["name"], category_name)
-                )
-                continue
-            self._project_item_model.insert_item(tree_item, category_ind)
-            # Append new node to networkx graph
-            self.add_to_dag(item.name)
-            if verbosity:
-                self._logger.msg.emit("{0} <b>{1}</b> added to project.".format(item.item_type(), item.name))
-            if set_selected:
-                self.set_item_selected(tree_item)
+        category_ind, project_tree_items = self.make_project_tree_items(category_name, *items)
+        self._add_project_tree_items(category_ind, *project_tree_items, set_selected=set_selected, verbosity=verbosity)
 
     def add_to_dag(self, item_name):
         """Add new node (project item) to the directed graph."""
         self.dag_handler.add_dag_node(item_name)
 
-    def set_item_selected(self, item):
-        """Sets item selected and shows its info screen.
+    def remove_all_items(self):
+        """Pushes a RemoveAllProjectItemsCommand to the toolbox undo stack.
+        """
+        items_per_category = self._project_item_model.items_per_category()
+        if not any(v for v in items_per_category.values()):
+            self._logger.msg.emit("No project items to remove")
+            return
+        delete_data = int(self._settings.value("appSettings/deleteData", defaultValue="0")) != 0
+        msg = "Remove all items from project?"
+        if not delete_data:
+            msg += "Item data directory will still be available in the project directory after this operation."
+        else:
+            msg += "<br><br><b>Warning: Item data will be permanently lost after this operation.</b>"
+        message_box = QMessageBox(
+            QMessageBox.Question,
+            "Remove All Items",
+            msg,
+            buttons=QMessageBox.Ok | QMessageBox.Cancel,
+            parent=self._toolbox,
+        )
+        message_box.button(QMessageBox.Ok).setText("Remove Items")
+        answer = message_box.exec_()
+        if answer != QMessageBox.Ok:
+            return
+        links = self._toolbox.ui.graphicsView.links()
+        self._toolbox.undo_stack.push(
+            RemoveAllProjectItemsCommand(self, items_per_category, links, delete_data=delete_data)
+        )
+
+    def remove_item(self, name, check_dialog=False):
+        """Pushes a RemoveProjectItemCommand to the toolbox undo stack.
 
         Args:
-            item (BaseProjectTreeItem): Project item to select
+            name (str): Item's name
+            check_dialog (bool): If True, shows 'Are you sure?' message box
         """
-        ind = self._project_item_model.find_item(item.name)
-        self._toolbox.ui.treeView_project.setCurrentIndex(ind)
+        delete_data = int(self._settings.value("appSettings/deleteData", defaultValue="0")) != 0
+        if check_dialog:
+            msg = "Remove item <b>{}</b> from project? ".format(name)
+            if not delete_data:
+                msg += "Item data directory will still be available in the project directory after this operation."
+            else:
+                msg += "<br><br><b>Warning: Item data will be permanently lost after this operation.</b>"
+            msg += "<br><br>Tip: Remove items by pressing 'Delete' key to bypass this dialog."
+            # noinspection PyCallByClass, PyTypeChecker
+            message_box = QMessageBox(
+                QMessageBox.Question,
+                "Remove Item",
+                msg,
+                buttons=QMessageBox.Ok | QMessageBox.Cancel,
+                parent=self._toolbox,
+            )
+            message_box.button(QMessageBox.Ok).setText("Remove Item")
+            answer = message_box.exec_()
+            if answer != QMessageBox.Ok:
+                return
+        self._toolbox.undo_stack.push(RemoveProjectItemCommand(self, name, delete_data=delete_data))
+
+    def do_remove_item(self, name):
+        """Removes item from project given its name.
+        This method is used when closing the existing project for opening a new one.
+
+        Args:
+            name (str): Item's name
+        """
+        ind = self._project_item_model.find_item(name)
+        category_ind = ind.parent()
+        item = self._project_item_model.item(ind)
+        self._remove_item(category_ind, item)
+
+    def _remove_item(self, category_ind, item, delete_data=False):
+        """
+        Removes LeafProjectTreeItem from project.
+
+        Args:
+            category_ind (QModelIndex): The category index
+            item (LeafProjectTreeItem): the item to remove
+            delete_data (bool): If set to True, deletes the directories and data associated with the item
+        """
+        try:
+            data_dir = item.project_item.data_dir
+        except AttributeError:
+            data_dir = None
+        # Remove item from project model
+        if not self._project_item_model.remove_item(item, parent=category_ind):
+            self._logger.msg_error.emit("Removing item <b>{0}</b> from project failed".format(item.name))
+        # Remove item icon and connected links (QGraphicsItems) from scene
+        icon = item.project_item.get_icon()
+        self._toolbox.ui.graphicsView.remove_icon(icon)
+        self.dag_handler.remove_node_from_graph(item.name)
+        item.project_item.tear_down()
+        if delete_data:
+            if data_dir:
+                # Remove data directory and all its contents
+                self._logger.msg.emit("Removing directory <b>{0}</b>".format(data_dir))
+                try:
+                    if not erase_dir(data_dir):
+                        self._logger.msg_error.emit("Directory does not exist")
+                except OSError:
+                    self._logger.msg_error.emit("[OSError] Removing directory failed. Check directory permissions.")
+            self._logger.msg.emit("Item <b>{0}</b> removed from project".format(item.name))
 
     def execute_dags(self, dags, execution_permits):
         """Executes given dags.
@@ -455,10 +626,6 @@ class SpineToolboxProject(MetaObject):
         # In those cases we don't need to notify other items.
         if dag:
             self.notify_changes_in_dag(dag)
-        elif self._project_item_model.find_item(item) is not None:
-            self._logger.msg_error.emit(
-                f"[BUG] Could not find a graph containing {item}. <b>Please reopen the project.</b>"
-            )
 
     @property
     def settings(self):

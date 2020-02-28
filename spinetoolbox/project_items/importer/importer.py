@@ -18,9 +18,7 @@ Contains Importer project item class.
 
 from collections import Counter
 import os
-import logging
 import json
-import sys
 from urllib.parse import urlparse
 from urllib.request import url2pathname
 from PySide2.QtCore import QAbstractListModel, QEventLoop, QFileInfo, QModelIndex, QProcess, Qt, Signal, Slot
@@ -32,6 +30,8 @@ from spinetoolbox.spine_io.importers.excel_reader import ExcelConnector
 from spinetoolbox.spine_io.importers.gdx_connector import GdxConnector
 from spinetoolbox.spine_io.importers.json_reader import JSONConnector
 from spinetoolbox.widgets.import_preview_window import ImportPreviewWindow
+from spinetoolbox.project_commands import UpdateImporterSettingsCommand, UpdateImporterCancelOnErrorCommand
+from spinetoolbox.config import PYTHON_EXECUTABLE
 from . import importer_program
 
 _CONNECTOR_NAME_TO_CLASS = {
@@ -110,22 +110,25 @@ class Importer(ProjectItem):
         s[self._properties_ui.treeView_files.doubleClicked] = self._handle_files_double_clicked
         return s
 
-    def activate(self):
-        """Restores selections, cancel on error checkbox and connects signals."""
-        self._properties_ui.cancel_on_error_checkBox.setCheckState(Qt.Checked if self.cancel_on_error else Qt.Unchecked)
-        self.restore_selections()
-        super().connect_signals()
+    @Slot(int)
+    def _handle_cancel_on_error_changed(self, _state):
+        cancel_on_error = self._properties_ui.cancel_on_error_checkBox.isChecked()
+        if self.cancel_on_error == cancel_on_error:
+            return
+        self._toolbox.undo_stack.push(UpdateImporterCancelOnErrorCommand(self, cancel_on_error))
 
-    def deactivate(self):
-        """Saves selections and disconnects signals."""
-        self.save_selections()
-        if not super().disconnect_signals():
-            logging.error("Item %s deactivation failed.", self.name)
-            return False
-        return True
+    def set_cancel_on_error(self, cancel_on_error):
+        self.cancel_on_error = cancel_on_error
+        if not self._active:
+            return
+        check_state = Qt.Checked if self.cancel_on_error else Qt.Unchecked
+        self._properties_ui.cancel_on_error_checkBox.blockSignals(True)
+        self._properties_ui.cancel_on_error_checkBox.setCheckState(check_state)
+        self._properties_ui.cancel_on_error_checkBox.blockSignals(False)
 
     def restore_selections(self):
         """Restores selections into shared widgets when this project item is selected."""
+        self._properties_ui.cancel_on_error_checkBox.setCheckState(Qt.Checked if self.cancel_on_error else Qt.Unchecked)
         self._properties_ui.label_name.setText(self.name)
         self._properties_ui.treeView_files.setModel(self._file_model)
 
@@ -270,7 +273,9 @@ class Importer(ProjectItem):
             settings (dict): Updated mapping (settings) dictionary
             importee (str): Absolute path to a file, whose mapping has been updated
         """
-        self.settings.setdefault(importee, {}).update(settings)
+        if self.settings.get(importee) == settings:
+            return
+        self._toolbox.undo_stack.push(UpdateImporterSettingsCommand(self, settings, importee))
 
     def _preview_destroyed(self, importee):
         """Destroys preview widget instance for the given importee.
@@ -291,10 +296,15 @@ class Importer(ProjectItem):
         self.importer_process.readyReadStandardError.connect(self._log_importer_process_stderr)
         self.importer_process.finished.connect(self.importer_process.deleteLater)
         program_path = os.path.abspath(importer_program.__file__)
-        self.importer_process.start(sys.executable, [program_path])
+        python_path = self._toolbox.qsettings().value("appSettings/pythonPath", defaultValue="")
+        if python_path:
+            python_cmd = python_path
+        else:
+            python_cmd = PYTHON_EXECUTABLE
+        self.importer_process.start(python_cmd, [program_path])
         self.importer_process.waitForStarted()
         self.importer_process.write(json.dumps(args).encode("utf-8"))
-        self.importer_process.write(b'\n')
+        self.importer_process.write(b"\n")
         self.importer_process.closeWriteChannel()
         if self.importer_process.state() == QProcess.Running:
             loop = QEventLoop()

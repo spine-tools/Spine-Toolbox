@@ -104,8 +104,9 @@ class TestLeafProjectTreeItem(unittest.TestCase):
         toolbox.project().add_project_items("Views", project_item_dict)
         index = toolbox.project_item_model.find_item("View")
         leaf = toolbox.project_item_model.item(index)
-        ret_val = leaf.rename(expected_name)
-        self.assertTrue(ret_val)
+        leaf.rename(expected_name)
+        cmd = toolbox.undo_stack.command(toolbox.undo_stack.index() - 1)
+        self.assertFalse(cmd.isObsolete())
         # Check name
         self.assertEqual(expected_name, leaf.name)
         self.assertEqual(expected_short_name, leaf.short_name)

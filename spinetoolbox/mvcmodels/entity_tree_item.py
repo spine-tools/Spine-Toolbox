@@ -194,7 +194,7 @@ class MultiDBTreeItem(TreeItem):
         self.append_children_by_id(db_map_ids)
 
     def _get_children_ids(self, db_map):
-        """Returns a set of children ids.
+        """Returns a list of children ids.
         Must be reimplemented in subclasses."""
         raise NotImplementedError()
 
@@ -359,8 +359,8 @@ class ObjectTreeRootItem(TreeRootItem):
         self.context_menu_actions = [{"Add object classes": QIcon(":/icons/menu_icons/cube_plus.svg")}]
 
     def _get_children_ids(self, db_map):
-        """Returns a set of object class ids."""
-        return {x["id"] for x in self.db_mngr.get_object_classes(db_map)}
+        """Returns a list of object class ids."""
+        return [x["id"] for x in self.db_mngr.get_object_classes(db_map)]
 
     @property
     def child_item_type(self):
@@ -376,8 +376,8 @@ class RelationshipTreeRootItem(TreeRootItem):
         self.context_menu_actions = [{"Add relationship classes": QIcon(":/icons/menu_icons/cubes_plus.svg")}]
 
     def _get_children_ids(self, db_map):
-        """Returns a set of relationship class ids."""
-        return {x["id"] for x in self.db_mngr.get_relationship_classes(db_map)}
+        """Returns a list of relationship class ids."""
+        return [x["id"] for x in self.db_mngr.get_relationship_classes(db_map)]
 
     @property
     def child_item_type(self):
@@ -424,8 +424,8 @@ class ObjectClassItem(EntityClassItem):
         return self.db_mngr.entity_class_icon(self.first_db_map, "object class", self.db_map_id(self.first_db_map))
 
     def _get_children_ids(self, db_map):
-        """Returns a set of object ids in this class."""
-        return {x["id"] for x in self.db_mngr.get_items(db_map, "object") if x["class_id"] == self.db_map_id(db_map)}
+        """Returns a list of object ids in this class."""
+        return [x["id"] for x in self.db_mngr.get_items(db_map, "object") if x["class_id"] == self.db_map_id(db_map)]
 
     @property
     def child_item_type(self):
@@ -459,22 +459,22 @@ class RelationshipClassItem(EntityClassItem):
         )
 
     def _get_children_ids(self, db_map):
-        """Returns a set of relationship ids in this class.
+        """Returns a list of relationship ids in this class.
         If the parent is an ObjectItem, then only returns ids of relationships involving that object.
         """
         if not isinstance(self.parent_item, ObjectItem):
-            return {
+            return [
                 x["id"]
                 for x in self.db_mngr.get_items(db_map, "relationship")
                 if x["class_id"] == self.db_map_id(db_map)
-            }
+            ]
         object_id = self.parent_item.db_map_id(db_map)
-        return {
+        return [
             x["id"]
             for items in self.db_mngr.find_cascading_relationships({db_map: {object_id}}).values()
             for x in items
             if x["class_id"] == self.db_map_id(db_map)
-        }
+        ]
 
     @property
     def child_item_type(self):
@@ -509,14 +509,14 @@ class ObjectItem(EntityItem):
         ]
 
     def _get_children_ids(self, db_map):
-        """Returns a set of relationship class ids involving this item's class.
+        """Returns a list of relationship class ids involving this item's class.
         """
         object_class_id = self.db_map_data_field(db_map, 'class_id')
-        return {
+        return [
             x["id"]
             for items in self.db_mngr.find_cascading_relationship_classes({db_map: {object_class_id}}).values()
             for x in items
-        }
+        ]
 
     @property
     def child_item_type(self):

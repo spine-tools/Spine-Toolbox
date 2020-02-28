@@ -124,8 +124,7 @@ class DirectedGraphHandler(QObject):
         self.add_dag(right_graph)
 
     def remove_node_from_graph(self, node_name):
-        """Removes node from a graph that contains
-        it. Called when project item is removed from project.
+        """Removes node from a graph that contains it. Called when project item is removed from project.
 
         Args:
             node_name (str): Project item name

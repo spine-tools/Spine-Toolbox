@@ -27,6 +27,7 @@ from spinetoolbox.project_item import ProjectItem, ProjectItemResource
 from spinetoolbox.widgets.spine_datapackage_widget import SpineDatapackageWidget
 from spinetoolbox.helpers import busy_effect, deserialize_path, serialize_path
 from spinetoolbox.config import APPLICATION_PATH, INVALID_FILENAME_CHARS
+from spinetoolbox.project_commands import AddDCReferencesCommand, RemoveDCReferencesCommand
 
 
 class DataConnection(ProjectItem):
@@ -48,9 +49,7 @@ class DataConnection(ProjectItem):
         self.reference_model = QStandardItemModel()  # References to files
         self.data_model = QStandardItemModel()  # Paths of project internal files. These are found in DC data directory
         self.datapackage_icon = QIcon(QPixmap(":/icons/datapkg.png"))
-        self.data_dir_watcher = QFileSystemWatcher(self)
-        if os.path.isdir(self.data_dir):
-            self.data_dir_watcher.addPath(self.data_dir)
+        self.data_dir_watcher = None
         # Populate references model
         if references is None:
             references = list()
@@ -62,6 +61,11 @@ class DataConnection(ProjectItem):
         data_files = self.data_files()
         self.populate_data_list(data_files)
         self.spine_datapackage_form = None
+
+    def set_up(self):
+        self.data_dir_watcher = QFileSystemWatcher(self)
+        if os.path.isdir(self.data_dir):
+            self.data_dir_watcher.addPath(self.data_dir)
         self.data_dir_watcher.directoryChanged.connect(self.refresh)
 
     @staticmethod
@@ -93,19 +97,6 @@ class DataConnection(ProjectItem):
         s[self._properties_ui.treeView_dc_data.del_key_pressed] = lambda: self.remove_files()
         return s
 
-    def activate(self):
-        """Restore selections and connect signals."""
-        self.restore_selections()  # Do this before connecting signals or funny things happen
-        super().connect_signals()
-
-    def deactivate(self):
-        """Save selections and disconnect signals."""
-        self.save_selections()
-        if not super().disconnect_signals():
-            logging.error("Item %s deactivation failed", self.name)
-            return False
-        return True
-
     def restore_selections(self):
         """Restore selections into shared widgets when this project item is selected."""
         self._properties_ui.label_dc_name.setText(self.name)
@@ -113,21 +104,29 @@ class DataConnection(ProjectItem):
         self._properties_ui.treeView_dc_data.setModel(self.data_model)
         self.refresh()
 
-    def save_selections(self):
-        """Save selections in shared widgets for this project item into instance variables."""
-
-    @Slot("QVariant", name="add_files_to_references")
+    @Slot("QVariant")
     def add_files_to_references(self, paths):
         """Add multiple file paths to reference list.
 
         Args:
             paths (list): A list of paths to files
         """
+        repeated_paths = []
+        new_paths = []
         for path in paths:
-            if path in self.references:
-                self._logger.msg_warning.emit(f"Reference to file <b>{path}</b> already available")
-                return
-            self.references.append(os.path.abspath(path))
+            if any(os.path.samefile(path, ref) for ref in self.references):
+                repeated_paths.append(path)
+            else:
+                new_paths.append(path)
+        repeated_paths = ", ".join(repeated_paths)
+        if repeated_paths:
+            self._logger.msg_warning.emit(f"Reference to file(s) <b>{repeated_paths}</b> already available")
+        if new_paths:
+            self._toolbox.undo_stack.push(AddDCReferencesCommand(self, new_paths))
+
+    def do_add_files_to_references(self, paths):
+        abspaths = [os.path.abspath(path) for path in paths]
+        self.references.extend(abspaths)
         self.populate_reference_list(self.references)
 
     @Slot("QGraphicsItem", list)
@@ -137,7 +136,7 @@ class DataConnection(ProjectItem):
         if icon == self.get_icon():
             self.add_files_to_data_dir(file_paths)
 
-    @Slot("QVariant", name="add_files_to_data_dir")
+    @Slot("QVariant")
     def add_files_to_data_dir(self, file_paths):
         """Add files to data directory"""
         for file_path in file_paths:
@@ -149,7 +148,7 @@ class DataConnection(ProjectItem):
                 self._logger.msg_error.emit("[OSError] Copying failed")
                 return
 
-    @Slot(bool, name="add_references")
+    @Slot(bool)
     def add_references(self, checked=False):
         """Let user select references to files for this data connection."""
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
@@ -157,14 +156,9 @@ class DataConnection(ProjectItem):
         file_paths = answer[0]
         if not file_paths:  # Cancel button clicked
             return
-        for path in file_paths:
-            if path in self.references:
-                self._logger.msg_warning.emit(f"Reference to file <b>{path}</b> already available")
-                continue
-            self.references.append(os.path.abspath(path))
-        self.populate_reference_list(self.references)
+        self.add_files_to_references(file_paths)
 
-    @Slot(bool, name="remove_references")
+    @Slot(bool)
     def remove_references(self, checked=False):
         """Remove selected references from reference list.
         Do not remove anything if there are no references selected.
@@ -173,14 +167,15 @@ class DataConnection(ProjectItem):
         if not indexes:  # Nothing selected
             self._logger.msg.emit("Please select references to remove")
             return
-        rows = [ind.row() for ind in indexes]
-        rows.sort(reverse=True)
-        for row in rows:
-            self.references.pop(row)
+        references = [ind.data(Qt.DisplayRole) for ind in indexes]
+        self._toolbox.undo_stack.push(RemoveDCReferencesCommand(self, references))
         self._logger.msg.emit("Selected references removed")
+
+    def do_remove_references(self, references):
+        self.references = [r for r in self.references if not any(os.path.samefile(r, ref) for ref in references)]
         self.populate_reference_list(self.references)
 
-    @Slot(bool, name="copy_to_project")
+    @Slot(bool)
     def copy_to_project(self, checked=False):
         """Copy selected file references to this Data Connection's data directory."""
         selected_indexes = self._properties_ui.treeView_dc_references.selectedIndexes()
@@ -200,7 +195,7 @@ class DataConnection(ProjectItem):
                 self._logger.msg_error.emit("[OSError] Copying failed")
                 continue
 
-    @Slot("QModelIndex", name="open_reference")
+    @Slot("QModelIndex")
     def open_reference(self, index):
         """Open reference in default program."""
         if not index:
@@ -215,7 +210,7 @@ class DataConnection(ProjectItem):
         if not res:
             self._logger.msg_error.emit(f"Failed to open reference:<b>{reference}</b>")
 
-    @Slot("QModelIndex", name="open_data_file")
+    @Slot("QModelIndex")
     def open_data_file(self, index):
         """Open data file in default program."""
         if not index:
@@ -247,7 +242,7 @@ class DataConnection(ProjectItem):
         self.spine_datapackage_form.destroyed.connect(self.datapackage_form_destroyed)
         self.spine_datapackage_form.show()
 
-    @Slot(name="datapackage_form_destroyed")
+    @Slot()
     def datapackage_form_destroyed(self):
         """Notify a connection that datapackage form has been destroyed."""
         self.spine_datapackage_form = None
@@ -404,10 +399,11 @@ class DataConnection(ProjectItem):
         Returns:
             bool: True if renaming succeeded, False otherwise
         """
-        success = super().rename(new_name)
-        if not success:
+        if not super().rename(new_name):
             return False
-        self.data_dir_watcher.removePaths(self.data_dir_watcher.directories())
+        dirs = self.data_dir_watcher.directories()
+        if dirs:
+            self.data_dir_watcher.removePaths(self.data_dir_watcher.directories())
         self.data_dir_watcher.addPath(self.data_dir)
         return True
 
