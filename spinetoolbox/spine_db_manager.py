@@ -683,7 +683,8 @@ class SpineDBManager(QObject):
             list: dictionary items
         """
         qry = db_map.query(db_map.object_class_sq)
-        items = [x._asdict() for x in qry]
+        sort_key = lambda x: x["name"]
+        items = sorted((x._asdict() for x in qry), key=sort_key)
         _ = cache and self.cache_items("object class", {db_map: items})
         self.update_icons({db_map: items})
         return items
@@ -701,7 +702,8 @@ class SpineDBManager(QObject):
         qry = db_map.query(db_map.object_sq)
         if class_id:
             qry = qry.filter_by(class_id=class_id)
-        items = [x._asdict() for x in qry]
+        sort_key = lambda x: (x["class_id"], x["name"])
+        items = sorted((x._asdict() for x in qry), key=sort_key)
         _ = cache and self.cache_items("object", {db_map: items})
         return items
 
@@ -722,7 +724,8 @@ class SpineDBManager(QObject):
         if object_class_id:
             ids = {x.id for x in db_map.query(db_map.relationship_class_sq).filter_by(object_class_id=object_class_id)}
             qry = qry.filter(db_map.wide_relationship_class_sq.c.id.in_(ids))
-        items = [x._asdict() for x in qry]
+        sort_key = lambda x: x["name"]
+        items = sorted((x._asdict() for x in qry), key=sort_key)
         _ = cache and self.cache_items("relationship class", {db_map: items})
         return items
 
@@ -746,7 +749,8 @@ class SpineDBManager(QObject):
             qry = qry.filter(db_map.wide_relationship_sq.c.id.in_(ids))
         if class_id:
             qry = qry.filter_by(class_id=class_id)
-        items = [x._asdict() for x in qry]
+        sort_key = lambda x: (x["class_id"], x["object_name_list"])
+        items = sorted((x._asdict() for x in qry), key=sort_key)
         _ = cache and self.cache_items("relationship", {db_map: items})
         return items
 
@@ -767,7 +771,8 @@ class SpineDBManager(QObject):
             qry = qry.filter_by(object_class_id=object_class_id)
         if ids:
             qry = qry.filter(sq.c.id.in_(ids))
-        items = [x._asdict() for x in qry]
+        sort_key = lambda x: (x["object_class_name"], x["parameter_name"])
+        items = sorted((x._asdict() for x in qry), key=sort_key)
         _ = cache and self.cache_items("parameter definition", {db_map: items})
         return items
 
@@ -788,7 +793,8 @@ class SpineDBManager(QObject):
             qry = qry.filter_by(relationship_class_id=relationship_class_id)
         if ids:
             qry = qry.filter(sq.c.id.in_(ids))
-        items = [x._asdict() for x in qry]
+        sort_key = lambda x: (x["relationship_class_name"], x["parameter_name"])
+        items = sorted((x._asdict() for x in qry), key=sort_key)
         _ = cache and self.cache_items("parameter definition", {db_map: items})
         return items
 
@@ -809,7 +815,8 @@ class SpineDBManager(QObject):
             qry = qry.filter_by(object_class_id=object_class_id)
         if ids:
             qry = qry.filter(sq.c.id.in_(ids))
-        items = [x._asdict() for x in qry]
+        sort_key = lambda x: (x["object_class_name"], x["object_name"], x["parameter_name"])
+        items = sorted((x._asdict() for x in qry), key=sort_key)
         _ = cache and self.cache_items("parameter value", {db_map: items})
         return items
 
@@ -830,7 +837,8 @@ class SpineDBManager(QObject):
             qry = qry.filter_by(relationship_class_id=relationship_class_id)
         if ids:
             qry = qry.filter(sq.c.id.in_(ids))
-        items = [x._asdict() for x in qry]
+        sort_key = lambda x: (x["relationship_class_name"], x["object_class_name_list"], x["parameter_name"])
+        items = sorted((x._asdict() for x in qry), key=sort_key)
         _ = cache and self.cache_items("parameter value", {db_map: items})
         return items
 

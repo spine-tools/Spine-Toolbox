@@ -16,6 +16,7 @@ Class for a custom SpineConsoleWidget to use as julia REPL.
 :date:   22.5.2018
 """
 
+import os
 import logging
 from PySide2.QtWidgets import QMessageBox, QAction, QApplication
 from PySide2.QtCore import Slot, Signal, Qt
@@ -178,7 +179,8 @@ class JuliaREPLWidget(SpineConsoleWidget):
         self._toolbox.msg.emit("*** Starting Julia Console ***")
         kernel_manager = CustomQtKernelManager(kernel_name=self.kernel_name, project_path=self.julia_project_path)
         try:
-            kernel_manager.start_kernel()
+            blackhole = open(os.devnull, 'w')
+            kernel_manager.start_kernel(stdout=blackhole, stderr=blackhole)
             self.kernel_manager = kernel_manager
             self.kernel_manager.kernel_left_dead.connect(self._handle_kernel_left_dead)
             self.setup_client()
@@ -293,7 +295,8 @@ class JuliaREPLWidget(SpineConsoleWidget):
             self.starting = True
             self._toolbox.msg.emit("*** Restarting Julia REPL ***")
             self.kernel_client.stop_channels()
-            self.kernel_manager.restart_kernel(now=True)
+            blackhole = open(os.devnull, 'w')
+            self.kernel_manager.restart_kernel(now=True, stdout=blackhole, stderr=blackhole)
             self.setup_client()
         else:
             # No kernel to restart (!) or julia has changed in settings. Start a new kernel

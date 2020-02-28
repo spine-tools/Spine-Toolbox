@@ -23,7 +23,6 @@ import logging
 import sys
 from spinedb_api import create_new_spine_database
 from PySide2.QtWidgets import QApplication, QMessageBox
-from networkx import DiGraph
 import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
 from spinetoolbox.widgets.data_store_widget import DataStoreForm
 from spinetoolbox.project_items.data_store.data_store import DataStore

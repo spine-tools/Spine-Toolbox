@@ -10,24 +10,19 @@
 ######################################################################################################################
 
 """
-Contains the GraphViewForm class.
+Contains the StateMachineWidget class.
 
 :author: M. Marin (KTH)
 :date:   26.11.2018
 """
 
-import os
-from PySide2.QtCore import Qt, QStateMachine, QFinalState, QState, QEventTransition, QEvent
-from PySide2.QtGui import QColor, QFont
+from PySide2.QtCore import Property, Qt, QStateMachine, QFinalState, QState, QEventTransition, QEvent
+from PySide2.QtGui import QFont, QMovie
 from PySide2.QtWidgets import QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QDockWidget, QWidget
-from .config import APPLICATION_PATH
 
 
-class LiveDemo(QDockWidget):
-    """A widget for showing live demonstrations."""
-
-    _overlay_color = QColor(255, 140, 0, 128)
-    _tutorial_data_path = os.path.join(APPLICATION_PATH, "../tutorial")
+class StateMachineWidget(QDockWidget):
+    """A widget with a state machine."""
 
     def __init__(self, window_title, parent):
         """Initializes class.
@@ -44,6 +39,11 @@ class LiveDemo(QDockWidget):
         self.label_msg.setWordWrap(True)
         self.button_left = QPushButton(self)
         self.button_right = QPushButton(self)
+        self.label_loader = QLabel(self)
+        self.label_loader.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
+        movie = QMovie(":/animated_gifs/ajax-loader.gif")
+        movie.start()
+        self.label_loader.setMovie(movie)
         button_container = QWidget(self)
         button_layout = QHBoxLayout(button_container)
         button_layout.addStretch()
@@ -55,11 +55,15 @@ class LiveDemo(QDockWidget):
         layout.addStretch()
         layout.addWidget(self.label_msg)
         layout.addStretch()
+        layout.addWidget(self.label_loader)
+        layout.addStretch()
         layout.addWidget(button_container)
         self.setWidget(widget)
-        self.hide()
         self.machine = None
-        self.run = None
+        self.welcome = None
+        self._welcome_text = "<html><p>Welcome!</p></html>"
+        self._current_state = None
+        self.setAttribute(Qt.WA_DeleteOnClose)
 
     def is_running(self):
         return self.machine and self.machine.isRunning()
@@ -67,39 +71,42 @@ class LiveDemo(QDockWidget):
     def show(self):
         self.setFloating(False)
         self.parent().addDockWidget(Qt.TopDockWidgetArea, self)
-        self.setup()
+        if not self.isVisible():
+            self.set_up_machine()
+            self.machine.start()
         super().show()
 
+    def _make_state(self, name):
+        s = QState(self.machine)
+        s.assignProperty(self, "current_state", name)
+        return s
+
     def _make_welcome(self):
-        welcome = QState(self.run)
+        welcome = self._make_state("welcome")
         begin = QState(welcome)
         finalize = QFinalState(welcome)
         welcome.setInitialState(begin)
-        begin.assignProperty(self.label_msg, "text", "Welcome!")
+        begin.assignProperty(self.label_msg, "text", self._welcome_text)
         begin.assignProperty(self.button_right, "text", "Start")
         begin.assignProperty(self.button_right, "visible", True)
+        begin.assignProperty(self.label_loader, "visible", False)
         begin.assignProperty(self.button_left, "visible", False)
         begin.addTransition(self.button_right.clicked, finalize)
         return welcome
 
-    def _make_abort(self):
-        abort = QState(self.run)
-        dead = QFinalState(self.machine)
-        abort.addTransition(dead)
-        return abort
-
-    def setup(self):
+    def set_up_machine(self):
         self.machine = QStateMachine(self)
-        self.run = QState(self.machine)
-        abort = self._make_abort()
-        transition = QEventTransition(self, QEvent.Close)
-        transition.setTargetState(abort)
-        self.run.addTransition(transition)
-        welcome = self._make_welcome()
-        welcome.entered.connect(self._handle_welcome_entered)
-        self.machine.setInitialState(self.run)
-        self.run.setInitialState(welcome)
-        self.machine.start()
+        self.welcome = self._make_welcome()
+        self.machine.setInitialState(self.welcome)
+        dead = QFinalState(self.machine)
+        death = QEventTransition(self, QEvent.Close)
+        death.setTargetState(dead)
+        self.machine.addTransition(death)
 
-    def _handle_welcome_entered(self):
-        raise NotImplementedError()
+    def get_current_state(self):
+        return self._current_state
+
+    def set_current_state(self, state):
+        self._current_state = state
+
+    current_state = Property(str, get_current_state, set_current_state)

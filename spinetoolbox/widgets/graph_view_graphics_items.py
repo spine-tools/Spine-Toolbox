@@ -195,7 +195,10 @@ class EntityItem(QGraphicsPixmapItem):
         colliding = [
             x
             for x in scene.items()
-            if isinstance(x, EntityItem) and x is not self and x.device_rect().intersects(self.device_rect())
+            if x.isVisible()
+            and isinstance(x, EntityItem)
+            and x is not self
+            and x.device_rect().intersects(self.device_rect())
         ]
         return next(iter(colliding), None)
 
@@ -468,6 +471,14 @@ class ObjectItem(EntityItem):
         return "<html>This is a work-in-progress <b>{0}</b>. Give it a name to finish the job.</html>".format(
             self.entity_class_name
         )
+
+    def become_whole(self):
+        super().become_whole()
+        self.refresh_description()
+
+    def refresh_description(self):
+        description = self.db_mngr.get_item(self.db_map, "object", self.entity_id).get("description")
+        self.setToolTip(f"<html>{description}</html>")
 
     def edit_name(self):
         """Starts editing the object name."""
