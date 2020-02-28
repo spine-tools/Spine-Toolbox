@@ -34,6 +34,6 @@ major = 0
 minor = 4
 micro = 0
 releaselevel = "beta"
-serial = 4
+serial = 5
 __version_info__ = VersionInfo(major, minor, micro, releaselevel, serial)
 __version__ = ".".join([str(a) for a in __version_info__[:3]])

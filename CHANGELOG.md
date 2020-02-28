@@ -4,8 +4,12 @@ All **notable** changes to this project are documented here.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ## [0.4.0-beta.5] - 2020-02-28
+### Added
+- spinedb_api version 0.1.15
+
 ### Fixed
 - A bug that sometimes made duplicate entries to File->Open recents menu
+- Bug where an excel import with empty rows would return a None in it's get_data_iterator
 
 ## [0.4.0-beta.4] - 2020-02-27
 ### Fixed
