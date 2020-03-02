@@ -16,10 +16,13 @@ Contains ImportPreviewWidget, and MappingTableMenu classes.
 :date:   1.6.2019
 """
 
+from copy import deepcopy
+
 from spinedb_api import ObjectClassMapping, dict_to_map, mapping_from_dict
 from PySide2.QtWidgets import QWidget, QVBoxLayout, QMenu, QListWidgetItem, QErrorMessage
 from PySide2.QtCore import Signal, Qt, QItemSelectionModel, QPoint
 from .mapping_widget import MappingWidget
+from .custom_menus import CustomContextMenu
 from ..spine_io.io_models import MappingPreviewModel, MappingListModel
 from ..spine_io.type_conversion import value_to_convert_spec
 
@@ -50,7 +53,8 @@ class ImportPreviewWidget(QWidget):
         self.table_mappings = {}
         self.table_updating = False
         self.data_updating = False
-
+        self._copied_mapping = None
+        self._copied_options = {}
         # create ui
         self._ui = Ui_ImportPreview()
         self._ui.setupUi(self)
@@ -72,6 +76,8 @@ class ImportPreviewWidget(QWidget):
             self._ui.top_source_splitter.setCollapsible(i, False)
 
         # connect signals
+        self._ui.source_list.setContextMenuPolicy(Qt.CustomContextMenu)
+        self._ui.source_list.customContextMenuRequested.connect(self.show_source_table_context_menu)
         self._ui.source_data_table.setContextMenuPolicy(Qt.CustomContextMenu)
         self._ui.source_data_table.customContextMenuRequested.connect(self._ui_preview_menu.request_menu)
         self._ui.source_list.currentItemChanged.connect(self.select_table)
@@ -145,6 +151,7 @@ class ImportPreviewWidget(QWidget):
             # request new data
             self.connector.set_table(selection.text())
             self.connector.request_data(selection.text(), max_rows=100)
+            self.selected_table = selection.text()
 
     def check_list_item(self, item):
         """
@@ -334,6 +341,63 @@ class ImportPreviewWidget(QWidget):
             pivoted_rows = list(range(mapping.last_pivot_row + 1))
         self._ui.source_data_table.verticalHeader().sections_with_buttons = pivoted_rows
 
+    def show_source_table_context_menu(self, pos):
+        """Context menu for connection links.
+
+        Args:
+            pos (QPoint): Mouse position
+        """
+        pPos = self._ui.source_list.mapToGlobal(pos)
+        item = self._ui.source_list.itemAt(pos)
+        table = item.text()
+        source_list_menu = TableMenu(self, pPos, bool(self._copied_options), self._copied_mapping is not None)
+        source_list_menu.deleteLater()
+        option = source_list_menu.get_action()
+        if option == "Copy mappings":
+            self.copy_mappings(table)
+            return
+        if option == "Copy options":
+            self.copy_options(table)
+            return
+        if option == "Copy options and mappings":
+            self.copy_options(table)
+            self.copy_mappings(table)
+            return
+        if option == "Paste mappings":
+            self.paste_mappings(table)
+            return
+        if option == "Paste options":
+            self.paste_options(table)
+            return
+        if option == "Paste options and mappings":
+            self.paste_mappings(table)
+            self.paste_options(table)
+            return
+
+    def copy_mappings(self, table):
+        if table in self.table_mappings:
+            self._copied_mapping = [deepcopy(m) for m in self.table_mappings[table].get_mappings()]
+
+    def copy_options(self, table):
+        options = self.connector.table_options
+        col_types = self.connector.table_types
+        row_types = self.connector.table_row_types
+        self._copied_options["options"] = deepcopy(options.get(table, {}))
+        self._copied_options["col_types"] = deepcopy(col_types.get(table, {}))
+        self._copied_options["row_types"] = deepcopy(row_types.get(table, {}))
+
+    def paste_mappings(self, table):
+        self.table_mappings[table] = MappingListModel([deepcopy(m) for m in self._copied_mapping])
+        if self.selected_table == table:
+            self._ui_mapper.set_model(self.table_mappings[table])
+
+    def paste_options(self, table):
+        self.connector.set_table_options({table: deepcopy(self._copied_options.get("options", {}))})
+        self.connector.set_table_types({table: deepcopy(self._copied_options.get("col_types", {}))})
+        self.connector.set_table_row_types({table: deepcopy(self._copied_options.get("row_types", {}))})
+        if self.selected_table == table:
+            self.select_table(self._ui.source_list.selectedItems()[0])
+
 
 class MappingTableMenu(QMenu):
     """
@@ -388,6 +452,23 @@ class MappingTableMenu(QMenu):
         mPos = pPos + QPos
         self.move(mPos)
         self.show()
+
+
+class TableMenu(CustomContextMenu):
+    """
+    Menu for tables in data source
+    """
+
+    def __init__(self, parent, position, can_paste_option, can_paste_mapping):
+
+        super().__init__(parent, position)
+        self.add_action("Copy options")
+        self.add_action("Copy mappings")
+        self.add_action("Copy options and mappings")
+        self.addSeparator()
+        self.add_action("Paste options", enabled=can_paste_option)
+        self.add_action("Paste mappings", enabled=can_paste_mapping)
+        self.add_action("Paste options and mappings", enabled=can_paste_mapping & can_paste_option)
 
 
 def _sanitize_data(data, header):
