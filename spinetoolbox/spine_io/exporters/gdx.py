@@ -25,6 +25,7 @@ to_gdx_file() that does basically everything needed for exporting is provided fo
 """
 
 import enum
+import itertools
 import os
 import os.path
 import sys
@@ -146,6 +147,17 @@ class Record:
             keys (tuple): a tuple of record's keys
         """
         self.keys = keys
+
+    def __eq__(self, other):
+        """
+        Returns True if other is equal to self.
+
+        Args:
+            other (Record):  a record to compare to
+        """
+        if not isinstance(other, Record):
+            return NotImplemented
+        return other.keys == self.keys
 
     @property
     def name(self):
@@ -449,6 +461,7 @@ def _python_interpreter_bitness():
 
 
 def _read_value(value_in_database):
+    """Converts a parameter from its database representation to a value object."""
     try:
         value = from_database(value_in_database)
     except ParameterValueFormatError:
@@ -512,6 +525,142 @@ def expand_indexed_parameter_values(parameters, indexing_settings):
         except KeyError:
             continue
         parameter.expand_indexes(indexing_setting)
+
+
+class MergingSetting:
+    """
+    Holds settings needed to merge a single parameter.
+
+    Attributes:
+        parameter_names (list): parameters to merge
+        new_domain_name (str): name of the additional domain that contains the parameter names
+        new_domain_description (str): explanatory text for the additional domain
+        previous_set (str): name of the set containing the parameters before merging;
+            not needed for the actual merging but included here to make the parameters' origing traceable
+    """
+
+    def __init__(self, parameter_names, new_domain_name, new_domain_description, previous_set, previous_domain_names):
+        """
+        Args:
+            parameter_names (list): parameters to merge
+            new_domain_name (str): name of the additional domain that contains the parameter names
+            new_domain_description (str): explanatory text for the additional domain
+            previous_set (str): name of the set containing the parameters before merging
+            previous_domain_names (list): list of parameters' original indexing domains
+        """
+        self.parameter_names = parameter_names
+        self.new_domain_name = new_domain_name
+        self.new_domain_description = new_domain_description
+        self.previous_set = previous_set
+        self._previous_domain_names = previous_domain_names
+        self.index_position = len(previous_domain_names)
+
+    def domain_names(self):
+        """
+        Composes a list of merged parameter's indexing domains.
+
+        Returns:
+            list: a list of indexing domains including the new domain containing the merged parameters' names
+        """
+        return (
+            self._previous_domain_names[: self.index_position]
+            + [self.new_domain_name]
+            + self._previous_domain_names[self.index_position :]
+        )
+
+    def to_dict(self):
+        """Stores the settings to a dictionary."""
+        return {
+            "parameters": self.parameter_names,
+            "new_domain": self.new_domain_name,
+            "domain_description": self.new_domain_description,
+            "previous_set": self.previous_set,
+            "previous_domains": self._previous_domain_names,
+            "index_position": self.index_position,
+        }
+
+    @staticmethod
+    def from_dict(setting_dict):
+        """Restores settings from a dictionary."""
+        parameters = setting_dict["parameters"]
+        new_domain = setting_dict["new_domain"]
+        description = setting_dict["domain_description"]
+        previous_set = setting_dict["previous_set"]
+        previous_domains = setting_dict["previous_domains"]
+        index_position = setting_dict["index_position"]
+        setting = MergingSetting(parameters, new_domain, description, previous_set, previous_domains)
+        setting.index_position = index_position
+        return setting
+
+
+def update_merging_settings(merging_settings, settings, db_map):
+    """
+    Returns parameter merging settings updated according to new export settings.
+
+    Args:
+        merging_settings (dict): old settings to be updated
+        settings (Settings): new gdx export settings
+        db_map (spinedb_api.DatabaseMapping): a database map
+    Returns:
+        dict: merged old and new merging settings
+    """
+    updated = dict()
+    for merged_parameter_name, setting in merging_settings.items():
+        if setting.previous_set not in itertools.chain(settings.sorted_domain_names, settings.sorted_set_names):
+            continue
+        entity_class_sq = db_map.entity_class_sq
+        entity_class = db_map.query(entity_class_sq).filter(entity_class_sq.c.name == setting.previous_set).first()
+        class_id = entity_class.id
+        type_id = entity_class.type_id
+        type_name = (
+            db_map.query(db_map.entity_class_type_sq).filter(db_map.entity_class_type_sq.c.id == type_id).first().name
+        )
+        if type_name == "object":
+            parameters = db_map.parameter_definition_list(object_class_id=class_id)
+        elif type_name == "relationship":
+            parameters = db_map.parameter_definition_list(relationship_class_id=class_id)
+        else:
+            raise GdxExportException(f"Unknown entity class type '{type_name}'")
+        defined_parameter_names = [parameter.name for parameter in parameters]
+        if not defined_parameter_names:
+            continue
+        setting.parameter_names = defined_parameter_names
+        updated[merged_parameter_name] = setting
+    return updated
+
+
+def merging_domain(merging_setting):
+    """Constructs the additional indexing domain which contains the merged parameters' names."""
+    new_domain = Set(merging_setting.new_domain_name, merging_setting.new_domain_description)
+    new_domain.records = [Record((name,)) for name in merging_setting.parameter_names]
+    return new_domain
+
+
+def merge_parameters(parameters, merging_settings):
+    """
+    Merges multiple parameters into a single parameter.
+
+    Note, that the merged parameters will be removed from the parameters dictionary.
+
+    Args:
+        parameters (dict): a mapping from existing parameter name to its Parameter object
+        merging_settings (dict): a mapping from the merged parameter name to its merging settings
+    Returns:
+        dict: a mapping from merged parameter name to its Parameter object
+    """
+    merged = dict()
+    for parameter_name, setting in merging_settings.items():
+        indexes = list()
+        values = list()
+        index_position = setting.index_position
+        for name in setting.parameter_names:
+            parameter = parameters.pop(name)
+            for value, base_index in zip(parameter.values, parameter.indexes):
+                expanded_index = base_index[:index_position] + (name,) + base_index[index_position:]
+                indexes.append(expanded_index)
+                values.append(value)
+        merged[parameter_name] = Parameter(setting.domain_names(), indexes, values)
+    return merged
 
 
 def sets_to_gams(gdx_file, sets, omitted_set=None):
@@ -964,7 +1113,15 @@ def extract_domain(domains, name_to_extract):
     return domains, None
 
 
-def to_gdx_file(database_map, file_name, additional_domains, settings, indexing_settings, gams_system_directory=None):
+def to_gdx_file(
+    database_map,
+    file_name,
+    additional_domains,
+    settings,
+    indexing_settings,
+    merging_settings,
+    gams_system_directory=None,
+):
     """
     Exports given database map into .gdx file.
 
@@ -974,6 +1131,7 @@ def to_gdx_file(database_map, file_name, additional_domains, settings, indexing_
         additional_domains (list): a list of extra domains not in the database
         settings (Settings): export settings
         indexing_settings (dict): a dictionary containing settings for indexed parameter expansion
+        merging_settings (dict): a list of merging settings for parameter merging
         gams_system_directory (str): path to GAMS system directory or None to let GAMS choose one for you
     """
     domains, domain_parameters = object_classes_to_domains(database_map)
@@ -988,6 +1146,8 @@ def to_gdx_file(database_map, file_name, additional_domains, settings, indexing_
     sort_records_inplace(sets, settings)
     expand_indexed_parameter_values(set_parameters, indexing_settings)
     parameters = {**domain_parameters, **set_parameters}
+    merged_parameters = merge_parameters(parameters, merging_settings)
+    parameters.update(merged_parameters)
     with GdxFile(file_name, mode='w', gams_dir=gams_system_directory) as output_file:
         sets_to_gams(output_file, domains, global_parameters_domain)
         sets_to_gams(output_file, sets)

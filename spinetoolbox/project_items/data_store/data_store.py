@@ -17,7 +17,6 @@ Module for data store class.
 """
 
 import os
-import logging
 from PySide2.QtCore import Slot, Qt
 from PySide2.QtWidgets import QFileDialog, QApplication
 from sqlalchemy import create_engine

@@ -87,15 +87,15 @@ class ParameterIndexSettingsWindow(QWidget):
         """Collects settings from individual ParameterIndexSettings widgets and hides the window."""
         for parameter_name, settings_widget in self._settings_widgets.items():
             if settings_widget.state != IndexSettingsState.OK:
+                self._ui.settings_area.ensureWidgetVisible(settings_widget)
                 message = "Parameter '{}' indexing not well-defined.".format(parameter_name)
                 QMessageBox.warning(self, "Bad Parameter Indexing", message)
-                self._ui.settings_area.ensureWidgetVisible(settings_widget)
                 return
             if settings_widget.new_domain_name in self._available_existing_domains:
+                self._ui.settings_area.ensureWidgetVisible(settings_widget)
                 settings_widget.state = IndexSettingsState.DOMAIN_NAME_CLASH
                 message = "Parameter '{}' indexing domain name already exists.".format(parameter_name)
                 QMessageBox.warning(self, "Domain Name Clash", message)
-                self._ui.settings_area.ensureWidgetVisible(settings_widget)
                 return
         self._new_domains.clear()
         for parameter_name, settings_widget in self._settings_widgets.items():
