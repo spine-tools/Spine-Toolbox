@@ -23,6 +23,7 @@ The main entrance points to plotting are:
 :date:   9.7.2019
 """
 
+from matplotlib.ticker import MaxNLocator
 import numpy as np
 from PySide2.QtCore import QModelIndex, Qt
 from spinedb_api import from_database, IndexedValue, Map, ParameterValueFormatError, TimeSeries
@@ -235,17 +236,21 @@ def add_map_plot(plot_widget, map_value, label=None):
         map_value (Map): the map to plot
         label (str): a label for the map
     """
+    if not map_value.indexes:
+        return
     if map_value.is_nested():
         raise PlottingError("Plotting of nested maps is not supported.")
     if not all(isinstance(value, float) for value in map_value.values):
         raise PlottingError("Cannot plot non-numerical values in map.")
-    indexes_as_strings = list()
-    for index in map_value.indexes:
-        if hasattr(index, "to_text"):
-            indexes_as_strings.append(index.to_text())
+    if not isinstance(map_value.indexes[0], str):
+        if hasattr(map_value.indexes[0], "to_text"):
+            indexes_as_strings = [index.to_text() for index in map_value.indexes]
         else:
-            indexes_as_strings.append(str(index))
-    plot_widget.canvas.axes.scatter(indexes_as_strings, map_value.values, label=label)
+            indexes_as_strings = list(map(str, map_value.indexes))
+    else:
+        indexes_as_strings = map_value.indexes
+    plot_widget.canvas.axes.plot(indexes_as_strings, map_value.values, label=label, linestyle="", marker="o")
+    plot_widget.canvas.axes.xaxis.set_major_locator(MaxNLocator(10))
 
 
 def add_time_series_plot(plot_widget, value, label=None):

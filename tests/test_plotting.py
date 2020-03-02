@@ -115,18 +115,18 @@ class TestPlotting(unittest.TestCase):
     def test_plot_pivot_column_float_type(self):
         model = _make_pivot_proxy_model()
         support = PivotTablePlottingHints()
-        plot_widget = plot_pivot_column(model, 1, support)
+        plot_widget = plot_pivot_column(model, 2, support)
         lines = plot_widget.canvas.axes.get_lines()
         self.assertEqual(len(lines), 1)
-        self.assertTrue(all(lines[0].get_ydata(orig=True) == [1.1, 1.2, 1.3]))
+        self.assertEqual(list(lines[0].get_ydata(orig=True)), [1.1, 1.2, 1.3])
 
     def test_plot_pivot_column_int_type(self):
         model = _make_pivot_proxy_model()
         support = PivotTablePlottingHints()
-        plot_widget = plot_pivot_column(model, 2, support)
+        plot_widget = plot_pivot_column(model, 1, support)
         lines = plot_widget.canvas.axes.get_lines()
         self.assertEqual(len(lines), 1)
-        self.assertTrue(all(lines[0].get_ydata(orig=True) == [-3.0, -1.0, 2.0]))
+        self.assertEqual(list(lines[0].get_ydata(orig=True)), [-3.0, -1.0, 2.0])
 
     def test_plot_pivot_column_time_series_type(self):
         model = _make_pivot_proxy_model()
@@ -134,18 +134,18 @@ class TestPlotting(unittest.TestCase):
         plot_widget = plot_pivot_column(model, 3, support)
         lines = plot_widget.canvas.axes.get_lines()
         self.assertEqual(len(lines), 3)
-        self.assertTrue(all(lines[0].get_ydata(orig=True) == [2.3, 5.0]))
-        self.assertTrue(all(lines[1].get_ydata(orig=True) == [3.3, 4.0]))
-        self.assertTrue(all(lines[2].get_ydata(orig=True) == [4.3, 3.0]))
+        self.assertEqual(list(lines[0].get_ydata(orig=True)), [2.3, 5.0])
+        self.assertEqual(list(lines[1].get_ydata(orig=True)), [3.3, 4.0])
+        self.assertEqual(list(lines[2].get_ydata(orig=True)), [4.3, 3.0])
 
     def test_plot_pivot_column_with_row_filtering(self):
         model = _make_pivot_proxy_model()
         model.set_filter("rows", {"1", "3"})
         support = PivotTablePlottingHints()
-        plot_widget = plot_pivot_column(model, 1, support)
+        plot_widget = plot_pivot_column(model, 2, support)
         lines = plot_widget.canvas.axes.get_lines()
         self.assertEqual(len(lines), 1)
-        self.assertTrue(all(lines[0].get_ydata(orig=True) == [1.1, 1.3]))
+        self.assertEqual(list(lines[0].get_ydata(orig=True)), [1.1, 1.3])
 
     def test_plot_pivot_column_with_column_filtering(self):
         model = _make_pivot_proxy_model()
@@ -154,7 +154,7 @@ class TestPlotting(unittest.TestCase):
         plot_widget = plot_pivot_column(model, 1, support)
         lines = plot_widget.canvas.axes.get_lines()
         self.assertEqual(len(lines), 1)
-        self.assertTrue(all(lines[0].get_ydata(orig=True) == [-3.0, -1.0, 2.0]))
+        self.assertEqual(list(lines[0].get_ydata(orig=True)), [-3.0, -1.0, 2.0])
 
     def test_plot_pivot_selection(self):
         model = _make_pivot_proxy_model()
@@ -166,18 +166,18 @@ class TestPlotting(unittest.TestCase):
         plot_widget = plot_selection(model, selected_indexes, support)
         lines = plot_widget.canvas.axes.get_lines()
         self.assertEqual(len(lines), 2)
-        self.assertTrue(all(lines[0].get_ydata(orig=True) == [1.1, 1.2, 1.3]))
-        self.assertTrue(all(lines[1].get_ydata(orig=True) == [-3.0, -1.0, 2.0]))
+        self.assertEqual(list(lines[0].get_ydata(orig=True)), [-3.0, -1.0, 2.0])
+        self.assertEqual(list(lines[1].get_ydata(orig=True)), [1.1, 1.2, 1.3])
 
     def test_plot_pivot_column_with_x_column(self):
         model = _make_pivot_proxy_model()
-        model.sourceModel().set_plot_x_column(1, True)
+        model.sourceModel().set_plot_x_column(2, True)
         support = PivotTablePlottingHints()
-        plot_widget = plot_pivot_column(model, 2, support)
+        plot_widget = plot_pivot_column(model, 1, support)
         lines = plot_widget.canvas.axes.get_lines()
         self.assertEqual(len(lines), 1)
-        self.assertTrue(all(lines[0].get_xdata(orig=True) == [1.1, 1.2, 1.3]))
-        self.assertTrue(all(lines[0].get_ydata(orig=True) == [-3.0, -1.0, 2.0]))
+        self.assertEqual(list(lines[0].get_xdata(orig=True)), [1.1, 1.2, 1.3])
+        self.assertEqual(list(lines[0].get_ydata(orig=True)), [-3.0, -1.0, 2.0])
 
     def test_plot_pivot_column_when_x_column_hidden(self):
         model = _make_pivot_proxy_model()
@@ -187,8 +187,8 @@ class TestPlotting(unittest.TestCase):
         plot_widget = plot_pivot_column(model, 1, support)
         lines = plot_widget.canvas.axes.get_lines()
         self.assertEqual(len(lines), 1)
-        self.assertTrue(all(lines[0].get_xdata(orig=True) == [1.0, 2.0, 3.0]))
-        self.assertTrue(all(lines[0].get_ydata(orig=True) == [-3.0, -1.0, 2.0]))
+        self.assertEqual(list(lines[0].get_xdata(orig=True)), [1.0, 2.0, 3.0])
+        self.assertEqual(list(lines[0].get_ydata(orig=True)), [-3.0, -1.0, 2.0])
 
     def test_plot_tree_view_selection_of_floats(self):
         model = _MockParameterModel()
@@ -199,7 +199,7 @@ class TestPlotting(unittest.TestCase):
         plot_widget = plot_selection(model, selected_indexes, support)
         lines = plot_widget.canvas.axes.get_lines()
         self.assertEqual(len(lines), 1)
-        self.assertTrue(all(lines[0].get_ydata(orig=True) == [-2.3, -0.5]))
+        self.assertEqual(list(lines[0].get_ydata(orig=True)), [-2.3, -0.5])
 
     def test_plot_tree_view_selection_of_time_series(self):
         model = _MockParameterModel()
@@ -210,8 +210,8 @@ class TestPlotting(unittest.TestCase):
         plot_widget = plot_selection(model, selected_indexes, support)
         lines = plot_widget.canvas.axes.get_lines()
         self.assertEqual(len(lines), 2)
-        self.assertTrue(all(lines[0].get_ydata(orig=True) == [0.5, 2.3]))
-        self.assertTrue(all(lines[1].get_ydata(orig=True) == [-5.0, -3.3]))
+        self.assertEqual(list(lines[0].get_ydata(orig=True)), [0.5, 2.3])
+        self.assertEqual(list(lines[1].get_ydata(orig=True)), [-5.0, -3.3])
 
     def test_plot_tree_view_selection_raises_with_mixed_data(self):
         model = _MockParameterModel()
@@ -230,20 +230,15 @@ class TestPlotting(unittest.TestCase):
         plot_widget = plot_selection(model, selected_indexes, support)
         lines = plot_widget.canvas.axes.get_lines()
         self.assertEqual(len(lines), 1)
-        self.assertTrue(all(lines[0].get_ydata(orig=True) == [-2.3]))
+        self.assertEqual(list(lines[0].get_ydata(orig=True)), [-2.3])
 
     def test_add_dictionary_plot(self):
         plot_widget = PlotWidget()
         dictionary = Map(["key 1 ", "key 2"], [2.3, 5.5])
         add_map_plot(plot_widget, dictionary)
-        children = plot_widget.canvas.axes.get_children()
-        self.assertTrue(any([isinstance(child, PathCollection) for child in children]))
-        for child in children:
-            if isinstance(child, PathCollection):
-                offsets = child.get_offsets()
-                self.assertEqual(len(offsets), 2)
-                self.assertEqual(list(offsets[0]), [0.0, 2.3])
-                self.assertEqual(list(offsets[1]), [1.0, 5.5])
+        lines = plot_widget.canvas.axes.get_lines()
+        self.assertEqual(len(lines), 1)
+        self.assertEqual(list(lines[0].get_ydata(orig=True)), [2.3, 5.5])
 
     def test_add_time_series_plot(self):
         plot_widget = PlotWidget()
@@ -251,7 +246,7 @@ class TestPlotting(unittest.TestCase):
         add_time_series_plot(plot_widget, time_series)
         lines = plot_widget.canvas.axes.get_lines()
         self.assertEqual(len(lines), 1)
-        self.assertTrue(all(lines[0].get_ydata(orig=True) == [0.0, 100.0]))
+        self.assertEqual(list(lines[0].get_ydata(orig=True)), [0.0, 100.0])
 
 
 if __name__ == '__main__':
