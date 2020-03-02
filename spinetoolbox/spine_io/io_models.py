@@ -560,7 +560,7 @@ class MappingSpecModel(QAbstractTableModel):
         elif isinstance(mapping, RowMapping) and mapping.reference == -1:
             mapping_value = "Headers"
         else:
-            mapping_value = str(mapping.reference)
+            mapping_value = mapping.reference
         return mapping_value
 
     # pylint: disable=no-self-use
@@ -578,7 +578,7 @@ class MappingSpecModel(QAbstractTableModel):
         return prepend_str
 
     def data(self, index, role):
-        if role == Qt.DisplayRole:
+        if role == Qt.DisplayRole or role == Qt.EditRole:
             name = self._display_names[index.row()]
             m = self._mappings[index.row()]
             func = [
@@ -592,6 +592,16 @@ class MappingSpecModel(QAbstractTableModel):
             return f()
         if role == Qt.BackgroundColorRole and index.column() == 0:
             return self.data_color(self._display_names[index.row()])
+        if role == Qt.BackgroundColorRole and index.column() == 2:
+            # display error color if mapping is None
+            m = self._mappings[index.row()]
+            if not isinstance(m, NoneMapping) and m.reference is None:
+                return _ERROR_COLOR
+        if role == Qt.ToolTipRole and index.column() == 2:
+            # display error message if reference is None
+            m = self._mappings[index.row()]
+            if not isinstance(m, NoneMapping) and m.reference is None:
+                return "No reference for mapping"
 
     def data_color(self, display_name):
         if display_name == "Relationship class names":
@@ -669,9 +679,9 @@ class MappingSpecModel(QAbstractTableModel):
             value = ConstantMapping()
         elif value == "Column":
             value = ColumnMapping()
-        elif value == "Header":
+        elif value == "Column Header":
             value = ColumnHeaderMapping()
-        elif value == "Pivoted Headers":
+        elif value == "Headers":
             value = RowMapping(reference=-1)
         elif value == "Row":
             value = RowMapping()
@@ -691,10 +701,10 @@ class MappingSpecModel(QAbstractTableModel):
                 return False
         elif type(mapping) in (ConstantMapping, ColumnHeaderMapping):
             if not value:
-                mapping = NoneMapping()
+                mapping.reference = None
             else:
                 mapping.reference = str(value)
-        elif isinstance(mapping, RowMapping) and value.lower() == "header":
+        elif isinstance(mapping, RowMapping) and isinstance(value, str) and value.lower() == "header":
             mapping.reference = -1
         elif isinstance(mapping, (RowMapping, ColumnMapping)):
             if not value:
