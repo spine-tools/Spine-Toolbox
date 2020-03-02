@@ -298,8 +298,15 @@ class SpineToolboxProject(MetaObject):
                 project_tree_items.append(project_tree_item)
             except TypeError:
                 self._logger.msg_error.emit(
-                    "Loading project item <b>{0}</b> into category <b>{1}</b> failed. "
-                    "This is most likely caused by an outdated project file.".format(item_dict["name"], category_name)
+                    f"Loading project item <b>{item_dict['name']}</b> into category <b>{category_name}</b> failed. "
+                    "This is most likely caused by an outdated project file."
+                )
+                continue
+            except KeyError as error:
+                self._logger.msg_error.emit(
+                    f"Loading project item <b>{item_dict['name']}</b> into category <b>{category_name}</b> failed. "
+                    f"This is most likely caused by an outdated or corrupted project file "
+                    f"(missing JSON key: {str(error)})."
                 )
         return category_ind, project_tree_items
 

@@ -16,6 +16,8 @@ Contains list helper functions for list manipulation.
 :date:   12.12.2019
 """
 
+from PySide2.QtCore import QModelIndex
+
 
 def move_list_elements(originals, first, last, target):
     """
@@ -37,3 +39,29 @@ def move_list_elements(originals, first, last, target):
     elements_that_come_after = trashable[target:]
     brave_new_list = elements_that_come_before + elements_to_move + elements_that_come_after
     return brave_new_list
+
+
+def move_selected_elements_by(list_view, delta):
+    """
+    Moves selected items in a QListView by given delta.
+
+    Args:
+        list_view (QListView): a list view
+        delta (int): positive values move the items up, negative down
+    """
+    selection_model = list_view.selectionModel()
+    selected_rows = sorted(selection_model.selectedRows())
+    if not selected_rows:
+        return
+    first_row = selected_rows[0].row()
+    contiguous_selections = [[first_row, 1]]
+    current_contiguous_chunk = contiguous_selections[0]
+    for row in selected_rows[1:]:
+        if row == current_contiguous_chunk[0] + 1:
+            current_contiguous_chunk[1] += 1
+        else:
+            contiguous_selections.append((row, 1))
+            current_contiguous_chunk = contiguous_selections[-1]
+    model = list_view.model()
+    for chunk in contiguous_selections:
+        model.moveRows(QModelIndex(), chunk[0], chunk[1], QModelIndex(), chunk[0] + delta)
