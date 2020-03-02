@@ -17,7 +17,6 @@ Module for view class.
 """
 
 import os
-import logging
 from PySide2.QtCore import Qt, Slot
 from PySide2.QtGui import QStandardItem, QStandardItemModel, QIcon, QPixmap
 from sqlalchemy.engine.url import URL, make_url

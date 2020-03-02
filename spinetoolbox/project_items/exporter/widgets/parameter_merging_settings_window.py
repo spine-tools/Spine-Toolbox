@@ -91,12 +91,12 @@ class ParameterMergingSettingsWindow(QWidget):
                 message = "Parameter name is missing."
                 QMessageBox.warning(self, "Parameter Name Missing", message)
                 return False
-            elif flags & MergingErrorFlag.DOMAIN_NAME_MISSING:
+            if flags & MergingErrorFlag.DOMAIN_NAME_MISSING:
                 self._ui.setting_area.ensureWidgetVisible(settings_widget)
                 message = "Domain name is missing."
                 QMessageBox.warning(self, "Domain Name Missing", message)
                 return False
-            elif flags & MergingErrorFlag.NO_PARAMETER_SELECTED:
+            if flags & MergingErrorFlag.NO_PARAMETER_SELECTED:
                 self._ui.setting_area.ensureWidgetVisible(settings_widget)
                 message = "No domain selected for parameter merging."
                 QMessageBox.warning(self, "Domain Selection Missing", message)

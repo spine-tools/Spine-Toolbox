@@ -1252,6 +1252,42 @@ class TestGdx(unittest.TestCase):
         self.assertEqual(domain.domain_names, [None])
         self.assertEqual(domain.records, [gdx.Record(("parameter1",)), gdx.Record(("parameter2",))])
 
+    def test_update_merging_settings_after_parameter_addition(self):
+        settings = gdx.Settings(["domain"], [], {})
+        old_merging_settings = {"merged": gdx.MergingSetting(["parameter1"], "merged_domain", "", "domain", ["domain"])}
+        with TemporaryDirectory() as tmp_dir_name:
+            database_map = self._make_database_map(tmp_dir_name, "test_make_settings.sqlite")
+            dbmanip.import_object_classes(database_map, ["domain"])
+            dbmanip.import_object_parameters(database_map, [("domain", "parameter1"), ("domain", "parameter2")])
+            updated_merging_settings = gdx.update_merging_settings(old_merging_settings, settings, database_map)
+            database_map.connection.close()
+        self.assertEqual(len(updated_merging_settings), 1)
+        self.assertTrue("merged" in updated_merging_settings)
+        setting = updated_merging_settings["merged"]
+        self.assertEqual(setting.parameter_names, ["parameter1", "parameter2"])
+        self.assertEqual(setting.new_domain_name, "merged_domain")
+        self.assertEqual(setting.previous_set, "domain")
+        self.assertEqual(setting.index_position, 1)
+
+    def test_update_merging_settings_after_parameter_removal(self):
+        settings = gdx.Settings(["domain"], [], {})
+        old_merging_settings = {
+            "merged": gdx.MergingSetting(["parameter1", "parameter2"], "merged_domain", "", "domain", ["domain"])
+        }
+        with TemporaryDirectory() as tmp_dir_name:
+            database_map = self._make_database_map(tmp_dir_name, "test_make_settings.sqlite")
+            dbmanip.import_object_classes(database_map, ["domain"])
+            dbmanip.import_object_parameters(database_map, [("domain", "parameter2")])
+            updated_merging_settings = gdx.update_merging_settings(old_merging_settings, settings, database_map)
+            database_map.connection.close()
+        self.assertEqual(len(updated_merging_settings), 1)
+        self.assertTrue("merged" in updated_merging_settings)
+        setting = updated_merging_settings["merged"]
+        self.assertEqual(setting.parameter_names, ["parameter2"])
+        self.assertEqual(setting.new_domain_name, "merged_domain")
+        self.assertEqual(setting.previous_set, "domain")
+        self.assertEqual(setting.index_position, 1)
+
     def test_SetMetadata_construction(self):
         metadata = gdx.SetMetadata(gdx.ExportFlag.NON_EXPORTABLE, True)
         self.assertEqual(metadata.exportable, gdx.ExportFlag.NON_EXPORTABLE)

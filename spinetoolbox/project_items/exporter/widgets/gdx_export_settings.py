@@ -296,9 +296,7 @@ class GdxExportSettings(QWidget):
             self._indexed_parameter_settings_window = ParameterIndexSettingsWindow(
                 indexing_settings, available_domains, new_domains, self._database_path, self
             )
-            self._indexed_parameter_settings_window.settings_approved.connect(
-                self._approve_parameter_indexing_settings
-            )
+            self._indexed_parameter_settings_window.settings_approved.connect(self._approve_parameter_indexing_settings)
             self._indexed_parameter_settings_window.settings_rejected.connect(
                 self._dispose_parameter_indexing_settings_window
             )
