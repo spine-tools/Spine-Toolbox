@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
 ######################################################################################################################
-# Copyright (C) 2017 - 2019 Spine project consortium
+# Copyright (C) 2017-2020 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and\/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -22,7 +22,7 @@
     <x>0</x>
     <y>0</y>
     <width>603</width>
-    <height>367</height>
+    <height>406</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -171,7 +171,7 @@
            <string>Set up indexing for time series and other indexed parameters.</string>
           </property>
           <property name="text">
-           <string>Indexed parameters...</string>
+           <string>Indexed Parameters...</string>
           </property>
          </widget>
         </item>
@@ -187,6 +187,33 @@
         </item>
         <item>
          <spacer name="horizontalSpacer_2">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <layout class="QHBoxLayout" name="horizontalLayout_5">
+        <item>
+         <widget class="QPushButton" name="open_parameter_merging_settings_button">
+          <property name="toolTip">
+           <string>Merge multiple parameters into one.</string>
+          </property>
+          <property name="text">
+           <string>Parameter Merging...</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <spacer name="horizontalSpacer_3">
           <property name="orientation">
            <enum>Qt::Horizontal</enum>
           </property>
