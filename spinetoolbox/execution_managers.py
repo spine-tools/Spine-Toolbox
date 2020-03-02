@@ -273,8 +273,8 @@ class QProcessExecutionManager(ExecutionManager):
         if not exit_code == 0:
             self.process_failed = True
         if not self._user_stopped:
-            out = str(self._process.readAllStandardOutput().data(), "utf-8")
-            errout = str(self._process.readAllStandardError().data(), "utf-8")
+            out = str(self._process.readAllStandardOutput().data(), "utf-8", errors="replace")
+            errout = str(self._process.readAllStandardError().data(), "utf-8", errors="replace")
             if out is not None:
                 if not self._silent:
                     self._logger.msg_proc.emit(out.strip())
@@ -294,7 +294,7 @@ class QProcessExecutionManager(ExecutionManager):
         """Emit data from stdout."""
         if not self._process:
             return
-        out = str(self._process.readAllStandardOutput().data(), "utf-8")
+        out = str(self._process.readAllStandardOutput().data(), "utf-8", errors="replace")
         self._logger.msg_proc.emit(out.strip())
 
     @Slot(name="on_ready_stderr")
@@ -302,5 +302,5 @@ class QProcessExecutionManager(ExecutionManager):
         """Emit data from stderr."""
         if not self._process:
             return
-        err = str(self._process.readAllStandardError().data(), "utf-8")
+        err = str(self._process.readAllStandardError().data(), "utf-8", errors="replace")
         self._logger.msg_proc_error.emit(err.strip())
