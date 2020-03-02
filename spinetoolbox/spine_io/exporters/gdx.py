@@ -600,10 +600,10 @@ def update_merging_settings(merging_settings, settings, db_map):
         else:
             raise GdxExportException(f"Unknown entity class type '{type_name}'")
         defined_parameter_names = [parameter.name for parameter in parameters]
-        kept_parameter_names = [name for name in setting.parameter_names if name in defined_parameter_names]
-        if kept_parameter_names:
-            setting.parameter_names = kept_parameter_names
-            updated[merged_parameter_name] = setting
+        if not defined_parameter_names:
+            continue
+        setting.parameter_names = defined_parameter_names
+        updated[merged_parameter_name] = setting
     return updated
 
 

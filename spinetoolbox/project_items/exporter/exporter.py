@@ -379,6 +379,9 @@ class Exporter(ProjectItem):
     @Slot(str)
     def _reset_settings_window(self, database_url):
         """Sends new settings to Gdx Export Settings window."""
+        pack = self._settings_packs[database_url]
+        pack.merging_settings = dict()
+        pack.merging_domains = list()
         self._start_worker(database_url)
 
     @Slot(str)

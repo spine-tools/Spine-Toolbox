@@ -61,66 +61,21 @@ class Worker(QThread):
 
     def run(self):
         """Constructs settings and parameter index settings and sends them to interested parties using signals."""
-        try:
-            database_map = DatabaseMapping(self._database_url)
-        except SpineDBAPIError as error:
-            self.errored.emit(self._database_url, error)
-            return
-        try:
-            if self.isInterruptionRequested():
-                return
-            settings = gdx.make_settings(database_map)
-            if self.isInterruptionRequested():
-                return
-            indexing_settings = gdx.make_indexing_settings(database_map)
-        except gdx.GdxExportException as error:
-            self.errored.emit(self._database_url, error)
-            return
-        finally:
-            database_map.connection.close()
-        if self.isInterruptionRequested():
+        settings, indexing_settings = self._read_settings()
+        if settings is None or self.isInterruptionRequested():
             return
         if self._previous_settings is not None:
             updated_settings = deepcopy(self._previous_settings)
             updated_settings.update(settings)
             if self.isInterruptionRequested():
                 return
-            updated_indexing_settings = gdx.update_indexing_settings(
-                self._previous_indexing_settings, indexing_settings, updated_settings
+            updated_indexing_settings, updated_indexing_domains = self._update_indexing_settings(
+                updated_settings, indexing_settings
             )
-            if self.isInterruptionRequested():
+            if updated_indexing_settings is None or self.isInterruptionRequested():
                 return
-            indexing_domain_names = list()
-            for indexing_setting in updated_indexing_settings.values():
-                if indexing_setting.indexing_domain is not None:
-                    indexing_domain_names.append(indexing_setting.indexing_domain.name)
-            updated_indexing_domains = [
-                domain for domain in self._previous_indexing_domains if domain.name in indexing_domain_names
-            ]
-            for indexing_domain in updated_indexing_domains:
-                metadata = gdx.SetMetadata(gdx.ExportFlag.FORCED_EXPORTABLE, True)
-                updated_settings.add_or_replace_domain(indexing_domain, metadata)
-            if self.isInterruptionRequested():
-                return
-            try:
-                database_map = DatabaseMapping(self._database_url)
-            except SpineDBAPIError as error:
-                self.errored.emit(self._database_url, error)
-                return
-            try:
-                updated_merging_settings = gdx.update_merging_settings(
-                    self._previous_merging_settings, updated_settings, database_map
-                )
-            except gdx.GdxExportException as error:
-                self.errored.emit(self._database_url, error)
-                return
-            finally:
-                database_map.connection.close()
-            updated_merging_domains = list(map(gdx.merging_domain, updated_merging_settings.values()))
-            for domain in updated_merging_domains:
-                metadata = gdx.SetMetadata(gdx.ExportFlag.FORCED_EXPORTABLE, True)
-                updated_settings.add_or_replace_domain(domain, metadata)
-            if self.isInterruptionRequested():
+            updated_merging_settings, updated_merging_domains = self._update_merging_settings(updated_settings)
+            if updated_merging_settings is None or self.isInterruptionRequested():
                 return
             self.settings_read.emit(self._database_url, updated_settings)
             self.indexing_settings_read.emit(self._database_url, updated_indexing_settings)
@@ -150,3 +105,62 @@ class Worker(QThread):
         self._previous_indexing_settings = previous_indexing_settings
         self._previous_indexing_domains = previous_indexing_domains
         self._previous_merging_settings = previous_merging_settings
+
+    def _read_settings(self):
+        try:
+            database_map = DatabaseMapping(self._database_url)
+        except SpineDBAPIError as error:
+            self.errored.emit(self._database_url, error)
+            return None, None
+        try:
+            if self.isInterruptionRequested():
+                return None, None
+            settings = gdx.make_settings(database_map)
+            if self.isInterruptionRequested():
+                return None, None
+            indexing_settings = gdx.make_indexing_settings(database_map)
+        except gdx.GdxExportException as error:
+            self.errored.emit(self._database_url, error)
+            return None, None
+        finally:
+            database_map.connection.close()
+        return settings, indexing_settings
+
+    def _update_indexing_settings(self, updated_settings, new_indexing_settings):
+        updated_indexing_settings = gdx.update_indexing_settings(
+            self._previous_indexing_settings, new_indexing_settings, updated_settings
+        )
+        if self.isInterruptionRequested():
+            return None, None
+        indexing_domain_names = list()
+        for indexing_setting in updated_indexing_settings.values():
+            if indexing_setting.indexing_domain is not None:
+                indexing_domain_names.append(indexing_setting.indexing_domain.name)
+        updated_indexing_domains = [
+            domain for domain in self._previous_indexing_domains if domain.name in indexing_domain_names
+        ]
+        for indexing_domain in updated_indexing_domains:
+            metadata = gdx.SetMetadata(gdx.ExportFlag.FORCED_EXPORTABLE, True)
+            updated_settings.add_or_replace_domain(indexing_domain, metadata)
+        return updated_indexing_settings, updated_indexing_domains
+
+    def _update_merging_settings(self, updated_settings):
+        try:
+            database_map = DatabaseMapping(self._database_url)
+        except SpineDBAPIError as error:
+            self.errored.emit(self._database_url, error)
+            return None, None
+        try:
+            updated_merging_settings = gdx.update_merging_settings(
+                self._previous_merging_settings, updated_settings, database_map
+            )
+        except gdx.GdxExportException as error:
+            self.errored.emit(self._database_url, error)
+            return None, None
+        finally:
+            database_map.connection.close()
+        updated_merging_domains = list(map(gdx.merging_domain, updated_merging_settings.values()))
+        for domain in updated_merging_domains:
+            metadata = gdx.SetMetadata(gdx.ExportFlag.FORCED_EXPORTABLE, True)
+            updated_settings.add_or_replace_domain(domain, metadata)
+        return updated_merging_settings, updated_merging_domains
