@@ -113,7 +113,7 @@ class TestPlotting(unittest.TestCase):
     def test_plot_pivot_column_float_type(self):
         model = _make_pivot_proxy_model()
         support = PivotTablePlottingHints()
-        plot_widget = plot_pivot_column(model, 1, support)
+        plot_widget = plot_pivot_column(model, 2, support)
         lines = plot_widget.canvas.axes.get_lines()
         self.assertEqual(len(lines), 1)
         self.assertTrue(all(lines[0].get_ydata(orig=True) == [1.1, 1.2, 1.3]))
@@ -121,7 +121,7 @@ class TestPlotting(unittest.TestCase):
     def test_plot_pivot_column_int_type(self):
         model = _make_pivot_proxy_model()
         support = PivotTablePlottingHints()
-        plot_widget = plot_pivot_column(model, 2, support)
+        plot_widget = plot_pivot_column(model, 1, support)
         lines = plot_widget.canvas.axes.get_lines()
         self.assertEqual(len(lines), 1)
         self.assertTrue(all(lines[0].get_ydata(orig=True) == [-3.0, -1.0, 2.0]))
@@ -140,7 +140,7 @@ class TestPlotting(unittest.TestCase):
         model = _make_pivot_proxy_model()
         model.set_filter("rows", {"1", "3"})
         support = PivotTablePlottingHints()
-        plot_widget = plot_pivot_column(model, 1, support)
+        plot_widget = plot_pivot_column(model, 2, support)
         lines = plot_widget.canvas.axes.get_lines()
         self.assertEqual(len(lines), 1)
         self.assertTrue(all(lines[0].get_ydata(orig=True) == [1.1, 1.3]))
@@ -164,8 +164,8 @@ class TestPlotting(unittest.TestCase):
         plot_widget = plot_selection(model, selected_indexes, support)
         lines = plot_widget.canvas.axes.get_lines()
         self.assertEqual(len(lines), 2)
-        self.assertTrue(all(lines[0].get_ydata(orig=True) == [1.1, 1.2, 1.3]))
-        self.assertTrue(all(lines[1].get_ydata(orig=True) == [-3.0, -1.0, 2.0]))
+        self.assertTrue(all(lines[0].get_ydata(orig=True) == [-3.0, -1.0, 2.0]))
+        self.assertTrue(all(lines[1].get_ydata(orig=True) == [1.1, 1.2, 1.3]))
 
     def test_plot_pivot_column_with_x_column(self):
         model = _make_pivot_proxy_model()
@@ -174,8 +174,8 @@ class TestPlotting(unittest.TestCase):
         plot_widget = plot_pivot_column(model, 2, support)
         lines = plot_widget.canvas.axes.get_lines()
         self.assertEqual(len(lines), 1)
-        self.assertTrue(all(lines[0].get_xdata(orig=True) == [1.1, 1.2, 1.3]))
-        self.assertTrue(all(lines[0].get_ydata(orig=True) == [-3.0, -1.0, 2.0]))
+        self.assertTrue(all(lines[0].get_xdata(orig=True) == [-3.0, -1.0, 2.0]))
+        self.assertTrue(all(lines[0].get_ydata(orig=True) == [1.1, 1.2, 1.3]))
 
     def test_plot_pivot_column_when_x_column_hidden(self):
         model = _make_pivot_proxy_model()
