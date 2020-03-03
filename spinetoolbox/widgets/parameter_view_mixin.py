@@ -418,6 +418,8 @@ class ParameterViewMixin:
             else:
                 plot_window_title = "Plot"
             plot_widget.setWindowTitle(plot_window_title)
+            plot_widget.setParent(table_view.window())
+            plot_widget.setWindowFlag(Qt.Window, True)
             plot_widget.show()
         elif option == "Remove selection":
             model.remove_selection_requested.emit()

@@ -356,7 +356,9 @@ class PivotTableModel(QAbstractTableModel):
         header_ids = self._header_ids(row, column)
         objects_ids, parameter_id = header_ids[:-1], header_ids[-1]
         object_names = [self.db_mngr.get_item(self.db_map, "object", id_)["name"] for id_ in objects_ids]
-        parameter_name = self.db_mngr.get_item(self.db_map, "parameter definition", parameter_id)["parameter_name"]
+        parameter_name = self.db_mngr.get_item(self.db_map, "parameter definition", parameter_id).get(
+            "parameter_name", ""
+        )
         return object_names, parameter_name
 
     def value_name(self, index):

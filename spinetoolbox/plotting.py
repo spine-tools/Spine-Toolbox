@@ -23,9 +23,10 @@ The main entrance points to plotting are:
 :date:   9.7.2019
 """
 
+from matplotlib.ticker import MaxNLocator
 import numpy as np
 from PySide2.QtCore import QModelIndex, Qt
-from spinedb_api import from_database, ParameterValueFormatError, TimeSeries
+from spinedb_api import from_database, IndexedValue, Map, ParameterValueFormatError, TimeSeries
 from .widgets.plot_widget import PlotWidget
 
 
@@ -52,16 +53,23 @@ def _add_plot_to_widget(values, labels, plot_widget):
     if isinstance(values[0], TimeSeries):
         for value, label in zip(values, labels):
             add_time_series_plot(plot_widget, value, label)
+    elif isinstance(values[0], Map):
+        for value, label in zip(values, labels):
+            add_map_plot(plot_widget, value, label)
     else:
         plot_widget.canvas.axes.plot(values[0], values[1], label=labels[0])
 
 
 def _raise_if_types_inconsistent(values):
     """Raises an exception if not all values are TimeSeries or floats."""
-    if not all(isinstance(value, TimeSeries) for value in values) and not all(
-        isinstance(value, float) for value in values
-    ):
-        raise PlottingError("Cannot plot a mixture of time series and other data")
+    if not values:
+        return
+    first_value_type = type(values[0])
+    if issubclass(first_value_type, TimeSeries):
+        # Clump fixed and variable step time series together. We can plot both at the same time.
+        first_value_type = TimeSeries
+    if not all(isinstance(value, first_value_type) for value in values[1:]):
+        raise PlottingError("Cannot plot a mixture of indexed and other data")
 
 
 def _filter_name_columns(selections):
@@ -112,7 +120,7 @@ def _collect_single_column_values(model, column, rows, hints):
                 value = None
             if isinstance(value, (float, int)):
                 values.append(float(value))
-            elif isinstance(value, TimeSeries):
+            elif isinstance(value, (Map, TimeSeries)):
                 labels.append(hints.cell_label(model, data_index))
                 values.append(value)
             else:
@@ -194,26 +202,55 @@ def plot_selection(model, indexes, hints):
     plot_widget = PlotWidget()
     selections = hints.filter_columns(_organize_selection_to_columns(indexes), model)
     first_column_value_type = None
+    all_labels = list()
     for column, rows in selections.items():
         values, labels = _collect_column_values(model, column, rows, hints)
+        all_labels += labels
         if first_column_value_type is None and values:
-            if isinstance(values[0], TimeSeries):
-                first_column_value_type = TimeSeries
+            if isinstance(values[0], IndexedValue):
+                first_column_value_type = type(values[0])
             else:
                 first_column_value_type = type(values[1][0])
         elif values:
             if isinstance(values[0], TimeSeries) and not isinstance(first_column_value_type, TimeSeries):
-                raise PlottingError("Cannot plot a mixture of time series and other data")
+                raise PlottingError("Cannot plot a mixture of time series and other value types.")
+            if isinstance(values[0], Map) and not isinstance(first_column_value_type, Map):
+                raise PlottingError("Cannot plot a mixture of maps and other value types.")
             if not isinstance(values[0][1], first_column_value_type):
-                raise PlottingError("Cannot plot a mixture of time series and other data")
+                raise PlottingError("Cannot plot a mixture of indexed values and scalars.")
         _add_plot_to_widget(values, labels, plot_widget)
     plot_widget.canvas.axes.set_xlabel(hints.x_label(model))
-    plot_lines = plot_widget.canvas.axes.get_lines()
-    if len(plot_lines) > 1:
+    if len(all_labels) > 1:
         plot_widget.canvas.axes.legend(loc="best", fontsize="small")
-    elif len(plot_lines) == 1:
-        plot_widget.canvas.axes.set_title(plot_lines[0].get_label())
+    elif len(all_labels) == 1:
+        plot_widget.canvas.axes.set_title(all_labels[0])
     return plot_widget
+
+
+def add_map_plot(plot_widget, map_value, label=None):
+    """
+    Adds a map plot to a plot widget.
+
+    Args:
+        plot_widget (PlotWidget): a plot widget to modify
+        map_value (Map): the map to plot
+        label (str): a label for the map
+    """
+    if not map_value.indexes:
+        return
+    if map_value.is_nested():
+        raise PlottingError("Plotting of nested maps is not supported.")
+    if not all(isinstance(value, float) for value in map_value.values):
+        raise PlottingError("Cannot plot non-numerical values in map.")
+    if not isinstance(map_value.indexes[0], str):
+        if hasattr(map_value.indexes[0], "to_text"):
+            indexes_as_strings = [index.to_text() for index in map_value.indexes]
+        else:
+            indexes_as_strings = list(map(str, map_value.indexes))
+    else:
+        indexes_as_strings = map_value.indexes
+    plot_widget.canvas.axes.plot(indexes_as_strings, map_value.values, label=label, linestyle="", marker="o")
+    plot_widget.canvas.axes.xaxis.set_major_locator(MaxNLocator(10))
 
 
 def add_time_series_plot(plot_widget, value, label=None):

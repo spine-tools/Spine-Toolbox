@@ -19,7 +19,7 @@ Classes for custom context menus and pop-up menus.
 import os
 from PySide2.QtWidgets import QMenu, QWidgetAction, QAction
 from PySide2.QtGui import QIcon
-from PySide2.QtCore import Signal, Slot, QPoint, QEvent
+from PySide2.QtCore import QEvent, QPoint, Qt, Signal, Slot
 from ..helpers import fix_name_ambiguity
 from ..plotting import plot_pivot_column, plot_selection, PlottingError, PivotTablePlottingHints
 from .custom_qwidgets import SimpleFilterWidget, TabularViewFilterWidget
@@ -743,6 +743,8 @@ class PivotTableModelMenu(QMenu):
             label = hints.column_label(self._proxy, index.column())
             plotted_column_names.add(label)
         plot_window.setWindowTitle("Plot    -- {} --".format(", ".join(plotted_column_names)))
+        plot_window.setParent(self.parentWidget())
+        plot_window.setWindowFlag(Qt.Window, True)
         plot_window.show()
 
     def request_menu(self, QPos=None):
@@ -799,13 +801,14 @@ class PivotTableModelMenu(QMenu):
 class PivotTableHorizontalHeaderMenu(QMenu):
     """
     A context menu for the horizontal header of a pivot table.
-
-    Args:
-         proxy_model (PivotTableSortFilterProxy): a proxy model
-         parent (QWidget): a parent widget
     """
 
     def __init__(self, proxy_model, parent=None):
+        """
+        Args:
+             proxy_model (PivotTableSortFilterProxy): a proxy model
+             parent (QWidget): a parent widget
+        """
         super().__init__(parent)
         self._proxy_model = proxy_model
         self._model_index = None

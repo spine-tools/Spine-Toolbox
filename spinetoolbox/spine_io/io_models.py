@@ -15,7 +15,7 @@ Classes for handling models in PySide2's model/view framework.
 :author: P. Vennström (VTT)
 :date:   1.6.2019
 """
-from collections import namedtuple
+from collections import namedtuple, Iterable
 from six import unichr
 
 from spinedb_api import (
@@ -23,6 +23,7 @@ from spinedb_api import (
     RelationshipClassMapping,
     ParameterDefinitionMapping,
     ParameterValueMapping,
+    ParameterMapMapping,
     ParameterTimeSeriesMapping,
     ParameterTimePatternMapping,
     ParameterListMapping,
@@ -79,6 +80,7 @@ _MAPTYPE_DISPLAY_NAME = {
 _DISPLAY_TYPE_TO_TYPE = {
     "Single value": ParameterValueMapping,
     "List": ParameterListMapping,
+    "Map": ParameterMapMapping,
     "Time series": ParameterTimeSeriesMapping,
     "Time pattern": ParameterTimePatternMapping,
     "Definition": ParameterDefinitionMapping,
@@ -500,6 +502,8 @@ class MappingSpecModel(QAbstractTableModel):
             self._model.parameters = ParameterListMapping()
         elif new_type == "Definition":
             self._model.parameters = ParameterDefinitionMapping()
+        elif new_type == "Map":
+            self._model.parameters = ParameterMapMapping()
         elif new_type == "Time series":
             self._model.parameters = ParameterTimeSeriesMapping()
         elif new_type == "Time pattern":
@@ -531,6 +535,9 @@ class MappingSpecModel(QAbstractTableModel):
         if isinstance(self._model.parameters, ParameterValueMapping):
             display_name.append("Parameter values")
             mappings.append(self._model.parameters.value)
+        if isinstance(self._model.parameters, ParameterMapMapping):
+            display_name.append("Parameter map index")
+            mappings.append(self._model.parameters.extra_dimensions[0])
         if isinstance(self._model.parameters, ParameterTimeSeriesMapping):
             display_name.append("Parameter time index")
             mappings.append(self._model.parameters.extra_dimensions[0])
@@ -612,7 +619,7 @@ class MappingSpecModel(QAbstractTableModel):
             return _MAPPING_COLORS["entity"]
         if display_name == "Parameter names":
             return _MAPPING_COLORS["parameter name"]
-        if display_name in ["Parameter time index", "Parameter time pattern index"]:
+        if display_name in ["Parameter map index", "Parameter time index", "Parameter time pattern index"]:
             return _MAPPING_COLORS["parameter extra dimension"]
         if display_name == "Parameter values":
             return _MAPPING_COLORS["parameter value"]
@@ -760,7 +767,7 @@ class MappingSpecModel(QAbstractTableModel):
             mapping = self._model.parameters.name
         elif name == "Parameter values":
             mapping = self._model.parameters.value
-        elif name in ("Parameter time index", "Parameter time pattern index"):
+        elif name in ("Parameter map index", "Parameter time index", "Parameter time pattern index"):
             mapping = self._model.parameters.extra_dimensions[0]
         else:
             return None
@@ -783,7 +790,7 @@ class MappingSpecModel(QAbstractTableModel):
             self._model.parameters.name = mapping
         elif name == "Parameter values":
             self._model.parameters.value = mapping
-        elif name in ("Parameter time index", "Parameter time pattern index"):
+        elif name in ("Parameter map index", "Parameter time index", "Parameter time pattern index"):
             self._model.parameters.extra_dimensions = [mapping]
         else:
             return False
@@ -868,13 +875,30 @@ class MappingListModel(QAbstractListModel):
             self.endRemoveRows()
 
 
+def _create_allowed_types_menu(parent, trigger_slot):
+    """
+    Returns a menu which contains actions for each allowed data type.
+
+    Args:
+        parent (QWidget): a parent widget
+        trigger_slot (Slot): a slot which is connected to QMenu's 'triggered' signal
+    Returns:
+        QMenu: a menu
+    """
+    menu = QMenu(parent)
+    for at in _ALLOWED_TYPES:
+        menu.addAction(at)
+    menu.triggered.connect(trigger_slot)
+    return menu
+
+
 class HeaderWithButton(QHeaderView):
     """Class that reimplements the QHeaderView section paint event to draw a button
     that is used to display and change the type of that column or row.
     """
 
     def __init__(self, orientation, parent=None):
-        super(HeaderWithButton, self).__init__(orientation, parent)
+        super().__init__(orientation, parent)
         self.setHighlightSections(True)
         self.setSectionsClickable(True)
         self.setDefaultAlignment(Qt.AlignLeft)
@@ -887,7 +911,7 @@ class HeaderWithButton(QHeaderView):
 
         self._margin = Margin(left=0, right=0, top=0, bottom=0)
 
-        self._menu = self._create_menu()
+        self._menu = _create_allowed_types_menu(self, self._menu_pressed)
 
         self._button = QToolButton(parent=self)
         self._button.setMenu(self._menu)
@@ -920,17 +944,21 @@ class HeaderWithButton(QHeaderView):
         self._display_sections = set(sections)
         self.viewport().update()
 
-    def _create_menu(self):
-        menu = QMenu(self)
-        for at in _ALLOWED_TYPES:
-            action = QAction(parent=menu)
-            action.setText(at)
-            menu.addAction(action)
-        menu.triggered.connect(self._menu_pressed)
-        return menu
-
+    @Slot("QAction")
     def _menu_pressed(self, action):
+        """Sets the data type of a row or column according to menu action."""
         type_str = action.text()
+        self.set_data_types(self._button_logical_index, type_str,update_viewport=False)
+
+    def set_data_types(self, sections, type_str, update_viewport=True):
+        """
+        Sets the data types of given sections (rows, columns).
+
+        Args:
+            sections (Iterable or int or NoneType): row/column index
+            type_str (str): data type name
+            update_viewport (bool): True if the buttons need repaint
+        """
         if type_str == "integer sequence datetime":
             dialog = NewIntegerSequenceDateTimeConvertSpecDialog()
             if dialog.exec_():
@@ -939,9 +967,13 @@ class HeaderWithButton(QHeaderView):
                 return
         else:
             convert_spec = value_to_convert_spec(type_str)
-
-        logical_index = self._button_logical_index
-        self.model().set_type(logical_index, convert_spec, self.orientation())
+        if not isinstance(sections, Iterable):
+            sections = [sections]
+        orientation = self.orientation()
+        for section in sections:
+            self.model().set_type(section, convert_spec, orientation)
+        if update_viewport:
+            self.viewport().update()
 
     def widget_width(self):
         """Width of widget
@@ -1038,8 +1070,8 @@ class HeaderWithButton(QHeaderView):
     def paintSection(self, painter, rect, logical_index):
         """Paints a section of the QHeader view.
 
-        Works by drawing a pixmap of the button to the left of the orignial paint rectangle.
-        Then shifts the original rect to the right so these two doesn't paint over eachother.
+        Works by drawing a pixmap of the button to the left of the original paint rectangle.
+        Then shifts the original rect to the right so these two doesn't paint over each other.
         """
         if not self._display_all and logical_index not in self._display_sections:
             super().paintSection(painter, rect, logical_index)
@@ -1102,20 +1134,77 @@ class HeaderWithButton(QHeaderView):
             self._set_button_geometry(self._button, self._button_logical_index)
 
     def set_margins(self, margins):
+        """Sets the header margins."""
         self._margin = margins
 
 
 class TableViewWithButtonHeader(QTableView):
+    """Customized table with data type buttons on horizontal and vertical headers"""
     def __init__(self, parent=None):
-        super(TableViewWithButtonHeader, self).__init__(parent)
+        """
+        Args:
+            parent (QWidget): a parent widget
+        """
+        super().__init__(parent)
         self._horizontal_header = HeaderWithButton(Qt.Horizontal, self)
         self._vertical_header = HeaderWithButton(Qt.Vertical, self)
         self.setHorizontalHeader(self._horizontal_header)
+        self._horizontal_header.setContextMenuPolicy(Qt.CustomContextMenu)
+        self._horizontal_header.customContextMenuRequested.connect(self._show_horizontal_header_menu)
+        self._horizontal_menu = self._create_horizontal_header_menu()
         self.setVerticalHeader(self._vertical_header)
+        self._vertical_header.setContextMenuPolicy(Qt.CustomContextMenu)
+        self._vertical_header.customContextMenuRequested.connect(self._show_vertical_header_menu)
+        self._vertical_menu = self._create_vertical_header_menu()
 
     def scrollContentsBy(self, dx, dy):
+        """Scrolls the table's contents by given delta."""
         super().scrollContentsBy(dx, dy)
         if dx != 0:
             self._horizontal_header.fix_widget_positions()
         if dy != 0:
             self._vertical_header.fix_widget_positions()
+
+    def _create_horizontal_header_menu(self):
+        """Returns a new menu for the horizontal header"""
+        parent = self._horizontal_header
+        menu = QMenu(parent)
+        type_menu = _create_allowed_types_menu(parent, self._set_all_column_data_types)
+        type_menu.setTitle("Set all data types to...")
+        menu.addMenu(type_menu)
+        return menu
+
+    def _create_vertical_header_menu(self):
+        """Returns a new menu for the vertical header."""
+        parent = self._horizontal_header
+        menu = QMenu(parent)
+        type_menu = _create_allowed_types_menu(parent, self._set_all_row_data_types)
+        type_menu.setTitle("Set all data types to...")
+        menu.addMenu(type_menu)
+        return menu
+
+    @Slot("QPoint")
+    def _show_horizontal_header_menu(self, pos):
+        """Opens the context menu of the horizontal header."""
+        screen_pos = self._horizontal_header.mapToGlobal(pos)
+        self._horizontal_menu.exec_(screen_pos)
+
+    @Slot("QPoint")
+    def _show_vertical_header_menu(self, pos):
+        """Opens the context menu of the vertical header."""
+        screen_pos = self._vertical_header.mapToGlobal(pos)
+        self._vertical_menu.exec_(screen_pos)
+
+    @Slot("QAction")
+    def _set_all_column_data_types(self, action):
+        """Sets all columns data types to the type given by action's text."""
+        type_str = action.text()
+        columns = range(self._horizontal_header.count())
+        self._horizontal_header.set_data_types(columns, type_str)
+
+    @Slot("QAction")
+    def _set_all_row_data_types(self, action):
+        """Sets all rows data types to the type given by action's text."""
+        type_str = action.text()
+        rows = range(self._vertical_header.count())
+        self._vertical_header.set_data_types(rows, type_str)

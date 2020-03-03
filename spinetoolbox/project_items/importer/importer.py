@@ -91,6 +91,7 @@ class Importer(ProjectItem):
         self._file_model = _FileListModel()
         self._file_model.selected_for_import_state_changed.connect(self._report_item_importability_change)
         self.importer_process = None
+        self.return_value = False  # Import process return value (boolean)
         # connector class
         self._preview_widget = {}  # Key is the filepath, value is the ImportPreviewWindow instance
 
@@ -289,12 +290,17 @@ class Importer(ProjectItem):
         """
         self._preview_widget.pop(importee, None)
 
-    def _prepare_importer_program(self, args):
+    def _prepare_importer_program(self, importer_args):
         """Prepares an execution manager instance for running
         importer_process.py in a QProcess.
 
         Args:
-            args (list): Abs. paths to import source files
+            importer_args (list): Arguments for the importer_program. Source file paths, their mapping specs,
+             URLs downstream, logs directory, cancel_on_error
+
+        Returns:
+            bool: True if preparing the program succeeded, False otherwise.
+
         """
         program_path = os.path.abspath(importer_program.__file__)
         python_path = self._toolbox.qsettings().value("appSettings/pythonPath", defaultValue="")
@@ -306,7 +312,7 @@ class Importer(ProjectItem):
             return False
         self.importer_process = QProcessExecutionManager(self._toolbox, python_cmd, [program_path])
         self.importer_process.execution_finished.connect(self._handle_importer_program_process_finished)
-        self.importer_process.data_to_inject = args
+        self.importer_process.data_to_inject = importer_args
         return True
 
     @Slot(int)
@@ -340,6 +346,9 @@ class Importer(ProjectItem):
 
         Args:
             program (str): Python executable that is currently set in Settings
+
+        Returns:
+            bool: True if Python is found, False otherwise
         """
         args = ["-V"]
         python_check_process = QProcessExecutionManager(self._toolbox, program, args, silent=True)
@@ -367,14 +376,15 @@ class Importer(ProjectItem):
             absolute_path = absolute_paths.get(label)
             if absolute_path is not None:
                 absolute_path_settings[absolute_path] = self.settings[label]
-        args = [
+        # Collect arguments for the importer_program
+        import_args = [
             [f.path for f in importable_files],
             absolute_path_settings,
             [r.url for r in self.resources_from_downstream if r.type_ == "database"],
             self.logs_dir,
             self._properties_ui.cancel_on_error_checkBox.isChecked(),
         ]
-        if not self._prepare_importer_program(args):
+        if not self._prepare_importer_program(import_args):
             self._logger.msg_error.emit(f"Executing Importer {self.name} failed.")
             return False
         self.importer_process.start_execution()

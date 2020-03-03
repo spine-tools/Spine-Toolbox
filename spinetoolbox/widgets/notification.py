@@ -145,7 +145,7 @@ class NotificationStack(QObject):
         notification.show()
 
     def handle_notification_destroyed(self, notification, height):
-        """Removes from the stack the given notification and move up 
+        """Removes from the stack the given notification and move up
         subsequent ones.
         """
         i = self.notifications.index(notification)

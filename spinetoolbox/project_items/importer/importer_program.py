@@ -16,6 +16,7 @@ Contains Importer project item class.
 :date:   10.6.2019
 """
 
+import io
 import sys
 import os
 import json
@@ -30,7 +31,7 @@ from spinetoolbox.spine_io.type_conversion import value_to_convert_spec
 
 
 def _create_log_file_timestamp():
-    """ Creates a new timestamp string that is used as Importer and Data Store error log file.
+    """Creates a new timestamp string that is used as Importer and Data Store error log file.
 
     Returns:
         Timestamp string or empty string if failed.
@@ -138,4 +139,8 @@ def _import(all_data, url, logs_dir, cancel_on_error):
 
 
 if __name__ == "__main__":
+    # Force std streams to utf-8, since it may not be the default on all terminals (e.g Win cmd prompt)
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8")
+    sys.stdin = io.TextIOWrapper(sys.stdin.buffer, encoding="utf-8")
     run(*json.loads(input()))
