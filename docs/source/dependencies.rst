@@ -18,7 +18,8 @@ than 5.12, which is not supported (yet).
 Required packages
 -----------------
 
-The following packages are available from ``requirements.txt``
+The following packages are installed when spinetoolbox package is installed via ``setup.py``
+or ``requirements.txt``
 
 +-------------------+---------------+---------------+
 | Package name      |    Version    |     License   |
@@ -27,21 +28,23 @@ The following packages are available from ``requirements.txt``
 +-------------------+---------------+---------------+
 | datapackage       | 1.2.3         |     MIT       |
 +-------------------+---------------+---------------+
+| jupyter-client    | <5.3.2        |    BSD        |
++-------------------+---------------+---------------+
 | qtconsole         | 4.3.1         |     BSD       |
 +-------------------+---------------+---------------+
 | sqlalchemy        | 1.2.6         |     MIT       |
 +-------------------+---------------+---------------+
-| openpyxl          | 2.5.0         |   MIT/Expat   |
+| spinedb_api       | 0.1.15        |     LGPL      |
 +-------------------+---------------+---------------+
-| spinedb_api       | 0.0.36        |     LGPL      |
+| spine_engine      | 0.4.0         |     LGPL      |
++-------------------+---------------+---------------+
+| openpyxl          | 2.5.0         |   MIT/Expat   |
 +-------------------+---------------+---------------+
 | numpy             | 1.15.1        |    BSD        |
 +-------------------+---------------+---------------+
 | matplotlib        | 3.0           |    BSD        |
 +-------------------+---------------+---------------+
 | scipy             | 1.1.0         |    BSD        |
-+-------------------+---------------+---------------+
-| jupyter-client    | 5.2.4         |    BSD        |
 +-------------------+---------------+---------------+
 | networkx          | 2.2           |    BSD        |
 +-------------------+---------------+---------------+
@@ -57,6 +60,11 @@ The following packages are available from ``requirements.txt``
 +-------------------+---------------+---------------+
 | pandas            | 0.24.0        |     BSD       |
 +-------------------+---------------+---------------+
+| jsonschema        | 2.6           |     MIT       |
++-------------------+---------------+---------------+
+| gdx2py            | 2.0.4         |     MIT       |
++-------------------+---------------+---------------+
+
 
 Developer packages
 ^^^^^^^^^^^^^^^^^^
