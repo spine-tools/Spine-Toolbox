@@ -803,7 +803,7 @@ class TestGdx(unittest.TestCase):
                 for gams_record, expected_name in zip(gams_set, expected_records):
                     self.assertEqual(gams_record, expected_name)
                 gams_parameter = gdx_file["scalar"]
-                self.assertIsNone(gams_parameter.domain)
+                self.assertEqual(gams_parameter.domain, ["domain"])
                 self.assertEqual(list(gams_parameter.keys()), [])
                 self.assertEqual(list(gams_parameter.values()), [])
 
