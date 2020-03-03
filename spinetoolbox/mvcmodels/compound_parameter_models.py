@@ -554,6 +554,7 @@ class CompoundObjectParameterDefinitionModel(
             "value_list_name",
             "parameter_tag_list",
             "default_value",
+            "description",
             "database",
         ]
 
@@ -575,6 +576,7 @@ class CompoundRelationshipParameterDefinitionModel(
             "value_list_name",
             "parameter_tag_list",
             "default_value",
+            "description",
             "database",
         ]
 
