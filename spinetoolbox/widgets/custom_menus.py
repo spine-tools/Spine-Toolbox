@@ -801,13 +801,14 @@ class PivotTableModelMenu(QMenu):
 class PivotTableHorizontalHeaderMenu(QMenu):
     """
     A context menu for the horizontal header of a pivot table.
-
-    Args:
-         proxy_model (PivotTableSortFilterProxy): a proxy model
-         parent (QWidget): a parent widget
     """
 
     def __init__(self, proxy_model, parent=None):
+        """
+        Args:
+             proxy_model (PivotTableSortFilterProxy): a proxy model
+             parent (QWidget): a parent widget
+        """
         super().__init__(parent)
         self._proxy_model = proxy_model
         self._model_index = None
