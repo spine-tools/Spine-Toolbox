@@ -760,6 +760,55 @@ class TestGdx(unittest.TestCase):
                 )
                 self.assertEqual(list(gams_parameter.values()), [-4.2, -2.3, -5.0])
 
+    @unittest.skipIf(gdx_utils.find_gams_directory() is None, "No working GAMS installation found.")
+    def test_to_gdx_file_works_with_empty_domains(self):
+        gams_directory = gdx.find_gams_directory()
+        with TemporaryDirectory() as tmp_dir_name:
+            database_map = self._make_database_map(tmp_dir_name, "test_to_gdx_file_works_with_empty_domains.sqlite")
+            dbmanip.import_object_classes(database_map, ["domain"])
+            sorted_domain_names = ["domain"]
+            settings = gdx.Settings(sorted_domain_names, [], {"domain": []})
+            path_to_gdx = Path(tmp_dir_name).joinpath("test_to_gdx_file_works_with_empty_domains.gdx")
+            gdx.to_gdx_file(database_map, path_to_gdx, [], settings, {}, {}, gams_directory)
+            database_map.connection.close()
+            with GdxFile(path_to_gdx, "r", gams_directory) as gdx_file:
+                self.assertEqual(len(gdx_file), 1)
+                expected_symbol_names = ["domain"]
+                for gams_symbol, expected_name in zip(gdx_file.keys(), expected_symbol_names):
+                    self.assertEqual(gams_symbol, expected_name)
+                gams_set = gdx_file["domain"]
+                self.assertEqual(len(gams_set), 0)
+
+    @unittest.skipIf(gdx_utils.find_gams_directory() is None, "No working GAMS installation found.")
+    def test_to_gdx_file_works_with_empty_parameters(self):
+        gams_directory = gdx.find_gams_directory()
+        with TemporaryDirectory() as tmp_dir_name:
+            database_map = self._make_database_map(tmp_dir_name, "test_to_gdx_file_works_with_empty_parameters.sqlite")
+            dbmanip.import_object_classes(database_map, ["domain"])
+            dbmanip.import_objects(
+                database_map, [("domain", "record")]
+            )
+            dbmanip.import_object_parameters(database_map, [("domain", "scalar")])
+            sorted_domain_names = ["domain"]
+            settings = gdx.Settings(sorted_domain_names, [], {"domain": [("record", )]})
+            path_to_gdx = Path(tmp_dir_name).joinpath("test_to_gdx_file_works_with_empty_parameters.gdx")
+            gdx.to_gdx_file(database_map, path_to_gdx, [], settings, {}, {}, gams_directory)
+            database_map.connection.close()
+            with GdxFile(path_to_gdx, "r", gams_directory) as gdx_file:
+                self.assertEqual(len(gdx_file), 2)
+                expected_symbol_names = ["domain"]
+                for gams_symbol, expected_name in zip(gdx_file.keys(), expected_symbol_names):
+                    self.assertEqual(gams_symbol, expected_name)
+                gams_set = gdx_file["domain"]
+                self.assertEqual(len(gams_set), 1)
+                expected_records = ["record"]
+                for gams_record, expected_name in zip(gams_set, expected_records):
+                    self.assertEqual(gams_record, expected_name)
+                gams_parameter = gdx_file["scalar"]
+                self.assertIsNone(gams_parameter.domain)
+                self.assertEqual(list(gams_parameter.keys()), [])
+                self.assertEqual(list(gams_parameter.values()), [])
+
     def test_make_settings(self):
         with TemporaryDirectory() as tmp_dir_name:
             database_map = self._make_database_map(tmp_dir_name, "test_make_settings.sqlite")
