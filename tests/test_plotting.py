@@ -18,7 +18,6 @@ Unit tests for the plotting module.
 
 import unittest
 from unittest.mock import Mock, MagicMock
-from matplotlib.collections import PathCollection
 from PySide2.QtCore import QAbstractTableModel, QModelIndex, Qt
 from PySide2.QtWidgets import QApplication, QAction
 from spinedb_api import Map, TimeSeriesVariableResolution
