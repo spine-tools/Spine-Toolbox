@@ -15,6 +15,7 @@ Miscelaneous mixins for parameter models
 :authors: M. Marin (KTH)
 :date:   4.10.2019
 """
+from spinedb_api import to_database
 
 
 def _parse_csv_list(csv_list):
@@ -42,7 +43,12 @@ class ConvertToDBMixin:
             dict: the db item
             list: error log
         """
-        return item.copy(), []
+        item = item.copy()
+        if "value" in item:
+            item["value"] = to_database(item["value"])
+        elif "default_value" in item:
+            item["default_value"] = to_database(item["default_value"])
+        return item, []
 
 
 class FillInParameterNameMixin(ConvertToDBMixin):
