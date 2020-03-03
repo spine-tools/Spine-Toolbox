@@ -3,6 +3,22 @@ All **notable** changes to this project are documented here.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
+## [0.4.0-beta.6] - 2020-03-03
+### Added
+- Import preview window now supports copy-pasting mappings and options from a source table to another
+- Import preview window header context-menus for the preview table which, allows users to change all 
+  data types at once.
+
+- Provide data for EditRole for nicer editor experience in MappingSpecModel.
+- Red background is displayed for invalid values in MappingSpecModel
+
+### Fixed
+- A problem with displaying special characters in Process Log when executing the Importer project item.
+- The context menu in Graph view's pivot table resulted in a traceback when an entity class did not 
+  have parameter definitions.
+- Combobox delegate in Import preview window had wrong list of choices.
+- Don't set mapping to NoneMapping if user gives a None value.
+
 ## [0.4.0-beta.5] - 2020-02-28
 ### Added
 - spinedb_api version 0.1.15
