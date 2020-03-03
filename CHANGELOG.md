@@ -8,7 +8,6 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - Import preview window now supports copy-pasting mappings and options from a source table to another
 - Import preview window header context-menus for the preview table which, allows users to change all 
   data types at once.
-
 - Provide data for EditRole for nicer editor experience in MappingSpecModel.
 - Red background is displayed for invalid values in MappingSpecModel
 
@@ -18,6 +17,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
   have parameter definitions.
 - Combobox delegate in Import preview window had wrong list of choices.
 - Don't set mapping to NoneMapping if user gives a None value.
+- Gdx Exporter now also exports empty object classes and empty parameters into GDX files
 
 ## [0.4.0-beta.5] - 2020-02-28
 ### Added
