@@ -294,10 +294,10 @@ class ParameterValueOrDefaultValueDelegate(ParameterDelegate):
     def setModelData(self, editor, model, index):
         """Emits the data_committed signal with new data."""
         if isinstance(editor, NumberParameterInlineEditor):
-            self.data_committed.emit(index, to_database(editor.data()))
+            self.data_committed.emit(index, editor.data())
             return
         value = self._str_to_int_or_float(editor.data())
-        self.data_committed.emit(index, to_database(value))
+        self.data_committed.emit(index, value)
 
     @staticmethod
     def _str_to_int_or_float(string):

@@ -19,7 +19,12 @@ Single models for parameter definitions and values (as 'for a single entity').
 from PySide2.QtCore import Qt, QModelIndex
 from PySide2.QtGui import QGuiApplication
 from ..mvcmodels.minimal_table_model import MinimalTableModel
-from ..mvcmodels.parameter_mixins import FillInParameterNameMixin, FillInValueListIdMixin, MakeParameterTagMixin
+from ..mvcmodels.parameter_mixins import (
+    ConvertToDBMixin,
+    FillInParameterNameMixin,
+    FillInValueListIdMixin,
+    MakeParameterTagMixin,
+)
 
 
 class SingleParameterModel(MinimalTableModel):
@@ -237,7 +242,7 @@ class SingleParameterDefinitionMixin(FillInParameterNameMixin, FillInValueListId
             self.db_mngr.msg_error.emit({self.db_map: error_log})
 
 
-class SingleParameterValueMixin:
+class SingleParameterValueMixin(ConvertToDBMixin):
     """A parameter value model for a single entity class."""
 
     def __init__(self, *args, **kwargs):
@@ -264,7 +269,18 @@ class SingleParameterValueMixin:
         Args:
             item (list): dictionary-items
         """
-        self.db_mngr.update_parameter_values({self.db_map: items})
+        param_vals = list()
+        error_log = list()
+        for item in items:
+            param_val, err = self._convert_to_db(item, self.db_map)
+            if param_val:
+                param_vals.append(param_val)
+            if err:
+                error_log += err
+        if param_vals:
+            self.db_mngr.update_parameter_values({self.db_map: param_vals})
+        if error_log:
+            self.db_mngr.msg_error.emit({self.db_map: error_log})
 
 
 class SingleObjectParameterDefinitionModel(
