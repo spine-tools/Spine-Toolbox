@@ -3,13 +3,15 @@ All **notable** changes to this project are documented here.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
-## [0.4.0-beta.6] - 2020-03-03
+## [0.4.0-beta.6] - 2020-03-04
 ### Added
+- spinedb_api version 0.2.2
 - Import preview window now supports copy-pasting mappings and options from a source table to another
 - Import preview window header context-menus for the preview table which, allows users to change all 
   data types at once.
 - Provide data for EditRole for nicer editor experience in MappingSpecModel.
 - Red background is displayed for invalid values in MappingSpecModel
+- Tooltips for items in Data Store's Tabular view and Tree view
 
 ### Fixed
 - A problem with displaying special characters in Process Log when executing the Importer project item.
