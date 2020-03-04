@@ -341,6 +341,32 @@ class PivotTableModel(QAbstractTableModel):
         header_id = self._header_id(index)
         top_left_id = self._top_left_id(index)
         return self._header_name(top_left_id, header_id)
+    
+    def header_data(self, index, role=Qt.DisplayRole):
+        """Returns the data corresponding to the given header index based on role enum.
+
+        Args:
+            index (QModelIndex)
+            role (enum Qt.ItemDataRole)
+
+        Returns:
+            str
+        """
+        header_id = self._header_id(index)
+        top_left_id = self._top_left_id(index)
+        if top_left_id == -1:
+            name_field = "parameter_name"
+            item = self.db_mngr.get_item(self.db_map, "parameter definition", header_id)
+        else:
+            name_field = "name"
+            item = self.db_mngr.get_item(self.db_map, "object", header_id)
+        if role in (Qt.DisplayRole, Qt.EditRole):
+            return item.get(name_field)
+        if role == Qt.ToolTipRole:
+            description = item.get("description")
+            if description in (None, ""):
+                description = item.get(name_field)
+            return description
 
     def header_names(self, index):
         """Returns the header names corresponding to the given data index.
@@ -402,7 +428,7 @@ class PivotTableModel(QAbstractTableModel):
             if self.index_in_left(index):
                 return self.model.pivot_columns[index.row()]
             if self.index_in_headers(index):
-                return self.header_name(index)
+                return self.header_data(index, role)
             if self.index_in_data(index):
                 row, column = self.map_to_pivot(index)
                 data = self.model.get_pivoted_data([row], [column])
