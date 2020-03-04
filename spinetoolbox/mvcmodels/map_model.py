@@ -30,15 +30,21 @@ class MapModel(QAbstractTableModel):
     The last columns of a row are padded with None.
 
     Example:
-        Map {
-            "A": 1.0
-            "B": Map {"a": -1.0}
-            "C": 3.0
-        }
+        ::
+
+            Map {
+                "A": 1.0
+                "B": Map {"a": -1.0}
+                "C": 3.0
+            }
+
         The table corresponding to the above map:
-        "A"  1.0  None
-        "B"  "a"  -1.0
-        "C"  3.0  None
+
+        === === ====
+        "A" 1.0 None
+        "B" "a" -1.0
+        "C" 3.0 None
+        === === ====
     """
 
     def __init__(self, map_value):
