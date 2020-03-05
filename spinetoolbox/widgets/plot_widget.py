@@ -20,16 +20,25 @@ import itertools
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolBar
 from PySide2.QtCore import QMetaObject, Qt
 from PySide2.QtWidgets import QVBoxLayout, QWidget
+from spinedb_api import IndexedValue, Map, TimeSeries
 from .plot_canvas import PlotCanvas
 
 
 class PlotWidget(QWidget):
+    """
+    A widget that contains a toolbar and a plotting canvas.
+
+    Attributes:
+        canvas (PlotCanvas): the plotting canvas
+        plot_type (type): type of currently plotted data or None
+    """
 
     plot_windows = dict()
     """A global list of plot windows."""
 
     def __init__(self):
         super().__init__()
+        self.plot_type = None
         self._layout = QVBoxLayout(self)
         self.canvas = PlotCanvas(self)
         self._toolbar = NavigationToolBar(self.canvas, self)
@@ -44,6 +53,19 @@ class PlotWidget(QWidget):
                 del PlotWidget.plot_windows[name]
                 break
         super().closeEvent(event)
+
+    def infer_plot_type(self, values):
+        """Decides suitable plot_type according to a list of values."""
+        first_value = values[0]
+        if isinstance(first_value, TimeSeries):
+            self.plot_type = TimeSeries
+        elif isinstance(first_value, Map):
+            self.plot_type = Map
+        elif isinstance(first_value, IndexedValue):
+            self.plot_type = type(first_value)
+        else:
+            # It is some scalar type
+            self.plot_type = type(values[1][0])
 
     def use_as_window(self, parent_window, document_name):
         """

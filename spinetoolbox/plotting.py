@@ -67,6 +67,11 @@ def plot_pivot_column(proxy_model, column, hints, plot_widget=None):
         needs_redraw = True
     first_data_row = proxy_model.sourceModel().first_data_row()
     values, labels = _collect_column_values(proxy_model, column, range(first_data_row, proxy_model.rowCount()), hints)
+    if values:
+        if plot_widget.plot_type is None:
+            plot_widget.infer_plot_type(values)
+        else:
+            _raise_if_value_types_clash(values, plot_widget)
     _add_plot_to_widget(values, labels, plot_widget)
     if len(plot_widget.canvas.axes.get_lines()) > 1:
         plot_widget.canvas.axes.legend(loc="best", fontsize="small")
@@ -97,23 +102,15 @@ def plot_selection(model, indexes, hints, plot_widget=None):
     else:
         needs_redraw = True
     selections = hints.filter_columns(_organize_selection_to_columns(indexes), model)
-    first_column_value_type = None
     all_labels = list()
     for column, rows in selections.items():
         values, labels = _collect_column_values(model, column, rows, hints)
         all_labels += labels
-        if first_column_value_type is None and values:
-            if isinstance(values[0], IndexedValue):
-                first_column_value_type = type(values[0])
+        if values:
+            if plot_widget.plot_type is None:
+                plot_widget.infer_plot_type(values)
             else:
-                first_column_value_type = type(values[1][0])
-        elif values:
-            if isinstance(values[0], TimeSeries) and not isinstance(first_column_value_type, TimeSeries):
-                raise PlottingError("Cannot plot a mixture of time series and other value types.")
-            if isinstance(values[0], Map) and not isinstance(first_column_value_type, Map):
-                raise PlottingError("Cannot plot a mixture of maps and other value types.")
-            if not isinstance(values[0][1], first_column_value_type):
-                raise PlottingError("Cannot plot a mixture of indexed values and scalars.")
+                _raise_if_value_types_clash(values, plot_widget)
         _add_plot_to_widget(values, labels, plot_widget)
     plot_widget.canvas.axes.set_xlabel(hints.x_label(model))
     if len(all_labels) > 1:
@@ -408,3 +405,12 @@ def _collect_column_values(model, column, rows, hints):
     return values, labels
 
 
+def _raise_if_value_types_clash(values, plot_widget):
+    """Raises a PlottingError if values type is incompatible with plot_widget."""
+    if isinstance(values[0], IndexedValue):
+        if isinstance(values[0], TimeSeries) and not plot_widget.plot_type == TimeSeries:
+            raise PlottingError("Cannot plot a mixture of time series and other value types.")
+        if isinstance(values[0], Map) and not plot_widget.plot_type == Map:
+            raise PlottingError("Cannot plot a mixture of maps and other value types.")
+    elif not isinstance(values[0][1], plot_widget.plot_type):
+        raise PlottingError("Cannot plot a mixture of indexed values and scalars.")
