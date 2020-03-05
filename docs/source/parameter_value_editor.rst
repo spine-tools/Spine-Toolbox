@@ -29,6 +29,23 @@ which can be set by entering ``true`` or ``false`` on the *Parameter value* fiel
 .. image:: img/value_editor_plain.png
    :align: center
 
+Maps
+----
+
+Maps are nested data structures which can contain many different types of data including
+one and multi dimensional indexed arrays.
+The current support for maps in Parameter value editor is rather bare bones.
+The map is shown as a table where the last non-empty cells on each row contain the value
+while the preceding cells contain the value's index.
+
+.. image:: img/value_editor_map.png
+   :align: center
+
+A **Right click** popup menu gives options to add rows or columns
+(effectively adds a new dimension to map) or trim empty columns from the right hand side.
+
+At the moment the cell values have to be entered as JSON strings.
+
 Time series
 -----------
 
