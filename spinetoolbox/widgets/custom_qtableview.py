@@ -302,11 +302,6 @@ class AutoFilterCopyPasteTableView(CopyPasteTableView):
             parent (QObject)
         """
         super().__init__(parent=parent)
-        self.auto_filter_column = None
-        self.auto_filter_menu = AutoFilterMenu(self)
-        self.auto_filter_menu.asc_sort_triggered.connect(self.sort_model_ascending)
-        self.auto_filter_menu.desc_sort_triggered.connect(self.sort_model_descending)
-        self.auto_filter_menu.filter_triggered.connect(self.update_auto_filter)
         self.horizontalHeader().sectionClicked.connect(self.show_auto_filter_menu)
 
     def keyPressEvent(self, event):
@@ -332,7 +327,7 @@ class AutoFilterCopyPasteTableView(CopyPasteTableView):
         super().setModel(model)
         self.horizontalHeader().sectionPressed.disconnect()
 
-    @Slot(int, name="show_filter_menu")
+    @Slot(int)
     def show_auto_filter_menu(self, logical_index):
         """Called when user clicks on a horizontal section header.
         Shows/hides the auto filter widget.
@@ -340,33 +335,11 @@ class AutoFilterCopyPasteTableView(CopyPasteTableView):
         Args:
             logical_index (int)
         """
-        self.auto_filter_column = logical_index
         header_pos = self.mapToGlobal(self.horizontalHeader().pos())
-        pos_x = header_pos.x() + self.horizontalHeader().sectionViewportPosition(self.auto_filter_column)
+        pos_x = header_pos.x() + self.horizontalHeader().sectionViewportPosition(logical_index)
         pos_y = header_pos.y() + self.horizontalHeader().height()
-        menu_data = self.model().auto_filter_menu_data(logical_index)
-        self.auto_filter_menu.set_data(menu_data)
-        self.auto_filter_menu.popup(QPoint(pos_x, pos_y))
-
-    @Slot(dict)
-    def update_auto_filter(self, auto_filter):
-        """Called when the user selects Ok in the auto filter menu.
-        Sets auto filter in model.
-
-        Args:
-            auto_filter (dict)
-        """
-        self.model().update_auto_filter(self.auto_filter_column, auto_filter)
-
-    @Slot(name="sort_model_ascending")
-    def sort_model_ascending(self):
-        """Called when the user selects sort ascending in the auto filter widget."""
-        self.model().sort(self.auto_filter_column, Qt.AscendingOrder)
-
-    @Slot(name="sort_model_descending")
-    def sort_model_descending(self):
-        """Called when the user selects sort descending in the auto filter widget."""
-        self.model().sort(self.auto_filter_column, Qt.DescendingOrder)
+        menu = self.model().get_auto_filter_menu(logical_index)
+        menu.popup(QPoint(pos_x, pos_y))
 
 
 class IndexedParameterValueTableViewBase(CopyPasteTableView):

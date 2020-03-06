@@ -17,7 +17,7 @@ Provides FilterCheckboxListModel for FilterWidget.
 """
 
 import bisect
-from PySide2.QtCore import Qt, QModelIndex, QAbstractListModel
+from PySide2.QtCore import Qt, Slot, QModelIndex, QAbstractListModel
 
 
 class FilterCheckboxListModelBase(QAbstractListModel):
@@ -261,6 +261,38 @@ class FilterCheckboxListModelBase(QAbstractListModel):
 class SimpleFilterCheckboxListModel(FilterCheckboxListModelBase):
     def _item_name(self, id_):
         return id_
+
+
+class ParameterViewCheckboxListModel(FilterCheckboxListModelBase):
+    def __init__(self, parent, source_model, source_column, show_empty=True):
+        """Init class.
+
+        Args:
+            parent (ParameterViewMixin)
+            source_model (CompoundParameterModel)
+            source_column (int)
+        """
+        super().__init__(parent, show_empty=show_empty)
+        self.source_model = source_model
+        self.source_column = source_column
+        self.source_model.destroyed.connect(self._handle_source_model_destroyed)
+
+    @Slot("QObject")
+    def _handle_source_model_destroyed(self, obj=None):
+        self.source_model = None
+        self.deleteLater()
+
+    def _item_name(self, id_):
+        if self.source_model is None:
+            return None
+        index = self.source_model.index(id_, self.source_column)
+        return self.source_model.data(index, role=Qt.DisplayRole)
+
+    def canFetchMore(self, parent=QModelIndex()):
+        return self.source_model.canFetchMore()
+
+    def fetchMore(self, parent=QModelIndex()):
+        self.source_model.fetchMore()
 
 
 class TabularViewFilterCheckboxListModel(FilterCheckboxListModelBase):

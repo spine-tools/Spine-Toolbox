@@ -97,8 +97,16 @@ class SingleParameterModel(MinimalTableModel):
         return False
 
     def db_item(self, index):
-        id_ = self._main_data[index.row()]
-        return self.db_mngr.get_item(self.db_map, self.item_type, id_)
+        return self._db_item(index.row())
+
+    def _db_item(self, row):
+        id_ = self._main_data[row]
+        db_item = self.db_mngr.get_item(self.db_map, self.item_type, id_)
+        db_item["database"] = self.db_map.codename
+        return db_item
+
+    def db_items(self):
+        return [self._db_item(row) for row in range(self.rowCount())]
 
     def flags(self, index):
         """Make fixed indexes non-editable."""

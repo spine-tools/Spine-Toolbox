@@ -16,10 +16,10 @@ These models concatenate several 'single' models and one 'empty' model.
 :authors: M. Marin (KTH)
 :date:   28.6.2019
 """
-
-from PySide2.QtCore import Qt, Signal
+from PySide2.QtCore import Qt, Signal, QModelIndex
 from PySide2.QtGui import QFont, QIcon
 from ..helpers import busy_effect, rows_to_row_count_tuples
+from ..widgets.custom_menus import ParameterViewFilterMenu
 from .compound_table_model import CompoundWithEmptyTableModel
 from .empty_parameter_models import (
     EmptyObjectParameterDefinitionModel,
@@ -51,12 +51,40 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
             db_mngr (SpineDBManager): the database manager
             *db_maps (DiffDatabaseMapping): the database maps included in the model
         """
-        super().__init__(parent)
+        super().__init__(parent, header=self._make_header())
         self.db_mngr = db_mngr
         self.db_maps = db_maps
         self._auto_filter = dict()
         self._accepted_entity_class_ids = {}  # Accepted by main filter
         self.remove_icon = QIcon(":/icons/menu_icons/cog_minus.svg")
+        self._auto_filter_menus = {}
+        self._make_auto_filter_menus()
+        self._field_value_row_map = dict()  # Maps fields to values to the first model row where it's encountered
+
+    def _make_header(self):
+        raise NotImplementedError()
+
+    def _make_auto_filter_menus(self):
+        self._auto_filter_menus = {
+            h: ParameterViewFilterMenu(self.parent(), self, column) for column, h in enumerate(self.header)
+        }
+
+    def get_auto_filter_menu(self, logical_index):
+        return self._auto_filter_menus[self.header[logical_index]]
+
+    def fetchMore(self, parent=QModelIndex()):
+        """Populates filter menus as submodels are fetched."""
+        super().fetchMore(parent=parent)
+        if not self._fetch_sub_model in self.sub_models:
+            return
+        db_items = self._fetch_sub_model.db_items()
+        for sub_row, db_item in enumerate(db_items):
+            for field, value in db_item.items():
+                row = self._inv_row_map[self._fetch_sub_model, sub_row]
+                self._field_value_row_map.setdefault(field, dict()).setdefault(value, row)
+        for field, menu in self._auto_filter_menus.items():
+            rows = self._field_value_row_map.get(field, {}).values()
+            menu.add_items_to_filter_list(rows)
 
     @property
     def entity_class_type(self):
@@ -545,10 +573,8 @@ class CompoundObjectParameterDefinitionModel(
     and one empty object parameter definition model.
     """
 
-    def __init__(self, parent, db_mngr, *db_maps):
-        """Initializes model header."""
-        super().__init__(parent, db_mngr, *db_maps)
-        self.header = [
+    def _make_header(self):
+        return [
             "object_class_name",
             "parameter_name",
             "value_list_name",
@@ -566,10 +592,8 @@ class CompoundRelationshipParameterDefinitionModel(
     and one empty relationship parameter definition model.
     """
 
-    def __init__(self, parent, db_mngr, *db_maps):
-        """Initializes model header."""
-        super().__init__(parent, db_mngr, *db_maps)
-        self.header = [
+    def _make_header(self):
+        return [
             "relationship_class_name",
             "object_class_name_list",
             "parameter_name",
@@ -588,10 +612,8 @@ class CompoundObjectParameterValueModel(
     and one empty object parameter value model.
     """
 
-    def __init__(self, parent, db_mngr, *db_maps):
-        """Initializes model header."""
-        super().__init__(parent, db_mngr, *db_maps)
-        self.header = ["object_class_name", "object_name", "parameter_name", "value", "database"]
+    def _make_header(self):
+        return ["object_class_name", "object_name", "parameter_name", "value", "database"]
 
     @property
     def entity_type(self):
@@ -605,10 +627,8 @@ class CompoundRelationshipParameterValueModel(
     and one empty relationship parameter value model.
     """
 
-    def __init__(self, parent, db_mngr, *db_maps):
-        """Initializes model header."""
-        super().__init__(parent, db_mngr, *db_maps)
-        self.header = ["relationship_class_name", "object_name_list", "parameter_name", "value", "database"]
+    def _make_header(self):
+        return ["relationship_class_name", "object_name_list", "parameter_name", "value", "database"]
 
     @property
     def entity_type(self):

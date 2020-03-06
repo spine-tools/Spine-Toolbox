@@ -22,7 +22,7 @@ from PySide2.QtGui import QIcon
 from PySide2.QtCore import QEvent, QPoint, Signal, Slot
 from ..helpers import fix_name_ambiguity
 from ..plotting import plot_pivot_column, plot_selection, PlottingError, PivotTablePlottingHints
-from .custom_qwidgets import SimpleFilterWidget, TabularViewFilterWidget
+from .custom_qwidgets import SimpleFilterWidget, ParameterViewFilterWidget, TabularViewFilterWidget
 from .plot_widget import PlotWidget
 from .report_plotting_failure import report_plotting_failure
 
@@ -576,6 +576,28 @@ class SimpleFilterMenu(FilterMenuBase):
         """
         super().__init__(parent)
         self._filter = SimpleFilterWidget(parent, show_empty=show_empty)
+        self._filter_action = QWidgetAction(parent)
+        self._filter_action.setDefaultWidget(self._filter)
+        self.addAction(self._filter_action)
+        self.connect_signals()
+
+    def emit_filter_changed(self, valid_values):
+        self.filterChanged.emit(valid_values)
+
+
+class ParameterViewFilterMenu(FilterMenuBase):
+
+    filterChanged = Signal(set)
+
+    def __init__(self, parent, source_model, source_column, show_empty=True):
+        """
+        Args:
+            parent (ParameterViewMixin)
+            source_model (CompoundParameterModel)
+            source_column (int)
+        """
+        super().__init__(parent)
+        self._filter = ParameterViewFilterWidget(parent, source_model, source_column, show_empty=show_empty)
         self._filter_action = QWidgetAction(parent)
         self._filter_action.setDefaultWidget(self._filter)
         self.addAction(self._filter_action)

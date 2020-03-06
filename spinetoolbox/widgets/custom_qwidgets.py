@@ -32,7 +32,11 @@ from PySide2.QtWidgets import (
 )
 from PySide2.QtCore import QTimer, Signal, Slot
 from PySide2.QtGui import QPainter
-from ..mvcmodels.filter_checkbox_list_model import SimpleFilterCheckboxListModel, TabularViewFilterCheckboxListModel
+from ..mvcmodels.filter_checkbox_list_model import (
+    SimpleFilterCheckboxListModel,
+    ParameterViewCheckboxListModel,
+    TabularViewFilterCheckboxListModel,
+)
 
 
 class FilterWidgetBase(QWidget):
@@ -142,6 +146,22 @@ class SimpleFilterWidget(FilterWidgetBase):
         """
         super().__init__(parent)
         self._filter_model = SimpleFilterCheckboxListModel(parent, show_empty=show_empty)
+        self._filter_model.set_list(self._filter_state)
+        self._ui_list.setModel(self._filter_model)
+        self.connect_signals()
+
+
+class ParameterViewFilterWidget(FilterWidgetBase):
+    def __init__(self, parent, source_model, source_column, show_empty=True):
+        """Init class.
+
+        Args:
+            parent (QWidget)
+            source_model (CompoundParameterModel)
+            source_column (int)
+        """
+        super().__init__(parent)
+        self._filter_model = ParameterViewCheckboxListModel(parent, source_model, source_column, show_empty=show_empty)
         self._filter_model.set_list(self._filter_state)
         self._ui_list.setModel(self._filter_model)
         self.connect_signals()
