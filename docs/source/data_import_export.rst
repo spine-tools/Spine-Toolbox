@@ -61,7 +61,7 @@ GAMS
    The bitness (32 or 64bit) of GAMS has to match the bitness of the Python interpreter.
 
 Databases can be exported to GAMS :literal:`.gdx` files by the *Exporter* project item.
-When a project is executed, *Exporter* writes its output files to the its data folder
+When a project is executed, *Exporter* writes its output files to its data folder
 and forwards file paths to project items downstream.
 If a *Tool* is to use such a file, remember to add the file as one of the *Tool specification*'s input files!
 
@@ -135,7 +135,7 @@ Since GAMS has no notion of time series or time patterns these types need specia
 to a :literal:`.gdx` file. Namely, the time stamps or time periods (i.e. parameter indexes) need be available
 as GAMS sets in the exported file. It is possible to use an existing set or create a new one for this purpose.
 The functionality is available in *Gdx Parameter Indexing Settings* window
-accessible from the *Parameter indexing...* button.
+accessible from the *Indexed Parameters...* button.
 
 .. image:: img/gdx_export_parameter_indexing_window_using_existing_domain.png
    :align: center
@@ -173,11 +173,11 @@ It can be moved around by the *Move Left* and *Move Right* buttons.
 
 It is possible to create a new indexing set by choosing *Create new index domain* as shown in the figure above.
 *Domain name* is mandatory for the new domain. A *Description* can also be provided but it is optional.
-There are two option to generate the index keys: extract the time stamps or time periods from the parameter
+There are two options to generate the index keys: extract the time stamps or time periods from the parameter
 itself or generate them using a Python expression.
 The *Extract index from parameter* button can be used to extract the keys from the parameter.
 The *Generator expression* field, on the other hand, is used to generate index keys for the new set.
-The exression should return Python object that is convertible to string.
+The expression should return Python object that is convertible to string.
 Below are some example expressions:
 
 ======================== ====================
