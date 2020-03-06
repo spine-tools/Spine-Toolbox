@@ -383,15 +383,13 @@ class Tool(ProjectItem):
 
     def output_resources_forward(self):
         """
-        Returns a list of resources, e.g. output files produced by the tool.
+        Returns a list of resources, i.e. the output files produced by the tool.
 
-        The output files are available only after tool has been executed.
-        The url attribute of the resources is set to None or it points
-        to a file from most recent execution.
-        The metadata attribute's keys are set as follows:
-            - label: name of the output file (base name)
-            - future: set to True
-            - future_url: URL of the file once it is available.
+        The output files are available only after tool has been executed,
+        therefore the resource type is 'transient_file'
+        The url attribute of the resources is set to ""
+        or it points to a file from most recent execution.
+        The metadata attribute's label key gives the base name of the output file.
 
         Returns:
             list: a list of Tool's output resources
@@ -403,20 +401,16 @@ class Tool(ProjectItem):
             if not work_dir:
                 self._logger.msg_error.emit("Work directory missing. Please check Settings.")
                 return []
-            execute_path = os.path.join(work_dir, self._next_base_dir_name)
         else:
             if self.tool_specification() is None:
                 self._logger.msg_error.emit("Tool specification missing.")
                 return []
-            execute_path = self.tool_specification().path
         for i in range(self.output_file_model.rowCount()):
             out_file_name = self.output_file_model.item(i, 0).data(Qt.DisplayRole)
-            old_file_path = last_output_files.get(out_file_name)
-            old_file_url = pathlib.Path(old_file_path).as_uri() if old_file_path is not None else None
-            future_file_path = os.path.join(execute_path, out_file_name)
-            future_file_url = pathlib.Path(future_file_path).as_uri()
-            metadata = {"label": out_file_name, "future": True, "future_url": future_file_url}
-            resource = ProjectItemResource(self, "file", url=old_file_url, metadata=metadata)
+            latest_file_path = last_output_files.get(out_file_name)
+            latest_file_url = pathlib.Path(latest_file_path).as_uri() if latest_file_path is not None else None
+            metadata = {"label": out_file_name}
+            resource = ProjectItemResource(self, "transient_file", url=latest_file_url, metadata=metadata)
             resources.append(resource)
         return resources
 

@@ -458,21 +458,21 @@ class ProjectItemResource:
 
         Args:
             provider (ProjectItem): The item that provides the resource
-            type_ (str): The resource type, either "file" or "database" (for now)
+            type_ (str): The resource type, currently available types:
+                - "file": url points to the file's path
+                - "database": url is the databases url
+                - "transient_file": a file that may not yet be available or may change its location;
+                  url points to latest version or is empty, metadata contains the "label" key
             url (str): The url of the resource
             metadata (dict): Some metadata providing extra information about the resource.
             Currently available keys:
                 - label (str): a textual label
-                - future (bool): whether the resource is from the future, e.g. Tool output files advertised beforehand
-                - future_url (str): resource's url once it is available.
         """
         self.provider = provider
         self.type_ = type_
         self.url = url
         self.parsed_url = urlparse(url)
-        if metadata is None:
-            metadata = dict()
-        self.metadata = metadata
+        self.metadata = metadata if metadata is not None else dict()
 
     def __eq__(self, other):
         if not isinstance(other, ProjectItemResource):
