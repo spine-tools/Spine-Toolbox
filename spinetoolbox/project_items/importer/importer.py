@@ -165,10 +165,13 @@ class Importer(ProjectItem):
         file_item = self._file_model.find_file(label)
         file_path = file_item.path
         if not file_item.exists():
-            self._logger.msg_error.emit(f"File '{file_path}' does not exist yet.")
+            self._logger.msg_error.emit(f"File does not exist yet.")
+            self._file_model.mark_as_nonexistent(index)
             return
         if not os.path.exists(file_path):
             self._logger.msg_error.emit(f"Cannot find file '{file_path}'.")
+            self._file_model.mark_as_nonexistent(index)
+            return
         # Raise current form for the selected file if any
         preview_widget = self._preview_widget.get(label, None)
         if preview_widget:
@@ -691,6 +694,11 @@ class _FileListModel(QAbstractListModel):
         """Returns a list of file labels."""
         return [item.label for item in self._files]
 
+    def mark_as_nonexistent(self, index):
+        """Marks item at index as not existing."""
+        self._files[index.row()].path = ""
+        self.dataChanged.emit(index, index, [Qt.ToolTipRole])
+
     def reset(self, resources):
         """Resets the model to given list of resources."""
         self.beginResetModel()
@@ -713,6 +721,7 @@ class _FileListModel(QAbstractListModel):
         item = self._files[index.row()]
         item.selected_for_import = checked
         self.selected_for_import_state_changed.emit(checked, item.label)
+        self.dataChanged(index, index, [Qt.CheckStateRole])
         return True
 
     def update_file(self, resource):
