@@ -98,6 +98,11 @@ class TabularViewMixin:
         self.ui.dockWidget_frozen_table.visibilityChanged.connect(self._handle_frozen_table_visibility_changed)
         self.ui.pivot_table.selectionModel().selectionChanged.connect(self._handle_pivot_table_selection_changed)
 
+    def init_models(self):
+        """Initializes models."""
+        super().init_models()
+        self.clear_pivot_table()
+
     @Slot("QItemSelection", "QItemSelection")
     def _handle_pivot_table_selection_changed(self, selected, deselected):
         """Accepts selection."""
@@ -443,9 +448,9 @@ class TabularViewMixin:
         if identifier not in self.filter_menus:
             item_type = "parameter definition" if identifier == self._PARAM_INDEX_ID else "object"
             self.filter_menus[identifier] = menu = TabularViewFilterMenu(self, identifier, item_type)
-            index_values = set(self.pivot_table_model.model.index_values.get(identifier, []))
-            index_values.discard(None)
-            menu.set_filter_list(index_values)
+            index_values = dict.fromkeys(self.pivot_table_model.model.index_values.get(identifier, []))
+            index_values.pop(None, None)
+            menu.set_filter_list(list(index_values.keys()))
             menu.filterChanged.connect(self.change_filter)
         return self.filter_menus[identifier]
 
@@ -610,7 +615,7 @@ class TabularViewMixin:
         for identifier, menu in self.filter_menus.items():
             current = set(self.pivot_table_model.model.index_values.get(identifier, []))
             current.discard(None)
-            previous = menu._filter._filter_model._id_data_set
+            previous = menu._filter._filter_model._data_set
             if action == "add":
                 menu.add_items_to_filter_list(list(current - previous))
             elif action == "remove":

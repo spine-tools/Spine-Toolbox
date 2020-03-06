@@ -102,7 +102,7 @@ class FilterWidgetBase(QWidget):
 
     def set_filter_list(self, data):
         """Sets the list of items to filter."""
-        self._filter_state = set(data)
+        self._filter_state = list(data)
         self._filter_empty_state = bool(self._filter_model._show_empty)
         self._filter_model.set_list(self._filter_state)
 
