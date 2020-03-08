@@ -453,7 +453,7 @@ class TabularViewMixin:
                 item_type = "object"
                 name_key = "name"
             self.filter_menus[identifier] = menu = TabularViewFilterMenu(
-                self, self.db_mngr, identifier, item_type, name_key
+                self, self.db_mngr, identifier, item_type, name_key, show_empty=False
             )
             index_values = dict.fromkeys(self.pivot_table_model.model.index_values.get(identifier, []))
             index_values.pop(None, None)
@@ -567,6 +567,7 @@ class TabularViewMixin:
     @Slot(int, set, bool)
     def change_filter(self, identifier, valid_values, has_filter):
         if has_filter:
+            valid_values = {id_ for _, id_ in valid_values}
             self.pivot_table_proxy.set_filter(identifier, valid_values)
         else:
             self.pivot_table_proxy.set_filter(identifier, None)  # None means everything passes

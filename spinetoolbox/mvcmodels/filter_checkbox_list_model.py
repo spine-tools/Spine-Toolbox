@@ -222,7 +222,9 @@ class FilterCheckboxListModelBase(QAbstractListModel):
         self._all_selected = self._is_all_selected()
         self.endResetModel()
 
-    def add_items(self, data, selected=True):
+    def add_items(self, data, selected=None):
+        if selected is None:
+            selected = self._is_all_selected()
         data = [x for x in data if x not in self._data_set]
         if not data:
             return
@@ -281,6 +283,8 @@ class DBItemFilterCheckboxListModel(FilterCheckboxListModelBase):
         return self.db_mngr.get_item(db_map, self.item_type, db_id)[self.name_key]
 
     def canFetchMore(self, parent=QModelIndex()):
+        if self.source_model is None:
+            return False
         return self.source_model.canFetchMore()
 
     def fetchMore(self, parent=QModelIndex()):

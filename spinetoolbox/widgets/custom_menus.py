@@ -587,7 +587,7 @@ class SimpleFilterMenu(FilterMenuBase):
 
 class ParameterViewFilterMenu(FilterMenuBase):
 
-    filterChanged = Signal(set)
+    filterChanged = Signal(set, bool)
 
     def __init__(self, parent, db_mngr, item_type, name_key, source_model, show_empty=True):
         """
@@ -605,13 +605,14 @@ class ParameterViewFilterMenu(FilterMenuBase):
         self.connect_signals()
 
     def emit_filter_changed(self, valid_values):
-        self.filterChanged.emit(valid_values)
+        valid_values = [self._filter._filter_model._item_name(v) for v in valid_values]
+        self.filterChanged.emit(valid_values, self._filter.has_filter())
 
 
 class TabularViewFilterMenu(FilterMenuBase):
     """Filter menu to use together with FilterWidget in TabularViewMixin."""
 
-    filterChanged = Signal(object, set, bool)
+    filterChanged = Signal(int, set, bool)
 
     def __init__(self, parent, db_mngr, identifier, item_type, name_key, show_empty=True):
         """

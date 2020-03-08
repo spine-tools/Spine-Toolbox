@@ -54,7 +54,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         super().__init__(parent, header=self._make_header())
         self.db_mngr = db_mngr
         self.db_maps = db_maps
-        self._auto_filter = dict()
+        self._auto_filter = dict()  # Maps column to (db_map, entity_id) to accepted values
         self._accepted_entity_class_ids = {}  # Accepted by main filter
         self.remove_icon = QIcon(":/icons/menu_icons/cog_minus.svg")
         self._auto_filter_menus = {}
@@ -69,17 +69,29 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         self._make_auto_filter_menus()
 
     def _make_auto_filter_menus(self):
+        """Makes auto filter menus."""
         self._auto_filter_menus.clear()
         self._auto_filter_menu_data.clear()
         for field in self.header:
             if field not in self._item_type_name_key:
                 continue
             item_type, name_key = self._item_type_name_key[field]
-            self._auto_filter_menus[field] = ParameterViewFilterMenu(
-                self.parent(), self.db_mngr, item_type, name_key, self
+            self._auto_filter_menus[field] = menu = ParameterViewFilterMenu(
+                self.parent(), self.db_mngr, item_type, name_key, self, show_empty=False
+            )
+            menu.filterChanged.connect(
+                lambda values, has_filter, field=field: self.update_auto_filter(field, values, has_filter)
             )
 
     def get_auto_filter_menu(self, logical_index):
+        """Returns auto filter menu for given logical index from header view.
+
+        Args:
+            logical_index (int)
+
+        Returns:
+            ParameterViewFilterMenu
+        """
         return self._auto_filter_menus[self.header[logical_index]]
 
     def fetchMore(self, parent=QModelIndex()):
@@ -87,18 +99,25 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         super().fetchMore(parent=parent)
         if not self._fetch_sub_model in self.single_models:
             return
-        db_items = self._fetch_sub_model.db_items()
-        db_map = self._fetch_sub_model.db_map
-        self._add_data_to_filter_menus(db_map, db_items)
+        self._add_data_to_filter_menus(self._fetch_sub_model)
 
-    def _add_data_to_filter_menus(self, db_map, db_items):
+    def _add_data_to_filter_menus(self, sub_model):
+        """Adds data from given sub-model to filter menus.
+
+        Args:
+            sub_model (SingleParameterModel)
+        """
+        db_items = sub_model.db_items()
         for field, menu in self._auto_filter_menus.items():
             data = self._auto_filter_menu_data.setdefault(field, {})
             _, name_key = self._item_type_name_key[field]
             for db_item in db_items:
-                item = self._fetch_sub_model.get_field_item(field, db_item)
-                data.setdefault(item[name_key], []).append((db_map, item["id"]))
-            menu.add_items_to_filter_list([x[0] for x in data.values()])
+                item = sub_model.get_field_item(field, db_item)
+                name = item[name_key]
+                # NOTE: we save the entity class id for speeding up filtering
+                data.setdefault(name, {})[sub_model.db_map, item["id"]] = sub_model.entity_class_id
+            filter_items = [list(items.keys())[0] for items in data.values()]
+            menu.add_items_to_filter_list(filter_items)
 
     @property
     def entity_class_type(self):
@@ -172,7 +191,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         """Returns an italic font in case the given column has an autofilter installed."""
         italic_font = QFont()
         italic_font.setItalic(True)
-        if role == Qt.FontRole and orientation == Qt.Horizontal and self._auto_filter.get(section):
+        if role == Qt.FontRole and orientation == Qt.Horizontal and self._auto_filter.get(self.header[section]):
             return italic_font
         return super().headerData(section, orientation, role)
 
@@ -237,7 +256,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         return model.entity_class_id in self._accepted_entity_class_ids.get(model.db_map, set())
 
     def _auto_filter_accepts_model(self, model):
-        if None in [value for column, value in self._auto_filter.items()]:
+        if None in self._auto_filter.values():
             return False
         for auto_filter in self._auto_filter.values():
             if not auto_filter:
@@ -307,45 +326,59 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         b = self._settattr_if_different(model, "_selected_param_def_ids", selected_param_def_ids)
         return a or b
 
-    def update_auto_filter(self, column, auto_filter):
+    def update_auto_filter(self, field, valid_values, has_filter):
         """Updates and applies the auto filter.
 
         Args:
-            column (int): the column number
-            auto_filter (dict): list of accepted values for the column keyed by tuple (database map, entity class id)
+            field (str): the field name
+            valid_values (list(str)): accepted values for the field
+            has_filter (bool)
         """
-        updated = self.update_compound_auto_filter(column, auto_filter)
+        data = self._auto_filter_menu_data[field]
+        auto_filter = self._build_auto_filter(data, valid_values, has_filter)
+        updated = self.update_compound_auto_filter(field, auto_filter)
         for model in self.accepted_single_models():
-            updated |= self.update_single_auto_filter(model, column)
+            updated |= self.update_single_auto_filter(model, field)
         if updated:
             self.refresh()
 
-    def update_compound_auto_filter(self, column, auto_filter):
+    @staticmethod
+    def _build_auto_filter(data, valid_values, has_filter):
+        if not has_filter:
+            return {}
+        auto_filter = {}
+        for value in valid_values:
+            item_ids = data[value]
+            for (db_map, id_), entity_class_id in item_ids.items():
+                auto_filter.setdefault((db_map, entity_class_id), []).append(id_)
+        return auto_filter
+
+    def update_compound_auto_filter(self, field, auto_filter):
         """Updates the auto filter for given column in the compound model.
 
         Args:
-            column (int): the column number
+            field (str): the field name
             auto_filter (dict): list of accepted values for the column keyed by tuple (database map, entity class id)
         """
-        if self._auto_filter.setdefault(column, {}) == auto_filter:
+        if self._auto_filter.setdefault(field, {}) == auto_filter:
             return False
-        self._auto_filter[column] = auto_filter
+        self._auto_filter[field] = auto_filter
         return True
 
-    def update_single_auto_filter(self, model, column):
+    def update_single_auto_filter(self, model, field):
         """Updates the auto filter for given column in the given single model.
 
         Args:
             model (SingleParameterModel): the model
-            column (int): the column number
+            field (str): the field name
 
         Returns:
             bool: True if the auto-filtered values were updated, None otherwise
         """
-        values = self._auto_filter[column].get((model.db_map, model.entity_class_id), {})
-        if values == model._auto_filter.get(column, {}):
+        values = self._auto_filter[field].get((model.db_map, model.entity_class_id), {})
+        if values == model._auto_filter.get(field, {}):
             return False
-        model._auto_filter[column] = values
+        model._auto_filter[field] = values
         return True
 
     def _row_map_for_model(self, model):

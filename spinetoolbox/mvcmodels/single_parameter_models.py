@@ -46,6 +46,13 @@ class SingleParameterModel(MinimalTableModel):
         self.entity_class_id = entity_class_id
         self._auto_filter = dict()
         self._selected_param_def_ids = set()
+        self._field_to_item_id = {
+            "object_class_name": ("entity_class_id", "object class"),
+            "relationship_class_name": ("entity_class_id", "relationship class"),
+            "object_name": ("entity_id", "object"),
+            "object_name_list": ("entity_id", "relationship"),
+            "parameter_name": (self.parameter_definition_id_key, "parameter definition"),
+        }
 
     @property
     def item_type(self):
@@ -195,8 +202,10 @@ class SingleParameterModel(MinimalTableModel):
 
     def _auto_filter_accepts_row(self, row):
         """Applies the autofilter, defined by the autofilter drop down menu."""
-        for column, values in self._auto_filter.items():
-            if values and self.index(row, column).data() not in values:
+        db_item = self._db_item(row)
+        for field, valid_ids in self._auto_filter.items():
+            id_field, _ = self._field_to_item_id[field]
+            if valid_ids and db_item[id_field] not in valid_ids:
                 return False
         return True
 
@@ -208,16 +217,9 @@ class SingleParameterModel(MinimalTableModel):
         """Returns a db item corresponding to the given field from the table header,
         or an empty dict if the field doesn't contain db items.
         """
-        field_to_item_id = {
-            "object_class_name": ("entity_class_id", "object class"),
-            "relationship_class_name": ("entity_class_id", "relationship class"),
-            "object_name": ("entity_id", "object"),
-            "object_name_list": ("entity_id", "relationship"),
-            "parameter_name": (self.parameter_definition_id_key, "parameter definition"),
-        }
-        if field not in field_to_item_id:
+        if field not in self._field_to_item_id:
             return {}
-        id_field, item_type = field_to_item_id[field]
+        id_field, item_type = self._field_to_item_id[field]
         item_id = db_item.get(id_field)
         return self.db_mngr.get_item(self.db_map, item_type, item_id)
 
