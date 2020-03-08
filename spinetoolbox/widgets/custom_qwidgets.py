@@ -50,7 +50,7 @@ class FilterWidgetBase(QWidget):
         super().__init__(parent)
         # parameters
         self._filter_state = set()
-        self._filter_empty_state = False
+        self._filter_empty_state = None
         self._search_text = ''
         self.search_delay = 200
 
@@ -84,8 +84,6 @@ class FilterWidgetBase(QWidget):
         self._filter_state = self._filter_model.get_selected()
         if self._filter_model._show_empty:
             self._filter_empty_state = self._filter_model._empty_selected
-        else:
-            self._filter_empty_state = False
 
     def reset_state(self):
         """Sets the state of the FilterCheckboxListModel to saved state."""
@@ -103,7 +101,6 @@ class FilterWidgetBase(QWidget):
     def set_filter_list(self, data):
         """Sets the list of items to filter."""
         self._filter_state = list(data)
-        self._filter_empty_state = bool(self._filter_model._show_empty)
         self._filter_model.set_list(self._filter_state)
 
     def _apply_filter(self):

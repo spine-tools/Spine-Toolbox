@@ -18,7 +18,7 @@ These models concatenate several 'single' models and one 'empty' model.
 """
 from PySide2.QtCore import Qt, Signal, QModelIndex
 from PySide2.QtGui import QFont, QIcon
-from ..helpers import busy_effect, rows_to_row_count_tuples
+from ..helpers import rows_to_row_count_tuples
 from ..widgets.custom_menus import ParameterViewFilterMenu
 from .compound_table_model import CompoundWithEmptyTableModel
 from .empty_parameter_models import (
@@ -33,7 +33,6 @@ from .single_parameter_models import (
     SingleRelationshipParameterDefinitionModel,
     SingleRelationshipParameterValueModel,
 )
-from .auto_filter_menu_model import AutoFilterMenuItem
 
 
 class CompoundParameterModel(CompoundWithEmptyTableModel):
@@ -191,7 +190,11 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         """Returns an italic font in case the given column has an autofilter installed."""
         italic_font = QFont()
         italic_font.setItalic(True)
-        if role == Qt.FontRole and orientation == Qt.Horizontal and self._auto_filter.get(self.header[section]):
+        if (
+            role == Qt.FontRole
+            and orientation == Qt.Horizontal
+            and self._auto_filter.get(self.header[section], {}) != {}
+        ):
             return italic_font
         return super().headerData(section, orientation, role)
 
@@ -344,8 +347,10 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
 
     @staticmethod
     def _build_auto_filter(data, valid_values, has_filter):
+        if not valid_values:
+            return None  # Nothing passes
         if not has_filter:
-            return {}
+            return {}  # Everything passes
         auto_filter = {}
         for value in valid_values:
             item_ids = data[value]
@@ -358,7 +363,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
 
         Args:
             field (str): the field name
-            auto_filter (dict): list of accepted values for the column keyed by tuple (database map, entity class id)
+            auto_filter (dict): maps tuple (database map, entity class id) to list of accepted ids for the field
         """
         if self._auto_filter.setdefault(field, {}) == auto_filter:
             return False
@@ -394,36 +399,6 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         if not self.filter_accepts_model(model):
             return []
         return [(model, i) for i in model.accepted_rows()]
-
-    @busy_effect
-    def auto_filter_menu_data(self, column):
-        """Returns auto filter menu data for the given column.
-
-        Returns:
-            list: AutoFilterMenuItem instances to populate the auto filter menu.
-        """
-        auto_filter_vals = dict()
-        for model in self.single_models:
-            if not self._main_filter_accepts_model(model):
-                continue
-            for row in range(model.rowCount()):
-                if not model._main_filter_accepts_row(row):
-                    continue
-                value = model.index(row, column).data()
-                auto_filter_vals.setdefault(value, set()).add((model.db_map, model.entity_class_id))
-        column_auto_filter = self._auto_filter.get(column, {})
-        if column_auto_filter is None:
-            return [AutoFilterMenuItem(Qt.Unchecked, value, classes) for value, classes in auto_filter_vals.items()]
-        if column_auto_filter == {}:
-            return [AutoFilterMenuItem(Qt.Checked, value, classes) for value, classes in auto_filter_vals.items()]
-        return [
-            AutoFilterMenuItem(
-                Qt.Checked if any(value in values for values in column_auto_filter.values()) else Qt.Unchecked,
-                value,
-                classes,
-            )
-            for value, classes in auto_filter_vals.items()
-        ]
 
     def _models_with_db_map(self, db_map):
         """Returns a collection of single models with given db_map.

@@ -202,6 +202,8 @@ class SingleParameterModel(MinimalTableModel):
 
     def _auto_filter_accepts_row(self, row):
         """Applies the autofilter, defined by the autofilter drop down menu."""
+        if self._auto_filter is None:
+            return False
         db_item = self._db_item(row)
         for field, valid_ids in self._auto_filter.items():
             id_field, _ = self._field_to_item_id[field]

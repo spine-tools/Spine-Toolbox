@@ -16,7 +16,7 @@ Provides FilterCheckboxListModel for FilterWidget.
 :date:   1.11.2018
 """
 
-from PySide2.QtCore import Qt, Slot, QModelIndex, QAbstractListModel
+from PySide2.QtCore import Qt, QModelIndex, QAbstractListModel
 
 
 class FilterCheckboxListModelBase(QAbstractListModel):
@@ -222,9 +222,7 @@ class FilterCheckboxListModelBase(QAbstractListModel):
         self._all_selected = self._is_all_selected()
         self.endResetModel()
 
-    def add_items(self, data, selected=None):
-        if selected is None:
-            selected = self._is_all_selected()
+    def add_items(self, data, selected=True):
         data = [x for x in data if x not in self._data_set]
         if not data:
             return
