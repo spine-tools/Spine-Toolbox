@@ -35,8 +35,8 @@ class TestFilterCheckboxListModel(unittest.TestCase):
 
     def test_set_list(self):
         self.model.set_list(self.data)
-        self.assertEqual(self.model._id_data, sorted(self.data))
-        self.assertEqual(self.model._id_data_set, set(self.data))
+        self.assertEqual(self.model._data, sorted(self.data))
+        self.assertEqual(self.model._data_set, set(self.data))
         self.assertEqual(self.model._selected, set(self.data))
         self.assertTrue(self.model._all_selected)
 
@@ -65,8 +65,8 @@ class TestFilterCheckboxListModel(unittest.TestCase):
             "spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.dataChanged"
         ):
             self.model.add_items(new_item)
-        self.assertEqual(self.model._id_data, sorted(self.data + new_item))
-        self.assertEqual(self.model._id_data_set, set(self.data + new_item))
+        self.assertEqual(self.model._data, self.data + new_item)
+        self.assertEqual(self.model._data_set, set(self.data + new_item))
 
     def test_add_item_without_select_without_filter(self):
         new_item = ['aaaa']
@@ -252,8 +252,8 @@ class TestFilterCheckboxListModel(unittest.TestCase):
             "spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.dataChanged"
         ):
             self.model.add_items(new_item)
-        self.assertEqual(self.model._id_data, sorted(self.data + new_item))
-        self.assertEqual(self.model._id_data_set, set(self.data + new_item))
+        self.assertEqual(self.model._data, sorted(self.data + new_item))
+        self.assertEqual(self.model._data_set, set(self.data + new_item))
         self.assertEqual(self.model._filter_index, [3, 4, 5, 6])
         self.assertEqual(self.model._selected_filtered, set(self.data[3:] + new_item))
         self.assertEqual(self.model.data(self.model.index(3 + 2, 0)), new_item[0])
@@ -270,8 +270,8 @@ class TestFilterCheckboxListModel(unittest.TestCase):
             "spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.dataChanged"
         ):
             self.model.add_items(new_item)
-        self.assertEqual(self.model._filter_index, [0, 4, 5, 6])
-        self.assertEqual(self.model.data(self.model.index(0 + 2, 0)), new_item[0])
+        self.assertEqual(self.model._filter_index, [3, 4, 5, 6])
+        self.assertEqual(self.model.data(self.model.index(3 + 2, 0)), new_item[0])
 
     def test_add_item_with_select_with_filter_middle(self):
         new_item = ['b1']
@@ -286,7 +286,7 @@ class TestFilterCheckboxListModel(unittest.TestCase):
         ):
             self.model.add_items(new_item)
         self.assertEqual(self.model._filter_index, [3, 4, 5, 6])
-        self.assertEqual(self.model.data(self.model.index(1 + 2, 0)), new_item[0])
+        self.assertEqual(self.model.data(self.model.index(3 + 2, 0)), new_item[0])
 
     def test_remove_items_data(self):
         items = set('a')
@@ -297,8 +297,8 @@ class TestFilterCheckboxListModel(unittest.TestCase):
             "spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.endResetModel"
         ) as er:
             self.model.remove_items(items)
-        self.assertEqual(self.model._id_data, self.data[1:])
-        self.assertEqual(self.model._id_data_set, set(self.data[1:]))
+        self.assertEqual(self.model._data, self.data[1:])
+        self.assertEqual(self.model._data_set, set(self.data[1:]))
 
     def test_remove_items_selected(self):
         items = set('a')
