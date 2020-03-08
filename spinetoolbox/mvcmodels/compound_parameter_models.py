@@ -58,16 +58,26 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         self._accepted_entity_class_ids = {}  # Accepted by main filter
         self.remove_icon = QIcon(":/icons/menu_icons/cog_minus.svg")
         self._auto_filter_menus = {}
-        self._make_auto_filter_menus()
-        self._field_value_row_map = dict()  # Maps fields to values to the first model row where it's encountered
+        self._auto_filter_menu_data = dict()  # Maps fields to auto filter data
+        self._item_type_name_key = {"object_class_name": ("object class", "name"), "object_name": ("object", "name")}
 
     def _make_header(self):
         raise NotImplementedError()
 
+    def init_model(self):
+        super().init_model()
+        self._make_auto_filter_menus()
+
     def _make_auto_filter_menus(self):
-        self._auto_filter_menus = {
-            h: ParameterViewFilterMenu(self.parent(), self, column) for column, h in enumerate(self.header)
-        }
+        self._auto_filter_menus.clear()
+        self._auto_filter_menu_data.clear()
+        for field in self.header:
+            if field not in self._item_type_name_key:
+                continue
+            item_type, name_key = self._item_type_name_key[field]
+            self._auto_filter_menus[field] = ParameterViewFilterMenu(
+                self.parent(), self.db_mngr, item_type, name_key, self
+            )
 
     def get_auto_filter_menu(self, logical_index):
         return self._auto_filter_menus[self.header[logical_index]]
@@ -75,16 +85,20 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
     def fetchMore(self, parent=QModelIndex()):
         """Populates filter menus as submodels are fetched."""
         super().fetchMore(parent=parent)
-        if not self._fetch_sub_model in self.sub_models:
+        if not self._fetch_sub_model in self.single_models:
             return
         db_items = self._fetch_sub_model.db_items()
-        for sub_row, db_item in enumerate(db_items):
-            for field, value in db_item.items():
-                row = self._inv_row_map[self._fetch_sub_model, sub_row]
-                self._field_value_row_map.setdefault(field, dict()).setdefault(value, row)
+        db_map = self._fetch_sub_model.db_map
+        self._add_data_to_filter_menus(db_map, db_items)
+
+    def _add_data_to_filter_menus(self, db_map, db_items):
         for field, menu in self._auto_filter_menus.items():
-            rows = self._field_value_row_map.get(field, {}).values()
-            menu.add_items_to_filter_list(rows)
+            data = self._auto_filter_menu_data.setdefault(field, {})
+            _, name_key = self._item_type_name_key[field]
+            for db_item in db_items:
+                item = self._fetch_sub_model.get_field_item(field, db_item)
+                data.setdefault(item[name_key], []).append((db_map, item["id"]))
+            menu.add_items_to_filter_list([x[0] for x in data.values()])
 
     @property
     def entity_class_type(self):
@@ -467,7 +481,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
             for entity_class_id, ids in entity_ids_per_class_id.items():
                 model = self._single_model_type(self, self.header, self.db_mngr, db_map, entity_class_id, lazy=False)
                 model.reset_model(ids)
-                single_row_map = super()._row_map_for_model(model)  # NOTE: super() prevents filtering
+                single_row_map = super()._row_map_for_model(model)  # NOTE: super() is to get all (unfiltered) rows
                 self._insert_single_row_map(single_row_map)
                 new_models.append(model)
         pos = len(self.single_models)

@@ -446,11 +446,18 @@ class TabularViewMixin:
             TabularViewFilterMenu
         """
         if identifier not in self.filter_menus:
-            item_type = "parameter definition" if identifier == self._PARAM_INDEX_ID else "object"
-            self.filter_menus[identifier] = menu = TabularViewFilterMenu(self, identifier, item_type)
+            if identifier == self._PARAM_INDEX_ID:
+                item_type = "parameter definition"
+                name_key = "parameter_name"
+            else:
+                item_type = "object"
+                name_key = "name"
+            self.filter_menus[identifier] = menu = TabularViewFilterMenu(
+                self, self.db_mngr, identifier, item_type, name_key
+            )
             index_values = dict.fromkeys(self.pivot_table_model.model.index_values.get(identifier, []))
             index_values.pop(None, None)
-            menu.set_filter_list(list(index_values.keys()))
+            menu.set_filter_list([(self.db_map, id_) for id_ in index_values])
             menu.filterChanged.connect(self.change_filter)
         return self.filter_menus[identifier]
 
@@ -592,7 +599,7 @@ class TabularViewMixin:
         Returns:
             list(tuple(list(int)))
         """
-        return sorted(set(zip(*[self.pivot_table_model.model.index_values.get(k, []) for k in frozen])))
+        return list(dict.fromkeys(zip(*[self.pivot_table_model.model.index_values.get(k, []) for k in frozen])).keys())
 
     @staticmethod
     def refresh_table_view(table_view):
@@ -613,13 +620,13 @@ class TabularViewMixin:
         elif action == "remove":
             self.pivot_table_model.remove_from_model(data)
         for identifier, menu in self.filter_menus.items():
-            current = set(self.pivot_table_model.model.index_values.get(identifier, []))
-            current.discard(None)
-            previous = menu._filter._filter_model._data_set
+            values = dict.fromkeys(self.pivot_table_model.model.index_values.get(identifier, []))
+            values.pop(None, None)
             if action == "add":
-                menu.add_items_to_filter_list(list(current - previous))
+                menu.add_items_to_filter_list(list(values.keys()))
             elif action == "remove":
-                menu.remove_items_from_filter_list(list(previous - current))
+                previous = menu._filter._filter_model._data_set
+                menu.remove_items_from_filter_list(list(previous - values.keys()))
         self.reload_frozen_table()
 
     def receive_objects_added_or_removed(self, db_map_data, action):

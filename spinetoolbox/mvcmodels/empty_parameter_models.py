@@ -71,9 +71,6 @@ class EmptyParameterModel(EmptyRowModel):
     def db_item(self, _index):  # pylint: disable=no-self-use
         return None
 
-    def db_items(self):  # pylint: disable=no-self-use
-        return []
-
     def flags(self, index):
         flags = super().flags(index)
         if self.header[index.column()] == "parameter_tag_list":

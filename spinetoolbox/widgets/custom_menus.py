@@ -22,7 +22,7 @@ from PySide2.QtGui import QIcon
 from PySide2.QtCore import QEvent, QPoint, Signal, Slot
 from ..helpers import fix_name_ambiguity
 from ..plotting import plot_pivot_column, plot_selection, PlottingError, PivotTablePlottingHints
-from .custom_qwidgets import SimpleFilterWidget, ParameterViewFilterWidget, TabularViewFilterWidget
+from .custom_qwidgets import SimpleFilterWidget, DBItemFilterWidget
 from .plot_widget import PlotWidget
 from .report_plotting_failure import report_plotting_failure
 
@@ -572,7 +572,7 @@ class SimpleFilterMenu(FilterMenuBase):
     def __init__(self, parent, show_empty=True):
         """
         Args:
-            parent (TabularViewMixin)
+            parent (DataStoreForm)
         """
         super().__init__(parent)
         self._filter = SimpleFilterWidget(parent, show_empty=show_empty)
@@ -589,15 +589,16 @@ class ParameterViewFilterMenu(FilterMenuBase):
 
     filterChanged = Signal(set)
 
-    def __init__(self, parent, source_model, source_column, show_empty=True):
+    def __init__(self, parent, db_mngr, item_type, name_key, source_model, show_empty=True):
         """
         Args:
-            parent (ParameterViewMixin)
-            source_model (CompoundParameterModel)
-            source_column (int)
+            parent (DataStoreForm)
+            item_type (str): the string item type
         """
         super().__init__(parent)
-        self._filter = ParameterViewFilterWidget(parent, source_model, source_column, show_empty=show_empty)
+        self._filter = DBItemFilterWidget(
+            self, db_mngr, item_type, name_key, source_model=source_model, show_empty=show_empty
+        )
         self._filter_action = QWidgetAction(parent)
         self._filter_action.setDefaultWidget(self._filter)
         self.addAction(self._filter_action)
@@ -612,16 +613,16 @@ class TabularViewFilterMenu(FilterMenuBase):
 
     filterChanged = Signal(object, set, bool)
 
-    def __init__(self, parent, identifier, item_type, show_empty=True):
+    def __init__(self, parent, db_mngr, identifier, item_type, name_key, show_empty=True):
         """
         Args:
-            parent (TabularViewMixin)
+            parent (DataStoreForm)
             identifier (int): index identifier
             item_type (str): either "object" or "parameter definition"
         """
         super().__init__(parent)
         self.identifier = identifier
-        self._filter = TabularViewFilterWidget(parent, item_type, show_empty=show_empty)
+        self._filter = DBItemFilterWidget(parent, db_mngr, item_type, name_key, show_empty=show_empty)
         self._filter_action = QWidgetAction(parent)
         self._filter_action.setDefaultWidget(self._filter)
         self.addAction(self._filter_action)

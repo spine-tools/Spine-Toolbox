@@ -16,7 +16,6 @@ Provides FilterCheckboxListModel for FilterWidget.
 :date:   1.11.2018
 """
 
-import bisect
 from PySide2.QtCore import Qt, Slot, QModelIndex, QAbstractListModel
 
 
@@ -111,7 +110,7 @@ class FilterCheckboxListModelBase(QAbstractListModel):
                 return Qt.Checked if action_state[row] else Qt.Unchecked
             return Qt.Checked if self._data[i] in selected else Qt.Unchecked
 
-    def _item_name(self, id_):
+    def _item_name(self, item):
         raise NotImplementedError()
 
     def click_index(self, index):
@@ -223,91 +222,66 @@ class FilterCheckboxListModelBase(QAbstractListModel):
         self._all_selected = self._is_all_selected()
         self.endResetModel()
 
-    def add_items(self, ids, selected=True):
-        ids = set(ids) - self._data_set
-        if not ids:
+    def add_items(self, data, selected=True):
+        data = [x for x in data if x not in self._data_set]
+        if not data:
             return
-        for id_ in ids:
-            k = bisect.bisect_left(self._data, id_)
-            self.beginInsertRows(self.index(0, 0), k, k)
-            self._data.insert(k, id_)
-            self._data_set.update(ids)
-            if selected:
-                self._selected.update(ids)
-                if self._is_filtered:
-                    self._selected_filtered.update(ids)
-            self.endInsertRows()
+        first = len(self._data)
+        last = first + len(data) - 1
+        self.beginInsertRows(self.index(0, 0), first, last)
+        self._data += data
+        self._data_set.update(data)
+        if selected:
+            self._selected.update(data)
+            if self._is_filtered:
+                self._selected_filtered.update(data)
+        self.endInsertRows()
         if self._is_filtered:
-            self._filter_index = [i for i, id_ in enumerate(self._data) if self._list_filter in self._item_name(id_)]
+            self._filter_index = [i for i, item in enumerate(self._data) if self._list_filter in self._item_name(item)]
         self._all_selected = self._is_all_selected()
 
-    def remove_items(self, ids):
-        ids = set(ids)
-        if not ids.intersection(self._data_set):
+    def remove_items(self, data):
+        data = set(data)
+        if not data.intersection(self._data_set):
             return
-        for k, id_ in reversed(list(enumerate(self._data))):
-            if id_ in ids:
+        for k, item in reversed(list(enumerate(self._data))):
+            if item in data:
                 self.beginRemoveRows(self.index(0, 0), k, k)
                 self._data.pop(k)
                 self.endRemoveRows()
-        self._data_set.difference_update(ids)
-        self._selected.difference_update(ids)
+        self._data_set.difference_update(data)
+        self._selected.difference_update(data)
         if self._is_filtered:
-            self._filter_index = [i for i, id_ in enumerate(self._data) if self._list_filter in self._item_name(id_)]
-            self._selected_filtered.difference_update(ids)
+            self._filter_index = [i for i, item in enumerate(self._data) if self._list_filter in self._item_name(item)]
+            self._selected_filtered.difference_update(data)
         self._all_selected = self._is_all_selected()
 
 
 class SimpleFilterCheckboxListModel(FilterCheckboxListModelBase):
-    def _item_name(self, id_):
-        return id_
+    def _item_name(self, item):
+        return item
 
 
-class ParameterViewCheckboxListModel(FilterCheckboxListModelBase):
-    def __init__(self, parent, source_model, source_column, show_empty=True):
+class DBItemFilterCheckboxListModel(FilterCheckboxListModelBase):
+    def __init__(self, parent, db_mngr, item_type, name_key, source_model=None, show_empty=True):
         """Init class.
 
         Args:
-            parent (ParameterViewMixin)
-            source_model (CompoundParameterModel)
-            source_column (int)
+            parent (DataStoreForm)
+            item_type (str, NoneType): either "object" or "parameter definition"
         """
         super().__init__(parent, show_empty=show_empty)
+        self.db_mngr = db_mngr
         self.source_model = source_model
-        self.source_column = source_column
-        self.source_model.destroyed.connect(self._handle_source_model_destroyed)
+        self.item_type = item_type
+        self.name_key = name_key
 
-    @Slot("QObject")
-    def _handle_source_model_destroyed(self, obj=None):
-        self.source_model = None
-        self.deleteLater()
-
-    def _item_name(self, id_):
-        if self.source_model is None:
-            return None
-        index = self.source_model.index(id_, self.source_column)
-        return self.source_model.data(index, role=Qt.DisplayRole)
+    def _item_name(self, item):
+        db_map, db_id = item
+        return self.db_mngr.get_item(db_map, self.item_type, db_id)[self.name_key]
 
     def canFetchMore(self, parent=QModelIndex()):
         return self.source_model.canFetchMore()
 
     def fetchMore(self, parent=QModelIndex()):
         self.source_model.fetchMore()
-
-
-class TabularViewFilterCheckboxListModel(FilterCheckboxListModelBase):
-    def __init__(self, parent, item_type, show_empty=True):
-        """Init class.
-
-        Args:
-            parent (TabularViewMixin)
-            item_type (str, NoneType): either "object" or "parameter definition"
-        """
-        super().__init__(parent, show_empty=show_empty)
-        self.item_type = item_type
-        self.db_mngr = parent.db_mngr
-        self.db_map = parent.db_map
-
-    def _item_name(self, id_):
-        name_key = {"object": "name", "parameter definition": "parameter_name"}[self.item_type]
-        return self.db_mngr.get_item(self.db_map, self.item_type, id_)[name_key]

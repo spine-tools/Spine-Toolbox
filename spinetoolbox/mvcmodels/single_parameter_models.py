@@ -141,13 +141,14 @@ class SingleParameterModel(MinimalTableModel):
             if field == "database":
                 return self.db_map.codename
             id_ = self._main_data[index.row()]
-            if role == Qt.ToolTipRole:
-                description = self._get_field_item(field, id_).get("description", None)
-                if description not in (None, ""):
-                    return description
             if field in self.json_fields:
                 return self.db_mngr.get_value(self.db_map, self.item_type, id_, field, role)
-            data = self.db_mngr.get_item(self.db_map, self.item_type, id_).get(field)
+            item = self.db_mngr.get_item(self.db_map, self.item_type, id_)
+            if role == Qt.ToolTipRole:
+                description = self.get_field_item(field, item).get("description", None)
+                if description not in (None, ""):
+                    return description
+            data = item.get(field)
             if role == Qt.DisplayRole and data and field in self.group_fields:
                 data = data.replace(",", self.db_mngr._GROUP_SEP)
             return data
@@ -203,23 +204,21 @@ class SingleParameterModel(MinimalTableModel):
         """Returns a list of accepted rows, for convenience."""
         return [row for row in range(self.rowCount()) if self._filter_accepts_row(row)]
 
-    def _get_field_item(self, field, id_):
-        """Returns a item from the db_mngr.get_item depending on the
-        field. If a field doesn't correspond to a item in the database then
-        an empty dict is returned.
+    def get_field_item(self, field, db_item):
+        """Returns a db item corresponding to the given field from the table header,
+        or an empty dict if the field doesn't contain db items.
         """
-        data = self.db_mngr.get_item(self.db_map, self.item_type, id_)
-        header_to_id = {
+        field_to_item_id = {
             "object_class_name": ("entity_class_id", "object class"),
             "relationship_class_name": ("entity_class_id", "relationship class"),
             "object_name": ("entity_id", "object"),
             "object_name_list": ("entity_id", "relationship"),
             "parameter_name": (self.parameter_definition_id_key, "parameter definition"),
         }
-        if field not in header_to_id:
+        if field not in field_to_item_id:
             return {}
-        id_field, item_type = header_to_id[field]
-        item_id = data.get(id_field)
+        id_field, item_type = field_to_item_id[field]
+        item_id = db_item.get(id_field)
         return self.db_mngr.get_item(self.db_map, item_type, item_id)
 
 

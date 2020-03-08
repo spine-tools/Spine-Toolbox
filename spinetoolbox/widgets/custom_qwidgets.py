@@ -32,11 +32,7 @@ from PySide2.QtWidgets import (
 )
 from PySide2.QtCore import QTimer, Signal, Slot
 from PySide2.QtGui import QPainter
-from ..mvcmodels.filter_checkbox_list_model import (
-    SimpleFilterCheckboxListModel,
-    ParameterViewCheckboxListModel,
-    TabularViewFilterCheckboxListModel,
-)
+from ..mvcmodels.filter_checkbox_list_model import SimpleFilterCheckboxListModel, DBItemFilterCheckboxListModel
 
 
 class FilterWidgetBase(QWidget):
@@ -151,32 +147,18 @@ class SimpleFilterWidget(FilterWidgetBase):
         self.connect_signals()
 
 
-class ParameterViewFilterWidget(FilterWidgetBase):
-    def __init__(self, parent, source_model, source_column, show_empty=True):
+class DBItemFilterWidget(FilterWidgetBase):
+    def __init__(self, parent, db_mngr, item_type, name_key, source_model=None, show_empty=True):
         """Init class.
 
         Args:
-            parent (QWidget)
-            source_model (CompoundParameterModel)
-            source_column (int)
-        """
-        super().__init__(parent)
-        self._filter_model = ParameterViewCheckboxListModel(parent, source_model, source_column, show_empty=show_empty)
-        self._filter_model.set_list(self._filter_state)
-        self._ui_list.setModel(self._filter_model)
-        self.connect_signals()
-
-
-class TabularViewFilterWidget(FilterWidgetBase):
-    def __init__(self, parent, item_type, show_empty=True):
-        """Init class.
-
-        Args:
-            parent (QWidget)
+            parent (DataStoreForm)
             item_type (str): either "object" or "parameter definition"
         """
         super().__init__(parent)
-        self._filter_model = TabularViewFilterCheckboxListModel(parent, item_type, show_empty=show_empty)
+        self._filter_model = DBItemFilterCheckboxListModel(
+            self, db_mngr, item_type, name_key, source_model=source_model, show_empty=show_empty
+        )
         self._filter_model.set_list(self._filter_state)
         self._ui_list.setModel(self._filter_model)
         self.connect_signals()
