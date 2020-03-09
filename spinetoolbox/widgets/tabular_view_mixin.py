@@ -436,6 +436,12 @@ class TabularViewMixin:
             self.ui.frozen_table.setIndexWidget(index, widget)
             self.ui.frozen_table.horizontalHeader().resizeSection(column, widget.size().width())
 
+    def _query_object(self, db_map, id_):
+        return self.db_mngr.get_field(db_map, "object", id_, "name")
+
+    def _query_parameter_definition(self, db_map, id_):
+        return self.db_mngr.get_field(db_map, "parameter definition", id_, "parameter_name")
+
     def create_filter_menu(self, identifier):
         """Returns a filter menu for given given object class identifier.
 
@@ -446,13 +452,9 @@ class TabularViewMixin:
             TabularViewFilterMenu
         """
         if identifier not in self.filter_menus:
-            if identifier == self._PARAM_INDEX_ID:
-                item_type = "parameter definition"
-                display_field = "parameter_name"
-            else:
-                item_type = "object"
-                display_field = "name"
-            query_method = lambda db_map, id_: self.db_mngr.get_field(db_map, item_type, id_, display_field)
+            query_method = (
+                self._query_parameter_definition if identifier == self._PARAM_INDEX_ID else self._query_object
+            )
             self.filter_menus[identifier] = menu = TabularViewFilterMenu(
                 self, identifier, query_method, show_empty=False
             )

@@ -62,23 +62,29 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
 
     def _make_field_query_method(self):
         """Returns a dictionary mapping field from the header, to a method that returns 'field' db items
-        given db_map and id.
+        given db_map and id. Used in creating ``ParameterViewFilterMenu``s for header fields.
 
         Returns:
             dict
         """
-
-        def _make_method(method_name, item_type, field):
-            return lambda db_map, id_: getattr(self.db_mngr, method_name)(db_map, item_type, id_, field)
-
+        get_field = self.db_mngr.get_field
+        get_value = self.db_mngr.get_value
         return {
-            "object_class_name": _make_method("get_field", "object class", "name"),
-            "relationship_class_name": _make_method("get_field", "relationship class", "name"),
-            "object_name": _make_method("get_field", "object", "name"),
-            "object_name_list": _make_method("get_field", "relationship", "object_name_list"),
-            "parameter_name": _make_method("get_field", "parameter definition", "parameter_name"),
-            "value": _make_method("get_value", "parameter value", "value"),
-            "default_value": _make_method("get_value", "parameter definition", "default_value"),
+            "object_class_name": lambda db_map, id_: get_field(db_map, "object class", id_, "name"),
+            "relationship_class_name": lambda db_map, id_: get_field(db_map, "relationship class", id_, "name"),
+            "object_class_name_list": lambda db_map, id_: get_field(
+                db_map, "relationship class", id_, "object_class_name_list"
+            ).replace(",", self.db_mngr._GROUP_SEP),
+            "object_name": lambda db_map, id_: get_field(db_map, "object", id_, "name"),
+            "object_name_list": lambda db_map, id_: get_field(db_map, "relationship", id_, "object_name_list").replace(
+                ",", self.db_mngr._GROUP_SEP
+            ),
+            "parameter_name": lambda db_map, id_: get_field(db_map, "parameter definition", id_, "parameter_name"),
+            "description": lambda db_map, id_: get_field(db_map, "parameter definition", id_, "description"),
+            "value_list_name": lambda db_map, id_: get_field(db_map, "parameter value list", id_, "name"),
+            "value": lambda db_map, id_: get_value(db_map, "parameter value", id_, "value"),
+            "default_value": lambda db_map, id_: get_value(db_map, "parameter definition", id_, "default_value"),
+            "database": lambda _, id_: id_,
         }
 
     def _make_header(self):
@@ -134,9 +140,9 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         for field, menu in self._auto_filter_menus.items():
             field_menu_data = self._auto_filter_menu_data.setdefault(field, {})
             query_method = self._field_query_method[field]
-            id_field, _ = sub_model._field_to_item_id[field]
+            id_key = sub_model.get_id_key(field)
             for db_item in db_items:
-                item_id = db_item.get(id_field)
+                item_id = db_item.get(id_key)
                 value = query_method(db_map, item_id)
                 # NOTE: we save the entity class id for quickly filtering out sub-models in `update_auto_filter`
                 field_menu_data.setdefault(value, {})[db_map, item_id] = sub_model.entity_class_id
@@ -289,7 +295,9 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         for auto_filter in self._auto_filter.values():
             if not auto_filter:
                 continue
-            if (model.db_map, model.entity_class_id) not in auto_filter.keys():
+            if model.db_map not in auto_filter:
+                return False
+            if model.entity_class_id not in auto_filter[model.db_map]:
                 return False
         return True
 
@@ -362,8 +370,8 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
             valid_values (list(str)): accepted values for the field
             has_filter (bool)
         """
-        data = self._auto_filter_menu_data[field]
-        auto_filter = self._build_auto_filter(data, valid_values, has_filter)
+        field_menu_data = self._auto_filter_menu_data[field]
+        auto_filter = self._build_auto_filter(field_menu_data, valid_values, has_filter)
         updated = self.update_compound_auto_filter(field, auto_filter)
         for model in self.accepted_single_models():
             updated |= self.update_single_auto_filter(model, field)
@@ -371,16 +379,16 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
             self.refresh()
 
     @staticmethod
-    def _build_auto_filter(data, valid_values, has_filter):
-        if not valid_values:
-            return None  # Nothing passes
+    def _build_auto_filter(field_menu_data, valid_values, has_filter):
         if not has_filter:
-            return {}  # Everything passes
+            return {}  # All-pass
+        if not valid_values:
+            return None  # You shall not pass
         auto_filter = {}
         for value in valid_values:
-            item_ids = data[value]
+            item_ids = field_menu_data[value]
             for (db_map, id_), entity_class_id in item_ids.items():
-                auto_filter.setdefault((db_map, entity_class_id), []).append(id_)
+                auto_filter.setdefault(db_map, {}).setdefault(entity_class_id, []).append(id_)
         return auto_filter
 
     def update_compound_auto_filter(self, field, auto_filter):
@@ -405,7 +413,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         Returns:
             bool: True if the auto-filtered values were updated, None otherwise
         """
-        values = self._auto_filter[field].get((model.db_map, model.entity_class_id), {})
+        values = self._auto_filter[field].get(model.db_map, {}).get(model.entity_class_id, {})
         if values == model._auto_filter.get(field, {}):
             return False
         model._auto_filter[field] = values

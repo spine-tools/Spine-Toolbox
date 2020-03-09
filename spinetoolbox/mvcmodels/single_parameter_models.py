@@ -49,11 +49,15 @@ class SingleParameterModel(MinimalTableModel):
         self._field_to_item_id = {
             "object_class_name": ("entity_class_id", "object class"),
             "relationship_class_name": ("entity_class_id", "relationship class"),
+            "object_class_name_list": ("entity_class_id", "relationship class"),
             "object_name": ("entity_id", "object"),
             "object_name_list": ("entity_id", "relationship"),
             "parameter_name": (self.parameter_definition_id_key, "parameter definition"),
+            "value_list_name": ("value_list_id", "parameter value list"),
+            "description": ("id", "parameter definition"),
             "value": ("id", "parameter value"),
-            "default_value": (self.parameter_definition_id_key, "parameter definition"),
+            "default_value": ("id", "parameter definition"),
+            "database": ("database", None),
         }
 
     @property
@@ -208,8 +212,8 @@ class SingleParameterModel(MinimalTableModel):
             return False
         db_item = self._db_item(row)
         for field, valid_ids in self._auto_filter.items():
-            id_field, _ = self._field_to_item_id[field]
-            if valid_ids and db_item[id_field] not in valid_ids:
+            id_key = self.get_id_key(field)
+            if valid_ids and db_item.get(id_key) not in valid_ids:
                 return False
         return True
 
@@ -223,9 +227,14 @@ class SingleParameterModel(MinimalTableModel):
         """
         if field not in self._field_to_item_id:
             return {}
-        id_field, item_type = self._field_to_item_id[field]
-        item_id = db_item.get(id_field)
+        id_key, item_type = self._field_to_item_id[field]
+        item_id = db_item.get(id_key)
         return self.db_mngr.get_item(self.db_map, item_type, item_id)
+
+    def get_id_key(self, field):
+        if field not in self._field_to_item_id:
+            return None
+        return self._field_to_item_id[field][0]
 
 
 class SingleObjectParameterMixin:
