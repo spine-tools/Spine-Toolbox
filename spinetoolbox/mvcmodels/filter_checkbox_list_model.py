@@ -278,6 +278,8 @@ class DBItemFilterCheckboxListModel(FilterCheckboxListModelBase):
         self.source_model = source_model
 
     def _item_name(self, item):
+        if item is None:
+            return None
         db_map, db_id = item
         return self.query_method(db_map, db_id)
 

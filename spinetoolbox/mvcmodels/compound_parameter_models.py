@@ -105,7 +105,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
                 continue
             self._auto_filter_menus[field] = menu = ParameterViewFilterMenu(
                 self.parent(), query_method, self, show_empty=False
-            )
+            )  # TODO: show_empty=True
             menu.filterChanged.connect(
                 lambda values, has_filter, field=field: self.update_auto_filter(field, values, has_filter)
             )
@@ -146,7 +146,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
                 value = query_method(db_map, item_id)
                 # NOTE: we save the entity class id for quickly filtering out sub-models in `update_auto_filter`
                 field_menu_data.setdefault(value, {})[db_map, item_id] = sub_model.entity_class_id
-            filter_items = [list(items.keys())[0] for items in field_menu_data.values()]
+            filter_items = [list(items.keys())[0] for key, items in field_menu_data.items() if key is not None]
             menu.add_items_to_filter_list(filter_items)
 
     @property
