@@ -585,20 +585,20 @@ class ParameterViewFilterMenu(FilterMenuBase):
 
     filterChanged = Signal(set, bool)
 
-    def __init__(self, parent, db_mngr, item_type, name_key, source_model, show_empty=True):
+    def __init__(self, parent, query_method, source_model, show_empty=True):
         """
         Args:
             parent (DataStoreForm)
-            item_type (str): the string item type
+            query_method (method): the method to query model data
+            source_model (CompoundParameterModel): a model to lazily get data from
         """
         super().__init__(parent)
-        self._filter = DBItemFilterWidget(
-            self, db_mngr, item_type, name_key, source_model=source_model, show_empty=show_empty
-        )
+        self._filter = DBItemFilterWidget(self, query_method, source_model=source_model, show_empty=show_empty)
         self._filter_action = QWidgetAction(parent)
         self._filter_action.setDefaultWidget(self._filter)
         self.addAction(self._filter_action)
         self.connect_signals()
+        self.aboutToShow.connect(self._filter.set_model)
 
     def emit_filter_changed(self, valid_values):
         valid_values = [self._filter._filter_model._item_name(v) for v in valid_values]
@@ -610,21 +610,22 @@ class TabularViewFilterMenu(FilterMenuBase):
 
     filterChanged = Signal(int, set, bool)
 
-    def __init__(self, parent, db_mngr, identifier, item_type, name_key, show_empty=True):
+    def __init__(self, parent, identifier, query_method, show_empty=True):
         """
         Args:
             parent (DataStoreForm)
             identifier (int): index identifier
-            item_type (str): either "object" or "parameter definition"
+            query_method (method): the method from SpineDBManager to query data
         """
         super().__init__(parent)
         self.identifier = identifier
-        self._filter = DBItemFilterWidget(parent, db_mngr, item_type, name_key, show_empty=show_empty)
+        self._filter = DBItemFilterWidget(parent, query_method, show_empty=show_empty)
         self._filter_action = QWidgetAction(parent)
         self._filter_action.setDefaultWidget(self._filter)
         self.addAction(self._filter_action)
         self.anchor = parent
         self.connect_signals()
+        self.aboutToShow.connect(self._filter.set_model)
 
     def emit_filter_changed(self, valid_values):
         self.filterChanged.emit(self.identifier, valid_values, self._filter.has_filter())

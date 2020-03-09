@@ -271,10 +271,12 @@ class AutoFilterCopyPasteTableView(CopyPasteTableView):
         Args:
             logical_index (int)
         """
+        menu = self.model().get_auto_filter_menu(logical_index)
+        if menu is None:
+            return
         header_pos = self.mapToGlobal(self.horizontalHeader().pos())
         pos_x = header_pos.x() + self.horizontalHeader().sectionViewportPosition(logical_index)
         pos_y = header_pos.y() + self.horizontalHeader().height()
-        menu = self.model().get_auto_filter_menu(logical_index)
         menu.popup(QPoint(pos_x, pos_y))
 
 

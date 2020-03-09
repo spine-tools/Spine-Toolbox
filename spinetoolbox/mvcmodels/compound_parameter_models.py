@@ -18,7 +18,7 @@ These models concatenate several 'single' models and one 'empty' model.
 """
 from PySide2.QtCore import Qt, Signal, QModelIndex
 from PySide2.QtGui import QFont, QIcon
-from ..helpers import rows_to_row_count_tuples
+from ..helpers import busy_effect, rows_to_row_count_tuples
 from ..widgets.custom_menus import ParameterViewFilterMenu
 from .compound_table_model import CompoundWithEmptyTableModel
 from .empty_parameter_models import (
@@ -58,8 +58,28 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         self._auto_filter_menus = {}
         self._auto_filter_menu_data = dict()  # Maps fields to auto filter data
         self._auto_filter = dict()  # Maps fields to (db_map, entity_id) to accepted field ids
-        # self._item_type_name_key = {"object_class_name": ("object class", "name"), "object_name": ("object", "name")}
-        self._item_type_name_key = {"object_class_name": ("object class", "name")}
+        self._field_query_method = self._make_field_query_method()
+
+    def _make_field_query_method(self):
+        """Returns a dictionary mapping field from the header, to a method that returns 'field' db items
+        given db_map and id.
+
+        Returns:
+            dict
+        """
+
+        def _make_method(method_name, item_type, field):
+            return lambda db_map, id_: getattr(self.db_mngr, method_name)(db_map, item_type, id_, field)
+
+        return {
+            "object_class_name": _make_method("get_field", "object class", "name"),
+            "relationship_class_name": _make_method("get_field", "relationship class", "name"),
+            "object_name": _make_method("get_field", "object", "name"),
+            "object_name_list": _make_method("get_field", "relationship", "object_name_list"),
+            "parameter_name": _make_method("get_field", "parameter definition", "parameter_name"),
+            "value": _make_method("get_value", "parameter value", "value"),
+            "default_value": _make_method("get_value", "parameter definition", "default_value"),
+        }
 
     def _make_header(self):
         raise NotImplementedError()
@@ -74,11 +94,11 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         self._auto_filter_menus.clear()
         self._auto_filter_menu_data.clear()
         for field in self.header:
-            if field not in self._item_type_name_key:
+            query_method = self._field_query_method.get(field)
+            if query_method is None:
                 continue
-            item_type, name_key = self._item_type_name_key[field]
             self._auto_filter_menus[field] = menu = ParameterViewFilterMenu(
-                self.parent(), self.db_mngr, item_type, name_key, self, show_empty=False
+                self.parent(), query_method, self, show_empty=False
             )
             menu.filterChanged.connect(
                 lambda values, has_filter, field=field: self.update_auto_filter(field, values, has_filter)
@@ -93,8 +113,9 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         Returns:
             ParameterViewFilterMenu
         """
-        return self._auto_filter_menus[self.header[logical_index]]
+        return self._auto_filter_menus.get(self.header[logical_index], None)
 
+    @busy_effect
     def fetchMore(self, parent=QModelIndex()):
         """Populates filter menus as submodels are fetched."""
         super().fetchMore(parent=parent)
@@ -109,15 +130,17 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
             sub_model (SingleParameterModel)
         """
         db_items = sub_model.db_items()
+        db_map = sub_model.db_map
         for field, menu in self._auto_filter_menus.items():
-            data = self._auto_filter_menu_data.setdefault(field, {})
-            _, name_key = self._item_type_name_key[field]
+            field_menu_data = self._auto_filter_menu_data.setdefault(field, {})
+            query_method = self._field_query_method[field]
+            id_field, _ = sub_model._field_to_item_id[field]
             for db_item in db_items:
-                item = sub_model.get_field_item(field, db_item)
-                name = item[name_key]
+                item_id = db_item.get(id_field)
+                value = query_method(db_map, item_id)
                 # NOTE: we save the entity class id for quickly filtering out sub-models in `update_auto_filter`
-                data.setdefault(name, {})[sub_model.db_map, item["id"]] = sub_model.entity_class_id
-            filter_items = [list(items.keys())[0] for items in data.values()]
+                field_menu_data.setdefault(value, {})[db_map, item_id] = sub_model.entity_class_id
+            filter_items = [list(items.keys())[0] for items in field_menu_data.values()]
             menu.add_items_to_filter_list(filter_items)
 
     @property

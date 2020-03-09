@@ -448,12 +448,13 @@ class TabularViewMixin:
         if identifier not in self.filter_menus:
             if identifier == self._PARAM_INDEX_ID:
                 item_type = "parameter definition"
-                name_key = "parameter_name"
+                display_field = "parameter_name"
             else:
                 item_type = "object"
-                name_key = "name"
+                display_field = "name"
+            query_method = lambda db_map, id_: self.db_mngr.get_field(db_map, item_type, id_, display_field)
             self.filter_menus[identifier] = menu = TabularViewFilterMenu(
-                self, self.db_mngr, identifier, item_type, name_key, show_empty=False
+                self, identifier, query_method, show_empty=False
             )
             index_values = dict.fromkeys(self.pivot_table_model.model.index_values.get(identifier, []))
             index_values.pop(None, None)

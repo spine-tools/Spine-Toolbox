@@ -144,20 +144,23 @@ class SimpleFilterWidget(FilterWidgetBase):
 
 
 class DBItemFilterWidget(FilterWidgetBase):
-    def __init__(self, parent, db_mngr, item_type, name_key, source_model=None, show_empty=True):
+    def __init__(self, parent, query_method, source_model=None, show_empty=True):
         """Init class.
 
         Args:
             parent (DataStoreForm)
-            item_type (str): either "object" or "parameter definition"
+            query_method (method): the method to query data
+            source_model (CompoundParameterModel, optional): a model to lazily get data from
         """
         super().__init__(parent)
         self._filter_model = DBItemFilterCheckboxListModel(
-            self, db_mngr, item_type, name_key, source_model=source_model, show_empty=show_empty
+            self, query_method, source_model=source_model, show_empty=show_empty
         )
         self._filter_model.set_list(self._filter_state)
-        self._ui_list.setModel(self._filter_model)
         self.connect_signals()
+
+    def set_model(self):
+        self._ui_list.setModel(self._filter_model)
 
 
 class ZoomWidgetAction(QWidgetAction):

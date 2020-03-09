@@ -265,22 +265,21 @@ class SimpleFilterCheckboxListModel(FilterCheckboxListModelBase):
 
 
 class DBItemFilterCheckboxListModel(FilterCheckboxListModelBase):
-    def __init__(self, parent, db_mngr, item_type, name_key, source_model=None, show_empty=True):
+    def __init__(self, parent, query_method, source_model=None, show_empty=True):
         """Init class.
 
         Args:
             parent (DataStoreForm)
-            item_type (str, NoneType): either "object" or "parameter definition"
+            query_method (method): the method to query data
+            source_model (CompoundParameterModel, optional): a model to lazily get data from
         """
         super().__init__(parent, show_empty=show_empty)
-        self.db_mngr = db_mngr
-        self.item_type = item_type
-        self.name_key = name_key
+        self.query_method = query_method
         self.source_model = source_model
 
     def _item_name(self, item):
         db_map, db_id = item
-        return self.db_mngr.get_item(db_map, self.item_type, db_id)[self.name_key]
+        return self.query_method(db_map, db_id)
 
     def canFetchMore(self, parent=QModelIndex()):
         if self.source_model is None:
@@ -290,6 +289,6 @@ class DBItemFilterCheckboxListModel(FilterCheckboxListModelBase):
     def fetchMore(self, parent=QModelIndex()):
         row_count = self.rowCount()
         self.source_model.fetchMore()
+        # If the source model didn't bring any new data, emit layoutChanged to trigger fetching again.
         if row_count == self.rowCount():
-            # This triggers fetching again, needed in case fetching the source model doesn't bring any new data
             self.layoutChanged.emit()

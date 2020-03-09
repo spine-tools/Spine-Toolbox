@@ -52,6 +52,8 @@ class SingleParameterModel(MinimalTableModel):
             "object_name": ("entity_id", "object"),
             "object_name_list": ("entity_id", "relationship"),
             "parameter_name": (self.parameter_definition_id_key, "parameter definition"),
+            "value": ("id", "parameter value"),
+            "default_value": (self.parameter_definition_id_key, "parameter definition"),
         }
 
     @property
