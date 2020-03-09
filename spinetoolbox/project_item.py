@@ -463,10 +463,14 @@ class ProjectItemResource:
                 - "database": url is the databases url
                 - "transient_file": a file that may not yet be available or may change its location;
                   url points to latest version or is empty, metadata contains the "label" key
+                  and an optional "pattern" key
+                - "file_pattern": a file patter with wildcards that acts as a placeholder;
+                  url is empty, metadata contains the "label" key
             url (str): The url of the resource
             metadata (dict): Some metadata providing extra information about the resource.
             Currently available keys:
                 - label (str): a textual label
+                - pattern (str): a file pattern if the file is part of that pattern
         """
         self.provider = provider
         self.type_ = type_

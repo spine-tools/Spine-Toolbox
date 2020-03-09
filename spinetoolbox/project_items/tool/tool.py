@@ -406,24 +406,43 @@ class Tool(ProjectItem):
                 self._logger.msg_error.emit("Tool specification missing.")
                 return []
         for i in range(self.output_file_model.rowCount()):
-            out_file_name = self.output_file_model.item(i, 0).data(Qt.DisplayRole)
-            latest_file_path = last_output_files.get(out_file_name)
-            latest_file_url = pathlib.Path(latest_file_path).as_uri() if latest_file_path is not None else None
-            metadata = {"label": out_file_name}
-            resource = ProjectItemResource(self, "transient_file", url=latest_file_url, metadata=metadata)
-            resources.append(resource)
+            out_file_label = self.output_file_model.item(i, 0).data(Qt.DisplayRole)
+            latest_files = last_output_files.get(out_file_label, list())
+            if _is_pattern(out_file_label):
+                if not latest_files:
+                    metadata = {"label": out_file_label}
+                    resource = ProjectItemResource(self, "file_pattern", metadata=metadata)
+                    resources.append(resource)
+                else:
+                    for out_file in latest_files:
+                        file_url = pathlib.Path(out_file.path).as_uri()
+                        metadata = {"label": out_file.label}
+                        resource = ProjectItemResource(self, "transient_file", url=file_url, metadata=metadata)
+                        resources.append(resource)
+            else:
+                if not latest_files:
+                    metadata = {"label": out_file_label}
+                    resource = ProjectItemResource(self, "transient_file", metadata=metadata)
+                    resources.append(resource)
+                else:
+                    latest_file = latest_files[0]  # Not a pattern; there should be only one element in the list.
+                    file_url = pathlib.Path(latest_file.path).as_uri()
+                    metadata = {"label": latest_file.label}
+                    resource = ProjectItemResource(self, "transient_file", url=file_url, metadata=metadata)
+                    resources.append(resource)
         return resources
 
     def _find_last_output_files(self):
-        """Returns a dict mapping an output file name to the most recent output file from the results directory.
+        """
+        Returns latest output files.
 
         Returns:
-            dict
+            dict: a mapping from a file name pattern to the path of the most recent files in the results archive.
         """
         if not os.path.exists(self.output_dir):
-            return []
+            return dict()
         recent_output_files = dict()
-        file_names = [
+        file_patterns = [
             self.output_file_model.item(i, 0).data(Qt.DisplayRole) for i in range(self.output_file_model.rowCount())
         ]
         archive_dirs = os.listdir(self.output_dir)
@@ -431,13 +450,19 @@ class Tool(ProjectItem):
             archive_dirs.remove("failed")
         archive_dirs.sort(reverse=True)
         for archive in archive_dirs:
-            for file_name in list(file_names):
-                file_path = os.path.join(self.output_dir, archive, file_name)
-                if os.path.exists(file_path):
-                    file_names.remove(file_name)
-                    recent_output_files[file_name] = file_path
-                    if not file_names:
-                        return recent_output_files
+            for pattern in list(file_patterns):
+                full_archive_path = os.path.join(self.output_dir, archive)
+                full_path_pattern = os.path.join(full_archive_path, pattern)
+                files_found = False
+                for path in glob.glob(full_path_pattern):
+                    if os.path.exists(path):
+                        files_found = True
+                        file_list = recent_output_files.setdefault(pattern, list())
+                        file_list.append(_LatestOutputFile.from_paths(path, full_archive_path))
+                if files_found:
+                    file_patterns.remove(pattern)
+                if not file_patterns:
+                    return recent_output_files
         return recent_output_files
 
     def execute_backward(self, resources):
@@ -1152,3 +1177,27 @@ class Tool(ProjectItem):
         if specification is None:
             return ""
         return specification.short_name + "__" + uuid.uuid4().hex + "__toolbox"
+
+
+def _is_pattern(file_name):
+    """Returns True if file_name is actually a file pattern."""
+    return "*" in file_name or "?" in file_name
+
+
+class _LatestOutputFile:
+    """
+    A class to hold information on a latest output file.
+
+    Attributes:
+        label (str): file label, e.g. file pattern or relative path
+        path (str): absolute path to the file
+    """
+    def __init__(self, label, path):
+        self.label = label
+        self.path = path
+
+    @staticmethod
+    def from_paths(path, archive_dir):
+        """Constructs a _LatestOutputFile object from an absolute path and archive directory."""
+        label = os.path.relpath(path, archive_dir)
+        return _LatestOutputFile(label, path)
