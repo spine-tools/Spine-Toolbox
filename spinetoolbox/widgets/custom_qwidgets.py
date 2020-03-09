@@ -72,7 +72,6 @@ class FilterWidgetBase(QWidget):
         self._filter_model = None
 
     def connect_signals(self):
-        # connect signals
         self._ui_list.clicked.connect(self._filter_model.click_index)
         self._search_timer.timeout.connect(self._filter_list)
         self._ui_edit.textChanged.connect(self._text_edited)

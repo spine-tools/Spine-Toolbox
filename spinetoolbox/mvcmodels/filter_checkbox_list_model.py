@@ -59,17 +59,17 @@ class FilterCheckboxListModelBase(QAbstractListModel):
                 self._selected_filtered = set()
             else:
                 self._selected = set()
-            self._empty_selected = False
         else:
             if self._is_filtered:
                 self._selected_filtered = set(self._data[i] for i in self._filter_index)
             else:
                 self._selected = self._data_set.copy()
-            self._empty_selected = True
         self._all_selected = not self._all_selected
+        if self._show_empty:
+            self._empty_selected = self._all_selected
         self.dataChanged.emit(self.index(0, 0), self.index(self.rowCount(), 0), [Qt.CheckStateRole])
 
-    def _is_all_selected(self):
+    def _check_all_selected(self):
         if self._is_filtered:
             return len(self._selected_filtered) == len(self._filter_index)
         return len(self._selected) == len(self._data_set) and self._empty_selected
@@ -135,7 +135,7 @@ class FilterCheckboxListModelBase(QAbstractListModel):
                         self._selected.discard(item)
                     else:
                         self._selected.add(item)
-            self._all_selected = self._is_all_selected()
+            self._all_selected = self._check_all_selected()
             self.dataChanged.emit(index, index, [Qt.CheckStateRole])
             self.dataChanged.emit(0, 0, [Qt.CheckStateRole])
 
@@ -159,7 +159,7 @@ class FilterCheckboxListModelBase(QAbstractListModel):
         self._selected = self._data_set.intersection(selected)
         if select_empty is not None:
             self._empty_selected = select_empty
-        self._all_selected = self._is_all_selected()
+        self._all_selected = self._check_all_selected()
         self.endResetModel()
 
     def get_selected(self):
@@ -219,10 +219,12 @@ class FilterCheckboxListModelBase(QAbstractListModel):
         self._is_filtered = False
         self._filter_index = []
         self._selected_filtered = set()
-        self._all_selected = self._is_all_selected()
+        self._all_selected = self._check_all_selected()
         self.endResetModel()
 
-    def add_items(self, data, selected=True):
+    def add_items(self, data, selected=None):
+        if selected is None:
+            selected = self._all_selected
         data = [x for x in data if x not in self._data_set]
         if not data:
             return
@@ -238,7 +240,7 @@ class FilterCheckboxListModelBase(QAbstractListModel):
         self.endInsertRows()
         if self._is_filtered:
             self._filter_index = [i for i, item in enumerate(self._data) if self._list_filter in self._item_name(item)]
-        self._all_selected = self._is_all_selected()
+        self._all_selected = self._check_all_selected()
 
     def remove_items(self, data):
         data = set(data)
@@ -254,7 +256,7 @@ class FilterCheckboxListModelBase(QAbstractListModel):
         if self._is_filtered:
             self._filter_index = [i for i, item in enumerate(self._data) if self._list_filter in self._item_name(item)]
             self._selected_filtered.difference_update(data)
-        self._all_selected = self._is_all_selected()
+        self._all_selected = self._check_all_selected()
 
 
 class SimpleFilterCheckboxListModel(FilterCheckboxListModelBase):
@@ -272,9 +274,9 @@ class DBItemFilterCheckboxListModel(FilterCheckboxListModelBase):
         """
         super().__init__(parent, show_empty=show_empty)
         self.db_mngr = db_mngr
-        self.source_model = source_model
         self.item_type = item_type
         self.name_key = name_key
+        self.source_model = source_model
 
     def _item_name(self, item):
         db_map, db_id = item
@@ -286,4 +288,8 @@ class DBItemFilterCheckboxListModel(FilterCheckboxListModelBase):
         return self.source_model.canFetchMore()
 
     def fetchMore(self, parent=QModelIndex()):
+        row_count = self.rowCount()
         self.source_model.fetchMore()
+        if row_count == self.rowCount():
+            # This triggers fetching again, needed in case fetching the source model doesn't bring any new data
+            self.layoutChanged.emit()

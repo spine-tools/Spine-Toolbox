@@ -226,68 +226,6 @@ class PivotTableView(CopyPasteTableView):
         h_header.setContextMenuPolicy(Qt.CustomContextMenu)
 
 
-class AutoFilterMenu(QMenu):
-    """A widget to show the auto filter 'menu'.
-
-    Attributes:
-        parent (QTableView): the parent widget.
-    """
-
-    asc_sort_triggered = Signal()
-    desc_sort_triggered = Signal()
-    filter_triggered = Signal(dict)
-
-    def __init__(self, parent):
-        """Initialize class."""
-        super().__init__(parent)
-        self.auto_filter = dict()
-        # Layout
-        self.all_item_model = AutoFilterMenuAllItemModel(self)
-        self.value_item_model = AutoFilterMenuValueItemModel(self)
-        self.text_filter = QLineEdit(self)
-        self.text_filter.setPlaceholderText("Search...")
-        self.text_filter.setClearButtonEnabled(True)
-        self.all_item_view = AutoFilterMenuView(self)
-        self.value_item_view = AutoFilterMenuView(self)
-        self.all_item_view.setModel(self.all_item_model)
-        self.value_item_view.setModel(self.value_item_model)
-        text_filter_action = QWidgetAction(self)
-        text_filter_action.setDefaultWidget(self.text_filter)
-        all_item_view_action = QWidgetAction(self)
-        all_item_view_action.setDefaultWidget(self.all_item_view)
-        value_item_view_action = QWidgetAction(self)
-        value_item_view_action.setDefaultWidget(self.value_item_view)
-        self.addAction(text_filter_action)
-        self.addAction(all_item_view_action)
-        self.addAction(value_item_view_action)
-        ok_action = self.addAction("Ok")
-        self.text_filter.textEdited.connect(self.value_item_model.set_filter_reg_exp)
-        ok_action.triggered.connect(self._handle_ok_action_triggered)
-        self.all_item_model.checked_state_changed.connect(self.value_item_model.set_all_items_checked_state)
-        self.value_item_model.all_checked_state_changed.connect(self.all_item_model.set_checked_state)
-        self.aboutToShow.connect(self._fix_geometry)
-
-    def set_data(self, data):
-        """Set data to show in the menu."""
-        self.value_item_model.reset_model(data)
-
-    @Slot(name="_fix_geometry")
-    def _fix_geometry(self):
-        """Fix geometry, shrink views as possible."""
-        all_item_view_height = self.all_item_view.sizeHintForRow(0)
-        self.all_item_view.setMaximumHeight(all_item_view_height)
-        self.text_filter.clear()
-        self.text_filter.setFocus()
-
-    @Slot("bool", name="_handle_ok_action_triggered")
-    def _handle_ok_action_triggered(self, checked=False):
-        """Called when user presses Ok.
-        Collect selections and emit signal.
-        """
-        auto_filter = self.value_item_model.get_auto_filter()
-        self.filter_triggered.emit(auto_filter)
-
-
 class AutoFilterCopyPasteTableView(CopyPasteTableView):
     """Custom QTableView class with autofilter functionality.
 

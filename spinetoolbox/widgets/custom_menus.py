@@ -523,7 +523,6 @@ class FilterMenuBase(QMenu):
         self.addAction(self._remove_filter)
 
     def connect_signals(self):
-        self.aboutToHide.connect(self._cancel_filter)
         self.aboutToShow.connect(self._check_filter)
         self._remove_filter.triggered.connect(self._clear_filter)
         self._filter.okPressed.connect(self._change_filter)
@@ -546,9 +545,6 @@ class FilterMenuBase(QMenu):
 
     def _check_filter(self):
         self._remove_filter.setEnabled(self._filter.has_filter())
-
-    def _cancel_filter(self):
-        self._filter._cancel_filter()
 
     def _change_filter(self):
         valid_values = set(self._filter._filter_state)

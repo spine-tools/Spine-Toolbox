@@ -53,17 +53,19 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         super().__init__(parent, header=self._make_header())
         self.db_mngr = db_mngr
         self.db_maps = db_maps
-        self._auto_filter = dict()  # Maps column to (db_map, entity_id) to accepted values
         self._accepted_entity_class_ids = {}  # Accepted by main filter
         self.remove_icon = QIcon(":/icons/menu_icons/cog_minus.svg")
         self._auto_filter_menus = {}
         self._auto_filter_menu_data = dict()  # Maps fields to auto filter data
-        self._item_type_name_key = {"object_class_name": ("object class", "name"), "object_name": ("object", "name")}
+        self._auto_filter = dict()  # Maps fields to (db_map, entity_id) to accepted field ids
+        # self._item_type_name_key = {"object_class_name": ("object class", "name"), "object_name": ("object", "name")}
+        self._item_type_name_key = {"object_class_name": ("object class", "name")}
 
     def _make_header(self):
         raise NotImplementedError()
 
     def init_model(self):
+        """Initializes the model."""
         super().init_model()
         self._make_auto_filter_menus()
 
@@ -113,7 +115,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
             for db_item in db_items:
                 item = sub_model.get_field_item(field, db_item)
                 name = item[name_key]
-                # NOTE: we save the entity class id for speeding up filtering
+                # NOTE: we save the entity class id for quickly filtering out sub-models in `update_auto_filter`
                 data.setdefault(name, {})[sub_model.db_map, item["id"]] = sub_model.entity_class_id
             filter_items = [list(items.keys())[0] for items in data.values()]
             menu.add_items_to_filter_list(filter_items)
