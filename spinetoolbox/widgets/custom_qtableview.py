@@ -20,11 +20,9 @@ import csv
 import io
 import locale
 import numpy as np
-from PySide2.QtWidgets import QTableView, QApplication, QMenu, QLineEdit, QWidgetAction
-from PySide2.QtCore import Qt, Signal, Slot, QItemSelectionModel, QPoint
+from PySide2.QtWidgets import QTableView, QApplication
+from PySide2.QtCore import Qt, Slot, QItemSelectionModel, QPoint
 from PySide2.QtGui import QKeySequence
-from ..mvcmodels.auto_filter_menu_model import AutoFilterMenuValueItemModel, AutoFilterMenuAllItemModel
-from ..widgets.custom_qlistview import AutoFilterMenuView
 from ..widgets.pivot_table_header_view import PivotTableHeaderView
 from ..helpers import busy_effect
 
