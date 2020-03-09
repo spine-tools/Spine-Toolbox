@@ -42,17 +42,17 @@ class TestFilterCheckboxListModel(unittest.TestCase):
 
     def test_is_all_selected_when_all_selected(self):
         self.model.set_list(self.data)
-        self.assertTrue(self.model._is_all_selected())
+        self.assertTrue(self.model._check_all_selected())
 
     def test_is_all_selected_when_not_all_selected(self):
         self.model.set_list(self.data)
         self.model._selected.discard('a')
-        self.assertFalse(self.model._is_all_selected())
+        self.assertFalse(self.model._check_all_selected())
 
     def test_is_all_selected_when_not_empty_selected(self):
         self.model.set_list(self.data)
         self.model._empty_selected = False
-        self.assertFalse(self.model._is_all_selected())
+        self.assertFalse(self.model._check_all_selected())
 
     def test_add_item_with_select_without_filter(self):
         new_item = ['aaaa']
