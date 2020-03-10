@@ -22,7 +22,7 @@ from PySide2.QtGui import QIcon
 from PySide2.QtCore import QEvent, QPoint, Signal, Slot
 from ..helpers import fix_name_ambiguity
 from ..plotting import plot_pivot_column, plot_selection, PlottingError, PivotTablePlottingHints
-from .custom_qwidgets import SimpleFilterWidget, LazyFilterWidget
+from .custom_qwidgets import SimpleFilterWidget, LazyFilterWidget, DataToValueFilterWidget
 from .plot_widget import PlotWidget
 from .report_plotting_failure import report_plotting_failure
 
@@ -571,7 +571,7 @@ class SimpleFilterMenu(FilterMenuBase):
             parent (DataStoreForm)
         """
         super().__init__(parent)
-        self._filter = SimpleFilterWidget(parent, show_empty=show_empty)
+        self._filter = SimpleFilterWidget(self, show_empty=show_empty)
         self._filter_action = QWidgetAction(parent)
         self._filter_action.setDefaultWidget(self._filter)
         self.addAction(self._filter_action)
@@ -608,15 +608,16 @@ class TabularViewFilterMenu(FilterMenuBase):
 
     filterChanged = Signal(int, set, bool)
 
-    def __init__(self, parent, identifier, show_empty=True):
+    def __init__(self, parent, identifier, data_to_value, show_empty=True):
         """
         Args:
             parent (DataStoreForm)
             identifier (int): index identifier
+            data_to_value (method): a method to translate item data to a value for display role
         """
         super().__init__(parent)
         self.identifier = identifier
-        self._filter = SimpleFilterWidget(parent, show_empty=show_empty)
+        self._filter = DataToValueFilterWidget(self, data_to_value, show_empty=show_empty)
         self._filter_action = QWidgetAction(parent)
         self._filter_action.setDefaultWidget(self._filter)
         self.addAction(self._filter_action)

@@ -32,7 +32,11 @@ from PySide2.QtWidgets import (
 )
 from PySide2.QtCore import QTimer, Signal, Slot
 from PySide2.QtGui import QPainter
-from ..mvcmodels.filter_checkbox_list_model import SimpleFilterCheckboxListModel, LazyFilterCheckboxListModel
+from ..mvcmodels.filter_checkbox_list_model import (
+    SimpleFilterCheckboxListModel,
+    LazyFilterCheckboxListModel,
+    DataToValueFilterCheckboxListModel,
+)
 
 
 class FilterWidgetBase(QWidget):
@@ -137,7 +141,22 @@ class SimpleFilterWidget(FilterWidgetBase):
             parent (QWidget)
         """
         super().__init__(parent)
-        self._filter_model = SimpleFilterCheckboxListModel(parent, show_empty=show_empty)
+        self._filter_model = SimpleFilterCheckboxListModel(self, show_empty=show_empty)
+        self._filter_model.set_list(self._filter_state)
+        self._ui_list.setModel(self._filter_model)
+        self.connect_signals()
+
+
+class DataToValueFilterWidget(FilterWidgetBase):
+    def __init__(self, parent, data_to_value, show_empty=True):
+        """Init class.
+
+        Args:
+            parent (QWidget)
+            data_to_value (method): a method to translate item data to a value for display role
+        """
+        super().__init__(parent)
+        self._filter_model = DataToValueFilterCheckboxListModel(self, data_to_value, show_empty=show_empty)
         self._filter_model.set_list(self._filter_state)
         self._ui_list.setModel(self._filter_model)
         self.connect_signals()

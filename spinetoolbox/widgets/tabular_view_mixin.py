@@ -43,7 +43,6 @@ class TabularViewMixin:
         self.current_class_id = None
         self.current_input_type = self._PARAMETER_VALUE
         self.filter_menus = {}
-        self.menu_values = {}
         self.class_pivot_preferences = {}
         self.PivotPreferences = namedtuple("PivotPreferences", ["index", "columns", "frozen", "frozen_value"])
         self.ui.comboBox_pivot_table_input_type.addItems([self._PARAMETER_VALUE, self._RELATIONSHIP])
@@ -407,7 +406,6 @@ class TabularViewMixin:
         while self.filter_menus:
             _, menu = self.filter_menus.popitem()
             menu.wipe_out()
-        self.menu_values.clear()
 
     @Slot()
     def make_pivot_headers(self):
@@ -447,21 +445,21 @@ class TabularViewMixin:
         Returns:
             TabularViewFilterMenu
         """
+
+        object_id_to_name = lambda id_: self.db_mngr.get_field(self.db_map, "object", id_, "name")
+        parameter_id_to_name = lambda id_: self.db_mngr.get_field(
+            self.db_map, "parameter definition", id_, "parameter_name"
+        )
         if identifier not in self.filter_menus:
-            self.filter_menus[identifier] = menu = TabularViewFilterMenu(self, identifier, show_empty=False)
+            data_to_value = parameter_id_to_name if identifier == self._PARAM_INDEX_ID else object_id_to_name
+            self.filter_menus[identifier] = menu = TabularViewFilterMenu(
+                self, identifier, data_to_value, show_empty=False
+            )
             index_values = dict.fromkeys(self.pivot_table_model.model.index_values.get(identifier, []))
             index_values.pop(None, None)
-            self.menu_values[identifier] = menu_values = self._get_menu_values(identifier, index_values)
-            menu.set_filter_list(menu_values.keys())
+            menu.set_filter_list(index_values.keys())
             menu.filterChanged.connect(self.change_filter)
         return self.filter_menus[identifier]
-
-    def _get_menu_values(self, identifier, db_ids):
-        if identifier == self._PARAM_INDEX_ID:
-            item_type, name_key = "parameter definition", "parameter_name"
-        else:
-            item_type, name_key = "object", "name"
-        return {self.db_mngr.get_field(self.db_map, item_type, id_, name_key): id_ for id_ in db_ids}
 
     def create_header_widget(self, identifier, area, with_menu=True):
         """
@@ -569,9 +567,7 @@ class TabularViewMixin:
     @Slot(int, set, bool)
     def change_filter(self, identifier, valid_values, has_filter):
         if has_filter:
-            menu_values = self.menu_values[identifier]
-            valid_ids = {menu_values[value] for value in valid_values}
-            self.pivot_table_proxy.set_filter(identifier, valid_ids)
+            self.pivot_table_proxy.set_filter(identifier, valid_values)
         else:
             self.pivot_table_proxy.set_filter(identifier, None)  # None means everything passes
 
