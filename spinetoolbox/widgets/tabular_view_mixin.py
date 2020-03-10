@@ -100,6 +100,11 @@ class TabularViewMixin:
         self.ui.dockWidget_frozen_table.visibilityChanged.connect(self._handle_frozen_table_visibility_changed)
         self.ui.pivot_table.selectionModel().selectionChanged.connect(self._handle_pivot_table_selection_changed)
 
+    def init_models(self):
+        """Initializes models."""
+        super().init_models()
+        self.clear_pivot_table()
+
     @Slot("QItemSelection", "QItemSelection")
     def _handle_pivot_table_selection_changed(self, selected, deselected):
         """Accepts selection."""
@@ -445,6 +450,15 @@ class TabularViewMixin:
             self.ui.frozen_table.setIndexWidget(index, widget)
             self.ui.frozen_table.horizontalHeader().resizeSection(column, widget.size().width())
 
+    def _query_object(self, db_map, id_):
+        return self.db_mngr.get_field(db_map, "object", id_, "name")
+
+    def _query_parameter_definition(self, db_map, id_):
+        return self.db_mngr.get_field(db_map, "parameter definition", id_, "parameter_name")
+
+    def _query_alternative(self, db_map, id_):
+        return self.db_mngr.get_field(db_map, "alternative", id_, "name")
+
     def create_filter_menu(self, identifier):
         """Returns a filter menu for given given object class identifier.
 
@@ -454,13 +468,18 @@ class TabularViewMixin:
         Returns:
             TabularViewFilterMenu
         """
-        item_type_lookup = {self._ALTERNATIVE_INDEX_ID: "alternative", self._PARAM_INDEX_ID: "parameter definition"}
+        item_type_lookup = {
+            self._ALTERNATIVE_INDEX_ID: self._query_alternative,
+            self._PARAM_INDEX_ID: self._query_parameter_definition,
+        }
         if identifier not in self.filter_menus:
-            item_type = item_type_lookup.get(identifier, "object")
-            self.filter_menus[identifier] = menu = TabularViewFilterMenu(self, identifier, item_type)
-            index_values = set(self.pivot_table_model.model.index_values.get(identifier, []))
-            index_values.discard(None)
-            menu.set_filter_list(index_values)
+            query_method = item_type_lookup.get(identifier, self._query_object)
+            self.filter_menus[identifier] = menu = TabularViewFilterMenu(
+                self, identifier, query_method, show_empty=False
+            )
+            index_values = dict.fromkeys(self.pivot_table_model.model.index_values.get(identifier, []))
+            index_values.pop(None, None)
+            menu.set_filter_list([(self.db_map, id_) for id_ in index_values])
             menu.filterChanged.connect(self.change_filter)
         return self.filter_menus[identifier]
 
@@ -572,6 +591,7 @@ class TabularViewMixin:
     @Slot(int, set, bool)
     def change_filter(self, identifier, valid_values, has_filter):
         if has_filter:
+            valid_values = {id_ for _, id_ in valid_values}
             self.pivot_table_proxy.set_filter(identifier, valid_values)
         else:
             self.pivot_table_proxy.set_filter(identifier, None)  # None means everything passes
@@ -604,7 +624,7 @@ class TabularViewMixin:
         Returns:
             list(tuple(list(int)))
         """
-        return sorted(set(zip(*[self.pivot_table_model.model.index_values.get(k, []) for k in frozen])))
+        return list(dict.fromkeys(zip(*[self.pivot_table_model.model.index_values.get(k, []) for k in frozen])).keys())
 
     @staticmethod
     def refresh_table_view(table_view):
@@ -625,13 +645,14 @@ class TabularViewMixin:
         elif action == "remove":
             self.pivot_table_model.remove_from_model(data)
         for identifier, menu in self.filter_menus.items():
-            current = set(self.pivot_table_model.model.index_values.get(identifier, []))
-            current.discard(None)
-            previous = menu._filter._filter_model._id_data_set
+            values = dict.fromkeys(self.pivot_table_model.model.index_values.get(identifier, []))
+            values.pop(None, None)
+            values = set((self.db_map, id_) for id_ in values.keys())
             if action == "add":
-                menu.add_items_to_filter_list(list(current - previous))
+                menu.add_items_to_filter_list(values)
             elif action == "remove":
-                menu.remove_items_from_filter_list(list(previous - current))
+                previous = menu._filter._filter_model._data_set
+                menu.remove_items_from_filter_list(previous - values)
         self.reload_frozen_table()
 
     def receive_objects_added_or_removed(self, db_map_data, action):

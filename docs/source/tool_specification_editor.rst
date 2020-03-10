@@ -37,10 +37,13 @@ in its source directory (See :ref:`Terminology` section). You can give the Tool 
 describing what the Tool specification does. Main program file is the main file of your simulation model, or an
 executable script. You can create a blank file into a new directory by pressing the |file| button and selecting
 *Make new main program* or you can browse to find an existing main program file by pressing the same button and
-selecting *Select existing main program*. Command line arguments will be appended to the actual command that
-Spine Toolbox executes in the background, e.g. if you have a Windows batch file called *do_things.bat*, which
-accepts command line arguments *a* and *b*. If you set *a b* on the command line arguments. This is the equivalent
-of running the batch file in command prompt with the command *do_things.bat a b*.
+selecting *Select existing main program*.
+
+Command line arguments can be appended to the actual command that
+Spine Toolbox executes in the background. For example, you may have a Windows batch file called *do_things.bat*,
+which accepts command line arguments *a* and *b*.
+Writing :literal:`a b` on the command line arguments field in the tool specification editor is the equivalent
+of running the batch file in command prompt with the command :literal:`do_things.bat a b`.
 See `Command line argument tag expansion`_ for more information on the command line arguments.
 
 *Additional source files* is a list of files that the main program requires in order to run. You can add

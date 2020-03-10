@@ -32,7 +32,7 @@ from PySide2.QtWidgets import (
 )
 from PySide2.QtCore import QTimer, Signal, Slot
 from PySide2.QtGui import QPainter
-from ..mvcmodels.filter_checkbox_list_model import SimpleFilterCheckboxListModel, TabularViewFilterCheckboxListModel
+from ..mvcmodels.filter_checkbox_list_model import SimpleFilterCheckboxListModel, DBItemFilterCheckboxListModel
 
 
 class FilterWidgetBase(QWidget):
@@ -50,7 +50,7 @@ class FilterWidgetBase(QWidget):
         super().__init__(parent)
         # parameters
         self._filter_state = set()
-        self._filter_empty_state = False
+        self._filter_empty_state = None
         self._search_text = ''
         self.search_delay = 200
 
@@ -72,7 +72,6 @@ class FilterWidgetBase(QWidget):
         self._filter_model = None
 
     def connect_signals(self):
-        # connect signals
         self._ui_list.clicked.connect(self._filter_model.click_index)
         self._search_timer.timeout.connect(self._filter_list)
         self._ui_edit.textChanged.connect(self._text_edited)
@@ -84,8 +83,6 @@ class FilterWidgetBase(QWidget):
         self._filter_state = self._filter_model.get_selected()
         if self._filter_model._show_empty:
             self._filter_empty_state = self._filter_model._empty_selected
-        else:
-            self._filter_empty_state = False
 
     def reset_state(self):
         """Sets the state of the FilterCheckboxListModel to saved state."""
@@ -102,8 +99,7 @@ class FilterWidgetBase(QWidget):
 
     def set_filter_list(self, data):
         """Sets the list of items to filter."""
-        self._filter_state = set(data)
-        self._filter_empty_state = bool(self._filter_model._show_empty)
+        self._filter_state = list(data)
         self._filter_model.set_list(self._filter_state)
 
     def _apply_filter(self):
@@ -147,19 +143,24 @@ class SimpleFilterWidget(FilterWidgetBase):
         self.connect_signals()
 
 
-class TabularViewFilterWidget(FilterWidgetBase):
-    def __init__(self, parent, item_type, show_empty=True):
+class DBItemFilterWidget(FilterWidgetBase):
+    def __init__(self, parent, query_method, source_model=None, show_empty=True):
         """Init class.
 
         Args:
-            parent (QWidget)
-            item_type (str): either "object" or "parameter definition"
+            parent (DataStoreForm)
+            query_method (method): the method to query data
+            source_model (CompoundParameterModel, optional): a model to lazily get data from
         """
         super().__init__(parent)
-        self._filter_model = TabularViewFilterCheckboxListModel(parent, item_type, show_empty=show_empty)
+        self._filter_model = DBItemFilterCheckboxListModel(
+            self, query_method, source_model=source_model, show_empty=show_empty
+        )
         self._filter_model.set_list(self._filter_state)
-        self._ui_list.setModel(self._filter_model)
         self.connect_signals()
+
+    def set_model(self):
+        self._ui_list.setModel(self._filter_model)
 
 
 class ZoomWidgetAction(QWidgetAction):

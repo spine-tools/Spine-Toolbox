@@ -16,10 +16,10 @@ These models concatenate several 'single' models and one 'empty' model.
 :authors: M. Marin (KTH)
 :date:   28.6.2019
 """
-
-from PySide2.QtCore import Qt, Signal
+from PySide2.QtCore import Qt, Signal, QModelIndex
 from PySide2.QtGui import QFont, QIcon
 from ..helpers import busy_effect, rows_to_row_count_tuples
+from ..widgets.custom_menus import ParameterViewFilterMenu
 from .compound_table_model import CompoundWithEmptyTableModel
 from .empty_parameter_models import (
     EmptyObjectParameterDefinitionModel,
@@ -33,7 +33,6 @@ from .single_parameter_models import (
     SingleRelationshipParameterDefinitionModel,
     SingleRelationshipParameterValueModel,
 )
-from .auto_filter_menu_model import AutoFilterMenuItem
 
 
 class CompoundParameterModel(CompoundWithEmptyTableModel):
@@ -51,12 +50,105 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
             db_mngr (SpineDBManager): the database manager
             *db_maps (DiffDatabaseMapping): the database maps included in the model
         """
-        super().__init__(parent)
+        super().__init__(parent, header=self._make_header())
         self.db_mngr = db_mngr
         self.db_maps = db_maps
-        self._auto_filter = dict()
         self._accepted_entity_class_ids = {}  # Accepted by main filter
         self.remove_icon = QIcon(":/icons/menu_icons/cog_minus.svg")
+        self._auto_filter_menus = {}
+        self._auto_filter_menu_data = dict()  # Maps fields to auto filter data
+        self._auto_filter = dict()  # Maps fields to (db_map, entity_id) to accepted field ids
+        self._field_query_method = self._make_field_query_method()
+
+    def _make_field_query_method(self):
+        """Returns a dictionary mapping field from the header, to a method that returns 'field' db items
+        given db_map and id. Used in creating ``ParameterViewFilterMenu``s for header fields.
+
+        Returns:
+            dict
+        """
+        get_field = self.db_mngr.get_field
+        get_value = self.db_mngr.get_value
+        return {
+            "object_class_name": lambda db_map, id_: get_field(db_map, "object class", id_, "name"),
+            "relationship_class_name": lambda db_map, id_: get_field(db_map, "relationship class", id_, "name"),
+            "object_class_name_list": lambda db_map, id_: get_field(
+                db_map, "relationship class", id_, "object_class_name_list"
+            ).replace(",", self.db_mngr._GROUP_SEP),
+            "object_name": lambda db_map, id_: get_field(db_map, "object", id_, "name"),
+            "object_name_list": lambda db_map, id_: get_field(db_map, "relationship", id_, "object_name_list").replace(
+                ",", self.db_mngr._GROUP_SEP
+            ),
+            "parameter_name": lambda db_map, id_: get_field(db_map, "parameter definition", id_, "parameter_name"),
+            "description": lambda db_map, id_: get_field(db_map, "parameter definition", id_, "description"),
+            "value_list_name": lambda db_map, id_: get_field(db_map, "parameter value list", id_, "name"),
+            "value": lambda db_map, id_: get_value(db_map, "parameter value", id_, "value"),
+            "default_value": lambda db_map, id_: get_value(db_map, "parameter definition", id_, "default_value"),
+            "alternative_id": lambda db_map, id_: get_field(db_map, "alternative", id_, "name"),
+            "database": lambda _, id_: id_,
+        }
+
+    def _make_header(self):
+        raise NotImplementedError()
+
+    def init_model(self):
+        """Initializes the model."""
+        super().init_model()
+        self._make_auto_filter_menus()
+
+    def _make_auto_filter_menus(self):
+        """Makes auto filter menus."""
+        self._auto_filter_menus.clear()
+        self._auto_filter_menu_data.clear()
+        for field in self.header:
+            query_method = self._field_query_method.get(field)
+            if query_method is None:
+                continue
+            self._auto_filter_menus[field] = menu = ParameterViewFilterMenu(
+                self.parent(), query_method, self, show_empty=False
+            )  # TODO: show_empty=True
+            menu.filterChanged.connect(
+                lambda values, has_filter, field=field: self.update_auto_filter(field, values, has_filter)
+            )
+
+    def get_auto_filter_menu(self, logical_index):
+        """Returns auto filter menu for given logical index from header view.
+
+        Args:
+            logical_index (int)
+
+        Returns:
+            ParameterViewFilterMenu
+        """
+        return self._auto_filter_menus.get(self.header[logical_index], None)
+
+    @busy_effect
+    def fetchMore(self, parent=QModelIndex()):
+        """Populates filter menus as submodels are fetched."""
+        super().fetchMore(parent=parent)
+        if not self._fetch_sub_model in self.single_models:
+            return
+        self._add_data_to_filter_menus(self._fetch_sub_model)
+
+    def _add_data_to_filter_menus(self, sub_model):
+        """Adds data from given sub-model to filter menus.
+
+        Args:
+            sub_model (SingleParameterModel)
+        """
+        db_items = sub_model.db_items()
+        db_map = sub_model.db_map
+        for field, menu in self._auto_filter_menus.items():
+            field_menu_data = self._auto_filter_menu_data.setdefault(field, {})
+            query_method = self._field_query_method[field]
+            id_key = sub_model.get_id_key(field)
+            for db_item in db_items:
+                item_id = db_item.get(id_key)
+                value = query_method(db_map, item_id)
+                # NOTE: we save the entity class id for quickly filtering out sub-models in `update_auto_filter`
+                field_menu_data.setdefault(value, {})[db_map, item_id] = sub_model.entity_class_id
+            filter_items = [list(items.keys())[0] for key, items in field_menu_data.items() if key is not None]
+            menu.add_items_to_filter_list(filter_items)
 
     @property
     def entity_class_type(self):
@@ -130,7 +222,11 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         """Returns an italic font in case the given column has an autofilter installed."""
         italic_font = QFont()
         italic_font.setItalic(True)
-        if role == Qt.FontRole and orientation == Qt.Horizontal and self._auto_filter.get(section):
+        if (
+            role == Qt.FontRole
+            and orientation == Qt.Horizontal
+            and self._auto_filter.get(self.header[section], {}) != {}
+        ):
             return italic_font
         return super().headerData(section, orientation, role)
 
@@ -195,12 +291,14 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         return model.entity_class_id in self._accepted_entity_class_ids.get(model.db_map, set())
 
     def _auto_filter_accepts_model(self, model):
-        if None in [value for column, value in self._auto_filter.items()]:
+        if None in self._auto_filter.values():
             return False
         for auto_filter in self._auto_filter.values():
             if not auto_filter:
                 continue
-            if (model.db_map, model.entity_class_id) not in auto_filter.keys():
+            if model.db_map not in auto_filter:
+                return False
+            if model.entity_class_id not in auto_filter[model.db_map]:
                 return False
         return True
 
@@ -265,45 +363,61 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         b = self._settattr_if_different(model, "_selected_param_def_ids", selected_param_def_ids)
         return a or b
 
-    def update_auto_filter(self, column, auto_filter):
+    def update_auto_filter(self, field, valid_values, has_filter):
         """Updates and applies the auto filter.
 
         Args:
-            column (int): the column number
-            auto_filter (dict): list of accepted values for the column keyed by tuple (database map, entity class id)
+            field (str): the field name
+            valid_values (list(str)): accepted values for the field
+            has_filter (bool)
         """
-        updated = self.update_compound_auto_filter(column, auto_filter)
+        field_menu_data = self._auto_filter_menu_data[field]
+        auto_filter = self._build_auto_filter(field_menu_data, valid_values, has_filter)
+        updated = self.update_compound_auto_filter(field, auto_filter)
         for model in self.accepted_single_models():
-            updated |= self.update_single_auto_filter(model, column)
+            updated |= self.update_single_auto_filter(model, field)
         if updated:
             self.refresh()
 
-    def update_compound_auto_filter(self, column, auto_filter):
+    @staticmethod
+    def _build_auto_filter(field_menu_data, valid_values, has_filter):
+        if not has_filter:
+            return {}  # All-pass
+        if not valid_values:
+            return None  # You shall not pass
+        auto_filter = {}
+        for value in valid_values:
+            item_ids = field_menu_data[value]
+            for (db_map, id_), entity_class_id in item_ids.items():
+                auto_filter.setdefault(db_map, {}).setdefault(entity_class_id, []).append(id_)
+        return auto_filter
+
+    def update_compound_auto_filter(self, field, auto_filter):
         """Updates the auto filter for given column in the compound model.
 
         Args:
-            column (int): the column number
-            auto_filter (dict): list of accepted values for the column keyed by tuple (database map, entity class id)
+            field (str): the field name
+            auto_filter (dict): maps tuple (database map, entity class id) to list of accepted ids for the field
         """
-        if self._auto_filter.setdefault(column, {}) == auto_filter:
+        if self._auto_filter.setdefault(field, {}) == auto_filter:
             return False
-        self._auto_filter[column] = auto_filter
+        self._auto_filter[field] = auto_filter
         return True
 
-    def update_single_auto_filter(self, model, column):
+    def update_single_auto_filter(self, model, field):
         """Updates the auto filter for given column in the given single model.
 
         Args:
             model (SingleParameterModel): the model
-            column (int): the column number
+            field (str): the field name
 
         Returns:
             bool: True if the auto-filtered values were updated, None otherwise
         """
-        values = self._auto_filter[column].get((model.db_map, model.entity_class_id), {})
-        if values == model._auto_filter.get(column, {}):
+        values = self._auto_filter[field].get(model.db_map, {}).get(model.entity_class_id, {})
+        if values == model._auto_filter.get(field, {}):
             return False
-        model._auto_filter[column] = values
+        model._auto_filter[field] = values
         return True
 
     def _row_map_for_model(self, model):
@@ -319,36 +433,6 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         if not self.filter_accepts_model(model):
             return []
         return [(model, i) for i in model.accepted_rows()]
-
-    @busy_effect
-    def auto_filter_menu_data(self, column):
-        """Returns auto filter menu data for the given column.
-
-        Returns:
-            list: AutoFilterMenuItem instances to populate the auto filter menu.
-        """
-        auto_filter_vals = dict()
-        for model in self.single_models:
-            if not self._main_filter_accepts_model(model):
-                continue
-            for row in range(model.rowCount()):
-                if not model._main_filter_accepts_row(row):
-                    continue
-                value = model.index(row, column).data()
-                auto_filter_vals.setdefault(value, set()).add((model.db_map, model.entity_class_id))
-        column_auto_filter = self._auto_filter.get(column, {})
-        if column_auto_filter is None:
-            return [AutoFilterMenuItem(Qt.Unchecked, value, classes) for value, classes in auto_filter_vals.items()]
-        if column_auto_filter == {}:
-            return [AutoFilterMenuItem(Qt.Checked, value, classes) for value, classes in auto_filter_vals.items()]
-        return [
-            AutoFilterMenuItem(
-                Qt.Checked if any(value in values for values in column_auto_filter.values()) else Qt.Unchecked,
-                value,
-                classes,
-            )
-            for value, classes in auto_filter_vals.items()
-        ]
 
     def _models_with_db_map(self, db_map):
         """Returns a collection of single models with given db_map.
@@ -439,7 +523,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
             for entity_class_id, ids in entity_ids_per_class_id.items():
                 model = self._single_model_type(self, self.header, self.db_mngr, db_map, entity_class_id, lazy=False)
                 model.reset_model(ids)
-                single_row_map = super()._row_map_for_model(model)  # NOTE: super() prevents filtering
+                single_row_map = super()._row_map_for_model(model)  # NOTE: super() is to get all (unfiltered) rows
                 self._insert_single_row_map(single_row_map)
                 new_models.append(model)
         pos = len(self.single_models)
@@ -553,10 +637,8 @@ class CompoundObjectParameterDefinitionModel(
     and one empty object parameter definition model.
     """
 
-    def __init__(self, parent, db_mngr, *db_maps):
-        """Initializes model header."""
-        super().__init__(parent, db_mngr, *db_maps)
-        self.header = [
+    def _make_header(self):
+        return [
             "object_class_name",
             "parameter_name",
             "value_list_name",
@@ -574,10 +656,8 @@ class CompoundRelationshipParameterDefinitionModel(
     and one empty relationship parameter definition model.
     """
 
-    def __init__(self, parent, db_mngr, *db_maps):
-        """Initializes model header."""
-        super().__init__(parent, db_mngr, *db_maps)
-        self.header = [
+    def _make_header(self):
+        return [
             "relationship_class_name",
             "object_class_name_list",
             "parameter_name",
@@ -596,10 +676,8 @@ class CompoundObjectParameterValueModel(
     and one empty object parameter value model.
     """
 
-    def __init__(self, parent, db_mngr, *db_maps):
-        """Initializes model header."""
-        super().__init__(parent, db_mngr, *db_maps)
-        self.header = ["object_class_name", "object_name", "parameter_name", "alternative_id", "value", "database"]
+    def _make_header(self):
+        return ["object_class_name", "object_name", "parameter_name", "alternative_id", "value", "database"]
 
     @property
     def entity_type(self):
@@ -613,17 +691,8 @@ class CompoundRelationshipParameterValueModel(
     and one empty relationship parameter value model.
     """
 
-    def __init__(self, parent, db_mngr, *db_maps):
-        """Initializes model header."""
-        super().__init__(parent, db_mngr, *db_maps)
-        self.header = [
-            "relationship_class_name",
-            "object_name_list",
-            "parameter_name",
-            "alternative_id",
-            "value",
-            "database",
-        ]
+    def _make_header(self):
+        return ["relationship_class_name", "object_name_list", "parameter_name", "alternative_id", "value", "database"]
 
     @property
     def entity_type(self):

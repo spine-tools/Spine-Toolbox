@@ -47,6 +47,20 @@ class SingleParameterModel(MinimalTableModel):
         self.entity_class_id = entity_class_id
         self._auto_filter = dict()
         self._selected_param_def_ids = set()
+        self._field_to_item_id = {
+            "object_class_name": ("entity_class_id", "object class"),
+            "relationship_class_name": ("entity_class_id", "relationship class"),
+            "object_class_name_list": ("entity_class_id", "relationship class"),
+            "object_name": ("entity_id", "object"),
+            "object_name_list": ("entity_id", "relationship"),
+            "parameter_name": (self.parameter_definition_id_key, "parameter definition"),
+            "value_list_name": ("value_list_id", "parameter value list"),
+            "description": ("id", "parameter definition"),
+            "value": ("id", "parameter value"),
+            "default_value": ("id", "parameter definition"),
+            "database": ("database", None),
+            "alternative_id": ("alternative_id", "alternative"),
+        }
 
     @property
     def item_type(self):
@@ -98,8 +112,16 @@ class SingleParameterModel(MinimalTableModel):
         return False
 
     def db_item(self, index):
-        id_ = self._main_data[index.row()]
-        return self.db_mngr.get_item(self.db_map, self.item_type, id_)
+        return self._db_item(index.row())
+
+    def _db_item(self, row):
+        id_ = self._main_data[row]
+        db_item = self.db_mngr.get_item(self.db_map, self.item_type, id_)
+        db_item["database"] = self.db_map.codename
+        return db_item
+
+    def db_items(self):
+        return [self._db_item(row) for row in range(self.rowCount())]
 
     def flags(self, index):
         """Make fixed indexes non-editable."""
@@ -134,16 +156,19 @@ class SingleParameterModel(MinimalTableModel):
             if field == "database":
                 return self.db_map.codename
             id_ = self._main_data[index.row()]
+            if field in self.json_fields:
+                return self.db_mngr.get_value(self.db_map, self.item_type, id_, field, role)
+            item = self.db_mngr.get_item(self.db_map, self.item_type, id_)
             if role == Qt.ToolTipRole:
-                description = self._get_field_item(field, id_).get("description", None)
+                description = self.get_field_item(field, item).get("description", None)
                 if description not in (None, ""):
                     return description
             if field == "alternative_id":
-                return self._get_field_item(field, id_).get("name", None)
+                return self.get_field_item(field, item).get("name", None)
 
             if field in self.json_fields:
                 return self.db_mngr.get_value(self.db_map, self.item_type, id_, field, role)
-            data = self.db_mngr.get_item(self.db_map, self.item_type, id_).get(field)
+            data = item.get(field)
             if role == Qt.DisplayRole and data and field in self.group_fields:
                 data = data.replace(",", self.db_mngr._GROUP_SEP)
             return data
@@ -190,8 +215,12 @@ class SingleParameterModel(MinimalTableModel):
 
     def _auto_filter_accepts_row(self, row):
         """Applies the autofilter, defined by the autofilter drop down menu."""
-        for column, values in self._auto_filter.items():
-            if values and self.index(row, column).data() not in values:
+        if self._auto_filter is None:
+            return False
+        db_item = self._db_item(row)
+        for field, valid_ids in self._auto_filter.items():
+            id_key = self.get_id_key(field)
+            if valid_ids and db_item.get(id_key) not in valid_ids:
                 return False
         return True
 
@@ -199,25 +228,20 @@ class SingleParameterModel(MinimalTableModel):
         """Returns a list of accepted rows, for convenience."""
         return [row for row in range(self.rowCount()) if self._filter_accepts_row(row)]
 
-    def _get_field_item(self, field, id_):
-        """Returns a item from the db_mngr.get_item depending on the
-        field. If a field doesn't correspond to a item in the database then
-        an empty dict is returned.
+    def get_field_item(self, field, db_item):
+        """Returns a db item corresponding to the given field from the table header,
+        or an empty dict if the field doesn't contain db items.
         """
-        data = self.db_mngr.get_item(self.db_map, self.item_type, id_)
-        header_to_id = {
-            "object_class_name": ("entity_class_id", "object class"),
-            "relationship_class_name": ("entity_class_id", "relationship class"),
-            "object_name": ("entity_id", "object"),
-            "object_name_list": ("entity_id", "relationship"),
-            "parameter_name": (self.parameter_definition_id_key, "parameter definition"),
-            "alternative_id": ("alternative_id", "alternative"),
-        }
-        if field not in header_to_id:
+        if field not in self._field_to_item_id:
             return {}
-        id_field, item_type = header_to_id[field]
-        item_id = data.get(id_field)
+        id_key, item_type = self._field_to_item_id[field]
+        item_id = db_item.get(id_key)
         return self.db_mngr.get_item(self.db_map, item_type, item_id)
+
+    def get_id_key(self, field):
+        if field not in self._field_to_item_id:
+            return None
+        return self._field_to_item_id[field][0]
 
 
 class SingleObjectParameterMixin:

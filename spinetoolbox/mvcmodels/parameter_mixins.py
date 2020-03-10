@@ -335,7 +335,7 @@ class FillInEntityIdsMixin(ConvertToDBMixin):
 
     def _fill_in_entity_ids(self, item, db_map):
         """Fills in all possible entity ids keyed by entity class id in the given db item
-        (as there can be more than entity for the same name).
+        (as there can be more than one entity for the same name).
 
         Args:
             item (dict): the db item
@@ -398,7 +398,7 @@ class FillInParameterDefinitionIdsMixin(ConvertToDBMixin):
 
     def _fill_in_parameter_ids(self, item, db_map):
         """Fills in all possible parameter definition ids keyed by entity class id in the given db item
-        (as there can be more than parameter definition for the same name).
+        (as there can be more than one parameter definition for the same name).
 
         Args:
             item (dict): the db item
@@ -535,7 +535,7 @@ class MakeRelationshipOnTheFlyMixin:
         }
 
     def _make_relationship_on_the_fly(self, item, db_map):
-        """Returns database relationship item (id-based) from the given model parameter value item (name-based).
+        """Returns a database relationship item (id-based) from the given model parameter value item (name-based).
 
         Args:
             item (dict): the model parameter value item
