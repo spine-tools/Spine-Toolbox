@@ -426,7 +426,9 @@ class SpineDBManager(QObject):
         self.parameter_value_lists_removed.connect(self.cascade_refresh_parameter_definitions_by_value_list)
         self.parameter_tags_updated.connect(self.cascade_refresh_parameter_definitions_by_tag)
         self.parameter_tags_removed.connect(self.cascade_refresh_parameter_definitions_by_tag)
-        # Remove from cache (last, because of how cascade removal works at the moment)
+        # Signaller (last, so cache is ready when listeners receive signals)
+        self.signaller.connect_signals()
+        # Remove from cache (very last, because we still want to access items to do clean up)
         self.object_classes_removed.connect(lambda db_map_data: self.uncache_items("object class", db_map_data))
         self.objects_removed.connect(lambda db_map_data: self.uncache_items("object", db_map_data))
         self.relationship_classes_removed.connect(
@@ -441,8 +443,6 @@ class SpineDBManager(QObject):
             lambda db_map_data: self.uncache_items("parameter value list", db_map_data)
         )
         self.parameter_tags_removed.connect(lambda db_map_data: self.uncache_items("parameter tag", db_map_data))
-        # Do this last, so cache is ready when listeners receive signals
-        self.signaller.connect_signals()
 
     @Slot(object)
     def receive_error_msg(self, db_map_error_log):

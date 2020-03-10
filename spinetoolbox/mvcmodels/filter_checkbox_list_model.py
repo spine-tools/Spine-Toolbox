@@ -19,7 +19,7 @@ Provides FilterCheckboxListModel for FilterWidget.
 from PySide2.QtCore import Qt, QModelIndex, QAbstractListModel
 
 
-class FilterCheckboxListModelBase(QAbstractListModel):
+class SimpleFilterCheckboxListModel(QAbstractListModel):
     def __init__(self, parent, show_empty=True):
         """Init class.
 
@@ -103,15 +103,12 @@ class FilterCheckboxListModelBase(QAbstractListModel):
             selected = self._selected
         if role == Qt.DisplayRole:
             if row >= len(action_rows):
-                return self._item_name(self._data[i])
+                return self._data[i]
             return action_rows[row]
         if role == Qt.CheckStateRole:
             if row < len(action_state):
                 return Qt.Checked if action_state[row] else Qt.Unchecked
             return Qt.Checked if self._data[i] in selected else Qt.Unchecked
-
-    def _item_name(self, item):
-        raise NotImplementedError()
 
     def click_index(self, index):
         if index.row() == 0:
@@ -174,7 +171,7 @@ class FilterCheckboxListModelBase(QAbstractListModel):
         if search_for and (isinstance(search_for, str) and not search_for.isspace()):
             self._select_all_str = '(Select all filtered)'
             self._list_filter = search_for
-            self._filter_index = [i for i, id_ in enumerate(self._data) if self._list_filter in self._item_name(id_)]
+            self._filter_index = [i for i, item in enumerate(self._data) if self._list_filter in item]
             self._selected_filtered = set(self._data[i] for i in self._filter_index)
             self._add_to_selection = False
             self.beginResetModel()
@@ -239,7 +236,7 @@ class FilterCheckboxListModelBase(QAbstractListModel):
                 self._selected_filtered.update(data)
         self.endInsertRows()
         if self._is_filtered:
-            self._filter_index = [i for i, item in enumerate(self._data) if self._list_filter in self._item_name(item)]
+            self._filter_index = [i for i, item in enumerate(self._data) if self._list_filter in item]
         self._all_selected = self._check_all_selected()
 
     def remove_items(self, data):
@@ -254,34 +251,24 @@ class FilterCheckboxListModelBase(QAbstractListModel):
         self._data_set.difference_update(data)
         self._selected.difference_update(data)
         if self._is_filtered:
-            self._filter_index = [i for i, item in enumerate(self._data) if self._list_filter in self._item_name(item)]
+            self._filter_index = [i for i, item in enumerate(self._data) if self._list_filter in item]
             self._selected_filtered.difference_update(data)
         self._all_selected = self._check_all_selected()
 
 
-class SimpleFilterCheckboxListModel(FilterCheckboxListModelBase):
-    def _item_name(self, item):
-        return item
+class LazyFilterCheckboxListModel(SimpleFilterCheckboxListModel):
+    """Extends SimpleFilterCheckboxListModel to allow for lazy loading in synch with another model.
+    """
 
-
-class DBItemFilterCheckboxListModel(FilterCheckboxListModelBase):
-    def __init__(self, parent, query_method, source_model=None, show_empty=True):
+    def __init__(self, parent, source_model, show_empty=True):
         """Init class.
 
         Args:
             parent (DataStoreForm)
-            query_method (method): the method to query data
-            source_model (CompoundParameterModel, optional): a model to lazily get data from
+            source_model (CompoundParameterModel): a model to lazily get data from
         """
         super().__init__(parent, show_empty=show_empty)
-        self.query_method = query_method
         self.source_model = source_model
-
-    def _item_name(self, item):
-        if item is None:
-            return None
-        db_map, db_id = item
-        return self.query_method(db_map, db_id)
 
     def canFetchMore(self, parent=QModelIndex()):
         if self.source_model is None:
