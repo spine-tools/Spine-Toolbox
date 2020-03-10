@@ -649,6 +649,7 @@ class PivotTableModelMenu(QMenu):
     _DELETE_OBJECT = "Remove selected objects"
     _DELETE_RELATIONSHIP = "Remove selected relationships"
     _DELETE_PARAMETER = "Remove selected parameter definitions"
+    _DELETE_ALTERNATIVE = "Remove selected alternative"
 
     def __init__(self, parent):
         """
@@ -664,6 +665,7 @@ class PivotTableModelMenu(QMenu):
         self._selected_value_indexes = list()
         self._selected_entity_indexes = list()
         self._selected_parameter_indexes = list()
+        self._selected_alternative_indexes = list()
         # add actions
         self.open_value_editor_action = self.addAction("Open in editor...")
         self.addSeparator()
@@ -676,6 +678,7 @@ class PivotTableModelMenu(QMenu):
         self.delete_object_action = self.addAction(self._DELETE_OBJECT)
         self.delete_relationship_action = self.addAction(self._DELETE_RELATIONSHIP)
         self.delete_parameter_action = self.addAction(self._DELETE_PARAMETER)
+        self.delete_alternative_action = self.addAction(self._DELETE_ALTERNATIVE)
         # connect signals
         self.open_value_editor_action.triggered.connect(self.open_value_editor)
         self.plot_action.triggered.connect(self.plot)
@@ -683,6 +686,7 @@ class PivotTableModelMenu(QMenu):
         self.delete_object_action.triggered.connect(self.delete_objects)
         self.delete_relationship_action.triggered.connect(self.delete_relationships)
         self.delete_parameter_action.triggered.connect(self.delete_parameters)
+        self.delete_alternative_action.triggered.connect(self.delete_alternatives)
 
     def delete_values(self):
         row_mask = set()
@@ -716,6 +720,12 @@ class PivotTableModelMenu(QMenu):
         ids = {self._source._header_id(index) for index in self._selected_parameter_indexes}
         parameters = [self.db_mngr.get_item(self.db_map, "parameter definition", id_) for id_ in ids]
         db_map_typed_data = {self.parent().db_map: {"parameter definition": parameters}}
+        self.db_mngr.remove_items(db_map_typed_data)
+
+    def delete_alternatives(self):
+        ids = {self._source._header_id(index) for index in self._selected_alternative_indexes}
+        alternatives = [self.db_mngr.get_item(self.db_map, "alternative", id_) for id_ in ids]
+        db_map_typed_data = {self.parent().db_map: {"alternative": alternatives}}
         self.db_mngr.remove_items(db_map_typed_data)
 
     def open_value_editor(self):
@@ -755,12 +765,15 @@ class PivotTableModelMenu(QMenu):
         self._selected_value_indexes = list()
         self._selected_entity_indexes = list()
         self._selected_parameter_indexes = list()
+        self._selected_alternative_indexes = list()
         for index in indexes:
             if self._source.index_in_data(index):
                 self._selected_value_indexes.append(index)
             elif self._source.index_in_headers(index):
                 if self._source._top_left_id(index) == -1:
                     self._selected_parameter_indexes.append(index)
+                elif self._source._top_left_id(index) == -2:
+                    self._selected_alternative_indexes.append(index)
                 else:
                     self._selected_entity_indexes.append(index)
 
@@ -773,11 +786,13 @@ class PivotTableModelMenu(QMenu):
             bool(self._selected_entity_indexes) and self.parent().current_class_type == "relationship class"
         )
         self.delete_parameter_action.setEnabled(bool(self._selected_parameter_indexes))
+        self.delete_alternative_action.setEnabled(bool(self._selected_alternative_indexes))
 
     def _update_actions_text(self):
         self.delete_object_action.setText(self._DELETE_OBJECT)
         self.delete_relationship_action.setText(self._DELETE_RELATIONSHIP)
         self.delete_parameter_action.setText(self._DELETE_PARAMETER)
+        self.delete_alternative_action.setText(self._DELETE_ALTERNATIVE)
         if len(self._selected_entity_indexes) == 1:
             index = self._selected_entity_indexes[0]
             object_name = self._source.header_name(index)
@@ -790,6 +805,10 @@ class PivotTableModelMenu(QMenu):
             index = self._selected_parameter_indexes[0]
             parameter_name = self._source.header_name(index)
             self.delete_parameter_action.setText("Remove parameter definition: {}".format(parameter_name))
+        if len(self._selected_alternative_indexes) == 1:
+            index = self._selected_alternative_indexes[0]
+            alternative_name = self._source.header_name(index)
+            self.delete_alternative_action.setText("Remove alternative: {}".format(alternative_name))
 
     @Slot("QAction")
     def _plot_in_window(self, action):
