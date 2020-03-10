@@ -174,11 +174,11 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
             str, str
         """
         return {
-            "object_class_name": ("entity_class_id", "object class"),
-            "relationship_class_name": ("entity_class_id", "relationship class"),
-            "object_class_name_list": ("entity_class_id", "relationship class"),
-            "object_name": ("entity_id", "object"),
-            "object_name_list": ("entity_id", "relationship"),
+            "object_class_name": ("object_class_id", "object class"),
+            "relationship_class_name": ("relationship_class_id", "relationship class"),
+            "object_class_name_list": ("relationship_class_id", "relationship class"),
+            "object_name": ("object_id", "object"),
+            "object_name_list": ("relationship_id", "relationship"),
             "parameter_name": (self.parameter_definition_id_key, "parameter definition"),
             "value_list_name": ("value_list_id", "parameter value list"),
             "description": ("id", "parameter definition"),
@@ -255,12 +255,22 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
             for db_item in db_items:
                 entity_class_id = db_item.get(self._entity_class_id_key)
                 item_id = db_item.get(id_key)
+                if item_id is None:
+                    continue
                 value = query_method(db_map, item_id)
                 field_menu_data.setdefault(value, []).append((db_map, entity_class_id, item_id))
             new_items = list(field_menu_data.keys())
             if None in new_items:
                 new_items.remove(None)
             menu.add_items_to_filter_list(new_items)
+
+    def _do_update_data_in_filter_menus(self, db_map, db_items):
+        """Updates data in filter menus.
+
+        Args:
+            db_map (DiffDatabaseMapping)
+            db_items (list(dict))
+        """
 
     def _do_remove_data_from_filter_menus(self, db_map, db_items):
         """Removes data from filter menus.
@@ -532,17 +542,6 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         self.do_refresh()
         self.layoutChanged.emit()
 
-    def receive_parameter_data_updated(self, db_map_data):
-        """Runs when either parameter definitions or values are updated in the dbs.
-        Emits dataChanged so the parameter_name column is refreshed.
-
-        Args:
-            db_map_data (dict): list of updated dict-items keyed by DiffDatabaseMapping
-        """
-        self._emit_data_changed_for_column("parameter_name")
-        # TODO: parameter definition names aren't refreshed unless we emit dataChanged,
-        # whereas entity and class names don't need it. Why?
-
     def _item_ids_per_class_id(self, items):
         """Returns a dict mapping entity class ids to a set of item ids.
 
@@ -559,28 +558,6 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
                 continue
             d.setdefault(entity_class_id, list()).append(item["id"])
         return d
-
-    def receive_parameter_data_removed(self, db_map_data):
-        """Runs when either parameter definitions or values are removed from the dbs.
-        Removes the affected rows from the corresponding single models.
-
-        Args:
-            db_map_data (dict): list of removed dict-items keyed by DiffDatabaseMapping
-        """
-        self.layoutAboutToBeChanged.emit()
-        for db_map, items in db_map_data.items():
-            item_ids_per_class_id = self._item_ids_per_class_id(items)
-            for model in self._models_with_db_map(db_map):
-                removed_ids = item_ids_per_class_id.get(model.entity_class_id)
-                if not removed_ids:
-                    continue
-                removed_rows = [row for row in range(model.rowCount()) if model._main_data[row] in removed_ids]
-                for row, count in sorted(rows_to_row_count_tuples(removed_rows), reverse=True):
-                    del model._main_data[row : row + count]
-            if item_ids_per_class_id:
-                self._do_remove_data_from_filter_menus(db_map, items)
-        self.do_refresh()
-        self.layoutChanged.emit()
 
     def receive_parameter_data_added(self, db_map_data):
         """Runs when either parameter definitions or values are added to the dbs.
@@ -604,6 +581,42 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         pos = len(self.single_models)
         self.sub_models[pos:pos] = new_models
         self.empty_model.receive_parameter_data_added(db_map_data)
+
+    def receive_parameter_data_updated(self, db_map_data):
+        """Runs when either parameter definitions or values are updated in the dbs.
+        Emits dataChanged so the parameter_name column is refreshed.
+
+        Args:
+            db_map_data (dict): list of updated dict-items keyed by DiffDatabaseMapping
+        """
+        for db_map, items in db_map_data.items():
+            if any(self._entity_class_id_key in item for item in items):
+                self._do_update_data_in_filter_menus(db_map, items)
+        self._emit_data_changed_for_column("parameter_name")
+        # TODO: parameter definition names aren't refreshed unless we emit dataChanged,
+        # whereas entity and class names don't need it. Why?
+
+    def receive_parameter_data_removed(self, db_map_data):
+        """Runs when either parameter definitions or values are removed from the dbs.
+        Removes the affected rows from the corresponding single models.
+
+        Args:
+            db_map_data (dict): list of removed dict-items keyed by DiffDatabaseMapping
+        """
+        self.layoutAboutToBeChanged.emit()
+        for db_map, items in db_map_data.items():
+            item_ids_per_class_id = self._item_ids_per_class_id(items)
+            for model in self._models_with_db_map(db_map):
+                removed_ids = item_ids_per_class_id.get(model.entity_class_id)
+                if not removed_ids:
+                    continue
+                removed_rows = [row for row in range(model.rowCount()) if model._main_data[row] in removed_ids]
+                for row, count in sorted(rows_to_row_count_tuples(removed_rows), reverse=True):
+                    del model._main_data[row : row + count]
+            if item_ids_per_class_id:
+                self._do_remove_data_from_filter_menus(db_map, items)
+        self.do_refresh()
+        self.layoutChanged.emit()
 
     def _emit_data_changed_for_column(self, field):
         """Lazily emits data changed for an entire column.
