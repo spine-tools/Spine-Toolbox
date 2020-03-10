@@ -726,6 +726,12 @@ class TabularViewMixin:
         self.make_pivot_headers()
 
     def receive_alternatives_added_or_removed(self, db_map_data, action):
+        if self.current_input_type != self._PARAMETER_VALUE:
+            return
+        if self.current_class_id is None:
+            return
+        if self.current_class_type is None:
+            return
         alt_ids = [a["id"] for a in db_map_data.get(self.db_map, set())]
         data = self.load_empty_parameter_value_data(alternative_ids=alt_ids)
         self.receive_data_added_or_removed(data, action)
