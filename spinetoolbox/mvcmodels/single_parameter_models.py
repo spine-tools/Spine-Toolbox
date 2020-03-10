@@ -21,6 +21,7 @@ from PySide2.QtGui import QGuiApplication
 from ..mvcmodels.minimal_table_model import MinimalTableModel
 from ..mvcmodels.parameter_mixins import (
     ConvertToDBMixin,
+    FillInAlternativeNameMixin,
     FillInParameterNameMixin,
     FillInValueListIdMixin,
     MakeParameterTagMixin,
@@ -137,6 +138,9 @@ class SingleParameterModel(MinimalTableModel):
                 description = self._get_field_item(field, id_).get("description", None)
                 if description not in (None, ""):
                     return description
+            if field == "alternative_id":
+                return self._get_field_item(field, id_).get("name", None)
+
             if field in self.json_fields:
                 return self.db_mngr.get_value(self.db_map, self.item_type, id_, field, role)
             data = self.db_mngr.get_item(self.db_map, self.item_type, id_).get(field)
@@ -207,6 +211,7 @@ class SingleParameterModel(MinimalTableModel):
             "object_name": ("entity_id", "object"),
             "object_name_list": ("entity_id", "relationship"),
             "parameter_name": (self.parameter_definition_id_key, "parameter definition"),
+            "alternative_id": ("alternative_id", "alternative"),
         }
         if field not in header_to_id:
             return {}
@@ -265,7 +270,7 @@ class SingleParameterDefinitionMixin(FillInParameterNameMixin, FillInValueListId
             self.db_mngr.msg_error.emit({self.db_map: error_log})
 
 
-class SingleParameterValueMixin(ConvertToDBMixin):
+class SingleParameterValueMixin(FillInAlternativeNameMixin):
     """A parameter value model for a single entity class."""
 
     def __init__(self, *args, **kwargs):
@@ -294,6 +299,9 @@ class SingleParameterValueMixin(ConvertToDBMixin):
         """
         param_vals = list()
         error_log = list()
+        db_map_data = dict()
+        db_map_data[self.db_map] = items
+        self.build_lookup_dictionary(db_map_data)
         for item in items:
             param_val, err = self._convert_to_db(item, self.db_map)
             if param_val:

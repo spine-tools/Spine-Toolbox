@@ -198,6 +198,10 @@ class RelationshipTreeContextMenu(EntityTreeContextMenu):
     """Context menu class for relationship tree items in tree view form."""
 
 
+class AlternativeTreeContextMenu(EntityTreeContextMenu):
+    """Context menu class for relationship tree items in tree view form."""
+
+
 class ParameterContextMenu(CustomContextMenu):
     """Context menu class for object (relationship) parameter items in tree views."""
 

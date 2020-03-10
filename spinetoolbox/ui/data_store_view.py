@@ -10,10 +10,10 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-# Form implementation generated from reading ui file 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\ui\data_store_view.ui',
-# licensing of 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\ui\data_store_view.ui' applies.
+# Form implementation generated from reading ui file 'c:\repos\spinetoolbox\bin\..\spinetoolbox\ui\data_store_view.ui',
+# licensing of 'c:\repos\spinetoolbox\bin\..\spinetoolbox\ui\data_store_view.ui' applies.
 #
-# Created: Thu Feb 13 11:53:56 2020
+# Created: Mon Mar  9 16:18:22 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -23,7 +23,7 @@ from PySide2 import QtCore, QtGui, QtWidgets
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
-        MainWindow.resize(872, 814)
+        MainWindow.resize(929, 814)
         MainWindow.setLayoutDirection(QtCore.Qt.LeftToRight)
         MainWindow.setDockOptions(QtWidgets.QMainWindow.AllowNestedDocks|QtWidgets.QMainWindow.AllowTabbedDocks|QtWidgets.QMainWindow.AnimatedDocks|QtWidgets.QMainWindow.GroupedDragging)
         self.centralwidget = QtWidgets.QWidget(MainWindow)
@@ -39,7 +39,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_2.setObjectName("verticalLayout_2")
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 872, 28))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 929, 21))
         self.menubar.setNativeMenuBar(False)
         self.menubar.setObjectName("menubar")
         self.menuSession = QtWidgets.QMenu(self.menubar)
@@ -55,6 +55,26 @@ class Ui_MainWindow(object):
         self.menuHelp = QtWidgets.QMenu(self.menubar)
         self.menuHelp.setObjectName("menuHelp")
         MainWindow.setMenuBar(self.menubar)
+        self.dockWidget_alternative_tree = QtWidgets.QDockWidget(MainWindow)
+        self.dockWidget_alternative_tree.setAllowedAreas(QtCore.Qt.AllDockWidgetAreas)
+        self.dockWidget_alternative_tree.setObjectName("dockWidget_alternative_tree")
+        self.dockWidgetContents_15 = QtWidgets.QWidget()
+        self.dockWidgetContents_15.setObjectName("dockWidgetContents_15")
+        self.verticalLayout_18 = QtWidgets.QVBoxLayout(self.dockWidgetContents_15)
+        self.verticalLayout_18.setSpacing(0)
+        self.verticalLayout_18.setContentsMargins(0, 0, 0, 0)
+        self.verticalLayout_18.setObjectName("verticalLayout_18")
+        self.treeView_alternative = EntityTreeView(self.dockWidgetContents_15)
+        self.treeView_alternative.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        self.treeView_alternative.setEditTriggers(QtWidgets.QAbstractItemView.EditKeyPressed)
+        self.treeView_alternative.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
+        self.treeView_alternative.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectItems)
+        self.treeView_alternative.setIconSize(QtCore.QSize(20, 20))
+        self.treeView_alternative.setUniformRowHeights(True)
+        self.treeView_alternative.setObjectName("treeView_alternative")
+        self.verticalLayout_18.addWidget(self.treeView_alternative)
+        self.dockWidget_alternative_tree.setWidget(self.dockWidgetContents_15)
+        MainWindow.addDockWidget(QtCore.Qt.DockWidgetArea(1), self.dockWidget_alternative_tree)
         self.dockWidget_parameter_value_list = QtWidgets.QDockWidget(MainWindow)
         self.dockWidget_parameter_value_list.setObjectName("dockWidget_parameter_value_list")
         self.dockWidgetContents = QtWidgets.QWidget()
@@ -564,6 +584,8 @@ class Ui_MainWindow(object):
         self.menuView.setTitle(QtWidgets.QApplication.translate("MainWindow", "View", None, -1))
         self.menuGraph.setTitle(QtWidgets.QApplication.translate("MainWindow", "Graph", None, -1))
         self.menuHelp.setTitle(QtWidgets.QApplication.translate("MainWindow", "Help", None, -1))
+        self.dockWidget_alternative_tree.setWindowTitle(QtWidgets.QApplication.translate("MainWindow", "Alternative tree", None, -1))
+        self.treeView_alternative.setAccessibleName(QtWidgets.QApplication.translate("MainWindow", "relationship tree", None, -1))
         self.dockWidget_parameter_value_list.setWindowTitle(QtWidgets.QApplication.translate("MainWindow", "Parameter value list", None, -1))
         self.treeView_parameter_value_list.setAccessibleName(QtWidgets.QApplication.translate("MainWindow", "parameter value list", None, -1))
         self.dockWidget_relationship_parameter_value.setWindowTitle(QtWidgets.QApplication.translate("MainWindow", "Relationship parameter value", None, -1))
@@ -624,9 +646,9 @@ class Ui_MainWindow(object):
         self.actionTabular_style.setText(QtWidgets.QApplication.translate("MainWindow", "Tabular style", None, -1))
         self.actionView_history.setText(QtWidgets.QApplication.translate("MainWindow", "View history...", None, -1))
 
-from spinetoolbox.widgets.custom_qtreeview import StickySelectionEntityTreeView, CopyTreeView, EntityTreeView
-from spinetoolbox.widgets.custom_qlistview import DragListView
 from spinetoolbox.widgets.custom_qtableview import PivotTableView, AutoFilterCopyPasteTableView
-from spinetoolbox.widgets.frozen_table_view import FrozenTableView
+from spinetoolbox.widgets.custom_qtreeview import EntityTreeView, StickySelectionEntityTreeView, CopyTreeView
 from spinetoolbox.widgets.custom_qgraphicsviews import GraphQGraphicsView
+from spinetoolbox.widgets.custom_qlistview import DragListView
+from spinetoolbox.widgets.frozen_table_view import FrozenTableView
 from spinetoolbox import resources_icons_rc

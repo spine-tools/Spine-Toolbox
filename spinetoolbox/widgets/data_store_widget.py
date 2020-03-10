@@ -519,6 +519,9 @@ class DataStoreFormBase(QMainWindow):
         msg = f"Successfully {action} {count} {item_type} item(s)"
         self.msg.emit(msg)
 
+    def receive_alternatives_added(self, db_map_data):
+        self.notify_items_changed("added", "alternatives", db_map_data)
+
     def receive_object_classes_added(self, db_map_data):
         self.notify_items_changed("added", "object class", db_map_data)
 
@@ -544,6 +547,9 @@ class DataStoreFormBase(QMainWindow):
     def receive_parameter_tags_added(self, db_map_data):
         self.notify_items_changed("added", "parameter tag", db_map_data)
         self.parameter_tag_toolbar.receive_parameter_tags_added(db_map_data)
+
+    def receive_alternatives_updated(self, db_map_data):
+        self.notify_items_changed("updated", "alternatives", db_map_data)
 
     def receive_object_classes_updated(self, db_map_data):
         self.notify_items_changed("updated", "object class", db_map_data)
@@ -573,6 +579,9 @@ class DataStoreFormBase(QMainWindow):
 
     def receive_parameter_definition_tags_set(self, db_map_data):
         self.notify_items_changed("set", "parameter definition tag", db_map_data)
+
+    def receive_alternatives_removed(self, db_map_data):
+        self.notify_items_changed("removed", "alternatives", db_map_data)
 
     def receive_object_classes_removed(self, db_map_data):
         self.notify_items_changed("removed", "object class", db_map_data)
@@ -718,6 +727,7 @@ class DataStoreForm(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         self.ui.dockWidget_frozen_table.hide()
         docks = [
             self.ui.dockWidget_object_tree,
+            self.ui.dockWidget_alternative_tree,
             self.ui.dockWidget_object_parameter_value,
             self.ui.dockWidget_parameter_value_list,
         ]

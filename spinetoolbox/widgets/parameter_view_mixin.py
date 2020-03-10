@@ -23,6 +23,7 @@ from .custom_delegates import (
     ParameterDefaultValueDelegate,
     TagListDelegate,
     ValueListDelegate,
+    AlternativeNameDelegate,
     ObjectParameterValueDelegate,
     ObjectParameterNameDelegate,
     ObjectClassNameDelegate,
@@ -200,12 +201,14 @@ class ParameterViewMixin:
         delegate.parameter_value_editor_requested.connect(self.show_parameter_value_editor)
         self._setup_delegate(table_view, h("parameter_name"), ObjectParameterNameDelegate)
         self._setup_delegate(table_view, h("object_name"), ObjectNameDelegate)
+        self._setup_delegate(table_view, h("alternative_id"), AlternativeNameDelegate)
         # Relationship parameter value
         table_view = self.ui.tableView_relationship_parameter_value
         h = table_view.model().header.index
         delegate = self._setup_delegate(table_view, h("value"), RelationshipParameterValueDelegate)
         delegate.parameter_value_editor_requested.connect(self.show_parameter_value_editor)
         self._setup_delegate(table_view, h("parameter_name"), RelationshipParameterNameDelegate)
+        self._setup_delegate(table_view, h("alternative_id"), AlternativeNameDelegate)
         delegate = self._setup_delegate(table_view, h("object_name_list"), ObjectNameListDelegate)
         delegate.object_name_list_editor_requested.connect(self.show_object_name_list_editor)
 
@@ -515,6 +518,11 @@ class ParameterViewMixin:
         h = self.ui.tableView_relationship_parameter_value.horizontalHeader()
         self.qsettings.setValue("relParValHeaderState", h.saveState())
         self.qsettings.endGroup()
+
+    def receive_alternatives_updated(self, db_map_data):
+        super().receive_alternatives_updated(db_map_data)
+        self.object_parameter_value_model.receive_alternatives_updated(db_map_data)
+        self.relationship_parameter_value_model.receive_alternatives_updated(db_map_data)
 
     def receive_parameter_definitions_added(self, db_map_data):
         super().receive_parameter_definitions_added(db_map_data)

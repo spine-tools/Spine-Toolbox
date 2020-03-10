@@ -327,6 +327,8 @@ class PivotTableModel(QAbstractTableModel):
         """
         if top_left_id == -1:
             return self.db_mngr.get_item(self.db_map, "parameter definition", header_id).get("parameter_name")
+        if top_left_id == -2:
+            return self.db_mngr.get_item(self.db_map, "alternative", header_id).get("name")
         return self.db_mngr.get_item(self.db_map, "object", header_id)["name"]
 
     def header_name(self, index):
@@ -341,7 +343,7 @@ class PivotTableModel(QAbstractTableModel):
         header_id = self._header_id(index)
         top_left_id = self._top_left_id(index)
         return self._header_name(top_left_id, header_id)
-    
+
     def header_data(self, index, role=Qt.DisplayRole):
         """Returns the data corresponding to the given header index based on role enum.
 
@@ -357,6 +359,9 @@ class PivotTableModel(QAbstractTableModel):
         if top_left_id == -1:
             name_field = "parameter_name"
             item = self.db_mngr.get_item(self.db_map, "parameter definition", header_id)
+        elif top_left_id == -2:
+            name_field = "name"
+            item = self.db_mngr.get_item(self.db_map, "alternative", header_id)
         else:
             name_field = "name"
             item = self.db_mngr.get_item(self.db_map, "object", header_id)
@@ -507,17 +512,19 @@ class PivotTableModel(QAbstractTableModel):
             return dict(
                 entity_class_id=self._parent.current_class_id,
                 entity_id=header_ids[0],
-                parameter_definition_id=header_ids[-1],
+                parameter_definition_id=header_ids[-2],
+                alternative_id=header_ids[-1],
                 value=value,
             )
 
         def relationship_parameter_value_to_add(header_ids, value, relationship_ids):
-            object_id_list = ",".join([str(id_) for id_ in header_ids[:-1]])
+            object_id_list = ",".join([str(id_) for id_ in header_ids[:-2]])
             relationship_id = relationship_ids[object_id_list]
             return dict(
                 entity_class_id=self._parent.current_class_id,
                 entity_id=relationship_id,
-                parameter_definition_id=header_ids[-1],
+                parameter_definition_id=header_ids[-2],
+                alternative_id=header_ids[-1],
                 value=value,
             )
 
@@ -541,7 +548,12 @@ class PivotTableModel(QAbstractTableModel):
                     item = parameter_value_to_add(header_ids, values[row, column], relationship_ids)
                     to_add.append(item)
                 else:
-                    item = dict(id=data[i][j], value=values[row, column], parameter_definition_id=header_ids[-1])
+                    item = dict(
+                        id=data[i][j],
+                        value=values[row, column],
+                        parameter_definition_id=header_ids[-2],
+                        alternative_id=header_ids[-1],
+                    )
                     to_update.append(item)
         if not to_add and not to_update:
             return False
@@ -613,25 +625,31 @@ class PivotTableModel(QAbstractTableModel):
     def _batch_set_header_data(self, header_data):
         objects = []
         param_defs = []
+        alternatives = []
         for index, value in header_data:
             header_id = self._header_id(index)
             top_left_id = self._top_left_id(index)
             item = dict(id=header_id, name=value)
             if top_left_id == -1:
                 param_defs.append(item)
+            elif top_left_id == -2:
+                alternatives.append(item)
             else:
                 objects.append(item)
-        if not objects and not param_defs:
+        if not objects and not param_defs and not alternatives:
             return False
         if objects:
             self.db_mngr.update_objects({self.db_map: objects})
         if param_defs:
             self.db_mngr.update_parameter_definitions({self.db_map: param_defs})
+        if alternatives:
+            self.db_mngr.update_alternatives({self.db_map: alternatives})
         return True
 
     def _batch_set_empty_header_data(self, header_data, get_top_left_id):
         objects = []
         param_defs = []
+        alternatives = []
         for index, value in header_data:
             top_left_id = get_top_left_id(index)
             item = dict(name=value)
@@ -641,15 +659,19 @@ class PivotTableModel(QAbstractTableModel):
                 )
                 item[class_key] = self._parent.current_class_id
                 param_defs.append(item)
+            elif top_left_id == -2:
+                alternatives.append(item)
             else:
                 item["class_id"] = self._parent.current_object_class_id_list()[top_left_id]
                 objects.append(item)
-        if not objects and not param_defs:
+        if not objects and not param_defs and not alternatives:
             return False
         if objects:
             self.db_mngr.add_objects({self.db_map: objects})
         if param_defs:
             self.db_mngr.add_parameter_definitions({self.db_map: param_defs})
+        if alternatives:
+            self.db_mngr.add_alternatives({self.db_map: alternatives})
         return True
 
 

@@ -22,6 +22,7 @@ from ..mvcmodels.minimal_table_model import MinimalTableModel
 from ..mvcmodels.empty_row_model import EmptyRowModel
 from ..mvcmodels.compound_table_model import CompoundWithEmptyTableModel
 from .custom_delegates import (
+    ManageAlternativesDelegate,
     ManageObjectClassesDelegate,
     ManageObjectsDelegate,
     ManageRelationshipClassesDelegate,
@@ -44,6 +45,69 @@ class EditOrRemoveItemsDialog(ManageItemsDialog):
         """
         item = self.items[row]
         return [db_map.codename for db_map in item.db_maps]
+
+
+class EditAlternativesDialog(EditOrRemoveItemsDialog):
+    """A dialog to query user's preferences for updating Alternatives."""
+
+    def __init__(self, parent, db_mngr, selected):
+        """Init class.
+
+        Args:
+            parent (DataStoreForm): data store widget
+            db_mngr (SpineDBManager): the manager to do the update
+            selected (set): set of ObjectClassItem instances to edit
+        """
+        super().__init__(parent, db_mngr)
+        self.setWindowTitle("Edit Alternatives")
+        self.model = MinimalTableModel(self)
+        self.model.set_horizontal_header_labels(['alternative name', 'description', 'databases'])
+        self.table_view.setModel(self.model)
+        self.table_view.setItemDelegate(ManageAlternativesDelegate(self))
+        self.connect_signals()
+        self.orig_data = list()
+        model_data = list()
+        for item in selected:
+            data = item.db_map_data(item.first_db_map)
+            row_data = [item.display_name, data['description']]
+            self.orig_data.append(row_data.copy())
+            row_data.append(item.display_database)
+            model_data.append(row_data)
+            self.items.append(item)
+        self.model.reset_model(model_data)
+
+    @Slot(name="accept")
+    def accept(self):
+        """Collect info from dialog and try to update items."""
+        db_map_data = dict()
+        for i in range(self.model.rowCount()):
+            name, description, db_names = self.model.row_data(i)
+            item = self.items[i]
+            db_maps = []
+            for database in db_names.split(","):
+                for db_map in item.db_maps:
+                    if db_map.codename == database:
+                        db_maps.append(db_map)
+                        break
+                else:
+                    self.parent().msg_error.emit("Invalid database {0} at row {1}".format(database, i + 1))
+                    return
+            if not name:
+                self.parent().msg_error.emit("Alternative name missing at row {}".format(i + 1))
+                return
+            orig_row = self.orig_data[i]
+            if [name, description] == orig_row:
+                continue
+            pre_db_item = {'name': name, 'description': description}
+            for db_map in db_maps:
+                db_item = pre_db_item.copy()
+                db_item['id'] = item.db_map_id(db_map)
+                db_map_data.setdefault(db_map, []).append(db_item)
+        if not db_map_data:
+            self.parent().msg_error.emit("Nothing to update")
+            return
+        self.db_mngr.update_alternatives(db_map_data)
+        super().accept()
 
 
 class EditObjectClassesDialog(ShowIconColorEditorMixin, EditOrRemoveItemsDialog):

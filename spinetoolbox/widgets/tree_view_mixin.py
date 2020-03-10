@@ -17,21 +17,23 @@ Contains the TreeViewMixin class.
 """
 
 from PySide2.QtCore import Slot
-from .custom_menus import ObjectTreeContextMenu, RelationshipTreeContextMenu
+from .custom_menus import ObjectTreeContextMenu, RelationshipTreeContextMenu, AlternativeTreeContextMenu
 from .add_db_items_dialogs import (
+    AddAlternativesDialog,
     AddObjectClassesDialog,
     AddObjectsDialog,
     AddRelationshipClassesDialog,
     AddRelationshipsDialog,
 )
 from .edit_db_items_dialogs import (
+    EditAlternativesDialog,
     EditObjectClassesDialog,
     EditObjectsDialog,
     EditRelationshipClassesDialog,
     EditRelationshipsDialog,
     RemoveEntitiesDialog,
 )
-from ..mvcmodels.entity_tree_models import ObjectTreeModel, RelationshipTreeModel
+from ..mvcmodels.entity_tree_models import ObjectTreeModel, RelationshipTreeModel, AlternativeTreeModel
 from ..helpers import busy_effect
 
 
@@ -42,20 +44,26 @@ class TreeViewMixin:
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Selected ids
+        self.alternative_tree_model = AlternativeTreeModel(self, self.db_mngr, *self.db_maps)
         self.object_tree_model = ObjectTreeModel(self, self.db_mngr, *self.db_maps)
         self.relationship_tree_model = RelationshipTreeModel(self, self.db_mngr, *self.db_maps)
         self.ui.treeView_object.setModel(self.object_tree_model)
         self.ui.treeView_relationship.setModel(self.relationship_tree_model)
+        self.ui.treeView_alternative.setModel(self.alternative_tree_model)
 
     def add_menu_actions(self):
         """Adds toggle view actions to View menu."""
         super().add_menu_actions()
         self.ui.menuView.addSeparator()
         self.ui.menuView.addAction(self.ui.dockWidget_relationship_tree.toggleViewAction())
+        self.ui.menuView.addAction(self.ui.dockWidget_alternative_tree.toggleViewAction())
 
     def connect_signals(self):
         """Connects signals to slots."""
         super().connect_signals()
+        self.ui.treeView_alternative.selectionModel().selectionChanged.connect(
+            self._handle_alternative_tree_selection_changed
+        )
         self.ui.treeView_object.selectionModel().selectionChanged.connect(self._handle_object_tree_selection_changed)
         self.ui.treeView_relationship.selectionModel().selectionChanged.connect(
             self._handle_relationship_tree_selection_changed
@@ -76,16 +84,31 @@ class TreeViewMixin:
         self.ui.treeView_relationship.edit_key_pressed.connect(self.edit_relationship_tree_items)
         self.ui.treeView_relationship.customContextMenuRequested.connect(self.show_relationship_tree_context_menu)
 
+        self.ui.treeView_alternative.customContextMenuRequested.connect(self.show_alternative_tree_context_menu)
+
     def init_models(self):
         """Initializes models."""
         super().init_models()
+        self.alternative_tree_model.build_tree()
         self.object_tree_model.build_tree()
         self.relationship_tree_model.build_tree()
+        self.ui.treeView_alternative.expand(self.alternative_tree_model.root_index)
         self.ui.treeView_object.expand(self.object_tree_model.root_index)
         self.ui.treeView_relationship.expand(self.relationship_tree_model.root_index)
+        self.ui.treeView_alternative.resizeColumnToContents(0)
         self.ui.treeView_object.resizeColumnToContents(0)
         self.ui.treeView_relationship.resizeColumnToContents(0)
         self.ui.actionExport.setEnabled(self.object_tree_model.root_item.has_children())
+
+    @Slot("QItemSelection", "QItemSelection")
+    def _handle_alternative_tree_selection_changed(self, selected, deselected):
+        """Updates object filter and sets default rows."""
+        indexes = self.ui.treeView_alternative.selectionModel().selectedIndexes()
+        self.alternative_tree_model.select_indexes(indexes)
+        if not self._accept_selection(self.ui.treeView_alternative):
+            return
+        # self.set_default_parameter_data(self.ui.treeView_object.currentIndex())
+        # self._update_object_filter()
 
     @Slot("QItemSelection", "QItemSelection")
     def _handle_object_tree_selection_changed(self, selected, deselected):
@@ -288,6 +311,31 @@ class TreeViewMixin:
             pass
         relationship_tree_context_menu.deleteLater()
 
+    @Slot("QPoint")
+    def show_alternative_tree_context_menu(self, pos):
+        """Shows the context for alternative tree.
+
+        Args:
+            pos (QPoint): Mouse position
+        """
+        index = self.ui.treeView_alternative.indexAt(pos)
+        if index.column() != 0:
+            return
+        global_pos = self.ui.treeView_alternative.viewport().mapToGlobal(pos)
+        alt_tree_context_menu = AlternativeTreeContextMenu(self, global_pos, index)
+        option = alt_tree_context_menu.get_action()
+        if option == "Copy text":
+            self.ui.treeView_alternative.copy()
+        elif option == "Add alternatives":
+            self.show_add_alternatives_form()
+        elif option == "Edit alternatives":
+            self.show_edit_alternatives_form()
+        elif option == "Remove selection":
+            self.show_remove_alternative_tree_items_form()
+        else:  # No option selected
+            pass
+        alt_tree_context_menu.deleteLater()
+
     @busy_effect
     def fully_expand_selection(self):
         for index in self.ui.treeView_object.selectionModel().selectedIndexes():
@@ -355,6 +403,12 @@ class TreeViewMixin:
         dialog.show()
 
     @Slot("bool")
+    def show_add_alternatives_form(self, checked=False, object_class_one_name=None):
+        """Shows dialog to let user select preferences for new alternative."""
+        dialog = AddAlternativesDialog(self, self.db_mngr, *self.db_maps)
+        dialog.show()
+
+    @Slot("bool")
     def show_add_relationships_form(
         self, checked=False, relationship_class_key=(), object_class_name="", object_name=""
     ):
@@ -373,6 +427,12 @@ class TreeViewMixin:
     def show_edit_object_classes_form(self, checked=False):
         selected = {ind.internalPointer() for ind in self.object_tree_model.selected_object_class_indexes}
         dialog = EditObjectClassesDialog(self, self.db_mngr, selected)
+        dialog.show()
+
+    @Slot("bool")
+    def show_edit_alternatives_form(self, checked=False):
+        selected = {ind.internalPointer() for ind in self.alternative_tree_model.selected_alternative_indexes}
+        dialog = EditAlternativesDialog(self, self.db_mngr, selected)
         dialog.show()
 
     @Slot("bool")
@@ -406,6 +466,16 @@ class TreeViewMixin:
         dialog.show()
 
     @Slot()
+    def show_remove_alternative_tree_items_form(self):
+        """Shows form to remove items from object treeview."""
+        selected = {
+            item_type: [ind.model().item_from_index(ind) for ind in indexes]
+            for item_type, indexes in self.alternative_tree_model.selected_indexes.items()
+        }
+        dialog = RemoveEntitiesDialog(self, self.db_mngr, selected)
+        dialog.show()
+
+    @Slot()
     def show_remove_object_tree_items_form(self):
         """Shows form to remove items from object treeview."""
         selected = {
@@ -430,6 +500,10 @@ class TreeViewMixin:
         super().notify_items_changed(action, item_type, db_map_data)
         self.ui.actionExport.setEnabled(self.object_tree_model.root_item.has_children())
 
+    def receive_alternatives_added(self, db_map_data):
+        super().receive_alternatives_added(db_map_data)
+        self.alternative_tree_model.add_alternatives(db_map_data)
+
     def receive_object_classes_added(self, db_map_data):
         super().receive_object_classes_added(db_map_data)
         self.object_tree_model.add_object_classes(db_map_data)
@@ -448,6 +522,10 @@ class TreeViewMixin:
         self.object_tree_model.add_relationships(db_map_data)
         self.relationship_tree_model.add_relationships(db_map_data)
 
+    def receive_alternatives_updated(self, db_map_data):
+        super().receive_alternatives_updated(db_map_data)
+        self.alternative_tree_model.update_alternatives(db_map_data)
+
     def receive_object_classes_updated(self, db_map_data):
         super().receive_object_classes_updated(db_map_data)
         self.object_tree_model.update_object_classes(db_map_data)
@@ -465,6 +543,10 @@ class TreeViewMixin:
         super().receive_relationships_updated(db_map_data)
         self.object_tree_model.update_relationships(db_map_data)
         self.relationship_tree_model.update_relationships(db_map_data)
+
+    def receive_alternatives_removed(self, db_map_data):
+        super().receive_alternatives_removed(db_map_data)
+        self.alternative_tree_model.remove_alternatives(db_map_data)
 
     def receive_object_classes_removed(self, db_map_data):
         super().receive_object_classes_removed(db_map_data)

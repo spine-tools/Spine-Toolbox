@@ -21,6 +21,7 @@ from ..mvcmodels.parameter_mixins import (
     FillInParameterNameMixin,
     MakeRelationshipOnTheFlyMixin,
     InferEntityClassIdMixin,
+    FillInAlternativeNameMixin,
     FillInParameterDefinitionIdsMixin,
     FillInEntityIdsMixin,
     FillInEntityClassIdMixin,
@@ -206,6 +207,7 @@ class EmptyRelationshipParameterDefinitionModel(EmptyParameterDefinitionModel):
 
 class EmptyParameterValueModel(
     InferEntityClassIdMixin,
+    FillInAlternativeNameMixin,
     FillInParameterDefinitionIdsMixin,
     FillInEntityIdsMixin,
     FillInEntityClassIdMixin,
@@ -258,7 +260,12 @@ class EmptyParameterValueModel(
 
     def _check_item(self, item):
         """Checks if a db item is ready to be inserted."""
-        return self.entity_class_id_key in item and self.entity_id_key in item and "parameter_definition_id" in item
+        return (
+            self.entity_class_id_key in item
+            and self.entity_id_key in item
+            and "parameter_definition_id" in item
+            and "alternative_id" in item
+        )
 
 
 class EmptyObjectParameterValueModel(EmptyParameterValueModel):

@@ -277,5 +277,5 @@ class TabularViewFilterCheckboxListModel(FilterCheckboxListModelBase):
         self.db_map = parent.db_map
 
     def _item_name(self, id_):
-        name_key = {"object": "name", "parameter definition": "parameter_name"}[self.item_type]
+        name_key = {"object": "name", "parameter definition": "parameter_name", "alternative": "name"}[self.item_type]
         return self.db_mngr.get_item(self.db_map, self.item_type, id_)[name_key]

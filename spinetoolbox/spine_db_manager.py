@@ -67,6 +67,7 @@ class SpineDBManager(QObject):
     session_committed = Signal(set)
     session_rolled_back = Signal(set)
     # Added
+    alternatives_added = Signal(object)
     object_classes_added = Signal(object)
     objects_added = Signal(object)
     relationship_classes_added = Signal(object)
@@ -78,6 +79,7 @@ class SpineDBManager(QObject):
     parameter_value_lists_added = Signal(object)
     parameter_tags_added = Signal(object)
     # Removed
+    alternatives_removed = Signal(object)
     object_classes_removed = Signal(object)
     objects_removed = Signal(object)
     relationship_classes_removed = Signal(object)
@@ -87,6 +89,7 @@ class SpineDBManager(QObject):
     parameter_value_lists_removed = Signal(object)
     parameter_tags_removed = Signal(object)
     # Updated
+    alternatives_updated = Signal(object)
     object_classes_updated = Signal(object)
     objects_updated = Signal(object)
     relationship_classes_updated = Signal(object)
@@ -364,6 +367,7 @@ class SpineDBManager(QObject):
         # Error
         self.msg_error.connect(self.receive_error_msg)
         # Add to cache
+        self.alternatives_added.connect(lambda db_map_data: self.cache_items("alternative", db_map_data))
         self.object_classes_added.connect(lambda db_map_data: self.cache_items("object class", db_map_data))
         self.objects_added.connect(lambda db_map_data: self.cache_items("object", db_map_data))
         self.relationship_classes_added.connect(lambda db_map_data: self.cache_items("relationship class", db_map_data))
@@ -377,6 +381,7 @@ class SpineDBManager(QObject):
         )
         self.parameter_tags_added.connect(lambda db_map_data: self.cache_items("parameter tag", db_map_data))
         # Update in cache
+        self.alternatives_updated.connect(lambda db_map_data: self.cache_items("alternative", db_map_data))
         self.object_classes_updated.connect(lambda db_map_data: self.cache_items("object class", db_map_data))
         self.objects_updated.connect(lambda db_map_data: self.cache_items("object", db_map_data))
         self.relationship_classes_updated.connect(
@@ -412,6 +417,7 @@ class SpineDBManager(QObject):
         self.objects_removed.connect(self.cascade_remove_parameter_values_by_entity)
         self.relationships_removed.connect(self.cascade_remove_parameter_values_by_entity)
         self.parameter_definitions_removed.connect(self.cascade_remove_parameter_values_by_definition)
+        self.alternatives_removed.connect(self.cascade_remove_parameter_values_by_alternative)
         # On cascade refresh
         self.object_classes_updated.connect(self.cascade_refresh_relationship_classes)
         self.object_classes_updated.connect(self.cascade_refresh_parameter_definitions)
@@ -441,6 +447,7 @@ class SpineDBManager(QObject):
             lambda db_map_data: self.uncache_items("parameter value list", db_map_data)
         )
         self.parameter_tags_removed.connect(lambda db_map_data: self.uncache_items("parameter tag", db_map_data))
+        self.alternatives_removed.connect(lambda db_map_data: self.uncache_items("alternative", db_map_data))
         # Do this last, so cache is ready when listeners receive signals
         self.signaller.connect_signals()
 
@@ -608,6 +615,7 @@ class SpineDBManager(QObject):
             "parameter value": "get_parameter_values",
             "parameter value list": "get_parameter_value_lists",
             "parameter tag": "get_parameter_tags",
+            "alternative": "get_alternatives",
         }
         method_name = method_name_dict.get(item_type)
         if not method_name:
@@ -672,6 +680,21 @@ class SpineDBManager(QObject):
         if isinstance(parsed_value, TimeSeriesVariableResolution):
             return "Start: {}, resolution: variable, length: {}".format(parsed_value.indexes[0], len(parsed_value))
         return None
+
+    def get_alternatives(self, db_map, cache=True):
+        """Returns alternatives from database.
+
+        Args:
+            db_map (DiffDatabaseMapping)
+
+        Returns:
+            list: dictionary items
+        """
+        qry = db_map.query(db_map.alternative_sq)
+        sort_key = lambda x: x["name"]
+        items = sorted((x._asdict() for x in qry), key=sort_key)
+        _ = cache and self.cache_items("alternative", {db_map: items})
+        return items
 
     def get_object_classes(self, db_map, cache=True):
         """Returns object classes from database.
@@ -923,6 +946,15 @@ class SpineDBManager(QObject):
         if any(db_map_data_out.values()):
             getattr(self, signal_name).emit(db_map_data_out)
 
+    def add_alternatives(self, db_map_data):
+        """Adds alternatives to db.
+
+        Args:
+            db_map_data (dict): lists of items to add keyed by DiffDatabaseMapping
+        """
+        for db_map, data in db_map_data.items():
+            self.undo_stack[db_map].push(AddItemsCommand(self, db_map, data, "alternative"))
+
     def add_object_classes(self, db_map_data):
         """Adds object classes to db.
 
@@ -1003,6 +1035,15 @@ class SpineDBManager(QObject):
         """
         for db_map, data in db_map_data.items():
             self.undo_stack[db_map].push(AddItemsCommand(self, db_map, data, "parameter tag"))
+
+    def update_alternatives(self, db_map_data):
+        """Updates object classes in db.
+
+        Args:
+            db_map_data (dict): lists of items to update keyed by DiffDatabaseMapping
+        """
+        for db_map, data in db_map_data.items():
+            self.undo_stack[db_map].push(UpdateItemsCommand(self, db_map, data, "alternative"))
 
     def update_object_classes(self, db_map_data):
         """Updates object classes in db.
@@ -1114,6 +1155,7 @@ class SpineDBManager(QObject):
         db_map_parameter_values = dict()
         db_map_parameter_value_lists = dict()
         db_map_parameter_tags = dict()
+        db_map_alternatives = dict()
         error_log = dict()
         for db_map, items_per_type in db_map_typed_data.items():
             object_classes = items_per_type.get("object class", ())
@@ -1124,6 +1166,7 @@ class SpineDBManager(QObject):
             parameter_values = items_per_type.get("parameter value", ())
             parameter_value_lists = items_per_type.get("parameter value list", ())
             parameter_tags = items_per_type.get("parameter tag", ())
+            alternatives = items_per_type.get("alternative", ())
             try:
                 db_map.remove_items(
                     object_class_ids={x['id'] for x in object_classes},
@@ -1134,6 +1177,7 @@ class SpineDBManager(QObject):
                     parameter_value_ids={x['id'] for x in parameter_values},
                     parameter_value_list_ids={x['id'] for x in parameter_value_lists},
                     parameter_tag_ids={x['id'] for x in parameter_tags},
+                    alternative_ids={x['id'] for x in alternatives},
                 )
             except SpineDBAPIError as err:
                 error_log[db_map] = err
@@ -1146,6 +1190,7 @@ class SpineDBManager(QObject):
             db_map_parameter_values[db_map] = parameter_values
             db_map_parameter_value_lists[db_map] = parameter_value_lists
             db_map_parameter_tags[db_map] = parameter_tags
+            db_map_alternatives[db_map] = alternatives
         if any(error_log.values()):
             self.msg_error.emit(error_log)
         if any(db_map_object_classes.values()):
@@ -1164,6 +1209,8 @@ class SpineDBManager(QObject):
             self.parameter_value_lists_removed.emit(db_map_parameter_value_lists)
         if any(db_map_parameter_tags.values()):
             self.parameter_tags_removed.emit(db_map_parameter_tags)
+        if any(db_map_alternatives.values()):
+            self.alternatives_removed.emit(db_map_alternatives)
 
     @staticmethod
     def _to_ids(db_map_data):
@@ -1254,6 +1301,17 @@ class SpineDBManager(QObject):
             db_map_data (dict): lists of removed items keyed by DiffDatabaseMapping
         """
         db_map_cascading_data = self.find_cascading_parameter_values_by_definition(self._to_ids(db_map_data))
+        if any(db_map_cascading_data.values()):
+            self.parameter_values_removed.emit(db_map_cascading_data)
+
+    @Slot(object)
+    def cascade_remove_parameter_values_by_alternative(self, db_map_data):
+        """Removes parameter values in cascade when when removing alternatives.
+
+        Args:
+            db_map_data (dict): lists of removed items keyed by DiffDatabaseMapping
+        """
+        db_map_cascading_data = self.find_cascading_parameter_values_by_alternative(self._to_ids(db_map_data))
         if any(db_map_cascading_data.values()):
             self.parameter_values_removed.emit(db_map_cascading_data)
 
@@ -1469,6 +1527,15 @@ class SpineDBManager(QObject):
         for db_map, definition_ids in db_map_ids.items():
             db_map_cascading_data[db_map] = [
                 item for item in self.get_items(db_map, "parameter value") if item["parameter_id"] in definition_ids
+            ]
+        return db_map_cascading_data
+
+    def find_cascading_parameter_values_by_alternative(self, db_map_ids):
+        """Finds and returns cascading parameter values for the given parameter alternative ids."""
+        db_map_cascading_data = dict()
+        for db_map, alt_ids in db_map_ids.items():
+            db_map_cascading_data[db_map] = [
+                item for item in self.get_items(db_map, "parameter value") if item["alternative_id"] in alt_ids
             ]
         return db_map_cascading_data
 

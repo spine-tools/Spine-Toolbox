@@ -18,6 +18,8 @@ Models to represent entities in a tree.
 from PySide2.QtCore import Qt, Signal, QModelIndex
 from PySide2.QtGui import QIcon
 from .entity_tree_item import (
+    AlternativeClassItem,
+    AlternativeItem,
     ObjectTreeRootItem,
     ObjectClassItem,
     ObjectItem,
@@ -120,6 +122,32 @@ class EntityTreeModel(MinimalTreeModel):
                 parent = self.index_from_item(parent_item)
                 self.canFetchMore(parent) and self.fetchMore(parent)  # pylint: disable=expression-not-assigned
         return parent_items
+
+
+class AlternativeTreeModel(EntityTreeModel):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.remove_icon = QIcon(":/icons/menu_icons/cube_minus.svg")
+
+    @property
+    def root_item_type(self):
+        return AlternativeClassItem
+
+    @property
+    def selected_alternative_indexes(self):
+        return self.selected_indexes.get(AlternativeItem, {})
+
+    def add_alternatives(self, db_map_data):
+        db_map_ids = {db_map: {x["id"] for x in data} for db_map, data in db_map_data.items()}
+        self.root_item.append_children_by_id(db_map_ids)
+
+    def update_alternatives(self, db_map_data):
+        db_map_ids = {db_map: {x["id"] for x in data} for db_map, data in db_map_data.items()}
+        self.root_item.update_children_by_id(db_map_ids)
+
+    def remove_alternatives(self, db_map_data):
+        db_map_ids = {db_map: {x["id"] for x in data} for db_map, data in db_map_data.items()}
+        self.root_item.remove_children_by_id(db_map_ids)
 
 
 class ObjectTreeModel(EntityTreeModel):

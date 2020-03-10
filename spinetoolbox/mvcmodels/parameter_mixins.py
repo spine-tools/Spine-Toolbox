@@ -51,6 +51,55 @@ class ConvertToDBMixin:
         return item, []
 
 
+class FillInAlternativeNameMixin(ConvertToDBMixin):
+    """Fills in alternative names."""
+
+    def __init__(self, *args, **kwargs):
+        """Initializes lookup dicts."""
+        super().__init__(*args, **kwargs)
+        self._db_map_alt_lookup = dict()
+
+    def build_lookup_dictionary(self, db_map_data):
+        """Builds a name lookup dictionary for the given data.
+
+        Args:
+            db_map_data (dict): lists of model items keyed by DiffDatabaseMapping
+        """
+        super().build_lookup_dictionary(db_map_data)
+        # Group data by name
+        db_map_names = dict()
+        for db_map, items in db_map_data.items():
+            for item in items:
+                name = item.get("alternative_id")
+                db_map_names.setdefault(db_map, set()).add(name)
+        # Build lookup dict
+        self._db_map_alt_lookup.clear()
+        for db_map, names in db_map_names.items():
+            for name in names:
+                item = self.db_mngr.get_item_by_field(db_map, "alternative", "name", name)
+                if item:
+                    self._db_map_alt_lookup.setdefault(db_map, {})[name] = item
+
+    def _convert_to_db(self, item, db_map):
+        """Returns a db item (id-based) from the given model item (name-based).
+
+        Args:
+            item (dict): the model item
+            db_map (DiffDatabaseMapping): the database where the resulting item belongs
+
+        Returns:
+            dict: the db item
+            list: error log
+        """
+        item, err = super()._convert_to_db(item, db_map)
+        alt_name = item.pop("alternative_id", None)
+        alt = self._db_map_alt_lookup.get(db_map, {}).get(alt_name)
+        if not alt:
+            return item, [f"Unknown alternative name {alt_name}"] if alt_name else []
+        item["alternative_id"] = alt["id"]
+        return item, err
+
+
 class FillInParameterNameMixin(ConvertToDBMixin):
     """Fills in parameter names."""
 

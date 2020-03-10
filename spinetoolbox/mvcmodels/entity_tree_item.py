@@ -385,6 +385,40 @@ class RelationshipTreeRootItem(TreeRootItem):
         return RelationshipClassItem
 
 
+class AlternativeClassItem(MultiDBTreeItem):
+    item_type = "alternative root"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.context_menu_actions = [
+            {"Add alternatives": QIcon(":/icons/menu_icons/cubes_plus.svg")},
+            {"Edit alternatives": QIcon(":/icons/menu_icons/cube_pen.svg")},
+        ]
+
+    @property
+    def display_id(self):
+        """"See super class."""
+        return "alternative"
+
+    @property
+    def display_name(self):
+        """"See super class."""
+        return "Alternative"
+
+    def _get_children_ids(self, db_map):
+        """Returns a list of object ids in this class."""
+        return [x["id"] for x in self.db_mngr.get_items(db_map, "alternative")]
+
+    @property
+    def child_item_type(self):
+        """Returns an ObjectItem."""
+        return AlternativeItem
+
+    def default_parameter_data(self):
+        """Return data to put as default in a parameter table when this item is selected."""
+        return dict(alternative_name=self.display_name, database=self.first_db_map.codename)
+
+
 class EntityClassItem(MultiDBTreeItem):
     """An entity class item."""
 
@@ -494,6 +528,32 @@ class EntityItem(MultiDBTreeItem):
         if role == Qt.ToolTipRole:
             return self.db_map_data_field(self.first_db_map, "description")
         return super().data(column, role)
+
+
+class AlternativeItem(EntityItem):
+    item_type = "alternative"
+
+    def __init__(self, *args, **kwargs):
+        """Overridden method to parse some data for convenience later.
+        Also make sure we never try to fetch this item."""
+        super().__init__(*args, **kwargs)
+        self._fetched = True
+        self.context_menu_actions = [
+            {"Edit alternatives": QIcon(":/icons/menu_icons/cubes_pen.svg")},
+            {"Remove selection": QIcon(":/icons/menu_icons/cubes_minus.svg")},
+        ]
+
+    def has_children(self):
+        """Returns false, this item never has children."""
+        return False
+
+    def default_parameter_data(self):
+        """Return data to put as default in a parameter table when this item is selected."""
+        return dict(alternative_name=self.display_name, database=self.first_db_map.codename)
+
+    def _get_children_ids(self, db_map):
+        """See base class."""
+        raise NotImplementedError()
 
 
 class ObjectItem(EntityItem):
