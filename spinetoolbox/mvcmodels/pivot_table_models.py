@@ -16,10 +16,16 @@ Provides pivot table models for the Tabular View.
 :date:   1.11.2018
 """
 
+import enum
 from PySide2.QtCore import Slot, QAbstractTableModel, Qt, QModelIndex, QSortFilterProxyModel
 from PySide2.QtGui import QColor, QFont
 from .pivot_model import PivotModel
 from ..config import PIVOT_TABLE_HEADER_COLOR
+
+
+class IndexId(enum.IntEnum):
+    PARAMETER = -1
+    PARAMETER_INDEX = -3
 
 
 class PivotTableModel(QAbstractTableModel):
@@ -186,6 +192,11 @@ class PivotTableModel(QAbstractTableModel):
         if self.model.pivot_rows and index.row() == len(self.model.pivot_columns):
             # empty line between column headers and data
             return Qt.ItemIsSelectable | Qt.ItemIsEnabled
+        if self._parent.is_value_expanded_parameter_value():
+            # Disable editing the pivot table while in expanded index mode.
+            if index.row() == self.rowCount() - 1 or index.column() == self.columnCount() - 1:
+                return Qt.NoItemFlags
+            return Qt.ItemIsEnabled | Qt.ItemIsSelectable
         return Qt.ItemIsEditable | Qt.ItemIsEnabled | Qt.ItemIsSelectable
 
     def top_left_indexes(self):
@@ -325,7 +336,7 @@ class PivotTableModel(QAbstractTableModel):
         Returns
             str
         """
-        if top_left_id == -1:
+        if top_left_id == IndexId.PARAMETER:
             return self.db_mngr.get_item(self.db_map, "parameter definition", header_id).get("parameter_name")
         return self.db_mngr.get_item(self.db_map, "object", header_id)["name"]
 
@@ -350,23 +361,25 @@ class PivotTableModel(QAbstractTableModel):
             role (enum Qt.ItemDataRole)
 
         Returns:
-            str
+            str: a string role-dependent string representation of the cell's contents.
         """
+        def fetch_from_db(fetch_name, name_field):
+            item = self.db_mngr.get_item(self.db_map, fetch_name, header_id)
+            if role in (Qt.DisplayRole, Qt.EditRole):
+                return item.get(name_field)
+            if role == Qt.ToolTipRole:
+                description = item.get("description")
+                return description if description else item.get(name_field)
+
         header_id = self._header_id(index)
         top_left_id = self._top_left_id(index)
-        if top_left_id == -1:
-            name_field = "parameter_name"
-            item = self.db_mngr.get_item(self.db_map, "parameter definition", header_id)
+        if top_left_id == IndexId.PARAMETER:
+            return fetch_from_db("parameter definition", "parameter_name")
+        elif top_left_id == IndexId.PARAMETER_INDEX:
+            # header_id contains the index value already
+            return str(header_id)
         else:
-            name_field = "name"
-            item = self.db_mngr.get_item(self.db_map, "object", header_id)
-        if role in (Qt.DisplayRole, Qt.EditRole):
-            return item.get(name_field)
-        if role == Qt.ToolTipRole:
-            description = item.get("description")
-            if description in (None, ""):
-                description = item.get(name_field)
-            return description
+            return fetch_from_db("object", "name")
 
     def header_names(self, index):
         """Returns the header names corresponding to the given data index.
@@ -380,7 +393,8 @@ class PivotTableModel(QAbstractTableModel):
         """
         row, column = self.map_to_pivot(index)
         header_ids = self._header_ids(row, column)
-        objects_ids, parameter_id = header_ids[:-1], header_ids[-1]
+        last_object_id = -1 if not self._parent.is_value_expanded_parameter_value else -2
+        objects_ids, parameter_id = header_ids[:last_object_id], header_ids[-1]
         object_names = [self.db_mngr.get_item(self.db_map, "object", id_)["name"] for id_ in objects_ids]
         parameter_name = self.db_mngr.get_item(self.db_map, "parameter definition", parameter_id).get(
             "parameter_name", ""
@@ -434,11 +448,15 @@ class PivotTableModel(QAbstractTableModel):
                 data = self.model.get_pivoted_data([row], [column])
                 if not data:
                     return None
+                value = data[0][0]
                 if self._parent.is_value_input_type():
-                    if data[0][0] is None:
+                    if value is None:
                         return None
-                    return self.db_mngr.get_value(self.db_map, "parameter value", data[0][0], "value", role)
-                return bool(data[0][0])
+                    value = self.db_mngr.get_value(self.db_map, "parameter value", value, "value", role)
+                    return value
+                if self._parent.is_value_expanded_parameter_value():
+                    return value if role == Qt.DisplayRole else None
+                return bool(value)
             return None
         if role == Qt.FontRole and self.index_in_top_left(index):
             font = QFont()
@@ -450,7 +468,6 @@ class PivotTableModel(QAbstractTableModel):
             role == Qt.TextAlignmentRole
             and self.index_in_data(index)
             and not self._parent.is_value_input_type()
-            # or self.index_in_column_headers(index)
         ):
             return Qt.AlignHCenter
         return None
@@ -617,7 +634,7 @@ class PivotTableModel(QAbstractTableModel):
             header_id = self._header_id(index)
             top_left_id = self._top_left_id(index)
             item = dict(id=header_id, name=value)
-            if top_left_id == -1:
+            if top_left_id == IndexId.PARAMETER:
                 param_defs.append(item)
             else:
                 objects.append(item)
@@ -635,7 +652,7 @@ class PivotTableModel(QAbstractTableModel):
         for index, value in header_data:
             top_left_id = get_top_left_id(index)
             item = dict(name=value)
-            if top_left_id == -1:
+            if top_left_id == IndexId.PARAMETER:
                 class_key = (
                     "object_class_id" if self._parent.current_class_type == "object class" else "relationship_class_id"
                 )

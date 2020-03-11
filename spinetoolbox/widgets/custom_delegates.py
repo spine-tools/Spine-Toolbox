@@ -168,7 +168,10 @@ class PivotTableDelegate(CheckBoxDelegate):
         self.data_committed.emit(index, editor.data())
 
     def _is_entity_index(self, index):
-        return not self.parent().is_value_input_type() and index.model().sourceModel().index_in_data(index)
+        parent = self.parent()
+        return not (
+            parent.is_value_input_type() or parent.is_value_expanded_parameter_value
+        ) and index.model().sourceModel().index_in_data(index)
 
     def paint(self, painter, option, index):
         if self._is_entity_index(index):

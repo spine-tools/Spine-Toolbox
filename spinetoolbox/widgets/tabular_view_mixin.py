@@ -19,11 +19,12 @@ Contains TabularViewMixin class.
 from itertools import product
 from collections import namedtuple
 from PySide2.QtCore import Qt, Slot
+from spinedb_api import from_database, ParameterValueFormatError, TimeSeries
 from .custom_menus import TabularViewFilterMenu, PivotTableModelMenu, PivotTableHorizontalHeaderMenu
 from .tabular_view_header_widget import TabularViewHeaderWidget
 from .custom_delegates import PivotTableDelegate
 from ..helpers import fix_name_ambiguity, busy_effect
-from ..mvcmodels.pivot_table_models import PivotTableSortFilterProxy, PivotTableModel
+from ..mvcmodels.pivot_table_models import IndexId, PivotTableSortFilterProxy, PivotTableModel
 from ..mvcmodels.frozen_table_model import FrozenTableModel
 
 
@@ -31,10 +32,11 @@ class TabularViewMixin:
     """Provides the pivot table and its frozen table for the DS form."""
 
     _PARAMETER_VALUE = "Parameter value"
+    _INDEX_EXPANSION = "Indexed parameter expansion"
     _RELATIONSHIP = "Relationship"
 
     _PARAMETER = "parameter"
-    _PARAM_INDEX_ID = -1
+    _INDEX = "index"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -45,7 +47,9 @@ class TabularViewMixin:
         self.filter_menus = {}
         self.class_pivot_preferences = {}
         self.PivotPreferences = namedtuple("PivotPreferences", ["index", "columns", "frozen", "frozen_value"])
-        self.ui.comboBox_pivot_table_input_type.addItems([self._PARAMETER_VALUE, self._RELATIONSHIP])
+        self.ui.comboBox_pivot_table_input_type.addItems(
+            [self._PARAMETER_VALUE, self._INDEX_EXPANSION, self._RELATIONSHIP]
+        )
         self.pivot_table_proxy = PivotTableSortFilterProxy()
         self.pivot_table_model = PivotTableModel(self)
         self.pivot_table_proxy.setSourceModel(self.pivot_table_model)
@@ -110,6 +114,9 @@ class TabularViewMixin:
 
     def is_value_input_type(self):
         return self.current_input_type == self._PARAMETER_VALUE
+
+    def is_value_expanded_parameter_value(self):
+        return self.current_input_type == self._INDEX_EXPANSION
 
     @Slot("QModelIndex", object)
     def _set_model_data(self, index, value):
@@ -298,11 +305,108 @@ class TabularViewMixin:
             parameter_ids = [None]
         return {entity_id + (parameter_id,): None for entity_id in entity_ids for parameter_id in parameter_ids}
 
+    def load_empty_expanded_parameter_value_data(self, entities=None, parameter_definition_ids=None):
+        """
+        Returns all permutations of entities as well as parameter indexes and values for the current class.
+
+        Args:
+            entities (list, optional): if given, only load data for these entities
+            parameter_definition_ids (set, optional): if given, only load data for these parameter definitions
+
+        Returns:
+            dict: Key is a tuple object_id, ..., index, while value is None.
+        """
+        if entities is None:
+            entities = self._get_entities()
+        if self.current_class_type == "relationship class":
+            entity_ids = [tuple(int(id_) for id_ in e["object_id_list"].split(",")) for e in entities]
+        else:
+            entity_ids = [(e["id"],) for e in entities]
+        if not entity_ids:
+            entity_ids = [tuple(None for _ in self.current_object_class_id_list())]
+        if parameter_definition_ids is None:
+            parameter_definition_ids = self._get_parameter_value_or_def_ids("parameter definition")
+        value_ids = self._get_parameter_value_or_def_ids("parameter value")
+        date_time_indexes = set()
+        date_time_values = dict()
+        other_indexes = set()
+        other_values = dict()
+        value_id_to_entity_and_definition = dict()
+        for id_ in value_ids:
+            value_item = self.db_mngr.get_item(self.db_map, "parameter value", id_)
+            if "object_id" in value_item:
+                value_entity_id = (value_item["object_id"],)
+            else:
+                value_entity_id = tuple(int(object_id) for object_id in value_item["object_id_list"].split(","))
+            value_definition_id = value_item["parameter_id"]
+            if value_definition_id not in parameter_definition_ids or value_entity_id not in entity_ids:
+                continue
+            value_id_to_entity_and_definition[id_] = (value_entity_id, value_definition_id)
+            database_value = value_item["value"]
+            index_is_datetime = False
+            try:
+                parameter_value = from_database(database_value)
+            except ParameterValueFormatError:
+                indexes = {""}
+                other_values[id_] = {"": "Error"}
+            else:
+                if isinstance(parameter_value, TimeSeries):
+                    indexes = set(parameter_value.indexes)
+                    date_time_values[id_] = {
+                        i: float(v) for i, v in zip(parameter_value.indexes, parameter_value.values)
+                    }
+                    index_is_datetime = True
+                else:
+                    indexes = {""}
+                    other_values[id_] = {"": parameter_value}
+            if index_is_datetime:
+                date_time_indexes |= indexes
+            else:
+                other_indexes |= indexes
+        date_time_indexes = list(date_time_indexes)
+        date_time_indexes.sort()
+        sorted_date_time_values = dict()
+        for id_, point in date_time_values.items():
+            values = len(date_time_indexes) * [None]
+            sorted_date_time_values[id_] = values
+            for index, value in point.items():
+                i = date_time_indexes.index(index)
+                values[i] = value
+        other_indexes = list(other_indexes)
+        sorted_other_values = dict()
+        for id_, point in other_values.items():
+            values = len(other_indexes) * [None]
+            sorted_other_values[id_] = values
+            for index, value in point.items():
+                i = other_indexes.index(index)
+                values[i] = value
+        expanded_indexes = date_time_indexes + other_indexes
+        expanded_values = dict()
+        empty_date_time_values = len(date_time_indexes) * [None]
+        empty_other_values = len(other_indexes) * [None]
+        for id_ in value_ids:
+            identifiers = value_id_to_entity_and_definition.get(id_)
+            if identifiers is None:
+                continue
+            entity_id = identifiers[0]
+            definition_id = identifiers[1]
+            expandeds = expanded_values.setdefault(entity_id, dict())
+            expandeds[definition_id] = sorted_date_time_values.get(id_, empty_date_time_values) + sorted_other_values.get(
+                id_, empty_other_values
+            )
+        return {
+            entity_id + (index, definition_id): value
+            for entity_id in entity_ids
+            for definition_id in parameter_definition_ids
+            for value, index in zip(expanded_values[entity_id][definition_id], expanded_indexes)
+        }
+
     def load_full_parameter_value_data(self, parameter_values=None, action="add"):
         """Returns a dict of parameter values for the current class.
 
         Args:
             parameter_values (list, optional)
+            action (str)
 
         Returns:
             dict: Key is a tuple object_id, ..., parameter_id, value is the parameter value.
@@ -327,7 +431,8 @@ class TabularViewMixin:
             dict: Key is a tuple object_id, ..., parameter_id, value is the parameter value or None if not specified.
         """
         data = self.load_empty_parameter_value_data()
-        data.update(self.load_full_parameter_value_data())
+        if self.current_input_type != self._INDEX_EXPANSION:
+            data.update(self.load_full_parameter_value_data())
         return data
 
     def get_pivot_preferences(self, selection_key):
@@ -352,7 +457,13 @@ class TabularViewMixin:
             # use default pivot
             length = len(self.current_object_class_id_list())
             rows = list(range(length))
-            columns = [self._PARAM_INDEX_ID] if self.current_input_type == self._PARAMETER_VALUE else []
+            if self.current_input_type == self._INDEX_EXPANSION:
+                rows.append(IndexId.PARAMETER_INDEX)
+            columns = (
+                [IndexId.PARAMETER]
+                if self.current_input_type in (self._PARAMETER_VALUE, self._INDEX_EXPANSION)
+                else []
+            )
             frozen = []
             frozen_value = ()
         return rows, columns, frozen, frozen_value
@@ -387,7 +498,10 @@ class TabularViewMixin:
         index_ids = tuple(range(length))
         if self.current_input_type == self._PARAMETER_VALUE:
             data = self.load_parameter_value_data()
-            index_ids += (self._PARAM_INDEX_ID,)
+            index_ids += (IndexId.PARAMETER,)
+        elif self.current_input_type == self._INDEX_EXPANSION:
+            data = self.load_empty_expanded_parameter_value_data()
+            index_ids += (IndexId.PARAMETER_INDEX, IndexId.PARAMETER)
         else:
             data = self.load_relationship_data()
         # get pivot preference for current selection
@@ -446,12 +560,22 @@ class TabularViewMixin:
             TabularViewFilterMenu
         """
 
-        object_id_to_name = lambda id_: self.db_mngr.get_field(self.db_map, "object", id_, "name")
-        parameter_id_to_name = lambda id_: self.db_mngr.get_field(
-            self.db_map, "parameter definition", id_, "parameter_name"
-        )
+        def object_id_to_name(id_):
+            return self.db_mngr.get_field(self.db_map, "object", id_, "name")
+
+        def parameter_id_to_name(id_):
+            return self.db_mngr.get_field(self.db_map, "parameter definition", id_, "parameter_name")
+
+        def parameter_index_to_value(index):
+            return str(index)
+
         if identifier not in self.filter_menus:
-            data_to_value = parameter_id_to_name if identifier == self._PARAM_INDEX_ID else object_id_to_name
+            if identifier == IndexId.PARAMETER:
+                data_to_value = parameter_id_to_name
+            elif identifier == IndexId.PARAMETER_INDEX:
+                data_to_value = parameter_index_to_value
+            else:
+                data_to_value = object_id_to_name
             self.filter_menus[identifier] = menu = TabularViewFilterMenu(
                 self, identifier, data_to_value, show_empty=False
             )
@@ -477,8 +601,10 @@ class TabularViewMixin:
             menu = self.create_filter_menu(identifier)
         else:
             menu = None
-        if identifier == -1:
+        if identifier == IndexId.PARAMETER:
             name = self._PARAMETER
+        elif identifier == IndexId.PARAMETER_INDEX:
+            name = self._INDEX
         else:
             name = self.current_object_class_name_list()[identifier]
         widget = TabularViewHeaderWidget(identifier, name, area, menu=menu, parent=self)
