@@ -23,7 +23,7 @@ import json
 from PySide2.QtGui import QDesktopServices, QStandardItemModel, QStandardItem
 from PySide2.QtWidgets import QWidget, QStatusBar, QInputDialog, QFileDialog, QFileIconProvider, QMessageBox, QMenu
 from PySide2.QtCore import Slot, Qt, QUrl, QFileInfo
-from ..config import STATUSBAR_SS, TREEVIEW_HEADER_SS, APPLICATION_PATH, TOOL_TYPES, REQUIRED_KEYS
+from ..config import STATUSBAR_SS, TREEVIEW_HEADER_SS, TOOL_TYPES, REQUIRED_KEYS
 from ..helpers import busy_effect
 from ..tool_specifications import CmdlineTag, CMDLINE_TAG_EDGE, ToolSpecification
 from .custom_menus import AddIncludesPopupMenu, CreateMainProgramPopupMenu
@@ -186,7 +186,7 @@ class ToolSpecificationWidget(QWidget):
     def browse_main_program(self, checked=False):
         """Open file browser where user can select the path of the main program file."""
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-        answer = QFileDialog.getOpenFileName(self, "Add existing main program file", APPLICATION_PATH, "*.*")
+        answer = QFileDialog.getOpenFileName(self, "Add existing main program file", self._project.project_dir, "*.*")
         file_path = answer[0]
         if not file_path:  # Cancel button clicked
             return
@@ -207,7 +207,7 @@ class ToolSpecificationWidget(QWidget):
          Alternative version using only one getSaveFileName dialog.
          """
         # noinspection PyCallByClass
-        answer = QFileDialog.getSaveFileName(self, "Create new main program", APPLICATION_PATH)
+        answer = QFileDialog.getSaveFileName(self, "Create new main program", self._project.project_dir)
         file_path = answer[0]
         if not file_path:  # Cancel button clicked
             return
@@ -233,7 +233,7 @@ class ToolSpecificationWidget(QWidget):
     @Slot(name="new_source_file")
     def new_source_file(self):
         """Let user create a new source file for this tool specification."""
-        path = self.program_path if self.program_path else APPLICATION_PATH
+        path = self.program_path if self.program_path else self._project.project_dir
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
         dir_path = QFileDialog.getSaveFileName(self, "Create source file", path, "*.*")
         file_path = dir_path[0]
@@ -246,7 +246,7 @@ class ToolSpecificationWidget(QWidget):
     @Slot(bool, name="show_add_source_files_dialog")
     def show_add_source_files_dialog(self, checked=False):
         """Let user select source files for this tool specification."""
-        path = self.program_path if self.program_path else APPLICATION_PATH
+        path = self.program_path if self.program_path else self._project.project_dir
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
         answer = QFileDialog.getOpenFileNames(self, "Add source file", path, "*.*")
         file_paths = answer[0]
@@ -261,7 +261,7 @@ class ToolSpecificationWidget(QWidget):
         """Let user select a source directory for this tool specification.
         All files and sub-directories will be added to the source files.
         """
-        path = self.program_path if self.program_path else APPLICATION_PATH
+        path = self.program_path if self.program_path else self._project.project_dir
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
         answer = QFileDialog.getExistingDirectory(self, "Select a directory to add to source files", path)
         file_paths = list()
