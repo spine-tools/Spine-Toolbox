@@ -238,10 +238,9 @@ class SingleParameterModel(MinimalTableModel):
         """Applies the autofilter, defined by the autofilter drop down menu."""
         if self._auto_filter is None:
             return False
-        db_item = self._db_item(row)
-        for field, valid_ids in self._auto_filter.items():
-            id_key = self.get_id_key(field)
-            if valid_ids and db_item.get(id_key) not in valid_ids:
+        item_id = self._main_data[row]
+        for valid_ids in self._auto_filter.values():
+            if valid_ids and item_id not in valid_ids:
                 return False
         return True
 
