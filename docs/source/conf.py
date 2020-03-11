@@ -15,10 +15,11 @@
 
 import os
 import sys
-from spinetoolbox.version import __version__, __version_info__
 
 app_path = os.path.join(os.path.dirname(__file__), os.path.pardir, os.path.pardir)
 sys.path.insert(0, os.path.abspath(app_path))
+
+from spinetoolbox.version import __version__, __version_info__
 
 # -- Project information -----------------------------------------------------
 

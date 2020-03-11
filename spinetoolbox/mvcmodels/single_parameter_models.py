@@ -47,20 +47,6 @@ class SingleParameterModel(MinimalTableModel):
         self.entity_class_id = entity_class_id
         self._auto_filter = dict()
         self._selected_param_def_ids = set()
-        self._field_to_item_id = {
-            "object_class_name": ("entity_class_id", "object class"),
-            "relationship_class_name": ("entity_class_id", "relationship class"),
-            "object_class_name_list": ("entity_class_id", "relationship class"),
-            "object_name": ("entity_id", "object"),
-            "object_name_list": ("entity_id", "relationship"),
-            "parameter_name": (self.parameter_definition_id_key, "parameter definition"),
-            "value_list_name": ("value_list_id", "parameter value list"),
-            "description": ("id", "parameter definition"),
-            "value": ("id", "parameter value"),
-            "default_value": ("id", "parameter definition"),
-            "database": ("database", None),
-            "alternative_id": ("alternative_id", "alternative"),
-        }
 
     @property
     def item_type(self):
@@ -100,10 +86,6 @@ class SingleParameterModel(MinimalTableModel):
         }[self.entity_class_type][self.item_type]
 
     @property
-    def parameter_definition_id_key(self):
-        return {"parameter definition": "id", "parameter value": "parameter_id"}[self.item_type]
-
-    @property
     def can_be_filtered(self):
         return True
 
@@ -116,6 +98,9 @@ class SingleParameterModel(MinimalTableModel):
 
     def _db_item(self, row):
         id_ = self._main_data[row]
+        return self.db_item_from_id(id_)
+
+    def db_item_from_id(self, id_):
         db_item = self.db_mngr.get_item(self.db_map, self.item_type, id_)
         db_item["database"] = self.db_map.codename
         return db_item
@@ -209,7 +194,7 @@ class SingleParameterModel(MinimalTableModel):
         if self._selected_param_def_ids == set():
             return True
         param_def_id = self.db_mngr.get_value(
-            self.db_map, self.item_type, self._main_data[row], self.parameter_definition_id_key
+            self.db_map, self.item_type, self._main_data[row], self.parent().parameter_definition_id_key
         )
         return param_def_id in self._selected_param_def_ids
 
@@ -219,7 +204,7 @@ class SingleParameterModel(MinimalTableModel):
             return False
         db_item = self._db_item(row)
         for field, valid_ids in self._auto_filter.items():
-            id_key = self.get_id_key(field)
+            id_key = self.parent().get_id_key(field)
             if valid_ids and db_item.get(id_key) not in valid_ids:
                 return False
         return True
@@ -232,16 +217,12 @@ class SingleParameterModel(MinimalTableModel):
         """Returns a db item corresponding to the given field from the table header,
         or an empty dict if the field doesn't contain db items.
         """
-        if field not in self._field_to_item_id:
+        field_item_data = self.parent().get_field_item_data(field)
+        if field_item_data is None:
             return {}
-        id_key, item_type = self._field_to_item_id[field]
+        id_key, item_type = field_item_data
         item_id = db_item.get(id_key)
         return self.db_mngr.get_item(self.db_map, item_type, item_id)
-
-    def get_id_key(self, field):
-        if field not in self._field_to_item_id:
-            return None
-        return self._field_to_item_id[field][0]
 
 
 class SingleObjectParameterMixin:

@@ -380,23 +380,6 @@ class SpineDBManager(QObject):
             lambda db_map_data: self.cache_items("parameter value list", db_map_data)
         )
         self.parameter_tags_added.connect(lambda db_map_data: self.cache_items("parameter tag", db_map_data))
-        # Update in cache
-        self.alternatives_updated.connect(lambda db_map_data: self.cache_items("alternative", db_map_data))
-        self.object_classes_updated.connect(lambda db_map_data: self.cache_items("object class", db_map_data))
-        self.objects_updated.connect(lambda db_map_data: self.cache_items("object", db_map_data))
-        self.relationship_classes_updated.connect(
-            lambda db_map_data: self.cache_items("relationship class", db_map_data)
-        )
-        self.relationships_updated.connect(lambda db_map_data: self.cache_items("relationship", db_map_data))
-        self.parameter_definitions_updated.connect(
-            lambda db_map_data: self.cache_items("parameter definition", db_map_data)
-        )
-        self.parameter_values_updated.connect(lambda db_map_data: self.cache_items("parameter value", db_map_data))
-        self.parameter_value_lists_updated.connect(
-            lambda db_map_data: self.cache_items("parameter value list", db_map_data)
-        )
-        self.parameter_tags_updated.connect(lambda db_map_data: self.cache_items("parameter tag", db_map_data))
-        self.parameter_definition_tags_set.connect(self.cache_parameter_definition_tags)
         # Go from compact to extend format
         self._parameter_definitions_added.connect(self.do_add_parameter_definitions)
         self._parameter_definitions_updated.connect(self.do_update_parameter_definitions)
@@ -419,6 +402,7 @@ class SpineDBManager(QObject):
         self.parameter_definitions_removed.connect(self.cascade_remove_parameter_values_by_definition)
         self.alternatives_removed.connect(self.cascade_remove_parameter_values_by_alternative)
         # On cascade refresh
+        self.alternatives_updated.connect(self.cascade_refresh_alternatives)
         self.object_classes_updated.connect(self.cascade_refresh_relationship_classes)
         self.object_classes_updated.connect(self.cascade_refresh_parameter_definitions)
         self.object_classes_updated.connect(self.cascade_refresh_parameter_values_by_entity_class)
@@ -432,7 +416,26 @@ class SpineDBManager(QObject):
         self.parameter_value_lists_removed.connect(self.cascade_refresh_parameter_definitions_by_value_list)
         self.parameter_tags_updated.connect(self.cascade_refresh_parameter_definitions_by_tag)
         self.parameter_tags_removed.connect(self.cascade_refresh_parameter_definitions_by_tag)
-        # Remove from cache (last, because of how cascade removal works at the moment)
+        # Signaller (after add to cache, so items are there when listeners receive signals)
+        self.signaller.connect_signals()
+        # Update in cache (last, because we may want to see the un-updated version of the items one last time)
+        self.alternatives_updated.connect(lambda db_map_data: self.cache_items("alternative", db_map_data))
+        self.object_classes_updated.connect(lambda db_map_data: self.cache_items("object class", db_map_data))
+        self.objects_updated.connect(lambda db_map_data: self.cache_items("object", db_map_data))
+        self.relationship_classes_updated.connect(
+            lambda db_map_data: self.cache_items("relationship class", db_map_data)
+        )
+        self.relationships_updated.connect(lambda db_map_data: self.cache_items("relationship", db_map_data))
+        self.parameter_definitions_updated.connect(
+            lambda db_map_data: self.cache_items("parameter definition", db_map_data)
+        )
+        self.parameter_values_updated.connect(lambda db_map_data: self.cache_items("parameter value", db_map_data))
+        self.parameter_value_lists_updated.connect(
+            lambda db_map_data: self.cache_items("parameter value list", db_map_data)
+        )
+        self.parameter_tags_updated.connect(lambda db_map_data: self.cache_items("parameter tag", db_map_data))
+        self.parameter_definition_tags_set.connect(self.cache_parameter_definition_tags)
+        # Remove from cache (also last, because we may want to see the removed items one last time)
         self.object_classes_removed.connect(lambda db_map_data: self.uncache_items("object class", db_map_data))
         self.objects_removed.connect(lambda db_map_data: self.uncache_items("object", db_map_data))
         self.relationship_classes_removed.connect(
@@ -448,8 +451,6 @@ class SpineDBManager(QObject):
         )
         self.parameter_tags_removed.connect(lambda db_map_data: self.uncache_items("parameter tag", db_map_data))
         self.alternatives_removed.connect(lambda db_map_data: self.uncache_items("alternative", db_map_data))
-        # Do this last, so cache is ready when listeners receive signals
-        self.signaller.connect_signals()
 
     @Slot(object)
     def receive_error_msg(self, db_map_error_log):
@@ -1317,6 +1318,10 @@ class SpineDBManager(QObject):
         db_map_cascading_data = self.find_cascading_parameter_values_by_alternative(self._to_ids(db_map_data))
         if any(db_map_cascading_data.values()):
             self.parameter_values_removed.emit(db_map_cascading_data)
+
+    @Slot(object)
+    def cascade_refresh_alternatives(self, db_map_data):
+        pass
 
     @Slot(object)
     def cascade_refresh_relationship_classes(self, db_map_data):

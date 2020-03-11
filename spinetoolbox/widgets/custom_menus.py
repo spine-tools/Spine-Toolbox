@@ -22,7 +22,7 @@ from PySide2.QtGui import QIcon
 from PySide2.QtCore import QEvent, QPoint, Signal, Slot
 from ..helpers import fix_name_ambiguity
 from ..plotting import plot_pivot_column, plot_selection, PlottingError, PivotTablePlottingHints
-from .custom_qwidgets import SimpleFilterWidget, DBItemFilterWidget
+from .custom_qwidgets import SimpleFilterWidget, LazyFilterWidget, DataToValueFilterWidget
 from .plot_widget import PlotWidget
 from .report_plotting_failure import report_plotting_failure
 
@@ -575,7 +575,7 @@ class SimpleFilterMenu(FilterMenuBase):
             parent (DataStoreForm)
         """
         super().__init__(parent)
-        self._filter = SimpleFilterWidget(parent, show_empty=show_empty)
+        self._filter = SimpleFilterWidget(self, show_empty=show_empty)
         self._filter_action = QWidgetAction(parent)
         self._filter_action.setDefaultWidget(self._filter)
         self.addAction(self._filter_action)
@@ -589,15 +589,14 @@ class ParameterViewFilterMenu(FilterMenuBase):
 
     filterChanged = Signal(set, bool)
 
-    def __init__(self, parent, query_method, source_model, show_empty=True):
+    def __init__(self, parent, source_model, show_empty=True):
         """
         Args:
             parent (DataStoreForm)
-            query_method (method): the method to query model data
             source_model (CompoundParameterModel): a model to lazily get data from
         """
         super().__init__(parent)
-        self._filter = DBItemFilterWidget(self, query_method, source_model=source_model, show_empty=show_empty)
+        self._filter = LazyFilterWidget(self, source_model, show_empty=show_empty)
         self._filter_action = QWidgetAction(parent)
         self._filter_action.setDefaultWidget(self._filter)
         self.addAction(self._filter_action)
@@ -605,7 +604,6 @@ class ParameterViewFilterMenu(FilterMenuBase):
         self.aboutToShow.connect(self._filter.set_model)
 
     def emit_filter_changed(self, valid_values):
-        valid_values = [self._filter._filter_model._item_name(v) for v in valid_values]
         self.filterChanged.emit(valid_values, self._filter.has_filter())
 
 
@@ -614,22 +612,21 @@ class TabularViewFilterMenu(FilterMenuBase):
 
     filterChanged = Signal(int, set, bool)
 
-    def __init__(self, parent, identifier, query_method, show_empty=True):
+    def __init__(self, parent, identifier, data_to_value, show_empty=True):
         """
         Args:
             parent (DataStoreForm)
             identifier (int): index identifier
-            query_method (method): the method from SpineDBManager to query data
+            data_to_value (method): a method to translate item data to a value for display role
         """
         super().__init__(parent)
         self.identifier = identifier
-        self._filter = DBItemFilterWidget(parent, query_method, show_empty=show_empty)
+        self._filter = DataToValueFilterWidget(self, data_to_value, show_empty=show_empty)
         self._filter_action = QWidgetAction(parent)
         self._filter_action.setDefaultWidget(self._filter)
         self.addAction(self._filter_action)
         self.anchor = parent
         self.connect_signals()
-        self.aboutToShow.connect(self._filter.set_model)
 
     def emit_filter_changed(self, valid_values):
         self.filterChanged.emit(self.identifier, valid_values, self._filter.has_filter())

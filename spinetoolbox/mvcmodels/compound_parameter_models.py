@@ -58,97 +58,9 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         self._auto_filter_menus = {}
         self._auto_filter_menu_data = dict()  # Maps fields to auto filter data
         self._auto_filter = dict()  # Maps fields to (db_map, entity_id) to accepted field ids
-        self._field_query_method = self._make_field_query_method()
-
-    def _make_field_query_method(self):
-        """Returns a dictionary mapping field from the header, to a method that returns 'field' db items
-        given db_map and id. Used in creating ``ParameterViewFilterMenu``s for header fields.
-
-        Returns:
-            dict
-        """
-        get_field = self.db_mngr.get_field
-        get_value = self.db_mngr.get_value
-        return {
-            "object_class_name": lambda db_map, id_: get_field(db_map, "object class", id_, "name"),
-            "relationship_class_name": lambda db_map, id_: get_field(db_map, "relationship class", id_, "name"),
-            "object_class_name_list": lambda db_map, id_: get_field(
-                db_map, "relationship class", id_, "object_class_name_list"
-            ).replace(",", self.db_mngr._GROUP_SEP),
-            "object_name": lambda db_map, id_: get_field(db_map, "object", id_, "name"),
-            "object_name_list": lambda db_map, id_: get_field(db_map, "relationship", id_, "object_name_list").replace(
-                ",", self.db_mngr._GROUP_SEP
-            ),
-            "parameter_name": lambda db_map, id_: get_field(db_map, "parameter definition", id_, "parameter_name"),
-            "description": lambda db_map, id_: get_field(db_map, "parameter definition", id_, "description"),
-            "value_list_name": lambda db_map, id_: get_field(db_map, "parameter value list", id_, "name"),
-            "value": lambda db_map, id_: get_value(db_map, "parameter value", id_, "value"),
-            "default_value": lambda db_map, id_: get_value(db_map, "parameter definition", id_, "default_value"),
-            "alternative_id": lambda db_map, id_: get_field(db_map, "alternative", id_, "name"),
-            "database": lambda _, id_: id_,
-        }
 
     def _make_header(self):
         raise NotImplementedError()
-
-    def init_model(self):
-        """Initializes the model."""
-        super().init_model()
-        self._make_auto_filter_menus()
-
-    def _make_auto_filter_menus(self):
-        """Makes auto filter menus."""
-        self._auto_filter_menus.clear()
-        self._auto_filter_menu_data.clear()
-        for field in self.header:
-            query_method = self._field_query_method.get(field)
-            if query_method is None:
-                continue
-            self._auto_filter_menus[field] = menu = ParameterViewFilterMenu(
-                self.parent(), query_method, self, show_empty=False
-            )  # TODO: show_empty=True
-            menu.filterChanged.connect(
-                lambda values, has_filter, field=field: self.update_auto_filter(field, values, has_filter)
-            )
-
-    def get_auto_filter_menu(self, logical_index):
-        """Returns auto filter menu for given logical index from header view.
-
-        Args:
-            logical_index (int)
-
-        Returns:
-            ParameterViewFilterMenu
-        """
-        return self._auto_filter_menus.get(self.header[logical_index], None)
-
-    @busy_effect
-    def fetchMore(self, parent=QModelIndex()):
-        """Populates filter menus as submodels are fetched."""
-        super().fetchMore(parent=parent)
-        if not self._fetch_sub_model in self.single_models:
-            return
-        self._add_data_to_filter_menus(self._fetch_sub_model)
-
-    def _add_data_to_filter_menus(self, sub_model):
-        """Adds data from given sub-model to filter menus.
-
-        Args:
-            sub_model (SingleParameterModel)
-        """
-        db_items = sub_model.db_items()
-        db_map = sub_model.db_map
-        for field, menu in self._auto_filter_menus.items():
-            field_menu_data = self._auto_filter_menu_data.setdefault(field, {})
-            query_method = self._field_query_method[field]
-            id_key = sub_model.get_id_key(field)
-            for db_item in db_items:
-                item_id = db_item.get(id_key)
-                value = query_method(db_map, item_id)
-                # NOTE: we save the entity class id for quickly filtering out sub-models in `update_auto_filter`
-                field_menu_data.setdefault(value, {})[db_map, item_id] = sub_model.entity_class_id
-            filter_items = [list(items.keys())[0] for key, items in field_menu_data.items() if key is not None]
-            menu.add_items_to_filter_list(filter_items)
 
     @property
     def entity_class_type(self):
@@ -217,6 +129,178 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         return {"object class": "object_class_id", "relationship class": "relationship_class_id"}[
             self.entity_class_type
         ]
+
+    @property
+    def parameter_definition_id_key(self):
+        return {"parameter definition": "id", "parameter value": "parameter_id"}[self.item_type]
+
+    def _get_field_query_method(self, field):
+        """Returns a method for retrieving 'field' values given db_map and id.
+        Used in creating ``ParameterViewFilterMenu``s for header fields.
+
+        Args:
+            field (str): A field from the header
+
+        Returns:
+            method
+        """
+        get_field = self.db_mngr.get_field
+        get_value = self.db_mngr.get_value
+        return {
+            "object_class_name": lambda db_map, id_: get_field(db_map, "object class", id_, "name"),
+            "relationship_class_name": lambda db_map, id_: get_field(db_map, "relationship class", id_, "name"),
+            "object_class_name_list": lambda db_map, id_: get_field(
+                db_map, "relationship class", id_, "object_class_name_list"
+            ).replace(",", self.db_mngr._GROUP_SEP),
+            "object_name": lambda db_map, id_: get_field(db_map, "object", id_, "name"),
+            "object_name_list": lambda db_map, id_: get_field(db_map, "relationship", id_, "object_name_list").replace(
+                ",", self.db_mngr._GROUP_SEP
+            ),
+            "parameter_name": lambda db_map, id_: get_field(db_map, "parameter definition", id_, "parameter_name"),
+            "description": lambda db_map, id_: get_field(db_map, "parameter definition", id_, "description"),
+            "value_list_name": lambda db_map, id_: get_field(db_map, "parameter value list", id_, "name"),
+            "value": lambda db_map, id_: get_value(db_map, "parameter value", id_, "value"),
+            "default_value": lambda db_map, id_: get_value(db_map, "parameter definition", id_, "default_value"),
+            "alternative_id": lambda db_map, id_: get_field(db_map, "alternative", id_, "name"),
+            "database": lambda _, id_: id_,
+        }.get(field)
+
+    def get_field_item_data(self, field):
+        """Returns item data for given field.
+
+        Args:
+            field (str): A field from the header
+
+        Returns:
+            str, str
+        """
+        return {
+            "object_class_name": ("object_class_id", "object class"),
+            "relationship_class_name": ("relationship_class_id", "relationship class"),
+            "object_class_name_list": ("relationship_class_id", "relationship class"),
+            "object_name": ("object_id", "object"),
+            "object_name_list": ("relationship_id", "relationship"),
+            "parameter_name": (self.parameter_definition_id_key, "parameter definition"),
+            "value_list_name": ("value_list_id", "parameter value list"),
+            "description": ("id", "parameter definition"),
+            "value": ("id", "parameter value"),
+            "default_value": ("id", "parameter definition"),
+            "database": ("database", None),
+            "alternative_id": ("alternative_id", "alternative"),
+        }.get(field)
+
+    def get_id_key(self, field):
+        field_item_data = self.get_field_item_data(field)
+        if field_item_data is None:
+            return None
+        return field_item_data[0]
+
+    def init_model(self):
+        """Initializes the model."""
+        super().init_model()
+        self._make_auto_filter_menus()
+
+    def _make_auto_filter_menus(self):
+        """Makes auto filter menus."""
+        self._auto_filter_menus.clear()
+        self._auto_filter_menu_data.clear()
+        for field in self.header:
+            query_method = self._get_field_query_method(field)
+            if query_method is None:
+                continue
+            # TODO: show_empty=True
+            self._auto_filter_menus[field] = menu = ParameterViewFilterMenu(self.parent(), self, show_empty=False)
+            menu.filterChanged.connect(
+                lambda values, has_filter, field=field: self.update_auto_filter(field, values, has_filter)
+            )
+
+    def get_auto_filter_menu(self, logical_index):
+        """Returns auto filter menu for given logical index from header view.
+
+        Args:
+            logical_index (int)
+
+        Returns:
+            ParameterViewFilterMenu
+        """
+        return self._auto_filter_menus.get(self.header[logical_index], None)
+
+    @busy_effect
+    def fetchMore(self, parent=QModelIndex()):
+        """Populates filter menus as submodels are fetched."""
+        super().fetchMore(parent=parent)
+        if not self._fetch_sub_model in self.single_models:
+            return
+        self._add_data_to_filter_menus(self._fetch_sub_model)
+
+    def _add_data_to_filter_menus(self, sub_model):
+        """Adds data of given sub-model to filter menus.
+
+        Args:
+            sub_model (SingleParameterModel)
+        """
+        db_items = sub_model.db_items()
+        db_map = sub_model.db_map
+        self._do_add_data_to_filter_menus(db_map, db_items)
+
+    def _do_add_data_to_filter_menus(self, db_map, db_items):
+        """Adds data to filter menus.
+
+        Args:
+            db_map (DiffDatabaseMapping)
+            db_items (list(dict))
+        """
+        for field, menu in self._auto_filter_menus.items():
+            field_menu_data = self._auto_filter_menu_data.setdefault(field, {})
+            query_method = self._get_field_query_method(field)
+            id_key = self.get_id_key(field)
+            for db_item in db_items:
+                entity_class_id = db_item.get(self._entity_class_id_key)
+                item_id = db_item.get(id_key)
+                if item_id is None:
+                    continue
+                value = query_method(db_map, item_id)
+                field_menu_data.setdefault(value, []).append((db_map, entity_class_id, item_id))
+            new_items = list(field_menu_data.keys())
+            if None in new_items:
+                new_items.remove(None)
+            menu.add_items_to_filter_list(new_items)
+
+    def _do_update_data_in_filter_menus(self, db_map, db_items):
+        """Updates data in filter menus.
+
+        Args:
+            db_map (DiffDatabaseMapping)
+            db_items (list(dict))
+        """
+
+    def _do_remove_data_from_filter_menus(self, db_map, db_items):
+        """Removes data from filter menus.
+
+        Args:
+            db_map (DiffDatabaseMapping)
+            db_items (list(dict))
+        """
+        for field, menu in self._auto_filter_menus.items():
+            field_menu_data = self._auto_filter_menu_data.setdefault(field, {})
+            query_method = self._get_field_query_method(field)
+            id_key = self.get_id_key(field)
+            removed_items = list()
+            for db_item in db_items:
+                entity_class_id = db_item.get(self._entity_class_id_key)
+                item_id = db_item.get(id_key)
+                value = query_method(db_map, item_id)
+                if value is None or value not in field_menu_data:
+                    continue
+                items = field_menu_data[value]
+                if (db_map, entity_class_id, item_id) not in items:
+                    continue
+                items.remove((db_map, entity_class_id, item_id))
+                if not items:
+                    del field_menu_data[value]
+                    removed_items.append(value)
+            if removed_items:
+                menu.remove_items_from_filter_list(removed_items)
 
     def headerData(self, section, orientation=Qt.Horizontal, role=Qt.DisplayRole):
         """Returns an italic font in case the given column has an autofilter installed."""
@@ -387,9 +471,8 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
             return None  # You shall not pass
         auto_filter = {}
         for value in valid_values:
-            item_ids = field_menu_data[value]
-            for (db_map, id_), entity_class_id in item_ids.items():
-                auto_filter.setdefault(db_map, {}).setdefault(entity_class_id, []).append(id_)
+            for db_map, entity_class_id, item_id in field_menu_data[value]:
+                auto_filter.setdefault(db_map, {}).setdefault(entity_class_id, []).append(item_id)
         return auto_filter
 
     def update_compound_auto_filter(self, field, auto_filter):
@@ -461,19 +544,8 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         self.do_refresh()
         self.layoutChanged.emit()
 
-    def receive_parameter_data_updated(self, db_map_data):
-        """Runs when either parameter definitions or values are updated in the dbs.
-        Emits dataChanged so the parameter_name column is refreshed.
-
-        Args:
-            db_map_data (dict): list of updated dict-items keyed by DiffDatabaseMapping
-        """
-        self._emit_data_changed_for_column("parameter_name")
-        # TODO: parameter definition names aren't refreshed unless we emit dataChanged,
-        # whereas entity and class names don't need it. Why?
-
-    def _entity_ids_per_class_id(self, items):
-        """Returns a dict mapping entity class ids to a set of entity ids.
+    def _item_ids_per_class_id(self, items):
+        """Returns a dict mapping entity class ids to a set of item ids.
 
         Args:
             items (list)
@@ -489,26 +561,6 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
             d.setdefault(entity_class_id, list()).append(item["id"])
         return d
 
-    def receive_parameter_data_removed(self, db_map_data):
-        """Runs when either parameter definitions or values are removed from the dbs.
-        Removes the affected rows from the corresponding single models.
-
-        Args:
-            db_map_data (dict): list of removed dict-items keyed by DiffDatabaseMapping
-        """
-        self.layoutAboutToBeChanged.emit()
-        for db_map, items in db_map_data.items():
-            entity_ids_per_class_id = self._entity_ids_per_class_id(items)
-            for model in self._models_with_db_map(db_map):
-                removed_ids = entity_ids_per_class_id.get(model.entity_class_id)
-                if not removed_ids:
-                    continue
-                removed_rows = [row for row in range(model.rowCount()) if model._main_data[row] in removed_ids]
-                for row, count in sorted(rows_to_row_count_tuples(removed_rows), reverse=True):
-                    del model._main_data[row : row + count]
-        self.do_refresh()
-        self.layoutChanged.emit()
-
     def receive_parameter_data_added(self, db_map_data):
         """Runs when either parameter definitions or values are added to the dbs.
         Adds necessary sub-models and initializes them with data.
@@ -519,16 +571,54 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         """
         new_models = []
         for db_map, items in db_map_data.items():
-            entity_ids_per_class_id = self._entity_ids_per_class_id(items)
-            for entity_class_id, ids in entity_ids_per_class_id.items():
+            item_ids_per_class_id = self._item_ids_per_class_id(items)
+            for entity_class_id, ids in item_ids_per_class_id.items():
                 model = self._single_model_type(self, self.header, self.db_mngr, db_map, entity_class_id, lazy=False)
                 model.reset_model(ids)
                 single_row_map = super()._row_map_for_model(model)  # NOTE: super() is to get all (unfiltered) rows
                 self._insert_single_row_map(single_row_map)
                 new_models.append(model)
+            if item_ids_per_class_id:
+                self._do_add_data_to_filter_menus(db_map, items)
         pos = len(self.single_models)
         self.sub_models[pos:pos] = new_models
         self.empty_model.receive_parameter_data_added(db_map_data)
+
+    def receive_parameter_data_updated(self, db_map_data):
+        """Runs when either parameter definitions or values are updated in the dbs.
+        Emits dataChanged so the parameter_name column is refreshed.
+
+        Args:
+            db_map_data (dict): list of updated dict-items keyed by DiffDatabaseMapping
+        """
+        for db_map, items in db_map_data.items():
+            if any(self._entity_class_id_key in item for item in items):
+                self._do_update_data_in_filter_menus(db_map, items)
+        self._emit_data_changed_for_column("parameter_name")
+        # TODO: parameter definition names aren't refreshed unless we emit dataChanged,
+        # whereas entity and class names don't need it. Why?
+
+    def receive_parameter_data_removed(self, db_map_data):
+        """Runs when either parameter definitions or values are removed from the dbs.
+        Removes the affected rows from the corresponding single models.
+
+        Args:
+            db_map_data (dict): list of removed dict-items keyed by DiffDatabaseMapping
+        """
+        self.layoutAboutToBeChanged.emit()
+        for db_map, items in db_map_data.items():
+            item_ids_per_class_id = self._item_ids_per_class_id(items)
+            for model in self._models_with_db_map(db_map):
+                removed_ids = item_ids_per_class_id.get(model.entity_class_id)
+                if not removed_ids:
+                    continue
+                removed_rows = [row for row in range(model.rowCount()) if model._main_data[row] in removed_ids]
+                for row, count in sorted(rows_to_row_count_tuples(removed_rows), reverse=True):
+                    del model._main_data[row : row + count]
+            if item_ids_per_class_id:
+                self._do_remove_data_from_filter_menus(db_map, items)
+        self.do_refresh()
+        self.layoutChanged.emit()
 
     def _emit_data_changed_for_column(self, field):
         """Lazily emits data changed for an entire column.

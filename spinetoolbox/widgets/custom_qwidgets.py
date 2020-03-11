@@ -32,7 +32,11 @@ from PySide2.QtWidgets import (
 )
 from PySide2.QtCore import QTimer, Signal, Slot
 from PySide2.QtGui import QPainter
-from ..mvcmodels.filter_checkbox_list_model import SimpleFilterCheckboxListModel, DBItemFilterCheckboxListModel
+from ..mvcmodels.filter_checkbox_list_model import (
+    SimpleFilterCheckboxListModel,
+    LazyFilterCheckboxListModel,
+    DataToValueFilterCheckboxListModel,
+)
 
 
 class FilterWidgetBase(QWidget):
@@ -137,25 +141,37 @@ class SimpleFilterWidget(FilterWidgetBase):
             parent (QWidget)
         """
         super().__init__(parent)
-        self._filter_model = SimpleFilterCheckboxListModel(parent, show_empty=show_empty)
+        self._filter_model = SimpleFilterCheckboxListModel(self, show_empty=show_empty)
         self._filter_model.set_list(self._filter_state)
         self._ui_list.setModel(self._filter_model)
         self.connect_signals()
 
 
-class DBItemFilterWidget(FilterWidgetBase):
-    def __init__(self, parent, query_method, source_model=None, show_empty=True):
+class DataToValueFilterWidget(FilterWidgetBase):
+    def __init__(self, parent, data_to_value, show_empty=True):
+        """Init class.
+
+        Args:
+            parent (QWidget)
+            data_to_value (method): a method to translate item data to a value for display role
+        """
+        super().__init__(parent)
+        self._filter_model = DataToValueFilterCheckboxListModel(self, data_to_value, show_empty=show_empty)
+        self._filter_model.set_list(self._filter_state)
+        self._ui_list.setModel(self._filter_model)
+        self.connect_signals()
+
+
+class LazyFilterWidget(FilterWidgetBase):
+    def __init__(self, parent, source_model, show_empty=True):
         """Init class.
 
         Args:
             parent (DataStoreForm)
-            query_method (method): the method to query data
             source_model (CompoundParameterModel, optional): a model to lazily get data from
         """
         super().__init__(parent)
-        self._filter_model = DBItemFilterCheckboxListModel(
-            self, query_method, source_model=source_model, show_empty=show_empty
-        )
+        self._filter_model = LazyFilterCheckboxListModel(self, source_model, show_empty=show_empty)
         self._filter_model.set_list(self._filter_state)
         self.connect_signals()
 

@@ -141,13 +141,15 @@ class TestFilterCheckboxListModel(unittest.TestCase):
     def test_rowCount_when_filter(self):
         self.model.set_list(self.data)
         self.model.set_filter('b')
-        self.assertEqual(self.model.rowCount(), 5)
+        self.assertEqual(self.model.rowCount(), 3 + len(self.model._action_rows))
 
     def test_add_to_selection_when_filter(self):
         self.model.set_list(self.data)
         self.model.set_filter('b')
         self.assertFalse(self.model._add_to_selection)
-        self.assertEqual(self.model.data(self.model.index(1, 0), Qt.CheckStateRole), Qt.Unchecked)
+        self.assertEqual(
+            self.model.data(self.model.index(len(self.model._action_rows) - 1, 0), Qt.CheckStateRole), Qt.Unchecked
+        )
 
     def test_selected_when_filtered(self):
         self.model.set_list(self.data)
@@ -158,7 +160,7 @@ class TestFilterCheckboxListModel(unittest.TestCase):
     def test_get_data_when_filtered(self):
         self.model.set_list(self.data)
         self.model.set_filter('b')
-        self.assertEqual(self.model.data(self.model.index(2, 0)), 'b')
+        self.assertEqual(self.model.data(self.model.index(len(self.model._action_rows), 0)), 'b')
 
     def test_data_works_when_show_empty_is_unset(self):
         self.model = SimpleFilterCheckboxListModel(None, show_empty=False)
@@ -197,7 +199,7 @@ class TestFilterCheckboxListModel(unittest.TestCase):
         self.model.set_list(self.data)
         self.model.set_filter('b')
         with mock.patch("spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.dataChanged"):
-            index = self.model.index(2, 0)
+            index = self.model.index(len(self.model._action_rows), 0)
             self.model.click_index(index)
         self.assertEqual(self.model._selected_filtered, set(self.data[4:]))
         self.assertFalse(self.model._all_selected)
@@ -207,7 +209,7 @@ class TestFilterCheckboxListModel(unittest.TestCase):
         self.model.set_filter('b')
         self.model._selected_filtered.discard('b')
         with mock.patch("spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.dataChanged"):
-            index = self.model.index(2, 0)
+            index = self.model.index(len(self.model._action_rows), 0)
             self.model.click_index(index)
         self.assertEqual(self.model._selected_filtered, set(self.data[3:]))
         self.assertTrue(self.model._all_selected)
@@ -256,7 +258,7 @@ class TestFilterCheckboxListModel(unittest.TestCase):
         self.assertEqual(self.model._data_set, set(self.data + new_item))
         self.assertEqual(self.model._filter_index, [3, 4, 5, 6])
         self.assertEqual(self.model._selected_filtered, set(self.data[3:] + new_item))
-        self.assertEqual(self.model.data(self.model.index(3 + 2, 0)), new_item[0])
+        self.assertEqual(self.model.data(self.model.index(3 + len(self.model._action_rows), 0)), new_item[0])
 
     def test_add_item_with_select_with_filter_first(self):
         new_item = ['0b']
@@ -271,7 +273,7 @@ class TestFilterCheckboxListModel(unittest.TestCase):
         ):
             self.model.add_items(new_item)
         self.assertEqual(self.model._filter_index, [3, 4, 5, 6])
-        self.assertEqual(self.model.data(self.model.index(3 + 2, 0)), new_item[0])
+        self.assertEqual(self.model.data(self.model.index(3 + len(self.model._action_rows), 0)), new_item[0])
 
     def test_add_item_with_select_with_filter_middle(self):
         new_item = ['b1']
@@ -286,7 +288,7 @@ class TestFilterCheckboxListModel(unittest.TestCase):
         ):
             self.model.add_items(new_item)
         self.assertEqual(self.model._filter_index, [3, 4, 5, 6])
-        self.assertEqual(self.model.data(self.model.index(3 + 2, 0)), new_item[0])
+        self.assertEqual(self.model.data(self.model.index(3 + len(self.model._action_rows), 0)), new_item[0])
 
     def test_remove_items_data(self):
         items = set('a')
