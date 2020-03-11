@@ -802,7 +802,12 @@ class ToolboxUI(QMainWindow):
             self.msg.emit("Please create a new project or open an existing one first")
             return
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-        answer = QFileDialog.getOpenFileName(self, "Select Tool specification file", _program_root, "JSON (*.json)")
+        answer = QFileDialog.getOpenFileName(
+            self,
+            "Select Tool specification file",
+            self._project.project_dir,
+            "JSON (*.json)"
+        )
         if answer[0] == "":  # Cancel button clicked
             return
         def_file = os.path.abspath(answer[0])
