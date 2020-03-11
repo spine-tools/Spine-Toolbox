@@ -191,6 +191,8 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
             item_id = db_item["id"]
             identifier = (db_map, entity_class_id, item_id)
             value = db_map.codename if field == "database" else db_item[field]
+            if field in ("value", "default_value"):
+                value, _ = self.db_mngr.parse_value(value)
             if value not in field_menu_data:
                 field_menu_data[value] = [identifier]
                 return value
@@ -204,6 +206,8 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
             identifier = (db_map, entity_class_id, item_id)
             old_item = self.db_mngr.get_item(db_map, self.item_type, item_id)
             old_value = db_map.codename if field == "database" else old_item[field]
+            if field in ("value", "default_value"):
+                old_value, _ = self.db_mngr.parse_value(old_value)
             old_items = field_menu_data[old_value]
             old_items.remove(identifier)
             if not old_items:

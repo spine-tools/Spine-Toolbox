@@ -632,21 +632,25 @@ class SpineDBManager(QObject):
             return None
         key = "formatted_" + field
         if key not in item:
-            try:
-                parsed_value = from_database(item[field])
-            except ParameterValueFormatError as error:
-                display_data = "Error"
-                tool_tip_data = str(error)
-            else:
-                display_data = self._display_data(parsed_value)
-                tool_tip_data = self._tool_tip_data(parsed_value)
-            fm = QFontMetrics(QFont("", 0))
-            if isinstance(display_data, str):
-                display_data = fm.elidedText(display_data, Qt.ElideRight, 500)
-            if isinstance(tool_tip_data, str):
-                tool_tip_data = fm.elidedText(tool_tip_data, Qt.ElideRight, 800)
+            display_data, tool_tip_data = self.parse_value(item[field])
             item[key] = {Qt.DisplayRole: display_data, Qt.ToolTipRole: tool_tip_data, Qt.EditRole: str(item[field])}
         return item[key].get(role)
+
+    def parse_value(self, value):
+        try:
+            parsed_value = from_database(value)
+        except ParameterValueFormatError as error:
+            display_data = "Error"
+            tool_tip_data = str(error)
+        else:
+            display_data = self._display_data(parsed_value)
+            tool_tip_data = self._tool_tip_data(parsed_value)
+        fm = QFontMetrics(QFont("", 0))
+        if isinstance(display_data, str):
+            display_data = fm.elidedText(display_data, Qt.ElideRight, 500)
+        if isinstance(tool_tip_data, str):
+            tool_tip_data = fm.elidedText(tool_tip_data, Qt.ElideRight, 800)
+        return display_data, tool_tip_data
 
     @staticmethod
     def _display_data(parsed_value):
