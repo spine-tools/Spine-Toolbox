@@ -85,6 +85,10 @@ class SingleParameterModel(MinimalTableModel):
         }[self.entity_class_type][self.item_type]
 
     @property
+    def parameter_definition_id_key(self):
+        return {"parameter definition": "id", "parameter value": "parameter_id"}[self.item_type]
+
+    @property
     def can_be_filtered(self):
         return True
 
@@ -100,9 +104,7 @@ class SingleParameterModel(MinimalTableModel):
         return self.db_item_from_id(id_)
 
     def db_item_from_id(self, id_):
-        db_item = self.db_mngr.get_item(self.db_map, self.item_type, id_)
-        db_item["database"] = self.db_map.codename
-        return db_item
+        return self.db_mngr.get_item(self.db_map, self.item_type, id_)
 
     def db_items(self):
         return [self._db_item(row) for row in range(self.rowCount())]
@@ -125,6 +127,46 @@ class SingleParameterModel(MinimalTableModel):
         Reimplement in subclasses if you want to populate your model automatically.
         """
         raise NotImplementedError()
+
+    def get_field_item_data(self, field):
+        """Returns item data for given field.
+
+        Args:
+            field (str): A field from the header
+
+        Returns:
+            str, str
+        """
+        return {
+            "object_class_name": ("object_class_id", "object class"),
+            "relationship_class_name": ("relationship_class_id", "relationship class"),
+            "object_class_name_list": ("relationship_class_id", "relationship class"),
+            "object_name": ("object_id", "object"),
+            "object_name_list": ("relationship_id", "relationship"),
+            "parameter_name": (self.parameter_definition_id_key, "parameter definition"),
+            "value_list_name": ("value_list_id", "parameter value list"),
+            "description": ("id", "parameter definition"),
+            "value": ("id", "parameter value"),
+            "default_value": ("id", "parameter definition"),
+            "database": ("database", None),
+        }.get(field)
+
+    def get_id_key(self, field):
+        field_item_data = self.get_field_item_data(field)
+        if field_item_data is None:
+            return None
+        return field_item_data[0]
+
+    def get_field_item(self, field, db_item):
+        """Returns a db item corresponding to the given field from the table header,
+        or an empty dict if the field doesn't contain db items.
+        """
+        field_item_data = self.get_field_item_data(field)
+        if field_item_data is None:
+            return {}
+        id_key, item_type = field_item_data
+        item_id = db_item.get(id_key)
+        return self.db_mngr.get_item(self.db_map, item_type, item_id)
 
     def data(self, index, role=Qt.DisplayRole):
         """Gets the id and database for the row, and reads data from the db manager
@@ -188,7 +230,7 @@ class SingleParameterModel(MinimalTableModel):
         if self._selected_param_def_ids == set():
             return True
         param_def_id = self.db_mngr.get_value(
-            self.db_map, self.item_type, self._main_data[row], self.parent().parameter_definition_id_key
+            self.db_map, self.item_type, self._main_data[row], self.parameter_definition_id_key
         )
         return param_def_id in self._selected_param_def_ids
 
@@ -198,7 +240,7 @@ class SingleParameterModel(MinimalTableModel):
             return False
         db_item = self._db_item(row)
         for field, valid_ids in self._auto_filter.items():
-            id_key = self.parent().get_id_key(field)
+            id_key = self.get_id_key(field)
             if valid_ids and db_item.get(id_key) not in valid_ids:
                 return False
         return True
@@ -206,17 +248,6 @@ class SingleParameterModel(MinimalTableModel):
     def accepted_rows(self):
         """Returns a list of accepted rows, for convenience."""
         return [row for row in range(self.rowCount()) if self._filter_accepts_row(row)]
-
-    def get_field_item(self, field, db_item):
-        """Returns a db item corresponding to the given field from the table header,
-        or an empty dict if the field doesn't contain db items.
-        """
-        field_item_data = self.parent().get_field_item_data(field)
-        if field_item_data is None:
-            return {}
-        id_key, item_type = field_item_data
-        item_id = db_item.get(id_key)
-        return self.db_mngr.get_item(self.db_map, item_type, item_id)
 
 
 class SingleObjectParameterMixin:

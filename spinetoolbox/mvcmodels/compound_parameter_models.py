@@ -130,69 +130,6 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
             self.entity_class_type
         ]
 
-    @property
-    def parameter_definition_id_key(self):
-        return {"parameter definition": "id", "parameter value": "parameter_id"}[self.item_type]
-
-    def _get_field_query_method(self, field):
-        """Returns a method for retrieving 'field' values given db_map and id.
-        Used in creating ``ParameterViewFilterMenu``s for header fields.
-
-        Args:
-            field (str): A field from the header
-
-        Returns:
-            method
-        """
-        get_field = self.db_mngr.get_field
-        get_value = self.db_mngr.get_value
-        return {
-            "object_class_name": lambda db_map, id_: get_field(db_map, "object class", id_, "name"),
-            "relationship_class_name": lambda db_map, id_: get_field(db_map, "relationship class", id_, "name"),
-            "object_class_name_list": lambda db_map, id_: get_field(
-                db_map, "relationship class", id_, "object_class_name_list"
-            ).replace(",", self.db_mngr._GROUP_SEP),
-            "object_name": lambda db_map, id_: get_field(db_map, "object", id_, "name"),
-            "object_name_list": lambda db_map, id_: get_field(db_map, "relationship", id_, "object_name_list").replace(
-                ",", self.db_mngr._GROUP_SEP
-            ),
-            "parameter_name": lambda db_map, id_: get_field(db_map, "parameter definition", id_, "parameter_name"),
-            "description": lambda db_map, id_: get_field(db_map, "parameter definition", id_, "description"),
-            "value_list_name": lambda db_map, id_: get_field(db_map, "parameter value list", id_, "name"),
-            "value": lambda db_map, id_: get_value(db_map, "parameter value", id_, "value"),
-            "default_value": lambda db_map, id_: get_value(db_map, "parameter definition", id_, "default_value"),
-            "database": lambda _, id_: id_,
-        }.get(field)
-
-    def get_field_item_data(self, field):
-        """Returns item data for given field.
-
-        Args:
-            field (str): A field from the header
-
-        Returns:
-            str, str
-        """
-        return {
-            "object_class_name": ("object_class_id", "object class"),
-            "relationship_class_name": ("relationship_class_id", "relationship class"),
-            "object_class_name_list": ("relationship_class_id", "relationship class"),
-            "object_name": ("object_id", "object"),
-            "object_name_list": ("relationship_id", "relationship"),
-            "parameter_name": (self.parameter_definition_id_key, "parameter definition"),
-            "value_list_name": ("value_list_id", "parameter value list"),
-            "description": ("id", "parameter definition"),
-            "value": ("id", "parameter value"),
-            "default_value": ("id", "parameter definition"),
-            "database": ("database", None),
-        }.get(field)
-
-    def get_id_key(self, field):
-        field_item_data = self.get_field_item_data(field)
-        if field_item_data is None:
-            return None
-        return field_item_data[0]
-
     def init_model(self):
         """Initializes the model."""
         super().init_model()
@@ -203,9 +140,6 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         self._auto_filter_menus.clear()
         self._auto_filter_menu_data.clear()
         for field in self.header:
-            query_method = self._get_field_query_method(field)
-            if query_method is None:
-                continue
             # TODO: show_empty=True
             self._auto_filter_menus[field] = menu = ParameterViewFilterMenu(self.parent(), self, show_empty=False)
             menu.filterChanged.connect(
@@ -241,64 +175,65 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         db_map = sub_model.db_map
         self._do_add_data_to_filter_menus(db_map, db_items)
 
-    def _do_add_data_to_filter_menus(self, db_map, db_items):
-        """Adds data to filter menus.
+    def _modify_data_in_filter_menus(self, action, db_map, db_items):
+        """Modifies data in filter menus.
 
         Args:
+            action (str): either 'add', 'remove', or 'update'
             db_map (DiffDatabaseMapping)
             db_items (list(dict))
         """
+
+        def get_value_to_add(db_map, db_item, field, field_menu_data):
+            if action not in ("add", "update"):
+                return None
+            entity_class_id = db_item.get(self._entity_class_id_key)
+            item_id = db_item["id"]
+            identifier = (db_map, entity_class_id, item_id)
+            value = db_map.codename if field == "database" else db_item[field]
+            if value not in field_menu_data:
+                field_menu_data[value] = [identifier]
+                return value
+            field_menu_data[value].append(identifier)
+
+        def get_value_to_remove(db_map, db_item, field, field_menu_data):
+            if action not in ("remove", "update"):
+                return None
+            entity_class_id = db_item.get(self._entity_class_id_key)
+            item_id = db_item["id"]
+            identifier = (db_map, entity_class_id, item_id)
+            old_item = self.db_mngr.get_item(db_map, self.item_type, item_id)
+            old_value = db_map.codename if field == "database" else old_item[field]
+            old_items = field_menu_data[old_value]
+            old_items.remove(identifier)
+            if not old_items:
+                del field_menu_data[old_value]
+                return old_value
+
         for field, menu in self._auto_filter_menus.items():
+            values_to_add = list()
+            values_to_remove = list()
             field_menu_data = self._auto_filter_menu_data.setdefault(field, {})
-            query_method = self._get_field_query_method(field)
-            id_key = self.get_id_key(field)
             for db_item in db_items:
-                entity_class_id = db_item.get(self._entity_class_id_key)
-                item_id = db_item.get(id_key)
-                if item_id is None:
-                    continue
-                value = query_method(db_map, item_id)
-                field_menu_data.setdefault(value, []).append((db_map, entity_class_id, item_id))
-            new_items = list(field_menu_data.keys())
-            if None in new_items:
-                new_items.remove(None)
-            menu.add_items_to_filter_list(new_items)
+                to_add = get_value_to_add(db_map, db_item, field, field_menu_data)
+                to_remove = get_value_to_remove(db_map, db_item, field, field_menu_data)
+                if to_add is not None:
+                    values_to_add.append(to_add)
+                if to_remove is not None:
+                    values_to_remove.append(to_remove)
+            if values_to_add:
+                menu.add_items_to_filter_list(values_to_add)
+            if values_to_remove:
+                menu.remove_items_from_filter_list(values_to_remove)
+
+    def _do_add_data_to_filter_menus(self, db_map, db_items):
+        self._modify_data_in_filter_menus("add", db_map, db_items)
 
     def _do_update_data_in_filter_menus(self, db_map, db_items):
-        """Updates data in filter menus.
-
-        Args:
-            db_map (DiffDatabaseMapping)
-            db_items (list(dict))
-        """
+        self._modify_data_in_filter_menus("update", db_map, db_items)
 
     def _do_remove_data_from_filter_menus(self, db_map, db_items):
-        """Removes data from filter menus.
-
-        Args:
-            db_map (DiffDatabaseMapping)
-            db_items (list(dict))
-        """
-        for field, menu in self._auto_filter_menus.items():
-            field_menu_data = self._auto_filter_menu_data.setdefault(field, {})
-            query_method = self._get_field_query_method(field)
-            id_key = self.get_id_key(field)
-            removed_items = list()
-            for db_item in db_items:
-                entity_class_id = db_item.get(self._entity_class_id_key)
-                item_id = db_item.get(id_key)
-                value = query_method(db_map, item_id)
-                if value is None or value not in field_menu_data:
-                    continue
-                items = field_menu_data[value]
-                if (db_map, entity_class_id, item_id) not in items:
-                    continue
-                items.remove((db_map, entity_class_id, item_id))
-                if not items:
-                    del field_menu_data[value]
-                    removed_items.append(value)
-            if removed_items:
-                menu.remove_items_from_filter_list(removed_items)
+        self._modify_data_in_filter_menus("remove", db_map, db_items)
 
     def headerData(self, section, orientation=Qt.Horizontal, role=Qt.DisplayRole):
         """Returns an italic font in case the given column has an autofilter installed."""

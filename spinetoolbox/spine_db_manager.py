@@ -412,7 +412,7 @@ class SpineDBManager(QObject):
         self.parameter_tags_removed.connect(self.cascade_refresh_parameter_definitions_by_tag)
         # Signaller (after add to cache, so items are there when listeners receive signals)
         self.signaller.connect_signals()
-        # Update in cache (last, because we may want to see the un-updated version of the items one last time)
+        # Update in cache (last, because we may want to see the non-updated version of the items one last time)
         self.object_classes_updated.connect(lambda db_map_data: self.cache_items("object class", db_map_data))
         self.objects_updated.connect(lambda db_map_data: self.cache_items("object", db_map_data))
         self.relationship_classes_updated.connect(
@@ -1483,7 +1483,7 @@ class SpineDBManager(QObject):
             db_map_data (dict): lists of parameter definition items keyed by DiffDatabaseMapping
         """
         d = {
-            db_map: self.get_parameter_definitions(db_map, ids={x["id"] for x in items})
+            db_map: self.get_parameter_definitions(db_map, ids={x["id"] for x in items}, cache=False)
             for db_map, items in db_map_data.items()
         }
         self.parameter_definitions_added.emit(d)
@@ -1496,7 +1496,7 @@ class SpineDBManager(QObject):
             db_map_data (dict): lists of parameter value items keyed by DiffDatabaseMapping
         """
         d = {
-            db_map: self.get_parameter_values(db_map, ids={x["id"] for x in items})
+            db_map: self.get_parameter_values(db_map, ids={x["id"] for x in items}, cache=False)
             for db_map, items in db_map_data.items()
         }
         self.parameter_values_added.emit(d)
@@ -1509,7 +1509,7 @@ class SpineDBManager(QObject):
             db_map_data (dict): lists of parameter definition items keyed by DiffDatabaseMapping
         """
         d = {
-            db_map: self.get_parameter_definitions(db_map, ids={x["id"] for x in items})
+            db_map: self.get_parameter_definitions(db_map, ids={x["id"] for x in items}, cache=False)
             for db_map, items in db_map_data.items()
         }
         self.parameter_definitions_updated.emit(d)
@@ -1522,7 +1522,7 @@ class SpineDBManager(QObject):
             db_map_data (dict): lists of parameter value items keyed by DiffDatabaseMapping
         """
         d = {
-            db_map: self.get_parameter_values(db_map, ids={x["id"] for x in items})
+            db_map: self.get_parameter_values(db_map, ids={x["id"] for x in items}, cache=False)
             for db_map, items in db_map_data.items()
         }
         self.parameter_values_updated.emit(d)
