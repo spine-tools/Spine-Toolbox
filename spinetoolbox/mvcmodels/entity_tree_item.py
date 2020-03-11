@@ -419,6 +419,40 @@ class AlternativeClassItem(MultiDBTreeItem):
         return dict(alternative_name=self.display_name, database=self.first_db_map.codename)
 
 
+class ScenarioClassItem(MultiDBTreeItem):
+    item_type = "scenario root"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.context_menu_actions = [
+            {"Add scenarios": QIcon(":/icons/menu_icons/cubes_plus.svg")},
+            {"Edit scenarios": QIcon(":/icons/menu_icons/cube_pen.svg")},
+        ]
+
+    @property
+    def display_id(self):
+        """"See super class."""
+        return "scenario"
+
+    @property
+    def display_name(self):
+        """"See super class."""
+        return "Scenario"
+
+    def _get_children_ids(self, db_map):
+        """Returns a list of object ids in this class."""
+        return [x["id"] for x in self.db_mngr.get_items(db_map, "scenario")]
+
+    @property
+    def child_item_type(self):
+        """Returns an ObjectItem."""
+        return ScenarioItem
+
+    def default_parameter_data(self):
+        """Return data to put as default in a parameter table when this item is selected."""
+        return dict(scenario_name=self.display_name, database=self.first_db_map.codename)
+
+
 class EntityClassItem(MultiDBTreeItem):
     """An entity class item."""
 
@@ -550,6 +584,32 @@ class AlternativeItem(EntityItem):
     def default_parameter_data(self):
         """Return data to put as default in a parameter table when this item is selected."""
         return dict(alternative_name=self.display_name, database=self.first_db_map.codename)
+
+    def _get_children_ids(self, db_map):
+        """See base class."""
+        raise NotImplementedError()
+
+
+class ScenarioItem(EntityItem):
+    item_type = "scenario"
+
+    def __init__(self, *args, **kwargs):
+        """Overridden method to parse some data for convenience later.
+        Also make sure we never try to fetch this item."""
+        super().__init__(*args, **kwargs)
+        self._fetched = True
+        self.context_menu_actions = [
+            {"Edit scenarios": QIcon(":/icons/menu_icons/cubes_pen.svg")},
+            {"Remove selection": QIcon(":/icons/menu_icons/cubes_minus.svg")},
+        ]
+
+    def has_children(self):
+        """Returns false, this item never has children."""
+        return False
+
+    def default_parameter_data(self):
+        """Return data to put as default in a parameter table when this item is selected."""
+        return dict(scenario_name=self.display_name, database=self.first_db_map.codename)
 
     def _get_children_ids(self, db_map):
         """See base class."""

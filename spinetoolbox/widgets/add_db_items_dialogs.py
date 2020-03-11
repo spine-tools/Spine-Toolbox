@@ -116,6 +116,55 @@ class AddAlternativesDialog(AddItemsDialog):
         super().accept()
 
 
+class AddScenariosDialog(AddItemsDialog):
+    """A dialog to query user's preferences for new scenarios."""
+
+    def __init__(self, parent, db_mngr, *db_maps):
+        """Init class.
+
+        Args
+            parent (DataStoreForm)
+            db_mngr (SpineDBManager)
+            db_maps (iter) DiffDatabaseMapping instances
+        """
+        super().__init__(parent, db_mngr, *db_maps)
+        self.setWindowTitle("Add Scenarios")
+        self.model = EmptyRowModel(self)
+        self.table_view.setModel(self.model)
+        self.remove_rows_button.setIcon(QIcon(":/icons/menu_icons/cube_minus.svg"))
+        self.table_view.setItemDelegate(ManageAlternativesDelegate(self))
+        self.connect_signals()
+        self.model.set_horizontal_header_labels(['scenario name', 'description', 'databases'])
+        databases = ",".join(list(self.keyed_db_maps.keys()))
+        self.model.set_default_row(**{'databases': databases})
+        self.model.clear()
+
+    @Slot(name="accept")
+    def accept(self):
+        """Collect info from dialog and try to add items."""
+        db_map_data = dict()
+        for i in range(self.model.rowCount() - 1):  # last row will always be empty
+            row_data = self.model.row_data(i)
+            name, description, db_names = row_data
+            db_name_list = db_names.split(",")
+            try:
+                db_maps = [self.keyed_db_maps[x] for x in db_name_list]
+            except KeyError as e:
+                self.parent().msg_error.emit("Invalid database {0} at row {1}".format(e, i + 1))
+                return
+            if not name:
+                self.parent().msg_error.emit("Scenario name missing at row {0}".format(i + 1))
+                return
+            item = {'name': name, 'description': description}
+            for db_map in db_maps:
+                db_map_data.setdefault(db_map, []).append(item)
+        if not db_map_data:
+            self.parent().msg_error.emit("Nothing to add")
+            return
+        self.db_mngr.add_scenarios(db_map_data)
+        super().accept()
+
+
 class AddObjectClassesDialog(ShowIconColorEditorMixin, AddItemsDialog):
     """A dialog to query user's preferences for new object classes."""
 

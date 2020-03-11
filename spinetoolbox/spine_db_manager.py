@@ -67,6 +67,7 @@ class SpineDBManager(QObject):
     session_committed = Signal(set)
     session_rolled_back = Signal(set)
     # Added
+    scenarios_added = Signal(object)
     alternatives_added = Signal(object)
     object_classes_added = Signal(object)
     objects_added = Signal(object)
@@ -79,6 +80,7 @@ class SpineDBManager(QObject):
     parameter_value_lists_added = Signal(object)
     parameter_tags_added = Signal(object)
     # Removed
+    scenarios_removed = Signal(object)
     alternatives_removed = Signal(object)
     object_classes_removed = Signal(object)
     objects_removed = Signal(object)
@@ -89,6 +91,7 @@ class SpineDBManager(QObject):
     parameter_value_lists_removed = Signal(object)
     parameter_tags_removed = Signal(object)
     # Updated
+    scenarios_updated = Signal(object)
     alternatives_updated = Signal(object)
     object_classes_updated = Signal(object)
     objects_updated = Signal(object)
@@ -367,6 +370,7 @@ class SpineDBManager(QObject):
         # Error
         self.msg_error.connect(self.receive_error_msg)
         # Add to cache
+        self.scenarios_added.connect(lambda db_map_data: self.cache_items("scenario", db_map_data))
         self.alternatives_added.connect(lambda db_map_data: self.cache_items("alternative", db_map_data))
         self.object_classes_added.connect(lambda db_map_data: self.cache_items("object class", db_map_data))
         self.objects_added.connect(lambda db_map_data: self.cache_items("object", db_map_data))
@@ -419,6 +423,7 @@ class SpineDBManager(QObject):
         # Signaller (after add to cache, so items are there when listeners receive signals)
         self.signaller.connect_signals()
         # Update in cache (last, because we may want to see the un-updated version of the items one last time)
+        self.scenarios_updated.connect(lambda db_map_data: self.cache_items("scenario", db_map_data))
         self.alternatives_updated.connect(lambda db_map_data: self.cache_items("alternative", db_map_data))
         self.object_classes_updated.connect(lambda db_map_data: self.cache_items("object class", db_map_data))
         self.objects_updated.connect(lambda db_map_data: self.cache_items("object", db_map_data))
@@ -451,6 +456,7 @@ class SpineDBManager(QObject):
         )
         self.parameter_tags_removed.connect(lambda db_map_data: self.uncache_items("parameter tag", db_map_data))
         self.alternatives_removed.connect(lambda db_map_data: self.uncache_items("alternative", db_map_data))
+        self.scenarios_removed.connect(lambda db_map_data: self.uncache_items("scenario", db_map_data))
 
     @Slot(object)
     def receive_error_msg(self, db_map_error_log):
@@ -617,6 +623,7 @@ class SpineDBManager(QObject):
             "parameter value list": "get_parameter_value_lists",
             "parameter tag": "get_parameter_tags",
             "alternative": "get_alternatives",
+            "scenario": "get_scenarios",
         }
         method_name = method_name_dict.get(item_type)
         if not method_name:
@@ -698,6 +705,21 @@ class SpineDBManager(QObject):
         sort_key = lambda x: x["name"]
         items = sorted((x._asdict() for x in qry), key=sort_key)
         _ = cache and self.cache_items("alternative", {db_map: items})
+        return items
+
+    def get_scenarios(self, db_map, cache=True):
+        """Returns scenarios from database.
+
+        Args:
+            db_map (DiffDatabaseMapping)
+
+        Returns:
+            list: dictionary items
+        """
+        qry = db_map.query(db_map.scenario_sq)
+        sort_key = lambda x: x["name"]
+        items = sorted((x._asdict() for x in qry), key=sort_key)
+        _ = cache and self.cache_items("scenario", {db_map: items})
         return items
 
     def get_object_classes(self, db_map, cache=True):
@@ -959,6 +981,15 @@ class SpineDBManager(QObject):
         for db_map, data in db_map_data.items():
             self.undo_stack[db_map].push(AddItemsCommand(self, db_map, data, "alternative"))
 
+    def add_scenarios(self, db_map_data):
+        """Adds scenarios to db.
+
+        Args:
+            db_map_data (dict): lists of items to add keyed by DiffDatabaseMapping
+        """
+        for db_map, data in db_map_data.items():
+            self.undo_stack[db_map].push(AddItemsCommand(self, db_map, data, "scenario"))
+
     def add_object_classes(self, db_map_data):
         """Adds object classes to db.
 
@@ -1048,6 +1079,15 @@ class SpineDBManager(QObject):
         """
         for db_map, data in db_map_data.items():
             self.undo_stack[db_map].push(UpdateItemsCommand(self, db_map, data, "alternative"))
+
+    def update_scenarios(self, db_map_data):
+        """Updates object classes in db.
+
+        Args:
+            db_map_data (dict): lists of items to update keyed by DiffDatabaseMapping
+        """
+        for db_map, data in db_map_data.items():
+            self.undo_stack[db_map].push(UpdateItemsCommand(self, db_map, data, "scenario"))
 
     def update_object_classes(self, db_map_data):
         """Updates object classes in db.
@@ -1160,6 +1200,7 @@ class SpineDBManager(QObject):
         db_map_parameter_value_lists = dict()
         db_map_parameter_tags = dict()
         db_map_alternatives = dict()
+        db_map_scenarios = dict()
         error_log = dict()
         for db_map, items_per_type in db_map_typed_data.items():
             object_classes = items_per_type.get("object class", ())
@@ -1171,6 +1212,7 @@ class SpineDBManager(QObject):
             parameter_value_lists = items_per_type.get("parameter value list", ())
             parameter_tags = items_per_type.get("parameter tag", ())
             alternatives = items_per_type.get("alternative", ())
+            scenarios = items_per_type.get("scenario", ())
             try:
                 db_map.remove_items(
                     object_class_ids={x['id'] for x in object_classes},
@@ -1182,6 +1224,7 @@ class SpineDBManager(QObject):
                     parameter_value_list_ids={x['id'] for x in parameter_value_lists},
                     parameter_tag_ids={x['id'] for x in parameter_tags},
                     alternative_ids={x['id'] for x in alternatives},
+                    scenario_ids={x['id'] for x in scenarios},
                 )
             except SpineDBAPIError as err:
                 error_log[db_map] = err
@@ -1195,6 +1238,7 @@ class SpineDBManager(QObject):
             db_map_parameter_value_lists[db_map] = parameter_value_lists
             db_map_parameter_tags[db_map] = parameter_tags
             db_map_alternatives[db_map] = alternatives
+            db_map_scenarios[db_map] = scenarios
         if any(error_log.values()):
             self.msg_error.emit(error_log)
         if any(db_map_object_classes.values()):
@@ -1215,6 +1259,8 @@ class SpineDBManager(QObject):
             self.parameter_tags_removed.emit(db_map_parameter_tags)
         if any(db_map_alternatives.values()):
             self.alternatives_removed.emit(db_map_alternatives)
+        if any(db_map_scenarios.values()):
+            self.scenarios_removed.emit(db_map_scenarios)
 
     @staticmethod
     def _to_ids(db_map_data):

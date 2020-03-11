@@ -19,6 +19,7 @@ Contains the TreeViewMixin class.
 from PySide2.QtCore import Slot
 from .custom_menus import ObjectTreeContextMenu, RelationshipTreeContextMenu, AlternativeTreeContextMenu
 from .add_db_items_dialogs import (
+    AddScenariosDialog,
     AddAlternativesDialog,
     AddObjectClassesDialog,
     AddObjectsDialog,
@@ -26,6 +27,7 @@ from .add_db_items_dialogs import (
     AddRelationshipsDialog,
 )
 from .edit_db_items_dialogs import (
+    EditScenariosDialog,
     EditAlternativesDialog,
     EditObjectClassesDialog,
     EditObjectsDialog,
@@ -330,6 +332,10 @@ class TreeViewMixin:
             self.show_add_alternatives_form()
         elif option == "Edit alternatives":
             self.show_edit_alternatives_form()
+        elif option == "Add scenarios":
+            self.show_add_scenarios_form()
+        elif option == "Edit scenarios":
+            self.show_edit_scenarios_form()
         elif option == "Remove selection":
             self.show_remove_alternative_tree_items_form()
         else:  # No option selected
@@ -403,9 +409,15 @@ class TreeViewMixin:
         dialog.show()
 
     @Slot("bool")
-    def show_add_alternatives_form(self, checked=False, object_class_one_name=None):
+    def show_add_alternatives_form(self, checked=False):
         """Shows dialog to let user select preferences for new alternative."""
         dialog = AddAlternativesDialog(self, self.db_mngr, *self.db_maps)
+        dialog.show()
+
+    @Slot("bool")
+    def show_add_scenarios_form(self, checked=False):
+        """Shows dialog to let user select preferences for new scenario."""
+        dialog = AddScenariosDialog(self, self.db_mngr, *self.db_maps)
         dialog.show()
 
     @Slot("bool")
@@ -433,6 +445,12 @@ class TreeViewMixin:
     def show_edit_alternatives_form(self, checked=False):
         selected = {ind.internalPointer() for ind in self.alternative_tree_model.selected_alternative_indexes}
         dialog = EditAlternativesDialog(self, self.db_mngr, selected)
+        dialog.show()
+
+    @Slot("bool")
+    def show_edit_scenarios_form(self, checked=False):
+        selected = {ind.internalPointer() for ind in self.alternative_tree_model.selected_scenario_indexes}
+        dialog = EditScenariosDialog(self, self.db_mngr, selected)
         dialog.show()
 
     @Slot("bool")
@@ -504,6 +522,10 @@ class TreeViewMixin:
         super().receive_alternatives_added(db_map_data)
         self.alternative_tree_model.add_alternatives(db_map_data)
 
+    def receive_scenarios_added(self, db_map_data):
+        super().receive_scenarios_added(db_map_data)
+        self.alternative_tree_model.add_scenarios(db_map_data)
+
     def receive_object_classes_added(self, db_map_data):
         super().receive_object_classes_added(db_map_data)
         self.object_tree_model.add_object_classes(db_map_data)
@@ -526,6 +548,10 @@ class TreeViewMixin:
         super().receive_alternatives_updated(db_map_data)
         self.alternative_tree_model.update_alternatives(db_map_data)
 
+    def receive_scenarios_updated(self, db_map_data):
+        super().receive_scenarios_updated(db_map_data)
+        self.alternative_tree_model.update_scenarios(db_map_data)
+
     def receive_object_classes_updated(self, db_map_data):
         super().receive_object_classes_updated(db_map_data)
         self.object_tree_model.update_object_classes(db_map_data)
@@ -547,6 +573,10 @@ class TreeViewMixin:
     def receive_alternatives_removed(self, db_map_data):
         super().receive_alternatives_removed(db_map_data)
         self.alternative_tree_model.remove_alternatives(db_map_data)
+
+    def receive_scenarios_removed(self, db_map_data):
+        super().receive_scenarios_removed(db_map_data)
+        self.alternative_tree_model.remove_scenarios(db_map_data)
 
     def receive_object_classes_removed(self, db_map_data):
         super().receive_object_classes_removed(db_map_data)

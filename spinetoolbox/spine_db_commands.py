@@ -169,6 +169,7 @@ class CommandBase(QUndoCommand):
 
 class AddItemsCommand(CommandBase):
     _command_name = {
+        "scenario": "add scenarios",
         "alternative": "add alternatives",
         "object class": "add object classes",
         "object": "add objects",
@@ -180,6 +181,7 @@ class AddItemsCommand(CommandBase):
         "parameter tag": "add parameter tags",
     }
     _method_name = {
+        "scenario": "add_scenarios",
         "alternative": "add_alternatives",
         "object class": "add_object_classes",
         "object": "add_objects",
@@ -191,6 +193,7 @@ class AddItemsCommand(CommandBase):
         "parameter tag": "add_parameter_tags",
     }
     _redo_method_name = {
+        "scenario": "readd_scenarios",
         "alternative": "readd_alternatives",
         "object class": "readd_object_classes",
         "object": "readd_objects",
@@ -202,6 +205,7 @@ class AddItemsCommand(CommandBase):
         "parameter tag": "readd_parameter_tags",
     }
     _emit_signal_name = {
+        "scenario": "scenarios_added",
         "alternative": "alternatives_added",
         "object class": "object_classes_added",
         "object": "objects_added",
@@ -264,6 +268,7 @@ class AddCheckedParameterValuesCommand(AddItemsCommand):
 
 class UpdateItemsCommand(CommandBase):
     _command_name = {
+        "scenario": "update scenarios",
         "alternative": "update alternatives",
         "object class": "update object classes",
         "object": "update objects",
@@ -275,6 +280,7 @@ class UpdateItemsCommand(CommandBase):
         "parameter tag": "update parameter tags",
     }
     _method_name = {
+        "scenario": "update_scenarios",
         "alternative": "update_alternatives",
         "object class": "update_object_classes",
         "object": "update_objects",
@@ -286,6 +292,7 @@ class UpdateItemsCommand(CommandBase):
         "parameter tag": "update_parameter_tags",
     }
     _emit_signal_name = {
+        "scenario": "scenarios_updated",
         "alternative": "alternatives_updated",
         "object class": "object_classes_updated",
         "object": "objects_updated",
@@ -362,6 +369,7 @@ class SetParameterDefinitionTagsCommand(CommandBase):
 class RemoveItemsCommand(CommandBase):
 
     _undo_method_name = {
+        "scenario": "readd_scenarios",
         "alternative": "readd_alternatives",
         "object class": "readd_object_classes",
         "object": "readd_objects",
@@ -373,6 +381,7 @@ class RemoveItemsCommand(CommandBase):
         "parameter tag": "readd_parameter_tags",
     }
     _emit_signal_name = {
+        "scenario": "scenarios_added",
         "alternative": "alternatives_added",
         "object class": "object_classes_added",
         "object": "objects_added",

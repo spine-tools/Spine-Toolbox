@@ -519,6 +519,9 @@ class DataStoreFormBase(QMainWindow):
         msg = f"Successfully {action} {count} {item_type} item(s)"
         self.msg.emit(msg)
 
+    def receive_scenarios_added(self, db_map_data):
+        self.notify_items_changed("added", "scenarios", db_map_data)
+
     def receive_alternatives_added(self, db_map_data):
         self.notify_items_changed("added", "alternatives", db_map_data)
 
@@ -547,6 +550,9 @@ class DataStoreFormBase(QMainWindow):
     def receive_parameter_tags_added(self, db_map_data):
         self.notify_items_changed("added", "parameter tag", db_map_data)
         self.parameter_tag_toolbar.receive_parameter_tags_added(db_map_data)
+
+    def receive_scenarios_updated(self, db_map_data):
+        self.notify_items_changed("updated", "scenarios", db_map_data)
 
     def receive_alternatives_updated(self, db_map_data):
         self.notify_items_changed("updated", "alternatives", db_map_data)
@@ -579,6 +585,9 @@ class DataStoreFormBase(QMainWindow):
 
     def receive_parameter_definition_tags_set(self, db_map_data):
         self.notify_items_changed("set", "parameter definition tag", db_map_data)
+
+    def receive_scenarios_removed(self, db_map_data):
+        self.notify_items_changed("removed", "scenarios", db_map_data)
 
     def receive_alternatives_removed(self, db_map_data):
         self.notify_items_changed("removed", "alternatives", db_map_data)

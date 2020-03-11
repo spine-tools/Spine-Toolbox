@@ -18,6 +18,8 @@ Models to represent entities in a tree.
 from PySide2.QtCore import Qt, Signal, QModelIndex
 from PySide2.QtGui import QIcon
 from .entity_tree_item import (
+    ScenarioItem,
+    ScenarioClassItem,
     AlternativeClassItem,
     AlternativeItem,
     ObjectTreeRootItem,
@@ -128,6 +130,8 @@ class AlternativeTreeModel(EntityTreeModel):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.remove_icon = QIcon(":/icons/menu_icons/cube_minus.svg")
+        self._alternative_root = None
+        self._scenario_root = None
 
     @property
     def root_item_type(self):
@@ -137,17 +141,46 @@ class AlternativeTreeModel(EntityTreeModel):
     def selected_alternative_indexes(self):
         return self.selected_indexes.get(AlternativeItem, {})
 
+    @property
+    def selected_scenario_indexes(self):
+        return self.selected_indexes.get(ScenarioItem, {})
+
+    def build_tree(self):
+        """Builds tree."""
+        self.beginResetModel()
+        self._invisible_root_item = TreeItem(self)
+        self.endResetModel()
+        self.selected_indexes.clear()
+        self._alternative_root = None
+        self._root_item = self._invisible_root_item
+        self._alternative_root = AlternativeClassItem(self, dict.fromkeys(self.db_maps))
+        self._scenario_root = ScenarioClassItem(self, dict.fromkeys(self.db_maps))
+        self._invisible_root_item.append_children(self._alternative_root)
+        self._invisible_root_item.append_children(self._scenario_root)
+
+    def add_scenarios(self, db_map_data):
+        db_map_ids = {db_map: {x["id"] for x in data} for db_map, data in db_map_data.items()}
+        self._scenario_root.append_children_by_id(db_map_ids)
+
     def add_alternatives(self, db_map_data):
         db_map_ids = {db_map: {x["id"] for x in data} for db_map, data in db_map_data.items()}
-        self.root_item.append_children_by_id(db_map_ids)
+        self._alternative_root.append_children_by_id(db_map_ids)
 
     def update_alternatives(self, db_map_data):
         db_map_ids = {db_map: {x["id"] for x in data} for db_map, data in db_map_data.items()}
-        self.root_item.update_children_by_id(db_map_ids)
+        self._alternative_root.update_children_by_id(db_map_ids)
+
+    def update_scenarios(self, db_map_data):
+        db_map_ids = {db_map: {x["id"] for x in data} for db_map, data in db_map_data.items()}
+        self._scenario_root.update_children_by_id(db_map_ids)
 
     def remove_alternatives(self, db_map_data):
         db_map_ids = {db_map: {x["id"] for x in data} for db_map, data in db_map_data.items()}
-        self.root_item.remove_children_by_id(db_map_ids)
+        self._alternative_root.remove_children_by_id(db_map_ids)
+
+    def remove_scenarios(self, db_map_data):
+        db_map_ids = {db_map: {x["id"] for x in data} for db_map, data in db_map_data.items()}
+        self._scenario_root.remove_children_by_id(db_map_ids)
 
 
 class ObjectTreeModel(EntityTreeModel):

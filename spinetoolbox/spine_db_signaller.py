@@ -49,6 +49,7 @@ class SpineDBSignaller:
     def connect_signals(self):
         """Connects signals."""
         # Added
+        self.db_mngr.scenarios_added.connect(self.receive_scenarios_added)
         self.db_mngr.alternatives_added.connect(self.receive_alternatives_added)
         self.db_mngr.object_classes_added.connect(self.receive_object_classes_added)
         self.db_mngr.objects_added.connect(self.receive_objects_added)
@@ -59,6 +60,7 @@ class SpineDBSignaller:
         self.db_mngr.parameter_value_lists_added.connect(self.receive_parameter_value_lists_added)
         self.db_mngr.parameter_tags_added.connect(self.receive_parameter_tags_added)
         # Updated
+        self.db_mngr.scenarios_updated.connect(self.receive_scenarios_updated)
         self.db_mngr.alternatives_updated.connect(self.receive_alternatives_updated)
         self.db_mngr.object_classes_updated.connect(self.receive_object_classes_updated)
         self.db_mngr.objects_updated.connect(self.receive_objects_updated)
@@ -70,6 +72,7 @@ class SpineDBSignaller:
         self.db_mngr.parameter_tags_updated.connect(self.receive_parameter_tags_updated)
         self.db_mngr.parameter_definition_tags_set.connect(self.receive_parameter_definition_tags_set)
         # Removed
+        self.db_mngr.scenarios_removed.connect(self.receive_scenarios_removed)
         self.db_mngr.alternatives_removed.connect(self.receive_alternatives_removed)
         self.db_mngr.object_classes_removed.connect(self.receive_object_classes_removed)
         self.db_mngr.objects_removed.connect(self.receive_objects_removed)
@@ -87,6 +90,13 @@ class SpineDBSignaller:
     @staticmethod
     def _shared_db_map_data(db_map_data, db_maps):
         return {db_map: data for db_map, data in db_map_data.items() if db_map in db_maps}
+
+    @Slot(object)
+    def receive_scenarios_added(self, db_map_data):
+        for listener, db_maps in self.listeners.items():
+            shared_db_map_data = self._shared_db_map_data(db_map_data, db_maps)
+            if shared_db_map_data:
+                listener.receive_scenarios_added(shared_db_map_data)
 
     @Slot(object)
     def receive_alternatives_added(self, db_map_data):
@@ -150,6 +160,13 @@ class SpineDBSignaller:
             shared_db_map_data = self._shared_db_map_data(db_map_data, db_maps)
             if shared_db_map_data:
                 listener.receive_parameter_tags_added(shared_db_map_data)
+
+    @Slot(object)
+    def receive_scenarios_updated(self, db_map_data):
+        for listener, db_maps in self.listeners.items():
+            shared_db_map_data = self._shared_db_map_data(db_map_data, db_maps)
+            if shared_db_map_data:
+                listener.receive_scenarios_updated(shared_db_map_data)
 
     @Slot(object)
     def receive_alternatives_updated(self, db_map_data):
@@ -220,6 +237,13 @@ class SpineDBSignaller:
             shared_db_map_data = self._shared_db_map_data(db_map_data, db_maps)
             if shared_db_map_data:
                 listener.receive_parameter_definition_tags_set(shared_db_map_data)
+
+    @Slot(object)
+    def receive_scenarios_removed(self, db_map_data):
+        for listener, db_maps in self.listeners.items():
+            shared_db_map_data = self._shared_db_map_data(db_map_data, db_maps)
+            if shared_db_map_data:
+                listener.receive_scenarios_removed(shared_db_map_data)
 
     @Slot(object)
     def receive_alternatives_removed(self, db_map_data):
