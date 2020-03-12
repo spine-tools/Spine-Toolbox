@@ -7,7 +7,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 ### Added
 - Undo/Redo in Design View
 - It is now possible to add new plots to existing plot windows in Data Store View.
-- Objects in Tree View are sorted alphabetically
+- Objects in Data Store's Tree View are sorted alphabetically
 
 ### Changed
 - The graph view behavior has changed. Now selecting objects in the object tree not only shows those objects but also 
@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 ### Fixed
 - Bug fixes for Data Store View
   - Disappearing object names in entity graph
+  - Spine db manager error dialogs
 - Tool configuration assistant for SpineModel.jl
 
 ## [0.4.0-beta.6] - 2020-03-04
@@ -26,10 +27,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
   data types at once.
 - Provide data for EditRole for nicer editor experience in MappingSpecModel.
 - Red background is displayed for invalid values in MappingSpecModel
-- Tooltips for items in Data Store's Tabular view and Tree view
+- Object tooltips now show the descriptions Data Store view's
 
 ### Fixed
-- A problem with displaying special characters in Process Log when executing the Importer project item.
+- [win-x64] A problem with displaying special characters in Process Log when executing the Importer project item.
 - The context menu in Graph view's pivot table resulted in a traceback when an entity class did not 
   have parameter definitions.
 - Combobox delegate in Import preview window had wrong list of choices.
@@ -47,18 +48,17 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 ## [0.4.0-beta.4] - 2020-02-27
 ### Fixed
 - Importer now uses QProcessExecutionManager for running the importer_program.py
-- Importer checks if the Python executable in Settings is valid before trying to start
+- [win-x64] Importer checks if the Python executable in Settings is valid before trying to start
   the importer_program.py
 
 ## [0.4.0-beta.3] - 2020-02-25
 ### Fixed
-- Executing the Importer project item has been fixed on Windows release version. I.e.
-  running import_program.py now works if Python executable is set up correctly in 
-  Settings.
+- [win-x64] Executing the Importer project item. I.e. running import_program.py 
+  now works if Python executable is set up correctly in Settings.
 
 ## [0.4.0-beta.2] - 2020-02-18
 ### Fixed
-- Executing Julia tools in the embedded Julia Console for Windows release versions
+- [win-x64] Executing Julia tools in the embedded Julia Console
 
 ## [0.4.0-beta.1] - 2020-02-18
 ### Fixed
