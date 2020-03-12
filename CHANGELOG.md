@@ -64,6 +64,21 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 ## [0.4.0-beta.0] - 2020-02-17
 
 ### Added
+- Undo/Redo in Design View
+- It is now possible to add new plots to existing plot windows in Data Store View.
+
+### Changed
+- The graph view behavior has changed. Now selecting objects in the object tree not only shows those objects but also 
+  all the cascading relationships. This is to facilitate exploring the system without a previous knowledge.
+
+### Deprecated
+### Removed
+### Fixed
+### Security
+
+## [0.4.0.beta.0] - 2020-02-17
+
+### Added
 - A small notification icon is painted next to project items in the design view whenever they are missing some
   configuration. Hovering the icon shows tips for completing the configuration.
 - A small icon is painted next to the project items in the design view to show the order in which they will be
@@ -105,7 +120,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
   The corresponding category *Data Importers* was renamed to *Importers*.
 - The status bar of the Data store view is gone. Instead, notifications are printed in a box on the right side of
   the form.
-- Tree, graph, and tabular views have been merged into one consolidated view. You can chose your preferred style
+- Tree, graph, and tabular views have been merged into one consolidated view. You can choose your preferred style
   from the View menu.
 
 ### Deprecated
@@ -116,6 +131,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 ### Fixed
 - Data advertised by a project item during execution is only accessible by its direct children.
   In other words, resources are passed to the next items in line but not beyond.
+- Executing the Importer project item has been fixed on Windows release version
 
 ### Security
 

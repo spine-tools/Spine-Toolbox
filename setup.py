@@ -47,6 +47,7 @@ requirements = [
     "pandas >= 0.24.0",
     "jsonschema == 2.6",
     "gdx2py >= 2.0.4",
+    "ijson >= 2.6.1",
 ]
 
 setup(
@@ -58,17 +59,12 @@ setup(
     author_email="spine_info@vtt.fi",
     url="https://github.com/Spine-project/Spine-Toolbox",
     packages=find_packages(),
-    entry_points={
-        "console_scripts": [
-            "spinetoolbox=spinetoolbox.main:main"
-        ]
-    },
+    entry_points={"console_scripts": ["spinetoolbox=spinetoolbox.main:main"]},
     include_package_data=True,
     license="LGPL-3.0-or-later",
     zip_safe=False,
     keywords="",
-    classifiers=[
-    ],
+    classifiers=[],
     python_requires='>=3.6, <3.8',
     install_requires=requirements,
     test_suite="tests",

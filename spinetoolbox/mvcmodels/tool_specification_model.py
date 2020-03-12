@@ -78,7 +78,7 @@ class ToolSpecificationModel(QAbstractListModel):
         Returns:
             Void
         """
-        if not row:
+        if row is None:
             row = self.rowCount()
         self.beginInsertRows(parent, row, row)
         self._tools.insert(row, tool)
@@ -102,12 +102,12 @@ class ToolSpecificationModel(QAbstractListModel):
         self.endRemoveRows()
         return True
 
-    def update_tool_specification(self, tool, row):
+    def update_tool_specification(self, row, tool):
         """Update tool specification.
 
         Args:
-            tool (ToolSpecification): new tool, to replace the old one
             row (int): Position of the tool to be updated
+            tool (ToolSpecification): new tool, to replace the old one
 
         Returns:
             Boolean value depending on the result of the operation

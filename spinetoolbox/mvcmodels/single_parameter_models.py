@@ -97,8 +97,17 @@ class SingleParameterModel(MinimalTableModel):
         return False
 
     def db_item(self, index):
-        id_ = self._main_data[index.row()]
+        return self._db_item(index.row())
+
+    def _db_item(self, row):
+        id_ = self._main_data[row]
+        return self.db_item_from_id(id_)
+
+    def db_item_from_id(self, id_):
         return self.db_mngr.get_item(self.db_map, self.item_type, id_)
+
+    def db_items(self):
+        return [self._db_item(row) for row in range(self.rowCount())]
 
     def flags(self, index):
         """Make fixed indexes non-editable."""
@@ -118,6 +127,46 @@ class SingleParameterModel(MinimalTableModel):
         Reimplement in subclasses if you want to populate your model automatically.
         """
         raise NotImplementedError()
+
+    def get_field_item_data(self, field):
+        """Returns item data for given field.
+
+        Args:
+            field (str): A field from the header
+
+        Returns:
+            str, str
+        """
+        return {
+            "object_class_name": ("object_class_id", "object class"),
+            "relationship_class_name": ("relationship_class_id", "relationship class"),
+            "object_class_name_list": ("relationship_class_id", "relationship class"),
+            "object_name": ("object_id", "object"),
+            "object_name_list": ("relationship_id", "relationship"),
+            "parameter_name": (self.parameter_definition_id_key, "parameter definition"),
+            "value_list_name": ("value_list_id", "parameter value list"),
+            "description": ("id", "parameter definition"),
+            "value": ("id", "parameter value"),
+            "default_value": ("id", "parameter definition"),
+            "database": ("database", None),
+        }.get(field)
+
+    def get_id_key(self, field):
+        field_item_data = self.get_field_item_data(field)
+        if field_item_data is None:
+            return None
+        return field_item_data[0]
+
+    def get_field_item(self, field, db_item):
+        """Returns a db item corresponding to the given field from the table header,
+        or an empty dict if the field doesn't contain db items.
+        """
+        field_item_data = self.get_field_item_data(field)
+        if field_item_data is None:
+            return {}
+        id_key, item_type = field_item_data
+        item_id = db_item.get(id_key)
+        return self.db_mngr.get_item(self.db_map, item_type, item_id)
 
     def data(self, index, role=Qt.DisplayRole):
         """Gets the id and database for the row, and reads data from the db manager
@@ -139,7 +188,12 @@ class SingleParameterModel(MinimalTableModel):
                     return description
             if field in self.json_fields:
                 return self.db_mngr.get_value(self.db_map, self.item_type, id_, field, role)
-            data = self.db_mngr.get_item(self.db_map, self.item_type, id_).get(field)
+            item = self.db_mngr.get_item(self.db_map, self.item_type, id_)
+            if role == Qt.ToolTipRole:
+                description = self.get_field_item(field, item).get("description", None)
+                if description not in (None, ""):
+                    return description
+            data = item.get(field)
             if role == Qt.DisplayRole and data and field in self.group_fields:
                 data = data.replace(",", self.db_mngr._GROUP_SEP)
             return data
@@ -186,8 +240,11 @@ class SingleParameterModel(MinimalTableModel):
 
     def _auto_filter_accepts_row(self, row):
         """Applies the autofilter, defined by the autofilter drop down menu."""
-        for column, values in self._auto_filter.items():
-            if values and self.index(row, column).data() not in values:
+        if self._auto_filter is None:
+            return False
+        item_id = self._main_data[row]
+        for valid_ids in self._auto_filter.values():
+            if valid_ids and item_id not in valid_ids:
                 return False
         return True
 

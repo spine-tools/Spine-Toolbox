@@ -28,6 +28,7 @@ from spinedb_api import (
     ParameterValueFormatError,
     DateTime,
     Duration,
+    Map,
     TimePattern,
     TimeSeries,
     TimeSeriesFixedResolution,
@@ -375,22 +376,6 @@ class SpineDBManager(QObject):
             lambda db_map_data: self.cache_items("parameter value list", db_map_data)
         )
         self.parameter_tags_added.connect(lambda db_map_data: self.cache_items("parameter tag", db_map_data))
-        # Update in cache
-        self.object_classes_updated.connect(lambda db_map_data: self.cache_items("object class", db_map_data))
-        self.objects_updated.connect(lambda db_map_data: self.cache_items("object", db_map_data))
-        self.relationship_classes_updated.connect(
-            lambda db_map_data: self.cache_items("relationship class", db_map_data)
-        )
-        self.relationships_updated.connect(lambda db_map_data: self.cache_items("relationship", db_map_data))
-        self.parameter_definitions_updated.connect(
-            lambda db_map_data: self.cache_items("parameter definition", db_map_data)
-        )
-        self.parameter_values_updated.connect(lambda db_map_data: self.cache_items("parameter value", db_map_data))
-        self.parameter_value_lists_updated.connect(
-            lambda db_map_data: self.cache_items("parameter value list", db_map_data)
-        )
-        self.parameter_tags_updated.connect(lambda db_map_data: self.cache_items("parameter tag", db_map_data))
-        self.parameter_definition_tags_set.connect(self.cache_parameter_definition_tags)
         # Go from compact to extend format
         self._parameter_definitions_added.connect(self.do_add_parameter_definitions)
         self._parameter_definitions_updated.connect(self.do_update_parameter_definitions)
@@ -425,7 +410,25 @@ class SpineDBManager(QObject):
         self.parameter_value_lists_removed.connect(self.cascade_refresh_parameter_definitions_by_value_list)
         self.parameter_tags_updated.connect(self.cascade_refresh_parameter_definitions_by_tag)
         self.parameter_tags_removed.connect(self.cascade_refresh_parameter_definitions_by_tag)
-        # Remove from cache (last, because of how cascade removal works at the moment)
+        # Signaller (after add to cache, so items are there when listeners receive signals)
+        self.signaller.connect_signals()
+        # Update in cache (last, because we may want to see the non-updated version of the items one last time)
+        self.object_classes_updated.connect(lambda db_map_data: self.cache_items("object class", db_map_data))
+        self.objects_updated.connect(lambda db_map_data: self.cache_items("object", db_map_data))
+        self.relationship_classes_updated.connect(
+            lambda db_map_data: self.cache_items("relationship class", db_map_data)
+        )
+        self.relationships_updated.connect(lambda db_map_data: self.cache_items("relationship", db_map_data))
+        self.parameter_definitions_updated.connect(
+            lambda db_map_data: self.cache_items("parameter definition", db_map_data)
+        )
+        self.parameter_values_updated.connect(lambda db_map_data: self.cache_items("parameter value", db_map_data))
+        self.parameter_value_lists_updated.connect(
+            lambda db_map_data: self.cache_items("parameter value list", db_map_data)
+        )
+        self.parameter_tags_updated.connect(lambda db_map_data: self.cache_items("parameter tag", db_map_data))
+        self.parameter_definition_tags_set.connect(self.cache_parameter_definition_tags)
+        # Remove from cache (also last, because we may want to see the removed items one last time)
         self.object_classes_removed.connect(lambda db_map_data: self.uncache_items("object class", db_map_data))
         self.objects_removed.connect(lambda db_map_data: self.uncache_items("object", db_map_data))
         self.relationship_classes_removed.connect(
@@ -440,8 +443,6 @@ class SpineDBManager(QObject):
             lambda db_map_data: self.uncache_items("parameter value list", db_map_data)
         )
         self.parameter_tags_removed.connect(lambda db_map_data: self.uncache_items("parameter tag", db_map_data))
-        # Do this last, so cache is ready when listeners receive signals
-        self.signaller.connect_signals()
 
     @Slot(object)
     def receive_error_msg(self, db_map_error_log):
@@ -613,6 +614,9 @@ class SpineDBManager(QObject):
             return []
         return getattr(self, method_name)(db_map)
 
+    def get_field(self, db_map, item_type, id_, field):
+        return self.get_item(db_map, item_type, id_).get(field)
+
     def get_value(self, db_map, item_type, id_, field, role=Qt.DisplayRole):
         """Returns the value or default value of a parameter.
 
@@ -628,27 +632,33 @@ class SpineDBManager(QObject):
             return None
         key = "formatted_" + field
         if key not in item:
-            try:
-                parsed_value = from_database(item[field])
-            except ParameterValueFormatError as error:
-                display_data = "Error"
-                tool_tip_data = str(error)
-            else:
-                display_data = self._display_data(parsed_value)
-                tool_tip_data = self._tool_tip_data(parsed_value)
-            fm = QFontMetrics(QFont("", 0))
-            if isinstance(display_data, str):
-                display_data = fm.elidedText(display_data, Qt.ElideRight, 500)
-            if isinstance(tool_tip_data, str):
-                tool_tip_data = fm.elidedText(tool_tip_data, Qt.ElideRight, 800)
+            display_data, tool_tip_data = self.parse_value(item[field])
             item[key] = {Qt.DisplayRole: display_data, Qt.ToolTipRole: tool_tip_data, Qt.EditRole: str(item[field])}
         return item[key].get(role)
+
+    def parse_value(self, value):
+        try:
+            parsed_value = from_database(value)
+        except ParameterValueFormatError as error:
+            display_data = "Error"
+            tool_tip_data = str(error)
+        else:
+            display_data = self._display_data(parsed_value)
+            tool_tip_data = self._tool_tip_data(parsed_value)
+        fm = QFontMetrics(QFont("", 0))
+        if isinstance(display_data, str):
+            display_data = fm.elidedText(display_data, Qt.ElideRight, 500)
+        if isinstance(tool_tip_data, str):
+            tool_tip_data = fm.elidedText(tool_tip_data, Qt.ElideRight, 800)
+        return display_data, tool_tip_data
 
     @staticmethod
     def _display_data(parsed_value):
         """Returns the value's database representation formatted for Qt.DisplayRole."""
         if isinstance(parsed_value, TimeSeries):
             return "Time series"
+        if isinstance(parsed_value, Map):
+            return "Map"
         if isinstance(parsed_value, DateTime):
             return str(parsed_value.value)
         if isinstance(parsed_value, Duration):
@@ -1477,7 +1487,7 @@ class SpineDBManager(QObject):
             db_map_data (dict): lists of parameter definition items keyed by DiffDatabaseMapping
         """
         d = {
-            db_map: self.get_parameter_definitions(db_map, ids={x["id"] for x in items})
+            db_map: self.get_parameter_definitions(db_map, ids={x["id"] for x in items}, cache=False)
             for db_map, items in db_map_data.items()
         }
         self.parameter_definitions_added.emit(d)
@@ -1490,7 +1500,7 @@ class SpineDBManager(QObject):
             db_map_data (dict): lists of parameter value items keyed by DiffDatabaseMapping
         """
         d = {
-            db_map: self.get_parameter_values(db_map, ids={x["id"] for x in items})
+            db_map: self.get_parameter_values(db_map, ids={x["id"] for x in items}, cache=False)
             for db_map, items in db_map_data.items()
         }
         self.parameter_values_added.emit(d)
@@ -1503,7 +1513,7 @@ class SpineDBManager(QObject):
             db_map_data (dict): lists of parameter definition items keyed by DiffDatabaseMapping
         """
         d = {
-            db_map: self.get_parameter_definitions(db_map, ids={x["id"] for x in items})
+            db_map: self.get_parameter_definitions(db_map, ids={x["id"] for x in items}, cache=False)
             for db_map, items in db_map_data.items()
         }
         self.parameter_definitions_updated.emit(d)
@@ -1516,7 +1526,7 @@ class SpineDBManager(QObject):
             db_map_data (dict): lists of parameter value items keyed by DiffDatabaseMapping
         """
         d = {
-            db_map: self.get_parameter_values(db_map, ids={x["id"] for x in items})
+            db_map: self.get_parameter_values(db_map, ids={x["id"] for x in items}, cache=False)
             for db_map, items in db_map_data.items()
         }
         self.parameter_values_updated.emit(d)

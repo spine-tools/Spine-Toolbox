@@ -41,13 +41,14 @@ class ExportListItem(QWidget):
         super().__init__(parent)
         self._ui = Ui_Form()
         self._url = url
+        self._file_name = file_name
         self._ui.setupUi(self)
         self._ui.url_field.setText(url)
         self._ui.url_field.setToolTip(url)
         self._ui.out_file_name_edit.setText(file_name)
-        self._ui.out_file_name_edit.textChanged.connect(self._emit_file_name_changed)
+        self._ui.out_file_name_edit.editingFinished.connect(self._emit_file_name_changed)
         self._ui.settings_button.clicked.connect(self._emit_open_settings_clicked)
-        self.settings_state_changed(settings_state)
+        self.handle_settings_state_changed(settings_state)
 
     @property
     def out_file_name_edit(self):
@@ -60,7 +61,7 @@ class ExportListItem(QWidget):
         return self._ui.url_field
 
     @Slot("QVariant")
-    def settings_state_changed(self, state):
+    def handle_settings_state_changed(self, state):
         self._ui.notification_label.setText("")
         if state == SettingsState.FETCHING:
             self._ui.settings_button.setEnabled(False)
@@ -81,9 +82,13 @@ class ExportListItem(QWidget):
                     + "Open settings to set up parameter indexing.</span>"
                 )
 
-    @Slot(str)
-    def _emit_file_name_changed(self, file_name):
+    @Slot()
+    def _emit_file_name_changed(self):
         """Emits file_name_changed signal."""
+        file_name = self._ui.out_file_name_edit.text()
+        if self._file_name == file_name:
+            return
+        self._file_name = file_name
         self.file_name_changed.emit(file_name, self._url)
 
     @Slot(bool)

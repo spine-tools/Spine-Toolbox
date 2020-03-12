@@ -117,22 +117,22 @@ class SettingsWidget(QWidget):
             return
         # Check that it's not a directory
         if os.path.isdir(answer[0]):
-            msg = "Please select a valid Julia interpreter (file) and not a directory"
+            msg = "Please select a valid Julia Executable (file) and not a directory"
             # noinspection PyCallByClass, PyArgumentList
-            QMessageBox.warning(self, "Invalid Julia Interpreter", msg)
+            QMessageBox.warning(self, "Invalid Julia Executable", msg)
             return
         # Check that it's a file that actually exists
         if not os.path.exists(answer[0]):
             msg = "File {0} does not exist".format(answer[0])
             # noinspection PyCallByClass, PyArgumentList
-            QMessageBox.warning(self, "Invalid Julia Interpreter", msg)
+            QMessageBox.warning(self, "Invalid Julia Executable", msg)
             return
         # Check that selected file at least starts with string 'julia'
         _, selected_file = os.path.split(answer[0])
         if not selected_file.lower().startswith("julia"):
-            msg = "Selected file <b>{0}</b> is not a valid Julia interpreter".format(selected_file)
+            msg = "Selected file <b>{0}</b> is not a valid Julia Executable".format(selected_file)
             # noinspection PyCallByClass, PyArgumentList
-            QMessageBox.warning(self, "Invalid Julia Interpreter", msg)
+            QMessageBox.warning(self, "Invalid Julia Executable", msg)
             return
         self.ui.lineEdit_julia_path.setText(answer[0])
         return
@@ -375,24 +375,14 @@ class SettingsWidget(QWidget):
         """Update project name and description if these have been changed."""
         if not self._project:
             return
-        save = False
         new_name = self.ui.lineEdit_project_name.text().strip()
         if self._project.name != new_name:
             # Change project name
-            if not new_name == "":
-                self._project.change_name(new_name)
-                # Remove entry with the old name from File->Open recent menu
-                self._toolbox.remove_path_from_recent_projects(self._project.project_dir)
-                # Add entry with the new name back to File->Open recent menu
-                self._toolbox.update_recent_projects()
-                save = True
+            if new_name != "":
+                self._project.call_set_name(new_name)
         if not self._project.description == self.ui.textEdit_project_description.toPlainText():
             # Set new project description
-            self._project.set_description(self.ui.textEdit_project_description.toPlainText())
-            save = True
-        if save:
-            self._toolbox.msg.emit("Project settings changed. Saving project...")
-            self._toolbox.save_project()
+            self._project.call_set_description(self.ui.textEdit_project_description.toPlainText())
 
     def check_if_python_env_changed(self, new_path):
         """Checks if Python environment was changed.

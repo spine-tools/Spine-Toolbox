@@ -98,6 +98,11 @@ class TabularViewMixin:
         self.ui.dockWidget_frozen_table.visibilityChanged.connect(self._handle_frozen_table_visibility_changed)
         self.ui.pivot_table.selectionModel().selectionChanged.connect(self._handle_pivot_table_selection_changed)
 
+    def init_models(self):
+        """Initializes models."""
+        super().init_models()
+        self.clear_pivot_table()
+
     @Slot("QItemSelection", "QItemSelection")
     def _handle_pivot_table_selection_changed(self, selected, deselected):
         """Accepts selection."""
@@ -440,12 +445,19 @@ class TabularViewMixin:
         Returns:
             TabularViewFilterMenu
         """
+
+        object_id_to_name = lambda id_: self.db_mngr.get_field(self.db_map, "object", id_, "name")
+        parameter_id_to_name = lambda id_: self.db_mngr.get_field(
+            self.db_map, "parameter definition", id_, "parameter_name"
+        )
         if identifier not in self.filter_menus:
-            item_type = "parameter definition" if identifier == self._PARAM_INDEX_ID else "object"
-            self.filter_menus[identifier] = menu = TabularViewFilterMenu(self, identifier, item_type)
-            index_values = set(self.pivot_table_model.model.index_values.get(identifier, []))
-            index_values.discard(None)
-            menu.set_filter_list(index_values)
+            data_to_value = parameter_id_to_name if identifier == self._PARAM_INDEX_ID else object_id_to_name
+            self.filter_menus[identifier] = menu = TabularViewFilterMenu(
+                self, identifier, data_to_value, show_empty=False
+            )
+            index_values = dict.fromkeys(self.pivot_table_model.model.index_values.get(identifier, []))
+            index_values.pop(None, None)
+            menu.set_filter_list(index_values.keys())
             menu.filterChanged.connect(self.change_filter)
         return self.filter_menus[identifier]
 
@@ -587,7 +599,7 @@ class TabularViewMixin:
         Returns:
             list(tuple(list(int)))
         """
-        return sorted(set(zip(*[self.pivot_table_model.model.index_values.get(k, []) for k in frozen])))
+        return list(dict.fromkeys(zip(*[self.pivot_table_model.model.index_values.get(k, []) for k in frozen])).keys())
 
     @staticmethod
     def refresh_table_view(table_view):
@@ -608,13 +620,14 @@ class TabularViewMixin:
         elif action == "remove":
             self.pivot_table_model.remove_from_model(data)
         for identifier, menu in self.filter_menus.items():
-            current = set(self.pivot_table_model.model.index_values.get(identifier, []))
-            current.discard(None)
-            previous = menu._filter._filter_model._id_data_set
+            index_values = dict.fromkeys(self.pivot_table_model.model.index_values.get(identifier, []))
+            index_values.pop(None, None)
+            self.menu_values[identifier] = menu_values = self._get_menu_values(identifier, index_values)
             if action == "add":
-                menu.add_items_to_filter_list(list(current - previous))
+                menu.add_items_to_filter_list(list(menu_values.keys()))
             elif action == "remove":
-                menu.remove_items_from_filter_list(list(previous - current))
+                previous = menu._filter._filter_model._data_set
+                menu.remove_items_from_filter_list(list(previous - menu_values.keys()))
         self.reload_frozen_table()
 
     def receive_objects_added_or_removed(self, db_map_data, action):

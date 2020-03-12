@@ -19,15 +19,7 @@ Custom item delegates.
 from PySide2.QtCore import Qt, Signal, QEvent, QPoint, QRect
 from PySide2.QtWidgets import QComboBox, QItemDelegate, QStyleOptionButton, QStyle, QApplication, QStyleOptionComboBox
 from PySide2.QtGui import QIcon
-from spinedb_api import (
-    from_database,
-    to_database,
-    DateTime,
-    Duration,
-    ParameterValueFormatError,
-    TimePattern,
-    TimeSeries,
-)
+from spinedb_api import from_database, DateTime, Duration, Map, ParameterValueFormatError, TimePattern, TimeSeries
 from .custom_editors import (
     CustomComboEditor,
     CustomLineEditor,
@@ -203,7 +195,7 @@ class PivotTableDelegate(CheckBoxDelegate):
                 value = from_database(index.data(role=Qt.EditRole))
             except ParameterValueFormatError:
                 value = None
-            if isinstance(value, (DateTime, Duration, TimePattern, TimeSeries)) or value is None:
+            if isinstance(value, (DateTime, Duration, Map, TimePattern, TimeSeries)) or value is None:
                 value_name = index.model().sourceModel().value_name(index)  # FIXME: get the actual name
                 self.parameter_value_editor_requested.emit(index, value_name, value)
                 return None
@@ -317,7 +309,7 @@ class ParameterValueOrDefaultValueDelegate(ParameterDelegate):
             value = from_database(index.data(role=Qt.EditRole))
         except ParameterValueFormatError:
             value = None
-        if isinstance(value, (DateTime, Duration, TimePattern, TimeSeries)):
+        if isinstance(value, (DateTime, Duration, Map, TimePattern, TimeSeries)):
             value_name = index.model().value_name(index)
             self.parameter_value_editor_requested.emit(index, value_name, value)
             return None

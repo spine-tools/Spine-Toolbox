@@ -18,14 +18,12 @@ Contains the GraphViewForm class.
 
 import random
 from PySide2.QtCore import Slot, QFinalState, QState, QItemSelectionModel, QAbstractAnimation, QVariantAnimation
-from PySide2.QtGui import QColor, QCursor
-from spinetoolbox.live_demo import LiveDemo
+from PySide2.QtGui import QCursor
+from .state_machine_widget import StateMachineWidget
 
 
-class GraphViewDemo(LiveDemo):
+class GraphViewDemo(StateMachineWidget):
     """A widget that shows a demo for the graph view."""
-
-    _overlay_color = QColor(0, 0, 255, 32)
 
     def __init__(self, parent):
         """Initializes class.

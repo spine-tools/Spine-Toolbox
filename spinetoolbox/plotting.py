@@ -18,21 +18,24 @@ The main entrance points to plotting are:
 - plot_selection() which plots selected cells on a table view returning a PlotWidget object
 - plot_pivot_column() which is a specialized method for plotting entire columns of a pivot table
 - add_time_series_plot() which adds a time series plot to an existing PlotWidget
+- add_map_plot() which adds a map plot to an existing PlotWidget
 
 :author: A. Soininen(VTT)
 :date:   9.7.2019
 """
 
+from matplotlib.ticker import MaxNLocator
 import numpy as np
 from PySide2.QtCore import QModelIndex, Qt
-from spinedb_api import from_database, ParameterValueFormatError, TimeSeries
+from spinedb_api import from_database, IndexedValue, Map, ParameterValueFormatError, TimeSeries
 from .widgets.plot_widget import PlotWidget
 
 
 class PlottingError(Exception):
-    def __init__(self, message):
-        """An exception signalling failure in plotting.
+    """An exception signalling failure in plotting."""
 
+    def __init__(self, message):
+        """
         Args:
             message (str): an error message
         """
@@ -41,120 +44,11 @@ class PlottingError(Exception):
 
     @property
     def message(self):
-        """Returns the error message."""
+        """str: the error message."""
         return self._message
 
 
-def _add_plot_to_widget(values, labels, plot_widget):
-    """Adds a new plot to plot_widget."""
-    if not values:
-        return
-    if isinstance(values[0], TimeSeries):
-        for value, label in zip(values, labels):
-            add_time_series_plot(plot_widget, value, label)
-    else:
-        plot_widget.canvas.axes.plot(values[0], values[1], label=labels[0])
-
-
-def _raise_if_types_inconsistent(values):
-    """Raises an exception if not all values are TimeSeries or floats."""
-    if not all(isinstance(value, TimeSeries) for value in values) and not all(
-        isinstance(value, float) for value in values
-    ):
-        raise PlottingError("Cannot plot a mixture of time series and other data")
-
-
-def _filter_name_columns(selections):
-    """Returns a dict with all but the entry with the greatest key removed."""
-    # In case of Tree and Graph views the user may have selected non-data columns for plotting.
-    # This function removes those from the selected columns.
-    last_column = max(selections.keys())
-    return {last_column: selections[last_column]}
-
-
-def _organize_selection_to_columns(indexes):
-    """Organizes a list of model indexes into a dictionary of {column: (rows)} entries."""
-    selections = dict()
-    for index in indexes:
-        selections.setdefault(index.column(), set()).add(index.row())
-    return selections
-
-
-def _collect_single_column_values(model, column, rows, hints):
-    """
-    Collects selected parameter values from a single column.
-
-    The return value of this function depends on what type of data the given column contains.
-    In case of plain numbers, a list of floats and a single label string are returned.
-    In case of time series, a list of TimeSeries objects is returned, accompanied
-    by a list of labels, each label corresponding to one of the time series.
-
-    Args:
-        model (QAbstractTableModel): a table model
-        column (int): a column index to the model
-        rows (Sequence): row indexes to plot
-        hints (PlottingHints): a plot support object
-
-    Returns:
-        a tuple of values and label(s)
-    """
-    values = list()
-    labels = list()
-    for row in sorted(rows):
-        data_index = model.index(row, column)
-        if not hints.is_index_in_data(model, data_index):
-            continue
-        data = model.data(data_index, role=Qt.EditRole)
-        if data:
-            try:
-                value = from_database(data)
-            except ParameterValueFormatError:
-                value = None
-            if isinstance(value, (float, int)):
-                values.append(float(value))
-            elif isinstance(value, TimeSeries):
-                labels.append(hints.cell_label(model, data_index))
-                values.append(value)
-            else:
-                raise PlottingError("Cannot plot value on row {}".format(row))
-    if not values:
-        return values, labels
-    _raise_if_types_inconsistent(values)
-    if isinstance(values[0], float):
-        labels.append(hints.column_label(model, column))
-    return values, labels
-
-
-def _collect_column_values(model, column, rows, hints):
-    """
-    Collects selected parameter values from a single column for plotting.
-
-    The return value of this function depends on what type of data the given column contains.
-    In case of plain numbers, a single tuple of two lists of x and y values
-    and a single label string are returned.
-    In case of time series, a list of TimeSeries objects is returned, accompanied
-    by a list of labels, each label corresponding to one of the time series.
-
-    Args:
-        model (QAbstractTableModel): a table model
-        column (int): a column index to the model
-        rows (Sequence): row indexes to plot
-        hints (PlottingHints): a support object
-
-    Returns:
-        a tuple of values and label(s)
-    """
-    values, labels = _collect_single_column_values(model, column, rows, hints)
-    if values and isinstance(values[0], float):
-        # Collect the y values as well
-        x_values = hints.special_x_values(model, column, rows)
-        if x_values is None:
-            x_values = np.arange(1.0, float(len(values) + 1.0))
-        return (x_values, values), labels
-    return values, labels
-
-
-def plot_pivot_column(proxy_model, column, hints):
+def plot_pivot_column(proxy_model, column, hints, plot_widget=None):
     """
     Returns a plot widget with a plot of an entire column in PivotTableModel.
 
@@ -162,13 +56,22 @@ def plot_pivot_column(proxy_model, column, hints):
         proxy_model (PivotTableSortFilterProxy): a pivot table filter
         column (int): a column index to the model
         hints (PlottingHints): a helper needed for e.g. plot labels
-
+        plot_widget (PlotWidget): an existing plot widget to draw into or None to create a new widget
     Returns:
-        a PlotWidget object
+        PlotWidget: a plot widget
     """
-    plot_widget = PlotWidget()
+    if plot_widget is None:
+        plot_widget = PlotWidget()
+        needs_redraw = False
+    else:
+        needs_redraw = True
     first_data_row = proxy_model.sourceModel().first_data_row()
     values, labels = _collect_column_values(proxy_model, column, range(first_data_row, proxy_model.rowCount()), hints)
+    if values:
+        if plot_widget.plot_type is None:
+            plot_widget.infer_plot_type(values)
+        else:
+            _raise_if_value_types_clash(values, plot_widget)
     _add_plot_to_widget(values, labels, plot_widget)
     if len(plot_widget.canvas.axes.get_lines()) > 1:
         plot_widget.canvas.axes.legend(loc="best", fontsize="small")
@@ -176,10 +79,12 @@ def plot_pivot_column(proxy_model, column, hints):
     plot_lines = plot_widget.canvas.axes.get_lines()
     if plot_lines:
         plot_widget.canvas.axes.set_title(plot_lines[0].get_label())
+    if needs_redraw:
+        plot_widget.canvas.draw()
     return plot_widget
 
 
-def plot_selection(model, indexes, hints):
+def plot_selection(model, indexes, hints, plot_widget=None):
     """
     Returns a plot widget with plots of the selected indexes.
 
@@ -187,33 +92,60 @@ def plot_selection(model, indexes, hints):
         model (QAbstractTableModel): a model
         indexes (Iterable): a list of QModelIndex objects for plotting
         hints (PlottingHints): a helper needed for e.g. plot labels
-
+        plot_widget (PlotWidget): an existing plot widget to draw into or None to create a new widget
     Returns:
         a PlotWidget object
     """
-    plot_widget = PlotWidget()
+    if plot_widget is None:
+        plot_widget = PlotWidget()
+        needs_redraw = False
+    else:
+        needs_redraw = True
     selections = hints.filter_columns(_organize_selection_to_columns(indexes), model)
-    first_column_value_type = None
+    all_labels = list()
     for column, rows in selections.items():
         values, labels = _collect_column_values(model, column, rows, hints)
-        if first_column_value_type is None and values:
-            if isinstance(values[0], TimeSeries):
-                first_column_value_type = TimeSeries
+        all_labels += labels
+        if values:
+            if plot_widget.plot_type is None:
+                plot_widget.infer_plot_type(values)
             else:
-                first_column_value_type = type(values[1][0])
-        elif values:
-            if isinstance(values[0], TimeSeries) and not isinstance(first_column_value_type, TimeSeries):
-                raise PlottingError("Cannot plot a mixture of time series and other data")
-            if not isinstance(values[0][1], first_column_value_type):
-                raise PlottingError("Cannot plot a mixture of time series and other data")
+                _raise_if_value_types_clash(values, plot_widget)
         _add_plot_to_widget(values, labels, plot_widget)
     plot_widget.canvas.axes.set_xlabel(hints.x_label(model))
-    plot_lines = plot_widget.canvas.axes.get_lines()
-    if len(plot_lines) > 1:
+    if len(all_labels) > 1:
         plot_widget.canvas.axes.legend(loc="best", fontsize="small")
-    elif len(plot_lines) == 1:
-        plot_widget.canvas.axes.set_title(plot_lines[0].get_label())
+    elif len(all_labels) == 1:
+        plot_widget.canvas.axes.set_title(all_labels[0])
+    if needs_redraw:
+        plot_widget.canvas.draw()
     return plot_widget
+
+
+def add_map_plot(plot_widget, map_value, label=None):
+    """
+    Adds a map plot to a plot widget.
+
+    Args:
+        plot_widget (PlotWidget): a plot widget to modify
+        map_value (Map): the map to plot
+        label (str): a label for the map
+    """
+    if not map_value.indexes:
+        return
+    if map_value.is_nested():
+        raise PlottingError("Plotting of nested maps is not supported.")
+    if not all(isinstance(value, float) for value in map_value.values):
+        raise PlottingError("Cannot plot non-numerical values in map.")
+    if not isinstance(map_value.indexes[0], str):
+        if hasattr(map_value.indexes[0], "to_text"):
+            indexes_as_strings = [index.to_text() for index in map_value.indexes]
+        else:
+            indexes_as_strings = list(map(str, map_value.indexes))
+    else:
+        indexes_as_strings = map_value.indexes
+    plot_widget.canvas.axes.plot(indexes_as_strings, map_value.values, label=label, linestyle="", marker="o")
+    plot_widget.canvas.axes.xaxis.set_major_locator(MaxNLocator(10))
 
 
 def add_time_series_plot(plot_widget, value, label=None):
@@ -355,3 +287,130 @@ class PivotTablePlottingHints(PlottingHints):
         """Maps a source model column to proxy model."""
         source_index = proxy_model.sourceModel().index(0, source_column)
         return proxy_model.mapFromSource(source_index).column()
+
+
+def _add_plot_to_widget(values, labels, plot_widget):
+    """Adds a new plot to plot_widget."""
+    if not values:
+        return
+    if isinstance(values[0], TimeSeries):
+        for value, label in zip(values, labels):
+            add_time_series_plot(plot_widget, value, label)
+    elif isinstance(values[0], Map):
+        for value, label in zip(values, labels):
+            add_map_plot(plot_widget, value, label)
+    else:
+        plot_widget.canvas.axes.plot(values[0], values[1], label=labels[0])
+
+
+def _raise_if_types_inconsistent(values):
+    """Raises an exception if not all values are TimeSeries or floats."""
+    if not values:
+        return
+    first_value_type = type(values[0])
+    if issubclass(first_value_type, TimeSeries):
+        # Clump fixed and variable step time series together. We can plot both at the same time.
+        first_value_type = TimeSeries
+    if not all(isinstance(value, first_value_type) for value in values[1:]):
+        raise PlottingError("Cannot plot a mixture of indexed and other data")
+
+
+def _filter_name_columns(selections):
+    """Returns a dict with all but the entry with the greatest key removed."""
+    # In case of Tree and Graph views the user may have selected non-data columns for plotting.
+    # This function removes those from the selected columns.
+    last_column = max(selections.keys())
+    return {last_column: selections[last_column]}
+
+
+def _organize_selection_to_columns(indexes):
+    """Organizes a list of model indexes into a dictionary of {column: (rows)} entries."""
+    selections = dict()
+    for index in indexes:
+        selections.setdefault(index.column(), set()).add(index.row())
+    return selections
+
+
+def _collect_single_column_values(model, column, rows, hints):
+    """
+    Collects selected parameter values from a single column.
+
+    The return value of this function depends on what type of data the given column contains.
+    In case of plain numbers, a list of floats and a single label string are returned.
+    In case of time series, a list of TimeSeries objects is returned, accompanied
+    by a list of labels, each label corresponding to one of the time series.
+
+    Args:
+        model (QAbstractTableModel): a table model
+        column (int): a column index to the model
+        rows (Sequence): row indexes to plot
+        hints (PlottingHints): a plot support object
+
+    Returns:
+        a tuple of values and label(s)
+    """
+    values = list()
+    labels = list()
+    for row in sorted(rows):
+        data_index = model.index(row, column)
+        if not hints.is_index_in_data(model, data_index):
+            continue
+        data = model.data(data_index, role=Qt.EditRole)
+        if data:
+            try:
+                value = from_database(data)
+            except ParameterValueFormatError:
+                value = None
+            if isinstance(value, (float, int)):
+                values.append(float(value))
+            elif isinstance(value, (Map, TimeSeries)):
+                labels.append(hints.cell_label(model, data_index))
+                values.append(value)
+            else:
+                raise PlottingError("Cannot plot value on row {}".format(row))
+    if not values:
+        return values, labels
+    _raise_if_types_inconsistent(values)
+    if isinstance(values[0], float):
+        labels.append(hints.column_label(model, column))
+    return values, labels
+
+
+def _collect_column_values(model, column, rows, hints):
+    """
+    Collects selected parameter values from a single column for plotting.
+
+    The return value of this function depends on what type of data the given column contains.
+    In case of plain numbers, a single tuple of two lists of x and y values
+    and a single label string are returned.
+    In case of time series, a list of TimeSeries objects is returned, accompanied
+    by a list of labels, each label corresponding to one of the time series.
+
+    Args:
+        model (QAbstractTableModel): a table model
+        column (int): a column index to the model
+        rows (Sequence): row indexes to plot
+        hints (PlottingHints): a support object
+
+    Returns:
+        a tuple of values and label(s)
+    """
+    values, labels = _collect_single_column_values(model, column, rows, hints)
+    if values and isinstance(values[0], float):
+        # Collect the y values as well
+        x_values = hints.special_x_values(model, column, rows)
+        if x_values is None:
+            x_values = np.arange(1.0, float(len(values) + 1.0))
+        return (x_values, values), labels
+    return values, labels
+
+
+def _raise_if_value_types_clash(values, plot_widget):
+    """Raises a PlottingError if values type is incompatible with plot_widget."""
+    if isinstance(values[0], IndexedValue):
+        if isinstance(values[0], TimeSeries) and not plot_widget.plot_type == TimeSeries:
+            raise PlottingError("Cannot plot a mixture of time series and other value types.")
+        if isinstance(values[0], Map) and not plot_widget.plot_type == Map:
+            raise PlottingError("Cannot plot a mixture of maps and other value types.")
+    elif not isinstance(values[0][1], plot_widget.plot_type):
+        raise PlottingError("Cannot plot a mixture of indexed values and scalars.")
