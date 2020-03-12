@@ -198,7 +198,7 @@ class PivotModel:
         if self.pivot_rows:
             if self._row_data_header:
                 return self._row_data_header[row]
-            return tuple(None for _ in self.pivot_rows)
+            return len(self.pivot_rows) * (None,)
         if row == 0:
             return ()
         raise IndexError('index out of range for current row pivot')
@@ -207,7 +207,7 @@ class PivotModel:
         if self.pivot_columns:
             if self._column_data_header:
                 return self._column_data_header[column]
-            return tuple(None for _ in self.pivot_columns)
+            return len(self.pivot_columns) * (None,)
         if column == 0:
             return ()
         raise IndexError('index out of range for current column pivot')

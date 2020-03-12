@@ -721,8 +721,7 @@ class PivotTableModelMenu(QMenu):
     def open_value_editor(self):
         """Opens the parameter value editor for the first selected cell."""
         index = self._selected_value_indexes[0]
-        value_name = self._source.value_name(index)
-        self.parent().show_parameter_value_editor(index, value_name=value_name)
+        self.parent().show_parameter_value_editor(index)
 
     def plot(self):
         """Plots the selected cells in the pivot table."""
@@ -835,7 +834,11 @@ class PivotTableHorizontalHeaderMenu(QMenu):
         self.move(self.parent().mapToGlobal(pos))
         self._model_index = self.parent().indexAt(pos)
         source_index = self._proxy_model.mapToSource(self._model_index)
-        if self._proxy_model.sourceModel().index_in_top_left(source_index):
+        if self._proxy_model.sourceModel().column_is_index_column(self._model_index.column()):
+            self._plot_action.setEnabled(False)
+            self._set_as_X_action.setEnabled(True)
+            self._set_as_X_action.setChecked(source_index.column() == self._proxy_model.sourceModel().plot_x_column)
+        elif self._model_index.column() < self._proxy_model.sourceModel().headerColumnCount():
             self._plot_action.setEnabled(False)
             self._set_as_X_action.setEnabled(False)
             self._set_as_X_action.setChecked(False)

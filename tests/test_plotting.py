@@ -21,6 +21,7 @@ from unittest.mock import Mock, MagicMock
 from PySide2.QtCore import QAbstractTableModel, QModelIndex, Qt
 from PySide2.QtWidgets import QApplication, QAction
 from spinedb_api import from_database, Map, TimeSeries, TimeSeriesVariableResolution
+from spinetoolbox.mvcmodels.pivot_table_models import PLOTTING_ROLE
 from spinetoolbox.plotting import (
     add_map_plot,
     add_time_series_plot,
@@ -88,7 +89,7 @@ class _MockParameterModel(QAbstractTableModel):
         return 2
 
     def data(self, index, role=Qt.DisplayRole):
-        if role not in (Qt.DisplayRole, Qt.EditRole, Qt.UserRole):
+        if role != PLOTTING_ROLE:
             return None
         return from_database(self._table[index.row()][index.column()])
 

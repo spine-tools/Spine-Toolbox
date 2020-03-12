@@ -10,17 +10,16 @@
 ######################################################################################################################
 
 """
-Unit tests for icon display id related functions in the helpers module.
+Unit tests for the helpers module.
 
 :authors: A. Soininen (VTT)
-:date:   20.8.2019
+:date:   23.3.2020
 """
-
 import unittest
-from spinetoolbox.helpers import interpret_icon_id, make_icon_id
+from spinetoolbox.helpers import first_non_null, interpret_icon_id, make_icon_id
 
 
-class MyTestCase(unittest.TestCase):
+class TestHelpers(unittest.TestCase):
     def test_make_icon_id(self):
         icon_id = make_icon_id(3, 7)
         self.assertEqual(icon_id, 3 + (7 << 16))
@@ -32,6 +31,10 @@ class MyTestCase(unittest.TestCase):
         icon_code, color_code = interpret_icon_id(3 + (7 << 16))
         self.assertEqual(icon_code, 3)
         self.assertEqual(color_code, 7)
+
+    def test_first_non_null(self):
+        self.assertEqual(first_non_null([23]), 23)
+        self.assertEqual(first_non_null([None, 23]), 23)
 
 
 if __name__ == '__main__':

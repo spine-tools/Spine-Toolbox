@@ -208,7 +208,8 @@ class SpineToolboxProject(MetaObject):
                 item_dict["name"] = name
                 items.append(item_dict)
                 empty = False
-            self.do_add_project_items(category_name, *items, verbosity=False)
+            if not self.do_add_project_items(category_name, *items, verbosity=False):
+                return False
         if empty:
             self._logger.msg_warning.emit("Project has no items")
         return True
@@ -287,7 +288,7 @@ class SpineToolboxProject(MetaObject):
         category_ind = self._project_item_model.find_category(category_name)
         if not category_ind:
             self._logger.msg_error.emit("Category {0} not found".format(category_name))
-            return []
+            return None, []
         category_item = self._project_item_model.item(category_ind)
         item_maker = category_item.item_maker()
         project_tree_items = []
@@ -352,7 +353,10 @@ class SpineToolboxProject(MetaObject):
             verbosity (bool): If True, prints message
         """
         category_ind, project_tree_items = self.make_project_tree_items(category_name, *items)
+        if category_ind is None:
+            return False
         self._add_project_tree_items(category_ind, *project_tree_items, set_selected=set_selected, verbosity=verbosity)
+        return True
 
     def add_to_dag(self, item_name):
         """Add new node (project item) to the directed graph."""

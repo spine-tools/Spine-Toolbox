@@ -23,6 +23,9 @@ from .pivot_model import PivotModel
 from ..config import PIVOT_TABLE_HEADER_COLOR
 
 
+PLOTTING_ROLE = Qt.UserRole
+
+
 class IndexId(enum.IntEnum):
     PARAMETER = -1
     PARAMETER_INDEX = -3
@@ -261,6 +264,10 @@ class PivotTableModel(QAbstractTableModel):
             and self.headerColumnCount() <= index.column() < self.columnCount() - self.emptyColumnCount()
         )
 
+    def column_is_index_column(self, column):
+        """Returns True if column is the column containing expanded parameter value indexes."""
+        return self._parent.is_value_expanded_parameter_value() and column == self.headerColumnCount() - 1
+
     def headerData(self, section, orientation, role=Qt.DisplayRole):
         if role == Qt.DisplayRole and orientation == Qt.Horizontal:
             if section == self._plot_x_column:
@@ -363,6 +370,7 @@ class PivotTableModel(QAbstractTableModel):
         Returns:
             str: a string role-dependent string representation of the cell's contents.
         """
+
         def fetch_from_db(fetch_name, name_field):
             item = self.db_mngr.get_item(self.db_map, fetch_name, header_id)
             if role in (Qt.DisplayRole, Qt.EditRole):
@@ -436,7 +444,7 @@ class PivotTableModel(QAbstractTableModel):
             return QColor(PIVOT_TABLE_HEADER_COLOR)
 
     def data(self, index, role=Qt.DisplayRole):
-        if role in (Qt.DisplayRole, Qt.EditRole, Qt.ToolTipRole, Qt.UserRole):
+        if role in (Qt.DisplayRole, Qt.EditRole, Qt.ToolTipRole):
             if self.index_in_top(index):
                 return self.model.pivot_rows[index.column()]
             if self.index_in_left(index):
@@ -458,17 +466,33 @@ class PivotTableModel(QAbstractTableModel):
                     return value if role == Qt.DisplayRole else None
                 return bool(value)
             return None
+        if role == PLOTTING_ROLE:
+            if self.index_in_data(index):
+                row, column = self.map_to_pivot(index)
+                data = self.model.get_pivoted_data([row], [column])
+                if not data:
+                    return None
+                value = data[0][0]
+                if value is None:
+                    return None
+                if self._parent.is_value_input_type():
+                    value = self.db_mngr.get_value(self.db_map, "parameter value", value, "value", Qt.UserRole)
+                    return value
+                if self._parent.is_value_expanded_parameter_value():
+                    return value
+                return None
+            # Index not in data: we are plotting the index column
+            row = index.row() - self.headerRowCount()
+            if row >= len(self.model.rows):
+                return None
+            return self.model.row_key(row)[index.column()]
         if role == Qt.FontRole and self.index_in_top_left(index):
             font = QFont()
             font.setBold(True)
             return font
         if role == Qt.BackgroundColorRole:
             return self._color_data(index)
-        if (
-            role == Qt.TextAlignmentRole
-            and self.index_in_data(index)
-            and not self._parent.is_value_input_type()
-        ):
+        if role == Qt.TextAlignmentRole and self.index_in_data(index) and not self._parent.is_value_input_type():
             return Qt.AlignHCenter
         return None
 

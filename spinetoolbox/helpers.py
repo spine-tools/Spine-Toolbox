@@ -16,14 +16,15 @@ General helper functions and classes.
 :date:   10.1.2018
 """
 
-import sys
-import logging
 import datetime
+import glob
+import json
+import logging
+import itertools
 import os
 import time
 import shutil
-import glob
-import json
+import sys
 import urllib.parse
 from PySide2.QtCore import Qt, Slot, QFile, QIODevice, QSize, QRect, QPoint
 from PySide2.QtCore import __version__ as qt_version
@@ -795,3 +796,8 @@ def ensure_window_is_on_screen(window, size):
         primary_screen = QApplication.primaryScreen()
         screen_geometry = primary_screen.availableGeometry()
         window.setGeometry(QStyle.alignedRect(Qt.LeftToRight, Qt.AlignCenter, size, screen_geometry))
+
+
+def first_non_null(s):
+    """Returns the first element in Iterable s that is not None."""
+    return next(itertools.dropwhile(lambda x: x is None, s))

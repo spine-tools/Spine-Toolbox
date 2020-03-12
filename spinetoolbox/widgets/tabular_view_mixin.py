@@ -305,7 +305,7 @@ class TabularViewMixin:
             parameter_ids = [None]
         return {entity_id + (parameter_id,): None for entity_id in entity_ids for parameter_id in parameter_ids}
 
-    def load_empty_expanded_parameter_value_data(self, entities=None, parameter_definition_ids=None):
+    def load_expanded_parameter_value_data(self, entities=None, parameter_definition_ids=None):
         """
         Returns all permutations of entities as well as parameter indexes and values for the current class.
 
@@ -391,9 +391,9 @@ class TabularViewMixin:
             entity_id = identifiers[0]
             definition_id = identifiers[1]
             expandeds = expanded_values.setdefault(entity_id, dict())
-            expandeds[definition_id] = sorted_date_time_values.get(id_, empty_date_time_values) + sorted_other_values.get(
-                id_, empty_other_values
-            )
+            expandeds[definition_id] = sorted_date_time_values.get(
+                id_, empty_date_time_values
+            ) + sorted_other_values.get(id_, empty_other_values)
         return {
             entity_id + (index, definition_id): value
             for entity_id in entity_ids
@@ -460,9 +460,7 @@ class TabularViewMixin:
             if self.current_input_type == self._INDEX_EXPANSION:
                 rows.append(IndexId.PARAMETER_INDEX)
             columns = (
-                [IndexId.PARAMETER]
-                if self.current_input_type in (self._PARAMETER_VALUE, self._INDEX_EXPANSION)
-                else []
+                [IndexId.PARAMETER] if self.current_input_type in (self._PARAMETER_VALUE, self._INDEX_EXPANSION) else []
             )
             frozen = []
             frozen_value = ()
@@ -500,7 +498,7 @@ class TabularViewMixin:
             data = self.load_parameter_value_data()
             index_ids += (IndexId.PARAMETER,)
         elif self.current_input_type == self._INDEX_EXPANSION:
-            data = self.load_empty_expanded_parameter_value_data()
+            data = self.load_expanded_parameter_value_data()
             index_ids += (IndexId.PARAMETER_INDEX, IndexId.PARAMETER)
         else:
             data = self.load_relationship_data()
@@ -510,6 +508,9 @@ class TabularViewMixin:
         self.wipe_out_filter_menus()
         self.pivot_table_model.reset_model(data, index_ids, rows, columns, frozen, frozen_value)
         self.pivot_table_proxy.clear_filter()
+        if self.current_input_type == self._INDEX_EXPANSION:
+            x_column = self.pivot_table_model.headerColumnCount() - 1
+            self.pivot_table_model.set_plot_x_column(x_column, is_x=True)
 
     def clear_pivot_table(self):
         self.wipe_out_filter_menus()
