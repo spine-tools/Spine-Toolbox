@@ -81,6 +81,14 @@ def main(argv):
             "pymysql",
             "tabulator.loaders.local",
             "tabulator.parsers.csv",
+            "ijson.compat",
+            "ijson.utils",
+            "ijson.backends.__init__",
+            "ijson.backends.python",
+            "ijson.backends.yajl",
+            "ijson.backends.yajl2",
+            "ijson.backends.yajl2_c",
+            "ijson.backends.yajl2_cffi"
         ],
         "include_files": [
             (doc_path, "docs/"),
