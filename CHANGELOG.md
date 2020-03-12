@@ -3,6 +3,16 @@ All **notable** changes to this project are documented here.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
+## [0.4.0-beta.7] - 2020-03-12
+### Added
+- Objects in Tree View are sorted alphabetically
+
+### Fixed
+- Bug fixes for Data Store View
+  - Disappearing object names in entity graph
+
+
+
 ## [0.4.0-beta.6] - 2020-03-04
 ### Added
 - spinedb_api version 0.2.2
