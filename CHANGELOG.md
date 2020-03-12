@@ -5,13 +5,18 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ## [0.4.0-beta.7] - 2020-03-12
 ### Added
+- Undo/Redo in Design View
+- It is now possible to add new plots to existing plot windows in Data Store View.
 - Objects in Tree View are sorted alphabetically
+
+### Changed
+- The graph view behavior has changed. Now selecting objects in the object tree not only shows those objects but also 
+  all the cascading relationships. This is to facilitate exploring the system without a previous knowledge.
 
 ### Fixed
 - Bug fixes for Data Store View
   - Disappearing object names in entity graph
-
-
+- Tool configuration assistant for SpineModel.jl
 
 ## [0.4.0-beta.6] - 2020-03-04
 ### Added
@@ -60,21 +65,6 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - Column indexing in Import Editor. When entering a time or time pattern index column manually in Import
   Editor's lower right corner table, the colors in the preview table failed to update. This should fix 
   the bug and allow column selection both by column index or column header text.
-
-## [0.4.0-beta.0] - 2020-02-17
-
-### Added
-- Undo/Redo in Design View
-- It is now possible to add new plots to existing plot windows in Data Store View.
-
-### Changed
-- The graph view behavior has changed. Now selecting objects in the object tree not only shows those objects but also 
-  all the cascading relationships. This is to facilitate exploring the system without a previous knowledge.
-
-### Deprecated
-### Removed
-### Fixed
-### Security
 
 ## [0.4.0.beta.0] - 2020-02-17
 
