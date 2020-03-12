@@ -166,7 +166,7 @@ class EmptyParameterDefinitionModel(
         if any(db_map_param_def.values()):
             self.db_mngr.add_parameter_definitions(db_map_param_def)
         if db_map_error_log:
-            self.db_mngr.msg_error.emit(db_map_error_log)
+            self.db_mngr.error_msg(db_map_error_log)
 
     def _check_item(self, item):
         """Checks if a db item is ready to be inserted."""
@@ -254,7 +254,7 @@ class EmptyParameterValueModel(
         if any(db_map_param_val.values()):
             self.db_mngr.add_parameter_values(db_map_param_val)
         if db_map_error_log:
-            self.db_mngr.msg_error.emit(db_map_error_log)
+            self.db_mngr.error_msg(db_map_error_log)
 
     def _check_item(self, item):
         """Checks if a db item is ready to be inserted."""
@@ -317,4 +317,4 @@ class EmptyRelationshipParameterValueModel(MakeRelationshipOnTheFlyMixin, EmptyP
             self.db_mngr.add_relationships(db_map_relationships)
             super().add_items_to_db(rows)
         if db_map_error_log:
-            self.db_mngr.msg_error.emit(db_map_error_log)
+            self.db_mngr.error_msg(db_map_error_log)

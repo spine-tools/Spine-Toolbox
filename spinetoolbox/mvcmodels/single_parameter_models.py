@@ -296,7 +296,7 @@ class SingleParameterDefinitionMixin(FillInParameterNameMixin, FillInValueListId
         if param_defs:
             self.db_mngr.update_parameter_definitions({self.db_map: param_defs})
         if error_log:
-            self.db_mngr.msg_error.emit({self.db_map: error_log})
+            self.db_mngr.error_msg({self.db_map: error_log})
 
 
 class SingleParameterValueMixin(ConvertToDBMixin):
@@ -337,7 +337,7 @@ class SingleParameterValueMixin(ConvertToDBMixin):
         if param_vals:
             self.db_mngr.update_parameter_values({self.db_map: param_vals})
         if error_log:
-            self.db_mngr.msg_error.emit({self.db_map: error_log})
+            self.db_mngr.error_msg({self.db_map: error_log})
 
 
 class SingleObjectParameterDefinitionModel(
