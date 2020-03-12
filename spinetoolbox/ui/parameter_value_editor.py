@@ -10,10 +10,10 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-# Form implementation generated from reading ui file 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\parameter_value_editor.ui',
-# licensing of 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\parameter_value_editor.ui' applies.
+# Form implementation generated from reading ui file 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\ui\parameter_value_editor.ui',
+# licensing of 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\ui\parameter_value_editor.ui' applies.
 #
-# Created: Tue Feb 11 13:39:41 2020
+# Created: Thu Mar 12 14:59:00 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
