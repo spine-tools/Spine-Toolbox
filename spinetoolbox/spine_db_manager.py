@@ -62,7 +62,6 @@ class SpineDBManager(QObject):
     TODO: Expand description, how it works, the cache, the signals, etc.
     """
 
-    msg_error = Signal(object)
     session_refreshed = Signal(set)
     session_committed = Signal(set)
     session_rolled_back = Signal(set)
@@ -107,11 +106,12 @@ class SpineDBManager(QObject):
         """Initializes the instance.
 
         Args:
-            logger (LoggingInterface)
+            logger (LoggingInterface): a general, non-database-specific logger
             project (SpineToolboxProject)
         """
         super().__init__(project)
-        self._logger = logger
+        self._general_logger = logger
+        self._db_specific_loggers = dict()
         self._db_maps = {}
         self._cache = {}
         self.qsettings = QSettings("SpineProject", "Spine Toolbox")
@@ -144,9 +144,9 @@ class SpineDBManager(QObject):
                 if ret != QMessageBox.AcceptRole:
                     return
             do_create_new_spine_database(url, for_spine_model)
-            self.parent()._toolbox.msg_success.emit("New Spine db successfully created at '{0}'.".format(url))
+            self._general_logger.msg_success.emit("New Spine db successfully created at '{0}'.".format(url))
         except SpineDBAPIError as e:
-            self.parent()._toolbox.msg_error.emit("Unable to create new Spine db at '{0}': {1}.".format(url, e))
+            self._general_logger.msg_error.emit("Unable to create new Spine db at '{0}': {1}.".format(url, e))
 
     def close_session(self, url):
         """Pops any db map on the given url and closes its connection.
@@ -158,12 +158,15 @@ class SpineDBManager(QObject):
         if db_map is None:
             return
         db_map.connection.close()
+        if db_map.codename in self._db_specific_loggers:
+            del self._db_specific_loggers[db_map.codename]
 
     def close_all_sessions(self):
         """Closes connections to all database mappings."""
         for db_map in self._db_maps.values():
             if not db_map.connection.closed:
                 db_map.connection.close()
+        self._db_specific_loggers.clear()
 
     def get_db_map(self, url, upgrade=False, codename=None):
         """Returns a DiffDatabaseMapping instance from url if possible, None otherwise.
@@ -246,6 +249,14 @@ class SpineDBManager(QObject):
             del self.redo_action[db_map]
         return True
 
+    def set_logger_for_db_map(self, logger, db_map):
+        if db_map.codename is not None:
+            self._db_specific_loggers[db_map.codename] = logger
+
+    def unset_logger_for_db_map(self, db_map):
+        if db_map.codename in self._db_specific_loggers:
+            del self._db_specific_loggers[db_map.codename]
+
     def refresh_session(self, *db_maps):
         refreshed_db_maps = set()
         for db_map in db_maps:
@@ -270,7 +281,7 @@ class SpineDBManager(QObject):
             except SpineDBAPIError as e:
                 error_log[db_map] = e.msg
         if any(error_log.values()):
-            self.msg_error.emit(error_log)
+            self._error_msg(error_log)
         if committed_db_maps:
             self.session_committed.emit(committed_db_maps)
 
@@ -295,7 +306,7 @@ class SpineDBManager(QObject):
             except SpineDBAPIError as e:
                 error_log[db_map] = e.msg
         if any(error_log.values()):
-            self.msg_error.emit(error_log)
+            self._error_msg(error_log)
         if rolled_db_maps:
             self.session_rolled_back.emit(rolled_db_maps)
 
@@ -307,7 +318,7 @@ class SpineDBManager(QObject):
             db_map.commit_session(commit_msg)
             return True
         except SpineDBAPIError as e:
-            self.msg_error.emit({db_map: e.msg})
+            self._error_msg({db_map: e.msg})
             return False
 
     def _rollback_db_map_session(self, db_map):
@@ -315,7 +326,7 @@ class SpineDBManager(QObject):
             db_map.rollback_session()
             return True
         except SpineDBAPIError as e:
-            self.msg_error.emit({db_map: e.msg})
+            self._error_msg({db_map: e.msg})
             return False
 
     def ok_to_close(self, db_map):
@@ -361,8 +372,6 @@ class SpineDBManager(QObject):
 
     def connect_signals(self):
         """Connects signals."""
-        # Error
-        self.msg_error.connect(self.receive_error_msg)
         # Add to cache
         self.object_classes_added.connect(lambda db_map_data: self.cache_items("object class", db_map_data))
         self.objects_added.connect(lambda db_map_data: self.cache_items("object", db_map_data))
@@ -444,14 +453,16 @@ class SpineDBManager(QObject):
         )
         self.parameter_tags_removed.connect(lambda db_map_data: self.uncache_items("parameter tag", db_map_data))
 
-    @Slot(object)
-    def receive_error_msg(self, db_map_error_log):
+    def error_msg(self, db_map_error_log):
         msg = ""
         for db_map, error_log in db_map_error_log.items():
             database = "From " + db_map.codename + ":"
             formatted_log = format_string_list(error_log)
             msg += format_string_list([database, formatted_log])
-        self._logger.error_box.emit("Error", msg)
+        for db_map in db_map_error_log:
+            logger = self._db_specific_loggers.get(db_map.codename)
+            if logger is not None:
+                logger.error_box.emit("Error", msg)
 
     def cache_items(self, item_type, db_map_data):
         """Caches data for a given type.
@@ -926,7 +937,7 @@ class SpineDBManager(QObject):
                 continue
             db_map_data_out[db_map] = [x._asdict() for x in items]
         if any(error_log.values()):
-            self.msg_error.emit(error_log)
+            self._error_msg(error_log)
         if any(db_map_data_out.values()):
             getattr(self, signal_name).emit(db_map_data_out)
 
@@ -1154,7 +1165,7 @@ class SpineDBManager(QObject):
             db_map_parameter_value_lists[db_map] = parameter_value_lists
             db_map_parameter_tags[db_map] = parameter_tags
         if any(error_log.values()):
-            self.msg_error.emit(error_log)
+            self._error_msg(error_log)
         if any(db_map_object_classes.values()):
             self.object_classes_removed.emit(db_map_object_classes)
         if any(db_map_objects.values()):
