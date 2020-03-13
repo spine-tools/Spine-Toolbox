@@ -64,6 +64,7 @@ from .config import (
     DEFAULT_WORK_DIR,
 )
 from .helpers import (
+    ensure_window_is_on_screen,
     get_datetime,
     busy_effect,
     set_taskbar_icon,
@@ -702,24 +703,19 @@ class ToolboxUI(QMainWindow):
         window_state = self._qsettings.value("mainWindow/windowState", defaultValue="false")
         splitter_state = self._qsettings.value("mainWindow/projectDockWidgetSplitterState", defaultValue="false")
         window_maximized = self._qsettings.value("mainWindow/windowMaximized", defaultValue="false")  # returns str
-        n_screens = self._qsettings.value("mainWindow/n_screens", defaultValue=1)  # number of screens on last exit
-        # noinspection PyArgumentList
-        n_screens_now = len(QGuiApplication.screens())  # Number of screens now
         # Note: cannot use booleans since Windows saves them as strings to registry
+        original_size = self.size()
         if not window_size == "false":
             self.resize(window_size)  # Expects QSize
         if not window_pos == "false":
             self.move(window_pos)  # Expects QPoint
+        ensure_window_is_on_screen(self, original_size)
         if not window_state == "false":
             self.restoreState(window_state, version=1)  # Toolbar and dockWidget positions. Expects QByteArray
         if not splitter_state == "false":
             self.ui.splitter.restoreState(splitter_state)  # Project Dock Widget splitter position. Expects QByteArray
         if window_maximized == "true":
             self.setWindowState(Qt.WindowMaximized)
-        if n_screens_now < int(n_screens):
-            # There are less screens available now than on previous application startup
-            # Move main window to position 0,0 to make sure that it is not lost on another screen that does not exist
-            self.move(0, 0)
 
     def clear_ui(self):
         """Clean UI to make room for a new or opened project."""
@@ -1582,9 +1578,6 @@ class ToolboxUI(QMainWindow):
             self._qsettings.setValue("mainWindow/windowMaximized", True)
         else:
             self._qsettings.setValue("mainWindow/windowMaximized", False)
-        # Save number of screens
-        # noinspection PyArgumentList
-        self._qsettings.setValue("mainWindow/n_screens", len(QGuiApplication.screens()))
         self.julia_repl.shutdown_jupyter_kernel()
         self.python_repl.shutdown_kernel()
         self.tear_down_items()

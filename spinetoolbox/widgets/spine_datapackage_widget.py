@@ -33,7 +33,7 @@ from ..mvcmodels.data_package_models import (
     DatapackageFieldsModel,
     DatapackageForeignKeysModel,
 )
-from ..helpers import busy_effect
+from ..helpers import busy_effect, ensure_window_is_on_screen
 from ..config import STATUSBAR_SS
 
 
@@ -213,21 +213,18 @@ class SpineDatapackageWidget(QMainWindow):
         splitter_state = self.qsettings.value("dataPackageWidget/splitterState")
         window_maximized = self.qsettings.value("dataPackageWidget/windowMaximized", defaultValue='false')
         window_state = self.qsettings.value("dataPackageWidget/windowState")
-        n_screens = self.qsettings.value("mainWindow/n_screens", defaultValue=1)
+        original_size = self.size()
         if window_size:
             self.resize(window_size)
         if window_pos:
             self.move(window_pos)
+        ensure_window_is_on_screen(self, original_size)
         if window_maximized == 'true':
             self.setWindowState(Qt.WindowMaximized)
         if window_state:
             self.restoreState(window_state, version=1)  # Toolbar and dockWidget positions
         if splitter_state:
             self.ui.splitter.restoreState(splitter_state)
-        # noinspection PyArgumentList
-        if len(QGuiApplication.screens()) < int(n_screens):
-            # There are less screens available now than on previous application startup
-            self.move(0, 0)  # Move this widget to primary screen position (0,0)
 
     @Slot(name="_handle_menu_about_to_show")
     def _handle_menu_about_to_show(self):
