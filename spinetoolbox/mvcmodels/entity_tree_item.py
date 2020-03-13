@@ -459,6 +459,20 @@ class ObjectItem(EntityItem):
             {"Edit objects": QIcon(":/icons/menu_icons/cube_pen.svg")},
             {"Remove selection": QIcon(":/icons/menu_icons/cube_minus.svg")},
         ]
+        self._append_relationship_class_items()
+
+    def _append_relationship_class_items(self):
+        """Appends relationship class items."""
+        db_map_ids = {db_map: list(self._get_cascading_relationship_class_ids(db_map)) for db_map in self.db_maps}
+        self.append_children_by_id(db_map_ids)
+
+    def _get_cascading_relationship_class_ids(self, db_map):
+        object_class_id = self.db_map_data_field(db_map, 'class_id')
+        return [
+            x["id"]
+            for items in self.db_mngr.find_cascading_relationship_classes({db_map: {object_class_id}}).values()
+            for x in items
+        ]
 
     @property
     def child_item_type(self):
