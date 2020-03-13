@@ -202,10 +202,10 @@ class CommandBase(QUndoCommand):
         """
         listeners = self.db_mngr.signaller.db_map_listeners(self.db_map)
         for listener in listeners:
-            listener.blockSignals(True)
+            listener.silenced = True
         func(self)
         for listener in listeners:
-            listener.blockSignals(False)
+            listener.silenced = False
 
     @staticmethod
     def redomethod(func):
