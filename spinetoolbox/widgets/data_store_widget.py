@@ -667,8 +667,7 @@ class DataStoreForm(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         self.connect_signals()
         self.apply_tree_style()
         self.restore_ui()
-        for db_map in self.db_maps:
-            self.db_mngr.fetch_db_map_for_listener(db_map, self)
+        self.db_mngr.fetch_db_maps_for_listener(self, *self.db_maps)
         toc = time.process_time()
         self.msg.emit("Data store view created in {0:.2f} seconds".format(toc - tic))
 

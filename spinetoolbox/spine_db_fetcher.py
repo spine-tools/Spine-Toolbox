@@ -16,7 +16,8 @@ SpineDBFetcher class.
 :date:   13.3.2020
 """
 
-from PySide2.QtCore import Signal, Slot, QObject, QThread
+from PySide2.QtCore import Signal, Slot, QObject, QThread, Qt
+from PySide2.QtGui import QCursor
 
 
 class SpineDBFetcher(QObject):
@@ -31,18 +32,18 @@ class SpineDBFetcher(QObject):
     parameter_value_lists_fetched = Signal(object)
     parameter_tags_fetched = Signal(object)
 
-    def __init__(self, db_mngr, db_map, listener):
+    def __init__(self, db_mngr, listener, *db_maps):
         """Initializes the fetcher object.
 
         Args:
             db_mngr (SpineDBManager)
-            db_map (DiffDatabaseMapping)
             listener (DataStoreForm)
+            db_maps (DiffDatabaseMapping)
         """
         super().__init__()
         self.db_mngr = db_mngr
-        self.db_map = db_map
         self.listener = listener
+        self.db_maps = db_maps
         self._thread = QThread()
         self.moveToThread(self._thread)
         self._thread.start()
@@ -58,69 +59,72 @@ class SpineDBFetcher(QObject):
         self.parameter_values_fetched.connect(self.receive_parameter_values_fetched)
         self.parameter_value_lists_fetched.connect(self.receive_parameter_value_lists_fetched)
         self.parameter_tags_fetched.connect(self.receive_parameter_tags_fetched)
-        self.destroyed.connect(lambda: self.clean_up())
+        self.destroyed.connect(lambda: self.clean_up())  # pylint: disable=unnecessary-lambda
         qApp.aboutToQuit.connect(self._thread.quit)  # pylint: disable=undefined-variable
 
     def run(self):
+        self.listener.setCursor(QCursor(Qt.BusyCursor))
         self.listener.silenced = True
-        self.object_classes_fetched.emit(self.db_mngr.get_object_classes(self.db_map))
-        self.objects_fetched.emit(self.db_mngr.get_objects(self.db_map))
-        self.relationship_classes_fetched.emit(self.db_mngr.get_relationship_classes(self.db_map))
-        self.relationships_fetched.emit(self.db_mngr.get_relationships(self.db_map))
-        self.parameter_definitions_fetched.emit(self.db_mngr.get_parameter_definitions(self.db_map))
-        self.parameter_values_fetched.emit(self.db_mngr.get_parameter_values(self.db_map))
-        self.parameter_value_lists_fetched.emit(self.db_mngr.get_parameter_value_lists(self.db_map))
-        self.parameter_tags_fetched.emit(self.db_mngr.get_parameter_tags(self.db_map))
+        self.object_classes_fetched.emit({db_map: self.db_mngr.get_object_classes(db_map) for db_map in self.db_maps})
+        self.relationship_classes_fetched.emit(
+            {db_map: self.db_mngr.get_relationship_classes(db_map) for db_map in self.db_maps}
+        )
+        self.parameter_definitions_fetched.emit(
+            {db_map: self.db_mngr.get_parameter_definitions(db_map) for db_map in self.db_maps}
+        )
+        self.objects_fetched.emit({db_map: self.db_mngr.get_objects(db_map) for db_map in self.db_maps})
+        self.relationships_fetched.emit({db_map: self.db_mngr.get_relationships(db_map) for db_map in self.db_maps})
+        self.parameter_values_fetched.emit(
+            {db_map: self.db_mngr.get_parameter_values(db_map) for db_map in self.db_maps}
+        )
+        self.parameter_value_lists_fetched.emit(
+            {db_map: self.db_mngr.get_parameter_value_lists(db_map) for db_map in self.db_maps}
+        )
+        self.parameter_tags_fetched.emit({db_map: self.db_mngr.get_parameter_tags(db_map) for db_map in self.db_maps})
         self.deleteLater()
 
     def clean_up(self):
         self._thread.quit()
         self.listener.silenced = False
+        self.listener.unsetCursor()
 
     @Slot(object)
-    def receive_object_classes_fetched(self, data):
-        db_map_data = {self.db_map: data}
+    def receive_object_classes_fetched(self, db_map_data):
         self.db_mngr.cache_items("object class", db_map_data)
+        self.db_mngr.update_icons(db_map_data)
         self.listener.receive_object_classes_added(db_map_data)
 
     @Slot(object)
-    def receive_objects_fetched(self, data):
-        db_map_data = {self.db_map: data}
+    def receive_objects_fetched(self, db_map_data):
         self.db_mngr.cache_items("object", db_map_data)
         self.listener.receive_objects_added(db_map_data)
 
     @Slot(object)
-    def receive_relationship_classes_fetched(self, data):
-        db_map_data = {self.db_map: data}
+    def receive_relationship_classes_fetched(self, db_map_data):
         self.db_mngr.cache_items("relationship class", db_map_data)
         self.listener.receive_relationship_classes_added(db_map_data)
 
     @Slot(object)
-    def receive_relationships_fetched(self, data):
-        db_map_data = {self.db_map: data}
+    def receive_relationships_fetched(self, db_map_data):
         self.db_mngr.cache_items("relationship", db_map_data)
         self.listener.receive_relationships_added(db_map_data)
 
     @Slot(object)
-    def receive_parameter_definitions_fetched(self, data):
-        db_map_data = {self.db_map: data}
+    def receive_parameter_definitions_fetched(self, db_map_data):
         self.db_mngr.cache_items("parameter definition", db_map_data)
         self.listener.receive_parameter_definitions_added(db_map_data)
 
     @Slot(object)
-    def receive_parameter_values_fetched(self, data):
-        db_map_data = {self.db_map: data}
+    def receive_parameter_values_fetched(self, db_map_data):
         self.db_mngr.cache_items("parameter value", db_map_data)
         self.listener.receive_parameter_values_added(db_map_data)
 
     @Slot(object)
-    def receive_parameter_value_lists_fetched(self, data):
-        db_map_data = {self.db_map: data}
+    def receive_parameter_value_lists_fetched(self, db_map_data):
         self.db_mngr.cache_items("parameter value list", db_map_data)
         self.listener.receive_parameter_value_lists_added(db_map_data)
 
     @Slot(object)
-    def receive_parameter_tags_fetched(self, data):
-        db_map_data = {self.db_map: data}
+    def receive_parameter_tags_fetched(self, db_map_data):
         self.db_mngr.cache_items("parameter tag", db_map_data)
         self.listener.receive_parameter_tags_added(db_map_data)

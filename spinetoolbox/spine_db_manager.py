@@ -256,14 +256,14 @@ class SpineDBManager(QObject):
             del self.redo_action[db_map]
         return True
 
-    def fetch_db_map_for_listener(self, db_map, listener):
+    def fetch_db_maps_for_listener(self, listener, *db_maps):
         """Fetches given db_map for given listener.
 
         Args:
             db_map (DiffDatabaseMapping)
             listener (DataStoreForm)
         """
-        self.fetcher = SpineDBFetcher(self, db_map, listener)
+        self.fetcher = SpineDBFetcher(self, listener, *db_maps)
         self.fetcher.run()
 
     def refresh_session(self, *db_maps):
