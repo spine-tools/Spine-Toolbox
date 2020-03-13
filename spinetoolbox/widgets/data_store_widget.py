@@ -90,6 +90,7 @@ class DataStoreFormBase(QMainWindow):
         self.selected_param_def_ids = {"object class": {}, "relationship class": {}}
         self.parameter_value_list_model = ParameterValueListModel(self, self.db_mngr, *self.db_maps)
         self.ui.treeView_parameter_value_list.setModel(self.parameter_value_list_model)
+        self.silenced = False
         fm = QFontMetrics(QFont("", 0))
         self.default_row_height = 1.2 * fm.lineSpacing()
         max_screen_height = max([s.availableSize().height() for s in QGuiApplication.screens()])
@@ -191,6 +192,8 @@ class DataStoreFormBase(QMainWindow):
         Args:
             msg (str): String to show in QStatusBar
         """
+        if self.silenced:
+            return
         self.notification_stack.push(msg)
 
     def restore_dock_widgets(self):
@@ -665,7 +668,7 @@ class DataStoreForm(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         self.apply_tree_style()
         self.restore_ui()
         for db_map in self.db_maps:
-            self.db_mngr.fetch_db_map(db_map)
+            self.db_mngr.fetch_db_map_for_listener(db_map, self)
         toc = time.process_time()
         self.msg.emit("Data store view created in {0:.2f} seconds".format(toc - tic))
 

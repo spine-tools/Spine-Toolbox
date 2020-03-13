@@ -20,7 +20,7 @@ import time
 import numpy as np
 from numpy import atleast_1d as arr
 from scipy.sparse.csgraph import dijkstra
-from PySide2.QtCore import Qt, Signal, Slot, QTimer
+from PySide2.QtCore import Qt, Signal, Slot
 from PySide2.QtWidgets import QGraphicsTextItem
 from .custom_menus import GraphViewContextMenu, ObjectItemContextMenu, RelationshipItemContextMenu
 from .custom_qwidgets import ZoomWidgetAction

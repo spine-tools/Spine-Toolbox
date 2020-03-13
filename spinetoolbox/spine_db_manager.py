@@ -38,6 +38,7 @@ from spinedb_api import (
 )
 from .helpers import IconManager, busy_effect, format_string_list
 from .spine_db_signaller import SpineDBSignaller
+from .spine_db_fetcher import SpineDBFetcher
 from .spine_db_commands import (
     AgedUndoStack,
     AddItemsCommand,
@@ -116,6 +117,7 @@ class SpineDBManager(QObject):
         self.redo_action = {}
         self.icon_mngr = IconManager()
         self.signaller = SpineDBSignaller(self)
+        self.fetcher = None
         self.connect_signals()
 
     @property
@@ -214,6 +216,12 @@ class SpineDBManager(QObject):
         return self._db_maps[url]
 
     def get_db_map_for_listener(self, listener, url, upgrade=False, codename=None):
+        """Returns a db_map for given listener.
+
+        Args:
+            listener (DataStoreForm)
+            url (DiffDatabaseMapping)
+        """
         db_map = self.get_db_map(url, upgrade=upgrade, codename=codename)
         self.signaller.add_db_map_listener(db_map, listener)
         stack = self.undo_stack[db_map] = AgedUndoStack()
@@ -228,6 +236,12 @@ class SpineDBManager(QObject):
         return db_map
 
     def remove_db_map_listener(self, db_map, listener):
+        """Removes listener for a given db_map.
+
+        Args:
+            db_map (DiffDatabaseMapping)
+            listener (DataStoreForm)
+        """
         listeners = self.signaller.db_map_listeners(db_map) - {listener}
         if not listeners:
             if not self.ok_to_close(db_map):
@@ -241,6 +255,16 @@ class SpineDBManager(QObject):
             del self.undo_action[db_map]
             del self.redo_action[db_map]
         return True
+
+    def fetch_db_map_for_listener(self, db_map, listener):
+        """Fetches given db_map for given listener.
+
+        Args:
+            db_map (DiffDatabaseMapping)
+            listener (DataStoreForm)
+        """
+        self.fetcher = SpineDBFetcher(self, db_map, listener)
+        self.fetcher.run()
 
     def refresh_session(self, *db_maps):
         refreshed_db_maps = set()
@@ -642,29 +666,6 @@ class SpineDBManager(QObject):
         if isinstance(parsed_value, TimeSeriesVariableResolution):
             return "Start: {}, resolution: variable, length: {}".format(parsed_value.indexes[0], len(parsed_value))
         return None
-
-    def fetch_db_map(self, db_map):
-        """Fetches given db_map.
-
-        Args:
-            db_map (DiffDatabaseMapping)
-        """
-        object_classes = self.get_object_classes(db_map)
-        objects = self.get_objects(db_map)
-        relationship_classes = self.get_relationship_classes(db_map)
-        relationships = self.get_relationships(db_map)
-        parameter_definitions = self.get_parameter_definitions(db_map)
-        parameter_values = self.get_parameter_values(db_map)
-        parameter_value_lists = self.get_parameter_value_lists(db_map)
-        parameter_tags = self.get_parameter_tags(db_map)
-        self.object_classes_added.emit({db_map: object_classes})
-        self.objects_added.emit({db_map: objects})
-        self.relationship_classes_added.emit({db_map: relationship_classes})
-        self.relationships_added.emit({db_map: relationships})
-        self.parameter_definitions_added.emit({db_map: parameter_definitions})
-        self.parameter_values_added.emit({db_map: parameter_values})
-        self.parameter_value_lists_added.emit({db_map: parameter_value_lists})
-        self.parameter_tags_added.emit({db_map: parameter_tags})
 
     @staticmethod
     def get_db_items(query, order_by_fields):
