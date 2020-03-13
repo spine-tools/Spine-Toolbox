@@ -22,6 +22,22 @@ from spinedb_api import to_database, from_database
 from .minimal_tree_model import MinimalTreeModel, TreeItem
 
 
+class ValueListTreeItem(TreeItem):
+    """A tree item that can fetch its children."""
+
+    def can_fetch_more(self):
+        """Disables lazy loading."""
+        return False
+
+    def insert_children(self, position, *children):
+        """Fetches the children as they become parented."""
+        result = super().insert_children(position, *children)
+        if result:
+            for child in children:
+                child.fetch_more()
+        return result
+
+
 class EditableMixin:
     def flags(self, column):
         """Makes items editable."""
@@ -61,7 +77,7 @@ class AppendEmptyChildMixin:
             self.append_children(empty_child)
 
 
-class DBItem(AppendEmptyChildMixin, TreeItem):
+class DBItem(AppendEmptyChildMixin, ValueListTreeItem):
     """An item representing a db."""
 
     def __init__(self, db_map):
@@ -94,7 +110,7 @@ class DBItem(AppendEmptyChildMixin, TreeItem):
             return f"root ({self.db_map.codename})"
 
 
-class ListItem(GrayFontMixin, BoldFontMixin, AppendEmptyChildMixin, EditableMixin, TreeItem):
+class ListItem(GrayFontMixin, BoldFontMixin, AppendEmptyChildMixin, EditableMixin, ValueListTreeItem):
     """A list item."""
 
     def __init__(self, db_map, identifier=None, name=None, value_list=()):
@@ -195,7 +211,7 @@ class ListItem(GrayFontMixin, BoldFontMixin, AppendEmptyChildMixin, EditableMixi
             child.value = from_database(value)
 
 
-class ValueItem(GrayFontMixin, EditableMixin, TreeItem):
+class ValueItem(GrayFontMixin, EditableMixin, ValueListTreeItem):
     """A value item."""
 
     def __init__(self, value=None):
@@ -236,13 +252,14 @@ class ParameterValueListModel(MinimalTreeModel):
             items = db_map_data.get(db_item.db_map)
             if not items:
                 continue
+            # First realize the ones added locally
             items = {x["name"]: x for x in items}
             for list_item in db_item.children[:-1]:
                 item = items.pop(list_item.name, None)
                 if not item:
                     continue
                 list_item.handle_added_to_db(identifier=item["id"], value_list=item["value_list"].split(","))
-            # Now append remaining items
+            # Now append the ones added externally
             children = [
                 ListItem(db_item.db_map, item["id"], item["name"], item["value_list"].split(","))
                 for item in items.values()
@@ -250,6 +267,7 @@ class ParameterValueListModel(MinimalTreeModel):
             db_item.insert_children(db_item.child_count() - 1, *children)
 
     def receive_parameter_value_lists_updated(self, db_map_data):
+        self.layoutAboutToBeChanged.emit()
         for db_item in self._invisible_root_item.children:
             items = db_map_data.get(db_item.db_map)
             if not items:
@@ -260,8 +278,10 @@ class ParameterValueListModel(MinimalTreeModel):
                 if not item:
                     continue
                 list_item.handle_updated_in_db(name=item["name"], value_list=item["value_list"].split(","))
+        self.layoutChanged.emit()
 
     def receive_parameter_value_lists_removed(self, db_map_data):
+        self.layoutAboutToBeChanged.emit()
         for db_item in self._invisible_root_item.children:
             items = db_map_data.get(db_item.db_map)
             if not items:
@@ -273,11 +293,12 @@ class ParameterValueListModel(MinimalTreeModel):
                     removed_rows.append(row)
             for row in sorted(removed_rows, reverse=True):
                 db_item.remove_children(row, 1)
+        self.layoutChanged.emit()
 
     def build_tree(self):
         """Initialize the internal data structure of the model."""
         self.beginResetModel()
-        self._invisible_root_item = TreeItem(self)
+        self._invisible_root_item = ValueListTreeItem(self)
         self.endResetModel()
         db_items = [DBItem(db_map) for db_map in self.db_maps]
         self._invisible_root_item.append_children(*db_items)

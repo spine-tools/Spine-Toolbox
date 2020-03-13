@@ -65,22 +65,14 @@ class SpineDBFetcher(QObject):
     def run(self):
         self.listener.setCursor(QCursor(Qt.BusyCursor))
         self.listener.silenced = True
-        self.object_classes_fetched.emit({db_map: self.db_mngr.get_object_classes(db_map) for db_map in self.db_maps})
-        self.relationship_classes_fetched.emit(
-            {db_map: self.db_mngr.get_relationship_classes(db_map) for db_map in self.db_maps}
-        )
-        self.parameter_definitions_fetched.emit(
-            {db_map: self.db_mngr.get_parameter_definitions(db_map) for db_map in self.db_maps}
-        )
-        self.objects_fetched.emit({db_map: self.db_mngr.get_objects(db_map) for db_map in self.db_maps})
-        self.relationships_fetched.emit({db_map: self.db_mngr.get_relationships(db_map) for db_map in self.db_maps})
-        self.parameter_values_fetched.emit(
-            {db_map: self.db_mngr.get_parameter_values(db_map) for db_map in self.db_maps}
-        )
-        self.parameter_value_lists_fetched.emit(
-            {db_map: self.db_mngr.get_parameter_value_lists(db_map) for db_map in self.db_maps}
-        )
-        self.parameter_tags_fetched.emit({db_map: self.db_mngr.get_parameter_tags(db_map) for db_map in self.db_maps})
+        self.object_classes_fetched.emit({x: self.db_mngr.get_object_classes(x) for x in self.db_maps})
+        self.relationship_classes_fetched.emit({x: self.db_mngr.get_relationship_classes(x) for x in self.db_maps})
+        self.parameter_definitions_fetched.emit({x: self.db_mngr.get_parameter_definitions(x) for x in self.db_maps})
+        self.objects_fetched.emit({x: self.db_mngr.get_objects(x) for x in self.db_maps})
+        self.relationships_fetched.emit({x: self.db_mngr.get_relationships(x) for x in self.db_maps})
+        self.parameter_values_fetched.emit({x: self.db_mngr.get_parameter_values(x) for x in self.db_maps})
+        self.parameter_value_lists_fetched.emit({x: self.db_mngr.get_parameter_value_lists(x) for x in self.db_maps})
+        self.parameter_tags_fetched.emit({x: self.db_mngr.get_parameter_tags(x) for x in self.db_maps})
         self.deleteLater()
 
     def clean_up(self):

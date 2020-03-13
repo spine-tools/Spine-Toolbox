@@ -107,7 +107,7 @@ class SpineDBManager(QObject):
             logger (LoggingInterface)
             project (SpineToolboxProject)
         """
-        super().__init__()
+        super().__init__(project)
         self._logger = logger
         self._db_maps = {}
         self._cache = {}
@@ -224,9 +224,9 @@ class SpineDBManager(QObject):
         """
         db_map = self.get_db_map(url, upgrade=upgrade, codename=codename)
         self.signaller.add_db_map_listener(db_map, listener)
-        stack = self.undo_stack[db_map] = AgedUndoStack()
-        undo_action = self.undo_action[db_map] = stack.createUndoAction(stack)
-        redo_action = self.redo_action[db_map] = stack.createRedoAction(stack)
+        stack = self.undo_stack[db_map] = AgedUndoStack(self)
+        undo_action = self.undo_action[db_map] = stack.createUndoAction(self)
+        redo_action = self.redo_action[db_map] = stack.createRedoAction(self)
         undo_action.setShortcuts(QKeySequence.Undo)
         redo_action.setShortcuts(QKeySequence.Redo)
         undo_action.setIcon(QIcon(":/icons/menu_icons/undo.svg"))
