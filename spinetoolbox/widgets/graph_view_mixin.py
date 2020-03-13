@@ -35,6 +35,8 @@ class GraphViewMixin:
     """Provides the graph view for the DS form."""
 
     graph_created = Signal()
+    objects_added_to_graph = Signal()
+    relationships_added_to_graph = Signal()
 
     _node_extent = 64
     _arc_width = 0.25 * _node_extent
@@ -87,6 +89,9 @@ class GraphViewMixin:
         # Connect Add more items in Item palette
         self.ui.listView_object_class.clicked.connect(self._add_more_object_classes)
         self.ui.listView_relationship_class.clicked.connect(self._add_more_relationship_classes)
+        # Added to graph
+        self.objects_added_to_graph.connect(self._ensure_objects_in_graph)
+        self.relationships_added_to_graph.connect(self._ensure_relationships_in_graph)
 
     def setup_zoom_widget_action(self):
         """Setups zoom widget action in view menu."""
@@ -137,7 +142,7 @@ class GraphViewMixin:
         super().receive_objects_added(db_map_data)
         objects = db_map_data.get(self.db_map, [])
         self._added_objects = {x["id"]: x for x in objects}
-        QTimer.singleShot(0, self._ensure_objects_in_graph)
+        self.objects_added_to_graph.emit()
 
     @Slot()
     def _ensure_objects_in_graph(self):
@@ -189,7 +194,7 @@ class GraphViewMixin:
         super().receive_relationships_added(db_map_data)
         relationships = db_map_data.get(self.db_map, [])
         self._added_relationships = {x["id"]: x for x in relationships}
-        QTimer.singleShot(0, self._ensure_relationships_in_graph)
+        self.relationships_added_to_graph.emit()
 
     @Slot()
     def _ensure_relationships_in_graph(self):

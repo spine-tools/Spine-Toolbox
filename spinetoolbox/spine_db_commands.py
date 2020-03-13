@@ -168,7 +168,7 @@ class CommandBase(QUndoCommand):
         "parameter value list": "parameter_value_lists_added",
         "parameter tag": "parameter_tags_added",
     }
-    _update_signal_name = {
+    _updated_signal_name = {
         "object class": "object_classes_updated",
         "object": "objects_updated",
         "relationship class": "relationship_classes_updated",
@@ -311,7 +311,7 @@ class UpdateItemsCommand(CommandBase):
         self.undo_db_map_data = {db_map: [self._undo_item(db_map, item) for item in data]}
         self.method_name = self._update_method_name[item_type]
         self.get_method_name = self._get_method_name[item_type]
-        self.emit_signal_name = self._update_signal_name[item_type]
+        self.emit_signal_name = self._updated_signal_name[item_type]
         self.receive_signal = getattr(db_mngr, self.emit_signal_name)
         self.setText(self._update_command_name[item_type] + f" in '{db_map.codename}'")
 

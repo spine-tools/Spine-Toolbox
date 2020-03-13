@@ -16,7 +16,7 @@ Spine DB Signaller class.
 :date:   31.10.2019
 """
 
-from PySide2.QtCore import Slot, QObject
+from PySide2.QtCore import Slot, QObject, QThread
 
 
 class SpineDBSignaller(QObject):
@@ -31,6 +31,9 @@ class SpineDBSignaller(QObject):
         super().__init__()
         self.db_mngr = db_mngr
         self.listeners = dict()
+        self._thread = QThread()
+        self.moveToThread(self._thread)
+        self._thread.start()
 
     def add_db_map_listener(self, db_map, listener):
         """Adds listener for given db_map."""
@@ -81,6 +84,7 @@ class SpineDBSignaller(QObject):
         self.db_mngr.session_refreshed.connect(self.receive_session_refreshed)
         self.db_mngr.session_committed.connect(self.receive_session_committed)
         self.db_mngr.session_rolled_back.connect(self.receive_session_rolled_back)
+        qApp.aboutToQuit.connect(self._thread.quit)
 
     @staticmethod
     def _shared_db_map_data(db_map_data, db_maps):

@@ -16,7 +16,7 @@ The SpineDBManager class
 :date:   2.10.2019
 """
 
-from PySide2.QtCore import Qt, QObject, Signal, Slot, QSettings, QThread
+from PySide2.QtCore import Qt, QObject, Signal, Slot, QSettings
 from PySide2.QtWidgets import QMessageBox, QDialog, QCheckBox
 from PySide2.QtGui import QKeySequence, QIcon, QFontMetrics, QFont
 from spinedb_api import (
@@ -116,10 +116,6 @@ class SpineDBManager(QObject):
         self.redo_action = {}
         self.icon_mngr = IconManager()
         self.signaller = SpineDBSignaller(self)
-        self._thread = QThread()
-        self.moveToThread(self._thread)
-        self.signaller.moveToThread(self._thread)
-        self._thread.start()
         self.connect_signals()
 
     @property
@@ -438,12 +434,6 @@ class SpineDBManager(QObject):
             lambda db_map_data: self.uncache_items("parameter value list", db_map_data)
         )
         self.parameter_tags_removed.connect(lambda db_map_data: self.uncache_items("parameter tag", db_map_data))
-        qApp.aboutToQuit.connect(self.stop_thread)
-
-    @Slot()
-    def stop_thread(self):
-        self._thread.quit()
-        self._thread.wait()
 
     @Slot(object)
     def receive_error_msg(self, db_map_error_log):
@@ -653,23 +643,28 @@ class SpineDBManager(QObject):
             return "Start: {}, resolution: variable, length: {}".format(parsed_value.indexes[0], len(parsed_value))
         return None
 
-    def fetch_items(self, db_map, item_type):
-        """Calls the given function with db_map data for the given db_map and item type.
+    def fetch_db_map(self, db_map):
+        """Fetches given db_map.
+
+        Args:
+            db_map (DiffDatabaseMapping)
         """
-        get_items_signal = {
-            "object class": (self.get_object_classes, self.object_classes_added),
-            "object": (self.get_objects, self.objects_added),
-            "relationship class": (self.get_relationship_classes, self.relationship_classes_added),
-            "relationship": (self.get_relationships, self.relationships_added),
-            "parameter definition": (self.get_parameter_definitions, self.parameter_definitions_added),
-            "parameter value": (self.get_parameter_values, self.parameter_values_added),
-            "parameter value list": (self.get_parameter_value_lists, self.parameter_value_lists_added),
-            "parameter tag": (self.get_parameter_tags, self.parameter_tags_added),
-        }.get(item_type)
-        if get_items_signal is not None:
-            get_items, signal = get_items_signal
-            items = get_items(db_map)
-            signal.emit({db_map: items})
+        object_classes = self.get_object_classes(db_map)
+        objects = self.get_objects(db_map)
+        relationship_classes = self.get_relationship_classes(db_map)
+        relationships = self.get_relationships(db_map)
+        parameter_definitions = self.get_parameter_definitions(db_map)
+        parameter_values = self.get_parameter_values(db_map)
+        parameter_value_lists = self.get_parameter_value_lists(db_map)
+        parameter_tags = self.get_parameter_tags(db_map)
+        self.object_classes_added.emit({db_map: object_classes})
+        self.objects_added.emit({db_map: objects})
+        self.relationship_classes_added.emit({db_map: relationship_classes})
+        self.relationships_added.emit({db_map: relationships})
+        self.parameter_definitions_added.emit({db_map: parameter_definitions})
+        self.parameter_values_added.emit({db_map: parameter_values})
+        self.parameter_value_lists_added.emit({db_map: parameter_value_lists})
+        self.parameter_tags_added.emit({db_map: parameter_tags})
 
     @staticmethod
     def get_db_items(query, order_by_fields):

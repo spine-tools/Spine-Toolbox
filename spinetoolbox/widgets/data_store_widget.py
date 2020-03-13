@@ -400,7 +400,6 @@ class DataStoreFormBase(QMainWindow):
         msg = f"All changes in {db_names} rolled back successfully."
         self.msg.emit(msg)
 
-    @Slot(bool)
     def receive_session_refreshed(self, db_maps):
         db_maps = set(self.db_maps) & set(db_maps)
         if not db_maps:
@@ -666,14 +665,7 @@ class DataStoreForm(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         self.apply_tree_style()
         self.restore_ui()
         for db_map in self.db_maps:
-            self.db_mngr.fetch_items(db_map, "object class")
-            self.db_mngr.fetch_items(db_map, "object")
-            self.db_mngr.fetch_items(db_map, "relationship class")
-            self.db_mngr.fetch_items(db_map, "relationship")
-            self.db_mngr.fetch_items(db_map, "parameter definition")
-            self.db_mngr.fetch_items(db_map, "parameter value")
-            self.db_mngr.fetch_items(db_map, "parameter value list")
-            self.db_mngr.fetch_items(db_map, "parameter tag")
+            self.db_mngr.fetch_db_map(db_map)
         toc = time.process_time()
         self.msg.emit("Data store view created in {0:.2f} seconds".format(toc - tic))
 
