@@ -79,12 +79,8 @@ class DBItem(AppendEmptyChildMixin, TreeItem):
         return self.model.db_mngr
 
     def fetch_more(self):
-        children = [
-            ListItem(self.db_map, value_list["id"], value_list["name"], value_list["value_list"].split(","))
-            for value_list in self.db_mngr.get_parameter_value_lists(self.db_map)
-        ]
         empty_child = self.empty_child()
-        self.append_children(*children, empty_child)
+        self.append_children(empty_child)
         self._fetched = True
 
     def empty_child(self):
@@ -236,7 +232,6 @@ class ParameterValueListModel(MinimalTreeModel):
         self.db_maps = db_maps
 
     def receive_parameter_value_lists_added(self, db_map_data):
-        self.layoutAboutToBeChanged.emit()
         for db_item in self._invisible_root_item.children:
             items = db_map_data.get(db_item.db_map)
             if not items:
@@ -253,10 +248,8 @@ class ParameterValueListModel(MinimalTreeModel):
                 for item in items.values()
             ]
             db_item.insert_children(db_item.child_count() - 1, *children)
-        self.layoutChanged.emit()
 
     def receive_parameter_value_lists_updated(self, db_map_data):
-        self.layoutAboutToBeChanged.emit()
         for db_item in self._invisible_root_item.children:
             items = db_map_data.get(db_item.db_map)
             if not items:
@@ -267,10 +260,8 @@ class ParameterValueListModel(MinimalTreeModel):
                 if not item:
                     continue
                 list_item.handle_updated_in_db(name=item["name"], value_list=item["value_list"].split(","))
-        self.layoutChanged.emit()
 
     def receive_parameter_value_lists_removed(self, db_map_data):
-        self.layoutAboutToBeChanged.emit()
         for db_item in self._invisible_root_item.children:
             items = db_map_data.get(db_item.db_map)
             if not items:
@@ -282,7 +273,6 @@ class ParameterValueListModel(MinimalTreeModel):
                     removed_rows.append(row)
             for row in sorted(removed_rows, reverse=True):
                 db_item.remove_children(row, 1)
-        self.layoutChanged.emit()
 
     def build_tree(self):
         """Initialize the internal data structure of the model."""
@@ -291,8 +281,6 @@ class ParameterValueListModel(MinimalTreeModel):
         self.endResetModel()
         db_items = [DBItem(db_map) for db_map in self.db_maps]
         self._invisible_root_item.append_children(*db_items)
-        for item in self.visit_all():
-            item.fetch_more()
 
     def columnCount(self, parent=QModelIndex()):
         """Returns the number of columns under the given parent. Always 1.

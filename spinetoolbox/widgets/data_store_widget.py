@@ -89,6 +89,7 @@ class DataStoreFormBase(QMainWindow):
         self.selected_parameter_tag_ids = dict()
         self.selected_param_def_ids = {"object class": {}, "relationship class": {}}
         self.parameter_value_list_model = ParameterValueListModel(self, self.db_mngr, *self.db_maps)
+        self.ui.treeView_parameter_value_list.setModel(self.parameter_value_list_model)
         fm = QFontMetrics(QFont("", 0))
         self.default_row_height = 1.2 * fm.lineSpacing()
         max_screen_height = max([s.availableSize().height() for s in QGuiApplication.screens()])
@@ -664,6 +665,15 @@ class DataStoreForm(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         self.connect_signals()
         self.apply_tree_style()
         self.restore_ui()
+        for db_map in self.db_maps:
+            self.db_mngr.fetch_items(db_map, "object class")
+            self.db_mngr.fetch_items(db_map, "object")
+            self.db_mngr.fetch_items(db_map, "relationship class")
+            self.db_mngr.fetch_items(db_map, "relationship")
+            self.db_mngr.fetch_items(db_map, "parameter definition")
+            self.db_mngr.fetch_items(db_map, "parameter value")
+            self.db_mngr.fetch_items(db_map, "parameter value list")
+            self.db_mngr.fetch_items(db_map, "parameter tag")
         toc = time.process_time()
         self.msg.emit("Data store view created in {0:.2f} seconds".format(toc - tic))
 

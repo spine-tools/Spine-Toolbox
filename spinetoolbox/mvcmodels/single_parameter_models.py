@@ -33,14 +33,13 @@ class SingleParameterModel(MinimalTableModel):
     to filter entities within the class.
     """
 
-    def __init__(self, parent, header, db_mngr, db_map, entity_class_id, lazy=True):
+    def __init__(self, header, db_mngr, db_map, entity_class_id, lazy=False):
         """Init class.
 
         Args:
-            parent (CompoundParameterModel): the parent object
             header (list): list of field names for the header
         """
-        super().__init__(parent, header, lazy=lazy)
+        super().__init__(header=header, lazy=lazy)
         self.db_mngr = db_mngr
         self.db_map = db_map
         self.entity_class_id = entity_class_id
@@ -115,18 +114,6 @@ class SingleParameterModel(MinimalTableModel):
         if self.header[index.column()] in self.fixed_fields:
             return flags & ~Qt.ItemIsEditable
         return flags
-
-    def fetchMore(self, parent=None):
-        """Fetch data and use it to reset the model."""
-        data = self._fetch_data()
-        self.reset_model(data)
-        self._fetched = True
-
-    def _fetch_data(self):
-        """Returns data to reset the model with and call it fetched.
-        Reimplement in subclasses if you want to populate your model automatically.
-        """
-        raise NotImplementedError()
 
     def get_field_item_data(self, field):
         """Returns item data for given field.
@@ -345,49 +332,18 @@ class SingleObjectParameterDefinitionModel(
 ):
     """An object parameter definition model for a single object class."""
 
-    def _fetch_data(self):
-        """Returns object parameter definition ids."""
-        return [
-            x["id"]
-            for x in self.db_mngr.get_object_parameter_definitions(self.db_map, object_class_id=self.entity_class_id)
-        ]
-
 
 class SingleRelationshipParameterDefinitionModel(
     SingleRelationshipParameterMixin, SingleParameterDefinitionMixin, SingleParameterModel
 ):
     """A relationship parameter definition model for a single relationship class."""
 
-    def _fetch_data(self):
-        """Returns relationship parameter definition ids."""
-        return [
-            x["id"]
-            for x in self.db_mngr.get_relationship_parameter_definitions(
-                self.db_map, relationship_class_id=self.entity_class_id
-            )
-        ]
-
 
 class SingleObjectParameterValueModel(SingleObjectParameterMixin, SingleParameterValueMixin, SingleParameterModel):
     """An object parameter value model for a single object class."""
-
-    def _fetch_data(self):
-        """Returns object parameter value ids."""
-        return [
-            x["id"] for x in self.db_mngr.get_object_parameter_values(self.db_map, object_class_id=self.entity_class_id)
-        ]
 
 
 class SingleRelationshipParameterValueModel(
     SingleRelationshipParameterMixin, SingleParameterValueMixin, SingleParameterModel
 ):
     """A relationship parameter value model for a single relationship class."""
-
-    def _fetch_data(self):
-        """Returns relationship parameter value ids."""
-        return [
-            x["id"]
-            for x in self.db_mngr.get_relationship_parameter_values(
-                self.db_map, relationship_class_id=self.entity_class_id
-            )
-        ]

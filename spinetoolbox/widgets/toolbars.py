@@ -185,6 +185,7 @@ class ParameterTagToolBar(QToolBar):
 
     tag_button_toggled = Signal("QVariant", "bool")
     manage_tags_action_triggered = Signal("bool")
+    tag_actions_added = Signal("QVariant", "QVariant")
 
     def __init__(self, parent, db_mngr, *db_maps):
         """
@@ -213,6 +214,7 @@ class ParameterTagToolBar(QToolBar):
         button.clicked.connect(lambda checked: self.manage_tags_action_triggered.emit(checked))
         self.setStyleSheet(PARAMETER_TAG_TOOLBAR_SS)
         self.setObjectName("ParameterTagToolbar")
+        self.tag_actions_added.connect(self._add_db_map_tag_actions)
 
     def init_toolbar(self):
         for button in self.tag_button_group.buttons():
@@ -228,7 +230,7 @@ class ParameterTagToolBar(QToolBar):
         self.db_map_ids = [[(db_map, 0) for db_map in self.db_maps]]
         tag_data = {}
         for db_map in self.db_maps:
-            for parameter_tag in self.db_mngr.get_parameter_tags(db_map):
+            for parameter_tag in self.db_mngr.get_items(db_map, "parameter tag"):
                 tag_data.setdefault(parameter_tag["tag"], {})[db_map] = parameter_tag["id"]
         for tag, db_map_data in tag_data.items():
             action = QAction(tag)
@@ -244,8 +246,9 @@ class ParameterTagToolBar(QToolBar):
 
     def receive_parameter_tags_added(self, db_map_data):
         for db_map, parameter_tags in db_map_data.items():
-            self._add_db_map_tag_actions(db_map, parameter_tags)
+            self.tag_actions_added.emit(db_map, parameter_tags)
 
+    @Slot("QVariant", "QVariant")
     def _add_db_map_tag_actions(self, db_map, parameter_tags):
         action_texts = [a.text() for a in self.actions]
         for parameter_tag in parameter_tags:

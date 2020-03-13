@@ -369,7 +369,7 @@ class GraphViewMixin:
         """
         root_index = self.object_tree_model.root_index
         if self.ui.treeView_object.selectionModel().isSelected(root_index):
-            return {x["id"] for x in self.db_mngr.get_objects(self.db_map)}
+            return {x["id"] for x in self.db_mngr.get_items(self.db_map, "object")}
         unique_object_ids = set()
         for index in self.object_tree_model.selected_object_indexes:
             item = index.model().item_from_index(index)
@@ -378,7 +378,9 @@ class GraphViewMixin:
         for index in self.object_tree_model.selected_object_class_indexes:
             item = index.model().item_from_index(index)
             object_class_id = item.db_map_id(self.db_map)
-            object_ids = {x["id"] for x in self.db_mngr.get_objects(self.db_map, class_id=object_class_id)}
+            object_ids = {
+                x["id"] for x in self.db_mngr.get_items_by_field(self.db_map, "object", "class_id", object_class_id)
+            }
             unique_object_ids.update(object_ids)
         return unique_object_ids
 
