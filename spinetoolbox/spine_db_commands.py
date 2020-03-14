@@ -98,6 +98,87 @@ class AgedUndoStack(QUndoStack):
 
 
 class CommandBase(QUndoCommand):
+    _add_command_name = {
+        "object class": "add object classes",
+        "object": "add objects",
+        "relationship class": "add relationship classes",
+        "relationship": "add relationships",
+        "parameter definition": "add parameter definitions",
+        "parameter value": "add parameter values",
+        "parameter value list": "add parameter value lists",
+        "parameter tag": "add parameter tags",
+    }
+    _update_command_name = {
+        "object class": "update object classes",
+        "object": "update objects",
+        "relationship class": "update relationship classes",
+        "relationship": "update relationships",
+        "parameter definition": "update parameter definitions",
+        "parameter value": "update parameter values",
+        "parameter value list": "update parameter value lists",
+        "parameter tag": "update parameter tags",
+    }
+    _add_method_name = {
+        "object class": "add_object_classes",
+        "object": "add_objects",
+        "relationship class": "add_wide_relationship_classes",
+        "relationship": "add_wide_relationships",
+        "parameter definition": "add_parameter_definitions",
+        "parameter value": "add_parameter_values",
+        "parameter value list": "add_wide_parameter_value_lists",
+        "parameter tag": "add_parameter_tags",
+    }
+    _readd_method_name = {
+        "object class": "readd_object_classes",
+        "object": "readd_objects",
+        "relationship class": "readd_wide_relationship_classes",
+        "relationship": "readd_wide_relationships",
+        "parameter definition": "readd_parameter_definitions",
+        "parameter value": "readd_parameter_values",
+        "parameter value list": "readd_wide_parameter_value_lists",
+        "parameter tag": "readd_parameter_tags",
+    }
+    _update_method_name = {
+        "object class": "update_object_classes",
+        "object": "update_objects",
+        "relationship class": "update_wide_relationship_classes",
+        "relationship": "update_wide_relationships",
+        "parameter definition": "update_parameter_definitions",
+        "parameter value": "update_parameter_values",
+        "parameter value list": "update_wide_parameter_value_lists",
+        "parameter tag": "update_parameter_tags",
+    }
+    _get_method_name = {
+        "object class": "get_object_classes",
+        "object": "get_objects",
+        "relationship class": "get_relationship_classes",
+        "relationship": "get_relationships",
+        "parameter definition": "get_parameter_definitions",
+        "parameter value": "get_parameter_values",
+        "parameter value list": "get_parameter_value_lists",
+        "parameter tag": "get_parameter_tags",
+    }
+    _added_signal_name = {
+        "object class": "object_classes_added",
+        "object": "objects_added",
+        "relationship class": "relationship_classes_added",
+        "relationship": "relationships_added",
+        "parameter definition": "parameter_definitions_added",
+        "parameter value": "parameter_values_added",
+        "parameter value list": "parameter_value_lists_added",
+        "parameter tag": "parameter_tags_added",
+    }
+    _updated_signal_name = {
+        "object class": "object_classes_updated",
+        "object": "objects_updated",
+        "relationship class": "relationship_classes_updated",
+        "relationship": "relationships_updated",
+        "parameter definition": "parameter_definitions_updated",
+        "parameter value": "parameter_values_updated",
+        "parameter value list": "parameter_value_lists_updated",
+        "parameter tag": "parameter_tags_updated",
+    }
+
     def __init__(self, db_mngr, db_map):
         """
         Args:
@@ -121,10 +202,10 @@ class CommandBase(QUndoCommand):
         """
         listeners = self.db_mngr.signaller.db_map_listeners(self.db_map)
         for listener in listeners:
-            listener.blockSignals(True)
+            listener.silenced = True
         func(self)
         for listener in listeners:
-            listener.blockSignals(False)
+            listener.silenced = False
 
     @staticmethod
     def redomethod(func):
@@ -168,51 +249,6 @@ class CommandBase(QUndoCommand):
 
 
 class AddItemsCommand(CommandBase):
-    _command_name = {
-        "object class": "add object classes",
-        "object": "add objects",
-        "relationship class": "add relationship classes",
-        "relationship": "add relationships",
-        "parameter definition": "add parameter definitions",
-        "parameter value": "add parameter values",
-        "parameter value list": "add parameter value lists",
-        "parameter tag": "add parameter tags",
-    }
-    _method_name = {
-        "object class": "add_object_classes",
-        "object": "add_objects",
-        "relationship class": "add_wide_relationship_classes",
-        "relationship": "add_wide_relationships",
-        "parameter definition": "add_parameter_definitions",
-        "parameter value": "add_parameter_values",
-        "parameter value list": "add_wide_parameter_value_lists",
-        "parameter tag": "add_parameter_tags",
-    }
-    _redo_method_name = {
-        "object class": "readd_object_classes",
-        "object": "readd_objects",
-        "relationship class": "readd_wide_relationship_classes",
-        "relationship": "readd_wide_relationships",
-        "parameter definition": "readd_parameter_definitions",
-        "parameter value": "readd_parameter_values",
-        "parameter value list": "readd_wide_parameter_value_lists",
-        "parameter tag": "readd_parameter_tags",
-    }
-    _emit_signal_name = {
-        "object class": "object_classes_added",
-        "object": "objects_added",
-        "relationship class": "relationship_classes_added",
-        "relationship": "relationships_added",
-        "parameter definition": "_parameter_definitions_added",
-        "parameter value": "_parameter_values_added",
-        "parameter value list": "parameter_value_lists_added",
-        "parameter tag": "parameter_tags_added",
-    }
-    _receive_signal_name = {
-        "parameter definition": "parameter_definitions_added",
-        "parameter value": "parameter_values_added",
-    }
-
     def __init__(self, db_mngr, db_map, data, item_type):
         """
         Args:
@@ -224,16 +260,18 @@ class AddItemsCommand(CommandBase):
         super().__init__(db_mngr, db_map)
         self.redo_db_map_data = {db_map: data}
         self.item_type = item_type
-        self.method_name = self._method_name[item_type]
-        self.emit_signal_name = self._emit_signal_name[item_type]
-        receive_signal_name = self._receive_signal_name.get(item_type, self.emit_signal_name)
-        self.receive_signal = getattr(db_mngr, receive_signal_name)
-        self.setText(self._command_name[item_type] + f" to '{db_map.codename}'")
+        self.method_name = self._add_method_name[item_type]
+        self.get_method_name = self._get_method_name[item_type]
+        self.emit_signal_name = self._added_signal_name[item_type]
+        self.receive_signal = getattr(db_mngr, self.emit_signal_name)
+        self.setText(self._add_command_name[item_type] + f" to '{db_map.codename}'")
         self.undo_db_map_data = None
 
     @CommandBase.redomethod
     def redo(self):
-        self.db_mngr.add_or_update_items(self.redo_db_map_data, self.method_name, self.emit_signal_name)
+        self.db_mngr.add_or_update_items(
+            self.redo_db_map_data, self.method_name, self.get_method_name, self.emit_signal_name
+        )
 
     @CommandBase.undomethod
     def undo(self):
@@ -245,7 +283,7 @@ class AddItemsCommand(CommandBase):
         self.redo_db_map_data = {
             db_map: [_cache_to_db_item(self.item_type, item) for item in data] for db_map, data in db_map_data.items()
         }
-        self.method_name = self._redo_method_name[self.item_type]
+        self.method_name = self._readd_method_name[self.item_type]
         self.undo_db_map_data = {db_map: {self.item_type: data} for db_map, data in db_map_data.items()}
 
     def data(self):
@@ -259,37 +297,6 @@ class AddCheckedParameterValuesCommand(AddItemsCommand):
 
 
 class UpdateItemsCommand(CommandBase):
-    _command_name = {
-        "object class": "update object classes",
-        "object": "update objects",
-        "relationship class": "update relationship classes",
-        "relationship": "update relationships",
-        "parameter definition": "update parameter definitions",
-        "parameter value": "update parameter values",
-        "parameter value list": "update parameter value lists",
-        "parameter tag": "update parameter tags",
-    }
-    _method_name = {
-        "object class": "update_object_classes",
-        "object": "update_objects",
-        "relationship class": "update_wide_relationship_classes",
-        "relationship": "update_wide_relationships",
-        "parameter definition": "update_parameter_definitions",
-        "parameter value": "update_parameter_values",
-        "parameter value list": "update_wide_parameter_value_lists",
-        "parameter tag": "update_parameter_tags",
-    }
-    _emit_signal_name = {
-        "object class": "object_classes_updated",
-        "object": "objects_updated",
-        "relationship class": "relationship_classes_updated",
-        "relationship": "relationships_updated",
-        "parameter definition": "_parameter_definitions_updated",
-        "parameter value": "_parameter_values_updated",
-        "parameter value list": "parameter_value_lists_updated",
-        "parameter tag": "parameter_tags_updated",
-    }
-
     def __init__(self, db_mngr, db_map, data, item_type):
         """
         Args:
@@ -302,10 +309,11 @@ class UpdateItemsCommand(CommandBase):
         self.item_type = item_type
         self.redo_db_map_data = {db_map: data}
         self.undo_db_map_data = {db_map: [self._undo_item(db_map, item) for item in data]}
-        self.method_name = self._method_name[item_type]
-        self.emit_signal_name = self._emit_signal_name[item_type]
+        self.method_name = self._update_method_name[item_type]
+        self.get_method_name = self._get_method_name[item_type]
+        self.emit_signal_name = self._updated_signal_name[item_type]
         self.receive_signal = getattr(db_mngr, self.emit_signal_name)
-        self.setText(self._command_name[item_type] + f" in '{db_map.codename}'")
+        self.setText(self._update_command_name[item_type] + f" in '{db_map.codename}'")
 
     def _undo_item(self, db_map, redo_item):
         undo_item = self.db_mngr.get_item(db_map, self.item_type, redo_item["id"])
@@ -313,11 +321,15 @@ class UpdateItemsCommand(CommandBase):
 
     @CommandBase.redomethod
     def redo(self):
-        self.db_mngr.add_or_update_items(self.redo_db_map_data, self.method_name, self.emit_signal_name)
+        self.db_mngr.add_or_update_items(
+            self.redo_db_map_data, self.method_name, self.get_method_name, self.emit_signal_name
+        )
 
     @CommandBase.undomethod
     def undo(self):
-        self.db_mngr.add_or_update_items(self.undo_db_map_data, self.method_name, self.emit_signal_name)
+        self.db_mngr.add_or_update_items(
+            self.undo_db_map_data, self.method_name, self.get_method_name, self.emit_signal_name
+        )
 
     def data(self):
         return {_format_item(self.item_type, item): [] for item in self.undo_db_map_data[self.db_map]}
@@ -335,6 +347,7 @@ class SetParameterDefinitionTagsCommand(CommandBase):
         self.redo_db_map_data = {db_map: data}
         self.undo_db_map_data = {db_map: [self._undo_item(db_map, item) for item in data]}
         self.method_name = "set_parameter_definition_tags"
+        self.get_method_name = "get_parameter_definition_tags"
         self.emit_signal_name = "parameter_definition_tags_set"
         self.setText(f"set parameter definition tags in '{db_map.codename}'")
         self.receive_signal = self.db_mngr.parameter_definition_tags_set
@@ -345,36 +358,18 @@ class SetParameterDefinitionTagsCommand(CommandBase):
 
     @CommandBase.redomethod
     def redo(self):
-        self.db_mngr.add_or_update_items(self.redo_db_map_data, self.method_name, self.emit_signal_name)
+        self.db_mngr.add_or_update_items(
+            self.redo_db_map_data, self.method_name, self.get_method_name, self.emit_signal_name
+        )
 
     @CommandBase.undomethod
     def undo(self):
-        self.db_mngr.add_or_update_items(self.undo_db_map_data, self.method_name, self.emit_signal_name)
+        self.db_mngr.add_or_update_items(
+            self.undo_db_map_data, self.method_name, self.get_method_name, self.emit_signal_name
+        )
 
 
 class RemoveItemsCommand(CommandBase):
-
-    _undo_method_name = {
-        "object class": "readd_object_classes",
-        "object": "readd_objects",
-        "relationship class": "readd_wide_relationship_classes",
-        "relationship": "readd_wide_relationships",
-        "parameter definition": "readd_parameter_definitions",
-        "parameter value": "readd_parameter_values",
-        "parameter value list": "readd_wide_parameter_value_lists",
-        "parameter tag": "readd_parameter_tags",
-    }
-    _emit_signal_name = {
-        "object class": "object_classes_added",
-        "object": "objects_added",
-        "relationship class": "relationship_classes_added",
-        "relationship": "relationships_added",
-        "parameter definition": "_parameter_definitions_added",
-        "parameter value": "_parameter_values_added",
-        "parameter value list": "parameter_value_lists_added",
-        "parameter tag": "parameter_tags_added",
-    }
-
     def __init__(self, db_mngr, db_map, typed_data):
         """
         Args:
@@ -396,9 +391,10 @@ class RemoveItemsCommand(CommandBase):
     def undo(self):
         for item_type in reversed(list(self.undo_typed_db_map_data.keys())):
             db_map_data = self.undo_typed_db_map_data[item_type]
-            method_name = self._undo_method_name[item_type]
-            emit_signal_name = self._emit_signal_name[item_type]
-            self.db_mngr.add_or_update_items(db_map_data, method_name, emit_signal_name)
+            method_name = self._readd_method_name[item_type]
+            get_method_name = self._get_method_name[item_type]
+            emit_signal_name = self._added_signal_name[item_type]
+            self.db_mngr.add_or_update_items(db_map_data, method_name, get_method_name, emit_signal_name)
 
     @Slot(object)
     def receive_items_changed(self, db_map_typed_data):  # pylint: disable=arguments-differ

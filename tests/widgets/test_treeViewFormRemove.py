@@ -15,16 +15,16 @@ Unit tests for the TreeViewFormRemoveMixin.
 :author: M. Marin (KTH)
 :date:   6.12.2018
 """
+from unittest import mock
+from spinetoolbox.mvcmodels.compound_parameter_models import CompoundParameterModel
 
 
 class TestTreeViewFormRemoveMixin:
     def test_remove_object_classes_from_object_tree_model(self):
         """Test that object classes are removed from the object tree model.
         """
-        self.put_mock_object_classes_in_db_mngr()
         self.tree_view_form.init_models()
-        for item in self.tree_view_form.object_tree_model.visit_all():
-            item.fetch_more()
+        self.put_mock_object_classes_in_db_mngr()
         root_item = self.tree_view_form.object_tree_model.root_item
         self.assertEqual(root_item.child_count(), 2)
         self.db_mngr.object_classes_removed.emit({self.mock_db_map: [self.fish_class]})
@@ -34,11 +34,9 @@ class TestTreeViewFormRemoveMixin:
 
     def test_remove_objects_from_object_tree_model(self):
         """Test that objects are removed from the object tree model."""
+        self.tree_view_form.init_models()
         self.put_mock_object_classes_in_db_mngr()
         self.put_mock_objects_in_db_mngr()
-        self.tree_view_form.init_models()
-        for item in self.tree_view_form.object_tree_model.visit_all():
-            item.fetch_more()
         root_item = self.tree_view_form.object_tree_model.root_item
         fish_item = root_item.child(0)
         self.assertEqual(fish_item.child_count(), 1)
@@ -47,12 +45,10 @@ class TestTreeViewFormRemoveMixin:
 
     def test_remove_relationship_classes_from_object_tree_model(self):
         """Test that relationship classes removed from in the object tree model."""
+        self.tree_view_form.init_models()
         self.put_mock_object_classes_in_db_mngr()
         self.put_mock_objects_in_db_mngr()
         self.put_mock_relationship_classes_in_db_mngr()
-        self.tree_view_form.init_models()
-        for item in self.tree_view_form.object_tree_model.visit_all():
-            item.fetch_more()
         root_item = self.tree_view_form.object_tree_model.root_item
         dog_item = root_item.child(0)
         pluto_item = dog_item.child(0)
@@ -62,16 +58,11 @@ class TestTreeViewFormRemoveMixin:
 
     def test_remove_relationships_from_object_tree_model(self):
         """Test that relationships are removed from the object tree model."""
+        self.tree_view_form.init_models()
         self.put_mock_object_classes_in_db_mngr()
         self.put_mock_objects_in_db_mngr()
         self.put_mock_relationship_classes_in_db_mngr()
         self.put_mock_relationships_in_db_mngr()
-        self.tree_view_form.init_models()
-        for item in self.tree_view_form.object_tree_model.visit_all():
-            try:
-                item.fetch_more()
-            except NotImplementedError:
-                pass
         root_item = self.tree_view_form.object_tree_model.root_item
         dog_item = root_item.child(0)
         pluto_item = dog_item.child(0)
@@ -85,13 +76,12 @@ class TestTreeViewFormRemoveMixin:
 
     def test_remove_object_parameter_definitions_from_model(self):
         """Test that object parameter definitions are removed from the model."""
-        self.put_mock_object_classes_in_db_mngr()
-        self.put_mock_object_parameter_definitions_in_db_mngr()
         model = self.tree_view_form.object_parameter_definition_model
         model.init_model()
-        for m in model.sub_models:
-            m.fetchMore()
-        self.db_mngr.parameter_definitions_removed.emit({self.mock_db_map: [self.water_parameter]})
+        self.put_mock_object_classes_in_db_mngr()
+        self.put_mock_object_parameter_definitions_in_db_mngr()
+        with mock.patch.object(CompoundParameterModel, "_modify_data_in_filter_menus"):
+            self.db_mngr.parameter_definitions_removed.emit({self.mock_db_map: [self.water_parameter]})
         h = model.header.index
         parameters = []
         for row in range(model.rowCount()):
@@ -103,13 +93,12 @@ class TestTreeViewFormRemoveMixin:
 
     def test_remove_relationship_parameter_definitions_from_model(self):
         """Test that object parameter definitions are removed from the model."""
-        self.put_mock_relationship_classes_in_db_mngr()
-        self.put_mock_relationship_parameter_definitions_in_db_mngr()
         model = self.tree_view_form.relationship_parameter_definition_model
         model.init_model()
-        for m in model.sub_models:
-            m.fetchMore()
-        self.db_mngr.parameter_definitions_removed.emit({self.mock_db_map: [self.relative_speed_parameter]})
+        self.put_mock_relationship_classes_in_db_mngr()
+        self.put_mock_relationship_parameter_definitions_in_db_mngr()
+        with mock.patch.object(CompoundParameterModel, "_modify_data_in_filter_menus"):
+            self.db_mngr.parameter_definitions_removed.emit({self.mock_db_map: [self.relative_speed_parameter]})
         h = model.header.index
         parameters = []
         for row in range(model.rowCount()):
@@ -121,13 +110,12 @@ class TestTreeViewFormRemoveMixin:
 
     def test_remove_object_parameter_values_from_model(self):
         """Test that object parameter values are removed from the model."""
-        self.put_mock_object_classes_in_db_mngr()
-        self.put_mock_object_parameter_values_in_db_mngr()
         model = self.tree_view_form.object_parameter_value_model
         model.init_model()
-        for m in model.sub_models:
-            m.fetchMore()
-        self.db_mngr.parameter_values_removed.emit({self.mock_db_map: [self.nemo_water]})
+        self.put_mock_object_classes_in_db_mngr()
+        self.put_mock_object_parameter_values_in_db_mngr()
+        with mock.patch.object(CompoundParameterModel, "_modify_data_in_filter_menus"):
+            self.db_mngr.parameter_values_removed.emit({self.mock_db_map: [self.nemo_water]})
         h = model.header.index
         parameters = []
         for row in range(model.rowCount()):
@@ -142,13 +130,12 @@ class TestTreeViewFormRemoveMixin:
 
     def test_remove_relationship_parameter_values_from_model(self):
         """Test that relationship parameter values are removed from the model."""
-        self.put_mock_relationship_classes_in_db_mngr()
-        self.put_mock_relationship_parameter_values_in_db_mngr()
         model = self.tree_view_form.relationship_parameter_value_model
         model.init_model()
-        for m in model.sub_models:
-            m.fetchMore()
-        self.db_mngr.parameter_values_removed.emit({self.mock_db_map: [self.nemo_pluto_relative_speed]})
+        self.put_mock_relationship_classes_in_db_mngr()
+        self.put_mock_relationship_parameter_values_in_db_mngr()
+        with mock.patch.object(CompoundParameterModel, "_modify_data_in_filter_menus"):
+            self.db_mngr.parameter_values_removed.emit({self.mock_db_map: [self.nemo_pluto_relative_speed]})
         h = model.header.index
         parameters = []
         for row in range(model.rowCount()):

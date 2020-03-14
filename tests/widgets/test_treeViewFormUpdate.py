@@ -17,17 +17,17 @@ Unit tests for the TreeViewFormUpdateMixin.
 """
 
 import unittest
+from unittest import mock
 from PySide2.QtCore import Qt
+from spinetoolbox.mvcmodels.compound_parameter_models import CompoundParameterModel
 
 
 class TestTreeViewFormUpdateMixin:
     def test_update_object_classes_in_object_tree_model(self):
         """Test that object classes are updated in the object tree model.
         """
-        self.put_mock_object_classes_in_db_mngr()
         self.tree_view_form.init_models()
-        for item in self.tree_view_form.object_tree_model.visit_all():
-            item.fetch_more()
+        self.put_mock_object_classes_in_db_mngr()
         self.fish_class = self._object_class(1, "octopus", "An octopus.", 1, None)
         self.db_mngr.object_classes_updated.emit({self.mock_db_map: [self.fish_class]})
         root_item = self.tree_view_form.object_tree_model.root_item
@@ -37,11 +37,9 @@ class TestTreeViewFormUpdateMixin:
 
     def test_update_objects_in_object_tree_model(self):
         """Test that objects are updated in the object tree model."""
+        self.tree_view_form.init_models()
         self.put_mock_object_classes_in_db_mngr()
         self.put_mock_objects_in_db_mngr()
-        self.tree_view_form.init_models()
-        for item in self.tree_view_form.object_tree_model.visit_all():
-            item.fetch_more()
         self.nemo_object = self._object(1, self.fish_class["id"], 'dory', 'The one that forgets.')
         self.db_mngr.objects_updated.emit({self.mock_db_map: [self.nemo_object]})
         root_item = self.tree_view_form.object_tree_model.root_item
@@ -52,12 +50,10 @@ class TestTreeViewFormUpdateMixin:
 
     def test_update_relationship_classes_in_object_tree_model(self):
         """Test that relationship classes are updated in the object tree model."""
+        self.tree_view_form.init_models()
         self.put_mock_object_classes_in_db_mngr()
         self.put_mock_objects_in_db_mngr()
         self.put_mock_relationship_classes_in_db_mngr()
-        self.tree_view_form.init_models()
-        for item in self.tree_view_form.object_tree_model.visit_all():
-            item.fetch_more()
         self.fish_dog_class = self._relationship_class(
             3, "octopus__dog", str(self.fish_class["id"]) + "," + str(self.dog_class["id"]), "octopus,dog"
         )
@@ -76,14 +72,13 @@ class TestTreeViewFormUpdateMixin:
 
     def test_update_object_parameter_definitions_in_model(self):
         """Test that object parameter definitions are updated in the model."""
-        self.put_mock_object_classes_in_db_mngr()
-        self.put_mock_object_parameter_definitions_in_db_mngr()
         model = self.tree_view_form.object_parameter_definition_model
         model.init_model()
-        for m in model.sub_models:
-            m.fetchMore()
+        self.put_mock_object_classes_in_db_mngr()
+        self.put_mock_object_parameter_definitions_in_db_mngr()
         self.water_parameter = self._object_parameter_definition(1, self.fish_class["id"], "fish", "fire")
-        self.db_mngr.parameter_definitions_updated.emit({self.mock_db_map: [self.water_parameter]})
+        with mock.patch.object(CompoundParameterModel, "_modify_data_in_filter_menus"):
+            self.db_mngr.parameter_definitions_updated.emit({self.mock_db_map: [self.water_parameter]})
         h = model.header.index
         parameters = []
         for row in range(model.rowCount()):
@@ -94,12 +89,10 @@ class TestTreeViewFormUpdateMixin:
 
     def test_update_relationship_parameter_definitions_in_model(self):
         """Test that object parameter definitions are updated in the model."""
-        self.put_mock_relationship_classes_in_db_mngr()
-        self.put_mock_relationship_parameter_definitions_in_db_mngr()
         model = self.tree_view_form.relationship_parameter_definition_model
         model.init_model()
-        for m in model.sub_models:
-            m.fetchMore()
+        self.put_mock_relationship_classes_in_db_mngr()
+        self.put_mock_relationship_parameter_definitions_in_db_mngr()
         self.relative_speed_parameter = self._relationship_parameter_definition(
             3,
             self.fish_dog_class["id"],
@@ -108,7 +101,8 @@ class TestTreeViewFormUpdateMixin:
             "fish,dog",
             "each_others_opinion",
         )
-        self.db_mngr.parameter_definitions_updated.emit({self.mock_db_map: [self.relative_speed_parameter]})
+        with mock.patch.object(CompoundParameterModel, "_modify_data_in_filter_menus"):
+            self.db_mngr.parameter_definitions_updated.emit({self.mock_db_map: [self.relative_speed_parameter]})
         h = model.header.index
         parameters = []
         for row in range(model.rowCount()):
@@ -119,12 +113,10 @@ class TestTreeViewFormUpdateMixin:
 
     def test_update_object_parameter_values_in_model(self):
         """Test that object parameter values are updated in the model."""
-        self.put_mock_object_classes_in_db_mngr()
-        self.put_mock_object_parameter_values_in_db_mngr()
         model = self.tree_view_form.object_parameter_value_model
         model.init_model()
-        for m in model.sub_models:
-            m.fetchMore()
+        self.put_mock_object_classes_in_db_mngr()
+        self.put_mock_object_parameter_values_in_db_mngr()
         self.nemo_water = self._object_parameter_value(
             1,
             self.fish_class["id"],
@@ -135,7 +127,8 @@ class TestTreeViewFormUpdateMixin:
             "water",
             '"pepper"',
         )
-        self.db_mngr.parameter_values_updated.emit({self.mock_db_map: [self.nemo_water]})
+        with mock.patch.object(CompoundParameterModel, "_modify_data_in_filter_menus"):
+            self.db_mngr.parameter_values_updated.emit({self.mock_db_map: [self.nemo_water]})
         h = model.header.index
         parameters = []
         for row in range(model.rowCount()):
@@ -150,12 +143,10 @@ class TestTreeViewFormUpdateMixin:
 
     def test_update_relationship_parameter_values_in_model(self):
         """Test that relationship parameter values are updated in the model."""
-        self.put_mock_relationship_classes_in_db_mngr()
-        self.put_mock_relationship_parameter_values_in_db_mngr()
         model = self.tree_view_form.relationship_parameter_value_model
         model.init_model()
-        for m in model.sub_models:
-            m.fetchMore()
+        self.put_mock_relationship_classes_in_db_mngr()
+        self.put_mock_relationship_parameter_values_in_db_mngr()
         self.nemo_pluto_relative_speed = self._relationship_parameter_value(
             4,
             self.fish_dog_class["id"],
@@ -169,7 +160,8 @@ class TestTreeViewFormUpdateMixin:
             "relative_speed",
             100,
         )
-        self.db_mngr.parameter_values_updated.emit({self.mock_db_map: [self.nemo_pluto_relative_speed]})
+        with mock.patch.object(CompoundParameterModel, "_modify_data_in_filter_menus"):
+            self.db_mngr.parameter_values_updated.emit({self.mock_db_map: [self.nemo_pluto_relative_speed]})
         h = model.header.index
         parameters = []
         for row in range(model.rowCount()):

@@ -81,7 +81,7 @@ class EmptyParameterModel(EmptyRowModel):
         """Returns a unique id for the given model item (name-based). Used by receive_parameter_data_added."""
         return (item.get(self.entity_class_name_key), item.get("parameter_name"))
 
-    def get_entity_parameter_data(self, db_map, ids=None):
+    def get_entity_parameter_data(self, db_map, ids):
         """Returns object or relationship parameter definitions or values.
         Must be reimplemented in subclasses according to the entity type and to whether
         it's a definition or value model. Used by receive_parameter_data_added."""
@@ -93,7 +93,7 @@ class EmptyParameterModel(EmptyRowModel):
         added_ids = set()
         for db_map, items in db_map_data.items():
             ids = {x["id"] for x in items}
-            for item in self.get_entity_parameter_data(db_map, ids=ids):
+            for item in self.get_entity_parameter_data(db_map, ids):
                 database = db_map.codename
                 unique_id = (database, *self._make_unique_id(item))
                 added_ids.add(unique_id)
@@ -172,6 +172,10 @@ class EmptyParameterDefinitionModel(
         """Checks if a db item is ready to be inserted."""
         return self.entity_class_id_key in item and "name" in item
 
+    def get_entity_parameter_data(self, db_map, ids):
+        """Returns object parameter definitions. Used by receive_parameter_data_added."""
+        return [item for item in self.db_mngr.get_items(db_map, "parameter definition") if item["id"] in ids]
+
 
 class EmptyObjectParameterDefinitionModel(EmptyParameterDefinitionModel):
     """An empty object parameter definition model."""
@@ -180,10 +184,6 @@ class EmptyObjectParameterDefinitionModel(EmptyParameterDefinitionModel):
     def entity_class_type(self):
         return "object class"
 
-    def get_entity_parameter_data(self, db_map, ids=None):
-        """Returns object parameter definitions. Used by receive_parameter_data_added."""
-        return self.db_mngr.get_object_parameter_definitions(db_map, ids=ids)
-
 
 class EmptyRelationshipParameterDefinitionModel(EmptyParameterDefinitionModel):
     """An empty relationship parameter definition model."""
@@ -191,10 +191,6 @@ class EmptyRelationshipParameterDefinitionModel(EmptyParameterDefinitionModel):
     @property
     def entity_class_type(self):
         return "relationship class"
-
-    def get_entity_parameter_data(self, db_map, ids=None):
-        """Returns relationship parameter definitions. Used by receive_parameter_data_added."""
-        return self.db_mngr.get_relationship_parameter_definitions(db_map, ids=ids)
 
     def flags(self, index):
         """Additional hack to make the object_class_name_list column non-editable."""
@@ -260,6 +256,10 @@ class EmptyParameterValueModel(
         """Checks if a db item is ready to be inserted."""
         return self.entity_class_id_key in item and self.entity_id_key in item and "parameter_definition_id" in item
 
+    def get_entity_parameter_data(self, db_map, ids):
+        """Returns object parameter definitions. Used by receive_parameter_data_added."""
+        return [item for item in self.db_mngr.get_items(db_map, "parameter value") if item["id"] in ids]
+
 
 class EmptyObjectParameterValueModel(EmptyParameterValueModel):
     """An empty object parameter value model."""
@@ -271,10 +271,6 @@ class EmptyObjectParameterValueModel(EmptyParameterValueModel):
     @property
     def entity_type(self):
         return "object"
-
-    def get_entity_parameter_data(self, db_map, ids=None):
-        """Returns object parameter values. Used by receive_parameter_data_added."""
-        return self.db_mngr.get_object_parameter_values(db_map, ids=ids)
 
 
 class EmptyRelationshipParameterValueModel(MakeRelationshipOnTheFlyMixin, EmptyParameterValueModel):
@@ -289,10 +285,6 @@ class EmptyRelationshipParameterValueModel(MakeRelationshipOnTheFlyMixin, EmptyP
     @property
     def entity_type(self):
         return "relationship"
-
-    def get_entity_parameter_data(self, db_map, ids=None):
-        """Returns relationship parameter values. Used by receive_parameter_data_added."""
-        return self.db_mngr.get_relationship_parameter_values(db_map, ids=ids)
 
     def add_items_to_db(self, rows):
         """Add items to db.

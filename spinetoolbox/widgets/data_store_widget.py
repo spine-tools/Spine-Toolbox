@@ -93,6 +93,8 @@ class DataStoreFormBase(QMainWindow):
         self.selected_parameter_tag_ids = dict()
         self.selected_param_def_ids = {"object class": {}, "relationship class": {}}
         self.parameter_value_list_model = ParameterValueListModel(self, self.db_mngr, *self.db_maps)
+        self.ui.treeView_parameter_value_list.setModel(self.parameter_value_list_model)
+        self.silenced = False
         fm = QFontMetrics(QFont("", 0))
         self.default_row_height = 1.2 * fm.lineSpacing()
         max_screen_height = max([s.availableSize().height() for s in QGuiApplication.screens()])
@@ -195,6 +197,8 @@ class DataStoreFormBase(QMainWindow):
         Args:
             msg (str): String to show in QStatusBar
         """
+        if self.silenced:
+            return
         self.notification_stack.push(msg)
 
     def restore_dock_widgets(self):
@@ -404,7 +408,6 @@ class DataStoreFormBase(QMainWindow):
         msg = f"All changes in {db_names} rolled back successfully."
         self.msg.emit(msg)
 
-    @Slot(bool)
     def receive_session_refreshed(self, db_maps):
         db_maps = set(self.db_maps) & set(db_maps)
         if not db_maps:
@@ -672,6 +675,7 @@ class DataStoreForm(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         self.restore_ui()
         toc = time.process_time()
         self.msg.emit("Data store view created in {0:.2f} seconds".format(toc - tic))
+        self.db_mngr.fetch_db_maps_for_listener(self, *self.db_maps)
 
     def connect_signals(self):
         super().connect_signals()

@@ -51,8 +51,6 @@ class EntityListModel(QStandardItemModel):
         new_item.setToolTip("Add new class.")
         self.appendRow(new_item)
         self.new_index = self.indexFromItem(new_item)
-        for entity_class_id in self._get_entity_class_ids():
-            self.add_entity_class(entity_class_id)
 
     def add_entity_class(self, entity_class_id):
         """Add entity class item to model."""
@@ -108,9 +106,6 @@ class ObjectClassListModel(EntityListModel):
     def entity_type(self):
         return "object class"
 
-    def _get_entity_class_ids(self):
-        return [x["id"] for x in self.db_mngr.get_object_classes(self.db_map)]
-
 
 class RelationshipClassListModel(EntityListModel):
     """A model for listing relationship classes in the GraphViewForm."""
@@ -122,6 +117,3 @@ class RelationshipClassListModel(EntityListModel):
     @property
     def entity_type(self):
         return "relationship class"
-
-    def _get_entity_class_ids(self):
-        return [x["id"] for x in self.db_mngr.get_relationship_classes(self.db_map)]

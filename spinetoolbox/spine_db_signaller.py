@@ -16,10 +16,10 @@ Spine DB Signaller class.
 :date:   31.10.2019
 """
 
-from PySide2.QtCore import Slot
+from PySide2.QtCore import Slot, QObject
 
 
-class SpineDBSignaller:
+class SpineDBSignaller(QObject):
     """Handles signals from DB manager and channels them to listeners."""
 
     def __init__(self, db_mngr):
@@ -28,6 +28,7 @@ class SpineDBSignaller:
         Args:
             db_mngr (SpineDBManager)
         """
+        super().__init__()
         self.db_mngr = db_mngr
         self.listeners = dict()
 

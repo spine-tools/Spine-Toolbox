@@ -38,12 +38,6 @@ class TestTreeViewFormFilterMixin:
             self.tree_view_form.relationship_parameter_value_model: ("relationship_class_name", "object_name_list"),
         }
 
-    def _fetch_parameter_models(self):
-        for model in self._parameter_models:
-            model.init_model()
-            for m in model.sub_models:
-                m.fetchMore()
-
     @staticmethod
     def _parameter_data(model, *fields):
         return [
@@ -65,12 +59,6 @@ class TestTreeViewFormFilterMixin:
         """Test that parameter tables are filtered when selecting object classes in the object tree.
         """
         self.put_mock_dataset_in_db_mngr()
-        for item in self.tree_view_form.object_tree_model.visit_all():
-            try:
-                item.fetch_more()
-            except NotImplementedError:
-                pass
-        self._fetch_parameter_models()
         root_item = self.tree_view_form.object_tree_model.root_item
         fish_item = root_item.child(0)
         fish_index = self.tree_view_form.object_tree_model.index_from_item(fish_item)
@@ -87,12 +75,6 @@ class TestTreeViewFormFilterMixin:
         """Test that parameter tables are filtered when selecting objects in the object tree.
         """
         self.put_mock_dataset_in_db_mngr()
-        for item in self.tree_view_form.object_tree_model.visit_all():
-            try:
-                item.fetch_more()
-            except NotImplementedError:
-                pass
-        self._fetch_parameter_models()
         root_item = self.tree_view_form.object_tree_model.root_item
         dog_item = root_item.child(1)
         pluto_item = dog_item.child(0)
@@ -110,12 +92,6 @@ class TestTreeViewFormFilterMixin:
         """Test that parameter tables are filtered when selecting relationship classes in the object tree.
         """
         self.put_mock_dataset_in_db_mngr()
-        for item in self.tree_view_form.object_tree_model.visit_all():
-            try:
-                item.fetch_more()
-            except NotImplementedError:
-                pass
-        self._fetch_parameter_models()
         root_item = self.tree_view_form.object_tree_model.root_item
         dog_item = root_item.child(1)
         pluto_item = dog_item.child(0)
@@ -134,12 +110,6 @@ class TestTreeViewFormFilterMixin:
         """Test that parameter tables are filtered when selecting relationships in the object tree.
         """
         self.put_mock_dataset_in_db_mngr()
-        for item in self.tree_view_form.object_tree_model.visit_all():
-            try:
-                item.fetch_more()
-            except NotImplementedError:
-                pass
-        self._fetch_parameter_models()
         root_item = self.tree_view_form.object_tree_model.root_item
         dog_item = root_item.child(1)
         pluto_item = dog_item.child(0)

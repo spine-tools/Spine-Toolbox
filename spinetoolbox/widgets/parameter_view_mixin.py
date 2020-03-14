@@ -64,7 +64,6 @@ class ParameterViewMixin:
         self.relationship_parameter_definition_model = CompoundRelationshipParameterDefinitionModel(
             self, self.db_mngr, *self.db_maps
         )
-        self.ui.treeView_parameter_value_list.setModel(self.parameter_value_list_model)
         self.ui.tableView_object_parameter_value.setModel(self.object_parameter_value_model)
         self.ui.tableView_relationship_parameter_value.setModel(self.relationship_parameter_value_model)
         self.ui.tableView_object_parameter_definition.setModel(self.object_parameter_definition_model)
@@ -230,7 +229,7 @@ class ParameterViewMixin:
         for id_ in object_class_id_list.split(","):
             id_ = int(id_)
             object_class_name = self.db_mngr.get_item(db_map, "object class", id_).get("name")
-            object_names_list = [x["name"] for x in self.db_mngr.get_objects(db_map, class_id=id_)]
+            object_names_list = [x["name"] for x in self.db_mngr.get_items_by_field(db_map, "object", "class_id", id_)]
             object_class_names.append(object_class_name)
             object_names_lists.append(object_names_list)
         object_name_list = index.data(Qt.EditRole)
