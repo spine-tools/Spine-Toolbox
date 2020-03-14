@@ -81,19 +81,12 @@ class EmptyParameterModel(EmptyRowModel):
         """Returns a unique id for the given model item (name-based). Used by receive_parameter_data_added."""
         return (item.get(self.entity_class_name_key), item.get("parameter_name"))
 
-    def get_entity_parameter_data(self, db_map, ids):
-        """Returns object or relationship parameter definitions or values.
-        Must be reimplemented in subclasses according to the entity type and to whether
-        it's a definition or value model. Used by receive_parameter_data_added."""
-        raise NotImplementedError()
-
     def receive_parameter_data_added(self, db_map_data):
         """Runs when parameter definitions or values are added.
         Finds and removes model items that were successfully added to the db."""
         added_ids = set()
         for db_map, items in db_map_data.items():
-            ids = {x["id"] for x in items}
-            for item in self.get_entity_parameter_data(db_map, ids):
+            for item in items:
                 database = db_map.codename
                 unique_id = (database, *self._make_unique_id(item))
                 added_ids.add(unique_id)
@@ -171,10 +164,6 @@ class EmptyParameterDefinitionModel(
     def _check_item(self, item):
         """Checks if a db item is ready to be inserted."""
         return self.entity_class_id_key in item and "name" in item
-
-    def get_entity_parameter_data(self, db_map, ids):
-        """Returns object parameter definitions. Used by receive_parameter_data_added."""
-        return [item for item in self.db_mngr.get_items(db_map, "parameter definition") if item["id"] in ids]
 
 
 class EmptyObjectParameterDefinitionModel(EmptyParameterDefinitionModel):
@@ -255,10 +244,6 @@ class EmptyParameterValueModel(
     def _check_item(self, item):
         """Checks if a db item is ready to be inserted."""
         return self.entity_class_id_key in item and self.entity_id_key in item and "parameter_definition_id" in item
-
-    def get_entity_parameter_data(self, db_map, ids):
-        """Returns object parameter definitions. Used by receive_parameter_data_added."""
-        return [item for item in self.db_mngr.get_items(db_map, "parameter value") if item["id"] in ids]
 
 
 class EmptyObjectParameterValueModel(EmptyParameterValueModel):
