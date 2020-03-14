@@ -20,7 +20,7 @@ import time
 import numpy as np
 from numpy import atleast_1d as arr
 from scipy.sparse.csgraph import dijkstra
-from PySide2.QtCore import Qt, Signal, Slot
+from PySide2.QtCore import Qt, Signal, Slot, QTimer
 from PySide2.QtWidgets import QGraphicsTextItem
 from .custom_menus import GraphViewContextMenu, ObjectItemContextMenu, RelationshipItemContextMenu
 from .custom_qwidgets import ZoomWidgetAction
@@ -146,6 +146,10 @@ class GraphViewMixin:
 
     @Slot()
     def _ensure_objects_in_graph(self):
+        QTimer.singleShot(0, self._do_ensure_objects_in_graph)
+
+    @Slot()
+    def _do_ensure_objects_in_graph(self):
         """Makes sure all objects in ``self._added_objects`` are materialized in the graph if corresponds.
         It is assumed that ``self._added_objects`` doesn't contain information regarding objects added
         from the graph itself (through Item Palette etc.). These are materialized in ``add_object()``.
@@ -198,6 +202,10 @@ class GraphViewMixin:
 
     @Slot()
     def _ensure_relationships_in_graph(self):
+        QTimer.singleShot(0, self._do_ensure_relationships_in_graph)
+
+    @Slot()
+    def _do_ensure_relationships_in_graph(self):
         """Makes sure all relationships in ``self._added_relationships`` are materialized in the graph if corresponds.
         It is assumed that ``self._added_relationships`` doesn't contain information regarding relationships added
         from the graph itself (through Item Palette etc.). These are materialized in ``add_relationship()``.
