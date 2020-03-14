@@ -26,7 +26,7 @@ class ValueListTreeItem(TreeItem):
     """A tree item that can fetch its children."""
 
     def can_fetch_more(self):
-        """Disables lazy loading."""
+        """Disables lazy loading by returning False."""
         return False
 
     def insert_children(self, position, *children):

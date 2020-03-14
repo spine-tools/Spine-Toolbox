@@ -50,7 +50,8 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
             db_mngr (SpineDBManager): the database manager
             *db_maps (DiffDatabaseMapping): the database maps included in the model
         """
-        super().__init__(parent, header=self._make_header())
+        super().__init__(parent=parent, header=self._make_header())
+        self._parent = parent
         self.db_mngr = db_mngr
         self.db_maps = db_maps
         self._accepted_entity_class_ids = {}  # Accepted by main filter
@@ -141,7 +142,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         self._auto_filter_menu_data.clear()
         for field in self.header:
             # TODO: show_empty=True
-            self._auto_filter_menus[field] = menu = ParameterViewFilterMenu(self.parent(), self, show_empty=False)
+            self._auto_filter_menus[field] = menu = ParameterViewFilterMenu(self._parent, self, show_empty=False)
             menu.filterChanged.connect(
                 lambda values, has_filter, field=field: self.update_auto_filter(field, values, has_filter)
             )
@@ -337,7 +338,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         a = bool(self._auto_filter)
         self._auto_filter = dict()
         b = self._settattr_if_different(
-            self, "_accepted_entity_class_ids", self.parent().selected_entity_class_ids(self.entity_class_type)
+            self, "_accepted_entity_class_ids", self._parent.selected_entity_class_ids(self.entity_class_type)
         )
         return a or b
 
@@ -352,7 +353,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         """
         a = bool(model._auto_filter)
         model._auto_filter.clear()
-        selected_param_def_ids = self.parent().selected_param_def_ids[self.entity_class_type]
+        selected_param_def_ids = self._parent.selected_param_def_ids[self.entity_class_type]
         if selected_param_def_ids is not None:
             selected_param_def_ids = selected_param_def_ids.get((model.db_map, model.entity_class_id), set())
         b = self._settattr_if_different(model, "_selected_param_def_ids", selected_param_def_ids)
@@ -613,7 +614,7 @@ class CompoundParameterValueMixin:
         b = self._settattr_if_different(
             model,
             "_selected_entity_ids",
-            self.parent().selected_ent_ids[self.entity_type].get((model.db_map, model.entity_class_id), set()),
+            self._parent.selected_ent_ids[self.entity_type].get((model.db_map, model.entity_class_id), set()),
         )
         return a or b
 
