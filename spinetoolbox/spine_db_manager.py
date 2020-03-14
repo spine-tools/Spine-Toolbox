@@ -301,7 +301,7 @@ class SpineDBManager(QObject):
             except SpineDBAPIError as e:
                 error_log[db_map] = e.msg
         if any(error_log.values()):
-            self._error_msg(error_log)
+            self.error_msg(error_log)
         if committed_db_maps:
             self.session_committed.emit(committed_db_maps)
 
@@ -326,7 +326,7 @@ class SpineDBManager(QObject):
             except SpineDBAPIError as e:
                 error_log[db_map] = e.msg
         if any(error_log.values()):
-            self._error_msg(error_log)
+            self.error_msg(error_log)
         if rolled_db_maps:
             self.session_rolled_back.emit(rolled_db_maps)
 
@@ -338,7 +338,7 @@ class SpineDBManager(QObject):
             db_map.commit_session(commit_msg)
             return True
         except SpineDBAPIError as e:
-            self._error_msg({db_map: e.msg})
+            self.error_msg({db_map: e.msg})
             return False
 
     def _rollback_db_map_session(self, db_map):
@@ -346,7 +346,7 @@ class SpineDBManager(QObject):
             db_map.rollback_session()
             return True
         except SpineDBAPIError as e:
-            self._error_msg({db_map: e.msg})
+            self.error_msg({db_map: e.msg})
             return False
 
     def ok_to_close(self, db_map):
@@ -869,7 +869,7 @@ class SpineDBManager(QObject):
                 continue
             db_map_data_out[db_map] = getattr(self, get_method_name)(db_map, ids=ids)
         if any(error_log.values()):
-            self._error_msg(error_log)
+            self.error_msg(error_log)
         if any(db_map_data_out.values()):
             getattr(self, signal_name).emit(db_map_data_out)
 
@@ -1097,7 +1097,7 @@ class SpineDBManager(QObject):
             db_map_parameter_value_lists[db_map] = parameter_value_lists
             db_map_parameter_tags[db_map] = parameter_tags
         if any(error_log.values()):
-            self._error_msg(error_log)
+            self.error_msg(error_log)
         if any(db_map_object_classes.values()):
             self.object_classes_removed.emit(db_map_object_classes)
         if any(db_map_objects.values()):
