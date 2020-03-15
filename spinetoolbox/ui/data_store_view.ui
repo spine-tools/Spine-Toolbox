@@ -122,6 +122,8 @@
     <property name="title">
      <string>Graph</string>
     </property>
+    <addaction name="actionRebuild"/>
+    <addaction name="separator"/>
     <addaction name="actionHide_selected"/>
     <addaction name="actionShow_hidden"/>
     <addaction name="separator"/>
@@ -1260,6 +1262,11 @@
   <action name="actionView_history">
    <property name="text">
     <string>View history...</string>
+   </property>
+  </action>
+  <action name="actionRebuild">
+   <property name="text">
+    <string>Rebuild</string>
    </property>
   </action>
  </widget>

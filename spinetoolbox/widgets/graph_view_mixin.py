@@ -39,8 +39,8 @@ class GraphViewMixin:
     relationships_added_to_graph = Signal()
 
     _node_extent = 64
-    _arc_width = 0.25 * _node_extent
-    _arc_length_hint = 3 * _node_extent
+    _arc_width = 0.2 * _node_extent
+    _arc_length_hint = 1.5 * _node_extent
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -54,7 +54,7 @@ class GraphViewMixin:
         self.rejected_items = list()
         self.removed_items = list()
         self.entity_item_selection = list()
-        self._nothing_item = QGraphicsTextItem("Nothing to show.")
+        self._nothing_item = None
         self.zoom_widget_action = None
         area = self.dockWidgetArea(self.ui.dockWidget_item_palette)
         self._handle_item_palette_dock_location_changed(area)
@@ -81,6 +81,7 @@ class GraphViewMixin:
         self.ui.actionPrune_selected.triggered.connect(self.prune_selected_items)
         self.ui.actionRestore_pruned.triggered.connect(self.restore_pruned_items)
         self.ui.actionLive_graph_demo.triggered.connect(self.show_demo)
+        self.ui.actionRebuild.triggered.connect(self.build_graph)
         # Dock Widgets menu action
         self.ui.menuGraph.aboutToShow.connect(self._handle_menu_graph_about_to_show)
         self.zoom_widget_action.minus_pressed.connect(self._handle_zoom_minus_pressed)
@@ -351,7 +352,8 @@ class GraphViewMixin:
             self.build_graph()
 
     @busy_effect
-    def build_graph(self, timeit=False):
+    @Slot(bool)
+    def build_graph(self, checked=False, timeit=False):
         """Builds the graph."""
         tic = time.clock()
         new_items = self._get_new_items()
@@ -359,7 +361,8 @@ class GraphViewMixin:
         scene = self.new_scene()
         self.hidden_items.clear()
         self.removed_items.clear()
-        if not new_items and not wip_items:
+        if not any(x for x in new_items) and not any(x for x in wip_items):
+            self._nothing_item = QGraphicsTextItem("Nothing to show.")
             scene.addItem(self._nothing_item)
         else:
             if new_items:
@@ -444,7 +447,7 @@ class GraphViewMixin:
             len(object_ids) + len(relationship_ids), src_inds, dst_inds, self._arc_length_hint
         )
         if d is None:
-            return []
+            return ()
         x, y = self.vertex_coordinates(d)
         object_items = list()
         relationship_items = list()
@@ -455,13 +458,13 @@ class GraphViewMixin:
         offset = len(object_items)
         for i, relationship_id in enumerate(relationship_ids):
             relationship_item = RelationshipItem(
-                self, x[offset + i], y[offset + i], self._node_extent, entity_id=relationship_id
+                self, x[offset + i], y[offset + i], 0.5 * self._node_extent, entity_id=relationship_id
             )
             relationship_items.append(relationship_item)
         for rel_ind, obj_ind in zip(src_inds, dst_inds):
             arc_item = ArcItem(relationship_items[rel_ind - offset], object_items[obj_ind], self._arc_width)
             arc_items.append(arc_item)
-        return object_items, relationship_items, arc_items
+        return (object_items, relationship_items, arc_items)
 
     def _get_wip_items(self):
         """Removes wip items from the current scene and returns them.
@@ -473,7 +476,7 @@ class GraphViewMixin:
         """
         scene = self.ui.graphicsView.scene()
         if not scene:
-            return []
+            return ()
         obj_items = set()
         rel_items = list()
         arc_items = list()
@@ -489,7 +492,7 @@ class GraphViewMixin:
             scene.removeItem(arc_item)
         for rel_item in rel_items:
             scene.removeItem(rel_item)
-        return list(obj_items), rel_items, arc_items
+        return (list(obj_items), rel_items, arc_items)
 
     @staticmethod
     def _add_new_items(scene, object_items, relationship_items, arc_items):
@@ -723,7 +726,7 @@ class GraphViewMixin:
         x += x_offset
         y += y_offset
         relationship_item = RelationshipItem(
-            self, x[-1], y[-1], self._node_extent, entity_class_id=relationship_class_id
+            self, x[-1], y[-1], 0.5 * self._node_extent, entity_class_id=relationship_class_id
         )
         object_items = list()
         arc_items = list()
