@@ -361,7 +361,7 @@ class GraphViewMixin:
         scene = self.new_scene()
         self.hidden_items.clear()
         self.removed_items.clear()
-        if not any(x for x in new_items) and not any(x for x in wip_items):
+        if not any(new_items) and not any(wip_items):
             self._nothing_item = QGraphicsTextItem("Nothing to show.")
             scene.addItem(self._nothing_item)
         else:
@@ -385,20 +385,26 @@ class GraphViewMixin:
         """
         root_index = self.object_tree_model.root_index
         if self.ui.treeView_object.selectionModel().isSelected(root_index):
-            return {x["id"] for x in self.db_mngr.get_items(self.db_map, "object")}
-        unique_object_ids = set()
+            return {x["id"] for x in self.db_mngr.get_items(self.db_map, "object")}, set()
+        selected_object_ids = set()
+        selected_relationship_ids = set()
         for index in self.object_tree_model.selected_object_indexes:
             item = index.model().item_from_index(index)
             object_id = item.db_map_id(self.db_map)
-            unique_object_ids.add(object_id)
+            selected_object_ids.add(object_id)
+        for index in self.object_tree_model.selected_relationship_indexes:
+            item = index.model().item_from_index(index)
+            relationship_id = item.db_map_id(self.db_map)
+            selected_relationship_ids.add(relationship_id)
         for index in self.object_tree_model.selected_object_class_indexes:
             item = index.model().item_from_index(index)
-            object_class_id = item.db_map_id(self.db_map)
-            object_ids = {
-                x["id"] for x in self.db_mngr.get_items_by_field(self.db_map, "object", "class_id", object_class_id)
-            }
-            unique_object_ids.update(object_ids)
-        return unique_object_ids
+            object_ids = {child.db_map_id(self.db_map) for child in item.children}
+            selected_object_ids.update(object_ids)
+        for index in self.object_tree_model.selected_relationship_class_indexes:
+            item = index.model().item_from_index(index)
+            relationship_ids = {child.db_map_id(self.db_map) for child in item.children}
+            selected_relationship_ids.update(relationship_ids)
+        return selected_object_ids, selected_relationship_ids
 
     def _get_graph_data(self):
         """Returns data for making graph according to selection in Object tree.
@@ -409,22 +415,25 @@ class GraphViewMixin:
             list: arc source indices
             list: arc destination indices
         """
+        object_ids, relationship_ids = self._get_selected_object_ids()
         rejected_entity_ids = {x.entity_id for x in self.rejected_items}
-        object_ids = self._get_selected_object_ids() - rejected_entity_ids
-        relationship_ids = list()
+        object_ids -= rejected_entity_ids
+        relationships = self.db_mngr.find_cascading_relationships({self.db_map: object_ids}).get(self.db_map, [])
+        relationships += [self.db_mngr.get_item(self.db_map, "relationship", id_) for id_ in relationship_ids]
         object_id_lists = list()
-        for relationship in self.db_mngr.find_cascading_relationships({self.db_map: object_ids}).get(self.db_map, []):
+        for relationship in relationships:
             if relationship["id"] in rejected_entity_ids:
                 continue
             object_id_list = {int(x) for x in relationship["object_id_list"].split(",")} - rejected_entity_ids
             if len(object_id_list) < 2:
                 continue
-            relationship_ids.append(relationship["id"])
+            relationship_ids.add(relationship["id"])
             object_id_lists.append(object_id_list)
             object_ids.update(object_id_list)
+        object_ids = list(object_ids)
+        relationship_ids = list(relationship_ids)
         src_inds = list()
         dst_inds = list()
-        object_ids = list(object_ids)
         relationship_ind = len(object_ids)
         for object_id_list in object_id_lists:
             object_inds = [object_ids.index(id_) for id_ in object_id_list]
