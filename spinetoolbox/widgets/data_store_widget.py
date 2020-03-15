@@ -413,6 +413,7 @@ class DataStoreFormBase(QMainWindow):
         if not db_maps:
             return
         self.init_models()
+        self.db_mngr.fetch_db_maps_for_listener(self, *db_maps)
         self.msg.emit("Session refreshed.")
 
     @Slot("QVariant", bool)

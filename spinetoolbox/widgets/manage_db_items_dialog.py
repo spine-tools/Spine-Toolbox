@@ -127,7 +127,8 @@ class GetObjectsMixin:
     def make_db_map_rel_cls_lookup(self):
         return {
             db_map: {
-                (x["name"], x["object_class_name_list"]): x for x in self.db_mngr.get_iems(db_map, "relationship class")
+                (x["name"], x["object_class_name_list"]): x
+                for x in self.db_mngr.get_items(db_map, "relationship class")
             }
             for db_map in self.db_maps
         }
