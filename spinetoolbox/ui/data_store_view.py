@@ -10,10 +10,10 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-# Form implementation generated from reading ui file 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\data_store_view.ui',
-# licensing of 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\data_store_view.ui' applies.
+# Form implementation generated from reading ui file '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/data_store_view.ui',
+# licensing of '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/data_store_view.ui' applies.
 #
-# Created: Mon Mar 16 15:34:35 2020
+# Created: Mon Mar 16 15:31:51 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -510,6 +510,8 @@ class Ui_MainWindow(object):
         self.actionClear_positions.setObjectName("actionClear_positions")
         self.actionSave_positions = QtWidgets.QAction(MainWindow)
         self.actionSave_positions.setObjectName("actionSave_positions")
+        self.actionExport_as_pdf = QtWidgets.QAction(MainWindow)
+        self.actionExport_as_pdf.setObjectName("actionExport_as_pdf")
         self.menuSession.addAction(self.actionRefresh)
         self.menuSession.addAction(self.actionCommit)
         self.menuSession.addAction(self.actionRollback)
@@ -540,6 +542,8 @@ class Ui_MainWindow(object):
         self.menuView.addAction(self.actionTree_style)
         self.menuView.addAction(self.actionTabular_style)
         self.menuView.addAction(self.actionGraph_style)
+        self.menuGraph.addAction(self.actionExport_as_pdf)
+        self.menuGraph.addSeparator()
         self.menuGraph.addAction(self.actionSave_positions)
         self.menuGraph.addAction(self.actionClear_positions)
         self.menuGraph.addSeparator()
@@ -632,10 +636,11 @@ class Ui_MainWindow(object):
         self.actionView_history.setText(QtWidgets.QApplication.translate("MainWindow", "View history...", None, -1))
         self.actionClear_positions.setText(QtWidgets.QApplication.translate("MainWindow", "Clear saved positions", None, -1))
         self.actionSave_positions.setText(QtWidgets.QApplication.translate("MainWindow", "Save positions", None, -1))
+        self.actionExport_as_pdf.setText(QtWidgets.QApplication.translate("MainWindow", "Export as PDF...", None, -1))
 
-from spinetoolbox.widgets.custom_qgraphicsviews import GraphQGraphicsView
 from spinetoolbox.widgets.custom_qlistview import DragListView
-from spinetoolbox.widgets.custom_qtreeview import StickySelectionEntityTreeView, EntityTreeView, CopyTreeView
 from spinetoolbox.widgets.frozen_table_view import FrozenTableView
-from spinetoolbox.widgets.custom_qtableview import AutoFilterCopyPasteTableView, PivotTableView
+from spinetoolbox.widgets.custom_qtreeview import StickySelectionEntityTreeView, CopyTreeView, EntityTreeView
+from spinetoolbox.widgets.custom_qgraphicsviews import GraphQGraphicsView
+from spinetoolbox.widgets.custom_qtableview import PivotTableView, AutoFilterCopyPasteTableView
 from spinetoolbox import resources_icons_rc

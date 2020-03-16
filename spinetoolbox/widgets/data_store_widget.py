@@ -32,7 +32,7 @@ from PySide2.QtWidgets import (
 from PySide2.QtCore import Qt, Signal, Slot, QSettings
 from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QIcon
 from spinedb_api import copy_database
-from ..config import MAINWINDOW_SS
+from ..config import MAINWINDOW_SS, APPLICATION_PATH
 from .edit_db_items_dialogs import ManageParameterTagsDialog
 from .custom_menus import ParameterValueListContextMenu
 from .parameter_view_mixin import ParameterViewMixin
@@ -318,6 +318,12 @@ class DataStoreFormBase(QMainWindow):
         dialog.close()
         dialog.deleteLater()
 
+    def _get_base_dir(self):
+        project = self.db_mngr.parent()
+        if project is None:
+            return APPLICATION_PATH
+        return project.project_dir
+
     @Slot(bool)
     def export_database(self, checked=False):
         """Exports data from database into a file."""
@@ -325,9 +331,8 @@ class DataStoreFormBase(QMainWindow):
         db_map = self._select_database()
         if db_map is None:  # Database selection cancelled
             return
-        proj_dir = self.db_mngr.parent().project_dir  # Parent should be SpineToolboxProject
         file_path, selected_filter = QFileDialog.getSaveFileName(
-            self, "Export to file", proj_dir, "Excel file (*.xlsx);;SQlite database (*.sqlite *.db)"
+            self, "Export to file", self._get_base_dir(), "Excel file (*.xlsx);;SQlite database (*.sqlite *.db)"
         )
         if not file_path:  # File selection cancelled
             return
@@ -362,7 +367,7 @@ class DataStoreFormBase(QMainWindow):
         filename = os.path.split(file_path)[1]
         try:
             export_spine_database_to_xlsx(db_map, file_path)
-            self.msg.emit("Excel file successfully exported.")
+            self.msg.emit(f"File {file_path} successfully exported.")
         except PermissionError:
             self.msg_error.emit(
                 "Unable to export to file <b>{0}</b>.<br/>" "Close the file in Excel and try again.".format(filename)

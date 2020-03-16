@@ -20,8 +20,10 @@ import time
 import numpy as np
 from numpy import atleast_1d as arr
 from scipy.sparse.csgraph import dijkstra
-from PySide2.QtCore import Qt, Signal, Slot, QTimer
-from PySide2.QtWidgets import QGraphicsTextItem
+from PySide2.QtCore import Qt, Signal, Slot, QTimer, QRectF
+from PySide2.QtWidgets import QGraphicsTextItem, QFileDialog
+from PySide2.QtPrintSupport import QPrinter
+from PySide2.QtGui import QPainter
 from spinedb_api import to_database, from_database
 from .custom_menus import GraphViewContextMenu, ObjectItemContextMenu, RelationshipItemContextMenu
 from .custom_qwidgets import ZoomWidgetAction
@@ -85,6 +87,7 @@ class GraphViewMixin:
         self.ui.actionLive_graph_demo.triggered.connect(self.show_demo)
         self.ui.actionSave_positions.triggered.connect(self.save_positions)
         self.ui.actionClear_positions.triggered.connect(self.clear_saved_positions)
+        self.ui.actionExport_as_pdf.triggered.connect(self.export_as_pdf)
         # Dock Widgets menu action
         self.ui.menuGraph.aboutToShow.connect(self._handle_menu_graph_about_to_show)
         self.zoom_widget_action.minus_pressed.connect(self._handle_zoom_minus_pressed)
@@ -325,6 +328,7 @@ class GraphViewMixin:
         has_graph = scene and scene.items() != [self._blank_item]
         self.ui.actionSave_positions.setEnabled(has_graph)
         self.ui.actionClear_positions.setEnabled(has_graph)
+        self.ui.actionExport_as_pdf.setEnabled(has_graph)
         self.ui.actionHide_selected.setEnabled(visible and bool(self.entity_item_selection))
         self.ui.actionShow_hidden.setEnabled(visible and bool(self.hidden_items))
         self.ui.actionPrune_selected.setEnabled(visible and bool(self.entity_item_selection))
@@ -452,6 +456,21 @@ class GraphViewMixin:
         if vals_to_remove:
             self.db_mngr.remove_items({self.db_map: {"parameter value": vals_to_remove}})
         self.build_graph()
+
+    @Slot(bool)
+    def export_as_pdf(self, checked=False):
+        file_name, _ = QFileDialog.getSaveFileName(self, "Save as image", self._get_base_dir(), "PDF files (*.pdf)")
+        if not file_name:
+            return
+        scene = self.ui.graphicsView.scene()
+        source = scene.itemsBoundingRect()
+        printer = QPrinter()
+        printer.setPaperSize(source.size(), QPrinter.Point)
+        printer.setOutputFileName(file_name)
+        painter = QPainter(printer)
+        scene.render(painter, QRectF(), source)
+        painter.end()
+        self.msg.emit(f"File {file_name} successfully exported.")
 
     def _get_selected_object_ids(self):
         """Returns a set of ids corresponding to selected objects in the object tree.
