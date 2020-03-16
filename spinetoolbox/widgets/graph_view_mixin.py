@@ -325,7 +325,7 @@ class GraphViewMixin:
         """Enables or disables actions according to current selection in the graph."""
         visible = self.ui.dockWidget_entity_graph.isVisible()
         scene = self.ui.graphicsView.scene()
-        has_graph = scene and scene.items() != [self._blank_item]
+        has_graph = scene is not None and scene.items() != [self._blank_item]
         self.ui.actionSave_positions.setEnabled(has_graph)
         self.ui.actionClear_positions.setEnabled(has_graph)
         self.ui.actionExport_as_pdf.setEnabled(has_graph)
