@@ -10,10 +10,10 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-# Form implementation generated from reading ui file 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\ui\settings.ui',
-# licensing of 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\ui\settings.ui' applies.
+# Form implementation generated from reading ui file '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/settings.ui',
+# licensing of '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/settings.ui' applies.
 #
-# Created: Thu Feb 13 11:54:11 2020
+# Created: Mon Mar 16 13:51:10 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -137,6 +137,9 @@ class Ui_SettingsForm(object):
         self.label.setFont(font)
         self.label.setObjectName("label")
         self.gridLayout.addWidget(self.label, 5, 0, 1, 1)
+        self.checkBox_use_smooth_zoom = QtWidgets.QCheckBox(self.groupBox_general)
+        self.checkBox_use_smooth_zoom.setObjectName("checkBox_use_smooth_zoom")
+        self.gridLayout.addWidget(self.checkBox_use_smooth_zoom, 7, 0, 1, 1)
         self.horizontalLayout_6 = QtWidgets.QHBoxLayout()
         self.horizontalLayout_6.setObjectName("horizontalLayout_6")
         self.lineEdit_work_dir = QtWidgets.QLineEdit(self.groupBox_general)
@@ -158,18 +161,12 @@ class Ui_SettingsForm(object):
         self.toolButton_browse_work.setObjectName("toolButton_browse_work")
         self.horizontalLayout_6.addWidget(self.toolButton_browse_work)
         self.gridLayout.addLayout(self.horizontalLayout_6, 6, 0, 1, 1)
-        self.checkBox_use_smooth_zoom = QtWidgets.QCheckBox(self.groupBox_general)
-        self.checkBox_use_smooth_zoom.setObjectName("checkBox_use_smooth_zoom")
-        self.gridLayout.addWidget(self.checkBox_use_smooth_zoom, 7, 0, 1, 1)
-        self.checkBox_use_curved_links = QtWidgets.QCheckBox(self.groupBox_general)
-        self.checkBox_use_curved_links.setObjectName("checkBox_use_curved_links")
-        self.gridLayout.addWidget(self.checkBox_use_curved_links)
         self.label_7 = QtWidgets.QLabel(self.groupBox_general)
         font = QtGui.QFont()
         font.setPointSize(7)
         self.label_7.setFont(font)
         self.label_7.setObjectName("label_7")
-        self.gridLayout.addWidget(self.label_7, 9, 0, 1, 1)
+        self.gridLayout.addWidget(self.label_7, 10, 0, 1, 1)
         self.horizontalLayout_4 = QtWidgets.QHBoxLayout()
         self.horizontalLayout_4.setObjectName("horizontalLayout_4")
         self.radioButton_bg_grid = QtWidgets.QRadioButton(self.groupBox_general)
@@ -186,13 +183,13 @@ class Ui_SettingsForm(object):
         self.toolButton_bg_color.setIconSize(QtCore.QSize(16, 16))
         self.toolButton_bg_color.setObjectName("toolButton_bg_color")
         self.horizontalLayout_4.addWidget(self.toolButton_bg_color)
-        self.gridLayout.addLayout(self.horizontalLayout_4, 10, 0, 1, 1)
+        self.gridLayout.addLayout(self.horizontalLayout_4, 11, 0, 1, 1)
         self.label_4 = QtWidgets.QLabel(self.groupBox_general)
         font = QtGui.QFont()
         font.setPointSize(7)
         self.label_4.setFont(font)
         self.label_4.setObjectName("label_4")
-        self.gridLayout.addWidget(self.label_4, 11, 0, 1, 1)
+        self.gridLayout.addWidget(self.label_4, 12, 0, 1, 1)
         self.verticalLayout_3 = QtWidgets.QVBoxLayout()
         self.verticalLayout_3.setSpacing(0)
         self.verticalLayout_3.setObjectName("verticalLayout_3")
@@ -220,9 +217,12 @@ class Ui_SettingsForm(object):
         self.horizontalSlider_data_flow_animation_duration.setInvertedControls(False)
         self.horizontalSlider_data_flow_animation_duration.setObjectName("horizontalSlider_data_flow_animation_duration")
         self.verticalLayout_3.addWidget(self.horizontalSlider_data_flow_animation_duration)
-        self.gridLayout.addLayout(self.verticalLayout_3, 12, 0, 1, 1)
+        self.gridLayout.addLayout(self.verticalLayout_3, 13, 0, 1, 1)
         spacerItem2 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
-        self.gridLayout.addItem(spacerItem2, 13, 0, 1, 1)
+        self.gridLayout.addItem(spacerItem2, 14, 0, 1, 1)
+        self.checkBox_use_curved_links = QtWidgets.QCheckBox(self.groupBox_general)
+        self.checkBox_use_curved_links.setObjectName("checkBox_use_curved_links")
+        self.gridLayout.addWidget(self.checkBox_use_curved_links, 8, 0, 1, 1)
         self.verticalLayout_6.addWidget(self.groupBox_general)
         spacerItem3 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
         self.verticalLayout_6.addItem(spacerItem3)
@@ -393,6 +393,9 @@ class Ui_SettingsForm(object):
         self.checkBox_object_tree_sticky_selection = QtWidgets.QCheckBox(self.groupBox_data_store)
         self.checkBox_object_tree_sticky_selection.setObjectName("checkBox_object_tree_sticky_selection")
         self.verticalLayout_4.addWidget(self.checkBox_object_tree_sticky_selection)
+        self.checkBox_relationship_icon_follows = QtWidgets.QCheckBox(self.groupBox_data_store)
+        self.checkBox_relationship_icon_follows.setObjectName("checkBox_relationship_icon_follows")
+        self.verticalLayout_4.addWidget(self.checkBox_relationship_icon_follows)
         self.verticalLayout_9.addWidget(self.groupBox_data_store)
         spacerItem7 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
         self.verticalLayout_9.addItem(spacerItem7)
@@ -423,7 +426,7 @@ class Ui_SettingsForm(object):
 
         self.retranslateUi(SettingsForm)
         self.listWidget.setCurrentRow(-1)
-        self.stackedWidget.setCurrentIndex(3)
+        self.stackedWidget.setCurrentIndex(0)
         QtCore.QObject.connect(self.listWidget, QtCore.SIGNAL("currentRowChanged(int)"), self.stackedWidget.setCurrentIndex)
         QtCore.QMetaObject.connectSlotsByName(SettingsForm)
         SettingsForm.setTabOrder(self.listWidget, self.checkBox_open_previous_project)
@@ -434,8 +437,7 @@ class Ui_SettingsForm(object):
         SettingsForm.setTabOrder(self.checkBox_delete_data, self.lineEdit_work_dir)
         SettingsForm.setTabOrder(self.lineEdit_work_dir, self.toolButton_browse_work)
         SettingsForm.setTabOrder(self.toolButton_browse_work, self.checkBox_use_smooth_zoom)
-        SettingsForm.setTabOrder(self.checkBox_use_smooth_zoom, self.checkBox_use_curved_links)
-        SettingsForm.setTabOrder(self.checkBox_use_curved_links, self.radioButton_bg_grid)
+        SettingsForm.setTabOrder(self.checkBox_use_smooth_zoom, self.radioButton_bg_grid)
         SettingsForm.setTabOrder(self.radioButton_bg_grid, self.radioButton_bg_solid)
         SettingsForm.setTabOrder(self.radioButton_bg_solid, self.toolButton_bg_color)
         SettingsForm.setTabOrder(self.toolButton_bg_color, self.horizontalSlider_data_flow_animation_duration)
@@ -477,13 +479,11 @@ class Ui_SettingsForm(object):
         self.checkBox_delete_data.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>Check this box to delete project item\'s data when a project item is removed from project. This means, that the project item directory and its contens will be deleted from your HD.</p></body></html>", None, -1))
         self.checkBox_delete_data.setText(QtWidgets.QApplication.translate("SettingsForm", "Delete data when project item is removed from project", None, -1))
         self.label.setText(QtWidgets.QApplication.translate("SettingsForm", "Work directory", None, -1))
+        self.checkBox_use_smooth_zoom.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>Controls whether smooth or discete zoom is used in Design and Graph Views.</p></body></html>", None, -1))
+        self.checkBox_use_smooth_zoom.setText(QtWidgets.QApplication.translate("SettingsForm", "Smooth zoom", None, -1))
         self.lineEdit_work_dir.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>Work directory location. Leave empty to use default (\\work).</p></body></html>", None, -1))
         self.lineEdit_work_dir.setPlaceholderText(QtWidgets.QApplication.translate("SettingsForm", "Using default directory", None, -1))
         self.toolButton_browse_work.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>Pick Work directory with file browser</p></body></html>", None, -1))
-        self.checkBox_use_smooth_zoom.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>Controls whether smooth or discete zoom is used in Design and Graph Views.</p></body></html>", None, -1))
-        self.checkBox_use_smooth_zoom.setText(QtWidgets.QApplication.translate("SettingsForm", "Smooth zoom", None, -1))
-        self.checkBox_use_curved_links.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>Controls whether smooth or straight connectors are used in Design View.</p></body></html>", None, -1))
-        self.checkBox_use_curved_links.setText(QtWidgets.QApplication.translate("SettingsForm", "Curved links", None, -1))
         self.label_7.setText(QtWidgets.QApplication.translate("SettingsForm", "Design View background", None, -1))
         self.radioButton_bg_grid.setText(QtWidgets.QApplication.translate("SettingsForm", "Grid", None, -1))
         self.radioButton_bg_solid.setText(QtWidgets.QApplication.translate("SettingsForm", "Solid", None, -1))
@@ -491,6 +491,8 @@ class Ui_SettingsForm(object):
         self.label_4.setText(QtWidgets.QApplication.translate("SettingsForm", "Data flow animation speed", None, -1))
         self.label_5.setText(QtWidgets.QApplication.translate("SettingsForm", "Slow", None, -1))
         self.label_8.setText(QtWidgets.QApplication.translate("SettingsForm", "Fast", None, -1))
+        self.checkBox_use_curved_links.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>Controls whether smooth or straight connectors are used in Design View.</p></body></html>", None, -1))
+        self.checkBox_use_curved_links.setText(QtWidgets.QApplication.translate("SettingsForm", "Curved links", None, -1))
         self.groupBox_project.setTitle(QtWidgets.QApplication.translate("SettingsForm", "Project", None, -1))
         self.label_2.setText(QtWidgets.QApplication.translate("SettingsForm", "Name", None, -1))
         self.lineEdit_project_name.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>Change project name by typing a new name here</p></body></html>", None, -1))
@@ -500,8 +502,8 @@ class Ui_SettingsForm(object):
         self.textEdit_project_description.setHtml(QtWidgets.QApplication.translate("SettingsForm", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
 "p, li { white-space: pre-wrap; }\n"
-"</style></head><body style=\" font-family:\'MS Shell Dlg 2\'; font-size:8.25pt; font-weight:400; font-style:normal;\">\n"
-"<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><br /></p></body></html>", None, -1))
+"</style></head><body style=\" font-family:\'Cantarell\'; font-size:11pt; font-weight:400; font-style:normal;\">\n"
+"<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:\'MS Shell Dlg 2\'; font-size:8.25pt;\"><br /></p></body></html>", None, -1))
         self.groupBox_gams.setTitle(QtWidgets.QApplication.translate("SettingsForm", "GAMS", None, -1))
         self.label_11.setText(QtWidgets.QApplication.translate("SettingsForm", "GAMS executable", None, -1))
         self.lineEdit_gams_path.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>Path to GAMS executable for Tool and GAMS Python bindings. Leave blank to use system\'s default</p></body></html>", None, -1))
@@ -528,8 +530,10 @@ class Ui_SettingsForm(object):
         self.groupBox_data_store.setTitle(QtWidgets.QApplication.translate("SettingsForm", "Data store view", None, -1))
         self.checkBox_commit_at_exit.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>Unchecked: Does not commit session and does not show message box</p><p>Partially checked: Shows message box (default)</p><p>Checked: Commits session and does not show message box</p><p><br/></p></body></html>", None, -1))
         self.checkBox_commit_at_exit.setText(QtWidgets.QApplication.translate("SettingsForm", "Commit session when view is closed", None, -1))
-        self.checkBox_object_tree_sticky_selection.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>Controls how selecting items in Graph View\'s Object tree <span style=\" font-weight:600;\">using the left mouse button</span> works. </p><p>When unchecked [default], Single selection is enabled. Pressing the Ctrl-button down enables multiple selection.</p><p>When checked, Multiple selection is enabled. Pressing the Ctrl-button down enables single selection.</p></body></html>", None, -1))
+        self.checkBox_object_tree_sticky_selection.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>Controls how selecting items in Object tree <span style=\" font-weight:600;\">using the left mouse button</span> works. </p><p>When unchecked [default], Single selection is enabled. Pressing the Ctrl-button down enables multiple selection.</p><p>When checked, Multiple selection is enabled. Pressing the Ctrl-button down enables single selection.</p></body></html>", None, -1))
         self.checkBox_object_tree_sticky_selection.setText(QtWidgets.QApplication.translate("SettingsForm", "Sticky selection in object tree", None, -1))
+        self.checkBox_relationship_icon_follows.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>When checked [default], moving Object items causes connected Relationship items to follow.</p></body></html>", None, -1))
+        self.checkBox_relationship_icon_follows.setText(QtWidgets.QApplication.translate("SettingsForm", "Relationship icons follow object icons", None, -1))
         self.pushButton_ok.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>Saves changes and closes the window</p></body></html>", None, -1))
         self.pushButton_ok.setText(QtWidgets.QApplication.translate("SettingsForm", "Ok", None, -1))
         self.pushButton_cancel.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>Closes the window without saving changes</p></body></html>", None, -1))

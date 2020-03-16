@@ -451,7 +451,7 @@ class GraphViewMixin:
         ]
         if vals_to_remove:
             self.db_mngr.remove_items({self.db_map: {"parameter value": vals_to_remove}})
-            self.build_graph()
+        self.build_graph()
 
     def _get_selected_object_ids(self):
         """Returns a set of ids corresponding to selected objects in the object tree.
