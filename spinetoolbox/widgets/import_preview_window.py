@@ -150,10 +150,8 @@ class ImportPreviewWindow(QMainWindow):
         qsettings.setValue("windowSize", self.size())
         qsettings.setValue("windowPosition", self.pos())
         qsettings.setValue("windowState", self.saveState(version=1))
-        if self.windowState() == Qt.WindowMaximized:
-            qsettings.setValue("windowMaximized", True)
-        else:
-            qsettings.setValue("windowMaximized", False)
+        qsettings.setValue("windowMaximized", self.windowState() == Qt.WindowMaximized)
+        qsettings.setValue("n_screens", len(QGuiApplication.screens()))
         qsettings.endGroup()
         if event:
             event.accept()

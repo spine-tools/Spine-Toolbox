@@ -70,8 +70,8 @@ class ImportPreviewWidget(QWidget):
         self._ui.source_data_table.verticalHeader().display_all = False
         for i in range(self._ui.main_splitter.count()):
             self._ui.main_splitter.setCollapsible(i, False)
-        for i in range(self._ui.splitter.count()):
-            self._ui.splitter.setCollapsible(i, False)
+        for i in range(self._ui.sources_splitter.count()):
+            self._ui.sources_splitter.setCollapsible(i, False)
         for i in range(self._ui.top_source_splitter.count()):
             self._ui.top_source_splitter.setCollapsible(i, False)
 

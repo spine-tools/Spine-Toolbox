@@ -550,10 +550,8 @@ class SpineDatapackageWidget(QMainWindow):
         self.qsettings.setValue("dataPackageWidget/windowSize", self.size())
         self.qsettings.setValue("dataPackageWidget/windowPosition", self.pos())
         self.qsettings.setValue("dataPackageWidget/windowState", self.saveState(version=1))
-        if self.windowState() == Qt.WindowMaximized:
-            self.qsettings.setValue("dataPackageWidget/windowMaximized", True)
-        else:
-            self.qsettings.setValue("dataPackageWidget/windowMaximized", False)
+        self.qsettings.setValue("dataPackageWidget/windowMaximized", self.windowState() == Qt.WindowMaximized)
+        self.qsettings.setValue("dataPackageWidget/n_screens", len(QGuiApplication.screens()))
         if event:
             event.accept()
 

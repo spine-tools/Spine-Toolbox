@@ -341,7 +341,7 @@ class PivotTableModel(QAbstractTableModel):
         header_id = self._header_id(index)
         top_left_id = self._top_left_id(index)
         return self._header_name(top_left_id, header_id)
-    
+
     def header_data(self, index, role=Qt.DisplayRole):
         """Returns the data corresponding to the given header index based on role enum.
 

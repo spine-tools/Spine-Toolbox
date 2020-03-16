@@ -46,7 +46,6 @@ from ..mvcmodels.parameter_value_list_model import ParameterValueListModel
 from ..helpers import busy_effect
 from .import_widget import ImportDialog
 from ..spine_io.exporters.excel import export_spine_database_to_xlsx
-from ..logger_interface import LoggerInterface
 
 
 class DataStoreFormBase(QMainWindow):
@@ -638,6 +637,7 @@ class DataStoreFormBase(QMainWindow):
         self.qsettings.setValue("windowPosition", self.pos())
         self.qsettings.setValue("windowState", self.saveState(version=1))
         self.qsettings.setValue("windowMaximized", self.windowState() == Qt.WindowMaximized)
+        self.qsettings.setValue("n_screens", len(QGuiApplication.screens()))
         self.qsettings.endGroup()
 
     def closeEvent(self, event):

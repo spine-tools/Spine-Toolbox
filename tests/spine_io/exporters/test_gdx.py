@@ -785,12 +785,10 @@ class TestGdx(unittest.TestCase):
         with TemporaryDirectory() as tmp_dir_name:
             database_map = self._make_database_map(tmp_dir_name, "test_to_gdx_file_works_with_empty_parameters.sqlite")
             dbmanip.import_object_classes(database_map, ["domain"])
-            dbmanip.import_objects(
-                database_map, [("domain", "record")]
-            )
+            dbmanip.import_objects(database_map, [("domain", "record")])
             dbmanip.import_object_parameters(database_map, [("domain", "scalar")])
             sorted_domain_names = ["domain"]
-            settings = gdx.Settings(sorted_domain_names, [], {"domain": [("record", )]})
+            settings = gdx.Settings(sorted_domain_names, [], {"domain": [("record",)]})
             path_to_gdx = Path(tmp_dir_name).joinpath("test_to_gdx_file_works_with_empty_parameters.gdx")
             gdx.to_gdx_file(database_map, path_to_gdx, [], settings, {}, {}, gams_directory)
             database_map.connection.close()

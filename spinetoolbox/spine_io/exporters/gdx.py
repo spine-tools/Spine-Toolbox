@@ -217,8 +217,8 @@ class Parameter:
             indexes (list): parameter's indexes
             values (list): parameter's values
         """
-#        if len(domain_names) != len(indexes[0]) and len(indexes[0]) > 0:
-#            raise GdxExportException("Different number of parameter indexing domains and index keys.")
+        #        if len(domain_names) != len(indexes[0]) and len(indexes[0]) > 0:
+        #            raise GdxExportException("Different number of parameter indexing domains and index keys.")
         self.domain_names = domain_names
         if len(indexes) != len(values):
             raise GdxExportException("Parameter index and value length mismatch.")

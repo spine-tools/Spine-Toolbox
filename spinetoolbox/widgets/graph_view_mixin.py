@@ -362,7 +362,7 @@ class GraphViewMixin:
     @Slot(bool)
     def build_graph(self, checked=False, timeit=False):
         """Builds the graph."""
-        tic = time.clock()
+        tic = time.process_time()
         new_items = self._get_new_items()
         wip_items = self._get_wip_items()
         scene = self.new_scene()
@@ -380,8 +380,9 @@ class GraphViewMixin:
             if wip_items:
                 self._add_wip_items(scene, object_items, *wip_items)  # pylint: disable=no-value-for-parameter
         self.extend_scene()
-        toc = time.clock()
-        _ = timeit and self.msg.emit("Graph built in {} seconds\t".format(toc - tic))
+        toc = time.process_time()
+        if timeit:
+            self.msg.emit("Graph built in {} seconds\t".format(toc - tic))
         self.graph_created.emit()
 
     @Slot(bool)

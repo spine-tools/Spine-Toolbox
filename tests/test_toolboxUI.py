@@ -718,6 +718,23 @@ class TestToolboxUI(unittest.TestCase):
         new_item_index = self.toolbox.project_item_model.find_item("data_connection 1")
         self.assertIsNotNone(new_item_index)
 
+    def test_closeEvent_saves_window_state(self):
+        self.toolbox._qsettings = mock.NonCallableMagicMock()
+        self.toolbox._perform_pre_exit_tasks = mock.MagicMock(return_value=True)
+        self.toolbox.julia_repl = mock.NonCallableMagicMock()
+        self.toolbox.python_repl = mock.NonCallableMagicMock()
+        self.toolbox.closeEvent(mock.MagicMock())
+        qsettings_save_calls = self.toolbox._qsettings.setValue.call_args_list
+        self.assertEqual(len(qsettings_save_calls), 7)
+        saved_dict = {saved[0][0]: saved[0][1] for saved in qsettings_save_calls}
+        self.assertIn("appSettings/previousProject", saved_dict)
+        self.assertIn("mainWindow/windowSize", saved_dict)
+        self.assertIn("mainWindow/windowPosition", saved_dict)
+        self.assertIn("mainWindow/windowState", saved_dict)
+        self.assertIn("mainWindow/projectDockWidgetSplitterState", saved_dict)
+        self.assertIn("mainWindow/windowMaximized", saved_dict)
+        self.assertIn("mainWindow/n_screens", saved_dict)
+
     @staticmethod
     def find_click_point_of_pi(pi, gv):
         """Maps given project item icons center coordinates to given Graphics View viewport coordinates.

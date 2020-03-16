@@ -10,10 +10,10 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-# Form implementation generated from reading ui file 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\ui\import_preview.ui',
-# licensing of 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\ui\import_preview.ui' applies.
+# Form implementation generated from reading ui file 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\import_preview.ui',
+# licensing of 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\import_preview.ui' applies.
 #
-# Created: Thu Feb 13 11:54:03 2020
+# Created: Mon Mar 16 15:34:35 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -33,16 +33,16 @@ class Ui_ImportPreview(object):
         self.sources_box.setObjectName("sources_box")
         self.verticalLayout_4 = QtWidgets.QVBoxLayout(self.sources_box)
         self.verticalLayout_4.setObjectName("verticalLayout_4")
-        self.splitter = QtWidgets.QSplitter(self.sources_box)
-        self.splitter.setOrientation(QtCore.Qt.Vertical)
-        self.splitter.setObjectName("splitter")
-        self.top_source_splitter = QtWidgets.QSplitter(self.splitter)
+        self.sources_splitter = QtWidgets.QSplitter(self.sources_box)
+        self.sources_splitter.setOrientation(QtCore.Qt.Vertical)
+        self.sources_splitter.setObjectName("sources_splitter")
+        self.top_source_splitter = QtWidgets.QSplitter(self.sources_splitter)
         self.top_source_splitter.setOrientation(QtCore.Qt.Horizontal)
         self.top_source_splitter.setObjectName("top_source_splitter")
         self.source_list = QtWidgets.QListWidget(self.top_source_splitter)
         self.source_list.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.source_list.setObjectName("source_list")
-        self.source_preview_widget_stack = QtWidgets.QStackedWidget(self.splitter)
+        self.source_preview_widget_stack = QtWidgets.QStackedWidget(self.sources_splitter)
         self.source_preview_widget_stack.setObjectName("source_preview_widget_stack")
         self.table_page = QtWidgets.QWidget()
         self.table_page.setObjectName("table_page")
@@ -67,7 +67,7 @@ class Ui_ImportPreview(object):
         self.horizontalLayout.addItem(spacerItem1)
         self.verticalLayout_3.addLayout(self.horizontalLayout)
         self.source_preview_widget_stack.addWidget(self.loading_page)
-        self.verticalLayout_4.addWidget(self.splitter)
+        self.verticalLayout_4.addWidget(self.sources_splitter)
         self.mappings_box = QtWidgets.QGroupBox(self.main_splitter)
         self.mappings_box.setObjectName("mappings_box")
         self.verticalLayout.addWidget(self.main_splitter)
