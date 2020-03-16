@@ -459,7 +459,7 @@ class GraphViewMixin:
 
     @Slot(bool)
     def export_as_pdf(self, checked=False):
-        file_name, _ = QFileDialog.getSaveFileName(self, "Save as image", self._get_base_dir(), "PDF files (*.pdf)")
+        file_name, _ = QFileDialog.getSaveFileName(self, "Export as PDF...", self._get_base_dir(), "PDF files (*.pdf)")
         if not file_name:
             return
         scene = self.ui.graphicsView.scene()
