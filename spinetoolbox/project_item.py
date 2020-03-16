@@ -126,11 +126,26 @@ class ProjectItem(MetaObject):
         return True
 
     def set_properties_ui(self, properties_ui):
+        """
+        Sets the properties tab widget for the item.
+
+        Note that this method expects the widget that is generated from the .ui files
+        and initialized with the setupUi() method rather than the entire properties tab widget.
+
+        Args:
+            properties_ui (QWidget): item's properties UI
+        """
         self._properties_ui = properties_ui
         if self._sigs is None:
             self._sigs = self.make_signal_handler_dict()
 
     def set_icon(self, icon):
+        """
+        Sets the icon for the item.
+
+        Args:
+            icon (ProjectItemIcon): item's icon
+        """
         self._icon = icon
 
     def get_icon(self):
@@ -454,11 +469,11 @@ class ProjectItemResource:
     and that may be consumed by another project item."""
 
     def __init__(self, provider, type_, url="", metadata=None):
-        """Init class.
-
+        """
         Args:
             provider (ProjectItem): The item that provides the resource
             type_ (str): The resource type, currently available types:
+
                 - "file": url points to the file's path
                 - "database": url is the databases url
                 - "transient_file": a file that may not yet be available or may change its location;
@@ -468,7 +483,8 @@ class ProjectItemResource:
                   url is empty, metadata contains the "label" key
             url (str): The url of the resource
             metadata (dict): Some metadata providing extra information about the resource.
-            Currently available keys:
+                Currently available keys:
+
                 - label (str): a textual label
                 - pattern (str): a file pattern if the file is part of that pattern
         """
