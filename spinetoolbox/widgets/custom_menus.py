@@ -287,11 +287,15 @@ class GraphViewContextMenu(CustomContextMenu):
             position (QPoint): Position on screen
         """
         super().__init__(parent, position)
-        self.add_action("Hide selected", enabled=len(parent.entity_item_selection) > 0)
-        self.add_action("Show hidden", enabled=len(parent.hidden_items) > 0)
+        parent._handle_menu_graph_about_to_show()
+        self.addAction(parent.ui.actionSave_positions)
+        self.addAction(parent.ui.actionClear_positions)
         self.addSeparator()
-        self.add_action("Prune selected", enabled=len(parent.entity_item_selection) > 0)
-        self.add_action("Restore pruned", enabled=len(parent.rejected_items) > 0)
+        self.addAction(parent.ui.actionHide_selected)
+        self.addAction(parent.ui.actionShow_hidden)
+        self.addSeparator()
+        self.addAction(parent.ui.actionPrune_selected)
+        self.addAction(parent.ui.actionRestore_pruned)
 
 
 class EntityItemContextMenu(CustomContextMenu):
@@ -484,7 +488,7 @@ class RecentProjectsPopupMenu(CustomPopupMenu):
                     tooltip=filepath,
                 )
 
-    @Slot(bool, str, name="call_open_project")
+    @Slot(bool, str)
     def call_open_project(self, checked, p):
         """Slot for catching the user selected action from the recent projects menu.
 

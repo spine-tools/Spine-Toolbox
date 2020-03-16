@@ -22,6 +22,7 @@ from numpy import atleast_1d as arr
 from scipy.sparse.csgraph import dijkstra
 from PySide2.QtCore import Qt, Signal, Slot, QTimer
 from PySide2.QtWidgets import QGraphicsTextItem
+from spinedb_api import to_database, from_database
 from .custom_menus import GraphViewContextMenu, ObjectItemContextMenu, RelationshipItemContextMenu
 from .custom_qwidgets import ZoomWidgetAction
 from .shrinking_scene import ShrinkingScene
@@ -38,6 +39,7 @@ class GraphViewMixin:
     objects_added_to_graph = Signal()
     relationships_added_to_graph = Signal()
 
+    _POS_STR = "graph_view_position"
     _node_extent = 64
     _arc_width = 0.2 * _node_extent
     _arc_length_hint = 1.5 * _node_extent
@@ -54,7 +56,7 @@ class GraphViewMixin:
         self.rejected_items = list()
         self.removed_items = list()
         self.entity_item_selection = list()
-        self._nothing_item = None
+        self._blank_item = None
         self.zoom_widget_action = None
         area = self.dockWidgetArea(self.ui.dockWidget_item_palette)
         self._handle_item_palette_dock_location_changed(area)
@@ -81,7 +83,8 @@ class GraphViewMixin:
         self.ui.actionPrune_selected.triggered.connect(self.prune_selected_items)
         self.ui.actionRestore_pruned.triggered.connect(self.restore_pruned_items)
         self.ui.actionLive_graph_demo.triggered.connect(self.show_demo)
-        self.ui.actionRebuild.triggered.connect(self.build_graph)
+        self.ui.actionSave_positions.triggered.connect(self.save_positions)
+        self.ui.actionClear_positions.triggered.connect(self.clear_saved_positions)
         # Dock Widgets menu action
         self.ui.menuGraph.aboutToShow.connect(self._handle_menu_graph_about_to_show)
         self.zoom_widget_action.minus_pressed.connect(self._handle_zoom_minus_pressed)
@@ -318,6 +321,10 @@ class GraphViewMixin:
     def _handle_menu_graph_about_to_show(self):
         """Enables or disables actions according to current selection in the graph."""
         visible = self.ui.dockWidget_entity_graph.isVisible()
+        scene = self.ui.graphicsView.scene()
+        has_graph = scene and scene.items() != [self._blank_item]
+        self.ui.actionSave_positions.setEnabled(has_graph)
+        self.ui.actionClear_positions.setEnabled(has_graph)
         self.ui.actionHide_selected.setEnabled(visible and bool(self.entity_item_selection))
         self.ui.actionShow_hidden.setEnabled(visible and bool(self.hidden_items))
         self.ui.actionPrune_selected.setEnabled(visible and bool(self.entity_item_selection))
@@ -362,8 +369,8 @@ class GraphViewMixin:
         self.hidden_items.clear()
         self.removed_items.clear()
         if not any(new_items) and not any(wip_items):
-            self._nothing_item = QGraphicsTextItem("Nothing to show.")
-            scene.addItem(self._nothing_item)
+            self._blank_item = QGraphicsTextItem("Nothing to show.")
+            scene.addItem(self._blank_item)
         else:
             if new_items:
                 object_items = new_items[0]
@@ -376,6 +383,74 @@ class GraphViewMixin:
         toc = time.clock()
         _ = timeit and self.msg.emit("Graph built in {} seconds\t".format(toc - tic))
         self.graph_created.emit()
+
+    @Slot(bool)
+    def save_positions(self, checked=False):
+        scene = self.ui.graphicsView.scene()
+        if not scene:
+            return
+        class_items = {}
+        for item in scene.items():
+            if isinstance(item, ObjectItem):
+                class_items.setdefault(item.entity_class_id, []).append(item)
+        pos_def_class_ids = {
+            p["object_class_id"]
+            for p in self.db_mngr.get_items_by_field(
+                self.db_map, "parameter definition", "parameter_name", self._POS_STR
+            )
+        }
+        defs_to_add = [
+            {"name": self._POS_STR, "object_class_id": class_id} for class_id in class_items.keys() - pos_def_class_ids
+        ]
+        if defs_to_add:
+            self.db_mngr.add_parameter_definitions({self.db_map: defs_to_add})
+        pos_def_id_lookup = {
+            p["object_class_id"]: p["id"]
+            for p in self.db_mngr.get_items_by_field(
+                self.db_map, "parameter definition", "parameter_name", self._POS_STR
+            )
+        }
+        pos_val_id_lookup = {
+            (p["object_class_id"], p["object_id"]): p["id"]
+            for p in self.db_mngr.get_items_by_field(self.db_map, "parameter value", "parameter_name", self._POS_STR)
+        }
+        vals_to_add = list()
+        vals_to_update = list()
+        for class_id, items in class_items.items():
+            for item in items:
+                pos_val_id = pos_val_id_lookup.get((class_id, item.entity_id), None)
+                value = {"type": "map", "index_type": "str", "data": [["x", item.pos().x()], ["y", item.pos().y()]]}
+                if pos_val_id is None:
+                    vals_to_add.append(
+                        {
+                            "name": "pos_x",
+                            "object_class_id": class_id,
+                            "object_id": item.entity_id,
+                            "parameter_definition_id": pos_def_id_lookup[class_id],
+                            "value": to_database(value),
+                        }
+                    )
+                else:
+                    vals_to_update.append({"id": pos_val_id, "value": to_database(value)})
+        if vals_to_add:
+            self.db_mngr.add_parameter_values({self.db_map: vals_to_add})
+        if vals_to_update:
+            self.db_mngr.update_parameter_values({self.db_map: vals_to_update})
+
+    @Slot(bool)
+    def clear_saved_positions(self, checked=False):
+        scene = self.ui.graphicsView.scene()
+        if not scene:
+            return
+        object_ids = {x.entity_id for x in scene.items() if isinstance(x, ObjectItem)}
+        vals_to_remove = [
+            p
+            for p in self.db_mngr.get_items_by_field(self.db_map, "parameter value", "parameter_name", self._POS_STR)
+            if p["object_id"] in object_ids
+        ]
+        if vals_to_remove:
+            self.db_mngr.remove_items({self.db_map: {"parameter value": vals_to_remove}})
+            self.build_graph()
 
     def _get_selected_object_ids(self):
         """Returns a set of ids corresponding to selected objects in the object tree.
@@ -430,8 +505,10 @@ class GraphViewMixin:
             relationship_ids.add(relationship["id"])
             object_id_lists.append(object_id_list)
             object_ids.update(object_id_list)
-        object_ids = list(object_ids)
-        relationship_ids = list(relationship_ids)
+        return tuple(object_ids), tuple(relationship_ids), tuple(object_id_lists)
+
+    @staticmethod
+    def _get_src_dst_inds(object_ids, object_id_lists):
         src_inds = list()
         dst_inds = list()
         relationship_ind = len(object_ids)
@@ -441,7 +518,7 @@ class GraphViewMixin:
                 src_inds.append(relationship_ind)
                 dst_inds.append(object_ind)
             relationship_ind += 1
-        return object_ids, relationship_ids, src_inds, dst_inds
+        return src_inds, dst_inds
 
     def _get_new_items(self):
         """Returns new items for the graph.
@@ -451,13 +528,18 @@ class GraphViewMixin:
             list: RelationshipItem instances
             list: ArcItem instances
         """
-        object_ids, relationship_ids, src_inds, dst_inds = self._get_graph_data()
-        d = self.shortest_path_matrix(
-            len(object_ids) + len(relationship_ids), src_inds, dst_inds, self._arc_length_hint
-        )
+        object_ids, relationship_ids, object_id_lists = self._get_graph_data()
+        src_inds, dst_inds = self._get_src_dst_inds(object_ids, object_id_lists)
+        entity_ids = object_ids + relationship_ids
+        d = self.shortest_path_matrix(len(entity_ids), src_inds, dst_inds, self._arc_length_hint)
         if d is None:
             return ()
-        x, y = self.vertex_coordinates(d)
+        pos_lookup = {
+            p["object_id"]: dict(from_database(p["value"]).value_to_database_data())
+            for p in self.db_mngr.get_items_by_field(self.db_map, "parameter value", "parameter_name", self._POS_STR)
+        }
+        heavy_positions = {ind: pos_lookup[id_] for ind, id_ in enumerate(entity_ids) if id_ in pos_lookup}
+        x, y = self.vertex_coordinates(d, heavy_positions=heavy_positions)
         object_items = list()
         relationship_items = list()
         arc_items = list()
@@ -590,7 +672,7 @@ class GraphViewMixin:
         heavy_pos_list = list()
         for ind, pos in heavy_positions.items():
             heavy_ind_list.append(ind)
-            heavy_pos_list.append([pos.x(), pos.y()])
+            heavy_pos_list.append([pos["x"], pos["y"]])
         heavy_ind = arr(heavy_ind_list)
         heavy_pos = arr(heavy_pos_list)
         if heavy_ind.any():
@@ -687,8 +769,8 @@ class GraphViewMixin:
         scene = self.ui.graphicsView.scene()
         if not scene:
             scene = self.new_scene()
-        if scene.items() == [self._nothing_item]:
-            scene.removeItem(self._nothing_item)
+        if scene.items() == [self._blank_item]:
+            scene.removeItem(self._blank_item)
         scene_pos = self.ui.graphicsView.mapToScene(pos)
         entity_type, entity_class_id = text.split(":")
         entity_class_id = int(entity_class_id)

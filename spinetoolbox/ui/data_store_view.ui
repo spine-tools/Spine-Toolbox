@@ -122,7 +122,8 @@
     <property name="title">
      <string>Graph</string>
     </property>
-    <addaction name="actionRebuild"/>
+    <addaction name="actionSave_positions"/>
+    <addaction name="actionClear_positions"/>
     <addaction name="separator"/>
     <addaction name="actionHide_selected"/>
     <addaction name="actionShow_hidden"/>
@@ -1264,9 +1265,14 @@
     <string>View history...</string>
    </property>
   </action>
-  <action name="actionRebuild">
+  <action name="actionClear_positions">
    <property name="text">
-    <string>Rebuild</string>
+    <string>Clear saved positions</string>
+   </property>
+  </action>
+  <action name="actionSave_positions">
+   <property name="text">
+    <string>Save positions</string>
    </property>
   </action>
  </widget>

@@ -13,7 +13,7 @@
 # Form implementation generated from reading ui file '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/data_store_view.ui',
 # licensing of '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/data_store_view.ui' applies.
 #
-# Created: Sun Mar 15 09:52:02 2020
+# Created: Mon Mar 16 08:19:47 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -506,8 +506,10 @@ class Ui_MainWindow(object):
         self.actionTabular_style.setObjectName("actionTabular_style")
         self.actionView_history = QtWidgets.QAction(MainWindow)
         self.actionView_history.setObjectName("actionView_history")
-        self.actionRebuild = QtWidgets.QAction(MainWindow)
-        self.actionRebuild.setObjectName("actionRebuild")
+        self.actionClear_positions = QtWidgets.QAction(MainWindow)
+        self.actionClear_positions.setObjectName("actionClear_positions")
+        self.actionSave_positions = QtWidgets.QAction(MainWindow)
+        self.actionSave_positions.setObjectName("actionSave_positions")
         self.menuSession.addAction(self.actionRefresh)
         self.menuSession.addAction(self.actionCommit)
         self.menuSession.addAction(self.actionRollback)
@@ -538,7 +540,8 @@ class Ui_MainWindow(object):
         self.menuView.addAction(self.actionTree_style)
         self.menuView.addAction(self.actionTabular_style)
         self.menuView.addAction(self.actionGraph_style)
-        self.menuGraph.addAction(self.actionRebuild)
+        self.menuGraph.addAction(self.actionSave_positions)
+        self.menuGraph.addAction(self.actionClear_positions)
         self.menuGraph.addSeparator()
         self.menuGraph.addAction(self.actionHide_selected)
         self.menuGraph.addAction(self.actionShow_hidden)
@@ -627,11 +630,12 @@ class Ui_MainWindow(object):
         self.actionGraph_style.setText(QtWidgets.QApplication.translate("MainWindow", "Graph style", None, -1))
         self.actionTabular_style.setText(QtWidgets.QApplication.translate("MainWindow", "Tabular style", None, -1))
         self.actionView_history.setText(QtWidgets.QApplication.translate("MainWindow", "View history...", None, -1))
-        self.actionRebuild.setText(QtWidgets.QApplication.translate("MainWindow", "Rebuild", None, -1))
+        self.actionClear_positions.setText(QtWidgets.QApplication.translate("MainWindow", "Clear saved positions", None, -1))
+        self.actionSave_positions.setText(QtWidgets.QApplication.translate("MainWindow", "Save positions", None, -1))
 
-from spinetoolbox.widgets.custom_qtreeview import EntityTreeView, StickySelectionEntityTreeView, CopyTreeView
-from spinetoolbox.widgets.custom_qtableview import AutoFilterCopyPasteTableView, PivotTableView
-from spinetoolbox.widgets.frozen_table_view import FrozenTableView
-from spinetoolbox.widgets.custom_qlistview import DragListView
 from spinetoolbox.widgets.custom_qgraphicsviews import GraphQGraphicsView
+from spinetoolbox.widgets.custom_qlistview import DragListView
+from spinetoolbox.widgets.custom_qtreeview import StickySelectionEntityTreeView, EntityTreeView, CopyTreeView
+from spinetoolbox.widgets.frozen_table_view import FrozenTableView
+from spinetoolbox.widgets.custom_qtableview import AutoFilterCopyPasteTableView, PivotTableView
 from spinetoolbox import resources_icons_rc
