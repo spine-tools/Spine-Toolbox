@@ -22,7 +22,6 @@ from PySide2.QtGui import QGuiApplication
 from PySide2.QtWidgets import QMainWindow, QDialogButtonBox, QSplitter, QFileDialog
 from ..spine_io.connection_manager import ConnectionManager
 from .import_preview_widget import ImportPreviewWidget
-from ..helpers import ensure_window_is_on_screen
 
 
 class ImportPreviewWindow(QMainWindow):
@@ -117,16 +116,15 @@ class ImportPreviewWindow(QMainWindow):
         window_pos = qsettings.value("windowPosition")
         window_state = qsettings.value("windowState")
         window_maximized = qsettings.value("windowMaximized", defaultValue='false')
+        n_screens = qsettings.value("n_screens", defaultValue=1)
         splitter_state = {}
         for splitter in self.findChildren(QSplitter):
             splitter_state[splitter] = qsettings.value(splitter.objectName() + "_splitterState")
         qsettings.endGroup()
-        original_size = self.size()
         if window_size:
             self.resize(window_size)
         if window_pos:
             self.move(window_pos)
-        ensure_window_is_on_screen(self, original_size)
         if window_state:
             self.restoreState(window_state, version=1)  # Toolbar and dockWidget positions
         if window_maximized == 'true':
@@ -134,6 +132,10 @@ class ImportPreviewWindow(QMainWindow):
         for splitter, state in splitter_state.items():
             if state:
                 splitter.restoreState(state)
+        # noinspection PyArgumentList
+        if len(QGuiApplication.screens()) < int(n_screens):
+            # There are less screens available now than on previous application startup
+            self.move(0, 0)  # Move this widget to primary screen position (0,0)
 
     def closeEvent(self, event=None):
         """Handle close window.

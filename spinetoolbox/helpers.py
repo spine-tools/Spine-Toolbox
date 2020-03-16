@@ -28,7 +28,7 @@ import urllib.parse
 from PySide2.QtCore import Qt, Slot, QFile, QIODevice, QSize, QRect, QPoint
 from PySide2.QtCore import __version__ as qt_version
 from PySide2.QtCore import __version_info__ as qt_version_info
-from PySide2.QtWidgets import QApplication, QMessageBox, QGraphicsScene, QFileIconProvider, QStyle
+from PySide2.QtWidgets import QApplication, QMessageBox, QGraphicsScene, QFileIconProvider
 from PySide2.QtGui import (
     QCursor,
     QImageReader,
@@ -772,26 +772,3 @@ def deserialize_path(serialized, project_dir):
     except KeyError as error:
         raise RuntimeError("Key missing from serialized path: {}".format(error))
     raise RuntimeError("Cannot deserialize: unknown path type '{}'.".format(path_type))
-
-
-def ensure_window_is_on_screen(window, size):
-    """
-    Checks if window is on screen and if not, moves and resizes it to make it visible on the primary screen.
-
-    Args:
-        window (QWidget): a window to check
-        size (QSize): desired window size if the window is moved
-    """
-    window_geometry = window.frameGeometry()
-    widget_center = window_geometry.center()
-    screens = QApplication.screens()
-    widget_inside_screen = False
-    for screen in screens:
-        screen_geometry = screen.geometry()
-        if screen_geometry.contains(widget_center):
-            widget_inside_screen = True
-            break
-    if not widget_inside_screen:
-        primary_screen = QApplication.primaryScreen()
-        screen_geometry = primary_screen.availableGeometry()
-        window.setGeometry(QStyle.alignedRect(Qt.LeftToRight, Qt.AlignCenter, size, screen_geometry))
