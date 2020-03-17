@@ -55,7 +55,7 @@ class GraphViewMixin:
         self.ui.listView_object_class.setModel(self.object_class_list_model)
         self.ui.listView_relationship_class.setModel(self.relationship_class_list_model)
         self.hidden_items = list()
-        self.rejected_items = list()
+        self.prunned_entity_ids = dict()
         self.removed_items = list()
         self.entity_item_selection = list()
         self._blank_item = None
@@ -82,8 +82,9 @@ class GraphViewMixin:
         self.ui.dockWidget_item_palette.dockLocationChanged.connect(self._handle_item_palette_dock_location_changed)
         self.ui.actionHide_selected.triggered.connect(self.hide_selected_items)
         self.ui.actionShow_hidden.triggered.connect(self.show_hidden_items)
-        self.ui.actionPrune_selected.triggered.connect(self.prune_selected_items)
-        self.ui.actionRestore_pruned.triggered.connect(self.restore_pruned_items)
+        self.ui.actionPrune_selected_entities.triggered.connect(self.prune_selected_entities)
+        self.ui.actionPrune_selected_classes.triggered.connect(self.prune_selected_classes)
+        self.ui.actionRestore_all_pruned.triggered.connect(self.restore_all_pruned_items)
         self.ui.actionLive_graph_demo.triggered.connect(self.show_demo)
         self.ui.actionSave_positions.triggered.connect(self.save_positions)
         self.ui.actionClear_positions.triggered.connect(self.clear_saved_positions)
@@ -331,9 +332,13 @@ class GraphViewMixin:
         self.ui.actionExport_as_pdf.setEnabled(has_graph)
         self.ui.actionHide_selected.setEnabled(visible and bool(self.entity_item_selection))
         self.ui.actionShow_hidden.setEnabled(visible and bool(self.hidden_items))
-        self.ui.actionPrune_selected.setEnabled(visible and bool(self.entity_item_selection))
-        self.ui.actionRestore_pruned.setEnabled(visible and bool(self.rejected_items))
+        self.ui.actionPrune_selected_entities.setEnabled(visible and bool(self.entity_item_selection))
+        self.ui.actionPrune_selected_classes.setEnabled(visible and bool(self.entity_item_selection))
+        self.ui.menuRestore_pruned.setEnabled(visible and any(self.prunned_entity_ids.values()))
+        self.ui.actionRestore_all_pruned.setEnabled(visible and any(self.prunned_entity_ids.values()))
         self.zoom_widget_action.setEnabled(visible)
+        self.ui.actionPrune_selected_entities.setText(f"Prune {self._get_selected_entity_names()}")
+        self.ui.actionPrune_selected_classes.setText(f"Prune {self._get_selected_class_names()}")
 
     @Slot("Qt.DockWidgetArea")
     def _handle_item_palette_dock_location_changed(self, area):
@@ -514,30 +519,28 @@ class GraphViewMixin:
         return selected_object_ids, selected_relationship_ids
 
     def _get_graph_data(self):
-        """Returns data for making graph according to selection in Object tree.
+        """Returns data for making graph according to selection in trees.
 
         Returns:
-            list: integer object ids
-            list: integer relationship ids
-            list: arc source indices
-            list: arc destination indices
+            tuple: integer object ids
+            dict: map from integer relationship ids to object id lists
         """
         object_ids, relationship_ids = self._get_selected_entity_ids()
-        rejected_entity_ids = {x.entity_id for x in self.rejected_items}
-        object_ids -= rejected_entity_ids
+        prunned_entity_ids = {id_ for ids in self.prunned_entity_ids.values() for id_ in ids}
+        object_ids -= prunned_entity_ids
+        relationship_ids -= prunned_entity_ids
         relationships = self.db_mngr.find_cascading_relationships({self.db_map: object_ids}).get(self.db_map, [])
         relationships += [self.db_mngr.get_item(self.db_map, "relationship", id_) for id_ in relationship_ids]
-        object_id_lists = list()
+        relationship_ids = dict()
         for relationship in relationships:
-            if relationship["id"] in rejected_entity_ids:
+            if relationship["id"] in prunned_entity_ids:
                 continue
-            object_id_list = {int(x) for x in relationship["object_id_list"].split(",")} - rejected_entity_ids
+            object_id_list = {int(x) for x in relationship["object_id_list"].split(",")} - prunned_entity_ids
             if len(object_id_list) < 2:
                 continue
-            relationship_ids.add(relationship["id"])
-            object_id_lists.append(object_id_list)
             object_ids.update(object_id_list)
-        return tuple(object_ids), tuple(relationship_ids), tuple(object_id_lists)
+            relationship_ids[relationship["id"]] = object_id_list
+        return tuple(object_ids), relationship_ids
 
     @staticmethod
     def _get_src_dst_inds(object_ids, object_id_lists):
@@ -560,9 +563,9 @@ class GraphViewMixin:
             list: RelationshipItem instances
             list: ArcItem instances
         """
-        object_ids, relationship_ids, object_id_lists = self._get_graph_data()
-        src_inds, dst_inds = self._get_src_dst_inds(object_ids, object_id_lists)
-        entity_ids = object_ids + relationship_ids
+        object_ids, relationship_ids = self._get_graph_data()
+        src_inds, dst_inds = self._get_src_dst_inds(object_ids, relationship_ids.values())
+        entity_ids = object_ids + tuple(relationship_ids.keys())
         d = self.shortest_path_matrix(len(entity_ids), src_inds, dst_inds, self._arc_length_hint)
         if d is None:
             return ()
@@ -921,18 +924,8 @@ class GraphViewMixin:
         Args:
             global_pos (QPoint)
         """
-        menu = GraphViewContextMenu(self, global_pos)
-        option = menu.get_action()
-        if option == "Hide selected":
-            self.hide_selected_items()
-        elif option == "Show hidden":
-            self.show_hidden_items()
-        elif option == "Prune selected":
-            self.prune_selected_items()
-        elif option == "Restore pruned":
-            self.restore_pruned_items()
-        else:
-            pass
+        menu = GraphViewContextMenu(self)
+        menu.exec_(global_pos)
         menu.deleteLater()
 
     @Slot(bool)
@@ -951,17 +944,52 @@ class GraphViewMixin:
             item.set_all_visible(True)
         self.hidden_items.clear()
 
+    def _get_selected_entity_names(self):
+        if len(self.entity_item_selection) == 1:
+            return "'" + self.entity_item_selection[0].entity_name + "'"
+        return "selected entities"
+
+    def _get_selected_class_names(self):
+        if len(self.entity_item_selection) == 1:
+            return "'" + self.entity_item_selection[0].entity_class_name + "'"
+        return "selected classes"
+
     @Slot(bool)
-    def prune_selected_items(self, checked=False):
+    def prune_selected_entities(self, checked=False):
         """Prunes selected items."""
-        self.rejected_items.extend(self.entity_item_selection)
+        entity_ids = {x.entity_id for x in self.entity_item_selection}
+        key = self._get_selected_entity_names()
+        self.prunned_entity_ids[key] = entity_ids
+        action = self.ui.menuRestore_pruned.addAction(key)
+        action.triggered.connect(lambda checked=False, key=key: self.restore_pruned_items(key))
         self.build_graph()
 
     @Slot(bool)
-    def restore_pruned_items(self, checked=False):
-        """Reinstates pruned items."""
-        self.rejected_items.clear()
+    def prune_selected_classes(self, checked=False):
+        """Prunes selected items."""
+        class_ids = {x.entity_class_id for x in self.entity_item_selection}
+        entity_ids = {x["id"] for x in self.db_mngr.get_items(self.db_map, "object") if x["class_id"] in class_ids}
+        entity_ids |= {
+            x["id"] for x in self.db_mngr.get_items(self.db_map, "relationship") if x["class_id"] in class_ids
+        }
+        key = self._get_selected_class_names()
+        self.prunned_entity_ids[key] = entity_ids
+        action = self.ui.menuRestore_pruned.addAction(key)
+        action.triggered.connect(lambda checked=False, key=key: self.restore_pruned_items(key))
         self.build_graph()
+
+    @Slot(bool)
+    def restore_all_pruned_items(self, checked=False):
+        """Reinstates all pruned items."""
+        self.prunned_entity_ids.clear()
+        self.build_graph()
+
+    def restore_pruned_items(self, key):
+        """Reinstates last pruned items."""
+        if self.prunned_entity_ids.pop(key, None) is not None:
+            action = next(iter(a for a in self.ui.menuRestore_pruned.actions() if a.text() == key))
+            self.ui.menuRestore_pruned.removeAction(action)
+            self.build_graph()
 
     @Slot(bool)
     def show_demo(self, checked=False):
@@ -986,8 +1014,8 @@ class GraphViewMixin:
         """
         menu = ObjectItemContextMenu(self, global_pos, main_item)
         option = menu.get_action()
-        if self._apply_entity_context_menu_option(option):
-            pass
+        if option == 'Remove':
+            self.remove_graph_items()
         elif option in ('Set name', 'Rename'):
             main_item.edit_name()
         elif option in menu.relationship_class_dict:
@@ -1008,19 +1036,9 @@ class GraphViewMixin:
         """
         menu = RelationshipItemContextMenu(self, global_pos)
         option = menu.get_action()
-        self._apply_entity_context_menu_option(option)
-        menu.deleteLater()
-
-    def _apply_entity_context_menu_option(self, option):
-        if option == 'Hide':
-            self.hide_selected_items()
-        elif option == 'Prune':
-            self.prune_selected_items()
-        elif option == 'Remove':
+        if option == 'Remove':
             self.remove_graph_items()
-        else:
-            return False
-        return True
+        menu.deleteLater()
 
     @Slot("bool")
     def remove_graph_items(self, checked=False):

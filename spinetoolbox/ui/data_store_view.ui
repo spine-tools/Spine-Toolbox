@@ -122,6 +122,11 @@
     <property name="title">
      <string>Graph</string>
     </property>
+    <widget class="QMenu" name="menuRestore_pruned">
+     <property name="title">
+      <string>Restore pruned</string>
+     </property>
+    </widget>
     <addaction name="actionExport_as_pdf"/>
     <addaction name="separator"/>
     <addaction name="actionSave_positions"/>
@@ -130,8 +135,10 @@
     <addaction name="actionHide_selected"/>
     <addaction name="actionShow_hidden"/>
     <addaction name="separator"/>
-    <addaction name="actionPrune_selected"/>
-    <addaction name="actionRestore_pruned"/>
+    <addaction name="actionPrune_selected_entities"/>
+    <addaction name="actionPrune_selected_classes"/>
+    <addaction name="menuRestore_pruned"/>
+    <addaction name="actionRestore_all_pruned"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
     <property name="title">
@@ -1217,17 +1224,17 @@
   </action>
   <action name="actionShow_hidden">
    <property name="text">
-    <string>Show hidden items</string>
+    <string>Show hidden</string>
    </property>
   </action>
-  <action name="actionPrune_selected">
+  <action name="actionPrune_selected_entities">
    <property name="text">
-    <string>Prune selected items</string>
+    <string>Prune selected entities</string>
    </property>
   </action>
-  <action name="actionRestore_pruned">
+  <action name="actionRestore_all_pruned">
    <property name="text">
-    <string>Restore pruned</string>
+    <string>Restore all pruned</string>
    </property>
   </action>
   <action name="actionLive_graph_demo">
@@ -1280,6 +1287,16 @@
   <action name="actionExport_as_pdf">
    <property name="text">
     <string>Export as PDF...</string>
+   </property>
+  </action>
+  <action name="actionPrune_selected_classes">
+   <property name="text">
+    <string>Prune selected classes</string>
+   </property>
+  </action>
+  <action name="actiontt">
+   <property name="text">
+    <string>tt</string>
    </property>
   </action>
  </widget>

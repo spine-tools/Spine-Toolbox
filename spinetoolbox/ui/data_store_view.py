@@ -13,7 +13,7 @@
 # Form implementation generated from reading ui file '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/data_store_view.ui',
 # licensing of '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/data_store_view.ui' applies.
 #
-# Created: Mon Mar 16 15:31:51 2020
+# Created: Tue Mar 17 15:35:55 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -52,6 +52,8 @@ class Ui_MainWindow(object):
         self.menuView.setObjectName("menuView")
         self.menuGraph = QtWidgets.QMenu(self.menubar)
         self.menuGraph.setObjectName("menuGraph")
+        self.menuRestore_pruned = QtWidgets.QMenu(self.menuGraph)
+        self.menuRestore_pruned.setObjectName("menuRestore_pruned")
         self.menuHelp = QtWidgets.QMenu(self.menubar)
         self.menuHelp.setObjectName("menuHelp")
         MainWindow.setMenuBar(self.menubar)
@@ -483,10 +485,10 @@ class Ui_MainWindow(object):
         self.actionHide_selected.setObjectName("actionHide_selected")
         self.actionShow_hidden = QtWidgets.QAction(MainWindow)
         self.actionShow_hidden.setObjectName("actionShow_hidden")
-        self.actionPrune_selected = QtWidgets.QAction(MainWindow)
-        self.actionPrune_selected.setObjectName("actionPrune_selected")
-        self.actionRestore_pruned = QtWidgets.QAction(MainWindow)
-        self.actionRestore_pruned.setObjectName("actionRestore_pruned")
+        self.actionPrune_selected_entities = QtWidgets.QAction(MainWindow)
+        self.actionPrune_selected_entities.setObjectName("actionPrune_selected_entities")
+        self.actionRestore_all_pruned = QtWidgets.QAction(MainWindow)
+        self.actionRestore_all_pruned.setObjectName("actionRestore_all_pruned")
         self.actionLive_graph_demo = QtWidgets.QAction(MainWindow)
         self.actionLive_graph_demo.setObjectName("actionLive_graph_demo")
         self.actionTree_style = QtWidgets.QAction(MainWindow)
@@ -512,6 +514,10 @@ class Ui_MainWindow(object):
         self.actionSave_positions.setObjectName("actionSave_positions")
         self.actionExport_as_pdf = QtWidgets.QAction(MainWindow)
         self.actionExport_as_pdf.setObjectName("actionExport_as_pdf")
+        self.actionPrune_selected_classes = QtWidgets.QAction(MainWindow)
+        self.actionPrune_selected_classes.setObjectName("actionPrune_selected_classes")
+        self.actiontt = QtWidgets.QAction(MainWindow)
+        self.actiontt.setObjectName("actiontt")
         self.menuSession.addAction(self.actionRefresh)
         self.menuSession.addAction(self.actionCommit)
         self.menuSession.addAction(self.actionRollback)
@@ -550,8 +556,10 @@ class Ui_MainWindow(object):
         self.menuGraph.addAction(self.actionHide_selected)
         self.menuGraph.addAction(self.actionShow_hidden)
         self.menuGraph.addSeparator()
-        self.menuGraph.addAction(self.actionPrune_selected)
-        self.menuGraph.addAction(self.actionRestore_pruned)
+        self.menuGraph.addAction(self.actionPrune_selected_entities)
+        self.menuGraph.addAction(self.actionPrune_selected_classes)
+        self.menuGraph.addAction(self.menuRestore_pruned.menuAction())
+        self.menuGraph.addAction(self.actionRestore_all_pruned)
         self.menuHelp.addAction(self.actionLive_graph_demo)
         self.menubar.addAction(self.menuFile.menuAction())
         self.menubar.addAction(self.menuEdit.menuAction())
@@ -574,6 +582,7 @@ class Ui_MainWindow(object):
         self.menuFile.setTitle(QtWidgets.QApplication.translate("MainWindow", "File", None, -1))
         self.menuView.setTitle(QtWidgets.QApplication.translate("MainWindow", "View", None, -1))
         self.menuGraph.setTitle(QtWidgets.QApplication.translate("MainWindow", "Graph", None, -1))
+        self.menuRestore_pruned.setTitle(QtWidgets.QApplication.translate("MainWindow", "Restore pruned", None, -1))
         self.menuHelp.setTitle(QtWidgets.QApplication.translate("MainWindow", "Help", None, -1))
         self.dockWidget_parameter_value_list.setWindowTitle(QtWidgets.QApplication.translate("MainWindow", "Parameter value list", None, -1))
         self.treeView_parameter_value_list.setAccessibleName(QtWidgets.QApplication.translate("MainWindow", "parameter value list", None, -1))
@@ -626,9 +635,9 @@ class Ui_MainWindow(object):
         self.actionRemove_selection.setText(QtWidgets.QApplication.translate("MainWindow", "Remove selection", None, -1))
         self.actionRemove_selection.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+Del", None, -1))
         self.actionHide_selected.setText(QtWidgets.QApplication.translate("MainWindow", "Hide selected", None, -1))
-        self.actionShow_hidden.setText(QtWidgets.QApplication.translate("MainWindow", "Show hidden items", None, -1))
-        self.actionPrune_selected.setText(QtWidgets.QApplication.translate("MainWindow", "Prune selected items", None, -1))
-        self.actionRestore_pruned.setText(QtWidgets.QApplication.translate("MainWindow", "Restore pruned", None, -1))
+        self.actionShow_hidden.setText(QtWidgets.QApplication.translate("MainWindow", "Show hidden", None, -1))
+        self.actionPrune_selected_entities.setText(QtWidgets.QApplication.translate("MainWindow", "Prune selected entities", None, -1))
+        self.actionRestore_all_pruned.setText(QtWidgets.QApplication.translate("MainWindow", "Restore all pruned", None, -1))
         self.actionLive_graph_demo.setText(QtWidgets.QApplication.translate("MainWindow", "Live graph demo", None, -1))
         self.actionTree_style.setText(QtWidgets.QApplication.translate("MainWindow", "Tree style", None, -1))
         self.actionGraph_style.setText(QtWidgets.QApplication.translate("MainWindow", "Graph style", None, -1))
@@ -637,10 +646,12 @@ class Ui_MainWindow(object):
         self.actionClear_positions.setText(QtWidgets.QApplication.translate("MainWindow", "Clear saved positions", None, -1))
         self.actionSave_positions.setText(QtWidgets.QApplication.translate("MainWindow", "Save positions", None, -1))
         self.actionExport_as_pdf.setText(QtWidgets.QApplication.translate("MainWindow", "Export as PDF...", None, -1))
+        self.actionPrune_selected_classes.setText(QtWidgets.QApplication.translate("MainWindow", "Prune selected classes", None, -1))
+        self.actiontt.setText(QtWidgets.QApplication.translate("MainWindow", "tt", None, -1))
 
-from spinetoolbox.widgets.custom_qlistview import DragListView
+from spinetoolbox.widgets.custom_qtableview import AutoFilterCopyPasteTableView, PivotTableView
 from spinetoolbox.widgets.frozen_table_view import FrozenTableView
-from spinetoolbox.widgets.custom_qtreeview import StickySelectionEntityTreeView, CopyTreeView, EntityTreeView
+from spinetoolbox.widgets.custom_qtreeview import StickySelectionEntityTreeView, EntityTreeView, CopyTreeView
+from spinetoolbox.widgets.custom_qlistview import DragListView
 from spinetoolbox.widgets.custom_qgraphicsviews import GraphQGraphicsView
-from spinetoolbox.widgets.custom_qtableview import PivotTableView, AutoFilterCopyPasteTableView
 from spinetoolbox import resources_icons_rc

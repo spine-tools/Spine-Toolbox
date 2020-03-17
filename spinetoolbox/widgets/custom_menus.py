@@ -277,16 +277,15 @@ class ParameterValueListContextMenu(CustomContextMenu):
         self.add_action("Remove selection", remove_icon)
 
 
-class GraphViewContextMenu(CustomContextMenu):
+class GraphViewContextMenu(QMenu):
     """Context menu class for qgraphics view in graph view."""
 
-    def __init__(self, parent, position):
+    def __init__(self, parent):
         """
         Args:
             parent (QWidget): Parent for menu widget (GraphViewForm)
-            position (QPoint): Position on screen
         """
-        super().__init__(parent, position)
+        super().__init__(parent)
         parent._handle_menu_graph_about_to_show()
         self.addAction(parent.ui.actionSave_positions)
         self.addAction(parent.ui.actionClear_positions)
@@ -294,8 +293,10 @@ class GraphViewContextMenu(CustomContextMenu):
         self.addAction(parent.ui.actionHide_selected)
         self.addAction(parent.ui.actionShow_hidden)
         self.addSeparator()
-        self.addAction(parent.ui.actionPrune_selected)
-        self.addAction(parent.ui.actionRestore_pruned)
+        self.addAction(parent.ui.actionPrune_selected_entities)
+        self.addAction(parent.ui.actionPrune_selected_classes)
+        self.addMenu(parent.ui.menuRestore_pruned)
+        self.addAction(parent.ui.actionRestore_all_pruned)
 
 
 class EntityItemContextMenu(CustomContextMenu):
@@ -309,8 +310,10 @@ class EntityItemContextMenu(CustomContextMenu):
         """
         super().__init__(parent, position)
         self.selection_count = len(parent.entity_item_selection)
-        self.add_action('Hide')
-        self.add_action('Prune')
+        parent._handle_menu_graph_about_to_show()
+        self.addAction(parent.ui.actionHide_selected)
+        self.addAction(parent.ui.actionPrune_selected_entities)
+        self.addAction(parent.ui.actionPrune_selected_classes)
 
 
 class ObjectItemContextMenu(EntityItemContextMenu):
