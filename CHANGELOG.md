@@ -7,6 +7,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ### Added
 - Now it's possible to export graphs as PDF files from the *Graph* menu in the Data Store form.
+- Now it's possible to prune entire classes from the graph view. The option is available both from the *Graph* menu and
+  from *Entity Graph* context menus. Also, pruned items can be restored gradually.
 
 ### Changed
 - The graph view behavior has changed. Now selecting objects in the object tree not only shows those objects but also 
