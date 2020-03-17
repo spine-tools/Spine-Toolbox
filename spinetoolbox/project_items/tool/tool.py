@@ -16,13 +16,13 @@ Tool class.
 :date:   19.12.2017
 """
 import fnmatch
+import glob
 import logging
 import os
-import shutil
-import tempfile
 import pathlib
-import glob
-from PySide2.QtCore import Slot, Qt, QUrl, QFileInfo, QTimeLine, QFileSystemWatcher, QEventLoop
+import shutil
+import uuid
+from PySide2.QtCore import Slot, Qt, QUrl, QFileInfo, QTimeLine, QEventLoop
 from PySide2.QtGui import QDesktopServices, QStandardItemModel, QStandardItem
 from PySide2.QtWidgets import QFileIconProvider
 from spinetoolbox.project_item import ProjectItem, ProjectItemResource
@@ -74,7 +74,7 @@ class Tool(ProjectItem):
         self.execute_in_work = execute_in_work
         self.cmd_line_args = list() if not cmd_line_args else cmd_line_args
         self._tool_specification = self._toolbox.tool_specification_model.find_tool_specification(tool)
-        if tool != "" and not self._tool_specification:
+        if tool and not self._tool_specification:
             self._logger.msg_error.emit(
                 f"Tool <b>{self.name}</b> should have a Tool specification <b>{tool}</b> but it was not found"
             )
@@ -85,10 +85,9 @@ class Tool(ProjectItem):
         self.instance = None  # Instance of this Tool that can be sent to a subprocess for processing
         # Base directory for execution, maybe it should be called `execution_dir`
         self.basedir = None
+        self._next_base_dir_name = self._unique_dir_name()
         # Make directory for results
         self.output_dir = os.path.join(self.data_dir, TOOL_OUTPUT_DIR)
-        self.output_files_watcher = QFileSystemWatcher(self)
-        self.output_files_watcher.fileChanged.connect(lambda path: self.item_changed.emit())
 
     @staticmethod
     def item_type():
@@ -364,58 +363,107 @@ class Tool(ProjectItem):
         self._properties_ui.label_tool_name.setText(self.name)
 
     def _update_base_directory(self):
-        """Updates the path to the base directory, depending on `execute_in_work`.
+        """Returns the path to the base directory, depending on `execute_in_work`.
+
+        If execute_in_work is True, a new unique path will be returned.
+        Otherwise, the main program file path from tool specification is returned.
+
+        Returns:
+            str: a full path to next basedir
         """
         if self.execute_in_work:
             work_dir = self._toolbox.work_dir
-            self.basedir = tempfile.mkdtemp(
-                suffix='__toolbox', prefix=self.tool_specification().short_name + '__', dir=work_dir
-            )
-        else:
-            self.basedir = self.tool_specification().path
+            if not work_dir:
+                self._logger.msg_error.emit("Work directory missing. Please check Settings.")
+                return None
+            basedir = os.path.join(work_dir, self._next_base_dir_name)
+            self._next_base_dir_name = self._unique_dir_name()
+            return basedir
+        return self.tool_specification().path
 
     def output_resources_forward(self):
-        """See base class."""
-        watched_files = self.output_files_watcher.files()
-        if watched_files:
-            self.output_files_watcher.removePaths(watched_files)
-        if not self.basedir:
-            output_files = self._find_last_output_files()
-            metadata = dict()
-        else:
-            output_files = [
-                os.path.abspath(os.path.join(self.basedir, self.output_file_model.item(i, 0).data(Qt.DisplayRole)))
-                for i in range(self.output_file_model.rowCount())
-            ]
-            metadata = dict(future=True)
-        if output_files:
-            self.output_files_watcher.addPaths(output_files)
-        return [
-            ProjectItemResource(self, "file", url=pathlib.Path(output_file).as_uri(), metadata=metadata)
-            for output_file in output_files
-        ]
+        """
+        Returns a list of resources, i.e. the output files produced by the tool.
 
-    def _find_last_output_files(self):
-        """Returns a list of most recent output files from the results directory.
+        The output files are available only after tool has been executed,
+        therefore the resource type is 'transient_file'
+        The url attribute of the resources is set to ""
+        or it points to a file from most recent execution.
+        The metadata attribute's label key gives the base name of the output file.
 
         Returns:
-            list
+            list: a list of Tool's output resources
         """
-        output_files = []
-        filenames = [
+        resources = list()
+        last_output_files = self._find_last_output_files()
+        if self.execute_in_work:
+            work_dir = self._toolbox.work_dir
+            if not work_dir:
+                self._logger.msg_error.emit("Work directory missing. Please check Settings.")
+                return []
+        else:
+            if self.tool_specification() is None:
+                self._logger.msg_error.emit("Tool specification missing.")
+                return []
+        for i in range(self.output_file_model.rowCount()):
+            out_file_label = self.output_file_model.item(i, 0).data(Qt.DisplayRole)
+            latest_files = last_output_files.get(out_file_label, list())
+            if _is_pattern(out_file_label):
+                if not latest_files:
+                    metadata = {"label": out_file_label}
+                    resource = ProjectItemResource(self, "file_pattern", metadata=metadata)
+                    resources.append(resource)
+                else:
+                    for out_file in latest_files:
+                        file_url = pathlib.Path(out_file.path).as_uri()
+                        metadata = {"label": out_file.label}
+                        resource = ProjectItemResource(self, "transient_file", url=file_url, metadata=metadata)
+                        resources.append(resource)
+            else:
+                if not latest_files:
+                    metadata = {"label": out_file_label}
+                    resource = ProjectItemResource(self, "transient_file", metadata=metadata)
+                    resources.append(resource)
+                else:
+                    latest_file = latest_files[0]  # Not a pattern; there should be only one element in the list.
+                    file_url = pathlib.Path(latest_file.path).as_uri()
+                    metadata = {"label": latest_file.label}
+                    resource = ProjectItemResource(self, "transient_file", url=file_url, metadata=metadata)
+                    resources.append(resource)
+        return resources
+
+    def _find_last_output_files(self):
+        """
+        Returns latest output files.
+
+        Returns:
+            dict: a mapping from a file name pattern to the path of the most recent files in the results archive.
+        """
+        if not os.path.exists(self.output_dir):
+            return dict()
+        recent_output_files = dict()
+        file_patterns = [
             self.output_file_model.item(i, 0).data(Qt.DisplayRole) for i in range(self.output_file_model.rowCount())
         ]
-        for root, dirs, files in os.walk(self.output_dir):
-            if "failed" in dirs:
-                dirs.remove("failed")
-            dirs.sort(reverse=True)
-            for f in sorted(files, reverse=True):
-                if f in filenames:
-                    filenames.remove(f)
-                    output_files.append(os.path.join(root, f))
-                    if not filenames:
-                        return output_files
-        return output_files
+        archive_dirs = os.listdir(self.output_dir)
+        if "failed" in archive_dirs:
+            archive_dirs.remove("failed")
+        archive_dirs.sort(reverse=True)
+        for archive in archive_dirs:
+            for pattern in list(file_patterns):
+                full_archive_path = os.path.join(self.output_dir, archive)
+                full_path_pattern = os.path.join(full_archive_path, pattern)
+                files_found = False
+                for path in glob.glob(full_path_pattern):
+                    if os.path.exists(path):
+                        files_found = True
+                        file_list = recent_output_files.setdefault(pattern, list())
+                        file_list.append(_LatestOutputFile.from_paths(path, full_archive_path))
+                if files_found:
+                    file_patterns.remove(pattern)
+                if not file_patterns:
+                    return recent_output_files
+        return recent_output_files
 
     def execute_backward(self, resources):
         """See base class."""
@@ -427,17 +475,11 @@ class Tool(ProjectItem):
         if not self.tool_specification():
             self._logger.msg_warning.emit(f"Tool <b>{self.name}</b> has no Tool specification to execute")
             return False
-        self._update_base_directory()
+        self.basedir = self._update_base_directory()
+        if self.basedir is None:
+            return False
         if self.execute_in_work:
             work_or_source = "work"
-            work_dir = self._toolbox.work_dir
-            if not work_dir:
-                self._toolbox.msg_error.emit("Work directory missing. Please check Settings.")
-                return False
-            if not self.basedir:
-                self.basedir = tempfile.mkdtemp(
-                    suffix='__toolbox', prefix=self.tool_specification().short_name + '__', dir=work_dir
-                )
             # Make work directory anchor with path as tooltip
             work_anchor = (
                 "<a style='color:#99CCFF;' title='"
@@ -911,7 +953,7 @@ class Tool(ProjectItem):
         for i in range(self.output_file_model.rowCount()):
             out_file_path = self.output_file_model.item(i, 0).data(Qt.DisplayRole)
             dirname = os.path.split(out_file_path)[0]
-            if dirname == '':
+            if not dirname:
                 continue
             dst_dir = os.path.join(self.basedir, dirname)
             try:
@@ -1054,8 +1096,6 @@ class Tool(ProjectItem):
         if not super().rename(new_name):
             return False
         self.output_dir = os.path.join(self.data_dir, TOOL_OUTPUT_DIR)
-        if self.output_files_watcher.files():
-            self.output_files_watcher.removePaths(self.output_files_watcher.files())
         self.item_changed.emit()
         return True
 
@@ -1130,3 +1170,34 @@ class Tool(ProjectItem):
             if resource.type_ == "database":
                 urls[resource.provider.name] = resource.url
         return urls
+
+    def _unique_dir_name(self):
+        """Builds a unique name for Tool's work directory."""
+        specification = self.tool_specification()
+        if specification is None:
+            return ""
+        return specification.short_name + "__" + uuid.uuid4().hex + "__toolbox"
+
+
+def _is_pattern(file_name):
+    """Returns True if file_name is actually a file pattern."""
+    return "*" in file_name or "?" in file_name
+
+
+class _LatestOutputFile:
+    """
+    A class to hold information on a latest output file.
+
+    Attributes:
+        label (str): file label, e.g. file pattern or relative path
+        path (str): absolute path to the file
+    """
+    def __init__(self, label, path):
+        self.label = label
+        self.path = path
+
+    @staticmethod
+    def from_paths(path, archive_dir):
+        """Constructs a _LatestOutputFile object from an absolute path and archive directory."""
+        label = os.path.relpath(path, archive_dir)
+        return _LatestOutputFile(label, path)

@@ -26,7 +26,7 @@ class LoggerInterface(QObject):
     The signals should be connected to a concrete logging system.
 
     Currently, this is just a 'model interface'. ToolboxUI contains the same signals so it can be used
-    instead of this class.
+    as a drop-in replacement for this class.
     """
 
     msg = Signal(str)

@@ -71,8 +71,9 @@ class TestImporter(unittest.TestCase):
         )
         source_item.item_type = MagicMock(return_value="Tool")
         self.importer.notify_destination(source_item)
-        self.toolbox.msg_warning.emit.assert_called_with(
-            "Link established. Interaction between a " "<b>Tool</b> and a <b>Importer</b> has not been implemented yet."
+        self.toolbox.msg.emit.assert_called_with(
+            "Link established."
+            " You can define mappings on output files from <b>source name</b> using item <b>importer</b>."
         )
         source_item.item_type = MagicMock(return_value="View")
         self.importer.notify_destination(source_item)

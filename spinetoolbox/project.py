@@ -556,6 +556,9 @@ class SpineToolboxProject(MetaObject):
         self._logger.msg.emit("<b>Executing Selected Directed Acyclic Graphs</b>")
         self._logger.msg.emit("-------------------------------------------------")
         self.execute_dags(dags, execution_permit_list)
+        for name in executable_item_names:
+            # Make sure transient files and file pattern resources get updated throughout the DAG
+            self.notify_changes_in_containing_dag(name)
 
     def execute_project(self):
         """Executes all dags in the project."""

@@ -551,8 +551,6 @@ class TestToolboxUI(unittest.TestCase):
             return
         self.assertIsNone(self.toolbox.project())
         with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project") as mock_save_project, mock.patch(
-            "spinetoolbox.project.create_dir"
-        ) as mock_create_dir, mock.patch("spinetoolbox.project_item.create_dir") as mock_create_dir, mock.patch(
             "spinetoolbox.ui_main.ToolboxUI.update_recent_projects"
         ) as mock_update_recent_project:
             self.toolbox.open_project(project_dir)
