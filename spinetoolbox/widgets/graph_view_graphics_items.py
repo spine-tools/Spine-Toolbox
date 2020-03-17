@@ -573,10 +573,10 @@ class ObjectItem(EntityItem):
     def moveBy(self, x, y):
         """Moves arc items."""
         super().moveBy(x, y)
-        rel_icon_folows = self._graph_view_form.qsettings.value(
-            "appSettings/relationshipIconFollows", defaultValue="true"
+        rel_items_follow = self._graph_view_form.qsettings.value(
+            "appSettings/relationshipItemsFollow", defaultValue="true"
         )
-        if rel_icon_folows == "false":
+        if rel_items_follow == "false":
             return
         for arc_item in self.arc_items:
             arc_item.rel_item.follow_object_by(x, y)

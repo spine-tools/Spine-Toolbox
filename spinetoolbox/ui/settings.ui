@@ -206,7 +206,7 @@
         </sizepolicy>
        </property>
        <property name="currentIndex">
-        <number>0</number>
+        <number>3</number>
        </property>
        <widget class="QWidget" name="General">
         <layout class="QVBoxLayout" name="verticalLayout_6">
@@ -1037,12 +1037,12 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item>
-             <widget class="QCheckBox" name="checkBox_relationship_icon_follows">
+             <widget class="QCheckBox" name="checkBox_relationship_items_follow">
               <property name="toolTip">
                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;When checked [default], moving Object items causes connected Relationship items to follow.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="text">
-               <string>Relationship icons follow object icons</string>
+               <string>Relationship items follow object items</string>
               </property>
              </widget>
             </item>

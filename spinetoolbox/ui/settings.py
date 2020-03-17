@@ -13,7 +13,7 @@
 # Form implementation generated from reading ui file '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/settings.ui',
 # licensing of '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/settings.ui' applies.
 #
-# Created: Mon Mar 16 13:51:10 2020
+# Created: Tue Mar 17 10:03:59 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -393,9 +393,9 @@ class Ui_SettingsForm(object):
         self.checkBox_object_tree_sticky_selection = QtWidgets.QCheckBox(self.groupBox_data_store)
         self.checkBox_object_tree_sticky_selection.setObjectName("checkBox_object_tree_sticky_selection")
         self.verticalLayout_4.addWidget(self.checkBox_object_tree_sticky_selection)
-        self.checkBox_relationship_icon_follows = QtWidgets.QCheckBox(self.groupBox_data_store)
-        self.checkBox_relationship_icon_follows.setObjectName("checkBox_relationship_icon_follows")
-        self.verticalLayout_4.addWidget(self.checkBox_relationship_icon_follows)
+        self.checkBox_relationship_items_follow = QtWidgets.QCheckBox(self.groupBox_data_store)
+        self.checkBox_relationship_items_follow.setObjectName("checkBox_relationship_items_follow")
+        self.verticalLayout_4.addWidget(self.checkBox_relationship_items_follow)
         self.verticalLayout_9.addWidget(self.groupBox_data_store)
         spacerItem7 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
         self.verticalLayout_9.addItem(spacerItem7)
@@ -426,7 +426,7 @@ class Ui_SettingsForm(object):
 
         self.retranslateUi(SettingsForm)
         self.listWidget.setCurrentRow(-1)
-        self.stackedWidget.setCurrentIndex(0)
+        self.stackedWidget.setCurrentIndex(3)
         QtCore.QObject.connect(self.listWidget, QtCore.SIGNAL("currentRowChanged(int)"), self.stackedWidget.setCurrentIndex)
         QtCore.QMetaObject.connectSlotsByName(SettingsForm)
         SettingsForm.setTabOrder(self.listWidget, self.checkBox_open_previous_project)
@@ -532,8 +532,8 @@ class Ui_SettingsForm(object):
         self.checkBox_commit_at_exit.setText(QtWidgets.QApplication.translate("SettingsForm", "Commit session when view is closed", None, -1))
         self.checkBox_object_tree_sticky_selection.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>Controls how selecting items in Object tree <span style=\" font-weight:600;\">using the left mouse button</span> works. </p><p>When unchecked [default], Single selection is enabled. Pressing the Ctrl-button down enables multiple selection.</p><p>When checked, Multiple selection is enabled. Pressing the Ctrl-button down enables single selection.</p></body></html>", None, -1))
         self.checkBox_object_tree_sticky_selection.setText(QtWidgets.QApplication.translate("SettingsForm", "Sticky selection in object tree", None, -1))
-        self.checkBox_relationship_icon_follows.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>When checked [default], moving Object items causes connected Relationship items to follow.</p></body></html>", None, -1))
-        self.checkBox_relationship_icon_follows.setText(QtWidgets.QApplication.translate("SettingsForm", "Relationship icons follow object icons", None, -1))
+        self.checkBox_relationship_items_follow.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>When checked [default], moving Object items causes connected Relationship items to follow.</p></body></html>", None, -1))
+        self.checkBox_relationship_items_follow.setText(QtWidgets.QApplication.translate("SettingsForm", "Relationship items follow object items", None, -1))
         self.pushButton_ok.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>Saves changes and closes the window</p></body></html>", None, -1))
         self.pushButton_ok.setText(QtWidgets.QApplication.translate("SettingsForm", "Ok", None, -1))
         self.pushButton_cancel.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>Closes the window without saving changes</p></body></html>", None, -1))

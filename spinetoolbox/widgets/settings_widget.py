@@ -237,7 +237,7 @@ class SettingsWidget(QWidget):
         delete_data = int(self._qsettings.value("appSettings/deleteData", defaultValue="0"))
         smooth_zoom = self._qsettings.value("appSettings/smoothZoom", defaultValue="false")
         curved_links = self._qsettings.value("appSettings/curvedLinks", defaultValue="false")
-        relationship_icon_follows = self._qsettings.value("appSettings/relationshipIconFollows", defaultValue="true")
+        relationship_items_follow = self._qsettings.value("appSettings/relationshipItemsFollow", defaultValue="true")
         data_flow_anim_dur = int(self._qsettings.value("appSettings/dataFlowAnimationDuration", defaultValue="100"))
         bg_grid = self._qsettings.value("appSettings/bgGrid", defaultValue="false")
         bg_color = self._qsettings.value("appSettings/bgColor", defaultValue="false")
@@ -268,8 +268,8 @@ class SettingsWidget(QWidget):
             self.ui.checkBox_use_smooth_zoom.setCheckState(Qt.Checked)
         if curved_links == "true":
             self.ui.checkBox_use_curved_links.setCheckState(Qt.Checked)
-        if relationship_icon_follows == "true":
-            self.ui.checkBox_relationship_icon_follows.setCheckState(Qt.Checked)
+        if relationship_items_follow == "true":
+            self.ui.checkBox_relationship_items_follow.setCheckState(Qt.Checked)
         self.ui.horizontalSlider_data_flow_animation_duration.setValue(data_flow_anim_dur)
         if bg_grid == "true":
             self.ui.radioButton_bg_grid.setChecked(True)
@@ -330,8 +330,8 @@ class SettingsWidget(QWidget):
         self._qsettings.setValue("appSettings/smoothZoom", smooth_zoom)
         curved_links = "true" if int(self.ui.checkBox_use_curved_links.checkState()) else "false"
         self._qsettings.setValue("appSettings/curvedLinks", curved_links)
-        relationship_icon_follows = "true" if int(self.ui.checkBox_relationship_icon_follows.checkState()) else "false"
-        self._qsettings.setValue("appSettings/relationshipIconFollows", relationship_icon_follows)
+        relationship_items_follow = "true" if int(self.ui.checkBox_relationship_items_follow.checkState()) else "false"
+        self._qsettings.setValue("appSettings/relationshipItemsFollow", relationship_items_follow)
         data_flow_anim_dur = str(self.ui.horizontalSlider_data_flow_animation_duration.value())
         self._qsettings.setValue("appSettings/dataFlowAnimationDuration", data_flow_anim_dur)
         bg_grid = "true" if self.ui.radioButton_bg_grid.isChecked() else "false"
