@@ -123,7 +123,8 @@ class EntityItem(QGraphicsPixmapItem):
     def shape(self):
         """Returns a shape containing the entire bounding rect, to work better with icon transparency."""
         path = QPainterPath()
-        path.addRect(self.boundingRect())
+        path.setFillRule(Qt.WindingFill)
+        path.addRect(self._bg.boundingRect())
         return path
 
     def paint(self, painter, option, widget=None):
@@ -440,7 +441,7 @@ class ObjectItem(EntityItem):
         self.label_item = EntityLabelItem(self)
         self.label_item.entity_name_edited.connect(self.finish_name_editing)
         self.setZValue(0.5)
-        self.refresh_name()
+        self.update_name(self.entity_name)
 
     @property
     def entity_type(self):
@@ -450,15 +451,25 @@ class ObjectItem(EntityItem):
     def db_representation(self):
         return dict(class_id=self.entity_class_id, id=self.entity_id, name=self.entity_name)
 
-    def refresh_name(self):
+    def shape(self):
+        path = super().shape()
+        path.addPolygon(self.label_item.mapToItem(self, self.label_item.boundingRect()))
+        return path
+
+    def update_name(self, name):
         """Refreshes the name."""
-        self.label_item.setPlainText(self.entity_name)
+        self.label_item.setPlainText(name)
 
     def _paint_as_selected(self):
-        if not self.label_item.hasFocus():
-            super()._paint_as_selected()
-        else:
+        if self.label_item.hasFocus():
             self._paint_as_deselected()
+        else:
+            super()._paint_as_selected()
+            self.label_item._paint_as_selected()
+
+    def _paint_as_deselected(self):
+        super()._paint_as_deselected()
+        self.label_item._paint_as_deselected()
 
     def _make_wip_tool_tip(self):
         return "<html>This is a work-in-progress <b>{0}</b>. Give it a name to finish the job.</html>".format(
@@ -467,10 +478,10 @@ class ObjectItem(EntityItem):
 
     def become_whole(self):
         super().become_whole()
-        self.refresh_description()
-
-    def refresh_description(self):
         description = self.db_mngr.get_item(self.db_map, "object", self.entity_id).get("description")
+        self.update_description(description)
+
+    def update_description(self, description):
         self.setToolTip(f"<html>{description}</html>")
 
     def edit_name(self):
@@ -500,7 +511,7 @@ class ObjectItem(EntityItem):
         else:
             # Update
             self._graph_view_form.update_object(self.entity_id, text)
-        self.refresh_name()
+        self.update_name(text)
 
     def keyPressEvent(self, event):
         """Starts editing the name if F2 is pressed.
@@ -599,9 +610,10 @@ class EntityLabelItem(QGraphicsTextItem):
         self._font.setPointSize(11)
         self.setFont(self._font)
         self.bg = QGraphicsRectItem(self)
-        color = QGuiApplication.palette().color(QPalette.Normal, QPalette.ToolTipBase)
-        color.setAlphaF(0.8)
-        self.set_bg_color(color)
+        self.bg_color = QGuiApplication.palette().color(QPalette.Normal, QPalette.ToolTipBase)
+        self.bg_color.setAlphaF(0.8)
+        self.bg.setBrush(QBrush(self.bg_color))
+        self.bg.setPen(Qt.NoPen)
         self.bg.setFlag(QGraphicsItem.ItemStacksBehindParent)
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=False)
         self.setAcceptHoverEvents(False)
@@ -625,13 +637,11 @@ class EntityLabelItem(QGraphicsTextItem):
         self.setPos(x, y)
         self.bg.setRect(self.boundingRect())
 
-    def set_bg_color(self, bg_color):
-        """Sets background color.
+    def _paint_as_selected(self):
+        self.bg.setBrush(QGuiApplication.palette().highlight())
 
-        Args:
-            bg_color (QColor)
-        """
-        self.bg.setBrush(QBrush(bg_color))
+    def _paint_as_deselected(self):
+        self.bg.setBrush(QBrush(self.bg_color))
 
     def start_editing(self):
         """Starts editing."""

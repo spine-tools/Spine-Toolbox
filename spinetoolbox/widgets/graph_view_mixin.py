@@ -43,7 +43,7 @@ class GraphViewMixin:
 
     _POS_STR = "graph_view_position"
     _node_extent = 64
-    _arc_width = 0.2 * _node_extent
+    _arc_width = 0.15 * _node_extent
     _arc_length_hint = 1.5 * _node_extent
 
     def __init__(self, *args, **kwargs):
@@ -180,11 +180,12 @@ class GraphViewMixin:
             db_map_data (dict): list of dictionary-items keyed by DiffDatabaseMapping instance.
         """
         super().receive_objects_updated(db_map_data)
-        updated_ids = {x["id"] for x in db_map_data.get(self.db_map, [])}
+        updated_ids = {x["id"]: (x["name"], x["description"]) for x in db_map_data.get(self.db_map, [])}
         for item in self.ui.graphicsView.items():
             if isinstance(item, ObjectItem) and item.entity_id in updated_ids:
-                item.refresh_name()
-                item.refresh_description()
+                name, description = updated_ids[item.entity_id]
+                item.update_name(name)
+                item.update_description(description)
 
     def receive_objects_removed(self, db_map_data):
         """Runs when objects are removed from the db. Rebuilds graph if needed.
