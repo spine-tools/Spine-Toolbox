@@ -362,6 +362,13 @@ class GraphViewMixin:
         if self.ui.dockWidget_entity_graph.isVisible():
             self.build_graph()
 
+    @Slot("QItemSelection", "QItemSelection")
+    def _handle_relationship_tree_selection_changed(self, selected, deselected):
+        """Builds graph."""
+        super()._handle_relationship_tree_selection_changed(selected, deselected)
+        if self.ui.dockWidget_entity_graph.isVisible():
+            self.build_graph()
+
     @busy_effect
     @Slot(bool)
     def build_graph(self, checked=False, timeit=False):
@@ -472,30 +479,35 @@ class GraphViewMixin:
         painter.end()
         self.msg.emit(f"File {file_name} successfully exported.")
 
-    def _get_selected_object_ids(self):
-        """Returns a set of ids corresponding to selected objects in the object tree.
+    def _get_selected_entity_ids(self):
+        """Returns a set of ids corresponding to selected entities in the trees.
 
         Returns:
-            set
+            set: selected object ids
+            set: selected relationship ids
         """
-        root_index = self.object_tree_model.root_index
-        if self.ui.treeView_object.selectionModel().isSelected(root_index):
-            return {x["id"] for x in self.db_mngr.get_items(self.db_map, "object")}, set()
+        if self._selection_source not in (self.ui.treeView_object, self.ui.treeView_relationship):
+            return set(), set()
+        model = self._selection_source.model()
+        if self._selection_source.selectionModel().isSelected(model.root_index):
+            if self._selection_source is self.ui.treeView_object:
+                return {x["id"] for x in self.db_mngr.get_items(self.db_map, "object")}, set()
+            return set(), {x["id"] for x in self.db_mngr.get_items(self.db_map, "relationship")}
         selected_object_ids = set()
         selected_relationship_ids = set()
-        for index in self.object_tree_model.selected_object_indexes:
+        for index in model.selected_object_indexes:
             item = index.model().item_from_index(index)
             object_id = item.db_map_id(self.db_map)
             selected_object_ids.add(object_id)
-        for index in self.object_tree_model.selected_relationship_indexes:
+        for index in model.selected_relationship_indexes:
             item = index.model().item_from_index(index)
             relationship_id = item.db_map_id(self.db_map)
             selected_relationship_ids.add(relationship_id)
-        for index in self.object_tree_model.selected_object_class_indexes:
+        for index in model.selected_object_class_indexes:
             item = index.model().item_from_index(index)
             object_ids = {child.db_map_id(self.db_map) for child in item.children}
             selected_object_ids.update(object_ids)
-        for index in self.object_tree_model.selected_relationship_class_indexes:
+        for index in model.selected_relationship_class_indexes:
             item = index.model().item_from_index(index)
             relationship_ids = {child.db_map_id(self.db_map) for child in item.children}
             selected_relationship_ids.update(relationship_ids)
@@ -510,7 +522,7 @@ class GraphViewMixin:
             list: arc source indices
             list: arc destination indices
         """
-        object_ids, relationship_ids = self._get_selected_object_ids()
+        object_ids, relationship_ids = self._get_selected_entity_ids()
         rejected_entity_ids = {x.entity_id for x in self.rejected_items}
         object_ids -= rejected_entity_ids
         relationships = self.db_mngr.find_cascading_relationships({self.db_map: object_ids}).get(self.db_map, [])

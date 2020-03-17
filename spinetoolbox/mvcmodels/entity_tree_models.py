@@ -46,7 +46,6 @@ class EntityTreeModel(MinimalTreeModel):
         self.db_maps = db_maps
         self._root_item = None
         self.selected_indexes = dict()  # Maps item type to selected indexes
-        self._selection_buffer = list()  # To restablish selected indexes after adding/removing rows
 
     @property
     def root_item_type(self):
@@ -60,6 +59,22 @@ class EntityTreeModel(MinimalTreeModel):
     @property
     def root_index(self):
         return self.index_from_item(self._root_item)
+
+    @property
+    def selected_object_class_indexes(self):
+        return self.selected_indexes.get(ObjectClassItem, {})
+
+    @property
+    def selected_object_indexes(self):
+        return self.selected_indexes.get(ObjectItem, {})
+
+    @property
+    def selected_relationship_class_indexes(self):
+        return self.selected_indexes.get(RelationshipClassItem, {})
+
+    @property
+    def selected_relationship_indexes(self):
+        return self.selected_indexes.get(RelationshipItem, {})
 
     def build_tree(self):
         """Builds tree."""
@@ -132,22 +147,6 @@ class ObjectTreeModel(EntityTreeModel):
     @property
     def root_item_type(self):
         return ObjectTreeRootItem
-
-    @property
-    def selected_object_class_indexes(self):
-        return self.selected_indexes.get(ObjectClassItem, {})
-
-    @property
-    def selected_object_indexes(self):
-        return self.selected_indexes.get(ObjectItem, {})
-
-    @property
-    def selected_relationship_class_indexes(self):
-        return self.selected_indexes.get(RelationshipClassItem, {})
-
-    @property
-    def selected_relationship_indexes(self):
-        return self.selected_indexes.get(RelationshipItem, {})
 
     def _group_object_data(self, db_map_data):
         """Takes given object data and returns the same data keyed by parent tree-item.
@@ -303,14 +302,6 @@ class RelationshipTreeModel(EntityTreeModel):
     @property
     def root_item_type(self):
         return RelationshipTreeRootItem
-
-    @property
-    def selected_relationship_class_indexes(self):
-        return self.selected_indexes.get(RelationshipClassItem, {})
-
-    @property
-    def selected_relationship_indexes(self):
-        return self.selected_indexes.get(RelationshipItem, {})
 
     def _group_relationship_data(self, db_map_data):
         """Takes given relationship data and returns the same data keyed by parent tree-item.

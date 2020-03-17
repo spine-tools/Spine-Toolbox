@@ -765,13 +765,13 @@ class DataStoreForm(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
     def apply_graph_style(self, checked=False):
         """Applies the tree style, inspired in the former graph view."""
         self.begin_style_change()
-        self.ui.dockWidget_relationship_tree.hide()
         self.ui.dockWidget_parameter_value_list.hide()
         self.ui.dockWidget_pivot_table.hide()
         self.ui.dockWidget_frozen_table.hide()
         self.splitDockWidget(self.ui.dockWidget_object_tree, self.ui.dockWidget_entity_graph, Qt.Horizontal)
         self.splitDockWidget(self.ui.dockWidget_entity_graph, self.ui.dockWidget_object_parameter_value, Qt.Vertical)
-        self.splitDockWidget(self.ui.dockWidget_object_tree, self.ui.dockWidget_item_palette, Qt.Vertical)
+        self.splitDockWidget(self.ui.dockWidget_object_tree, self.ui.dockWidget_relationship_tree, Qt.Vertical)
+        self.splitDockWidget(self.ui.dockWidget_entity_graph, self.ui.dockWidget_item_palette, Qt.Horizontal)
         self.tabify_and_raise(
             [
                 self.ui.dockWidget_object_parameter_value,
@@ -786,5 +786,8 @@ class DataStoreForm(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         docks = [self.ui.dockWidget_entity_graph, self.ui.dockWidget_object_parameter_value]
         height = sum(d.size().height() for d in docks)
         self.resizeDocks(docks, [0.7 * height, 0.3 * height], Qt.Vertical)
+        docks = [self.ui.dockWidget_entity_graph, self.ui.dockWidget_item_palette]
+        width = sum(d.size().width() for d in docks)
+        self.resizeDocks(docks, [0.9 * width, 0.1 * width], Qt.Horizontal)
         self.end_style_change()
         self.ui.graphicsView.reset_zoom()
