@@ -1192,6 +1192,7 @@ class _LatestOutputFile:
         label (str): file label, e.g. file pattern or relative path
         path (str): absolute path to the file
     """
+
     def __init__(self, label, path):
         self.label = label
         self.path = path
