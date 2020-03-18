@@ -30,6 +30,7 @@ please check the :ref:`Terminology` section. If you want to contribute to this p
    terminology
    dependencies
    contribution_guide
+   developer_documentation
    autoapi/index
 
 Indices and tables
