@@ -18,6 +18,7 @@ Contains Importer project item class.
 
 from collections import Counter
 import os
+import sys
 from PySide2.QtCore import Qt, Signal, Slot, QFileInfo, QEventLoop
 from PySide2.QtGui import QStandardItem, QStandardItemModel
 from PySide2.QtWidgets import QFileIconProvider, QListWidget, QDialog, QVBoxLayout, QDialogButtonBox
@@ -30,7 +31,7 @@ from spinetoolbox.spine_io.importers.json_reader import JSONConnector
 from spinetoolbox.widgets.import_preview_window import ImportPreviewWindow
 from spinetoolbox.project_commands import UpdateImporterSettingsCommand, UpdateImporterCancelOnErrorCommand
 from spinetoolbox.execution_managers import QProcessExecutionManager
-from spinetoolbox.config import PYTHON_EXECUTABLE
+from spinetoolbox.config import _frozen
 from . import importer_program
 
 _CONNECTOR_NAME_TO_CLASS = {
@@ -322,8 +323,10 @@ class Importer(ProjectItem):
                 self.file_model.appendRow(qitem)
 
     def _prepare_importer_program(self, importer_args):
-        """Prepares an execution manager instance for running
-        importer_process.py in a QProcess.
+        """Prepares an execution manager instance for running importer_process.py
+        in a QProcess. If app is frozen, the Python to run it is the python.exe found
+        in application install directory. If app is not frozen, the Python to run it
+        is the python that was used in starting the app.
 
         Args:
             importer_args (list): Arguments for the importer_program. Source file paths, their mapping specs,
@@ -334,14 +337,20 @@ class Importer(ProjectItem):
 
         """
         program_path = os.path.abspath(importer_program.__file__)
-        python_path = self._toolbox.qsettings().value("appSettings/pythonPath", defaultValue="")
-        if python_path != "":
-            python_cmd = python_path
+        if not _frozen:
+            # sys.executable in here is the full path to python.exe that was used in starting the app
+            python_cmd = sys.executable
+            args = [program_path]
         else:
-            python_cmd = PYTHON_EXECUTABLE
+            # sys.executable is the full path to spinetoolbox.exe here
+            exec_dir = os.path.dirname(sys.executable)
+            # Use embedded Python (in /extras/python.exe) to run importer_program.py
+            python_cmd = os.path.join(exec_dir, "extras", "python.exe")
+            # We need to tell importer_program that we are in frozen state here
+            args = [program_path] + ["frozen"]
         if not self.python_exists(python_cmd):
             return False
-        self.importer_process = QProcessExecutionManager(self._toolbox, python_cmd, [program_path])
+        self.importer_process = QProcessExecutionManager(self._toolbox, python_cmd, args)
         self.importer_process.execution_finished.connect(self._handle_importer_program_process_finished)
         self.importer_process.data_to_inject = importer_args
         return True
