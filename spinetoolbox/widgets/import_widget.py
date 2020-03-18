@@ -30,7 +30,7 @@ from PySide2.QtWidgets import (
 from PySide2.QtCore import QSize, Qt, Slot
 from PySide2.QtGui import QGuiApplication
 import spinedb_api
-from ..helpers import busy_effect
+from ..helpers import busy_effect, ensure_window_is_on_screen
 from ..spine_io.connection_manager import ConnectionManager
 from ..spine_io.importers.csv_reader import CSVConnector
 from ..spine_io.importers.excel_reader import ExcelConnector
@@ -285,6 +285,7 @@ class ImportDialog(QDialog):
             for splitter in self._import_preview.findChildren(QSplitter):
                 splitter_state[splitter] = self._settings.value(splitter.objectName() + "_splitterState")
             self._settings.endGroup()
+            original_size = self.size()
             if window_size:
                 self.resize(window_size)
             else:
@@ -295,14 +296,15 @@ class ImportDialog(QDialog):
                 )
             if window_pos:
                 self.move(window_pos)
+            if len(QGuiApplication.screens()) < int(n_screens):
+                # There are less screens available now than on previous application startup
+                self.move(0, 0)  # Move this widget to primary screen position (0,0)
+            ensure_window_is_on_screen(self, original_size)
             if window_maximized == 'true':
                 self.setWindowState(Qt.WindowMaximized)
             for splitter, state in splitter_state.items():
                 if state:
                     splitter.restoreState(state)
-            if len(QGuiApplication.screens()) < int(n_screens):
-                # There are less screens available now than on previous application startup
-                self.move(0, 0)  # Move this widget to primary screen position (0,0)
         else:
             self.resize(self._preview_window_state["size"])
             self.move(self._preview_window_state["position"])

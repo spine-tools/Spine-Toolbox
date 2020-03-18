@@ -43,7 +43,7 @@ from .toolbars import ParameterTagToolBar
 from .db_session_history_dialog import DBSessionHistoryDialog
 from .notification import NotificationStack
 from ..mvcmodels.parameter_value_list_model import ParameterValueListModel
-from ..helpers import busy_effect
+from ..helpers import busy_effect, ensure_window_is_on_screen
 from .import_widget import ImportDialog
 from ..spine_io.exporters.excel import export_spine_database_to_xlsx
 
@@ -622,18 +622,20 @@ class DataStoreFormBase(QMainWindow):
         window_maximized = self.qsettings.value("windowMaximized", defaultValue='false')
         n_screens = self.qsettings.value("n_screens", defaultValue=1)
         self.qsettings.endGroup()
+        original_size = self.size()
         if window_size:
             self.resize(window_size)
         if window_pos:
             self.move(window_pos)
         if window_state:
             self.restoreState(window_state, version=1)  # Toolbar and dockWidget positions
-        if window_maximized == 'true':
-            self.setWindowState(Qt.WindowMaximized)
-        # noinspection PyArgumentList
         if len(QGuiApplication.screens()) < int(n_screens):
             # There are less screens available now than on previous application startup
             self.move(0, 0)  # Move this widget to primary screen position (0,0)
+        ensure_window_is_on_screen(self, original_size)
+        if window_maximized == 'true':
+            self.setWindowState(Qt.WindowMaximized)
+        # noinspection PyArgumentList
 
     def save_window_state(self):
         """Save window state parameters (size, position, state) via QSettings."""
