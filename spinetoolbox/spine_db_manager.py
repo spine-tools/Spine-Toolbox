@@ -644,9 +644,10 @@ class SpineDBManager(QObject):
             user_data = from_database(value)
             display_data = self._display_data(user_data)
             tool_tip_data = self._tool_tip_data(user_data)
-        except ParameterValueFormatError as user_data:
+        except ParameterValueFormatError as error:
+            user_data = error
             display_data = "Error"
-            tool_tip_data = str(user_data)
+            tool_tip_data = str(error)
         fm = QFontMetrics(QFont("", 0))
         if isinstance(display_data, str):
             display_data = fm.elidedText(display_data, Qt.ElideRight, 500)

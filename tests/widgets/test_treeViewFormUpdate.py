@@ -158,7 +158,7 @@ class TestTreeViewFormUpdateMixin:
             "nemo,pluto",
             self.relative_speed_parameter["id"],
             "relative_speed",
-            100,
+            "100",
         )
         with mock.patch.object(CompoundParameterModel, "_modify_data_in_filter_menus"):
             self.db_mngr.parameter_values_updated.emit({self.mock_db_map: [self.nemo_pluto_relative_speed]})
@@ -172,4 +172,4 @@ class TestTreeViewFormUpdateMixin:
                     model.index(row, h("value")).data(),
                 )
             )
-        self.assertTrue(("nemo,pluto", "relative_speed", 100) in parameters)
+        self.assertTrue(("nemo,pluto", "relative_speed", 100.0) in parameters)
