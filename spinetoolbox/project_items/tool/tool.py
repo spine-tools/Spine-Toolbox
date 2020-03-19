@@ -836,7 +836,11 @@ class Tool(ProjectItem):
         """
         filepaths = []
         for resource in resources:
-            if resource.type_ == "file" or (resource.type_ == "database" and resource.scheme == "sqlite"):
+            if (
+                resource.type_ == "file"
+                or (resource.type_ == "database" and resource.scheme == "sqlite")
+                or (resource.type_ == "transient_file" and resource.url)
+            ):
                 filepaths += glob.glob(resource.path)
         return filepaths
 
