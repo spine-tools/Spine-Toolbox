@@ -45,6 +45,7 @@ from .notification import NotificationStack
 from ..mvcmodels.parameter_value_list_model import ParameterValueListModel
 from ..helpers import busy_effect, ensure_window_is_on_screen
 from .import_widget import ImportDialog
+from .parameter_value_editor import ParameterValueEditor
 from ..spine_io.exporters.excel import export_spine_database_to_xlsx
 
 
@@ -525,6 +526,14 @@ class DataStoreFormBase(QMainWindow):
         self.db_mngr.update_parameter_value_lists(db_map_data_to_upd)
         self.db_mngr.remove_items(db_map_typed_data_to_rm)
         self.ui.treeView_parameter_value_list.selectionModel().clearSelection()
+
+    @busy_effect
+    @Slot("QModelIndex")
+    def show_parameter_value_editor(self, index):
+        """Shows the parameter value editor for the given index of given table view.
+        """
+        editor = ParameterValueEditor(index, parent=self)
+        editor.show()
 
     def notify_items_changed(self, action, item_type, db_map_data):
         """Enables or disables actions and informs the user about what just happened."""

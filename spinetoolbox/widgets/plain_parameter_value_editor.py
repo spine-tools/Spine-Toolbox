@@ -20,36 +20,6 @@ from PySide2.QtCore import Slot
 from PySide2.QtWidgets import QWidget
 
 
-class _ValueModel:
-    def __init__(self, value):
-        """A model to handle the parameter value in the editor.
-        Mostly useful because of the handy conversion of strings to floats or booleans.
-
-        Args:
-            value (float, bool): a parameter value
-        """
-        self._value = value
-
-    @property
-    def value(self):
-        """Returns the value held by the model."""
-        return self._value
-
-    @value.setter
-    def value(self, value):
-        """Converts a value string to float or boolean."""
-        try:
-            self._value = float(value)
-        except ValueError:
-            value = value.strip().lower()
-            if value == 'true':
-                self._value = True
-            elif value == 'false':
-                self._value = False
-            else:
-                raise
-
-
 class PlainParameterValueEditor(QWidget):
     """
     A widget to edit float or boolean type parameter values.
@@ -64,28 +34,42 @@ class PlainParameterValueEditor(QWidget):
         super().__init__(parent_widget)
         self._ui = Ui_PlainParameterValueEditor()
         self._ui.setupUi(self)
-        self._ui.value_edit.editingFinished.connect(self._value_changed)
-        self._model = _ValueModel(0.0)
-        self._ui.value_edit.setText(str(self._model.value))
+        self._ui.radioButton_number_or_string.toggled.connect(self._set_number_or_string_enabled)
+
+    @Slot(bool)
+    def _set_number_or_string_enabled(self, on):
+        self._ui.value_edit.setEnabled(on)
+        if on:
+            self._ui.value_edit.setFocus()
 
     def set_value(self, value):
         """Sets the value to be edited in this widget."""
-        if not isinstance(value, (int, float, bool)):
-            value = 0.0
-        self._model = _ValueModel(value)
-        self._ui.value_edit.setText(str(value))
-
-    @Slot(name="_value_changed")
-    def _value_changed(self):
-        """Updates the model."""
-        new_value = self._ui.value_edit.text()
-        if new_value:
-            try:
-                self._model.value = new_value
-            except ValueError:
-                self._ui.value_edit.setText(str(self._model.value))
-                return
+        if value is None:
+            self._ui.radioButton_null.setChecked(True)
+        elif value is True:
+            self._ui.radioButton_true.setChecked(True)
+        elif value is False:
+            self._ui.radioButton_false.setChecked(True)
+        else:
+            self._ui.radioButton_number_or_string.setChecked(True)
+            self._ui.value_edit.setText(str(value))
 
     def value(self):
         """Returns the value currently being edited."""
-        return self._model.value
+        if self._ui.radioButton_null.isChecked():
+            return None
+        if self._ui.radioButton_true.isChecked():
+            return True
+        if self._ui.radioButton_false.isChecked():
+            return False
+        return self._number_or_string_value()
+
+    def _number_or_string_value(self):
+        text = self._ui.value_edit.text()
+        try:
+            return int(text)
+        except ValueError:
+            try:
+                return float(text)
+            except ValueError:
+                return text

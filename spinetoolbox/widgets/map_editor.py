@@ -41,7 +41,7 @@ class MapEditor(QWidget):
         self._ui.map_table_view.setContextMenuPolicy(Qt.CustomContextMenu)
         self._ui.map_table_view.customContextMenuRequested.connect(self._show_table_context_menu)
 
-    @Slot("QPoint", name="_show_table_context_menu")
+    @Slot("QPoint")
     def _show_table_context_menu(self, pos):
         menu = QMenu(self._ui.map_table_view)
         menu.addAction("Insert row before")

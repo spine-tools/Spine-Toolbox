@@ -40,11 +40,9 @@ from ..mvcmodels.compound_parameter_models import (
     CompoundRelationshipParameterDefinitionModel,
     CompoundRelationshipParameterValueModel,
 )
-from ..widgets.parameter_value_editor import ParameterValueEditor
 from ..widgets.plot_widget import PlotWidget
 from ..widgets.object_name_list_editor import ObjectNameListEditor
 from ..plotting import plot_selection, PlottingError, ParameterTablePlottingHints
-from ..helpers import busy_effect
 
 
 class ParameterViewMixin:
@@ -241,14 +239,6 @@ class ParameterViewMixin:
         editor = ObjectNameListEditor(self, index, object_class_names, object_names_lists, current_object_names)
         editor.show()
 
-    @busy_effect
-    @Slot("QModelIndex", str, object)
-    def show_parameter_value_editor(self, index, value_name="", value=None):
-        """Shows the parameter value editor for the given index of given table view.
-        """
-        editor = ParameterValueEditor(index, value_name=value_name, value=value, parent_widget=self)
-        editor.show()
-
     # TODO: nothing connected to these two below
 
     @Slot(int)
@@ -395,8 +385,7 @@ class ParameterViewMixin:
             menu = ParameterContextMenu(self, global_pos, index)
         option = menu.get_action()
         if option == "Open in editor...":
-            value_name = model.value_name(index)
-            self.show_parameter_value_editor(index, value_name=value_name)
+            self.show_parameter_value_editor(index)
         elif option == "Plot":
             selection = table_view.selectedIndexes()
             try:

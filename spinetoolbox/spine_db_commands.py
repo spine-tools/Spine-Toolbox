@@ -196,8 +196,8 @@ class CommandBase(QUndoCommand):
     def age(self):
         return self._age
 
-    def block_notifications(self, func):
-        """Calls given function while blocking notifications on the affected Data Store forms.
+    def silence_listener(self, func):
+        """Calls given function while silencing the listener Data Store forms.
         This is so undo() and subsequent redo() calls don't trigger the same notifications over and over.
         """
         listeners = self.db_mngr.signaller.db_map_listeners(self.db_map)
@@ -218,7 +218,7 @@ class CommandBase(QUndoCommand):
 
         def redo(self):
             if self._completed:
-                self.block_notifications(func)
+                self.silence_listener(func)
                 return
             self.receive_signal.connect(self.receive_items_changed)
             func(self)
@@ -234,7 +234,7 @@ class CommandBase(QUndoCommand):
         """
 
         def undo(self):
-            self.block_notifications(func)
+            self.silence_listener(func)
 
         return undo
 

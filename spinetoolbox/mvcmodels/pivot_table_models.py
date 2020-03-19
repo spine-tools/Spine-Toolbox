@@ -422,7 +422,7 @@ class PivotTableModel(QAbstractTableModel):
             return QColor(PIVOT_TABLE_HEADER_COLOR)
 
     def data(self, index, role=Qt.DisplayRole):
-        if role in (Qt.DisplayRole, Qt.EditRole, Qt.ToolTipRole):
+        if role in (Qt.DisplayRole, Qt.EditRole, Qt.ToolTipRole, Qt.UserRole):
             if self.index_in_top(index):
                 return self.model.pivot_rows[index.column()]
             if self.index_in_left(index):

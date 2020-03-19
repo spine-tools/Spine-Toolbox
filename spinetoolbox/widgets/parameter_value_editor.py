@@ -17,13 +17,13 @@ An editor dialog for editing database (relationship) parameter values.
 """
 
 from enum import IntEnum, unique
+from numbers import Number
 from PySide2.QtCore import Qt, Slot
 from PySide2.QtWidgets import QDialog, QMessageBox
 from spinedb_api import (
     DateTime,
     Duration,
     duration_to_relativedelta,
-    from_database,
     Map,
     ParameterValueFormatError,
     TimePattern,
@@ -57,28 +57,25 @@ class ParameterValueEditor(QDialog):
     """
     Dialog for editing (relationship) parameter values.
 
-    The dialog takes the editable value from a parent model and shows a specialized editor
-    corresponding to the value type in a stack widget. The user can change the value type
-    by changing the specialized editor using a combo box.
+    The dialog takes an index and shows a specialized editor corresponding to the value type in a stack widget.
+    The user can change the value type by changing the specialized editor using a combo box.
     When the dialog is closed the value from the currently shown specialized editor is
-    written back to the parent model.
+    written back to the given index.
     """
 
-    def __init__(self, parent_index, value_name="", value=None, parent_widget=None):
+    def __init__(self, index, parent=None):
         """
         Args:
-            parent_index (QModelIndex): an index to a parameter value in parent_model
-            value_name (str): name of the value
-            value: parameter value or None if it should be loaded from parent_index
-            parent_widget (QWidget): a parent widget
+            index (QModelIndex): an index to a parameter value in parent_model
+            parent (QWidget): a parent widget
         """
         from ..ui.parameter_value_editor import Ui_ParameterValueEditor
 
-        super().__init__(parent_widget)
-        self._parent_model = parent_index.model()
-        self._parent_index = parent_index
+        super().__init__(parent)
+        self._index = index
         self._ui = Ui_ParameterValueEditor()
         self._ui.setupUi(self)
+        value_name = self._index.model().value_name(self._index)
         self.setWindowTitle(f"Edit value    -- {value_name} --")
         self.setWindowFlag(Qt.WindowMinMaxButtonsHint)
         self._ui.button_box.accepted.connect(self.accept)
@@ -98,20 +95,14 @@ class ParameterValueEditor(QDialog):
         self._ui.editor_stack.addWidget(self._datetime_editor)
         self._ui.editor_stack.addWidget(self._duration_editor)
         self._ui.parameter_type_selector.activated.connect(self._change_parameter_type)
-        if value is None:
-            try:
-                value = from_database(self._parent_model.data(parent_index, Qt.EditRole))
-            except ParameterValueFormatError as error:
-                self._select_default_view(message="Failed to load value: {}".format(error))
-                return
-        self._select_editor(value)
+        self._select_editor(index.data(Qt.UserRole))
 
     @Slot()
     def accept(self):
         """Saves the parameter value shown in the currently selected editor widget back to the parent model."""
         editor = self._ui.editor_stack.currentWidget()
         try:
-            self._parent_model.setData(self._parent_index, to_database(editor.value()))
+            self._index.model().setData(self._index, to_database(editor.value()))
         except ParameterValueFormatError as error:
             message = "Cannot set value: {}".format(error)
             QMessageBox.warning(self, "Parameter Value error", message)
@@ -159,10 +150,14 @@ class ParameterValueEditor(QDialog):
             )
             self._time_series_fixed_resolution_editor.set_value(fixed_resolution_value)
         self._ui.editor_stack.setCurrentIndex(selector_index)
+        if selector_index == _Editor.PLAIN_VALUE:
+            self._plain_value_editor.set_value("")
 
     def _select_editor(self, value):
         """Shows the editor widget corresponding to the given value type on the editor stack."""
-        if isinstance(value, (int, float, bool)):
+        if isinstance(value, ParameterValueFormatError):
+            self._select_default_view(message=str(value))
+        elif isinstance(value, (Number, bool, str, type(None))):
             self._ui.parameter_type_selector.setCurrentIndex(_Editor.PLAIN_VALUE)
             self._ui.editor_stack.setCurrentIndex(_Editor.PLAIN_VALUE)
             self._plain_value_editor.set_value(value)
