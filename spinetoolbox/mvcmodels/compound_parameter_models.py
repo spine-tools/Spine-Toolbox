@@ -57,7 +57,8 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         self._accepted_entity_class_ids = {}  # Accepted by main filter
         self.remove_icon = QIcon(":/icons/menu_icons/cog_minus.svg")
         self._auto_filter_menus = {}
-        self._auto_filter_menu_data = dict()  # Maps field to all (db map, entity id, item id)
+        self._auto_filter_menu_data = dict()  # Maps field to value to list of (db map, entity id, item id)
+        self._inv_auto_filter_menu_data = dict()  # Maps field to (db map, entity id, item id) to value
         self._auto_filter = dict()  # Maps field to db map, to entity id, to *accepted* item ids
 
     def _make_header(self):
@@ -140,6 +141,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         """Makes auto filter menus."""
         self._auto_filter_menus.clear()
         self._auto_filter_menu_data.clear()
+        self._inv_auto_filter_menu_data.clear()
         for field in self.header:
             # TODO: show_empty=True
             self._auto_filter_menus[field] = menu = ParameterViewFilterMenu(self._parent, self, show_empty=False)
@@ -177,53 +179,48 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
             db_items (list(dict))
         """
 
-        def get_value_to_add(db_map, db_item, field, field_menu_data):
-            if action not in ("add", "update"):
-                return None
-            entity_class_id = db_item.get(self._entity_class_id_key)
-            item_id = db_item["id"]
-            identifier = (db_map, entity_class_id, item_id)
-            value = db_map.codename if field == "database" else db_item[field]
-            # TODO: try to make this work without performance issues
-            # if field in ("value", "default_value"):
-            # value, _ = self.db_mngr.parse_value(value)
-            if value not in field_menu_data:
-                field_menu_data[value] = [identifier]
-                return value
-            field_menu_data[value].append(identifier)
-
-        def get_value_to_remove(db_map, db_item, field, field_menu_data):
+        def get_value_to_remove(db_map, db_item, field, field_menu_data, inv_field_menu_data):
             if action not in ("remove", "update"):
                 return None
             entity_class_id = db_item.get(self._entity_class_id_key)
             item_id = db_item["id"]
             identifier = (db_map, entity_class_id, item_id)
-            old_item = self.db_mngr.get_item(db_map, self.item_type, item_id)
-            old_value = db_map.codename if field == "database" else old_item[field]
-            # TODO: try to make this work without performance issues
-            # if field in ("value", "default_value"):
-            # old_value, _ = self.db_mngr.parse_value(old_value)
+            old_value = inv_field_menu_data.pop(identifier)
             old_items = field_menu_data[old_value]
             old_items.remove(identifier)
             if not old_items:
                 del field_menu_data[old_value]
                 return old_value
 
+        def get_value_to_add(db_map, db_item, field, field_menu_data, inv_field_menu_data):
+            if action not in ("add", "update"):
+                return None
+            entity_class_id = db_item.get(self._entity_class_id_key)
+            item_id = db_item["id"]
+            identifier = (db_map, entity_class_id, item_id)
+            value = db_map.codename if field == "database" else db_item[field]
+            inv_field_menu_data[identifier] = value
+            if value not in field_menu_data:
+                field_menu_data[value] = [identifier]
+                return value
+            field_menu_data[value].append(identifier)
+
         for field, menu in self._auto_filter_menus.items():
             values_to_add = list()
             values_to_remove = list()
             field_menu_data = self._auto_filter_menu_data.setdefault(field, {})
+            inv_field_menu_data = self._inv_auto_filter_menu_data.setdefault(field, {})
             for db_item in db_items:
-                to_add = get_value_to_add(db_map, db_item, field, field_menu_data)
-                to_remove = get_value_to_remove(db_map, db_item, field, field_menu_data)
-                if to_add is not None:
-                    values_to_add.append(to_add)
+                to_remove = get_value_to_remove(db_map, db_item, field, field_menu_data, inv_field_menu_data)
+                to_add = get_value_to_add(db_map, db_item, field, field_menu_data, inv_field_menu_data)
                 if to_remove is not None:
                     values_to_remove.append(to_remove)
-            if values_to_add:
-                menu.add_items_to_filter_list(values_to_add)
+                if to_add is not None:
+                    values_to_add.append(to_add)
             if values_to_remove:
                 menu.remove_items_from_filter_list(values_to_remove)
+            if values_to_add:
+                menu.add_items_to_filter_list(values_to_add)
 
     def _do_add_data_to_filter_menus(self, db_map, db_items):
         self._modify_data_in_filter_menus("add", db_map, db_items)

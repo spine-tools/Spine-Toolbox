@@ -405,6 +405,22 @@ class SpineDBManager(QObject):
             lambda db_map_data: self.cache_items("parameter value list", db_map_data)
         )
         self.parameter_tags_added.connect(lambda db_map_data: self.cache_items("parameter tag", db_map_data))
+        # Update in cache
+        self.object_classes_updated.connect(lambda db_map_data: self.cache_items("object class", db_map_data))
+        self.objects_updated.connect(lambda db_map_data: self.cache_items("object", db_map_data))
+        self.relationship_classes_updated.connect(
+            lambda db_map_data: self.cache_items("relationship class", db_map_data)
+        )
+        self.relationships_updated.connect(lambda db_map_data: self.cache_items("relationship", db_map_data))
+        self.parameter_definitions_updated.connect(
+            lambda db_map_data: self.cache_items("parameter definition", db_map_data)
+        )
+        self.parameter_values_updated.connect(lambda db_map_data: self.cache_items("parameter value", db_map_data))
+        self.parameter_value_lists_updated.connect(
+            lambda db_map_data: self.cache_items("parameter value list", db_map_data)
+        )
+        self.parameter_tags_updated.connect(lambda db_map_data: self.cache_items("parameter tag", db_map_data))
+        self.parameter_definition_tags_set.connect(self.cache_parameter_definition_tags)
         # Icons
         self.object_classes_added.connect(self.update_icons)
         self.object_classes_updated.connect(self.update_icons)
@@ -434,25 +450,9 @@ class SpineDBManager(QObject):
         self.parameter_value_lists_removed.connect(self.cascade_refresh_parameter_definitions_by_value_list)
         self.parameter_tags_updated.connect(self.cascade_refresh_parameter_definitions_by_tag)
         self.parameter_tags_removed.connect(self.cascade_refresh_parameter_definitions_by_tag)
-        # Signaller (after add to cache, so items are there when listeners receive signals)
+        # Signaller (after caching, so items are there when listeners receive signals)
         self.signaller.connect_signals()
-        # Update in cache (last, because we may want to see the non-updated version of the items one last time)
-        self.object_classes_updated.connect(lambda db_map_data: self.cache_items("object class", db_map_data))
-        self.objects_updated.connect(lambda db_map_data: self.cache_items("object", db_map_data))
-        self.relationship_classes_updated.connect(
-            lambda db_map_data: self.cache_items("relationship class", db_map_data)
-        )
-        self.relationships_updated.connect(lambda db_map_data: self.cache_items("relationship", db_map_data))
-        self.parameter_definitions_updated.connect(
-            lambda db_map_data: self.cache_items("parameter definition", db_map_data)
-        )
-        self.parameter_values_updated.connect(lambda db_map_data: self.cache_items("parameter value", db_map_data))
-        self.parameter_value_lists_updated.connect(
-            lambda db_map_data: self.cache_items("parameter value list", db_map_data)
-        )
-        self.parameter_tags_updated.connect(lambda db_map_data: self.cache_items("parameter tag", db_map_data))
-        self.parameter_definition_tags_set.connect(self.cache_parameter_definition_tags)
-        # Remove from cache (also last, because we may want to see the removed items one last time)
+        # Remove from cache (last, so views are able to find items until the very last moment)
         self.object_classes_removed.connect(lambda db_map_data: self.uncache_items("object class", db_map_data))
         self.objects_removed.connect(lambda db_map_data: self.uncache_items("object", db_map_data))
         self.relationship_classes_removed.connect(
@@ -514,15 +514,14 @@ class SpineDBManager(QObject):
         db_map_typed_data = {}
         for db_map, items in db_map_data.items():
             for item in items:
-                if db_map not in self._cache:
+                db_map_data = self._cache.get(db_map)
+                if db_map_data is None:
                     continue
-                cached_map = self._cache[db_map]
-                if item_type not in cached_map:
+                items = db_map_data.get(item_type)
+                if items is None:
                     continue
-                cached_items = cached_map[item_type]
-                item_id = item["id"]
-                if item_id in cached_items:
-                    item = cached_items.pop(item_id)
+                removed_item = items.pop(item["id"], None)
+                if removed_item:
                     db_map_typed_data.setdefault(db_map, {}).setdefault(item_type, []).append(item)
         self.items_removed_from_cache.emit(db_map_typed_data)
 

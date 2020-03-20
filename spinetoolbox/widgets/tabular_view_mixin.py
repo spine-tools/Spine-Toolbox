@@ -605,6 +605,9 @@ class TabularViewMixin:
     def refresh_table_view(table_view):
         top_left = table_view.indexAt(table_view.rect().topLeft())
         bottom_right = table_view.indexAt(table_view.rect().bottomRight())
+        if not bottom_right.isValid():
+            model = table_view.model()
+            bottom_right = table_view.model().index(model.rowCount() - 1, model.columnCount() - 1)
         table_view.model().dataChanged.emit(top_left, bottom_right)
 
     @staticmethod
