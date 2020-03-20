@@ -20,11 +20,9 @@ import logging
 import matplotlib
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
-from pandas.plotting import register_matplotlib_converters
 from PySide2 import QtWidgets
 
 
-register_matplotlib_converters()  # Needed to plot the time series indexes
 matplotlib.use('Qt5Agg')
 matplotlib.rcParams.update({"font.size": 8})
 logging.getLogger("matplotlib").setLevel(logging.WARNING)
