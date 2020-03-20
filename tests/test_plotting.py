@@ -20,7 +20,7 @@ import unittest
 from unittest.mock import Mock, MagicMock
 from PySide2.QtCore import QAbstractTableModel, QModelIndex, Qt
 from PySide2.QtWidgets import QApplication, QAction
-from spinedb_api import Map, TimeSeries, TimeSeriesVariableResolution
+from spinedb_api import from_database, Map, TimeSeries, TimeSeriesVariableResolution
 from spinetoolbox.plotting import (
     add_map_plot,
     add_time_series_plot,
@@ -37,7 +37,7 @@ from spinetoolbox.widgets.data_store_widget import DataStoreForm
 def _make_pivot_proxy_model():
     """Returns a prefilled PivotTableModel."""
     db_mngr = MagicMock()
-    db_mngr.get_value.side_effect = lambda db_map, item_type, id_, field, role: id_
+    db_mngr.get_value.side_effect = lambda db_map, item_type, id_, field, role: from_database(id_)
     mock_db_map = Mock()
     mock_db_map.codename = "codename"
     db_mngr.get_db_map_for_listener.side_effect = lambda *args, **kwargs: mock_db_map
@@ -88,9 +88,9 @@ class _MockParameterModel(QAbstractTableModel):
         return 2
 
     def data(self, index, role=Qt.DisplayRole):
-        if role not in (Qt.DisplayRole, Qt.EditRole):
+        if role not in (Qt.DisplayRole, Qt.EditRole, Qt.UserRole):
             return None
-        return self._table[index.row()][index.column()]
+        return from_database(self._table[index.row()][index.column()])
 
     def headerData(self, column):
         return "value"
