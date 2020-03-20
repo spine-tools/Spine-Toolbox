@@ -258,7 +258,8 @@ class PivotTablePlottingHints(PlottingHints):
 
     def is_index_in_data(self, model, index):
         """Returns True if index is in the data portion of the table."""
-        return model.sourceModel().index_in_data(index)
+        source_index = model.mapToSource(index)
+        return model.sourceModel().index_in_data(source_index)
 
     def special_x_values(self, model, column, rows):
         """Returns the values from the X column if one is designated otherwise returns None."""
