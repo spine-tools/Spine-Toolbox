@@ -19,7 +19,7 @@ Contains TabularViewMixin class.
 from itertools import product
 from collections import namedtuple
 from PySide2.QtCore import Qt, Slot
-from spinedb_api import from_database, ParameterValueFormatError, TimeSeries
+from spinedb_api import from_database, IndexedValue, Map, ParameterValueFormatError, TimeSeries
 from .custom_menus import TabularViewFilterMenu, PivotTableModelMenu, PivotTableHorizontalHeaderMenu
 from .tabular_view_header_widget import TabularViewHeaderWidget
 from .custom_delegates import PivotTableDelegate
@@ -343,26 +343,27 @@ class TabularViewMixin:
                 continue
             value_id_to_entity_and_definition[id_] = (value_entity_id, value_definition_id)
             database_value = value_item["value"]
-            index_is_datetime = False
             try:
                 parameter_value = from_database(database_value)
             except ParameterValueFormatError:
-                indexes = {""}
+                other_indexes.add("")
                 other_values[id_] = {"": "Error"}
             else:
                 if isinstance(parameter_value, TimeSeries):
-                    indexes = set(parameter_value.indexes)
                     date_time_values[id_] = {
                         i: float(v) for i, v in zip(parameter_value.indexes, parameter_value.values)
                     }
-                    index_is_datetime = True
+                    date_time_indexes |= set(parameter_value.indexes)
+                elif isinstance(parameter_value, Map):
+                    indexes, values = _expand_map(parameter_value)
+                    other_indexes |= indexes
+                    other_values[id_] = values
+                elif isinstance(parameter_value, IndexedValue):
+                    other_values[id_] = {i: float(v) for i, v in zip(parameter_value.indexes, parameter_value.values)}
+                    other_indexes |= set(parameter_value.indexes)
                 else:
-                    indexes = {""}
+                    other_indexes.add("")
                     other_values[id_] = {"": parameter_value}
-            if index_is_datetime:
-                date_time_indexes |= indexes
-            else:
-                other_indexes |= indexes
         date_time_indexes = list(date_time_indexes)
         date_time_indexes.sort()
         sorted_date_time_values = dict()
@@ -373,6 +374,7 @@ class TabularViewMixin:
                 i = date_time_indexes.index(index)
                 values[i] = value
         other_indexes = list(other_indexes)
+        other_indexes.sort()
         sorted_other_values = dict()
         for id_, point in other_values.items():
             values = len(other_indexes) * [None]
@@ -922,3 +924,35 @@ class TabularViewMixin:
         super().receive_session_rolled_back(db_maps)
         self.reload_pivot_table()
         self.reload_frozen_table()
+
+
+def _expand_map(map_to_expand, preceding_indexes=None):
+    """
+    Expands map indexes and values iteratively.
+
+    Args:
+        map_to_expand (spinedb_api.Map): a map to expand.
+        preceding_indexes (list): a list of indexes indexing a nested map
+
+    Return:
+        tuple of set and dict: a set of map's indexes as comma-separated strings and a dict mapping each index string
+            to the corresponding scalar value
+    """
+    current_indexes = map_to_expand.indexes
+    if not current_indexes:
+        return []
+    if preceding_indexes is None:
+        preceding_indexes = list()
+    indexes = set()
+    values = dict()
+    for index, value in zip(current_indexes, map_to_expand.values):
+        index_list = preceding_indexes + [index]
+        if isinstance(value, Map):
+            nested_indexes, nested_values = _expand_map(value, index_list)
+            indexes |= nested_indexes
+            values.update(nested_values)
+        else:
+            index_as_string = ", ".join(index_list)
+            indexes.add(index_as_string)
+            values[index_as_string] = value
+    return indexes, values
