@@ -685,24 +685,26 @@ class SpineDBManager(QObject):
             return "Start: {}, resolution: variable, length: {}".format(parsed_value.indexes[0], len(parsed_value))
         return None
 
-    def get_expanded_value(self, db_map, item_type, id_, field):
+    def get_expanded_value(self, db_map, item_type, id_, field, role=Qt.DisplayRole):
         item = self.get_item(db_map, item_type, id_)
         if not item:
             return None
         key = "expanded_" + field
         if key not in item:
-            value = self.get_value(db_map, item_type, id_, field, role=EDITOR_ROLE)
-            item[key] = self._expanded_value(value)
-        return item[key]
+            editor_data = self.get_value(db_map, item_type, id_, field, role=EDITOR_ROLE)
+            edit_data = self._expanded_value(editor_data)
+            display_data = {k: self._display_data(v) for k, v in edit_data.items()}
+            item[key] = {Qt.DisplayRole: display_data, Qt.ToolTipRole: display_data, Qt.EditRole: edit_data}
+        return item[key].get(role)
 
-    def _expanded_value(self, value):
-        if isinstance(value, ParameterValueFormatError):
+    def _expanded_value(self, editor_data):
+        if isinstance(editor_data, ParameterValueFormatError):
             return {"": "Error"}
-        if isinstance(value, (TimeSeries, IndexedValue)):
-            return {i: float(v) for i, v in zip(value.indexes, value.values)}
-        if isinstance(value, Map):
-            return self._expand_map(value)
-        return {"": value}
+        if isinstance(editor_data, (TimeSeries, IndexedValue)):
+            return {i: float(v) for i, v in zip(editor_data.indexes, editor_data.values)}
+        if isinstance(editor_data, Map):
+            return self._expand_map(editor_data)
+        return {"": editor_data}
 
     def _expand_map(self, map_to_expand, preceding_indexes=None):
         """
