@@ -321,6 +321,10 @@ def _add_plot_to_widget(values, labels, plot_widget):
             add_map_plot(plot_widget, value, label)
     elif isinstance(values[1][0], Number):
         plot_widget.canvas.axes.plot(values[0], values[1], label=labels[0])
+        if isinstance(values[0][0], str):
+            # matplotlib tries to plot every single x tick label if they are strings.
+            # This can be very slow if the labels are numerous.
+            plot_widget.canvas.axes.xaxis.set_major_locator(MaxNLocator(10))
     else:
         raise PlottingError(f"Cannot plot: Don't know how to plot '{type(values[1][0]).__name__}' values.")
 
