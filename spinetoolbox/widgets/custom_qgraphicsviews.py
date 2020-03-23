@@ -187,11 +187,11 @@ class CustomQGraphicsView(QGraphicsView):
 
     def zoom_in(self):
         """Perform a zoom in with a fixed scaling."""
-        self.gentle_zoom(self._zoom_factor_base ** self._angle, self.viewport().rect().center())
+        self.gentle_zoom(self._zoom_factor_base ** self._angle)
 
     def zoom_out(self):
         """Perform a zoom out with a fixed scaling."""
-        self.gentle_zoom(self._zoom_factor_base ** -self._angle, self.viewport().rect().center())
+        self.gentle_zoom(self._zoom_factor_base ** -self._angle)
 
     def reset_zoom(self):
         """Reset zoom to the default factor."""
@@ -199,7 +199,7 @@ class CustomQGraphicsView(QGraphicsView):
         if self._scene_fitting_zoom < 1.0:
             self.scale(self._scene_fitting_zoom, self._scene_fitting_zoom)
 
-    def gentle_zoom(self, factor, zoom_focus):
+    def gentle_zoom(self, factor, zoom_focus=None):
         """
         Perform a zoom by a given factor.
 
@@ -207,6 +207,8 @@ class CustomQGraphicsView(QGraphicsView):
             factor (float): a scaling factor relative to the current scene scaling
             zoom_focus (QPoint): focus of the zoom, e.g. mouse pointer position
         """
+        if zoom_focus is None:
+            zoom_focus = self.viewport().rect().center()
         initial_focus_on_scene = self.mapToScene(zoom_focus)
         transform = self.transform()
         current_zoom = transform.m11()  # The [1, 1] element contains the x scaling factor
@@ -573,7 +575,7 @@ class GraphQGraphicsView(CustomQGraphicsView):
         e.accept()
         self.context_menu_requested.emit(e.globalPos())
 
-    def gentle_zoom(self, factor, zoom_focus):
+    def gentle_zoom(self, factor, zoom_focus=None):
         """
         Perform a zoom by a given factor.
 
@@ -581,7 +583,7 @@ class GraphQGraphicsView(CustomQGraphicsView):
             factor (float): a scaling factor relative to the current scene scaling
             zoom_focus (QPoint): focus of the zoom, e.g. mouse pointer position
         """
-        if not super().gentle_zoom(factor, zoom_focus):
+        if not super().gentle_zoom(factor, zoom_focus=zoom_focus):
             return False
         self.adjust_items_to_zoom()
         return True

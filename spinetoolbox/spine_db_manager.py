@@ -117,7 +117,7 @@ class SpineDBManager(QObject):
         self.redo_action = {}
         self.icon_mngr = IconManager()
         self.signaller = SpineDBSignaller(self)
-        self.fetcher = None
+        self.fetchers = []
         self.connect_signals()
 
     @property
@@ -274,8 +274,9 @@ class SpineDBManager(QObject):
             db_map (DiffDatabaseMapping)
             listener (DataStoreForm)
         """
-        self.fetcher = SpineDBFetcher(self, listener, *db_maps)
-        self.fetcher.run()
+        fetcher = SpineDBFetcher(self, listener, *db_maps)
+        self.fetchers.append(fetcher)
+        fetcher.run()
 
     def refresh_session(self, *db_maps):
         refreshed_db_maps = set()

@@ -16,10 +16,6 @@ Contains the GraphViewMixin class.
 :date:   26.11.2018
 """
 
-import time
-import numpy as np
-from numpy import atleast_1d as arr
-from scipy.sparse.csgraph import dijkstra
 from PySide2.QtCore import Qt, Signal, Slot, QTimer, QRectF
 from PySide2.QtWidgets import QGraphicsTextItem, QFileDialog
 from PySide2.QtPrintSupport import QPrinter
@@ -30,21 +26,20 @@ from .custom_qwidgets import ZoomWidgetAction
 from .shrinking_scene import ShrinkingScene
 from .graph_view_graphics_items import EntityItem, ObjectItem, RelationshipItem, ArcItem
 from .graph_view_demo import GraphViewDemo
+from .graph_layout_generator import GraphLayoutGenerator
 from ..mvcmodels.entity_list_models import ObjectClassListModel, RelationshipClassListModel
-from ..helpers import busy_effect
 
 
 class GraphViewMixin:
     """Provides the graph view for the DS form."""
 
-    graph_created = Signal()
     objects_added_to_graph = Signal()
     relationships_added_to_graph = Signal()
 
     _POS_STR = "graph_view_position"
-    _node_extent = 64
-    _arc_width = 0.15 * _node_extent
-    _arc_length_hint = 1.5 * _node_extent
+    _VERTEX_EXTENT = 64
+    _ARC_WIDTH = 0.15 * _VERTEX_EXTENT
+    _ARC_LENGTH_HINT = 1.5 * _VERTEX_EXTENT
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -54,12 +49,18 @@ class GraphViewMixin:
         self.relationship_class_list_model = RelationshipClassListModel(self, self.db_mngr, self.db_map)
         self.ui.listView_object_class.setModel(self.object_class_list_model)
         self.ui.listView_relationship_class.setModel(self.relationship_class_list_model)
+        self.object_ids = list()
+        self.relationship_ids = list()
+        self.src_inds = list()
+        self.dst_inds = list()
+        self.wip_items = tuple()
         self.hidden_items = list()
         self.prunned_entity_ids = dict()
         self.removed_items = list()
         self.entity_item_selection = list()
         self._blank_item = None
         self.zoom_widget_action = None
+        self.layout_gens = list()
         area = self.dockWidgetArea(self.ui.dockWidget_item_palette)
         self._handle_item_palette_dock_location_changed(area)
         self.ui.treeView_object.qsettings = self.qsettings
@@ -375,17 +376,38 @@ class GraphViewMixin:
         if self.ui.dockWidget_entity_graph.isVisible():
             self.build_graph()
 
-    @busy_effect
-    @Slot(bool)
-    def build_graph(self, checked=False, timeit=False):
+    def build_graph(self):
         """Builds the graph."""
-        tic = time.process_time()
-        new_items = self._get_new_items()
-        wip_items = self._get_wip_items()
+        for layout_gen in self.layout_gens:
+            layout_gen.stop()
+        self.object_ids, self.relationship_ids, self.src_inds, self.dst_inds = self._get_graph_data()
+        if not self.wip_items:
+            self.wip_items = self._get_wip_items()
+        layout_gen = self._make_layout_generator()
+        self.layout_gens.append(layout_gen)
+        progress_widget = layout_gen.create_progress_widget()
+        scene = self.new_scene()
+        scene.addWidget(progress_widget)
+        self.extend_scene()
+        self.ui.graphicsView.gentle_zoom(0.5)
+        layout_gen.finished.connect(self._complete_graph)
+        layout_gen.done.connect(lambda layout_gen=layout_gen: self.layout_gens.remove(layout_gen))
+        layout_gen.start()
+
+    @Slot(object, object)
+    def _complete_graph(self, x, y):
+        """
+        Args:
+            x (list): Horizontal coordinates
+            y (list): Vertical coordinates
+        """
+        if self.layout_gens:
+            return
+        new_items = self._get_new_items(x, y)
         scene = self.new_scene()
         self.hidden_items.clear()
         self.removed_items.clear()
-        if not any(new_items) and not any(wip_items):
+        if not any(new_items) and not any(self.wip_items):
             self._blank_item = QGraphicsTextItem("Nothing to show.")
             scene.addItem(self._blank_item)
         else:
@@ -394,96 +416,10 @@ class GraphViewMixin:
                 self._add_new_items(scene, *new_items)  # pylint: disable=no-value-for-parameter
             else:
                 object_items = []
-            if wip_items:
-                self._add_wip_items(scene, object_items, *wip_items)  # pylint: disable=no-value-for-parameter
+            if self.wip_items:
+                self._add_wip_items(scene, object_items, *self.wip_items)  # pylint: disable=no-value-for-parameter
+                self.wip_items = tuple()
         self.extend_scene()
-        toc = time.process_time()
-        if timeit:
-            self.msg.emit("Graph built in {} seconds\t".format(toc - tic))
-        self.graph_created.emit()
-
-    @Slot(bool)
-    def save_positions(self, checked=False):
-        scene = self.ui.graphicsView.scene()
-        if not scene:
-            return
-        class_items = {}
-        for item in scene.items():
-            if isinstance(item, ObjectItem):
-                class_items.setdefault(item.entity_class_id, []).append(item)
-        pos_def_class_ids = {
-            p["object_class_id"]
-            for p in self.db_mngr.get_items_by_field(
-                self.db_map, "parameter definition", "parameter_name", self._POS_STR
-            )
-        }
-        defs_to_add = [
-            {"name": self._POS_STR, "object_class_id": class_id} for class_id in class_items.keys() - pos_def_class_ids
-        ]
-        if defs_to_add:
-            self.db_mngr.add_parameter_definitions({self.db_map: defs_to_add})
-        pos_def_id_lookup = {
-            p["object_class_id"]: p["id"]
-            for p in self.db_mngr.get_items_by_field(
-                self.db_map, "parameter definition", "parameter_name", self._POS_STR
-            )
-        }
-        pos_val_id_lookup = {
-            (p["object_class_id"], p["object_id"]): p["id"]
-            for p in self.db_mngr.get_items_by_field(self.db_map, "parameter value", "parameter_name", self._POS_STR)
-        }
-        vals_to_add = list()
-        vals_to_update = list()
-        for class_id, items in class_items.items():
-            for item in items:
-                pos_val_id = pos_val_id_lookup.get((class_id, item.entity_id), None)
-                value = {"type": "map", "index_type": "str", "data": [["x", item.pos().x()], ["y", item.pos().y()]]}
-                if pos_val_id is None:
-                    vals_to_add.append(
-                        {
-                            "name": "pos_x",
-                            "object_class_id": class_id,
-                            "object_id": item.entity_id,
-                            "parameter_definition_id": pos_def_id_lookup[class_id],
-                            "value": to_database(value),
-                        }
-                    )
-                else:
-                    vals_to_update.append({"id": pos_val_id, "value": to_database(value)})
-        if vals_to_add:
-            self.db_mngr.add_parameter_values({self.db_map: vals_to_add})
-        if vals_to_update:
-            self.db_mngr.update_parameter_values({self.db_map: vals_to_update})
-
-    @Slot(bool)
-    def clear_saved_positions(self, checked=False):
-        scene = self.ui.graphicsView.scene()
-        if not scene:
-            return
-        object_ids = {x.entity_id for x in scene.items() if isinstance(x, ObjectItem)}
-        vals_to_remove = [
-            p
-            for p in self.db_mngr.get_items_by_field(self.db_map, "parameter value", "parameter_name", self._POS_STR)
-            if p["object_id"] in object_ids
-        ]
-        if vals_to_remove:
-            self.db_mngr.remove_items({self.db_map: {"parameter value": vals_to_remove}})
-        self.build_graph()
-
-    @Slot(bool)
-    def export_as_pdf(self, checked=False):
-        file_name, _ = QFileDialog.getSaveFileName(self, "Export as PDF...", self._get_base_dir(), "PDF files (*.pdf)")
-        if not file_name:
-            return
-        scene = self.ui.graphicsView.scene()
-        source = scene.itemsBoundingRect()
-        printer = QPrinter()
-        printer.setPaperSize(source.size(), QPrinter.Point)
-        printer.setOutputFileName(file_name)
-        painter = QPainter(printer)
-        scene.render(painter, QRectF(), source)
-        painter.end()
-        self.msg.emit(f"File {file_name} successfully exported.")
 
     def _get_selected_entity_ids(self):
         """Returns a set of ids corresponding to selected entities in the trees.
@@ -523,8 +459,7 @@ class GraphViewMixin:
         """Returns data for making graph according to selection in trees.
 
         Returns:
-            tuple: integer object ids
-            dict: map from integer relationship ids to object id lists
+
         """
         object_ids, relationship_ids = self._get_selected_entity_ids()
         prunned_entity_ids = {id_ for ids in self.prunned_entity_ids.values() for id_ in ids}
@@ -532,7 +467,8 @@ class GraphViewMixin:
         relationship_ids -= prunned_entity_ids
         relationships = self.db_mngr.find_cascading_relationships({self.db_map: object_ids}).get(self.db_map, [])
         relationships += [self.db_mngr.get_item(self.db_map, "relationship", id_) for id_ in relationship_ids]
-        relationship_ids = dict()
+        relationship_ids = list()
+        object_id_lists = list()
         for relationship in relationships:
             if relationship["id"] in prunned_entity_ids:
                 continue
@@ -540,8 +476,11 @@ class GraphViewMixin:
             if len(object_id_list) < 2:
                 continue
             object_ids.update(object_id_list)
-            relationship_ids[relationship["id"]] = object_id_list
-        return tuple(object_ids), relationship_ids
+            relationship_ids.append(relationship["id"])
+            object_id_lists.append(object_id_list)
+        object_ids = list(object_ids)
+        src_inds, dst_inds = self._get_src_dst_inds(object_ids, object_id_lists)
+        return object_ids, relationship_ids, src_inds, dst_inds
 
     @staticmethod
     def _get_src_dst_inds(object_ids, object_id_lists):
@@ -556,40 +495,48 @@ class GraphViewMixin:
             relationship_ind += 1
         return src_inds, dst_inds
 
-    def _get_new_items(self):
-        """Returns new items for the graph.
+    def _make_layout_generator(self):
+        """Returns a layout generator for the current graph.
 
         Returns:
-            list: ObjectItem instances
-            list: RelationshipItem instances
-            list: ArcItem instances
+            GraphLayoutGenerator
         """
-        object_ids, relationship_ids = self._get_graph_data()
-        src_inds, dst_inds = self._get_src_dst_inds(object_ids, relationship_ids.values())
-        entity_ids = object_ids + tuple(relationship_ids.keys())
-        d = self.shortest_path_matrix(len(entity_ids), src_inds, dst_inds, self._arc_length_hint)
-        if d is None:
-            return ()
+        entity_ids = self.object_ids + self.relationship_ids
         pos_lookup = {
             p["object_id"]: dict(from_database(p["value"]).value_to_database_data())
             for p in self.db_mngr.get_items_by_field(self.db_map, "parameter value", "parameter_name", self._POS_STR)
         }
         heavy_positions = {ind: pos_lookup[id_] for ind, id_ in enumerate(entity_ids) if id_ in pos_lookup}
-        x, y = self.vertex_coordinates(d, heavy_positions=heavy_positions)
+        return GraphLayoutGenerator(
+            len(entity_ids), self.src_inds, self.dst_inds, self._ARC_LENGTH_HINT, heavy_positions=heavy_positions
+        )
+
+    def _get_new_items(self, x, y):
+        """Returns new items for the graph.
+
+        Args:
+            x (list)
+            y (list)
+
+        Returns
+            list: ObjectItem instances
+            list: RelationshipItem instances
+            list: ArcItem instances
+        """
         object_items = list()
         relationship_items = list()
         arc_items = list()
-        for i, object_id in enumerate(object_ids):
-            object_item = ObjectItem(self, x[i], y[i], self._node_extent, entity_id=object_id)
+        for i, object_id in enumerate(self.object_ids):
+            object_item = ObjectItem(self, x[i], y[i], self._VERTEX_EXTENT, entity_id=object_id)
             object_items.append(object_item)
         offset = len(object_items)
-        for i, relationship_id in enumerate(relationship_ids):
+        for i, relationship_id in enumerate(self.relationship_ids):
             relationship_item = RelationshipItem(
-                self, x[offset + i], y[offset + i], 0.5 * self._node_extent, entity_id=relationship_id
+                self, x[offset + i], y[offset + i], 0.5 * self._VERTEX_EXTENT, entity_id=relationship_id
             )
             relationship_items.append(relationship_item)
-        for rel_ind, obj_ind in zip(src_inds, dst_inds):
-            arc_item = ArcItem(relationship_items[rel_ind - offset], object_items[obj_ind], self._arc_width)
+        for rel_ind, obj_ind in zip(self.src_inds, self.dst_inds):
+            arc_item = ArcItem(relationship_items[rel_ind - offset], object_items[obj_ind], self._ARC_WIDTH)
             arc_items.append(arc_item)
         return (object_items, relationship_items, arc_items)
 
@@ -646,93 +593,6 @@ class GraphViewMixin:
             obj_item._merge_target = object_items_lookup.get(obj_item.entity_id)
             if obj_item._merge_target:
                 obj_item.merge_into_target(force=True)
-
-    @staticmethod
-    def shortest_path_matrix(N, src_inds, dst_inds, spread):
-        """Returns the shortest-path matrix.
-
-        Args:
-            N (int): The number of nodes in the graph.
-            src_inds (list): Source indices
-            dst_inds (list): Destination indices
-            spread (int): The desired 'distance' between neighbours
-        """
-        if not N:
-            return None
-        dist = np.zeros((N, N))
-        src_inds = arr(src_inds)
-        dst_inds = arr(dst_inds)
-        try:
-            dist[src_inds, dst_inds] = dist[dst_inds, src_inds] = spread
-        except IndexError:
-            pass
-        d = dijkstra(dist, directed=False)
-        # Remove infinites and zeros
-        d[d == np.inf] = spread * 3
-        d[d == 0] = spread * 1e-6
-        return d
-
-    @staticmethod
-    def sets(N):
-        """Returns sets of vertex pairs indices.
-
-        Args:
-            N (int)
-        """
-        sets = []
-        for n in range(1, N):
-            pairs = np.zeros((N - n, 2), int)  # pairs on diagonal n
-            pairs[:, 0] = np.arange(N - n)
-            pairs[:, 1] = pairs[:, 0] + n
-            mask = np.mod(range(N - n), 2 * n) < n
-            s1 = pairs[mask]
-            s2 = pairs[~mask]
-            if s1.any():
-                sets.append(s1)
-            if s2.any():
-                sets.append(s2)
-        return sets
-
-    @staticmethod
-    def vertex_coordinates(matrix, heavy_positions=None, iterations=10, weight_exp=-2, initial_diameter=1000):
-        """Returns x and y coordinates for each vertex in the graph, computed using VSGD-MS."""
-        if heavy_positions is None:
-            heavy_positions = dict()
-        N = len(matrix)
-        if N == 1:
-            return [0], [0]
-        mask = np.ones((N, N)) == 1 - np.tril(np.ones((N, N)))  # Upper triangular except diagonal
-        np.random.seed(0)
-        layout = np.random.rand(N, 2) * initial_diameter - initial_diameter / 2  # Random layout with initial diameter
-        heavy_ind_list = list()
-        heavy_pos_list = list()
-        for ind, pos in heavy_positions.items():
-            heavy_ind_list.append(ind)
-            heavy_pos_list.append([pos["x"], pos["y"]])
-        heavy_ind = arr(heavy_ind_list)
-        heavy_pos = arr(heavy_pos_list)
-        if heavy_ind.any():
-            layout[heavy_ind, :] = heavy_pos
-        weights = matrix ** weight_exp  # bus-pair weights (lower for distant buses)
-        maxstep = 1 / np.min(weights[mask])
-        minstep = 1 / np.max(weights[mask])
-        lambda_ = np.log(minstep / maxstep) / (iterations - 1)  # exponential decay of allowed adjustment
-        sets = GraphViewMixin.sets(N)  # construct sets of bus pairs
-        for iteration in range(iterations):
-            step = maxstep * np.exp(lambda_ * iteration)  # how big adjustments are allowed?
-            rand_order = np.random.permutation(N)  # we don't want to use the same pair order each iteration
-            for p in sets:
-                v1, v2 = rand_order[p[:, 0]], rand_order[p[:, 1]]  # arrays of vertex1 and vertex2
-                # current distance (possibly accounting for system rescaling)
-                dist = ((layout[v1, 0] - layout[v2, 0]) ** 2 + (layout[v1, 1] - layout[v2, 1]) ** 2) ** 0.5
-                r = (matrix[v1, v2] - dist)[:, None] / 2 * (layout[v1] - layout[v2]) / dist[:, None]  # desired change
-                dx1 = r * np.minimum(1, weights[v1, v2] * step)[:, None]
-                dx2 = -dx1
-                layout[v1, :] += dx1  # update position
-                layout[v2, :] += dx2
-                if heavy_ind.any():
-                    layout[heavy_ind, :] = heavy_pos
-        return layout[:, 0], layout[:, 1]
 
     def new_scene(self):
         """Replaces the current scene with a new one."""
@@ -812,7 +672,7 @@ class GraphViewMixin:
         entity_class_id = int(entity_class_id)
         if entity_type == "object class":
             object_item = ObjectItem(
-                self, scene_pos.x(), scene_pos.y(), self._node_extent, entity_class_id=entity_class_id
+                self, scene_pos.x(), scene_pos.y(), self._VERTEX_EXTENT, entity_class_id=entity_class_id
             )
             scene.addItem(object_item)
             self.ui.graphicsView.setFocus()
@@ -820,7 +680,6 @@ class GraphViewMixin:
         elif entity_type == "relationship class":
             self.add_wip_relationship(scene, scene_pos, entity_class_id)
         self.extend_scene()
-        self.graph_created.emit()
 
     def add_wip_relationship(self, scene, pos, relationship_class_id, center_item=None, center_dimension=None):
         """Makes items for a wip relationship and adds them to the scene at the given coordinates.
@@ -839,10 +698,8 @@ class GraphViewMixin:
         dimension_count = len(object_class_id_list)
         rel_inds = [dimension_count for _ in range(dimension_count)]
         obj_inds = list(range(dimension_count))
-        d = self.shortest_path_matrix(dimension_count + 1, rel_inds, obj_inds, self._arc_length_hint)
-        if d is None:
-            return
-        x, y = self.vertex_coordinates(d)
+        layout_gen = GraphLayoutGenerator(dimension_count + 1, rel_inds, obj_inds, self._ARC_LENGTH_HINT)
+        x, y = layout_gen.get_coordinates()
         # Fix position
         x_offset = pos.x()
         y_offset = pos.y()
@@ -853,14 +710,14 @@ class GraphViewMixin:
         x += x_offset
         y += y_offset
         relationship_item = RelationshipItem(
-            self, x[-1], y[-1], 0.5 * self._node_extent, entity_class_id=relationship_class_id
+            self, x[-1], y[-1], 0.5 * self._VERTEX_EXTENT, entity_class_id=relationship_class_id
         )
         object_items = list()
         arc_items = list()
         for i, object_class_id in enumerate(object_class_id_list):
-            object_item = ObjectItem(self, x[i], y[i], self._node_extent, entity_class_id=object_class_id)
+            object_item = ObjectItem(self, x[i], y[i], self._VERTEX_EXTENT, entity_class_id=object_class_id)
             object_items.append(object_item)
-            arc_item = ArcItem(relationship_item, object_item, self._arc_width, is_wip=True)
+            arc_item = ArcItem(relationship_item, object_item, self._ARC_WIDTH, is_wip=True)
             arc_items.append(arc_item)
         entity_items = object_items + [relationship_item]
         for item in entity_items + arc_items:
@@ -868,7 +725,6 @@ class GraphViewMixin:
         if center_item and center_dimension is not None:
             center_item._merge_target = object_items[center_dimension]
             center_item.merge_into_target()
-        self.extend_scene()
 
     def add_object(self, object_class_id, name):
         """Adds object to the database.
@@ -1054,6 +910,89 @@ class GraphViewMixin:
                 db_item = item.db_representation
                 db_map_typed_data[self.db_map].setdefault(item.entity_type, []).append(db_item)
         self.db_mngr.remove_items(db_map_typed_data)
+
+    @Slot(bool)
+    def save_positions(self, checked=False):
+        scene = self.ui.graphicsView.scene()
+        if not scene:
+            return
+        class_items = {}
+        for item in scene.items():
+            if isinstance(item, ObjectItem):
+                class_items.setdefault(item.entity_class_id, []).append(item)
+        pos_def_class_ids = {
+            p["object_class_id"]
+            for p in self.db_mngr.get_items_by_field(
+                self.db_map, "parameter definition", "parameter_name", self._POS_STR
+            )
+        }
+        defs_to_add = [
+            {"name": self._POS_STR, "object_class_id": class_id} for class_id in class_items.keys() - pos_def_class_ids
+        ]
+        if defs_to_add:
+            self.db_mngr.add_parameter_definitions({self.db_map: defs_to_add})
+        pos_def_id_lookup = {
+            p["object_class_id"]: p["id"]
+            for p in self.db_mngr.get_items_by_field(
+                self.db_map, "parameter definition", "parameter_name", self._POS_STR
+            )
+        }
+        pos_val_id_lookup = {
+            (p["object_class_id"], p["object_id"]): p["id"]
+            for p in self.db_mngr.get_items_by_field(self.db_map, "parameter value", "parameter_name", self._POS_STR)
+        }
+        vals_to_add = list()
+        vals_to_update = list()
+        for class_id, items in class_items.items():
+            for item in items:
+                pos_val_id = pos_val_id_lookup.get((class_id, item.entity_id), None)
+                value = {"type": "map", "index_type": "str", "data": [["x", item.pos().x()], ["y", item.pos().y()]]}
+                if pos_val_id is None:
+                    vals_to_add.append(
+                        {
+                            "name": "pos_x",
+                            "object_class_id": class_id,
+                            "object_id": item.entity_id,
+                            "parameter_definition_id": pos_def_id_lookup[class_id],
+                            "value": to_database(value),
+                        }
+                    )
+                else:
+                    vals_to_update.append({"id": pos_val_id, "value": to_database(value)})
+        if vals_to_add:
+            self.db_mngr.add_parameter_values({self.db_map: vals_to_add})
+        if vals_to_update:
+            self.db_mngr.update_parameter_values({self.db_map: vals_to_update})
+
+    @Slot(bool)
+    def clear_saved_positions(self, checked=False):
+        scene = self.ui.graphicsView.scene()
+        if not scene:
+            return
+        object_ids = {x.entity_id for x in scene.items() if isinstance(x, ObjectItem)}
+        vals_to_remove = [
+            p
+            for p in self.db_mngr.get_items_by_field(self.db_map, "parameter value", "parameter_name", self._POS_STR)
+            if p["object_id"] in object_ids
+        ]
+        if vals_to_remove:
+            self.db_mngr.remove_items({self.db_map: {"parameter value": vals_to_remove}})
+        self.build_graph()
+
+    @Slot(bool)
+    def export_as_pdf(self, checked=False):
+        file_name, _ = QFileDialog.getSaveFileName(self, "Export as PDF...", self._get_base_dir(), "PDF files (*.pdf)")
+        if not file_name:
+            return
+        scene = self.ui.graphicsView.scene()
+        source = scene.itemsBoundingRect()
+        printer = QPrinter()
+        printer.setPaperSize(source.size(), QPrinter.Point)
+        printer.setOutputFileName(file_name)
+        painter = QPainter(printer)
+        scene.render(painter, QRectF(), source)
+        painter.end()
+        self.msg.emit(f"File {file_name} successfully exported.")
 
     def closeEvent(self, event=None):
         """Handles close window event.
