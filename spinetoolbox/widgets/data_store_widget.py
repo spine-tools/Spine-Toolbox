@@ -522,6 +522,9 @@ class DataStoreFormBase(QMainWindow):
     def receive_scenarios_added(self, db_map_data):
         self.notify_items_changed("added", "scenarios", db_map_data)
 
+    def receive_scenario_alternatives_added(self, db_map_data):
+        self.notify_items_changed("added", "scenario alternatives", db_map_data)
+
     def receive_alternatives_added(self, db_map_data):
         self.notify_items_changed("added", "alternatives", db_map_data)
 
@@ -553,6 +556,9 @@ class DataStoreFormBase(QMainWindow):
 
     def receive_scenarios_updated(self, db_map_data):
         self.notify_items_changed("updated", "scenarios", db_map_data)
+
+    def receive_scenario_alternatives_updated(self, db_map_data):
+        self.notify_items_changed("updated", "scenario alternatives", db_map_data)
 
     def receive_alternatives_updated(self, db_map_data):
         self.notify_items_changed("updated", "alternatives", db_map_data)
@@ -588,6 +594,9 @@ class DataStoreFormBase(QMainWindow):
 
     def receive_scenarios_removed(self, db_map_data):
         self.notify_items_changed("removed", "scenarios", db_map_data)
+
+    def receive_scenario_alternatives_removed(self, db_map_data):
+        self.notify_items_changed("removed", "scenario alternatives", db_map_data)
 
     def receive_alternatives_removed(self, db_map_data):
         self.notify_items_changed("removed", "alternatives", db_map_data)

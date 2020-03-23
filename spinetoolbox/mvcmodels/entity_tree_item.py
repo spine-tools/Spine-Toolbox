@@ -90,6 +90,11 @@ class MultiDBTreeItem(TreeItem):
         """Returns a list of all associated db_maps."""
         return list(self._db_map_id.keys())
 
+    @property
+    def db_map_ids(self):
+        """Returns dict with db_map as key and id as value"""
+        return {db_map: self.db_map_id(db_map) for db_map in self.db_maps}
+
     def add_db_map_id(self, db_map, id_):
         """Adds id for this item in the given db_map."""
         self._db_map_id[db_map] = id_
@@ -577,6 +582,9 @@ class AlternativeItem(EntityItem):
             {"Remove selection": QIcon(":/icons/menu_icons/cubes_minus.svg")},
         ]
 
+    def flags(self, index):
+        return super().flags(index) | Qt.ItemIsDragEnabled
+
     def has_children(self):
         """Returns false, this item never has children."""
         return False
@@ -597,15 +605,171 @@ class ScenarioItem(EntityItem):
         """Overridden method to parse some data for convenience later.
         Also make sure we never try to fetch this item."""
         super().__init__(*args, **kwargs)
-        self._fetched = True
         self.context_menu_actions = [
             {"Edit scenarios": QIcon(":/icons/menu_icons/cubes_pen.svg")},
             {"Remove selection": QIcon(":/icons/menu_icons/cubes_minus.svg")},
         ]
 
+    @property
+    def child_item_type(self):
+        """Returns a RelationshipItem."""
+        return ScenarioAlternativeItem
+
+    def _sort_children(self):
+        sorted_children = sorted(self.children, key=lambda c: c.display_id)
+        self.children = sorted_children
+        self.model.layoutChanged.emit()
+
+    def append_children_by_id(self, db_map_ids):
+        super().append_children_by_id(db_map_ids)
+        self._sort_children()
+
+    def update_children_by_id(self, db_map_ids):
+        super().update_children_by_id(db_map_ids)
+        self._sort_children()
+
+    def flags(self, index):
+        return super().flags(index) | Qt.ItemIsDropEnabled
+
+    def default_parameter_data(self):
+        """Return data to put as default in a parameter table when this item is selected."""
+        return dict(scenario_name=self.display_name, database=self.first_db_map.codename)
+
+    def _get_children_ids(self, db_map):
+        """See base class."""
+        scenario_id = self.db_map_id(db_map)
+        scenario_alt = self.db_mngr.get_items_by_field(db_map, "scenario_alternative", "scenario_id", scenario_id)
+        return [x["id"] for x in scenario_alt]
+
+    def _new_scenario_alt(self, db_map_scenario_id, db_map_alt_id, db_map_rank):
+        return {
+            db_map: [
+                {
+                    "scenario_id": db_map_scenario_id[db_map],
+                    "alternative_id": id_,
+                    "rank": db_map_rank.get(db_map, 1) + i,
+                }
+                for i, id_ in enumerate(ids)
+            ]
+            for db_map, ids in db_map_alt_id.items()
+        }
+
+    def move_scenario_alternative(self, source_row, count, target_row):
+        if target_row in range(source_row, source_row + count + 1):
+            return False
+        if target_row < 0 or target_row > len(self.children):
+            return False
+        # create new ordered child list
+        new_children = list(self.children)
+        move_children = new_children[source_row : source_row + count]
+        for i, child in enumerate(move_children):
+            new_children.insert(target_row + i, child)
+        if target_row < source_row:
+            delete_from = source_row + count
+            del new_children[delete_from : delete_from + count]
+        else:
+            del new_children[source_row : source_row + count]
+
+        # find new rank/order of items.
+        update_items = {}
+        curr_rank = {db_map: 1 for db_map in self.db_maps}
+        for child in new_children:
+            for db_map in child.db_maps:
+                current_rank = child.db_map_data_field(db_map, "rank")
+                new_rank = curr_rank.get(db_map)
+                if current_rank != new_rank:
+                    update_items.setdefault(db_map, []).append(
+                        {"id": child.db_map_id(db_map), "rank": curr_rank.get(db_map), "old_rank": current_rank}
+                    )
+                curr_rank[db_map] += 1
+        ordered_update = {}
+        # change order of items to update. First update highest old rank to an higher rank than existing so that rank
+        # is availble for other items, which are update in rank descending order. Last update highest old rank to actual rank
+        for db_map, items in update_items.items():
+            last_item = sorted(items, key=lambda x: x["old_rank"], reverse=True)[0]
+            last_item.pop("old_rank")
+            last_item_final = {"id": last_item["id"], "rank": last_item["rank"]}
+            last_item["rank"] = curr_rank[db_map]
+            ordered_items = [
+                {"id": i["id"], "rank": i["rank"]}
+                for i in sorted(items, key=lambda x: x["rank"], reverse=True)
+                if i["id"] != last_item["id"]
+            ]
+            ordered_items.insert(0, last_item)
+            ordered_items.append(last_item_final)
+            ordered_update[db_map] = ordered_items
+
+        self.db_mngr.update_scenario_alternatives(ordered_update)
+
+    def insert_alternative(self, row, db_map_alt_id):
+        new_items_per_db = {db_map: len(ids) for db_map, ids in db_map_alt_id.items()}
+        new_items = {}
+        update_items = {}
+        curr_rank = {}
+        scenario_ids = {db_map: self.db_map_id(db_map) for db_map in self.db_maps}
+        children = sorted(self.children, key=lambda c: c.db_map_data_field(c.first_db_map, "rank"))
+        if row == -1:
+            # item dropped on parent, append
+            row = len(children)
+        for child_row, child in enumerate(children):
+            curr_rank.update({db_map: child.db_map_data_field(db_map, "rank") for db_map in child.db_maps})
+            if child_row == row:
+                new_items = self._new_scenario_alt(scenario_ids, db_map_alt_id, curr_rank)
+            if child_row >= row:
+                for db_map in child.db_maps:
+                    if db_map not in new_items_per_db:
+                        continue
+                    update_items.setdefault(db_map, []).append(
+                        {
+                            "id": child.db_map_id(db_map),
+                            "rank": child.db_map_data_field(db_map, "rank") + new_items_per_db[db_map],
+                        }
+                    )
+        if row >= len(self.children):
+            new_items = self._new_scenario_alt(scenario_ids, db_map_alt_id, curr_rank)
+        if update_items:
+            self.db_mngr.update_scenario_alternatives(update_items)
+        self.db_mngr.add_scenario_alternatives(new_items)
+
+
+class ScenarioAlternativeItem(EntityItem):
+    item_type = "scenario_alternative"
+
+    def __init__(self, *args, **kwargs):
+        """Overridden method to parse some data for convenience later.
+        Also make sure we never try to fetch this item."""
+        super().__init__(*args, **kwargs)
+        self._fetched = True
+        self.context_menu_actions = [{"Remove selection": QIcon(":/icons/menu_icons/cubes_minus.svg")}]
+
+    @property
+    def display_id(self):
+        ids = []
+        for db_map in self.db_maps:
+            data = self.db_map_data(db_map)
+            alt_id = data.get("alternative_id")
+            alt_rank = data.get("rank")
+            alt_name = self.db_mngr.get_item(self.first_db_map, "alternative", alt_id).get("name")
+            ids.append((alt_rank, alt_name))
+
+        if len(set(ids)) != 1:
+            return None
+        return ids[0]
+
+    @property
+    def display_name(self):
+        data = self.db_map_data(self.first_db_map)
+        alt_id = data.get("alternative_id")
+        alt_rank = data.get("rank")
+        alt_name = self.db_mngr.get_item(self.first_db_map, "alternative", alt_id).get("name")
+        return f"{alt_rank}: {alt_name}"
+
     def has_children(self):
         """Returns false, this item never has children."""
         return False
+
+    def flags(self, index):
+        return super().flags(index) | Qt.ItemIsDragEnabled
 
     def default_parameter_data(self):
         """Return data to put as default in a parameter table when this item is selected."""

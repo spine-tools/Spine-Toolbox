@@ -171,6 +171,7 @@ class AddItemsCommand(CommandBase):
     _command_name = {
         "scenario": "add scenarios",
         "alternative": "add alternatives",
+        "scenario_alternative": "add scenario alternatives",
         "object class": "add object classes",
         "object": "add objects",
         "relationship class": "add relationship classes",
@@ -183,6 +184,7 @@ class AddItemsCommand(CommandBase):
     _method_name = {
         "scenario": "add_scenarios",
         "alternative": "add_alternatives",
+        "scenario_alternative": "add_scenario_alternatives",
         "object class": "add_object_classes",
         "object": "add_objects",
         "relationship class": "add_wide_relationship_classes",
@@ -195,6 +197,7 @@ class AddItemsCommand(CommandBase):
     _redo_method_name = {
         "scenario": "readd_scenarios",
         "alternative": "readd_alternatives",
+        "scenario_alternative": "readd_scenario_alternatives",
         "object class": "readd_object_classes",
         "object": "readd_objects",
         "relationship class": "readd_wide_relationship_classes",
@@ -207,6 +210,7 @@ class AddItemsCommand(CommandBase):
     _emit_signal_name = {
         "scenario": "scenarios_added",
         "alternative": "alternatives_added",
+        "scenario_alternative": "scenario_alternatives_added",
         "object class": "object_classes_added",
         "object": "objects_added",
         "relationship class": "relationship_classes_added",
@@ -270,6 +274,7 @@ class UpdateItemsCommand(CommandBase):
     _command_name = {
         "scenario": "update scenarios",
         "alternative": "update alternatives",
+        "scenario_alternative": "update scenario alternatives",
         "object class": "update object classes",
         "object": "update objects",
         "relationship class": "update relationship classes",
@@ -282,6 +287,7 @@ class UpdateItemsCommand(CommandBase):
     _method_name = {
         "scenario": "update_scenarios",
         "alternative": "update_alternatives",
+        "scenario_alternative": "update_scenario_alternatives",
         "object class": "update_object_classes",
         "object": "update_objects",
         "relationship class": "update_wide_relationship_classes",
@@ -294,6 +300,7 @@ class UpdateItemsCommand(CommandBase):
     _emit_signal_name = {
         "scenario": "scenarios_updated",
         "alternative": "alternatives_updated",
+        "scenario_alternative": "scenario_alternatives_updated",
         "object class": "object_classes_updated",
         "object": "objects_updated",
         "relationship class": "relationship_classes_updated",
@@ -371,6 +378,7 @@ class RemoveItemsCommand(CommandBase):
     _undo_method_name = {
         "scenario": "readd_scenarios",
         "alternative": "readd_alternatives",
+        "scenario_alternative": "readd_scenario_alternatives",
         "object class": "readd_object_classes",
         "object": "readd_objects",
         "relationship class": "readd_wide_relationship_classes",
@@ -383,6 +391,7 @@ class RemoveItemsCommand(CommandBase):
     _emit_signal_name = {
         "scenario": "scenarios_added",
         "alternative": "alternatives_added",
+        "scenario_alternative": "scenario_alternatives_readd",
         "object class": "object_classes_added",
         "object": "objects_added",
         "relationship class": "relationship_classes_added",

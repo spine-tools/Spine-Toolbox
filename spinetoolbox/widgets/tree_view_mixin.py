@@ -53,6 +53,10 @@ class TreeViewMixin:
         self.ui.treeView_relationship.setModel(self.relationship_tree_model)
         self.ui.treeView_alternative.setModel(self.alternative_tree_model)
 
+        self.ui.treeView_alternative.setDragEnabled(True)
+        self.ui.treeView_alternative.setAcceptDrops(True)
+        self.ui.treeView_alternative.setDropIndicatorShown(True)
+
     def add_menu_actions(self):
         """Adds toggle view actions to View menu."""
         super().add_menu_actions()
@@ -526,6 +530,10 @@ class TreeViewMixin:
         super().receive_scenarios_added(db_map_data)
         self.alternative_tree_model.add_scenarios(db_map_data)
 
+    def receive_scenario_alternatives_added(self, db_map_data):
+        super().receive_scenarios_added(db_map_data)
+        self.alternative_tree_model.add_scenario_alternatives(db_map_data)
+
     def receive_object_classes_added(self, db_map_data):
         super().receive_object_classes_added(db_map_data)
         self.object_tree_model.add_object_classes(db_map_data)
@@ -552,6 +560,10 @@ class TreeViewMixin:
         super().receive_scenarios_updated(db_map_data)
         self.alternative_tree_model.update_scenarios(db_map_data)
 
+    def receive_scenario_alternatives_updated(self, db_map_data):
+        super().receive_scenarios_updated(db_map_data)
+        self.alternative_tree_model.update_scenario_alternatives(db_map_data)
+
     def receive_object_classes_updated(self, db_map_data):
         super().receive_object_classes_updated(db_map_data)
         self.object_tree_model.update_object_classes(db_map_data)
@@ -577,6 +589,10 @@ class TreeViewMixin:
     def receive_scenarios_removed(self, db_map_data):
         super().receive_scenarios_removed(db_map_data)
         self.alternative_tree_model.remove_scenarios(db_map_data)
+
+    def receive_scenario_alternatives_removed(self, db_map_data):
+        super().receive_scenarios_removed(db_map_data)
+        self.alternative_tree_model.remove_scenario_alternatives(db_map_data)
 
     def receive_object_classes_removed(self, db_map_data):
         super().receive_object_classes_removed(db_map_data)

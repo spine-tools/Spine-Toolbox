@@ -69,6 +69,7 @@ class SpineDBManager(QObject):
     # Added
     scenarios_added = Signal(object)
     alternatives_added = Signal(object)
+    scenario_alternatives_added = Signal(object)
     object_classes_added = Signal(object)
     objects_added = Signal(object)
     relationship_classes_added = Signal(object)
@@ -82,6 +83,7 @@ class SpineDBManager(QObject):
     # Removed
     scenarios_removed = Signal(object)
     alternatives_removed = Signal(object)
+    scenario_alternatives_removed = Signal(object)
     object_classes_removed = Signal(object)
     objects_removed = Signal(object)
     relationship_classes_removed = Signal(object)
@@ -93,6 +95,7 @@ class SpineDBManager(QObject):
     # Updated
     scenarios_updated = Signal(object)
     alternatives_updated = Signal(object)
+    scenario_alternatives_updated = Signal(object)
     object_classes_updated = Signal(object)
     objects_updated = Signal(object)
     relationship_classes_updated = Signal(object)
@@ -372,6 +375,9 @@ class SpineDBManager(QObject):
         # Add to cache
         self.scenarios_added.connect(lambda db_map_data: self.cache_items("scenario", db_map_data))
         self.alternatives_added.connect(lambda db_map_data: self.cache_items("alternative", db_map_data))
+        self.scenario_alternatives_added.connect(
+            lambda db_map_data: self.cache_items("scenario_alternative", db_map_data)
+        )
         self.object_classes_added.connect(lambda db_map_data: self.cache_items("object class", db_map_data))
         self.objects_added.connect(lambda db_map_data: self.cache_items("object", db_map_data))
         self.relationship_classes_added.connect(lambda db_map_data: self.cache_items("relationship class", db_map_data))
@@ -405,8 +411,10 @@ class SpineDBManager(QObject):
         self.relationships_removed.connect(self.cascade_remove_parameter_values_by_entity)
         self.parameter_definitions_removed.connect(self.cascade_remove_parameter_values_by_definition)
         self.alternatives_removed.connect(self.cascade_remove_parameter_values_by_alternative)
+        self.alternatives_removed.connect(self.cascade_remove_scenario_alternative_by_alternative)
+        self.alternatives_removed.connect(self.cascade_remove_scenario_alternative_by_scenario)
         # On cascade refresh
-        self.alternatives_updated.connect(self.cascade_refresh_alternatives)
+        self.alternatives_updated.connect(self.cascade_refresh_scenario_alternatives)
         self.object_classes_updated.connect(self.cascade_refresh_relationship_classes)
         self.object_classes_updated.connect(self.cascade_refresh_parameter_definitions)
         self.object_classes_updated.connect(self.cascade_refresh_parameter_values_by_entity_class)
@@ -425,6 +433,9 @@ class SpineDBManager(QObject):
         # Update in cache (last, because we may want to see the un-updated version of the items one last time)
         self.scenarios_updated.connect(lambda db_map_data: self.cache_items("scenario", db_map_data))
         self.alternatives_updated.connect(lambda db_map_data: self.cache_items("alternative", db_map_data))
+        self.scenario_alternatives_updated.connect(
+            lambda db_map_data: self.cache_items("scenario_alternative", db_map_data)
+        )
         self.object_classes_updated.connect(lambda db_map_data: self.cache_items("object class", db_map_data))
         self.objects_updated.connect(lambda db_map_data: self.cache_items("object", db_map_data))
         self.relationship_classes_updated.connect(
@@ -457,6 +468,9 @@ class SpineDBManager(QObject):
         self.parameter_tags_removed.connect(lambda db_map_data: self.uncache_items("parameter tag", db_map_data))
         self.alternatives_removed.connect(lambda db_map_data: self.uncache_items("alternative", db_map_data))
         self.scenarios_removed.connect(lambda db_map_data: self.uncache_items("scenario", db_map_data))
+        self.scenario_alternatives_removed.connect(
+            lambda db_map_data: self.uncache_items("scenario_alternative", db_map_data)
+        )
 
     @Slot(object)
     def receive_error_msg(self, db_map_error_log):
@@ -624,6 +638,7 @@ class SpineDBManager(QObject):
             "parameter tag": "get_parameter_tags",
             "alternative": "get_alternatives",
             "scenario": "get_scenarios",
+            "scenario_alternative": "get_scenario_alternatives",
         }
         method_name = method_name_dict.get(item_type)
         if not method_name:
@@ -720,6 +735,21 @@ class SpineDBManager(QObject):
         sort_key = lambda x: x["name"]
         items = sorted((x._asdict() for x in qry), key=sort_key)
         _ = cache and self.cache_items("scenario", {db_map: items})
+        return items
+
+    def get_scenario_alternatives(self, db_map, cache=True):
+        """Returns scenario alternatives from database.
+
+        Args:
+            db_map (DiffDatabaseMapping)
+
+        Returns:
+            list: dictionary items
+        """
+        qry = db_map.query(db_map.scenario_alternatives_sq)
+        sort_key = lambda x: x["rank"]
+        items = sorted((x._asdict() for x in qry), key=sort_key)
+        _ = cache and self.cache_items("scenario_alternative", {db_map: items})
         return items
 
     def get_object_classes(self, db_map, cache=True):
@@ -990,6 +1020,15 @@ class SpineDBManager(QObject):
         for db_map, data in db_map_data.items():
             self.undo_stack[db_map].push(AddItemsCommand(self, db_map, data, "scenario"))
 
+    def add_scenario_alternatives(self, db_map_data):
+        """Adds scenario alternatives to db.
+
+        Args:
+            db_map_data (dict): lists of items to add keyed by DiffDatabaseMapping
+        """
+        for db_map, data in db_map_data.items():
+            self.undo_stack[db_map].push(AddItemsCommand(self, db_map, data, "scenario_alternative"))
+
     def add_object_classes(self, db_map_data):
         """Adds object classes to db.
 
@@ -1072,7 +1111,7 @@ class SpineDBManager(QObject):
             self.undo_stack[db_map].push(AddItemsCommand(self, db_map, data, "parameter tag"))
 
     def update_alternatives(self, db_map_data):
-        """Updates object classes in db.
+        """Updates alternatives in db.
 
         Args:
             db_map_data (dict): lists of items to update keyed by DiffDatabaseMapping
@@ -1081,13 +1120,22 @@ class SpineDBManager(QObject):
             self.undo_stack[db_map].push(UpdateItemsCommand(self, db_map, data, "alternative"))
 
     def update_scenarios(self, db_map_data):
-        """Updates object classes in db.
+        """Updates scenarios in db.
 
         Args:
             db_map_data (dict): lists of items to update keyed by DiffDatabaseMapping
         """
         for db_map, data in db_map_data.items():
             self.undo_stack[db_map].push(UpdateItemsCommand(self, db_map, data, "scenario"))
+
+    def update_scenario_alternatives(self, db_map_data):
+        """Updates scenario alternatives in db.
+
+        Args:
+            db_map_data (dict): lists of items to update keyed by DiffDatabaseMapping
+        """
+        for db_map, data in db_map_data.items():
+            self.undo_stack[db_map].push(UpdateItemsCommand(self, db_map, data, "scenario_alternative"))
 
     def update_object_classes(self, db_map_data):
         """Updates object classes in db.
@@ -1201,6 +1249,7 @@ class SpineDBManager(QObject):
         db_map_parameter_tags = dict()
         db_map_alternatives = dict()
         db_map_scenarios = dict()
+        db_map_scenario_alternatives = dict()
         error_log = dict()
         for db_map, items_per_type in db_map_typed_data.items():
             object_classes = items_per_type.get("object class", ())
@@ -1213,6 +1262,7 @@ class SpineDBManager(QObject):
             parameter_tags = items_per_type.get("parameter tag", ())
             alternatives = items_per_type.get("alternative", ())
             scenarios = items_per_type.get("scenario", ())
+            scenario_alternatives = items_per_type.get("scenario_alternative", ())
             try:
                 db_map.remove_items(
                     object_class_ids={x['id'] for x in object_classes},
@@ -1225,6 +1275,7 @@ class SpineDBManager(QObject):
                     parameter_tag_ids={x['id'] for x in parameter_tags},
                     alternative_ids={x['id'] for x in alternatives},
                     scenario_ids={x['id'] for x in scenarios},
+                    scenario_alternative_ids={x["id"] for x in scenario_alternatives},
                 )
             except SpineDBAPIError as err:
                 error_log[db_map] = err
@@ -1239,6 +1290,7 @@ class SpineDBManager(QObject):
             db_map_parameter_tags[db_map] = parameter_tags
             db_map_alternatives[db_map] = alternatives
             db_map_scenarios[db_map] = scenarios
+            db_map_scenario_alternatives[db_map] = scenario_alternatives
         if any(error_log.values()):
             self.msg_error.emit(error_log)
         if any(db_map_object_classes.values()):
@@ -1261,6 +1313,8 @@ class SpineDBManager(QObject):
             self.alternatives_removed.emit(db_map_alternatives)
         if any(db_map_scenarios.values()):
             self.scenarios_removed.emit(db_map_scenarios)
+        if any(db_map_scenario_alternatives.values()):
+            self.scenario_alternatives_removed.emit(db_map_scenario_alternatives)
 
     @staticmethod
     def _to_ids(db_map_data):
@@ -1365,8 +1419,14 @@ class SpineDBManager(QObject):
         if any(db_map_cascading_data.values()):
             self.parameter_values_removed.emit(db_map_cascading_data)
 
+    def cascade_remove_scenario_alternative_by_alternative(self, db_map_data):
+        pass
+
+    def cascade_remove_scenario_alternative_by_scenario(self, db_map_data):
+        pass
+
     @Slot(object)
-    def cascade_refresh_alternatives(self, db_map_data):
+    def cascade_refresh_scenario_alternatives(self, db_map_data):
         pass
 
     @Slot(object)
