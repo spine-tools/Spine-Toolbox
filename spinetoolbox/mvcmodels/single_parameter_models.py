@@ -25,7 +25,7 @@ from ..mvcmodels.parameter_mixins import (
     FillInValueListIdMixin,
     MakeParameterTagMixin,
 )
-from ..config import PLOTTING_ROLE, EDITOR_ROLE
+from .shared import PLOTTING_ROLE, EDITOR_ROLE
 
 
 class SingleParameterModel(MinimalTableModel):

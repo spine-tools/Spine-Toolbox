@@ -21,7 +21,7 @@ from PySide2.QtWidgets import QComboBox, QItemDelegate, QStyleOptionButton, QSty
 from PySide2.QtGui import QIcon
 from spinedb_api import from_database, to_database
 from .custom_editors import CustomComboEditor, CustomLineEditor, SearchBarEditor, CheckListEditor
-from ..config import EDITOR_ROLE
+from ..mvcmodels.shared import EDITOR_ROLE
 
 
 class ComboBoxDelegate(QItemDelegate):

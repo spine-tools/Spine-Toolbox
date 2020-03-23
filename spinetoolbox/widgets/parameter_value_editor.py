@@ -38,7 +38,7 @@ from ..widgets.plain_parameter_value_editor import PlainParameterValueEditor
 from ..widgets.time_pattern_editor import TimePatternEditor
 from ..widgets.time_series_fixed_resolution_editor import TimeSeriesFixedResolutionEditor
 from ..widgets.time_series_variable_resolution_editor import TimeSeriesVariableResolutionEditor
-from ..config import EDITOR_ROLE
+from ..mvcmodels.shared import EDITOR_ROLE
 
 
 @unique

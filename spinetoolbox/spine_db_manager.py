@@ -49,7 +49,7 @@ from .spine_db_commands import (
     RemoveItemsCommand,
 )
 from .widgets.manage_db_items_dialog import CommitDialog
-from .config import EDITOR_ROLE
+from .mvcmodels.shared import EDITOR_ROLE
 
 
 @busy_effect
