@@ -441,6 +441,8 @@ class PivotTableModel(QAbstractTableModel):
             return QColor(PIVOT_TABLE_HEADER_COLOR)
 
     def data(self, index, role=Qt.DisplayRole):
+        if role == PLOTTING_ROLE:
+            role = EDITOR_ROLE
         if role in (Qt.DisplayRole, Qt.EditRole, Qt.ToolTipRole, EDITOR_ROLE):
             if self.index_in_top(index):
                 return self.model.pivot_rows[index.column()]
@@ -454,35 +456,19 @@ class PivotTableModel(QAbstractTableModel):
                 if not data:
                     return None
                 value = data[0][0]
-                if self._parent.is_value_input_type():
-                    if value is None:
-                        return None
-                    value = self.db_mngr.get_value(self.db_map, "parameter value", value, "value", role)
-                    return value
-                if self._parent.is_index_expansion_input_type():
-                    return value if role == Qt.DisplayRole else None
-                return bool(value)
-            return None
-        if role == PLOTTING_ROLE:
-            if self.index_in_data(index):
-                row, column = self.map_to_pivot(index)
-                data = self.model.get_pivoted_data([row], [column])
-                if not data:
-                    return None
-                value = data[0][0]
                 if value is None:
                     return None
                 if self._parent.is_value_input_type():
-                    value = self.db_mngr.get_value(self.db_map, "parameter value", value, "value", EDITOR_ROLE)
+                    value = self.db_mngr.get_value(self.db_map, "parameter value", value, "value", role)
                     return value
                 if self._parent.is_index_expansion_input_type():
-                    return value
-                return None
-            # Index not in data: we are plotting the index column
-            row = index.row() - self.headerRowCount()
-            if row >= len(self.model.rows):
-                return None
-            return self.model.row_key(row)[index.column()]
+                    expanded = self.db_mngr.get_expanded_value(self.db_map, "parameter value", value, "value")
+                    if expanded is None:
+                        return None
+                    index = self._header_ids(row, column)[-2]
+                    return self.db_mngr.get_expanded_value(self.db_map, "parameter value", value, "value").get(index)
+                return bool(value)
+            return None
         if role == Qt.FontRole and self.index_in_top_left(index):
             font = QFont()
             font.setBold(True)

@@ -29,6 +29,7 @@ from spinedb_api import (
     DateTime,
     Duration,
     Map,
+    IndexedValue,
     TimePattern,
     TimeSeries,
     TimeSeriesFixedResolution,
@@ -683,6 +684,52 @@ class SpineDBManager(QObject):
         if isinstance(parsed_value, TimeSeriesVariableResolution):
             return "Start: {}, resolution: variable, length: {}".format(parsed_value.indexes[0], len(parsed_value))
         return None
+
+    def get_expanded_value(self, db_map, item_type, id_, field):
+        item = self.get_item(db_map, item_type, id_)
+        if not item:
+            return None
+        key = "expanded_" + field
+        if key not in item:
+            value = self.get_value(db_map, item_type, id_, field, role=EDITOR_ROLE)
+            item[key] = self._expanded_value(value)
+        return item[key]
+
+    def _expanded_value(self, value):
+        if isinstance(value, ParameterValueFormatError):
+            return {"": "Error"}
+        if isinstance(value, (TimeSeries, IndexedValue)):
+            return {i: float(v) for i, v in zip(value.indexes, value.values)}
+        if isinstance(value, Map):
+            return self._expand_map(value)
+        return {"": value}
+
+    def _expand_map(self, map_to_expand, preceding_indexes=None):
+        """
+        Expands map iteratively.
+
+        Args:
+            map_to_expand (spinedb_api.Map): a map to expand.
+            preceding_indexes (list): a list of indexes indexing a nested map
+
+        Return:
+            dict: mapping each index string to the corresponding scalar value
+        """
+        current_indexes = map_to_expand.indexes
+        if not current_indexes:
+            return []
+        if preceding_indexes is None:
+            preceding_indexes = list()
+        values = dict()
+        for index, value in zip(current_indexes, map_to_expand.values):
+            index_list = preceding_indexes + [index]
+            if isinstance(value, Map):
+                nested_values = self._expand_map(value, index_list)
+                values.update(nested_values)
+            else:
+                index_as_string = ", ".join(index_list)
+                values[index_as_string] = value
+        return values
 
     @staticmethod
     def get_db_items(query, order_by_fields):

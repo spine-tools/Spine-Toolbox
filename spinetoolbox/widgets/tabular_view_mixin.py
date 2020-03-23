@@ -19,7 +19,7 @@ Contains TabularViewMixin class.
 from itertools import product
 from collections import namedtuple
 from PySide2.QtCore import Qt, Slot
-from spinedb_api import IndexedValue, Map, ParameterValueFormatError, TimeSeries
+from spinedb_api import TimeSeries
 from .custom_menus import TabularViewFilterMenu, PivotTableModelMenu, PivotTableHorizontalHeaderMenu
 from .tabular_view_header_widget import TabularViewHeaderWidget
 from .custom_delegates import PivotTableDelegate
@@ -306,63 +306,6 @@ class TabularViewMixin:
             parameter_ids = [None]
         return {entity_id + (parameter_id,): None for entity_id in entity_ids for parameter_id in parameter_ids}
 
-    def load_expanded_parameter_value_data(self, entities=None, parameter_definition_ids=None):
-        """
-        Returns all permutations of entities as well as parameter indexes and values for the current class.
-
-        Args:
-            entities (list, optional): if given, only load data for these entities
-            parameter_definition_ids (set, optional): if given, only load data for these parameter definitions
-
-        Returns:
-            dict: Key is a tuple object_id, ..., index, while value is None.
-        """
-        if entities is None:
-            entities = self._get_entities()
-        if self.current_class_type == "relationship class":
-            entity_ids = [tuple(int(id_) for id_ in e["object_id_list"].split(",")) for e in entities]
-        else:
-            entity_ids = [(e["id"],) for e in entities]
-        if not entity_ids:
-            entity_ids = [tuple(None for _ in self.current_object_class_id_list())]
-        if parameter_definition_ids is None:
-            parameter_definition_ids = self._get_parameter_value_or_def_ids("parameter definition")
-        value_ids = self._get_parameter_value_or_def_ids("parameter value")
-        # Collecting date time indexes and values separately to facilitate plotting.
-        # Other index types are converted to strings.
-        (
-            date_time_indexes,
-            date_time_data,
-            other_indexes,
-            other_data,
-            value_id_to_entity_and_definition,
-        ) = _collect_indexes_and_values(entity_ids, value_ids, parameter_definition_ids, self.db_mngr, self.db_map)
-        date_time_indexes = list(date_time_indexes)
-        date_time_indexes.sort()
-        sorted_date_time_values = _fill_gaps_by_nones(date_time_indexes, date_time_data)
-        other_indexes = list(other_indexes)
-        other_indexes.sort()
-        sorted_other_values = _fill_gaps_by_nones(other_indexes, other_data)
-        expanded_indexes = date_time_indexes + other_indexes
-        expanded_values = _combine_date_time_and_other_values(
-            len(date_time_indexes),
-            sorted_date_time_values,
-            len(other_indexes),
-            sorted_other_values,
-            value_ids,
-            value_id_to_entity_and_definition,
-        )
-        missing_values = _expand_entities_without_values(
-            expanded_values, entity_ids, len(expanded_indexes), parameter_definition_ids
-        )
-        expanded_values.update(missing_values)
-        return {
-            entity_id + (index, definition_id): value
-            for entity_id in entity_ids
-            for definition_id in parameter_definition_ids
-            for value, index in zip(expanded_values[entity_id][definition_id], expanded_indexes)
-        }
-
     def load_full_parameter_value_data(self, parameter_values=None, action="add"):
         """Returns a dict of parameter values for the current class.
 
@@ -393,9 +336,42 @@ class TabularViewMixin:
             dict: Key is a tuple object_id, ..., parameter_id, value is the parameter value or None if not specified.
         """
         data = self.load_empty_parameter_value_data()
-        if self.current_input_type != self._INDEX_EXPANSION:
-            data.update(self.load_full_parameter_value_data())
+        data.update(self.load_full_parameter_value_data())
         return data
+
+    def load_expanded_parameter_value_data(self):
+        """
+        Returns all permutations of entities as well as parameter indexes and values for the current class.
+
+        Returns:
+            dict: Key is a tuple object_id, ..., index, while value is None.
+        """
+        data = self.load_parameter_value_data()
+        indexes = self._collect_indexes(data)
+        return {key[:-1] + (index, key[-1]): value for key, value in data.items() for index in indexes}
+
+    def _collect_indexes(self, data):
+        """
+        Collects parameter indexes and values for expansion.
+
+        Args:
+            data (dict): parameter value data
+
+        Returns:
+            list: indexes (date time first)
+        """
+        date_time_indexes = set()
+        other_indexes = set()
+        for id_ in data.values():
+            if id_ is None:
+                continue
+            value = self.db_mngr.get_value(self.db_map, "parameter value", id_, "value", role=EDITOR_ROLE)
+            expanded = self.db_mngr.get_expanded_value(self.db_map, "parameter value", id_, "value")
+            if isinstance(value, TimeSeries):
+                date_time_indexes |= expanded.keys()
+            else:
+                other_indexes |= expanded.keys()
+        return sorted(date_time_indexes) + sorted(other_indexes)
 
     def get_pivot_preferences(self, selection_key):
         """Returns saved or default pivot preferences.
@@ -438,18 +414,20 @@ class TabularViewMixin:
             selected = self.ui.treeView_relationship.selectionModel().currentIndex()
             class_type = "relationship class"
         else:
+            self.do_reload_pivot_table()
             return
         if self._is_class_index(selected, class_type):
             self.current_class_type = class_type
             selected_item = selected.model().item_from_index(selected)
             self.current_class_id = selected_item.db_map_id(self.db_map)
-            if self.current_class_id is not None:
-                self.do_reload_pivot_table()
+            self.do_reload_pivot_table()
 
     @busy_effect
     def do_reload_pivot_table(self):
         """Reloads pivot table.
         """
+        if self.current_class_id is None:
+            return
         self.current_input_type = self.ui.comboBox_pivot_table_input_type.currentText()
         if self.current_input_type == self._RELATIONSHIP and self.current_class_type != "relationship class":
             self.clear_pivot_table()
@@ -884,160 +862,3 @@ class TabularViewMixin:
         super().receive_session_rolled_back(db_maps)
         self.reload_pivot_table()
         self.reload_frozen_table()
-
-
-def _collect_indexes_and_values(entity_ids, value_ids, parameter_definition_ids, db_mngr, db_map):
-    """
-    Collects parameter indexes and values for expansion.
-
-    Args:
-        entity_ids (list): collect data from entities with these ids.
-        value_ids (set): a set of parameter or parameter definition ids
-        parameter_definition_ids (set): load data only for these parameter definition ids
-        db_mngr (SpineDBManager): a database manager
-        db_map (spinedb_api.DatabaseMapping): a database mapping
-
-    Returns:
-        tuple: date time and other indexes and values
-            as well as mapping from value id to entity and parameter definition id.
-    """
-    date_time_indexes = set()
-    date_time_data = dict()
-    other_indexes = set()
-    other_data = dict()
-    value_id_to_entity_and_definition = dict()
-    for id_ in value_ids:
-        value_item = db_mngr.get_item(db_map, "parameter value", id_)
-        if "object_id" in value_item:
-            value_entity_id = (value_item["object_id"],)
-        else:
-            value_entity_id = tuple(int(object_id) for object_id in value_item["object_id_list"].split(","))
-        value_definition_id = value_item["parameter_id"]
-        if value_definition_id not in parameter_definition_ids or value_entity_id not in entity_ids:
-            continue
-        value_id_to_entity_and_definition[id_] = (value_entity_id, value_definition_id)
-        parameter_value = db_mngr.get_value(db_map, "parameter value", id_, "value", role=EDITOR_ROLE)
-        if isinstance(parameter_value, ParameterValueFormatError):
-            other_indexes.add("")
-            other_data[id_] = {"": "Error"}
-        elif isinstance(parameter_value, TimeSeries):
-            date_time_data[id_] = {i: float(v) for i, v in zip(parameter_value.indexes, parameter_value.values)}
-            date_time_indexes |= set(parameter_value.indexes)
-        elif isinstance(parameter_value, Map):
-            indexes, values = _expand_map(parameter_value)
-            other_indexes |= indexes
-            other_data[id_] = values
-        elif isinstance(parameter_value, IndexedValue):
-            other_data[id_] = {i: float(v) for i, v in zip(parameter_value.indexes, parameter_value.values)}
-            other_indexes |= set(parameter_value.indexes)
-        else:
-            other_indexes.add("")
-            other_data[id_] = {"": parameter_value}
-    return date_time_indexes, date_time_data, other_indexes, other_data, value_id_to_entity_and_definition
-
-
-def _expand_map(map_to_expand, preceding_indexes=None):
-    """
-    Expands map indexes and values iteratively.
-
-    Args:
-        map_to_expand (spinedb_api.Map): a map to expand.
-        preceding_indexes (list): a list of indexes indexing a nested map
-
-    Return:
-        tuple of set and dict: a set of map's indexes as comma-separated strings and a dict mapping each index string
-            to the corresponding scalar value
-    """
-    current_indexes = map_to_expand.indexes
-    if not current_indexes:
-        return []
-    if preceding_indexes is None:
-        preceding_indexes = list()
-    indexes = set()
-    values = dict()
-    for index, value in zip(current_indexes, map_to_expand.values):
-        index_list = preceding_indexes + [index]
-        if isinstance(value, Map):
-            nested_indexes, nested_values = _expand_map(value, index_list)
-            indexes |= nested_indexes
-            values.update(nested_values)
-        else:
-            index_as_string = ", ".join(index_list)
-            indexes.add(index_as_string)
-            values[index_as_string] = value
-    return indexes, values
-
-
-def _fill_gaps_by_nones(indexes, data):
-    """
-    Makes value lists correspond to the full index lists by inserting Nones where a value is missing.
-
-    Args:
-        indexes (list): a list of indexes
-        data (dict): a map from parameter or parameter definition id to a mapping from index to value.
-
-    Returns:
-        dict: a map from parameter or parameter definition id to a list of values
-    """
-    return {id_: [indexes_and_values.get(i) for i in indexes] for id_, indexes_and_values in data.items()}
-
-
-def _combine_date_time_and_other_values(
-    date_time_count,
-    sorted_date_time_values,
-    other_count,
-    sorted_other_values,
-    value_ids,
-    value_id_to_entity_and_definition,
-):
-    """
-    Combines the date time and other value lists filling missing data by Nones.
-
-    Args:
-        date_time_count (int): number of date time indexes
-        sorted_date_time_values (dict): a map from value ids to gap-filled value lists
-        other_count (int): number of other indexes
-        sorted_other_values (dict): a map from value id to gap-filled value lists
-        value_ids (set): a set of parameter or parameter definition ids
-        value_id_to_entity_and_definition (dict): a map from value id to entity id and parameter definition id
-
-    Returns:
-        dict: a map from value id to full list of parameter values
-    """
-    expanded_values = dict()
-    empty_date_time_values = date_time_count * [None]
-    empty_other_values = other_count * [None]
-    for id_ in value_ids:
-        identifiers = value_id_to_entity_and_definition.get(id_)
-        if identifiers is None:
-            continue
-        entity_id = identifiers[0]
-        definition_id = identifiers[1]
-        expandeds = expanded_values.setdefault(entity_id, dict())
-        expandeds[definition_id] = sorted_date_time_values.get(id_, empty_date_time_values) + sorted_other_values.get(
-            id_, empty_other_values
-        )
-    return expanded_values
-
-
-def _expand_entities_without_values(expanded_values, entity_ids, index_count, parameter_definition_ids):
-    """
-    'Expands' non-existent values to null values.
-
-    Args:
-        expanded_values (dict): expanded data
-        entity_ids (set): a set of entity ids
-        index_count (int): number of expanded indexes
-        parameter_definition_ids (set): a set of parameter definition ids
-
-    Returns:
-        dict: a map from entity ids to value dictionaries
-    """
-    expanded_empty = dict()
-    for entity_id in entity_ids:
-        if entity_id not in expanded_values:
-            missing = dict()
-            for definition_id in parameter_definition_ids:
-                missing[definition_id] = index_count * [None]
-            expanded_empty[entity_id] = missing
-    return expanded_empty
