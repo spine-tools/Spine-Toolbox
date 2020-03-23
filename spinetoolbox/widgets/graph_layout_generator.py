@@ -40,17 +40,7 @@ class GraphLayoutGenerator(QObject):
     progressed = Signal(int)
     done = Signal()
 
-    def __init__(
-        self,
-        vertex_count,
-        src_inds,
-        dst_inds,
-        spread,
-        heavy_positions=None,
-        iterations=10,
-        weight_exp=-2,
-        initial_diameter=1000,
-    ):
+    def __init__(self, vertex_count, src_inds, dst_inds, spread, heavy_positions=None, iterations=10, weight_exp=-2):
         super().__init__()
         if heavy_positions is None:
             heavy_positions = dict()
@@ -61,7 +51,7 @@ class GraphLayoutGenerator(QObject):
         self.heavy_positions = heavy_positions
         self.iterations = iterations
         self.weight_exp = weight_exp
-        self.initial_diameter = initial_diameter
+        self.initial_diameter = self.vertex_count * self.spread
         self._state = _State.ACTIVE
         self._thread = QThread()
         self.moveToThread(self._thread)

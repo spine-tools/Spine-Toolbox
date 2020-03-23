@@ -381,11 +381,10 @@ class PivotTableModel(QAbstractTableModel):
         top_left_id = self._top_left_id(index)
         if top_left_id == IndexId.PARAMETER:
             return fetch_from_db("parameter definition", "parameter_name")
-        elif top_left_id == IndexId.PARAMETER_INDEX:
+        if top_left_id == IndexId.PARAMETER_INDEX:
             # header_id contains the index value already
             return str(header_id)
-        else:
-            return fetch_from_db("object", "name")
+        return fetch_from_db("object", "name")
 
     def header_names(self, index):
         """Returns the header names corresponding to the given data index.
@@ -399,7 +398,7 @@ class PivotTableModel(QAbstractTableModel):
         """
         row, column = self.map_to_pivot(index)
         header_ids = self._header_ids(row, column)
-        last_object_id = -1 if not self._parent.is_index_expansion_input_type else -2
+        last_object_id = -1 if not self._parent.is_index_expansion_input_type() else -2
         objects_ids, parameter_id = header_ids[:last_object_id], header_ids[-1]
         object_names = [self.db_mngr.get_item(self.db_map, "object", id_)["name"] for id_ in objects_ids]
         parameter_name = self.db_mngr.get_item(self.db_map, "parameter definition", parameter_id).get(
