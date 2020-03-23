@@ -19,13 +19,14 @@ Contains TabularViewMixin class.
 from itertools import product
 from collections import namedtuple
 from PySide2.QtCore import Qt, Slot
-from spinedb_api import from_database, IndexedValue, Map, ParameterValueFormatError, TimeSeries
+from spinedb_api import IndexedValue, Map, ParameterValueFormatError, TimeSeries
 from .custom_menus import TabularViewFilterMenu, PivotTableModelMenu, PivotTableHorizontalHeaderMenu
 from .tabular_view_header_widget import TabularViewHeaderWidget
 from .custom_delegates import PivotTableDelegate
 from ..helpers import fix_name_ambiguity, busy_effect
 from ..mvcmodels.pivot_table_models import IndexId, PivotTableSortFilterProxy, PivotTableModel
 from ..mvcmodels.frozen_table_model import FrozenTableModel
+from ..config import EDITOR_ROLE
 
 
 class TabularViewMixin:
@@ -115,7 +116,7 @@ class TabularViewMixin:
     def is_value_input_type(self):
         return self.current_input_type == self._PARAMETER_VALUE
 
-    def is_value_expansion_input_type(self):
+    def is_index_expansion_input_type(self):
         return self.current_input_type == self._INDEX_EXPANSION
 
     @Slot("QModelIndex", object)
@@ -915,26 +916,23 @@ def _collect_indexes_and_values(entity_ids, value_ids, parameter_definition_ids,
         if value_definition_id not in parameter_definition_ids or value_entity_id not in entity_ids:
             continue
         value_id_to_entity_and_definition[id_] = (value_entity_id, value_definition_id)
-        database_value = value_item["value"]
-        try:
-            parameter_value = from_database(database_value)
-        except ParameterValueFormatError:
+        parameter_value = db_mngr.get_value(db_map, "parameter value", id_, "value", role=EDITOR_ROLE)
+        if isinstance(parameter_value, ParameterValueFormatError):
             other_indexes.add("")
             other_data[id_] = {"": "Error"}
+        elif isinstance(parameter_value, TimeSeries):
+            date_time_data[id_] = {i: float(v) for i, v in zip(parameter_value.indexes, parameter_value.values)}
+            date_time_indexes |= set(parameter_value.indexes)
+        elif isinstance(parameter_value, Map):
+            indexes, values = _expand_map(parameter_value)
+            other_indexes |= indexes
+            other_data[id_] = values
+        elif isinstance(parameter_value, IndexedValue):
+            other_data[id_] = {i: float(v) for i, v in zip(parameter_value.indexes, parameter_value.values)}
+            other_indexes |= set(parameter_value.indexes)
         else:
-            if isinstance(parameter_value, TimeSeries):
-                date_time_data[id_] = {i: float(v) for i, v in zip(parameter_value.indexes, parameter_value.values)}
-                date_time_indexes |= set(parameter_value.indexes)
-            elif isinstance(parameter_value, Map):
-                indexes, values = _expand_map(parameter_value)
-                other_indexes |= indexes
-                other_data[id_] = values
-            elif isinstance(parameter_value, IndexedValue):
-                other_data[id_] = {i: float(v) for i, v in zip(parameter_value.indexes, parameter_value.values)}
-                other_indexes |= set(parameter_value.indexes)
-            else:
-                other_indexes.add("")
-                other_data[id_] = {"": parameter_value}
+            other_indexes.add("")
+            other_data[id_] = {"": parameter_value}
     return date_time_indexes, date_time_data, other_indexes, other_data, value_id_to_entity_and_definition
 
 
@@ -970,25 +968,18 @@ def _expand_map(map_to_expand, preceding_indexes=None):
     return indexes, values
 
 
-def _fill_gaps_by_nones(index_list, data):
+def _fill_gaps_by_nones(indexes, data):
     """
     Makes value lists correspond to the full index lists by inserting Nones where a value is missing.
 
     Args:
-        index_list (list): a list of indexes
+        indexes (list): a list of indexes
         data (dict): a map from parameter or parameter definition id to a mapping from index to value.
 
     Returns:
         dict: a map from parameter or parameter definition id to a list of values
     """
-    all_gap_filled_values = dict()
-    for id_, indexes_and_values in data.items():
-        gap_filled_values = len(index_list) * [None]
-        all_gap_filled_values[id_] = gap_filled_values
-        for index, value in indexes_and_values.items():
-            i = index_list.index(index)
-            gap_filled_values[i] = value
-    return all_gap_filled_values
+    return {id_: [indexes_and_values.get(i) for i in indexes] for id_, indexes_and_values in data.items()}
 
 
 def _combine_date_time_and_other_values(

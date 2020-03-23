@@ -49,6 +49,7 @@ from .spine_db_commands import (
     RemoveItemsCommand,
 )
 from .widgets.manage_db_items_dialog import CommitDialog
+from .config import EDITOR_ROLE
 
 
 @busy_effect
@@ -630,22 +631,22 @@ class SpineDBManager(QObject):
             return None
         key = "formatted_" + field
         if key not in item:
-            display_data, tool_tip_data, user_data = self.parse_value(item[field])
+            display_data, tool_tip_data, editor_data = self.parse_value(item[field])
             item[key] = {
                 Qt.DisplayRole: display_data,
                 Qt.ToolTipRole: tool_tip_data,
                 Qt.EditRole: item[field],
-                Qt.UserRole: user_data,
+                EDITOR_ROLE: editor_data,
             }
         return item[key].get(role)
 
     def parse_value(self, value):
         try:
-            user_data = from_database(value)
-            display_data = self._display_data(user_data)
-            tool_tip_data = self._tool_tip_data(user_data)
+            editor_data = from_database(value)
+            display_data = self._display_data(editor_data)
+            tool_tip_data = self._tool_tip_data(editor_data)
         except ParameterValueFormatError as error:
-            user_data = error
+            editor_data = error
             display_data = "Error"
             tool_tip_data = str(error)
         fm = QFontMetrics(QFont("", 0))
@@ -653,7 +654,7 @@ class SpineDBManager(QObject):
             display_data = fm.elidedText(display_data, Qt.ElideRight, 500)
         if isinstance(tool_tip_data, str):
             tool_tip_data = fm.elidedText(tool_tip_data, Qt.ElideRight, 800)
-        return display_data, tool_tip_data, user_data
+        return display_data, tool_tip_data, editor_data
 
     @staticmethod
     def _display_data(parsed_value):
