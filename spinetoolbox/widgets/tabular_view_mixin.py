@@ -115,7 +115,7 @@ class TabularViewMixin:
     def is_value_input_type(self):
         return self.current_input_type == self._PARAMETER_VALUE
 
-    def is_value_expanded_parameter_value(self):
+    def is_value_expansion_input_type(self):
         return self.current_input_type == self._INDEX_EXPANSION
 
     @Slot("QModelIndex", object)

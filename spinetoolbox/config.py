@@ -18,6 +18,7 @@ Application constants and style sheets
 
 import sys
 import os
+from PySide2.QtCore import Qt
 
 REQUIRED_SPINE_ENGINE_VERSION = "0.4.0"
 REQUIRED_SPINEDB_API_VERSION = "0.2.5"
@@ -176,3 +177,7 @@ MAINWINDOW_SS = (
 TREEVIEW_HEADER_SS = "QHeaderView::section{background-color: #ecd8c6; font-size: 12px;}"
 
 PIVOT_TABLE_HEADER_COLOR = "#efefef"
+
+
+EDITOR_ROLE = Qt.UserRole
+PLOTTING_ROLE = Qt.UserRole + 1

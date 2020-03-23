@@ -21,6 +21,7 @@ from PySide2.QtWidgets import QComboBox, QItemDelegate, QStyleOptionButton, QSty
 from PySide2.QtGui import QIcon
 from spinedb_api import from_database, to_database
 from .custom_editors import CustomComboEditor, CustomLineEditor, SearchBarEditor, CheckListEditor
+from ..config import EDITOR_ROLE
 
 
 class ComboBoxDelegate(QItemDelegate):
@@ -170,7 +171,7 @@ class PivotTableDelegate(CheckBoxDelegate):
     def _is_entity_index(self, index):
         parent = self.parent()
         return not (
-            parent.is_value_input_type() or parent.is_value_expanded_parameter_value
+            parent.is_value_input_type() or parent.is_value_expansion_input_type()
         ) and index.model().sourceModel().index_in_data(index)
 
     def paint(self, painter, option, index):
@@ -325,7 +326,7 @@ class ParameterValueDelegate(ParameterValueOrDefaultValueDelegate):
         if value_list:
             editor = SearchBarEditor(self.parent(), parent)
             value_list = [from_database(x) for x in value_list.split(",")]
-            editor.set_data(index.data(Qt.UserRole), value_list)
+            editor.set_data(index.data(EDITOR_ROLE), value_list)
             editor.data_committed.connect(lambda editor=editor, index=index: self._close_editor(editor, index))
             return editor
         return self._create_or_request_parameter_value_editor(parent, option, index, db_map)

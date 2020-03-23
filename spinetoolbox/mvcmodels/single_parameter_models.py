@@ -25,6 +25,7 @@ from ..mvcmodels.parameter_mixins import (
     FillInValueListIdMixin,
     MakeParameterTagMixin,
 )
+from ..config import PLOTTING_ROLE, EDITOR_ROLE
 
 
 class SingleParameterModel(MinimalTableModel):
@@ -165,7 +166,9 @@ class SingleParameterModel(MinimalTableModel):
         if role == Qt.BackgroundRole and field in self.fixed_fields:
             return QGuiApplication.palette().button()
         # Display, edit, tool tip role
-        if role in (Qt.DisplayRole, Qt.EditRole, Qt.ToolTipRole, Qt.UserRole):
+        if role == PLOTTING_ROLE:
+            role = EDITOR_ROLE
+        if role in (Qt.DisplayRole, Qt.EditRole, Qt.ToolTipRole, EDITOR_ROLE):
             if field == "database":
                 return self.db_map.codename
             id_ = self._main_data[index.row()]

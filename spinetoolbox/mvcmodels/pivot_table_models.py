@@ -20,10 +20,7 @@ import enum
 from PySide2.QtCore import Slot, QAbstractTableModel, Qt, QModelIndex, QSortFilterProxyModel
 from PySide2.QtGui import QColor, QFont
 from .pivot_model import PivotModel
-from ..config import PIVOT_TABLE_HEADER_COLOR
-
-
-PLOTTING_ROLE = Qt.UserRole
+from ..config import PIVOT_TABLE_HEADER_COLOR, EDITOR_ROLE, PLOTTING_ROLE
 
 
 class IndexId(enum.IntEnum):
@@ -195,7 +192,7 @@ class PivotTableModel(QAbstractTableModel):
         if self.model.pivot_rows and index.row() == len(self.model.pivot_columns):
             # empty line between column headers and data
             return Qt.ItemIsSelectable | Qt.ItemIsEnabled
-        if self._parent.is_value_expanded_parameter_value():
+        if self._parent.is_value_expansion_input_type():
             # Disable editing the pivot table while in expanded index mode.
             if index.row() == self.rowCount() - 1 or index.column() == self.columnCount() - 1:
                 return Qt.NoItemFlags
@@ -266,7 +263,7 @@ class PivotTableModel(QAbstractTableModel):
 
     def column_is_index_column(self, column):
         """Returns True if column is the column containing expanded parameter value indexes."""
-        return self._parent.is_value_expanded_parameter_value() and column == self.headerColumnCount() - 1
+        return self._parent.is_value_expansion_input_type() and column == self.headerColumnCount() - 1
 
     def headerData(self, section, orientation, role=Qt.DisplayRole):
         if role == Qt.DisplayRole and orientation == Qt.Horizontal:
@@ -401,7 +398,7 @@ class PivotTableModel(QAbstractTableModel):
         """
         row, column = self.map_to_pivot(index)
         header_ids = self._header_ids(row, column)
-        last_object_id = -1 if not self._parent.is_value_expanded_parameter_value else -2
+        last_object_id = -1 if not self._parent.is_value_expansion_input_type else -2
         objects_ids, parameter_id = header_ids[:last_object_id], header_ids[-1]
         object_names = [self.db_mngr.get_item(self.db_map, "object", id_)["name"] for id_ in objects_ids]
         parameter_name = self.db_mngr.get_item(self.db_map, "parameter definition", parameter_id).get(
@@ -444,7 +441,7 @@ class PivotTableModel(QAbstractTableModel):
             return QColor(PIVOT_TABLE_HEADER_COLOR)
 
     def data(self, index, role=Qt.DisplayRole):
-        if role in (Qt.DisplayRole, Qt.EditRole, Qt.ToolTipRole):
+        if role in (Qt.DisplayRole, Qt.EditRole, Qt.ToolTipRole, EDITOR_ROLE):
             if self.index_in_top(index):
                 return self.model.pivot_rows[index.column()]
             if self.index_in_left(index):
@@ -462,7 +459,7 @@ class PivotTableModel(QAbstractTableModel):
                         return None
                     value = self.db_mngr.get_value(self.db_map, "parameter value", value, "value", role)
                     return value
-                if self._parent.is_value_expanded_parameter_value():
+                if self._parent.is_value_expansion_input_type():
                     return value if role == Qt.DisplayRole else None
                 return bool(value)
             return None
@@ -476,9 +473,9 @@ class PivotTableModel(QAbstractTableModel):
                 if value is None:
                     return None
                 if self._parent.is_value_input_type():
-                    value = self.db_mngr.get_value(self.db_map, "parameter value", value, "value", Qt.UserRole)
+                    value = self.db_mngr.get_value(self.db_map, "parameter value", value, "value", EDITOR_ROLE)
                     return value
-                if self._parent.is_value_expanded_parameter_value():
+                if self._parent.is_value_expansion_input_type():
                     return value
                 return None
             # Index not in data: we are plotting the index column

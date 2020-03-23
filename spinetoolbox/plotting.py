@@ -31,7 +31,7 @@ import numpy as np
 from PySide2.QtCore import QModelIndex
 from spinedb_api import IndexedValue, Map, ParameterValueFormatError, TimeSeries
 from .helpers import first_non_null
-from .mvcmodels.pivot_table_models import PLOTTING_ROLE
+from .config import PLOTTING_ROLE
 from .widgets.plot_widget import PlotWidget
 
 

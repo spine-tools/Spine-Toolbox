@@ -38,6 +38,7 @@ from ..widgets.plain_parameter_value_editor import PlainParameterValueEditor
 from ..widgets.time_pattern_editor import TimePatternEditor
 from ..widgets.time_series_fixed_resolution_editor import TimeSeriesFixedResolutionEditor
 from ..widgets.time_series_variable_resolution_editor import TimeSeriesVariableResolutionEditor
+from ..config import EDITOR_ROLE
 
 
 @unique
@@ -95,7 +96,7 @@ class ParameterValueEditor(QDialog):
         self._ui.editor_stack.addWidget(self._datetime_editor)
         self._ui.editor_stack.addWidget(self._duration_editor)
         self._ui.parameter_type_selector.activated.connect(self._change_parameter_type)
-        self._select_editor(index.data(Qt.UserRole))
+        self._select_editor(index.data(EDITOR_ROLE))
 
     @Slot()
     def accept(self):
