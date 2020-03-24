@@ -460,11 +460,8 @@ class PivotTableModel(QAbstractTableModel):
                     value = self.db_mngr.get_value(self.db_map, "parameter value", value, "value", role)
                     return value
                 if self._parent.is_index_expansion_input_type():
-                    expanded = self.db_mngr.get_expanded_value(self.db_map, "parameter value", value, "value", role)
-                    if expanded is None:
-                        return None
                     index = self._header_ids(row, column)[-2]
-                    return expanded.get(index)
+                    return self.db_mngr.get_value_index(self.db_map, "parameter value", value, "value", index, role)
                 return bool(value)
             return None
         if role == Qt.FontRole and self.index_in_top_left(index):

@@ -24,6 +24,7 @@ from spinedb_api import (
     SpineDBVersionError,
     DiffDatabaseMapping,
     from_database,
+    to_database,
     relativedelta_to_duration,
     ParameterValueFormatError,
     DateTime,
@@ -694,22 +695,27 @@ class SpineDBManager(QObject):
             tool_tip_data = fm.elidedText(tool_tip_data, Qt.ElideRight, 800)
         return display_data, tool_tip_data, parsed_data
 
-    def get_expanded_value(self, db_map, item_type, id_, field, role=Qt.DisplayRole):
+    def get_expanded_data(self, db_map, item_type, id_, field):
         item = self.get_item(db_map, item_type, id_)
         if not item:
-            return None
+            return {}
         key = "expanded_" + field
         if key not in item:
-            parse_data = self.get_value(db_map, item_type, id_, field, role=PARSED_ROLE)
-            edit_data = self._expanded_value(parse_data)
-            display_data = {k: self._display_data(v) for k, v in edit_data.items()}
+            parsed_data = self.get_value(db_map, item_type, id_, field, role=PARSED_ROLE)
+            expanded_data = self._expanded_value(parsed_data)
             item[key] = {
-                Qt.DisplayRole: display_data,
-                Qt.ToolTipRole: display_data,
-                Qt.EditRole: edit_data,
-                PARSED_ROLE: edit_data,
+                k: {
+                    Qt.DisplayRole: self._display_data(v),
+                    Qt.ToolTipRole: self._tool_tip_data(v),
+                    Qt.EditRole: to_database(v),
+                    PARSED_ROLE: v,
+                }
+                for k, v in expanded_data.items()
             }
-        return item[key].get(role)
+        return item[key]
+
+    def get_value_index(self, db_map, item_type, id_, field, index, role=Qt.DisplayRole):
+        return self.get_expanded_data(db_map, item_type, id_, field).get(index, {}).get(role)
 
     def _expand_map(self, map_to_expand, preceding_indexes=None):
         """

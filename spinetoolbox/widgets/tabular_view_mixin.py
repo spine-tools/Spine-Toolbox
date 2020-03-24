@@ -18,7 +18,7 @@ Contains TabularViewMixin class.
 
 from itertools import product
 from collections import namedtuple
-from PySide2.QtCore import Qt, Slot
+from PySide2.QtCore import Qt, Slot, QTimer
 from spinedb_api import TimeSeries
 from .custom_menus import TabularViewFilterMenu, PivotTableModelMenu, PivotTableHorizontalHeaderMenu
 from .tabular_view_header_widget import TabularViewHeaderWidget
@@ -366,7 +366,7 @@ class TabularViewMixin:
             if id_ is None:
                 continue
             value = self.db_mngr.get_value(self.db_map, "parameter value", id_, "value", role=PARSED_ROLE)
-            expanded = self.db_mngr.get_expanded_value(self.db_map, "parameter value", id_, "value")
+            expanded = self.db_mngr.get_expanded_data(self.db_map, "parameter value", id_, "value")
             if isinstance(value, TimeSeries):
                 date_time_indexes |= expanded.keys()
             else:
@@ -480,10 +480,7 @@ class TabularViewMixin:
             proxy_index = self.pivot_table_proxy.mapFromSource(index)
             widget = self.create_header_widget(proxy_index.data(Qt.DisplayRole), "rows")
             self.ui.pivot_table.setIndexWidget(proxy_index, widget)
-        # TODO: find out why we need two processEvents here
-        qApp.processEvents()  # pylint: disable=undefined-variable
-        qApp.processEvents()  # pylint: disable=undefined-variable
-        self.ui.pivot_table.resizeColumnsToContents()
+        QTimer.singleShot(0, self.ui.pivot_table.resizeColumnsToContents)
 
     def make_frozen_headers(self):
         """
