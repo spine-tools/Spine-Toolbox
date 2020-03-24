@@ -17,7 +17,7 @@ Provides pivot table models for the Tabular View.
 """
 
 import enum
-from PySide2.QtCore import Slot, QAbstractTableModel, Qt, QModelIndex, QSortFilterProxyModel
+from PySide2.QtCore import Qt, Slot, QTimer, QAbstractTableModel, QModelIndex, QSortFilterProxyModel
 from PySide2.QtGui import QColor, QFont
 from .pivot_model import PivotModel
 from .shared import PARSED_ROLE
@@ -32,7 +32,9 @@ class IndexId(enum.IntEnum):
 class PivotTableModel(QAbstractTableModel):
 
     _V_HEADER_WIDTH = 5
-    _ITEMS_TO_FETCH = 1024
+    _FETCH_STEP_COUNT = 64
+    _MIN_FETCH_COUNT = 512
+    _FETCH_DELAY = 0
 
     def __init__(self, parent):
         """
@@ -47,33 +49,40 @@ class PivotTableModel(QAbstractTableModel):
         self._plot_x_column = None
         self._data_row_count = 0
         self._data_column_count = 0
-        self.modelReset.connect(self.reset_data_count)
+        self.rowsInserted.connect(lambda *args: QTimer.singleShot(self._FETCH_DELAY, self.fetch_more_rows))
+        self.columnsInserted.connect(lambda *args: QTimer.singleShot(self._FETCH_DELAY, self.fetch_more_columns))
+        self.modelAboutToBeReset.connect(self.reset_data_count)
+        self.modelReset.connect(lambda *args: QTimer.singleShot(self._FETCH_DELAY, self.start_fetching))
 
     @Slot()
     def reset_data_count(self):
-        self.layoutAboutToBeChanged.emit()
         self._data_row_count = 0
         self._data_column_count = 0
-        self.layoutChanged.emit()
 
-    def canFetchMore(self, parent):
-        return self._data_row_count < len(self.model.rows) or self._data_column_count < len(self.model.columns)
+    @Slot()
+    def start_fetching(self):
+        self.fetch_more_rows()
+        self.fetch_more_columns()
 
-    def fetchMore(self, parent):
-        self.fetch_more_rows(parent)
-        self.fetch_more_columns(parent)
-
-    def fetch_more_rows(self, parent):
-        count = min(self._ITEMS_TO_FETCH, len(self.model.rows) - self._data_row_count)
+    @Slot()
+    def fetch_more_rows(self):
+        max_count = max(self._MIN_FETCH_COUNT, len(self.model.rows) // self._FETCH_STEP_COUNT + 1)
+        count = min(max_count, len(self.model.rows) - self._data_row_count)
+        if not count:
+            return
         first = self.headerRowCount() + self.dataRowCount()
-        self.beginInsertRows(parent, first, first + count - 1)
+        self.beginInsertRows(QModelIndex(), first, first + count - 1)
         self._data_row_count += count
         self.endInsertRows()
 
-    def fetch_more_columns(self, parent):
-        count = min(self._ITEMS_TO_FETCH, len(self.model.columns) - self._data_column_count)
+    @Slot()
+    def fetch_more_columns(self):
+        max_count = max(self._MIN_FETCH_COUNT, len(self.model.rows) // self._FETCH_STEP_COUNT + 1)
+        count = min(max_count, len(self.model.columns) - self._data_column_count)
+        if not count:
+            return
         first = self.headerColumnCount() + self.dataColumnCount()
-        self.beginInsertColumns(parent, first, first + count - 1)
+        self.beginInsertColumns(QModelIndex(), first, first + count - 1)
         self._data_column_count += count
         self.endInsertColumns()
 
