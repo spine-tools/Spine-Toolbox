@@ -694,7 +694,12 @@ class SpineDBManager(QObject):
             editor_data = self.get_value(db_map, item_type, id_, field, role=EDITOR_ROLE)
             edit_data = self._expanded_value(editor_data)
             display_data = {k: self._display_data(v) for k, v in edit_data.items()}
-            item[key] = {Qt.DisplayRole: display_data, Qt.ToolTipRole: display_data, Qt.EditRole: edit_data}
+            item[key] = {
+                Qt.DisplayRole: display_data,
+                Qt.ToolTipRole: display_data,
+                Qt.EditRole: edit_data,
+                EDITOR_ROLE: edit_data,
+            }
         return item[key].get(role)
 
     def _expanded_value(self, editor_data):
