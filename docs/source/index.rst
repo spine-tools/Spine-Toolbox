@@ -19,7 +19,7 @@ please check the :ref:`Terminology` section. If you want to contribute to this p
    main_window
    project_items
    tool_specification_editor
-   executing_tools
+   executing_projects
    settings
    data_store_view
    plotting
