@@ -36,7 +36,7 @@ Data Store |data_store|
 
 A Data store item represents a connection to a Spine model database.
 Currently, the item supports sqlite and mysql dialects.
-The database can be accessed and modified using :ref:`data store views <Data store views>`
+The database can be accessed and modified in :ref:`Data store view <Data store view>`
 available from the item's properties or from a right-click context menu.
 
 Data Connection |data_connection|
@@ -56,7 +56,7 @@ View |view|
 -----------
 
 A View item is meant for inspecting data from multiple sources using the
-:ref:`data store views <Data store views>`.
+:ref:`Data store view <Data store view>`.
 Note that the data is opened in read-only mode so modifications are not possible from the View item.
 
 .. note::
