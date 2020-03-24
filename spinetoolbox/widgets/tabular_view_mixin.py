@@ -98,7 +98,7 @@ class TabularViewMixin:
         self.ui.pivot_table.verticalHeader().header_dropped.connect(self.handle_header_dropped)
         self.ui.frozen_table.header_dropped.connect(self.handle_header_dropped)
         self.ui.frozen_table.selectionModel().currentChanged.connect(self.change_frozen_value)
-        self.ui.comboBox_pivot_table_input_type.currentTextChanged.connect(self.reload_pivot_table)
+        self.ui.comboBox_pivot_table_input_type.currentTextChanged.connect(self.do_reload_pivot_table)
         self.ui.dockWidget_pivot_table.visibilityChanged.connect(self._handle_pivot_table_visibility_changed)
         self.ui.dockWidget_frozen_table.visibilityChanged.connect(self._handle_frozen_table_visibility_changed)
         self.ui.pivot_table.selectionModel().selectionChanged.connect(self._handle_pivot_table_selection_changed)
@@ -352,20 +352,20 @@ class TabularViewMixin:
 
     def _collect_indexes(self, data):
         """
-        Collects parameter indexes and values for expansion.
+        Collects parameter value indexes.
 
         Args:
             data (dict): parameter value data
 
         Returns:
-            list: indexes (date time first)
+            list: indexes (date-time first)
         """
         date_time_indexes = set()
         other_indexes = set()
         for id_ in data.values():
             if id_ is None:
                 continue
-            value = self.db_mngr.get_value(self.db_map, "parameter value", id_, "value", role=EDITOR_ROLE)
+            value = self.db_mngr.get_value(self.db_map, "parameter value", id_, "value", role=PARSED_ROLE)
             expanded = self.db_mngr.get_expanded_value(self.db_map, "parameter value", id_, "value")
             if isinstance(value, TimeSeries):
                 date_time_indexes |= expanded.keys()
@@ -414,21 +414,25 @@ class TabularViewMixin:
             selected = self.ui.treeView_relationship.selectionModel().currentIndex()
             class_type = "relationship class"
         else:
-            self.do_reload_pivot_table()
             return
         if self._is_class_index(selected, class_type):
+            class_id = selected.model().item_from_index(selected).db_map_id(self.db_map)
+            if self.current_class_id == class_id:
+                return
             self.current_class_type = class_type
-            selected_item = selected.model().item_from_index(selected)
-            self.current_class_id = selected_item.db_map_id(self.db_map)
+            self.current_class_id = class_id
             self.do_reload_pivot_table()
 
     @busy_effect
-    def do_reload_pivot_table(self):
+    @Slot("QString")
+    def do_reload_pivot_table(self, input_type=None):
         """Reloads pivot table.
         """
         if self.current_class_id is None:
             return
-        self.current_input_type = self.ui.comboBox_pivot_table_input_type.currentText()
+        if input_type is None:
+            input_type = self.ui.comboBox_pivot_table_input_type.currentText()
+        self.current_input_type = input_type
         if self.current_input_type == self._RELATIONSHIP and self.current_class_type != "relationship class":
             self.clear_pivot_table()
             return
