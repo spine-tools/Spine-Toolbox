@@ -18,5 +18,4 @@ Contains stuff that is used by more than one model
 
 from PySide2.QtCore import Qt
 
-EDITOR_ROLE = Qt.UserRole
-PLOTTING_ROLE = Qt.UserRole + 1
+PARSED_ROLE = Qt.UserRole

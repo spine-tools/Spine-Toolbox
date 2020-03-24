@@ -26,7 +26,7 @@ from .custom_delegates import PivotTableDelegate
 from ..helpers import fix_name_ambiguity, busy_effect
 from ..mvcmodels.pivot_table_models import IndexId, PivotTableSortFilterProxy, PivotTableModel
 from ..mvcmodels.frozen_table_model import FrozenTableModel
-from ..mvcmodels.shared import EDITOR_ROLE
+from ..mvcmodels.shared import PARSED_ROLE
 
 
 class TabularViewMixin:

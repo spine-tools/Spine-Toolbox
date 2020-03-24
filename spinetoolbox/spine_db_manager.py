@@ -50,7 +50,7 @@ from .spine_db_commands import (
     RemoveItemsCommand,
 )
 from .widgets.manage_db_items_dialog import CommitDialog
-from .mvcmodels.shared import EDITOR_ROLE
+from .mvcmodels.shared import PARSED_ROLE
 
 
 @busy_effect
@@ -617,6 +617,43 @@ class SpineDBManager(QObject):
     def get_field(self, db_map, item_type, id_, field):
         return self.get_item(db_map, item_type, id_).get(field)
 
+    @staticmethod
+    def _display_data(parsed_data):
+        """Returns the value's database representation formatted for Qt.DisplayRole."""
+        if isinstance(parsed_data, TimeSeries):
+            return "Time series"
+        if isinstance(parsed_data, Map):
+            return "Map"
+        if isinstance(parsed_data, DateTime):
+            return str(parsed_data.value)
+        if isinstance(parsed_data, Duration):
+            return ", ".join(relativedelta_to_duration(delta) for delta in parsed_data.value)
+        if isinstance(parsed_data, TimePattern):
+            return "Time pattern"
+        if isinstance(parsed_data, list):
+            return str(parsed_data)
+        return parsed_data
+
+    @staticmethod
+    def _tool_tip_data(parsed_data):
+        """Returns the value's database representation formatted for Qt.ToolTipRole."""
+        if isinstance(parsed_data, TimeSeriesFixedResolution):
+            resolution = [relativedelta_to_duration(r) for r in parsed_data.resolution]
+            resolution = ', '.join(resolution)
+            return "Start: {}, resolution: [{}], length: {}".format(parsed_data.start, resolution, len(parsed_data))
+        if isinstance(parsed_data, TimeSeriesVariableResolution):
+            return "Start: {}, resolution: variable, length: {}".format(parsed_data.indexes[0], len(parsed_data))
+        return None
+
+    def _expanded_value(self, parsed_value):
+        if isinstance(parsed_value, ParameterValueFormatError):
+            return {"": "Error"}
+        if isinstance(parsed_value, (TimeSeries, IndexedValue)):
+            return {i: float(v) for i, v in zip(parsed_value.indexes, parsed_value.values)}
+        if isinstance(parsed_value, Map):
+            return self._expand_map(parsed_value)
+        return {"": parsed_value}
+
     def get_value(self, db_map, item_type, id_, field, role=Qt.DisplayRole):
         """Returns the value or default value of a parameter.
 
@@ -632,22 +669,22 @@ class SpineDBManager(QObject):
             return None
         key = "formatted_" + field
         if key not in item:
-            display_data, tool_tip_data, editor_data = self.parse_value(item[field])
+            display_data, tool_tip_data, parsed_data = self.parse_value(item[field])
             item[key] = {
                 Qt.DisplayRole: display_data,
                 Qt.ToolTipRole: tool_tip_data,
                 Qt.EditRole: item[field],
-                EDITOR_ROLE: editor_data,
+                PARSED_ROLE: parsed_data,
             }
         return item[key].get(role)
 
     def parse_value(self, value):
         try:
-            editor_data = from_database(value)
-            display_data = self._display_data(editor_data)
-            tool_tip_data = self._tool_tip_data(editor_data)
+            parsed_data = from_database(value)
+            display_data = self._display_data(parsed_data)
+            tool_tip_data = self._tool_tip_data(parsed_data)
         except ParameterValueFormatError as error:
-            editor_data = error
+            parsed_data = error
             display_data = "Error"
             tool_tip_data = str(error)
         fm = QFontMetrics(QFont("", 0))
@@ -655,35 +692,7 @@ class SpineDBManager(QObject):
             display_data = fm.elidedText(display_data, Qt.ElideRight, 500)
         if isinstance(tool_tip_data, str):
             tool_tip_data = fm.elidedText(tool_tip_data, Qt.ElideRight, 800)
-        return display_data, tool_tip_data, editor_data
-
-    @staticmethod
-    def _display_data(parsed_value):
-        """Returns the value's database representation formatted for Qt.DisplayRole."""
-        if isinstance(parsed_value, TimeSeries):
-            return "Time series"
-        if isinstance(parsed_value, Map):
-            return "Map"
-        if isinstance(parsed_value, DateTime):
-            return str(parsed_value.value)
-        if isinstance(parsed_value, Duration):
-            return ", ".join(relativedelta_to_duration(delta) for delta in parsed_value.value)
-        if isinstance(parsed_value, TimePattern):
-            return "Time pattern"
-        if isinstance(parsed_value, list):
-            return str(parsed_value)
-        return parsed_value
-
-    @staticmethod
-    def _tool_tip_data(parsed_value):
-        """Returns the value's database representation formatted for Qt.ToolTipRole."""
-        if isinstance(parsed_value, TimeSeriesFixedResolution):
-            resolution = [relativedelta_to_duration(r) for r in parsed_value.resolution]
-            resolution = ', '.join(resolution)
-            return "Start: {}, resolution: [{}], length: {}".format(parsed_value.start, resolution, len(parsed_value))
-        if isinstance(parsed_value, TimeSeriesVariableResolution):
-            return "Start: {}, resolution: variable, length: {}".format(parsed_value.indexes[0], len(parsed_value))
-        return None
+        return display_data, tool_tip_data, parsed_data
 
     def get_expanded_value(self, db_map, item_type, id_, field, role=Qt.DisplayRole):
         item = self.get_item(db_map, item_type, id_)
@@ -691,25 +700,16 @@ class SpineDBManager(QObject):
             return None
         key = "expanded_" + field
         if key not in item:
-            editor_data = self.get_value(db_map, item_type, id_, field, role=EDITOR_ROLE)
-            edit_data = self._expanded_value(editor_data)
+            parse_data = self.get_value(db_map, item_type, id_, field, role=PARSED_ROLE)
+            edit_data = self._expanded_value(parse_data)
             display_data = {k: self._display_data(v) for k, v in edit_data.items()}
             item[key] = {
                 Qt.DisplayRole: display_data,
                 Qt.ToolTipRole: display_data,
                 Qt.EditRole: edit_data,
-                EDITOR_ROLE: edit_data,
+                PARSED_ROLE: edit_data,
             }
         return item[key].get(role)
-
-    def _expanded_value(self, editor_data):
-        if isinstance(editor_data, ParameterValueFormatError):
-            return {"": "Error"}
-        if isinstance(editor_data, (TimeSeries, IndexedValue)):
-            return {i: float(v) for i, v in zip(editor_data.indexes, editor_data.values)}
-        if isinstance(editor_data, Map):
-            return self._expand_map(editor_data)
-        return {"": editor_data}
 
     def _expand_map(self, map_to_expand, preceding_indexes=None):
         """

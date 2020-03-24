@@ -20,7 +20,7 @@ import enum
 from PySide2.QtCore import Slot, QAbstractTableModel, Qt, QModelIndex, QSortFilterProxyModel
 from PySide2.QtGui import QColor, QFont
 from .pivot_model import PivotModel
-from .shared import PLOTTING_ROLE, EDITOR_ROLE
+from .shared import PARSED_ROLE
 from ..config import PIVOT_TABLE_HEADER_COLOR
 
 
@@ -441,9 +441,7 @@ class PivotTableModel(QAbstractTableModel):
             return QColor(PIVOT_TABLE_HEADER_COLOR)
 
     def data(self, index, role=Qt.DisplayRole):
-        if role == PLOTTING_ROLE:
-            role = EDITOR_ROLE
-        if role in (Qt.DisplayRole, Qt.EditRole, Qt.ToolTipRole, EDITOR_ROLE):
+        if role in (Qt.DisplayRole, Qt.EditRole, Qt.ToolTipRole, PARSED_ROLE):
             if self.index_in_top(index):
                 return self.model.pivot_rows[index.column()]
             if self.index_in_left(index):

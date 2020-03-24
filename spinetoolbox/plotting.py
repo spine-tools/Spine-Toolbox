@@ -31,7 +31,7 @@ import numpy as np
 from PySide2.QtCore import QModelIndex
 from spinedb_api import IndexedValue, Map, ParameterValueFormatError, TimeSeries
 from .helpers import first_non_null
-from .mvcmodels.shared import PLOTTING_ROLE
+from .mvcmodels.shared import PARSED_ROLE
 from .widgets.plot_widget import PlotWidget
 
 
@@ -383,7 +383,7 @@ def _collect_single_column_values(model, column, rows, hints):
         data_index = model.index(row, column)
         if not hints.is_index_in_data(model, data_index):
             continue
-        value = model.data(data_index, role=PLOTTING_ROLE)
+        value = model.data(data_index, role=PARSED_ROLE)
         if isinstance(value, Exception):
             raise PlottingError(f"Failed to plot row {row}: {value}")
         if isinstance(value, (Map, TimeSeries)):
@@ -416,7 +416,7 @@ def _collect_x_column_values(model, column, rows, hints):
         data_index = model.index(row, column)
         if not hints.is_index_in_data(model, data_index):
             continue
-        value = model.data(data_index, role=PLOTTING_ROLE)
+        value = model.data(data_index, role=PARSED_ROLE)
         if isinstance(value, Exception):
             raise PlottingError(f"Failed to plot '{value}'")
         values.append(value)
@@ -444,7 +444,7 @@ def _collect_index_column_values(model, column, rows, hints):
         if not hints.is_index_in_data(model, data_index):
             continue
         data_index = model.index(row, column)
-        data = model.data(data_index, role=PLOTTING_ROLE)
+        data = model.data(data_index, role=PARSED_ROLE)
         values.append(data)
     if not values:
         return values
