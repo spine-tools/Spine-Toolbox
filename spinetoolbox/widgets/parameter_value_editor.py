@@ -73,11 +73,15 @@ class ParameterValueEditor(QDialog):
         from ..ui.parameter_value_editor import Ui_ParameterValueEditor
 
         super().__init__(parent)
+        model = index.model()
         self._index = index
         self._ui = Ui_ParameterValueEditor()
         self._ui.setupUi(self)
-        value_name = self._index.model().value_name(self._index)
-        self.setWindowTitle(f"Edit value    -- {value_name} --")
+        self.db_mngr = model.db_mngr
+        self.item_type = model.item_type
+        self.db_map = model.index_db_map(index)
+        self.id = model.index_id(index)
+        self.setWindowTitle(f"Edit value    -- {model.index_name(index)} --")
         self.setWindowFlag(Qt.WindowMinMaxButtonsHint)
         self._ui.button_box.accepted.connect(self.accept)
         self._ui.button_box.rejected.connect(self.reject)
@@ -103,11 +107,17 @@ class ParameterValueEditor(QDialog):
         """Saves the parameter value shown in the currently selected editor widget back to the parent model."""
         editor = self._ui.editor_stack.currentWidget()
         try:
-            self._index.model().setData(self._index, to_database(editor.value()))
+            db_value = to_database(editor.value())
         except ParameterValueFormatError as error:
             message = "Cannot set value: {}".format(error)
             QMessageBox.warning(self, "Parameter Value error", message)
             return
+        if self.item_type == "parameter value":
+            db_item = {"id": self.id, "value": db_value}
+            self.db_mngr.update_parameter_values({self.db_map: [db_item]})
+        elif self.item_type == "parameter definition":
+            db_item = {"id": self.id, "default value": db_value}
+            self.db_mngr.update_parameter_definitions({self.db_map: [db_item]})
         self.close()
 
     @Slot(int)

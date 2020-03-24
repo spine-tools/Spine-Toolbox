@@ -430,7 +430,7 @@ class TabularViewMixin:
         """
         if self.current_class_id is None:
             return
-        qApp.processEvents()
+        qApp.processEvents()  # pylint: disable=undefined-variable
         if input_type is None:
             input_type = self.ui.comboBox_pivot_table_input_type.currentText()
         self.current_input_type = input_type

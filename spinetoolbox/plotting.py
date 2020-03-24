@@ -211,7 +211,7 @@ class ParameterTablePlottingHints(PlottingHints):
 
     def cell_label(self, model, index):
         """Returns a label build from the columns on the left from the data column."""
-        return model.value_name(index)
+        return model.index_name(index)
 
     def column_label(self, model, column):
         """Returns the column header."""
@@ -245,7 +245,7 @@ class PivotTablePlottingHints(PlottingHints):
 
     def cell_label(self, model, index):
         """Returns a label for the table cell given by index."""
-        return model.sourceModel().value_name(index)
+        return model.sourceModel().index_name(index)
 
     def column_label(self, model, column):
         """Returns a label for a table column."""

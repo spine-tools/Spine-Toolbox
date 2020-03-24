@@ -18,7 +18,6 @@ Unit tests for the plotting module.
 
 import unittest
 from unittest.mock import Mock, MagicMock
-from PySide2.QtCore import QModelIndex
 from PySide2.QtWidgets import QApplication, QAction
 from spinetoolbox.mvcmodels.pivot_table_models import PivotTableModel
 from spinetoolbox.widgets.data_store_widget import DataStoreForm
@@ -44,7 +43,7 @@ class TestPivotTableModel(unittest.TestCase):
         data = {('row1', 'col1'): '1', ('row2', 'col1'): '3', ('row1', 'col2'): '5', ('row2', 'col2'): '7'}
         index_names = ['rows', 'cols']
         self._model.reset_model(data, index_names, ['rows'], ['cols'], [], ())
-        self._model.fetchMore(QModelIndex())
+        self._model.start_fetching()
 
     def test_x_flag(self):
         self.assertIsNone(self._model.plot_x_column)

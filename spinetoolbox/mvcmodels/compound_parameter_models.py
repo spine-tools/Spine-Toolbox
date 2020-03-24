@@ -549,7 +549,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         sub_index = self.map_to_sub(index)
         return sub_index.model().db_item(sub_index)
 
-    def value_name(self, index):
+    def index_name(self, index):
         item = self.db_item(index)
         if item is None:
             return ""
@@ -562,6 +562,12 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         }[self.item_type][self.entity_class_type]
         entity_name = item[entity_name_key].replace(",", self.db_mngr._GROUP_SEP)
         return entity_name + " - " + item["parameter_name"]
+
+    def index_db_map(self, index):
+        return self.map_to_sub(index).model().db_map
+
+    def index_id(self, index):
+        return self.item_at_row(index.row())
 
 
 class CompoundObjectParameterMixin:

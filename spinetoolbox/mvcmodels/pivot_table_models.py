@@ -54,6 +54,11 @@ class PivotTableModel(QAbstractTableModel):
         self.modelAboutToBeReset.connect(self.reset_data_count)
         self.modelReset.connect(lambda *args: QTimer.singleShot(self._FETCH_DELAY, self.start_fetching))
 
+    @property
+    def item_type(self):
+        """Returns the item type, always parameter value, for the ParameterValueEditor"""
+        return "parameter value"
+
     @Slot()
     def reset_data_count(self):
         self._data_row_count = 0
@@ -415,7 +420,7 @@ class PivotTableModel(QAbstractTableModel):
         )
         return object_names, parameter_name
 
-    def value_name(self, index):
+    def index_name(self, index):
         """Returns a string that concatenates the header names corresponding to the given data index.
 
         Args:
@@ -428,6 +433,13 @@ class PivotTableModel(QAbstractTableModel):
             return ""
         object_names, parameter_name = self.header_names(index)
         return self.db_mngr._GROUP_SEP.join(object_names) + " - " + parameter_name
+
+    def index_db_map(self, index):
+        return self.db_map
+
+    def index_id(self, index):
+        row, column = self.map_to_pivot(index)
+        return self.model.get_pivoted_data([row], [column])[0][0]
 
     def column_name(self, column):
         """Returns a string that concatenates the header names corresponding to the given column.

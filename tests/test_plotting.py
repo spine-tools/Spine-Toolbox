@@ -63,7 +63,7 @@ def _make_pivot_proxy_model():
     }
     index_ids = ['rows', 'col_types']
     model.reset_model(data, index_ids, ['rows'], ['col_types'], [], ())
-    model.fetchMore(QModelIndex())
+    model.start_fetching()
     return data_store_widget.pivot_table_proxy
 
 
