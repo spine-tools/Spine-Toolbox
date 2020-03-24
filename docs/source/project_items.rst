@@ -27,7 +27,7 @@ Project Items
 Project items in the *Design view* and the connections between them make up the graph (Directed Acyclic Graph, DAG)
 that is executed when the |execute| or |execute-selected| buttons are pressed.
 
-See :ref:`Executing Tools` for more information on how the DAG is processed by Spine Toolbox.
+See :ref:`Executing Projects` for more information on how the DAG is processed by Spine Toolbox.
 
 The following items are currently available:
 
