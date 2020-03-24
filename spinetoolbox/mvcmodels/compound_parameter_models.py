@@ -16,7 +16,7 @@ These models concatenate several 'single' models and one 'empty' model.
 :authors: M. Marin (KTH)
 :date:   28.6.2019
 """
-from PySide2.QtCore import Qt, Signal
+from PySide2.QtCore import Qt, Signal, Slot
 from PySide2.QtGui import QFont, QIcon
 from ..helpers import rows_to_row_count_tuples
 from ..widgets.custom_menus import ParameterViewFilterMenu
@@ -41,6 +41,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
     """
 
     remove_selection_requested = Signal()
+    data_for_single_model_received = Signal(object, int, list)
 
     def __init__(self, parent, db_mngr, *db_maps):
         """Initializes model.
@@ -60,6 +61,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         self._auto_filter_menu_data = dict()  # Maps field to value to list of (db map, entity id, item id)
         self._inv_auto_filter_menu_data = dict()  # Maps field to (db map, entity id, item id) to value
         self._auto_filter = dict()  # Maps field to db map, to entity id, to *accepted* item ids
+        self.data_for_single_model_received.connect(self.create_and_append_single_model)
 
     def _make_header(self):
         raise NotImplementedError()
@@ -478,20 +480,21 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         Args:
             db_map_data (dict): list of removed dict-items keyed by DiffDatabaseMapping
         """
-        new_models = []
         for db_map, items in db_map_data.items():
             items_per_class = self._items_per_class(items)
             for entity_class_id, class_items in items_per_class.items():
                 ids = [item["id"] for item in class_items]
-                model = self._single_model_type(self.header, self.db_mngr, db_map, entity_class_id)
-                model.reset_model(ids)
-                single_row_map = super()._row_map_for_model(model)  # NOTE: super() is to get all (unfiltered) rows
-                self._insert_single_row_map(single_row_map)
-                new_models.append(model)
+                self.data_for_single_model_received.emit(db_map, entity_class_id, ids)
                 self._do_add_data_to_filter_menus(db_map, class_items)
-        pos = len(self.single_models)
-        self.sub_models[pos:pos] = new_models
         self.empty_model.receive_parameter_data_added(db_map_data)
+
+    @Slot(object, int, list)
+    def create_and_append_single_model(self, db_map, entity_class_id, ids):
+        model = self._single_model_type(self.header, self.db_mngr, db_map, entity_class_id)
+        model.reset_model(ids)
+        single_row_map = super()._row_map_for_model(model)  # NOTE: super() is to get all (unfiltered) rows
+        self._insert_single_row_map(single_row_map)
+        self.sub_models.insert(len(self.single_models), model)
 
     def receive_parameter_data_updated(self, db_map_data):
         """Runs when either parameter definitions or values are updated in the dbs.
