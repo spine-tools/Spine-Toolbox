@@ -548,18 +548,12 @@ class PivotTableModel(QAbstractTableModel):
         header_ids = self._header_ids(row, column)
         if data[0][0] is None:
             parameter_value_to_add = self._make_parameter_value_to_add()
-
-            def set_data_delayed(value, parameter_value_to_add=parameter_value_to_add, header_ids=header_ids):
-                item = parameter_value_to_add(header_ids, value)
-                self._add_parameter_values([item])
-
-        else:
-
-            def set_data_delayed(value, id_=data[0][0], parameter_definition_id=header_ids[-1]):
-                item = dict(id=id_, value=value, parameter_definition_id=parameter_definition_id)
-                self._update_parameter_values([item])
-
-        return set_data_delayed
+            return lambda value, parameter_value_to_add=parameter_value_to_add, header_ids=header_ids: self._add_parameter_values(
+                [parameter_value_to_add(header_ids, value)]
+            )
+        return lambda value, id_=data[0][0], header_ids=header_ids: self._update_parameter_values(
+            [self._parameter_value_to_update(id_, header_ids, value)]
+        )
 
     def _object_parameter_value_to_add(self, header_ids, value):
         return dict(
@@ -569,9 +563,9 @@ class PivotTableModel(QAbstractTableModel):
             value=value,
         )
 
-    def _relationship_parameter_value_to_add(self, header_ids, value, relationship_ids):
+    def _relationship_parameter_value_to_add(self, header_ids, value, rel_id_lookup):
         object_id_list = ",".join([str(id_) for id_ in header_ids[:-1]])
-        relationship_id = relationship_ids[object_id_list]
+        relationship_id = rel_id_lookup[object_id_list]
         return dict(
             entity_class_id=self._parent.current_class_id,
             entity_id=relationship_id,
@@ -586,14 +580,21 @@ class PivotTableModel(QAbstractTableModel):
             relationships = self.db_mngr.get_items_by_field(
                 self.db_map, "relationship", "class_id", self._parent.current_class_id
             )
-            rel_ids = {x["object_id_list"]: x["id"] for x in relationships}
-            return lambda header_ids, value, rel_ids=rel_ids: self._relationship_parameter_value_to_add(
-                header_ids, value, rel_ids
+            rel_id_lookup = {x["object_id_list"]: x["id"] for x in relationships}
+            return lambda header_ids, value, rel_id_lookup=rel_id_lookup: self._relationship_parameter_value_to_add(
+                header_ids, value, rel_id_lookup
             )
 
-    def _batch_set_parameter_value_data(self, row_map, column_map, data, values):
-        """"""
+    def _parameter_value_to_update(self, id_, header_ids, value):
+        item = {"id": id_, "value": value}
+        if self._parent.is_index_expansion_input_type():
+            item["index"] = header_ids[-2]
+        else:
+            item["parameter_definition_id"] = header_ids[-1]
+        return item
 
+    def _batch_set_parameter_value_data(self, row_map, column_map, data, values):
+        """Sets parameter values in batch."""
         to_add = []
         to_update = []
         parameter_value_to_add = self._make_parameter_value_to_add()
@@ -606,7 +607,7 @@ class PivotTableModel(QAbstractTableModel):
                     item = parameter_value_to_add(header_ids, values[row, column])
                     to_add.append(item)
                 else:
-                    item = dict(id=data[i][j], value=values[row, column], parameter_definition_id=header_ids[-1])
+                    item = self._parameter_value_to_update(data[i][j], header_ids, values[row, column])
                     to_update.append(item)
         if not to_add and not to_update:
             return False

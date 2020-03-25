@@ -57,8 +57,11 @@ class _MockParentModel(QAbstractTableModel):
         self._table[index.column()][index.row()] = value
         return True
 
-    def value_name(self, index):
-        return "value_name"
+    def get_set_data_delayed(self, index):
+        return lambda value, index=index: self.setData(index, value)
+
+    def index_name(self, index):
+        return "index_name"
 
 
 class TestParameterValueEditor(unittest.TestCase):

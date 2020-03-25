@@ -327,31 +327,11 @@ class TabularViewMixin:
             dict: Key is a tuple object_id, ..., index, while value is None.
         """
         data = self.load_parameter_value_data()
-        indexes = self._collect_indexes(data)
-        return {key[:-1] + (index, key[-1]): value for key, value in data.items() for index in indexes}
-
-    def _collect_indexes(self, data):
-        """
-        Collects parameter value indexes.
-
-        Args:
-            data (dict): parameter value data
-
-        Returns:
-            list: indexes (date-time first)
-        """
-        date_time_indexes = set()
-        other_indexes = set()
-        for id_ in data.values():
-            if id_ is None:
-                continue
-            value = self.db_mngr.get_value(self.db_map, "parameter value", id_, "value", role=PARSED_ROLE)
-            expanded = self.db_mngr.get_expanded_data(self.db_map, "parameter value", id_, "value")
-            if isinstance(value, TimeSeries):
-                date_time_indexes |= expanded.keys()
-            else:
-                other_indexes |= expanded.keys()
-        return sorted(date_time_indexes) + sorted(other_indexes)
+        return {
+            key[:-1] + (index, key[-1]): id_
+            for key, id_ in data.items()
+            for index in self.db_mngr.get_expanded_data(self.db_map, "parameter value", id_)
+        }
 
     def get_pivot_preferences(self, selection_key):
         """Returns saved or default pivot preferences.

@@ -102,7 +102,7 @@ class _MockParameterModel(QAbstractTableModel):
         self._table[index.row()][index.column()] = value
         return True
 
-    def value_name(self, index):
+    def index_name(self, index):
         return "entity - parameter"
 
 

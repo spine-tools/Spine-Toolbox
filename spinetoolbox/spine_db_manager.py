@@ -633,6 +633,8 @@ class SpineDBManager(QObject):
             return "Time pattern"
         if isinstance(parsed_data, list):
             return str(parsed_data)
+        if isinstance(parsed_data, ParameterValueFormatError):
+            return "Error"
         return parsed_data
 
     @staticmethod
@@ -644,78 +646,16 @@ class SpineDBManager(QObject):
             return "Start: {}, resolution: [{}], length: {}".format(parsed_data.start, resolution, len(parsed_data))
         if isinstance(parsed_data, TimeSeriesVariableResolution):
             return "Start: {}, resolution: variable, length: {}".format(parsed_data.indexes[0], len(parsed_data))
+        if isinstance(parsed_data, ParameterValueFormatError):
+            return str(parsed_data)
         return None
 
-    def _expanded_value(self, parsed_value):
-        if isinstance(parsed_value, ParameterValueFormatError):
-            return {"": "Error"}
-        if isinstance(parsed_value, (TimeSeries, IndexedValue)):
-            return {i: float(v) for i, v in zip(parsed_value.indexes, parsed_value.values)}
+    def _expand_value(self, parsed_value):
         if isinstance(parsed_value, Map):
             return self._expand_map(parsed_value)
+        if isinstance(parsed_value, IndexedValue):
+            return {i: float(v) for i, v in zip(parsed_value.indexes, parsed_value.values)}
         return {"": parsed_value}
-
-    def get_value(self, db_map, item_type, id_, field, role=Qt.DisplayRole):
-        """Returns the value or default value of a parameter.
-
-        Args:
-            db_map (DiffDatabaseMapping)
-            item_type (str): either "parameter definition" or "parameter value"
-            id_ (int)
-            field (str): either "value" or "default_value"
-            role (int, optional)
-        """
-        item = self.get_item(db_map, item_type, id_)
-        if not item:
-            return None
-        key = "formatted_" + field
-        if key not in item:
-            display_data, tool_tip_data, parsed_data = self.parse_value(item[field])
-            item[key] = {
-                Qt.DisplayRole: display_data,
-                Qt.ToolTipRole: tool_tip_data,
-                Qt.EditRole: item[field],
-                PARSED_ROLE: parsed_data,
-            }
-        return item[key].get(role)
-
-    def parse_value(self, value):
-        try:
-            parsed_data = from_database(value)
-            display_data = self._display_data(parsed_data)
-            tool_tip_data = self._tool_tip_data(parsed_data)
-        except ParameterValueFormatError as error:
-            parsed_data = error
-            display_data = "Error"
-            tool_tip_data = str(error)
-        fm = QFontMetrics(QFont("", 0))
-        if isinstance(display_data, str):
-            display_data = fm.elidedText(display_data, Qt.ElideRight, 500)
-        if isinstance(tool_tip_data, str):
-            tool_tip_data = fm.elidedText(tool_tip_data, Qt.ElideRight, 800)
-        return display_data, tool_tip_data, parsed_data
-
-    def get_expanded_data(self, db_map, item_type, id_, field):
-        item = self.get_item(db_map, item_type, id_)
-        if not item:
-            return {}
-        key = "expanded_" + field
-        if key not in item:
-            parsed_data = self.get_value(db_map, item_type, id_, field, role=PARSED_ROLE)
-            expanded_data = self._expanded_value(parsed_data)
-            item[key] = {
-                k: {
-                    Qt.DisplayRole: self._display_data(v),
-                    Qt.ToolTipRole: self._tool_tip_data(v),
-                    Qt.EditRole: to_database(v),
-                    PARSED_ROLE: v,
-                }
-                for k, v in expanded_data.items()
-            }
-        return item[key]
-
-    def get_value_index(self, db_map, item_type, id_, field, index, role=Qt.DisplayRole):
-        return self.get_expanded_data(db_map, item_type, id_, field).get(index, {}).get(role)
 
     def _expand_map(self, map_to_expand, preceding_indexes=None):
         """
@@ -740,9 +680,69 @@ class SpineDBManager(QObject):
                 nested_values = self._expand_map(value, index_list)
                 values.update(nested_values)
             else:
-                index_as_string = ", ".join(index_list)
+                index_as_string = ", ".join([str(i) for i in index_list])
                 values[index_as_string] = value
         return values
+
+    def get_value(self, db_map, item_type, id_, role=Qt.DisplayRole):
+        """Returns the value or default value of a parameter.
+
+        Args:
+            db_map (DiffDatabaseMapping)
+            item_type (str): either "parameter definition" or "parameter value"
+            id_ (int)
+            role (int, optional)
+        """
+        item = self.get_item(db_map, item_type, id_)
+        if not item:
+            return None
+        field = {"parameter value": "value", "parameter definition": "default_value"}[item_type]
+        key = "formatted_value"
+        if key not in item:
+            display_data, tool_tip_data, parsed_data = self.parse_value(item[field])
+            item[key] = {
+                Qt.DisplayRole: display_data,
+                Qt.ToolTipRole: tool_tip_data,
+                Qt.EditRole: item[field],
+                PARSED_ROLE: parsed_data,
+            }
+        return item[key].get(role)
+
+    def parse_value(self, value):
+        try:
+            parsed_data = from_database(value)
+        except ParameterValueFormatError as error:
+            parsed_data = error
+        display_data = self._display_data(parsed_data)
+        tool_tip_data = self._tool_tip_data(parsed_data)
+        fm = QFontMetrics(QFont("", 0))
+        if isinstance(display_data, str):
+            display_data = fm.elidedText(display_data, Qt.ElideRight, 500)
+        if isinstance(tool_tip_data, str):
+            tool_tip_data = fm.elidedText(tool_tip_data, Qt.ElideRight, 800)
+        return display_data, tool_tip_data, parsed_data
+
+    def get_expanded_data(self, db_map, item_type, id_):
+        item = self.get_item(db_map, item_type, id_)
+        if not item:
+            return {"": {}}
+        key = "expanded_value"
+        if key not in item:
+            parsed_data = self.get_value(db_map, item_type, id_, role=PARSED_ROLE)
+            expanded_data = self._expand_value(parsed_data)
+            item[key] = {
+                k: {
+                    Qt.DisplayRole: self._display_data(v),
+                    Qt.ToolTipRole: self._tool_tip_data(v),
+                    Qt.EditRole: None if isinstance(v, ParameterValueFormatError) else to_database(v),
+                    PARSED_ROLE: v,
+                }
+                for k, v in expanded_data.items()
+            }
+        return item[key]
+
+    def get_value_index(self, db_map, item_type, id_, index, role=Qt.DisplayRole):
+        return self.get_expanded_data(db_map, item_type, id_).get(index, {}).get(role)
 
     @staticmethod
     def get_db_items(query, order_by_fields):
