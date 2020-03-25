@@ -37,7 +37,7 @@ def _cache_to_db_relationship(item):
 
 
 def _cache_to_db_parameter_definition(item):
-    item = {k: v for k, v in item.items() if k != "formatted_default_value"}
+    item = {k: v for k, v in item.items() if not any(k.startswith(x) for x in ("formatted_", "expanded_"))}
     item = deepcopy(item)
     if "parameter_name" in item:
         item["name"] = item.pop("parameter_name")
@@ -47,7 +47,7 @@ def _cache_to_db_parameter_definition(item):
 
 
 def _cache_to_db_parameter_value(item):
-    item = {k: v for k, v in item.items() if k != "formatted_value"}
+    item = {k: v for k, v in item.items() if not any(k.startswith(x) for x in ("formatted_", "expanded_"))}
     item = deepcopy(item)
     if "parameter_id" in item:
         item["parameter_definition_id"] = item.pop("parameter_id")

@@ -412,7 +412,7 @@ class RelationshipClassNameDelegate(ParameterDelegate):
         if not db_map:
             return None
         editor = SearchBarEditor(self.parent(), parent)
-        relationship_classes = self.db_mngr.get_iems(db_map, "relationship class")
+        relationship_classes = self.db_mngr.get_items(db_map, "relationship class")
         editor.set_data(index.data(Qt.EditRole), [x["name"] for x in relationship_classes])
         editor.data_committed.connect(lambda editor=editor, index=index: self._close_editor(editor, index))
         return editor

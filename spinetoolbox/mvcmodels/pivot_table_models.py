@@ -434,13 +434,6 @@ class PivotTableModel(QAbstractTableModel):
         object_names, parameter_name = self.header_names(index)
         return self.db_mngr._GROUP_SEP.join(object_names) + " - " + parameter_name
 
-    def index_db_map(self, index):
-        return self.db_map
-
-    def index_id(self, index):
-        row, column = self.map_to_pivot(index)
-        return self.model.get_pivoted_data([row], [column])[0][0]
-
     def column_name(self, column):
         """Returns a string that concatenates the header names corresponding to the given column.
 
@@ -540,45 +533,77 @@ class PivotTableModel(QAbstractTableModel):
             return self._batch_set_parameter_value_data(row_map, column_map, data, values)
         return self._batch_set_relationship_data(row_map, column_map, data, values)
 
-    def _batch_set_parameter_value_data(self, row_map, column_map, data, values):
-        """"""
+    def get_set_data_delayed(self, index):
+        """Returns a function that ParameterValueEditor can call to set data for the given index at any later time,
+        even if the model changes.
 
-        def object_parameter_value_to_add(header_ids, value, _):
-            return dict(
-                entity_class_id=self._parent.current_class_id,
-                entity_id=header_ids[0],
-                parameter_definition_id=header_ids[-1],
-                value=value,
-            )
+        Args:
+            index (QModelIndex)
 
-        def relationship_parameter_value_to_add(header_ids, value, relationship_ids):
-            object_id_list = ",".join([str(id_) for id_ in header_ids[:-1]])
-            relationship_id = relationship_ids[object_id_list]
-            return dict(
-                entity_class_id=self._parent.current_class_id,
-                entity_id=relationship_id,
-                parameter_definition_id=header_ids[-1],
-                value=value,
-            )
+        Returns:
+            function
+        """
+        row, column = self.map_to_pivot(index)
+        data = self.model.get_pivoted_data([row], [column])
+        header_ids = self._header_ids(row, column)
+        if data[0][0] is None:
+            parameter_value_to_add = self._make_parameter_value_to_add()
 
-        to_add = []
-        to_update = []
+            def set_data_delayed(value, parameter_value_to_add=parameter_value_to_add, header_ids=header_ids):
+                item = parameter_value_to_add(header_ids, value)
+                self._add_parameter_values([item])
+
+        else:
+
+            def set_data_delayed(value, id_=data[0][0], parameter_definition_id=header_ids[-1]):
+                item = dict(id=id_, value=value, parameter_definition_id=parameter_definition_id)
+                self._update_parameter_values([item])
+
+        return set_data_delayed
+
+    def _object_parameter_value_to_add(self, header_ids, value):
+        return dict(
+            entity_class_id=self._parent.current_class_id,
+            entity_id=header_ids[0],
+            parameter_definition_id=header_ids[-1],
+            value=value,
+        )
+
+    def _relationship_parameter_value_to_add(self, header_ids, value, relationship_ids):
+        object_id_list = ",".join([str(id_) for id_ in header_ids[:-1]])
+        relationship_id = relationship_ids[object_id_list]
+        return dict(
+            entity_class_id=self._parent.current_class_id,
+            entity_id=relationship_id,
+            parameter_definition_id=header_ids[-1],
+            value=value,
+        )
+
+    def _make_parameter_value_to_add(self):
         if self._parent.current_class_type == "object class":
-            relationship_ids = {}
-            parameter_value_to_add = object_parameter_value_to_add
-        elif self._parent.current_class_type == "relationship class":
+            return self._object_parameter_value_to_add
+        if self._parent.current_class_type == "relationship class":
             relationships = self.db_mngr.get_items_by_field(
                 self.db_map, "relationship", "class_id", self._parent.current_class_id
             )
-            relationship_ids = {x["object_id_list"]: x["id"] for x in relationships}
-            parameter_value_to_add = relationship_parameter_value_to_add
+            rel_ids = {x["object_id_list"]: x["id"] for x in relationships}
+            return lambda header_ids, value, rel_ids=rel_ids: self._relationship_parameter_value_to_add(
+                header_ids, value, rel_ids
+            )
+
+    def _batch_set_parameter_value_data(self, row_map, column_map, data, values):
+        """"""
+
+        to_add = []
+        to_update = []
+        parameter_value_to_add = self._make_parameter_value_to_add()
         for i, row in enumerate(row_map):
             for j, column in enumerate(column_map):
                 if (row, column) not in values:
                     continue
                 header_ids = self._header_ids(row, column)
                 if data[i][j] is None:
-                    item = parameter_value_to_add(header_ids, values[row, column], relationship_ids)
+                    item = parameter_value_to_add(header_ids, values[row, column])
                     to_add.append(item)
                 else:
                     item = dict(id=data[i][j], value=values[row, column], parameter_definition_id=header_ids[-1])

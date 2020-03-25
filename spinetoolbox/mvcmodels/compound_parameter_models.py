@@ -563,11 +563,21 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         entity_name = item[entity_name_key].replace(",", self.db_mngr._GROUP_SEP)
         return entity_name + " - " + item["parameter_name"]
 
-    def index_db_map(self, index):
-        return self.map_to_sub(index).model().db_map
+    def get_set_data_delayed(self, index):
+        """Returns a function that ParameterValueEditor can call to set data for the given index at any later time,
+        even if the model changes.
 
-    def index_id(self, index):
-        return self.item_at_row(index.row())
+        Args:
+            index (QModelIndex)
+
+        Returns:
+            function
+        """
+        sub_model = self.sub_model_at_row(index.row())
+        if sub_model == self.empty_model:
+            return lambda value, index=index: self.setData(index, value)
+        id_ = self.item_at_row(index.row())
+        return lambda value, sub_model=sub_model, id_=id_: sub_model.update_items_in_db([dict(id=id_, value=value)])
 
 
 class CompoundObjectParameterMixin:

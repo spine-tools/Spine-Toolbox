@@ -34,6 +34,7 @@ class PlainParameterValueEditor(QWidget):
         super().__init__(parent_widget)
         self._ui = Ui_PlainParameterValueEditor()
         self._ui.setupUi(self)
+        self._ui.value_edit.setEnabled(False)
         self._ui.radioButton_number_or_string.toggled.connect(self._set_number_or_string_enabled)
 
     @Slot(bool)
