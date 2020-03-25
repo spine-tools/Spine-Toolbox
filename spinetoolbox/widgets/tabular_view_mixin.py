@@ -180,14 +180,8 @@ class TabularViewMixin:
             class_id = self.current_class_id
         if class_type is None:
             class_type = self.current_class_type
-        model = {"object class": self.object_tree_model, "relationship class": self.relationship_tree_model}[class_type]
-        class_item = next(model.root_item.find_children_by_id(self.db_map, class_id))
-        if class_item.can_fetch_more():
-            class_item.fetch_more()
-            model.layoutChanged.emit()
-        return [
-            item.db_map_data(self.db_map) for item in class_item.find_children_by_id(self.db_map, True, reverse=False)
-        ]
+        entity_type = {"object class": "object", "relationship class": "relationships"}[class_type]
+        return self.db_mngr.get_items_by_field(self.db_map, entity_type, "class_id", self.current_class_id)
 
     def load_empty_relationship_data(self, objects_per_class=None):
         """Returns a dict containing all possible relationships in the current class.
@@ -238,36 +232,22 @@ class TabularViewMixin:
         return data
 
     def _get_parameter_value_or_def_ids(self, item_type):
-        """Returns a set of integer ids from the parameter model
+        """Returns a list of integer ids from the parameter model
         corresponding to the currently selected class and the given item type.
 
         Args:
             item_type (str): either "parameter value" or "parameter definition"
 
         Returns:
-            set(int)
+            list(int)
         """
-        entity_class = self.db_mngr.get_item(self.db_map, self.current_class_type, self.current_class_id)
-        model = {
-            "object class": {
-                "parameter value": self.object_parameter_value_model,
-                "parameter definition": self.object_parameter_definition_model,
-            },
-            "relationship class": {
-                "parameter value": self.relationship_parameter_value_model,
-                "parameter definition": self.relationship_parameter_definition_model,
-            },
-        }[self.current_class_type][item_type]
-        sub_models = [
-            m for m in model.single_models if (m.db_map, m.entity_class_id) == (self.db_map, entity_class["id"])
+        class_id_field = {"object class": "object_class_id", "relationship class": "relationship_class_id"}[
+            self.current_class_type
         ]
-        if not sub_models:
-            return []
-        for m in sub_models:
-            if m.canFetchMore():
-                model._fetch_sub_model = m
-                model.fetchMore()
-        return {id_ for m in sub_models for id_ in m._main_data}
+        return [
+            x["id"]
+            for x in self.db_mngr.get_items_by_field(self.db_map, item_type, class_id_field, self.current_class_id)
+        ]
 
     def _get_parameter_values_or_defs(self, item_type):
         """Returns a list of dict items from the parameter model
