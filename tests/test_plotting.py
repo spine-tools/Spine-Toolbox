@@ -38,7 +38,7 @@ from spinetoolbox.widgets.data_store_widget import DataStoreForm
 def _make_pivot_proxy_model():
     """Returns a prefilled PivotTableModel."""
     db_mngr = MagicMock()
-    db_mngr.get_value.side_effect = lambda db_map, item_type, id_, field, role: from_database(id_)
+    db_mngr.get_value.side_effect = lambda db_map, item_type, id_, role: from_database(id_)
     mock_db_map = Mock()
     mock_db_map.codename = "codename"
     db_mngr.get_db_map_for_listener.side_effect = lambda *args, **kwargs: mock_db_map
