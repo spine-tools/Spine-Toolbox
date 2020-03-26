@@ -207,8 +207,15 @@ class PivotTableModel(QAbstractTableModel):
         if self.model.pivot_rows and index.row() == len(self.model.pivot_columns):
             # empty line between column headers and data
             return Qt.ItemIsSelectable | Qt.ItemIsEnabled
-        if self._parent.is_index_expansion_input_type() and self._top_left_id(index) == IndexId.PARAMETER_INDEX:
-            return Qt.ItemIsSelectable | Qt.ItemIsEnabled
+        if self._parent.is_index_expansion_input_type():
+            if self.index_in_data(index):
+                row, column = self.map_to_pivot(index)
+                data = self.model.get_pivoted_data([row], [column])
+                if not data or data[0][0] is None:
+                    # Don't add parameter values since in index expansion mode
+                    return Qt.ItemIsSelectable | Qt.ItemIsEnabled
+            if self._top_left_id(index) == IndexId.PARAMETER_INDEX:
+                return Qt.ItemIsSelectable | Qt.ItemIsEnabled
         return Qt.ItemIsEditable | Qt.ItemIsEnabled | Qt.ItemIsSelectable
 
     def top_left_indexes(self):
