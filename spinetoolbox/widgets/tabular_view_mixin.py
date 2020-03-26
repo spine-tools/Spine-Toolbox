@@ -441,7 +441,13 @@ class TabularViewMixin:
             proxy_index = self.pivot_table_proxy.mapFromSource(index)
             widget = self.create_header_widget(proxy_index.data(Qt.DisplayRole), "rows")
             self.ui.pivot_table.setIndexWidget(proxy_index, widget)
-        QTimer.singleShot(0, self.ui.pivot_table.resizeColumnsToContents)
+        QTimer.singleShot(0, self._resize_pivot_header_columns)
+
+    @Slot()
+    def _resize_pivot_header_columns(self):
+        top_indexes, _ = self.pivot_table_model.top_left_indexes()
+        for index in top_indexes:
+            self.ui.pivot_table.resizeColumnToContents(index.column())
 
     def make_frozen_headers(self):
         """
