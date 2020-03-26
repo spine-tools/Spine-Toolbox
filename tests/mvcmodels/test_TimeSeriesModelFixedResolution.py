@@ -56,9 +56,7 @@ class TestTimeSeriesModelFixedStep(unittest.TestCase):
         model = TimeSeriesModelFixedResolution(
             TimeSeriesFixedResolution("2019-07-05T12:00", "2 hours", [-5.0, 7.0], True, False)
         )
-        numpy.testing.assert_equal(
-            model.indexes, numpy.array(["2019-07-05T12:00", "2019-07-05T14:00"], dtype='datetime64')
-        )
+        self.assertEqual(model.indexes, numpy.array(["2019-07-05T12:00", "2019-07-05T14:00"], dtype='datetime64'))
 
     def test_insertRows_at_the_beginning(self):
         model = TimeSeriesModelFixedResolution(
@@ -68,7 +66,7 @@ class TestTimeSeriesModelFixedStep(unittest.TestCase):
         self.assertEqual(
             model.value, TimeSeriesFixedResolution("2019-07-05T12:00", "2 hours", [0.0, -5.0, 7.0], True, False)
         )
-        np.testing.assert_equal(
+        self.assertEqual(
             model.indexes, np.array(["2019-07-05T12:00", "2019-07-05T14:00", "2019-07-05T16:00"], dtype="datetime64")
         )
 
@@ -80,7 +78,7 @@ class TestTimeSeriesModelFixedStep(unittest.TestCase):
         self.assertEqual(
             model.value, TimeSeriesFixedResolution("2019-07-05T12:00", "2 hours", [-5.0, 0.0, 7.0], True, False)
         )
-        np.testing.assert_equal(
+        self.assertEqual(
             model.indexes, np.array(["2019-07-05T12:00", "2019-07-05T14:00", "2019-07-05T16:00"], dtype="datetime64")
         )
 
@@ -93,7 +91,7 @@ class TestTimeSeriesModelFixedStep(unittest.TestCase):
             model.value,
             TimeSeriesFixedResolution("2019-07-05T12:00", "2 hours", [-5.0, 0.0, 0.0, 0.0, 7.0], True, False),
         )
-        np.testing.assert_equal(
+        self.assertEqual(
             model.indexes,
             np.array(
                 ["2019-07-05T12:00", "2019-07-05T14:00", "2019-07-05T16:00", "2019-07-05T18:00", "2019-07-05T20:00"],
@@ -109,7 +107,7 @@ class TestTimeSeriesModelFixedStep(unittest.TestCase):
         self.assertEqual(
             model.value, TimeSeriesFixedResolution("2019-07-05T12:00", "2 hours", [-5.0, 7.0, 0.0], True, False)
         )
-        np.testing.assert_equal(
+        self.assertEqual(
             model.indexes, np.array(["2019-07-05T12:00", "2019-07-05T14:00", "2019-07-05T16:00"], dtype="datetime64")
         )
 
@@ -121,7 +119,7 @@ class TestTimeSeriesModelFixedStep(unittest.TestCase):
         self.assertEqual(
             model.value, TimeSeriesFixedResolution("2019-07-05T12:00", "2 hours", [-5.0, 7.0], True, False)
         )
-        np.testing.assert_equal(model.indexes, np.array(["2019-07-05T12:00", "2019-07-05T14:00"], dtype="datetime64"))
+        self.assertEqual(model.indexes, np.array(["2019-07-05T12:00", "2019-07-05T14:00"], dtype="datetime64"))
 
     def test_removeRows_from_the_middle(self):
         model = TimeSeriesModelFixedResolution(
@@ -129,7 +127,7 @@ class TestTimeSeriesModelFixedStep(unittest.TestCase):
         )
         self.assertTrue(model.removeRows(1, 1))
         self.assertEqual(model.value, TimeSeriesFixedResolution("2019-07-05T12:00", "2 hours", [2.3, 7.0], True, False))
-        np.testing.assert_equal(model.indexes, np.array(["2019-07-05T12:00", "2019-07-05T14:00"], dtype="datetime64"))
+        self.assertEqual(model.indexes, np.array(["2019-07-05T12:00", "2019-07-05T14:00"], dtype="datetime64"))
 
     def test_removeRows_from_the_end(self):
         model = TimeSeriesModelFixedResolution(
@@ -139,7 +137,7 @@ class TestTimeSeriesModelFixedStep(unittest.TestCase):
         self.assertEqual(
             model.value, TimeSeriesFixedResolution("2019-07-05T12:00", "2 hours", [2.3, -5.0], True, False)
         )
-        np.testing.assert_equal(model.indexes, np.array(["2019-07-05T12:00", "2019-07-05T14:00"], dtype="datetime64"))
+        self.assertEqual(model.indexes, np.array(["2019-07-05T12:00", "2019-07-05T14:00"], dtype="datetime64"))
 
     def test_cannot_remove_all_rows(self):
         model = TimeSeriesModelFixedResolution(
@@ -147,7 +145,7 @@ class TestTimeSeriesModelFixedStep(unittest.TestCase):
         )
         self.assertTrue(model.removeRows(0, 3))
         self.assertEqual(model.value, TimeSeriesFixedResolution("2019-07-05T12:00", "2 hours", [2.3], True, False))
-        np.testing.assert_equal(model.indexes, np.array(["2019-07-05T12:00"], dtype="datetime64"))
+        self.assertEqual(model.indexes, np.array(["2019-07-05T12:00"], dtype="datetime64"))
 
     def test_removing_last_row_fails(self):
         model = TimeSeriesModelFixedResolution(
@@ -163,9 +161,7 @@ class TestTimeSeriesModelFixedStep(unittest.TestCase):
         self.assertEqual(
             model.value, TimeSeriesFixedResolution("1991-01-01T13:30", "3 months", [7.0, -4.0], False, True)
         )
-        numpy.testing.assert_equal(
-            model.indexes, np.array(["1991-01-01T13:30", "1991-04-01T13:30"], dtype="datetime64")
-        )
+        self.assertEqual(model.indexes, np.array(["1991-01-01T13:30", "1991-04-01T13:30"], dtype="datetime64"))
 
     def test_setData(self):
         model = TimeSeriesModelFixedResolution(
@@ -185,7 +181,7 @@ class TestTimeSeriesModelFixedStep(unittest.TestCase):
         self.assertEqual(
             model.value, TimeSeriesFixedResolution("2019-07-05T12:00", "4 minutes", [2.3, -5.0], True, False)
         )
-        np.testing.assert_equal(model.indexes, np.array(["2019-07-05T12:00", "2019-07-05T12:04"], dtype="datetime64"))
+        self.assertEqual(model.indexes, np.array(["2019-07-05T12:00", "2019-07-05T12:04"], dtype="datetime64"))
 
     def test_set_start_updates_indexes(self):
         model = TimeSeriesModelFixedResolution(
@@ -193,7 +189,7 @@ class TestTimeSeriesModelFixedStep(unittest.TestCase):
         )
         model.set_start(dateutil.parser.parse("1975-07-07T06:33"))
         self.assertEqual(model.value, TimeSeriesFixedResolution("1975-07-07T06:33", "2h", [2.3, -5.0], True, False))
-        np.testing.assert_equal(model.indexes, np.array(["1975-07-07T06:33", "1975-07-07T08:33"], dtype="datetime64"))
+        self.assertEqual(model.indexes, np.array(["1975-07-07T06:33", "1975-07-07T08:33"], dtype="datetime64"))
 
     def test_batch_set_data(self):
         model = TimeSeriesModelFixedResolution(
