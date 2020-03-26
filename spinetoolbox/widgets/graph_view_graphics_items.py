@@ -57,8 +57,6 @@ class EntityItem(QGraphicsPixmapItem):
         self.setPos(x, y)
         rect = self.boundingRect()
         self.setOffset(-rect.width() / 2, -rect.height() / 2)
-        self._press_pos = None
-        self._merge_target = None
         self._moved_on_scene = False
         self._view_transform = QTransform()  # To determine collisions in the view
         self._views_cursor = {}
@@ -182,59 +180,6 @@ class EntityItem(QGraphicsPixmapItem):
         factor = transform.m11()
         self.setFlag(QGraphicsItem.ItemIgnoresTransformations, enabled=factor > 1)
 
-    def device_rect(self):
-        """Returns the item's rect in devices's coordinates.
-        Used to accurately determine collisions.
-        """
-        return self.deviceTransform(self._view_transform).mapRect(super().boundingRect())
-
-    def _find_merge_target(self):
-        """Returns a suitable merge target if any.
-
-        Returns:
-            spinetoolbox.widgets.graph_view_graphics_items.EntityItem, NoneType
-        """
-        scene = self.scene()
-        if not scene:
-            return None
-        colliding = [
-            x
-            for x in scene.items()
-            if x.isVisible()
-            and isinstance(x, EntityItem)
-            and x is not self
-            and x.device_rect().intersects(self.device_rect())
-        ]
-        return next(iter(colliding), None)
-
-    # pylint: disable=no-self-use
-    def _is_target_valid(self):
-        """Whether or not the registered merge target is valid.
-
-        Returns:
-            bool
-        """
-        return False
-
-    # pylint: disable=no-self-use
-    def merge_into_target(self, force=False):
-        """Merges this item into the registered target if valid.
-
-        Returns:
-            bool: True if merged, False if not.
-        """
-        return False
-
-    def mousePressEvent(self, event):
-        """Saves original position for bouncing purposes.
-
-        Args:
-            event (QGraphicsSceneMouseEvent)
-        """
-        super().mousePressEvent(event)
-        self._press_pos = self.pos()
-        self._merge_target = None
-
     def mouseMoveEvent(self, event):
         """Moves the item and all connected arcs. Also checks for a merge target
         and sets an appropriate mouse cursor.
@@ -250,51 +195,11 @@ class EntityItem(QGraphicsPixmapItem):
         for item in self.scene().selectedItems():
             if isinstance(item, (EntityItem)):
                 item.moveBy(move_by.x(), move_by.y())
-        self._merge_target = self._find_merge_target()
-        for view in self.scene().views():
-            self._views_cursor.setdefault(view, view.viewport().cursor())
-            if not self._merge_target:
-                try:
-                    view.viewport().setCursor(self._views_cursor[view])
-                except KeyError:
-                    pass
-                continue
-            if self._is_target_valid():
-                view.viewport().setCursor(Qt.DragCopyCursor)
-            else:
-                view.viewport().setCursor(Qt.ForbiddenCursor)
 
     def update_arcs_line(self):
         """Moves arc items."""
         for item in self.arc_items:
             item.update_line()
-
-    def mouseReleaseEvent(self, event):
-        """Merges the item into the registered target if any. Bounces it if not possible.
-        Shrinks the scene if needed.
-
-        Args:
-            event (QGraphicsSceneMouseEvent)
-        """
-        super().mouseReleaseEvent(event)
-        if self._merge_target:
-            if self.merge_into_target():
-                return
-            self._bounce_back()
-        if self._moved_on_scene:
-            self._moved_on_scene = False
-            scene = self.scene()
-            scene.shrink_if_needed()
-            scene.item_move_finished.emit(self)
-
-    def _bounce_back(self):
-        """Bounces the item back from given position to its original position.
-        """
-        if self._press_pos is None:
-            return
-        delta = self._press_pos - self.pos()
-        self.moveBy(delta.x(), delta.y())
-        self.update_arcs_line()
 
     def itemChange(self, change, value):
         """
@@ -409,7 +314,7 @@ class RelationshipItem(EntityItem):
 
     def become_whole(self):
         super().become_whole()
-        self.setToolTip(self.object_name_list)
+        self.setToolTip(self.entity_class_name)
         for item in self.arc_items:
             item.become_whole()
 
@@ -442,6 +347,8 @@ class ObjectItem(EntityItem):
         self.label_item.entity_name_edited.connect(self.finish_name_editing)
         self.setZValue(0.5)
         self.update_name(self.entity_name)
+        self._press_pos = None
+        self._merge_target = None
 
     @property
     def entity_type(self):
@@ -537,18 +444,92 @@ class ObjectItem(EntityItem):
     def _is_in_wip_relationship(self):
         return any(arc_item.rel_item.is_wip for arc_item in self.arc_items)
 
+    def device_rect(self):
+        """Returns the item's rect in devices's coordinates.
+        Used to accurately determine collisions.
+        """
+        return self.deviceTransform(self._view_transform).mapRect(QGraphicsPixmapItem.boundingRect(self))
+
+    def _find_merge_target(self):
+        """Returns a suitable merge target if any.
+
+        Returns:
+            spinetoolbox.widgets.graph_view_graphics_items.EntityItem, NoneType
+        """
+        scene = self.scene()
+        if not scene:
+            return None
+        colliding = [
+            x
+            for x in scene.items()
+            if x.isVisible()
+            and isinstance(x, ObjectItem)
+            and x is not self
+            and (self._is_in_wip_relationship() or x._is_in_wip_relationship())
+            and x.device_rect().intersects(self.device_rect())
+        ]
+        return next(iter(colliding), None)
+
+    def mousePressEvent(self, event):
+        """Saves original position for bouncing purposes.
+
+        Args:
+            event (QGraphicsSceneMouseEvent)
+        """
+        super().mousePressEvent(event)
+        self._press_pos = self.pos()
+        self._merge_target = None
+
+    def mouseMoveEvent(self, event):
+        super().mouseMoveEvent(event)
+        self._merge_target = self._find_merge_target()
+        for view in self.scene().views():
+            self._views_cursor.setdefault(view, view.viewport().cursor())
+            if not self._merge_target:
+                try:
+                    view.viewport().setCursor(self._views_cursor[view])
+                except KeyError:
+                    pass
+                continue
+            if self._is_target_valid():
+                view.viewport().setCursor(Qt.DragCopyCursor)
+            else:
+                view.viewport().setCursor(Qt.ForbiddenCursor)
+
+    def mouseReleaseEvent(self, event):
+        """Merges the item into the registered target if any. Bounces it if not possible.
+        Shrinks the scene if needed.
+
+        Args:
+            event (QGraphicsSceneMouseEvent)
+        """
+        super().mouseReleaseEvent(event)
+        if self._merge_target:
+            if self.merge_into_target():
+                return
+            self._bounce_back()
+        if self._moved_on_scene:
+            self._moved_on_scene = False
+            scene = self.scene()
+            scene.shrink_if_needed()
+            scene.item_move_finished.emit(self)
+
+    def _bounce_back(self):
+        """Bounces the item back from given position to its original position.
+        """
+        if self._press_pos is None:
+            return
+        delta = self._press_pos - self.pos()
+        self.moveBy(delta.x(), delta.y())
+        self.update_arcs_line()
+
     def _is_target_valid(self):
         """Whether or not the registered merge target is valid.
 
         Returns:
             bool
         """
-        return (
-            self._merge_target
-            and isinstance(self._merge_target, ObjectItem)
-            and (self._is_in_wip_relationship() or self._merge_target._is_in_wip_relationship())
-            and self._merge_target.entity_class_id == self.entity_class_id
-        )
+        return self._merge_target and self._merge_target.entity_class_id == self.entity_class_id
 
     def merge_into_target(self, force=False):
         """Merges this item into the registered target if valid.
