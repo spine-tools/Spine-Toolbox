@@ -40,7 +40,7 @@ class TestParameterValueFormatting(unittest.TestCase):
             QApplication()
 
     def setUp(self):
-        self.db_mngr = SpineDBManager(None, None)
+        self.db_mngr = SpineDBManager(None, None, None)
         self.db_mngr.get_item = Mock()
 
     def get_value(self, role):

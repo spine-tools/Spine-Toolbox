@@ -17,7 +17,7 @@ Unit tests for the plotting module.
 """
 
 import unittest
-from unittest.mock import Mock, MagicMock
+from unittest.mock import Mock, MagicMock, patch
 from PySide2.QtCore import QAbstractTableModel, QModelIndex, Qt
 from PySide2.QtWidgets import QApplication, QAction
 from spinedb_api import from_database, Map, TimeSeries, TimeSeriesVariableResolution
@@ -44,7 +44,8 @@ def _make_pivot_proxy_model():
     db_mngr.get_db_map_for_listener.side_effect = lambda *args, **kwargs: mock_db_map
     db_mngr.undo_action.__getitem__.side_effect = lambda key: QAction()
     db_mngr.redo_action.__getitem__.side_effect = lambda key: QAction()
-    data_store_widget = DataStoreForm(db_mngr, ("sqlite://", "codename"))
+    with patch.object(DataStoreForm, "restore_ui"):
+        data_store_widget = DataStoreForm(db_mngr, ("sqlite://", "codename"))
     data_store_widget.create_header_widget = lambda *args, **kwargs: None
     model = data_store_widget.pivot_table_model
     data = {
