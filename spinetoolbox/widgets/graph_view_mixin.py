@@ -28,6 +28,7 @@ from .graph_view_graphics_items import EntityItem, ObjectItem, RelationshipItem,
 from .graph_view_demo import GraphViewDemo
 from .graph_layout_generator import GraphLayoutGenerator
 from ..mvcmodels.entity_list_models import ObjectClassListModel, RelationshipClassListModel
+from ..helpers import get_save_file_name_in_last_dir
 
 
 class GraphViewMixin:
@@ -981,7 +982,16 @@ class GraphViewMixin:
 
     @Slot(bool)
     def export_as_pdf(self, checked=False):
-        file_name, _ = QFileDialog.getSaveFileName(self, "Export as PDF...", self._get_base_dir(), "PDF files (*.pdf)")
+        self.qsettings.beginGroup(self.settings_group)
+        file_name, _ = get_save_file_name_in_last_dir(
+            self.qsettings,
+            "exportGraphAsPDF",
+            self,
+            "Export as PDF...",
+            self._get_base_dir(),
+            filter_="PDF files (*.pdf)",
+        )
+        self.qsettings.endGroup()
         if not file_name:
             return
         scene = self.ui.graphicsView.scene()

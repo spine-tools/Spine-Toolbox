@@ -2,7 +2,7 @@ import sys
 import locale
 from PySide2.QtGui import QFontDatabase
 from PySide2.QtWidgets import QApplication, QErrorMessage
-from PySide2.QtCore import Slot, Qt
+from PySide2.QtCore import Slot, Qt, QSettings
 import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
 from spinetoolbox.logger_interface import LoggerInterface
 from spinetoolbox.spine_db_manager import SpineDBManager
@@ -41,7 +41,8 @@ def main(argv):
     QFontDatabase.addApplicationFont(":/fonts/fontawesome5-solid-webfont.ttf")
     locale.setlocale(locale.LC_NUMERIC, 'C')
     url = f"sqlite:///{path}"
-    db_mngr = SpineDBManager(SimpleLogger(), None)
+    settings = QSettings("SpineProject", "Spine Toolbox")
+    db_mngr = SpineDBManager(settings, SimpleLogger(), None)
     tree = DataStoreForm(db_mngr, (url, "main"))
     tree.show()
     return_code = app.exec_()

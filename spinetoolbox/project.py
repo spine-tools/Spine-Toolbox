@@ -66,7 +66,7 @@ class SpineToolboxProject(MetaObject):
         self._logger = logger
         self._settings = settings
         self.dag_handler = DirectedGraphHandler()
-        self.db_mngr = SpineDBManager(logger, self)
+        self.db_mngr = SpineDBManager(settings, logger, self)
         self.engine = None
         self._execution_stopped = True
         self._dag_execution_list = None

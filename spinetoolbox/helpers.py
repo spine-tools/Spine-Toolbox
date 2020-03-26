@@ -29,7 +29,7 @@ import urllib.parse
 from PySide2.QtCore import Qt, Slot, QFile, QIODevice, QSize, QRect, QPoint
 from PySide2.QtCore import __version__ as qt_version
 from PySide2.QtCore import __version_info__ as qt_version_info
-from PySide2.QtWidgets import QApplication, QMessageBox, QGraphicsScene, QFileIconProvider, QStyle
+from PySide2.QtWidgets import QApplication, QMessageBox, QGraphicsScene, QFileIconProvider, QStyle, QFileDialog
 from PySide2.QtGui import (
     QCursor,
     QImageReader,
@@ -801,3 +801,22 @@ def ensure_window_is_on_screen(window, size):
 def first_non_null(s):
     """Returns the first element in Iterable s that is not None."""
     return next(itertools.dropwhile(lambda x: x is None, s))
+
+
+def get_save_file_name_in_last_dir(qsettings, key, parent, caption, given_dir, filter_=""):
+    """Calls QFileDialog.getSaveFileName in the directory that was selected last time the dialog was accepted.
+
+    Args:
+        qsettings (QSettings): A QSettings object where the last directory is stored
+        key (string): The name of the entry in the above QSettings
+        parent, caption, given_dir, filter_: Args passed to QFileDialog.getSaveFileName
+
+    Returns:
+        str: filename
+        str: selecte filter
+    """
+    dir_ = qsettings.value(key, default=given_dir)
+    filename, selected_filter = QFileDialog.getSaveFileName(parent, caption, dir_, filter_)
+    if filename:
+        qsettings.setValue(key, os.path.dirname(filename))
+    return filename, selected_filter

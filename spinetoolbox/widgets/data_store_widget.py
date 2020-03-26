@@ -29,7 +29,7 @@ from PySide2.QtWidgets import (
     QTreeView,
     QTableView,
 )
-from PySide2.QtCore import Qt, Signal, Slot, QSettings
+from PySide2.QtCore import Qt, Signal, Slot
 from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QIcon
 from spinedb_api import copy_database
 from ..config import MAINWINDOW_SS, APPLICATION_PATH
@@ -43,7 +43,7 @@ from .toolbars import ParameterTagToolBar
 from .db_session_history_dialog import DBSessionHistoryDialog
 from .notification import NotificationStack
 from ..mvcmodels.parameter_value_list_model import ParameterValueListModel
-from ..helpers import busy_effect, ensure_window_is_on_screen
+from ..helpers import busy_effect, ensure_window_is_on_screen, get_save_file_name_in_last_dir
 from .import_widget import ImportDialog
 from .parameter_value_editor import ParameterValueEditor
 from ..spine_io.exporters.excel import export_spine_database_to_xlsx
@@ -81,7 +81,7 @@ class DataStoreFormBase(QMainWindow):
         self.setWindowIcon(QIcon(":/symbols/app.ico"))
         self.setStyleSheet(MAINWINDOW_SS)
         self.setAttribute(Qt.WA_DeleteOnClose)
-        self.qsettings = QSettings("SpineProject", "Spine Toolbox")
+        self.qsettings = self.db_mngr.qsettings
         self.err_msg = QErrorMessage(self)
         self.err_msg.setWindowTitle("Error")
         self.err_msg.setWindowFlag(Qt.WindowContextHelpButtonHint, False)
@@ -102,7 +102,7 @@ class DataStoreFormBase(QMainWindow):
         self._selection_source = None
         self._selection_locked = False
         self._focusable_childs = [self.ui.treeView_parameter_value_list]
-        self.settings_group = 'treeViewWidget'
+        self.settings_group = 'dataStoreForm'
         self.undo_action = None
         self.redo_action = None
         db_names = ", ".join(["{0}".format(db_map.codename) for db_map in self.db_maps])
@@ -319,12 +319,6 @@ class DataStoreFormBase(QMainWindow):
         dialog.close()
         dialog.deleteLater()
 
-    def _get_base_dir(self):
-        project = self.db_mngr.parent()
-        if project is None:
-            return APPLICATION_PATH
-        return project.project_dir
-
     @Slot(bool)
     def export_database(self, checked=False):
         """Exports data from database into a file."""
@@ -332,9 +326,16 @@ class DataStoreFormBase(QMainWindow):
         db_map = self._select_database()
         if db_map is None:  # Database selection cancelled
             return
-        file_path, selected_filter = QFileDialog.getSaveFileName(
-            self, "Export to file", self._get_base_dir(), "Excel file (*.xlsx);;SQlite database (*.sqlite *.db)"
+        self.qsettings.beginGroup(self.settings_group)
+        file_path, selected_filter = get_save_file_name_in_last_dir(
+            self.qsettings,
+            "exportDB",
+            self,
+            "Export to file",
+            self._get_base_dir(),
+            "Excel file (*.xlsx);;SQlite database (*.sqlite *.db)",
         )
+        self.qsettings.endGroup()
         if not file_path:  # File selection cancelled
             return
         if selected_filter.startswith("SQlite"):
@@ -802,3 +803,9 @@ class DataStoreForm(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         self.resizeDocks(docks, [0.9 * width, 0.1 * width], Qt.Horizontal)
         self.end_style_change()
         self.ui.graphicsView.reset_zoom()
+
+    def _get_base_dir(self):
+        project = self.db_mngr.parent()
+        if project is None:
+            return APPLICATION_PATH
+        return project.project_dir

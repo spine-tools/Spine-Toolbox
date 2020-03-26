@@ -16,7 +16,7 @@ The SpineDBManager class
 :date:   2.10.2019
 """
 
-from PySide2.QtCore import Qt, QObject, Signal, Slot, QSettings
+from PySide2.QtCore import Qt, QObject, Signal, Slot
 from PySide2.QtWidgets import QMessageBox, QDialog, QCheckBox
 from PySide2.QtGui import QKeySequence, QIcon, QFontMetrics, QFont
 from spinedb_api import (
@@ -102,10 +102,11 @@ class SpineDBManager(QObject):
 
     _GROUP_SEP = " \u01C0 "
 
-    def __init__(self, logger, project):
+    def __init__(self, settings, logger, project):
         """Initializes the instance.
 
         Args:
+            settings (QSettings): Toolbox settings
             logger (LoggingInterface): a general, non-database-specific logger
             project (SpineToolboxProject)
         """
@@ -114,7 +115,7 @@ class SpineDBManager(QObject):
         self._db_specific_loggers = dict()
         self._db_maps = {}
         self._cache = {}
-        self.qsettings = QSettings("SpineProject", "Spine Toolbox")
+        self.qsettings = settings
         self.undo_stack = {}
         self.undo_action = {}
         self.redo_action = {}
