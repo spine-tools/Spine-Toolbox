@@ -52,7 +52,7 @@ class TestParameterValueFormatting(unittest.TestCase):
         value = 2.3
         self.db_mngr.get_item.return_value = {"value": to_database(value)}
         formatted = self.get_value(Qt.DisplayRole)
-        self.assertEqual(formatted, 2.3)
+        self.assertEqual(formatted, "2.3")
 
     def test_plain_number_in_edit_role(self):
         value = 2.3

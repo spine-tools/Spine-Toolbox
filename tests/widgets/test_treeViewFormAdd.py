@@ -165,6 +165,6 @@ class TestTreeViewFormAddMixin:
                     model.index(row, h("value")).data(),
                 )
             )
-        self.assertTrue(("nemo,pluto", "relative_speed", -1) in parameters)
-        self.assertTrue(("nemo,scooby", "relative_speed", 5) in parameters)
-        self.assertTrue(("pluto,nemo", "combined_mojo", 100) in parameters)
+        self.assertTrue(("nemo,pluto", "relative_speed", "-1.0") in parameters)
+        self.assertTrue(("nemo,scooby", "relative_speed", "5.0") in parameters)
+        self.assertTrue(("pluto,nemo", "combined_mojo", "100.0") in parameters)
