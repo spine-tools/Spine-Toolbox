@@ -716,7 +716,7 @@ class SpineDBManager(QObject):
         """
         parsed_value = self.get_value(db_map, item_type, id_, role=PARSED_ROLE)
         if isinstance(parsed_value, IndexedValue):
-            parsed_value = parsed_value.get_index(index)
+            parsed_value = parsed_value.get_value(index)
         if role == Qt.EditRole:
             return to_database(parsed_value)
         if role == Qt.DisplayRole:
@@ -1109,7 +1109,7 @@ class SpineDBManager(QObject):
                 parsed_data = self.get_value(db_map, "parameter value", id_, role=PARSED_ROLE)
                 if isinstance(parsed_data, IndexedValue):
                     for index, value in indexed_values.items():
-                        parsed_data.set_index(index, value)
+                        parsed_data.set_value(index, value)
                     value = to_database(parsed_data)
                 else:
                     value = next(iter(indexed_values.values()))
