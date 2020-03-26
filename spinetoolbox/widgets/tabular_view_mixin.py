@@ -330,7 +330,7 @@ class TabularViewMixin:
         return {
             key[:-1] + (index, key[-1]): id_
             for key, id_ in data.items()
-            for index in self.db_mngr.get_expanded_data(self.db_map, "parameter value", id_)
+            for index in self.db_mngr.get_value_indexes(self.db_map, "parameter value", id_)
         }
 
     def get_pivot_preferences(self, selection_key):

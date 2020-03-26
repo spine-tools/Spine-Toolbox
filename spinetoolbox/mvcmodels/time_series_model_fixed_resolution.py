@@ -32,8 +32,7 @@ class TimeSeriesModelFixedResolution(IndexedValueTableModel):
 
     def __init__(self, series):
         super().__init__(series, "Time stamp", "Values")
-        # Cache the time steps so they need not be recalculated every single time they are needed.
-        self._index_cache = self._value.indexes
+        # No need to cache indexes here anymore, as spinedb_api.TimeSeriesFixedResolution already does it
         self.locale = QLocale()
 
     def data(self, index, role=Qt.DisplayRole):
@@ -49,7 +48,7 @@ class TimeSeriesModelFixedResolution(IndexedValueTableModel):
         if not index.isValid() or role not in (Qt.DisplayRole, Qt.EditRole):
             return None
         if index.column() == 0:
-            return str(self._index_cache[index.row()])
+            return str(self._value.indexes[index.row()])
         return float(self._value.values[index.row()])
 
     def flags(self, index):
@@ -63,7 +62,7 @@ class TimeSeriesModelFixedResolution(IndexedValueTableModel):
     @property
     def indexes(self):
         """Returns the time stamps as an array."""
-        return self._index_cache
+        return self._value.indexes
 
     def insertRows(self, row, count, parent=QModelIndex()):
         """
@@ -87,7 +86,6 @@ class TimeSeriesModelFixedResolution(IndexedValueTableModel):
         self._value = TimeSeriesFixedResolution(
             self._value.start, self._value.resolution, new_values, self._value.ignore_year, self._value.repeat
         )
-        self._index_cache = self._value.indexes
         self.endInsertRows()
         return True
 
@@ -114,7 +112,6 @@ class TimeSeriesModelFixedResolution(IndexedValueTableModel):
         self._value = TimeSeriesFixedResolution(
             self._value.start, self._value.resolution, new_values, self._value.ignore_year, self._value.repeat
         )
-        self._index_cache = self._value.indexes
         self.endRemoveRows()
         return True
 
@@ -122,7 +119,6 @@ class TimeSeriesModelFixedResolution(IndexedValueTableModel):
         """Resets the model with new time series data."""
         self.beginResetModel()
         self._value = value
-        self._index_cache = self._value.indexes
         self.endResetModel()
 
     def setData(self, index, value, role=Qt.EditRole):
@@ -183,13 +179,11 @@ class TimeSeriesModelFixedResolution(IndexedValueTableModel):
     def set_resolution(self, resolution):
         """Sets the resolution."""
         self._value.resolution = resolution
-        self._index_cache = self._value.indexes
         self.dataChanged.emit(self.index(0, 0), self.index(len(self._value) - 1, 0))
 
     def set_start(self, start):
         """Sets the start datetime."""
         self._value.start = start
-        self._index_cache = self._value.indexes
         self.dataChanged.emit(self.index(0, 0), self.index(len(self._value) - 1, 0))
 
     @property

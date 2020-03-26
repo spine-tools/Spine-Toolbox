@@ -207,11 +207,8 @@ class PivotTableModel(QAbstractTableModel):
         if self.model.pivot_rows and index.row() == len(self.model.pivot_columns):
             # empty line between column headers and data
             return Qt.ItemIsSelectable | Qt.ItemIsEnabled
-        if self._parent.is_index_expansion_input_type():
-            # Disable editing the pivot table while in expanded index mode.
-            if index.row() == self.rowCount() - 1 or index.column() == self.columnCount() - 1:
-                return Qt.NoItemFlags
-            return Qt.ItemIsEnabled | Qt.ItemIsSelectable
+        if self._parent.is_index_expansion_input_type() and self._top_left_id(index) == IndexId.PARAMETER_INDEX:
+            return Qt.ItemIsSelectable | Qt.ItemIsEnabled
         return Qt.ItemIsEditable | Qt.ItemIsEnabled | Qt.ItemIsSelectable
 
     def top_left_indexes(self):
@@ -467,16 +464,14 @@ class PivotTableModel(QAbstractTableModel):
                 data = self.model.get_pivoted_data([row], [column])
                 if not data:
                     return None
-                value = data[0][0]
-                if value is None:
+                if data[0][0] is None:
                     return None
                 if self._parent.is_value_input_type():
-                    value = self.db_mngr.get_value(self.db_map, "parameter value", value, "value", role)
-                    return value
+                    return self.db_mngr.get_value(self.db_map, "parameter value", data[0][0], role)
                 if self._parent.is_index_expansion_input_type():
                     index = self._header_ids(row, column)[-2]
-                    return self.db_mngr.get_value_index(self.db_map, "parameter value", value, "value", index, role)
-                return bool(value)
+                    return self.db_mngr.get_value_index(self.db_map, "parameter value", data[0][0], index, role)
+                return bool(data[0][0])
             return None
         if role == Qt.FontRole and self.index_in_top_left(index):
             font = QFont()
@@ -529,7 +524,7 @@ class PivotTableModel(QAbstractTableModel):
         data = self.model.get_pivoted_data(row_map, column_map)
         if not data:
             return False
-        if self._parent.is_value_input_type():
+        if self._parent.is_value_input_type() or self._parent.is_index_expansion_input_type():
             return self._batch_set_parameter_value_data(row_map, column_map, data, values)
         return self._batch_set_relationship_data(row_map, column_map, data, values)
 
@@ -645,6 +640,9 @@ class PivotTableModel(QAbstractTableModel):
         self.db_mngr.add_checked_parameter_values({self.db_map: items})
 
     def _update_parameter_values(self, items):
+        if self._parent.is_index_expansion_input_type():
+            self.db_mngr.update_expanded_parameter_values({self.db_map: items})
+            return
         items = self._checked_parameter_values(items)
         self.db_mngr.update_checked_parameter_values({self.db_map: items})
 
