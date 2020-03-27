@@ -732,10 +732,11 @@ class PivotTableModelMenu(QMenu):
         except PlottingError as error:
             report_plotting_failure(error, self)
             return
-        plotted_column_names = set()
-        for index in selected_indexes:
-            label = hints.column_label(self._proxy, index.column())
-            plotted_column_names.add(label)
+        plotted_column_names = {
+            hints.column_label(self._proxy, index.column())
+            for index in selected_indexes
+            if hints.is_index_in_data(self._proxy, index)
+        }
         plot_window.use_as_window(self.parentWidget(), ", ".join(plotted_column_names))
         plot_window.show()
 

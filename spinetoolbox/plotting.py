@@ -257,12 +257,7 @@ class PivotTablePlottingHints(PlottingHints):
         if x_column is None or not model.filterAcceptsColumn(x_column, QModelIndex()):
             return selections
         proxy_x_column = self._map_column_from_source(model, x_column)
-        filtered = dict()
-        columns = selections.keys()
-        for column in columns:
-            if column != proxy_x_column:
-                filtered[column] = selections[column]
-        return filtered
+        return {column: rows for column, rows in selections.items() if column != proxy_x_column}
 
     def is_index_in_data(self, model, index):
         """Returns True if index is in the data portion of the table."""

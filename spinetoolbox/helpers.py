@@ -800,7 +800,10 @@ def ensure_window_is_on_screen(window, size):
 
 def first_non_null(s):
     """Returns the first element in Iterable s that is not None."""
-    return next(itertools.dropwhile(lambda x: x is None, s))
+    try:
+        return next(itertools.dropwhile(lambda x: x is None, s))
+    except StopIteration:
+        return None
 
 
 def get_save_file_name_in_last_dir(qsettings, key, parent, caption, given_dir, filter_=""):
