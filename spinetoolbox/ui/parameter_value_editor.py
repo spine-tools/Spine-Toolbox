@@ -13,7 +13,7 @@
 # Form implementation generated from reading ui file 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\parameter_value_editor.ui',
 # licensing of 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\parameter_value_editor.ui' applies.
 #
-# Created: Tue Feb 11 13:39:41 2020
+# Created: Wed Mar 25 14:44:17 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -33,6 +33,7 @@ class Ui_ParameterValueEditor(object):
         self.parameter_type_selector_layout.addWidget(self.parameter_type_selector_label)
         self.parameter_type_selector = QtWidgets.QComboBox(ParameterValueEditor)
         self.parameter_type_selector.setObjectName("parameter_type_selector")
+        self.parameter_type_selector.addItem("")
         self.parameter_type_selector.addItem("")
         self.parameter_type_selector.addItem("")
         self.parameter_type_selector.addItem("")
@@ -64,6 +65,7 @@ class Ui_ParameterValueEditor(object):
         self.parameter_type_selector.setItemText(2, QtWidgets.QApplication.translate("ParameterValueEditor", "Time series - fixed resolution", None, -1))
         self.parameter_type_selector.setItemText(3, QtWidgets.QApplication.translate("ParameterValueEditor", "Time series - variable resolution", None, -1))
         self.parameter_type_selector.setItemText(4, QtWidgets.QApplication.translate("ParameterValueEditor", "Time pattern", None, -1))
-        self.parameter_type_selector.setItemText(5, QtWidgets.QApplication.translate("ParameterValueEditor", "Datetime", None, -1))
-        self.parameter_type_selector.setItemText(6, QtWidgets.QApplication.translate("ParameterValueEditor", "Duration", None, -1))
+        self.parameter_type_selector.setItemText(5, QtWidgets.QApplication.translate("ParameterValueEditor", "Arrray", None, -1))
+        self.parameter_type_selector.setItemText(6, QtWidgets.QApplication.translate("ParameterValueEditor", "Datetime", None, -1))
+        self.parameter_type_selector.setItemText(7, QtWidgets.QApplication.translate("ParameterValueEditor", "Duration", None, -1))
 

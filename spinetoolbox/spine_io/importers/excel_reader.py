@@ -198,7 +198,7 @@ def create_mapping_from_sheet(worksheet):
         return None, None
     if sheet_type.lower() not in ["relationship", "object"]:
         return None, None
-    if sheet_data.lower() not in ["parameter", "time series", "time pattern", "1d array"]:
+    if sheet_data.lower() not in ["parameter", "time series", "time pattern", "map", "array"]:
         return None, None
     if sheet_type.lower() == "relationship":
         mapping = RelationshipClassMapping()
@@ -235,7 +235,7 @@ def create_mapping_from_sheet(worksheet):
                     },
                 }
             )
-        elif sheet_data.lower() == "1d array":
+        elif sheet_data.lower() == "array":
             options.update({"header": False, "row": 3, "read_until_col": True, "read_until_row": False})
             mapping = RelationshipClassMapping.from_dict(
                 {
@@ -247,7 +247,7 @@ def create_mapping_from_sheet(worksheet):
                         "map_type": "parameter",
                         "name": {"map_type": "row", "value_reference": rel_dimension},
                         "extra_dimensions": [0],
-                        "parameter_type": "1d array",
+                        "parameter_type": "array",
                     },
                 }
             )
@@ -288,7 +288,7 @@ def create_mapping_from_sheet(worksheet):
                     },
                 }
             )
-        elif sheet_data.lower() == "1d array":
+        elif sheet_data.lower() == "array":
             options.update({"header": False, "row": 3, "read_until_col": True, "read_until_row": False})
             mapping = ObjectClassMapping.from_dict(
                 {
@@ -299,7 +299,7 @@ def create_mapping_from_sheet(worksheet):
                         "map_type": "parameter",
                         "name": {"map_type": "row", "value_reference": 1},
                         "extra_dimensions": [0],
-                        "parameter_type": "1d array",
+                        "parameter_type": "array",
                     },
                 }
             )

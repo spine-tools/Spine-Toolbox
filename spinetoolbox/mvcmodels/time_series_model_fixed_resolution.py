@@ -135,12 +135,12 @@ class TimeSeriesModelFixedResolution(IndexedValueTableModel):
         Returns:
             True if the operation was successful
         """
-        if not index.isValid() or role != Qt.EditRole:
+        if role != Qt.EditRole or not index.isValid():
             return False
         if index.column() != 1:
             return False
         self._value.values[index.row()] = value
-        self.dataChanged.emit(index, index, [Qt.EditRole])
+        self.dataChanged.emit(index, index, [Qt.DisplayRole, Qt.EditRole])
         return True
 
     def batch_set_data(self, indexes, values):

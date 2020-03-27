@@ -26,7 +26,7 @@ from spinedb_api import (
     ParameterMapMapping,
     ParameterTimeSeriesMapping,
     ParameterTimePatternMapping,
-    ParameterListMapping,
+    ParameterArrayMapping,
     MappingBase,
     NoneMapping,
     ConstantMapping,
@@ -79,7 +79,7 @@ _MAPTYPE_DISPLAY_NAME = {
 
 _DISPLAY_TYPE_TO_TYPE = {
     "Single value": ParameterValueMapping,
-    "List": ParameterListMapping,
+    "Array": ParameterArrayMapping,
     "Map": ParameterMapMapping,
     "Time series": ParameterTimeSeriesMapping,
     "Time pattern": ParameterTimePatternMapping,
@@ -264,7 +264,7 @@ class MappingPreviewModel(MinimalTableModel):
                     return _MAPPING_COLORS["parameter value"]
             elif self.index_in_mapping(mapping.parameters.value, index):
                 return _MAPPING_COLORS["parameter value"]
-        if isinstance(mapping.parameters, ParameterListMapping) and mapping.parameters.extra_dimensions:
+        if isinstance(mapping.parameters, ParameterArrayMapping) and mapping.parameters.extra_dimensions:
             # parameter extra dimensions color
             for ed in mapping.parameters.extra_dimensions:
                 if self.index_in_mapping(ed, index):
@@ -498,8 +498,8 @@ class MappingSpecModel(QAbstractTableModel):
             self._model.parameters = None
         elif new_type == "Single value":
             self._model.parameters = ParameterValueMapping()
-        elif new_type == "List":
-            self._model.parameters = ParameterListMapping()
+        elif new_type == "Array":
+            self._model.parameters = ParameterArrayMapping()
         elif new_type == "Definition":
             self._model.parameters = ParameterDefinitionMapping()
         elif new_type == "Map":

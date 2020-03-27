@@ -300,10 +300,10 @@ class Parameter:
         new_values = list()
         new_indexes = list()
         for parameter_index, parameter_value in zip(self.indexes, self.values):
-            for new_index in indexing_domain.indexes:
+            for new_index, new_value in zip(indexing_domain.indexes, parameter_value.values):
                 expanded_index = tuple(parameter_index[:index_position] + new_index + parameter_index[index_position:])
                 new_indexes.append(expanded_index)
-            new_values += list(parameter_value.values)
+                new_values.append(new_value)
         self.indexes = new_indexes
         self.values = new_values
 
@@ -695,7 +695,7 @@ def parameters_to_gams(gdx_file, parameters):
     for parameter_name, parameter in parameters.items():
         indexed_values = dict()
         for index, value in zip(parameter.indexes, parameter.values):
-            if not isinstance(value, float) and not (index == None and value == None):
+            if not isinstance(value, float) and not (index is None and value is None):
                 if isinstance(value, IndexedValue):
                     raise GdxExportException(
                         f"Cannot write parameter '{parameter_name}':"

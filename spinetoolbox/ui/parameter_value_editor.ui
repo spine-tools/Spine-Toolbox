@@ -64,6 +64,11 @@
        </item>
        <item>
         <property name="text">
+         <string>Arrray</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
          <string>Datetime</string>
         </property>
        </item>

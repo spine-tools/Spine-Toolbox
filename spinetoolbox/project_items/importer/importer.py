@@ -82,6 +82,7 @@ class Importer(ProjectItem):
                 for table_name, row_types in table_row_types.items()
             }
         # Convert serialized paths to absolute in mappings
+        _fix_1d_array_to_array(mappings)
         self.settings = self.deserialize_mappings(mappings, self._project.project_dir)
         # self.settings is now a dictionary, where elements have the absolute path as the key and the mapping as value
         self.cancel_on_error = cancel_on_error
@@ -520,6 +521,25 @@ class Importer(ProjectItem):
         for source, mapping in mappings.items():  # mappings is a dict with absolute paths as keys and mapping as values
             serialized_mappings.append([serialize_path(source, project_path), mapping])
         return serialized_mappings
+
+
+def _fix_1d_array_to_array(mappings):
+    """
+    Replaces '1d array' with 'array' for parameter type in mappings.
+
+    With spinedb_api >= 0.3, '1d array' parameter type was replaced by 'array'.
+    Other settings in a mapping are backwards compatible except the name.
+    """
+    for more_mappings in mappings:
+        for settings in more_mappings:
+            table_mappings = settings.get("table_mappings")
+            if table_mappings is not None:
+                for sheet_settings in table_mappings.values():
+                    for setting in sheet_settings:
+                        parameter_setting = setting.get("parameters")
+                        parameter_type = parameter_setting.get("parameter_type")
+                        if parameter_type == "1d array":
+                            parameter_setting["parameter_type"] = "array"
 
 
 def _fix_csv_connector_settings(settings):

@@ -395,7 +395,7 @@ def _write_json_array_to_xlsx(wb, data, sheet_type):
         ws['A1'] = "Sheet type"
         ws['A2'] = sheet_type
         ws['B1'] = "Data type"
-        ws['B2'] = "1d array"
+        ws['B2'] = "array"
         ws['C1'] = sheet_type + " class name"
         ws['C2'] = d[0]
 

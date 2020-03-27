@@ -27,9 +27,7 @@ from spinedb_api import (
 )
 from ..plotting import add_time_series_plot
 from ..mvcmodels.time_series_model_fixed_resolution import TimeSeriesModelFixedResolution
-from .custom_qtableview import TimeSeriesFixedResolutionTableView
 from .indexed_value_table_context_menu import handle_table_context_menu
-from .plot_widget import PlotWidget
 
 
 def _resolution_to_text(resolution):
@@ -72,18 +70,14 @@ class TimeSeriesFixedResolutionEditor(QWidget):
         self._model.rowsRemoved.connect(self._update_plot)
         self._ui = Ui_TimeSeriesFixedResolutionEditor()
         self._ui.setupUi(self)
-        self._plot_widget = PlotWidget()
-        self._ui.splitter.insertWidget(1, self._plot_widget)
         self._ui.start_time_edit.setText(str(initial_value.start))
         self._ui.start_time_edit.editingFinished.connect(self._start_time_changed)
         self._ui.calendar_button.clicked.connect(self._show_calendar)
         self._ui.resolution_edit.setText(_resolution_to_text(initial_value.resolution))
         self._ui.resolution_edit.editingFinished.connect(self._resolution_changed)
-        self._time_series_table = TimeSeriesFixedResolutionTableView(self._ui.splitter)
-        self._ui.left_layout.addWidget(self._time_series_table)
-        self._time_series_table.setModel(self._model)
-        self._time_series_table.setContextMenuPolicy(Qt.CustomContextMenu)
-        self._time_series_table.customContextMenuRequested.connect(self._show_table_context_menu)
+        self._ui.time_series_table.setModel(self._model)
+        self._ui.time_series_table.setContextMenuPolicy(Qt.CustomContextMenu)
+        self._ui.time_series_table.customContextMenuRequested.connect(self._show_table_context_menu)
         self._ui.ignore_year_check_box.setChecked(self._model.value.ignore_year)
         self._ui.ignore_year_check_box.toggled.connect(self._model.set_ignore_year)
         self._ui.repeat_check_box.setChecked(self._model.value.repeat)
@@ -92,6 +86,8 @@ class TimeSeriesFixedResolutionEditor(QWidget):
         self._calendar.setMinimumDate(QDate(100, 1, 1))
         self._calendar.setWindowFlags(Qt.Popup)
         self._calendar.activated.connect(self._select_date)
+        for i in range(self._ui.splitter.count()):
+            self._ui.splitter.setCollapsible(i, False)
         self._update_plot()
 
     @Slot(name='_resolution_changed')
@@ -107,7 +103,7 @@ class TimeSeriesFixedResolutionEditor(QWidget):
     @Slot("QPoint", name="_show_table_context_menu")
     def _show_table_context_menu(self, pos):
         """Shows the table's context menu."""
-        handle_table_context_menu(pos, self._time_series_table, self._model, self)
+        handle_table_context_menu(pos, self._ui.time_series_table, self._model, self)
 
     @Slot("QDate", name='_select_date')
     def _select_date(self, selected_date):
@@ -151,9 +147,9 @@ class TimeSeriesFixedResolutionEditor(QWidget):
     @Slot("QModelIndex", "QModelIndex", "list", name="_update_plot")
     def _update_plot(self, topLeft=None, bottomRight=None, roles=None):
         """Updated the plot."""
-        self._plot_widget.canvas.axes.cla()
-        add_time_series_plot(self._plot_widget, self._model)
-        self._plot_widget.canvas.draw()
+        self._ui.plot_widget.canvas.axes.cla()
+        add_time_series_plot(self._ui.plot_widget, self._model)
+        self._ui.plot_widget.canvas.draw()
 
     def value(self):
         """Returns the parameter value currently being edited."""

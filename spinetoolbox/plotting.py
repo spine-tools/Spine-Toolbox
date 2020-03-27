@@ -29,7 +29,7 @@ from numbers import Number
 from matplotlib.ticker import MaxNLocator
 import numpy as np
 from PySide2.QtCore import QModelIndex
-from spinedb_api import IndexedValue, Map, ParameterValueFormatError, TimeSeries
+from spinedb_api import Array, IndexedValue, Map, ParameterValueFormatError, TimeSeries
 from .helpers import first_non_null
 from .mvcmodels.shared import PARSED_ROLE
 from .widgets.plot_widget import PlotWidget
@@ -124,6 +124,18 @@ def plot_selection(model, indexes, hints, plot_widget=None):
     if needs_redraw:
         plot_widget.canvas.draw()
     return plot_widget
+
+
+def add_array_plot(plot_widget, value, label=None):
+    """
+    Adds an array plot to a plot widget.
+
+    Args:
+        plot_widget (PlotWidget): a plot widget to modify
+        value (Array): the array to plot
+        label (str): a label for the array
+    """
+    plot_widget.canvas.axes.plot(value.indexes, value.values, label=label)
 
 
 def add_map_plot(plot_widget, map_value, label=None):
@@ -290,6 +302,8 @@ class PivotTablePlottingHints(PlottingHints):
         x_column = model.sourceModel().plot_x_column
         if x_column is None or not model.filterAcceptsColumn(x_column, QModelIndex()):
             return ""
+        if model.sourceModel().column_is_index_column(x_column):
+            return "Index"
         return self.column_label(model, self._map_column_from_source(model, x_column))
 
     @staticmethod
@@ -314,11 +328,14 @@ def _add_plot_to_widget(values, labels, plot_widget):
     elif isinstance(values[0], Map):
         for value, label in zip(values, labels):
             add_map_plot(plot_widget, value, label)
+    elif isinstance(values[0], Array):
+        for value, label in zip(values, labels):
+            add_array_plot(plot_widget, value, label)
     elif isinstance(values[1][0], Number):
         plot_widget.canvas.axes.plot(values[0], values[1], label=labels[0])
         if isinstance(values[0][0], str):
             # matplotlib tries to plot every single x tick label if they are strings.
-            # This can be very slow if the labels are numerous.
+            # This can become very slow if the labels are numerous.
             plot_widget.canvas.axes.xaxis.set_major_locator(MaxNLocator(10))
     else:
         raise PlottingError(f"Cannot plot: Don't know how to plot '{type(values[1][0]).__name__}' values.")
@@ -381,7 +398,7 @@ def _collect_single_column_values(model, column, rows, hints):
         value = model.data(data_index, role=PARSED_ROLE)
         if isinstance(value, Exception):
             raise PlottingError(f"Failed to plot row {row}: {value}")
-        if isinstance(value, (Map, TimeSeries)):
+        if isinstance(value, (Array, Map, TimeSeries)):
             labels.append(hints.cell_label(model, data_index))
         elif value is not None and not isinstance(value, Number):
             raise PlottingError(f"Cannot plot row {row}: don't know how to plot a '{type(value).__name__}'.")
@@ -414,6 +431,8 @@ def _collect_x_column_values(model, column, rows, hints):
         value = model.data(data_index, role=PARSED_ROLE)
         if isinstance(value, Exception):
             raise PlottingError(f"Failed to plot '{value}'")
+        if not isinstance(value, Number):
+            raise PlottingError(f"Cannot plot X column value of type {type(value).__name__}.")
         values.append(value)
     if not values:
         return values
@@ -468,9 +487,10 @@ def _collect_column_values(model, column, rows, hints):
     values, labels = _collect_single_column_values(model, column, rows, hints)
     if not values:
         return values, labels
-    if isinstance(first_non_null(values), (TimeSeries, Map)):
+    if isinstance(first_non_null(values), (Array, Map, TimeSeries)):
         values = [x for x in values if x is not None]
         _raise_if_not_all_indexed_values(values)
+        _raise_if_indexed_values_not_plottable(values)
         return values, labels
     # Collect the y values as well
     x_values = hints.special_x_values(model, column, rows)
@@ -496,6 +516,17 @@ def _filter_and_check(xs, ys):
             except (ParameterValueFormatError, TypeError, ValueError):
                 raise PlottingError("Cannot plot a mixture of different types of data")
     return filtered_xs, filtered_ys
+
+
+def _raise_if_indexed_values_not_plottable(values):
+    """Raises an exception if the indexed values in values contain elements that cannot be plotted."""
+    for value in values:
+        if isinstance(value.values, np.ndarray):
+            if value.values.dtype.kind not in ("f", "M", "m", "i", "u"):
+                raise PlottingError(f"Cannot plot values of type {value.values.dtype.name}.")
+            continue
+        if any(not isinstance(x, Number) for x in value.values):
+            raise PlottingError(f"Cannot plot values of type {type(value.values[0]).__name__}.")
 
 
 def _raise_if_value_types_clash(values, plot_widget):

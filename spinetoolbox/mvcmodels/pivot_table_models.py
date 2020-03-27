@@ -401,6 +401,8 @@ class PivotTableModel(QAbstractTableModel):
             return fetch_from_db("parameter definition", "parameter_name")
         if top_left_id == IndexId.PARAMETER_INDEX:
             # header_id contains the index value already
+            if role == PARSED_ROLE:
+                return header_id
             return str(header_id)
         return fetch_from_db("object", "name")
 

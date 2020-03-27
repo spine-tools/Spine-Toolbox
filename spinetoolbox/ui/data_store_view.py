@@ -10,10 +10,10 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-# Form implementation generated from reading ui file '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/data_store_view.ui',
-# licensing of '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/data_store_view.ui' applies.
+# Form implementation generated from reading ui file 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\data_store_view.ui',
+# licensing of 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\data_store_view.ui' applies.
 #
-# Created: Tue Mar 17 15:35:55 2020
+# Created: Wed Mar 25 14:47:32 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -39,7 +39,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_2.setObjectName("verticalLayout_2")
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 872, 28))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 872, 22))
         self.menubar.setNativeMenuBar(False)
         self.menubar.setObjectName("menubar")
         self.menuSession = QtWidgets.QMenu(self.menubar)
@@ -649,9 +649,9 @@ class Ui_MainWindow(object):
         self.actionPrune_selected_classes.setText(QtWidgets.QApplication.translate("MainWindow", "Prune selected classes", None, -1))
         self.actiontt.setText(QtWidgets.QApplication.translate("MainWindow", "tt", None, -1))
 
-from spinetoolbox.widgets.custom_qtableview import AutoFilterCopyPasteTableView, PivotTableView
-from spinetoolbox.widgets.frozen_table_view import FrozenTableView
-from spinetoolbox.widgets.custom_qtreeview import StickySelectionEntityTreeView, EntityTreeView, CopyTreeView
+from spinetoolbox.widgets.custom_qtableview import PivotTableView, AutoFilterCopyPasteTableView
+from spinetoolbox.widgets.custom_qtreeview import CopyTreeView, StickySelectionEntityTreeView, EntityTreeView
 from spinetoolbox.widgets.custom_qlistview import DragListView
+from spinetoolbox.widgets.frozen_table_view import FrozenTableView
 from spinetoolbox.widgets.custom_qgraphicsviews import GraphQGraphicsView
 from spinetoolbox import resources_icons_rc

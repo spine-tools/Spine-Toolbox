@@ -20,23 +20,24 @@ from PySide2.QtCore import Qt, QObject, Signal, Slot
 from PySide2.QtWidgets import QMessageBox, QDialog, QCheckBox
 from PySide2.QtGui import QKeySequence, QIcon, QFontMetrics, QFont
 from spinedb_api import (
+    Array,
+    create_new_spine_database,
+    DateTime,
+    DiffDatabaseMapping,
+    Duration,
+    from_database,
+    IndexedValue,
+    is_empty,
+    Map,
+    ParameterValueFormatError,
+    relativedelta_to_duration,
     SpineDBAPIError,
     SpineDBVersionError,
-    DiffDatabaseMapping,
-    from_database,
-    to_database,
-    relativedelta_to_duration,
-    ParameterValueFormatError,
-    DateTime,
-    Duration,
-    Map,
-    IndexedValue,
-    TimePattern,
     TimeSeries,
     TimeSeriesFixedResolution,
     TimeSeriesVariableResolution,
-    is_empty,
-    create_new_spine_database,
+    TimePattern,
+    to_database,
 )
 from .helpers import IconManager, busy_effect, format_string_list
 from .spine_db_signaller import SpineDBSignaller
@@ -633,6 +634,8 @@ class SpineDBManager(QObject):
             display_data = "Time series"
         elif isinstance(parsed_data, Map):
             display_data = "Map"
+        elif isinstance(parsed_data, Array):
+            display_data = "Array"
         elif isinstance(parsed_data, DateTime):
             display_data = str(parsed_data.value)
         elif isinstance(parsed_data, Duration):

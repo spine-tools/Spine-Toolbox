@@ -13,7 +13,7 @@
 # Form implementation generated from reading ui file 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\import_mapping.ui',
 # licensing of 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\import_mapping.ui' applies.
 #
-# Created: Mon Mar 16 15:36:32 2020
+# Created: Wed Mar 25 13:26:19 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!

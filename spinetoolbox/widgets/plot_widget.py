@@ -36,8 +36,8 @@ class PlotWidget(QWidget):
     plot_windows = dict()
     """A global list of plot windows."""
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, parent=None):
+        super().__init__(parent)
         self.plot_type = None
         self._layout = QVBoxLayout(self)
         self.canvas = PlotCanvas(self)
