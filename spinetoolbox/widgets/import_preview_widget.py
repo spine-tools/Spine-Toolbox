@@ -84,7 +84,7 @@ class ImportPreviewWidget(QWidget):
         self._ui.source_list.itemChanged.connect(self.check_list_item)
 
         # signals for connector
-        self.connector.connectionReady.connect(self.connection_ready)
+        self.connector.connectionReady.connect(self.request_new_tables_from_connector)
         self.connector.dataReady.connect(self.update_preview_data)
         self.connector.tablesReady.connect(self.update_tables)
         self.connector.mappedDataReady.connect(self.mappedDataReady.emit)
@@ -134,7 +134,7 @@ class ImportPreviewWidget(QWidget):
         self._ui.source_preview_widget_stack.setCurrentIndex(loading_message if status else preview_table)
         self._ui_mapper.setDisabled(status)
 
-    def connection_ready(self):
+    def request_new_tables_from_connector(self):
         """
         Requests new tables data from connector
         """

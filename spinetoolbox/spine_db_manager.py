@@ -290,25 +290,32 @@ class SpineDBManager(QObject):
         if refreshed_db_maps:
             self.session_refreshed.emit(refreshed_db_maps)
 
-    def commit_session(self, *db_maps):
+    def commit_session(self, *db_maps, rollback_if_no_msg=False):
         error_log = {}
         committed_db_maps = set()
+        rolled_db_maps = set()
         for db_map in db_maps:
             if not db_map.has_pending_changes():
                 continue
             commit_msg = self._get_commit_msg(db_map)
-            if not commit_msg:
-                continue
             try:
-                db_map.commit_session(commit_msg)
-                committed_db_maps.add(db_map)
-                self.undo_stack[db_map].setClean()
+                if commit_msg:
+                    db_map.commit_session(commit_msg)
+                    committed_db_maps.add(db_map)
+                    self.undo_stack[db_map].setClean()
+                elif rollback_if_no_msg:
+                    db_map.rollback_session()
+                    rolled_db_maps.add(db_map)
+                    self._cache.pop(db_map, None)
+                    self.undo_stack[db_map].setClean()
             except SpineDBAPIError as e:
                 error_log[db_map] = e.msg
         if any(error_log.values()):
             self.error_msg(error_log)
         if committed_db_maps:
             self.session_committed.emit(committed_db_maps)
+        if rolled_db_maps:
+            self.session_rolled_back.emit(rolled_db_maps)
 
     @staticmethod
     def _get_commit_msg(db_map):

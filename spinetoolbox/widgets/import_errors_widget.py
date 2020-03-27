@@ -29,20 +29,17 @@ class ImportErrorWidget(QWidget):
 
         # state
         self._error_list = []
-        self._num_imported = 0
 
         # ui
         self._ui = Ui_ImportErrors()
         self._ui.setupUi(self)
 
-    def set_import_state(self, num_imported, errors):
+    def set_import_state(self, errors):
         """Sets state of error widget.
 
         Arguments:
-            num_imported {int} -- number of successfully imported items
             errors {list} -- list of errors.
         """
         self._ui.error_count_label.setText(f"Number of errors: {len(errors)}")
-        self._ui.import_count_label.setText(f"Number of imports: {num_imported}")
         self._ui.error_list.clear()
         self._ui.error_list.addItems(errors)

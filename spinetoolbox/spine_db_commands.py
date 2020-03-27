@@ -399,10 +399,10 @@ class RemoveItemsCommand(CommandBase):
     @Slot(object)
     def receive_items_changed(self, db_map_typed_data):  # pylint: disable=arguments-differ
         super().receive_items_changed(db_map_typed_data)
-        for db_map, typed_data in db_map_typed_data.items():
-            for item_type, data in typed_data.items():
-                data = [_cache_to_db_item(item_type, item) for item in data]
-                self.undo_typed_db_map_data.setdefault(item_type, {}).setdefault(db_map, []).extend(data)
+        typed_data = db_map_typed_data.get(self.db_map, {})
+        for item_type, data in typed_data.items():
+            data = [_cache_to_db_item(item_type, item) for item in data]
+            self.undo_typed_db_map_data.setdefault(item_type, {}).setdefault(self.db_map, []).extend(data)
 
     def data(self):
         return {

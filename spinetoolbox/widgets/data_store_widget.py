@@ -18,20 +18,10 @@ Contains the DataStoreForm class.
 
 import os
 import time  # just to measure loading time and sqlalchemy ORM performance
-from PySide2.QtWidgets import (
-    QMainWindow,
-    QErrorMessage,
-    QDockWidget,
-    QMessageBox,
-    QDialog,
-    QFileDialog,
-    QInputDialog,
-    QTreeView,
-    QTableView,
-)
+from PySide2.QtWidgets import QMainWindow, QErrorMessage, QDockWidget, QMessageBox, QInputDialog, QTreeView, QTableView
 from PySide2.QtCore import Qt, Signal, Slot
 from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QIcon
-from spinedb_api import copy_database
+from spinedb_api import copy_database, import_data, SpineIntegrityError, SpineDBAPIError
 from ..config import MAINWINDOW_SS, APPLICATION_PATH
 from .edit_db_items_dialogs import ManageParameterTagsDialog
 from .custom_menus import ParameterValueListContextMenu
@@ -47,6 +37,8 @@ from ..helpers import busy_effect, ensure_window_is_on_screen, get_save_file_nam
 from .import_widget import ImportDialog
 from .parameter_value_editor import ParameterValueEditor
 from ..spine_io.exporters.excel import export_spine_database_to_xlsx
+
+# TODO: call deleteLater on all dialogs after they return
 
 
 class DataStoreFormBase(QMainWindow):
@@ -303,21 +295,31 @@ class DataStoreFormBase(QMainWindow):
     @Slot(bool)
     def show_import_file_dialog(self, checked=False):
         """Shows dialog to allow user to select a file to import."""
-        db_map = next(iter(self.db_maps))
-        if db_map.has_pending_changes():
+        if any(db_map.has_pending_changes() for db_map in self.db_maps):
             commit_warning = QMessageBox(parent=self)
             commit_warning.setText("Please commit or rollback before importing data")
             commit_warning.setStandardButtons(QMessageBox.Ok)
             commit_warning.exec()
             return
         dialog = ImportDialog(self.qsettings, parent=self)
-        # assume that dialog is modal, if not use accepted, rejected signals
-        if dialog.exec() == QDialog.Accepted:
-            if db_map.has_pending_changes():
-                self.msg.emit("Import successful")
-                self.init_models()
-        dialog.close()
-        dialog.deleteLater()
+        dialog.exec()
+
+    @Slot(dict)
+    def import_data(self, data):
+        changed_db_maps = []
+        db_map_error_log = {}
+        for db_map in self.db_maps:
+            try:
+                _, import_errors = import_data(db_map, **data)
+                db_map_error_log[db_map] = [f"{e.db_type}: {e.msg}" for e in import_errors]
+                changed_db_maps.append(db_map)
+            except (SpineIntegrityError, SpineDBAPIError) as err:
+                import_errors.append(str(err))
+                db_map.rollback_session()
+        self.db_mngr.commit_session(*changed_db_maps, rollback_if_no_msg=True)
+        self.db_mngr.fetch_db_maps_for_listener(self, *changed_db_maps)
+        if any(db_map_error_log.values()):
+            self.db_mngr.error_msg(db_map_error_log)
 
     @Slot(bool)
     def export_database(self, checked=False):
