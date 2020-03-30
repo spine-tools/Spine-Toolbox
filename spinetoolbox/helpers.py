@@ -92,37 +92,6 @@ def pyside2_version_check():
     return True
 
 
-def spinedb_api_version_check():
-    """Check if spinedb_api is the correct version and explain how to upgrade if it is not."""
-    try:
-        current_version = spinedb_api.__version__
-        current_split = [int(x) for x in current_version.split(".")]
-        required_split = [int(x) for x in REQUIRED_SPINEDB_API_VERSION.split(".")]
-        if current_split >= required_split:
-            return True
-    except AttributeError:
-        current_version = "not reported"
-    script = "upgrade_spinedb_api.bat" if sys.platform == "win32" else "upgrade_spinedb_api.py"
-    print(
-        """SPINEDB_API OUTDATED.
-
-        Spine Toolbox failed to start because spinedb_api is outdated.
-        (Required version is {0}, whereas current is {1})
-        Please upgrade spinedb_api to v{0} and start Spine Toolbox again.
-
-        To upgrade, run script '{2}' in the '/bin' folder.
-
-        Or upgrade it manually by running,
-
-            pip install --upgrade git+https://github.com/Spine-project/Spine-Database-API.git
-
-        """.format(
-            REQUIRED_SPINEDB_API_VERSION, current_version, script
-        )
-    )
-    return False
-
-
 def spine_engine_version_check():
     """Check if spine engine package is the correct version and explain how to upgrade if it is not."""
     try:

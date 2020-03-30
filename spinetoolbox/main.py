@@ -21,11 +21,15 @@ import sys
 import logging
 from PySide2.QtGui import QFontDatabase
 from PySide2.QtWidgets import QApplication
+from .spinedb_api_version_check import spinedb_api_version_check
 
+# Check for spinedb_api version before we try to import possibly non-existent stuff below.
+if not spinedb_api_version_check():
+    sys.exit(1)
 # Importing resources_icons_rc initializes resources and Font Awesome gets added to the application
 import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
 from .ui_main import ToolboxUI
-from .helpers import spinedb_api_version_check, pyside2_version_check, spine_engine_version_check
+from .helpers import pyside2_version_check, spine_engine_version_check
 from .version import __version__
 
 
@@ -38,8 +42,6 @@ def main():
         datefmt='%Y-%m-%d %H:%M:%S',
     )
     if not pyside2_version_check():
-        return 1
-    if not spinedb_api_version_check():
         return 1
     if not spine_engine_version_check():
         return 1
