@@ -1481,9 +1481,7 @@ class SpineDBManager(QObject):
         db_map_cascading_data = dict()
         for db_map, entity_class_ids in db_map_ids.items():
             db_map_cascading_data[db_map] = [
-                item
-                for item in self.get_items(db_map, item_type)
-                if entity_class_ids.intersection([item.get("object_class_id"), item.get("relationship_class_id")])
+                item for item in self.get_items(db_map, item_type) if item["entity_class_id"] in entity_class_ids
             ]
         return db_map_cascading_data
 
@@ -1515,9 +1513,7 @@ class SpineDBManager(QObject):
         db_map_cascading_data = dict()
         for db_map, entity_ids in db_map_ids.items():
             db_map_cascading_data[db_map] = [
-                item
-                for item in self.get_items(db_map, "parameter value")
-                if entity_ids.intersection([item.get("object_id"), item.get("relationship_id")])
+                item for item in self.get_items(db_map, "parameter value") if item["entity_id"] in entity_ids
             ]
         return db_map_cascading_data
 

@@ -504,7 +504,7 @@ class GraphViewMixin:
         """
         entity_ids = self.object_ids + self.relationship_ids
         pos_lookup = {
-            p["object_id"]: dict(from_database(p["value"]).value_to_database_data())
+            p["entity_id"]: dict(from_database(p["value"]).value_to_database_data())
             for p in self.db_mngr.get_items_by_field(self.db_map, "parameter value", "parameter_name", self._POS_STR)
         }
         heavy_positions = {ind: pos_lookup[id_] for ind, id_ in enumerate(entity_ids) if id_ in pos_lookup}
@@ -919,27 +919,27 @@ class GraphViewMixin:
             return
         class_items = {}
         for item in scene.items():
-            if isinstance(item, ObjectItem):
+            if isinstance(item, EntityItem):
                 class_items.setdefault(item.entity_class_id, []).append(item)
         pos_def_class_ids = {
-            p["object_class_id"]
+            p["entity_class_id"]
             for p in self.db_mngr.get_items_by_field(
                 self.db_map, "parameter definition", "parameter_name", self._POS_STR
             )
         }
         defs_to_add = [
-            {"name": self._POS_STR, "object_class_id": class_id} for class_id in class_items.keys() - pos_def_class_ids
+            {"name": self._POS_STR, "entity_class_id": class_id} for class_id in class_items.keys() - pos_def_class_ids
         ]
         if defs_to_add:
             self.db_mngr.add_parameter_definitions({self.db_map: defs_to_add})
         pos_def_id_lookup = {
-            p["object_class_id"]: p["id"]
+            p["entity_class_id"]: p["id"]
             for p in self.db_mngr.get_items_by_field(
                 self.db_map, "parameter definition", "parameter_name", self._POS_STR
             )
         }
         pos_val_id_lookup = {
-            (p["object_class_id"], p["object_id"]): p["id"]
+            (p["entity_class_id"], p["entity_id"]): p["id"]
             for p in self.db_mngr.get_items_by_field(self.db_map, "parameter value", "parameter_name", self._POS_STR)
         }
         vals_to_add = list()
@@ -952,8 +952,8 @@ class GraphViewMixin:
                     vals_to_add.append(
                         {
                             "name": "pos_x",
-                            "object_class_id": class_id,
-                            "object_id": item.entity_id,
+                            "entity_class_id": class_id,
+                            "entity_id": item.entity_id,
                             "parameter_definition_id": pos_def_id_lookup[class_id],
                             "value": to_database(value),
                         }
