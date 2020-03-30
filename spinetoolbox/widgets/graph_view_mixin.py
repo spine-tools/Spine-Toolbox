@@ -970,11 +970,11 @@ class GraphViewMixin:
         scene = self.ui.graphicsView.scene()
         if not scene:
             return
-        object_ids = {x.entity_id for x in scene.items() if isinstance(x, ObjectItem)}
+        entity_ids = {x.entity_id for x in scene.items() if isinstance(x, EntityItem)}
         vals_to_remove = [
             p
             for p in self.db_mngr.get_items_by_field(self.db_map, "parameter value", "parameter_name", self._POS_STR)
-            if p["object_id"] in object_ids
+            if p["entity_id"] in entity_ids
         ]
         if vals_to_remove:
             self.db_mngr.remove_items({self.db_map: {"parameter value": vals_to_remove}})
