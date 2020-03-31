@@ -307,7 +307,7 @@ class ParameterValueDelegate(ParameterValueOrDefaultValueDelegate):
         parameter_name = index.sibling(index.row(), h("parameter_name")).data()
         parameters = self.db_mngr.get_items_by_field(db_map, "parameter definition", "parameter_name", parameter_name)
         entity_class_id = self._get_entity_class_id(index, db_map)
-        parameter_ids = {p["id"] for p in parameters if p[self.entity_class_id_key] == entity_class_id}
+        parameter_ids = {p["id"] for p in parameters if p["entity_class_id"] == entity_class_id}
         value_list_ids = {
             self.db_mngr.get_item(db_map, "parameter definition", id_).get("value_list_id") for id_ in parameter_ids
         }
@@ -335,20 +335,12 @@ class ParameterValueDelegate(ParameterValueOrDefaultValueDelegate):
 class ObjectParameterValueDelegate(GetObjectClassIdMixin, ParameterValueDelegate):
     """A delegate for the object parameter value."""
 
-    @property
-    def entity_class_id_key(self):
-        return "object_class_id"
-
     def _get_entity_class_id(self, index, db_map):
         return self._get_object_class_id(index, db_map)
 
 
 class RelationshipParameterValueDelegate(GetRelationshipClassIdMixin, ParameterValueDelegate):
     """A delegate for the relationship parameter value."""
-
-    @property
-    def entity_class_id_key(self):
-        return "relationship_class_id"
 
     def _get_entity_class_id(self, index, db_map):
         return self._get_relationship_class_id(index, db_map)
