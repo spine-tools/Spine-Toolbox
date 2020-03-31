@@ -7,7 +7,12 @@ import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
 from spinetoolbox.logger_interface import LoggerInterface
 from spinetoolbox.spine_db_manager import SpineDBManager
 from spinetoolbox.widgets.data_store_widget import DataStoreForm
-from spinetoolbox.helpers import spinedb_api_version_check, pyside2_version_check
+from spinetoolbox.helpers import pyside2_version_check
+from spinetoolbox.spinedb_api_version_check import spinedb_api_version_check
+
+# Check for spinedb_api version before we try to import possibly non-existent stuff below.
+if not spinedb_api_version_check():
+    sys.exit(1)
 
 
 class SimpleLogger(LoggerInterface):
@@ -30,9 +35,7 @@ def main(argv):
         argv (list): Command line arguments
     """
     if not pyside2_version_check():
-        return 0
-    if not spinedb_api_version_check():
-        return 0
+        return 1
     try:
         path = argv[1]
     except IndexError:
