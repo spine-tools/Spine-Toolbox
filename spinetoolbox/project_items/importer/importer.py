@@ -537,9 +537,10 @@ def _fix_1d_array_to_array(mappings):
                 for sheet_settings in table_mappings.values():
                     for setting in sheet_settings:
                         parameter_setting = setting.get("parameters")
-                        parameter_type = parameter_setting.get("parameter_type")
-                        if parameter_type == "1d array":
-                            parameter_setting["parameter_type"] = "array"
+                        if parameter_setting is not None:
+                            parameter_type = parameter_setting.get("parameter_type")
+                            if parameter_type is not None and parameter_type == "1d array":
+                                parameter_setting["parameter_type"] = "array"
 
 
 def _fix_csv_connector_settings(settings):
