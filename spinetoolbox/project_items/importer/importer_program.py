@@ -46,6 +46,7 @@ def _create_log_file_timestamp():
 
 
 def run(checked_files, all_settings, urls_downstream, logs_dir, cancel_on_error):
+    print("starting importer program")
     all_data = []
     all_errors = []
     for source in checked_files:

@@ -225,7 +225,10 @@ class ToolboxUI(QMainWindow):
     @Slot(bool)
     def update_window_modified(self, clean):
         """Updates window modified status and save actions depending on the state of the undo stack."""
-        self.setWindowModified(not clean)
+        try:
+            self.setWindowModified(not clean)
+        except RuntimeError as e:
+            raise e
         self.ui.actionSave.setDisabled(clean)
 
     def parse_project_item_modules(self):
@@ -395,7 +398,7 @@ class ToolboxUI(QMainWindow):
         self.init_project_item_model()
         self.ui.treeView_project.selectionModel().selectionChanged.connect(self.item_selection_changed)
         self._project = SpineToolboxProject(
-            self, name, description, location, self.project_item_model, settings=self._qsettings, logger=self
+            self, name, description, location, self.project_item_model, settings=self._qsettings, embedded_julia_console=self.julia_repl, embedded_python_console=self.python_repl, logger=self
         )
         self._project.connect_signals()
         self._connect_project_signals()
@@ -475,7 +478,7 @@ class ToolboxUI(QMainWindow):
         self.ui.treeView_project.selectionModel().selectionChanged.connect(self.item_selection_changed)
         # Create project
         self._project = SpineToolboxProject(
-            self, name, desc, project_dir, self.project_item_model, settings=self._qsettings, logger=self
+            self, name, desc, project_dir, self.project_item_model, settings=self._qsettings, embedded_julia_console=self.julia_repl, embedded_python_console=self.python_repl, logger=self
         )
         self._connect_project_signals()
         self.update_window_title()

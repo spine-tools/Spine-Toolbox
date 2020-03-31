@@ -160,17 +160,17 @@ class GAMSToolInstance(ToolInstance):
 class JuliaToolInstance(ToolInstance):
     """Class for Julia Tool instances."""
 
-    def __init__(self, toolbox, tool_specification, basedir, settings, logger):
+    def __init__(self, tool_specification, basedir, settings, embedded_julia_console, logger):
         """
         Args:
-            toolbox (ToolboxUI): QMainWindow instance
             tool_specification (ToolSpecification): the tool specification for this instance
             basedir (str): the path to the directory where this instance should run
             settings (QSettings): Toolbox settings
+            embedded_julia_console (JuliaREPLWidget): a Julia console for execution in the embedded console
             logger (LoggerInterface): a logger instance
         """
         super().__init__(tool_specification, basedir, settings, logger)
-        self._toolbox = toolbox
+        self._embedded_console = embedded_julia_console
         self.ijulia_command_list = list()
 
     def prepare(self, optional_input_files, input_database_urls, output_database_urls, tool_args):
@@ -210,7 +210,7 @@ class JuliaToolInstance(ToolInstance):
     def execute(self, **kwargs):
         """Executes a prepared instance."""
         if self._settings.value("appSettings/useEmbeddedJulia", defaultValue="2") == "2":
-            self.exec_mngr = ConsoleExecutionManager(self._toolbox.julia_repl, self.ijulia_command_list, self._logger)
+            self.exec_mngr = ConsoleExecutionManager(self._embedded_console, self.ijulia_command_list, self._logger)
             self.exec_mngr.execution_finished.connect(self.handle_repl_execution_finished)
             self.exec_mngr.start_execution()
         else:
@@ -270,18 +270,18 @@ class JuliaToolInstance(ToolInstance):
 class PythonToolInstance(ToolInstance):
     """Class for Python Tool instances."""
 
-    def __init__(self, toolbox, tool_specification, basedir, settings, logger):
+    def __init__(self, tool_specification, basedir, settings, embedded_python_console, logger):
         """
 
         Args:
-            toolbox (ToolboxUI): QMainWindow instance
             tool_specification (ToolSpecification): the tool specification for this instance
             basedir (str): the path to the directory where this instance should run
             settings (QSettings): Toolbox settings
+            embedded_python_console (PythonReplWidget): a Python console widget for execution in embedded console
             logger (LoggerInterface): A logger instance
         """
         super().__init__(tool_specification, basedir, settings, logger)
-        self._toolbox = toolbox
+        self._embedded_console = embedded_python_console
         self.ipython_command_list = list()
 
     def prepare(self, optional_input_files, input_database_urls, output_database_urls, tool_args):
@@ -319,7 +319,7 @@ class PythonToolInstance(ToolInstance):
     def execute(self, **kwargs):
         """Executes a prepared instance."""
         if self._settings.value("appSettings/useEmbeddedPython", defaultValue="0") == "2":
-            self.exec_mngr = ConsoleExecutionManager(self._toolbox.python_repl, self.ipython_command_list, self._logger)
+            self.exec_mngr = ConsoleExecutionManager(self._embedded_console, self.ipython_command_list, self._logger)
             self.exec_mngr.execution_finished.connect(self.handle_console_execution_finished)
             self.exec_mngr.start_execution()
         else:

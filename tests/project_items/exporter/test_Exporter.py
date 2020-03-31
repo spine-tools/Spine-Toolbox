@@ -20,7 +20,6 @@ import os
 import unittest
 from unittest.mock import MagicMock, NonCallableMagicMock
 from PySide2.QtWidgets import QApplication
-from networkx import DiGraph
 from spinetoolbox.project_item import ProjectItemResource
 from spinetoolbox.project_items.exporter.exporter import Exporter
 from ...mock_helpers import clean_up_toolboxui_with_project, create_toolboxui_with_project

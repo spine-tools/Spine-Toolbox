@@ -28,6 +28,7 @@ from spinetoolbox.widgets.spine_datapackage_widget import SpineDatapackageWidget
 from spinetoolbox.helpers import busy_effect, deserialize_path, serialize_path
 from spinetoolbox.config import APPLICATION_PATH, INVALID_FILENAME_CHARS
 from spinetoolbox.project_commands import AddDCReferencesCommand, RemoveDCReferencesCommand
+from .data_connection_executable import DataConnectionExecutable
 
 
 class DataConnection(ProjectItem):
@@ -77,6 +78,11 @@ class DataConnection(ProjectItem):
     def category():
         """See base class."""
         return "Data Connections"
+
+    def execution_item(self):
+        """Creates DataConnection's execution counterpart."""
+        data_files = [os.path.join(self.data_dir, f) for f in self.data_files()]
+        return DataConnectionExecutable(self.name, self.file_references(), data_files, self._logger)
 
     def make_signal_handler_dict(self):
         """Returns a dictionary of all shared signals and their handlers.

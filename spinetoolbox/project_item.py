@@ -20,7 +20,7 @@ import os
 import logging
 from urllib.parse import urlparse
 from urllib.request import url2pathname
-from PySide2.QtCore import Signal, QUrl, QParallelAnimationGroup, QEventLoop
+from PySide2.QtCore import Signal, QUrl
 from PySide2.QtGui import QDesktopServices
 from .helpers import create_dir, rename_dir
 from .metaobject import MetaObject, shorten
@@ -167,74 +167,9 @@ class ProjectItem(MetaObject):
         else:
             self.get_icon().rank_icon.set_rank("X")
 
-    def stop_execution(self):
-        """Stops executing this View."""
-        self._logger.msg.emit(f"Stopping {self.name}")
-
-    def execute(self, resources, direction):
-        """
-        Executes this item in the given direction using the given resources and returns a boolean
-        indicating the outcome.
-
-        Subclasses need to implement execute_forward and execute_backward to do the appropriate work
-        in each direction.
-
-        Args:
-            resources (list): a list of ProjectItemResources available for execution
-            direction (str): either "forward" or "backward"
-
-        Returns:
-            bool: True if execution succeeded, False otherwise
-        """
-        if direction == "forward":
-            self._logger.msg.emit("")
-            self._logger.msg.emit(f"Executing {self.item_type()} <b>{self.name}</b>")
-            self._logger.msg.emit("***")
-            if self.execute_forward(resources):
-                self.run_leave_animation()
-                return True
-            return False
-        return self.execute_backward(resources)
-
-    def run_leave_animation(self):
-        """
-        Runs the animation that represents execution leaving this item.
-        Blocks until the animation is finished.
-        """
-        loop = QEventLoop()
-        animation = self.make_execution_leave_animation()
-        animation.finished.connect(loop.quit)
-        animation.start()
-        if animation.state() == QParallelAnimationGroup.Running:
-            loop.exec_()
-
-    def execute_forward(self, resources):
-        """
-        Executes this item in the forward direction.
-
-        The default implementation just returns True.
-
-        Args:
-            resources (list): a list of ProjectItemResources available for execution
-
-        Returns:
-            bool: True if execution succeeded, False otherwise
-        """
-        return True
-
-    def execute_backward(self, resources):
-        """
-        Executes this item in the backward direction.
-
-        The default implementation just returns True.
-
-        Args:
-            resources (list): a list of ProjectItemResources available for execution
-
-        Returns:
-            bool: True if execution succeeded, False otherwise
-        """
-        return True
+    def execution_item(self):
+        """Creates project item's execution counterpart."""
+        raise NotImplementedError()
 
     def output_resources(self, direction):
         """
@@ -300,19 +235,6 @@ class ProjectItem(MetaObject):
             resources (list): resources available from input items
         """
 
-    def make_execution_leave_animation(self):
-        """
-        Returns animation to play when execution leaves this item.
-
-        Returns:
-            QParallelAnimationGroup
-        """
-        icon = self.get_icon()
-        links = set(link for conn in icon.connectors.values() for link in conn.links if link.src_connector == conn)
-        anim_group = QParallelAnimationGroup(self)
-        for link in links:
-            anim_group.addAnimation(link.make_execution_animation())
-        return anim_group
 
     def invalidate_workflow(self, edges):
         """Notifies that this item's workflow is not acyclic.
@@ -414,35 +336,6 @@ class ProjectItem(MetaObject):
             "implemented yet."
         )
 
-    # pylint: disable=no-self-use
-    def available_resources_downstream(self, upstream_resources):
-        """
-        Returns resources available to downstream items.
-
-        Should be reimplemented by subclasses if they want to offer resources
-        to downstream items. The default implementation returns an empty list.
-
-        Args:
-            upstream_resources (list): a list of resources available from upstream items
-
-        Returns:
-            a list of ProjectItemResources
-        """
-        return list()
-
-    # pylint: disable=no-self-use
-    def available_resources_upstream(self):
-        """
-        Returns resources available to upstream items.
-
-        Should be reimplemented by subclasses if they want to offer resources
-        to upstream items. The default implementation returns an empty list.
-
-        Returns:
-            a list of ProjectItemResources
-        """
-        return list()
-
     @staticmethod
     def upgrade_from_no_version_to_version_1(item_name, old_item_dict, old_project_dir):
         """
@@ -471,7 +364,7 @@ class ProjectItemResource:
     def __init__(self, provider, type_, url="", metadata=None):
         """
         Args:
-            provider (ProjectItem): The item that provides the resource
+            provider (ProjectItem or ExecutionItem): The item that provides the resource
             type_ (str): The resource type, currently available types:
 
                 - "file": url points to the file's path
