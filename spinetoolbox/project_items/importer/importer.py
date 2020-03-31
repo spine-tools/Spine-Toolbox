@@ -539,7 +539,7 @@ def _fix_1d_array_to_array(mappings):
                         parameter_setting = setting.get("parameters")
                         if parameter_setting is not None:
                             parameter_type = parameter_setting.get("parameter_type")
-                            if parameter_type == "1d array":
+                            if parameter_type is not None and parameter_type == "1d array":
                                 parameter_setting["parameter_type"] = "array"
 
 
