@@ -488,7 +488,7 @@ class Tool(ProjectItem):
                 + self.basedir
                 + "'>work directory</a>"
             )
-            self._toolbox.msg.emit(
+            self._logger.msg.emit(
                 "*** Copying Tool specification <b>{0}</b> source files to {1} ***".format(
                     self.tool_specification().name, work_anchor
                 )
