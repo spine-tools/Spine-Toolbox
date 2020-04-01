@@ -312,7 +312,7 @@ class Importer(ProjectItem):
             python_cmd = PYTHON_EXECUTABLE
         if not self.python_exists(python_cmd):
             return False
-        self.importer_process = QProcessExecutionManager(self._toolbox, python_cmd, [program_path])
+        self.importer_process = QProcessExecutionManager(self._logger, python_cmd, [program_path])
         self.importer_process.execution_finished.connect(self._handle_importer_program_process_finished)
         self.importer_process.data_to_inject = importer_args
         return True
@@ -353,7 +353,7 @@ class Importer(ProjectItem):
             bool: True if Python is found, False otherwise
         """
         args = ["-V"]
-        python_check_process = QProcessExecutionManager(self._toolbox, program, args, silent=True)
+        python_check_process = QProcessExecutionManager(self._logger, program, args, silent=True)
         python_check_process.start_execution()
         if not python_check_process.wait_for_process_finished(msecs=3000):
             self._logger.msg_error.emit(
