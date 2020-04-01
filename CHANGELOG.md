@@ -3,6 +3,15 @@ All **notable** changes to this project are documented here.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
+## [0.4.0-beta.8] - 2020-04-01
+### Changed
+- importer_program.py now uses the Python interpreter that the app was started with and not 
+  the one that is given by user in Settings -> Tools.
+
+### Fixed
+- [win-x64] importer_program.pyc is now run with python.exe that is embedded to the application 
+  install sub-directory /extras/.
+
 ## [0.4.0-beta.7] - 2020-03-12
 ### Added
 - Undo/Redo in Design View
