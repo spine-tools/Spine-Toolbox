@@ -17,7 +17,7 @@ Contains the TreeViewMixin class.
 """
 
 from PySide2.QtCore import Slot, Signal
-from .custom_menus import ObjectTreeContextMenu, RelationshipTreeContextMenu
+from .custom_menus import EntityTreeContextMenu
 from .data_store_add_items_dialogs import (
     AddObjectClassesDialog,
     AddObjectsDialog,
@@ -80,6 +80,19 @@ class TreeViewMixin:
         self.ui.treeView_relationship.customContextMenuRequested.connect(self.show_relationship_tree_context_menu)
         self._object_classes_added.connect(lambda: self.ui.treeView_object.resizeColumnToContents(0))
         self._relationship_classes_added.connect(lambda: self.ui.treeView_relationship.resizeColumnToContents(0))
+        self.ui.treeView_object.expanded.connect(self._resize_tree_view_columns)
+        self.ui.treeView_object.collapsed.connect(self._resize_tree_view_columns)
+        self.ui.treeView_relationship.expanded.connect(self._resize_tree_view_columns)
+        self.ui.treeView_relationship.collapsed.connect(self._resize_tree_view_columns)
+
+    @Slot("QModelIndex")
+    def _resize_tree_view_columns(self, index):
+        view = {
+            self.object_tree_model: self.ui.treeView_object,
+            self.relationship_tree_model: self.ui.treeView_relationship,
+        }.get(index.model())
+        if view is not None:
+            view.resizeColumnToContents(0)
 
     def init_models(self):
         """Initializes models."""
@@ -230,7 +243,7 @@ class TreeViewMixin:
         if index.column() != 0:
             return
         global_pos = self.ui.treeView_object.viewport().mapToGlobal(pos)
-        object_tree_context_menu = ObjectTreeContextMenu(self, global_pos, index)
+        object_tree_context_menu = EntityTreeContextMenu(self, global_pos, index)
         option = object_tree_context_menu.get_action()
         if option == "Copy text":
             self.ui.treeView_object.copy()
@@ -255,9 +268,9 @@ class TreeViewMixin:
         elif option == "Remove selection":
             self.show_remove_object_tree_items_form()
         elif option == "Fully expand":
-            self.fully_expand_selection()
+            self.fully_expand_view(self.ui.treeView_object)
         elif option == "Fully collapse":
-            self.fully_collapse_selection()
+            self.fully_collapse_view(self.ui.treeView_object)
         else:  # No option selected
             pass
         object_tree_context_menu.deleteLater()
@@ -273,7 +286,7 @@ class TreeViewMixin:
         if index.column() != 0:
             return
         global_pos = self.ui.treeView_relationship.viewport().mapToGlobal(pos)
-        relationship_tree_context_menu = RelationshipTreeContextMenu(self, global_pos, index)
+        relationship_tree_context_menu = EntityTreeContextMenu(self, global_pos, index)
         option = relationship_tree_context_menu.get_action()
         if option == "Copy text":
             self.ui.treeView_relationship.copy()
@@ -287,25 +300,37 @@ class TreeViewMixin:
             self.show_edit_relationships_form()
         elif option == "Remove selection":
             self.show_remove_relationship_tree_items_form()
+        elif option == "Fully expand":
+            self.fully_expand_view(self.ui.treeView_relationship)
+        elif option == "Fully collapse":
+            self.fully_collapse_view(self.ui.treeView_relationship)
         else:  # No option selected
             pass
         relationship_tree_context_menu.deleteLater()
 
     @busy_effect
-    def fully_expand_selection(self):
-        for index in self.ui.treeView_object.selectionModel().selectedIndexes():
+    def fully_expand_view(self, view):
+        view.expanded.disconnect(self._resize_tree_view_columns)
+        model = view.model()
+        for index in view.selectionModel().selectedIndexes():
             if index.column() != 0:
                 continue
-            for item in self.object_tree_model.visit_all(index):
-                self.ui.treeView_object.expand(self.object_tree_model.index_from_item(item))
+            for item in model.visit_all(index):
+                view.expand(model.index_from_item(item))
+        view.expanded.connect(self._resize_tree_view_columns)
+        view.resizeColumnToContents(0)
 
     @busy_effect
-    def fully_collapse_selection(self):
-        for index in self.ui.treeView_object.selectionModel().selectedIndexes():
+    def fully_collapse_view(self, view):
+        view.collapsed.disconnect(self._resize_tree_view_columns)
+        model = view.model()
+        for index in view.selectionModel().selectedIndexes():
             if index.column() != 0:
                 continue
-            for item in self.object_tree_model.visit_all(index):
-                self.ui.treeView_object.collapse(self.object_tree_model.index_from_item(item))
+            for item in model.visit_all(index):
+                view.collapse(model.index_from_item(item))
+        view.collapsed.connect(self._resize_tree_view_columns)
+        view.resizeColumnToContents(0)
 
     @Slot("QModelIndex")
     def find_next_relationship(self, index):

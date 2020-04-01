@@ -174,28 +174,10 @@ class EntityTreeContextMenu(CustomContextMenu):
             for text, icon in action_block.items():
                 self.add_action(text, icon)
             self.addSeparator()
-
-
-class ObjectTreeContextMenu(EntityTreeContextMenu):
-    """Context menu class for object tree items in tree view form."""
-
-    def __init__(self, parent, position, index):
-        """
-        Args:
-            parent (QWidget): Parent for menu widget
-            position (QPoint): Position on screen
-            index (QModelIndex): Index of item that requested the context-menu
-        """
-        super().__init__(parent, position, index)
-        item = index.model().item_from_index(index)
         if item.has_children():
             self.addSeparator()
             self.add_action("Fully expand", QIcon(":/icons/menu_icons/angle-double-right.svg"))
             self.add_action("Fully collapse", QIcon(":/icons/menu_icons/angle-double-left.svg"))
-
-
-class RelationshipTreeContextMenu(EntityTreeContextMenu):
-    """Context menu class for relationship tree items in tree view form."""
 
 
 class ParameterContextMenu(CustomContextMenu):
