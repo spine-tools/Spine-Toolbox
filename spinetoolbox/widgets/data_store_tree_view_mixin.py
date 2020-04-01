@@ -41,6 +41,8 @@ class TreeViewMixin:
 
     _object_classes_added = Signal()
     _relationship_classes_added = Signal()
+    _object_classes_fetched = Signal()
+    _relationship_classes_fetched = Signal()
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -79,7 +81,11 @@ class TreeViewMixin:
         self.ui.treeView_relationship.edit_key_pressed.connect(self.edit_relationship_tree_items)
         self.ui.treeView_relationship.customContextMenuRequested.connect(self.show_relationship_tree_context_menu)
         self._object_classes_added.connect(lambda: self.ui.treeView_object.resizeColumnToContents(0))
+        self._object_classes_fetched.connect(lambda: self.ui.treeView_object.expand(self.object_tree_model.root_index))
         self._relationship_classes_added.connect(lambda: self.ui.treeView_relationship.resizeColumnToContents(0))
+        self._relationship_classes_fetched.connect(
+            lambda: self.ui.treeView_relationship.expand(self.relationship_tree_model.root_index)
+        )
         self.ui.treeView_object.expanded.connect(self._resize_tree_view_columns)
         self.ui.treeView_object.collapsed.connect(self._resize_tree_view_columns)
         self.ui.treeView_relationship.expanded.connect(self._resize_tree_view_columns)
@@ -99,8 +105,6 @@ class TreeViewMixin:
         super().init_models()
         self.object_tree_model.build_tree()
         self.relationship_tree_model.build_tree()
-        self.ui.treeView_object.expand(self.object_tree_model.root_index)
-        self.ui.treeView_relationship.expand(self.relationship_tree_model.root_index)
         self.ui.actionExport.setEnabled(self.object_tree_model.root_item.has_children())
 
     @Slot("QItemSelection", "QItemSelection")
@@ -457,6 +461,14 @@ class TreeViewMixin:
         """Enables or disables actions and informs the user about what just happened."""
         super().notify_items_changed(action, item_type, db_map_data)
         self.ui.actionExport.setEnabled(self.object_tree_model.root_item.has_children())
+
+    def receive_object_classes_fetched(self, db_map_data):
+        super().receive_object_classes_fetched(db_map_data)
+        self._object_classes_fetched.emit()
+
+    def receive_relationship_classes_fetched(self, db_map_data):
+        super().receive_object_classes_fetched(db_map_data)
+        self._relationship_classes_fetched.emit()
 
     def receive_object_classes_added(self, db_map_data):
         super().receive_object_classes_added(db_map_data)

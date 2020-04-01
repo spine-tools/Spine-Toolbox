@@ -115,31 +115,21 @@ class GraphViewMixin:
         self.object_class_list_model.populate_list()
         self.relationship_class_list_model.populate_list()
 
+    def receive_object_classes_fetched(self, db_map_data):
+        super().receive_object_classes_fetched(db_map_data)
+        self.object_class_list_model.receive_entity_classes_added(db_map_data)
+
+    def receive_relationship_classes_fetched(self, db_map_data):
+        super().receive_relationship_classes_fetched(db_map_data)
+        self.relationship_class_list_model.receive_entity_classes_added(db_map_data)
+
     def receive_object_classes_added(self, db_map_data):
         super().receive_object_classes_added(db_map_data)
         self.object_class_list_model.receive_entity_classes_added(db_map_data)
 
-    def receive_object_classes_updated(self, db_map_data):
-        super().receive_object_classes_updated(db_map_data)
-        self.object_class_list_model.receive_entity_classes_updated(db_map_data)
-        self.refresh_icons(db_map_data)
-
-    def receive_object_classes_removed(self, db_map_data):
-        super().receive_object_classes_removed(db_map_data)
-        self.object_class_list_model.receive_entity_classes_removed(db_map_data)
-
     def receive_relationship_classes_added(self, db_map_data):
         super().receive_relationship_classes_added(db_map_data)
         self.relationship_class_list_model.receive_entity_classes_added(db_map_data)
-
-    def receive_relationship_classes_updated(self, db_map_data):
-        super().receive_relationship_classes_updated(db_map_data)
-        self.relationship_class_list_model.receive_entity_classes_updated(db_map_data)
-        self.refresh_icons(db_map_data)
-
-    def receive_relationship_classes_removed(self, db_map_data):
-        super().receive_relationship_classes_removed(db_map_data)
-        self.relationship_class_list_model.receive_entity_classes_removed(db_map_data)
 
     def receive_objects_added(self, db_map_data):
         """Runs when objects are added to the db.
@@ -153,6 +143,69 @@ class GraphViewMixin:
         objects = db_map_data.get(self.db_map, [])
         self._added_objects = {x["id"]: x for x in objects}
         self.objects_added_to_graph.emit()
+
+    def receive_relationships_added(self, db_map_data):
+        """Runs when relationships are added to the db.
+        Builds a lookup dictionary consumed by ``add_relationship``.
+        Also, adds the new relationships to the graph if needed.
+
+        Args:
+            db_map_data (dict): list of dictionary-items keyed by DiffDatabaseMapping instance.
+        """
+        super().receive_relationships_added(db_map_data)
+        relationships = db_map_data.get(self.db_map, [])
+        self._added_relationships = {x["id"]: x for x in relationships}
+        self.relationships_added_to_graph.emit()
+
+    def receive_object_classes_updated(self, db_map_data):
+        super().receive_object_classes_updated(db_map_data)
+        self.object_class_list_model.receive_entity_classes_updated(db_map_data)
+        self.refresh_icons(db_map_data)
+
+    def receive_relationship_classes_updated(self, db_map_data):
+        super().receive_relationship_classes_updated(db_map_data)
+        self.relationship_class_list_model.receive_entity_classes_updated(db_map_data)
+        self.refresh_icons(db_map_data)
+
+    def receive_objects_updated(self, db_map_data):
+        """Runs when objects are updated in the db. Refreshes names of objects in graph.
+
+        Args:
+            db_map_data (dict): list of dictionary-items keyed by DiffDatabaseMapping instance.
+        """
+        super().receive_objects_updated(db_map_data)
+        updated_ids = {x["id"]: (x["name"], x["description"]) for x in db_map_data.get(self.db_map, [])}
+        for item in self.ui.graphicsView.items():
+            if isinstance(item, ObjectItem) and item.entity_id in updated_ids:
+                name, description = updated_ids[item.entity_id]
+                item.update_name(name)
+                item.update_description(description)
+
+    def receive_object_classes_removed(self, db_map_data):
+        super().receive_object_classes_removed(db_map_data)
+        self.object_class_list_model.receive_entity_classes_removed(db_map_data)
+
+    def receive_relationship_classes_removed(self, db_map_data):
+        super().receive_relationship_classes_removed(db_map_data)
+        self.relationship_class_list_model.receive_entity_classes_removed(db_map_data)
+
+    def receive_objects_removed(self, db_map_data):
+        """Runs when objects are removed from the db. Rebuilds graph if needed.
+
+        Args:
+            db_map_data (dict): list of dictionary-items keyed by DiffDatabaseMapping instance.
+        """
+        super().receive_objects_removed(db_map_data)
+        self.hide_removed_entities(db_map_data)
+
+    def receive_relationships_removed(self, db_map_data):
+        """Runs when relationships are removed from the db. Rebuilds graph if needed.
+
+        Args:
+            db_map_data (dict): list of dictionary-items keyed by DiffDatabaseMapping instance.
+        """
+        super().receive_relationships_removed(db_map_data)
+        self.hide_removed_entities(db_map_data)
 
     @Slot()
     def _ensure_objects_in_graph(self):
@@ -175,42 +228,6 @@ class GraphViewMixin:
         if rem_class_ids.intersection(sel_class_ids):
             self.build_graph()
 
-    def receive_objects_updated(self, db_map_data):
-        """Runs when objects are updated in the db. Refreshes names of objects in graph.
-
-        Args:
-            db_map_data (dict): list of dictionary-items keyed by DiffDatabaseMapping instance.
-        """
-        super().receive_objects_updated(db_map_data)
-        updated_ids = {x["id"]: (x["name"], x["description"]) for x in db_map_data.get(self.db_map, [])}
-        for item in self.ui.graphicsView.items():
-            if isinstance(item, ObjectItem) and item.entity_id in updated_ids:
-                name, description = updated_ids[item.entity_id]
-                item.update_name(name)
-                item.update_description(description)
-
-    def receive_objects_removed(self, db_map_data):
-        """Runs when objects are removed from the db. Rebuilds graph if needed.
-
-        Args:
-            db_map_data (dict): list of dictionary-items keyed by DiffDatabaseMapping instance.
-        """
-        super().receive_objects_removed(db_map_data)
-        self.hide_removed_entities(db_map_data)
-
-    def receive_relationships_added(self, db_map_data):
-        """Runs when relationships are added to the db.
-        Builds a lookup dictionary consumed by ``add_relationship``.
-        Also, adds the new relationships to the graph if needed.
-
-        Args:
-            db_map_data (dict): list of dictionary-items keyed by DiffDatabaseMapping instance.
-        """
-        super().receive_relationships_added(db_map_data)
-        relationships = db_map_data.get(self.db_map, [])
-        self._added_relationships = {x["id"]: x for x in relationships}
-        self.relationships_added_to_graph.emit()
-
     @Slot()
     def _ensure_relationships_in_graph(self):
         QTimer.singleShot(0, self._do_ensure_relationships_in_graph)
@@ -229,15 +246,6 @@ class GraphViewMixin:
         self._added_relationships.clear()
         if any(object_ids.intersection(object_id_list) for object_id_list in rem_object_id_lists):
             self.build_graph()
-
-    def receive_relationships_removed(self, db_map_data):
-        """Runs when relationships are removed from the db. Rebuilds graph if needed.
-
-        Args:
-            db_map_data (dict): list of dictionary-items keyed by DiffDatabaseMapping instance.
-        """
-        super().receive_relationships_removed(db_map_data)
-        self.hide_removed_entities(db_map_data)
 
     def restore_removed_entities(self, added_ids):
         """Restores any entities that have been previously removed and returns their ids.
@@ -448,11 +456,11 @@ class GraphViewMixin:
             selected_relationship_ids.add(relationship_id)
         for index in model.selected_object_class_indexes:
             item = index.model().item_from_index(index)
-            object_ids = {child.db_map_id(self.db_map) for child in item.children}
+            object_ids = set(item._get_children_ids(self.db_map))
             selected_object_ids.update(object_ids)
         for index in model.selected_relationship_class_indexes:
             item = index.model().item_from_index(index)
-            relationship_ids = {child.db_map_id(self.db_map) for child in item.children}
+            relationship_ids = set(item._get_children_ids(self.db_map))
             selected_relationship_ids.update(relationship_ids)
         return selected_object_ids, selected_relationship_ids
 

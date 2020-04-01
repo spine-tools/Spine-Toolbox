@@ -65,14 +65,22 @@ class SpineDBFetcher(QObject):
     def run(self):
         self.listener.setCursor(QCursor(Qt.BusyCursor))
         self.listener.silenced = True
-        self.object_classes_fetched.emit({x: self.db_mngr.get_object_classes(x) for x in self.db_maps})
-        self.relationship_classes_fetched.emit({x: self.db_mngr.get_relationship_classes(x) for x in self.db_maps})
-        self.parameter_definitions_fetched.emit({x: self.db_mngr.get_parameter_definitions(x) for x in self.db_maps})
-        self.objects_fetched.emit({x: self.db_mngr.get_objects(x) for x in self.db_maps})
-        self.relationships_fetched.emit({x: self.db_mngr.get_relationships(x) for x in self.db_maps})
-        self.parameter_values_fetched.emit({x: self.db_mngr.get_parameter_values(x) for x in self.db_maps})
-        self.parameter_value_lists_fetched.emit({x: self.db_mngr.get_parameter_value_lists(x) for x in self.db_maps})
-        self.parameter_tags_fetched.emit({x: self.db_mngr.get_parameter_tags(x) for x in self.db_maps})
+        object_classes = {x: self.db_mngr.get_object_classes(x) for x in self.db_maps}
+        relationship_classes = {x: self.db_mngr.get_relationship_classes(x) for x in self.db_maps}
+        parameter_definitions = {x: self.db_mngr.get_parameter_definitions(x) for x in self.db_maps}
+        objects = {x: self.db_mngr.get_objects(x) for x in self.db_maps}
+        relationships = {x: self.db_mngr.get_relationships(x) for x in self.db_maps}
+        parameter_values = {x: self.db_mngr.get_parameter_values(x) for x in self.db_maps}
+        parameter_value_lists = {x: self.db_mngr.get_parameter_value_lists(x) for x in self.db_maps}
+        parameter_tags = {x: self.db_mngr.get_parameter_tags(x) for x in self.db_maps}
+        self.object_classes_fetched.emit(object_classes)
+        self.relationship_classes_fetched.emit(relationship_classes)
+        self.parameter_definitions_fetched.emit(parameter_definitions)
+        self.objects_fetched.emit(objects)
+        self.relationships_fetched.emit(relationships)
+        self.parameter_values_fetched.emit(parameter_values)
+        self.parameter_value_lists_fetched.emit(parameter_value_lists)
+        self.parameter_tags_fetched.emit(parameter_tags)
         self.deleteLater()
 
     def clean_up(self):
@@ -84,39 +92,39 @@ class SpineDBFetcher(QObject):
     def receive_object_classes_fetched(self, db_map_data):
         self.db_mngr.cache_items("object class", db_map_data)
         self.db_mngr.update_icons(db_map_data)
-        self.listener.receive_object_classes_added(db_map_data)
+        self.listener.receive_object_classes_fetched(db_map_data)
 
     @Slot(object)
     def receive_objects_fetched(self, db_map_data):
         self.db_mngr.cache_items("object", db_map_data)
-        self.listener.receive_objects_added(db_map_data)
+        self.listener.receive_objects_fetched(db_map_data)
 
     @Slot(object)
     def receive_relationship_classes_fetched(self, db_map_data):
         self.db_mngr.cache_items("relationship class", db_map_data)
-        self.listener.receive_relationship_classes_added(db_map_data)
+        self.listener.receive_relationship_classes_fetched(db_map_data)
 
     @Slot(object)
     def receive_relationships_fetched(self, db_map_data):
         self.db_mngr.cache_items("relationship", db_map_data)
-        self.listener.receive_relationships_added(db_map_data)
+        self.listener.receive_relationships_fetched(db_map_data)
 
     @Slot(object)
     def receive_parameter_definitions_fetched(self, db_map_data):
         self.db_mngr.cache_items("parameter definition", db_map_data)
-        self.listener.receive_parameter_definitions_added(db_map_data)
+        self.listener.receive_parameter_definitions_fetched(db_map_data)
 
     @Slot(object)
     def receive_parameter_values_fetched(self, db_map_data):
         self.db_mngr.cache_items("parameter value", db_map_data)
-        self.listener.receive_parameter_values_added(db_map_data)
+        self.listener.receive_parameter_values_fetched(db_map_data)
 
     @Slot(object)
     def receive_parameter_value_lists_fetched(self, db_map_data):
         self.db_mngr.cache_items("parameter value list", db_map_data)
-        self.listener.receive_parameter_value_lists_added(db_map_data)
+        self.listener.receive_parameter_value_lists_fetched(db_map_data)
 
     @Slot(object)
     def receive_parameter_tags_fetched(self, db_map_data):
         self.db_mngr.cache_items("parameter tag", db_map_data)
-        self.listener.receive_parameter_tags_added(db_map_data)
+        self.listener.receive_parameter_tags_fetched(db_map_data)

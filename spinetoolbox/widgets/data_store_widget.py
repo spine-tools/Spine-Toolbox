@@ -337,7 +337,7 @@ class DataStoreFormBase(QMainWindow):
             self,
             "Export to file",
             self._get_base_dir(),
-            "Excel file (*.xlsx);;SQlite database (*.sqlite *.db)",
+            "Excel file (*.xlsx);;SQlite database (*.sqlite *.db);; SQL script (*.sql)",
         )
         self.qsettings.endGroup()
         if not file_path:  # File selection cancelled
@@ -385,7 +385,7 @@ class DataStoreFormBase(QMainWindow):
     def export_to_sqlite(self, db_map, file_path):
         """Exports data from database into SQlite file."""
         dst_url = 'sqlite:///{0}'.format(file_path)
-        copy_database(dst_url, db_map, overwrite=True)
+        copy_database(dst_url, db_map.db_url, overwrite=True)
         self.msg.emit("SQlite file successfully exported.")
 
     @Slot(bool)
@@ -550,6 +550,32 @@ class DataStoreFormBase(QMainWindow):
         count = sum(len(data) for data in db_map_data.values())
         msg = f"Successfully {action} {count} {item_type} item(s)"
         self.msg.emit(msg)
+
+    def receive_object_classes_fetched(self, db_map_data):
+        pass
+
+    def receive_objects_fetched(self, db_map_data):
+        pass
+
+    def receive_relationship_classes_fetched(self, db_map_data):
+        pass
+
+    def receive_relationships_fetched(self, db_map_data):
+        pass
+
+    def receive_parameter_definitions_fetched(self, db_map_data):
+        pass
+
+    def receive_parameter_values_fetched(self, db_map_data):
+        pass
+
+    def receive_parameter_value_lists_fetched(self, db_map_data):
+        self.notify_items_changed("fetched", "parameter value list", db_map_data)
+        self.parameter_value_list_model.receive_parameter_value_lists_added(db_map_data)
+
+    def receive_parameter_tags_fetched(self, db_map_data):
+        self.notify_items_changed("fetched", "parameter tag", db_map_data)
+        self.parameter_tag_toolbar.receive_parameter_tags_added(db_map_data)
 
     def receive_object_classes_added(self, db_map_data):
         self.notify_items_changed("added", "object class", db_map_data)

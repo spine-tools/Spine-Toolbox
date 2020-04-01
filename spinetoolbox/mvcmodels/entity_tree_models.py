@@ -115,7 +115,7 @@ class EntityTreeModel(MinimalTreeModel):
         for index in indexes:
             self._select_index(index)
 
-    def find_items(self, db_map, path_prefix, parent_items=()):
+    def find_items(self, db_map, path_prefix, parent_items=(), fetch=False):
         """Returns items at given path prefix.
         """
         if not parent_items:
@@ -125,6 +125,11 @@ class EntityTreeModel(MinimalTreeModel):
             parent_items = [
                 child for parent_item in parent_items for child in parent_item.find_children_by_id(db_map, id_)
             ]
+            if fetch:
+                for parent_item in parent_items:
+                    parent = self.index_from_item(parent_item)
+                    if self.canFetchMore(parent):
+                        self.fetchMore(parent)
         return parent_items
 
 
@@ -277,7 +282,7 @@ class ObjectTreeModel(EntityTreeModel):
         object_id = object_ids[pos]
         object_class_id = object_class_ids[pos]
         # Return first node that passes all cascade fiters
-        for parent_item in self.find_items(db_map, (object_class_id, object_id, rel_cls_id)):
+        for parent_item in self.find_items(db_map, (object_class_id, object_id, rel_cls_id), fetch=True):
             for item in parent_item.find_children(lambda child: child.display_id == rel_item.display_id):
                 return self.index_from_item(item)
         return None
