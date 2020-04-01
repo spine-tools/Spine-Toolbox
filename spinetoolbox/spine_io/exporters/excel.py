@@ -16,6 +16,7 @@ Framework for exporting a database to Excel file.
 :date:   31.1.2020
 """
 
+import warnings
 from itertools import groupby
 from operator import itemgetter
 import numpy as np
@@ -34,17 +35,17 @@ def _get_objects_and_parameters(db):
     """
 
     # get all objects
-    obj = db.object_list().all()
+    obj = db.query(db.object_sq).all()
 
     # get all object classes
-    obj_class = db.object_class_list().all()
+    obj_class = db.query(db.object_class_sq).all()
     obj_class_id_2_name = {oc.id: oc.name for oc in obj_class}
 
     # get all parameter values
-    pval = db.object_parameter_value_list().all()
+    pval = db.query(db.object_parameter_value_sq).all()
 
     # get all parameter definitions
-    par = db.object_parameter_definition_list().all()
+    par = db.query(db.object_parameter_definition_sq).all()
 
     # make all in same format
     par = [(p.object_class_name, None, p.parameter_name, None) for p in par]
@@ -71,7 +72,7 @@ def _get_objects_and_parameters(db):
             object_timepattern.append(d)
             object_par.append(d[:-1] + (None,))
         else:
-            raise Warning(f"Unsuported export type: {type(d[3])}, Skipping export")
+            warnings.warn(f"Skipping export of unsuported parameter type: {type(d[3])}")
 
     return object_par, object_json, object_ts, object_timepattern
 
@@ -86,10 +87,10 @@ def _get_relationships_and_parameters(db):
         (List, List) First list contains parameter data, second one json data
     """
 
-    rel_class = db.wide_relationship_class_list().all()
-    rel = db.wide_relationship_list().all()
-    rel_par = db.relationship_parameter_definition_list().all()
-    rel_par_value = db.relationship_parameter_value_list().all()
+    rel_class = db.query(db.wide_relationship_class_sq).all()
+    rel = db.query(db.wide_relationship_sq).all()
+    rel_par = db.query(db.relationship_parameter_definition_sq).all()
+    rel_par_value = db.query(db.relationship_parameter_value_sq).all()
 
     rel_class_id_2_name = {rc.id: rc.name for rc in rel_class}
 
@@ -128,7 +129,7 @@ def _get_relationships_and_parameters(db):
             rel_timepattern.append(d)
             rel_par.append(d[:-1] + [None])
         else:
-            raise Warning(f"Unsuported export type: {type(d[3])}, Skipping export")
+            warnings.warn(f"Skipping export of unsuported parameter type: {type(d[3])}")
 
     return rel_par, rel_json, rel_class, rel_ts, rel_timepattern
 

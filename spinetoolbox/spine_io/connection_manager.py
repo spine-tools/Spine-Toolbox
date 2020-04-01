@@ -305,7 +305,7 @@ class ConnectionWorker(QObject):
     tablesReady = Signal(list)
     # Signal when data from a specific table in source is ready, list of data and list of headers
     dataReady = Signal(list, list)
-    # Signal when data is read an mapped, dict with data and list of errors when reading data with mappings
+    # Signal when data is read and mapped, dict with data and list of errors when reading data with mappings
     mappedDataReady = Signal(dict, list)
 
     def __init__(self, source, connection, parent=None):
