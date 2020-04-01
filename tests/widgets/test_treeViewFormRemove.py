@@ -25,6 +25,7 @@ class TestTreeViewFormRemoveMixin:
         """
         self.tree_view_form.init_models()
         self.put_mock_object_classes_in_db_mngr()
+        self.fetch_object_tree_model()
         root_item = self.tree_view_form.object_tree_model.root_item
         self.assertEqual(root_item.child_count(), 2)
         self.db_mngr.object_classes_removed.emit({self.mock_db_map: [self.fish_class]})
@@ -37,6 +38,7 @@ class TestTreeViewFormRemoveMixin:
         self.tree_view_form.init_models()
         self.put_mock_object_classes_in_db_mngr()
         self.put_mock_objects_in_db_mngr()
+        self.fetch_object_tree_model()
         root_item = self.tree_view_form.object_tree_model.root_item
         fish_item = root_item.child(0)
         self.assertEqual(fish_item.child_count(), 1)
@@ -49,6 +51,7 @@ class TestTreeViewFormRemoveMixin:
         self.put_mock_object_classes_in_db_mngr()
         self.put_mock_objects_in_db_mngr()
         self.put_mock_relationship_classes_in_db_mngr()
+        self.fetch_object_tree_model()
         root_item = self.tree_view_form.object_tree_model.root_item
         dog_item = root_item.child(0)
         pluto_item = dog_item.child(0)
@@ -63,6 +66,7 @@ class TestTreeViewFormRemoveMixin:
         self.put_mock_objects_in_db_mngr()
         self.put_mock_relationship_classes_in_db_mngr()
         self.put_mock_relationships_in_db_mngr()
+        self.fetch_object_tree_model()
         root_item = self.tree_view_form.object_tree_model.root_item
         dog_item = root_item.child(0)
         pluto_item = dog_item.child(0)
@@ -80,6 +84,7 @@ class TestTreeViewFormRemoveMixin:
         model.init_model()
         self.put_mock_object_classes_in_db_mngr()
         self.put_mock_object_parameter_definitions_in_db_mngr()
+        self.fetch_object_tree_model()
         with mock.patch.object(CompoundParameterModel, "_modify_data_in_filter_menus"):
             self.db_mngr.parameter_definitions_removed.emit({self.mock_db_map: [self.water_parameter]})
         h = model.header.index
@@ -97,6 +102,7 @@ class TestTreeViewFormRemoveMixin:
         model.init_model()
         self.put_mock_relationship_classes_in_db_mngr()
         self.put_mock_relationship_parameter_definitions_in_db_mngr()
+        self.fetch_object_tree_model()
         with mock.patch.object(CompoundParameterModel, "_modify_data_in_filter_menus"):
             self.db_mngr.parameter_definitions_removed.emit({self.mock_db_map: [self.relative_speed_parameter]})
         h = model.header.index
@@ -114,6 +120,7 @@ class TestTreeViewFormRemoveMixin:
         model.init_model()
         self.put_mock_object_classes_in_db_mngr()
         self.put_mock_object_parameter_values_in_db_mngr()
+        self.fetch_object_tree_model()
         with mock.patch.object(CompoundParameterModel, "_modify_data_in_filter_menus"):
             self.db_mngr.parameter_values_removed.emit({self.mock_db_map: [self.nemo_water]})
         h = model.header.index
@@ -134,6 +141,7 @@ class TestTreeViewFormRemoveMixin:
         model.init_model()
         self.put_mock_relationship_classes_in_db_mngr()
         self.put_mock_relationship_parameter_values_in_db_mngr()
+        self.fetch_object_tree_model()
         with mock.patch.object(CompoundParameterModel, "_modify_data_in_filter_menus"):
             self.db_mngr.parameter_values_removed.emit({self.mock_db_map: [self.nemo_pluto_relative_speed]})
         h = model.header.index

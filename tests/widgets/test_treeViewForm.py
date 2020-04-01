@@ -351,11 +351,18 @@ class TestTreeViewForm(
         self.put_mock_relationship_parameter_definitions_in_db_mngr()
         self.put_mock_object_parameter_values_in_db_mngr()
         self.put_mock_relationship_parameter_values_in_db_mngr()
+        self.fetch_object_tree_model()
+
+    def fetch_object_tree_model(self):
+        for item in self.tree_view_form.object_tree_model.visit_all():
+            if item.can_fetch_more():
+                item.fetch_more()
 
     def test_set_object_parameter_definition_defaults(self):
         """Test that defaults are set in object parameter definition models according the object tree selection."""
         self.tree_view_form.init_models()
         self.put_mock_object_classes_in_db_mngr()
+        self.fetch_object_tree_model()
         # Select fish item in object tree
         root_item = self.tree_view_form.object_tree_model.root_item
         fish_item = root_item.child(0)

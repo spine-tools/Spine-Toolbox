@@ -578,3 +578,6 @@ class RelationshipItem(EntityItem):
             object_name_list=self.db_map_data_field(self.first_db_map, "object_name_list"),
             database=self.first_db_map.codename,
         )
+
+    def can_fetch_more(self):
+        return False
