@@ -24,7 +24,7 @@ import sys
 from PySide2.QtWidgets import QApplication, QAction
 import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
 from spinetoolbox.widgets.data_store_widget import DataStoreForm
-from spinetoolbox.widgets.add_db_items_dialogs import AddObjectClassesDialog
+from spinetoolbox.widgets.data_store_add_items_dialogs import AddObjectClassesDialog
 
 
 class TestAddItemsDialog(unittest.TestCase):
