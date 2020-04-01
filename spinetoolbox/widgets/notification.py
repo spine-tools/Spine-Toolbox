@@ -24,7 +24,7 @@ from PySide2.QtGui import QFont
 class Notification(QWidget):
     """Custom pop-up notification widget with fade-in and fade-out effect."""
 
-    def __init__(self, parent, txt, anim_duration=500, life_span=2000):
+    def __init__(self, parent, txt, anim_duration=500, life_span=None):
         """
 
         Args:
@@ -34,10 +34,15 @@ class Notification(QWidget):
             life_span (int): How long does the notification stays in place in msecs
         """
         super().__init__()
+        if life_span is None:
+            word_count = len(txt.split(" "))
+            mspw = 60000 / 140  # Assume people can read ~140 words per minute
+            life_span = mspw * word_count
         self.setWindowFlags(Qt.Popup)
         self.setParent(parent)
         self._parent = parent
         self.label = QLabel(txt)
+        self.label.setMaximumSize(parent.size())
         self.label.setAlignment(Qt.AlignCenter)
         self.label.setWordWrap(True)
         self.label.setMargin(8)
@@ -123,7 +128,7 @@ class Notification(QWidget):
 
 
 class NotificationStack(QObject):
-    def __init__(self, parent, anim_duration=500, life_span=2000):
+    def __init__(self, parent, anim_duration=500, life_span=None):
         super().__init__()
         self._parent = parent
         self._anim_duration = anim_duration
@@ -133,10 +138,9 @@ class NotificationStack(QObject):
     def push(self, txt):
         """Pushes a notification to the stack with the given text."""
         offset = sum((x.height() for x in self.notifications), 0)
-        life_span = self._life_span
-        if self.notifications:
-            life_span += 0.8 * self.notifications[-1].remaining_time()
-        notification = Notification(self._parent, txt, anim_duration=self._anim_duration, life_span=life_span)
+        additional_life_span = 0.8 * self.notifications[-1].remaining_time() if self.notifications else 0
+        notification = Notification(self._parent, txt, anim_duration=self._anim_duration, life_span=self._life_span)
+        notification.timer.setInterval(notification.timer.interval() + additional_life_span)
         notification.move(notification.pos().x(), offset)
         notification.destroyed.connect(
             lambda obj=None, n=notification, h=notification.height(): self.handle_notification_destroyed(n, h)

@@ -16,21 +16,11 @@ ImportDialog class.
 :date:   1.6.2019
 """
 
-from PySide2.QtWidgets import (
-    QApplication,
-    QDialog,
-    QWidget,
-    QVBoxLayout,
-    QDialogButtonBox,
-    QPushButton,
-    QLabel,
-    QSplitter,
-    QStyle,
-)
+from PySide2.QtWidgets import QApplication, QDialog, QWidget, QVBoxLayout, QDialogButtonBox, QSplitter, QStyle
 from PySide2.QtCore import QSize, Qt, Signal, Slot
 from PySide2.QtGui import QGuiApplication
 import spinedb_api
-from ..helpers import busy_effect, ensure_window_is_on_screen
+from ..helpers import ensure_window_is_on_screen
 from ..spine_io.connection_manager import ConnectionManager
 from ..spine_io.importers.csv_reader import CSVConnector
 from ..spine_io.importers.excel_reader import ExcelConnector
@@ -39,6 +29,7 @@ from ..spine_io.importers.gdx_connector import GdxConnector
 from ..spine_io.importers.json_reader import JSONConnector
 from .import_preview_widget import ImportPreviewWidget
 from .import_errors_widget import ImportErrorWidget
+from .notification import Notification
 
 
 class ImportDialog(QDialog):
@@ -70,8 +61,8 @@ class ImportDialog(QDialog):
         # state
         self._mapped_data = None
         self._mapping_errors = []
-        self.connector_list = [CSVConnector, ExcelConnector, SqlAlchemyConnector, GdxConnector, JSONConnector]
-        self.connector_list = {c.DISPLAY_NAME: c for c in self.connector_list}
+        connector_list = [CSVConnector, ExcelConnector, SqlAlchemyConnector, GdxConnector, JSONConnector]
+        self.connectors = {c.DISPLAY_NAME: c for c in connector_list}
         self._selected_connector = None
         self.active_connector = None
         self._current_view = "connector"
@@ -100,7 +91,7 @@ class ImportDialog(QDialog):
 
         # set list items
         self._select_widget_ui.source_list.blockSignals(True)
-        self._select_widget_ui.source_list.addItems(list(self.connector_list.keys()))
+        self._select_widget_ui.source_list.addItems(list(self.connectors.keys()))
         self._select_widget_ui.source_list.clearSelection()
         self._select_widget_ui.source_list.blockSignals(False)
 
@@ -125,11 +116,11 @@ class ImportDialog(QDialog):
     def mapping_errors(self):
         return self._mapping_errors
 
-    @Slot()
-    def connector_selected(self, selection):
+    @Slot("QListWidgetItem", "QListWidgetItem")
+    def connector_selected(self, current, _previous):
         connector = None
-        if selection:
-            connector = self.connector_list.get(selection.text(), None)
+        if current:
+            connector = self.connectors.get(current.text(), None)
         self._selected_connector = connector
         self.set_ok_button_availability()
 
@@ -189,9 +180,8 @@ class ImportDialog(QDialog):
                 self._import_preview.mappedDataReady.connect(self._handle_data_ready)
                 self._layout.addWidget(self._import_preview)
                 self.active_connector.connectionFailed.connect(self._handle_failed_connection)
+                self.active_connector.connectionReady.connect(self.set_preview_as_main_widget)
                 self.active_connector.init_connection()
-                # show preview widget
-                self.set_preview_as_main_widget()
             else:
                 # remove connector object.
                 self.active_connector.deleteLater()
@@ -204,10 +194,6 @@ class ImportDialog(QDialog):
         Arguments:
             msg {str} -- str with message of reason for failed connection.
         """
-        self.select_widget.hide()
-        self._error_widget.hide()
-        self._import_preview.hide()
-
         if self.active_connector:
             self.active_connector.close_connection()
             self.active_connector.deleteLater()
@@ -215,18 +201,8 @@ class ImportDialog(QDialog):
         if self._import_preview:
             self._import_preview.deleteLater()
             self._import_preview = None
-
-        ok_button = QPushButton()
-        ok_button.setText("Ok")
-
-        temp_widget = QWidget()
-        temp_widget.setLayout(QVBoxLayout())
-        temp_widget.layout().addWidget(QLabel(msg))
-        temp_widget.layout().addWidget(ok_button)
-
-        ok_button.clicked.connect(self.select_widget.show)
-        ok_button.clicked.connect(temp_widget.deleteLater)
-        self.layout().addWidget(temp_widget)
+        notification = Notification(self, msg)
+        notification.show()
 
     def set_preview_as_main_widget(self):
         self._current_view = "preview"
