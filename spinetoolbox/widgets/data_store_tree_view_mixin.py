@@ -18,13 +18,13 @@ Contains the TreeViewMixin class.
 
 from PySide2.QtCore import Slot, Signal
 from .custom_menus import ObjectTreeContextMenu, RelationshipTreeContextMenu
-from .add_db_items_dialogs import (
+from .data_store_add_items_dialogs import (
     AddObjectClassesDialog,
     AddObjectsDialog,
     AddRelationshipClassesDialog,
     AddRelationshipsDialog,
 )
-from .edit_db_items_dialogs import (
+from .data_store_edit_items_dialogs import (
     EditObjectClassesDialog,
     EditObjectsDialog,
     EditRelationshipClassesDialog,

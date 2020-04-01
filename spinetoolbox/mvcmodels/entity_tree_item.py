@@ -341,7 +341,7 @@ class ObjectTreeRootItem(TreeRootItem):
 
     @property
     def child_item_type(self):
-        """Returns an ObjectClassItem."""
+        """Returns ObjectClassItem."""
         return ObjectClassItem
 
 
@@ -354,7 +354,7 @@ class RelationshipTreeRootItem(TreeRootItem):
 
     @property
     def child_item_type(self):
-        """Returns a RelationshipClassItem."""
+        """Returns RelationshipClassItem."""
         return RelationshipClassItem
 
 
@@ -398,7 +398,7 @@ class ObjectClassItem(EntityClassItem):
 
     @property
     def child_item_type(self):
-        """Returns an ObjectItem."""
+        """Returns ObjectItem."""
         return ObjectItem
 
     def default_parameter_data(self):
@@ -429,7 +429,7 @@ class RelationshipClassItem(EntityClassItem):
 
     @property
     def child_item_type(self):
-        """Returns a RelationshipItem."""
+        """Returns RelationshipItem."""
         return RelationshipItem
 
     def default_parameter_data(self):
@@ -475,7 +475,7 @@ class ObjectItem(EntityItem):
 
     @property
     def child_item_type(self):
-        """Returns a RelationshipClassItem."""
+        """Returns RelationshipClassItem."""
         return RelationshipClassItem
 
     @property

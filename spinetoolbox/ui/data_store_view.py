@@ -10,10 +10,10 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-# Form implementation generated from reading ui file 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\data_store_view.ui',
-# licensing of 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\data_store_view.ui' applies.
+# Form implementation generated from reading ui file '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/data_store_view.ui',
+# licensing of '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/data_store_view.ui' applies.
 #
-# Created: Wed Mar 25 14:47:32 2020
+# Created: Wed Apr  1 06:37:01 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -39,7 +39,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_2.setObjectName("verticalLayout_2")
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 872, 22))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 872, 28))
         self.menubar.setNativeMenuBar(False)
         self.menubar.setObjectName("menubar")
         self.menuSession = QtWidgets.QMenu(self.menubar)
@@ -518,6 +518,8 @@ class Ui_MainWindow(object):
         self.actionPrune_selected_classes.setObjectName("actionPrune_selected_classes")
         self.actiontt = QtWidgets.QAction(MainWindow)
         self.actiontt.setObjectName("actiontt")
+        self.actionMass_remove_items = QtWidgets.QAction(MainWindow)
+        self.actionMass_remove_items.setObjectName("actionMass_remove_items")
         self.menuSession.addAction(self.actionRefresh)
         self.menuSession.addAction(self.actionCommit)
         self.menuSession.addAction(self.actionRollback)
@@ -537,6 +539,7 @@ class Ui_MainWindow(object):
         self.menuEdit.addAction(self.actionEdit_relationships)
         self.menuEdit.addSeparator()
         self.menuEdit.addAction(self.actionRemove_selection)
+        self.menuEdit.addAction(self.actionMass_remove_items)
         self.menuEdit.addSeparator()
         self.menuEdit.addAction(self.actionManage_parameter_tags)
         self.menuEdit.addSeparator()
@@ -648,10 +651,11 @@ class Ui_MainWindow(object):
         self.actionExport_as_pdf.setText(QtWidgets.QApplication.translate("MainWindow", "Export as PDF...", None, -1))
         self.actionPrune_selected_classes.setText(QtWidgets.QApplication.translate("MainWindow", "Prune selected classes", None, -1))
         self.actiontt.setText(QtWidgets.QApplication.translate("MainWindow", "tt", None, -1))
+        self.actionMass_remove_items.setText(QtWidgets.QApplication.translate("MainWindow", "Mass remove items...", None, -1))
 
-from spinetoolbox.widgets.custom_qtableview import PivotTableView, AutoFilterCopyPasteTableView
-from spinetoolbox.widgets.custom_qtreeview import CopyTreeView, StickySelectionEntityTreeView, EntityTreeView
+from spinetoolbox.widgets.custom_qtreeview import CopyTreeView, EntityTreeView, StickySelectionEntityTreeView
 from spinetoolbox.widgets.custom_qlistview import DragListView
-from spinetoolbox.widgets.frozen_table_view import FrozenTableView
+from spinetoolbox.widgets.custom_qtableview import AutoFilterCopyPasteTableView, PivotTableView
 from spinetoolbox.widgets.custom_qgraphicsviews import GraphQGraphicsView
+from spinetoolbox.widgets.frozen_table_view import FrozenTableView
 from spinetoolbox import resources_icons_rc

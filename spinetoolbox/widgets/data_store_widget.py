@@ -23,12 +23,13 @@ from PySide2.QtCore import Qt, Signal, Slot
 from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QIcon
 from spinedb_api import copy_database, import_data, SpineIntegrityError, SpineDBAPIError
 from ..config import MAINWINDOW_SS, APPLICATION_PATH
-from .edit_db_items_dialogs import ManageParameterTagsDialog
+from .data_store_edit_items_dialogs import ManageParameterTagsDialog
+from .data_store_manage_items_dialog import MassRemoveItemsDialog
 from .custom_menus import ParameterValueListContextMenu
-from .parameter_view_mixin import ParameterViewMixin
-from .tree_view_mixin import TreeViewMixin
-from .graph_view_mixin import GraphViewMixin
-from .tabular_view_mixin import TabularViewMixin
+from .data_store_parameter_view_mixin import ParameterViewMixin
+from .data_store_tree_view_mixin import TreeViewMixin
+from .data_store_graph_view_mixin import GraphViewMixin
+from .data_store_tabular_view_mixin import TabularViewMixin
 from .toolbars import ParameterTagToolBar
 from .db_session_history_dialog import DBSessionHistoryDialog
 from .notification import NotificationStack
@@ -132,6 +133,7 @@ class DataStoreFormBase(QMainWindow):
         self.ui.actionPaste.triggered.connect(self.paste)
         self.ui.actionRemove_selection.triggered.connect(self.remove_selection)
         self.ui.actionManage_parameter_tags.triggered.connect(self.show_manage_parameter_tags_form)
+        self.ui.actionMass_remove_items.triggered.connect(self.show_mass_remove_items_form)
         self.parameter_tag_toolbar.manage_tags_action_triggered.connect(self.show_manage_parameter_tags_form)
         self.parameter_tag_toolbar.tag_button_toggled.connect(self._handle_tag_button_toggled)
         self.ui.treeView_parameter_value_list.selectionModel().selectionChanged.connect(
@@ -529,6 +531,11 @@ class DataStoreFormBase(QMainWindow):
         self.db_mngr.update_parameter_value_lists(db_map_data_to_upd)
         self.db_mngr.remove_items(db_map_typed_data_to_rm)
         self.ui.treeView_parameter_value_list.selectionModel().clearSelection()
+
+    @Slot(bool)
+    def show_mass_remove_items_form(self, checked=False):
+        dialog = MassRemoveItemsDialog(self, self.db_mngr, *self.db_maps)
+        dialog.show()
 
     @busy_effect
     @Slot("QModelIndex")

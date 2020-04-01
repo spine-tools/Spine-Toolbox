@@ -153,11 +153,11 @@ class ObjectTreeModel(EntityTreeModel):
             # Group items by class id
             d = dict()
             for item in items:
-                d.setdefault(item["class_id"], list()).append(item["id"])
+                d.setdefault(item["class_id"], dict())[item["id"]] = None
             for class_id, ids in d.items():
                 # Find the parents corresponding the this class id and put them in the result
                 for parent_item in self.find_items(db_map, (class_id,)):
-                    result.setdefault(parent_item, {})[db_map] = ids
+                    result.setdefault(parent_item, {})[db_map] = list(ids.keys())
         return result
 
     def _group_relationship_class_data(self, db_map_data):
@@ -174,10 +174,10 @@ class ObjectTreeModel(EntityTreeModel):
             d = dict()
             for item in items:
                 for object_class_id in item["object_class_id_list"].split(","):
-                    d.setdefault(int(object_class_id), list()).append(item["id"])
+                    d.setdefault(int(object_class_id), dict())[item["id"]] = None
             for object_class_id, ids in d.items():
                 for parent_item in self.find_items(db_map, (object_class_id, None)):
-                    result.setdefault(parent_item, {})[db_map] = ids
+                    result.setdefault(parent_item, {})[db_map] = list(ids.keys())
         return result
 
     def _group_relationship_data(self, db_map_data):
@@ -195,10 +195,10 @@ class ObjectTreeModel(EntityTreeModel):
             for item in items:
                 for object_id in item["object_id_list"].split(","):
                     key = (int(object_id), item["class_id"])
-                    d.setdefault(key, list()).append(item["id"])
+                    d.setdefault(key, dict())[item["id"]] = None
             for (object_id, class_id), ids in d.items():
                 for parent_item in self.find_items(db_map, (None, object_id, class_id)):
-                    result.setdefault(parent_item, {})[db_map] = ids
+                    result.setdefault(parent_item, {})[db_map] = list(ids.keys())
         return result
 
     def add_object_classes(self, db_map_data):
@@ -307,10 +307,10 @@ class RelationshipTreeModel(EntityTreeModel):
         for db_map, items in db_map_data.items():
             d = dict()
             for item in items:
-                d.setdefault(item["class_id"], list()).append(item["id"])
+                d.setdefault(item["class_id"], dict())[item["id"]] = None
             for class_id, ids in d.items():
                 for parent_item in self.find_items(db_map, (class_id,)):
-                    result.setdefault(parent_item, {})[db_map] = ids
+                    result.setdefault(parent_item, {})[db_map] = list(ids.keys())
         return result
 
     def add_relationship_classes(self, db_map_data):

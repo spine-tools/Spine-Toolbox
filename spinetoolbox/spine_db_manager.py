@@ -51,7 +51,7 @@ from .spine_db_commands import (
     SetParameterDefinitionTagsCommand,
     RemoveItemsCommand,
 )
-from .widgets.manage_db_items_dialog import CommitDialog
+from .widgets.data_store_manage_items_dialog import CommitDialog
 from .mvcmodels.shared import PARSED_ROLE
 
 
@@ -441,10 +441,8 @@ class SpineDBManager(QObject):
         self.object_classes_removed.connect(self.cascade_remove_objects)
         self.object_classes_removed.connect(self.cascade_remove_relationship_classes)
         self.object_classes_removed.connect(self.cascade_remove_parameter_definitions)
-        self.object_classes_removed.connect(self.cascade_remove_parameter_values_by_entity_class)
         self.relationship_classes_removed.connect(self.cascade_remove_relationships_by_class)
         self.relationship_classes_removed.connect(self.cascade_remove_parameter_definitions)
-        self.relationship_classes_removed.connect(self.cascade_remove_parameter_values_by_entity_class)
         self.objects_removed.connect(self.cascade_remove_relationships_by_object)
         self.objects_removed.connect(self.cascade_remove_parameter_values_by_entity)
         self.relationships_removed.connect(self.cascade_remove_parameter_values_by_entity)
@@ -465,7 +463,7 @@ class SpineDBManager(QObject):
         self.parameter_tags_removed.connect(self.cascade_refresh_parameter_definitions_by_tag)
         # Signaller (after caching, so items are there when listeners receive signals)
         self.signaller.connect_signals()
-        # Remove from cache (last, so views are able to find items until the very last moment)
+        # Remove from cache (after signaller, so views are able to find items until the very last moment)
         self.object_classes_removed.connect(lambda db_map_data: self.uncache_items("object class", db_map_data))
         self.objects_removed.connect(lambda db_map_data: self.uncache_items("object", db_map_data))
         self.relationship_classes_removed.connect(
@@ -527,15 +525,15 @@ class SpineDBManager(QObject):
         db_map_typed_data = {}
         for db_map, items in db_map_data.items():
             for item in items:
-                db_map_data = self._cache.get(db_map)
-                if db_map_data is None:
+                db_map_cache_data = self._cache.get(db_map)
+                if db_map_cache_data is None:
                     continue
-                items = db_map_data.get(item_type)
-                if items is None:
+                cache_items = db_map_cache_data.get(item_type)
+                if cache_items is None:
                     continue
-                removed_item = items.pop(item["id"], None)
+                removed_item = cache_items.pop(item["id"], None)
                 if removed_item:
-                    db_map_typed_data.setdefault(db_map, {}).setdefault(item_type, []).append(item)
+                    db_map_typed_data.setdefault(db_map, {}).setdefault(item_type, []).append(removed_item)
         self.items_removed_from_cache.emit(db_map_typed_data)
 
     def update_icons(self, db_map_data):
@@ -1284,17 +1282,6 @@ class SpineDBManager(QObject):
         db_map_cascading_data = self.find_cascading_parameter_data(self._to_ids(db_map_data), "parameter definition")
         if any(db_map_cascading_data.values()):
             self.parameter_definitions_removed.emit(db_map_cascading_data)
-
-    @Slot(object)
-    def cascade_remove_parameter_values_by_entity_class(self, db_map_data):
-        """Removes parameter values in cascade when removing entity classes.
-
-        Args:
-            db_map_data (dict): lists of removed items keyed by DiffDatabaseMapping
-        """
-        db_map_cascading_data = self.find_cascading_parameter_data(self._to_ids(db_map_data), "parameter value")
-        if any(db_map_cascading_data.values()):
-            self.parameter_values_removed.emit(db_map_cascading_data)
 
     @Slot(object)
     def cascade_remove_parameter_values_by_entity(self, db_map_data):

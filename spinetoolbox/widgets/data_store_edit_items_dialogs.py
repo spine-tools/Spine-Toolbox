@@ -29,7 +29,7 @@ from .custom_delegates import (
     RemoveEntitiesDelegate,
     ManageParameterTagsDelegate,
 )
-from .manage_db_items_dialog import ShowIconColorEditorMixin, GetObjectsMixin, ManageItemsDialog
+from .data_store_manage_items_dialog import ShowIconColorEditorMixin, GetObjectsMixin, ManageItemsDialog
 from ..helpers import default_icon_id
 
 
@@ -83,7 +83,7 @@ class EditObjectClassesDialog(ShowIconColorEditorMixin, EditOrRemoveItemsDialog)
             lambda index: self.show_icon_color_editor(index)
         )
 
-    @Slot(name="accept")
+    @Slot()
     def accept(self):
         """Collect info from dialog and try to update items."""
         db_map_data = dict()
@@ -149,7 +149,7 @@ class EditObjectsDialog(EditOrRemoveItemsDialog):
             self.items.append(item)
         self.model.reset_model(model_data)
 
-    @Slot(name="accept")
+    @Slot()
     def accept(self):
         """Collect info from dialog and try to update items."""
         db_map_data = dict()
@@ -212,7 +212,7 @@ class EditRelationshipClassesDialog(EditOrRemoveItemsDialog):
             self.items.append(item)
         self.model.reset_model(model_data)
 
-    @Slot(name="accept")
+    @Slot()
     def accept(self):
         """Collect info from dialog and try to update items."""
         db_map_data = dict()
@@ -287,7 +287,7 @@ class EditRelationshipsDialog(GetObjectsMixin, EditOrRemoveItemsDialog):
         self.db_map_obj_lookup = self.make_db_map_obj_lookup()
         self.db_map_rel_cls_lookup = self.make_db_map_rel_cls_lookup()
 
-    @Slot(name="accept")
+    @Slot()
     def accept(self):
         """Collect info from dialog and try to update items."""
         db_map_data = dict()
@@ -377,7 +377,7 @@ class RemoveEntitiesDialog(EditOrRemoveItemsDialog):
                 self.items.append(item)
         self.model.reset_model(model_data)
 
-    @Slot(name="accept")
+    @Slot()
     def accept(self):
         """Collect info from dialog and try to remove items."""
         db_map_data = dict()
@@ -464,7 +464,7 @@ class ManageParameterTagsDialog(ManageItemsDialog):
             return [db_name for db_name, db_map in self.keyed_db_maps.items() if db_map in item]
         return self.keyed_db_maps.keys()
 
-    @Slot(name="accept")
+    @Slot()
     def accept(self):
         """Collect info from dialog and try to update, remove, add items."""
         # Update and remove

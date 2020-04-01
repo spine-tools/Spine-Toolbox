@@ -17,8 +17,20 @@ Classes for custom QDialogs to add edit and remove database items.
 """
 
 from functools import reduce
-from PySide2.QtWidgets import QDialog, QVBoxLayout, QPlainTextEdit, QDialogButtonBox, QHeaderView, QAction, QApplication
-from PySide2.QtCore import Slot, Qt
+from PySide2.QtWidgets import (
+    QWidget,
+    QDialog,
+    QVBoxLayout,
+    QHBoxLayout,
+    QPlainTextEdit,
+    QDialogButtonBox,
+    QHeaderView,
+    QAction,
+    QApplication,
+    QGroupBox,
+    QCheckBox,
+)
+from PySide2.QtCore import Slot, Qt, QTimer
 from .custom_editors import IconColorEditor
 from .custom_qtableview import CopyPasteTableView
 from ..helpers import busy_effect
@@ -27,13 +39,15 @@ from ..helpers import busy_effect
 class ManageItemsDialog(QDialog):
     """A dialog with a CopyPasteTableView and a QDialogButtonBox. Base class for all
     dialogs to query user's preferences for adding/editing/managing data items.
-
-    Attributes:
-        parent (DataStoreForm): data store widget
-        db_mngr (SpineDBManager)
     """
 
     def __init__(self, parent, db_mngr):
+        """Init class.
+
+        Args:
+            parent (DataStoreForm): data store widget
+            db_mngr (SpineDBManager)
+        """
         super().__init__(parent)
         self.db_mngr = db_mngr
         self.model = None
@@ -69,18 +83,18 @@ class ManageItemsDialog(QDialog):
             height,
         )
 
-    @Slot("QModelIndex", "QModelIndex", "QVector", name="_handle_model_data_changed")
+    @Slot("QModelIndex", "QModelIndex", "QVector")
     def _handle_model_data_changed(self, top_left, bottom_right, roles):
         """Reimplement in subclasses to handle changes in model data."""
 
-    @Slot("QModelIndex", "QVariant", name='set_model_data')
+    @Slot("QModelIndex", "QVariant")
     def set_model_data(self, index, data):
         """Update model data."""
         if data is None:
             return
         self.model.setData(index, data, Qt.EditRole)
 
-    @Slot(name="_handle_model_reset")
+    @Slot()
     def _handle_model_reset(self):
         """Resize columns and form."""
         self.table_view.resizeColumnsToContents()
@@ -175,21 +189,21 @@ class ShowIconColorEditorMixin:
 
 class CommitDialog(QDialog):
     """A dialog to query user's preferences for new commit.
-
-    Attributes:
-        db_names (Iterable): database names
     """
 
     def __init__(self, parent, *db_names):
-        """Initialize class"""
+        """Initialize class.
+
+        Args:
+            parent (QWidget): the parent widget
+            db_names (str): database names
+        """
         super().__init__(parent)
         self.setWindowModality(Qt.ApplicationModal)
         self.commit_msg = None
         self.setWindowTitle('Commit changes to {}'.format(",".join(db_names)))
         form = QVBoxLayout(self)
-        form.setContentsMargins(0, 0, 0, 0)
-        inner_layout = QVBoxLayout()
-        inner_layout.setContentsMargins(4, 4, 4, 4)
+        form.setContentsMargins(4, 4, 4, 4)
         self.action_accept = QAction(self)
         self.action_accept.setShortcut(QApplication.translate("Dialog", "Ctrl+Return", None, -1))
         self.action_accept.triggered.connect(self.accept)
@@ -202,15 +216,13 @@ class CommitDialog(QDialog):
         self.commit_button = button_box.addButton('Commit', QDialogButtonBox.AcceptRole)
         button_box.accepted.connect(self.accept)
         button_box.rejected.connect(self.reject)
-        inner_layout.addWidget(self.commit_msg_edit)
-        inner_layout.addWidget(button_box)
-        # Add status bar to form
-        form.addLayout(inner_layout)
+        form.addWidget(self.commit_msg_edit)
+        form.addWidget(button_box)
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.commit_msg_edit.textChanged.connect(self.receive_text_changed)
         self.receive_text_changed()
 
-    @Slot(name="receive_text_changed")
+    @Slot()
     def receive_text_changed(self):
         """Called when text changes in the commit msg text edit.
         Enable/disable commit button accordingly."""
@@ -218,3 +230,90 @@ class CommitDialog(QDialog):
         cond = self.commit_msg.strip() != ""
         self.commit_button.setEnabled(cond)
         self.action_accept.setEnabled(cond)
+
+
+class MassRemoveItemsDialog(QDialog):
+    """A dialog to query user's preferences for mass removing db items."""
+
+    _MARGIN = 3
+    _ITEM_TYPES = (
+        "object class",
+        "relationship class",
+        "parameter definition",
+        "parameter tag",
+        "parameter value list",
+        "object",
+        "relationship",
+        "parameter value",
+    )
+
+    def __init__(self, parent, db_mngr, *db_maps):
+        """Initialize class.
+
+        Args:
+            parent (DataStoreForm)
+            db_mngr (SpineDBManager)
+            db_maps (DiffDatabaseMapping): the target db
+        """
+        super().__init__(parent)
+        self.db_mngr = db_mngr
+        self.db_maps = db_maps
+        self.setWindowTitle("Mass remove items")
+        top_widget = QWidget()
+        top_layout = QHBoxLayout(top_widget)
+        db_maps_group_box = QGroupBox("Databases", top_widget)
+        db_maps_layout = QVBoxLayout(db_maps_group_box)
+        db_maps_layout.setContentsMargins(self._MARGIN, self._MARGIN, self._MARGIN, self._MARGIN)
+        self.db_map_check_boxes = {db_map: QCheckBox(db_map.codename, db_maps_group_box) for db_map in self.db_maps}
+        for check_box in self.db_map_check_boxes.values():
+            check_box.setChecked(True)
+            db_maps_layout.addWidget(check_box)
+        items_group_box = QGroupBox("Items", top_widget)
+        items_layout = QVBoxLayout(items_group_box)
+        items_layout.setContentsMargins(self._MARGIN, self._MARGIN, self._MARGIN, self._MARGIN)
+        self.item_check_boxes = {item_type: QCheckBox(item_type, items_group_box) for item_type in self._ITEM_TYPES}
+        for check_box in self.item_check_boxes.values():
+            check_box.stateChanged.connect(lambda _: QTimer.singleShot(0, self._handle_item_check_box_state_changed))
+            items_layout.addWidget(check_box)
+        top_layout.addWidget(db_maps_group_box)
+        top_layout.addWidget(items_group_box)
+        button_box = QDialogButtonBox(self)
+        button_box.setStandardButtons(QDialogButtonBox.Cancel | QDialogButtonBox.Ok)
+        button_box.accepted.connect(self.accept)
+        button_box.rejected.connect(self.reject)
+        layout = QVBoxLayout(self)
+        layout.addWidget(top_widget)
+        layout.addWidget(button_box)
+        layout.setContentsMargins(self._MARGIN, self._MARGIN, self._MARGIN, self._MARGIN)
+        self.setAttribute(Qt.WA_DeleteOnClose)
+
+    @Slot()
+    def _handle_item_check_box_state_changed(self):
+        """Adjust state of checkboxes depending on checks."""
+        if self.item_check_boxes["object class"].isChecked():
+            self.item_check_boxes["object"].setChecked(True)
+            self.item_check_boxes["relationship class"].setChecked(True)
+        if self.item_check_boxes["relationship class"].isChecked() or self.item_check_boxes["object"].isChecked():
+            self.item_check_boxes["relationship"].setChecked(True)
+        if (
+            self.item_check_boxes["relationship class"].isChecked()
+            and self.item_check_boxes["object class"].isChecked()
+        ):
+            self.item_check_boxes["parameter definition"].setChecked(True)
+        if self.item_check_boxes["parameter definition"].isChecked() or (
+            self.item_check_boxes["relationship"].isChecked() and self.item_check_boxes["object"].isChecked()
+        ):
+            self.item_check_boxes["parameter value"].setChecked(True)
+
+    def accept(self):
+        db_map_typed_data = {
+            db_map: {
+                item_type: list(self.db_mngr.get_items(db_map, item_type))
+                for item_type, check_box in self.item_check_boxes.items()
+                if check_box.isChecked()
+            }
+            for db_map, check_box in self.db_map_check_boxes.items()
+            if check_box.isChecked()
+        }
+        self.db_mngr.remove_items(db_map_typed_data)
+        super().accept()

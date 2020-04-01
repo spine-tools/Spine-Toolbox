@@ -187,7 +187,9 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
             entity_class_id = db_item.get(self._entity_class_id_key)
             item_id = db_item["id"]
             identifier = (db_map, entity_class_id, item_id)
-            old_value = inv_field_menu_data.pop(identifier)
+            old_value = inv_field_menu_data.pop(identifier, None)
+            if old_value is None:
+                return None
             old_items = field_menu_data[old_value]
             old_items.remove(identifier)
             if not old_items:

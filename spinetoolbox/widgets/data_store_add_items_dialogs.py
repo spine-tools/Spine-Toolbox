@@ -26,7 +26,12 @@ from .custom_delegates import (
     ManageRelationshipClassesDelegate,
     ManageRelationshipsDelegate,
 )
-from .manage_db_items_dialog import ShowIconColorEditorMixin, GetObjectClassesMixin, GetObjectsMixin, ManageItemsDialog
+from .data_store_manage_items_dialog import (
+    ShowIconColorEditorMixin,
+    GetObjectClassesMixin,
+    GetObjectsMixin,
+    ManageItemsDialog,
+)
 from ..helpers import default_icon_id
 
 

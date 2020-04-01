@@ -62,7 +62,7 @@
      <x>0</x>
      <y>0</y>
      <width>872</width>
-     <height>22</height>
+     <height>28</height>
     </rect>
    </property>
    <property name="nativeMenuBar">
@@ -96,6 +96,7 @@
     <addaction name="actionEdit_relationships"/>
     <addaction name="separator"/>
     <addaction name="actionRemove_selection"/>
+    <addaction name="actionMass_remove_items"/>
     <addaction name="separator"/>
     <addaction name="actionManage_parameter_tags"/>
     <addaction name="separator"/>
@@ -337,11 +338,11 @@
        <attribute name="verticalHeaderVisible">
         <bool>false</bool>
        </attribute>
-       <attribute name="verticalHeaderMinimumSectionSize">
-        <number>20</number>
-       </attribute>
        <attribute name="verticalHeaderHighlightSections">
         <bool>false</bool>
+       </attribute>
+       <attribute name="verticalHeaderMinimumSectionSize">
+        <number>20</number>
        </attribute>
       </widget>
      </item>
@@ -1005,7 +1006,7 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset>
+    <iconset resource="resources/resources_icons.qrc">
      <normaloff>:/icons/menu_icons/check.svg</normaloff>:/icons/menu_icons/check.svg</iconset>
    </property>
    <property name="text">
@@ -1020,7 +1021,7 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset>
+    <iconset resource="resources/resources_icons.qrc">
      <normaloff>:/icons/menu_icons/undo.svg</normaloff>:/icons/menu_icons/undo.svg</iconset>
    </property>
    <property name="text">
@@ -1032,7 +1033,7 @@
   </action>
   <action name="actionClose">
    <property name="icon">
-    <iconset>
+    <iconset resource="resources/resources_icons.qrc">
      <normaloff>:/icons/menu_icons/window-close.svg</normaloff>:/icons/menu_icons/window-close.svg</iconset>
    </property>
    <property name="text">
@@ -1044,7 +1045,7 @@
   </action>
   <action name="actionAdd_object_classes">
    <property name="icon">
-    <iconset>
+    <iconset resource="resources/resources_icons.qrc">
      <normaloff>:/icons/menu_icons/cube_plus.svg</normaloff>:/icons/menu_icons/cube_plus.svg</iconset>
    </property>
    <property name="text">
@@ -1056,7 +1057,7 @@
   </action>
   <action name="actionAdd_objects">
    <property name="icon">
-    <iconset>
+    <iconset resource="resources/resources_icons.qrc">
      <normaloff>:/icons/menu_icons/cube_plus.svg</normaloff>:/icons/menu_icons/cube_plus.svg</iconset>
    </property>
    <property name="text">
@@ -1068,7 +1069,7 @@
   </action>
   <action name="actionAdd_relationship_classes">
    <property name="icon">
-    <iconset>
+    <iconset resource="resources/resources_icons.qrc">
      <normaloff>:/icons/menu_icons/cubes_plus.svg</normaloff>:/icons/menu_icons/cubes_plus.svg</iconset>
    </property>
    <property name="text">
@@ -1080,7 +1081,7 @@
   </action>
   <action name="actionAdd_relationships">
    <property name="icon">
-    <iconset>
+    <iconset resource="resources/resources_icons.qrc">
      <normaloff>:/icons/menu_icons/cubes_plus.svg</normaloff>:/icons/menu_icons/cubes_plus.svg</iconset>
    </property>
    <property name="text">
@@ -1092,7 +1093,7 @@
   </action>
   <action name="actionImport">
    <property name="icon">
-    <iconset>
+    <iconset resource="resources/resources_icons.qrc">
      <normaloff>:/icons/project_item_icons/database-import.svg</normaloff>:/icons/project_item_icons/database-import.svg</iconset>
    </property>
    <property name="text">
@@ -1104,7 +1105,7 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset>
+    <iconset resource="resources/resources_icons.qrc">
      <normaloff>:/icons/project_item_icons/database-export.svg</normaloff>:/icons/project_item_icons/database-export.svg</iconset>
    </property>
    <property name="text">
@@ -1116,7 +1117,7 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset>
+    <iconset resource="resources/resources_icons.qrc">
      <normaloff>:/icons/menu_icons/copy.svg</normaloff>:/icons/menu_icons/copy.svg</iconset>
    </property>
    <property name="text">
@@ -1131,7 +1132,7 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset>
+    <iconset resource="resources/resources_icons.qrc">
      <normaloff>:/icons/menu_icons/paste.svg</normaloff>:/icons/menu_icons/paste.svg</iconset>
    </property>
    <property name="text">
@@ -1143,7 +1144,7 @@
   </action>
   <action name="actionRefresh">
    <property name="icon">
-    <iconset>
+    <iconset resource="resources/resources_icons.qrc">
      <normaloff>:/icons/menu_icons/sync.svg</normaloff>:/icons/menu_icons/sync.svg</iconset>
    </property>
    <property name="text">
@@ -1158,7 +1159,7 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset>
+    <iconset resource="resources/resources_icons.qrc">
      <normaloff>:/icons/menu_icons/cube_pen.svg</normaloff>:/icons/menu_icons/cube_pen.svg</iconset>
    </property>
    <property name="text">
@@ -1170,7 +1171,7 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset>
+    <iconset resource="resources/resources_icons.qrc">
      <normaloff>:/icons/menu_icons/cubes_pen.svg</normaloff>:/icons/menu_icons/cubes_pen.svg</iconset>
    </property>
    <property name="text">
@@ -1182,7 +1183,7 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset>
+    <iconset resource="resources/resources_icons.qrc">
      <normaloff>:/icons/menu_icons/cube_pen.svg</normaloff>:/icons/menu_icons/cube_pen.svg</iconset>
    </property>
    <property name="text">
@@ -1194,7 +1195,7 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset>
+    <iconset resource="resources/resources_icons.qrc">
      <normaloff>:/icons/menu_icons/cubes_pen.svg</normaloff>:/icons/menu_icons/cubes_pen.svg</iconset>
    </property>
    <property name="text">
@@ -1244,7 +1245,7 @@
   </action>
   <action name="actionTree_style">
    <property name="icon">
-    <iconset>
+    <iconset resource="resources/resources_icons.qrc">
      <normaloff>:/symbols/menu_icons/tree.svg</normaloff>:/symbols/menu_icons/tree.svg</iconset>
    </property>
    <property name="text">
@@ -1253,7 +1254,7 @@
   </action>
   <action name="actionGraph_style">
    <property name="icon">
-    <iconset>
+    <iconset resource="resources/resources_icons.qrc">
      <normaloff>:/icons/project-diagram.svg</normaloff>:/icons/project-diagram.svg</iconset>
    </property>
    <property name="text">
@@ -1262,7 +1263,7 @@
   </action>
   <action name="actionTabular_style">
    <property name="icon">
-    <iconset>
+    <iconset resource="resources/resources_icons.qrc">
      <normaloff>:/symbols/menu_icons/table.svg</normaloff>:/symbols/menu_icons/table.svg</iconset>
    </property>
    <property name="text">
@@ -1297,6 +1298,11 @@
   <action name="actiontt">
    <property name="text">
     <string>tt</string>
+   </property>
+  </action>
+  <action name="actionMass_remove_items">
+   <property name="text">
+    <string>Mass remove items...</string>
    </property>
   </action>
  </widget>

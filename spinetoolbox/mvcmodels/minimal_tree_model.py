@@ -138,12 +138,14 @@ class TreeItem:
 
     def remove_children(self, position, count):
         """Removes count children starting from the given position."""
-        if position > self.child_count() or position < 0:
+        first = position
+        last = position + count - 1
+        if first >= self.child_count() or first < 0:
             return False
-        if position + count > self.child_count():
-            count = self.child_count() - position
-        self.model.beginRemoveRows(self.index(), position, position + count - 1)
-        del self._children[position : position + count]
+        if last >= self.child_count():
+            last = self.child_count() - 1
+        self.model.beginRemoveRows(self.index(), first, last)
+        del self._children[first : last + 1]
         self.model.endRemoveRows()
         return True
 

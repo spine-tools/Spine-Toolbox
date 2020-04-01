@@ -17,16 +17,16 @@ Contains the GraphViewMixin class.
 """
 
 from PySide2.QtCore import Qt, Signal, Slot, QTimer, QRectF
-from PySide2.QtWidgets import QGraphicsTextItem, QFileDialog
+from PySide2.QtWidgets import QGraphicsTextItem
 from PySide2.QtPrintSupport import QPrinter
 from PySide2.QtGui import QPainter
 from spinedb_api import to_database, from_database
 from .custom_menus import GraphViewContextMenu, ObjectItemContextMenu, RelationshipItemContextMenu
 from .custom_qwidgets import ZoomWidgetAction
 from .shrinking_scene import ShrinkingScene
-from .graph_view_graphics_items import EntityItem, ObjectItem, RelationshipItem, ArcItem
-from .graph_view_demo import GraphViewDemo
-from .graph_layout_generator import GraphLayoutGenerator
+from .data_store_graphics_items import EntityItem, ObjectItem, RelationshipItem, ArcItem
+from .data_store_graph_view_demo import GraphViewDemo
+from .data_store_graph_layout_generator import GraphLayoutGenerator
 from ..mvcmodels.entity_list_models import ObjectClassListModel, RelationshipClassListModel
 from ..helpers import get_save_file_name_in_last_dir
 
