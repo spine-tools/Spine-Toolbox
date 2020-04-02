@@ -3,6 +3,11 @@ All **notable** changes to this project are documented here.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
+## [0.4.0-beta.9] - 2020-04-01
+### Added
+- [win-x64] importer_program.py has been built as an independent application. This program is 
+  now embedded into Spine Toolbox install directory (/importer_program).
+
 ## [0.4.0-beta.8] - 2020-04-01
 ### Changed
 - importer_program.py now uses the Python interpreter that the app was started with and not 
