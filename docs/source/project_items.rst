@@ -84,7 +84,7 @@ Importer |importer|
 ===================
 
 This item provides the user a chance to define a mapping from tabulated data such as comma separated
-values or Excel to the Spine data model.
+values or Excel to the Spine data model. See :ref:`Importing and exporting data` for more information.
 
 Exporter |exporter|
 ===================

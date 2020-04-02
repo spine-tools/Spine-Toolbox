@@ -3,28 +3,81 @@
 
 .. _Importing and exporting data:
 
+
 ****************************
 Importing and exporting data
 ****************************
 
-.. note:: This section is a work in progress.
-
 This section explains the different ways of importing and exporting data to and from a Spine database.
 
-Excel
------
-In this section the excel import/export functionality is explained.
+Importing data with Importer
+----------------------------
 
-To import/export an excel file, select a **Data store** and open the **Tree view**.
-Then select **File -> Import** or **File -> Export** from the main menu.
+Data importing is handled by the Importer project item
+which can import tabulated and to some degree tree-structured data
+into a Spine database from various formats.
+The same functionality is also available in **Data store view** from **File->Import**
+but using an Importer item is preferred because then the process is documented and repeatable.
 
+.. tip::
+   A Tool item can also be connected to Importer to import tool's output files to a database.
+
+The heart of Importer is the **Import Editor** window in which the mappings from source data
+to Spine database entities are set up. The editor window can be accessed
+by the **Import Editor...** button in Importer's Properties tab.
+Note, that you have to select one of the files in the **Source files** list before clicking the button.
+
+.. image:: img/importer_properties.png
+   :align: center
+
+The **Import Editor** windows is divided into two parts:
+**Sources** shows all the 'sheets' contained in the file,
+some options for reading the file correctly,
+and a preview table to visualize and configure how the data on the selected sheet would be mapped.
+**Mappings**, on the other hand, shows the actual importing settings, the mappings from the input
+data to database entities.
+
+.. image:: img/import_editor_window.png
+   :align: center
+
+The options in the Mappings part declare if the currently selected sheet will be imported as an object or relationship
+and what type of parameters, if any, the sheet contains.
+The table can be used to configure how the input data is interpreted:
+which row or column contains the entity class names, parameter values, time stamps and so on.
+
+.. image:: img/import_editor_mapping_options.png
+   :align: center
+
+It might be helpful to fill in the mapping options using the preview table in the Sources part.
+Right clicking on the table cells shows a popup menu
+that lets one to configure how the rows and colunms are read upon importing.
+
+.. image:: img/import_editor_preview_table_mapping_menu.png
+   :align: center
+
+An important aspect of data import is whether each item in the input data should be read as a string, a number,
+a time stamp, or something else.
+By default all input data is read as strings.
+However, more often than not things like parameter values are actually numbers.
+It is possible to control what type of data each column (and, sometimes, each row) contains from the preview table.
+Clicking the data type indicator button on column headers pops up a menu with a selection of available data types.
+Right clicking the column header also gives the opportunity to change the data type of all columns at once.
+
+.. image:: img/import_editor_column_data_type_menu.png
+   :align: center
+
+Exporting to Excel
+------------------
+
+To export a Spine database to an Excel file, select a **Data store** and open the **Data store view**.
+Then select **File -> Export** from the main menu.
+
+.. tip:: An easy way to get an Excel template is to export an existing Spine database to Excel.
 
 Format
 ~~~~~~
 
-The excel files for import/export are formatted in the following way:
-
-.. tip:: An easy way to get a excel template is to export an existing spine-database to excel.
+The exported Excel files are formatted in the following way:
 
 Object classes:
 
@@ -46,12 +99,11 @@ Relationship timeseries:
 .. image:: img/excel_relationship_sheet_timeseries.png
    :align: center
 
-When importing, all sheets with a valid format are imported, whereas sheets with invalid format are simply ignored.
 When exporting all object classes and relationship classes are exported.
-Only parameter values with timeseries data are exported in the timeseries format.
+Only parameter values with time series data are exported in the time series format.
 
-GAMS
-----
+Exporting to GAMS
+-----------------
 
 .. note::
    You need to have GAMS installed to use this functionality.
