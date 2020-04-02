@@ -10,6 +10,8 @@
 .. |trash| image:: ../../spinetoolbox/ui/resources/menu_icons/trash-alt.svg
             :width: 16
 
+.. _Main Window:
+
 ***********
 Main Window
 ***********

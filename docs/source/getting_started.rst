@@ -176,6 +176,13 @@ the *Process Log* or in the *Python Console* depending on your settings (See :re
 .. image:: img/hello_world_event_process_log.png
    :align: center
 
+.. note::
+   If you encounter the following message in Event Log when trying to execute a Python Tool.
+
+   **Couldn't determine Python version. Please check the Python interpreter option in Settings.**
+
+   Please see :ref:`Setting Up` for help.
+
 Congratulations, you just ran your first Spine Toolbox project.
 
 Editing a Tool specification
