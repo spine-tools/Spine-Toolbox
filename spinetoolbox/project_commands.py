@@ -337,7 +337,7 @@ class UpdateImporterSettingsCommand(SpineToolboxCommand):
         """Command to update Importer settings.
 
         Args:
-            importer (Importer): the Importer
+            importer (spinetoolbox.project_items.importer.importer.Importer): the Importer
             settings (dict): the new settings
             importee (str): the filepath
         """
@@ -360,7 +360,7 @@ class UpdateImporterCancelOnErrorCommand(SpineToolboxCommand):
         """Command to update Importer cancel on error setting.
 
         Args:
-            importer (Importer): the Importer
+            importer (spinetoolbox.project_items.importer.importer.Importer): the Importer
             cancel_on_error (bool): the new setting
         """
         super().__init__()
