@@ -10,7 +10,7 @@
 ######################################################################################################################
 
 """
-Contains Importer project item class.
+Contains importer_program script.
 
 :authors: P. Savolainen (VTT), P. Vennström (VTT), A. Soininen (VTT)
 :date:   10.6.2019
@@ -22,6 +22,7 @@ import os
 import json
 import datetime
 import time
+import spinedb_api
 from spinetoolbox.spine_io.importers.csv_reader import CSVConnector
 from spinetoolbox.spine_io.importers.excel_reader import ExcelConnector
 from spinetoolbox.spine_io.importers.gdx_connector import GdxConnector
@@ -137,57 +138,9 @@ def _import(all_data, url, logs_dir, cancel_on_error):
         print("Import errors{0}. Logfile: {1}".format(rollback_text, logfile_anchor), file=sys.stderr)
 
 
-def import_spinedb_api(frozen):
-    """Makes sure that we are importing the correct spinedb_api, depending on whether we are
-    running this program from a frozen spinetoolbox or not.
-
-    If app is frozen, we need to prepare python.exe that is embedded to the application
-    installation directory (/extras) for running this script. We need to manipulate it's
-    PythonPath before importing spinedb_api in order to make sure that we import the
-    spinedb_api that is included in the installation bundle.
-
-    If app is not frozen, we use python.exe that was used in starting the app.
-    """
-    if frozen:
-        # sys.executable here is the application embedded Python (/extras/python.exe)
-        sys.path.clear()
-        embedded_python_dir = os.path.dirname(sys.executable)
-        app_dir = os.path.abspath(os.path.join(embedded_python_dir, os.pardir))
-        app_lib_dir = os.path.join(app_dir, "lib")
-        script_dir = os.path.dirname(sys.argv[0])
-        library_zip_dir = os.path.join(app_dir, "lib", "library.zip")
-        sys.path.append(script_dir)
-        sys.path.append(app_lib_dir)
-        sys.path.append(library_zip_dir)
-        try:
-            global spinedb_api
-            import spinedb_api
-        except ImportError:
-            print("ImportError: No module named 'spinedb_api' found for sys.executable '{0}'".format(sys.executable))
-            return False
-    else:
-        # sys.executable here is the python that was used to start the app
-        try:
-            global spinedb_api
-            import spinedb_api
-        except ImportError:
-            # This should never happen since we are using the same python that was used in starting the app.
-            print("ImportError: No module named 'spinedb_api' found on sys.executable '{0}'".format(sys.executable))
-            return False
-    return True
-
-
 if __name__ == "__main__":
     # Force std streams to utf-8, since it may not be the default on all terminals (e.g Win cmd prompt)
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8")
     sys.stdin = io.TextIOWrapper(sys.stdin.buffer, encoding="utf-8")
-    # We cannot use _frozen from config.py since that tells if spinetoolbox is frozen.
-    # It does not tell if importer_program is frozen
-    frozen = False
-    if len(sys.argv) > 1 and sys.argv[1] == "frozen":
-        frozen = True
-    if not import_spinedb_api(frozen):
-        sys.exit(-1)
     run(*json.loads(input()))
-

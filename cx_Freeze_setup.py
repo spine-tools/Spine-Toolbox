@@ -10,16 +10,21 @@
 ######################################################################################################################
 
 """
-cx-Freeze setup file for Spine Toolbox (Python3.6-64bit).
+cx-Freeze setup file for Spine Toolbox.
 
-To make an installation bundle please follow the next steps:
+Tested on Python3.6-64bit.
+
+To make a Spine Toolbox installation bundle please follow the next steps:
 
 On Windows:
-1. Build the application into build/ directory with command 'python cx_Freeze_setup.py build'
-2. Copy python.exe MANUALLY to path <app main dir>/extras/python.exe. Importer requires this.
-3. Compile setup.iss file with Inno Setup. This will create a single-file (.exe) installer.
+1. Build the application into build/spinetoolbox directory with command 'python cx_Freeze_setup.py build'
+2. Build importer_program into /build/importer_program with command 'python cx_Freeze_importer_program_setup.py build'
+3. Copy importer_program manually from directory /build/importer_program to build/spinetoolbox/importer_program
+4. Check version numbers and CHANGELOG
+5. Compile setup.iss file with Inno Setup. This will create a single-file (.exe) installer.
+6. When Spine Toolbox is installed Importer Program is added to importer_program/ directory
 
-On other platforms:
+On other platforms (not tested):
 1. Build the application into build/ directory with command 'python cx_Freeze_setup.py build'
 2. Use cx_Freeze_setup.py (this file) and Cx_Freeze (see Cx_Freeze documentation for help)
 
@@ -106,6 +111,7 @@ def main(argv):
         ]
         + alembic_version_files,
         "include_msvcr": True,
+        "build_exe": "./build/spinetoolbox/"
     }
     # Windows specific options
     if os.name == "nt":  # Windows specific options
@@ -119,7 +125,7 @@ def main(argv):
             return
         # Append msvcr120.dll for Windows 7/8 support
         build_exe_options["include_files"].append(msvcr120_dll)
-    # Other platforms (TODO: needs testing)
+    # Other platforms
     else:
         base = None
     executables = [Executable("spinetoolbox.py", base=base, icon="spinetoolbox/ui/resources/app.ico")]
