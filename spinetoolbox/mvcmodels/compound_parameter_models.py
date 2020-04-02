@@ -579,7 +579,10 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         if sub_model == self.empty_model:
             return lambda value, index=index: self.setData(index, value)
         id_ = self.item_at_row(index.row())
-        return lambda value, sub_model=sub_model, id_=id_: sub_model.update_items_in_db([dict(id=id_, value=value)])
+        value_field = {"parameter value": "value", "parameter definition": "default_value"}[self.item_type]
+        return lambda value, sub_model=sub_model, id_=id_: sub_model.update_items_in_db(
+            [{"id": id_, value_field: value}]
+        )
 
 
 class CompoundObjectParameterMixin:
