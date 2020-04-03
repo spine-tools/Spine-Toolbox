@@ -3,7 +3,7 @@ All **notable** changes to this project are documented here.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
-## [0.4.0-release.0] - 2020-04-03
+## [0.4.0-final.0] - 2020-04-03
 
 ### Added
 - A small notification icon is painted next to project items in the design view whenever they 
