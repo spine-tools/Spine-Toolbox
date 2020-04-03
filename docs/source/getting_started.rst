@@ -181,7 +181,7 @@ the *Process Log* or in the *Python Console* depending on your settings (See :re
 
    **Couldn't determine Python version. Please check the Python interpreter option in Settings.**
 
-   Please see :ref:`Setting Up` for help.
+   Please see :ref:`Setting Up External Tools` for help.
 
 Congratulations, you just ran your first Spine Toolbox project.
 

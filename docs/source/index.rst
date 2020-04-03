@@ -16,7 +16,7 @@ please check the :ref:`Terminology` section. If you want to contribute to this p
    :caption: Contents:
 
    getting_started
-   setting_up_python_julia_gams
+   setting_up
    main_window
    project_items
    tool_specification_editor
