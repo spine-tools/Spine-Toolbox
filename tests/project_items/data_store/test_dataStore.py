@@ -98,8 +98,6 @@ class TestDataStore(unittest.TestCase):
         self.ds.activate()
         self.assertEqual(cb_dialect.currentText(), "")
         self.assertEqual(le_db.text(), "")
-        # Assert that checkbox is unchecked
-        self.assertFalse(self.ds_properties_ui.checkBox_for_spine_model.isChecked())
         # Click New Spine db button
         self.ds_properties_ui.pushButton_create_new_spine_db.click()
         expected_db_path = os.path.join(self.ds.data_dir, self.ds.name + ".sqlite")
@@ -122,54 +120,6 @@ class TestDataStore(unittest.TestCase):
         self.assertEqual("sqlite", cb_dialect.currentText())
         self.assertEqual(temp_path, le_db.text())
         self.assertTrue(os.path.exists(le_db.text()))  # temp_db.sqlite should exist in DS data_dir at this point
-        # Assert that checkbox is unchecked
-        self.assertFalse(self.ds_properties_ui.checkBox_for_spine_model.isChecked())
-        # Click New Spine db button. This overwrites the existing sqlite file!
-        with mock.patch("spinetoolbox.spine_db_manager.QMessageBox") as mock_qmessagebox:
-            mock_qmessagebox.exec_().return_value = QMessageBox.AcceptRole
-            self.ds_properties_ui.pushButton_create_new_spine_db.click()
-            mock_qmessagebox.assert_called_once()
-        self.assertEqual("sqlite", cb_dialect.currentText())
-        self.assertEqual(temp_path, le_db.text())
-        self.assertTrue(os.path.exists(le_db.text()))
-
-    def test_create_new_spine_database_for_spine_model(self):
-        """Test that a new Spine database is created when clicking on 'New Spine db tool button'
-        with an empty Data Store and 'for Spine model' checkbox CHECKED.
-        """
-        cb_dialect = self.ds_properties_ui.comboBox_dialect  # Dialect comboBox
-        le_db = self.ds_properties_ui.lineEdit_database  # Database lineEdit
-        self.ds.activate()
-        self.assertEqual(cb_dialect.currentText(), "")
-        self.assertEqual(le_db.text(), "")
-        # Check CheckBox and assert that it is checked
-        self.ds_properties_ui.checkBox_for_spine_model.setChecked(True)
-        self.assertTrue(self.ds_properties_ui.checkBox_for_spine_model.isChecked())
-        # Click New Spine db button
-        self.ds_properties_ui.pushButton_create_new_spine_db.click()
-        expected_db_path = os.path.join(self.ds.data_dir, self.ds.name + ".sqlite")
-        self.assertEqual(cb_dialect.currentText(), "sqlite")
-        self.assertEqual(expected_db_path, le_db.text())
-        self.assertTrue(os.path.exists(le_db.text()))
-
-    def test_create_new_spine_database_for_spine_model2(self):
-        """Test that a new Spine database is created when clicking on 'New Spine db tool button'
-        with a Data Store that already has an URL. Checkbox 'for Spine model' CHECKED.
-        """
-        cb_dialect = self.ds_properties_ui.comboBox_dialect  # Dialect comboBox
-        le_db = self.ds_properties_ui.lineEdit_database  # Database lineEdit
-        temp_path = self.create_temp_db()
-        # Connect to an existing .sqlite db
-        url = dict(dialect="sqlite", database=temp_path)
-        self.ds._url = self.ds.parse_url(url)
-        self.ds.activate()  # This loads the url into properties UI widgets
-        # DS should now have "sqlite" selected in the combobox
-        self.assertEqual("sqlite", cb_dialect.currentText())
-        self.assertEqual(temp_path, le_db.text())
-        self.assertTrue(os.path.exists(le_db.text()))  # temp_db.sqlite should exist in DS data_dir at this point
-        # Check CheckBox and assert that it is checked
-        self.ds_properties_ui.checkBox_for_spine_model.setChecked(True)
-        self.assertTrue(self.ds_properties_ui.checkBox_for_spine_model.isChecked())
         # Click New Spine db button. This overwrites the existing sqlite file!
         with mock.patch("spinetoolbox.spine_db_manager.QMessageBox") as mock_qmessagebox:
             mock_qmessagebox.exec_().return_value = QMessageBox.AcceptRole
