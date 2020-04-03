@@ -18,10 +18,18 @@ Contains the DataStoreForm class.
 
 import os
 import time  # just to measure loading time and sqlalchemy ORM performance
+import json
 from PySide2.QtWidgets import QMainWindow, QErrorMessage, QDockWidget, QMessageBox, QInputDialog, QTreeView, QTableView
 from PySide2.QtCore import Qt, Signal, Slot
 from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QIcon
-from spinedb_api import copy_database, import_data, SpineIntegrityError, SpineDBAPIError
+from spinedb_api import (
+    copy_database,
+    import_data,
+    export_data,
+    SpineIntegrityError,
+    SpineDBAPIError,
+    ParameterValueEncoder,
+)
 from ..config import MAINWINDOW_SS, APPLICATION_PATH
 from .data_store_edit_items_dialogs import ManageParameterTagsDialog
 from .data_store_manage_items_dialog import MassRemoveItemsDialog
@@ -34,10 +42,16 @@ from .toolbars import ParameterTagToolBar
 from .db_session_history_dialog import DBSessionHistoryDialog
 from .notification import NotificationStack
 from ..mvcmodels.parameter_value_list_model import ParameterValueListModel
-from ..helpers import busy_effect, ensure_window_is_on_screen, get_save_file_name_in_last_dir
+from ..helpers import (
+    busy_effect,
+    ensure_window_is_on_screen,
+    get_save_file_name_in_last_dir,
+    get_open_file_name_in_last_dir,
+)
 from .import_widget import ImportDialog
 from .parameter_value_editor import ParameterValueEditor
 from ..spine_io.exporters.excel import export_spine_database_to_xlsx
+
 
 # TODO: call deleteLater on all dialogs after they return
 
@@ -129,6 +143,8 @@ class DataStoreFormBase(QMainWindow):
         self.ui.menuEdit.aboutToShow.connect(self._handle_menu_edit_about_to_show)
         self.ui.actionImport.triggered.connect(self.show_import_file_dialog)
         self.ui.actionExport.triggered.connect(self.export_database)
+        self.ui.actionLoadTemplate.triggered.connect(self.load_template)
+        self.ui.actionSaveAsTemplate.triggered.connect(self.save_as_template)
         self.ui.actionCopy.triggered.connect(self.copy)
         self.ui.actionPaste.triggered.connect(self.paste)
         self.ui.actionRemove_selection.triggered.connect(self.remove_selection)
@@ -295,11 +311,67 @@ class DataStoreFormBase(QMainWindow):
         focus_widget.paste()
 
     @Slot(bool)
+    def load_template(self, checked=False):
+        """Loads JSON template."""
+        if any(db_map.has_pending_changes() for db_map in self.db_maps):
+            commit_warning = QMessageBox(parent=self)
+            commit_warning.setText("Please commit or rollback before loading a template.")
+            commit_warning.setStandardButtons(QMessageBox.Ok)
+            commit_warning.exec()
+            return
+        self.qsettings.beginGroup(self.settings_group)
+        file_path, _ = get_open_file_name_in_last_dir(
+            self.qsettings, "loadDB", self, "Load template", self._get_base_dir(), "JSON file (*.json)"
+        )
+        self.qsettings.endGroup()
+        if not file_path:  # File selection cancelled
+            return
+        with open(file_path) as f:
+            data = json.load(f)
+        self.import_data(data)
+        self.msg.emit(f"Template {file_path} successfully loaded.")
+
+    @Slot(bool)
+    def save_as_template(self, checked=False):
+        """Saves a db as a JSON template."""
+        db_map = self._select_database()
+        if db_map is None:  # Database selection cancelled
+            return
+        self.qsettings.beginGroup(self.settings_group)
+        file_path, _ = get_save_file_name_in_last_dir(
+            self.qsettings, "dumpDB", self, "Save template", self._get_base_dir(), "JSON file (*.json)"
+        )
+        self.qsettings.endGroup()
+        if not file_path:  # File selection cancelled
+            return
+        data = export_data(db_map)
+        indent = 4 * " "
+        json_data = "{{{0}{1}{0}}}".format(
+            "\n" if data else "",
+            ",\n".join(
+                [
+                    indent
+                    + json.dumps(key)
+                    + ": [{0}{1}{0}]".format(
+                        "\n" + indent if values else "",
+                        (",\n" + indent).join(
+                            [indent + json.dumps(value, cls=ParameterValueEncoder) for value in values]
+                        ),
+                    )
+                    for key, values in data.items()
+                ]
+            ),
+        )
+        with open(file_path, 'w', encoding='utf-8') as f:
+            f.write(json_data)
+        self.msg.emit(f"Template {file_path} successfully saved.")
+
+    @Slot(bool)
     def show_import_file_dialog(self, checked=False):
         """Shows dialog to allow user to select a file to import."""
         if any(db_map.has_pending_changes() for db_map in self.db_maps):
             commit_warning = QMessageBox(parent=self)
-            commit_warning.setText("Please commit or rollback before importing data")
+            commit_warning.setText("Please commit or rollback before importing data.")
             commit_warning.setStandardButtons(QMessageBox.Ok)
             commit_warning.exec()
             return
@@ -319,6 +391,7 @@ class DataStoreFormBase(QMainWindow):
                 import_errors.append(str(err))
                 db_map.rollback_session()
         self.db_mngr.commit_session(*changed_db_maps, rollback_if_no_msg=True)
+        self.init_models()
         self.db_mngr.fetch_db_maps_for_listener(self, *changed_db_maps)
         if any(db_map_error_log.values()):
             self.db_mngr.error_msg(db_map_error_log)
@@ -331,21 +404,13 @@ class DataStoreFormBase(QMainWindow):
         if db_map is None:  # Database selection cancelled
             return
         self.qsettings.beginGroup(self.settings_group)
-        file_path, selected_filter = get_save_file_name_in_last_dir(
-            self.qsettings,
-            "exportDB",
-            self,
-            "Export to file",
-            self._get_base_dir(),
-            "Excel file (*.xlsx);;SQlite database (*.sqlite *.db);; SQL script (*.sql)",
+        file_path, _ = get_save_file_name_in_last_dir(
+            self.qsettings, "exportDB", self, "Export to file", self._get_base_dir(), "Excel file (*.xlsx)"
         )
         self.qsettings.endGroup()
         if not file_path:  # File selection cancelled
             return
-        if selected_filter.startswith("SQlite"):
-            self.export_to_sqlite(db_map, file_path)
-        elif selected_filter.startswith("Excel"):
-            self.export_to_excel(db_map, file_path)
+        self.export_to_excel(db_map, file_path)
 
     def _select_database(self):
         """
@@ -380,13 +445,6 @@ class DataStoreFormBase(QMainWindow):
             )
         except OSError:
             self.msg_error.emit("[OSError] Unable to export to file <b>{0}</b>".format(filename))
-
-    @busy_effect
-    def export_to_sqlite(self, db_map, file_path):
-        """Exports data from database into SQlite file."""
-        dst_url = 'sqlite:///{0}'.format(file_path)
-        copy_database(dst_url, db_map.db_url, overwrite=True)
-        self.msg.emit("SQlite file successfully exported.")
 
     @Slot(bool)
     def refresh_session(self, checked=False):

@@ -182,6 +182,7 @@ class ImportDialog(QDialog):
                 self.active_connector.connectionFailed.connect(self._handle_failed_connection)
                 self.active_connector.connectionReady.connect(self.set_preview_as_main_widget)
                 self.active_connector.init_connection()
+                # self.set_preview_as_main_widget()
             else:
                 # remove connector object.
                 self.active_connector.deleteLater()
@@ -204,6 +205,7 @@ class ImportDialog(QDialog):
         notification = Notification(self, msg)
         notification.show()
 
+    @Slot()
     def set_preview_as_main_widget(self):
         self._current_view = "preview"
         self.select_widget.hide()

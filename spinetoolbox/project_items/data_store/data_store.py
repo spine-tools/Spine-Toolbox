@@ -105,12 +105,7 @@ class DataStore(ProjectItem):
     def restore_selections(self):
         """Load url into selections."""
         self._properties_ui.label_ds_name.setText(self.name)
-        self._properties_ui.checkBox_for_spine_model.setCheckState(self._for_spine_model_checkbox_state)
         self.load_url_into_selections(self._url)
-
-    def save_selections(self):
-        """Save checkbox state."""
-        self._for_spine_model_checkbox_state = self._properties_ui.checkBox_for_spine_model.checkState()
 
     def url(self):
         """Return the url attribute, for saving the project."""
@@ -402,7 +397,6 @@ class DataStore(ProjectItem):
     @Slot(bool)
     def create_new_spine_database(self, checked=False):
         """Create new (empty) Spine database."""
-        for_spine_model = self._properties_ui.checkBox_for_spine_model.isChecked()
         # Try to make an url from the current status
         self._update_sa_url(log_errors=False)
         if not self._sa_url:
@@ -412,7 +406,7 @@ class DataStore(ProjectItem):
             dialect = "sqlite"
             database = os.path.abspath(os.path.join(self.data_dir, self.name + ".sqlite"))
             self.update_url(dialect=dialect, database=database)
-        self._project.db_mngr.create_new_spine_database(self._sa_url, for_spine_model)
+        self._project.db_mngr.create_new_spine_database(self._sa_url)
 
     def update_name_label(self):
         """Update Data Store tab name label. Used only when renaming project items."""

@@ -105,9 +105,12 @@
     <property name="title">
      <string>File</string>
     </property>
+    <addaction name="separator"/>
+    <addaction name="actionLoadTemplate"/>
+    <addaction name="actionSaveAsTemplate"/>
+    <addaction name="separator"/>
     <addaction name="actionImport"/>
     <addaction name="actionExport"/>
-    <addaction name="separator"/>
     <addaction name="actionClose"/>
    </widget>
    <widget class="QMenu" name="menuView">
@@ -1097,7 +1100,7 @@
      <normaloff>:/icons/project_item_icons/database-import.svg</normaloff>:/icons/project_item_icons/database-import.svg</iconset>
    </property>
    <property name="text">
-    <string>Import</string>
+    <string>Import...</string>
    </property>
   </action>
   <action name="actionExport">
@@ -1109,7 +1112,7 @@
      <normaloff>:/icons/project_item_icons/database-export.svg</normaloff>:/icons/project_item_icons/database-export.svg</iconset>
    </property>
    <property name="text">
-    <string>Export</string>
+    <string>Export...</string>
    </property>
   </action>
   <action name="actionCopy">
@@ -1303,6 +1306,16 @@
   <action name="actionMass_remove_items">
    <property name="text">
     <string>Mass remove items...</string>
+   </property>
+  </action>
+  <action name="actionSaveAsTemplate">
+   <property name="text">
+    <string>Save as template...</string>
+   </property>
+  </action>
+  <action name="actionLoadTemplate">
+   <property name="text">
+    <string>Load template...</string>
    </property>
   </action>
  </widget>

@@ -792,3 +792,11 @@ def get_save_file_name_in_last_dir(qsettings, key, parent, caption, given_dir, f
     if filename:
         qsettings.setValue(key, os.path.dirname(filename))
     return filename, selected_filter
+
+
+def get_open_file_name_in_last_dir(qsettings, key, parent, caption, given_dir, filter_=""):
+    dir_ = qsettings.value(key, default=given_dir)
+    filename, selected_filter = QFileDialog.getOpenFileName(parent, caption, dir_, filter_)
+    if filename:
+        qsettings.setValue(key, os.path.dirname(filename))
+    return filename, selected_filter
