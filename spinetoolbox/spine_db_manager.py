@@ -56,9 +56,9 @@ from .mvcmodels.shared import PARSED_ROLE
 
 
 @busy_effect
-def do_create_new_spine_database(url, for_spine_model):
+def do_create_new_spine_database(url):
     """Creates a new spine database at the given url."""
-    create_new_spine_database(url, for_spine_model=for_spine_model)
+    create_new_spine_database(url)
 
 
 class SpineDBManager(QObject):
@@ -129,7 +129,7 @@ class SpineDBManager(QObject):
     def db_maps(self):
         return set(self._db_maps.values())
 
-    def create_new_spine_database(self, url, for_spine_model=False):
+    def create_new_spine_database(self, url):
         if url in self._db_maps:
             message = f"The url <b>{url}</b> is being viewed. Please close all windows viewing this url and try again."
             QMessageBox.critical(self.parent()._toolbox, "Error", message)
@@ -146,7 +146,7 @@ class SpineDBManager(QObject):
                 ret = msg.exec_()  # Show message box
                 if ret != QMessageBox.AcceptRole:
                     return
-            do_create_new_spine_database(url, for_spine_model)
+            do_create_new_spine_database(url)
             self._general_logger.msg_success.emit("New Spine db successfully created at '{0}'.".format(url))
         except SpineDBAPIError as e:
             self._general_logger.msg_error.emit("Unable to create new Spine db at '{0}': {1}.".format(url, e))
