@@ -304,7 +304,7 @@ class DataStoreFormBase(QMainWindow):
     @Slot(bool)
     def load_template(self, checked=False):
         """Loads JSON template."""
-        if any(db_map.has_pending_changes() for db_map in self.db_maps):
+        if not all(self.db_mngr.undo_stack[db_map].isClean() for db_map in self.db_maps):
             commit_warning = QMessageBox(parent=self)
             commit_warning.setText("Please commit or rollback before loading a template.")
             commit_warning.setStandardButtons(QMessageBox.Ok)
@@ -379,7 +379,7 @@ class DataStoreFormBase(QMainWindow):
     @Slot(bool)
     def show_import_file_dialog(self, checked=False):
         """Shows dialog to allow user to select a file to import."""
-        if any(db_map.has_pending_changes() for db_map in self.db_maps):
+        if not all(self.db_mngr.undo_stack[db_map].isClean() for db_map in self.db_maps):
             commit_warning = QMessageBox(parent=self)
             commit_warning.setText("Please commit or rollback before importing data.")
             commit_warning.setStandardButtons(QMessageBox.Ok)
