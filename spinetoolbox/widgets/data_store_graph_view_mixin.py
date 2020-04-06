@@ -474,7 +474,13 @@ class GraphViewMixin:
         prunned_entity_ids = {id_ for ids in self.prunned_entity_ids.values() for id_ in ids}
         object_ids -= prunned_entity_ids
         relationship_ids -= prunned_entity_ids
-        relationships = self.db_mngr.find_cascading_relationships({self.db_map: object_ids}).get(self.db_map, [])
+        only_selected_objects = self.qsettings.value("appSettings/onlySelectedObjects", defaultValue="false")
+        cond = all if only_selected_objects == "true" else any
+        relationships = [
+            x
+            for x in self.db_mngr.get_items(self.db_map, "relationship")
+            if cond([int(id_) in object_ids for id_ in x["object_id_list"].split(",")])
+        ]
         relationships += [self.db_mngr.get_item(self.db_map, "relationship", id_) for id_ in relationship_ids]
         relationship_ids = list()
         object_id_lists = list()
