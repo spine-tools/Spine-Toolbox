@@ -114,7 +114,7 @@ class AddObjectClassesDialog(ShowIconColorEditorMixin, AddItemsDialog):
             lambda index: self.show_icon_color_editor(index)
         )
 
-    @Slot(name="accept")
+    @Slot()
     def accept(self):
         """Collect info from dialog and try to add items."""
         db_map_data = dict()
