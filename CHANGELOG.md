@@ -14,7 +14,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ### Changed
 - The graph view behavior has changed. Now selecting objects in the object tree not only shows those objects but also 
-  all the cascading relationships. This is to facilitate exploring the system without a previous knowledge.
+  all the cascading relationships. One can still go back to the previous behaviour in Settings.
 - Moving object items in the graph view also causes relationship icons to follow. This behaviour can be disabled in the
   Settings form.
 
