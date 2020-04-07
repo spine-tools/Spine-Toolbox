@@ -89,6 +89,8 @@ class EditObjectClassesDialog(ShowIconColorEditorMixin, EditOrRemoveItemsDialog)
         db_map_data = dict()
         for i in range(self.model.rowCount()):
             name, description, display_icon, db_names = self.model.row_data(i)
+            if db_names is None:
+                db_names = ""
             item = self.items[i]
             db_maps = []
             for database in db_names.split(","):
@@ -155,6 +157,8 @@ class EditObjectsDialog(EditOrRemoveItemsDialog):
         db_map_data = dict()
         for i in range(self.model.rowCount()):
             name, description, db_names = self.model.row_data(i)
+            if db_names is None:
+                db_names = ""
             item = self.items[i]
             db_maps = []
             for database in db_names.split(","):
@@ -218,6 +222,8 @@ class EditRelationshipClassesDialog(EditOrRemoveItemsDialog):
         db_map_data = dict()
         for i in range(self.model.rowCount()):
             name, db_names = self.model.row_data(i)
+            if db_names is None:
+                db_names = ""
             item = self.items[i]
             db_maps = []
             for database in db_names.split(","):
@@ -299,6 +305,8 @@ class EditRelationshipsDialog(GetObjectsMixin, EditOrRemoveItemsDialog):
             object_name_list = [row_data[column] for column in range(name_column)]
             name = row_data[name_column]
             db_names = row_data[db_column]
+            if db_names is None:
+                db_names = ""
             db_maps = []
             for database in db_names.split(","):
                 for db_map in item.db_maps:
@@ -383,6 +391,8 @@ class RemoveEntitiesDialog(EditOrRemoveItemsDialog):
         db_map_data = dict()
         for i in range(self.model.rowCount()):
             item_type, _, db_names = self.model.row_data(i)
+            if db_names is None:
+                db_names = ""
             item = self.items[i]
             db_maps = []
             for database in db_names.split(","):

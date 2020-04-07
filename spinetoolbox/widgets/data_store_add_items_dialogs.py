@@ -57,7 +57,7 @@ class AddItemsDialog(ManageItemsDialog):
         super().connect_signals()
         self.remove_rows_button.clicked.connect(self.remove_selected_rows)
 
-    @Slot("bool", name="remove_selected_rows")
+    @Slot(bool)
     def remove_selected_rows(self, checked=True):
         indexes = self.table_view.selectedIndexes()
         rows = list(set(ind.row() for ind in indexes))
@@ -124,6 +124,8 @@ class AddObjectClassesDialog(ShowIconColorEditorMixin, AddItemsDialog):
         for i in range(self.model.rowCount() - 1):  # last row will always be empty
             row_data = self.model.row_data(i)
             name, description, display_icon, db_names = row_data
+            if db_names is None:
+                db_names = ""
             db_name_list = db_names.split(",")
             try:
                 db_maps = [self.keyed_db_maps[x] for x in db_name_list]
@@ -190,13 +192,15 @@ class AddObjectsDialog(GetObjectClassesMixin, AddItemsDialog):
         self.model.set_default_row(**{'object class name': class_name, 'databases': db_names})
         self.model.clear()
 
-    @Slot(name="accept")
+    @Slot()
     def accept(self):
         """Collect info from dialog and try to add items."""
         db_map_data = dict()
         for i in range(self.model.rowCount() - 1):  # last row will always be empty
             row_data = self.model.row_data(i)
             class_name, name, description, db_names = row_data
+            if db_names is None:
+                db_names = ""
             if not name:
                 self.parent().msg_error.emit("Object name missing at row {}".format(i + 1))
                 return
@@ -272,7 +276,7 @@ class AddRelationshipClassesDialog(GetObjectClassesMixin, AddItemsDialog):
         super().connect_signals()
         self.spin_box.valueChanged.connect(self._handle_spin_box_value_changed)
 
-    @Slot("int", name="_handle_spin_box_value_changed")
+    @Slot(int)
     def _handle_spin_box_value_changed(self, i):
         self.spin_box.setEnabled(False)
         if i > self.number_of_dimensions:
@@ -296,7 +300,7 @@ class AddRelationshipClassesDialog(GetObjectClassesMixin, AddItemsDialog):
         self.model.header.pop(column)
         self.model.removeColumns(column, 1)
 
-    @Slot("QModelIndex", "QModelIndex", "QVector", name="_handle_model_data_changed")
+    @Slot("QModelIndex", "QModelIndex", "QVector")
     def _handle_model_data_changed(self, top_left, bottom_right, roles):
         if Qt.EditRole not in roles:
             return
@@ -318,7 +322,7 @@ class AddRelationshipClassesDialog(GetObjectClassesMixin, AddItemsDialog):
                     relationship_class_name = "__".join(obj_cls_names)
                 self.model.setData(self.model.index(row, self.number_of_dimensions), relationship_class_name)
 
-    @Slot(name="accept")
+    @Slot()
     def accept(self):
         """Collect info from dialog and try to add items."""
         db_map_data = dict()
@@ -332,6 +336,8 @@ class AddRelationshipClassesDialog(GetObjectClassesMixin, AddItemsDialog):
                 return
             pre_item = {'name': relationship_class_name}
             db_names = row_data[db_column]
+            if db_names is None:
+                db_names = ""
             for db_name in db_names.split(","):
                 if db_name not in self.keyed_db_maps:
                     self.parent().msg_error.emit("Invalid database {0} at row {1}".format(db_name, i + 1))
@@ -421,7 +427,7 @@ class AddRelationshipsDialog(GetObjectsMixin, AddItemsDialog):
         self.combo_box.currentIndexChanged.connect(self.call_reset_model)
         super().connect_signals()
 
-    @Slot("int", name='call_reset_model')
+    @Slot(int)
     def call_reset_model(self, index):
         """Called when relationship class's combobox's index changes.
         Update relationship_class attribute accordingly and reset model."""
@@ -450,7 +456,7 @@ class AddRelationshipsDialog(GetObjectsMixin, AddItemsDialog):
         self.model.set_default_row(**defaults)
         self.model.clear()
 
-    @Slot("QModelIndex", "QModelIndex", "QVector", name="_handle_model_data_changed")
+    @Slot("QModelIndex", "QModelIndex", "QVector")
     def _handle_model_data_changed(self, top_left, bottom_right, roles):
         if Qt.EditRole not in roles:
             return
@@ -470,7 +476,7 @@ class AddRelationshipsDialog(GetObjectsMixin, AddItemsDialog):
                     relationship_name = "__".join(obj_names)
                 self.model.setData(self.model.index(row, number_of_dimensions), relationship_name)
 
-    @Slot(name="accept")
+    @Slot()
     def accept(self):
         """Collect info from dialog and try to add items."""
         db_map_data = dict()
@@ -485,6 +491,8 @@ class AddRelationshipsDialog(GetObjectsMixin, AddItemsDialog):
                 return
             pre_item = {'name': relationship_name}
             db_names = row_data[db_column]
+            if db_names is None:
+                db_names = ""
             for db_name in db_names.split(","):
                 if db_name not in self.keyed_db_maps:
                     self.parent().msg_error.emit("Invalid database {0} at row {1}".format(db_name, i + 1))
