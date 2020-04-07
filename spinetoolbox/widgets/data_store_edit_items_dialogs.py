@@ -482,6 +482,8 @@ class ManageParameterTagsDialog(ManageItemsDialog):
         db_map_typed_data_to_rm = {}
         for i in range(self.filled_model.rowCount()):
             tag, description, db_names, _ = self.filled_model.row_data(i)
+            if db_names is None:
+                db_names = ""
             db_name_list = db_names.split(",")
             try:
                 db_maps = [self.keyed_db_maps[x] for x in db_name_list]
@@ -509,6 +511,8 @@ class ManageParameterTagsDialog(ManageItemsDialog):
         offset = self.filled_model.rowCount()
         for i in range(self.empty_model.rowCount() - 1):  # last row will always be empty
             tag, description, db_names, _ = self.empty_model.row_data(i)
+            if db_names is None:
+                db_names = ""
             db_name_list = db_names.split(",")
             try:
                 db_maps = [self.keyed_db_maps[x] for x in db_name_list]
