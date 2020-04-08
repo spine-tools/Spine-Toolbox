@@ -21,7 +21,7 @@ import math
 from PySide2.QtWidgets import QGraphicsView
 from PySide2.QtGui import QCursor
 from PySide2.QtCore import QEventLoop, QParallelAnimationGroup, Signal, Slot, Qt, QRectF, QTimeLine, QMarginsF, QSettings
-from spine_engine import ExecutionDirection
+from spine_engine import ExecutionDirection, SpineEngineState
 from ..graphics_items import LinkDrawer, Link
 from ..project_commands import AddLinkCommand, RemoveLinkCommand
 from .custom_qlistview import DragListView
@@ -510,8 +510,8 @@ class DesignQGraphicsView(CustomQGraphicsView):
         if hasattr(icon, "start_animation"):
             icon.start_animation()
 
-    @Slot(str, "QVariant")
-    def _stop_animation(self, item_name, direction):
+    @Slot(str, "QVariant", "QVariant")
+    def _stop_animation(self, item_name, direction, _):
         """Stops item icon animation when executing forward."""
         if direction == ExecutionDirection.BACKWARD:
             return
@@ -520,13 +520,13 @@ class DesignQGraphicsView(CustomQGraphicsView):
         if hasattr(icon, "stop_animation"):
             icon.stop_animation()
 
-    @Slot(str, "QVariant")
-    def _run_leave_animation(self, item_name, direction):
+    @Slot(str, "QVariant", "QVariant")
+    def _run_leave_animation(self, item_name, direction, engine_state):
         """
         Runs the animation that represents execution leaving this item.
         Blocks until the animation is finished.
         """
-        if direction == ExecutionDirection.BACKWARD:
+        if direction == ExecutionDirection.BACKWARD or engine_state != SpineEngineState.RUNNING:
             return
         loop = QEventLoop()
         animation = self._make_execution_leave_animation(item_name)

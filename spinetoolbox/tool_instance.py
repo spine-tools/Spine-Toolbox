@@ -57,6 +57,7 @@ class ToolInstance(QObject):
             return
         self.exec_mngr.stop_execution()
         self.exec_mngr = None
+        self.instance_finished.emit(1)
 
     def remove(self):
         """[Obsolete] Removes Tool instance files from work directory."""
