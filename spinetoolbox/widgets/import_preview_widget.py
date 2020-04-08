@@ -146,7 +146,7 @@ class ImportPreviewWidget(QWidget):
         """
         if selection:
             if selection.text() not in self.table_mappings:
-                self.table_mappings[selection.text()] = MappingListModel([ObjectClassMapping()])
+                self.table_mappings[selection.text()] = MappingListModel([ObjectClassMapping()], selection.text())
             self._ui_mapper.set_model(self.table_mappings[selection.text()])
             # request new data
             self.connector.set_table(selection.text())
@@ -186,7 +186,7 @@ class ImportPreviewWidget(QWidget):
                     # add table to selected if connector gave a mapping object
                     # for the table
                     self.selected_source_tables.add(t_name)
-                self.table_mappings[t_name] = MappingListModel([t_mapping])
+                self.table_mappings[t_name] = MappingListModel([t_mapping], t_name)
         for k in list(self.table_mappings.keys()):
             if k not in tables:
                 self.table_mappings.pop(k)
@@ -255,11 +255,14 @@ class ImportPreviewWidget(QWidget):
         self.previewDataUpdated.emit()
 
     def use_settings(self, settings):
-
-        self.table_mappings = {
-            table: MappingListModel([dict_to_map(m) for m in mappings])
-            for table, mappings in settings.get("table_mappings", {}).items()
-        }
+        try:
+            self.table_mappings = {
+                table: MappingListModel([dict_to_map(m) for m in mappings], table)
+                for table, mappings in settings.get("table_mappings", {}).items()
+            }
+        except ValueError as error:
+            self._ui_error.showMessage(f"{error}")
+            return
 
         table_types = {
             tn: {int(col): value_to_convert_spec(spec) for col, spec in cols.items()}
