@@ -408,12 +408,12 @@ class JuliaTool(ToolSpecification):
 
     def __init__(
         self,
-        toolbox,
         name,
         tooltype,
         path,
         includes,
         settings,
+        embedded_julia_console,
         logger,
         description=None,
         inputfiles=None,
@@ -424,14 +424,13 @@ class JuliaTool(ToolSpecification):
     ):
         """
         Args:
-
-            toolbox (ToolboxUI): QMainWindow instance
             name (str): Julia Tool name
             tooltype (str): Tool specification type
             path (str): Path to model main file
             includes (list): List of files belonging to the tool (relative to 'path').  # TODO: Change to src_files
             First file in the list is the main Julia program.
             settings (QSettings): Toolbox settings
+            embedded_julia_console (JuliaREPLWidget): a Julia console widget for execution in the embedded console
             logger (LoggerInterface): A logger instance
             description (str): Julia Tool description
             inputfiles (list): List of required data files
@@ -453,7 +452,7 @@ class JuliaTool(ToolSpecification):
             cmdline_args,
             execute_in_work,
         )
-        self._toolbox = toolbox
+        self._embedded_console = embedded_julia_console
         main_file = includes[0]
         self.main_dir, self.main_prgm = os.path.split(main_file)
         self.julia_options = OrderedDict()
@@ -472,14 +471,14 @@ class JuliaTool(ToolSpecification):
         """
 
     @staticmethod
-    def load(toolbox, path, data, settings, logger):
+    def load(path, data, settings, embedded_julia_console, logger):
         """Creates a JuliaTool according to a tool specification file.
 
         Args:
-            toolbox (ToolboxUI): QMainWindow instance
             path (str): Base path to tool files
             data (dict): Dictionary of tool definitions
             settings (QSetting): Toolbox settings
+            embedded_julia_console (JuliaREPLWidget): a Julia console for execution in the embedded console
             logger (LoggerInterface): A logger instance
 
         Returns:
@@ -488,7 +487,9 @@ class JuliaTool(ToolSpecification):
         kwargs = JuliaTool.check_definition(data, logger)
         if kwargs is not None:
             # Return an executable model instance
-            return JuliaTool(toolbox=toolbox, path=path, settings=settings, logger=logger, **kwargs)
+            return JuliaTool(
+                path=path, settings=settings, embedded_julia_console=embedded_julia_console, logger=logger, **kwargs
+            )
         return None
 
     def create_tool_instance(self, basedir):
@@ -497,7 +498,7 @@ class JuliaTool(ToolSpecification):
         Args:
             basedir (str): the path to the directory where the instance will run
         """
-        return JuliaToolInstance(self._toolbox, self, basedir, self._settings, self._logger)
+        return JuliaToolInstance(self, basedir, self._settings, self._embedded_console, self._logger)
 
 
 class PythonTool(ToolSpecification):
@@ -505,12 +506,12 @@ class PythonTool(ToolSpecification):
 
     def __init__(
         self,
-        toolbox,
         name,
         tooltype,
         path,
         includes,
         settings,
+        embedded_python_console,
         logger,
         description=None,
         inputfiles=None,
@@ -522,12 +523,12 @@ class PythonTool(ToolSpecification):
         """
         Args:
 
-            toolbox (ToolboxUI): QMainWindow instance
             name (str): Python Tool name
             tooltype (str): Tool specification type
             path (str): Path to model main file
             includes (list): List of files belonging to the tool (relative to 'path').  # TODO: Change to src_files
             settings (QSettings): Toolbox settings
+            embedded_python_console (PythonReplWidget): a Python console widget for embedded console execution
             logger (LoggerInterface): A logger instance
             First file in the list is the main Python program.
             description (str): Python Tool description
@@ -550,7 +551,7 @@ class PythonTool(ToolSpecification):
             cmdline_args,
             execute_in_work,
         )
-        self._toolbox = toolbox
+        self._embedded_console = embedded_python_console
         main_file = includes[0]
         self.main_dir, self.main_prgm = os.path.split(main_file)
         self.python_options = OrderedDict()
@@ -569,14 +570,14 @@ class PythonTool(ToolSpecification):
         """
 
     @staticmethod
-    def load(toolbox, path, data, settings, logger):
+    def load(path, data, settings, embedded_python_console, logger):
         """Creates a PythonTool according to a tool specification file.
 
         Args:
-            toolbox (ToolboxUI): Toolbox main window
             path (str): Base path to tool files
             data (dict): Dictionary of tool definitions
             settings (QSettings): Toolbox settings
+            embedded_python_console (PythonReplWidget): Python console widget for execution in the embedded console
             logger (LoggerInterface): A logger instance
 
         Returns:
@@ -585,7 +586,9 @@ class PythonTool(ToolSpecification):
         kwargs = PythonTool.check_definition(data, logger)
         if kwargs is not None:
             # Return an executable model instance
-            return PythonTool(toolbox=toolbox, path=path, settings=settings, logger=logger, **kwargs)
+            return PythonTool(
+                path=path, settings=settings, embedded_python_console=embedded_python_console, logger=logger, **kwargs
+            )
         return None
 
     def create_tool_instance(self, basedir):
@@ -594,7 +597,7 @@ class PythonTool(ToolSpecification):
         Args:
             basedir (str): the path to the directory where the instance will run
         """
-        return PythonToolInstance(self._toolbox, self, basedir, self._settings, self._logger)
+        return PythonToolInstance(self, basedir, self._settings, self._embedded_console, self._logger)
 
 
 class ExecutableTool(ToolSpecification):

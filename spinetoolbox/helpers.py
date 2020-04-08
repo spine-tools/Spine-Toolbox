@@ -22,7 +22,6 @@ import json
 import logging
 import itertools
 import os
-import time
 import shutil
 import sys
 import urllib.parse
@@ -42,9 +41,8 @@ from PySide2.QtGui import (
     QStandardItemModel,
     QStandardItem,
 )
-import spinedb_api
 import spine_engine
-from .config import REQUIRED_SPINEDB_API_VERSION, REQUIRED_SPINE_ENGINE_VERSION
+from .config import REQUIRED_SPINE_ENGINE_VERSION
 
 if os.name == "nt":
     import ctypes
@@ -181,23 +179,6 @@ def create_dir(base_path, folder='', verbosity=False):
         if verbosity:
             logging.debug("Directory created: %s", directory)
     return True
-
-
-def create_output_dir_timestamp():
-    """ Creates a new timestamp string that is used as Tool output
-    directory.
-
-    Returns:
-        Timestamp string or empty string if failed.
-    """
-    try:
-        # Create timestamp
-        stamp = datetime.datetime.fromtimestamp(time.time())
-    except OverflowError:
-        logging.error('Timestamp out of range.')
-        return ''
-    extension = stamp.strftime('%Y-%m-%dT%H.%M.%S')
-    return extension
 
 
 @busy_effect

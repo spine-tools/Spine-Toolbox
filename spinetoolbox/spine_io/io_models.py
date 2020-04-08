@@ -76,7 +76,7 @@ _MAPTYPE_DISPLAY_NAME = {
     ColumnMapping: "Column",
     ColumnHeaderMapping: "Column Header",
     RowMapping: "Row",
-    TableNameMapping: "Table Name"
+    TableNameMapping: "Table Name",
 }
 
 _DISPLAY_TYPE_TO_TYPE = {
