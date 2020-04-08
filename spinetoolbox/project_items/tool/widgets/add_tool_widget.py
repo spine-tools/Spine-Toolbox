@@ -29,9 +29,10 @@ class AddToolWidget(QWidget):
         toolbox (ToolboxUI): Parent widget
         x (int): X coordinate of new item
         y (int): Y coordinate of new item
+        spec (str): Tool specification
     """
 
-    def __init__(self, toolbox, x, y):
+    def __init__(self, toolbox, x, y, spec=""):
         """Initialize class."""
         from ..ui.add_tool import Ui_Form
 
@@ -49,14 +50,19 @@ class AddToolWidget(QWidget):
         self.statusbar.setSizeGripEnabled(False)
         self.statusbar.setStyleSheet(STATUSBAR_SS)
         self.ui.horizontalLayout_statusbar_placeholder.addWidget(self.statusbar)
-        # Class attributes
-        self.name = toolbox.propose_item_name(Tool.default_name_prefix())
+        # Init
+        prefix = Tool.default_name_prefix()
+        self.ui.comboBox_specification.setModel(self._toolbox.tool_specification_model)
+        if spec:
+            self.ui.comboBox_specification.setCurrentText(spec)
+            prefix += "_" + spec
+        else:
+            self.ui.comboBox_specification.setCurrentIndex(-1)
+        self.name = toolbox.propose_item_name(prefix)
+        self.ui.lineEdit_name.setFocus()
         self.ui.lineEdit_name.setText(self.name)
         self.ui.lineEdit_name.selectAll()
         self.description = ''
-        # Init
-        self.ui.comboBox_specification.setModel(self._toolbox.tool_specification_model)
-        self.ui.lineEdit_name.setFocus()
         self.connect_signals()
         # Ensure this window gets garbage-collected when closed
         self.setAttribute(Qt.WA_DeleteOnClose)
@@ -64,11 +70,11 @@ class AddToolWidget(QWidget):
     def connect_signals(self):
         """Connect signals to slots."""
         self.ui.lineEdit_name.textChanged.connect(self.name_changed)  # Name -> folder name connection
-        self.ui.pushButton_ok.clicked.connect(self.ok_clicked)
+        self.ui.pushButton_ok.clicked.connect(self.handle_ok_clicked)
         self.ui.pushButton_cancel.clicked.connect(self.close)
         self.ui.comboBox_specification.currentIndexChanged.connect(self.update_args)
 
-    @Slot(int, name='update_args')
+    @Slot(int)
     def update_args(self, row):
         """Show Tool specification command line arguments in text input.
 
@@ -87,7 +93,7 @@ class AddToolWidget(QWidget):
         self.ui.lineEdit_tool_specification_args.setText("{0}".format(args))
         return
 
-    @Slot(name='name_changed')
+    @Slot()
     def name_changed(self):
         """Update label to show upcoming folder name."""
         name = self.ui.lineEdit_name.text()
@@ -99,8 +105,8 @@ class AddToolWidget(QWidget):
             msg = default + " " + folder_name
             self.ui.label_folder.setText(msg)
 
-    @Slot(name='ok_clicked')
-    def ok_clicked(self):
+    @Slot()
+    def handle_ok_clicked(self):
         """Check that given item name is valid and add it to project."""
         self.name = self.ui.lineEdit_name.text()
         self.description = self.ui.lineEdit_description.text()
@@ -141,7 +147,7 @@ class AddToolWidget(QWidget):
         if e.key() == Qt.Key_Escape:
             self.close()
         elif e.key() == Qt.Key_Enter or e.key() == Qt.Key_Return:
-            self.ok_clicked()
+            self.handle_ok_clicked()
 
     def closeEvent(self, event=None):
         """Handle close window.

@@ -29,7 +29,7 @@ class AddViewWidget(AddProjectItemWidget):
         y (int): Y coordinate of new item
     """
 
-    def __init__(self, toolbox, x, y):
+    def __init__(self, toolbox, x, y, spec=""):
         """Initialize class."""
         initial_name = toolbox.propose_item_name(View.default_name_prefix())
         super().__init__(toolbox, x, y, initial_name)

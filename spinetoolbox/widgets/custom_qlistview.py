@@ -40,16 +40,16 @@ class DragListView(QListView):
         super().mousePressEvent(event)
         if event.button() == Qt.LeftButton:
             index = self.indexAt(event.pos())
-            if not index.isValid() or index == index.model().new_index:
+            if not index.isValid() or not index.model().is_index_draggable(index):
                 self.drag_start_pos = None
                 self.pixmap = None
                 self.mime_data = None
                 return
             self.drag_start_pos = event.pos()
             self.pixmap = index.data(Qt.DecorationRole).pixmap(self.iconSize())
-            entity_class_id = index.data(Qt.UserRole + 1)
+            mime_data_text = self.model().get_mime_data_text(index)
             self.mime_data = QMimeData()
-            self.mime_data.setText(str(entity_class_id))
+            self.mime_data.setText(mime_data_text)
 
     def mouseMoveEvent(self, event):
         """Start dragging action if needed"""

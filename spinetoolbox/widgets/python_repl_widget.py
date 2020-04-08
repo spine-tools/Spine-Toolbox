@@ -22,7 +22,6 @@ from PySide2.QtCore import Qt, Slot
 from PySide2.QtWidgets import QAction, QMessageBox
 from qtconsole.manager import QtKernelManager
 from jupyter_client.kernelspec import find_kernel_specs, get_kernel_spec, NoSuchKernel
-from .toolbars import DraggableWidget
 from ..helpers import busy_effect
 from ..config import PYTHON_EXECUTABLE
 from ..execution_managers import QProcessExecutionManager

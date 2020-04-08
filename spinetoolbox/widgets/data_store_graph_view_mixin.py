@@ -62,8 +62,7 @@ class GraphViewMixin:
         self._blank_item = None
         self.zoom_widget_action = None
         self.layout_gens = list()
-        area = self.dockWidgetArea(self.ui.dockWidget_item_palette)
-        self._handle_item_palette_dock_location_changed(area)
+        self._handle_item_palette_dock_location_changed(self.dockWidgetArea(self.ui.dockWidget_item_palette))
         self.ui.treeView_object.qsettings = self.qsettings
         self.setup_zoom_widget_action()
 

@@ -522,7 +522,7 @@ class RemoveToolSpecificationCommand(SpineToolboxCommand):
 
         Args:
             toolbox (ToolboxUI): the toolbox
-            row (int): the row in the ToolSpecificationModel
+            row (int): the row in the ToolSpecificationPaletteModel
             ask_verification (bool): if True, shows confirmation message the first time
         """
         super().__init__()
@@ -546,7 +546,7 @@ class UpdateToolSpecificationCommand(SpineToolboxCommand):
 
         Args:
             toolbox (ToolboxUI): the toolbox
-            row (int): the row in the ToolSpecificationModel of the spec to be replaced
+            row (int): the row in the ToolSpecificationPaletteModel of the spec to be replaced
             tool_specification (ToolSpecification): the updated tool spec
         """
         super().__init__()

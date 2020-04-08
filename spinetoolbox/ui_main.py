@@ -37,7 +37,7 @@ from PySide2.QtWidgets import (
 )
 from .graphics_items import ProjectItemIcon
 from .mvcmodels.project_item_model import ProjectItemModel
-from .mvcmodels.tool_specification_model import ToolSpecificationModel
+from .mvcmodels.project_item_palette_models import ProjectItemPaletteModel, ToolSpecificationPaletteModel
 from .widgets.about_widget import AboutWidget
 from .widgets.custom_menus import (
     ProjectItemModelContextMenu,
@@ -126,6 +126,7 @@ class ToolboxUI(QMainWindow):
         self.undo_stack = QUndoStack(self)
         self.categories = dict()  # Holds category data parsed from project item plugins
         self._project = None
+        self.project_item_palette_model = None
         self.project_item_model = None
         self.tool_specification_model = None
         self.show_datetime = self.update_datetime()
@@ -144,8 +145,8 @@ class ToolboxUI(QMainWindow):
         self.zoom_widget_action = None
         self.recent_projects_menu = RecentProjectsPopupMenu(self)
         # Make and initialize toolbars
-        self.item_toolbar = toolbars.ItemToolBar(self)
-        self.addToolBar(Qt.TopToolBarArea, self.item_toolbar)
+        self.main_toolbar = toolbars.MainToolBar(self)
+        self.addToolBar(Qt.TopToolBarArea, self.main_toolbar)
         # Make julia REPL
         self.julia_repl = JuliaREPLWidget(self)
         self.ui.dockWidgetContents_julia_repl.layout().addWidget(self.julia_repl)
@@ -169,6 +170,7 @@ class ToolboxUI(QMainWindow):
         self.restore_ui()
         self.parse_project_item_modules()
         self.parse_assistant_modules()
+        self.main_toolbar.setup()
         self.set_work_directory()
 
     def connect_signals(self):
@@ -211,8 +213,6 @@ class ToolboxUI(QMainWindow):
         self.test_variable_push.triggered.connect(self.python_repl.test_push_vars)
         # Tool specifications tab
         self.add_tool_specification_popup_menu = AddToolSpecificationPopupMenu(self)
-        self.ui.toolButton_add_tool_specification.setMenu(self.add_tool_specification_popup_menu)
-        self.ui.toolButton_remove_tool_specification.clicked.connect(self.remove_selected_tool_specification)
         # Context-menus
         self.ui.treeView_project.customContextMenuRequested.connect(self.show_item_context_menu)
         # Zoom actions
@@ -260,8 +260,12 @@ class ToolboxUI(QMainWindow):
             item_icon = item_dict["item_icon"]
             item_type = item_dict["item_type"]
             category_icon.append((item_type, item_category, item_icon))
-        # Add draggable widgets to toolbar
-        self.item_toolbar.add_draggable_widgets(category_icon)
+        self.init_project_item_palette_model(category_icon)
+
+    def init_project_item_palette_model(self, category_icon):
+        self.project_item_palette_model = ProjectItemPaletteModel(self)
+        for item_type, category, icon in category_icon:
+            self.project_item_palette_model.add_item(item_type, category, QIcon(icon))
 
     def parse_assistant_modules(self):
         """Makes actions to run assistants from assistant modules.
@@ -651,7 +655,7 @@ class ToolboxUI(QMainWindow):
             tool_specification_paths (list): List of tool definition file paths used in this project
         """
         self.tool_specification_model_changed.emit(QStandardItemModel())
-        self.tool_specification_model = ToolSpecificationModel()
+        self.tool_specification_model = ToolSpecificationPaletteModel(QIcon(self.categories["Tools"]["item_icon"]))
         n_tools = 0
         self.msg.emit("Loading Tool specifications...")
         for path in tool_specification_paths:
@@ -668,25 +672,27 @@ class ToolboxUI(QMainWindow):
             self.tool_specification_model.insertRow(tool_cand)
             # self.msg.emit("Tool specification <b>{0}</b> ready".format(tool_cand.name))
         # Set model to the tool specification list view
-        self.ui.listView_tool_specifications.setModel(self.tool_specification_model)
+        self.main_toolbar.tool_specification_list_view.setModel(self.tool_specification_model)
         # Set model to Tool project item combo box
         self.tool_specification_model_changed.emit(self.tool_specification_model)
-        # Note: If ToolSpecificationModel signals are in use, they should be reconnected here.
-        # Reconnect ToolSpecificationModel and QListView signals. Make sure that signals are connected only once.
-        n_recv_sig1 = self.ui.listView_tool_specifications.receivers(
+        # Note: If ToolSpecificationPaletteModel signals are in use, they should be reconnected here.
+        # Reconnect ToolSpecificationPaletteModel and QListView signals. Make sure that signals are connected only once.
+        n_recv_sig1 = self.main_toolbar.tool_specification_list_view.receivers(
             SIGNAL("doubleClicked(QModelIndex)")
         )  # nr of receivers
         if n_recv_sig1 == 0:
             # logging.debug("Connecting doubleClicked signal for QListView")
-            self.ui.listView_tool_specifications.doubleClicked.connect(self.edit_tool_specification)
+            self.main_toolbar.tool_specification_list_view.doubleClicked.connect(self.edit_tool_specification)
         elif n_recv_sig1 > 1:  # Check that this never gets over 1
             logging.error("Number of receivers for QListView doubleClicked signal is now: %d", n_recv_sig1)
         else:
             pass  # signal already connected
-        n_recv_sig2 = self.ui.listView_tool_specifications.receivers(SIGNAL("customContextMenuRequested(QPoint)"))
+        n_recv_sig2 = self.main_toolbar.tool_specification_list_view.receivers(
+            SIGNAL("customContextMenuRequested(QPoint)")
+        )
         if n_recv_sig2 == 0:
             # logging.debug("Connecting customContextMenuRequested signal for QListView")
-            self.ui.listView_tool_specifications.customContextMenuRequested.connect(
+            self.main_toolbar.tool_specification_list_view.customContextMenuRequested.connect(
                 self.show_tool_specification_context_menu
             )
         elif n_recv_sig2 > 1:  # Check that this never gets over 1
@@ -701,7 +707,6 @@ class ToolboxUI(QMainWindow):
         window_size = self._qsettings.value("mainWindow/windowSize", defaultValue="false")
         window_pos = self._qsettings.value("mainWindow/windowPosition", defaultValue="false")
         window_state = self._qsettings.value("mainWindow/windowState", defaultValue="false")
-        splitter_state = self._qsettings.value("mainWindow/projectDockWidgetSplitterState", defaultValue="false")
         window_maximized = self._qsettings.value("mainWindow/windowMaximized", defaultValue="false")  # returns str
         n_screens = self._qsettings.value("mainWindow/n_screens", defaultValue=1)  # number of screens on last exit
         # noinspection PyArgumentList
@@ -714,8 +719,6 @@ class ToolboxUI(QMainWindow):
             self.move(window_pos)  # Expects QPoint
         if not window_state == "false":
             self.restoreState(window_state, version=1)  # Toolbar and dockWidget positions. Expects QByteArray
-        if not splitter_state == "false":
-            self.ui.splitter.restoreState(splitter_state)  # Project Dock Widget splitter position. Expects QByteArray
         if n_screens_now < int(n_screens):
             # There are less screens available now than on previous application startup
             # Move main window to position 0,0 to make sure that it is not lost on another screen that does not exist
@@ -861,10 +864,7 @@ class ToolboxUI(QMainWindow):
             return
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
         answer = QFileDialog.getOpenFileName(
-            self,
-            "Select Tool specification file",
-            self._project.project_dir,
-            "JSON (*.json)"
+            self, "Select Tool specification file", self._project.project_dir, "JSON (*.json)"
         )
         if answer[0] == "":  # Cancel button clicked
             return
@@ -903,7 +903,7 @@ class ToolboxUI(QMainWindow):
         """Updates a Tool specification and refreshes all Tools that use it.
 
         Args:
-            row (int): Row of tool specification in ToolSpecificationModel
+            row (int): Row of tool specification in ToolSpecificationPaletteModel
             tool_specification (ToolSpecification): An updated Tool specification
         """
         if not self.tool_specification_model.update_tool_specification(row, tool_specification):
@@ -934,7 +934,7 @@ class ToolboxUI(QMainWindow):
         if not self._project:
             self.msg.emit("Please create a new project or open an existing one first")
             return
-        selected = self.ui.listView_tool_specifications.selectedIndexes()
+        selected = self.main_toolbar.tool_specification_list_view.selectedIndexes()
         if not selected:
             self.msg.emit("Select a Tool specification to remove")
             return
@@ -947,12 +947,12 @@ class ToolboxUI(QMainWindow):
         self.undo_stack.push(RemoveToolSpecificationCommand(self, row, ask_verification=ask_verification))
 
     def do_remove_tool_specification(self, row, ask_verification=True):
-        """Removes tool specification from ToolSpecificationModel.
+        """Removes tool specification from ToolSpecificationPaletteModel.
         Removes also Tool specifications from all Tool items
         that use this specification.
 
         Args:
-            row (int): Row in ToolSpecificationModel
+            row (int): Row in ToolSpecificationPaletteModel
             ask_verification (bool): If True, displays a dialog box asking user to verify the removal
         """
         tool_spec = self.tool_specification_model.tool_specification(row)
@@ -1128,7 +1128,7 @@ class ToolboxUI(QMainWindow):
 
     def add_menu_actions(self):
         """Add extra actions to View menu."""
-        self.ui.menuToolbars.addAction(self.item_toolbar.toggleViewAction())
+        self.ui.menuToolbars.addAction(self.main_toolbar.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_project.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_eventlog.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_process_output.toggleViewAction())
@@ -1241,7 +1241,7 @@ class ToolboxUI(QMainWindow):
         # noinspection PyArgumentList
         QApplication.processEvents()
 
-    def show_add_project_item_form(self, item_category, x=0, y=0):
+    def show_add_project_item_form(self, item_category, x=0, y=0, spec=""):
         """Show add project item widget."""
         if not self._project:
             self.msg.emit("Please open or create a project first")
@@ -1251,7 +1251,7 @@ class ToolboxUI(QMainWindow):
             self.msg_error.emit("Category {0} not found".format(item_category))
             return
         category = self.project_item_model.item(category_ind)
-        self.add_project_item_form = category._add_form_maker(self, x, y)
+        self.add_project_item_form = category._add_form_maker(self, x, y, spec)
         self.add_project_item_form.show()
 
     @Slot()
@@ -1579,7 +1579,6 @@ class ToolboxUI(QMainWindow):
         self._qsettings.setValue("mainWindow/windowSize", self.size())
         self._qsettings.setValue("mainWindow/windowPosition", self.pos())
         self._qsettings.setValue("mainWindow/windowState", self.saveState(version=1))
-        self._qsettings.setValue("mainWindow/projectDockWidgetSplitterState", self.ui.splitter.saveState())
         self._qsettings.setValue("mainWindow/windowMaximized", self.windowState() == Qt.WindowMaximized)
         # Save number of screens
         # noinspection PyArgumentList

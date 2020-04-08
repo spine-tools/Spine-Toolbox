@@ -23,7 +23,7 @@ from ..importer import Importer
 class AddImporterWidget(AddProjectItemWidget):
     """A widget to query user's preferences for a new item."""
 
-    def __init__(self, toolbox, x, y):
+    def __init__(self, toolbox, x, y, spec=""):
         """
         Args:
             toolbox (ToolboxUI): Parent widget

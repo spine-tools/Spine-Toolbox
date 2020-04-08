@@ -16,26 +16,16 @@ Functions to make and handle QToolBars.
 :date:   19.1.2018
 """
 
-from PySide2.QtCore import Qt, QMimeData, Signal, Slot
-from PySide2.QtWidgets import (
-    QToolBar,
-    QLabel,
-    QAction,
-    QApplication,
-    QButtonGroup,
-    QPushButton,
-    QWidget,
-    QSizePolicy,
-    QToolButton,
-)
-from PySide2.QtGui import QIcon, QDrag
+from PySide2.QtCore import Qt, Signal, Slot, QSize
+from PySide2.QtWidgets import QToolBar, QLabel, QAction, QButtonGroup, QPushButton, QWidget, QSizePolicy, QToolButton
+from PySide2.QtGui import QIcon
 from ..config import ICON_TOOLBAR_SS, PARAMETER_TAG_TOOLBAR_SS
+from .custom_qlistview import DragListView
 
 
-class ItemToolBar(QToolBar):
+class MainToolBar(QToolBar):
     """A toolbar to add items using drag and drop actions."""
 
-    # noinspection PyUnresolvedReferences, PyUnusedLocal
     def __init__(self, parent):
         """
 
@@ -44,59 +34,107 @@ class ItemToolBar(QToolBar):
         """
         super().__init__("Add Item Toolbar", parent=parent)  # Inherits stylesheet from ToolboxUI
         self._toolbox = parent
-        label = QLabel("Drag & Drop Icon")
-        self.addWidget(label)
+        self.project_item_drag_list_view = self.make_drag_list_view()
+        self.tool_specification_list_view = self.make_drag_list_view()
+        self.setStyleSheet(ICON_TOOLBAR_SS)
+        self.setObjectName("ItemToolbar")
+        self._handle_orientation_changed(self.orientation())
+        self.orientationChanged.connect(self._handle_orientation_changed)
+
+    @Slot("Qt.Orientation")
+    def _handle_orientation_changed(self, orientation):
+        for view in (self.project_item_drag_list_view, self.tool_specification_list_view):
+            if orientation == Qt.Horizontal:
+                view.setFlow(DragListView.LeftToRight)
+                view.setFlow(DragListView.LeftToRight)
+                view.setMaximumHeight(28)
+                view.setMaximumWidth(16777215)
+            elif orientation == Qt.Vertical:
+                view.setFlow(DragListView.TopToBottom)
+                view.setFlow(DragListView.TopToBottom)
+                view.setMaximumHeight(16777215)
+                view.setMaximumWidth(128)
+
+    def make_drag_list_view(self):
         icon_size = 24
-        # set remove all action
-        remove_all_icon = QIcon(":/icons/menu_icons/trash-alt.svg").pixmap(icon_size, icon_size)
-        remove_all = QToolButton(parent)
-        remove_all.setIcon(remove_all_icon)
-        remove_all.clicked.connect(self.remove_all)
-        remove_all.setToolTip("Remove all items from project.")
-        self.tool_separator = self.addSeparator()
-        self.addWidget(remove_all)
-        # Execute label and button
+        view = DragListView(self)
+        view.setIconSize(QSize(icon_size, icon_size))
+        font = view.font()
+        font.setPointSize(9)
+        view.setFont(font)
+        view.setStyleSheet("QListView {background: transparent;}")
+        view.setResizeMode(DragListView.Adjust)
+        view.setWrapping(True)
+        return view
+
+    def setup(self):
+        self.add_project_item_drag_list_view()
+        self.add_tool_specification_drag_list_view()
+        self.add_execute_buttons()
+        self.add_remove_all_button()
+
+    def add_project_item_drag_list_view(self):
+        label = QLabel("Project items")
+        self.addWidget(label)
+        self.project_item_drag_list_view.setModel(self._toolbox.project_item_palette_model)
+        self.addWidget(self.project_item_drag_list_view)
+
+    def add_tool_specification_drag_list_view(self):
+        icon_size = 16
+        self.addSeparator()
+        label = QLabel("Tool specs")
+        self.addWidget(label)
+        self.addWidget(self.tool_specification_list_view)
+        remove_tool_spec = QToolButton(self)
+        remove_tool_spec_icon = QIcon(":/icons/wrench_minus.svg").pixmap(icon_size, icon_size)
+        remove_tool_spec.setIcon(remove_tool_spec_icon)
+        remove_tool_spec.clicked.connect(self._toolbox.remove_selected_tool_specification)
+        remove_tool_spec.setToolTip(
+            "<html><head/><body><p>Remove (selected) Tool specification from project</p></body></html>"
+        )
+        self.addWidget(remove_tool_spec)
+        add_tool_spec = QToolButton(self)
+        add_tool_spec_icon = QIcon(":/icons/wrench_plus.svg").pixmap(icon_size, icon_size)
+        add_tool_spec.setIcon(add_tool_spec_icon)
+        add_tool_spec.setMenu(self._toolbox.add_tool_specification_popup_menu)
+        add_tool_spec.setPopupMode(QToolButton.InstantPopup)
+        add_tool_spec.setToolTip("<html><head/><body><p>Add new Tool specification to the project</p></body></html>")
+        self.addWidget(add_tool_spec)
+
+    def add_execute_buttons(self):
+        icon_size = 24
         self.addSeparator()
         ex_label = QLabel("Execute")
         self.addWidget(ex_label)
         execute_project_icon = QIcon(":/icons/project_item_icons/play-circle-solid.svg").pixmap(icon_size, icon_size)
-        execute_project = QToolButton(parent)
+        execute_project = QToolButton(self)
         execute_project.setIcon(execute_project_icon)
         execute_project.clicked.connect(self.execute_project)
         execute_project.setToolTip("Execute project.")
         self.addWidget(execute_project)
-        # ex_selected_label = QLabel("Execute Selected")
-        # self.addWidget(ex_selected_label)
         execute_selected_icon = QIcon(":/icons/project_item_icons/play-circle-regular.svg").pixmap(icon_size, icon_size)
-        execute_selected = QToolButton(parent)
+        execute_selected = QToolButton(self)
         execute_selected.setIcon(execute_selected_icon)
         execute_selected.clicked.connect(self.execute_selected)
         execute_selected.setToolTip("Execute selection.")
         self.addWidget(execute_selected)
         self.addSeparator()
         stop_icon = QIcon(":/icons/project_item_icons/stop-circle-regular.svg").pixmap(icon_size, icon_size)
-        stop = QToolButton(parent)
+        stop = QToolButton(self)
         stop.setIcon(stop_icon)
         stop.clicked.connect(self.stop_execution)
         stop.setToolTip("Stop execution.")
         self.addWidget(stop)
-        # Set stylesheet
-        self.setStyleSheet(ICON_TOOLBAR_SS)
-        self.setObjectName("ItemToolbar")
 
-    def add_draggable_widgets(self, category_icon):
-        """Adds draggable widgets from the given list.
-
-        Args:
-            category_icon (list): List of tuples (item_type (str), item category (str), icon path (str))
-        """
-        widgets = list()
-        for item_type, category, icon in category_icon:
-            pixmap = QIcon(icon).pixmap(24, 24)
-            widget = DraggableWidget(self, pixmap, item_type, category)
-            widgets.append(widget)
-        for widget in widgets:
-            self.insertWidget(self.tool_separator, widget)
+    def add_remove_all_button(self):
+        icon_size = 24
+        remove_all_icon = QIcon(":/icons/menu_icons/trash-alt.svg").pixmap(icon_size, icon_size)
+        remove_all = QToolButton(self)
+        remove_all.setIcon(remove_all_icon)
+        remove_all.clicked.connect(self.remove_all)
+        remove_all.setToolTip("Remove all items from project.")
+        self.addSeparator()
+        self.addWidget(remove_all)
 
     @Slot(bool)
     def remove_all(self, checked=False):
@@ -129,55 +167,6 @@ class ItemToolBar(QToolBar):
             self._toolbox.msg.emit("Please create a new project or open an existing one first")
             return
         self._toolbox.project().stop()
-
-
-class DraggableWidget(QLabel):
-    """A draggable QLabel."""
-
-    def __init__(self, parent, pixmap, item_type, category):
-        """
-
-        Args:
-            parent (QWidget): Parent widget
-            pixmap (QPixMap): Picture for the label
-            item_type (str): Item type (e.g. Data Store, Data Connection, etc...)
-            category (str): Item category (e.g. Data Stores, Data Connetions, etc...)
-        """
-        super().__init__(parent=parent)  # Parent passed to QLabel constructor. Inherits stylesheet from ToolboxUI.
-        self.category = category
-        self.setPixmap(pixmap)
-        self.drag_start_pos = None
-        self.setToolTip(
-            "<p>Drag-and-drop this icon into the Design View to create a new <b>{}</b> item.</p>".format(item_type)
-        )
-        self.setAlignment(Qt.AlignHCenter)
-        self.setAttribute(Qt.WA_DeleteOnClose)
-
-    def mousePressEvent(self, event):
-        """Register drag start position"""
-        if event.button() == Qt.LeftButton:
-            self.drag_start_pos = event.pos()
-
-    # noinspection PyArgumentList, PyUnusedLocal
-    def mouseMoveEvent(self, event):
-        """Start dragging action if needed"""
-        if not event.buttons() & Qt.LeftButton:
-            return
-        if not self.drag_start_pos:
-            return
-        if (event.pos() - self.drag_start_pos).manhattanLength() < QApplication.startDragDistance():
-            return
-        drag = QDrag(self)
-        mime_data = QMimeData()
-        mime_data.setText(self.category)
-        drag.setMimeData(mime_data)
-        drag.setPixmap(self.pixmap())
-        drag.setHotSpot(self.pixmap().rect().center())
-        drag.exec_()
-
-    def mouseReleaseEvent(self, event):
-        """Forget drag start position"""
-        self.drag_start_pos = None
 
 
 class ParameterTagToolBar(QToolBar):

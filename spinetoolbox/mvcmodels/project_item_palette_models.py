@@ -17,14 +17,40 @@ Contains a class for storing Tool specifications.
 """
 
 from PySide2.QtCore import Qt, QModelIndex, QAbstractListModel
+from PySide2.QtGui import QStandardItem, QStandardItemModel
 
 
-class ToolSpecificationModel(QAbstractListModel):
+class ProjectItemPaletteModel(QStandardItemModel):
+    """A model for listing project items in the Item Palette view."""
+
+    def add_item(self, item_type, category, icon):
+        """Add item to model."""
+        new_item = QStandardItem("")
+        new_item.setData(icon, Qt.DecorationRole)
+        new_item.setData(category, Qt.UserRole + 1)
+        new_item.setToolTip(
+            f"<p>Drag-and-drop this icon into the Design View to create a new <b>{item_type}</b> item.</p>"
+        )
+        self.appendRow(new_item)
+
+    def flags(self, index):
+        return super().flags(index) & ~Qt.ItemIsSelectable
+
+    @staticmethod
+    def is_index_draggable(index):
+        return True
+
+    def get_mime_data_text(self, index):
+        return ",".join([self.data(index, Qt.UserRole + 1), ""])
+
+
+class ToolSpecificationPaletteModel(QAbstractListModel):
     """Class to store tools that are available in a project e.g. GAMS or Julia models."""
 
-    def __init__(self):
+    def __init__(self, tool_icon):
         super().__init__()
         self._tools = list()
+        self._tool_icon = tool_icon
 
     def rowCount(self, parent=None):
         """Must be reimplemented when subclassing. Returns
@@ -58,6 +84,8 @@ class ToolSpecificationModel(QAbstractListModel):
             if row >= self.rowCount():
                 return ""
             return self._tools[row].def_file_path
+        if role == Qt.DecorationRole:
+            return self._tool_icon
 
     def flags(self, index):
         """Returns enabled flags for the given index.
@@ -154,3 +182,11 @@ class ToolSpecificationModel(QAbstractListModel):
         if row == -1:
             return QModelIndex()
         return self.createIndex(row, 0)
+
+    @staticmethod
+    def is_index_draggable(index):
+        return True
+
+    @staticmethod
+    def get_mime_data_text(index):
+        return ",".join(["Tools", index.data(Qt.DisplayRole)])
