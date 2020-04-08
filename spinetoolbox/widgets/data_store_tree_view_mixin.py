@@ -366,19 +366,19 @@ class TreeViewMixin:
             relationship_class_key=relationship_class_key, object_class_name=object_class_name, object_name=object_name
         )
 
-    @Slot("bool")
+    @Slot(bool)
     def show_add_object_classes_form(self, checked=False):
         """Shows dialog to let user select preferences for new object classes."""
         dialog = AddObjectClassesDialog(self, self.db_mngr, *self.db_maps)
         dialog.show()
 
-    @Slot("bool")
+    @Slot(bool)
     def show_add_objects_form(self, checked=False, class_name=""):
         """Shows dialog to let user select preferences for new objects."""
         dialog = AddObjectsDialog(self, self.db_mngr, *self.db_maps, class_name=class_name)
         dialog.show()
 
-    @Slot("bool")
+    @Slot(bool)
     def show_add_relationship_classes_form(self, checked=False, object_class_one_name=None):
         """Shows dialog to let user select preferences for new relationship class."""
         dialog = AddRelationshipClassesDialog(
@@ -386,7 +386,7 @@ class TreeViewMixin:
         )
         dialog.show()
 
-    @Slot("bool")
+    @Slot(bool)
     def show_add_relationships_form(
         self, checked=False, relationship_class_key=(), object_class_name="", object_name=""
     ):
@@ -401,19 +401,19 @@ class TreeViewMixin:
         )
         dialog.show()
 
-    @Slot("bool")
+    @Slot(bool)
     def show_edit_object_classes_form(self, checked=False):
         selected = {ind.internalPointer() for ind in self.object_tree_model.selected_object_class_indexes}
         dialog = EditObjectClassesDialog(self, self.db_mngr, selected)
         dialog.show()
 
-    @Slot("bool")
+    @Slot(bool)
     def show_edit_objects_form(self, checked=False):
         selected = {ind.internalPointer() for ind in self.object_tree_model.selected_object_indexes}
         dialog = EditObjectsDialog(self, self.db_mngr, selected)
         dialog.show()
 
-    @Slot("bool")
+    @Slot(bool)
     def show_edit_relationship_classes_form(self, checked=False):
         selected = {
             ind.internalPointer()
@@ -423,7 +423,7 @@ class TreeViewMixin:
         dialog = EditRelationshipClassesDialog(self, self.db_mngr, selected)
         dialog.show()
 
-    @Slot("bool")
+    @Slot(bool)
     def show_edit_relationships_form(self, checked=False):
         # NOTE: Only edits relationships that are in the same class
         selected = {

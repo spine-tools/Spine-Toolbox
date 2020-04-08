@@ -123,10 +123,13 @@ class FillInValueListIdMixin(ConvertToDBMixin):
             list: error log
         """
         value_list_name = item.pop("value_list_name", None)
-        value_list = self._db_map_value_list_lookup.get(db_map, {}).get(value_list_name)
-        if not value_list:
-            return [f"Unknown value list name {value_list_name}"] if value_list_name else []
-        item["parameter_value_list_id"] = value_list["id"]
+        if value_list_name:
+            value_list = self._db_map_value_list_lookup.get(db_map, {}).get(value_list_name)
+            if not value_list:
+                return [f"Unknown value list name {value_list_name}"] if value_list_name else []
+            item["parameter_value_list_id"] = value_list["id"]
+        else:
+            item["parameter_value_list_id"] = None
         return []
 
 

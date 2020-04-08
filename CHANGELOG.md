@@ -11,10 +11,12 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
   from *Entity Graph* context menus. Also, pruned items can be restored gradually.
 - A new Input type *Indexed parameter expansion* is now available in Data Store view's Pivot table.
   In this Input type the indexes, e.g. time stamps of time series get expanded as a new dimension in the table.
+- Import editor now has a new Source type: Table name. It can be used e.g. to pick an Excel sheet's
+  or GAMS domain's name as the object class name.
 
 ### Changed
 - The graph view behavior has changed. Now selecting objects in the object tree not only shows those objects but also 
-  all the cascading relationships. This is to facilitate exploring the system without a previous knowledge.
+  all the cascading relationships. One can still go back to the previous behaviour in Settings.
 - Moving object items in the graph view also causes relationship icons to follow. This behaviour can be disabled in the
   Settings form.
 

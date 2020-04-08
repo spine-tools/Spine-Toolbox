@@ -23,7 +23,7 @@ from .custom_menus import SimpleFilterMenu
 from .custom_delegates import ComboBoxDelegate
 from ..spine_io.io_models import MappingSpecModel
 
-MAPPING_CHOICES = ("Constant", "Column", "Row", "Column Header", "Headers", "None")
+MAPPING_CHOICES = ("Constant", "Column", "Row", "Column Header", "Headers", "Table Name", "None")
 
 
 class MappingWidget(QWidget):

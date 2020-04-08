@@ -98,13 +98,13 @@ class ItemToolBar(QToolBar):
         for widget in widgets:
             self.insertWidget(self.tool_separator, widget)
 
-    @Slot(bool, name="remove_all")
+    @Slot(bool)
     def remove_all(self, checked=False):
         """Slot for handling the remove all tool button clicked signal.
         Calls ToolboxUI remove_all_items() method."""
         self._toolbox.remove_all_items()
 
-    @Slot(bool, name="execute_project")
+    @Slot(bool)
     def execute_project(self, checked=False):
         """Slot for handling the Execute project tool button clicked signal."""
         if not self._toolbox.project():
@@ -113,7 +113,7 @@ class ItemToolBar(QToolBar):
         self._toolbox.project().execute_project()
         return
 
-    @Slot(bool, name="execute_selected")
+    @Slot(bool)
     def execute_selected(self, checked=False):
         """Slot for handling the Execute selected tool button clicked signal."""
         if not self._toolbox.project():
@@ -122,7 +122,7 @@ class ItemToolBar(QToolBar):
         self._toolbox.project().execute_selected()
         return
 
-    @Slot(bool, name="stop_execution")
+    @Slot(bool)
     def stop_execution(self, checked=False):
         """Slot for handling the Stop execution tool button clicked signal."""
         if not self._toolbox.project():

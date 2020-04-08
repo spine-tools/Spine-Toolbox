@@ -296,7 +296,7 @@ class SpineDBManager(QObject):
         committed_db_maps = set()
         rolled_db_maps = set()
         for db_map in db_maps:
-            if not db_map.has_pending_changes():
+            if self.undo_stack[db_map].isClean():
                 continue
             commit_msg = self._get_commit_msg(db_map)
             try:
@@ -329,7 +329,7 @@ class SpineDBManager(QObject):
         error_log = {}
         rolled_db_maps = set()
         for db_map in db_maps:
-            if not db_map.has_pending_changes():
+            if self.undo_stack[db_map].isClean():
                 continue
             try:
                 db_map.rollback_session()
@@ -368,7 +368,7 @@ class SpineDBManager(QObject):
         Returns:
             bool: True if successfully committed or rolled back, False otherwise
         """
-        if not db_map.has_pending_changes():
+        if self.undo_stack[db_map].isClean():
             return True
         commit_at_exit = int(self.qsettings.value("appSettings/commitAtExit", defaultValue="1"))
         if commit_at_exit == 0:

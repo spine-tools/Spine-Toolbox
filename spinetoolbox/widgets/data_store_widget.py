@@ -22,17 +22,10 @@ import json
 from PySide2.QtWidgets import QMainWindow, QErrorMessage, QDockWidget, QMessageBox, QInputDialog, QTreeView, QTableView
 from PySide2.QtCore import Qt, Signal, Slot
 from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QIcon
-from spinedb_api import (
-    copy_database,
-    import_data,
-    export_data,
-    SpineIntegrityError,
-    SpineDBAPIError,
-    ParameterValueEncoder,
-)
+from spinedb_api import import_data, export_data, SpineIntegrityError, SpineDBAPIError, ParameterValueEncoder
 from ..config import MAINWINDOW_SS, APPLICATION_PATH
 from .data_store_edit_items_dialogs import ManageParameterTagsDialog
-from .data_store_manage_items_dialog import MassRemoveItemsDialog
+from .data_store_manage_items_dialog import MassRemoveItemsDialog, CreateTemplateDialog
 from .custom_menus import ParameterValueListContextMenu
 from .data_store_parameter_view_mixin import ParameterViewMixin
 from .data_store_tree_view_mixin import TreeViewMixin
@@ -51,9 +44,6 @@ from ..helpers import (
 from .import_widget import ImportDialog
 from .parameter_value_editor import ParameterValueEditor
 from ..spine_io.exporters.excel import export_spine_database_to_xlsx
-
-
-# TODO: call deleteLater on all dialogs after they return
 
 
 class DataStoreFormBase(QMainWindow):
@@ -112,6 +102,7 @@ class DataStoreFormBase(QMainWindow):
         self.settings_group = 'dataStoreForm'
         self.undo_action = None
         self.redo_action = None
+        self.template_file_path = None
         db_names = ", ".join(["{0}".format(db_map.codename) for db_map in self.db_maps])
         self.setWindowTitle("{0}[*] - Data store view".format(db_names))
         self.update_commit_enabled()
@@ -313,7 +304,7 @@ class DataStoreFormBase(QMainWindow):
     @Slot(bool)
     def load_template(self, checked=False):
         """Loads JSON template."""
-        if any(db_map.has_pending_changes() for db_map in self.db_maps):
+        if not all(self.db_mngr.undo_stack[db_map].isClean() for db_map in self.db_maps):
             commit_warning = QMessageBox(parent=self)
             commit_warning.setText("Please commit or rollback before loading a template.")
             commit_warning.setStandardButtons(QMessageBox.Ok)
@@ -321,7 +312,7 @@ class DataStoreFormBase(QMainWindow):
             return
         self.qsettings.beginGroup(self.settings_group)
         file_path, _ = get_open_file_name_in_last_dir(
-            self.qsettings, "loadDB", self, "Load template", self._get_base_dir(), "JSON file (*.json)"
+            self.qsettings, "loadTemplate", self, "Load template", self._get_base_dir(), "Template file (*.json)"
         )
         self.qsettings.endGroup()
         if not file_path:  # File selection cancelled
@@ -333,18 +324,37 @@ class DataStoreFormBase(QMainWindow):
 
     @Slot(bool)
     def save_as_template(self, checked=False):
-        """Saves a db as a JSON template."""
-        db_map = self._select_database()
-        if db_map is None:  # Database selection cancelled
-            return
         self.qsettings.beginGroup(self.settings_group)
-        file_path, _ = get_save_file_name_in_last_dir(
-            self.qsettings, "dumpDB", self, "Save template", self._get_base_dir(), "JSON file (*.json)"
+        self.template_file_path, _ = get_save_file_name_in_last_dir(
+            self.qsettings, "saveAsTemplate", self, "Save as template", self._get_base_dir(), "Template file (*.json)"
         )
         self.qsettings.endGroup()
-        if not file_path:  # File selection cancelled
+        if not self.template_file_path:  # File selection cancelled
             return
-        data = export_data(db_map)
+        dialog = CreateTemplateDialog(self, self.db_mngr, *self.db_maps)
+        dialog.data_submitted.connect(self.do_save_as_template)
+        dialog.show()
+
+    @Slot(object)
+    def do_save_as_template(self, db_map_selected_item_types):
+        """Saves a db as a JSON template."""
+        data = {}
+        for db_map, selected_item_types in db_map_selected_item_types.items():
+            export_items = dict()
+            export_items["object_classes"] = "object class" in selected_item_types
+            export_items["relationship_classes"] = "relationship class" in selected_item_types
+            export_items["objects"] = "object" in selected_item_types
+            export_items["relationships"] = "relationship" in selected_item_types
+            export_items["object_parameters"] = export_items["relationship_parameters"] = (
+                "parameter definition" in selected_item_types
+            )
+            export_items["object_parameter_values"] = export_items["relationship_parameter_values"] = (
+                "parameter value" in selected_item_types
+            )
+            # export_items["parameter_value_lists"] = "parameter value list" in selected_item_types
+            # export_items["parameter_tags"] = "parameter tag" in selected_item_types
+            for key, items in export_data(db_map, **export_items).items():
+                data.setdefault(key, []).extend(items)
         indent = 4 * " "
         json_data = "{{{0}{1}{0}}}".format(
             "\n" if data else "",
@@ -362,14 +372,14 @@ class DataStoreFormBase(QMainWindow):
                 ]
             ),
         )
-        with open(file_path, 'w', encoding='utf-8') as f:
+        with open(self.template_file_path, 'w', encoding='utf-8') as f:
             f.write(json_data)
-        self.msg.emit(f"Template {file_path} successfully saved.")
+        self.msg.emit(f"Template {self.template_file_path} successfully saved.")
 
     @Slot(bool)
     def show_import_file_dialog(self, checked=False):
         """Shows dialog to allow user to select a file to import."""
-        if any(db_map.has_pending_changes() for db_map in self.db_maps):
+        if not all(self.db_mngr.undo_stack[db_map].isClean() for db_map in self.db_maps):
             commit_warning = QMessageBox(parent=self)
             commit_warning.setText("Please commit or rollback before importing data.")
             commit_warning.setStandardButtons(QMessageBox.Ok)

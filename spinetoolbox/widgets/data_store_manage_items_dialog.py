@@ -30,7 +30,7 @@ from PySide2.QtWidgets import (
     QGroupBox,
     QCheckBox,
 )
-from PySide2.QtCore import Slot, Qt, QTimer
+from PySide2.QtCore import Slot, Qt, QTimer, Signal
 from .custom_editors import IconColorEditor
 from .custom_qtableview import CopyPasteTableView
 from ..helpers import busy_effect
@@ -232,8 +232,8 @@ class CommitDialog(QDialog):
         self.action_accept.setEnabled(cond)
 
 
-class MassRemoveItemsDialog(QDialog):
-    """A dialog to query user's preferences for mass removing db items."""
+class SelectDBItemsDialog(QDialog):
+    """A dialog to query a selection of dbs and items from the user."""
 
     _MARGIN = 3
     _ITEM_TYPES = (
@@ -253,12 +253,11 @@ class MassRemoveItemsDialog(QDialog):
         Args:
             parent (DataStoreForm)
             db_mngr (SpineDBManager)
-            db_maps (DiffDatabaseMapping): the target db
+            db_maps (DiffDatabaseMapping): the dbs to select items from
         """
         super().__init__(parent)
         self.db_mngr = db_mngr
         self.db_maps = db_maps
-        self.setWindowTitle("Mass remove items")
         top_widget = QWidget()
         top_layout = QHBoxLayout(top_widget)
         db_maps_group_box = QGroupBox("Databases", top_widget)
@@ -266,6 +265,7 @@ class MassRemoveItemsDialog(QDialog):
         db_maps_layout.setContentsMargins(self._MARGIN, self._MARGIN, self._MARGIN, self._MARGIN)
         self.db_map_check_boxes = {db_map: QCheckBox(db_map.codename, db_maps_group_box) for db_map in self.db_maps}
         for check_box in self.db_map_check_boxes.values():
+            check_box.stateChanged.connect(lambda _: QTimer.singleShot(0, self._set_item_check_box_enabled))
             check_box.setChecked(True)
             db_maps_layout.addWidget(check_box)
         items_group_box = QGroupBox("Items", top_widget)
@@ -273,7 +273,7 @@ class MassRemoveItemsDialog(QDialog):
         items_layout.setContentsMargins(self._MARGIN, self._MARGIN, self._MARGIN, self._MARGIN)
         self.item_check_boxes = {item_type: QCheckBox(item_type, items_group_box) for item_type in self._ITEM_TYPES}
         for check_box in self.item_check_boxes.values():
-            check_box.stateChanged.connect(lambda _: QTimer.singleShot(0, self._handle_item_check_box_state_changed))
+            check_box.stateChanged.connect(lambda _: QTimer.singleShot(0, self._set_item_check_box_states_in_cascade))
             items_layout.addWidget(check_box)
         top_layout.addWidget(db_maps_group_box)
         top_layout.addWidget(items_group_box)
@@ -287,23 +287,60 @@ class MassRemoveItemsDialog(QDialog):
         layout.setContentsMargins(self._MARGIN, self._MARGIN, self._MARGIN, self._MARGIN)
         self.setAttribute(Qt.WA_DeleteOnClose)
 
+    @property
+    def positive(self):
+        """Returns a boolean indicating which check state (True or False) needs to be propagated in cascade
+        across item check boxes. See ``_set_item_check_box_states_in_cascade``.
+        """
+        raise NotImplementedError()
+
     @Slot()
-    def _handle_item_check_box_state_changed(self):
-        """Adjust state of checkboxes depending on checks."""
-        if self.item_check_boxes["object class"].isChecked():
-            self.item_check_boxes["object"].setChecked(True)
-            self.item_check_boxes["relationship class"].setChecked(True)
-        if self.item_check_boxes["relationship class"].isChecked() or self.item_check_boxes["object"].isChecked():
-            self.item_check_boxes["relationship"].setChecked(True)
+    def _set_item_check_box_enabled(self):
+        """Set the enabled property on item check boxes depending on the state of db_map check boxes."""
+        enabled = any([x.isChecked() for x in self.db_map_check_boxes.values()])
+        for check_box in self.item_check_boxes.values():
+            check_box.setEnabled(enabled)
+
+    @Slot()
+    def _set_item_check_box_states_in_cascade(self):
+        """Set state of item check boxes in cascade."""
+        if self.item_check_boxes["object class"].isChecked() is self.positive:
+            self.item_check_boxes["object"].setChecked(self.positive)
+            self.item_check_boxes["relationship class"].setChecked(self.positive)
         if (
-            self.item_check_boxes["relationship class"].isChecked()
-            and self.item_check_boxes["object class"].isChecked()
+            self.item_check_boxes["relationship class"].isChecked() is self.positive
+            or self.item_check_boxes["object"].isChecked() is self.positive
         ):
-            self.item_check_boxes["parameter definition"].setChecked(True)
-        if self.item_check_boxes["parameter definition"].isChecked() or (
-            self.item_check_boxes["relationship"].isChecked() and self.item_check_boxes["object"].isChecked()
+            self.item_check_boxes["relationship"].setChecked(self.positive)
+        if (
+            self.item_check_boxes["relationship class"].isChecked() is self.positive
+            and self.item_check_boxes["object class"].isChecked() is self.positive
         ):
-            self.item_check_boxes["parameter value"].setChecked(True)
+            self.item_check_boxes["parameter definition"].setChecked(self.positive)
+        if self.item_check_boxes["parameter definition"].isChecked() is self.positive or (
+            self.item_check_boxes["relationship"].isChecked() is self.positive
+            and self.item_check_boxes["object"].isChecked() is self.positive
+        ):
+            self.item_check_boxes["parameter value"].setChecked(self.positive)
+
+
+class MassRemoveItemsDialog(SelectDBItemsDialog):
+    """A dialog to query user's preferences for mass removing db items."""
+
+    def __init__(self, parent, db_mngr, *db_maps):
+        """Initialize class.
+
+        Args:
+            parent (DataStoreForm)
+            db_mngr (SpineDBManager)
+            db_maps (DiffDatabaseMapping): the dbs to select items from
+        """
+        super().__init__(parent, db_mngr, *db_maps)
+        self.setWindowTitle("Mass remove items")
+
+    @property
+    def positive(self):
+        return True
 
     def accept(self):
         db_map_typed_data = {
@@ -317,3 +354,41 @@ class MassRemoveItemsDialog(QDialog):
         }
         self.db_mngr.remove_items(db_map_typed_data)
         super().accept()
+
+
+class CreateTemplateDialog(SelectDBItemsDialog):
+    """A dialog to query user's preferences for creating a template."""
+
+    data_submitted = Signal(object)
+
+    def __init__(self, parent, db_mngr, *db_maps):
+        """Initialize class.
+
+        Args:
+            parent (DataStoreForm)
+            db_mngr (SpineDBManager)
+            db_maps (DiffDatabaseMapping): the dbs to select items from
+        """
+        super().__init__(parent, db_mngr, *db_maps)
+        self.setWindowTitle("Select items to include in the template")
+        for item_type in (
+            "object class",
+            "relationship class",
+            "parameter definition",
+            "parameter tag",
+            "parameter value list",
+        ):
+            self.item_check_boxes[item_type].setChecked(True)
+
+    @property
+    def positive(self):
+        return False
+
+    def accept(self):
+        super().accept()
+        db_map_selected_item_types = {
+            db_map: [item_type for item_type, check_box in self.item_check_boxes.items() if check_box.isChecked()]
+            for db_map, check_box in self.db_map_check_boxes.items()
+            if check_box.isChecked()
+        }
+        self.data_submitted.emit(db_map_selected_item_types)
