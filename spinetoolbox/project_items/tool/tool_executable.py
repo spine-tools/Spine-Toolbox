@@ -273,7 +273,7 @@ class ToolExecutable(ExecutableItem):
         Returns:
             bool: True if the operation was successful, False otherwiseBoolean variable depending on success
         """
-        for required_path in self._tool_specification.input_files:
+        for required_path in self._tool_specification.inputfiles:
             path, filename = os.path.split(required_path)
             if filename:
                 continue
