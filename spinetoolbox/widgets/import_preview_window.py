@@ -39,14 +39,14 @@ class ImportPreviewWindow(QMainWindow):
     settings_updated = Signal(dict)
     connection_failed = Signal(str)
 
-    def __init__(self, importer, filepath, connector, settings, toolbox):
+    def __init__(self, importer, filepath, connector, connector_settings, settings, toolbox):
         from ..ui.import_preview_window import Ui_MainWindow
 
         super().__init__(parent=toolbox, flags=Qt.Window)
         self._importer = importer
         self._toolbox = toolbox
         self._qsettings = self._toolbox.qsettings()
-        self._connection_manager = ConnectionManager(connector)
+        self._connection_manager = ConnectionManager(connector, connector_settings)
         self._connection_manager.source = filepath
         self._ui = Ui_MainWindow()
         self._ui.setupUi(self)

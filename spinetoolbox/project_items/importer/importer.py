@@ -22,6 +22,7 @@ from PySide2.QtCore import QAbstractListModel, QFileInfo, QModelIndex, Qt, Signa
 from PySide2.QtWidgets import QFileIconProvider, QListWidget, QDialog, QVBoxLayout, QDialogButtonBox
 from spinetoolbox.project_item import ProjectItem
 from spinetoolbox.helpers import create_dir, deserialize_path, serialize_path
+from spinetoolbox.spine_io.gdx_utils import find_gams_directory
 from spinetoolbox.spine_io.importers.csv_reader import CSVConnector
 from spinetoolbox.spine_io.importers.excel_reader import ExcelConnector
 from spinetoolbox.spine_io.importers.gdx_connector import GdxConnector
@@ -99,9 +100,10 @@ class Importer(ProjectItem):
     def execution_item(self):
         """Creates project item's execution counterpart."""
         python_path = self._toolbox.qsettings().value("appSettings/pythonPath", defaultValue="")
+        gams_path = self._gams_system_directory()
         cancel_on_error = self._properties_ui.cancel_on_error_checkBox.isChecked()
         executable = ImporterExecutable(
-            self.name, self.settings, self.logs_dir, python_path, cancel_on_error, self._logger
+            self.name, self.settings, self.logs_dir, python_path, gams_path, cancel_on_error, self._logger
         )
         return executable
 
@@ -195,8 +197,9 @@ class Importer(ProjectItem):
                 # Aborted by the user
                 return
         self._logger.msg.emit(f"Opening Import editor for file: {file_path}")
+        connector_settings = {"gams_directory": self._gams_system_directory()}
         preview_widget = self._preview_widget[label] = ImportPreviewWindow(
-            self, file_path, connector, settings, self._toolbox
+            self, file_path, connector, connector_settings, settings, self._toolbox
         )
         preview_widget.settings_updated.connect(lambda s, importee=label: self.save_settings(s, importee))
         preview_widget.connection_failed.connect(lambda m, importee=label: self._connection_failed(m, importee))
@@ -221,13 +224,14 @@ class Importer(ProjectItem):
         connector_list_wg.addItems(connector_names)
         # Set current item in `connector_list_wg` based on file extension
         _filename, file_extension = os.path.splitext(importee)
-        if file_extension.lower().startswith(".xls"):
+        file_extension = file_extension.lower()
+        if file_extension.startswith(".xls"):
             row = connector_list.index(ExcelConnector)
-        elif file_extension.lower() == ".csv":
+        elif file_extension in (".csv", ".dat", ".txt"):
             row = connector_list.index(CSVConnector)
-        elif file_extension.lower() == ".gdx":
+        elif file_extension == ".gdx":
             row = connector_list.index(GdxConnector)
-        elif file_extension.lower() == ".json":
+        elif file_extension == ".json":
             row = connector_list.index(JSONConnector)
         else:
             row = None
@@ -417,6 +421,15 @@ class Importer(ProjectItem):
         for source, mapping in mappings.items():  # mappings is a dict with absolute paths as keys and mapping as values
             serialized_mappings.append([serialize_path(source, project_path), mapping])
         return serialized_mappings
+
+    def _gams_system_directory(self):
+        """Returns GAMS system path from Toolbox settings or None if GAMS default is to be used."""
+        path = self._project.settings.value("appSettings/gamsPath", defaultValue=None)
+        if not path:
+            path = find_gams_directory()
+        if path is not None and os.path.isfile(path):
+            path = os.path.dirname(path)
+        return path
 
 
 def _fix_1d_array_to_array(mappings):

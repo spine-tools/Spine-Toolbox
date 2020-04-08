@@ -42,11 +42,11 @@ class TestImporterExecutable(unittest.TestCase):
         self.assertEqual(ImporterExecutable.item_type(), "Importer")
 
     def test_execute_backward(self):
-        executable = ImporterExecutable("name", {}, "", "", True, mock.MagicMock())
+        executable = ImporterExecutable("name", {}, "", "", "", True, mock.MagicMock())
         self.assertTrue(executable.execute([], ExecutionDirection.BACKWARD))
 
     def test_execute_forward_simplest_case(self):
-        executable = ImporterExecutable("name", {}, "", "", True, mock.MagicMock())
+        executable = ImporterExecutable("name", {}, "", "", "", True, mock.MagicMock())
         self.assertTrue(executable.execute([], ExecutionDirection.FORWARD))
 
     def test_execute_forward_import_small_file(self):
@@ -57,7 +57,10 @@ class TestImporterExecutable(unittest.TestCase):
             database_path = Path(temp_dir).joinpath("database.sqlite")
             database_url = 'sqlite:///' + str(database_path)
             create_new_spine_database(database_url)
-            executable = ImporterExecutable("name", mappings, temp_dir, sys.executable, True, mock.MagicMock())
+            gams_path = ""
+            executable = ImporterExecutable(
+                "name", mappings, temp_dir, sys.executable, gams_path, True, mock.MagicMock()
+            )
             database_resources = [ProjectItemResource(None, "database", database_url)]
             self.assertTrue(executable.execute(database_resources, ExecutionDirection.BACKWARD))
             file_resources = [ProjectItemResource(None, "file", data_file.as_uri())]

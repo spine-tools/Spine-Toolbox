@@ -20,6 +20,7 @@ from PySide2.QtCore import QObject, QEventLoop, Signal, Slot
 from spinetoolbox.config import PYTHON_EXECUTABLE
 from spinetoolbox.executable_item import ExecutableItem
 from spinetoolbox.execution_managers import QProcessExecutionManager
+from spinetoolbox.spine_io.gdx_utils import find_gams_directory
 from . import importer_program
 
 
@@ -28,13 +29,14 @@ class ImporterExecutable(ExecutableItem, QObject):
     importing_finished = Signal()
     """Emitted after the separate import process has finished executing."""
 
-    def __init__(self, name, settings, logs_dir, python_path, cancel_on_error, logger):
+    def __init__(self, name, settings, logs_dir, python_path, gams_path, cancel_on_error, logger):
         """
         Args:
             name (str): Importer's name
             settings (dict): import mappings
             logs_dir (str): path to the directory where logs should be stored
             python_path (str): path to the system's python executable
+            gams_path (str): path to system's GAMS executable or empty string for the default path
             cancel_on_error (bool): if True, quit execution on import error
             logger (LoggerInterface): a logger
         """
@@ -43,6 +45,7 @@ class ImporterExecutable(ExecutableItem, QObject):
         self._settings = settings
         self._logs_dir = logs_dir
         self._python_path = python_path
+        self._gams_path = gams_path
         self._cancel_on_error = cancel_on_error
         self._resources_from_downstream = list()
         self._importer_process = None
@@ -73,10 +76,12 @@ class ImporterExecutable(ExecutableItem, QObject):
             absolute_path = absolute_paths.get(label)
             if absolute_path is not None:
                 absolute_path_settings[absolute_path] = self._settings[label]
+        source_settings = {"GdxConnector": {"gams_directory": self._gams_system_directory()}}
         # Collect arguments for the importer_program
         import_args = [
             list(absolute_paths.values()),
             absolute_path_settings,
+            source_settings,
             [r.url for r in self._resources_from_downstream if r.type_ == "database"],
             self._logs_dir,
             self._cancel_on_error,
@@ -151,6 +156,15 @@ class ImporterExecutable(ExecutableItem, QObject):
         self._importer_process = None
         self._importer_process_successful = exit_code == 0
         self.importing_finished.emit()
+
+    def _gams_system_directory(self):
+        """Returns GAMS system path from Toolbox settings or None if GAMS default is to be used."""
+        path = self._gams_path
+        if not path:
+            path = find_gams_directory()
+        if path is not None and os.path.isfile(path):
+            path = os.path.dirname(path)
+        return path
 
 
 def _files_from_resources(resources):
