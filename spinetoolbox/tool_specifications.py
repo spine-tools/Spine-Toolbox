@@ -408,7 +408,6 @@ class JuliaTool(ToolSpecification):
 
     def __init__(
         self,
-        toolbox,
         name,
         tooltype,
         path,
@@ -425,8 +424,6 @@ class JuliaTool(ToolSpecification):
     ):
         """
         Args:
-
-            toolbox (ToolboxUI): QMainWindow instance
             name (str): Julia Tool name
             tooltype (str): Tool specification type
             path (str): Path to model main file
@@ -455,7 +452,6 @@ class JuliaTool(ToolSpecification):
             cmdline_args,
             execute_in_work,
         )
-        self._toolbox = toolbox
         self._embedded_console = embedded_julia_console
         main_file = includes[0]
         self.main_dir, self.main_prgm = os.path.split(main_file)
