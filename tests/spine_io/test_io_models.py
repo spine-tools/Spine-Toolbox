@@ -158,8 +158,7 @@ class TestMappingPreviewModel(unittest.TestCase):
 class TestMappingSpecModel(unittest.TestCase):
     def test_data_when_mapping_object_class_without_parameters(self):
         model = MappingSpecModel(
-            dict_to_map({"map_type": "ObjectClass", "name": None, "object": None}),
-            "connector's name",
+            dict_to_map({"map_type": "ObjectClass", "name": None, "object": None}), "connector's name"
         )
         self.assertEqual(model.rowCount(), 2)
         self.assertEqual(model.columnCount(), 3)
@@ -196,11 +195,11 @@ class TestMappingSpecModel(unittest.TestCase):
         index = model.index(2, 1)
         self.assertEqual(index.data(), "None")
         index = model.index(0, 2)
-        self.assertEquals(index.data(), "")
+        self.assertEqual(index.data(), "")
         index = model.index(1, 2)
-        self.assertEquals(index.data(), "")
+        self.assertEqual(index.data(), "")
         index = model.index(2, 2)
-        self.assertEquals(index.data(), "")
+        self.assertEqual(index.data(), "")
 
 
 if __name__ == '__main__':

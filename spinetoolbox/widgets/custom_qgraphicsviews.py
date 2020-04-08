@@ -20,7 +20,17 @@ import logging
 import math
 from PySide2.QtWidgets import QGraphicsView
 from PySide2.QtGui import QCursor
-from PySide2.QtCore import QEventLoop, QParallelAnimationGroup, Signal, Slot, Qt, QRectF, QTimeLine, QMarginsF, QSettings
+from PySide2.QtCore import (
+    QEventLoop,
+    QParallelAnimationGroup,
+    Signal,
+    Slot,
+    Qt,
+    QRectF,
+    QTimeLine,
+    QMarginsF,
+    QSettings,
+)
 from spine_engine import ExecutionDirection, SpineEngineState
 from ..graphics_items import LinkDrawer, Link
 from ..project_commands import AddLinkCommand, RemoveLinkCommand

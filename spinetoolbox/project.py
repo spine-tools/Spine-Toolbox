@@ -639,7 +639,7 @@ class SpineToolboxProject(MetaObject):
             resources = []
             for parent_name in node_predecessors.get(item_name, set()):
                 parent_item = self._project_item_model.get_item(parent_name).project_item
-                resources += parent_item.output_resources_forward()
+                resources += parent_item.resources_for_direct_successors()
             item.handle_dag_changed(rank, resources)
 
     def notify_changes_in_all_dags(self):

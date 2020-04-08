@@ -353,20 +353,16 @@ class Tool(ProjectItem):
         """Update Tool tab name label. Used only when renaming project items."""
         self._properties_ui.label_tool_name.setText(self.name)
 
-    def output_resources_forward(self):
+    def resources_for_direct_successors(self):
         """
-        Returns a list of resources, i.e. the output files produced by the tool.
+        Returns a list of resources, i.e. the outputs defined by the tool specification.
 
         The output files are available only after tool has been executed,
-        therefore the resource type is 'transient_file'
-        The url attribute of the resources is set to ""
+        therefore the resource type is 'transient_file' or 'file_pattern'.
+        A 'file_pattern' type resource is returned only if the pattern doesn't match any output file.
+        For 'transient_file' resources, the url attribute is set to an empty string if the file doesn't exist yet
         or it points to a file from most recent execution.
-        The metadata attribute's label key gives the base name of the output file.
-
-        Args:
-            provider (ProjectItem or ExecutionItem): resource's provider item
-            output_files (list): output file patterns from tool specification
-            output_dir (str): path to the execution output directory
+        The metadata attribute's label key gives the base name or file pattern of the output file.
 
         Returns:
             list: a list of Tool's output resources

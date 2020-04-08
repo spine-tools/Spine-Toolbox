@@ -375,7 +375,7 @@ class DataConnection(ProjectItem):
         """Update Data Connection tab name label. Used only when renaming project items."""
         self._properties_ui.label_dc_name.setText(self.name)
 
-    def output_resources_forward(self):
+    def resources_for_direct_successors(self):
         """see base class"""
         refs = self.file_references()
         f_list = [os.path.join(self.data_dir, f) for f in self.data_files()]

@@ -57,9 +57,9 @@ class ExecutableItem:
 
     def output_resources(self, direction):
         """
-        Returns output resources for execution in the given direction.
+        Returns output resources in the given direction.
 
-        Subclasses need to implement output_resources_backward and/or output_resources_forward
+        Subclasses need to implement _output_resources_backward and/or _output_resources_forward
         if they want to provide resources in any direction.
 
         Args:

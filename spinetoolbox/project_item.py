@@ -171,42 +171,16 @@ class ProjectItem(MetaObject):
         """Creates project item's execution counterpart."""
         raise NotImplementedError()
 
-    def output_resources(self, direction):
-        """
-        Returns output resources for execution in the given direction.
-
-        Subclasses need to implement output_resources_backward and/or output_resources_forward
-        if they want to provide resources in any direction.
-
-        Args:
-            direction (str): Direction where output resources are passed
-
-        Returns:
-            a list of ProjectItemResources
-        """
-        return {"backward": self.output_resources_backward, "forward": self.output_resources_forward}[direction]()
-
     # pylint: disable=no-self-use
-    def output_resources_forward(self):
+    def resources_for_direct_successors(self):
         """
-        Returns output resources for forward execution.
+        Returns resources for direct successors.
 
+        These resources can include transient files that don't exist yet, or filename patterns.
         The default implementation returns an empty list.
 
         Returns:
-            a list of ProjectItemResources
-        """
-        return list()
-
-    # pylint: disable=no-self-use
-    def output_resources_backward(self):
-        """
-        Returns output resources for backward execution.
-
-        The default implementation returns an empty list.
-
-        Returns:
-            a list of ProjectItemResources
+            list: a list of ProjectItemResources
         """
         return list()
 
@@ -234,7 +208,6 @@ class ProjectItem(MetaObject):
         Args:
             resources (list): resources available from input items
         """
-
 
     def invalidate_workflow(self, edges):
         """Notifies that this item's workflow is not acyclic.

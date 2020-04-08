@@ -452,7 +452,7 @@ class Exporter(ProjectItem):
         """See base class."""
         return "Exporter"
 
-    def output_resources_forward(self):
+    def resources_for_direct_successors(self):
         """See base class."""
         files = [pack.output_file_name for pack in self._settings_packs.values()]
         paths = [os.path.join(self.data_dir, file_name) for file_name in files]

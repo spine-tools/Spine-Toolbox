@@ -524,11 +524,7 @@ class DataStore(ProjectItem):
         """see base class"""
         return "Data Store"
 
-    def output_resources_backward(self):
-        """See base class."""
-        return self.output_resources_forward()
-
-    def output_resources_forward(self):
+    def resources_for_direct_successors(self):
         """See base class."""
         self._update_sa_url(log_errors=False)
         if self._sa_url:

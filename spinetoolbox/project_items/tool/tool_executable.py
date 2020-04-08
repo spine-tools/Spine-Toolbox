@@ -565,6 +565,9 @@ class ToolExecutable(ExecutableItem):
         """
         Returns a list of resources, i.e. the output files produced by the tool.
 
+        Returns the files that were actually created during the execution.
+        The URL points to the archive directory.
+
         Returns:
             list: a list of Tool's output resources
         """
