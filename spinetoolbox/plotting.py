@@ -257,7 +257,8 @@ class PivotTablePlottingHints(PlottingHints):
 
     def cell_label(self, model, index):
         """Returns a label for the table cell given by index."""
-        return model.sourceModel().index_name(index)
+        source_index = model.mapToSource(index)
+        return model.sourceModel().index_name(source_index)
 
     def column_label(self, model, column):
         """Returns a label for a table column."""
