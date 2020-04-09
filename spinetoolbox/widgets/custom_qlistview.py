@@ -18,7 +18,7 @@ Classes for custom QListView.
 
 from PySide2.QtWidgets import QListView, QApplication
 from PySide2.QtGui import QDrag
-from PySide2.QtCore import Qt, QMimeData
+from PySide2.QtCore import Qt, QMimeData, QSize, QTimer
 
 
 class DragListView(QListView):
@@ -74,3 +74,37 @@ class DragListView(QListView):
         self.drag_start_pos = None
         self.pixmap = None
         self.mime_data = None
+
+
+class ProjectItemDragListView(DragListView):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.base_size = QSize(24, 24)
+        self.setIconSize(self.base_size)
+        font = self.font()
+        font.setPointSize(9)
+        self.setFont(font)
+        self.setStyleSheet("QListView {background: transparent;}")
+        self.setResizeMode(DragListView.Adjust)
+        self.setMinimumSize(self.base_size)
+        self.setContextMenuPolicy(Qt.CustomContextMenu)
+
+    def setModel(self, model):
+        super().setModel(model)
+        self.set_maximum_size_for_orientation(self.parent().orientation())
+
+    def set_maximum_size_for_orientation(self, orientation):
+        if orientation == Qt.Horizontal:
+            self.setFlow(QListView.LeftToRight)
+        elif orientation == Qt.Vertical:
+            self.setFlow(QListView.TopToBottom)
+        self.setMaximumSize(self.base_size)
+        QTimer.singleShot(0, self.resize_to_contents)
+
+    def resize_to_contents(self):
+        size = self.contentsSize()
+        if not size.isValid():
+            return
+        margin = 2 * self.frameWidth()
+        size += QSize(margin, margin)
+        self.setMaximumSize(size)

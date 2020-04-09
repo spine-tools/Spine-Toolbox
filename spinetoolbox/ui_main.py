@@ -1377,8 +1377,8 @@ class ToolboxUI(QMainWindow):
         """
         if not self.project():
             return
-        ind = self.ui.listView_tool_specifications.indexAt(pos)
-        global_pos = self.ui.listView_tool_specifications.viewport().mapToGlobal(pos)
+        ind = self.main_toolbar.tool_specification_list_view.indexAt(pos)
+        global_pos = self.main_toolbar.tool_specification_list_view.viewport().mapToGlobal(pos)
         self.tool_specification_context_menu = ToolSpecificationContextMenu(self, global_pos, ind)
         option = self.tool_specification_context_menu.get_action()
         if option == "Edit Tool specification":

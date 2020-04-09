@@ -20,7 +20,7 @@ from PySide2.QtCore import Qt, Signal, Slot, QSize
 from PySide2.QtWidgets import QToolBar, QLabel, QAction, QButtonGroup, QPushButton, QWidget, QSizePolicy, QToolButton
 from PySide2.QtGui import QIcon
 from ..config import ICON_TOOLBAR_SS, PARAMETER_TAG_TOOLBAR_SS
-from .custom_qlistview import DragListView
+from .custom_qlistview import ProjectItemDragListView
 
 
 class MainToolBar(QToolBar):
@@ -34,8 +34,8 @@ class MainToolBar(QToolBar):
         """
         super().__init__("Add Item Toolbar", parent=parent)  # Inherits stylesheet from ToolboxUI
         self._toolbox = parent
-        self.project_item_drag_list_view = self.make_drag_list_view()
-        self.tool_specification_list_view = self.make_drag_list_view()
+        self.project_item_drag_list_view = ProjectItemDragListView(self)
+        self.tool_specification_list_view = ProjectItemDragListView(self)
         self.setStyleSheet(ICON_TOOLBAR_SS)
         self.setObjectName("ItemToolbar")
         self._handle_orientation_changed(self.orientation())
@@ -43,29 +43,8 @@ class MainToolBar(QToolBar):
 
     @Slot("Qt.Orientation")
     def _handle_orientation_changed(self, orientation):
-        for view in (self.project_item_drag_list_view, self.tool_specification_list_view):
-            if orientation == Qt.Horizontal:
-                view.setFlow(DragListView.LeftToRight)
-                view.setFlow(DragListView.LeftToRight)
-                view.setMaximumHeight(28)
-                view.setMaximumWidth(16777215)
-            elif orientation == Qt.Vertical:
-                view.setFlow(DragListView.TopToBottom)
-                view.setFlow(DragListView.TopToBottom)
-                view.setMaximumHeight(16777215)
-                view.setMaximumWidth(128)
-
-    def make_drag_list_view(self):
-        icon_size = 24
-        view = DragListView(self)
-        view.setIconSize(QSize(icon_size, icon_size))
-        font = view.font()
-        font.setPointSize(9)
-        view.setFont(font)
-        view.setStyleSheet("QListView {background: transparent;}")
-        view.setResizeMode(DragListView.Adjust)
-        view.setWrapping(True)
-        return view
+        self.project_item_drag_list_view.set_maximum_size_for_orientation(orientation)
+        self.tool_specification_list_view.set_maximum_size_for_orientation(orientation)
 
     def setup(self):
         self.add_project_item_drag_list_view()
