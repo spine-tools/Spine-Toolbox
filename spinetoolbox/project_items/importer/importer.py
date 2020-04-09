@@ -261,7 +261,7 @@ class Importer(ProjectItem):
         settings["source_type"] = connector.__name__
 
     def _connection_failed(self, msg, importee):
-        self._logger.msg.emit(msg)
+        self._logger.msg_error.emit(msg)
         preview_widget = self._preview_widget.pop(importee, None)
         if preview_widget:
             preview_widget.close()
