@@ -22,15 +22,24 @@ from spinedb_api import Array, from_database, ParameterValueFormatError, to_data
 
 
 class ArrayModel(QAbstractTableModel):
+    """
+    Model for the Array parameter value type.
+
+    Even if the array is empty this model's rowCount() will still return 1.
+    This is to show an empty row in the table view.
+    """
+
     def __init__(self):
         super().__init__()
         self._data = list()
         self._data_type = float
 
     def array(self):
+        """Returns the array modeled by this model."""
         return Array(self._data, self._data_type)
 
     def batch_set_data(self, indexes, values):
+        """Sets data at multiple indexes at once."""
         if not indexes:
             return
         top_row = indexes[0].row()
@@ -47,10 +56,12 @@ class ArrayModel(QAbstractTableModel):
         )
 
     def columnCount(self, parent=QModelIndex()):
+        """Returns 1."""
         return 1
 
     def data(self, index, role=Qt.DisplayRole):
-        if not index.isValid():
+        """Returns model's data for given role."""
+        if not index.isValid() or not self._data:
             return None
         if role == Qt.DisplayRole:
             element = self._data[index.row()]
@@ -77,11 +88,13 @@ class ArrayModel(QAbstractTableModel):
         return None
 
     def flags(self, index):
+        """Returns table cell's flags."""
         if not index.isValid():
             return Qt.NoItemFlags
         return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsEditable
 
     def headerData(self, section, orientation, role=Qt.DisplayRole):
+        """Returns header data."""
         if role != Qt.DisplayRole:
             return None
         if orientation == Qt.Vertical:
@@ -89,28 +102,61 @@ class ArrayModel(QAbstractTableModel):
         return "Value"
 
     def insertRows(self, row, count, parent=QModelIndex()):
+        """Inserts rows to the array."""
+        # In case the array is initially empty we need to add an extra cell to account for the virtual empty cell.
         self.beginInsertRows(parent, row, row + count - 1)
-        filler = count * [self._data_type()]
+        filler_size = count if self._data else count + 1
+        filler = filler_size * [self._data_type()]
         self._data = self._data[:row] + filler + self._data[row:]
         self.endInsertRows()
         return True
 
     def removeRows(self, row, count, parent=QModelIndex()):
-        self.beginRemoveRows(parent, row, row + count - 1)
+        """Removes rows from the array."""
+        # Some special handling is needed if the array becomes empty after the operation.
+        if not self._data:
+            return False
+        if row == 0:
+            if len(self._data) == 1:
+                self._data.clear()
+                self.dataChanged.emit(
+                    self.index(0, 0), self.index(0, 0), [Qt.DisplayRole, Qt.EditRole, Qt.BackgroundColorRole]
+                )
+                return False
+        first_row = row if count < len(self._data) else 1
+        self.beginRemoveRows(parent, first_row, row + count - 1)
         self._data = self._data[:row] + self._data[row + count :]
         self.endRemoveRows()
+        if not self._data:
+            self.dataChanged.emit(
+                self.index(0, 0), self.index(0, 0), [Qt.DisplayRole, Qt.EditRole, Qt.BackgroundColorRole]
+            )
         return True
 
     def reset(self, value):
+        """
+        Resets the model to a new array.
+
+        Args:
+            value (Array): a new array to model
+        """
         self.beginResetModel()
         self._data = list(value.values)
         self._data_type = value.value_type
         self.endResetModel()
 
     def rowCount(self, parent=QModelIndex()):
+        """
+        Returns the length of the array.
+
+        Note: returns 1 even if the array is empty.
+        """
+        if not self._data:
+            return 1
         return len(self._data)
 
     def set_array_type(self, new_type):
+        """Changes the data type of array's elements."""
         if new_type == self._data_type:
             return
         self.beginResetModel()
@@ -122,6 +168,7 @@ class ArrayModel(QAbstractTableModel):
         self.endResetModel()
 
     def setData(self, index, value, role=Qt.EditRole):
+        """Sets the value at given index."""
         if not index.isValid():
             return False
         if role == Qt.EditRole:
@@ -131,6 +178,17 @@ class ArrayModel(QAbstractTableModel):
         return False
 
     def _set_data(self, index, value):
+        """
+        Sets data for given index.
+
+        In case of errors the value at index is replaced by an ``_ErrorCell`` sentinel.
+
+        Args:
+            index (QModelIndex): an index
+            value (str): value in database format
+        """
+        if not self._data:
+            self._data = [None]
         try:
             element = from_database(value)
         except ParameterValueFormatError as error:
@@ -145,6 +203,13 @@ class ArrayModel(QAbstractTableModel):
 
 
 class _ErrorCell:
+    """A sentinel class to mark erroneous cells in the table."""
+
     def __init__(self, edit_value, tooltip):
+        """
+        Args:
+            edit_value (str): the JSON string that caused the error
+            tooltip (str): tooltip that should be shown on the table cell
+        """
         self.edit_value = edit_value
         self.tooltip = tooltip
