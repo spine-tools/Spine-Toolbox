@@ -30,9 +30,7 @@ class AddImporterWidget(AddProjectItemWidget):
             x (float): X coordinate of new item
             y (float): Y coordinate of new item
         """
-        super().__init__(toolbox, x, y, Importer.default_name_prefix(), spec=spec)
-        self.setWindowTitle(f"Add Importer")
-        self.ui.comboBox_specification.setModel(toolbox.category_filtered_spec_models["Importers"])
+        super().__init__(toolbox, x, y, Importer, spec=spec)
 
     def call_add_item(self):
         """Creates new Item according to user's selections."""

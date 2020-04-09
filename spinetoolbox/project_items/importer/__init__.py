@@ -29,4 +29,3 @@ item_maker = Importer
 icon_maker = ImporterIcon
 properties_widget_maker = ImporterPropertiesWidget
 add_form_maker = AddImporterWidget
-specification_form_maker = None

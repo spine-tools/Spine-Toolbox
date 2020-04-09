@@ -25,4 +25,3 @@ item_rank = 5
 item_category = item_maker.category()
 item_type = item_maker.item_type()
 item_icon = ":/icons/project_item_icons/database-export.svg"
-specification_form_maker = None

@@ -18,7 +18,7 @@ Classes for custom QListView.
 
 from PySide2.QtWidgets import QListView, QApplication
 from PySide2.QtGui import QDrag
-from PySide2.QtCore import Qt, QMimeData, QSize, QTimer
+from PySide2.QtCore import Qt, QMimeData, QSize, QTimer, Slot
 
 
 class DragListView(QListView):
@@ -79,6 +79,7 @@ class DragListView(QListView):
 class ProjectItemDragListView(DragListView):
     def __init__(self, parent):
         super().__init__(parent)
+        self.orientation = self.parent().orientation()
         self.base_size = QSize(24, 24)
         self.setIconSize(self.base_size)
         font = self.font()
@@ -88,15 +89,22 @@ class ProjectItemDragListView(DragListView):
         self.setResizeMode(DragListView.Adjust)
         self.setMinimumSize(self.base_size)
         self.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.set_maximum_size_for_orientation()
+        self.parent().orientationChanged.connect(self.set_orientation)
 
     def setModel(self, model):
         super().setModel(model)
-        self.set_maximum_size_for_orientation(self.parent().orientation())
+        self.set_maximum_size_for_orientation()
 
-    def set_maximum_size_for_orientation(self, orientation):
-        if orientation == Qt.Horizontal:
+    @Slot("Qt.Orientation")
+    def set_orientation(self, orientation):
+        self.orientation = orientation
+        self.set_maximum_size_for_orientation()
+
+    def set_maximum_size_for_orientation(self):
+        if self.orientation == Qt.Horizontal:
             self.setFlow(QListView.LeftToRight)
-        elif orientation == Qt.Vertical:
+        elif self.orientation == Qt.Vertical:
             self.setFlow(QListView.TopToBottom)
         self.setMaximumSize(self.base_size)
         QTimer.singleShot(0, self.resize_to_contents)

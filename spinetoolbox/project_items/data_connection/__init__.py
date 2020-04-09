@@ -28,4 +28,3 @@ item_icon = ":/icons/project_item_icons/file-alt.svg"
 icon_maker = DataConnectionIcon
 properties_widget_maker = DataConnectionPropertiesWidget
 add_form_maker = AddDataConnectionWidget
-specification_form_maker = None

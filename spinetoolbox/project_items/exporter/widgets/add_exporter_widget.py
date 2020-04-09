@@ -30,9 +30,7 @@ class AddExporterWidget(AddProjectItemWidget):
             x (int): X coordinate of new item
             y (int): Y coordinate of new item
         """
-        super().__init__(toolbox, x, y, Exporter.default_name_prefix(), spec=spec)
-        self.setWindowTitle(f"Add Exporter")
-        self.ui.comboBox_specification.setModel(toolbox.category_filtered_spec_models["Exporters"])
+        super().__init__(toolbox, x, y, Exporter, spec=spec)
 
     def call_add_item(self):
         """Creates new Item according to user's selections."""

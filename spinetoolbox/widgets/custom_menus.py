@@ -157,6 +157,9 @@ class ItemSpecificationContextMenu(CustomContextMenu):
             self.parent().remove_specification(self.index.row())
         elif option == "Open specification file...":
             self.parent().open_specification_file(self.index)
+        else:
+            return False
+        return True
 
 
 class EntityTreeContextMenu(CustomContextMenu):

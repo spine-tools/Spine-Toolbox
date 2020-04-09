@@ -16,13 +16,14 @@ Classes for custom context menus and pop-up menus.
 :date:   9.1.2018
 """
 
-from PySide2.QtCore import QTimeLine, Slot
+from PySide2.QtCore import QTimeLine, QUrl
 from spinetoolbox.widgets.custom_menus import (
     CustomContextMenu,
     CustomPopupMenu,
     ProjectItemContextMenu,
     ItemSpecificationContextMenu,
 )
+from ..tool_specifications import open_main_program_file
 
 
 class ToolPropertiesContextMenu(CustomContextMenu):
@@ -77,11 +78,11 @@ class ToolSpecificationOptionsPopupmenu(CustomPopupMenu):
             tool (Tool): Tool item that is associated with the pressed button
         """
         super().__init__(parent)
-        enabled = bool(tool.tool_specification())
-        self.add_action("Edit Tool specification", tool.edit_tool_specification, enabled=enabled)
-        self.add_action("Edit main program file...", tool.open_tool_main_program_file, enabled=enabled)
-        self.add_action("Open main program directory...", tool.open_tool_main_directory, enabled=enabled)
-        self.add_action("Open definition file", tool.open_tool_specification_file, enabled=enabled)
+        enabled = bool(tool.specification())
+        self.add_action("Edit Tool specification", tool.edit_specification, enabled=enabled)
+        self.add_action("Edit main program file...", tool.open_main_program_file, enabled=enabled)
+        self.add_action("Open main program directory...", tool.open_main_directory, enabled=enabled)
+        self.add_action("Open definition file", tool.open_specification_file, enabled=enabled)
         self.addSeparator()
         # self.add_action("New Tool specification", self._parent.show_tool_specification_form)
         # self.add_action("Add Tool specification...", self._parent.open_tool_specification)
@@ -101,56 +102,18 @@ class ToolSpecificationContextMenu(ItemSpecificationContextMenu):
         self.addSeparator()
         self.add_action("Edit main program file...")
         self.add_action("Open main program directory...")
-        return
 
-        option = self.get_action()
-        # FIXME
-
+    def apply_action(self, option):
+        if super().apply_action(option):
+            return True
         if option == "Edit main program file...":
-            self.open_tool_main_program_file(ind)
+            spec = self.parent().specification_model.specification(self.index.row())
+            open_main_program_file(spec, self.parent())
         elif option == "Open main program directory...":
-            tool_specification_path = self.tool_specification_model.tool_specification(ind.row()).path
+            tool_specification_path = self.parent().specification_model.specification(self.index.row()).path
             path_url = "file:///" + tool_specification_path
-            self.open_anchor(QUrl(path_url, QUrl.TolerantMode))
-        else:  # No option selected
-            pass
-
-    @Slot("QModelIndex")
-    def open_tool_main_program_file(self, index):
-        """Open the tool specification's main program file in the default editor.
-
-        Args:
-            index (QModelIndex): Index of the item
-        """
-        if not index.isValid():
-            return
-        tool_item = self.tool_specification_model.tool_specification(index.row())
-        file_path = os.path.join(tool_item.path, tool_item.includes[0])
-        # Check if file exists first. openUrl may return True even if file doesn't exist
-        # TODO: this could still fail if the file is deleted or renamed right after the check
-        if not os.path.isfile(file_path):
-            self.msg_error.emit("Tool main program file <b>{0}</b> not found.".format(file_path))
-            return
-        ext = os.path.splitext(os.path.split(file_path)[1])[1]
-        if ext in [".bat", ".exe"]:
-            self.msg_warning.emit(
-                "Sorry, opening files with extension <b>{0}</b> not supported. "
-                "Please open the file manually.".format(ext)
-            )
-            return
-        main_program_url = "file:///" + file_path
-        # Open Tool specification main program file in editor
-        # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
-        res = QDesktopServices.openUrl(QUrl(main_program_url, QUrl.TolerantMode))
-        if not res:
-            filename, file_extension = os.path.splitext(file_path)
-            self.msg_error.emit(
-                "Unable to open Tool specification main program file {0}. "
-                "Make sure that <b>{1}</b> "
-                "files are associated with an editor. E.g. on Windows "
-                "10, go to Control Panel -> Default Programs to do this.".format(filename, file_extension)
-            )
-        return
+            self.parent().open_anchor(QUrl(path_url, QUrl.TolerantMode))
+        return True
 
 
 class AddIncludesPopupMenu(CustomPopupMenu):

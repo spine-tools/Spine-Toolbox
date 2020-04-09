@@ -24,6 +24,7 @@ from PySide2.QtCore import Signal, QUrl, QParallelAnimationGroup, QEventLoop
 from PySide2.QtGui import QDesktopServices
 from .helpers import create_dir, rename_dir
 from .metaobject import MetaObject, shorten
+from spinetoolbox.project_commands import SetItemSpecificationCommand
 
 
 class ProjectItem(MetaObject):
@@ -59,6 +60,8 @@ class ProjectItem(MetaObject):
         self.item_changed.connect(lambda: self._project.notify_changes_in_containing_dag(self.name))
         # Make project directory for this Item
         self.data_dir = os.path.join(self._project.items_dir, self.short_name)
+        self._specification = None
+        self.undo_specification = None
 
     def create_data_dir(self):
         try:
@@ -138,6 +141,26 @@ class ProjectItem(MetaObject):
         self._properties_ui = properties_ui
         if self._sigs is None:
             self._sigs = self.make_signal_handler_dict()
+
+    def specification(self):
+        """Returns the specification for this item. Reimplement in subclasses that can have specs (e.g., Tool)."""
+        return self._specification
+
+    def set_specification(self, specification):
+        """Pushes a new SetToolSpecificationCommand to the toolbox' undo stack.
+        """
+        if specification == self._specification:
+            return
+        self._toolbox.undo_stack.push(SetItemSpecificationCommand(self, specification))
+
+    def do_set_specification(self, specification):
+        """Sets Tool specification for this Tool. Removes Tool specification if None given as argument.
+
+        Args:
+            specification (ToolSpecification): Tool specification of this Tool. None removes the specification.
+        """
+        self.undo_specification = self._specification
+        self._specification = specification
 
     def set_icon(self, icon):
         """

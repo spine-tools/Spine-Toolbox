@@ -30,7 +30,7 @@ class AddProjectItemWidget(QWidget):
         y (int): Y coordinate of new item
     """
 
-    def __init__(self, toolbox, x, y, prefix, spec=""):
+    def __init__(self, toolbox, x, y, class_, spec=""):
         """Initialize class."""
         from ..ui.add_project_item import Ui_Form
 
@@ -49,10 +49,12 @@ class AddProjectItemWidget(QWidget):
         self.statusbar.setStyleSheet(STATUSBAR_SS)
         self.ui.horizontalLayout_statusbar_placeholder.addWidget(self.statusbar)
         # Init
+        self.ui.comboBox_specification.setModel(toolbox.category_filtered_spec_models[class_.category()])
         if spec:
             self.ui.comboBox_specification.setCurrentText(spec)
-            prefix += "_" + spec
+            prefix = spec
         else:
+            prefix = class_.default_name_prefix()
             self.ui.comboBox_specification.setCurrentIndex(-1)
         self.name = toolbox.propose_item_name(prefix)
         self.ui.lineEdit_name.setText(self.name)
@@ -62,6 +64,7 @@ class AddProjectItemWidget(QWidget):
         self.ui.lineEdit_name.setFocus()
         # Ensure this window gets garbage-collected when closed
         self.setAttribute(Qt.WA_DeleteOnClose)
+        self.setWindowTitle(f"Add {class_.item_type()}")
 
     def connect_signals(self):
         """Connect signals to slots."""

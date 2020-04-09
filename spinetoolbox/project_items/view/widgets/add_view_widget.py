@@ -31,9 +31,7 @@ class AddViewWidget(AddProjectItemWidget):
 
     def __init__(self, toolbox, x, y, spec=""):
         """Initialize class."""
-        super().__init__(toolbox, x, y, View.default_name_prefix(), spec=spec)
-        self.setWindowTitle(f"Add View")
-        self.ui.comboBox_specification.setModel(toolbox.category_filtered_spec_models["Views"])
+        super().__init__(toolbox, x, y, View, spec=spec)
 
     def call_add_item(self):
         """Creates new Item according to user's selections."""

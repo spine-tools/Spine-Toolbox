@@ -132,6 +132,8 @@ ICON_TOOLBAR_SS = (
     "border-style: solid;}"
     "QToolButton{background-color: white;"
     "border-width: 1px;"
+    "width: 24px;"
+    "height: 24px;"
     "border-style: inset;"
     "border-color: darkslategray;"
     "border-radius: 2px;}"

@@ -23,7 +23,7 @@ import json
 import pathlib
 import numpy as np
 from PySide2.QtCore import QByteArray, QMimeData, Qt, Signal, Slot, QSettings, QUrl, SIGNAL
-from PySide2.QtGui import QDesktopServices, QGuiApplication, QKeySequence, QStandardItemModel, QIcon, QCursor
+from PySide2.QtGui import QDesktopServices, QGuiApplication, QKeySequence, QIcon, QCursor
 from PySide2.QtWidgets import (
     QMainWindow,
     QApplication,
@@ -409,7 +409,7 @@ class ToolboxUI(QMainWindow):
         )
         self._project.connect_signals()
         self._connect_project_signals()
-        self.init_specification_model(list())  # Start project with no tool specifications
+        self.init_specification_model(list())  # Start project with no specifications
         self.update_window_title()
         self.ui.actionSave_As.setEnabled(True)
         self.ui.graphicsView.init_scene(empty=True)
@@ -529,7 +529,7 @@ class ToolboxUI(QMainWindow):
         if not self._project:
             self.msg.emit("Please open or create a project first")
             return
-        # Put project's tool specification definition files into a list
+        # Put project's specification definition files into a list
         tool_spec_paths = [
             self.specification_model.specification(i).get_def_path() for i in range(self.specification_model.rowCount())
         ]
@@ -668,7 +668,7 @@ class ToolboxUI(QMainWindow):
         for model in self.category_filtered_spec_models.values():
             model.setSourceModel(self.specification_model)
         n_tools = 0
-        self.msg.emit("Loading Tool specifications...")
+        self.msg.emit("Loading Custom Item specifications...")
         for path in specification_paths:
             if not path:
                 continue
@@ -985,7 +985,7 @@ class ToolboxUI(QMainWindow):
             return
         selected = self.main_toolbar.project_item_spec_list_view.selectedIndexes()
         if not selected:
-            self.msg.emit("Select a specification to remove")
+            self.msg.emit("Select a custom item to remove")
             return
         index = selected[0]
         if not index.isValid():
@@ -1293,8 +1293,8 @@ class ToolboxUI(QMainWindow):
         if not self._project:
             self.msg.emit("Please open or create a project first")
             return
-        form_maker = self.categories[category]["specification_form_maker"]
-        form = form_maker(self, specification)
+        specification_form_maker = self.categories[category]["specification_form_maker"]
+        form = specification_form_maker(self, specification)
         form.show()
 
     @Slot()

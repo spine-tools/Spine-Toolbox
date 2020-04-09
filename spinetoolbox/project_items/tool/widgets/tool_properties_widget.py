@@ -53,7 +53,7 @@ class ToolPropertiesWidget(QWidget):
         model = self._toolbox.category_filtered_spec_models["Tools"]
         self.ui.comboBox_tool.setModel(model)
 
-    @Slot("QPoint", name="show_tool_properties_context_menu")
+    @Slot("QPoint")
     def show_tool_properties_context_menu(self, pos):
         """Create and show a context-menu in Tool properties
         if selected Tool has a Tool specification.
@@ -66,22 +66,22 @@ class ToolPropertiesWidget(QWidget):
         )  # Index of selected QStandardItem in Tool properties tree view.
         curr_index = self._toolbox.ui.treeView_project.currentIndex()  # Get selected Tool
         tool = self._toolbox.project_item_model.item(curr_index).project_item
-        if not tool.tool_specification():
+        if not tool.specification():
             return
         # Find index of Tool specification
-        name = tool.tool_specification().name
-        tool_index = self._toolbox.tool_specification_model.tool_specification_index(name)
+        name = tool.specification().name
+        tool_index = self._toolbox.specification_model.specification_index(name)
         global_pos = self.ui.treeView_specification.viewport().mapToGlobal(pos)
         self.tool_prop_context_menu = ToolPropertiesContextMenu(self, global_pos, ind)
         option = self.tool_prop_context_menu.get_action()
         if option == "Edit Tool specification":
-            self._toolbox.edit_tool_specification(tool_index)  # index in tool specification model
+            self._toolbox.edit_specification(tool_index)  # index in tool specification model
         elif option == "Edit main program file...":
             self._toolbox.open_tool_main_program_file(tool_index)  # index in tool specification model
         elif option == "Open main program directory...":
-            tool.open_tool_main_directory()
+            tool.open_main_directory()
         elif option == "Open Tool specification file...":
-            self._toolbox.open_tool_specification_file(tool_index)
+            self._toolbox.open_specification_file(tool_index)
         elif option == "Open directory...":
             tool.open_directory()
         return

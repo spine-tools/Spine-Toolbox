@@ -28,4 +28,3 @@ item_icon = ":/icons/project_item_icons/database.svg"
 icon_maker = DataStoreIcon
 properties_widget_maker = DataStorePropertiesWidget
 add_form_maker = AddDataStoreWidget
-specification_form_maker = None

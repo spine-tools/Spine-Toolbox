@@ -31,9 +31,7 @@ class AddDataStoreWidget(AddProjectItemWidget):
 
     def __init__(self, toolbox, x, y, spec=""):
         """Initialize class."""
-        super().__init__(toolbox, x, y, DataStore.default_name_prefix(), spec=spec)
-        self.setWindowTitle(f"Add Data Store")
-        self.ui.comboBox_specification.setModel(toolbox.category_filtered_spec_models["Data Stores"])
+        super().__init__(toolbox, x, y, DataStore, spec=spec)
 
     def call_add_item(self):
         """Creates new Item according to user's selections."""

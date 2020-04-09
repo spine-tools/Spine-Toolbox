@@ -376,28 +376,24 @@ class UpdateImporterCancelOnErrorCommand(SpineToolboxCommand):
         self.importer.set_cancel_on_error(self.undo_cancel_on_error)
 
 
-# TODO
-class SetToolSpecificationCommand(SpineToolboxCommand):
-    def __init__(self, tool, specification):
+class SetItemSpecificationCommand(SpineToolboxCommand):
+    def __init__(self, item, specification):
         """Command to set the specification for a Tool.
 
         Args:
-            tool (Tool): the Tool
-            specification (ToolSpecification): the new tool spec
+            item (ProjectItem): the Item
+            specification (ProjectItemSpecification): the new spec
         """
         super().__init__()
-        self.tool = tool
+        self.item = item
         self.redo_specification = specification
-        self.undo_specification = tool._tool_specification
-        self.undo_execute_in_work = tool.execute_in_work
-        self.setText(f"set Tool specification of {tool.name}")
+        self.setText(f"set specification of {item.name}")
 
     def redo(self):
-        self.tool.do_set_tool_specification(self.redo_specification)
+        self.item.do_set_specification(self.redo_specification)
 
     def undo(self):
-        self.tool.do_set_tool_specification(self.undo_specification)
-        self.tool.do_update_execution_mode(self.undo_execute_in_work)
+        self.item.undo_set_specification()
 
 
 class UpdateToolExecuteInWorkCommand(SpineToolboxCommand):
@@ -502,7 +498,7 @@ class AddSpecificationCommand(SpineToolboxCommand):
 
         Args:
             toolbox (ToolboxUI): the toolbox
-            specification (ToolSpecification): the tool spec
+            specification (ProjectItemSpecification): the spec
         """
         super().__init__()
         self.toolbox = toolbox
@@ -561,8 +557,8 @@ class UpdateSpecificationCommand(SpineToolboxCommand):
             project_item = item.project_item
             if project_item.specification() != self.undo_specification:
                 continue
-            self.redo_tool_settings[tool] = (self.redo_specification, self.redo_specification.execute_in_work)
-            self.undo_tool_settings[tool] = (self.undo_specification, tool.execute_in_work)
+            self.redo_tool_settings[project_item] = (self.redo_specification, self.redo_specification.execute_in_work)
+            self.undo_tool_settings[project_item] = (self.undo_specification, project_item.execute_in_work)
         self.setText(f"update specification {specification.name}")
 
     def redo(self):
