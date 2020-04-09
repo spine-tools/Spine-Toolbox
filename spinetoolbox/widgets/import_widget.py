@@ -15,13 +15,13 @@ ImportDialog class.
 :author: P. Vennström (VTT)
 :date:   1.6.2019
 """
-
+import os.path
 from PySide2.QtWidgets import QApplication, QDialog, QWidget, QVBoxLayout, QDialogButtonBox, QSplitter, QStyle
 from PySide2.QtCore import QSize, Qt, Signal, Slot
 from PySide2.QtGui import QGuiApplication
-import spinedb_api
 from ..helpers import ensure_window_is_on_screen
 from ..spine_io.connection_manager import ConnectionManager
+from ..spine_io.gdx_utils import find_gams_directory
 from ..spine_io.importers.csv_reader import CSVConnector
 from ..spine_io.importers.excel_reader import ExcelConnector
 from ..spine_io.importers.sqlalchemy_connector import SqlAlchemyConnector
@@ -169,7 +169,8 @@ class ImportDialog(QDialog):
     def launch_import_preview(self):
         if self._selected_connector:
             # create instance of connector
-            self.active_connector = ConnectionManager(self._selected_connector)
+            connector_settings = {"gams_directory": self._gams_system_directory()}
+            self.active_connector = ConnectionManager(self._selected_connector, connector_settings)
             valid_source = self.active_connector.connection_ui()
             if valid_source:
                 # Create instance of ImportPreviewWidget and configure
@@ -290,3 +291,13 @@ class ImportDialog(QDialog):
                     self._settings.setValue(name + "_splitterState", state)
             self._settings.endGroup()
         event.accept()
+
+    def _gams_system_directory(self):
+        """Returns GAMS system path from Toolbox settings or None if GAMS default is to be used."""
+        path = self._settings.value("appSettings/gamsPath", defaultValue=None)
+        if not path:
+            path = find_gams_directory()
+        if path is not None and os.path.isfile(path):
+            path = os.path.dirname(path)
+        return path
+

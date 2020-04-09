@@ -80,7 +80,9 @@ class CSVConnector(SourceConnection):
         # try to find options for file
         with open(self._filename, 'rb') as input_file:
             sniff_result = chardet.detect(input_file.read(1024))
-        sniffed_encoding = sniff_result["encoding"].lower()
+        sniffed_encoding = sniff_result["encoding"]
+        if sniffed_encoding is not None:
+            sniffed_encoding = sniffed_encoding.lower()
         # The sniffed encoding is not always correct. We may still need to try other options too.
         if sniffed_encoding in self._ENCODINGS:
             try_encodings = [sniffed_encoding] + [
