@@ -20,9 +20,33 @@ from collections import ChainMap, OrderedDict
 import logging
 import os
 import re
-from .metaobject import MetaObject
-from .config import REQUIRED_KEYS, OPTIONAL_KEYS, LIST_REQUIRED_KEYS
-from .tool_instance import GAMSToolInstance, JuliaToolInstance, PythonToolInstance, ExecutableToolInstance
+from spinetoolbox.metaobject import MetaObject  # FIXME: Import ProjectItemSpecification which has the minimal interface
+from spinetoolbox.config import REQUIRED_KEYS, OPTIONAL_KEYS, LIST_REQUIRED_KEYS
+from spinetoolbox.tool_instance import GAMSToolInstance, JuliaToolInstance, PythonToolInstance, ExecutableToolInstance
+
+
+def load_tool_specification_from_dict(toolbox, definition, def_path, settings, logger):
+    # Path to main program relative to definition file
+    includes_main_path = definition.get("includes_main_path", ".")
+    path = os.path.normpath(os.path.join(os.path.dirname(def_path), includes_main_path))
+    try:
+        _tooltype = definition["tooltype"].lower()
+    except KeyError:
+        logger.msg_error.emit(
+            "No tool type defined in tool definition file. Supported types "
+            "are 'python', 'gams', 'julia' and 'executable'"
+        )
+        return None
+    if _tooltype == "julia":
+        return JuliaTool.load(toolbox, path, definition, settings, logger)
+    if _tooltype == "python":
+        return PythonTool.load(toolbox, path, definition, settings, logger)
+    if _tooltype == "gams":
+        return GAMSTool.load(path, definition, settings, logger)
+    if _tooltype == "executable":
+        return ExecutableTool.load(path, definition, settings, logger)
+    logger.msg_warning.emit("Tool type <b>{}</b> not available".format(_tooltype))
+    return None
 
 
 CMDLINE_TAG_EDGE = "@@"
@@ -72,6 +96,7 @@ class ToolSpecification(MetaObject):
         super().__init__(name, description)
         self._settings = settings
         self._logger = logger
+        self.category = "Tools"
         self.tooltype = tooltype
         if not os.path.exists(path):
             pass

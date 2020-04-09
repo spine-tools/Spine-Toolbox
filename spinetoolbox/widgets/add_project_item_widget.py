@@ -30,7 +30,7 @@ class AddProjectItemWidget(QWidget):
         y (int): Y coordinate of new item
     """
 
-    def __init__(self, toolbox, x, y, initial_name=''):
+    def __init__(self, toolbox, x, y, prefix, spec=""):
         """Initialize class."""
         from ..ui.add_project_item import Ui_Form
 
@@ -48,8 +48,13 @@ class AddProjectItemWidget(QWidget):
         self.statusbar.setSizeGripEnabled(False)
         self.statusbar.setStyleSheet(STATUSBAR_SS)
         self.ui.horizontalLayout_statusbar_placeholder.addWidget(self.statusbar)
-        # Class attributes
-        self.name = initial_name
+        # Init
+        if spec:
+            self.ui.comboBox_specification.setCurrentText(spec)
+            prefix += "_" + spec
+        else:
+            self.ui.comboBox_specification.setCurrentIndex(-1)
+        self.name = toolbox.propose_item_name(prefix)
         self.ui.lineEdit_name.setText(self.name)
         self.ui.lineEdit_name.selectAll()
         self.description = ''
@@ -60,12 +65,12 @@ class AddProjectItemWidget(QWidget):
 
     def connect_signals(self):
         """Connect signals to slots."""
-        self.ui.lineEdit_name.textChanged.connect(self.name_changed)  # Name -> folder name connection
-        self.ui.pushButton_ok.clicked.connect(self.ok_clicked)
+        self.ui.lineEdit_name.textChanged.connect(self.handle_name_changed)  # Name -> folder name connection
+        self.ui.pushButton_ok.clicked.connect(self.handle_ok_clicked)
         self.ui.pushButton_cancel.clicked.connect(self.close)
 
-    @Slot(name='name_changed')
-    def name_changed(self):
+    @Slot()
+    def handle_name_changed(self):
         """Update label to show upcoming folder name."""
         name = self.ui.lineEdit_name.text()
         default = "Folder:"
@@ -76,8 +81,8 @@ class AddProjectItemWidget(QWidget):
             msg = default + " " + folder_name
             self.ui.label_folder.setText(msg)
 
-    @Slot(name='ok_clicked')
-    def ok_clicked(self):
+    @Slot()
+    def handle_ok_clicked(self):
         """Check that given item name is valid and add it to project."""
         self.name = self.ui.lineEdit_name.text()
         self.description = self.ui.lineEdit_description.text()
@@ -119,7 +124,7 @@ class AddProjectItemWidget(QWidget):
         if e.key() == Qt.Key_Escape:
             self.close()
         elif e.key() == Qt.Key_Enter or e.key() == Qt.Key_Return:
-            self.ok_clicked()
+            self.handle_ok_clicked()
 
     def closeEvent(self, event=None):
         """Handle close window.

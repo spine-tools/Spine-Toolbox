@@ -16,7 +16,7 @@ Contains a class for storing Tool specifications.
 :date:   23.1.2018
 """
 
-from PySide2.QtCore import Qt, QModelIndex, QAbstractListModel
+from PySide2.QtCore import Qt, QModelIndex, QAbstractListModel, QSortFilterProxyModel
 from PySide2.QtGui import QStandardItem, QStandardItemModel
 
 
@@ -44,25 +44,25 @@ class ProjectItemPaletteModel(QStandardItemModel):
         return ",".join([self.data(index, Qt.UserRole + 1), ""])
 
 
-class ToolSpecificationPaletteModel(QAbstractListModel):
-    """Class to store tools that are available in a project e.g. GAMS or Julia models."""
+class ProjectItemSpecPaletteModel(QAbstractListModel):
+    """Class to store specs that are available in a project e.g. GAMS or Julia models."""
 
-    def __init__(self, tool_icon):
+    def __init__(self, icons):
         super().__init__()
-        self._tools = list()
-        self._tool_icon = tool_icon
+        self._specs = list()
+        self._icons = icons
 
     def rowCount(self, parent=None):
         """Must be reimplemented when subclassing. Returns
-        the number of Tools in the model.
+        the number of specs in the model.
 
         Args:
             parent (QModelIndex): Not used (because this is a list)
 
         Returns:
-            Number of rows (available tools) in the model
+            Number of rows (available specs) in the model
         """
-        return len(self._tools)
+        return len(self._specs)
 
     def data(self, index, role=None):
         """Must be reimplemented when subclassing.
@@ -78,29 +78,29 @@ class ToolSpecificationPaletteModel(QAbstractListModel):
             return None
         row = index.row()
         if role == Qt.DisplayRole:
-            toolname = self._tools[row].name
-            return toolname
+            specname = self._specs[row].name
+            return specname
         if role == Qt.ToolTipRole:
             if row >= self.rowCount():
                 return ""
-            return self._tools[row].def_file_path
+            return self._specs[row].def_file_path
         if role == Qt.DecorationRole:
-            return self._tool_icon
+            return self._icons[self._specs[row].category]
 
     def flags(self, index):
         """Returns enabled flags for the given index.
 
         Args:
-            index (QModelIndex): Index of Tool
+            index (QModelIndex): Index of spec
         """
         return Qt.ItemIsEnabled | Qt.ItemIsSelectable
 
-    def insertRow(self, tool, row=None, parent=QModelIndex()):
-        """Insert row (tool specification) into model.
+    def insertRow(self, spec, row=None, parent=QModelIndex()):
+        """Insert row (specification) into model.
 
         Args:
-            tool (Tool): Tool added to the model
-            row (str): Row to insert tool to
+            spec (ProjectItemSpecification): spec added to the model
+            row (str): Row to insert spec to
             parent (QModelIndex): Parent of child (not used)
 
         Returns:
@@ -109,15 +109,15 @@ class ToolSpecificationPaletteModel(QAbstractListModel):
         if row is None:
             row = self.rowCount()
         self.beginInsertRows(parent, row, row)
-        self._tools.insert(row, tool)
+        self._specs.insert(row, spec)
         self.endInsertRows()
 
     def removeRow(self, row, parent=QModelIndex()):
-        """Remove row (tool specification) from model.
+        """Remove row (spec) from model.
 
         Args:
-            row (int): Row to remove the tool from
-            parent (QModelIndex): Parent of tool on row (not used)
+            row (int): Row to remove the spec from
+            parent (QModelIndex): Parent of spec on row (not used)
 
         Returns:
             Boolean variable
@@ -126,59 +126,59 @@ class ToolSpecificationPaletteModel(QAbstractListModel):
             # logging.error("Invalid row number")
             return False
         self.beginRemoveRows(parent, row, row)
-        self._tools.pop(row)
+        self._specs.pop(row)
         self.endRemoveRows()
         return True
 
-    def update_tool_specification(self, row, tool):
-        """Update tool specification.
+    def update_specification(self, row, spec):
+        """Update specification.
 
         Args:
-            row (int): Position of the tool to be updated
-            tool (ToolSpecification): new tool, to replace the old one
+            row (int): Position of the spec to be updated
+            spec (ProjectItemSpecification): new spec, to replace the old one
 
         Returns:
             Boolean value depending on the result of the operation
         """
         try:
-            self._tools[row] = tool
+            self._specs[row] = spec
             return True
         except IndexError:
             return False
 
-    def tool_specification(self, row):
-        """Returns tool specification on given row.
+    def specification(self, row):
+        """Returns spec specification on given row.
 
         Args:
-            row (int): Row of tool specification
+            row (int): Row of spec specification
 
         Returns:
-            ToolSpecification from tool specification list or None if given row is zero
+            ProjectItemSpecification from specification list or None if given row is zero
         """
-        return self._tools[row]
+        return self._specs[row]
 
-    def find_tool_specification(self, name):
-        """Returns tool specification with the given name.
+    def find_specification(self, name):
+        """Returns specification with the given name.
 
         Args:
-            name (str): Name of tool specification to find
+            name (str): Name of specification to find
         """
-        for specification in self._tools:
+        for specification in self._specs:
             if name.lower() == specification.name.lower():
                 return specification
         return None
 
-    def tool_specification_row(self, name):
+    def specification_row(self, name):
         """Returns the row on which the given specification is located or -1 if it is not found."""
-        for i in range(len(self._tools)):
-            if name == self._tools[i].name:
+        for i in range(len(self._specs)):
+            if name == self._specs[i].name:
                 return i
         return -1
 
-    def tool_specification_index(self, name):
-        """Returns the QModelIndex on which a tool specification with
+    def specification_index(self, name):
+        """Returns the QModelIndex on which a specification with
         the given name is located or invalid index if it is not found."""
-        row = self.tool_specification_row(name)
+        row = self.specification_row(name)
         if row == -1:
             return QModelIndex()
         return self.createIndex(row, 0)
@@ -187,6 +187,16 @@ class ToolSpecificationPaletteModel(QAbstractListModel):
     def is_index_draggable(index):
         return True
 
-    @staticmethod
-    def get_mime_data_text(index):
-        return ",".join(["Tools", index.data(Qt.DisplayRole)])
+    def get_mime_data_text(self, index):
+        i = index.row()
+        return ",".join([self._specs[i].category, self._specs[i].name])
+
+
+class CategoryFilteredSpecPaletteModel(QSortFilterProxyModel):
+    def __init__(self, category):
+        super().__init__()
+        self._category = category
+
+    def filterAcceptsRow(self, source_row, source_parent):
+        spec = self.sourceModel().specification(source_row)
+        return spec.category == self._category

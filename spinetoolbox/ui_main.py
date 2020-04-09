@@ -37,17 +37,19 @@ from PySide2.QtWidgets import (
 )
 from .graphics_items import ProjectItemIcon
 from .mvcmodels.project_item_model import ProjectItemModel
-from .mvcmodels.project_item_palette_models import ProjectItemPaletteModel, ToolSpecificationPaletteModel
+from .mvcmodels.project_item_palette_models import (
+    ProjectItemPaletteModel,
+    ProjectItemSpecPaletteModel,
+    CategoryFilteredSpecPaletteModel,
+)
 from .widgets.about_widget import AboutWidget
 from .widgets.custom_menus import (
     ProjectItemModelContextMenu,
-    ToolSpecificationContextMenu,
     LinkContextMenu,
-    AddToolSpecificationPopupMenu,
+    AddSpecificationPopupMenu,
     RecentProjectsPopupMenu,
 )
 from .widgets.settings_widget import SettingsWidget
-from .widgets.tool_specification_widget import ToolSpecificationWidget
 from .widgets.custom_qwidgets import ZoomWidgetAction
 from .widgets.julia_repl_widget import JuliaREPLWidget
 from .widgets.python_repl_widget import PythonReplWidget
@@ -77,11 +79,7 @@ from .helpers import (
 from .project_upgrader import ProjectUpgrader
 from .project_tree_item import CategoryProjectTreeItem, LeafProjectTreeItem, RootProjectTreeItem
 from .project_items import data_store, data_connection, exporter, tool, view, importer
-from .project_commands import (
-    AddToolSpecificationCommand,
-    RemoveToolSpecificationCommand,
-    UpdateToolSpecificationCommand,
-)
+from .project_commands import AddSpecificationCommand, RemoveSpecificationCommand, UpdateSpecificationCommand
 from .configuration_assistants import spine_model
 
 
@@ -98,7 +96,7 @@ class ToolboxUI(QMainWindow):
     error_box = Signal(str, str)
     # The rest of the msg_* signals should be moved to LoggerInterface in the long run.
     msg_proc_error = Signal(str)
-    tool_specification_model_changed = Signal("QVariant")
+    specification_model_changed = Signal()
 
     def __init__(self):
         """ Initialize application and main window."""
@@ -128,20 +126,21 @@ class ToolboxUI(QMainWindow):
         self._project = None
         self.project_item_palette_model = None
         self.project_item_model = None
-        self.tool_specification_model = None
+        self.specification_model = None
+        self.category_filtered_spec_models = {}
         self.show_datetime = self.update_datetime()
         self.active_project_item = None
         self.work_dir = None
         # Widget and form references
         self.settings_form = None
-        self.tool_specification_context_menu = None
+        self.specification_context_menu = None
         self.project_item_context_menu = None
         self.link_context_menu = None
         self.process_output_context_menu = None
         self.add_project_item_form = None
-        self.tool_specification_form = None
+        self.specification_form = None
         self.placing_item = ""
-        self.add_tool_specification_popup_menu = None
+        self.add_specification_popup_menu = None
         self.zoom_widget_action = None
         self.recent_projects_menu = RecentProjectsPopupMenu(self)
         # Make and initialize toolbars
@@ -212,7 +211,7 @@ class ToolboxUI(QMainWindow):
         self.show_supported_img_formats.triggered.connect(supported_img_formats)  # in helpers.py
         self.test_variable_push.triggered.connect(self.python_repl.test_push_vars)
         # Tool specifications tab
-        self.add_tool_specification_popup_menu = AddToolSpecificationPopupMenu(self)
+        self.add_specification_popup_menu = None
         # Context-menus
         self.ui.treeView_project.customContextMenuRequested.connect(self.show_item_context_menu)
         # Zoom actions
@@ -241,6 +240,9 @@ class ToolboxUI(QMainWindow):
             item_maker = module.item_maker
             icon_maker = module.icon_maker
             add_form_maker = module.add_form_maker
+            specification_form_maker = getattr(module, "specification_form_maker", None)
+            specification_menu_maker = getattr(module, "specification_menu_maker", None)
+            specification_loader = getattr(module, "specification_loader", None)
             properties_widget = module.properties_widget_maker(self)
             properties_ui = properties_widget.ui
             self.categories[item_category] = dict(
@@ -251,6 +253,9 @@ class ToolboxUI(QMainWindow):
                 icon_maker=icon_maker,
                 add_form_maker=add_form_maker,
                 properties_ui=properties_ui,
+                specification_form_maker=specification_form_maker,
+                specification_menu_maker=specification_menu_maker,
+                specification_loader=specification_loader,
             )
         # Sort categories by rank
         self.categories = dict(sorted(self.categories.items(), key=lambda kv: kv[1]["item_rank"]))
@@ -261,6 +266,7 @@ class ToolboxUI(QMainWindow):
             item_type = item_dict["item_type"]
             category_icon.append((item_type, item_category, item_icon))
         self.init_project_item_palette_model(category_icon)
+        self.add_specification_popup_menu = AddSpecificationPopupMenu(self)
 
     def init_project_item_palette_model(self, category_icon):
         self.project_item_palette_model = ProjectItemPaletteModel(self)
@@ -403,7 +409,7 @@ class ToolboxUI(QMainWindow):
         )
         self._project.connect_signals()
         self._connect_project_signals()
-        self.init_tool_specification_model(list())  # Start project with no tool specifications
+        self.init_specification_model(list())  # Start project with no tool specifications
         self.update_window_title()
         self.ui.actionSave_As.setEnabled(True)
         self.ui.graphicsView.init_scene(empty=True)
@@ -458,9 +464,10 @@ class ToolboxUI(QMainWindow):
             bool: True when restoring project succeeded, False otherwise
         """
         # Check that project info is valid
-        if not ProjectUpgrader(self).is_valid(project_info):
-            self.msg_error.emit("Opening project in directory {0} failed".format(project_dir))
-            return False
+        # FIXME
+        # if not ProjectUpgrader(self).is_valid(project_info):
+        #    self.msg_error.emit("Opening project in directory {0} failed".format(project_dir))
+        #    return False
         version = project_info["project"]["version"]
         # Upgrade project dictionary if needed
         if version < LATEST_PROJECT_VERSION:
@@ -471,7 +478,7 @@ class ToolboxUI(QMainWindow):
         # Parse project info
         name = project_info["project"]["name"]  # Project name
         desc = project_info["project"]["description"]  # Project description
-        tool_spec_paths = project_info["project"]["tool_specifications"]
+        spec_paths = project_info["project"].get("specifications", [])
         connections = project_info["project"]["connections"]
         project_items = project_info["objects"]
         # Init project item model
@@ -486,8 +493,8 @@ class ToolboxUI(QMainWindow):
         self.ui.actionSave.setDisabled(True)
         self.ui.actionSave_As.setEnabled(True)
         # Init tool spec model
-        deserialized_paths = [deserialize_path(spec, self._project.project_dir) for spec in tool_spec_paths]
-        self.init_tool_specification_model(deserialized_paths)
+        deserialized_paths = [deserialize_path(spec, self._project.project_dir) for spec in spec_paths]
+        self.init_specification_model(deserialized_paths)
         # Clear text browsers
         if clear_logs:
             self.ui.textBrowser_eventlog.clear()
@@ -524,8 +531,7 @@ class ToolboxUI(QMainWindow):
             return
         # Put project's tool specification definition files into a list
         tool_spec_paths = [
-            self.tool_specification_model.tool_specification(i).get_def_path()
-            for i in range(self.tool_specification_model.rowCount())
+            self.specification_model.specification(i).get_def_path() for i in range(self.specification_model.rowCount())
         ]
         # Serialize tool spec paths
         serialized_tool_spec_paths = [serialize_path(spec, self._project.project_dir) for spec in tool_spec_paths]
@@ -648,59 +654,102 @@ class ToolboxUI(QMainWindow):
         self.ui.treeView_project.header().hide()
         self.ui.graphicsView.set_project_item_model(self.project_item_model)
 
-    def init_tool_specification_model(self, tool_specification_paths):
+    def init_specification_model(self, specification_paths):
         """Initializes Tool specification model.
 
         Args:
-            tool_specification_paths (list): List of tool definition file paths used in this project
+            specification_paths (list): List of tool definition file paths used in this project
         """
-        self.tool_specification_model_changed.emit(QStandardItemModel())
-        self.tool_specification_model = ToolSpecificationPaletteModel(QIcon(self.categories["Tools"]["item_icon"]))
+        icons = {category: QIcon(data["item_icon"]) for category, data in self.categories.items()}
+        self.specification_model = ProjectItemSpecPaletteModel(icons)
+        self.category_filtered_spec_models = {
+            category: CategoryFilteredSpecPaletteModel(category) for category in self.categories
+        }
+        for model in self.category_filtered_spec_models.values():
+            model.setSourceModel(self.specification_model)
         n_tools = 0
         self.msg.emit("Loading Tool specifications...")
-        for path in tool_specification_paths:
+        for path in specification_paths:
             if not path:
                 continue
             # Add tool specification into project
-            tool_cand = self._project.load_tool_specification_from_file(path)
+            spec = self.load_specification_from_file(path)
             n_tools += 1
-            if not tool_cand:
+            if not spec:
                 continue
             # Add tool definition file path to tool instance variable
-            tool_cand.set_def_path(path)
+            spec.set_def_path(path)
             # Insert tool into model
-            self.tool_specification_model.insertRow(tool_cand)
-            # self.msg.emit("Tool specification <b>{0}</b> ready".format(tool_cand.name))
+            self.specification_model.insertRow(spec)
+            # self.msg.emit("Tool specification <b>{0}</b> ready".format(spec.name))
         # Set model to the tool specification list view
-        self.main_toolbar.tool_specification_list_view.setModel(self.tool_specification_model)
+        self.main_toolbar.project_item_spec_list_view.setModel(self.specification_model)
         # Set model to Tool project item combo box
-        self.tool_specification_model_changed.emit(self.tool_specification_model)
-        # Note: If ToolSpecificationPaletteModel signals are in use, they should be reconnected here.
-        # Reconnect ToolSpecificationPaletteModel and QListView signals. Make sure that signals are connected only once.
-        n_recv_sig1 = self.main_toolbar.tool_specification_list_view.receivers(
+        self.specification_model_changed.emit()
+        # Note: If ProjectItemSpecPaletteModel signals are in use, they should be reconnected here.
+        # Reconnect ProjectItemSpecPaletteModel and QListView signals. Make sure that signals are connected only once.
+        n_recv_sig1 = self.main_toolbar.project_item_spec_list_view.receivers(
             SIGNAL("doubleClicked(QModelIndex)")
         )  # nr of receivers
         if n_recv_sig1 == 0:
             # logging.debug("Connecting doubleClicked signal for QListView")
-            self.main_toolbar.tool_specification_list_view.doubleClicked.connect(self.edit_tool_specification)
+            self.main_toolbar.project_item_spec_list_view.doubleClicked.connect(self.edit_specification)
         elif n_recv_sig1 > 1:  # Check that this never gets over 1
             logging.error("Number of receivers for QListView doubleClicked signal is now: %d", n_recv_sig1)
         else:
             pass  # signal already connected
-        n_recv_sig2 = self.main_toolbar.tool_specification_list_view.receivers(
+        n_recv_sig2 = self.main_toolbar.project_item_spec_list_view.receivers(
             SIGNAL("customContextMenuRequested(QPoint)")
         )
         if n_recv_sig2 == 0:
             # logging.debug("Connecting customContextMenuRequested signal for QListView")
-            self.main_toolbar.tool_specification_list_view.customContextMenuRequested.connect(
-                self.show_tool_specification_context_menu
+            self.main_toolbar.project_item_spec_list_view.customContextMenuRequested.connect(
+                self.show_specification_context_menu
             )
         elif n_recv_sig2 > 1:  # Check that this never gets over 1
             logging.error("Number of receivers for QListView customContextMenuRequested signal is now: %d", n_recv_sig2)
         else:
             pass  # signal already connected
         if n_tools == 0:
-            self.msg_warning.emit("Project has no Tool specifications")
+            self.msg_warning.emit("Project has no specifications")
+
+    def load_specification_from_file(self, path):
+        """Returns an Item specification from a definition file.
+
+        Args:
+            path (str): Path of the specification definition file
+
+        Returns:
+            ProjectItemSpecification or None if reading the file failed
+        """
+        try:
+            with open(path, "r") as fp:
+                try:
+                    definition = json.load(fp)
+                except ValueError:
+                    self._logger.msg_error.emit("Item specification file not valid")
+                    logging.exception("Loading JSON data failed")
+                    return None
+        except FileNotFoundError:
+            self._logger.msg_error.emit("Specification file <b>{0}</b> does not exist".format(path))
+            return None
+        return self.load_specification_from_dict(definition, path)
+
+    def load_specification_from_dict(self, definition, path):
+        """Returns a Tool specification from a definition dictionary.
+
+        Args:
+            definition (dict): Dictionary with the tool definition
+            path (str): Path of the specification definition file
+
+        Returns:
+            ToolSpecification, NoneType
+        """
+        category = definition.get("item_category", "Tools")  # NOTE: Default to Tools to make existing specs work
+        specification_loader = self.categories[category]["specification_loader"]
+        if not specification_loader:
+            return
+        return specification_loader(self, definition, path, self.qsettings, self)
 
     def restore_ui(self):
         """Restore UI state from previous session."""
@@ -738,7 +787,7 @@ class ToolboxUI(QMainWindow):
         if self._project:
             self._project.deleteLater()
         self._project = None
-        self.tool_specification_model = None
+        self.specification_model = None
         self.ui.graphicsView.scene().clear()  # Clear all items from scene
 
     def undo_critical_commands(self):
@@ -855,9 +904,9 @@ class ToolboxUI(QMainWindow):
         self.ui.dockWidget_item.setWindowTitle(item.item_type() + " Properties")
 
     @Slot()
-    def open_tool_specification(self):
+    def open_specification(self):
         """Opens a file dialog where the user can select an existing tool specification
-        definition file (.json). If file is valid, calls add_tool_specification().
+        definition file (.json). If file is valid, calls add_specification().
         """
         if not self._project:
             self.msg.emit("Please create a new project or open an existing one first")
@@ -870,48 +919,48 @@ class ToolboxUI(QMainWindow):
             return
         def_file = os.path.abspath(answer[0])
         # Load tool definition
-        tool_specification = self._project.load_tool_specification_from_file(def_file)
-        if not tool_specification:
+        specification = self._project.load_specification_from_file(def_file)
+        if not specification:
             return
-        if self.tool_specification_model.find_tool_specification(tool_specification.name):
+        if self.specification_model.find_specification(specification.name):
             # Tool specification already added to project
-            self.msg_warning.emit("Tool specification <b>{0}</b> already in project".format(tool_specification.name))
+            self.msg_warning.emit("Tool specification <b>{0}</b> already in project".format(specification.name))
             return
         # Add definition file path into tool specification
-        tool_specification.set_def_path(def_file)
-        self.add_tool_specification(tool_specification)
+        specification.set_def_path(def_file)
+        self.add_specification(specification)
 
-    def add_tool_specification(self, tool_specification):
-        """Pushes a new AddToolSpecificationCommand to the undo stack."""
-        self.undo_stack.push(AddToolSpecificationCommand(self, tool_specification))
+    def add_specification(self, specification):
+        """Pushes a new AddSpecificationCommand to the undo stack."""
+        self.undo_stack.push(AddSpecificationCommand(self, specification))
 
-    def do_add_tool_specification(self, tool_specification, row=None):
-        """Adds a ToolSpecification instance to project, which then can be added to a Tool item.
-        Adds the tool specification file path into project file (project.json)
-
-        Args:
-            tool_specification (ToolSpecification): Tool specification that is added to project
-        """
-        self.tool_specification_model.insertRow(tool_specification, row)
-        self.msg_success.emit("Tool specification <b>{0}</b> added to project".format(tool_specification.name))
-
-    def update_tool_specification(self, row, tool_specification):
-        """Pushes a new UpdateToolSpecificationCommand to the undo stack."""
-        self.undo_stack.push(UpdateToolSpecificationCommand(self, row, tool_specification))
-
-    def do_update_tool_specification(self, row, tool_specification):
-        """Updates a Tool specification and refreshes all Tools that use it.
+    def do_add_specification(self, specification, row=None):
+        """Adds a ProjectItemSpecification instance to project.
 
         Args:
-            row (int): Row of tool specification in ToolSpecificationPaletteModel
-            tool_specification (ToolSpecification): An updated Tool specification
+            specification (ProjectItemSpecification): specification that is added to project
         """
-        if not self.tool_specification_model.update_tool_specification(row, tool_specification):
-            self.msg_error.emit("Unable to update Tool specification <b>{0}</b>".format(tool_specification.name))
+        self.specification_model.insertRow(specification, row)
+        self.msg_success.emit("Specification <b>{0}</b> added to project".format(specification.name))
+
+    def update_specification(self, row, specification):
+        """Pushes a new UpdateSpecificationCommand to the undo stack."""
+        self.undo_stack.push(UpdateSpecificationCommand(self, row, specification))
+
+    def do_update_specification(self, row, specification):
+        """Updates a specification and refreshes all items that use it.
+
+        Args:
+            row (int): Row of tool specification in ProjectItemSpecPaletteModel
+            specification (ProjectItemSpecification): An updated specification
+        """
+        if not self.specification_model.update_specification(row, specification):
+            self.msg_error.emit("Unable to update specification <b>{0}</b>".format(specification.name))
             return False
-        self.msg_success.emit("Tool specification <b>{0}</b> successfully updated".format(tool_specification.name))
+        self.msg_success.emit("Specification <b>{0}</b> successfully updated".format(specification.name))
         return True
 
+    # TODO
     def update_tool_settings(self, tool_settings):
         """Updates tool specification and execution mode for a bunch of tool items.
         Called just after successfully updating a Tool Specification.
@@ -919,48 +968,47 @@ class ToolboxUI(QMainWindow):
         Args:
             tool_settings (dict): mapping Tool items to a tuple of (ToolSpecification instance, bool execution mode)
         """
-        for tool_item, (tool_specification, execute_in_work) in tool_settings.items():
+        for tool_item, (specification, execute_in_work) in tool_settings.items():
             tool_item.do_update_execution_mode(execute_in_work)
-            tool_item.do_set_tool_specification(tool_specification)
+            tool_item.do_set_specification(specification)
             self.msg.emit(
                 "Tool specification <b>{0}</b> successfully updated in Tool <b>{1}</b>".format(
-                    tool_specification.name, tool_item.name
+                    specification.name, tool_item.name
                 )
             )
 
     @Slot(bool)
-    def remove_selected_tool_specification(self, checked=False):
-        """Removes tool specification selected in QListView."""
+    def remove_selected_specification(self, checked=False):
+        """Removes specification selected in QListView."""
         if not self._project:
             self.msg.emit("Please create a new project or open an existing one first")
             return
-        selected = self.main_toolbar.tool_specification_list_view.selectedIndexes()
+        selected = self.main_toolbar.project_item_spec_list_view.selectedIndexes()
         if not selected:
-            self.msg.emit("Select a Tool specification to remove")
+            self.msg.emit("Select a specification to remove")
             return
         index = selected[0]
         if not index.isValid():
             return
-        self.remove_tool_specification(index.row())
+        self.remove_specification(index.row())
 
-    def remove_tool_specification(self, row, ask_verification=True):
-        self.undo_stack.push(RemoveToolSpecificationCommand(self, row, ask_verification=ask_verification))
+    def remove_specification(self, row, ask_verification=True):
+        self.undo_stack.push(RemoveSpecificationCommand(self, row, ask_verification=ask_verification))
 
-    def do_remove_tool_specification(self, row, ask_verification=True):
-        """Removes tool specification from ToolSpecificationPaletteModel.
-        Removes also Tool specifications from all Tool items
-        that use this specification.
+    def do_remove_specification(self, row, ask_verification=True):
+        """Removes specification from ProjectItemSpecPaletteModel.
+        Removes also specifications from all items that use this specification.
 
         Args:
-            row (int): Row in ToolSpecificationPaletteModel
+            row (int): Row in ProjectItemSpecPaletteModel
             ask_verification (bool): If True, displays a dialog box asking user to verify the removal
         """
-        tool_spec = self.tool_specification_model.tool_specification(row)
+        tool_spec = self.specification_model.specification(row)
         if ask_verification:
-            message = "Remove Tool Specification <b>{0}</b> from Project?".format(tool_spec.name)
+            message = "Remove Specification <b>{0}</b> from Project?".format(tool_spec.name)
             message_box = QMessageBox(
                 QMessageBox.Question,
-                "Remove Tool Specification",
+                "Remove Specification",
                 message,
                 buttons=QMessageBox.Ok | QMessageBox.Cancel,
                 parent=self,
@@ -969,10 +1017,10 @@ class ToolboxUI(QMainWindow):
             answer = message_box.exec_()
             if answer != QMessageBox.Ok:
                 return
-        if not self.tool_specification_model.removeRow(row):
-            self.msg_error.emit("Error in removing Tool specification <b>{0}</b>".format(tool_spec.name))
+        if not self.specification_model.removeRow(row):
+            self.msg_error.emit("Error in removing specification <b>{0}</b>".format(tool_spec.name))
             return
-        self.msg_success.emit("Tool specification removed")
+        self.msg_success.emit("Specification removed")
 
     @Slot()
     def remove_all_items(self):
@@ -997,8 +1045,31 @@ class ToolboxUI(QMainWindow):
         if not res:
             self.msg_error.emit("Opening path {} failed".format(path))
 
+    @Slot("QPoint")
+    def show_specification_context_menu(self, pos):
+        """Context menu for item specifications.
+
+        Args:
+            pos (QPoint): Mouse position
+        """
+        if not self.project():
+            return
+        ind = self.main_toolbar.project_item_spec_list_view.indexAt(pos)
+        if not ind.isValid():
+            return
+        spec = self.specification_model.specification(ind.row())
+        specification_menu_maker = self.categories[spec.category]["specification_menu_maker"]
+        if not specification_menu_maker:
+            return
+        global_pos = self.main_toolbar.project_item_spec_list_view.viewport().mapToGlobal(pos)
+        self.specification_context_menu = specification_menu_maker(self, global_pos, ind)
+        option = self.specification_context_menu.get_action()
+        self.specification_context_menu.apply_action(option)
+        self.specification_context_menu.deleteLater()
+        self.specification_context_menu = None
+
     @Slot("QModelIndex")
-    def edit_tool_specification(self, index):
+    def edit_specification(self, index):
         """Open the tool specification widget for editing an existing tool specification.
 
         Args:
@@ -1006,27 +1077,27 @@ class ToolboxUI(QMainWindow):
         """
         if not index.isValid():
             return
-        tool_specification = self.tool_specification_model.tool_specification(index.row())
+        specification = self.specification_model.specification(index.row())
         # Open spec in Tool specification edit widget
-        self.show_tool_specification_form(tool_specification)
+        self.show_specification_form(specification.category, specification)
 
     @busy_effect
     @Slot("QModelIndex")
-    def open_tool_specification_file(self, index):
-        """Open the Tool specification definition file in the default (.json) text-editor.
+    def open_specification_file(self, index):
+        """Open the specification definition file in the default (.json) text-editor.
 
         Args:
             index (QModelIndex): Index of the item
         """
         if not index.isValid():
             return
-        tool_specification = self.tool_specification_model.tool_specification(index.row())
-        file_path = tool_specification.get_def_path()
+        specification = self.specification_model.specification(index.row())
+        file_path = specification.get_def_path()
         # Check if file exists first. openUrl may return True if file doesn't exist
         # TODO: this could still fail if the file is deleted or renamed right after the check
         if not os.path.isfile(file_path):
             logging.error("Failed to open editor for %s", file_path)
-            self.msg_error.emit("Tool specification file <b>{0}</b> not found.".format(file_path))
+            self.msg_error.emit("Specification file <b>{0}</b> not found.".format(file_path))
             return
         tool_specification_url = "file:///" + file_path
         # Open Tool specification file in editor
@@ -1035,47 +1106,9 @@ class ToolboxUI(QMainWindow):
         if not res:
             logging.error("Failed to open editor for %s", tool_specification_url)
             self.msg_error.emit(
-                "Unable to open Tool specification file {0}. Make sure that <b>.json</b> "
+                "Unable to open specification file {0}. Make sure that <b>.json</b> "
                 "files are associated with a text editor. For example on Windows "
                 "10, go to Control Panel -> Default Programs to do this.".format(file_path)
-            )
-        return
-
-    @busy_effect
-    @Slot("QModelIndex")
-    def open_tool_main_program_file(self, index):
-        """Open the tool specification's main program file in the default editor.
-
-        Args:
-            index (QModelIndex): Index of the item
-        """
-        if not index.isValid():
-            return
-        tool_item = self.tool_specification_model.tool_specification(index.row())
-        file_path = os.path.join(tool_item.path, tool_item.includes[0])
-        # Check if file exists first. openUrl may return True even if file doesn't exist
-        # TODO: this could still fail if the file is deleted or renamed right after the check
-        if not os.path.isfile(file_path):
-            self.msg_error.emit("Tool main program file <b>{0}</b> not found.".format(file_path))
-            return
-        ext = os.path.splitext(os.path.split(file_path)[1])[1]
-        if ext in [".bat", ".exe"]:
-            self.msg_warning.emit(
-                "Sorry, opening files with extension <b>{0}</b> not supported. "
-                "Please open the file manually.".format(ext)
-            )
-            return
-        main_program_url = "file:///" + file_path
-        # Open Tool specification main program file in editor
-        # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
-        res = QDesktopServices.openUrl(QUrl(main_program_url, QUrl.TolerantMode))
-        if not res:
-            filename, file_extension = os.path.splitext(file_path)
-            self.msg_error.emit(
-                "Unable to open Tool specification main program file {0}. "
-                "Make sure that <b>{1}</b> "
-                "files are associated with an editor. E.g. on Windows "
-                "10, go to Control Panel -> Default Programs to do this.".format(filename, file_extension)
             )
         return
 
@@ -1255,12 +1288,13 @@ class ToolboxUI(QMainWindow):
         self.add_project_item_form.show()
 
     @Slot()
-    def show_tool_specification_form(self, tool_specification=None):
-        """Show tool specification widget."""
+    def show_specification_form(self, category, specification=None):
+        """Show specification widget."""
         if not self._project:
             self.msg.emit("Please open or create a project first")
             return
-        form = ToolSpecificationWidget(self, tool_specification)
+        form_maker = self.categories[category]["specification_form_maker"]
+        form = form_maker(self, specification)
         form.show()
 
     @Slot()
@@ -1367,36 +1401,6 @@ class ToolboxUI(QMainWindow):
             link.send_to_bottom()
         self.link_context_menu.deleteLater()
         self.link_context_menu = None
-
-    @Slot("QPoint")
-    def show_tool_specification_context_menu(self, pos):
-        """Context menu for tool specifications.
-
-        Args:
-            pos (QPoint): Mouse position
-        """
-        if not self.project():
-            return
-        ind = self.main_toolbar.tool_specification_list_view.indexAt(pos)
-        global_pos = self.main_toolbar.tool_specification_list_view.viewport().mapToGlobal(pos)
-        self.tool_specification_context_menu = ToolSpecificationContextMenu(self, global_pos, ind)
-        option = self.tool_specification_context_menu.get_action()
-        if option == "Edit Tool specification":
-            self.edit_tool_specification(ind)
-        elif option == "Edit main program file...":
-            self.open_tool_main_program_file(ind)
-        elif option == "Open main program directory...":
-            tool_specification_path = self.tool_specification_model.tool_specification(ind.row()).path
-            path_url = "file:///" + tool_specification_path
-            self.open_anchor(QUrl(path_url, QUrl.TolerantMode))
-        elif option == "Open Tool specification file...":
-            self.open_tool_specification_file(ind)
-        elif option == "Remove Tool specification":
-            self.remove_tool_specification(ind.row())
-        else:  # No option selected
-            pass
-        self.tool_specification_context_menu.deleteLater()
-        self.tool_specification_context_menu = None
 
     def tear_down_items(self):
         """Calls the tear_down method on all project items, so they can clean up their mess if needed."""

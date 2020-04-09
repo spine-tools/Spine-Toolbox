@@ -376,6 +376,7 @@ class UpdateImporterCancelOnErrorCommand(SpineToolboxCommand):
         self.importer.set_cancel_on_error(self.undo_cancel_on_error)
 
 
+# TODO
 class SetToolSpecificationCommand(SpineToolboxCommand):
     def __init__(self, tool, specification):
         """Command to set the specification for a Tool.
@@ -495,79 +496,79 @@ class UpdateExporterSettingsCommand(SpineToolboxCommand):
         self.exporter.undo_or_redo_settings(*self.undo_settings_tuple, self.database_path)
 
 
-class AddToolSpecificationCommand(SpineToolboxCommand):
-    def __init__(self, toolbox, tool_specification):
-        """Command to add Tool specs to a project.
+class AddSpecificationCommand(SpineToolboxCommand):
+    def __init__(self, toolbox, specification):
+        """Command to add item specs to a project.
 
         Args:
             toolbox (ToolboxUI): the toolbox
-            tool_specification (ToolSpecification): the tool spec
+            specification (ToolSpecification): the tool spec
         """
         super().__init__()
         self.toolbox = toolbox
-        self.tool_specification = tool_specification
-        self.setText(f"add tool speciciation {tool_specification.name}")
+        self.specification = specification
+        self.setText(f"add specification {specification.name}")
 
     def redo(self):
-        self.toolbox.do_add_tool_specification(self.tool_specification)
+        self.toolbox.do_add_specification(self.specification)
 
     def undo(self):
-        row = self.toolbox.tool_specification_model.tool_specification_row(self.tool_specification.name)
-        self.toolbox.do_remove_tool_specification(row, ask_verification=False)
+        row = self.toolbox.specification_model.specification_row(self.specification.name)
+        self.toolbox.do_remove_specification(row, ask_verification=False)
 
 
-class RemoveToolSpecificationCommand(SpineToolboxCommand):
+class RemoveSpecificationCommand(SpineToolboxCommand):
     def __init__(self, toolbox, row, ask_verification):
-        """Command to remove Tool specs from a project.
+        """Command to remove item specs from a project.
 
         Args:
             toolbox (ToolboxUI): the toolbox
-            row (int): the row in the ToolSpecificationPaletteModel
+            row (int): the row in the ProjectItemSpecPaletteModel
             ask_verification (bool): if True, shows confirmation message the first time
         """
         super().__init__()
         self.toolbox = toolbox
         self.row = row
-        self.tool_specification = self.toolbox.tool_specification_model.tool_specification(row)
-        self.setText(f"remove tool speciciation {self.tool_specification.name}")
+        self.specification = self.toolbox.specification_model.specification(row)
+        self.setText(f"remove specification {self.specification.name}")
         self.ask_verification = ask_verification
 
     def redo(self):
-        self.toolbox.do_remove_tool_specification(self.row, ask_verification=self.ask_verification)
+        self.toolbox.do_remove_specification(self.row, ask_verification=self.ask_verification)
         self.ask_verification = False
 
     def undo(self):
-        self.toolbox.do_add_tool_specification(self.tool_specification, row=self.row)
+        self.toolbox.do_add_specification(self.specification, row=self.row)
 
 
-class UpdateToolSpecificationCommand(SpineToolboxCommand):
-    def __init__(self, toolbox, row, tool_specification):
-        """Command to update Tool specs in a project.
+class UpdateSpecificationCommand(SpineToolboxCommand):
+    def __init__(self, toolbox, row, specification):
+        """Command to update item specs in a project.
 
         Args:
             toolbox (ToolboxUI): the toolbox
-            row (int): the row in the ToolSpecificationPaletteModel of the spec to be replaced
-            tool_specification (ToolSpecification): the updated tool spec
+            row (int): the row in the ProjectItemSpecPaletteModel of the spec to be replaced
+            specification (ProjectItemSpecification): the updated spec
         """
         super().__init__()
         self.toolbox = toolbox
         self.row = row
-        self.redo_tool_specification = tool_specification
-        self.undo_tool_specification = self.toolbox.tool_specification_model.tool_specification(row)
+        self.redo_specification = specification
+        self.undo_specification = self.toolbox.specification_model.specification(row)
         self.redo_tool_settings = {}
         self.undo_tool_settings = {}
-        for item in toolbox.project_item_model.items("Tools"):
-            tool = item.project_item
-            if tool.tool_specification() != self.undo_tool_specification:
+        for item in toolbox.project_item_model.items(specification.category):
+            project_item = item.project_item
+            if project_item.specification() != self.undo_specification:
                 continue
-            self.redo_tool_settings[tool] = (self.redo_tool_specification, self.redo_tool_specification.execute_in_work)
-            self.undo_tool_settings[tool] = (self.undo_tool_specification, tool.execute_in_work)
-        self.setText(f"update tool speciciation {tool_specification.name}")
+            self.redo_tool_settings[tool] = (self.redo_specification, self.redo_specification.execute_in_work)
+            self.undo_tool_settings[tool] = (self.undo_specification, tool.execute_in_work)
+        self.setText(f"update specification {specification.name}")
 
     def redo(self):
-        if self.toolbox.do_update_tool_specification(self.row, self.redo_tool_specification):
+        if self.toolbox.do_update_specification(self.row, self.redo_specification):
             self.toolbox.update_tool_settings(self.redo_tool_settings)
 
     def undo(self):
-        if self.toolbox.do_update_tool_specification(self.row, self.undo_tool_specification):
+        if self.toolbox.do_update_specification(self.row, self.undo_specification):
             self.toolbox.update_tool_settings(self.undo_tool_settings)

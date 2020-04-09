@@ -23,19 +23,19 @@ import json
 from PySide2.QtGui import QDesktopServices, QStandardItemModel, QStandardItem
 from PySide2.QtWidgets import QWidget, QStatusBar, QInputDialog, QFileDialog, QFileIconProvider, QMessageBox, QMenu
 from PySide2.QtCore import Slot, Qt, QUrl, QFileInfo
-from ..config import STATUSBAR_SS, TREEVIEW_HEADER_SS, TOOL_TYPES, REQUIRED_KEYS
-from ..helpers import busy_effect
-from ..tool_specifications import CmdlineTag, CMDLINE_TAG_EDGE, ToolSpecification
+from spinetoolbox.config import STATUSBAR_SS, TREEVIEW_HEADER_SS, TOOL_TYPES, REQUIRED_KEYS
+from spinetoolbox.helpers import busy_effect
+from ..tool_specifications import CmdlineTag, CMDLINE_TAG_EDGE, ToolSpecification, load_tool_specification_from_dict
 from .custom_menus import AddIncludesPopupMenu, CreateMainProgramPopupMenu
 
 
 class ToolSpecificationWidget(QWidget):
-    def __init__(self, toolbox, tool_specification=None):
+    def __init__(self, toolbox, specification=None):
         """A widget to query user's preferences for a new tool specification.
 
         Args:
             toolbox (ToolboxUI): QMainWindow instance
-            tool_specification (ToolSpecification): If given, the form is pre-filled with this specification
+            specification (ToolSpecification): If given, the form is pre-filled with this specification
         """
         from ..ui.tool_specification_form import Ui_Form
 
@@ -69,23 +69,23 @@ class ToolSpecificationWidget(QWidget):
         self.ui.comboBox_tooltype.addItem("Select type...")
         self.ui.comboBox_tooltype.addItems(TOOL_TYPES)
         # if a specification is given, fill the form with data from it
-        if tool_specification:
-            self.ui.lineEdit_name.setText(tool_specification.name)
-            check_state = Qt.Checked if tool_specification.execute_in_work else Qt.Unchecked
+        if specification:
+            self.ui.lineEdit_name.setText(specification.name)
+            check_state = Qt.Checked if specification.execute_in_work else Qt.Unchecked
             self.ui.checkBox_execute_in_work.setCheckState(check_state)
-            self.ui.textEdit_description.setPlainText(tool_specification.description)
-            self.ui.lineEdit_args.setText(" ".join(tool_specification.cmdline_args))
+            self.ui.textEdit_description.setPlainText(specification.description)
+            self.ui.lineEdit_args.setText(" ".join(specification.cmdline_args))
             tool_types = [x.lower() for x in TOOL_TYPES]
-            index = tool_types.index(tool_specification.tooltype) + 1
+            index = tool_types.index(specification.tooltype) + 1
             self.ui.comboBox_tooltype.setCurrentIndex(index)
         # Init lists
         self.main_program_file = ""
-        self.sourcefiles = list(tool_specification.includes) if tool_specification else list()
-        self.inputfiles = list(tool_specification.inputfiles) if tool_specification else list()
-        self.inputfiles_opt = list(tool_specification.inputfiles_opt) if tool_specification else list()
-        self.outputfiles = list(tool_specification.outputfiles) if tool_specification else list()
-        self.def_file_path = tool_specification.def_file_path if tool_specification else None
-        self.program_path = tool_specification.path if tool_specification else None
+        self.sourcefiles = list(specification.includes) if specification else list()
+        self.inputfiles = list(specification.inputfiles) if specification else list()
+        self.inputfiles_opt = list(specification.inputfiles_opt) if specification else list()
+        self.outputfiles = list(specification.outputfiles) if specification else list()
+        self.def_file_path = specification.def_file_path if specification else None
+        self.program_path = specification.path if specification else None
         self.definition = dict()
         # Get first item from sourcefiles list as the main program file
         try:
@@ -527,14 +527,16 @@ class ToolSpecificationWidget(QWidget):
         """
         # Load tool specification
         path = self.program_path
-        tool = self._project.load_tool_specification_from_dict(self.definition, path)
+        tool = load_tool_specification_from_dict(
+            self._toolbox, self.definition, path, self._toolbox.qsettings, self._toolbox
+        )
         if not tool:
             self.statusbar.showMessage("Adding Tool specification failed", 3000)
             return False
         # Check if a tool specification with this name already exists
-        row = self._toolbox.tool_specification_model.tool_specification_row(tool.name)
+        row = self._toolbox.specification_model.specification_row(tool.name)
         if row >= 0:  # NOTE: Row 0 at this moment has 'No tool', but in the future it may change. Better be ready.
-            old_tool = self._toolbox.tool_specification_model.tool_specification(row)
+            old_tool = self._toolbox.specification_model.specification(row)
             def_file = old_tool.get_def_path()
             tool.set_def_path(def_file)
             if tool.__dict__ == old_tool.__dict__:  # Nothing changed. We're done here.
@@ -550,7 +552,7 @@ class ToolSpecificationWidget(QWidget):
                 return False
             def_file = os.path.abspath(answer[0])
             tool.set_def_path(def_file)
-            self._toolbox.add_tool_specification(tool)
+            self._toolbox.add_specification(tool)
         # Save path of main program file relative to definition file in case they differ
         def_path = os.path.dirname(def_file)
         if def_path != self.program_path:

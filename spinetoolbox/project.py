@@ -24,7 +24,6 @@ from PySide2.QtWidgets import QMessageBox
 from spine_engine import SpineEngine, SpineEngineState
 from .metaobject import MetaObject
 from .helpers import create_dir, inverted, erase_dir
-from .tool_specifications import JuliaTool, PythonTool, GAMSTool, ExecutableTool
 from .config import LATEST_PROJECT_VERSION, PROJECT_FILENAME
 from .dag_handler import DirectedGraphHandler
 from .project_tree_item import LeafProjectTreeItem
@@ -159,12 +158,12 @@ class SpineToolboxProject(MetaObject):
             connections.append(conn)
         return connections
 
-    def save(self, tool_spec_paths):
+    def save(self, spec_paths):
         """Collects project information and objects
         into a dictionary and writes it to a JSON file.
 
         Args:
-            tool_spec_paths (list): List of absolute paths to tool specification files
+            spec_paths (list): List of absolute paths to specification files
 
         Returns:
             bool: True or False depending on success
@@ -173,7 +172,7 @@ class SpineToolboxProject(MetaObject):
         project_dict["version"] = LATEST_PROJECT_VERSION
         project_dict["name"] = self.name
         project_dict["description"] = self.description
-        project_dict["tool_specifications"] = tool_spec_paths
+        project_dict["specifications"] = spec_paths
         # Compute connections directly from Links on scene
         project_dict["connections"] = self.get_connections(self._toolbox.ui.graphicsView.links())
         items_dict = dict()  # Dictionary for storing project items
@@ -213,60 +212,6 @@ class SpineToolboxProject(MetaObject):
         if empty:
             self._logger.msg_warning.emit("Project has no items")
         return True
-
-    def load_tool_specification_from_file(self, jsonfile):
-        """Returns a Tool specification from a definition file.
-
-        Args:
-            jsonfile (str): Path of the tool specification definition file
-
-        Returns:
-            ToolSpecification or None if reading the file failed
-        """
-        try:
-            with open(jsonfile, "r") as fp:
-                try:
-                    definition = json.load(fp)
-                except ValueError:
-                    self._logger.msg_error.emit("Tool specification file not valid")
-                    logging.exception("Loading JSON data failed")
-                    return None
-        except FileNotFoundError:
-            self._logger.msg_error.emit("Tool specification file <b>{0}</b> does not exist".format(jsonfile))
-            return None
-        # Path to main program relative to definition file
-        includes_main_path = definition.get("includes_main_path", ".")
-        path = os.path.normpath(os.path.join(os.path.dirname(jsonfile), includes_main_path))
-        return self.load_tool_specification_from_dict(definition, path)
-
-    def load_tool_specification_from_dict(self, definition, path):
-        """Returns a Tool specification from a definition dictionary.
-
-        Args:
-            definition (dict): Dictionary with the tool definition
-            path (str): Directory where main program file is located
-
-        Returns:
-            ToolSpecification, NoneType
-        """
-        try:
-            _tooltype = definition["tooltype"].lower()
-        except KeyError:
-            self._logger.msg_error.emit(
-                "No tool type defined in tool definition file. Supported types "
-                "are 'python', 'gams', 'julia' and 'executable'"
-            )
-            return None
-        if _tooltype == "julia":
-            return JuliaTool.load(self._toolbox, path, definition, self._settings, self._logger)
-        if _tooltype == "python":
-            return PythonTool.load(self._toolbox, path, definition, self._settings, self._logger)
-        if _tooltype == "gams":
-            return GAMSTool.load(path, definition, self._settings, self._logger)
-        if _tooltype == "executable":
-            return ExecutableTool.load(path, definition, self._settings, self._logger)
-        self._logger.msg_warning.emit("Tool type <b>{}</b> not available".format(_tooltype))
-        return None
 
     def add_project_items(self, category_name, *items, set_selected=False, verbosity=True):
         """Pushes an AddProjectItemsCommand to the toolbox undo stack.

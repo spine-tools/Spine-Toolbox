@@ -45,8 +45,13 @@ class ToolPropertiesWidget(QWidget):
 
     def connect_signals(self):
         """Connect signals to slots."""
-        self._toolbox.tool_specification_model_changed.connect(self.ui.comboBox_tool.setModel)
+        self._toolbox.specification_model_changed.connect(self.update_combo_box_tool_model)
         self.ui.treeView_specification.customContextMenuRequested.connect(self.show_tool_properties_context_menu)
+
+    @Slot()
+    def update_combo_box_tool_model(self):
+        model = self._toolbox.category_filtered_spec_models["Tools"]
+        self.ui.comboBox_tool.setModel(model)
 
     @Slot("QPoint", name="show_tool_properties_context_menu")
     def show_tool_properties_context_menu(self, pos):

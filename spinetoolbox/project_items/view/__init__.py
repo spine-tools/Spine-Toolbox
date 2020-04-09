@@ -29,3 +29,4 @@ item_maker = View
 icon_maker = ViewIcon
 properties_widget_maker = ViewPropertiesWidget
 add_form_maker = AddViewWidget
+specification_form_maker = None

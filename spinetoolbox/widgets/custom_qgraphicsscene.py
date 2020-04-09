@@ -20,11 +20,11 @@ from PySide2.QtCore import Slot, QItemSelectionModel
 from PySide2.QtGui import QColor, QPen, QBrush
 from ..graphics_items import ProjectItemIcon
 from .shrinking_scene import ShrinkingScene
-from ..mvcmodels.project_item_palette_models import ProjectItemPaletteModel, ToolSpecificationPaletteModel
+from ..mvcmodels.project_item_palette_models import ProjectItemPaletteModel, ProjectItemSpecPaletteModel
 
 
 class CustomQGraphicsScene(ShrinkingScene):
-    """A scene that handles drag and drop events of ProjectItemPaletteModel or ToolSpecificationPaletteModel sources."""
+    """A scene that handles drag and drop events of ProjectItemPaletteModel or ProjectItemSpecPaletteModel sources."""
 
     def __init__(self, parent, toolbox):
         """
@@ -103,27 +103,27 @@ class CustomQGraphicsScene(ShrinkingScene):
 
     def dragEnterEvent(self, event):
         """Accept event. Then call the super class method
-        only if drag source is not a ProjectItemPaletteModel or ToolSpecificationPaletteModel."""
+        only if drag source is not a ProjectItemPaletteModel or ProjectItemSpecPaletteModel."""
         event.accept()
         source = event.source()
-        if not isinstance(source.model(), (ProjectItemPaletteModel, ToolSpecificationPaletteModel)):
+        if not isinstance(source.model(), (ProjectItemPaletteModel, ProjectItemSpecPaletteModel)):
             super().dragEnterEvent(event)
 
     def dragMoveEvent(self, event):
         """Accept event. Then call the super class method
-        only if drag source is not a ProjectItemPaletteModel or ToolSpecificationPaletteModel."""
+        only if drag source is not a ProjectItemPaletteModel or ProjectItemSpecPaletteModel."""
         event.accept()
         source = event.source()
-        if not isinstance(source.model(), (ProjectItemPaletteModel, ToolSpecificationPaletteModel)):
+        if not isinstance(source.model(), (ProjectItemPaletteModel, ProjectItemSpecPaletteModel)):
             super().dragMoveEvent(event)
 
     def dropEvent(self, event):
         """Only accept drops when the source is an instance of
-        ProjectItemPaletteModel or ToolSpecificationPaletteModel.
+        ProjectItemPaletteModel or ProjectItemSpecPaletteModel.
         Capture text from event's mimedata and show the appropriate 'Add Item form.'
         """
         source = event.source()
-        if not isinstance(source.model(), (ProjectItemPaletteModel, ToolSpecificationPaletteModel)):
+        if not isinstance(source.model(), (ProjectItemPaletteModel, ProjectItemSpecPaletteModel)):
             super().dropEvent(event)
             return
         if not self._toolbox.project():

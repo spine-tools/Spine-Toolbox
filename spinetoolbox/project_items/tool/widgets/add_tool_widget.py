@@ -16,13 +16,11 @@ Widget shown to user when a new Tool is created.
 :date:   19.1.2017
 """
 
-from PySide2.QtWidgets import QWidget, QStatusBar
-from PySide2.QtCore import Slot, Qt
-from spinetoolbox.config import STATUSBAR_SS, INVALID_CHARS
+from spinetoolbox.widgets.add_project_item_widget import AddProjectItemWidget
 from ..tool import Tool
 
 
-class AddToolWidget(QWidget):
+class AddToolWidget(AddProjectItemWidget):
     """A widget that queries user's preferences for a new item.
 
     Attributes:
@@ -34,131 +32,12 @@ class AddToolWidget(QWidget):
 
     def __init__(self, toolbox, x, y, spec=""):
         """Initialize class."""
-        from ..ui.add_tool import Ui_Form
-
-        super().__init__(parent=toolbox, f=Qt.Window)  # Setting parent inherits stylesheet
-        self._toolbox = toolbox
-        self._x = x
-        self._y = y
-        self._project = self._toolbox.project()
-        #  Set up the user interface from Designer.
-        self.ui = Ui_Form()
-        self.ui.setupUi(self)
-        # Add status bar to form
-        self.statusbar = QStatusBar(self)
-        self.statusbar.setFixedHeight(20)
-        self.statusbar.setSizeGripEnabled(False)
-        self.statusbar.setStyleSheet(STATUSBAR_SS)
-        self.ui.horizontalLayout_statusbar_placeholder.addWidget(self.statusbar)
-        # Init
-        prefix = Tool.default_name_prefix()
-        self.ui.comboBox_specification.setModel(self._toolbox.tool_specification_model)
-        if spec:
-            self.ui.comboBox_specification.setCurrentText(spec)
-            prefix += "_" + spec
-        else:
-            self.ui.comboBox_specification.setCurrentIndex(-1)
-        self.name = toolbox.propose_item_name(prefix)
-        self.ui.lineEdit_name.setFocus()
-        self.ui.lineEdit_name.setText(self.name)
-        self.ui.lineEdit_name.selectAll()
-        self.description = ''
-        self.connect_signals()
-        # Ensure this window gets garbage-collected when closed
-        self.setAttribute(Qt.WA_DeleteOnClose)
-
-    def connect_signals(self):
-        """Connect signals to slots."""
-        self.ui.lineEdit_name.textChanged.connect(self.name_changed)  # Name -> folder name connection
-        self.ui.pushButton_ok.clicked.connect(self.handle_ok_clicked)
-        self.ui.pushButton_cancel.clicked.connect(self.close)
-        self.ui.comboBox_specification.currentIndexChanged.connect(self.update_args)
-
-    @Slot(int)
-    def update_args(self, row):
-        """Show Tool specification command line arguments in text input.
-
-        Args:
-            row (int): Selected row number
-        """
-        if row == 0:
-            # No Tool selected
-            self.ui.lineEdit_tool_specification_args.setText("")
-            return
-        selected_tool = self._toolbox.tool_specification_model.tool_specification(row)
-        args = selected_tool.cmdline_args
-        if not args:
-            # Tool cmdline_args is None if the line does not exist in Tool definition file
-            args = ''
-        self.ui.lineEdit_tool_specification_args.setText("{0}".format(args))
-        return
-
-    @Slot()
-    def name_changed(self):
-        """Update label to show upcoming folder name."""
-        name = self.ui.lineEdit_name.text()
-        default = "Folder:"
-        if name == '':
-            self.ui.label_folder.setText(default)
-        else:
-            folder_name = name.lower().replace(' ', '_')
-            msg = default + " " + folder_name
-            self.ui.label_folder.setText(msg)
-
-    @Slot()
-    def handle_ok_clicked(self):
-        """Check that given item name is valid and add it to project."""
-        self.name = self.ui.lineEdit_name.text()
-        self.description = self.ui.lineEdit_description.text()
-        if not self.name:  # No name given
-            self.statusbar.showMessage("Name missing", 3000)
-            return
-        # Check for invalid characters for a folder name
-        if any((True for x in self.name if x in INVALID_CHARS)):
-            self.statusbar.showMessage("Name not valid for a folder name", 3000)
-            return
-        # Check that name is not reserved
-        if self._toolbox.project_item_model.find_item(self.name):
-            msg = "Item '{0}' already exists".format(self.name)
-            self.statusbar.showMessage(msg, 3000)
-            return
-        # Check that short name (folder) is not reserved
-        short_name = self.name.lower().replace(' ', '_')
-        if self._toolbox.project_item_model.short_name_reserved(short_name):
-            msg = "Item using folder '{0}' already exists".format(short_name)
-            self.statusbar.showMessage(msg, 3000)
-            return
-        # Create new Item
-        self.call_add_item()
-        self.close()
+        super().__init__(toolbox, x, y, Tool.default_name_prefix(), spec=spec)
+        self.setWindowTitle(f"Add Tool")
+        self.ui.comboBox_specification.setModel(toolbox.category_filtered_spec_models["Tools"])
 
     def call_add_item(self):
         """Creates new Item according to user's selections."""
-        tool = self.ui.comboBox_specification.currentText()
-        item = dict(name=self.name, description=self.description, x=self._x, y=self._y, tool=tool, execute_in_work=True)
+        spec = self.ui.comboBox_specification.currentText()
+        item = dict(name=self.name, description=self.description, x=self._x, y=self._y, tool=spec, execute_in_work=True)
         self._project.add_project_items("Tools", item, set_selected=True)
-
-    def keyPressEvent(self, e):
-        """Close Setup form when escape key is pressed.
-
-        Args:
-            e (QKeyEvent): Received key press event.
-        """
-        if e.key() == Qt.Key_Escape:
-            self.close()
-        elif e.key() == Qt.Key_Enter or e.key() == Qt.Key_Return:
-            self.handle_ok_clicked()
-
-    def closeEvent(self, event=None):
-        """Handle close window.
-
-        Args:
-            event (QEvent): Closing event if 'X' is clicked.
-        """
-        if event:
-            event.accept()
-            scene = self._toolbox.ui.graphicsView.scene()
-            item_shadow = scene.item_shadow
-            if item_shadow:
-                scene.removeItem(item_shadow)
-                scene.item_shadow = None

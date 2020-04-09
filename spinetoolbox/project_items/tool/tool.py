@@ -27,15 +27,15 @@ from PySide2.QtGui import QDesktopServices, QStandardItemModel, QStandardItem
 from PySide2.QtWidgets import QFileIconProvider
 from spinetoolbox.project_item import ProjectItem, ProjectItemResource
 from spinetoolbox.config import TOOL_OUTPUT_DIR
-from spinetoolbox.widgets.custom_menus import ToolSpecificationOptionsPopupmenu
 from spinetoolbox.project_items.tool.widgets.custom_menus import ToolContextMenu
 from spinetoolbox.helpers import create_dir, create_output_dir_timestamp
-from spinetoolbox.tool_specifications import ToolSpecification
 from spinetoolbox.project_commands import (
     SetToolSpecificationCommand,
     UpdateToolExecuteInWorkCommand,
     UpdateToolCmdLineArgsCommand,
 )
+from .tool_specifications import ToolSpecification
+from .widgets.custom_menus import ToolSpecificationOptionsPopupmenu
 
 
 class Tool(ProjectItem):
@@ -73,7 +73,7 @@ class Tool(ProjectItem):
         self.source_files = list()
         self.execute_in_work = execute_in_work
         self.cmd_line_args = list() if not cmd_line_args else cmd_line_args
-        self._tool_specification = self._toolbox.tool_specification_model.find_tool_specification(tool)
+        self._tool_specification = self._toolbox.specification_model.find_specification(tool)
         if tool and not self._tool_specification:
             self._logger.msg_error.emit(
                 f"Tool <b>{self.name}</b> should have a Tool specification <b>{tool}</b> but it was not found"
@@ -105,7 +105,7 @@ class Tool(ProjectItem):
         s = super().make_signal_handler_dict()
         s[self._properties_ui.toolButton_tool_open_dir.clicked] = lambda checked=False: self.open_directory()
         s[self._properties_ui.pushButton_tool_results.clicked] = self.open_results
-        s[self._properties_ui.comboBox_tool.currentIndexChanged] = self.update_tool_specification
+        s[self._properties_ui.comboBox_tool.currentTextChanged] = self.update_tool_specification
         s[self._properties_ui.radioButton_execute_in_work.toggled] = self.update_execution_mode
         s[self._properties_ui.lineEdit_tool_args.editingFinished] = self.update_tool_cmd_line_args
         return s
@@ -139,19 +139,19 @@ class Tool(ProjectItem):
             self._properties_ui.radioButton_execute_in_source.setChecked(True)
         self._properties_ui.radioButton_execute_in_work.blockSignals(False)
 
-    @Slot(int)
-    def update_tool_specification(self, row):
+    @Slot(str)
+    def update_tool_specification(self, text):
         """Update Tool specification according to selection in the specification comboBox.
 
         Args:
             row (int): Selected row in the comboBox
         """
-        if row == -1:
+        spec = self._toolbox.specification_model.find_specification(text)
+        if spec is None:
             self.set_tool_specification(None)
         else:
-            new_tool = self._toolbox.tool_specification_model.tool_specification(row)
-            self.set_tool_specification(new_tool)
-            self.do_update_execution_mode(new_tool.execute_in_work)
+            self.set_tool_specification(spec)
+            self.do_update_execution_mode(spec.execute_in_work)
 
     @Slot()
     def update_tool_cmd_line_args(self):
