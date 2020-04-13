@@ -975,26 +975,45 @@ class ToolboxUI(QMainWindow):
         """
         if not self.specification_model.update_specification(row, specification):
             self.msg_error.emit("Unable to update specification <b>{0}</b>".format(specification.name))
-            return False
+            return
         self.msg_success.emit("Specification <b>{0}</b> successfully updated".format(specification.name))
-        return True
-
-    # TODO
-    def update_tool_settings(self, tool_settings):
-        """Updates tool specification and execution mode for a bunch of tool items.
-        Called just after successfully updating a Tool Specification.
-
-        Args:
-            tool_settings (dict): mapping Tool items to a tuple of (ToolSpecification instance, bool execution mode)
-        """
-        for tool_item, (specification, execute_in_work) in tool_settings.items():
-            tool_item.do_update_execution_mode(execute_in_work)
-            tool_item.do_set_specification(specification)
+        for project_item in self._get_specific_items(specification):
+            project_item.do_set_specification(specification)
             self.msg.emit(
-                "Tool specification <b>{0}</b> successfully updated in Tool <b>{1}</b>".format(
-                    specification.name, tool_item.name
+                "Specification <b>{0}</b> successfully updated in Item <b>{1}</b>".format(
+                    specification.name, project_item.name
                 )
             )
+
+    def undo_update_specification(self, row):
+        """Reverts a specification update and refreshes all items that use it.
+
+        Args:
+            row (int): Row of tool specification in ProjectItemSpecPaletteModel
+        """
+        if not self.specification_model.undo_update_specification(row):
+            self.msg_error.emit("Unable to update specification at row <b>{0}</b>".format(row))
+            return
+        specification = self.specification_model.specification(row)
+        self.msg_success.emit("Specification <b>{0}</b> successfully updated".format(specification.name))
+        for project_item in self._get_specific_items(specification):
+            project_item.undo_set_specification()
+            self.msg.emit(
+                "Specification <b>{0}</b> successfully updated in Item <b>{1}</b>".format(
+                    specification.name, project_item.name
+                )
+            )
+
+    def _get_specific_items(self, specification):
+        """Yields project items with given specification.
+
+        Args:
+            specification (ProjectItemSpecification)
+        """
+        for item in self.project_item_model.items(specification.category):
+            project_item = item.project_item
+            if project_item.specification().name == specification.name:
+                yield project_item
 
     @Slot(bool)
     def remove_selected_specification(self, checked=False):

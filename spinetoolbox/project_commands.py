@@ -550,21 +550,10 @@ class UpdateSpecificationCommand(SpineToolboxCommand):
         self.toolbox = toolbox
         self.row = row
         self.redo_specification = specification
-        self.undo_specification = self.toolbox.specification_model.specification(row)
-        self.redo_tool_settings = {}
-        self.undo_tool_settings = {}
-        for item in toolbox.project_item_model.items(specification.category):
-            project_item = item.project_item
-            if project_item.specification() != self.undo_specification:
-                continue
-            self.redo_tool_settings[project_item] = (self.redo_specification, self.redo_specification.execute_in_work)
-            self.undo_tool_settings[project_item] = (self.undo_specification, project_item.execute_in_work)
         self.setText(f"update specification {specification.name}")
 
     def redo(self):
-        if self.toolbox.do_update_specification(self.row, self.redo_specification):
-            self.toolbox.update_tool_settings(self.redo_tool_settings)
+        self.toolbox.do_update_specification(self.row, self.redo_specification)
 
     def undo(self):
-        if self.toolbox.do_update_specification(self.row, self.undo_specification):
-            self.toolbox.update_tool_settings(self.undo_tool_settings)
+        self.toolbox.undo_update_specification(self.row)

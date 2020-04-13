@@ -50,6 +50,7 @@ class ProjectItemSpecPaletteModel(QAbstractListModel):
     def __init__(self, icons):
         super().__init__()
         self._specs = list()
+        self._undo_specs = dict()
         self._icons = icons
 
     def rowCount(self, parent=None):
@@ -131,7 +132,7 @@ class ProjectItemSpecPaletteModel(QAbstractListModel):
         return True
 
     def update_specification(self, row, spec):
-        """Update specification.
+        """Updates specification.
 
         Args:
             row (int): Position of the spec to be updated
@@ -141,10 +142,20 @@ class ProjectItemSpecPaletteModel(QAbstractListModel):
             Boolean value depending on the result of the operation
         """
         try:
-            self._specs[row] = spec
-            return True
+            undo_spec = self._specs[row]
         except IndexError:
             return False
+        else:
+            self._undo_specs[row] = undo_spec
+            self._specs[row] = spec
+            return True
+
+    def undo_update_specification(self, row):
+        undo_spec = self._undo_specs.pop(row, None)
+        if undo_spec is None:
+            return False
+        self._specs[row] = undo_spec
+        return True
 
     def specification(self, row):
         """Returns spec specification on given row.

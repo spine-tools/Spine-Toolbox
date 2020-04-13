@@ -162,6 +162,9 @@ class ProjectItem(MetaObject):
         self.undo_specification = self._specification
         self._specification = specification
 
+    def undo_set_specification(self):
+        self.do_set_specification(self.undo_specification)
+
     def set_icon(self, icon):
         """
         Sets the icon for the item.

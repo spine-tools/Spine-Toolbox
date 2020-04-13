@@ -536,7 +536,7 @@ class ToolSpecificationWidget(QWidget):
             return False
         # Check if a tool specification with this name already exists
         row = self._toolbox.specification_model.specification_row(tool.name)
-        if row >= 0:  # NOTE: Row 0 at this moment has 'No tool', but in the future it may change. Better be ready.
+        if row >= 0:
             old_tool = self._toolbox.specification_model.specification(row)
             def_file = old_tool.get_def_path()
             tool.set_def_path(def_file)

@@ -60,22 +60,20 @@ class Tool(ProjectItem):
         self.populate_output_file_model(None)
         self.specification_model = QStandardItemModel()
         self.populate_specification_model(False)
+        self.execute_in_work = None
+        self.undo_execute_in_work = None
         self.source_files = list()
-        self.execute_in_work = execute_in_work
         self.cmd_line_args = list() if not cmd_line_args else cmd_line_args
         self._specification = self._toolbox.specification_model.find_specification(tool)
         if tool and not self._specification:
             self._logger.msg_error.emit(
                 f"Tool <b>{self.name}</b> should have a Tool specification <b>{tool}</b> but it was not found"
             )
-        if self._specification:
-            self.execute_in_work = self._specification.execute_in_work
         self.do_set_specification(self._specification)
+        self.do_update_execution_mode(execute_in_work)
         self.specification_options_popup_menu = None
         # Make directory for results
         self.output_dir = os.path.join(self.data_dir, TOOL_OUTPUT_DIR)
-        # Especial attributes for undo
-        self.undo_execute_in_work = None
 
     @staticmethod
     def item_type():
@@ -139,7 +137,6 @@ class Tool(ProjectItem):
             self.set_specification(None)
         else:
             self.set_specification(spec)
-            self.do_update_execution_mode(spec.execute_in_work)
 
     @Slot()
     def update_tool_cmd_line_args(self):
@@ -165,14 +162,18 @@ class Tool(ProjectItem):
             specification (ToolSpecification): Tool specification of this Tool. None removes the specification.
         """
         super().do_set_specification(specification)
-        self.undo_execute_in_work = self.execute_in_work
         self.update_tool_models()
         self.update_tool_ui()
+        if self.undo_execute_in_work is None:
+            self.undo_execute_in_work = self.execute_in_work
+        if specification:
+            self.do_update_execution_mode(specification.execute_in_work)
         self.item_changed.emit()
 
     def undo_set_specification(self):
-        self.do_set_specification(self.undo_specification)
+        super().undo_set_specification()
         self.do_update_execution_mode(self.undo_execute_in_work)
+        self.undo_execute_in_work = None
 
     def update_tool_ui(self):
         """Updates Tool UI to show Tool specification details. Used when Tool specification is changed.
