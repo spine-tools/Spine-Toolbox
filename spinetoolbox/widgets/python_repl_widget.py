@@ -26,6 +26,7 @@ from ..helpers import busy_effect
 from ..config import PYTHON_EXECUTABLE
 from ..execution_managers import QProcessExecutionManager
 from .spine_console_widget import SpineConsoleWidget
+from .custom_qlistview import DragListView
 
 
 class PythonReplWidget(SpineConsoleWidget):
@@ -443,7 +444,7 @@ class PythonReplWidget(SpineConsoleWidget):
     def dragEnterEvent(self, e):
         """Don't accept project item drops."""
         source = e.source()
-        if isinstance(source, DraggableWidget):
+        if isinstance(source, DragListView):
             e.ignore()
         else:
             super().dragEnterEvent(e)

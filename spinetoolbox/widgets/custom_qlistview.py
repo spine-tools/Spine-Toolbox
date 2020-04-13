@@ -18,7 +18,7 @@ Classes for custom QListView.
 
 from PySide2.QtWidgets import QListView, QApplication
 from PySide2.QtGui import QDrag
-from PySide2.QtCore import Qt, QMimeData, QSize, QTimer, Slot
+from PySide2.QtCore import Qt, QMimeData, QSize, Slot
 
 
 class DragListView(QListView):
