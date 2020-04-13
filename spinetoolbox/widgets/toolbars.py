@@ -34,27 +34,6 @@ from ..config import ICON_TOOLBAR_SS, PARAMETER_TAG_TOOLBAR_SS
 from .custom_qlistview import ProjectItemDragListView
 
 
-class CustomGroupBox(QGroupBox):
-    def __init__(self, title, parent):
-        super().__init__(title, parent=parent)
-        font = self.font()
-        font.setPointSize(10)
-        self.setFont(font)
-        layout = QBoxLayout(QBoxLayout.LeftToRight)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)
-        self.setLayout(layout)
-        layout.setSizeConstraint(QBoxLayout.SetFixedSize)
-        self.parent().orientationChanged.connect(self._handle_parent_orientation_changed)
-
-    @Slot("Qt.Orientation")
-    def _handle_parent_orientation_changed(self, orientation):
-        if orientation == Qt.Horizontal:
-            self.layout().setDirection(QBoxLayout.LeftToRight)
-        elif orientation == Qt.Vertical:
-            self.layout().setDirection(QBoxLayout.TopToBottom)
-
-
 class MainToolBar(QToolBar):
     """A toolbar to add items using drag and drop actions."""
 
@@ -78,15 +57,14 @@ class MainToolBar(QToolBar):
 
     def add_project_item_list_view(self):
         self.project_item_list_view.setModel(self._toolbox.project_item_palette_model)
-        group_box = CustomGroupBox("Generic items", self)
-        group_box.layout().addWidget(self.project_item_list_view)
-        self.addWidget(group_box)
+        self.addWidget(QLabel("Generic items"))
+        self.addWidget(self.project_item_list_view)
 
     def add_project_item_spec_list_view(self):
         icon_size = 16
         self.addSeparator()
-        group_box = CustomGroupBox("Custom items", self)
-        group_box.layout().addWidget(self.project_item_spec_list_view)
+        self.addWidget(QLabel("Specific items"))
+        self.addWidget(self.project_item_spec_list_view)
         remove_spec = QToolButton(self)
         remove_spec_icon = QIcon(":/icons/wrench_minus.svg").pixmap(icon_size, icon_size)
         remove_spec.setIcon(remove_spec_icon)
@@ -94,39 +72,37 @@ class MainToolBar(QToolBar):
         remove_spec.setToolTip(
             "<html><head/><body><p>Remove (selected) Tool specification from project</p></body></html>"
         )
-        group_box.layout().addWidget(remove_spec)
+        self.addWidget(remove_spec)
         add_spec = QToolButton(self)
         add_spec_icon = QIcon(":/icons/wrench_plus.svg").pixmap(icon_size, icon_size)
         add_spec.setIcon(add_spec_icon)
         add_spec.setMenu(self._toolbox.add_specification_popup_menu)
         add_spec.setPopupMode(QToolButton.InstantPopup)
         add_spec.setToolTip("<html><head/><body><p>Add new Tool specification to the project</p></body></html>")
-        group_box.layout().addWidget(add_spec)
-        self.addWidget(group_box)
+        self.addWidget(add_spec)
 
     def add_execute_buttons(self):
         icon_size = 24
         self.addSeparator()
-        group_box = CustomGroupBox("Execution", self)
+        self.addWidget(QLabel("Execution"))
         execute_project_icon = QIcon(":/icons/project_item_icons/play-circle-solid.svg").pixmap(icon_size, icon_size)
         execute_project = QToolButton(self)
         execute_project.setIcon(execute_project_icon)
         execute_project.clicked.connect(self.execute_project)
-        execute_project.setToolTip("Execute project.")
-        group_box.layout().addWidget(execute_project)
+        execute_project.setToolTip("Execute project")
+        self.addWidget(execute_project)
         execute_selected_icon = QIcon(":/icons/project_item_icons/play-circle-regular.svg").pixmap(icon_size, icon_size)
         execute_selected = QToolButton(self)
         execute_selected.setIcon(execute_selected_icon)
         execute_selected.clicked.connect(self.execute_selected)
-        execute_selected.setToolTip("Execute selection.")
-        group_box.layout().addWidget(execute_selected)
+        execute_selected.setToolTip("Execute selection")
+        self.addWidget(execute_selected)
         stop_icon = QIcon(":/icons/project_item_icons/stop-circle-regular.svg").pixmap(icon_size, icon_size)
         stop = QToolButton(self)
         stop.setIcon(stop_icon)
         stop.clicked.connect(self.stop_execution)
-        stop.setToolTip("Stop execution.")
-        group_box.layout().addWidget(stop)
-        self.addWidget(group_box)
+        stop.setToolTip("Stop execution")
+        self.addWidget(stop)
 
     def add_remove_all_button(self):
         icon_size = 24

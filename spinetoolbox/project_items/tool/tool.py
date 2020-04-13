@@ -24,7 +24,7 @@ from spinetoolbox.project_item import ProjectItem, ProjectItemResource
 from spinetoolbox.config import TOOL_OUTPUT_DIR
 from spinetoolbox.project_commands import UpdateToolExecuteInWorkCommand, UpdateToolCmdLineArgsCommand
 from .tool_specifications import ToolSpecification, open_main_program_file
-from .widgets.custom_menus import ToolContextMenu, ToolSpecificationOptionsPopupmenu
+from .widgets.custom_menus import ToolContextMenu, ToolSpecificationMenu
 from .tool_executable import ToolExecutable
 from .utils import flatten_file_path_duplicates, find_file, find_last_output_files, is_pattern
 
@@ -190,7 +190,8 @@ class Tool(ProjectItem):
         else:
             self._properties_ui.comboBox_tool.setCurrentText(self.specification().name)
             self._properties_ui.lineEdit_tool_spec_args.setText(" ".join(self.specification().cmdline_args))
-        self.specification_options_popup_menu = ToolSpecificationOptionsPopupmenu(self._toolbox, self)
+        index = self._toolbox.specification_model.specification_index(self.specification().name)
+        self.specification_options_popup_menu = ToolSpecificationMenu(self._toolbox, index)
         self._properties_ui.toolButton_tool_specification.setMenu(self.specification_options_popup_menu)
         self._properties_ui.treeView_specification.expandAll()
         self._properties_ui.lineEdit_tool_args.setText(" ".join(self.cmd_line_args))

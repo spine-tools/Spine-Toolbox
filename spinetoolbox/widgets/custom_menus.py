@@ -132,36 +132,6 @@ class LinkContextMenu(CustomContextMenu):
             self.add_action("Send to bottom")
 
 
-class ItemSpecificationContextMenu(CustomContextMenu):
-    """Context menu class for item specifications."""
-
-    def __init__(self, parent, position, index):
-        """
-        Args:
-            parent (QWidget): Parent for menu widget (ToolboxUI)
-            position (QPoint): Position on screen
-            index (QModelIndex): the index
-        """
-        super().__init__(parent, position)
-        self.index = index
-        self.add_action("Edit specification")
-        self.add_action("Remove specification")
-        self.add_action("Open specification file...")
-        self.addSeparator()
-
-    def apply_action(self, option):
-        """Applies the selected action."""
-        if option == "Edit specification":
-            self.parent().edit_specification(self.index)
-        elif option == "Remove specification":
-            self.parent().remove_specification(self.index.row())
-        elif option == "Open specification file...":
-            self.parent().open_specification_file(self.index)
-        else:
-            return False
-        return True
-
-
 class EntityTreeContextMenu(CustomContextMenu):
     """Context menu class for object tree items in tree view form."""
 
@@ -398,15 +368,34 @@ class AddSpecificationPopupMenu(CustomPopupMenu):
         """
         super().__init__(parent)
         # Open empty Tool specification Form
+        self.add_action("Add Specification from file...", parent.import_specification)
+        self.addSeparator()
         for category, data in parent.categories.items():
             spec_form_maker = data["specification_form_maker"]
-            if spec_form_maker is None:
-                continue
             item_type = data["item_type"]
             self.add_action(
-                f"Add custom {item_type}...",
+                f"Create {item_type} Specification...",
                 lambda checked=False, category=category: parent.show_specification_form(category, specification=None),
+                enabled=spec_form_maker is not None,
             )
+
+
+class ItemSpecificationMenu(CustomPopupMenu):
+    """Context menu class for item specifications."""
+
+    def __init__(self, parent, index):
+        """
+        Args:
+            parent (QWidget): Parent for menu widget (ToolboxUI)
+            position (QPoint): Position on screen
+            index (QModelIndex): the index
+        """
+        super().__init__(parent)
+        self.index = index
+        self.add_action("Edit specification", lambda: parent.edit_specification(index))
+        self.add_action("Remove specification", lambda: parent.remove_specification(index.row()))
+        self.add_action("Open specification file...", lambda: parent.open_specification_file(index))
+        self.addSeparator()
 
 
 class RecentProjectsPopupMenu(CustomPopupMenu):

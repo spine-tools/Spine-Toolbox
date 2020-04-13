@@ -21,7 +21,7 @@ from .tool_icon import ToolIcon as icon_maker
 from .widgets.tool_properties_widget import ToolPropertiesWidget as properties_widget_maker
 from .widgets.add_tool_widget import AddToolWidget as add_form_maker
 from .widgets.tool_specification_widget import ToolSpecificationWidget as specification_form_maker
-from .widgets.custom_menus import ToolSpecificationContextMenu as specification_menu_maker
+from .widgets.custom_menus import ToolSpecificationMenu as specification_menu_maker
 from .tool_specifications import load_tool_specification_from_dict as specification_loader
 
 item_rank = 2

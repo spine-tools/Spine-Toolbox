@@ -79,37 +79,28 @@ class DragListView(QListView):
 class ProjectItemDragListView(DragListView):
     def __init__(self, parent):
         super().__init__(parent)
-        self.orientation = self.parent().orientation()
-        self.base_size = QSize(24, 24)
-        self.setIconSize(self.base_size)
+        base_size = QSize(24, 24)
+        self.setIconSize(base_size)
+        self.setMinimumSize(base_size)
         font = self.font()
         font.setPointSize(9)
         self.setFont(font)
         self.setStyleSheet("QListView {background: transparent;}")
         self.setResizeMode(DragListView.Adjust)
-        self.setMinimumSize(self.base_size)
         self.setContextMenuPolicy(Qt.CustomContextMenu)
-        self.set_maximum_size_for_orientation()
+        self.set_orientation(self.parent().orientation())
         self.parent().orientationChanged.connect(self.set_orientation)
-
-    def setModel(self, model):
-        super().setModel(model)
-        self.set_maximum_size_for_orientation()
 
     @Slot("Qt.Orientation")
     def set_orientation(self, orientation):
-        self.orientation = orientation
-        self.set_maximum_size_for_orientation()
-
-    def set_maximum_size_for_orientation(self):
-        if self.orientation == Qt.Horizontal:
+        if orientation == Qt.Horizontal:
             self.setFlow(QListView.LeftToRight)
-        elif self.orientation == Qt.Vertical:
+        elif orientation == Qt.Vertical:
             self.setFlow(QListView.TopToBottom)
-        self.setMaximumSize(self.base_size)
-        QTimer.singleShot(0, self.resize_to_contents)
 
-    def resize_to_contents(self):
+    def updateGeometries(self):
+        """Resize to contents."""
+        super().updateGeometries()
         size = self.contentsSize()
         if not size.isValid():
             return

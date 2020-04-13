@@ -16,12 +16,12 @@ Classes for custom context menus and pop-up menus.
 :date:   9.1.2018
 """
 
-from PySide2.QtCore import QTimeLine, QUrl
+from PySide2.QtCore import QTimeLine, QUrl, Slot
 from spinetoolbox.widgets.custom_menus import (
     CustomContextMenu,
-    CustomPopupMenu,
     ProjectItemContextMenu,
-    ItemSpecificationContextMenu,
+    ItemSpecificationMenu,
+    CustomPopupMenu,
 )
 from ..tool_specifications import open_main_program_file
 
@@ -68,52 +68,29 @@ class ToolContextMenu(ProjectItemContextMenu):
         self.add_action("Edit main program file...", enabled=enabled)
 
 
-class ToolSpecificationOptionsPopupmenu(CustomPopupMenu):
-    """Popup menu class for tool specification options button in Tool item."""
-
-    def __init__(self, parent, tool):
-        """
-        Args:
-            parent (QWidget): Parent widget of this menu (ToolboxUI)
-            tool (Tool): Tool item that is associated with the pressed button
-        """
-        super().__init__(parent)
-        enabled = bool(tool.specification())
-        self.add_action("Edit Tool specification", tool.edit_specification, enabled=enabled)
-        self.add_action("Edit main program file...", tool.open_main_program_file, enabled=enabled)
-        self.add_action("Open main program directory...", tool.open_main_directory, enabled=enabled)
-        self.add_action("Open definition file", tool.open_specification_file, enabled=enabled)
-        self.addSeparator()
-        # self.add_action("New Tool specification", self._parent.show_tool_specification_form)
-        # self.add_action("Add Tool specification...", self._parent.open_tool_specification)
-
-
-class ToolSpecificationContextMenu(ItemSpecificationContextMenu):
+class ToolSpecificationMenu(ItemSpecificationMenu):
     """Context menu class for Tool specifications."""
 
-    def __init__(self, parent, position, index):
+    def __init__(self, parent, index):
         """
         Args:
             parent (QWidget): Parent for menu widget (ToolboxUI)
-            position (QPoint): Position on screen
-            index (QModelIndex): the index
+            index (QModelIndex): the index from specification model
         """
-        super().__init__(parent, position, index)
-        self.addSeparator()
-        self.add_action("Edit main program file...")
-        self.add_action("Open main program directory...")
+        super().__init__(parent, index)
+        self.add_action("Open main program file...", self.open_main_program_file)
+        self.add_action("Open main program directory...", self.open_main_program_dir)
 
-    def apply_action(self, option):
-        if super().apply_action(option):
-            return True
-        if option == "Edit main program file...":
-            spec = self.parent().specification_model.specification(self.index.row())
-            open_main_program_file(spec, self.parent())
-        elif option == "Open main program directory...":
-            tool_specification_path = self.parent().specification_model.specification(self.index.row()).path
-            path_url = "file:///" + tool_specification_path
-            self.parent().open_anchor(QUrl(path_url, QUrl.TolerantMode))
-        return True
+    @Slot()
+    def open_main_program_file(self):
+        spec = self.parent().specification_model.specification(self.index.row())
+        open_main_program_file(spec, self.parent())
+
+    @Slot()
+    def open_main_program_dir(self):
+        tool_specification_path = self.parent().specification_model.specification(self.index.row()).path
+        path_url = "file:///" + tool_specification_path
+        self.parent().open_anchor(QUrl(path_url, QUrl.TolerantMode))
 
 
 class AddIncludesPopupMenu(CustomPopupMenu):

@@ -20,7 +20,7 @@ from collections import ChainMap, OrderedDict
 import logging
 import os
 import re
-from PySide2.QtCore import QUrl, Slot
+from PySide2.QtCore import QUrl
 from PySide2.QtGui import QDesktopServices
 from spinetoolbox.metaobject import MetaObject  # FIXME: Import ProjectItemSpecification which has the minimal interface
 from spinetoolbox.config import REQUIRED_KEYS, OPTIONAL_KEYS, LIST_REQUIRED_KEYS
@@ -40,9 +40,9 @@ def load_tool_specification_from_dict(toolbox, definition, def_path, settings, l
         )
         return None
     if _tooltype == "julia":
-        return JuliaTool.load(toolbox, path, definition, settings, logger)
+        return JuliaTool.load(path, definition, settings, toolbox.julia_repl, logger)
     if _tooltype == "python":
-        return PythonTool.load(toolbox, path, definition, settings, logger)
+        return PythonTool.load(path, definition, settings, toolbox.python_repl, logger)
     if _tooltype == "gams":
         return GAMSTool.load(path, definition, settings, logger)
     if _tooltype == "executable":

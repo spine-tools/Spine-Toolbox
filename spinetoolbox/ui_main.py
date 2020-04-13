@@ -408,7 +408,15 @@ class ToolboxUI(QMainWindow):
         self.init_project_item_model()
         self.ui.treeView_project.selectionModel().selectionChanged.connect(self.item_selection_changed)
         self._project = SpineToolboxProject(
-            self, name, description, location, self.project_item_model, settings=self._qsettings, embedded_julia_console=self.julia_repl, embedded_python_console=self.python_repl, logger=self
+            self,
+            name,
+            description,
+            location,
+            self.project_item_model,
+            settings=self._qsettings,
+            embedded_julia_console=self.julia_repl,
+            embedded_python_console=self.python_repl,
+            logger=self,
         )
         self._project.connect_signals()
         self._connect_project_signals()
@@ -489,7 +497,15 @@ class ToolboxUI(QMainWindow):
         self.ui.treeView_project.selectionModel().selectionChanged.connect(self.item_selection_changed)
         # Create project
         self._project = SpineToolboxProject(
-            self, name, desc, project_dir, self.project_item_model, settings=self._qsettings, embedded_julia_console=self.julia_repl, embedded_python_console=self.python_repl, logger=self
+            self,
+            name,
+            desc,
+            project_dir,
+            self.project_item_model,
+            settings=self._qsettings,
+            embedded_julia_console=self.julia_repl,
+            embedded_python_console=self.python_repl,
+            logger=self,
         )
         self._connect_project_signals()
         self.update_window_title()
@@ -748,7 +764,7 @@ class ToolboxUI(QMainWindow):
         Returns:
             ToolSpecification, NoneType
         """
-        category = definition.get("item_category", "Tools")  # NOTE: Default to Tools to make existing specs work
+        category = definition.get("category", "Tools")  # NOTE: Default to Tools to make existing specs work
         specification_loader = self.categories[category]["specification_loader"]
         if not specification_loader:
             return
@@ -907,8 +923,8 @@ class ToolboxUI(QMainWindow):
         self.ui.dockWidget_item.setWindowTitle(item.item_type() + " Properties")
 
     @Slot()
-    def open_specification(self):
-        """Opens a file dialog where the user can select an existing tool specification
+    def import_specification(self):
+        """Opens a file dialog where the user can select an existing specification
         definition file (.json). If file is valid, calls add_specification().
         """
         if not self._project:
@@ -916,18 +932,18 @@ class ToolboxUI(QMainWindow):
             return
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
         answer = QFileDialog.getOpenFileName(
-            self, "Select Tool specification file", self._project.project_dir, "JSON (*.json)"
+            self, "Select Specification file", self._project.project_dir, "JSON (*.json)"
         )
         if answer[0] == "":  # Cancel button clicked
             return
         def_file = os.path.abspath(answer[0])
         # Load tool definition
-        specification = self._project.load_specification_from_file(def_file)
+        specification = self.load_specification_from_file(def_file)
         if not specification:
             return
         if self.specification_model.find_specification(specification.name):
             # Tool specification already added to project
-            self.msg_warning.emit("Tool specification <b>{0}</b> already in project".format(specification.name))
+            self.msg_warning.emit("Specification <b>{0}</b> already in project".format(specification.name))
             return
         # Add definition file path into tool specification
         specification.set_def_path(def_file)
@@ -1065,9 +1081,8 @@ class ToolboxUI(QMainWindow):
         if not specification_menu_maker:
             return
         global_pos = self.main_toolbar.project_item_spec_list_view.viewport().mapToGlobal(pos)
-        self.specification_context_menu = specification_menu_maker(self, global_pos, ind)
-        option = self.specification_context_menu.get_action()
-        self.specification_context_menu.apply_action(option)
+        self.specification_context_menu = specification_menu_maker(self, ind)
+        self.specification_context_menu.exec_(global_pos)
         self.specification_context_menu.deleteLater()
         self.specification_context_menu = None
 

@@ -182,7 +182,7 @@ class ToolSpecificationWidget(QWidget):
                 qitem.setData(QFileIconProvider().icon(QFileInfo(item)), Qt.DecorationRole)
                 self.outputfiles_model.appendRow(qitem)
 
-    @Slot(bool, name="browse_main_program")
+    @Slot(bool)
     def browse_main_program(self, checked=False):
         """Open file browser where user can select the path of the main program file."""
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
@@ -192,7 +192,7 @@ class ToolSpecificationWidget(QWidget):
             return
         self.set_main_program_path(file_path)
 
-    @Slot("QString", name="set_main_program_path")
+    @Slot("QString")
     def set_main_program_path(self, file_path):
         """Set main program file and folder path."""
         folder_path = os.path.split(file_path)[0]
@@ -230,7 +230,7 @@ class ToolSpecificationWidget(QWidget):
         self.ui.lineEdit_main_program.setText(file_path)
         self.ui.label_mainpath.setText(self.program_path)
 
-    @Slot(name="new_source_file")
+    @Slot()
     def new_source_file(self):
         """Let user create a new source file for this tool specification."""
         path = self.program_path if self.program_path else self._project.project_dir
@@ -243,7 +243,7 @@ class ToolSpecificationWidget(QWidget):
         open(file_path, 'w').close()
         self.add_single_include(file_path)
 
-    @Slot(bool, name="show_add_source_files_dialog")
+    @Slot(bool)
     def show_add_source_files_dialog(self, checked=False):
         """Let user select source files for this tool specification."""
         path = self.program_path if self.program_path else self._project.project_dir
@@ -256,7 +256,7 @@ class ToolSpecificationWidget(QWidget):
             if not self.add_single_include(path):
                 continue
 
-    @Slot(bool, name="show_add_source_dirs_dialog")
+    @Slot(bool)
     def show_add_source_dirs_dialog(self, checked=False):
         """Let user select a source directory for this tool specification.
         All files and sub-directories will be added to the source files.
@@ -272,7 +272,7 @@ class ToolSpecificationWidget(QWidget):
             if not self.add_single_include(path):
                 continue
 
-    @Slot("QVariant", name="add_dropped_includes")
+    @Slot("QVariant")
     def add_dropped_includes(self, file_paths):
         """Adds dropped file paths to Source files list."""
         for path in file_paths:
@@ -308,7 +308,7 @@ class ToolSpecificationWidget(QWidget):
         return True
 
     @busy_effect
-    @Slot("QModelIndex", name="open_includes_file")
+    @Slot("QModelIndex")
     def open_includes_file(self, index):
         """Open source file in default program."""
         if not index:
@@ -330,12 +330,12 @@ class ToolSpecificationWidget(QWidget):
         if not res:
             self._toolbox.msg_error.emit("Failed to open file: <b>{0}</b>".format(includes_file))
 
-    @Slot(name="remove_source_files_with_del")
+    @Slot()
     def remove_source_files_with_del(self):
         """Support for deleting items with the Delete key."""
         self.remove_source_files()
 
-    @Slot(bool, name="remove_source_files")
+    @Slot(bool)
     def remove_source_files(self, checked=False):
         """Remove selected source files from include list.
         Do not remove anything if there are no items selected.
@@ -354,7 +354,7 @@ class ToolSpecificationWidget(QWidget):
                     self.ui.label_mainpath.clear()
             self.statusbar.showMessage("Selected source files removed", 3000)
 
-    @Slot(bool, name="add_inputfiles")
+    @Slot(bool)
     def add_inputfiles(self, checked=False):
         """Let user select input files for this tool specification."""
         msg = (
@@ -375,12 +375,12 @@ class ToolSpecificationWidget(QWidget):
         qitem.setData(QFileIconProvider().icon(QFileInfo(file_name)), Qt.DecorationRole)
         self.inputfiles_model.appendRow(qitem)
 
-    @Slot(name="remove_inputfiles_with_del")
+    @Slot()
     def remove_inputfiles_with_del(self):
         """Support for deleting items with the Delete key."""
         self.remove_inputfiles()
 
-    @Slot(bool, name="remove_inputfiles")
+    @Slot(bool)
     def remove_inputfiles(self, checked=False):
         """Remove selected input files from list.
         Do not remove anything if there are no items selected.
@@ -395,7 +395,7 @@ class ToolSpecificationWidget(QWidget):
                 self.inputfiles_model.removeRow(row)
             self.statusbar.showMessage("Selected input files removed", 3000)
 
-    @Slot(bool, name="add_inputfiles_opt")
+    @Slot(bool)
     def add_inputfiles_opt(self, checked=False):
         """Let user select optional input files for this tool specification."""
         msg = (
@@ -418,12 +418,12 @@ class ToolSpecificationWidget(QWidget):
         qitem.setData(QFileIconProvider().icon(QFileInfo(file_name)), Qt.DecorationRole)
         self.inputfiles_opt_model.appendRow(qitem)
 
-    @Slot(name="remove_inputfiles_opt_with_del")
+    @Slot()
     def remove_inputfiles_opt_with_del(self):
         """Support for deleting items with the Delete key."""
         self.remove_inputfiles_opt()
 
-    @Slot(bool, name="remove_inputfiles_opt")
+    @Slot(bool)
     def remove_inputfiles_opt(self, checked=False):
         """Remove selected optional input files from list.
         Do not remove anything if there are no items selected.
@@ -438,7 +438,7 @@ class ToolSpecificationWidget(QWidget):
                 self.inputfiles_opt_model.removeRow(row)
             self.statusbar.showMessage("Selected optional input files removed", 3000)
 
-    @Slot(bool, name="add_outputfiles")
+    @Slot(bool)
     def add_outputfiles(self, checked=False):
         """Let user select output files for this tool specification."""
         msg = (
@@ -459,12 +459,12 @@ class ToolSpecificationWidget(QWidget):
         qitem.setData(QFileIconProvider().icon(QFileInfo(file_name)), Qt.DecorationRole)
         self.outputfiles_model.appendRow(qitem)
 
-    @Slot(name="remove_outputfiles_with_del")
+    @Slot()
     def remove_outputfiles_with_del(self):
         """Support for deleting items with the Delete key."""
         self.remove_outputfiles()
 
-    @Slot(bool, name="remove_outputfiles")
+    @Slot(bool)
     def remove_outputfiles(self, checked=False):
         """Remove selected output files from list.
         Do not remove anything if there are no items selected.
@@ -487,6 +487,7 @@ class ToolSpecificationWidget(QWidget):
             self.statusbar.showMessage("Tool type not selected", 3000)
             return
         self.definition["name"] = self.ui.lineEdit_name.text()
+        self.definition["category"] = "Tools"
         self.definition["description"] = self.ui.textEdit_description.toPlainText()
         self.definition["tooltype"] = self.ui.comboBox_tooltype.currentText().lower()
         flags = Qt.MatchContains
@@ -542,7 +543,7 @@ class ToolSpecificationWidget(QWidget):
             if tool.__dict__ == old_tool.__dict__:  # Nothing changed. We're done here.
                 return True
             # logging.debug("Updating definition for tool specification '{}'".format(tool.name))
-            self._toolbox.update_tool_specification(row, tool)
+            self._toolbox.update_specification(row, tool)
         else:
             # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
             answer = QFileDialog.getSaveFileName(
