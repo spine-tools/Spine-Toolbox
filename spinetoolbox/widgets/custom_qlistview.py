@@ -81,7 +81,6 @@ class ProjectItemDragListView(DragListView):
         super().__init__(parent)
         base_size = QSize(24, 24)
         self.setIconSize(base_size)
-        self.setMinimumSize(base_size)
         font = self.font()
         font.setPointSize(9)
         self.setFont(font)
@@ -103,7 +102,7 @@ class ProjectItemDragListView(DragListView):
         super().updateGeometries()
         size = self.contentsSize()
         if not size.isValid():
-            return
+            size = QSize(0, 0)
         margin = 2 * self.frameWidth()
         size += QSize(margin, margin)
         self.setMaximumSize(size)

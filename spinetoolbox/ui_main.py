@@ -475,10 +475,9 @@ class ToolboxUI(QMainWindow):
             bool: True when restoring project succeeded, False otherwise
         """
         # Check that project info is valid
-        # FIXME
-        # if not ProjectUpgrader(self).is_valid(project_info):
-        #    self.msg_error.emit("Opening project in directory {0} failed".format(project_dir))
-        #    return False
+        if not ProjectUpgrader(self).is_valid(project_info):
+            self.msg_error.emit("Opening project in directory {0} failed".format(project_dir))
+            return False
         version = project_info["project"]["version"]
         # Upgrade project dictionary if needed
         if version < LATEST_PROJECT_VERSION:
@@ -489,7 +488,7 @@ class ToolboxUI(QMainWindow):
         # Parse project info
         name = project_info["project"]["name"]  # Project name
         desc = project_info["project"]["description"]  # Project description
-        spec_paths = project_info["project"].get("specifications", [])
+        spec_paths = project_info["project"].get("tool_specifications", [])
         connections = project_info["project"]["connections"]
         project_items = project_info["objects"]
         # Init project item model
@@ -1023,7 +1022,7 @@ class ToolboxUI(QMainWindow):
             return
         selected = self.main_toolbar.project_item_spec_list_view.selectedIndexes()
         if not selected:
-            self.msg.emit("Select a custom item to remove")
+            self.msg.emit("Select a Specific item to remove")
             return
         index = selected[0]
         if not index.isValid():
