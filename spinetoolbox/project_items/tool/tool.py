@@ -188,11 +188,12 @@ class Tool(ProjectItem):
             self._properties_ui.comboBox_tool.setCurrentIndex(-1)
             self._properties_ui.lineEdit_tool_spec_args.setText("")
             self.do_update_execution_mode(True)
+            spec_model_index = None
         else:
             self._properties_ui.comboBox_tool.setCurrentText(self.specification().name)
             self._properties_ui.lineEdit_tool_spec_args.setText(" ".join(self.specification().cmdline_args))
-        index = self._toolbox.specification_model.specification_index(self.specification().name)
-        self.specification_options_popup_menu = ToolSpecificationMenu(self._toolbox, index)
+            spec_model_index = self._toolbox.specification_model.specification_index(self.specification().name)
+        self.specification_options_popup_menu = ToolSpecificationMenu(self._toolbox, spec_model_index)
         self._properties_ui.toolButton_tool_specification.setMenu(self.specification_options_popup_menu)
         self._properties_ui.treeView_specification.expandAll()
         self._properties_ui.lineEdit_tool_args.setText(" ".join(self.cmd_line_args))
@@ -365,7 +366,7 @@ class Tool(ProjectItem):
         Returns:
             list: a list of Tool's output resources
         """
-        if self.tool_specification() is None:
+        if self.specification() is None:
             self._logger.msg_error.emit("Tool specification missing.")
             return []
         resources = list()

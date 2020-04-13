@@ -356,6 +356,20 @@ class ProjectItem(MetaObject):
         return old_item_dict
 
 
+class ProjectItemSpecification(MetaObject):
+    """Class to hold a project item specification."""
+
+    def __init__(self, name, description=None, category=""):
+        """
+        Args:
+            name (str): specification name
+            description (str): description
+            category (str): Project item category string, e.g., "Tools"
+        """
+        super().__init__(name, description)
+        self.category = category
+
+
 class ProjectItemResource:
     """Class to hold a resource made available by a project item
     and that may be consumed by another project item."""

@@ -24,7 +24,7 @@ from PySide2.QtCore import QCoreApplication
 from spine_engine import ExecutionDirection
 from spinetoolbox.project_item import ProjectItemResource
 from spinetoolbox.project_items.tool.tool_executable import ToolExecutable
-from spinetoolbox.tool_specifications import ToolSpecification, PythonTool
+from spinetoolbox.project_items.tool.tool_specifications import ToolSpecification, PythonTool
 
 
 class TestToolExecutable(unittest.TestCase):

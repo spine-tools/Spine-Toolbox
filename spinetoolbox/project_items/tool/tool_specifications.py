@@ -22,7 +22,7 @@ import os
 import re
 from PySide2.QtCore import QUrl
 from PySide2.QtGui import QDesktopServices
-from spinetoolbox.metaobject import MetaObject  # FIXME: Import ProjectItemSpecification which has the minimal interface
+from spinetoolbox.project_item import ProjectItemSpecification
 from spinetoolbox.config import REQUIRED_KEYS, OPTIONAL_KEYS, LIST_REQUIRED_KEYS
 from spinetoolbox.tool_instance import GAMSToolInstance, JuliaToolInstance, PythonToolInstance, ExecutableToolInstance
 
@@ -94,7 +94,7 @@ class CmdlineTag:
     OPTIONAL_INPUTS = CMDLINE_TAG_EDGE + "optional_inputs" + CMDLINE_TAG_EDGE
 
 
-class ToolSpecification(MetaObject):
+class ToolSpecification(ProjectItemSpecification):
     """Super class for all tool specifications."""
 
     def __init__(
@@ -128,10 +128,9 @@ class ToolSpecification(MetaObject):
             cmdline_args (str, optional): Tool command line arguments (read from tool definition file)
             execute_in_work (bool): Execute in work folder
         """
-        super().__init__(name, description)
+        super().__init__(name, description, category="Tools")
         self._settings = settings
         self._logger = logger
-        self.category = "Tools"
         self.tooltype = tooltype
         if not os.path.exists(path):
             pass

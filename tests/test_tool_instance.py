@@ -18,7 +18,7 @@ Contains unit tests for the tool_instance module.
 
 import unittest
 from unittest import mock
-from spinetoolbox.tool_specifications import PythonTool
+from spinetoolbox.project_items.tool.tool_specifications import PythonTool
 
 
 class TestPythonToolInstance(unittest.TestCase):
