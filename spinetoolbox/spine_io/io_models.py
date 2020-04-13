@@ -33,6 +33,7 @@ from spinedb_api import (
     ColumnHeaderMapping,
     ColumnMapping,
     RowMapping,
+    TableNameMapping,
     ParameterValueFormatError,
     mapping_non_pivoted_columns,
 )
@@ -75,6 +76,7 @@ _MAPTYPE_DISPLAY_NAME = {
     ColumnMapping: "Column",
     ColumnHeaderMapping: "Column Header",
     RowMapping: "Row",
+    TableNameMapping: "Table Name",
 }
 
 _DISPLAY_TYPE_TO_TYPE = {
@@ -359,13 +361,14 @@ class MappingSpecModel(QAbstractTableModel):
     A model to hold a Mapping specification.
     """
 
-    def __init__(self, model, parent=None):
+    def __init__(self, model, table_name, parent=None):
         super().__init__(parent)
         self._display_names = []
         self._mappings = []
         self._model = None
         if model is not None:
             self.set_mapping(model)
+        self._table_name = table_name
 
     @property
     def skip_columns(self):
@@ -692,6 +695,8 @@ class MappingSpecModel(QAbstractTableModel):
             value = RowMapping(reference=-1)
         elif value == "Row":
             value = RowMapping()
+        elif value == "Table Name":
+            value = TableNameMapping(self._table_name)
         else:
             return False
         return self.set_mapping_from_name(name, value)
@@ -824,11 +829,12 @@ class MappingListModel(QAbstractListModel):
     A model to hold a list of Mappings.
     """
 
-    def __init__(self, mapping_list, parent=None):
+    def __init__(self, mapping_list, table_name, parent=None):
         super().__init__(parent)
         self._qmappings = []
         self._names = []
         self._counter = 1
+        self._table_name = table_name
         self.set_model(mapping_list)
 
     def set_model(self, model):
@@ -837,7 +843,7 @@ class MappingListModel(QAbstractListModel):
         self._qmappings = []
         for m in model:
             self._names.append("Mapping " + str(self._counter))
-            self._qmappings.append(MappingSpecModel(m))
+            self._qmappings.append(MappingSpecModel(m, self._table_name))
             self._counter += 1
         self.endResetModel()
 
@@ -862,7 +868,7 @@ class MappingListModel(QAbstractListModel):
     def add_mapping(self):
         self.beginInsertRows(self.index(self.rowCount(), 0), self.rowCount(), self.rowCount())
         m = ObjectClassMapping()
-        self._qmappings.append(MappingSpecModel(m))
+        self._qmappings.append(MappingSpecModel(m, self._table_name))
         self._names.append("Mapping " + str(self._counter))
         self._counter += 1
         self.endInsertRows()

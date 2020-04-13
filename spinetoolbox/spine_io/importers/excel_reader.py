@@ -49,8 +49,8 @@ class ExcelConnector(SourceConnection):
     # Modal widget that that returns source object and action (OK, CANCEL)
     SELECT_SOURCE_UI = select_excel_file
 
-    def __init__(self):
-        super(ExcelConnector, self).__init__()
+    def __init__(self, settings):
+        super().__init__(settings)
         self._filename = None
         self._wb = None
 

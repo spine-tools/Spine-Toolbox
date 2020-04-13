@@ -35,6 +35,12 @@ class SourceConnection:
     # Modal widget that that returns action (OK, CANCEL) and source object
     SELECT_SOURCE_UI = NotImplemented
 
+    def __init__(self, settings):
+        """
+        Args:
+            settings (dict, optional): connector specific settings or None
+        """
+
     def connect_to_source(self, source):
         """Connects to source, ex: connecting to a database where source is a connection string.
 

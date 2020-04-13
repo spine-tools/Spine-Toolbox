@@ -53,8 +53,8 @@ class CSVConnector(SourceConnection):
     SELECT_SOURCE_UI = select_csv_file
     """Modal widget that returns source object and action (OK, CANCEL)"""
 
-    def __init__(self):
-        super(CSVConnector, self).__init__()
+    def __init__(self, settings):
+        super().__init__(settings)
         self._filename = None
 
     def connect_to_source(self, source):

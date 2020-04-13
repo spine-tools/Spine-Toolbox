@@ -46,7 +46,18 @@ class SpineToolboxProject(MetaObject):
     project_execution_about_to_start = Signal()
     """Emitted just before the entire project is executed."""
 
-    def __init__(self, toolbox, name, description, p_dir, project_item_model, settings, logger):
+    def __init__(
+        self,
+        toolbox,
+        name,
+        description,
+        p_dir,
+        project_item_model,
+        settings,
+        embedded_julia_console,
+        embedded_python_console,
+        logger,
+    ):
 
         """
 
@@ -57,6 +68,8 @@ class SpineToolboxProject(MetaObject):
             p_dir (str): Project directory
             project_item_model (ProjectItemModel): project item tree model
             settings (QSettings): Toolbox settings
+            embedded_julia_console (JuliaREPLWidget): a Julia console widget for execution in the embedded console
+            embedded_python_console (PythonReplWidget): a Python console widget for execution in the embedded console
             logger (LoggerInterface): a logger instance
         """
         super().__init__(name, description)
@@ -64,6 +77,8 @@ class SpineToolboxProject(MetaObject):
         self._project_item_model = project_item_model
         self._logger = logger
         self._settings = settings
+        self._embedded_julia_console = embedded_julia_console
+        self._embedded_python_console = embedded_python_console
         self.dag_handler = DirectedGraphHandler()
         self.db_mngr = SpineDBManager(settings, logger, self)
         self.engine = None
@@ -455,7 +470,7 @@ class SpineToolboxProject(MetaObject):
                 "Possible fix: remove connection(s) {0}.".format(", ".join(edges))
             )
             return
-        items = [self._project_item_model.get_item(name).project_item for name in node_successors]
+        items = [self._project_item_model.get_item(name).project_item.execution_item() for name in node_successors]
         self.engine = SpineEngine(items, node_successors, execution_permits)
         self.dag_execution_about_to_start.emit(self.engine)
         self._logger.msg.emit("<b>Starting DAG {0}</b>".format(dag_identifier))
@@ -569,7 +584,7 @@ class SpineToolboxProject(MetaObject):
             resources = []
             for parent_name in node_predecessors.get(item_name, set()):
                 parent_item = self._project_item_model.get_item(parent_name).project_item
-                resources += parent_item.output_resources_forward()
+                resources += parent_item.resources_for_direct_successors()
             item.handle_dag_changed(rank, resources)
 
     def notify_changes_in_all_dags(self):

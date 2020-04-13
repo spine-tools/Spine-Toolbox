@@ -24,8 +24,8 @@ from spinedb_api import DatabaseMapping, SpineDBAPIError
 from spinetoolbox.project_item import ProjectItem, ProjectItemResource
 from spinetoolbox.project_commands import UpdateExporterOutFileNameCommand, UpdateExporterSettingsCommand
 from spinetoolbox.helpers import deserialize_path, serialize_url
-from spinetoolbox.spine_io import gdx_utils
 from spinetoolbox.spine_io.exporters import gdx
+from .exporter_executable import ExporterExecutable
 from .settings_state import SettingsState
 from .widgets.gdx_export_settings import GdxExportSettings
 from .widgets.export_list_item import ExportListItem
@@ -87,6 +87,12 @@ class Exporter(ProjectItem):
         """See base class."""
         return "Exporters"
 
+    def execution_item(self):
+        """Creates Exporter's execution counterpart."""
+        gams_path = self._project.settings.value("appSettings/gamsPath", defaultValue=None)
+        executable = ExporterExecutable(self.name, self._settings_packs, self.data_dir, gams_path, self._logger)
+        return executable
+
     def settings_pack(self, database_path):
         return self._settings_packs[database_path]
 
@@ -119,52 +125,6 @@ class Exporter(ProjectItem):
             item.open_settings_clicked.connect(self._show_settings)
             item.file_name_changed.connect(self._update_out_file_name)
             pack.state_changed.connect(item.handle_settings_state_changed)
-
-    def execute_forward(self, resources):
-        """See base class."""
-        database_urls = [r.url for r in resources if r.type_ == "database"]
-        gams_system_directory = self._resolve_gams_system_directory()
-        if gams_system_directory is None:
-            self._logger.msg_error.emit(f"<b>{self.name}</b>: Cannot proceed. No GAMS installation found.")
-            return False
-        for url in database_urls:
-            settings_pack = self._settings_packs.get(url, None)
-            if settings_pack is None:
-                self._logger.msg_error.emit(f"<b>{self.name}</b>: No export settings defined for database {url}.")
-                return False
-            if not settings_pack.output_file_name:
-                self._logger.msg_error.emit(f"<b>{self.name}</b>: No file name given to export database {url}.")
-                return False
-            if settings_pack.state == SettingsState.FETCHING:
-                self._logger.msg_error.emit(f"<b>{self.name}</b>: Settings not ready for database {url}.")
-                return False
-            if settings_pack.state == SettingsState.INDEXING_PROBLEM:
-                self._logger.msg_error.emit(
-                    f"<b>{self.name}</b>: Parameters missing indexing information for database {url}."
-                )
-                return False
-            if settings_pack.state == SettingsState.ERROR:
-                self._logger.msg_error.emit(f"<b>{self.name}</b>: Ill formed database {url}.")
-                return False
-            out_path = os.path.join(self.data_dir, settings_pack.output_file_name)
-            try:
-                database_map = DatabaseMapping(url)
-                gdx.to_gdx_file(
-                    database_map,
-                    out_path,
-                    settings_pack.indexing_domains + settings_pack.merging_domains,
-                    settings_pack.settings,
-                    settings_pack.indexing_settings,
-                    settings_pack.merging_settings,
-                    gams_system_directory,
-                )
-            except (gdx.GdxExportException, SpineDBAPIError) as error:
-                self._logger.msg_error.emit(f"Failed to export <b>{url}</b> to .gdx: {error}")
-                return False
-            finally:
-                database_map.connection.close()
-            self._logger.msg_success.emit(f"File <b>{out_path}</b> written")
-        return True
 
     def _do_handle_dag_changed(self, resources):
         """See base class."""
@@ -469,15 +429,6 @@ class Exporter(ProjectItem):
         """See base class."""
         self._properties_ui.item_name_label.setText(self.name)
 
-    def _resolve_gams_system_directory(self):
-        """Returns GAMS system path from Toolbox settings or None if GAMS default is to be used."""
-        path = self._project.settings.value("appSettings/gamsPath", defaultValue=None)
-        if not path:
-            path = gdx_utils.find_gams_directory()
-        if path is not None and os.path.isfile(path):
-            path = os.path.dirname(path)
-        return path
-
     def notify_destination(self, source_item):
         """See base class."""
         if source_item.item_type() == "Data Store":
@@ -501,7 +452,7 @@ class Exporter(ProjectItem):
         """See base class."""
         return "Exporter"
 
-    def output_resources_forward(self):
+    def resources_for_direct_successors(self):
         """See base class."""
         files = [pack.output_file_name for pack in self._settings_packs.values()]
         paths = [os.path.join(self.data_dir, file_name) for file_name in files]
