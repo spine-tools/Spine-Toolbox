@@ -731,17 +731,17 @@ class ToolboxUI(QMainWindow):
         if n_tools == 0:
             self.msg_warning.emit("Project has no specifications")
 
-    def load_specification_from_file(self, path):
+    def load_specification_from_file(self, def_path):
         """Returns an Item specification from a definition file.
 
         Args:
-            path (str): Path of the specification definition file
+            def_path (str): Path of the specification definition file
 
         Returns:
             ProjectItemSpecification or None if reading the file failed
         """
         try:
-            with open(path, "r") as fp:
+            with open(def_path, "r") as fp:
                 try:
                     definition = json.load(fp)
                 except ValueError:
@@ -749,25 +749,25 @@ class ToolboxUI(QMainWindow):
                     logging.exception("Loading JSON data failed")
                     return None
         except FileNotFoundError:
-            self._logger.msg_error.emit("Specification file <b>{0}</b> does not exist".format(path))
+            self._logger.msg_error.emit("Specification file <b>{0}</b> does not exist".format(def_path))
             return None
-        return self.load_specification_from_dict(definition, path)
+        return self.load_specification_from_dict(definition, def_path)
 
-    def load_specification_from_dict(self, definition, path):
+    def load_specification_from_dict(self, definition, def_path):
         """Returns a Tool specification from a definition dictionary.
 
         Args:
             definition (dict): Dictionary with the tool definition
-            path (str): Path of the specification definition file
+            def_path (str): Path of the specification definition file
 
         Returns:
             ToolSpecification, NoneType
         """
-        category = definition.get("category", "Tools")  # NOTE: Default to Tools to make existing specs work
+        category = definition.get("category", "Tools")  # NOTE: Default to Tools so tool-specs work out of the box
         specification_loader = self.categories[category]["specification_loader"]
         if not specification_loader:
             return
-        return specification_loader(self, definition, path, self.qsettings, self)
+        return specification_loader(self, definition, def_path, self.qsettings, self)
 
     def restore_ui(self):
         """Restore UI state from previous session."""
@@ -1011,7 +1011,7 @@ class ToolboxUI(QMainWindow):
         """
         for item in self.project_item_model.items(specification.category):
             project_item = item.project_item
-            if project_item.specification().name == specification.name:
+            if project_item.specification() == specification:
                 yield project_item
 
     @Slot(bool)

@@ -39,6 +39,14 @@ def load_tool_specification(toolbox, definition, def_path, settings, logger):
             "are 'python', 'gams', 'julia' and 'executable'"
         )
         return None
+    spec = _do_load_tool_specification(toolbox, _tooltype, path, definition, settings, logger)
+    if not spec:
+        return None
+    spec.set_def_path(def_path)
+    return spec
+
+
+def _do_load_tool_specification(toolbox, _tooltype, path, definition, settings, logger):
     if _tooltype == "julia":
         return JuliaTool.load(path, definition, settings, toolbox.julia_repl, logger)
     if _tooltype == "python":
@@ -149,7 +157,6 @@ class ToolSpecification(ProjectItemSpecification):
         self.inputfiles_opt = set(inputfiles_opt) if inputfiles_opt else set()
         self.outputfiles = set(outputfiles) if outputfiles else set()
         self.return_codes = {}
-        self.def_file_path = ''  # JSON tool definition file path
         self.execute_in_work = execute_in_work
 
     def set_return_code(self, code, description):
@@ -160,18 +167,6 @@ class ToolSpecification(ProjectItemSpecification):
             description (str): Description
         """
         self.return_codes[code] = description
-
-    def set_def_path(self, path):
-        """Sets the file path for this tool specification.
-
-        Args:
-            path (str): Absolute path to the specification file.
-        """
-        self.def_file_path = path
-
-    def get_def_path(self):
-        """Returns tool specification file path."""
-        return self.def_file_path
 
     @staticmethod
     def check_definition(data, logger):

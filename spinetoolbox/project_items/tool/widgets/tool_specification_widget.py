@@ -503,9 +503,9 @@ class ToolSpecificationWidget(QWidget):
         self.definition["execute_in_work"] = self.ui.checkBox_execute_in_work.isChecked()
         self.definition["includes"] = [file_path]
         self.definition["includes"] += [i.text() for i in self.sourcefiles_model.findItems("", flags)]
-        self.definition["inputfiles"] = [i.text() for i in self.inputfiles_model.findItems("", flags)]
-        self.definition["inputfiles_opt"] = [i.text() for i in self.inputfiles_opt_model.findItems("", flags)]
-        self.definition["outputfiles"] = [i.text() for i in self.outputfiles_model.findItems("", flags)]
+        self.definition["inputfiles"] = {i.text() for i in self.inputfiles_model.findItems("", flags)}
+        self.definition["inputfiles_opt"] = {i.text() for i in self.inputfiles_opt_model.findItems("", flags)}
+        self.definition["outputfiles"] = {i.text() for i in self.outputfiles_model.findItems("", flags)}
         # Strip whitespace from args before saving it to JSON
         self.definition["cmdline_args"] = ToolSpecification.split_cmdline_args(self.ui.lineEdit_args.text())
         for k in REQUIRED_KEYS:
@@ -518,6 +518,21 @@ class ToolSpecificationWidget(QWidget):
         if self.call_add_tool_specification():
             self.close()
 
+    def _make_tool_specification(self, def_path):
+        """Returns a ToolSpecification from current form settings.
+
+        Args:
+            def_path (str): path to definition .json file
+
+        Returns:
+            ToolSpecification
+        """
+        self.definition["includes_main_path"] = os.path.relpath(self.program_path, os.path.dirname(def_path))
+        tool = load_tool_specification(self._toolbox, self.definition, def_path, self._toolbox.qsettings, self._toolbox)
+        if not tool:
+            self.statusbar.showMessage("Adding Tool specification failed", 3000)
+        return tool
+
     def call_add_tool_specification(self):
         """Adds or updates Tool specification according to user's selections.
         If the name is the same as an existing tool specification, it is updated and
@@ -526,21 +541,17 @@ class ToolSpecificationWidget(QWidget):
         a new tool specification and offer to save the definition file. (User is
         creating a new tool specification from scratch or spawning from an existing one).
         """
-        # Load tool specification
-        path = self.program_path
-        tool = load_tool_specification(self._toolbox, self.definition, path, self._toolbox.qsettings, self._toolbox)
-        if not tool:
-            self.statusbar.showMessage("Adding Tool specification failed", 3000)
-            return False
         # Check if a tool specification with this name already exists
-        row = self._toolbox.specification_model.specification_row(tool.name)
+        row = self._toolbox.specification_model.specification_row(self.definition["name"])
         if row >= 0:
             old_tool = self._toolbox.specification_model.specification(row)
-            def_file = old_tool.get_def_path()
-            tool.set_def_path(def_file)
-            if tool.__dict__ == old_tool.__dict__:  # Nothing changed. We're done here.
+            if all(old_tool.__dict__[k] == v for k, v in self.definition.items()):
+                # Nothing changed
                 return True
-            # logging.debug("Updating definition for tool specification '{}'".format(tool.name))
+            def_path = old_tool.get_def_path()
+            tool = self._make_tool_specification(def_path)
+            if not tool:
+                return False
             self._toolbox.update_specification(row, tool)
         else:
             # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
@@ -549,20 +560,18 @@ class ToolSpecificationWidget(QWidget):
             )
             if answer[0] == "":  # Cancel button clicked
                 return False
-            def_file = os.path.abspath(answer[0])
-            tool.set_def_path(def_file)
+            def_path = os.path.abspath(answer[0])
+            tool = self._make_tool_specification(def_path)
+            if not tool:
+                return False
             self._toolbox.add_specification(tool)
-        # Save path of main program file relative to definition file in case they differ
-        def_path = os.path.dirname(def_file)
-        if def_path != self.program_path:
-            self.definition["includes_main_path"] = os.path.relpath(self.program_path, def_path)
         # Save file descriptor
-        with open(def_file, "w") as fp:
+        with open(def_path, "w") as fp:
             try:
                 json.dump(self.definition, fp, indent=4)
             except ValueError:
                 self.statusbar.showMessage("Error saving file", 3000)
-                self._toolbox.msg_error.emit("Saving Tool specification file failed. Path:{0}".format(def_file))
+                self._toolbox.msg_error.emit("Saving Tool specification file failed. Path:{0}".format(def_path))
                 return False
         return True
 

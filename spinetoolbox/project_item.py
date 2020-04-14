@@ -368,6 +368,19 @@ class ProjectItemSpecification(MetaObject):
         """
         super().__init__(name, description)
         self.category = category
+        self.def_file_path = ""  # specification's JSON file path
+
+    def set_def_path(self, path):
+        """Sets the file path for this tool specification.
+
+        Args:
+            path (str): Absolute path to the specification file.
+        """
+        self.def_file_path = path
+
+    def get_def_path(self):
+        """Returns tool specification file path."""
+        return self.def_file_path
 
 
 class ProjectItemResource:
