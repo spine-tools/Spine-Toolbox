@@ -23,9 +23,9 @@ import json
 from PySide2.QtGui import QDesktopServices, QStandardItemModel, QStandardItem
 from PySide2.QtWidgets import QWidget, QStatusBar, QInputDialog, QFileDialog, QFileIconProvider, QMessageBox, QMenu
 from PySide2.QtCore import Slot, Qt, QUrl, QFileInfo
-from spinetoolbox.config import STATUSBAR_SS, TREEVIEW_HEADER_SS, TOOL_TYPES, REQUIRED_KEYS
+from spinetoolbox.config import STATUSBAR_SS, TREEVIEW_HEADER_SS
 from spinetoolbox.helpers import busy_effect
-from ..tool_specifications import CmdlineTag, CMDLINE_TAG_EDGE, ToolSpecification
+from ..tool_specifications import CmdlineTag, TOOL_TYPES, REQUIRED_KEYS, CMDLINE_TAG_EDGE, ToolSpecification
 from .custom_menus import AddIncludesPopupMenu, CreateMainProgramPopupMenu
 
 
@@ -546,6 +546,7 @@ class ToolSpecificationWidget(QWidget):
         row = self._toolbox.specification_model.specification_row(self.definition["name"])
         if row >= 0:
             old_tool = self._toolbox.specification_model.specification(row)
+            # FIXME: This test doesn't work because some attributes are set() and self.definiton has lists
             if all(old_tool.__dict__[k] == v for k, v in self.definition.items()):
                 # Nothing changed
                 return True

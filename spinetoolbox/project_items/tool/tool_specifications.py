@@ -21,9 +21,23 @@ import logging
 import os
 import re
 from spinetoolbox.project_item import ProjectItemSpecification
-from spinetoolbox.config import REQUIRED_KEYS, OPTIONAL_KEYS, LIST_REQUIRED_KEYS  # FIXME: Import this from manager
 from spinetoolbox.tool_instance import GAMSToolInstance, JuliaToolInstance, PythonToolInstance, ExecutableToolInstance
 
+# Tool types
+TOOL_TYPES = ["Julia", "Python", "GAMS", "Executable"]
+
+# Required and optional keywords for Tool specification dictionaries
+REQUIRED_KEYS = ['name', 'tooltype', 'includes']
+OPTIONAL_KEYS = [
+    'description',
+    'short_name',
+    'inputfiles',
+    'inputfiles_opt',
+    'outputfiles',
+    'cmdline_args',
+    'execute_in_work',
+]
+LIST_REQUIRED_KEYS = ['includes', 'inputfiles', 'inputfiles_opt', 'outputfiles']  # These should be lists
 
 CMDLINE_TAG_EDGE = "@@"
 

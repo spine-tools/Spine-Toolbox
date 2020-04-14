@@ -66,21 +66,6 @@ JULIA_EXECUTABLE = _executable("julia")
 # Python
 PYTHON_EXECUTABLE = _executable("python" if _on_windows else "python3")
 
-# Tool types
-TOOL_TYPES = ["Julia", "Python", "GAMS", "Executable"]
-
-# Required and optional keywords for Tool specification dictionaries
-REQUIRED_KEYS = ['name', 'tooltype', 'includes']
-OPTIONAL_KEYS = [
-    'description',
-    'short_name',
-    'inputfiles',
-    'inputfiles_opt',
-    'outputfiles',
-    'cmdline_args',
-    'execute_in_work',
-]
-LIST_REQUIRED_KEYS = ['includes', 'inputfiles', 'inputfiles_opt', 'outputfiles']  # These should be lists
 
 # Julia REPL constants
 JL_REPL_TIME_TO_DEAD = 5.0
