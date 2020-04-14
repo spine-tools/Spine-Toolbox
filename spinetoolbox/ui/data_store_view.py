@@ -10,10 +10,10 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-# Form implementation generated from reading ui file '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/data_store_view.ui',
-# licensing of '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/data_store_view.ui' applies.
+# Form implementation generated from reading ui file 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\data_store_view.ui',
+# licensing of 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\data_store_view.ui' applies.
 #
-# Created: Mon Apr  6 17:13:39 2020
+# Created: Tue Apr 14 12:29:40 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -663,9 +663,9 @@ class Ui_MainWindow(object):
         self.actionSaveAsTemplate.setText(QtWidgets.QApplication.translate("MainWindow", "Save as template...", None, -1))
         self.actionLoadTemplate.setText(QtWidgets.QApplication.translate("MainWindow", "Load template...", None, -1))
 
-from spinetoolbox.widgets.custom_qgraphicsviews import GraphQGraphicsView
-from spinetoolbox.widgets.custom_qtreeview import CopyTreeView, StickySelectionEntityTreeView, EntityTreeView
-from spinetoolbox.widgets.custom_qlistview import DragListView
-from spinetoolbox.widgets.custom_qtableview import PivotTableView, AutoFilterCopyPasteTableView
+from spinetoolbox.widgets.custom_qtableview import AutoFilterCopyPasteTableView, PivotTableView
 from spinetoolbox.widgets.frozen_table_view import FrozenTableView
+from spinetoolbox.widgets.custom_qgraphicsviews import GraphQGraphicsView
+from spinetoolbox.widgets.custom_qtreeview import EntityTreeView, StickySelectionEntityTreeView, CopyTreeView
+from spinetoolbox.widgets.custom_qlistview import DragListView
 from spinetoolbox import resources_icons_rc
