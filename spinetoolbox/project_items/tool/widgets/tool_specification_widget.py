@@ -25,7 +25,7 @@ from PySide2.QtWidgets import QWidget, QStatusBar, QInputDialog, QFileDialog, QF
 from PySide2.QtCore import Slot, Qt, QUrl, QFileInfo
 from spinetoolbox.config import STATUSBAR_SS, TREEVIEW_HEADER_SS, TOOL_TYPES, REQUIRED_KEYS
 from spinetoolbox.helpers import busy_effect
-from ..tool_specifications import CmdlineTag, CMDLINE_TAG_EDGE, ToolSpecification, load_tool_specification
+from ..tool_specifications import CmdlineTag, CMDLINE_TAG_EDGE, ToolSpecification
 from .custom_menus import AddIncludesPopupMenu, CreateMainProgramPopupMenu
 
 
@@ -503,9 +503,9 @@ class ToolSpecificationWidget(QWidget):
         self.definition["execute_in_work"] = self.ui.checkBox_execute_in_work.isChecked()
         self.definition["includes"] = [file_path]
         self.definition["includes"] += [i.text() for i in self.sourcefiles_model.findItems("", flags)]
-        self.definition["inputfiles"] = {i.text() for i in self.inputfiles_model.findItems("", flags)}
-        self.definition["inputfiles_opt"] = {i.text() for i in self.inputfiles_opt_model.findItems("", flags)}
-        self.definition["outputfiles"] = {i.text() for i in self.outputfiles_model.findItems("", flags)}
+        self.definition["inputfiles"] = [i.text() for i in self.inputfiles_model.findItems("", flags)]
+        self.definition["inputfiles_opt"] = [i.text() for i in self.inputfiles_opt_model.findItems("", flags)]
+        self.definition["outputfiles"] = [i.text() for i in self.outputfiles_model.findItems("", flags)]
         # Strip whitespace from args before saving it to JSON
         self.definition["cmdline_args"] = ToolSpecification.split_cmdline_args(self.ui.lineEdit_args.text())
         for k in REQUIRED_KEYS:
@@ -528,7 +528,8 @@ class ToolSpecificationWidget(QWidget):
             ToolSpecification
         """
         self.definition["includes_main_path"] = os.path.relpath(self.program_path, os.path.dirname(def_path))
-        tool = load_tool_specification(self._toolbox, self.definition, def_path, self._toolbox.qsettings, self._toolbox)
+        category_item = self._toolbox.category_items["Tools"]
+        tool = category_item.load_specification(self.definition, def_path)
         if not tool:
             self.statusbar.showMessage("Adding Tool specification failed", 3000)
         return tool

@@ -23,7 +23,7 @@ from ..shared.import_export_animation import ImportExportAnimation
 
 
 class ExporterIcon(ProjectItemIcon):
-    def __init__(self, toolbox, x, y, w, h, name):
+    def __init__(self, toolbox, x, y, w, h, project_item, icon):
         """Exporter icon for the Design View.
 
         Args:
@@ -32,18 +32,11 @@ class ExporterIcon(ProjectItemIcon):
             y (float): Icon y coordinate
             w (float): Width of master icon
             h (float): Height of master icon
-            name (str): Item name
+            project_item (ProjectItem): Item
+            icon (str): icon resource path
         """
         super().__init__(
-            toolbox,
-            x,
-            y,
-            w,
-            h,
-            name,
-            ":/icons/project_item_icons/database-export.svg",
-            icon_color=QColor("#990000"),
-            background_color=QColor("#ffcccc"),
+            toolbox, x, y, w, h, project_item, icon, icon_color=QColor("#990000"), background_color=QColor("#ffcccc")
         )
         src_item = QGraphicsTextItem("\uf1c0")
         src_item.setDefaultTextColor("#cc33ff")

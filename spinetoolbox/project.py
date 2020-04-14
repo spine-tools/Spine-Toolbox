@@ -250,12 +250,11 @@ class SpineToolboxProject(MetaObject):
             self._logger.msg_error.emit("Category {0} not found".format(category_name))
             return None, []
         category_item = self._project_item_model.item(category_ind)
-        item_maker = category_item.item_maker()
         project_tree_items = []
         for item_dict in items:
             try:
-                item = item_maker(**item_dict, toolbox=self._toolbox, project=self, logger=self._logger)
-                project_tree_item = LeafProjectTreeItem(item, self._toolbox)
+                project_item = category_item.item_maker(self._toolbox, self, self._logger, **item_dict)
+                project_tree_item = LeafProjectTreeItem(project_item, self._toolbox)
                 project_tree_items.append(project_tree_item)
             except TypeError:
                 self._logger.msg_error.emit(

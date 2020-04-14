@@ -17,17 +17,23 @@ Contains a class for storing Tool specifications.
 """
 
 from PySide2.QtCore import Qt, QModelIndex, QAbstractListModel, QSortFilterProxyModel
-from PySide2.QtGui import QStandardItem, QStandardItemModel
+from PySide2.QtGui import QStandardItem, QStandardItemModel, QIcon
 
 
 class ProjectItemPaletteModel(QStandardItemModel):
     """A model for listing project items in the Item Palette view."""
 
-    def add_item(self, item_type, category, icon):
-        """Add item to model."""
+    def add_item(self, category_item):
+        """Add item to model.
+
+        Args:
+            category_item (CategoryProjectTreeItem)
+        """
+        icon = QIcon(category_item.icon())
+        item_type = category_item.item_type()
         new_item = QStandardItem("")
         new_item.setData(icon, Qt.DecorationRole)
-        new_item.setData(category, Qt.UserRole + 1)
+        new_item.setData(category_item.name, Qt.UserRole + 1)
         new_item.setToolTip(
             f"<p>Drag-and-drop this icon into the Design View to create a new <b>{item_type}</b> item.</p>"
         )

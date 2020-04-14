@@ -152,7 +152,7 @@ class ProjectUpgrader:
         # Get all item names to a list from old project dict. Needed for upgrading connections.
         item_names = list()
         for category_name in old["objects"]:
-            if category_name not in self._toolbox.categories:
+            if category_name not in self._toolbox.category_items:
                 continue
             for item_name, item_dict in old["objects"][category_name].items():
                 item_names.append(item_name)
@@ -167,12 +167,12 @@ class ProjectUpgrader:
         # Upgrade objects dict
         new_objects = dict(old["objects"])
         for category_name in old["objects"]:
-            if category_name not in self._toolbox.categories:
+            if category_name not in self._toolbox.category_items:
                 self._toolbox.msg_error.emit(
                     "Upgrading project item's to category '{}' failed. Unknown category.".format(category_name)
                 )
                 continue
-            item_class = self._toolbox.categories[category_name]["item_maker"]
+            item_class = self._toolbox.category_items[category_name].item_maker
             for item_name, item_dict in old["objects"][category_name].items():
                 new_item_dict = item_class.upgrade_from_no_version_to_version_1(item_name, item_dict, old_project_dir)
                 new_objects[category_name][item_name] = new_item_dict

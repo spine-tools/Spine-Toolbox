@@ -23,7 +23,6 @@ from spinetoolbox.widgets.custom_menus import (
     ItemSpecificationMenu,
     CustomPopupMenu,
 )
-from ..tool_specifications import open_main_program_file
 
 
 class ToolPropertiesContextMenu(CustomContextMenu):
@@ -84,7 +83,7 @@ class ToolSpecificationMenu(ItemSpecificationMenu):
     @Slot()
     def open_main_program_file(self):
         spec = self.parent().specification_model.specification(self.index.row())
-        open_main_program_file(spec, self.parent())
+        self.parent().category_items["Tools"].open_main_program_file(spec)
 
     @Slot()
     def open_main_program_dir(self):

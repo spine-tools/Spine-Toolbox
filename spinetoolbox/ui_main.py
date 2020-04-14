@@ -77,7 +77,7 @@ from .helpers import (
     deserialize_path,
 )
 from .project_upgrader import ProjectUpgrader
-from .project_tree_item import CategoryProjectTreeItem, LeafProjectTreeItem, RootProjectTreeItem
+from .project_tree_item import LeafProjectTreeItem, RootProjectTreeItem
 from .project_items import data_store, data_connection, exporter, tool, view, importer
 from .project_commands import AddSpecificationCommand, RemoveSpecificationCommand, UpdateSpecificationCommand
 from .configuration_assistants import spine_model
@@ -122,7 +122,7 @@ class ToolboxUI(QMainWindow):
         self.setStyleSheet(MAINWINDOW_SS)
         # Class variables
         self.undo_stack = QUndoStack(self)
-        self.categories = dict()  # Holds category data parsed from project item plugins
+        self.category_items = dict()  # maps category names to `CategoryProjectTreeItem`s
         self._project = None
         self.project_item_palette_model = None
         self.project_item_model = None
@@ -210,8 +210,6 @@ class ToolboxUI(QMainWindow):
         self.show_properties_tabbar.triggered.connect(self.toggle_properties_tabbar_visibility)
         self.show_supported_img_formats.triggered.connect(supported_img_formats)  # in helpers.py
         self.test_variable_push.triggered.connect(self.python_repl.test_push_vars)
-        # Tool specifications tab
-        self.add_specification_popup_menu = None
         # Context-menus
         self.ui.treeView_project.customContextMenuRequested.connect(self.show_item_context_menu)
         # Zoom actions
@@ -234,47 +232,21 @@ class ToolboxUI(QMainWindow):
         """Collects attributes from project item modules into a dict.
         This dict is then used to perform all project item related tasks.
         """
-        self.categories.clear()
-        for module in (data_store, data_connection, tool, view, importer, exporter):
-            item_rank = module.item_rank
-            item_category = module.item_category
-            item_type = module.item_type
-            item_icon = module.item_icon
-            item_maker = module.item_maker
-            icon_maker = module.icon_maker
-            add_form_maker = module.add_form_maker
-            specification_form_maker = getattr(module, "specification_form_maker", None)
-            specification_menu_maker = getattr(module, "specification_menu_maker", None)
-            specification_loader = getattr(module, "specification_loader", None)
-            properties_widget = module.properties_widget_maker(self)
-            properties_ui = properties_widget.ui
-            self.categories[item_category] = dict(
-                item_rank=item_rank,
-                item_type=item_type,
-                item_icon=item_icon,
-                item_maker=item_maker,
-                icon_maker=icon_maker,
-                add_form_maker=add_form_maker,
-                properties_ui=properties_ui,
-                specification_form_maker=specification_form_maker,
-                specification_menu_maker=specification_menu_maker,
-                specification_loader=specification_loader,
-            )
-        # Sort categories by rank
-        self.categories = dict(sorted(self.categories.items(), key=lambda kv: kv[1]["item_rank"]))
-        # Create actions for Edit menu, and draggable widgets to toolbar
-        category_icon = list()
-        for item_category, item_dict in self.categories.items():
-            item_icon = item_dict["item_icon"]
-            item_type = item_dict["item_type"]
-            category_icon.append((item_type, item_category, item_icon))
-        self.init_project_item_palette_model(category_icon)
+        category_items = sorted(
+            (
+                module.category_maker(self, self._qsettings, self)
+                for module in (data_store, data_connection, tool, view, importer, exporter)
+            ),
+            key=lambda category: category.rank(),
+        )
+        self.category_items = {item.name: item for item in category_items}
+        self.init_project_item_palette_model()
         self.add_specification_popup_menu = AddSpecificationPopupMenu(self)
 
-    def init_project_item_palette_model(self, category_icon):
+    def init_project_item_palette_model(self):
         self.project_item_palette_model = ProjectItemPaletteModel(self)
-        for item_type, category, icon in category_icon:
-            self.project_item_palette_model.add_item(item_type, category, QIcon(icon))
+        for category_item in self.category_items.values():
+            self.project_item_palette_model.add_item(category_item)
 
     def parse_assistant_modules(self):
         """Makes actions to run assistants from assistant modules.
@@ -661,12 +633,7 @@ class ToolboxUI(QMainWindow):
         add them to the model."""
         root_item = RootProjectTreeItem()
         self.project_item_model = ProjectItemModel(self, root=root_item)
-        for category, category_dict in self.categories.items():
-            item_maker = category_dict["item_maker"]
-            icon_maker = category_dict["icon_maker"]
-            add_form_maker = category_dict["add_form_maker"]
-            properties_ui = category_dict["properties_ui"]
-            category_item = CategoryProjectTreeItem(category, "", item_maker, icon_maker, add_form_maker, properties_ui)
+        for category_item in self.category_items.values():
             self.project_item_model.insert_item(category_item)
         self.ui.treeView_project.setModel(self.project_item_model)
         self.ui.treeView_project.header().hide()
@@ -678,10 +645,13 @@ class ToolboxUI(QMainWindow):
         Args:
             specification_paths (list): List of tool definition file paths used in this project
         """
-        icons = {category: QIcon(data["item_icon"]) for category, data in self.categories.items()}
-        self.specification_model = ProjectItemSpecPaletteModel(icons)
+
+        category_icons = {
+            category_item.name: QIcon(category_item.icon()) for category_item in self.category_items.values()
+        }
+        self.specification_model = ProjectItemSpecPaletteModel(category_icons)
         self.category_filtered_spec_models = {
-            category: CategoryFilteredSpecPaletteModel(category) for category in self.categories
+            category: CategoryFilteredSpecPaletteModel(category) for category in category_icons
         }
         for model in self.category_filtered_spec_models.values():
             model.setSourceModel(self.specification_model)
@@ -745,11 +715,11 @@ class ToolboxUI(QMainWindow):
                 try:
                     definition = json.load(fp)
                 except ValueError:
-                    self._logger.msg_error.emit("Item specification file not valid")
+                    self.msg_error.emit("Item specification file not valid")
                     logging.exception("Loading JSON data failed")
                     return None
         except FileNotFoundError:
-            self._logger.msg_error.emit("Specification file <b>{0}</b> does not exist".format(def_path))
+            self.msg_error.emit("Specification file <b>{0}</b> does not exist".format(def_path))
             return None
         return self.load_specification_from_dict(definition, def_path)
 
@@ -764,10 +734,10 @@ class ToolboxUI(QMainWindow):
             ToolSpecification, NoneType
         """
         category = definition.get("category", "Tools")  # NOTE: Default to Tools so tool-specs work out of the box
-        specification_loader = self.categories[category]["specification_loader"]
-        if not specification_loader:
+        category_item = self.category_items[category]
+        if not category_item.supports_specifications():
             return
-        return specification_loader(self, definition, def_path, self.qsettings, self)
+        return category_item.load_specification(definition, def_path)
 
     def restore_ui(self):
         """Restore UI state from previous session."""
@@ -1095,11 +1065,11 @@ class ToolboxUI(QMainWindow):
         if not ind.isValid():
             return
         spec = self.specification_model.specification(ind.row())
-        specification_menu_maker = self.categories[spec.category]["specification_menu_maker"]
-        if not specification_menu_maker:
+        category_item = self.category_items[spec.category]
+        if not category_item.supports_specifications():
             return
         global_pos = self.main_toolbar.project_item_spec_list_view.viewport().mapToGlobal(pos)
-        self.specification_context_menu = specification_menu_maker(self, ind)
+        self.specification_context_menu = category_item.make_specification_menu(ind)
         self.specification_context_menu.exec_(global_pos)
         self.specification_context_menu.deleteLater()
         self.specification_context_menu = None
@@ -1319,8 +1289,8 @@ class ToolboxUI(QMainWindow):
         if not category_ind:
             self.msg_error.emit("Category {0} not found".format(item_category))
             return
-        category = self.project_item_model.item(category_ind)
-        self.add_project_item_form = category._add_form_maker(self, x, y, spec)
+        category_item = self.project_item_model.item(category_ind)
+        self.add_project_item_form = category_item.add_form_maker(self, x, y, spec)
         self.add_project_item_form.show()
 
     @Slot()
@@ -1329,8 +1299,10 @@ class ToolboxUI(QMainWindow):
         if not self._project:
             self.msg.emit("Please open or create a project first")
             return
-        specification_form_maker = self.categories[category]["specification_form_maker"]
-        form = specification_form_maker(self, specification)
+        category_item = self.category_items[category]
+        if not category_item.supports_specifications():
+            return
+        form = category_item.make_specification_form(specification)
         form.show()
 
     @Slot()

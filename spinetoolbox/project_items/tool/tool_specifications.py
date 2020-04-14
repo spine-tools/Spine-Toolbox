@@ -20,76 +20,9 @@ from collections import ChainMap, OrderedDict
 import logging
 import os
 import re
-from PySide2.QtCore import QUrl
-from PySide2.QtGui import QDesktopServices
 from spinetoolbox.project_item import ProjectItemSpecification
-from spinetoolbox.config import REQUIRED_KEYS, OPTIONAL_KEYS, LIST_REQUIRED_KEYS
+from spinetoolbox.config import REQUIRED_KEYS, OPTIONAL_KEYS, LIST_REQUIRED_KEYS  # FIXME: Import this from manager
 from spinetoolbox.tool_instance import GAMSToolInstance, JuliaToolInstance, PythonToolInstance, ExecutableToolInstance
-
-
-def load_tool_specification(toolbox, definition, def_path, settings, logger):
-    # Path to main program relative to definition file
-    includes_main_path = definition.get("includes_main_path", ".")
-    path = os.path.normpath(os.path.join(os.path.dirname(def_path), includes_main_path))
-    try:
-        _tooltype = definition["tooltype"].lower()
-    except KeyError:
-        logger.msg_error.emit(
-            "No tool type defined in tool definition file. Supported types "
-            "are 'python', 'gams', 'julia' and 'executable'"
-        )
-        return None
-    spec = _do_load_tool_specification(toolbox, _tooltype, path, definition, settings, logger)
-    if not spec:
-        return None
-    spec.set_def_path(def_path)
-    return spec
-
-
-def _do_load_tool_specification(toolbox, _tooltype, path, definition, settings, logger):
-    if _tooltype == "julia":
-        return JuliaTool.load(path, definition, settings, toolbox.julia_repl, logger)
-    if _tooltype == "python":
-        return PythonTool.load(path, definition, settings, toolbox.python_repl, logger)
-    if _tooltype == "gams":
-        return GAMSTool.load(path, definition, settings, logger)
-    if _tooltype == "executable":
-        return ExecutableTool.load(path, definition, settings, logger)
-    logger.msg_warning.emit("Tool type <b>{}</b> not available".format(_tooltype))
-    return None
-
-
-def open_main_program_file(spec, logger):
-    """Open the tool specification's main program file in the default editor.
-    Args:
-        index (QModelIndex): Index of the item
-    """
-    file_path = os.path.join(spec.path, spec.includes[0])
-    # Check if file exists first. openUrl may return True even if file doesn't exist
-    # TODO: this could still fail if the file is deleted or renamed right after the check
-    if not os.path.isfile(file_path):
-        logger.msg_error.emit("Tool main program file <b>{0}</b> not found.".format(file_path))
-        return
-    ext = os.path.splitext(os.path.split(file_path)[1])[1]
-    if ext in [".bat", ".exe"]:
-        logger.msg_warning.emit(
-            "Sorry, opening files with extension <b>{0}</b> not supported. "
-            "Please open the file manually.".format(ext)
-        )
-        return
-    main_program_url = "file:///" + file_path
-    # Open Tool specification main program file in editor
-    # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
-    res = QDesktopServices.openUrl(QUrl(main_program_url, QUrl.TolerantMode))
-    if not res:
-        filename, file_extension = os.path.splitext(file_path)
-        logger.msg_error.emit(
-            "Unable to open Tool specification main program file {0}. "
-            "Make sure that <b>{1}</b> "
-            "files are associated with an editor. E.g. on Windows "
-            "10, go to Control Panel -> Default Programs to do this.".format(filename, file_extension)
-        )
-    return
 
 
 CMDLINE_TAG_EDGE = "@@"

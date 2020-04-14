@@ -23,7 +23,7 @@ from PySide2.QtWidgets import QFileIconProvider
 from spinetoolbox.project_item import ProjectItem, ProjectItemResource
 from spinetoolbox.config import TOOL_OUTPUT_DIR
 from spinetoolbox.project_commands import UpdateToolExecuteInWorkCommand, UpdateToolCmdLineArgsCommand
-from .tool_specifications import ToolSpecification, open_main_program_file
+from .tool_specifications import ToolSpecification  # , open_main_program_file
 from .widgets.custom_menus import ToolContextMenu, ToolSpecificationMenu
 from .tool_executable import ToolExecutable
 from .utils import flatten_file_path_duplicates, find_file, find_last_output_files, is_pattern
@@ -31,18 +31,18 @@ from .utils import flatten_file_path_duplicates, find_file, find_last_output_fil
 
 class Tool(ProjectItem):
     def __init__(
-        self, name, description, x, y, toolbox, project, logger, tool="", execute_in_work=True, cmd_line_args=None
+        self, toolbox, project, logger, name, description, x, y, tool="", execute_in_work=True, cmd_line_args=None
     ):
         """Tool class.
 
         Args:
+            toolbox (ToolboxUI): QMainWindow instance
+            project (SpineToolboxProject): the project this item belongs to
+            logger (LoggerInterface): a logger instance
             name (str): Object name
             description (str): Object description
             x (float): Initial X coordinate of item icon
             y (float): Initial Y coordinate of item icon
-            toolbox (ToolboxUI): QMainWindow instance
-            project (SpineToolboxProject): the project this item belongs to
-            logger (LoggerInterface): a logger instance
             tool (str): Name of this Tool's Tool specification
             execute_in_work (bool): Execute associated Tool specification in work (True) or source directory (False)
             cmd_line_args (list): Tool command line arguments

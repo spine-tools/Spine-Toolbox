@@ -32,17 +32,17 @@ from .data_connection_executable import DataConnectionExecutable
 
 
 class DataConnection(ProjectItem):
-    def __init__(self, name, description, x, y, toolbox, project, logger, references=None):
+    def __init__(self, toolbox, project, logger, name, description, x, y, references=None):
         """Data Connection class.
 
         Args:
+            toolbox (ToolboxUI): QMainWindow instance
+            project (SpineToolboxProject): the project this item belongs to
+            logger (LoggerInterface): a logger instance
             name (str): Object name
             description (str): Object description
             x (float): Initial X coordinate of item icon
             y (float): Initial Y coordinate of item icon
-            toolbox (ToolboxUI): QMainWindow instance
-            project (SpineToolboxProject): the project this item belongs to
-            logger (LoggerInterface): a logger instance
             references (list): a list of file paths
         """
         super().__init__(name, description, x, y, project, logger)

@@ -149,29 +149,134 @@ class RootProjectTreeItem(BaseProjectTreeItem):
 class CategoryProjectTreeItem(BaseProjectTreeItem):
     """Class for category project tree items."""
 
-    def __init__(self, name, description, item_maker, icon_maker, add_form_maker, properties_ui):
+    def __init__(self, toolbox, settings, logger, name, description):
         """
         Args:
+            toolbox (ToolboxUI)
+            settings (QSettings)
+            logger (LoggerInterface)
             name (str): Category name
             description (str): Category description
-            item_maker (function): A function for creating project items in this category
-            icon_maker (function): A function for creating icons (QGraphicsItems) for project items in this category
-            add_form_maker (function): A function for creating the form to add project items to this category
-            properties_ui (object): An object holding the Item Properties UI
         """
         super().__init__(name, description)
-        self._item_maker = item_maker
-        self._icon_maker = icon_maker
-        self._add_form_maker = add_form_maker
-        self._properties_ui = properties_ui
+        self._toolbox = toolbox
+        self._settings = settings
+        self._logger = logger
+        self._properties_ui = self.make_properties_ui()
 
     def flags(self):
         """Returns the item flags."""
         return Qt.ItemIsEnabled
 
+    def make_properties_ui(self):
+        raise NotImplementedError()
+
+    @staticmethod
+    def rank():
+        """
+        Returns the category rank
+
+        Returns:
+            int
+        """
+        raise NotImplementedError()
+
+    @staticmethod
+    def icon():
+        """
+        Returns the category icon resource path.
+
+        Returns:
+            str
+        """
+        raise NotImplementedError()
+
+    @staticmethod
+    def item_type():
+        """
+        Returns the category item type.
+
+        Returns:
+            str
+        """
+        raise NotImplementedError()
+
+    @property
     def item_maker(self):
-        """Returns the item maker method."""
-        return self._item_maker
+        """
+        Returns the ProjectItem subclass.
+
+        Returns:
+            class
+        """
+        raise NotImplementedError()
+
+    @property
+    def icon_maker(self):
+        """
+        Returns the ProjectItemIcon subclass.
+
+        Returns:
+            class
+        """
+        raise NotImplementedError()
+
+    @property
+    def add_form_maker(self):
+        """
+        Returns the AddProjectItem subclass.
+
+        Returns:
+            class
+        """
+        raise NotImplementedError()
+
+    @staticmethod
+    def supports_specifications():
+        """
+        Returns whether or not this category supports specs.
+
+        Returns:
+            bool
+        """
+        return False
+
+    def make_specification_form(self, spec):
+        """
+        Returns a form to edit the given spec.
+
+        Args:
+            spec (ProjectItemSpecification)
+
+        Returns:
+            QWidget
+        """
+        raise NotImplementedError()
+
+    def make_specification_menu(self, ind):
+        """
+        Returns a menu for the given index.
+
+        Args:
+            ind (QModelIndex): The index in the ProjectItemSpecPaletteModel
+
+        Returns:
+            QMenu
+        """
+        raise NotImplementedError()
+
+    def load_specification(self, definition, def_path):
+        """
+        Loads and returns a specification from the given definition.
+
+        Args:
+            definition (dict): The definition dictionary.
+            def_path (str): Path to definition .json file
+
+        Returns:
+            ProjectItemSpecification
+        """
+        raise NotImplementedError()
 
     def add_child(self, child_item):
         """Adds given project tree item as the child of this category item. New item is added as the last item.
@@ -192,7 +297,9 @@ class CategoryProjectTreeItem(BaseProjectTreeItem):
         if icon is not None:
             icon.activate()
         else:
-            icon = self._icon_maker(child_item.toolbox, project_item.x - 35, project_item.y - 35, 70, 70, project_item)
+            icon = self.icon_maker(
+                self._toolbox, project_item.x - 35, project_item.y - 35, 70, 70, project_item, self.icon()
+            )
             project_item.set_icon(icon)
         project_item.set_properties_ui(self._properties_ui)
         project_item.create_data_dir()

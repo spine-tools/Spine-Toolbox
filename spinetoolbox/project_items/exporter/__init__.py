@@ -16,12 +16,4 @@ Exporter project item plugin.
 :date:   25.9.2019
 """
 
-from .exporter import Exporter as item_maker
-from .exporter_icon import ExporterIcon as icon_maker
-from .widgets.add_exporter_widget import AddExporterWidget as add_form_maker
-from .widgets.exporter_properties import ExporterProperties as properties_widget_maker
-
-item_rank = 5
-item_category = item_maker.category()
-item_type = item_maker.item_type()
-item_icon = ":/icons/project_item_icons/database-export.svg"
+from .exporter_category import ExporterCategory as category_maker
