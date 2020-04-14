@@ -27,7 +27,7 @@ from spinetoolbox.config import REQUIRED_KEYS, OPTIONAL_KEYS, LIST_REQUIRED_KEYS
 from spinetoolbox.tool_instance import GAMSToolInstance, JuliaToolInstance, PythonToolInstance, ExecutableToolInstance
 
 
-def load_tool_specification_from_dict(toolbox, definition, def_path, settings, logger):
+def load_tool_specification(toolbox, definition, def_path, settings, logger):
     # Path to main program relative to definition file
     includes_main_path = definition.get("includes_main_path", ".")
     path = os.path.normpath(os.path.join(os.path.dirname(def_path), includes_main_path))

@@ -372,11 +372,12 @@ class AddSpecificationPopupMenu(CustomPopupMenu):
         self.addSeparator()
         for category, data in parent.categories.items():
             spec_form_maker = data["specification_form_maker"]
+            if spec_form_maker is None:
+                continue
             item_type = data["item_type"]
             self.add_action(
                 f"Create {item_type} Specification...",
                 lambda checked=False, category=category: parent.show_specification_form(category, specification=None),
-                enabled=spec_form_maker is not None,
             )
 
 

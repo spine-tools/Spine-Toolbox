@@ -25,7 +25,7 @@ from PySide2.QtWidgets import QWidget, QStatusBar, QInputDialog, QFileDialog, QF
 from PySide2.QtCore import Slot, Qt, QUrl, QFileInfo
 from spinetoolbox.config import STATUSBAR_SS, TREEVIEW_HEADER_SS, TOOL_TYPES, REQUIRED_KEYS
 from spinetoolbox.helpers import busy_effect
-from ..tool_specifications import CmdlineTag, CMDLINE_TAG_EDGE, ToolSpecification, load_tool_specification_from_dict
+from ..tool_specifications import CmdlineTag, CMDLINE_TAG_EDGE, ToolSpecification, load_tool_specification
 from .custom_menus import AddIncludesPopupMenu, CreateMainProgramPopupMenu
 
 
@@ -528,9 +528,7 @@ class ToolSpecificationWidget(QWidget):
         """
         # Load tool specification
         path = self.program_path
-        tool = load_tool_specification_from_dict(
-            self._toolbox, self.definition, path, self._toolbox.qsettings, self._toolbox
-        )
+        tool = load_tool_specification(self._toolbox, self.definition, path, self._toolbox.qsettings, self._toolbox)
         if not tool:
             self.statusbar.showMessage("Adding Tool specification failed", 3000)
             return False

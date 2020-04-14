@@ -143,7 +143,7 @@ class ProjectItem(MetaObject):
             self._sigs = self.make_signal_handler_dict()
 
     def specification(self):
-        """Returns the specification for this item. Reimplement in subclasses that can have specs (e.g., Tool)."""
+        """Returns the specification for this item."""
         return self._specification
 
     def set_specification(self, specification):

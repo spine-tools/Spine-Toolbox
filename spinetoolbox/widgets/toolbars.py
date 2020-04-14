@@ -69,16 +69,14 @@ class MainToolBar(QToolBar):
         remove_spec_icon = QIcon(":/icons/wrench_minus.svg").pixmap(icon_size, icon_size)
         remove_spec.setIcon(remove_spec_icon)
         remove_spec.clicked.connect(self._toolbox.remove_selected_specification)
-        remove_spec.setToolTip(
-            "<html><head/><body><p>Remove (selected) Tool specification from project</p></body></html>"
-        )
+        remove_spec.setToolTip("<html><head/><body><p>Remove selected specific item from the project</p></body></html>")
         self.addWidget(remove_spec)
         add_spec = QToolButton(self)
         add_spec_icon = QIcon(":/icons/wrench_plus.svg").pixmap(icon_size, icon_size)
         add_spec.setIcon(add_spec_icon)
         add_spec.setMenu(self._toolbox.add_specification_popup_menu)
         add_spec.setPopupMode(QToolButton.InstantPopup)
-        add_spec.setToolTip("<html><head/><body><p>Add new Tool specification to the project</p></body></html>")
+        add_spec.setToolTip("<html><head/><body><p>Add new specific item to the project</p></body></html>")
         self.addWidget(add_spec)
 
     def add_execute_buttons(self):
