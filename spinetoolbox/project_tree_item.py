@@ -166,7 +166,7 @@ class CategoryProjectTreeItem(BaseProjectTreeItem):
     @staticmethod
     def rank():
         """
-        Returns the category rank
+        Returns the category rank.
 
         Returns:
             int
@@ -237,6 +237,8 @@ class CategoryProjectTreeItem(BaseProjectTreeItem):
     def supports_specifications():
         """
         Returns whether or not this category supports specs.
+        If the subclass implementation returns True, then it must also implement
+        ``specification_form_maker``, ``specification_menu_maker``, and  ``specification_loader``.
 
         Returns:
             bool
