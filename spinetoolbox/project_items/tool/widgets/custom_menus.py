@@ -83,7 +83,7 @@ class ToolSpecificationMenu(ItemSpecificationMenu):
     @Slot()
     def open_main_program_file(self):
         spec = self.parent().specification_model.specification(self.index.row())
-        self.parent().category_items["Tools"].open_main_program_file(spec)
+        spec.open_main_program_file()
 
     @Slot()
     def open_main_program_dir(self):

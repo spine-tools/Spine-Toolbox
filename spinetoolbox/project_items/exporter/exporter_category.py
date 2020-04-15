@@ -24,11 +24,8 @@ from .widgets.exporter_properties import ExporterProperties
 
 
 class ExporterCategory(CategoryProjectTreeItem):
-    def __init__(self, toolbox, settings, logger):
-        super().__init__(toolbox, settings, logger, "Exporters", "Some meaningful description.")
-
-    def make_properties_ui(self):
-        return ExporterProperties(self._toolbox).ui
+    def __init__(self, toolbox):
+        super().__init__(toolbox, "Exporters", "Some meaningful description.")
 
     @staticmethod
     def rank():
@@ -41,6 +38,10 @@ class ExporterCategory(CategoryProjectTreeItem):
     @staticmethod
     def item_type():
         return "Exporter"
+
+    @property
+    def properties_widget_maker(self):
+        return ExporterProperties
 
     @property
     def item_maker(self):

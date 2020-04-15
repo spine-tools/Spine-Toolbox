@@ -86,7 +86,7 @@ class ToolSpecificationWidget(QWidget):
         self.outputfiles = list(specification.outputfiles) if specification else list()
         self.def_file_path = specification.def_file_path if specification else None
         self.program_path = specification.path if specification else None
-        self.definition = dict()
+        self.definition = dict(category="Tools")
         # Get first item from sourcefiles list as the main program file
         try:
             self.main_program_file = self.sourcefiles.pop(0)
@@ -487,7 +487,6 @@ class ToolSpecificationWidget(QWidget):
             self.statusbar.showMessage("Tool type not selected", 3000)
             return
         self.definition["name"] = self.ui.lineEdit_name.text()
-        self.definition["category"] = "Tools"
         self.definition["description"] = self.ui.textEdit_description.toPlainText()
         self.definition["tooltype"] = self.ui.comboBox_tooltype.currentText().lower()
         flags = Qt.MatchContains
@@ -528,8 +527,7 @@ class ToolSpecificationWidget(QWidget):
             ToolSpecification
         """
         self.definition["includes_main_path"] = os.path.relpath(self.program_path, os.path.dirname(def_path))
-        category_item = self._toolbox.category_items["Tools"]
-        tool = category_item.load_specification(self.definition, def_path)
+        tool = self._toolbox.load_specification(self.definition, def_path)
         if not tool:
             self.statusbar.showMessage("Adding Tool specification failed", 3000)
         return tool

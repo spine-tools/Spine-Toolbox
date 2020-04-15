@@ -233,10 +233,7 @@ class ToolboxUI(QMainWindow):
         This dict is then used to perform all project item related tasks.
         """
         category_items = sorted(
-            (
-                module.category_maker(self, self._qsettings, self)
-                for module in (data_store, data_connection, tool, view, importer, exporter)
-            ),
+            (module.category_maker(self) for module in (data_store, data_connection, tool, view, importer, exporter)),
             key=lambda category: category.rank(),
         )
         self.category_items = {item.name: item for item in category_items}
@@ -721,9 +718,9 @@ class ToolboxUI(QMainWindow):
         except FileNotFoundError:
             self.msg_error.emit("Specification file <b>{0}</b> does not exist".format(def_path))
             return None
-        return self.load_specification_from_dict(definition, def_path)
+        return self.load_specification(definition, def_path)
 
-    def load_specification_from_dict(self, definition, def_path):
+    def load_specification(self, definition, def_path):
         """Returns a Tool specification from a definition dictionary.
 
         Args:
@@ -737,7 +734,7 @@ class ToolboxUI(QMainWindow):
         category_item = self.category_items[category]
         if not category_item.supports_specifications():
             return
-        return category_item.load_specification(definition, def_path)
+        return category_item.specification_loader(self, definition, def_path)
 
     def restore_ui(self):
         """Restore UI state from previous session."""
@@ -1069,7 +1066,7 @@ class ToolboxUI(QMainWindow):
         if not category_item.supports_specifications():
             return
         global_pos = self.main_toolbar.project_item_spec_list_view.viewport().mapToGlobal(pos)
-        self.specification_context_menu = category_item.make_specification_menu(ind)
+        self.specification_context_menu = category_item.specification_menu_maker(self, ind)
         self.specification_context_menu.exec_(global_pos)
         self.specification_context_menu.deleteLater()
         self.specification_context_menu = None
@@ -1302,7 +1299,7 @@ class ToolboxUI(QMainWindow):
         category_item = self.category_items[category]
         if not category_item.supports_specifications():
             return
-        form = category_item.make_specification_form(specification)
+        form = category_item.specification_form_maker(self, specification)
         form.show()
 
     @Slot()

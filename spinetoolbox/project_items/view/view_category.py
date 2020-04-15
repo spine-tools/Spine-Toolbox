@@ -24,11 +24,8 @@ from .widgets.add_view_widget import AddViewWidget
 
 
 class ViewCategory(CategoryProjectTreeItem):
-    def __init__(self, toolbox, settings, logger):
-        super().__init__(toolbox, settings, logger, "Views", "Some meaningful description.")
-
-    def make_properties_ui(self):
-        return ViewPropertiesWidget(self._toolbox).ui
+    def __init__(self, toolbox):
+        super().__init__(toolbox, "Views", "Some meaningful description.")
 
     @staticmethod
     def rank():
@@ -41,6 +38,10 @@ class ViewCategory(CategoryProjectTreeItem):
     @staticmethod
     def item_type():
         return "View"
+
+    @property
+    def properties_widget_maker(self):
+        return ViewPropertiesWidget
 
     @property
     def item_maker(self):

@@ -23,7 +23,7 @@ from PySide2.QtWidgets import QFileIconProvider
 from spinetoolbox.project_item import ProjectItem, ProjectItemResource
 from spinetoolbox.config import TOOL_OUTPUT_DIR
 from spinetoolbox.project_commands import UpdateToolExecuteInWorkCommand, UpdateToolCmdLineArgsCommand
-from .tool_specifications import ToolSpecification  # , open_main_program_file
+from .tool_specifications import ToolSpecification
 from .widgets.custom_menus import ToolContextMenu, ToolSpecificationMenu
 from .tool_executable import ToolExecutable
 from .utils import flatten_file_path_duplicates, find_file, find_last_output_files, is_pattern
@@ -229,12 +229,16 @@ class Tool(ProjectItem):
     @Slot()
     def edit_specification(self):
         """Open Tool specification editor for the Tool specification attached to this Tool."""
+        if not self.specification():
+            return
         index = self._toolbox.specification_model.specification_index(self.specification().name)
         self._toolbox.edit_specification(index)
 
     @Slot()
     def open_specification_file(self):
         """Open Tool specification file."""
+        if not self.specification():
+            return
         index = self._toolbox.specification_model.specification_index(self.specification().name)
         self._toolbox.open_specification_file(index)
 
@@ -243,7 +247,7 @@ class Tool(ProjectItem):
         """Open Tool specification main program file in an external text edit application."""
         if not self.specification():
             return
-        open_main_program_file(self.specification(), self._toolbox)
+        self.specification().open_main_program_file()
 
     @Slot()
     def open_main_directory(self):

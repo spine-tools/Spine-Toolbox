@@ -149,27 +149,19 @@ class RootProjectTreeItem(BaseProjectTreeItem):
 class CategoryProjectTreeItem(BaseProjectTreeItem):
     """Class for category project tree items."""
 
-    def __init__(self, toolbox, settings, logger, name, description):
+    def __init__(self, toolbox, name, description):
         """
         Args:
             toolbox (ToolboxUI)
-            settings (QSettings)
-            logger (LoggerInterface)
             name (str): Category name
             description (str): Category description
         """
         super().__init__(name, description)
-        self._toolbox = toolbox
-        self._settings = settings
-        self._logger = logger
-        self._properties_ui = self.make_properties_ui()
+        self._properties_ui = self.properties_widget_maker(toolbox).ui
 
     def flags(self):
         """Returns the item flags."""
         return Qt.ItemIsEnabled
-
-    def make_properties_ui(self):
-        raise NotImplementedError()
 
     @staticmethod
     def rank():
@@ -202,9 +194,19 @@ class CategoryProjectTreeItem(BaseProjectTreeItem):
         raise NotImplementedError()
 
     @property
+    def properties_widget_maker(self):
+        """
+        Returns a QWidget subclass to create the properties ui.
+
+        Returns:
+            class
+        """
+        raise NotImplementedError()
+
+    @property
     def item_maker(self):
         """
-        Returns the ProjectItem subclass.
+        Returns a ProjectItem subclass.
 
         Returns:
             class
@@ -214,7 +216,7 @@ class CategoryProjectTreeItem(BaseProjectTreeItem):
     @property
     def icon_maker(self):
         """
-        Returns the ProjectItemIcon subclass.
+        Returns a ProjectItemIcon subclass.
 
         Returns:
             class
@@ -224,7 +226,7 @@ class CategoryProjectTreeItem(BaseProjectTreeItem):
     @property
     def add_form_maker(self):
         """
-        Returns the AddProjectItem subclass.
+        Returns an AddProjectItem subclass.
 
         Returns:
             class
@@ -241,40 +243,32 @@ class CategoryProjectTreeItem(BaseProjectTreeItem):
         """
         return False
 
-    def make_specification_form(self, spec):
+    @property
+    def specification_form_maker(self):
         """
-        Returns a form to edit the given spec.
-
-        Args:
-            spec (ProjectItemSpecification)
+        Returns a QWidget subclass to create and edit specifications.
 
         Returns:
-            QWidget
+            class
         """
         raise NotImplementedError()
 
-    def make_specification_menu(self, ind):
+    def specification_menu_maker(self):
         """
-        Returns a menu for the given index.
-
-        Args:
-            ind (QModelIndex): The index in the ProjectItemSpecPaletteModel
+        Returns an ItemSpecificationMenu subclass.
 
         Returns:
-            QMenu
+            class
         """
         raise NotImplementedError()
 
-    def load_specification(self, definition, def_path):
+    @property
+    def specification_loader(self):
         """
-        Loads and returns a specification from the given definition.
-
-        Args:
-            definition (dict): The definition dictionary.
-            def_path (str): Path to definition .json file
+        Returns a function to load specifications.
 
         Returns:
-            ProjectItemSpecification
+            class
         """
         raise NotImplementedError()
 
@@ -298,7 +292,7 @@ class CategoryProjectTreeItem(BaseProjectTreeItem):
             icon.activate()
         else:
             icon = self.icon_maker(
-                self._toolbox, project_item.x - 35, project_item.y - 35, 70, 70, project_item, self.icon()
+                child_item.toolbox, project_item.x - 35, project_item.y - 35, 70, 70, project_item, self.icon()
             )
             project_item.set_icon(icon)
         project_item.set_properties_ui(self._properties_ui)

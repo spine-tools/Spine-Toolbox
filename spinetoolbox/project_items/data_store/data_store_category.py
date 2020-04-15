@@ -24,11 +24,8 @@ from .widgets.add_data_store_widget import AddDataStoreWidget
 
 
 class DataStoreCategory(CategoryProjectTreeItem):
-    def __init__(self, toolbox, settings, logger):
-        super().__init__(toolbox, settings, logger, "Data Stores", "Some meaningful description.")
-
-    def make_properties_ui(self):
-        return DataStorePropertiesWidget(self._toolbox).ui
+    def __init__(self, toolbox):
+        super().__init__(toolbox, "Data Stores", "Some meaningful description.")
 
     @staticmethod
     def rank():
@@ -41,6 +38,10 @@ class DataStoreCategory(CategoryProjectTreeItem):
     @staticmethod
     def item_type():
         return "Data Store"
+
+    @property
+    def properties_widget_maker(self):
+        return DataStorePropertiesWidget
 
     @property
     def item_maker(self):

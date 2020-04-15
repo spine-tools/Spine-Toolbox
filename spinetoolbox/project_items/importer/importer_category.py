@@ -24,11 +24,8 @@ from .widgets.add_importer_widget import AddImporterWidget
 
 
 class ImporterCategory(CategoryProjectTreeItem):
-    def __init__(self, toolbox, settings, logger):
-        super().__init__(toolbox, settings, logger, "Importers", "Some meaningful description.")
-
-    def make_properties_ui(self):
-        return ImporterPropertiesWidget(self._toolbox).ui
+    def __init__(self, toolbox):
+        super().__init__(toolbox, "Importers", "Some meaningful description.")
 
     @staticmethod
     def rank():
@@ -41,6 +38,10 @@ class ImporterCategory(CategoryProjectTreeItem):
     @staticmethod
     def item_type():
         return "Importer"
+
+    @property
+    def properties_widget_maker(self):
+        return ImporterPropertiesWidget
 
     @property
     def item_maker(self):

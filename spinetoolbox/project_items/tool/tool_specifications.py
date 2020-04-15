@@ -20,6 +20,8 @@ from collections import ChainMap, OrderedDict
 import logging
 import os
 import re
+from PySide2.QtCore import QUrl
+from PySide2.QtGui import QDesktopServices
 from spinetoolbox.project_item import ProjectItemSpecification
 from spinetoolbox.tool_instance import GAMSToolInstance, JuliaToolInstance, PythonToolInstance, ExecutableToolInstance
 
@@ -282,6 +284,60 @@ class ToolSpecification(ProjectItemSpecification):
                 continue
             expanded_args.append(arg)
         return did_expand, expanded_args
+
+    @staticmethod
+    def toolbox_load(toolbox, definition, def_path):
+        includes_main_path = definition.get("includes_main_path", ".")
+        path = os.path.normpath(os.path.join(os.path.dirname(def_path), includes_main_path))
+        try:
+            _tooltype = definition["tooltype"].lower()
+        except KeyError:
+            toolbox.msg_error.emit(
+                "No tool type defined in tool definition file. Supported types "
+                "are 'python', 'gams', 'julia' and 'executable'"
+            )
+            return None
+        if _tooltype == "julia":
+            spec = JuliaTool.load(path, definition, toolbox._qsettings, toolbox.julia_repl, toolbox)
+        elif _tooltype == "python":
+            spec = PythonTool.load(path, definition, toolbox._qsettings, toolbox.python_repl, toolbox)
+        elif _tooltype == "gams":
+            spec = GAMSTool.load(path, definition, toolbox._qsettings, toolbox)
+        elif _tooltype == "executable":
+            spec = ExecutableTool.load(path, definition, toolbox._qsettings, toolbox)
+        else:
+            toolbox.msg_warning.emit("Tool type <b>{}</b> not available".format(_tooltype))
+            return None
+        spec.set_def_path(def_path)
+        return spec
+
+    def open_main_program_file(self):
+        """Open this specification's main program file in the default editor."""
+        file_path = os.path.join(self.path, self.includes[0])
+        # Check if file exists first. openUrl may return True even if file doesn't exist
+        # TODO: this could still fail if the file is deleted or renamed right after the check
+        if not os.path.isfile(file_path):
+            self._logger.msg_error.emit("Tool main program file <b>{0}</b> not found.".format(file_path))
+            return
+        ext = os.path.splitext(os.path.split(file_path)[1])[1]
+        if ext in [".bat", ".exe"]:
+            self._logger.msg_warning.emit(
+                "Sorry, opening files with extension <b>{0}</b> not supported. "
+                "Please open the file manually.".format(ext)
+            )
+            return
+        main_program_url = "file:///" + file_path
+        # Open Tool specification main program file in editor
+        # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
+        res = QDesktopServices.openUrl(QUrl(main_program_url, QUrl.TolerantMode))
+        if not res:
+            filename, file_extension = os.path.splitext(file_path)
+            self._logger.msg_error.emit(
+                "Unable to open Tool specification main program file {0}. "
+                "Make sure that <b>{1}</b> "
+                "files are associated with an editor. E.g. on Windows "
+                "10, go to Control Panel -> Default Programs to do this.".format(filename, file_extension)
+            )
 
 
 class GAMSTool(ToolSpecification):
