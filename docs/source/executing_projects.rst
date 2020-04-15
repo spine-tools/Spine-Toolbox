@@ -60,57 +60,6 @@ widget and then press the |play-selected| button.
    desired items.
 
 
-Passing Resources between Project Items
-=======================================
-
-All project items are visited when a DAG is executed but the actual processing only happens when a
-Tool, an Importer, or an Exporter project item is visited. The processing is done in a subprocess, in
-order to not clog the GUI until the project item has been executed.
-
-When project items are connected to each other, the resources that are passed between project items at
-execution depends on the project item type. The following table describes the resources that project
-items use from their predecessors and what resources are passed to their successors.
-
-.. note::
-   Resources are only transmitted to **direct successors** and **direct predecessors**.
-
-+-----------------+-------+---------------------------+------------------------+-------------------------+-----------------------+--------------------------+
-| Type            | Notes | Accepts from predecessor  | Accepts from successor | Provides to predecessor | Provides to successor | Properties               |
-+=================+=======+===========================+========================+=========================+=======================+==========================+
-| Data Connection | 1     | n/a                       | n/a                    | n/a                     | File URLs             | File paths               |
-+-----------------+-------+---------------------------+------------------------+-------------------------+-----------------------+--------------------------+
-| Data Store      | 2     | n/a                       | n/a                    | Database URL            | Database URL          | Database URL             |
-+-----------------+-------+---------------------------+------------------------+-------------------------+-----------------------+--------------------------+
-| Exporter        |       | Database URL              | n/a                    | n/a                     | File URLs             | Export settings          |
-+-----------------+-------+---------------------------+------------------------+-------------------------+-----------------------+--------------------------+
-| Importer        | 3     | File URLs                 | Database URL           | n/a                     | n/a                   | Import mappings          |
-+-----------------+-------+---------------------------+------------------------+-------------------------+-----------------------+--------------------------+
-| Tool            | 4     | File URLs, database URLs  | Database URLs          | n/a                     | File URLs             | Tool specification,      |
-+-----------------+-------+---------------------------+------------------------+-------------------------+-----------------------+--------------------------+
-|                 |       |                           |                        |                         |                       | cmd line arguments,      |
-+-----------------+-------+---------------------------+------------------------+-------------------------+-----------------------+--------------------------+
-|                 |       |                           |                        |                         |                       | execute in work dir      |
-+-----------------+-------+---------------------------+------------------------+-------------------------+-----------------------+--------------------------+
-| View            |       | Database URLs             | n/a                    | n/a                     | n/a                   | n/a                      |
-+-----------------+-------+---------------------------+------------------------+-------------------------+-----------------------+--------------------------+
-
-Notes:
-
-1. Data connection provides paths to local files.
-2. Data Store provides a database URL to direct successors and predecessors. Note, that this is the
-   only project item that provides resources to it's predecessor.
-3. Importer requires a database URL from its successor for writing the mapped data. This can be
-   provided by a Data Store.
-4. Tool *program* is defined by its *Tool specification*, which also contains the required files,
-   optional files, and output files of the *program*. The output files are provided to successors as
-   file URLs. Database URLs can be passed to the tool *program* via command line arguments but are
-   otherwise ignored by the Tool project item. Currently, there is no mechanism to know if an URL is
-   actually required by a tool *program*. For more information, see :ref:`Tool specification editor`.
-5. The **Properties** column describes the resources that the user is expected to set for each project
-   item in Spine Toolbox.
-
-To learn more about Project items and their responsibilities, please see :ref:`Project Items`.
-
 Example DAG
 ===========
 
