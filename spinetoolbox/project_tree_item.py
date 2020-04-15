@@ -157,7 +157,7 @@ class CategoryProjectTreeItem(BaseProjectTreeItem):
             description (str): Category description
         """
         super().__init__(name, description)
-        self._properties_ui = self.properties_widget_maker(toolbox).ui
+        self.properties_ui = self.properties_widget_maker(toolbox).ui
 
     def flags(self):
         """Returns the item flags."""
@@ -291,14 +291,15 @@ class CategoryProjectTreeItem(BaseProjectTreeItem):
         if icon is not None:
             icon.activate()
         else:
-            icon = self.icon_maker(
-                child_item.toolbox, project_item.x - 35, project_item.y - 35, 70, 70, project_item, self.icon()
-            )
+            icon = self.make_icon(child_item.toolbox, project_item.x - 35, project_item.y - 35, 70, 70, project_item)
             project_item.set_icon(icon)
-        project_item.set_properties_ui(self._properties_ui)
+        project_item.set_properties_ui(self.properties_ui)
         project_item.create_data_dir()
         project_item.set_up()
         return True
+
+    def make_icon(self, toolbox, x, y, w, h, project_item):
+        return self.icon_maker(toolbox, x, y, w, h, project_item, self.icon())
 
     def custom_context_menu(self, parent, pos):
         """Returns the context menu for this item.

@@ -17,7 +17,7 @@ Unit tests for ProjectItemModel class.
 """
 
 import unittest
-from unittest.mock import MagicMock, NonCallableMagicMock
+from unittest.mock import MagicMock, NonCallableMagicMock, patch
 from PySide2.QtCore import Qt
 from PySide2.QtWidgets import QApplication
 from spinetoolbox.mvcmodels.project_item_model import ProjectItemModel
@@ -51,7 +51,8 @@ class TestProjectItemModel(unittest.TestCase):
     def test_insert_item_category_item(self):
         root = RootProjectTreeItem()
         model = ProjectItemModel(self.toolbox, root)
-        category = CategoryProjectTreeItem("category", "category description", None, MagicMock(), None, None)
+        with patch.object(CategoryProjectTreeItem, "properties_widget_maker"):
+            category = CategoryProjectTreeItem(self.toolbox, "category", "category description")
         model.insert_item(category)
         self.assertEqual(model.rowCount(), 1)
         self.assertEqual(model.n_items(), 0)
@@ -64,7 +65,8 @@ class TestProjectItemModel(unittest.TestCase):
     def test_insert_item_leaf_item(self):
         root = RootProjectTreeItem()
         model = ProjectItemModel(self.toolbox, root)
-        category = CategoryProjectTreeItem("category", "category description", None, MagicMock(), None, None)
+        with patch.object(CategoryProjectTreeItem, "properties_widget_maker"):
+            category = CategoryProjectTreeItem(self.toolbox, "category", "category description")
         model.insert_item(category)
         category_index = model.find_category("category")
         mock_project_item = NonCallableMagicMock()
@@ -93,13 +95,15 @@ class TestProjectItemModel(unittest.TestCase):
 
     def test_category_of_item(self):
         root = RootProjectTreeItem()
-        category = CategoryProjectTreeItem("category", "category description", None, MagicMock(), None, None)
+        with patch.object(CategoryProjectTreeItem, "properties_widget_maker"):
+            category = CategoryProjectTreeItem(self.toolbox, "category", "category description")
         root.add_child(category)
         model = ProjectItemModel(self.toolbox, root)
         self.assertEqual(model.category_of_item("nonexistent item"), None)
         project_item = ProjectItem("item", "item description", 0.0, 0.0, self.toolbox.project(), self.toolbox)
         item = LeafProjectTreeItem(project_item, self.toolbox)
-        category.add_child(item)
+        with patch.object(CategoryProjectTreeItem, "make_icon"):
+            category.add_child(item)
         found_category = model.category_of_item("item")
         self.assertEqual(found_category.name, category.name)
 
