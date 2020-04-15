@@ -180,8 +180,8 @@ class TabularViewMixin:
             class_id = self.current_class_id
         if class_type is None:
             class_type = self.current_class_type
-        entity_type = {"object class": "object", "relationship class": "relationships"}[class_type]
-        return self.db_mngr.get_items_by_field(self.db_map, entity_type, "class_id", self.current_class_id)
+        entity_type = {"object class": "object", "relationship class": "relationship"}[class_type]
+        return self.db_mngr.get_items_by_field(self.db_map, entity_type, "class_id", class_id)
 
     def load_empty_relationship_data(self, objects_per_class=None):
         """Returns a dict containing all possible relationships in the current class.
