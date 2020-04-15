@@ -10,10 +10,10 @@
 ######################################################################################################################
 
 """
-Tool plugin.
+The ToolCategory class.
 
 :author: M. Marin (KTH)
-:date:   12.9.2019
+:date:   15.4.2020
 """
 
 from spinetoolbox.project_tree_item import CategoryProjectTreeItem
@@ -28,7 +28,7 @@ from .widgets.custom_menus import ToolSpecificationMenu
 
 class ToolCategory(CategoryProjectTreeItem):
     def __init__(self, toolbox):
-        super().__init__(toolbox, "Tools", "Some meaningful description.")
+        super().__init__(toolbox, "Tools", "Custom data processing.")
 
     @staticmethod
     def rank():

@@ -10,10 +10,10 @@
 ######################################################################################################################
 
 """
-View plugin.
+The ViewCategory class.
 
 :author: M. Marin (KTH)
-:date:   12.9.2019
+:date:   15.4.2020
 """
 
 from spinetoolbox.project_tree_item import CategoryProjectTreeItem
@@ -25,7 +25,7 @@ from .widgets.add_view_widget import AddViewWidget
 
 class ViewCategory(CategoryProjectTreeItem):
     def __init__(self, toolbox):
-        super().__init__(toolbox, "Views", "Some meaningful description.")
+        super().__init__(toolbox, "Views", "Data visualization.")
 
     @staticmethod
     def rank():

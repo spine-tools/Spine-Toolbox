@@ -10,10 +10,10 @@
 ######################################################################################################################
 
 """
-Exporter project item plugin.
+The ExporterCategory class.
 
-:author: A. Soininen (VTT)
-:date:   25.9.2019
+:author: M. Marin (KTH)
+:date:   15.4.2020
 """
 
 from spinetoolbox.project_tree_item import CategoryProjectTreeItem
@@ -25,7 +25,7 @@ from .widgets.exporter_properties import ExporterProperties
 
 class ExporterCategory(CategoryProjectTreeItem):
     def __init__(self, toolbox):
-        super().__init__(toolbox, "Exporters", "Some meaningful description.")
+        super().__init__(toolbox, "Exporters", "Data conversion from Spine to an external format.")
 
     @staticmethod
     def rank():

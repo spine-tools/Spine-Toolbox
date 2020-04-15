@@ -10,10 +10,10 @@
 ######################################################################################################################
 
 """
-Data connection plugin.
+The DataConnectionCategory class.
 
 :author: M. Marin (KTH)
-:date:   12.9.2019
+:date:   15.4.2020
 """
 
 from spinetoolbox.project_tree_item import CategoryProjectTreeItem
@@ -25,7 +25,7 @@ from .widgets.add_data_connection_widget import AddDataConnectionWidget
 
 class DataConnectionCategory(CategoryProjectTreeItem):
     def __init__(self, toolbox):
-        super().__init__(toolbox, "Data Connections", "Some meaningful description.")
+        super().__init__(toolbox, "Data Connections", "Generic data source.")
 
     @staticmethod
     def rank():
