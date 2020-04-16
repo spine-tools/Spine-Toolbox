@@ -483,6 +483,8 @@ class SpineDBManager(QObject):
         msg = ""
         for db_map, error_log in db_map_error_log.items():
             database = "From " + db_map.codename + ":"
+            if isinstance(error_log, str):
+                error_log = [error_log]
             formatted_log = format_string_list(error_log)
             msg += format_string_list([database, formatted_log])
         for db_map in db_map_error_log:
