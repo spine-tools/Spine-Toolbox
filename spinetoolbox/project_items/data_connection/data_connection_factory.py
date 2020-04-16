@@ -10,47 +10,47 @@
 ######################################################################################################################
 
 """
-The ViewCategory class.
+The DataConnectionFactory class.
 
 :author: M. Marin (KTH)
 :date:   15.4.2020
 """
 
-from spinetoolbox.project_tree_item import CategoryProjectTreeItem
-from .view import View
-from .view_icon import ViewIcon
-from .widgets.view_properties_widget import ViewPropertiesWidget
-from .widgets.add_view_widget import AddViewWidget
+from spinetoolbox.project_item import ProjectItemFactory
+from .data_connection_icon import DataConnectionIcon
+from .data_connection import DataConnection
+from .widgets.data_connection_properties_widget import DataConnectionPropertiesWidget
+from .widgets.add_data_connection_widget import AddDataConnectionWidget
 
 
-class ViewCategory(CategoryProjectTreeItem):
+class DataConnectionFactory(ProjectItemFactory):
     def __init__(self, toolbox):
-        super().__init__(toolbox, "Views", "Data visualization.")
+        super().__init__(toolbox, "Data Connections", "")
 
     @staticmethod
-    def rank():
-        return 3
+    def item_category():
+        return "Data Connections"
 
     @staticmethod
     def icon():
-        return ":/icons/project_item_icons/binoculars.svg"
+        return ":/icons/project_item_icons/file-alt.svg"
 
     @staticmethod
     def item_type():
-        return "View"
+        return "Data Connection"
 
     @property
     def properties_widget_maker(self):
-        return ViewPropertiesWidget
+        return DataConnectionPropertiesWidget
 
     @property
     def item_maker(self):
-        return View
+        return DataConnection
 
     @property
     def icon_maker(self):
-        return ViewIcon
+        return DataConnectionIcon
 
     @property
     def add_form_maker(self):
-        return AddViewWidget
+        return AddDataConnectionWidget

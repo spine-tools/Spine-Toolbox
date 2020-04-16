@@ -215,62 +215,67 @@ class SpineToolboxProject(MetaObject):
         """
         self._logger.msg.emit("Loading project items...")
         empty = True
-        for category_name, category_dict in objects_dict.items():
+        for factory_name, factory_dict in objects_dict.items():
             items = []
-            for name, item_dict in category_dict.items():
+            for name, item_dict in factory_dict.items():
                 item_dict.pop("short name", None)
                 item_dict["name"] = name
                 items.append(item_dict)
                 empty = False
-            if not self.do_add_project_items(category_name, *items, verbosity=False):
+            if not self.make_and_add_project_items(factory_name, *items, verbosity=False):
                 return False
         if empty:
             self._logger.msg_warning.emit("Project has no items")
         return True
 
-    def add_project_items(self, category_name, *items, set_selected=False, verbosity=True):
+    def add_project_items(self, factory_name, *items, set_selected=False, verbosity=True):
         """Pushes an AddProjectItemsCommand to the toolbox undo stack.
         """
         self._toolbox.undo_stack.push(
-            AddProjectItemsCommand(self, category_name, *items, set_selected=set_selected, verbosity=verbosity)
+            AddProjectItemsCommand(self, factory_name, *items, set_selected=set_selected, verbosity=verbosity)
         )
 
-    def make_project_tree_items(self, category_name, *items):
-        """Creates and returns list of LeafProjectTreeItem instances.
+    def make_project_tree_items(self, factory_name, *items):
+        """Creates and returns a dictionary mapping category indexes to a list of corresponding LeafProjectTreeItem instances.
 
         Args:
-            category_name (str): The items' category
+            factory_name (str): The item factory name
             items (dict): one or more dict of items to add
 
         Returns:
-            list(LeafProjectTreeItem)
+            dict(QModelIndex, list(LeafProjectTreeItem))
         """
-        category_ind = self._project_item_model.find_category(category_name)
-        if not category_ind:
-            self._logger.msg_error.emit("Category {0} not found".format(category_name))
+        factory = self._toolbox.item_factories.get(factory_name)
+        if factory is None:
+            self._logger.msg_error.emit("{0} not found in factories".format(factory_name))
             return None, []
-        category_item = self._project_item_model.item(category_ind)
-        project_tree_items = []
+        project_items_by_category = {}
         for item_dict in items:
+            project_item = factory.make_item(self._toolbox, self, self._logger, **item_dict)
             try:
-                project_item = category_item.item_maker(self._toolbox, self, self._logger, **item_dict)
-                project_tree_item = LeafProjectTreeItem(project_item, self._toolbox)
-                project_tree_items.append(project_tree_item)
+                project_items_by_category.setdefault(factory.item_category(), list()).append(project_item)
             except TypeError:
                 self._logger.msg_error.emit(
-                    f"Loading project item <b>{item_dict['name']}</b> into category <b>{category_name}</b> failed. "
+                    f"Creating project item <b>{item_dict['name']}</b> with factory <b>{factory_name}</b> failed. "
                     "This is most likely caused by an outdated project file."
                 )
                 continue
             except KeyError as error:
                 self._logger.msg_error.emit(
-                    f"Loading project item <b>{item_dict['name']}</b> into category <b>{category_name}</b> failed. "
+                    f"Creating project item <b>{item_dict['name']}</b> with factory <b>{factory_name}</b> failed. "
                     f"This is most likely caused by an outdated or corrupted project file "
                     f"(missing JSON key: {str(error)})."
                 )
-        return category_ind, project_tree_items
+        project_tree_items = {}
+        for category, project_items in project_items_by_category.items():
+            category_ind = self._project_item_model.find_category(category)
+            # NOTE: category_ind might be None, and needs to be handled caller side
+            project_tree_items[category_ind] = [
+                LeafProjectTreeItem(project_item, self._toolbox) for project_item in project_items
+            ]
+        return project_tree_items
 
-    def _add_project_tree_items(self, category_ind, *project_tree_items, set_selected=False, verbosity=True):
+    def do_add_project_tree_items(self, category_ind, *project_tree_items, set_selected=False, verbosity=True):
         """Adds LeafProjectTreeItem instances to project.
 
         Args:
@@ -282,6 +287,8 @@ class SpineToolboxProject(MetaObject):
         for project_tree_item in project_tree_items:
             project_item = project_tree_item.project_item
             self._project_item_model.insert_item(project_tree_item, category_ind)
+            factory = self._toolbox.item_factories[project_item.item_factory()]
+            factory.activate_project_item(self._toolbox, project_item)
             # Append new node to networkx graph
             self.add_to_dag(project_item.name)
             if verbosity:
@@ -302,19 +309,21 @@ class SpineToolboxProject(MetaObject):
         ind = self._project_item_model.find_item(item.name)
         self._toolbox.ui.treeView_project.setCurrentIndex(ind)
 
-    def do_add_project_items(self, category_name, *items, set_selected=False, verbosity=True):
+    def make_and_add_project_items(self, factory_name, *items, set_selected=False, verbosity=True):
         """Adds items to project at loading.
 
         Args:
-            category_name (str): The items' category
+            factory_name (str): The items' category
             items (dict): one or more dict of items to add
             set_selected (bool): Whether to set item selected after the item has been added to project
             verbosity (bool): If True, prints message
         """
-        category_ind, project_tree_items = self.make_project_tree_items(category_name, *items)
-        if category_ind is None:
-            return False
-        self._add_project_tree_items(category_ind, *project_tree_items, set_selected=set_selected, verbosity=verbosity)
+        for category_ind, project_tree_items in self.make_project_tree_items(factory_name, *items).items():
+            if category_ind is None:
+                return False
+            self.do_add_project_tree_items(
+                category_ind, *project_tree_items, set_selected=set_selected, verbosity=verbosity
+            )
         return True
 
     def add_to_dag(self, item_name):

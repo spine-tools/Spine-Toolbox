@@ -10,47 +10,47 @@
 ######################################################################################################################
 
 """
-The ImporterCategory class.
+The ViewFactory class.
 
 :author: M. Marin (KTH)
 :date:   15.4.2020
 """
 
-from spinetoolbox.project_tree_item import CategoryProjectTreeItem
-from .importer import Importer
-from .importer_icon import ImporterIcon
-from .widgets.importer_properties_widget import ImporterPropertiesWidget
-from .widgets.add_importer_widget import AddImporterWidget
+from spinetoolbox.project_item import ProjectItemFactory
+from .view import View
+from .view_icon import ViewIcon
+from .widgets.view_properties_widget import ViewPropertiesWidget
+from .widgets.add_view_widget import AddViewWidget
 
 
-class ImporterCategory(CategoryProjectTreeItem):
+class ViewFactory(ProjectItemFactory):
     def __init__(self, toolbox):
-        super().__init__(toolbox, "Importers", "Data conversion from an external format to Spine.")
+        super().__init__(toolbox, "Views", "")
 
     @staticmethod
-    def rank():
-        return 4
+    def item_category():
+        return "Views"
 
     @staticmethod
     def icon():
-        return ":/icons/project_item_icons/database-import.svg"
+        return ":/icons/project_item_icons/binoculars.svg"
 
     @staticmethod
     def item_type():
-        return "Importer"
+        return "View"
 
     @property
     def properties_widget_maker(self):
-        return ImporterPropertiesWidget
+        return ViewPropertiesWidget
 
     @property
     def item_maker(self):
-        return Importer
+        return View
 
     @property
     def icon_maker(self):
-        return ImporterIcon
+        return ViewIcon
 
     @property
     def add_form_maker(self):
-        return AddImporterWidget
+        return AddViewWidget

@@ -72,19 +72,19 @@ class SetProjectDescriptionCommand(SpineToolboxCommand):
 
 
 class AddProjectItemsCommand(SpineToolboxCommand):
-    def __init__(self, project, category_name, *items, set_selected=False, verbosity=True):
+    def __init__(self, project, factory_name, *items, set_selected=False, verbosity=True):
         """Command to add items.
 
         Args:
             project (SpineToolboxProject): the project
-            category_name (str): The items' category
+            factory_name (str): The factory name
             items (dict): one or more dict of items to add
             set_selected (bool): Whether to set item selected after the item has been added to project
             verbosity (bool): If True, prints message
         """
         super().__init__()
         self.project = project
-        self.category_ind, self.project_tree_items = project.make_project_tree_items(category_name, *items)
+        self.project_tree_items = project.make_project_tree_items(factory_name, *items)
         self.set_selected = set_selected
         self.verbosity = verbosity
         if len(items) == 1:
@@ -93,13 +93,15 @@ class AddProjectItemsCommand(SpineToolboxCommand):
             self.setText("add multiple items")
 
     def redo(self):
-        self.project._add_project_tree_items(
-            self.category_ind, *self.project_tree_items, set_selected=self.set_selected, verbosity=self.verbosity
-        )
+        for category_ind, project_tree_items in self.project_tree_items.items():
+            self.project.do_add_project_tree_items(
+                category_ind, *project_tree_items, set_selected=self.set_selected, verbosity=self.verbosity
+            )
 
     def undo(self):
-        for project_tree_item in self.project_tree_items:
-            self.project._remove_item(self.category_ind, project_tree_item, delete_data=True)
+        for category_ind, project_tree_items in self.project_tree_items.items():
+            for project_tree_item in project_tree_items:
+                self.project._remove_item(category_ind, project_tree_item, delete_data=True)
 
 
 class RemoveAllProjectItemsCommand(SpineToolboxCommand):
@@ -126,7 +128,7 @@ class RemoveAllProjectItemsCommand(SpineToolboxCommand):
     def undo(self):
         self.project.dag_handler.blockSignals(True)
         for category_ind, project_tree_items in self.items_per_category.items():
-            self.project._add_project_tree_items(category_ind, *project_tree_items)
+            self.project.do_add_project_tree_items(category_ind, *project_tree_items)
         for link in self.links:
             self.project._toolbox.ui.graphicsView._add_link(link)
         self.project.dag_handler.blockSignals(False)
@@ -158,7 +160,7 @@ class RemoveProjectItemCommand(SpineToolboxCommand):
 
     def undo(self):
         self.project.dag_handler.blockSignals(True)
-        self.project._add_project_tree_items(self.category_ind, self.project_tree_item)
+        self.project.do_add_project_tree_items(self.category_ind, self.project_tree_item)
         for link in self.links:
             self.project._toolbox.ui.graphicsView._add_link(link)
         self.project.dag_handler.blockSignals(False)

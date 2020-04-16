@@ -20,11 +20,11 @@ from PySide2.QtCore import Slot, QItemSelectionModel
 from PySide2.QtGui import QColor, QPen, QBrush
 from ..graphics_items import ProjectItemIcon
 from .shrinking_scene import ShrinkingScene
-from ..mvcmodels.project_item_palette_models import ProjectItemPaletteModel, ProjectItemSpecPaletteModel
+from ..mvcmodels.project_item_factory_models import ProjectItemFactoryModel, ProjectItemSpecFactoryModel
 
 
 class CustomQGraphicsScene(ShrinkingScene):
-    """A scene that handles drag and drop events of ProjectItemPaletteModel or ProjectItemSpecPaletteModel sources."""
+    """A scene that handles drag and drop events of ProjectItemFactoryModel or ProjectItemSpecFactoryModel sources."""
 
     def __init__(self, parent, toolbox):
         """
@@ -103,27 +103,27 @@ class CustomQGraphicsScene(ShrinkingScene):
 
     def dragEnterEvent(self, event):
         """Accept event. Then call the super class method
-        only if drag source is not a ProjectItemPaletteModel or ProjectItemSpecPaletteModel."""
+        only if drag source is not a ProjectItemFactoryModel or ProjectItemSpecFactoryModel."""
         event.accept()
         source = event.source()
-        if not isinstance(source.model(), (ProjectItemPaletteModel, ProjectItemSpecPaletteModel)):
+        if not isinstance(source.model(), (ProjectItemFactoryModel, ProjectItemSpecFactoryModel)):
             super().dragEnterEvent(event)
 
     def dragMoveEvent(self, event):
         """Accept event. Then call the super class method
-        only if drag source is not a ProjectItemPaletteModel or ProjectItemSpecPaletteModel."""
+        only if drag source is not a ProjectItemFactoryModel or ProjectItemSpecFactoryModel."""
         event.accept()
         source = event.source()
-        if not isinstance(source.model(), (ProjectItemPaletteModel, ProjectItemSpecPaletteModel)):
+        if not isinstance(source.model(), (ProjectItemFactoryModel, ProjectItemSpecFactoryModel)):
             super().dragMoveEvent(event)
 
     def dropEvent(self, event):
         """Only accept drops when the source is an instance of
-        ProjectItemPaletteModel or ProjectItemSpecPaletteModel.
+        ProjectItemFactoryModel or ProjectItemSpecFactoryModel.
         Capture text from event's mimedata and show the appropriate 'Add Item form.'
         """
         source = event.source()
-        if not isinstance(source.model(), (ProjectItemPaletteModel, ProjectItemSpecPaletteModel)):
+        if not isinstance(source.model(), (ProjectItemFactoryModel, ProjectItemSpecFactoryModel)):
             super().dropEvent(event)
             return
         if not self._toolbox.project():
@@ -131,15 +131,15 @@ class CustomQGraphicsScene(ShrinkingScene):
             event.ignore()
             return
         event.acceptProposedAction()
-        category, spec = event.mimeData().text().split(",")
+        factory_name, spec = event.mimeData().text().split(",")
         pos = event.scenePos()
         w = 70
         h = 70
         x = pos.x() - w / 2
         y = pos.y() - h / 2
-        category_item = self._toolbox.category_items[category]
-        self.item_shadow = category_item.make_icon(self._toolbox, x, y, w, h, None)
-        self._toolbox.show_add_project_item_form(category, pos.x(), pos.y(), spec=spec)
+        factory = self._toolbox.item_factories[factory_name]
+        self.item_shadow = factory.make_icon(self._toolbox, x, y, w, h, None)
+        self._toolbox.show_add_project_item_form(factory_name, pos.x(), pos.y(), spec=spec)
 
     def drawBackground(self, painter, rect):
         """Reimplemented method to make a custom background.

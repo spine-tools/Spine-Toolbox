@@ -36,7 +36,7 @@ class TestTool(unittest.TestCase):
         self.basedir = mkdtemp()
         self.toolbox = create_toolboxui_with_project()
         model = _MockToolSpecModel(self.toolbox, self.basedir)
-        self.toolbox.specification_model = self.toolbox.category_filtered_spec_models["Tools"] = model
+        self.toolbox.specification_model = self.toolbox.filtered_spec_factory_models["Tools"] = model
         self.toolbox.specification_model_changed.emit()
 
     def tearDown(self):

@@ -84,8 +84,7 @@ class TestLeafProjectTreeItem(unittest.TestCase):
     def test_CategoryProjectTreeItem_parent_child_hierarchy(self):
         toolbox, parent = self._category_item()
         toolbox, leaf = self._leaf_item(toolbox)
-        with unittest.mock.patch.object(CategoryProjectTreeItem, "make_icon"):
-            parent.add_child(leaf)
+        parent.add_child(leaf)
         self.assertEqual(parent.child_count(), 1)
         self.assertEqual(parent.children()[0], leaf)
         self.assertEqual(leaf.parent(), parent)
@@ -124,8 +123,7 @@ class TestLeafProjectTreeItem(unittest.TestCase):
     def _category_item():
         """Set up toolbox."""
         toolbox = create_toolboxui_with_project()
-        with unittest.mock.patch.object(CategoryProjectTreeItem, "properties_widget_maker"):
-            item = CategoryProjectTreeItem(toolbox, "category item", "A category tree item")
+        item = CategoryProjectTreeItem("category item", "A category tree item")
         return toolbox, item
 
     @staticmethod

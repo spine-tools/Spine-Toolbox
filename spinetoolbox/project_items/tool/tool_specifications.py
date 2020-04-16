@@ -85,7 +85,7 @@ class ToolSpecification(ProjectItemSpecification):
             cmdline_args (str, optional): Tool command line arguments (read from tool definition file)
             execute_in_work (bool): Execute in work folder
         """
-        super().__init__(name, description, category="Tools")
+        super().__init__(name, description, factory_name="Tools")
         self._settings = settings
         self._logger = logger
         self.tooltype = tooltype

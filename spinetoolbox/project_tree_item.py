@@ -149,137 +149,15 @@ class RootProjectTreeItem(BaseProjectTreeItem):
 class CategoryProjectTreeItem(BaseProjectTreeItem):
     """Class for category project tree items."""
 
-    def __init__(self, toolbox, name, description):
-        """
-        Args:
-            toolbox (ToolboxUI)
-            name (str): Category name
-            description (str): Category description
-        """
-        super().__init__(name, description)
-        self.properties_ui = self.properties_widget_maker(toolbox).ui
-
     def flags(self):
         """Returns the item flags."""
         return Qt.ItemIsEnabled
-
-    @staticmethod
-    def rank():
-        """
-        Returns the category rank.
-
-        Returns:
-            int
-        """
-        raise NotImplementedError()
-
-    @staticmethod
-    def icon():
-        """
-        Returns the category icon resource path.
-
-        Returns:
-            str
-        """
-        raise NotImplementedError()
-
-    @staticmethod
-    def item_type():
-        """
-        Returns the category item type.
-
-        Returns:
-            str
-        """
-        raise NotImplementedError()
-
-    @property
-    def properties_widget_maker(self):
-        """
-        Returns a QWidget subclass to create the properties ui.
-
-        Returns:
-            class
-        """
-        raise NotImplementedError()
-
-    @property
-    def item_maker(self):
-        """
-        Returns a ProjectItem subclass.
-
-        Returns:
-            class
-        """
-        raise NotImplementedError()
-
-    @property
-    def icon_maker(self):
-        """
-        Returns a ProjectItemIcon subclass.
-
-        Returns:
-            class
-        """
-        raise NotImplementedError()
-
-    @property
-    def add_form_maker(self):
-        """
-        Returns an AddProjectItem subclass.
-
-        Returns:
-            class
-        """
-        raise NotImplementedError()
-
-    @staticmethod
-    def supports_specifications():
-        """
-        Returns whether or not this category supports specs.
-        If the subclass implementation returns True, then it must also implement
-        ``specification_form_maker``, ``specification_menu_maker``, and  ``specification_loader``.
-
-        Returns:
-            bool
-        """
-        return False
-
-    @property
-    def specification_form_maker(self):
-        """
-        Returns a QWidget subclass to create and edit specifications.
-
-        Returns:
-            class
-        """
-        raise NotImplementedError()
-
-    def specification_menu_maker(self):
-        """
-        Returns an ItemSpecificationMenu subclass.
-
-        Returns:
-            class
-        """
-        raise NotImplementedError()
-
-    @property
-    def specification_loader(self):
-        """
-        Returns a function to load specifications.
-
-        Returns:
-            class
-        """
-        raise NotImplementedError()
 
     def add_child(self, child_item):
         """Adds given project tree item as the child of this category item. New item is added as the last item.
 
         Args:
             child_item (LeafProjectTreeTreeItem): Item to add
-            toolbox (ToolboxUI): A toolbox instance
         Returns:
             True for success, False otherwise
         """
@@ -288,20 +166,7 @@ class CategoryProjectTreeItem(BaseProjectTreeItem):
             return False
         self._children.append(child_item)
         child_item._parent = self
-        project_item = child_item.project_item
-        icon = project_item.get_icon()
-        if icon is not None:
-            icon.activate()
-        else:
-            icon = self.make_icon(child_item.toolbox, project_item.x - 35, project_item.y - 35, 70, 70, project_item)
-            project_item.set_icon(icon)
-        project_item.set_properties_ui(self.properties_ui)
-        project_item.create_data_dir()
-        project_item.set_up()
         return True
-
-    def make_icon(self, toolbox, x, y, w, h, project_item):
-        return self.icon_maker(toolbox, x, y, w, h, project_item, self.icon())
 
     def custom_context_menu(self, parent, pos):
         """Returns the context menu for this item.

@@ -37,10 +37,10 @@ from PySide2.QtWidgets import (
 )
 from .graphics_items import ProjectItemIcon
 from .mvcmodels.project_item_model import ProjectItemModel
-from .mvcmodels.project_item_palette_models import (
-    ProjectItemPaletteModel,
-    ProjectItemSpecPaletteModel,
-    CategoryFilteredSpecPaletteModel,
+from .mvcmodels.project_item_factory_models import (
+    ProjectItemFactoryModel,
+    ProjectItemSpecFactoryModel,
+    FilteredSpecFactoryModel,
 )
 from .widgets.about_widget import AboutWidget
 from .widgets.custom_menus import (
@@ -77,8 +77,8 @@ from .helpers import (
     deserialize_path,
 )
 from .project_upgrader import ProjectUpgrader
-from .project_tree_item import LeafProjectTreeItem, RootProjectTreeItem
-from .project_items import data_store, data_connection, exporter, tool, view, importer
+from .project_tree_item import LeafProjectTreeItem, CategoryProjectTreeItem, RootProjectTreeItem
+from .project_items import data_store, data_connection, tool, view, importer, exporter
 from .project_commands import AddSpecificationCommand, RemoveSpecificationCommand, UpdateSpecificationCommand
 from .configuration_assistants import spine_model
 
@@ -122,12 +122,12 @@ class ToolboxUI(QMainWindow):
         self.setStyleSheet(MAINWINDOW_SS)
         # Class variables
         self.undo_stack = QUndoStack(self)
-        self.category_items = dict()  # maps category names to `CategoryProjectTreeItem`s
+        self.item_factories = dict()  # maps factory names to `ProjectItemFactory` objects
         self._project = None
-        self.project_item_palette_model = None
+        self.project_item_factory_model = None
         self.project_item_model = None
         self.specification_model = None
-        self.category_filtered_spec_models = {}
+        self.filtered_spec_factory_models = {}
         self.show_datetime = self.update_datetime()
         self.active_project_item = None
         self.work_dir = None
@@ -232,18 +232,17 @@ class ToolboxUI(QMainWindow):
         """Collects attributes from project item modules into a dict.
         This dict is then used to perform all project item related tasks.
         """
-        category_items = sorted(
-            (module.category_maker(self) for module in (data_store, data_connection, tool, view, importer, exporter)),
-            key=lambda category: category.rank(),
-        )
-        self.category_items = {item.name: item for item in category_items}
-        self.init_project_item_palette_model()
+        factories = [
+            module.item_factory(self) for module in (data_store, data_connection, tool, view, importer, exporter)
+        ]
+        self.item_factories = {f.name: f for f in factories}
+        self.init_project_item_factory_model()
         self.add_specification_popup_menu = AddSpecificationPopupMenu(self)
 
-    def init_project_item_palette_model(self):
-        self.project_item_palette_model = ProjectItemPaletteModel(self)
-        for category_item in self.category_items.values():
-            self.project_item_palette_model.add_item(category_item)
+    def init_project_item_factory_model(self):
+        self.project_item_factory_model = ProjectItemFactoryModel(self)
+        for factory in self.item_factories.values():
+            self.project_item_factory_model.add_item(factory)
 
     def parse_assistant_modules(self):
         """Makes actions to run assistants from assistant modules.
@@ -630,7 +629,16 @@ class ToolboxUI(QMainWindow):
         add them to the model."""
         root_item = RootProjectTreeItem()
         self.project_item_model = ProjectItemModel(self, root=root_item)
-        for category_item in self.category_items.values():
+        categories = (
+            ("Data Stores", "Data in the Spine generic format"),
+            ("Data Connections", "Generic data source"),
+            ("Tools", "Custom data processing"),
+            ("Views", "Data visualization"),
+            ("Importers", "Data conversion from an external format to Spine"),
+            ("Exporters", "Data conversion from Spine to an external format"),
+        )
+        for category, description in categories:
+            category_item = CategoryProjectTreeItem(category, description)
             self.project_item_model.insert_item(category_item)
         self.ui.treeView_project.setModel(self.project_item_model)
         self.ui.treeView_project.header().hide()
@@ -643,14 +651,10 @@ class ToolboxUI(QMainWindow):
             specification_paths (list): List of tool definition file paths used in this project
         """
 
-        category_icons = {
-            category_item.name: QIcon(category_item.icon()) for category_item in self.category_items.values()
-        }
-        self.specification_model = ProjectItemSpecPaletteModel(category_icons)
-        self.category_filtered_spec_models = {
-            category: CategoryFilteredSpecPaletteModel(category) for category in category_icons
-        }
-        for model in self.category_filtered_spec_models.values():
+        factory_icons = {name: QIcon(factory.icon()) for name, factory in self.item_factories.items()}
+        self.specification_model = ProjectItemSpecFactoryModel(factory_icons)
+        self.filtered_spec_factory_models = {name: FilteredSpecFactoryModel(name) for name in self.item_factories}
+        for model in self.filtered_spec_factory_models.values():
             model.setSourceModel(self.specification_model)
         n_tools = 0
         self.msg.emit("Loading Custom Item specifications...")
@@ -671,8 +675,8 @@ class ToolboxUI(QMainWindow):
         self.main_toolbar.project_item_spec_list_view.setModel(self.specification_model)
         # Set model to Tool project item combo box
         self.specification_model_changed.emit()
-        # Note: If ProjectItemSpecPaletteModel signals are in use, they should be reconnected here.
-        # Reconnect ProjectItemSpecPaletteModel and QListView signals. Make sure that signals are connected only once.
+        # Note: If ProjectItemSpecFactoryModel signals are in use, they should be reconnected here.
+        # Reconnect ProjectItemSpecFactoryModel and QListView signals. Make sure that signals are connected only once.
         n_recv_sig1 = self.main_toolbar.project_item_spec_list_view.receivers(
             SIGNAL("doubleClicked(QModelIndex)")
         )  # nr of receivers
@@ -730,11 +734,13 @@ class ToolboxUI(QMainWindow):
         Returns:
             ToolSpecification, NoneType
         """
-        category = definition.get("category", "Tools")  # NOTE: Default to Tools so tool-specs work out of the box
-        category_item = self.category_items[category]
-        if not category_item.supports_specifications():
+        factory_name = definition.get(
+            "factory_name", "Tools"
+        )  # NOTE: Default to Tools so tool-specs work out of the box
+        factory = self.item_factories[factory_name]
+        if not factory.supports_specifications():
             return
-        return category_item.specification_loader(self, definition, def_path)
+        return factory.specification_loader(self, definition, def_path)
 
     def restore_ui(self):
         """Restore UI state from previous session."""
@@ -936,7 +942,7 @@ class ToolboxUI(QMainWindow):
         """Updates a specification and refreshes all items that use it.
 
         Args:
-            row (int): Row of tool specification in ProjectItemSpecPaletteModel
+            row (int): Row of tool specification in ProjectItemSpecFactoryModel
             specification (ProjectItemSpecification): An updated specification
         """
         if not self.specification_model.update_specification(row, specification):
@@ -955,7 +961,7 @@ class ToolboxUI(QMainWindow):
         """Reverts a specification update and refreshes all items that use it.
 
         Args:
-            row (int): Row of tool specification in ProjectItemSpecPaletteModel
+            row (int): Row of tool specification in ProjectItemSpecFactoryModel
         """
         if not self.specification_model.undo_update_specification(row):
             self.msg_error.emit("Unable to update specification at row <b>{0}</b>".format(row))
@@ -1000,11 +1006,11 @@ class ToolboxUI(QMainWindow):
         self.undo_stack.push(RemoveSpecificationCommand(self, row, ask_verification=ask_verification))
 
     def do_remove_specification(self, row, ask_verification=True):
-        """Removes specification from ProjectItemSpecPaletteModel.
+        """Removes specification from ProjectItemSpecFactoryModel.
         Removes also specifications from all items that use this specification.
 
         Args:
-            row (int): Row in ProjectItemSpecPaletteModel
+            row (int): Row in ProjectItemSpecFactoryModel
             ask_verification (bool): If True, displays a dialog box asking user to verify the removal
         """
         tool_spec = self.specification_model.specification(row)
@@ -1062,11 +1068,11 @@ class ToolboxUI(QMainWindow):
         if not ind.isValid():
             return
         spec = self.specification_model.specification(ind.row())
-        category_item = self.category_items[spec.category]
-        if not category_item.supports_specifications():
+        factory = self.item_factories[spec.factory_name]
+        if not factory.supports_specifications():
             return
         global_pos = self.main_toolbar.project_item_spec_list_view.viewport().mapToGlobal(pos)
-        self.specification_context_menu = category_item.specification_menu_maker(self, ind)
+        self.specification_context_menu = factory.specification_menu_maker(self, ind)
         self.specification_context_menu.exec_(global_pos)
         self.specification_context_menu.deleteLater()
         self.specification_context_menu = None
@@ -1082,7 +1088,7 @@ class ToolboxUI(QMainWindow):
             return
         specification = self.specification_model.specification(index.row())
         # Open spec in Tool specification edit widget
-        self.show_specification_form(specification.category, specification)
+        self.show_specification_form(specification.factory_name, specification)
 
     @busy_effect
     @Slot("QModelIndex")
@@ -1277,29 +1283,28 @@ class ToolboxUI(QMainWindow):
         # noinspection PyArgumentList
         QApplication.processEvents()
 
-    def show_add_project_item_form(self, item_category, x=0, y=0, spec=""):
+    def show_add_project_item_form(self, factory_name, x=0, y=0, spec=""):
         """Show add project item widget."""
         if not self._project:
             self.msg.emit("Please open or create a project first")
             return
-        category_ind = self.project_item_model.find_category(item_category)
-        if not category_ind:
-            self.msg_error.emit("Category {0} not found".format(item_category))
+        factory = self.item_factories.get(factory_name)
+        if factory is None:
+            self.msg_error.emit("{0} not found in factories".format(factory_name))
             return
-        category_item = self.project_item_model.item(category_ind)
-        self.add_project_item_form = category_item.add_form_maker(self, x, y, spec)
+        self.add_project_item_form = factory.add_form_maker(self, x, y, spec)
         self.add_project_item_form.show()
 
     @Slot()
-    def show_specification_form(self, category, specification=None):
+    def show_specification_form(self, factory_name, specification=None):
         """Show specification widget."""
         if not self._project:
             self.msg.emit("Please open or create a project first")
             return
-        category_item = self.category_items[category]
-        if not category_item.supports_specifications():
+        factory = self.item_factories[factory_name]
+        if not factory.supports_specifications():
             return
-        form = category_item.specification_form_maker(self, specification)
+        form = factory.specification_form_maker(self, specification)
         form.show()
 
     @Slot()
@@ -1615,11 +1620,11 @@ class ToolboxUI(QMainWindow):
                 continue
             name = item_icon.name()
             index = self.project_item_model.find_item(name)
-            item = self.project_item_model.item(index)
-            category = self.project_item_model.category_of_item(item.name)
-            category_items = serialized_items.setdefault(category.name, list())
-            item_dict = item.project_item.item_dict()
-            item_dict["name"] = item.name
+            project_item = self.project_item_model.item(index).project_item
+            factory_name = project_item.item_factory()  # FIXME: Implement item_factory()
+            category_items = serialized_items.setdefault(factory_name, list())
+            item_dict = project_item.item_dict()
+            item_dict["name"] = project_item.name
             category_items.append(item_dict)
         return serialized_items
 
@@ -1673,7 +1678,7 @@ class ToolboxUI(QMainWindow):
         scene.clearSelection()
         shift_x, shift_y = self._deserialized_item_position_shifts(serialized_items)
         scene_rect = scene.sceneRect()
-        for category_name, item_dicts in serialized_items.items():
+        for factory_name, item_dicts in serialized_items.items():
             for item in item_dicts:
                 name = item["name"]
                 if self.project_item_model.find_item(name) is not None:
@@ -1681,7 +1686,7 @@ class ToolboxUI(QMainWindow):
                     item["name"] = new_name
                 self._set_deserialized_item_position(item, shift_x, shift_y, scene_rect)
                 item.pop("short name")
-            self._project.add_project_items(category_name, *item_dicts, set_selected=True, verbosity=False)
+            self._project.add_project_items(factory_name, *item_dicts, set_selected=True, verbosity=False)
 
     @Slot()
     def project_item_to_clipboard(self):

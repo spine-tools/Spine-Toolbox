@@ -20,20 +20,20 @@ from PySide2.QtCore import Qt, QModelIndex, QAbstractListModel, QSortFilterProxy
 from PySide2.QtGui import QStandardItem, QStandardItemModel, QIcon
 
 
-class ProjectItemPaletteModel(QStandardItemModel):
+class ProjectItemFactoryModel(QStandardItemModel):
     """A model for listing project items in the Item Palette view."""
 
-    def add_item(self, category_item):
+    def add_item(self, factory):
         """Add item to model.
 
         Args:
-            category_item (CategoryProjectTreeItem)
+            factory (ProjectItemFactory)
         """
-        icon = QIcon(category_item.icon())
-        item_type = category_item.item_type()
+        icon = QIcon(factory.icon())
+        item_type = factory.item_type()
         new_item = QStandardItem("")
         new_item.setData(icon, Qt.DecorationRole)
-        new_item.setData(category_item.name, Qt.UserRole + 1)
+        new_item.setData(factory.name, Qt.UserRole + 1)
         new_item.setToolTip(
             f"<p>Drag-and-drop this icon into the Design View to create a new <b>{item_type}</b> item.</p>"
         )
@@ -50,7 +50,7 @@ class ProjectItemPaletteModel(QStandardItemModel):
         return ",".join([self.data(index, Qt.UserRole + 1), ""])
 
 
-class ProjectItemSpecPaletteModel(QAbstractListModel):
+class ProjectItemSpecFactoryModel(QAbstractListModel):
     """Class to store specs that are available in a project e.g. GAMS or Julia models."""
 
     def __init__(self, icons):
@@ -90,9 +90,9 @@ class ProjectItemSpecPaletteModel(QAbstractListModel):
         if role == Qt.ToolTipRole:
             if row >= self.rowCount():
                 return ""
-            return self._specs[row].def_file_path
+            return self._specs[row].description
         if role == Qt.DecorationRole:
-            return self._icons[self._specs[row].category]
+            return self._icons[self._specs[row].factory_name]
 
     def flags(self, index):
         """Returns enabled flags for the given index.
@@ -206,14 +206,14 @@ class ProjectItemSpecPaletteModel(QAbstractListModel):
 
     def get_mime_data_text(self, index):
         i = index.row()
-        return ",".join([self._specs[i].category, self._specs[i].name])
+        return ",".join([self._specs[i].factory_name, self._specs[i].name])
 
 
-class CategoryFilteredSpecPaletteModel(QSortFilterProxyModel):
-    def __init__(self, category):
+class FilteredSpecFactoryModel(QSortFilterProxyModel):
+    def __init__(self, factory_name):
         super().__init__()
-        self._category = category
+        self.factory_name = factory_name
 
     def filterAcceptsRow(self, source_row, source_parent):
         spec = self.sourceModel().specification(source_row)
-        return spec.category == self._category
+        return spec.factory_name == self.factory_name

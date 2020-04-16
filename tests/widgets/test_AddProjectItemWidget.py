@@ -33,8 +33,8 @@ class TestAddProjectItemWidget(unittest.TestCase):
         prefix = "project_item"
         toolbox = QWidget()
         toolbox.project = MagicMock()
-        toolbox.category_filtered_spec_models = MagicMock()
-        toolbox.category_filtered_spec_models.__getitem__.side_effect = lambda x: QStandardItemModel()
+        toolbox.filtered_spec_factory_models = MagicMock()
+        toolbox.filtered_spec_factory_models.__getitem__.side_effect = lambda x: QStandardItemModel()
         toolbox.propose_item_name = MagicMock()
         toolbox.propose_item_name.side_effect = lambda x: x
         class_ = MagicMock()

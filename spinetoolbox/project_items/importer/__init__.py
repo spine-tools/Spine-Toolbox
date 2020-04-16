@@ -16,4 +16,4 @@ Importer plugin.
 :date:   12.9.2019
 """
 
-from .importer_category import ImporterCategory as category_maker
+from .importer_factory import ImporterFactory as item_factory

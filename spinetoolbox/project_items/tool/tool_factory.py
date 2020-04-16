@@ -10,13 +10,13 @@
 ######################################################################################################################
 
 """
-The ToolCategory class.
+The ToolFactory class.
 
 :author: M. Marin (KTH)
 :date:   15.4.2020
 """
 
-from spinetoolbox.project_tree_item import CategoryProjectTreeItem
+from spinetoolbox.project_item import ProjectItemFactory
 from .tool import Tool
 from .tool_icon import ToolIcon
 from .tool_specifications import ToolSpecification
@@ -26,13 +26,13 @@ from .widgets.add_tool_widget import AddToolWidget
 from .widgets.custom_menus import ToolSpecificationMenu
 
 
-class ToolCategory(CategoryProjectTreeItem):
+class ToolFactory(ProjectItemFactory):
     def __init__(self, toolbox):
-        super().__init__(toolbox, "Tools", "Custom data processing.")
+        super().__init__(toolbox, "Tools", "")
 
     @staticmethod
-    def rank():
-        return 2
+    def item_category():
+        return "Tools"
 
     @staticmethod
     def icon():

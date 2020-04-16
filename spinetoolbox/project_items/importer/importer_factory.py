@@ -10,47 +10,47 @@
 ######################################################################################################################
 
 """
-The DataConnectionCategory class.
+The ImporterFactory class.
 
 :author: M. Marin (KTH)
 :date:   15.4.2020
 """
 
-from spinetoolbox.project_tree_item import CategoryProjectTreeItem
-from .data_connection_icon import DataConnectionIcon
-from .data_connection import DataConnection
-from .widgets.data_connection_properties_widget import DataConnectionPropertiesWidget
-from .widgets.add_data_connection_widget import AddDataConnectionWidget
+from spinetoolbox.project_item import ProjectItemFactory
+from .importer import Importer
+from .importer_icon import ImporterIcon
+from .widgets.importer_properties_widget import ImporterPropertiesWidget
+from .widgets.add_importer_widget import AddImporterWidget
 
 
-class DataConnectionCategory(CategoryProjectTreeItem):
+class ImporterFactory(ProjectItemFactory):
     def __init__(self, toolbox):
-        super().__init__(toolbox, "Data Connections", "Generic data source.")
+        super().__init__(toolbox, "Importers", "")
 
     @staticmethod
-    def rank():
-        return 1
+    def item_category():
+        return "Importers"
 
     @staticmethod
     def icon():
-        return ":/icons/project_item_icons/file-alt.svg"
+        return ":/icons/project_item_icons/database-import.svg"
 
     @staticmethod
     def item_type():
-        return "Data Connection"
+        return "Importer"
 
     @property
     def properties_widget_maker(self):
-        return DataConnectionPropertiesWidget
+        return ImporterPropertiesWidget
 
     @property
     def item_maker(self):
-        return DataConnection
+        return Importer
 
     @property
     def icon_maker(self):
-        return DataConnectionIcon
+        return ImporterIcon
 
     @property
     def add_form_maker(self):
-        return AddDataConnectionWidget
+        return AddImporterWidget

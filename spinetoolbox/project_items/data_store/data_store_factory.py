@@ -10,26 +10,26 @@
 ######################################################################################################################
 
 """
-The DataStoreCategory class.
+The DataStoreFactory class.
 
 :author: M. Marin (KTH)
 :date:   15.4.2020
 """
 
-from spinetoolbox.project_tree_item import CategoryProjectTreeItem
+from spinetoolbox.project_item import ProjectItemFactory
 from .data_store import DataStore
 from .data_store_icon import DataStoreIcon
 from .widgets.data_store_properties_widget import DataStorePropertiesWidget
 from .widgets.add_data_store_widget import AddDataStoreWidget
 
 
-class DataStoreCategory(CategoryProjectTreeItem):
+class DataStoreFactory(ProjectItemFactory):
     def __init__(self, toolbox):
-        super().__init__(toolbox, "Data Stores", "Data in the Spine generic format.")
+        super().__init__(toolbox, "Data Stores", "")
 
     @staticmethod
-    def rank():
-        return 0
+    def item_category():
+        return "Data Stores"
 
     @staticmethod
     def icon():

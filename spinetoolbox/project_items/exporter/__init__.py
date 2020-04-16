@@ -16,4 +16,4 @@ Exporter project item plugin.
 :date:   25.9.2019
 """
 
-from .exporter_category import ExporterCategory as category_maker
+from .exporter_factory import ExporterFactory as item_factory

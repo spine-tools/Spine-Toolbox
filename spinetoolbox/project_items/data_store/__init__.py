@@ -16,4 +16,4 @@ Data store plugin.
 :date:   12.9.2019
 """
 
-from .data_store_category import DataStoreCategory as category_maker
+from .data_store_factory import DataStoreFactory as item_factory

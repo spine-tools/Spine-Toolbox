@@ -56,7 +56,7 @@ class MainToolBar(QToolBar):
         self.add_execute_buttons()
 
     def add_project_item_list_view(self):
-        self.project_item_list_view.setModel(self._toolbox.project_item_palette_model)
+        self.project_item_list_view.setModel(self._toolbox.project_item_factory_model)
         self.addWidget(QLabel("Generic items"))
         self.addWidget(self.project_item_list_view)
 

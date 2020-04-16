@@ -10,26 +10,26 @@
 ######################################################################################################################
 
 """
-The ExporterCategory class.
+The ExporterFactory class.
 
 :author: M. Marin (KTH)
 :date:   15.4.2020
 """
 
-from spinetoolbox.project_tree_item import CategoryProjectTreeItem
+from spinetoolbox.project_item import ProjectItemFactory
 from .exporter import Exporter
 from .exporter_icon import ExporterIcon
 from .widgets.add_exporter_widget import AddExporterWidget
 from .widgets.exporter_properties import ExporterProperties
 
 
-class ExporterCategory(CategoryProjectTreeItem):
+class ExporterFactory(ProjectItemFactory):
     def __init__(self, toolbox):
-        super().__init__(toolbox, "Exporters", "Data conversion from Spine to an external format.")
+        super().__init__(toolbox, "Exporters", "")
 
     @staticmethod
-    def rank():
-        return 5
+    def item_category():
+        return "Exporters"
 
     @staticmethod
     def icon():

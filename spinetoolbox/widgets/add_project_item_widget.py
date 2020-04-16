@@ -49,7 +49,7 @@ class AddProjectItemWidget(QWidget):
         self.statusbar.setStyleSheet(STATUSBAR_SS)
         self.ui.horizontalLayout_statusbar_placeholder.addWidget(self.statusbar)
         # Init
-        self.ui.comboBox_specification.setModel(toolbox.category_filtered_spec_models[class_.category()])
+        self.ui.comboBox_specification.setModel(toolbox.filtered_spec_factory_models[class_.category()])
         if spec:
             self.ui.comboBox_specification.setCurrentText(spec)
             prefix = spec

@@ -86,7 +86,7 @@ class ToolSpecificationWidget(QWidget):
         self.outputfiles = list(specification.outputfiles) if specification else list()
         self.def_file_path = specification.def_file_path if specification else None
         self.program_path = specification.path if specification else None
-        self.definition = dict(category="Tools")
+        self.definition = dict(factory_name="Tools")
         # Get first item from sourcefiles list as the main program file
         try:
             self.main_program_file = self.sourcefiles.pop(0)
