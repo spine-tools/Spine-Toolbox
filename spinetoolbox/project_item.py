@@ -375,7 +375,7 @@ class ProjectItemFactory(MetaObject):
     @staticmethod
     def icon():
         """
-        Returns the category icon resource path.
+        Returns the icon resource path.
 
         Returns:
             str
@@ -445,7 +445,7 @@ class ProjectItemFactory(MetaObject):
     @staticmethod
     def supports_specifications():
         """
-        Returns whether or not this category supports specs.
+        Returns whether or not this factory supports specs.
         If the subclass implementation returns True, then it must also implement
         ``specification_form_maker``, ``specification_menu_maker``, and  ``specification_loader``.
 
