@@ -108,7 +108,6 @@ class DataConnection(ProjectItem):
         self._properties_ui.label_dc_name.setText(self.name)
         self._properties_ui.treeView_dc_references.setModel(self.reference_model)
         self._properties_ui.treeView_dc_data.setModel(self.data_model)
-        self.refresh()
 
     @Slot("QVariant")
     def add_files_to_references(self, paths):
@@ -265,12 +264,12 @@ class DataConnection(ProjectItem):
             return
         # Check that file name has no invalid chars
         if any(True for x in file_name if x in INVALID_FILENAME_CHARS):
-            msg = "File name <b>{0}</b> contains invalid characters.".format(file_name)
+            msg = f"File name <b>{file_name}</b> contains invalid characters."
             self._logger.information_box.emit("Creating file failed", msg)
             return
         file_path = os.path.join(self.data_dir, file_name)
         if os.path.exists(file_path):
-            msg = "File <b>{0}</b> already exists.".format(file_name)
+            msg = f"File <b>{file_name}</b> already exists."
             self._logger.information_box.emit("Creating file failed", msg)
             return
         try:
@@ -330,7 +329,7 @@ class DataConnection(ProjectItem):
         return files
 
     @Slot("QString")
-    def refresh(self, path=None):
+    def refresh(self, _=None):
         """Refresh data files in Data Connection Properties.
         NOTE: Might lead to performance issues."""
         d = self.data_files()
@@ -405,12 +404,14 @@ class DataConnection(ProjectItem):
         Returns:
             bool: True if renaming succeeded, False otherwise
         """
-        if not super().rename(new_name):
-            return False
         dirs = self.data_dir_watcher.directories()
         if dirs:
-            self.data_dir_watcher.removePaths(self.data_dir_watcher.directories())
+            self.data_dir_watcher.removePaths(dirs)
+        if not super().rename(new_name):
+            self.data_dir_watcher.addPaths(dirs)
+            return False
         self.data_dir_watcher.addPath(self.data_dir)
+        self.refresh()
         return True
 
     def tear_down(self):
