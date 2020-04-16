@@ -20,8 +20,8 @@ import os
 import sys
 import shutil
 from PySide2.QtCore import QObject, Signal, Slot
-from .config import GAMS_EXECUTABLE, JULIA_EXECUTABLE, PYTHON_EXECUTABLE
-from .execution_managers import ConsoleExecutionManager, QProcessExecutionManager
+from spinetoolbox.config import GAMS_EXECUTABLE, JULIA_EXECUTABLE, PYTHON_EXECUTABLE
+from spinetoolbox.execution_managers import ConsoleExecutionManager, QProcessExecutionManager
 
 
 class ToolInstance(QObject):

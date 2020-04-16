@@ -23,7 +23,7 @@ import re
 from PySide2.QtCore import QUrl
 from PySide2.QtGui import QDesktopServices
 from spinetoolbox.project_item import ProjectItemSpecification
-from spinetoolbox.tool_instance import GAMSToolInstance, JuliaToolInstance, PythonToolInstance, ExecutableToolInstance
+from .tool_instance import GAMSToolInstance, JuliaToolInstance, PythonToolInstance, ExecutableToolInstance
 
 # Tool types
 TOOL_TYPES = ["Julia", "Python", "GAMS", "Executable"]
