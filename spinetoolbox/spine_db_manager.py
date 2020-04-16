@@ -368,7 +368,7 @@ class SpineDBManager(QObject):
         Returns:
             bool: True if successfully committed or rolled back, False otherwise
         """
-        if self.undo_stack[db_map].isClean():
+        if self.undo_stack[db_map].isClean() or not db_map.has_pending_changes():
             return True
         commit_at_exit = int(self.qsettings.value("appSettings/commitAtExit", defaultValue="1"))
         if commit_at_exit == 0:
