@@ -119,6 +119,9 @@ class TabularViewMixin:
     def is_index_expansion_input_type(self):
         return self.current_input_type == self._INDEX_EXPANSION
 
+    def is_relationship_input_type(self):
+        return self.current_input_type == self._RELATIONSHIP
+
     @Slot("QModelIndex", object)
     def _set_model_data(self, index, value):
         self.pivot_table_proxy.setData(index, value)

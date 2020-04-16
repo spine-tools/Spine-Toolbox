@@ -473,6 +473,8 @@ class PivotTableModel(QAbstractTableModel):
                 data = self.model.get_pivoted_data([row], [column])
                 if not data:
                     return None
+                if self._parent.is_relationship_input_type():
+                    return bool(data[0][0])
                 if data[0][0] is None:
                     return None
                 if self._parent.is_value_input_type():
@@ -480,7 +482,7 @@ class PivotTableModel(QAbstractTableModel):
                 if self._parent.is_index_expansion_input_type():
                     index = self._header_ids(row, column)[-2]
                     return self.db_mngr.get_value_index(self.db_map, "parameter value", data[0][0], index, role)
-                return bool(data[0][0])
+                return "Logic error"
             return None
         if role == Qt.FontRole and self.index_in_top_left(index):
             font = QFont()
