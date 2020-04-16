@@ -328,6 +328,13 @@ def rename_dir(old_dir, new_dir, logger):
         new_dir (str): Absolute path to new directory
         logger (LoggerInterface): A logger instance
     """
+    if os.path.exists(new_dir):
+        # If the target is a directory, then there will not be a name clash in shutil.move()
+        # as the old_dir will be moved inside new_dir which is not a rename operation.
+        # We guard against that here.
+        msg = "Directory<br/><b>{0}</b><br/>already exists".format(new_dir)
+        logger.information_box.emit("Renaming directory failed", msg)
+        return False
     try:
         shutil.move(old_dir, new_dir)
     except FileExistsError:

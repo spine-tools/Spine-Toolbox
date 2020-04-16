@@ -252,7 +252,7 @@ class ProjectItem(MetaObject):
         """
         new_short_name = shorten(new_name)
         # Rename project item data directory
-        new_data_dir = os.path.join(self._project.items_dir, new_short_name)  # Make path for new data dir
+        new_data_dir = os.path.join(self._project.items_dir, new_short_name)
         if not rename_dir(self.data_dir, new_data_dir, self._logger):
             return False
         # Rename project item

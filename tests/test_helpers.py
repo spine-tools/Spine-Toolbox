@@ -15,8 +15,11 @@ Unit tests for the helpers module.
 :authors: A. Soininen (VTT)
 :date:   23.3.2020
 """
+from pathlib import Path
+from tempfile import TemporaryDirectory
 import unittest
-from spinetoolbox.helpers import first_non_null, interpret_icon_id, make_icon_id
+from unittest.mock import MagicMock
+from spinetoolbox.helpers import first_non_null, interpret_icon_id, make_icon_id, rename_dir
 
 
 class TestHelpers(unittest.TestCase):
@@ -35,6 +38,32 @@ class TestHelpers(unittest.TestCase):
     def test_first_non_null(self):
         self.assertEqual(first_non_null([23]), 23)
         self.assertEqual(first_non_null([None, 23]), 23)
+
+    def test_rename_dir(self):
+        with TemporaryDirectory() as temp_dir:
+            old_dir = Path(temp_dir, "old directory")
+            old_dir.mkdir()
+            file_in_dir = Path(old_dir, "file.fff")
+            file_in_dir.touch()
+            new_dir = Path(temp_dir, "new directory")
+            logger = MagicMock()
+            self.assertTrue(rename_dir(str(old_dir), str(new_dir), logger))
+            self.assertFalse(old_dir.exists())
+            self.assertTrue(new_dir.exists())
+            files_in_new_dir = [path for path in new_dir.iterdir()]
+            self.assertEqual(files_in_new_dir, [Path(new_dir, "file.fff")])
+
+    def test_rename_dir_fails_if_target_exists(self):
+        with TemporaryDirectory() as temp_dir:
+            old_dir = Path(temp_dir, "old directory")
+            old_dir.mkdir()
+            new_dir = Path(temp_dir, "new directory")
+            new_dir.mkdir()
+            logger = MagicMock()
+            self.assertFalse(rename_dir(str(old_dir), str(new_dir), logger))
+            logger.information_box.emit.assert_called_once()
+            self.assertTrue(old_dir.exists())
+            self.assertTrue(new_dir.exists())
 
 
 if __name__ == '__main__':
