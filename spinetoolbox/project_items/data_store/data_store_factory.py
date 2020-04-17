@@ -54,3 +54,15 @@ class DataStoreFactory(ProjectItemFactory):
     @property
     def add_form_maker(self):
         return AddDataStoreWidget
+
+    @property
+    def specification_form_maker(self):
+        raise NotImplementedError()
+
+    @property
+    def specification_menu_maker(self):
+        raise NotImplementedError()
+
+    @property
+    def specification_loader(self):
+        raise NotImplementedError()

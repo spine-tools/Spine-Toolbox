@@ -54,3 +54,15 @@ class DataConnectionFactory(ProjectItemFactory):
     @property
     def add_form_maker(self):
         return AddDataConnectionWidget
+
+    @property
+    def specification_form_maker(self):
+        raise NotImplementedError()
+
+    @property
+    def specification_menu_maker(self):
+        raise NotImplementedError()
+
+    @property
+    def specification_loader(self):
+        raise NotImplementedError()

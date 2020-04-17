@@ -464,6 +464,7 @@ class ProjectItemFactory(MetaObject):
         """
         raise NotImplementedError()
 
+    @property
     def specification_menu_maker(self):
         """
         Returns an ItemSpecificationMenu subclass.
