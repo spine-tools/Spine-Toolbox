@@ -22,32 +22,27 @@ from PySide2.QtGui import QDesktopServices, QStandardItemModel, QStandardItem
 from PySide2.QtWidgets import QFileIconProvider
 from spinetoolbox.project_item import ProjectItem, ProjectItemResource
 from spinetoolbox.config import TOOL_OUTPUT_DIR
-from spinetoolbox.widgets.custom_menus import ToolSpecificationOptionsPopupmenu
-from spinetoolbox.tool_specifications import ToolSpecification
-from spinetoolbox.project_commands import (
-    SetToolSpecificationCommand,
-    UpdateToolExecuteInWorkCommand,
-    UpdateToolCmdLineArgsCommand,
-)
+from spinetoolbox.project_commands import UpdateToolExecuteInWorkCommand, UpdateToolCmdLineArgsCommand
+from .tool_specifications import ToolSpecification
+from .widgets.custom_menus import ToolContextMenu, ToolSpecificationMenu
 from .tool_executable import ToolExecutable
 from .utils import flatten_file_path_duplicates, find_file, find_last_output_files, is_pattern
-from .widgets.custom_menus import ToolContextMenu
 
 
 class Tool(ProjectItem):
     def __init__(
-        self, name, description, x, y, toolbox, project, logger, tool="", execute_in_work=True, cmd_line_args=None
+        self, toolbox, project, logger, name, description, x, y, tool="", execute_in_work=True, cmd_line_args=None
     ):
         """Tool class.
 
         Args:
+            toolbox (ToolboxUI): QMainWindow instance
+            project (SpineToolboxProject): the project this item belongs to
+            logger (LoggerInterface): a logger instance
             name (str): Object name
             description (str): Object description
             x (float): Initial X coordinate of item icon
             y (float): Initial Y coordinate of item icon
-            toolbox (ToolboxUI): QMainWindow instance
-            project (SpineToolboxProject): the project this item belongs to
-            logger (LoggerInterface): a logger instance
             tool (str): Name of this Tool's Tool specification
             execute_in_work (bool): Execute associated Tool specification in work (True) or source directory (False)
             cmd_line_args (list): Tool command line arguments
@@ -65,18 +60,18 @@ class Tool(ProjectItem):
         self.populate_output_file_model(None)
         self.specification_model = QStandardItemModel()
         self.populate_specification_model(False)
+        self.execute_in_work = None
+        self.undo_execute_in_work = None
         self.source_files = list()
-        self.execute_in_work = execute_in_work
         self.cmd_line_args = list() if not cmd_line_args else cmd_line_args
-        self._tool_specification = self._toolbox.tool_specification_model.find_tool_specification(tool)
-        if tool and not self._tool_specification:
+        self._specification = self._toolbox.specification_model.find_specification(tool)
+        if tool and not self._specification:
             self._logger.msg_error.emit(
                 f"Tool <b>{self.name}</b> should have a Tool specification <b>{tool}</b> but it was not found"
             )
-        if self._tool_specification:
-            self.execute_in_work = self._tool_specification.execute_in_work
-        self.do_set_tool_specification(self._tool_specification)
-        self.tool_specification_options_popup_menu = None
+        self.do_set_specification(self._specification)
+        self.do_update_execution_mode(execute_in_work)
+        self.specification_options_popup_menu = None
         # Make directory for results
         self.output_dir = os.path.join(self.data_dir, TOOL_OUTPUT_DIR)
 
@@ -96,7 +91,7 @@ class Tool(ProjectItem):
         s = super().make_signal_handler_dict()
         s[self._properties_ui.toolButton_tool_open_dir.clicked] = lambda checked=False: self.open_directory()
         s[self._properties_ui.pushButton_tool_results.clicked] = self.open_results
-        s[self._properties_ui.comboBox_tool.currentIndexChanged] = self.update_tool_specification
+        s[self._properties_ui.comboBox_tool.currentTextChanged] = self.update_specification
         s[self._properties_ui.radioButton_execute_in_work.toggled] = self.update_execution_mode
         s[self._properties_ui.lineEdit_tool_args.editingFinished] = self.update_tool_cmd_line_args
         return s
@@ -130,19 +125,18 @@ class Tool(ProjectItem):
             self._properties_ui.radioButton_execute_in_source.setChecked(True)
         self._properties_ui.radioButton_execute_in_work.blockSignals(False)
 
-    @Slot(int)
-    def update_tool_specification(self, row):
+    @Slot(str)
+    def update_specification(self, text):
         """Update Tool specification according to selection in the specification comboBox.
 
         Args:
             row (int): Selected row in the comboBox
         """
-        if row == -1:
-            self.set_tool_specification(None)
+        spec = self._toolbox.specification_model.find_specification(text)
+        if spec is None:
+            self.set_specification(None)
         else:
-            new_tool = self._toolbox.tool_specification_model.tool_specification(row)
-            self.set_tool_specification(new_tool)
-            self.do_update_execution_mode(new_tool.execute_in_work)
+            self.set_specification(spec)
 
     @Slot()
     def update_tool_cmd_line_args(self):
@@ -161,23 +155,25 @@ class Tool(ProjectItem):
         self._properties_ui.lineEdit_tool_args.setText(" ".join(self.cmd_line_args))
         self._properties_ui.lineEdit_tool_args.blockSignals(False)
 
-    def set_tool_specification(self, tool_specification):
-        """Pushes a new SetToolSpecificationCommand to the toolbox' undo stack.
-        """
-        if tool_specification == self._tool_specification:
-            return
-        self._toolbox.undo_stack.push(SetToolSpecificationCommand(self, tool_specification))
-
-    def do_set_tool_specification(self, tool_specification):
+    def do_set_specification(self, specification):
         """Sets Tool specification for this Tool. Removes Tool specification if None given as argument.
 
         Args:
-            tool_specification (ToolSpecification): Tool specification of this Tool. None removes the specification.
+            specification (ToolSpecification): Tool specification of this Tool. None removes the specification.
         """
-        self._tool_specification = tool_specification
+        super().do_set_specification(specification)
         self.update_tool_models()
         self.update_tool_ui()
+        if self.undo_execute_in_work is None:
+            self.undo_execute_in_work = self.execute_in_work
+        if specification:
+            self.do_update_execution_mode(specification.execute_in_work)
         self.item_changed.emit()
+
+    def undo_set_specification(self):
+        super().undo_set_specification()
+        self.do_update_execution_mode(self.undo_execute_in_work)
+        self.undo_execute_in_work = None
 
     def update_tool_ui(self):
         """Updates Tool UI to show Tool specification details. Used when Tool specification is changed.
@@ -185,35 +181,37 @@ class Tool(ProjectItem):
         if not self._active:
             return
         if not self._properties_ui:
-            # This happens when calling self.set_tool_specification() in the __init__ method,
+            # This happens when calling self.set_specification() in the __init__ method,
             # because the UI only becomes available *after* adding the item to the project_item_model... problem??
             return
-        if not self.tool_specification():
+        if not self.specification():
             self._properties_ui.comboBox_tool.setCurrentIndex(-1)
             self._properties_ui.lineEdit_tool_spec_args.setText("")
             self.do_update_execution_mode(True)
+            spec_model_index = None
         else:
-            self._properties_ui.comboBox_tool.setCurrentText(self.tool_specification().name)
-            self._properties_ui.lineEdit_tool_spec_args.setText(" ".join(self.tool_specification().cmdline_args))
-        self.tool_specification_options_popup_menu = ToolSpecificationOptionsPopupmenu(self._toolbox, self)
-        self._properties_ui.toolButton_tool_specification.setMenu(self.tool_specification_options_popup_menu)
+            self._properties_ui.comboBox_tool.setCurrentText(self.specification().name)
+            self._properties_ui.lineEdit_tool_spec_args.setText(" ".join(self.specification().cmdline_args))
+            spec_model_index = self._toolbox.specification_model.specification_index(self.specification().name)
+        self.specification_options_popup_menu = ToolSpecificationMenu(self._toolbox, spec_model_index)
+        self._properties_ui.toolButton_tool_specification.setMenu(self.specification_options_popup_menu)
         self._properties_ui.treeView_specification.expandAll()
         self._properties_ui.lineEdit_tool_args.setText(" ".join(self.cmd_line_args))
 
     def update_tool_models(self):
         """Update Tool models with Tool specification details. Used when Tool specification is changed.
         Overrides execution mode (work or source) with the specification default."""
-        if not self.tool_specification():
+        if not self.specification():
             self.populate_source_file_model(None)
             self.populate_input_file_model(None)
             self.populate_opt_input_file_model(None)
             self.populate_output_file_model(None)
             self.populate_specification_model(populate=False)
         else:
-            self.populate_source_file_model(self.tool_specification().includes)
-            self.populate_input_file_model(self.tool_specification().inputfiles)
-            self.populate_opt_input_file_model(self.tool_specification().inputfiles_opt)
-            self.populate_output_file_model(self.tool_specification().outputfiles)
+            self.populate_source_file_model(self.specification().includes)
+            self.populate_input_file_model(self.specification().inputfiles)
+            self.populate_opt_input_file_model(self.specification().inputfiles_opt)
+            self.populate_output_file_model(self.specification().outputfiles)
             self.populate_specification_model(populate=True)
 
     @Slot(bool)
@@ -229,34 +227,39 @@ class Tool(ProjectItem):
             self._logger.msg_error.emit(f"Failed to open directory: {self.output_dir}")
 
     @Slot()
-    def edit_tool_specification(self):
+    def edit_specification(self):
         """Open Tool specification editor for the Tool specification attached to this Tool."""
-        index = self._toolbox.tool_specification_model.tool_specification_index(self.tool_specification().name)
-        self._toolbox.edit_tool_specification(index)
-
-    @Slot()
-    def open_tool_specification_file(self):
-        """Open Tool specification file."""
-        index = self._toolbox.tool_specification_model.tool_specification_index(self.tool_specification().name)
-        self._toolbox.open_tool_specification_file(index)
-
-    @Slot()
-    def open_tool_main_program_file(self):
-        """Open Tool specification main program file in an external text edit application."""
-        index = self._toolbox.tool_specification_model.tool_specification_index(self.tool_specification().name)
-        self._toolbox.open_tool_main_program_file(index)
-
-    @Slot()
-    def open_tool_main_directory(self):
-        """Open directory where the Tool specification main program is located in file explorer."""
-        if not self.tool_specification():
+        if not self.specification():
             return
-        dir_url = "file:///" + self.tool_specification().path
+        index = self._toolbox.specification_model.specification_index(self.specification().name)
+        self._toolbox.edit_specification(index)
+
+    @Slot()
+    def open_specification_file(self):
+        """Open Tool specification file."""
+        if not self.specification():
+            return
+        index = self._toolbox.specification_model.specification_index(self.specification().name)
+        self._toolbox.open_specification_file(index)
+
+    @Slot()
+    def open_main_program_file(self):
+        """Open Tool specification main program file in an external text edit application."""
+        if not self.specification():
+            return
+        self.specification().open_main_program_file()
+
+    @Slot()
+    def open_main_directory(self):
+        """Open directory where the Tool specification main program is located in file explorer."""
+        if not self.specification():
+            return
+        dir_url = "file:///" + self.specification().path
         self._toolbox.open_anchor(QUrl(dir_url, QUrl.TolerantMode))
 
-    def tool_specification(self):
+    def specification(self):
         """Returns Tool specification."""
-        return self._tool_specification
+        return self._specification
 
     def populate_source_file_model(self, items):
         """Add required source files (includes) into a model.
@@ -367,11 +370,11 @@ class Tool(ProjectItem):
         Returns:
             list: a list of Tool's output resources
         """
-        if self.tool_specification() is None:
+        if self.specification() is None:
             self._logger.msg_error.emit("Tool specification missing.")
             return []
         resources = list()
-        last_output_files = find_last_output_files(self._tool_specification.outputfiles, self.output_dir)
+        last_output_files = find_last_output_files(self._specification.outputfiles, self.output_dir)
         for i in range(self.output_file_model.rowCount()):
             out_file_label = self.output_file_model.item(i, 0).data(Qt.DisplayRole)
             latest_files = last_output_files.get(out_file_label, list())
@@ -402,10 +405,9 @@ class Tool(ProjectItem):
     def execution_item(self):
         """Creates project item's execution counterpart."""
         work_dir = self._toolbox.work_dir if self.execute_in_work else None
-        executable = ToolExecutable(
-            self.name, work_dir, self.output_dir, self._tool_specification, self.cmd_line_args, self._logger
+        return ToolExecutable(
+            self.name, work_dir, self.output_dir, self._specification, self.cmd_line_args, self._logger
         )
-        return executable
 
     def _find_input_files(self, resources):
         """Iterates files in required input files model and looks for them in the given resources.
@@ -429,7 +431,7 @@ class Tool(ProjectItem):
 
     def _do_handle_dag_changed(self, resources):
         """See base class."""
-        if not self.tool_specification():
+        if not self.specification():
             self.add_notification(
                 "This Tool is not connected to a Tool specification. Set it in the Tool Properties Panel."
             )
@@ -448,10 +450,10 @@ class Tool(ProjectItem):
     def item_dict(self):
         """Returns a dictionary corresponding to this item."""
         d = super().item_dict()
-        if not self.tool_specification():
+        if not self.specification():
             d["tool"] = ""
         else:
-            d["tool"] = self.tool_specification().name
+            d["tool"] = self.specification().name
         d["execute_in_work"] = self.execute_in_work
         d["cmd_line_args"] = ToolSpecification.split_cmdline_args(" ".join(self.cmd_line_args))
         return d
@@ -482,9 +484,9 @@ class Tool(ProjectItem):
             else:
                 self.stop_execution()  # Proceed with stopping
         elif action == "Edit Tool specification":
-            self.edit_tool_specification()
+            self.edit_specification()
         elif action == "Edit main program file...":
-            self.open_tool_main_program_file()
+            self.open_main_program_file()
 
     def rename(self, new_name):
         """Rename this item.

@@ -40,18 +40,18 @@ _CONNECTOR_NAME_TO_CLASS = {
 
 
 class Importer(ProjectItem):
-    def __init__(self, name, description, mappings, x, y, toolbox, project, logger, cancel_on_error=True):
+    def __init__(self, toolbox, project, logger, name, description, mappings, x, y, cancel_on_error=True):
         """Importer class.
 
         Args:
+            toolbox (ToolboxUI): QMainWindow instance
+            project (SpineToolboxProject): the project this item belongs to
+            logger (LoggerInterface): a logger instance
             name (str): Project item name
             description (str): Project item description
             mappings (list): List where each element contains two dicts (path dict and mapping dict)
             x (float): Initial icon scene X coordinate
             y (float): Initial icon scene Y coordinate
-            toolbox (ToolboxUI): QMainWindow instance
-            project (SpineToolboxProject): the project this item belongs to
-            logger (LoggerInterface): a logger instance
             cancel_on_error (bool): if True the item's execution will stop on import error
        """
         super().__init__(name, description, x, y, project, logger)

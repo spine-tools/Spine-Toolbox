@@ -217,9 +217,9 @@ class SingleParameterModel(MinimalTableModel):
             return False
         if self._selected_param_def_ids == set():
             return True
-        param_def_id = self.db_mngr.get_item(
-            self.db_map, self.item_type, self._main_data[row], self.parameter_definition_id_key
-        )["id"]
+        param_def_id = self.db_mngr.get_item(self.db_map, self.item_type, self._main_data[row])[
+            self.parameter_definition_id_key
+        ]
         return param_def_id in self._selected_param_def_ids
 
     def _auto_filter_accepts_row(self, row):

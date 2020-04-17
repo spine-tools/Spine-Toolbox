@@ -24,7 +24,7 @@ import shutil
 from PySide2.QtCore import Qt
 from PySide2.QtGui import QStandardItem, QStandardItemModel
 from PySide2.QtWidgets import QApplication
-from spinetoolbox.tool_specifications import ExecutableTool
+from spinetoolbox.project_items.tool.tool_specifications import ExecutableTool
 from spinetoolbox.project_items.tool.tool import Tool
 from spinetoolbox.config import TOOL_OUTPUT_DIR
 from ...mock_helpers import clean_up_toolboxui_with_project, create_toolboxui_with_project
@@ -35,8 +35,9 @@ class TestTool(unittest.TestCase):
         """Set up."""
         self.basedir = mkdtemp()
         self.toolbox = create_toolboxui_with_project()
-        self.toolbox.tool_specification_model = _MockToolSpecModel(self.toolbox, self.basedir)
-        self.toolbox.tool_specification_model_changed.emit(self.toolbox.tool_specification_model)
+        model = _MockToolSpecModel(self.toolbox, self.basedir)
+        self.toolbox.specification_model = self.toolbox.filtered_spec_factory_models["Tools"] = model
+        self.toolbox.specification_model_changed.emit()
 
     def tearDown(self):
         """Clean up."""
@@ -117,7 +118,7 @@ class TestTool(unittest.TestCase):
         """Test that specification is loaded into selections on Tool creation,
         and then shown in the ui when Tool is activated.
         """
-        item = dict(name="Tool", description="", x=0, y=0, tool="simple_exec")
+        item = dict(name="Tool", description="", x=0, y=0, tool="simple_exec", execute_in_work=False)
         self.toolbox.project().add_project_items("Tools", item)  # Add Tool to project
         ind = self.toolbox.project_item_model.find_item("Tool")
         tool = self.toolbox.project_item_model.item(ind).project_item
@@ -268,10 +269,14 @@ class _MockToolSpecModel(QStandardItemModel):
         ]
         specification_names = [x.name for x in specifications]
         specification_dict = dict(zip(specification_names, specifications))
-        self.find_tool_specification = specification_dict.get
-        self.tool_specification = specifications.__getitem__
-        self.tool_specification_row = specification_names.index
+        self.find_specification = specification_dict.get
+        self.specification = specifications.__getitem__
+        self.specification_row = specification_names.index
         self.invisibleRootItem().appendRows([QStandardItem(x) for x in specification_dict])
+
+    def specification_index(self, spec_name):
+        row = self.specification_row(spec_name)
+        return self.invisibleRootItem().child(row)
 
 
 if __name__ == '__main__':

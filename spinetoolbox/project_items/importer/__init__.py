@@ -16,16 +16,4 @@ Importer plugin.
 :date:   12.9.2019
 """
 
-from .importer import Importer
-from .importer_icon import ImporterIcon
-from .widgets.importer_properties_widget import ImporterPropertiesWidget
-from .widgets.add_importer_widget import AddImporterWidget
-
-item_rank = 4
-item_category = Importer.category()
-item_type = Importer.item_type()
-item_icon = ":/icons/project_item_icons/database-import.svg"
-item_maker = Importer
-icon_maker = ImporterIcon
-properties_widget_maker = ImporterPropertiesWidget
-add_form_maker = AddImporterWidget
+from .importer_factory import ImporterFactory as item_factory

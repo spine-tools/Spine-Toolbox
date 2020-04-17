@@ -16,16 +16,4 @@ View plugin.
 :date:   12.9.2019
 """
 
-from .view import View
-from .view_icon import ViewIcon
-from .widgets.view_properties_widget import ViewPropertiesWidget
-from .widgets.add_view_widget import AddViewWidget
-
-item_rank = 3
-item_category = View.category()
-item_type = View.item_type()
-item_icon = ":/icons/project_item_icons/binoculars.svg"
-item_maker = View
-icon_maker = ViewIcon
-properties_widget_maker = ViewPropertiesWidget
-add_form_maker = AddViewWidget
+from .view_factory import ViewFactory as item_factory

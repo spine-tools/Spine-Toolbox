@@ -35,7 +35,6 @@ from .mock_helpers import (
     add_exporter,
 )
 from spinetoolbox.executable_item import ExecutableItem
-from spinetoolbox.tool_specifications import PythonTool
 
 
 # noinspection PyUnusedLocal
@@ -206,12 +205,6 @@ class TestSpineToolboxProject(unittest.TestCase):
         desc = "Project Description"
         self.toolbox.project().set_description(desc)
         self.assertEqual(self.toolbox.project().description, desc)
-
-    def test_load_tool_specification_from_file(self):
-        """Tests creating a PythonTool (specification) instance from a valid tool specification file."""
-        spec_path = os.path.abspath(os.path.join(os.curdir, "tests", "test_resources", "test_tool_spec.json"))
-        tool_spec = self.toolbox.project().load_tool_specification_from_file(spec_path)
-        self.assertIsInstance(tool_spec, PythonTool)
 
     def test_execute_selected_item_within_single_dag(self):
         data_store, data_store_executable = self._make_item(self.add_ds)

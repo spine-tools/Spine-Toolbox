@@ -23,7 +23,7 @@ from spinetoolbox.graphics_items import ProjectItemIcon
 
 
 class ToolIcon(ProjectItemIcon):
-    def __init__(self, toolbox, x, y, w, h, name):
+    def __init__(self, toolbox, x, y, w, h, project_item, icon):
         """Tool icon for the Design View.
 
         Args:
@@ -32,18 +32,11 @@ class ToolIcon(ProjectItemIcon):
             y (float): Icon y coordinate
             w (float): Width of master icon
             h (float): Height of master icon
-            name (str): Item name
+            project_item (ProjectItem): Item
+            icon (str): icon resource path
         """
         super().__init__(
-            toolbox,
-            x,
-            y,
-            w,
-            h,
-            name,
-            ":/icons/project_item_icons/hammer.svg",
-            icon_color=QColor("red"),
-            background_color=QColor("#ffe6e6"),
+            toolbox, x, y, w, h, project_item, icon, icon_color=QColor("red"), background_color=QColor("#ffe6e6")
         )
         # animation stuff
         self.timer = QTimeLine()

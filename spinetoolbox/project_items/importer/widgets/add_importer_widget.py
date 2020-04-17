@@ -23,16 +23,14 @@ from ..importer import Importer
 class AddImporterWidget(AddProjectItemWidget):
     """A widget to query user's preferences for a new item."""
 
-    def __init__(self, toolbox, x, y):
+    def __init__(self, toolbox, x, y, spec=""):
         """
         Args:
             toolbox (ToolboxUI): Parent widget
             x (float): X coordinate of new item
             y (float): Y coordinate of new item
         """
-        initial_name = toolbox.propose_item_name(Importer.default_name_prefix())
-        super().__init__(toolbox, x, y, initial_name)
-        self.setWindowTitle(f"Add Importer")
+        super().__init__(toolbox, x, y, Importer, spec=spec)
 
     def call_add_item(self):
         """Creates new Item according to user's selections."""

@@ -39,18 +39,18 @@ class Exporter(ProjectItem):
     Currently, only .gdx format is supported.
     """
 
-    def __init__(self, name, description, settings_packs, x, y, toolbox, project, logger):
+    def __init__(self, toolbox, project, logger, name, description, settings_packs, x, y):
         """
 
         Args:
+            toolbox (ToolboxUI): a ToolboxUI instance
+            project (SpineToolboxProject): the project this item belongs to
+            logger (LoggerInterface): a logger instance
             name (str): item name
             description (str): item description
             settings_packs (list): dicts mapping database URLs to _SettingsPack objects
             x (float): initial X coordinate of item icon
             y (float): initial Y coordinate of item icon
-            toolbox (ToolboxUI): a ToolboxUI instance
-            project (SpineToolboxProject): the project this item belongs to
-            logger (LoggerInterface): a logger instance
         """
         super().__init__(name, description, x, y, project, logger)
         self._toolbox = toolbox

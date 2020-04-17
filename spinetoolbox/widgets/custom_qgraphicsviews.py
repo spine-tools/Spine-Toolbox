@@ -34,7 +34,7 @@ from PySide2.QtCore import (
 from spine_engine import ExecutionDirection, SpineEngineState
 from ..graphics_items import LinkDrawer, Link
 from ..project_commands import AddLinkCommand, RemoveLinkCommand
-from .custom_qlistview import DragListView
+from ..mvcmodels.entity_list_models import EntityListModel
 from .custom_qgraphicsscene import CustomQGraphicsScene
 
 
@@ -570,31 +570,31 @@ class GraphQGraphicsView(CustomQGraphicsView):
 
     def dragLeaveEvent(self, event):
         """Accept event. Then call the super class method
-        only if drag source is not DragListView."""
+        only if drag source is not EntityListModel."""
         event.accept()
 
     def dragEnterEvent(self, event):
         """Accept event. Then call the super class method
-        only if drag source is not DragListView."""
+        only if drag source is not EntityListModel."""
         event.accept()
         source = event.source()
-        if not isinstance(source, DragListView):
+        if not isinstance(source.model(), EntityListModel):
             super().dragEnterEvent(event)
 
     def dragMoveEvent(self, event):
         """Accept event. Then call the super class method
-        only if drag source is not DragListView."""
+        only if drag source is not EntityListModel."""
         event.accept()
         source = event.source()
-        if not isinstance(source, DragListView):
+        if not isinstance(source.model(), EntityListModel):
             super().dragMoveEvent(event)
 
     def dropEvent(self, event):
-        """Only accept drops when the source is an instance of DragListView.
+        """Only accept drops when the source is an instance of EntityListModel.
         Capture text from event's mimedata and emit signal.
         """
         source = event.source()
-        if not isinstance(source, DragListView):
+        if not isinstance(source.model(), EntityListModel):
             super().dropEvent(event)
             return
         entity_type = source.model().entity_type

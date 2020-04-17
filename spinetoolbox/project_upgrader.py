@@ -151,10 +151,10 @@ class ProjectUpgrader:
             old["objects"].pop("Data Exporters")
         # Get all item names to a list from old project dict. Needed for upgrading connections.
         item_names = list()
-        for category_name in old["objects"]:
-            if category_name not in self._toolbox.categories:
+        for factory_name in old["objects"]:
+            if factory_name not in self._toolbox.item_factories:
                 continue
-            for item_name, item_dict in old["objects"][category_name].items():
+            for item_name, item_dict in old["objects"][factory_name].items():
                 item_names.append(item_name)
         # Parse connections
         try:
@@ -166,16 +166,16 @@ class ProjectUpgrader:
             new["connections"] = self.upgrade_connections(item_names, old_connections)
         # Upgrade objects dict
         new_objects = dict(old["objects"])
-        for category_name in old["objects"]:
-            if category_name not in self._toolbox.categories:
+        for factory_name in old["objects"]:
+            if factory_name not in self._toolbox.item_factories:
                 self._toolbox.msg_error.emit(
-                    "Upgrading project item's to category '{}' failed. Unknown category.".format(category_name)
+                    "Upgrading project item's to factory '{}' failed. Unknown factory.".format(factory_name)
                 )
                 continue
-            item_class = self._toolbox.categories[category_name]["item_maker"]
-            for item_name, item_dict in old["objects"][category_name].items():
+            item_class = self._toolbox.item_factories[factory_name].item_maker
+            for item_name, item_dict in old["objects"][factory_name].items():
                 new_item_dict = item_class.upgrade_from_no_version_to_version_1(item_name, item_dict, old_project_dir)
-                new_objects[category_name][item_name] = new_item_dict
+                new_objects[factory_name][item_name] = new_item_dict
         return dict(project=new, objects=new_objects)
 
     def upgrade_connections(self, item_names, connections_old):

@@ -27,13 +27,12 @@ class AddDataConnectionWidget(AddProjectItemWidget):
         toolbox (ToolboxUI): Parent widget
         x (int): X coordinate of new item
         y (int): Y coordinate of new item
+        spec (str): The name of a spec
     """
 
-    def __init__(self, toolbox, x, y):
+    def __init__(self, toolbox, x, y, spec=""):
         """Initialize class."""
-        initial_name = toolbox.propose_item_name(DataConnection.default_name_prefix())
-        super().__init__(toolbox, x, y, initial_name)
-        self.setWindowTitle(f"Add Data Connection")
+        super().__init__(toolbox, x, y, DataConnection, spec=spec)
 
     def call_add_item(self):
         """Creates new Item according to user's selections."""

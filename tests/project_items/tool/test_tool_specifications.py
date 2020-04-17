@@ -17,7 +17,7 @@ Contains unit tests for Tool specification classes.
 """
 
 import unittest
-from spinetoolbox.tool_specifications import ToolSpecification
+from spinetoolbox.project_items.tool.tool_specifications import ToolSpecification
 
 
 class TestToolSpecification(unittest.TestCase):

@@ -23,19 +23,19 @@ import json
 from PySide2.QtGui import QDesktopServices, QStandardItemModel, QStandardItem
 from PySide2.QtWidgets import QWidget, QStatusBar, QInputDialog, QFileDialog, QFileIconProvider, QMessageBox, QMenu
 from PySide2.QtCore import Slot, Qt, QUrl, QFileInfo
-from ..config import STATUSBAR_SS, TREEVIEW_HEADER_SS, TOOL_TYPES, REQUIRED_KEYS
-from ..helpers import busy_effect
-from ..tool_specifications import CmdlineTag, CMDLINE_TAG_EDGE, ToolSpecification
+from spinetoolbox.config import STATUSBAR_SS, TREEVIEW_HEADER_SS
+from spinetoolbox.helpers import busy_effect
+from ..tool_specifications import CmdlineTag, TOOL_TYPES, REQUIRED_KEYS, CMDLINE_TAG_EDGE, ToolSpecification
 from .custom_menus import AddIncludesPopupMenu, CreateMainProgramPopupMenu
 
 
 class ToolSpecificationWidget(QWidget):
-    def __init__(self, toolbox, tool_specification=None):
+    def __init__(self, toolbox, specification=None):
         """A widget to query user's preferences for a new tool specification.
 
         Args:
             toolbox (ToolboxUI): QMainWindow instance
-            tool_specification (ToolSpecification): If given, the form is pre-filled with this specification
+            specification (ToolSpecification): If given, the form is pre-filled with this specification
         """
         from ..ui.tool_specification_form import Ui_Form
 
@@ -69,24 +69,24 @@ class ToolSpecificationWidget(QWidget):
         self.ui.comboBox_tooltype.addItem("Select type...")
         self.ui.comboBox_tooltype.addItems(TOOL_TYPES)
         # if a specification is given, fill the form with data from it
-        if tool_specification:
-            self.ui.lineEdit_name.setText(tool_specification.name)
-            check_state = Qt.Checked if tool_specification.execute_in_work else Qt.Unchecked
+        if specification:
+            self.ui.lineEdit_name.setText(specification.name)
+            check_state = Qt.Checked if specification.execute_in_work else Qt.Unchecked
             self.ui.checkBox_execute_in_work.setCheckState(check_state)
-            self.ui.textEdit_description.setPlainText(tool_specification.description)
-            self.ui.lineEdit_args.setText(" ".join(tool_specification.cmdline_args))
+            self.ui.textEdit_description.setPlainText(specification.description)
+            self.ui.lineEdit_args.setText(" ".join(specification.cmdline_args))
             tool_types = [x.lower() for x in TOOL_TYPES]
-            index = tool_types.index(tool_specification.tooltype) + 1
+            index = tool_types.index(specification.tooltype) + 1
             self.ui.comboBox_tooltype.setCurrentIndex(index)
         # Init lists
         self.main_program_file = ""
-        self.sourcefiles = list(tool_specification.includes) if tool_specification else list()
-        self.inputfiles = list(tool_specification.inputfiles) if tool_specification else list()
-        self.inputfiles_opt = list(tool_specification.inputfiles_opt) if tool_specification else list()
-        self.outputfiles = list(tool_specification.outputfiles) if tool_specification else list()
-        self.def_file_path = tool_specification.def_file_path if tool_specification else None
-        self.program_path = tool_specification.path if tool_specification else None
-        self.definition = dict()
+        self.sourcefiles = list(specification.includes) if specification else list()
+        self.inputfiles = list(specification.inputfiles) if specification else list()
+        self.inputfiles_opt = list(specification.inputfiles_opt) if specification else list()
+        self.outputfiles = list(specification.outputfiles) if specification else list()
+        self.def_file_path = specification.def_file_path if specification else None
+        self.program_path = specification.path if specification else None
+        self.definition = dict(factory_name="Tools")
         # Get first item from sourcefiles list as the main program file
         try:
             self.main_program_file = self.sourcefiles.pop(0)
@@ -182,7 +182,7 @@ class ToolSpecificationWidget(QWidget):
                 qitem.setData(QFileIconProvider().icon(QFileInfo(item)), Qt.DecorationRole)
                 self.outputfiles_model.appendRow(qitem)
 
-    @Slot(bool, name="browse_main_program")
+    @Slot(bool)
     def browse_main_program(self, checked=False):
         """Open file browser where user can select the path of the main program file."""
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
@@ -192,7 +192,7 @@ class ToolSpecificationWidget(QWidget):
             return
         self.set_main_program_path(file_path)
 
-    @Slot("QString", name="set_main_program_path")
+    @Slot("QString")
     def set_main_program_path(self, file_path):
         """Set main program file and folder path."""
         folder_path = os.path.split(file_path)[0]
@@ -230,7 +230,7 @@ class ToolSpecificationWidget(QWidget):
         self.ui.lineEdit_main_program.setText(file_path)
         self.ui.label_mainpath.setText(self.program_path)
 
-    @Slot(name="new_source_file")
+    @Slot()
     def new_source_file(self):
         """Let user create a new source file for this tool specification."""
         path = self.program_path if self.program_path else self._project.project_dir
@@ -243,7 +243,7 @@ class ToolSpecificationWidget(QWidget):
         open(file_path, 'w').close()
         self.add_single_include(file_path)
 
-    @Slot(bool, name="show_add_source_files_dialog")
+    @Slot(bool)
     def show_add_source_files_dialog(self, checked=False):
         """Let user select source files for this tool specification."""
         path = self.program_path if self.program_path else self._project.project_dir
@@ -256,7 +256,7 @@ class ToolSpecificationWidget(QWidget):
             if not self.add_single_include(path):
                 continue
 
-    @Slot(bool, name="show_add_source_dirs_dialog")
+    @Slot(bool)
     def show_add_source_dirs_dialog(self, checked=False):
         """Let user select a source directory for this tool specification.
         All files and sub-directories will be added to the source files.
@@ -272,7 +272,7 @@ class ToolSpecificationWidget(QWidget):
             if not self.add_single_include(path):
                 continue
 
-    @Slot("QVariant", name="add_dropped_includes")
+    @Slot("QVariant")
     def add_dropped_includes(self, file_paths):
         """Adds dropped file paths to Source files list."""
         for path in file_paths:
@@ -308,7 +308,7 @@ class ToolSpecificationWidget(QWidget):
         return True
 
     @busy_effect
-    @Slot("QModelIndex", name="open_includes_file")
+    @Slot("QModelIndex")
     def open_includes_file(self, index):
         """Open source file in default program."""
         if not index:
@@ -330,12 +330,12 @@ class ToolSpecificationWidget(QWidget):
         if not res:
             self._toolbox.msg_error.emit("Failed to open file: <b>{0}</b>".format(includes_file))
 
-    @Slot(name="remove_source_files_with_del")
+    @Slot()
     def remove_source_files_with_del(self):
         """Support for deleting items with the Delete key."""
         self.remove_source_files()
 
-    @Slot(bool, name="remove_source_files")
+    @Slot(bool)
     def remove_source_files(self, checked=False):
         """Remove selected source files from include list.
         Do not remove anything if there are no items selected.
@@ -354,7 +354,7 @@ class ToolSpecificationWidget(QWidget):
                     self.ui.label_mainpath.clear()
             self.statusbar.showMessage("Selected source files removed", 3000)
 
-    @Slot(bool, name="add_inputfiles")
+    @Slot(bool)
     def add_inputfiles(self, checked=False):
         """Let user select input files for this tool specification."""
         msg = (
@@ -375,12 +375,12 @@ class ToolSpecificationWidget(QWidget):
         qitem.setData(QFileIconProvider().icon(QFileInfo(file_name)), Qt.DecorationRole)
         self.inputfiles_model.appendRow(qitem)
 
-    @Slot(name="remove_inputfiles_with_del")
+    @Slot()
     def remove_inputfiles_with_del(self):
         """Support for deleting items with the Delete key."""
         self.remove_inputfiles()
 
-    @Slot(bool, name="remove_inputfiles")
+    @Slot(bool)
     def remove_inputfiles(self, checked=False):
         """Remove selected input files from list.
         Do not remove anything if there are no items selected.
@@ -395,7 +395,7 @@ class ToolSpecificationWidget(QWidget):
                 self.inputfiles_model.removeRow(row)
             self.statusbar.showMessage("Selected input files removed", 3000)
 
-    @Slot(bool, name="add_inputfiles_opt")
+    @Slot(bool)
     def add_inputfiles_opt(self, checked=False):
         """Let user select optional input files for this tool specification."""
         msg = (
@@ -418,12 +418,12 @@ class ToolSpecificationWidget(QWidget):
         qitem.setData(QFileIconProvider().icon(QFileInfo(file_name)), Qt.DecorationRole)
         self.inputfiles_opt_model.appendRow(qitem)
 
-    @Slot(name="remove_inputfiles_opt_with_del")
+    @Slot()
     def remove_inputfiles_opt_with_del(self):
         """Support for deleting items with the Delete key."""
         self.remove_inputfiles_opt()
 
-    @Slot(bool, name="remove_inputfiles_opt")
+    @Slot(bool)
     def remove_inputfiles_opt(self, checked=False):
         """Remove selected optional input files from list.
         Do not remove anything if there are no items selected.
@@ -438,7 +438,7 @@ class ToolSpecificationWidget(QWidget):
                 self.inputfiles_opt_model.removeRow(row)
             self.statusbar.showMessage("Selected optional input files removed", 3000)
 
-    @Slot(bool, name="add_outputfiles")
+    @Slot(bool)
     def add_outputfiles(self, checked=False):
         """Let user select output files for this tool specification."""
         msg = (
@@ -459,12 +459,12 @@ class ToolSpecificationWidget(QWidget):
         qitem.setData(QFileIconProvider().icon(QFileInfo(file_name)), Qt.DecorationRole)
         self.outputfiles_model.appendRow(qitem)
 
-    @Slot(name="remove_outputfiles_with_del")
+    @Slot()
     def remove_outputfiles_with_del(self):
         """Support for deleting items with the Delete key."""
         self.remove_outputfiles()
 
-    @Slot(bool, name="remove_outputfiles")
+    @Slot(bool)
     def remove_outputfiles(self, checked=False):
         """Remove selected output files from list.
         Do not remove anything if there are no items selected.
@@ -517,6 +517,21 @@ class ToolSpecificationWidget(QWidget):
         if self.call_add_tool_specification():
             self.close()
 
+    def _make_tool_specification(self, def_path):
+        """Returns a ToolSpecification from current form settings.
+
+        Args:
+            def_path (str): path to definition .json file
+
+        Returns:
+            ToolSpecification
+        """
+        self.definition["includes_main_path"] = os.path.relpath(self.program_path, os.path.dirname(def_path))
+        tool = self._toolbox.load_specification(self.definition, def_path)
+        if not tool:
+            self.statusbar.showMessage("Adding Tool specification failed", 3000)
+        return tool
+
     def call_add_tool_specification(self):
         """Adds or updates Tool specification according to user's selections.
         If the name is the same as an existing tool specification, it is updated and
@@ -525,22 +540,19 @@ class ToolSpecificationWidget(QWidget):
         a new tool specification and offer to save the definition file. (User is
         creating a new tool specification from scratch or spawning from an existing one).
         """
-        # Load tool specification
-        path = self.program_path
-        tool = self._project.load_tool_specification_from_dict(self.definition, path)
-        if not tool:
-            self.statusbar.showMessage("Adding Tool specification failed", 3000)
-            return False
         # Check if a tool specification with this name already exists
-        row = self._toolbox.tool_specification_model.tool_specification_row(tool.name)
-        if row >= 0:  # NOTE: Row 0 at this moment has 'No tool', but in the future it may change. Better be ready.
-            old_tool = self._toolbox.tool_specification_model.tool_specification(row)
-            def_file = old_tool.get_def_path()
-            tool.set_def_path(def_file)
-            if tool.__dict__ == old_tool.__dict__:  # Nothing changed. We're done here.
+        row = self._toolbox.specification_model.specification_row(self.definition["name"])
+        if row >= 0:
+            old_tool = self._toolbox.specification_model.specification(row)
+            # FIXME: This test doesn't work because some attributes are set() and self.definiton has lists
+            if all(old_tool.__dict__[k] == v for k, v in self.definition.items()):
+                # Nothing changed
                 return True
-            # logging.debug("Updating definition for tool specification '{}'".format(tool.name))
-            self._toolbox.update_tool_specification(row, tool)
+            def_path = old_tool.get_def_path()
+            tool = self._make_tool_specification(def_path)
+            if not tool:
+                return False
+            self._toolbox.update_specification(row, tool)
         else:
             # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
             answer = QFileDialog.getSaveFileName(
@@ -548,20 +560,18 @@ class ToolSpecificationWidget(QWidget):
             )
             if answer[0] == "":  # Cancel button clicked
                 return False
-            def_file = os.path.abspath(answer[0])
-            tool.set_def_path(def_file)
-            self._toolbox.add_tool_specification(tool)
-        # Save path of main program file relative to definition file in case they differ
-        def_path = os.path.dirname(def_file)
-        if def_path != self.program_path:
-            self.definition["includes_main_path"] = os.path.relpath(self.program_path, def_path)
+            def_path = os.path.abspath(answer[0])
+            tool = self._make_tool_specification(def_path)
+            if not tool:
+                return False
+            self._toolbox.add_specification(tool)
         # Save file descriptor
-        with open(def_file, "w") as fp:
+        with open(def_path, "w") as fp:
             try:
                 json.dump(self.definition, fp, indent=4)
             except ValueError:
                 self.statusbar.showMessage("Error saving file", 3000)
-                self._toolbox.msg_error.emit("Saving Tool specification file failed. Path:{0}".format(def_file))
+                self._toolbox.msg_error.emit("Saving Tool specification file failed. Path:{0}".format(def_path))
                 return False
         return True
 

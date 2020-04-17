@@ -21,7 +21,7 @@ from unittest import mock
 import logging
 import sys
 from PySide2.QtWidgets import QApplication, QWidget
-from spinetoolbox.widgets.tool_specification_widget import ToolSpecificationWidget
+from spinetoolbox.project_items.tool.widgets.tool_specification_widget import ToolSpecificationWidget
 from ..mock_helpers import create_toolboxui
 
 
@@ -65,10 +65,12 @@ class TestToolSpecificationWidget(unittest.TestCase):
 
     def test_create_minimal_tool_specification(self):
         """Test that a minimal tool specification can be created by specifying name, type and main program file."""
-        with mock.patch("spinetoolbox.widgets.tool_specification_widget.QFileDialog") as mock_file_dialog, mock.patch(
-            "spinetoolbox.widgets.tool_specification_widget.ToolSpecificationWidget.call_add_tool_specification"
+        with mock.patch(
+            "spinetoolbox.project_items.tool.widgets.tool_specification_widget.QFileDialog"
+        ) as mock_file_dialog, mock.patch(
+            "spinetoolbox.project_items.tool.widgets.tool_specification_widget.ToolSpecificationWidget.call_add_tool_specification"
         ) as mock_add, mock.patch(
-            "spinetoolbox.widgets.tool_specification_widget.ToolSpecificationWidget.close"
+            "spinetoolbox.project_items.tool.widgets.tool_specification_widget.ToolSpecificationWidget.close"
         ) as mock_close:
             self.tool_specification_widget.ui.comboBox_tooltype.setCurrentIndex(1)
             self.tool_specification_widget.ui.lineEdit_name.setText("test_tool")

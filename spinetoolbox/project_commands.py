@@ -72,19 +72,19 @@ class SetProjectDescriptionCommand(SpineToolboxCommand):
 
 
 class AddProjectItemsCommand(SpineToolboxCommand):
-    def __init__(self, project, category_name, *items, set_selected=False, verbosity=True):
+    def __init__(self, project, factory_name, *items, set_selected=False, verbosity=True):
         """Command to add items.
 
         Args:
             project (SpineToolboxProject): the project
-            category_name (str): The items' category
+            factory_name (str): The factory name
             items (dict): one or more dict of items to add
             set_selected (bool): Whether to set item selected after the item has been added to project
             verbosity (bool): If True, prints message
         """
         super().__init__()
         self.project = project
-        self.category_ind, self.project_tree_items = project.make_project_tree_items(category_name, *items)
+        self.project_tree_items = project.make_project_tree_items(factory_name, *items)
         self.set_selected = set_selected
         self.verbosity = verbosity
         if len(items) == 1:
@@ -93,13 +93,15 @@ class AddProjectItemsCommand(SpineToolboxCommand):
             self.setText("add multiple items")
 
     def redo(self):
-        self.project._add_project_tree_items(
-            self.category_ind, *self.project_tree_items, set_selected=self.set_selected, verbosity=self.verbosity
-        )
+        for category_ind, project_tree_items in self.project_tree_items.items():
+            self.project.do_add_project_tree_items(
+                category_ind, *project_tree_items, set_selected=self.set_selected, verbosity=self.verbosity
+            )
 
     def undo(self):
-        for project_tree_item in self.project_tree_items:
-            self.project._remove_item(self.category_ind, project_tree_item, delete_data=True)
+        for category_ind, project_tree_items in self.project_tree_items.items():
+            for project_tree_item in project_tree_items:
+                self.project._remove_item(category_ind, project_tree_item, delete_data=True)
 
 
 class RemoveAllProjectItemsCommand(SpineToolboxCommand):
@@ -126,7 +128,7 @@ class RemoveAllProjectItemsCommand(SpineToolboxCommand):
     def undo(self):
         self.project.dag_handler.blockSignals(True)
         for category_ind, project_tree_items in self.items_per_category.items():
-            self.project._add_project_tree_items(category_ind, *project_tree_items)
+            self.project.do_add_project_tree_items(category_ind, *project_tree_items)
         for link in self.links:
             self.project._toolbox.ui.graphicsView._add_link(link)
         self.project.dag_handler.blockSignals(False)
@@ -158,7 +160,7 @@ class RemoveProjectItemCommand(SpineToolboxCommand):
 
     def undo(self):
         self.project.dag_handler.blockSignals(True)
-        self.project._add_project_tree_items(self.category_ind, self.project_tree_item)
+        self.project.do_add_project_tree_items(self.category_ind, self.project_tree_item)
         for link in self.links:
             self.project._toolbox.ui.graphicsView._add_link(link)
         self.project.dag_handler.blockSignals(False)
@@ -376,27 +378,24 @@ class UpdateImporterCancelOnErrorCommand(SpineToolboxCommand):
         self.importer.set_cancel_on_error(self.undo_cancel_on_error)
 
 
-class SetToolSpecificationCommand(SpineToolboxCommand):
-    def __init__(self, tool, specification):
+class SetItemSpecificationCommand(SpineToolboxCommand):
+    def __init__(self, item, specification):
         """Command to set the specification for a Tool.
 
         Args:
-            tool (Tool): the Tool
-            specification (ToolSpecification): the new tool spec
+            item (ProjectItem): the Item
+            specification (ProjectItemSpecification): the new spec
         """
         super().__init__()
-        self.tool = tool
+        self.item = item
         self.redo_specification = specification
-        self.undo_specification = tool._tool_specification
-        self.undo_execute_in_work = tool.execute_in_work
-        self.setText(f"set Tool specification of {tool.name}")
+        self.setText(f"set specification of {item.name}")
 
     def redo(self):
-        self.tool.do_set_tool_specification(self.redo_specification)
+        self.item.do_set_specification(self.redo_specification)
 
     def undo(self):
-        self.tool.do_set_tool_specification(self.undo_specification)
-        self.tool.do_update_execution_mode(self.undo_execute_in_work)
+        self.item.undo_set_specification()
 
 
 class UpdateToolExecuteInWorkCommand(SpineToolboxCommand):
@@ -495,79 +494,68 @@ class UpdateExporterSettingsCommand(SpineToolboxCommand):
         self.exporter.undo_or_redo_settings(*self.undo_settings_tuple, self.database_path)
 
 
-class AddToolSpecificationCommand(SpineToolboxCommand):
-    def __init__(self, toolbox, tool_specification):
-        """Command to add Tool specs to a project.
+class AddSpecificationCommand(SpineToolboxCommand):
+    def __init__(self, toolbox, specification):
+        """Command to add item specs to a project.
 
         Args:
             toolbox (ToolboxUI): the toolbox
-            tool_specification (ToolSpecification): the tool spec
+            specification (ProjectItemSpecification): the spec
         """
         super().__init__()
         self.toolbox = toolbox
-        self.tool_specification = tool_specification
-        self.setText(f"add tool speciciation {tool_specification.name}")
+        self.specification = specification
+        self.setText(f"add specification {specification.name}")
 
     def redo(self):
-        self.toolbox.do_add_tool_specification(self.tool_specification)
+        self.toolbox.do_add_specification(self.specification)
 
     def undo(self):
-        row = self.toolbox.tool_specification_model.tool_specification_row(self.tool_specification.name)
-        self.toolbox.do_remove_tool_specification(row, ask_verification=False)
+        row = self.toolbox.specification_model.specification_row(self.specification.name)
+        self.toolbox.do_remove_specification(row, ask_verification=False)
 
 
-class RemoveToolSpecificationCommand(SpineToolboxCommand):
+class RemoveSpecificationCommand(SpineToolboxCommand):
     def __init__(self, toolbox, row, ask_verification):
-        """Command to remove Tool specs from a project.
+        """Command to remove item specs from a project.
 
         Args:
             toolbox (ToolboxUI): the toolbox
-            row (int): the row in the ToolSpecificationModel
+            row (int): the row in the ProjectItemSpecPaletteModel
             ask_verification (bool): if True, shows confirmation message the first time
         """
         super().__init__()
         self.toolbox = toolbox
         self.row = row
-        self.tool_specification = self.toolbox.tool_specification_model.tool_specification(row)
-        self.setText(f"remove tool speciciation {self.tool_specification.name}")
+        self.specification = self.toolbox.specification_model.specification(row)
+        self.setText(f"remove specification {self.specification.name}")
         self.ask_verification = ask_verification
 
     def redo(self):
-        self.toolbox.do_remove_tool_specification(self.row, ask_verification=self.ask_verification)
+        self.toolbox.do_remove_specification(self.row, ask_verification=self.ask_verification)
         self.ask_verification = False
 
     def undo(self):
-        self.toolbox.do_add_tool_specification(self.tool_specification, row=self.row)
+        self.toolbox.do_add_specification(self.specification, row=self.row)
 
 
-class UpdateToolSpecificationCommand(SpineToolboxCommand):
-    def __init__(self, toolbox, row, tool_specification):
-        """Command to update Tool specs in a project.
+class UpdateSpecificationCommand(SpineToolboxCommand):
+    def __init__(self, toolbox, row, specification):
+        """Command to update item specs in a project.
 
         Args:
             toolbox (ToolboxUI): the toolbox
-            row (int): the row in the ToolSpecificationModel of the spec to be replaced
-            tool_specification (ToolSpecification): the updated tool spec
+            row (int): the row in the ProjectItemSpecPaletteModel of the spec to be replaced
+            specification (ProjectItemSpecification): the updated spec
         """
         super().__init__()
         self.toolbox = toolbox
         self.row = row
-        self.redo_tool_specification = tool_specification
-        self.undo_tool_specification = self.toolbox.tool_specification_model.tool_specification(row)
-        self.redo_tool_settings = {}
-        self.undo_tool_settings = {}
-        for item in toolbox.project_item_model.items("Tools"):
-            tool = item.project_item
-            if tool.tool_specification() != self.undo_tool_specification:
-                continue
-            self.redo_tool_settings[tool] = (self.redo_tool_specification, self.redo_tool_specification.execute_in_work)
-            self.undo_tool_settings[tool] = (self.undo_tool_specification, tool.execute_in_work)
-        self.setText(f"update tool speciciation {tool_specification.name}")
+        self.redo_specification = specification
+        self.setText(f"update specification {specification.name}")
 
     def redo(self):
-        if self.toolbox.do_update_tool_specification(self.row, self.redo_tool_specification):
-            self.toolbox.update_tool_settings(self.redo_tool_settings)
+        self.toolbox.do_update_specification(self.row, self.redo_specification)
 
     def undo(self):
-        if self.toolbox.do_update_tool_specification(self.row, self.undo_tool_specification):
-            self.toolbox.update_tool_settings(self.undo_tool_settings)
+        self.toolbox.undo_update_specification(self.row)

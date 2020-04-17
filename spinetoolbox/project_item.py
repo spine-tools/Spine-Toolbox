@@ -24,6 +24,7 @@ from PySide2.QtCore import Signal, QUrl
 from PySide2.QtGui import QDesktopServices
 from .helpers import create_dir, rename_dir
 from .metaobject import MetaObject, shorten
+from spinetoolbox.project_commands import SetItemSpecificationCommand
 
 
 class ProjectItem(MetaObject):
@@ -48,6 +49,7 @@ class ProjectItem(MetaObject):
             logger (LoggerInterface): a logger instance
         """
         super().__init__(name, description)
+        self._item_factory = None
         self._project = project
         self.x = x
         self.y = y
@@ -59,6 +61,8 @@ class ProjectItem(MetaObject):
         self.item_changed.connect(lambda: self._project.notify_changes_in_containing_dag(self.name))
         # Make project directory for this Item
         self.data_dir = os.path.join(self._project.items_dir, self.short_name)
+        self._specification = None
+        self.undo_specification = None
 
     def create_data_dir(self):
         try:
@@ -71,10 +75,12 @@ class ProjectItem(MetaObject):
         """Item's type identifier string."""
         raise NotImplementedError()
 
-    @staticmethod
-    def category():
-        """Item's category identifier string."""
-        raise NotImplementedError()
+    def item_factory(self):
+        """Item's factory identifier string."""
+        return self._item_factory
+
+    def set_item_factory(self, item_factory):
+        self._item_factory = item_factory
 
     # pylint: disable=no-self-use
     def make_signal_handler_dict(self):
@@ -138,6 +144,29 @@ class ProjectItem(MetaObject):
         self._properties_ui = properties_ui
         if self._sigs is None:
             self._sigs = self.make_signal_handler_dict()
+
+    def specification(self):
+        """Returns the specification for this item."""
+        return self._specification
+
+    def set_specification(self, specification):
+        """Pushes a new SetToolSpecificationCommand to the toolbox' undo stack.
+        """
+        if specification == self._specification:
+            return
+        self._toolbox.undo_stack.push(SetItemSpecificationCommand(self, specification))
+
+    def do_set_specification(self, specification):
+        """Sets Tool specification for this Tool. Removes Tool specification if None given as argument.
+
+        Args:
+            specification (ToolSpecification): Tool specification of this Tool. None removes the specification.
+        """
+        self.undo_specification = self._specification
+        self._specification = specification
+
+    def undo_set_specification(self):
+        self.do_set_specification(self.undo_specification)
 
     def set_icon(self, icon):
         """
@@ -328,6 +357,203 @@ class ProjectItem(MetaObject):
             version 1 item dictionary
         """
         return old_item_dict
+
+
+class ProjectItemFactory(MetaObject):
+    """Class for project item factories."""
+
+    def __init__(self, toolbox, name, description):
+        """
+        Args:
+            toolbox (ToolboxUI)
+            name (str): Category name
+            description (str): Category description
+        """
+        super().__init__(name, description)
+        self.properties_ui = self.properties_widget_maker(toolbox).ui
+
+    @staticmethod
+    def icon():
+        """
+        Returns the icon resource path.
+
+        Returns:
+            str
+        """
+        raise NotImplementedError()
+
+    @staticmethod
+    def item_category():
+        """
+        Returns the item category string, e.g., "Tools".
+
+        Returns:
+            str
+        """
+        raise NotImplementedError()
+
+    @staticmethod
+    def item_type():
+        """
+        Returns the category item type string, e.g., "Gimlet".
+
+        Returns:
+            str
+        """
+        raise NotImplementedError()
+
+    @property
+    def properties_widget_maker(self):
+        """
+        Returns a QWidget subclass to create the properties ui.
+
+        Returns:
+            class
+        """
+        raise NotImplementedError()
+
+    @property
+    def item_maker(self):
+        """
+        Returns a ProjectItem subclass.
+
+        Returns:
+            class
+        """
+        raise NotImplementedError()
+
+    @property
+    def icon_maker(self):
+        """
+        Returns a ProjectItemIcon subclass.
+
+        Returns:
+            class
+        """
+        raise NotImplementedError()
+
+    @property
+    def add_form_maker(self):
+        """
+        Returns an AddProjectItem subclass.
+
+        Returns:
+            class
+        """
+        raise NotImplementedError()
+
+    @staticmethod
+    def supports_specifications():
+        """
+        Returns whether or not this factory supports specs.
+        If the subclass implementation returns True, then it must also implement
+        ``specification_form_maker``, ``specification_menu_maker``, and  ``specification_loader``.
+
+        Returns:
+            bool
+        """
+        return False
+
+    @property
+    def specification_form_maker(self):
+        """
+        Returns a QWidget subclass to create and edit specifications.
+
+        Returns:
+            class
+        """
+        raise NotImplementedError()
+
+    @property
+    def specification_menu_maker(self):
+        """
+        Returns an ItemSpecificationMenu subclass.
+
+        Returns:
+            class
+        """
+        raise NotImplementedError()
+
+    @property
+    def specification_loader(self):
+        """
+        Returns a function to load specifications.
+
+        Returns:
+            class
+        """
+        raise NotImplementedError()
+
+    def make_icon(self, toolbox, x, y, w, h, project_item):
+        """
+        Returns a ProjectItemIcon to use with given toolbox, for given project item.
+
+        Args:
+            toolbox (ToolboxUI)
+            x, y, w, h (int): Icon coordinates and dimensions
+            project_item (ProjectItem)
+
+        Returns:
+            ProjectItemIcon
+        """
+        return self.icon_maker(toolbox, x, y, w, h, project_item, self.icon())
+
+    def make_item(self, *args, **kwargs):
+        """
+        Returns a project item while setting its factory attribute.
+
+        Returns:
+            ProjectItem
+        """
+        item = self.item_maker(*args, **kwargs)
+        item.set_item_factory(self.name)
+        return item
+
+    def activate_project_item(self, toolbox, project_item):
+        """
+        Activates the given project item so it works with the given toolbox.
+        This is mainly intended to facilitate adding items back with redo.
+
+        Args:
+            toolbox (ToolboxUI)
+            project_item (ProjectItem)
+        """
+        icon = project_item.get_icon()
+        if icon is not None:
+            icon.activate()
+        else:
+            icon = self.make_icon(toolbox, project_item.x - 35, project_item.y - 35, 70, 70, project_item)
+            project_item.set_icon(icon)
+        project_item.set_properties_ui(self.properties_ui)
+        project_item.create_data_dir()
+        project_item.set_up()
+
+
+class ProjectItemSpecification(MetaObject):
+    """Class to hold a project item specification."""
+
+    def __init__(self, name, description=None, factory_name=""):
+        """
+        Args:
+            name (str): specification name
+            description (str): description
+            factory_name (str): Project item factory name, e.g., "Tools"
+        """
+        super().__init__(name, description)
+        self.factory_name = factory_name
+        self.def_file_path = ""  # specification's JSON file path
+
+    def set_def_path(self, path):
+        """Sets the file path for this tool specification.
+
+        Args:
+            path (str): Absolute path to the specification file.
+        """
+        self.def_file_path = path
+
+    def get_def_path(self):
+        """Returns tool specification file path."""
+        return self.def_file_path
 
 
 class ProjectItemResource:

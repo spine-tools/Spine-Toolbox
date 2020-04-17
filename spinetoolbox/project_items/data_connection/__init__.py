@@ -16,15 +16,4 @@ Data connection plugin.
 :date:   12.9.2019
 """
 
-from .data_connection_icon import DataConnectionIcon
-from .data_connection import DataConnection as item_maker
-from .widgets.data_connection_properties_widget import DataConnectionPropertiesWidget
-from .widgets.add_data_connection_widget import AddDataConnectionWidget
-
-item_rank = 1
-item_category = item_maker.category()
-item_type = item_maker.item_type()
-item_icon = ":/icons/project_item_icons/file-alt.svg"
-icon_maker = DataConnectionIcon
-properties_widget_maker = DataConnectionPropertiesWidget
-add_form_maker = AddDataConnectionWidget
+from .data_connection_factory import DataConnectionFactory as item_factory
