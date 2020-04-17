@@ -39,6 +39,7 @@ class TestExporterExecutable(unittest.TestCase):
         executable = ExporterExecutable("name", {}, "", "", mock.MagicMock())
         self.assertTrue(executable.execute([], ExecutionDirection.BACKWARD))
 
+    @unittest.skipIf(gdx_utils.find_gams_directory() is None, "No working GAMS installation found.")
     def test_execute_forward_no_output(self):
         executable = ExporterExecutable("name", {}, "", "", mock.MagicMock())
         self.assertTrue(executable.execute([], ExecutionDirection.FORWARD))
