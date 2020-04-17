@@ -73,7 +73,6 @@ class ParameterViewMixin:
             self.ui.tableView_relationship_parameter_definition,
             self.ui.tableView_relationship_parameter_value,
         ]
-        self._focusable_childs += views
         for view in views:
             view.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
             view.verticalHeader().setDefaultSectionSize(self.default_row_height)
@@ -114,19 +113,6 @@ class ParameterViewMixin:
         )
         self.relationship_parameter_value_model.remove_selection_requested.connect(
             self.remove_relationship_parameter_values
-        )
-        # Parameter tables selection changes
-        self.ui.tableView_object_parameter_definition.selectionModel().selectionChanged.connect(
-            self._handle_object_parameter_definition_selection_changed
-        )
-        self.ui.tableView_object_parameter_value.selectionModel().selectionChanged.connect(
-            self._handle_object_parameter_value_selection_changed
-        )
-        self.ui.tableView_relationship_parameter_definition.selectionModel().selectionChanged.connect(
-            self._handle_relationship_parameter_definition_selection_changed
-        )
-        self.ui.tableView_relationship_parameter_value.selectionModel().selectionChanged.connect(
-            self._handle_relationship_parameter_value_selection_changed
         )
         # Parameter tables context menu requested
         self.ui.tableView_object_parameter_definition.customContextMenuRequested.connect(
@@ -276,26 +262,6 @@ class ParameterViewMixin:
     def _handle_relationship_parameter_definition_visibility_changed(self, visible):
         if visible:
             self.relationship_parameter_definition_model.update_main_filter()
-
-    @Slot("QItemSelection", "QItemSelection")
-    def _handle_object_parameter_definition_selection_changed(self, selected, deselected):
-        """Enables/disables the option to remove rows."""
-        self._accept_selection(self.ui.tableView_object_parameter_definition)
-
-    @Slot("QItemSelection", "QItemSelection")
-    def _handle_object_parameter_value_selection_changed(self, selected, deselected):
-        """Enables/disables the option to remove rows."""
-        self._accept_selection(self.ui.tableView_object_parameter_value)
-
-    @Slot("QItemSelection", "QItemSelection")
-    def _handle_relationship_parameter_definition_selection_changed(self, selected, deselected):
-        """Enables/disables the option to remove rows."""
-        self._accept_selection(self.ui.tableView_relationship_parameter_definition)
-
-    @Slot("QItemSelection", "QItemSelection")
-    def _handle_relationship_parameter_value_selection_changed(self, selected, deselected):
-        """Enables/disables the option to remove rows."""
-        self._accept_selection(self.ui.tableView_relationship_parameter_value)
 
     def set_default_parameter_data(self, index=None):
         """Sets default rows for parameter models according to given index.

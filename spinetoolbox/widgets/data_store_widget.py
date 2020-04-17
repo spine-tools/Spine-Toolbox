@@ -19,7 +19,7 @@ Contains the DataStoreForm class.
 import os
 import time  # just to measure loading time and sqlalchemy ORM performance
 import json
-from PySide2.QtWidgets import QMainWindow, QErrorMessage, QDockWidget, QMessageBox, QInputDialog, QTreeView, QTableView
+from PySide2.QtWidgets import QMainWindow, QErrorMessage, QDockWidget, QMessageBox, QInputDialog
 from PySide2.QtCore import Qt, Signal, Slot
 from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QIcon
 from spinedb_api import import_data, export_data, SpineIntegrityError, SpineDBAPIError, ParameterValueEncoder
@@ -61,7 +61,7 @@ class DataStoreFormBase(QMainWindow):
             *db_urls (tuple): Database url, codename.
         """
         super().__init__(flags=Qt.Window)
-        from ..ui.data_store_view import Ui_MainWindow
+        from ..ui.data_store_view import Ui_MainWindow  # pylint: disable=import-outside-toplevel
 
         self.db_urls = list(db_urls)
         self.db_url = self.db_urls[0]
@@ -96,15 +96,12 @@ class DataStoreFormBase(QMainWindow):
         self.default_row_height = 1.2 * fm.lineSpacing()
         max_screen_height = max([s.availableSize().height() for s in QGuiApplication.screens()])
         self.visible_rows = int(max_screen_height / self.default_row_height)
-        self._selection_source = None
-        self._selection_locked = False
-        self._focusable_childs = [self.ui.treeView_parameter_value_list]
         self.settings_group = 'dataStoreForm'
         self.undo_action = None
         self.redo_action = None
         self.template_file_path = None
-        db_names = ", ".join(["{0}".format(db_map.codename) for db_map in self.db_maps])
-        self.setWindowTitle("{0}[*] - Data store view".format(db_names))
+        db_names = ", ".join([f"{db_map.codename}" for db_map in self.db_maps])
+        self.setWindowTitle(f"{db_names}[*] - Data store view")
         self.update_commit_enabled()
 
     def add_menu_actions(self):
@@ -143,9 +140,6 @@ class DataStoreFormBase(QMainWindow):
         self.ui.actionMass_remove_items.triggered.connect(self.show_mass_remove_items_form)
         self.parameter_tag_toolbar.manage_tags_action_triggered.connect(self.show_manage_parameter_tags_form)
         self.parameter_tag_toolbar.tag_button_toggled.connect(self._handle_tag_button_toggled)
-        self.ui.treeView_parameter_value_list.selectionModel().selectionChanged.connect(
-            self._handle_parameter_value_list_selection_changed
-        )
         self.ui.treeView_parameter_value_list.customContextMenuRequested.connect(
             self.show_parameter_value_list_context_menu
         )
@@ -215,35 +209,19 @@ class DataStoreFormBase(QMainWindow):
     def _handle_menu_edit_about_to_show(self):
         """Runs when the edit menu from the main menubar is about to show.
         Enables or disables actions according to selection status."""
-        selection_available = self._selection_source is not None
-        self.ui.actionCopy.setEnabled(selection_available)
-        self.ui.actionRemove_selection.setEnabled(selection_available)
-        object_classes_selected = self._selection_source is self.ui.treeView_object and bool(
-            self._selection_source.model().selected_object_class_indexes
+        self.ui.actionCopy.setEnabled(self._focused_widget_has_callable("copy"))
+        self.ui.actionRemove_selection.setEnabled(self._focused_widget_can_remove_selections())
+        object_classes_selected = self._focused_widgets_model_has_non_empty_list("selected_object_class_indexes")
+        objects_selected = self._focused_widgets_model_has_non_empty_list("selected_object_indexes")
+        relationship_classes_selected = self._focused_widgets_model_has_non_empty_list(
+            "selected_relationship_class_indexes"
         )
-        objects_selected = self._selection_source is self.ui.treeView_object and bool(
-            self._selection_source.model().selected_object_indexes
-        )
-        relationship_classes_selected = self._selection_source in (
-            self.ui.treeView_object,
-            self.ui.treeView_relationship,
-        ) and bool(self._selection_source.model().selected_relationship_class_indexes)
-        relationships_selected = self._selection_source in (
-            self.ui.treeView_object,
-            self.ui.treeView_relationship,
-        ) and bool(self._selection_source.model().selected_relationship_indexes)
+        relationships_selected = self._focused_widgets_model_has_non_empty_list("selected_relationship_indexes")
         self.ui.actionEdit_object_classes.setEnabled(object_classes_selected)
         self.ui.actionEdit_objects.setEnabled(objects_selected)
         self.ui.actionEdit_relationship_classes.setEnabled(relationship_classes_selected)
         self.ui.actionEdit_relationships.setEnabled(relationships_selected)
-        self.ui.actionPaste.setEnabled(True)
-        focus_widget = self._find_focus_child()
-        self.ui.actionPaste.setEnabled(focus_widget is not None)
-
-    def _find_focus_child(self):
-        for child in self._focusable_childs:
-            if child.hasFocus():
-                return child
+        self.ui.actionPaste.setEnabled(self._focused_widget_has_callable("paste"))
 
     def selected_entity_class_ids(self, entity_class_type):
         """Returns object class ids selected in object tree *and* parameter tag toolbar."""
@@ -265,41 +243,27 @@ class DataStoreFormBase(QMainWindow):
                 result[db_map] = tree_cls_ids & tag_cls_ids
         return result
 
-    def _accept_selection(self, widget):
-        """Clears selection from all widgets except the given one, so there's only one selection
-        in the form at a time. In addition, registers the given widget as the official source
-        for all operations involving selections (copy, remove, edit), but only in case it *has* a selection."""
-        if not self._selection_locked:
-            self._selection_source = widget if widget.selectionModel().hasSelection() else None
-            self._selection_locked = True
-            for w in self.findChildren(QTreeView) + self.findChildren(QTableView):
-                if w != widget:
-                    w.selectionModel().clearSelection()
-            self._selection_locked = False
-            return True
-        return False
-
     @Slot(bool)
     def remove_selection(self, checked=False):
         """Removes selection of items."""
-        if not self._selection_source:
-            return
-        self._selection_source.model().remove_selection_requested.emit()
+        focus_widget = self.focusWidget()
+        while focus_widget is not self:
+            if hasattr(focus_widget, "model") and callable(focus_widget.model):
+                model = focus_widget.model()
+                if hasattr(model, "remove_selection_requested"):
+                    model.remove_selection_requested.emit()
+                    break
+            focus_widget = focus_widget.parentWidget()
 
     @Slot(bool)
     def copy(self, checked=False):
         """Copies data to clipboard."""
-        if not self._selection_source:
-            return
-        self._selection_source.copy()
+        self._call_on_focused_widget("copy")
 
     @Slot(bool)
     def paste(self, checked=False):
         """Pastes data from clipboard."""
-        focus_widget = self._find_focus_child()
-        if not focus_widget:
-            return
-        focus_widget.paste()
+        self._call_on_focused_widget("paste")
 
     @Slot(bool)
     def load_template(self, checked=False):
@@ -529,11 +493,6 @@ class DataStoreFormBase(QMainWindow):
     def show_manage_parameter_tags_form(self, checked=False):
         dialog = ManageParameterTagsDialog(self, self.db_mngr, *self.db_maps)
         dialog.show()
-
-    @Slot("QItemSelection", "QItemSelection")
-    def _handle_parameter_value_list_selection_changed(self, selected, deselected):
-        """Accepts selection."""
-        self._accept_selection(self.ui.treeView_parameter_value_list)
 
     @Slot("QPoint")
     def show_parameter_value_list_context_menu(self, pos):
@@ -774,6 +733,51 @@ class DataStoreFormBase(QMainWindow):
         # Save UI form state
         self.save_window_state()
         event.accept()
+
+    def _focused_widget_can_remove_selections(self):
+        """Returns True if the currently focused widget or one of its parents can respond to actinoRemove_selection."""
+        focus_widget = self.focusWidget()
+        while focus_widget is not self:
+            if hasattr(focus_widget, "model") and callable(focus_widget.model):
+                model = focus_widget.model()
+                if hasattr(model, "remove_selection_requested"):
+                    return True
+            focus_widget = focus_widget.parentWidget()
+        return False
+
+    def _focused_widget_has_callable(self, callable_name):
+        """Returns True if the currently focused widget or one of its ancestors has the given callable."""
+        focus_widget = self.focusWidget()
+        while focus_widget is not None and focus_widget is not self:
+            if hasattr(focus_widget, callable_name):
+                method = getattr(focus_widget, callable_name)
+                if callable(method):
+                    return True
+            focus_widget = focus_widget.parentWidget()
+        return False
+
+    def _focused_widgets_model_has_non_empty_list(self, list_name):
+        """Returns True if the currently focused widget's or one of its ancestors' model has a non empty list."""
+        focus_widget = self.focusWidget()
+        while focus_widget is not self:
+            if hasattr(focus_widget, "model") and callable(focus_widget.model):
+                model = focus_widget.model()
+                if hasattr(model, list_name):
+                    a_list = getattr(model, list_name)
+                    return bool(a_list)
+            focus_widget = focus_widget.parentWidget()
+        return False
+
+    def _call_on_focused_widget(self, callable_name):
+        """Calls the given callable on the currently focused widget or one of its ancestors."""
+        focus_widget = self.focusWidget()
+        while focus_widget is not None and focus_widget is not self:
+            if hasattr(focus_widget, callable_name):
+                method = getattr(focus_widget, callable_name)
+                if callable(method):
+                    method()
+                    break
+            focus_widget = focus_widget.parentWidget()
 
 
 class DataStoreForm(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeViewMixin, DataStoreFormBase):

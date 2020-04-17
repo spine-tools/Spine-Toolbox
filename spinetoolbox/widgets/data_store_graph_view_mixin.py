@@ -436,11 +436,15 @@ class GraphViewMixin:
             set: selected object ids
             set: selected relationship ids
         """
-        if self._selection_source not in (self.ui.treeView_object, self.ui.treeView_relationship):
+        if self.ui.treeView_object.selectionModel().hasSelection():
+            tree_view = self.ui.treeView_object
+        elif self.ui.treeView_relationship.selectionModel().hasSelection():
+            tree_view = self.ui.treeView_relationship
+        else:
             return set(), set()
-        model = self._selection_source.model()
-        if self._selection_source.selectionModel().isSelected(model.root_index):
-            if self._selection_source is self.ui.treeView_object:
+        model = tree_view.model()
+        if tree_view.selectionModel().isSelected(model.root_index):
+            if tree_view is self.ui.treeView_object:
                 return {x["id"] for x in self.db_mngr.get_items(self.db_map, "object")}, set()
             return set(), {x["id"] for x in self.db_mngr.get_items(self.db_map, "relationship")}
         selected_object_ids = set()

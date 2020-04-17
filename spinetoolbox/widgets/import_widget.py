@@ -300,4 +300,3 @@ class ImportDialog(QDialog):
         if path is not None and os.path.isfile(path):
             path = os.path.dirname(path)
         return path
-

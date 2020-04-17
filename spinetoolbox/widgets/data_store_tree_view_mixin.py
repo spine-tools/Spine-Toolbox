@@ -16,7 +16,7 @@ Contains the TreeViewMixin class.
 :date:   26.11.2018
 """
 
-from PySide2.QtCore import Slot, Signal
+from PySide2.QtCore import QItemSelectionModel, Slot, Signal
 from .custom_menus import EntityTreeContextMenu
 from .data_store_add_items_dialogs import (
     AddObjectClassesDialog,
@@ -61,7 +61,11 @@ class TreeViewMixin:
     def connect_signals(self):
         """Connects signals to slots."""
         super().connect_signals()
+        self.ui.treeView_object.selectionModel().currentChanged.connect(self._handle_object_tree_current_changed)
         self.ui.treeView_object.selectionModel().selectionChanged.connect(self._handle_object_tree_selection_changed)
+        self.ui.treeView_relationship.selectionModel().currentChanged.connect(
+            self._handle_relationship_tree_current_changed
+        )
         self.ui.treeView_relationship.selectionModel().selectionChanged.connect(
             self._handle_relationship_tree_selection_changed
         )
@@ -112,20 +116,32 @@ class TreeViewMixin:
         """Updates object filter and sets default rows."""
         indexes = self.ui.treeView_object.selectionModel().selectedIndexes()
         self.object_tree_model.select_indexes(indexes)
-        if not self._accept_selection(self.ui.treeView_object):
-            return
+        self.ui.treeView_relationship.selectionModel().clearSelection()
         self.set_default_parameter_data(self.ui.treeView_object.currentIndex())
         self._update_object_filter()
+
+    @Slot("QModelIndex", "QModelIndex")
+    def _handle_object_tree_current_changed(self, current, _):
+        """Also selects the current item if no selection has been made previously."""
+        if not current.isValid() or self.ui.treeView_object.selectionModel().hasSelection():
+            return
+        self.ui.treeView_object.selectionModel().select(current, QItemSelectionModel.Select)
 
     @Slot("QItemSelection", "QItemSelection")
     def _handle_relationship_tree_selection_changed(self, selected, deselected):
         """Updates relationship filter and sets default rows."""
         indexes = self.ui.treeView_relationship.selectionModel().selectedIndexes()
         self.relationship_tree_model.select_indexes(indexes)
-        if not self._accept_selection(self.ui.treeView_relationship):
-            return
+        self.ui.treeView_object.selectionModel().clearSelection()
         self.set_default_parameter_data(self.ui.treeView_relationship.currentIndex())
         self._update_relationship_filter()
+
+    @Slot("QModelIndex", "QModelIndex")
+    def _handle_relationship_tree_current_changed(self, current, _):
+        """Also selects the current item if no selection has been made previously."""
+        if not current.isValid() or self.ui.treeView_relationship.selectionModel().hasSelection():
+            return
+        self.ui.treeView_relationship.selectionModel().select(current, QItemSelectionModel.Select)
 
     @staticmethod
     def _db_map_items(indexes):

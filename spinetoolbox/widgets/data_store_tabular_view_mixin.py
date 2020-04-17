@@ -19,14 +19,12 @@ Contains TabularViewMixin class.
 from itertools import product
 from collections import namedtuple
 from PySide2.QtCore import Qt, Slot, QTimer
-from spinedb_api import TimeSeries
 from .custom_menus import TabularViewFilterMenu, PivotTableModelMenu, PivotTableHorizontalHeaderMenu
 from .tabular_view_header_widget import TabularViewHeaderWidget
 from .custom_delegates import PivotTableDelegate
 from ..helpers import fix_name_ambiguity, busy_effect
 from ..mvcmodels.pivot_table_models import IndexId, PivotTableSortFilterProxy, PivotTableModel
 from ..mvcmodels.frozen_table_model import FrozenTableModel
-from ..mvcmodels.shared import PARSED_ROLE
 
 
 class TabularViewMixin:
@@ -65,7 +63,6 @@ class TabularViewMixin:
         self._pivot_table_horizontal_header_menu = PivotTableHorizontalHeaderMenu(
             self.pivot_table_proxy, self.ui.pivot_table
         )
-        self._focusable_childs.append(self.ui.pivot_table)
 
     def setup_delegates(self):
         """Sets delegates for tables."""
@@ -101,17 +98,11 @@ class TabularViewMixin:
         self.ui.comboBox_pivot_table_input_type.currentTextChanged.connect(self.do_reload_pivot_table)
         self.ui.dockWidget_pivot_table.visibilityChanged.connect(self._handle_pivot_table_visibility_changed)
         self.ui.dockWidget_frozen_table.visibilityChanged.connect(self._handle_frozen_table_visibility_changed)
-        self.ui.pivot_table.selectionModel().selectionChanged.connect(self._handle_pivot_table_selection_changed)
 
     def init_models(self):
         """Initializes models."""
         super().init_models()
         self.clear_pivot_table()
-
-    @Slot("QItemSelection", "QItemSelection")
-    def _handle_pivot_table_selection_changed(self, selected, deselected):
-        """Accepts selection."""
-        self._accept_selection(self.ui.pivot_table)
 
     def is_value_input_type(self):
         return self.current_input_type == self._PARAMETER_VALUE
@@ -370,14 +361,15 @@ class TabularViewMixin:
     @Slot(str)
     def reload_pivot_table(self, text=""):
         """Updates current class (type and id) and reloads pivot table for it."""
-        if self._selection_source == self.ui.treeView_object:
-            selected = self.ui.treeView_object.selectionModel().currentIndex()
+        if self.ui.treeView_object.selectionModel().hasSelection():
+            tree_view = self.ui.treeView_object
             class_type = "object class"
-        elif self._selection_source == self.ui.treeView_relationship:
-            selected = self.ui.treeView_relationship.selectionModel().currentIndex()
+        elif self.ui.treeView_relationship.selectionModel().hasSelection():
+            tree_view = self.ui.treeView_relationship
             class_type = "relationship class"
         else:
             return
+        selected = tree_view.selectionModel().currentIndex()
         if self._is_class_index(selected, class_type):
             class_id = selected.model().item_from_index(selected).db_map_id(self.db_map)
             if self.current_class_id == class_id:
