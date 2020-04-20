@@ -16,7 +16,7 @@ Contains the TreeViewMixin class.
 :date:   26.11.2018
 """
 
-from PySide2.QtCore import QItemSelectionModel, Slot, Signal
+from PySide2.QtCore import Slot, Signal
 from .custom_menus import EntityTreeContextMenu
 from .data_store_add_items_dialogs import (
     AddObjectClassesDialog,
