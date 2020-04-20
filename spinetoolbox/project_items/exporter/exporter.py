@@ -17,6 +17,7 @@ Exporter project item.
 """
 
 from copy import deepcopy
+from datetime import datetime
 import pathlib
 import os.path
 from PySide2.QtCore import QObject, Signal, Slot
@@ -25,6 +26,7 @@ from spinetoolbox.project_item import ProjectItem, ProjectItemResource
 from spinetoolbox.project_commands import UpdateExporterOutFileNameCommand, UpdateExporterSettingsCommand
 from spinetoolbox.helpers import deserialize_path, serialize_url
 from spinetoolbox.spine_io.exporters import gdx
+from .db_utils import latest_database_commit_time_stamp
 from .exporter_executable import ExporterExecutable
 from .settings_state import SettingsState
 from .widgets.gdx_export_settings import GdxExportSettings
@@ -72,6 +74,8 @@ class Exporter(ProjectItem):
         for url, pack in self._settings_packs.items():
             if pack.state != SettingsState.OK:
                 self._start_worker(url)
+            elif pack.last_database_commit != _latest_database_commit_time_stamp(url):
+                self._start_worker(url, update_settings=True)
 
     def set_up(self):
         """See base class."""
@@ -161,6 +165,7 @@ class Exporter(ProjectItem):
             worker.indexing_domains_read.connect(self._update_indexing_domains)
             worker.merging_settings_read.connect(self._update_merging_settings)
             worker.merging_domains_read.connect(self._update_merging_domains)
+            worker.time_stamp_read.connect(self._update_commit_time_stamp)
             worker.finished.connect(self._worker_finished)
             worker.errored.connect(self._worker_failed)
             self._workers[database_url] = worker
@@ -175,44 +180,45 @@ class Exporter(ProjectItem):
         worker.start()
 
     @Slot(str, "QVariant")
+    def _update_commit_time_stamp(self, database_url, time_stamp):
+        pack = self._settings_packs.get(database_url)
+        if pack is not None:
+            pack.last_database_commit = time_stamp
+
+    @Slot(str, "QVariant")
     def _update_export_settings(self, database_url, settings):
         """Sets new settings for given database."""
         pack = self._settings_packs.get(database_url)
-        if pack is None:
-            return
-        pack.settings = settings
+        if pack is not None:
+            pack.settings = settings
 
     @Slot(str, "QVariant")
     def _update_indexing_settings(self, database_url, indexing_settings):
         """Sets new indexing settings for given database."""
         pack = self._settings_packs.get(database_url)
-        if pack is None:
-            return
-        pack.indexing_settings = indexing_settings
+        if pack is not None:
+            pack.indexing_settings = indexing_settings
 
     @Slot(str, "QVariant")
     def _update_indexing_domains(self, database_url, domains):
         """Sets new indexing domains for given database."""
         pack = self._settings_packs.get(database_url)
-        if pack is None:
-            return
-        pack.indexing_domains = domains
+        if pack is not None:
+            pack.indexing_domains = domains
 
     @Slot(str, "QVariant")
     def _update_merging_settings(self, database_url, settings):
         """Sets new merging settings for given database."""
         pack = self._settings_packs.get(database_url)
-        if pack is None:
-            return
-        pack.merging_settings = settings
+        if pack is not None:
+            pack.merging_settings = settings
 
     @Slot(str, "QVariant")
     def _update_merging_domains(self, database_url, domains):
         """Sets new merging domains for given database."""
         pack = self._settings_packs.get(database_url)
-        if pack is None:
-            return
-        pack.merging_domains = domains
+        if pack is not None:
+            pack.merging_domains = domains
 
     @Slot(str)
     def _worker_finished(self, database_url):
@@ -222,11 +228,12 @@ class Exporter(ProjectItem):
             worker.wait()
             worker.deleteLater()
             del self._workers[database_url]
-            if database_url in self._settings_packs:
-                settings_pack = self._settings_packs[database_url]
+            settings_pack = self._settings_packs.get(database_url)
+            if settings_pack is not None:
                 if settings_pack.settings_window is not None:
                     self._send_settings_to_window(database_url)
                 settings_pack.state = SettingsState.OK
+                self._toolbox.update_window_modified(False)
             self._check_state()
 
     @Slot(str, "QVariant")
@@ -475,6 +482,7 @@ class SettingsPack(QObject):
         indexing_domains (list): extra domains needed for parameter indexing
         merging_settings (dict): parameter merging settings
         merging_domains (list): extra domains needed for parameter merging
+        last_database_commit (datetime): latest database commit time stamp
         settings_window (GdxExportSettings): settings editor window
     """
 
@@ -493,6 +501,7 @@ class SettingsPack(QObject):
         self.indexing_domains = list()
         self.merging_settings = dict()
         self.merging_domains = list()
+        self.last_database_commit = None
         self.settings_window = None
         self._state = SettingsState.FETCHING
         self.notifications = _Notifications()
@@ -523,6 +532,9 @@ class SettingsPack(QObject):
             parameter_name: setting.to_dict() for parameter_name, setting in self.merging_settings.items()
         }
         d["merging_domains"] = [domain.to_dict() for domain in self.merging_domains]
+        d["latest_database_commit"] = (
+            self.last_database_commit.isoformat() if self.last_database_commit is not None else None
+        )
         return d
 
     @staticmethod
@@ -549,6 +561,12 @@ class SettingsPack(QObject):
             for parameter_name, setting_dict in pack_dict["merging_settings"].items()
         }
         pack.merging_domains = [gdx.Set.from_dict(set_dict) for set_dict in pack_dict["merging_domains"]]
+        latest_commit = pack_dict.get("latest_database_commit")
+        if latest_commit is not None:
+            try:
+                pack.last_database_commit = datetime.fromisoformat(latest_commit)
+            except ValueError as error:
+                logger.msg_error.emit(f"Failed to read latest database commit: {error}")
         return pack
 
 
@@ -610,3 +628,15 @@ def _normalize_url(url):
     It should be removed once we are using version 1 files.
     """
     return "sqlite:///" + url[10:].replace("/", os.sep)
+
+
+def _latest_database_commit_time_stamp(url):
+    """Returns the latest commit timestamp from database at given URL or None."""
+    try:
+        database_map = DatabaseMapping(url)
+    except SpineDBAPIError:
+        return None
+    else:
+        time_stamp = latest_database_commit_time_stamp(database_map)
+        database_map.connection.close()
+        return time_stamp

@@ -37,6 +37,7 @@ class ProjectItem(MetaObject):
     """
 
     item_changed = Signal()
+    """Request DAG update. Emitted when a change affects other items in the DAG."""
 
     def __init__(self, name, description, x, y, project, logger):
         """

@@ -20,6 +20,7 @@ from copy import deepcopy
 from PySide2.QtCore import QThread, Signal
 from spinedb_api import DatabaseMapping, SpineDBAPIError
 from spinetoolbox.spine_io.exporters import gdx
+from .db_utils import latest_database_commit_time_stamp
 
 
 class Worker(QThread):
@@ -39,6 +40,9 @@ class Worker(QThread):
     """Sends updated merging domains away."""
     settings_read = Signal(str, "QVariant")
     """Sends the settings away."""
+    time_stamp_read = Signal(str, "QVariant")
+    """Emits latest time stamp of database commits."""
+
 
     def __init__(self, database_url):
         """
@@ -61,7 +65,7 @@ class Worker(QThread):
 
     def run(self):
         """Constructs settings and parameter index settings and sends them to interested parties using signals."""
-        settings, indexing_settings = self._read_settings()
+        settings, indexing_settings, time_stamp = self._read_settings()
         if settings is None or self.isInterruptionRequested():
             return
         if self._previous_settings is not None:
@@ -77,6 +81,7 @@ class Worker(QThread):
             updated_merging_settings, updated_merging_domains = self._update_merging_settings(updated_settings)
             if updated_merging_settings is None or self.isInterruptionRequested():
                 return
+            self.time_stamp_read.emit(self._database_url, time_stamp)
             self.settings_read.emit(self._database_url, updated_settings)
             self.indexing_settings_read.emit(self._database_url, updated_indexing_settings)
             self.indexing_domains_read.emit(self._database_url, updated_indexing_domains)
@@ -84,6 +89,7 @@ class Worker(QThread):
             self.merging_domains_read.emit(self._database_url, updated_merging_domains)
             self.finished.emit(self._database_url)
             return
+        self.time_stamp_read.emit(self._database_url, time_stamp)
         self.settings_read.emit(self._database_url, settings)
         self.indexing_settings_read.emit(self._database_url, indexing_settings)
         self.indexing_domains_read.emit(self._database_url, list())
@@ -113,6 +119,7 @@ class Worker(QThread):
             self.errored.emit(self._database_url, error)
             return None, None
         try:
+            time_stamp = latest_database_commit_time_stamp(database_map)
             if self.isInterruptionRequested():
                 return None, None
             settings = gdx.make_settings(database_map)
@@ -124,7 +131,7 @@ class Worker(QThread):
             return None, None
         finally:
             database_map.connection.close()
-        return settings, indexing_settings
+        return settings, indexing_settings, time_stamp
 
     def _update_indexing_settings(self, updated_settings, new_indexing_settings):
         updated_indexing_settings = gdx.update_indexing_settings(
