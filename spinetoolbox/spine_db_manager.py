@@ -349,6 +349,7 @@ class SpineDBManager(QObject):
             return False
         try:
             db_map.commit_session(commit_msg)
+            self.session_committed.emit([db_map])
             return True
         except SpineDBAPIError as e:
             self.error_msg({db_map: e.msg})

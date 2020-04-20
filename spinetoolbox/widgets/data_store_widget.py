@@ -732,7 +732,7 @@ class DataStoreFormBase(QMainWindow):
             self.db_mngr.unset_logger_for_db_map(db_map)
         # Save UI form state
         self.save_window_state()
-        event.accept()
+        QMainWindow.closeEvent(self, event)
 
     def _focused_widget_can_remove_selections(self):
         """Returns True if the currently focused widget or one of its parents can respond to actinoRemove_selection."""
