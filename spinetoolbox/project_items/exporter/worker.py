@@ -43,7 +43,6 @@ class Worker(QThread):
     time_stamp_read = Signal(str, "QVariant")
     """Emits latest time stamp of database commits."""
 
-
     def __init__(self, database_url):
         """
         Args:

@@ -68,7 +68,7 @@ class SpineDBManager(QObject):
     """
 
     session_refreshed = Signal(set)
-    session_committed = Signal(set)
+    session_committed = Signal(set, object)
     session_rolled_back = Signal(set)
     # Added
     object_classes_added = Signal(object)
@@ -291,7 +291,15 @@ class SpineDBManager(QObject):
         if refreshed_db_maps:
             self.session_refreshed.emit(refreshed_db_maps)
 
-    def commit_session(self, *db_maps, rollback_if_no_msg=False):
+    def commit_session(self, *db_maps, rollback_if_no_msg=False, cookie=None):
+        """
+        Commits the current session.
+
+        Args:
+            *db_maps: database maps to commit
+            rollback_if_no_msg (bool): if True, the commit will be rolled back if no commit message is provided
+            cookie (object, optional): a free form identifier which will be forwarded to ``session_committed`` signal
+        """
         error_log = {}
         committed_db_maps = set()
         rolled_db_maps = set()
@@ -314,7 +322,7 @@ class SpineDBManager(QObject):
         if any(error_log.values()):
             self.error_msg(error_log)
         if committed_db_maps:
-            self.session_committed.emit(committed_db_maps)
+            self.session_committed.emit(committed_db_maps, cookie)
         if rolled_db_maps:
             self.session_rolled_back.emit(rolled_db_maps)
 
@@ -349,7 +357,8 @@ class SpineDBManager(QObject):
             return False
         try:
             db_map.commit_session(commit_msg)
-            self.session_committed.emit([db_map])
+            cookie = None
+            self.session_committed.emit({db_map}, cookie)
             return True
         except SpineDBAPIError as e:
             self.error_msg({db_map: e.msg})

@@ -446,8 +446,8 @@ class Exporter(ProjectItem):
         else:
             super().notify_destination(source_item)
 
-    @Slot("QVariant")
-    def _update_settings_after_db_commit(self, committed_db_maps):
+    @Slot(set, "QVariant")
+    def _update_settings_after_db_commit(self, committed_db_maps, cookie):
         """Refreshes export settings for databases after data has been committed to them."""
         for db_map in committed_db_maps:
             url = str(db_map.db_url)

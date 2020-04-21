@@ -268,12 +268,12 @@ class SpineDBSignaller(QObject):
             if shared_db_maps:
                 listener.receive_session_refreshed(shared_db_maps)
 
-    @Slot(set)
-    def receive_session_committed(self, db_maps):
+    @Slot(set, object)
+    def receive_session_committed(self, db_maps, cookie):
         for listener, listener_db_maps in self.listeners.items():
             shared_db_maps = listener_db_maps.intersection(db_maps)
             if shared_db_maps:
-                listener.receive_session_committed(shared_db_maps)
+                listener.receive_session_committed(shared_db_maps, cookie)
 
     @Slot(set)
     def receive_session_rolled_back(self, db_maps):

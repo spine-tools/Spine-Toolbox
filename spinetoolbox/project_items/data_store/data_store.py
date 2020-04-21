@@ -114,8 +114,13 @@ class DataStore(ProjectItem):
         self.load_url_into_selections(self._url)
 
     def url(self):
-        """Return the url attribute."""
+        """Returns the url attribute."""
         return self._url
+
+    def sql_alchemy_url(self):
+        """Returns the URL as an SQLAlchemy URL object or None if no URL is set."""
+        self._update_sa_url()
+        return self._sa_url
 
     def _update_sa_url(self, log_errors=True):
         self._sa_url = self._make_url(log_errors=log_errors)

@@ -362,11 +362,10 @@ class DataStoreFormBase(QMainWindow):
                 db_map_error_log[db_map] = [f"{e.db_type}: {e.msg}" for e in import_errors]
                 changed_db_maps.append(db_map)
             except (SpineIntegrityError, SpineDBAPIError) as err:
-                import_errors.append(str(err))
+                db_map_error_log[db_map] = [err.msg]
                 db_map.rollback_session()
-        self.db_mngr.commit_session(*changed_db_maps, rollback_if_no_msg=True)
-        self.init_models()
-        self.db_mngr.fetch_db_maps_for_listener(self, *changed_db_maps)
+        # Don't send a commit cookie as the database is updated by an 'outside force' here.
+        self.db_mngr.commit_session(*changed_db_maps, rollback_if_no_msg=True, cookie=None)
         if any(db_map_error_log.values()):
             self.db_mngr.error_msg(db_map_error_log)
 
@@ -420,6 +419,13 @@ class DataStoreFormBase(QMainWindow):
         except OSError:
             self.msg_error.emit("[OSError] Unable to export to file <b>{0}</b>".format(filename))
 
+    def reload_session(self, db_maps):
+        """Reloads data from given db_maps."""
+        self.init_models()
+        self.db_mngr.fetch_db_maps_for_listener(self, *db_maps)
+        db_names = ", ".join([x.codename for x in db_maps])
+        self.msg.emit(f"Reloaded databases {db_names}")
+
     @Slot(bool)
     def refresh_session(self, checked=False):
         self.db_mngr.refresh_session(*self.db_maps)
@@ -433,13 +439,16 @@ class DataStoreFormBase(QMainWindow):
     def rollback_session(self, checked=False):
         self.db_mngr.rollback_session(*self.db_maps)
 
-    def receive_session_committed(self, db_maps):
+    def receive_session_committed(self, db_maps, cookie):
         db_maps = set(self.db_maps) & set(db_maps)
         if not db_maps:
             return
-        db_names = ", ".join([x.codename for x in db_maps])
-        msg = f"All changes in {db_names} committed successfully."
-        self.msg.emit(msg)
+        if cookie is self:
+            db_names = ", ".join([x.codename for x in db_maps])
+            msg = f"All changes in {db_names} committed successfully."
+            self.msg.emit(msg)
+        else:  # Commit done by an 'outside force'.
+            self.reload_session(db_maps)
 
     def receive_session_rolled_back(self, db_maps):
         db_maps = set(self.db_maps) & set(db_maps)
