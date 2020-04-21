@@ -17,6 +17,7 @@ Classes to represent entities in a tree.
 """
 from PySide2.QtCore import Qt
 from PySide2.QtGui import QFont, QBrush, QIcon
+from spinetoolbox.helpers import rows_to_row_count_tuples
 from .minimal_tree_model import TreeItem
 
 
@@ -99,14 +100,26 @@ class MultiDBTreeItem(TreeItem):
 
     def take_db_map(self, db_map):
         """Removes the mapping for given db_map and returns it."""
-        id_ = self._db_map_id.pop(db_map, None)
-        if self._db_map_id:
-            index = self.index()
-            sibling = index.sibling(index.row(), 1)
-            self.model.dataChanged.emit(sibling, sibling)
-        else:
-            self.parent_item.remove_children(self.child_number(), 1)
-        return id_
+        return self._db_map_id.pop(db_map, None)
+
+    def _deep_refresh_children(self):
+        """Refreshes children after taking db_maps from them. Called after removing and updating children for this item."""
+        changed_rows = []
+        removed_rows = []
+        for row, child in reversed(list(enumerate(self.children))):
+            if child._db_map_id:
+                child._deep_refresh_children()
+                changed_rows.append(row)
+            else:
+                removed_rows.append(row)
+        for row, count in reversed(rows_to_row_count_tuples(removed_rows)):
+            self.remove_children(row, count)
+        if changed_rows:
+            top_row = changed_rows[-1]
+            bottom_row = changed_rows[0]
+            top_index = self.children[top_row].index().sibling(top_row, 1)
+            bottom_index = self.children[bottom_row].index().sibling(bottom_row, 1)
+            self.model.dataChanged.emit(top_index, bottom_index)
 
     def deep_remove_db_map(self, db_map):
         """Removes given db_map from this item and all its descendants."""
@@ -115,11 +128,15 @@ class MultiDBTreeItem(TreeItem):
         _ = self.take_db_map(db_map)
 
     def deep_take_db_map(self, db_map):
-        """Takes given db_map from this item and all its descendants.
-        Returns a new item from taken data or None if db_map is not present in the first place.
+        """Removes given db_map from this item and all its descendants, and
+        returns a new item from the db_map's data.
+
+        Returns:
+            MultiDBTreeItem, NoneType
+
         """
         id_ = self.take_db_map(db_map)
-        if not id_:
+        if id_ is None:
             return None
         other = type(self)({db_map: id_})
         other_children = []
@@ -226,6 +243,7 @@ class MultiDBTreeItem(TreeItem):
         for db_map, ids in db_map_ids.items():
             for child in self.find_children_by_id(db_map, *ids, reverse=True):
                 child.deep_remove_db_map(db_map)
+        self._deep_refresh_children()
 
     def update_children_by_id(self, db_map_ids):
         """
@@ -265,6 +283,7 @@ class MultiDBTreeItem(TreeItem):
                 # Take the child and put it in the list to be merged
                 new_children.append(child)
                 self.remove_children(row, 1)
+        self._deep_refresh_children()
         self._merge_children(new_children)
 
     def insert_children(self, position, *children):

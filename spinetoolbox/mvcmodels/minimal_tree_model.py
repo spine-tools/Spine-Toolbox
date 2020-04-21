@@ -84,10 +84,10 @@ class TreeItem:
         return len(self._children)
 
     def child_number(self):
-        """Returns the rank of this item within its parent or 0 if it's an orphan."""
+        """Returns the rank of this item within its parent or -1 if it's an orphan."""
         if self.parent_item:
             return self.parent_item.children.index(self)
-        return 0
+        return -1
 
     def find_children(self, cond=lambda child: True):
         """Returns children that meet condition expressed as a lambda function."""
@@ -105,7 +105,7 @@ class TreeItem:
 
     def previous_sibling(self):
         """Returns the previous sibling or None if it's the first."""
-        if self.child_number() == 0:
+        if self.child_number() <= 0:
             return None
         return self.parent_item.child(self.child_number() - 1)
 
