@@ -20,7 +20,7 @@ import os
 import logging
 from urllib.parse import urlparse
 from urllib.request import url2pathname
-from PySide2.QtCore import Signal, QUrl
+from PySide2.QtCore import QUrl, Signal
 from PySide2.QtGui import QDesktopServices
 from .helpers import create_dir, rename_dir
 from .metaobject import MetaObject, shorten
@@ -200,6 +200,9 @@ class ProjectItem(MetaObject):
     def execution_item(self):
         """Creates project item's execution counterpart."""
         raise NotImplementedError()
+
+    def executed_successfully(self, execution_direction, engine_state):
+        """Performs item dependent actions after the execution item has finished successfully."""
 
     # pylint: disable=no-self-use
     def resources_for_direct_successors(self):

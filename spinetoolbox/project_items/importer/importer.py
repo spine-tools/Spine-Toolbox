@@ -20,6 +20,7 @@ from collections import Counter
 import os
 from PySide2.QtCore import QAbstractListModel, QFileInfo, QModelIndex, Qt, Signal, Slot
 from PySide2.QtWidgets import QFileIconProvider, QListWidget, QDialog, QVBoxLayout, QDialogButtonBox
+from spine_engine import ExecutionDirection
 from spinetoolbox.project_item import ProjectItem
 from spinetoolbox.helpers import create_dir, deserialize_path, serialize_path
 from spinetoolbox.spine_io.gdx_utils import find_gams_directory
@@ -106,6 +107,23 @@ class Importer(ProjectItem):
             self.name, self.settings, self.logs_dir, python_path, gams_path, cancel_on_error, self._logger
         )
         return executable
+
+    @Slot()
+    def executed_successfully(self, execution_direction, engine_state):
+        """Notifies Toolbox for successful database import."""
+        if execution_direction != ExecutionDirection.FORWARD:
+            return
+        successors = self._project.direct_successors(self)
+        committed_db_maps = set()
+        for successor in successors:
+            if successor.item_type() == "Data Store":
+                urls = set(resource.url for resource in successor.resources_for_direct_successors())
+                for url in urls:
+                    database_map = self._project.db_mngr.get_db_map(url)
+                    if database_map is not None:
+                        committed_db_maps.add(database_map)
+        if committed_db_maps:
+            self._project.db_mngr.session_committed.emit(committed_db_maps)
 
     def make_signal_handler_dict(self):
         """Returns a dictionary of all shared signals and their handlers.

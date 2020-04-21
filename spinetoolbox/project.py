@@ -480,6 +480,7 @@ class SpineToolboxProject(MetaObject):
             return
         items = [self._project_item_model.get_item(name).project_item.execution_item() for name in node_successors]
         self.engine = SpineEngine(items, node_successors, execution_permits)
+        self.engine.dag_node_execution_finished.connect(self._notify_item_for_finished_execution)
         self.dag_execution_about_to_start.emit(self.engine)
         self._logger.msg.emit("<b>Starting DAG {0}</b>".format(dag_identifier))
         self._logger.msg.emit("Order: {0}".format(" -> ".join(list(node_successors))))
@@ -490,12 +491,10 @@ class SpineToolboxProject(MetaObject):
             SpineEngineState.COMPLETED: "completed successfully",
         }[self.engine.state()]
         self._logger.msg.emit("<b>DAG {0} {1}</b>".format(dag_identifier, outcome))
+        self.engine.dag_node_execution_finished.disconnect(self._notify_item_for_finished_execution)
 
     def execute_selected(self):
         """Executes DAGs corresponding to all selected project items."""
-        self._toolbox.ui.textBrowser_eventlog.verticalScrollBar().setValue(
-            self._toolbox.ui.textBrowser_eventlog.verticalScrollBar().maximum()
-        )
         if not self.dag_handler.dags():
             self._logger.msg_warning.emit("Project has no items to execute")
             return
@@ -612,3 +611,22 @@ class SpineToolboxProject(MetaObject):
     @property
     def settings(self):
         return self._settings
+
+    @Slot(str, "QVariant", "QVariant")
+    def _notify_item_for_finished_execution(self, item_name, execution_direction, engine_state):
+        """Notifies a project item that its execution counterpart has been executed successfully."""
+        item = self._project_item_model.get_item(item_name)
+        if item is None:
+            return
+        item.project_item.executed_successfully(execution_direction, engine_state)
+
+    def direct_successors(self, item):
+        """Returns a list of direct successor nodes for given project item."""
+        item_name = item.name
+        dags = self.dag_handler.dags()
+        for dag in dags:
+            successors = self.dag_handler.node_successors(dag)
+            items_successors = successors.get(item_name)
+            if items_successors is not None:
+                return [self._project_item_model.get_item(successor).project_item for successor in items_successors]
+        return []

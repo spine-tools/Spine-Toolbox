@@ -114,7 +114,7 @@ class DataStore(ProjectItem):
         self.load_url_into_selections(self._url)
 
     def url(self):
-        """Return the url attribute, for saving the project."""
+        """Return the url attribute."""
         return self._url
 
     def _update_sa_url(self, log_errors=True):
