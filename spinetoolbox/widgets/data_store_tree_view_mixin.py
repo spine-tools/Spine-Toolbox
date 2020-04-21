@@ -112,10 +112,7 @@ class TreeViewMixin:
         """Updates object filter and sets default rows."""
         indexes = self.ui.treeView_object.selectionModel().selectedIndexes()
         self.object_tree_model.select_indexes(indexes)
-        if not self.ui.treeView_relationship._selection_locked:
-            self.ui.treeView_object._selection_locked = True
-            self.ui.treeView_relationship.selectionModel().clearSelection()
-            self.ui.treeView_object._selection_locked = False
+        self._clear_tree_selections_silently(self.ui.treeView_relationship)
         self.set_default_parameter_data(self.ui.treeView_object.currentIndex())
         self._update_object_filter()
 
@@ -124,12 +121,18 @@ class TreeViewMixin:
         """Updates relationship filter and sets default rows."""
         indexes = self.ui.treeView_relationship.selectionModel().selectedIndexes()
         self.relationship_tree_model.select_indexes(indexes)
-        if not self.ui.treeView_object._selection_locked:
-            self.ui.treeView_relationship._selection_locked = True
-            self.ui.treeView_object.selectionModel().clearSelection()
-            self.ui.treeView_relationship._selection_locked = False
+        self._clear_tree_selections_silently(self.ui.treeView_object)
         self.set_default_parameter_data(self.ui.treeView_relationship.currentIndex())
         self._update_relationship_filter()
+
+    @staticmethod
+    def _clear_tree_selections_silently(tree_view):
+        """Clears the selections on a given abstract item view without emitting any signals."""
+        selection_model = tree_view.selectionModel()
+        if selection_model.hasSelection():
+            selection_model.blockSignals(True)
+            selection_model.clearSelection()
+            selection_model.blockSignals(False)
 
     @staticmethod
     def _db_map_items(indexes):

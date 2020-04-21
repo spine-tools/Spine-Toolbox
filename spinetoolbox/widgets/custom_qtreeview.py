@@ -54,7 +54,6 @@ class EntityTreeView(CopyTreeView):
     def __init__(self, parent):
         """Initialize the view."""
         super().__init__(parent=parent)
-        self._selection_locked = False
 
     @Slot("QModelIndex", "EditTrigger", "QEvent")
     def edit(self, index, trigger, event):
