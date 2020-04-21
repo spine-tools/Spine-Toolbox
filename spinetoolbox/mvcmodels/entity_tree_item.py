@@ -104,19 +104,19 @@ class MultiDBTreeItem(TreeItem):
 
     def _deep_refresh_children(self):
         """Refreshes children after taking db_maps from them. Called after removing and updating children for this item."""
-        changed_rows = []
         removed_rows = []
         for row, child in reversed(list(enumerate(self.children))):
-            if child._db_map_id:
-                child._deep_refresh_children()
-                changed_rows.append(row)
-            else:
+            if not child._db_map_id:
                 removed_rows.append(row)
         for row, count in reversed(rows_to_row_count_tuples(removed_rows)):
             self.remove_children(row, count)
+        changed_rows = []
+        for row, child in enumerate(self.children):
+            child._deep_refresh_children()
+            changed_rows.append(row)
         if changed_rows:
-            top_row = changed_rows[-1]
-            bottom_row = changed_rows[0]
+            top_row = changed_rows[0]
+            bottom_row = changed_rows[-1]
             top_index = self.children[top_row].index().sibling(top_row, 1)
             bottom_index = self.children[bottom_row].index().sibling(bottom_row, 1)
             self.model.dataChanged.emit(top_index, bottom_index)
