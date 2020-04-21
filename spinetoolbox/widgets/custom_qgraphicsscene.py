@@ -97,6 +97,14 @@ class CustomQGraphicsScene(ShrinkingScene):
         """
         self.bg_grid = bg
 
+    @staticmethod
+    def _is_project_item_drag(source):
+        if not hasattr(source, "model"):
+            return False
+        return callable(source.model) and isinstance(
+            source.model(), (ProjectItemFactoryModel, ProjectItemSpecFactoryModel)
+        )
+
     def dragLeaveEvent(self, event):
         """Accept event."""
         event.accept()
@@ -106,7 +114,7 @@ class CustomQGraphicsScene(ShrinkingScene):
         only if drag source is not a ProjectItemFactoryModel or ProjectItemSpecFactoryModel."""
         event.accept()
         source = event.source()
-        if not isinstance(source.model(), (ProjectItemFactoryModel, ProjectItemSpecFactoryModel)):
+        if not self._is_project_item_drag(source):
             super().dragEnterEvent(event)
 
     def dragMoveEvent(self, event):
@@ -114,7 +122,7 @@ class CustomQGraphicsScene(ShrinkingScene):
         only if drag source is not a ProjectItemFactoryModel or ProjectItemSpecFactoryModel."""
         event.accept()
         source = event.source()
-        if not isinstance(source.model(), (ProjectItemFactoryModel, ProjectItemSpecFactoryModel)):
+        if not self._is_project_item_drag(source):
             super().dragMoveEvent(event)
 
     def dropEvent(self, event):
@@ -123,7 +131,7 @@ class CustomQGraphicsScene(ShrinkingScene):
         Capture text from event's mimedata and show the appropriate 'Add Item form.'
         """
         source = event.source()
-        if not isinstance(source.model(), (ProjectItemFactoryModel, ProjectItemSpecFactoryModel)):
+        if not self._is_project_item_drag(source):
             super().dropEvent(event)
             return
         if not self._toolbox.project():
