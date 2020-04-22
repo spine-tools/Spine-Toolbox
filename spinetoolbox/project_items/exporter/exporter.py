@@ -80,6 +80,7 @@ class Exporter(ProjectItem):
     def set_up(self):
         """See base class."""
         self._project.db_mngr.session_committed.connect(self._update_settings_after_db_commit)
+        self._project.db_mngr.database_overwritten.connect(self._update_settings_after_db_overwrite)
 
     @staticmethod
     def item_type():
@@ -447,6 +448,13 @@ class Exporter(ProjectItem):
             if url in self._settings_packs:
                 self._start_worker(url, update_settings=True)
 
+    @Slot(object)
+    def _update_settings_after_db_overwrite(self, url):
+        """Triggers settings override."""
+        url_string = url.drivername + ":///" + url.database
+        if url_string in self._settings_packs:
+            self._start_worker(url_string)
+
     @staticmethod
     def default_name_prefix():
         """See base class."""
@@ -462,6 +470,7 @@ class Exporter(ProjectItem):
     def tear_down(self):
         """See base class."""
         self._project.db_mngr.session_committed.disconnect(self._update_settings_after_db_commit)
+        self._project.db_mngr.database_overwritten.disconnect(self._update_settings_after_db_overwrite)
 
 
 class SettingsPack(QObject):

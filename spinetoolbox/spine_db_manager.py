@@ -67,6 +67,7 @@ class SpineDBManager(QObject):
     TODO: Expand description, how it works, the cache, the signals, etc.
     """
 
+    database_overwritten = Signal(object)
     session_refreshed = Signal(set)
     session_committed = Signal(set, object)
     session_rolled_back = Signal(set)
@@ -132,24 +133,28 @@ class SpineDBManager(QObject):
     def create_new_spine_database(self, url):
         if url in self._db_maps:
             message = f"The url <b>{url}</b> is being viewed. Please close all windows viewing this url and try again."
-            QMessageBox.critical(self.parent()._toolbox, "Error", message)
+            self._general_logger.error_box.emit("Error", message)
             return
         try:
+            overwritten = False
             if not is_empty(url):
                 msg = QMessageBox(self.parent()._toolbox)
                 msg.setIcon(QMessageBox.Question)
                 msg.setWindowTitle("Database not empty")
-                msg.setText("The database at <b>'{0}'</b> is not empty.".format(url))
+                msg.setText(f"The database at <b>'{url}'</b> is not empty.")
                 msg.setInformativeText("Do you want to overwrite it?")
                 msg.addButton("Overwrite", QMessageBox.AcceptRole)
                 msg.addButton("Cancel", QMessageBox.RejectRole)
                 ret = msg.exec_()  # Show message box
                 if ret != QMessageBox.AcceptRole:
                     return
+                overwritten = True
             do_create_new_spine_database(url)
-            self._general_logger.msg_success.emit("New Spine db successfully created at '{0}'.".format(url))
+            self._general_logger.msg_success.emit(f"New Spine db successfully created at '{url}'.")
+            if overwritten:
+                self.database_overwritten.emit(url)
         except SpineDBAPIError as e:
-            self._general_logger.msg_error.emit("Unable to create new Spine db at '{0}': {1}.".format(url, e))
+            self._general_logger.msg_error.emit(f"Unable to create new Spine db at '{url}': {e}.")
 
     def close_session(self, url):
         """Pops any db map on the given url and closes its connection.

@@ -1792,7 +1792,6 @@ class ToolboxUI(QMainWindow):
         box.setWindowTitle(title)
         box.setWindowModality(Qt.ApplicationModal)
         box.showMessage(message)
-        box.deleteLater()
 
     def _connect_project_signals(self):
         """Connects signals emitted by project."""
