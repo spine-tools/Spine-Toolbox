@@ -20,7 +20,7 @@ from copy import deepcopy
 from datetime import datetime
 import pathlib
 import os.path
-from PySide2.QtCore import QObject, Signal, Slot
+from PySide2.QtCore import QObject, QThreadPool, Signal, Slot
 from spinedb_api import DatabaseMapping, SpineDBAPIError
 from spinetoolbox.project_item import ProjectItem, ProjectItemResource
 from spinetoolbox.project_commands import UpdateExporterOutFileNameCommand, UpdateExporterSettingsCommand
@@ -154,21 +154,20 @@ class Exporter(ProjectItem):
 
     def _start_worker(self, database_url, update_settings=False):
         """Starts fetching settings using a worker in another thread."""
+        pool = QThreadPool.globalInstance()
         worker = self._workers.get(database_url, None)
-        if worker is not None and worker.isRunning():
-            worker.requestInterruption()
-            worker.wait()
-        elif worker is None:
-            worker = Worker(database_url)
-            worker.settings_read.connect(self._update_export_settings)
-            worker.indexing_settings_read.connect(self._update_indexing_settings)
-            worker.indexing_domains_read.connect(self._update_indexing_domains)
-            worker.merging_settings_read.connect(self._update_merging_settings)
-            worker.merging_domains_read.connect(self._update_merging_domains)
-            worker.time_stamp_read.connect(self._update_commit_time_stamp)
-            worker.finished.connect(self._worker_finished)
-            worker.errored.connect(self._worker_failed)
-            self._workers[database_url] = worker
+        if worker is not None:
+            pool.cancel(worker)
+        worker = Worker(database_url)
+        worker.signals.settings_read.connect(self._update_export_settings)
+        worker.signals.indexing_settings_read.connect(self._update_indexing_settings)
+        worker.signals.indexing_domains_read.connect(self._update_indexing_domains)
+        worker.signals.merging_settings_read.connect(self._update_merging_settings)
+        worker.signals.merging_domains_read.connect(self._update_merging_domains)
+        worker.signals.time_stamp_read.connect(self._update_commit_time_stamp)
+        worker.signals.finished.connect(self._worker_finished)
+        worker.signals.errored.connect(self._worker_failed)
+        self._workers[database_url] = worker
         if update_settings:
             pack = self._settings_packs[database_url]
             worker.set_previous_settings(
@@ -177,7 +176,7 @@ class Exporter(ProjectItem):
         else:
             worker.reset_previous_settings()
         self._settings_packs[database_url].state = SettingsState.FETCHING
-        worker.start()
+        pool.start(worker)
 
     @Slot(str, "QVariant")
     def _update_commit_time_stamp(self, database_url, time_stamp):
@@ -224,9 +223,6 @@ class Exporter(ProjectItem):
     def _worker_finished(self, database_url):
         """Cleans up after a worker has finished fetching export settings."""
         if database_url in self._workers:
-            worker = self._workers[database_url]
-            worker.wait()
-            worker.deleteLater()
             del self._workers[database_url]
             settings_pack = self._settings_packs.get(database_url)
             if settings_pack is not None:
@@ -246,9 +242,6 @@ class Exporter(ProjectItem):
             self._settings_packs[database_url].state = SettingsState.ERROR
             self._report_notifications()
         if database_url in self._workers:
-            worker = self._workers[database_url]
-            worker.wait()
-            worker.deleteLater()
             del self._workers[database_url]
 
     def _check_state(self, clear_before_check=True):
