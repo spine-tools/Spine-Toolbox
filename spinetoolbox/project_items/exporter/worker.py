@@ -103,14 +103,14 @@ class Worker(QRunnable):
         try:
             database_map = DatabaseMapping(self._database_url)
         except SpineDBAPIError as error:
-            self.errored.emit(self._database_url, error)
+            self.signals.errored.emit(self._database_url, error)
             return None, None
         try:
             time_stamp = latest_database_commit_time_stamp(database_map)
             settings = gdx.make_settings(database_map)
             indexing_settings = gdx.make_indexing_settings(database_map)
         except gdx.GdxExportException as error:
-            self.errored.emit(self._database_url, error)
+            self.signals.errored.emit(self._database_url, error)
             return None, None
         finally:
             database_map.connection.close()
@@ -138,14 +138,14 @@ class Worker(QRunnable):
         try:
             database_map = DatabaseMapping(self._database_url)
         except SpineDBAPIError as error:
-            self.errored.emit(self._database_url, error)
+            self.signals.errored.emit(self._database_url, error)
             return None, None
         try:
             updated_merging_settings = gdx.update_merging_settings(
                 self._previous_merging_settings, updated_settings, database_map
             )
         except gdx.GdxExportException as error:
-            self.errored.emit(self._database_url, error)
+            self.signals.errored.emit(self._database_url, error)
             return None, None
         finally:
             database_map.connection.close()
