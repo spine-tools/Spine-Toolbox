@@ -37,21 +37,21 @@ class MetaObject(QObject):
         self.short_name = shorten(name)
         self.description = description
 
-    def set_name(self, new_name):
+    def set_name(self, name):
         """Set object name and short name.
         Note: Check conflicts (e.g. name already exists)
         before calling this method.
 
         Args:
-            new_name (str): New (long) name for this object
+            name (str): New (long) name for this object
         """
-        self.name = new_name
-        self.short_name = shorten(new_name)
+        self.name = name
+        self.short_name = shorten(name)
 
-    def set_description(self, desc):
+    def set_description(self, description):
         """Set object description.
 
         Args:
-            desc (str): Object description
+            description (str): Object description
         """
-        self.description = desc
+        self.description = description

@@ -22,7 +22,7 @@ from unittest import mock
 import logging
 import os
 import sys
-from PySide2.QtWidgets import QApplication, QMessageBox
+from PySide2.QtWidgets import QApplication
 from PySide2.QtCore import SIGNAL, Qt, QPoint, QItemSelectionModel
 from PySide2.QtTest import QTest
 from spinetoolbox.project import SpineToolboxProject
@@ -168,10 +168,11 @@ class TestToolboxUI(unittest.TestCase):
             self.skipTest("Test project directory '{0}' does not exist".format(project_dir))
             return
         self.assertIsNone(self.toolbox.project())
-        with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project") as mock_save_project, \
-                mock.patch("spinetoolbox.project.create_dir") as mock_create_dir, \
-                mock.patch("spinetoolbox.project_item.create_dir") as mock_create_dir, \
-                mock.patch("spinetoolbox.ui_main.ToolboxUI.update_recent_projects") as mock_upd_rec_projs:
+        with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project") as mock_save_project, mock.patch(
+            "spinetoolbox.project.create_dir"
+        ) as mock_create_dir, mock.patch("spinetoolbox.project_item.create_dir") as mock_create_dir, mock.patch(
+            "spinetoolbox.ui_main.ToolboxUI.update_recent_projects"
+        ) as mock_upd_rec_projs:
             self.toolbox.open_project(project_dir)
         self.assertIsInstance(self.toolbox.project(), SpineToolboxProject)
         # Check that project contains four items
@@ -517,7 +518,6 @@ class TestToolboxUI(unittest.TestCase):
         create_project(self.toolbox)
         dc1 = "DC1"
         add_dc(self.toolbox.project(), dc1)
-        dc1_index = self.toolbox.project_item_model.find_item(dc1)
         # Check the size of project item model
         n_items = self.toolbox.project_item_model.n_items()
         self.assertEqual(n_items, 1)
@@ -530,7 +530,7 @@ class TestToolboxUI(unittest.TestCase):
         n_items_in_design_view = len([item for item in items_in_design_view if isinstance(item, ProjectItemIcon)])
         self.assertEqual(n_items_in_design_view, 1)
         # NOW REMOVE DC1
-        self.toolbox.remove_item(dc1_index, delete_item=False)
+        self.toolbox._project.remove_item(dc1)
         self.assertEqual(self.toolbox.project_item_model.n_items(), 0)  # Check the number of project items
         dags = self.toolbox.project().dag_handler.dags()
         self.assertEqual(0, len(dags))  # Number of DAGs (DiGraph) objects in project
@@ -551,10 +551,11 @@ class TestToolboxUI(unittest.TestCase):
             self.skipTest("Test project directory '{0}' does not exist".format(project_dir))
             return
         self.assertIsNone(self.toolbox.project())
-        with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project") as mock_save_project, \
-                mock.patch("spinetoolbox.project.create_dir") as mock_create_dir, \
-                mock.patch("spinetoolbox.project_item.create_dir") as mock_create_dir, \
-                mock.patch("spinetoolbox.ui_main.ToolboxUI.update_recent_projects") as mock_update_recent_project:
+        with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project") as mock_save_project, mock.patch(
+            "spinetoolbox.project.create_dir"
+        ) as mock_create_dir, mock.patch("spinetoolbox.project_item.create_dir") as mock_create_dir, mock.patch(
+            "spinetoolbox.ui_main.ToolboxUI.update_recent_projects"
+        ) as mock_update_recent_project:
             self.toolbox.open_project(project_dir)
         # Tool spec model must be empty at this point
         self.assertEqual(0, self.toolbox.tool_specification_model.rowCount())
@@ -570,7 +571,7 @@ class TestToolboxUI(unittest.TestCase):
         # Now, remove the Tool Spec from the model
         index = self.toolbox.tool_specification_model.tool_specification_index("Python Tool Specification")
         self.assertTrue(index.isValid())
-        self.toolbox.remove_tool_specification(index, ask_verification=False)
+        self.toolbox.remove_tool_specification(index.row(), ask_verification=False)
         # Tool spec model must be empty again
         self.assertEqual(0, self.toolbox.tool_specification_model.rowCount())
 

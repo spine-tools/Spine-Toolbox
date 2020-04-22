@@ -88,7 +88,7 @@ class TestEmptyParameterModel(unittest.TestCase):
             self.assertEqual(item["object_class_id"], 1)
             self.assertEqual(item["object_id"], 1)
             self.assertEqual(item["parameter_definition_id"], 1)
-            self.assertEqual(item["value"], "bloodhound")
+            self.assertEqual(item["value"], '"bloodhound"')
 
         self.mock_db_mngr.add_parameter_values.side_effect = _add_parameter_values
         model.batch_set_data(_empty_indexes(model), ["dog", "pluto", "breed", "bloodhound", "mock_db"])
@@ -125,11 +125,11 @@ class TestEmptyParameterModel(unittest.TestCase):
             self.assertEqual(item["relationship_class_id"], 3)
             self.assertEqual(item["relationship_id"], 3)
             self.assertEqual(item["parameter_definition_id"], 2)
-            self.assertEqual(item["value"], -1)
+            self.assertEqual(item["value"], '-1')
 
         self.mock_db_mngr.add_parameter_values.side_effect = _add_parameter_values
         model.batch_set_data(_empty_indexes(model), ["dog__fish", "pluto,nemo", "relative_speed", -1, "mock_db"])
-        self.mock_db_mngr.add_parameter_values.assert_called_once()
+        self.assertEqual(self.mock_db_mngr.add_parameter_values.call_count, 2)
 
     def test_do_not_add_invalid_relationship_parameter_values(self):
         """Test that relationship parameter values aren't added to the db if data is incomplete."""

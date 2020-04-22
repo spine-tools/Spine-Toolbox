@@ -23,7 +23,7 @@ from .custom_menus import SimpleFilterMenu
 from .custom_delegates import ComboBoxDelegate
 from ..spine_io.io_models import MappingSpecModel
 
-MAPPING_CHOICES = ("Constant", "Column", "Row", "Header", "None")
+MAPPING_CHOICES = ("Constant", "Column", "Row", "Column Header", "Headers", "None")
 
 
 class MappingWidget(QWidget):
@@ -212,9 +212,7 @@ class MappingOptionsWidget(QWidget):
             self._ui.dimension_spin_box.hide()
             self._ui.class_type_combo_box.setCurrentIndex(0)
         # update parameter mapping
-        self._ui.parameter_type_combo_box.setCurrentIndex(
-            self._ui.parameter_type_combo_box.findText(self._model.parameter_type)
-        )
+        self._ui.parameter_type_combo_box.setCurrentText(self._model.parameter_type)
 
         self._ui.ignore_columns_button.setVisible(self._model.is_pivoted)
         self._ui.ignore_columns_label.setVisible(self._model.is_pivoted)

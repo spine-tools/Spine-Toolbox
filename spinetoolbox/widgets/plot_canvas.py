@@ -27,19 +27,27 @@ from PySide2 import QtWidgets
 register_matplotlib_converters()  # Needed to plot the time series indexes
 matplotlib.use('Qt5Agg')
 matplotlib.rcParams.update({"font.size": 8})
-_mpl_logger = logging.getLogger("matplotlib")
-_mpl_logger.setLevel(logging.WARNING)
+logging.getLogger("matplotlib").setLevel(logging.WARNING)
 
 
 class PlotCanvas(FigureCanvasQTAgg):
-    """A widget for plotting with matplotlib"""
+    """A widget for plotting with matplotlib."""
 
     def __init__(self, parent=None):
+        """
+        Args:
+            parent (QWidget): a parent widget
+        """
         width = 5  # inches
         height = 4  # inches
         fig = Figure(figsize=(width, height), tight_layout=True)
-        self.axes = fig.add_subplot(111)
+        self._axes = fig.add_subplot(111)
         super().__init__(fig)
         self.setParent(parent)
         super().setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         super().updateGeometry()
+
+    @property
+    def axes(self):
+        """:obj:`matplotlib.axes.Axes`: figure's axes"""
+        return self._axes

@@ -13,7 +13,7 @@
 # Form implementation generated from reading ui file 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\project_items\exporter\ui\gdx_export_settings.ui',
 # licensing of 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\project_items\exporter\ui\gdx_export_settings.ui' applies.
 #
-# Created: Thu Feb  6 17:07:31 2020
+# Created: Thu Mar 12 14:58:55 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -24,7 +24,7 @@ class Ui_Form(object):
     def setupUi(self, Form):
         Form.setObjectName("Form")
         Form.setWindowModality(QtCore.Qt.WindowModal)
-        Form.resize(603, 367)
+        Form.resize(603, 406)
         self.verticalLayout_4 = QtWidgets.QVBoxLayout(Form)
         self.verticalLayout_4.setObjectName("verticalLayout_4")
         self.splitter = QtWidgets.QSplitter(Form)
@@ -97,6 +97,14 @@ class Ui_Form(object):
         spacerItem4 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
         self.horizontalLayout_4.addItem(spacerItem4)
         self.verticalLayout_3.addLayout(self.horizontalLayout_4)
+        self.horizontalLayout_5 = QtWidgets.QHBoxLayout()
+        self.horizontalLayout_5.setObjectName("horizontalLayout_5")
+        self.open_parameter_merging_settings_button = QtWidgets.QPushButton(self.misc_control_holder)
+        self.open_parameter_merging_settings_button.setObjectName("open_parameter_merging_settings_button")
+        self.horizontalLayout_5.addWidget(self.open_parameter_merging_settings_button)
+        spacerItem5 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        self.horizontalLayout_5.addItem(spacerItem5)
+        self.verticalLayout_3.addLayout(self.horizontalLayout_5)
         self.horizontalLayout_3 = QtWidgets.QHBoxLayout()
         self.horizontalLayout_3.setObjectName("horizontalLayout_3")
         self.formLayout = QtWidgets.QFormLayout()
@@ -108,8 +116,8 @@ class Ui_Form(object):
         self.global_parameters_combo_box.setObjectName("global_parameters_combo_box")
         self.formLayout.setWidget(0, QtWidgets.QFormLayout.FieldRole, self.global_parameters_combo_box)
         self.horizontalLayout_3.addLayout(self.formLayout)
-        spacerItem5 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
-        self.horizontalLayout_3.addItem(spacerItem5)
+        spacerItem6 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        self.horizontalLayout_3.addItem(spacerItem6)
         self.verticalLayout_3.addLayout(self.horizontalLayout_3)
         self.verticalLayout_4.addWidget(self.misc_control_holder)
         self.button_box = QtWidgets.QDialogButtonBox(Form)
@@ -131,7 +139,9 @@ class Ui_Form(object):
         self.record_move_up_button.setText(QtWidgets.QApplication.translate("Form", "Move Up", None, -1))
         self.record_move_down_button.setText(QtWidgets.QApplication.translate("Form", "Move Down", None, -1))
         self.open_indexed_parameter_settings_button.setToolTip(QtWidgets.QApplication.translate("Form", "Set up indexing for time series and other indexed parameters.", None, -1))
-        self.open_indexed_parameter_settings_button.setText(QtWidgets.QApplication.translate("Form", "Indexed parameters...", None, -1))
+        self.open_indexed_parameter_settings_button.setText(QtWidgets.QApplication.translate("Form", "Indexed Parameters...", None, -1))
+        self.open_parameter_merging_settings_button.setToolTip(QtWidgets.QApplication.translate("Form", "Merge multiple parameters into one.", None, -1))
+        self.open_parameter_merging_settings_button.setText(QtWidgets.QApplication.translate("Form", "Parameter Merging...", None, -1))
         self.label.setToolTip(QtWidgets.QApplication.translate("Form", "Selected domain\'s parameters are exported as GAMS scalars.\n"
 "The domain itself is not exported.", None, -1))
         self.label.setText(QtWidgets.QApplication.translate("Form", "Global parameters domain:", None, -1))

@@ -28,6 +28,7 @@ class DataConnectionPropertiesWidget(QWidget):
 
     def __init__(self, toolbox):
         """
+
         Args:
             toolbox (ToolboxUI): The toolbox instance where this widget should be embedded
         """

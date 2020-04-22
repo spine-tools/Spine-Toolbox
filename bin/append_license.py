@@ -17,23 +17,24 @@ license_text = [
 ]
 
 
-def append_license(path):
+def append_license(path, force=False):
     _, extension = os.path.splitext(path)
     if extension not in [".py", ".ui", ".xml"]:
         raise RuntimeError("Unsupported file type. Can only append license to .py, .ui or .xml files.")
     if extension == ".py":
-        _append_license_py(path)
+        _append_license_py(path, force)
     else:
-        _append_license_xml(path)
+        _append_license_xml(path, force)
 
 
-def _append_license_py(path):
+def _append_license_py(path, force):
     """Appends a license header to given .py, .ui or .xml file."""
-    print("Appending license to " + path)
+    base_name = os.path.basename(path)
+    print("Appending license to " + base_name)
     with open(path) as input_file:
         contents = input_file.readlines()
-    if contents[2].startswith("# Copyright"):
-        print(path + " seems to have a license already. Skipping.")
+    if not force and contents[2].startswith("# Copyright"):
+        print(base_name + " seems to have a license already. Skipping.")
         return
     with open(path, "w") as output_file:
         output_file.writelines(contents[:1])  # First line contains encoding.
@@ -41,7 +42,7 @@ def _append_license_py(path):
         output_file.writelines(contents[1:])
 
 
-def _append_license_xml(path):
+def _append_license_xml(path, force):
     """Appends a license header to given .py, .ui or .xml file."""
     xml_license = list()
     xml_license.append("<!--\n")
@@ -50,10 +51,11 @@ def _append_license_xml(path):
     xml_license.append("-->\n")
     with open(path) as input_file:
         contents = input_file.readlines()
-    if contents[1].startswith("<!--"):
-        print(path + " seems to have a license already. Skipping.")
+    base_name = os.path.basename(path)
+    if not force and contents[1].startswith("<!--"):
+        print(base_name + " seems to have a license already. Skipping.")
         return
-    print("Appending license to " + path)
+    print("Appending license to " + base_name)
     with open(path, "w") as output_file:
         output_file.writelines(contents[:1])  # First line contains XML schema etc.
         output_file.writelines(xml_license)

@@ -16,13 +16,13 @@ please check the :ref:`Terminology` section. If you want to contribute to this p
    :caption: Contents:
 
    getting_started
-   tutorials
+   setting_up
    main_window
    project_items
    tool_specification_editor
-   executing_tools
+   executing_projects
    settings
-   data_store_views
+   data_store_view
    plotting
    parameter_value_editor
    data_import_export

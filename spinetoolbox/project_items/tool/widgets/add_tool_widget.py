@@ -55,7 +55,7 @@ class AddToolWidget(QWidget):
         self.ui.lineEdit_name.selectAll()
         self.description = ''
         # Init
-        self.ui.comboBox_tool.setModel(self._toolbox.tool_specification_model)
+        self.ui.comboBox_specification.setModel(self._toolbox.tool_specification_model)
         self.ui.lineEdit_name.setFocus()
         self.connect_signals()
         # Ensure this window gets garbage-collected when closed
@@ -66,7 +66,7 @@ class AddToolWidget(QWidget):
         self.ui.lineEdit_name.textChanged.connect(self.name_changed)  # Name -> folder name connection
         self.ui.pushButton_ok.clicked.connect(self.ok_clicked)
         self.ui.pushButton_cancel.clicked.connect(self.close)
-        self.ui.comboBox_tool.currentIndexChanged.connect(self.update_args)
+        self.ui.comboBox_specification.currentIndexChanged.connect(self.update_args)
 
     @Slot(int, name='update_args')
     def update_args(self, row):
@@ -77,14 +77,14 @@ class AddToolWidget(QWidget):
         """
         if row == 0:
             # No Tool selected
-            self.ui.lineEdit_tool_args.setText("")
+            self.ui.lineEdit_tool_specification_args.setText("")
             return
         selected_tool = self._toolbox.tool_specification_model.tool_specification(row)
         args = selected_tool.cmdline_args
         if not args:
             # Tool cmdline_args is None if the line does not exist in Tool definition file
             args = ''
-        self.ui.lineEdit_tool_args.setText("{0}".format(args))
+        self.ui.lineEdit_tool_specification_args.setText("{0}".format(args))
         return
 
     @Slot(name='name_changed')
@@ -128,7 +128,7 @@ class AddToolWidget(QWidget):
 
     def call_add_item(self):
         """Creates new Item according to user's selections."""
-        tool = self.ui.comboBox_tool.currentText()
+        tool = self.ui.comboBox_specification.currentText()
         item = dict(name=self.name, description=self.description, x=self._x, y=self._y, tool=tool, execute_in_work=True)
         self._project.add_project_items("Tools", item, set_selected=True)
 

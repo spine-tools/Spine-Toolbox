@@ -17,6 +17,7 @@ Classes to manage tool instance execution in various forms.
 """
 
 import logging
+import json
 from PySide2.QtCore import QObject, QProcess, Slot, Signal
 
 
@@ -83,10 +84,11 @@ class ConsoleExecutionManager(ExecutionManager):
         """Executes next command in the buffer."""
         if self._stopped:
             return
-        try:
+        if self._commands:
             command = self._commands.pop(0)
             self._console.execute(command)
-        except IndexError:
+        else:
+            self._stopped = True
             self.execution_finished.emit(0)
 
     def stop_execution(self):
@@ -118,6 +120,7 @@ class QProcessExecutionManager(ExecutionManager):
         self._process = QProcess(self)
         self.process_output = None  # stdout when running silent
         self.error_output = None  # stderr when running silent
+        self.data_to_inject = None
 
     def program(self):
         """Program getter method."""
@@ -152,7 +155,16 @@ class QProcessExecutionManager(ExecutionManager):
             self.process_failed_to_start = True
             self._process.deleteLater()
             self._process = None
+            self.data_to_inject = None
             self.execution_finished.emit(-9998)
+        if self.data_to_inject is not None:
+            self.inject_data_to_write_channel()
+
+    def inject_data_to_write_channel(self):
+        """Writes data to process write channel and closes it afterwards."""
+        self._process.write(json.dumps(self.data_to_inject).encode("utf-8"))
+        self._process.write(b'\n')
+        self._process.closeWriteChannel()
 
     def wait_for_process_finished(self, msecs=30000):
         """Wait for subprocess to finish.
@@ -171,11 +183,11 @@ class QProcessExecutionManager(ExecutionManager):
             return False
         return True
 
-    @Slot(name="process_started")
+    @Slot()
     def process_started(self):
         """Run when subprocess has started."""
 
-    @Slot("QProcess::ProcessState", name="on_state_changed")
+    @Slot("QProcess::ProcessState")
     def on_state_changed(self, new_state):
         """Runs when QProcess state changes.
 
@@ -187,9 +199,7 @@ class QProcessExecutionManager(ExecutionManager):
             arg_str = " ".join(self._args)
             self._logger.msg.emit("\tArguments: <b>{0}</b>".format(arg_str))
         elif new_state == QProcess.Running:
-            self._logger.msg_warning.emit(
-                "\tExecution is in progress. See Process Log for messages " "(stdout&stderr)"
-            )
+            self._logger.msg_warning.emit("\tExecution is in progress. See Process Log for messages " "(stdout&stderr)")
         elif new_state == QProcess.NotRunning:
             # logging.debug("QProcess is not running")
             pass
@@ -197,7 +207,7 @@ class QProcessExecutionManager(ExecutionManager):
             self._logger.msg_error.emit("Process is in an unspecified state")
             logging.error("QProcess unspecified state: %s", new_state)
 
-    @Slot("QProcess::ProcessError", name="'on_process_error")
+    @Slot("QProcess::ProcessError")
     def on_process_error(self, process_error):
         """Run if there is an error in the running QProcess.
 
@@ -238,9 +248,10 @@ class QProcessExecutionManager(ExecutionManager):
         finally:
             self._process.deleteLater()
             self._process = None
+            self.data_to_inject = None
 
-    @Slot(int)
-    def on_process_finished(self, exit_code):
+    @Slot(int, "QProcess::ExitStatus")
+    def on_process_finished(self, exit_code, exit_status):
         """Runs when subprocess has finished.
 
         Args:
@@ -249,7 +260,6 @@ class QProcessExecutionManager(ExecutionManager):
         # logging.debug("Error that occurred last: {0}".format(self._process.error()))
         if not self._process:
             return
-        exit_status = self._process.exitStatus()  # Normal or crash exit
         if exit_status == QProcess.CrashExit:
             if not self._silent:
                 self._logger.msg_error.emit("\tProcess crashed")
@@ -263,8 +273,8 @@ class QProcessExecutionManager(ExecutionManager):
         if not exit_code == 0:
             self.process_failed = True
         if not self._user_stopped:
-            out = str(self._process.readAllStandardOutput().data(), "utf-8")
-            errout = str(self._process.readAllStandardError().data(), "utf-8")
+            out = str(self._process.readAllStandardOutput().data(), "utf-8", errors="replace")
+            errout = str(self._process.readAllStandardError().data(), "utf-8", errors="replace")
             if out is not None:
                 if not self._silent:
                     self._logger.msg_proc.emit(out.strip())
@@ -276,20 +286,21 @@ class QProcessExecutionManager(ExecutionManager):
         # Delete QProcess
         self._process.deleteLater()
         self._process = None
+        self.data_to_inject = None
         self.execution_finished.emit(exit_code)
 
-    @Slot(name="on_ready_stdout")
+    @Slot()
     def on_ready_stdout(self):
         """Emit data from stdout."""
         if not self._process:
             return
-        out = str(self._process.readAllStandardOutput().data(), "utf-8")
+        out = str(self._process.readAllStandardOutput().data(), "utf-8", errors="replace")
         self._logger.msg_proc.emit(out.strip())
 
-    @Slot(name="on_ready_stderr")
+    @Slot()
     def on_ready_stderr(self):
         """Emit data from stderr."""
         if not self._process:
             return
-        err = str(self._process.readAllStandardError().data(), "utf-8")
+        err = str(self._process.readAllStandardError().data(), "utf-8", errors="replace")
         self._logger.msg_proc_error.emit(err.strip())

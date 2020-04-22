@@ -13,7 +13,7 @@
 # Form implementation generated from reading ui file 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\ui\parameter_value_editor.ui',
 # licensing of 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\ui\parameter_value_editor.ui' applies.
 #
-# Created: Thu Feb  6 17:07:54 2020
+# Created: Thu Mar 12 14:59:00 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -33,6 +33,7 @@ class Ui_ParameterValueEditor(object):
         self.parameter_type_selector_layout.addWidget(self.parameter_type_selector_label)
         self.parameter_type_selector = QtWidgets.QComboBox(ParameterValueEditor)
         self.parameter_type_selector.setObjectName("parameter_type_selector")
+        self.parameter_type_selector.addItem("")
         self.parameter_type_selector.addItem("")
         self.parameter_type_selector.addItem("")
         self.parameter_type_selector.addItem("")
@@ -59,9 +60,10 @@ class Ui_ParameterValueEditor(object):
         ParameterValueEditor.setWindowTitle(QtWidgets.QApplication.translate("ParameterValueEditor", "Edit parameter value", None, -1))
         self.parameter_type_selector_label.setText(QtWidgets.QApplication.translate("ParameterValueEditor", "Parameter type", None, -1))
         self.parameter_type_selector.setItemText(0, QtWidgets.QApplication.translate("ParameterValueEditor", "Plain value", None, -1))
-        self.parameter_type_selector.setItemText(1, QtWidgets.QApplication.translate("ParameterValueEditor", "Time series - fixed resolution", None, -1))
-        self.parameter_type_selector.setItemText(2, QtWidgets.QApplication.translate("ParameterValueEditor", "Time series - variable resolution", None, -1))
-        self.parameter_type_selector.setItemText(3, QtWidgets.QApplication.translate("ParameterValueEditor", "Time pattern", None, -1))
-        self.parameter_type_selector.setItemText(4, QtWidgets.QApplication.translate("ParameterValueEditor", "Datetime", None, -1))
-        self.parameter_type_selector.setItemText(5, QtWidgets.QApplication.translate("ParameterValueEditor", "Duration", None, -1))
+        self.parameter_type_selector.setItemText(1, QtWidgets.QApplication.translate("ParameterValueEditor", "Map", None, -1))
+        self.parameter_type_selector.setItemText(2, QtWidgets.QApplication.translate("ParameterValueEditor", "Time series - fixed resolution", None, -1))
+        self.parameter_type_selector.setItemText(3, QtWidgets.QApplication.translate("ParameterValueEditor", "Time series - variable resolution", None, -1))
+        self.parameter_type_selector.setItemText(4, QtWidgets.QApplication.translate("ParameterValueEditor", "Time pattern", None, -1))
+        self.parameter_type_selector.setItemText(5, QtWidgets.QApplication.translate("ParameterValueEditor", "Datetime", None, -1))
+        self.parameter_type_selector.setItemText(6, QtWidgets.QApplication.translate("ParameterValueEditor", "Duration", None, -1))
 

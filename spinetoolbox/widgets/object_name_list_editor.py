@@ -82,12 +82,6 @@ class ObjectNameListEditor(ManageItemsDialog):
         self.table_view.setItemDelegate(delegate)
         self.connect_signals()
 
-    def connect_signals(self):
-        """Connect signals to slots."""
-        super().connect_signals()
-        self.button_box.accepted.connect(self.accept)
-        self.button_box.rejected.connect(self.reject)
-
     def init_model(self, object_class_names, object_names_lists, current_object_names):
         self.model.setHorizontalHeaderLabels(object_class_names)
         item_list = []

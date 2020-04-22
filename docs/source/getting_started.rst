@@ -43,7 +43,7 @@ Spine Toolbox Interface
 
 The central element in Spine Toolbox's interface is the *Design View*,
 where you can visualize and manipulate your project in a pictorial way.
-Alongside *Design view* there are a few 'dock widgets' that provide additional functionality:
+Alongside *Design View* there are a few 'dock widgets' that provide additional functionality:
 
 - *Project* provides a more concise view of your project, including:
 
@@ -77,8 +77,10 @@ To create a new project, please do one of the following:
 A) From the application main menu, select **File -> New project...**
 B) Press *Ctrl+N*.
 
-The *New Project* form will show up.
-Type 'hello world' in the name field ---we will leave the description empty this time--- and click **Ok**.
+The *Select project directory (New project...)* dialog will show up.
+Browse to a folder of your choice and create a new directory called 'hello world' there.
+Then select the 'hello world' directory.
+Spine Toolbox will populate that directory with some files and directories it needs to store the project's data.
 
 Congratulations, you have created a new project.
 
@@ -98,7 +100,8 @@ The *Edit Tool specification* form will appear. Follow the instructions below to
 - Select 'Python' from the *Select type...* dropdown list,
 - Click on the |file| button right next to the field that reads *Add main program file here...*, and
   select the option **Make new main program** from the popup menu.
-- A file browser dialog should open. Name the file *hello_world.py* and save it in a folder of your choice.
+- A file browser dialog should open. Name the file *hello_world.py* and save it in a folder of your choice,
+  e.g. in 'hello world'
 
 After this, the *Edit Tool specification* form should be looking similar to this:
 
@@ -173,6 +176,13 @@ the *Process Log* or in the *Python Console* depending on your settings (See :re
 .. image:: img/hello_world_event_process_log.png
    :align: center
 
+.. note::
+   If you encounter the following message in Event Log when trying to execute a Python Tool.
+
+   **Couldn't determine Python version. Please check the Python interpreter option in Settings.**
+
+   Please see :ref:`Setting Up External Tools` for help.
+
 Congratulations, you just ran your first Spine Toolbox project.
 
 Editing a Tool specification
@@ -188,10 +198,10 @@ Click on the 'Tool specification options' button (|tool_specification_options|) 
 *Properties*, and select **Edit Tool specification** from the popup menu.
 This will open the 'Edit Tool specification' form pre-filled with data from the 'hello_world' specification.
 
-Click the *add input files and/or directories* |file_link| button right below the *Input files* list
-A dialog will appear that lets you can enter a
+Click the *add input files and/or directories* |file_link| button right below the *Input files* list.
+A dialog will appear that lets you enter a
 name for a new input file. Type 'input.txt' and click **Ok**. The form
-should now be looking like this:
+should now look like this:
 
 .. image:: img/hello_world_input_tool_specification_editor.png
   :align: center
@@ -227,8 +237,8 @@ made available for the Tool:
 Adding a Data Connection item to the project
 --------------------------------------------
 
-.. note:: The **Data Connection** item is used to hold and manipulate generic data files,
-   so that other items, notably Tool items, can make use of that data.
+.. note:: The **Data Connection** item is used to hold generic data files,
+   so that other items, notably Importer and Tool items, can make use of that data.
 
 Let's add a Data Connection item to our project, so that we're able to pass the file 'input.txt' to 'say hello world'.
 To add a Data Connection item drag-and-drop the Data Connection icon (|dc_icon|) from the main window toolbar

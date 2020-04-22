@@ -15,11 +15,10 @@ Miscelaneous mixins for parameter models
 :authors: M. Marin (KTH)
 :date:   4.10.2019
 """
+from spinedb_api import to_database
 
 
 def _parse_csv_list(csv_list):
-    if not csv_list:
-        return []
     try:
         return csv_list.split(",")
     except AttributeError:
@@ -44,7 +43,12 @@ class ConvertToDBMixin:
             dict: the db item
             list: error log
         """
-        return item.copy(), []
+        item = item.copy()
+        if "value" in item:
+            item["value"] = to_database(item["value"])
+        elif "default_value" in item:
+            item["default_value"] = to_database(item["default_value"])
+        return item, []
 
 
 class FillInParameterNameMixin(ConvertToDBMixin):
@@ -178,6 +182,8 @@ class MakeParameterTagMixin(ConvertToDBMixin):
             return None, [f"Unable to parse {parameter_tag_list}"] if parameter_tag_list else []
         parameter_tag_id_list = []
         for tag in parsed_parameter_tag_list:
+            if tag == "":
+                break
             tag_item = self._db_map_tag_lookup.get(db_map, {}).get(tag)
             if not tag_item:
                 return None, [f"Unknown tag {tag}"]
@@ -280,7 +286,7 @@ class FillInEntityIdsMixin(ConvertToDBMixin):
 
     def _fill_in_entity_ids(self, item, db_map):
         """Fills in all possible entity ids keyed by entity class id in the given db item
-        (as there can be more than entity for the same name).
+        (as there can be more than one entity for the same name).
 
         Args:
             item (dict): the db item
@@ -343,7 +349,7 @@ class FillInParameterDefinitionIdsMixin(ConvertToDBMixin):
 
     def _fill_in_parameter_ids(self, item, db_map):
         """Fills in all possible parameter definition ids keyed by entity class id in the given db item
-        (as there can be more than parameter definition for the same name).
+        (as there can be more than one parameter definition for the same name).
 
         Args:
             item (dict): the db item
@@ -480,7 +486,7 @@ class MakeRelationshipOnTheFlyMixin:
         }
 
     def _make_relationship_on_the_fly(self, item, db_map):
-        """Returns database relationship item (id-based) from the given model parameter value item (name-based).
+        """Returns a database relationship item (id-based) from the given model parameter value item (name-based).
 
         Args:
             item (dict): the model parameter value item

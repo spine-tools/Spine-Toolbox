@@ -271,7 +271,7 @@ class TestToolExecution(unittest.TestCase):
         self.assertTrue('output2.csv' in output_files)
         # Check ui
         combox_text = tool._properties_ui.comboBox_tool.currentText()
-        cmdline_args = tool._properties_ui.lineEdit_tool_args.text()
+        cmdline_args = tool._properties_ui.lineEdit_tool_spec_args.text()
         in_work = tool._properties_ui.radioButton_execute_in_work.isChecked()
         in_source = tool._properties_ui.radioButton_execute_in_source.isChecked()
         self.assertEqual(combox_text, "simple_exec")

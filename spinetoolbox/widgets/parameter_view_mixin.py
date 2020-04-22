@@ -41,6 +41,7 @@ from ..mvcmodels.compound_parameter_models import (
     CompoundRelationshipParameterValueModel,
 )
 from ..widgets.parameter_value_editor import ParameterValueEditor
+from ..widgets.plot_widget import PlotWidget
 from ..widgets.object_name_list_editor import ObjectNameListEditor
 from ..plotting import plot_selection, PlottingError, ParameterTablePlottingHints
 from ..helpers import busy_effect
@@ -404,21 +405,18 @@ class ParameterViewMixin:
                 plot_widget = plot_selection(model, selection, hints)
             except PlottingError as error:
                 report_plotting_failure(error, self)
-                return
-            if (
-                table_view is self.ui.tableView_object_parameter_value
-                or table_view is self.ui.tableView_object_parameter_definition
-            ):
-                plot_window_title = "Object parameter plot -- {} --".format(value_column_header)
-            elif (
-                table_view is self.ui.tableView_relationship_parameter_value
-                or table_view is self.ui.tableView_relationship_parameter_definition
-            ):
-                plot_window_title = "Relationship parameter plot    -- {} --".format(value_column_header)
             else:
-                plot_window_title = "Plot"
-            plot_widget.setWindowTitle(plot_window_title)
-            plot_widget.show()
+                plot_widget.use_as_window(table_view.window(), value_column_header)
+                plot_widget.show()
+        elif option == "Plot in window":
+            plot_window_name = menu.plot_in_window_option
+            plot_window = PlotWidget.plot_windows.get(plot_window_name)
+            selection = table_view.selectedIndexes()
+            try:
+                hints = ParameterTablePlottingHints()
+                plot_selection(model, selection, hints, plot_window)
+            except PlottingError as error:
+                report_plotting_failure(error, self)
         elif option == "Remove selection":
             model.remove_selection_requested.emit()
         elif option == "Copy":
@@ -518,10 +516,6 @@ class ParameterViewMixin:
         self.qsettings.setValue("relParValHeaderState", h.saveState())
         self.qsettings.endGroup()
 
-    def receive_relationships_added(self, db_map_data):
-        super().receive_relationships_added(db_map_data)
-        self.relationship_parameter_value_model.receive_relationships_added(db_map_data)
-
     def receive_parameter_definitions_added(self, db_map_data):
         super().receive_parameter_definitions_added(db_map_data)
         self.object_parameter_definition_model.receive_parameter_data_added(db_map_data)
@@ -541,6 +535,11 @@ class ParameterViewMixin:
         super().receive_parameter_values_updated(db_map_data)
         self.object_parameter_value_model.receive_parameter_data_updated(db_map_data)
         self.relationship_parameter_value_model.receive_parameter_data_updated(db_map_data)
+
+    def receive_parameter_definition_tags_set(self, db_map_data):
+        super().receive_parameter_definition_tags_set(db_map_data)
+        self.object_parameter_definition_model.receive_parameter_definition_tags_set(db_map_data)
+        self.relationship_parameter_definition_model.receive_parameter_definition_tags_set(db_map_data)
 
     def receive_object_classes_removed(self, db_map_data):
         super().receive_object_classes_removed(db_map_data)

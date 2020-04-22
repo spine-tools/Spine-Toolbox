@@ -35,17 +35,18 @@ from spinedb_api import copy_database
 from ..config import MAINWINDOW_SS
 from .edit_db_items_dialogs import ManageParameterTagsDialog
 from .custom_menus import ParameterValueListContextMenu
-from ..widgets.parameter_view_mixin import ParameterViewMixin
-from ..widgets.tree_view_mixin import TreeViewMixin
-from ..widgets.graph_view_mixin import GraphViewMixin
-from ..widgets.tabular_view_mixin import TabularViewMixin
-from ..widgets.toolbars import ParameterTagToolBar
-from ..widgets.db_session_history_dialog import DBSessionHistoryDialog
-from ..widgets.notification import NotificationStack
+from .parameter_view_mixin import ParameterViewMixin
+from .tree_view_mixin import TreeViewMixin
+from .graph_view_mixin import GraphViewMixin
+from .tabular_view_mixin import TabularViewMixin
+from .toolbars import ParameterTagToolBar
+from .db_session_history_dialog import DBSessionHistoryDialog
+from .notification import NotificationStack
 from ..mvcmodels.parameter_value_list_model import ParameterValueListModel
 from ..helpers import busy_effect
 from .import_widget import ImportDialog
 from ..spine_io.exporters.excel import export_spine_database_to_xlsx
+from ..logger_interface import LoggerInterface
 
 
 class DataStoreFormBase(QMainWindow):
@@ -53,6 +54,7 @@ class DataStoreFormBase(QMainWindow):
 
     msg = Signal(str)
     msg_error = Signal(str)
+    error_box = Signal(str, str)
 
     def __init__(self, db_mngr, *db_urls):
         """Initializes form.
@@ -71,6 +73,7 @@ class DataStoreFormBase(QMainWindow):
             self.db_mngr.get_db_map_for_listener(self, url, codename=codename) for url, codename in self.db_urls
         ]
         self.db_map = self.db_maps[0]
+        self.db_mngr.set_logger_for_db_map(self, self.db_map)
         # Setup UI from Qt Designer file
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
@@ -80,8 +83,9 @@ class DataStoreFormBase(QMainWindow):
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.qsettings = QSettings("SpineProject", "Spine Toolbox")
         self.err_msg = QErrorMessage(self)
-        self.notification_stack = NotificationStack(self)
         self.err_msg.setWindowTitle("Error")
+        self.err_msg.setWindowFlag(Qt.WindowContextHelpButtonHint, False)
+        self.notification_stack = NotificationStack(self)
         self.parameter_tag_toolbar = ParameterTagToolBar(self, self.db_mngr, *self.db_maps)
         self.addToolBar(Qt.TopToolBarArea, self.parameter_tag_toolbar)
         self.selected_ent_cls_ids = {"object class": {}, "relationship class": {}}
@@ -99,8 +103,8 @@ class DataStoreFormBase(QMainWindow):
         self.settings_group = 'treeViewWidget'
         self.undo_action = None
         self.redo_action = None
-        db_names = ", ".join(["{0}[*]".format(db_map.codename) for db_map in self.db_maps])
-        self.setWindowTitle("{0} - Data store view ".format(db_names))
+        db_names = ", ".join(["{0}".format(db_map.codename) for db_map in self.db_maps])
+        self.setWindowTitle("{0}[*] - Data store view".format(db_names))
         self.update_commit_enabled()
 
     def add_menu_actions(self):
@@ -120,6 +124,7 @@ class DataStoreFormBase(QMainWindow):
         # Message signals
         self.msg.connect(self.add_message)
         self.msg_error.connect(self.err_msg.showMessage)
+        self.error_box.connect(lambda title, msg: self.err_msg.showMessage(msg))
         # Menu actions
         self.ui.actionCommit.triggered.connect(self.commit_session)
         self.ui.actionRollback.triggered.connect(self.rollback_session)
@@ -142,9 +147,6 @@ class DataStoreFormBase(QMainWindow):
             self.show_parameter_value_list_context_menu
         )
         self.parameter_value_list_model.remove_selection_requested.connect(self.remove_parameter_value_lists)
-        for db_map in self.db_maps:
-            self.db_mngr.undo_stack[db_map].indexChanged.connect(self.update_undo_redo_actions)
-            self.db_mngr.undo_stack[db_map].cleanChanged.connect(self.update_commit_enabled)
 
     @Slot(int)
     def update_undo_redo_actions(self, index):
@@ -373,6 +375,10 @@ class DataStoreFormBase(QMainWindow):
         self.msg.emit("SQlite file successfully exported.")
 
     @Slot(bool)
+    def refresh_session(self, checked=False):
+        self.db_mngr.refresh_session(*self.db_maps)
+
+    @Slot(bool)
     def commit_session(self, checked=False):
         """Commits session."""
         self.db_mngr.commit_session(*self.db_maps)
@@ -399,10 +405,12 @@ class DataStoreFormBase(QMainWindow):
         self.msg.emit(msg)
 
     @Slot(bool)
-    def refresh_session(self, checked=False):
+    def receive_session_refreshed(self, db_maps):
+        db_maps = set(self.db_maps) & set(db_maps)
+        if not db_maps:
+            return
         self.init_models()
-        msg = "Session refreshed."
-        self.msg.emit(msg)
+        self.msg.emit("Session refreshed.")
 
     @Slot("QVariant", bool)
     def _handle_tag_button_toggled(self, db_map_ids, checked):
@@ -568,6 +576,9 @@ class DataStoreFormBase(QMainWindow):
         self.notify_items_changed("updated", "parameter tag", db_map_data)
         self.parameter_tag_toolbar.receive_parameter_tags_updated(db_map_data)
 
+    def receive_parameter_definition_tags_set(self, db_map_data):
+        self.notify_items_changed("set", "parameter definition tag", db_map_data)
+
     def receive_object_classes_removed(self, db_map_data):
         self.notify_items_changed("removed", "object class", db_map_data)
 
@@ -635,6 +646,7 @@ class DataStoreFormBase(QMainWindow):
             if not self.db_mngr.remove_db_map_listener(db_map, self):
                 event.ignore()
                 return
+            self.db_mngr.unset_logger_for_db_map(db_map)
         # Save UI form state
         self.save_window_state()
         event.accept()

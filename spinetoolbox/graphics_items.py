@@ -41,6 +41,7 @@ from PySide2.QtGui import (
     QLinearGradient,
 )
 from PySide2.QtSvg import QGraphicsSvgItem, QSvgRenderer
+from spinetoolbox.project_commands import MoveIconCommand
 
 
 class ConnectorButton(QGraphicsRectItem):
@@ -266,6 +267,9 @@ class ProjectItemIcon(QGraphicsRectItem):
         self._toolbox = toolbox
         self._project_item = project_item
         self._moved_on_scene = False
+        self._previous_pos = QPointF()
+        self._current_pos = QPointF()
+        self.selected_icons = []
         self.renderer = QSvgRenderer()
         self.svg_item = QGraphicsSvgItem()
         self.colorizer = QGraphicsColorizeEffect()
@@ -274,10 +278,6 @@ class ProjectItemIcon(QGraphicsRectItem):
         # Make item name graphics item.
         name = project_item.name if project_item else ""
         self.name_item = QGraphicsSimpleTextItem(name)
-        shadow_effect = QGraphicsDropShadowEffect()
-        shadow_effect.setOffset(1)
-        shadow_effect.setEnabled(False)
-        self.setGraphicsEffect(shadow_effect)
         self.set_name_attributes()  # Set font, size, position, etc.
         # Make connector buttons
         self.connectors = dict(
@@ -298,9 +298,18 @@ class ProjectItemIcon(QGraphicsRectItem):
         self.rank_icon.setParentItem(self)
         brush = QBrush(background_color)
         self._setup(brush, icon_file, icon_color)
-        # Add items to scene
+        self.activate()
+
+    def activate(self):
+        """Adds items to scene and setup graphics effect.
+        Called in the constructor and when re-adding the item to the project in the context of undo/redo.
+        """
         scene = self._toolbox.ui.graphicsView.scene()
         scene.addItem(self)
+        shadow_effect = QGraphicsDropShadowEffect()
+        shadow_effect.setOffset(1)
+        shadow_effect.setEnabled(False)
+        self.setGraphicsEffect(shadow_effect)
 
     def _setup(self, brush, svg, svg_color):
         """Setup item's attributes.
@@ -392,6 +401,12 @@ class ProjectItemIcon(QGraphicsRectItem):
         self.graphicsEffect().setEnabled(False)
         event.accept()
 
+    def mousePressEvent(self, event):
+        super().mousePressEvent(event)
+        self.selected_icons = set(x for x in self.scene().selectedItems() if isinstance(x, ProjectItemIcon))
+        for icon in self.selected_icons:
+            icon._previous_pos = icon.scenePos()
+
     def mouseMoveEvent(self, event):
         """Moves icon(s) while the mouse button is pressed.
         Update links that are connected to selected icons.
@@ -400,18 +415,27 @@ class ProjectItemIcon(QGraphicsRectItem):
             event (QGraphicsSceneMouseEvent): Event
         """
         super().mouseMoveEvent(event)
-        selected_icons = set(x for x in self.scene().selectedItems() if isinstance(x, ProjectItemIcon))
-        links = set(link for icon in selected_icons for conn in icon.connectors.values() for link in conn.links)
+        self.update_links_geometry()
+
+    def update_links_geometry(self):
+        """Updates geometry of connected links to reflect this item's most recent position."""
+        links = set(link for icon in self.selected_icons for conn in icon.connectors.values() for link in conn.links)
         for link in links:
             link.update_geometry()
 
     def mouseReleaseEvent(self, event):
+        for icon in self.selected_icons:
+            icon._current_pos = icon.scenePos()
+        if (self._current_pos - self._previous_pos).manhattanLength() > qApp.startDragDistance():
+            self._toolbox.undo_stack.push(MoveIconCommand(self))
+        super().mouseReleaseEvent(event)
+
+    def shrink_scene_if_needed(self):
         if self._moved_on_scene:
             self._moved_on_scene = False
             scene = self.scene()
             scene.shrink_if_needed()
             scene.item_move_finished.emit(self)
-        super().mouseReleaseEvent(event)
 
     def contextMenuEvent(self, event):
         """Show item context menu.
@@ -431,10 +455,7 @@ class ProjectItemIcon(QGraphicsRectItem):
             event (QKeyEvent): Key event
         """
         if event.key() == Qt.Key_Delete and self.isSelected():
-            ind = self._toolbox.project_item_model.find_item(self.name())
-            delete_int = int(self._toolbox.qsettings().value("appSettings/deleteData", defaultValue="0"))
-            delete_bool = delete_int != 0
-            self._toolbox.remove_item(ind, delete_item=delete_bool)
+            self._project_item._project.remove_item(self.name())
             event.accept()
         elif event.key() == Qt.Key_R and self.isSelected():
             # TODO:
@@ -628,7 +649,7 @@ class LinkBase(QGraphicsPathItem):
         a = path.angleAtPercent(t)
         percents.append(t)
         angles.append(a)
-        points = [path.pointAtPercent(t) for t in percents]
+        points = list(map(path.pointAtPercent, percents))
         for t in reversed(percents):
             p = path.pointAtPercent(1.0 - t)
             a = path.angleAtPercent(1.0 - t)
@@ -704,6 +725,7 @@ class LinkBase(QGraphicsPathItem):
 
     def _get_joint_line(self, guide_path):
         t = 1.0 - guide_path.percentAtLength(self.src_rect.width() / 2)
+        t = max(t, 0.01)
         src = guide_path.pointAtPercent(t - 0.01)
         dst = guide_path.pointAtPercent(t)
         return QLineF(src, dst)

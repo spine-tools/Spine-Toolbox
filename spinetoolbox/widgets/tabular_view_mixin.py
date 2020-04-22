@@ -10,7 +10,7 @@
 ######################################################################################################################
 
 """
-Contains TabularViewForm class and some related constants.
+Contains TabularViewMixin class.
 
 :author: P. Vennström (VTT)
 :date:   1.11.2018
@@ -98,6 +98,11 @@ class TabularViewMixin:
         self.ui.dockWidget_frozen_table.visibilityChanged.connect(self._handle_frozen_table_visibility_changed)
         self.ui.pivot_table.selectionModel().selectionChanged.connect(self._handle_pivot_table_selection_changed)
 
+    def init_models(self):
+        """Initializes models."""
+        super().init_models()
+        self.clear_pivot_table()
+
     @Slot("QItemSelection", "QItemSelection")
     def _handle_pivot_table_selection_changed(self, selected, deselected):
         """Accepts selection."""
@@ -139,7 +144,7 @@ class TabularViewMixin:
         if visible:
             self.reload_pivot_table()
             self.reload_frozen_table()
-        self.ui.dockWidget_frozen_table.setVisible(self.ui.dockWidget_pivot_table.isVisible())
+            self.ui.dockWidget_frozen_table.setVisible(True)
 
     @Slot(bool)
     def _handle_frozen_table_visibility_changed(self, visible):
@@ -171,7 +176,10 @@ class TabularViewMixin:
         class_item = next(model.root_item.find_children_by_id(self.db_map, class_id))
         if class_item.can_fetch_more():
             class_item.fetch_more()
-        return [item.db_map_data(self.db_map) for item in class_item.find_children_by_id(self.db_map, True)]
+            model.layoutChanged.emit()
+        return [
+            item.db_map_data(self.db_map) for item in class_item.find_children_by_id(self.db_map, True, reverse=False)
+        ]
 
     def load_empty_relationship_data(self, objects_per_class=None):
         """Returns a dict containing all possible relationships in the current class.
@@ -191,8 +199,8 @@ class TabularViewMixin:
             objects = objects_per_class.get(obj_cls_id, None)
             if objects is None:
                 objects = self._get_entities(obj_cls_id, "object class")
-            id_set = {item["id"] for item in objects}
-            object_id_sets.append(id_set)
+            id_set = {item["id"]: None for item in objects}
+            object_id_sets.append(list(id_set.keys()))
         return dict.fromkeys(product(*object_id_sets))
 
     def load_full_relationship_data(self, relationships=None, action="add"):
@@ -251,7 +259,7 @@ class TabularViewMixin:
             if m.canFetchMore():
                 model._fetch_sub_model = m
                 model.fetchMore()
-        return {id_ for m in sub_models for id_ in m._main_data}
+        return [id_ for m in sub_models for id_ in m._main_data]
 
     def _get_parameter_values_or_defs(self, item_type):
         """Returns a list of dict items from the parameter model
@@ -413,7 +421,7 @@ class TabularViewMixin:
             proxy_index = self.pivot_table_proxy.mapFromSource(index)
             widget = self.create_header_widget(proxy_index.data(Qt.DisplayRole), "rows")
             self.ui.pivot_table.setIndexWidget(proxy_index, widget)
-        # TODO: find out why we need two processEvents when changing the frozen value
+        # TODO: find out why we need two processEvents here
         qApp.processEvents()  # pylint: disable=undefined-variable
         qApp.processEvents()  # pylint: disable=undefined-variable
         self.ui.pivot_table.resizeColumnsToContents()
@@ -437,12 +445,19 @@ class TabularViewMixin:
         Returns:
             TabularViewFilterMenu
         """
+
+        object_id_to_name = lambda id_: self.db_mngr.get_field(self.db_map, "object", id_, "name")
+        parameter_id_to_name = lambda id_: self.db_mngr.get_field(
+            self.db_map, "parameter definition", id_, "parameter_name"
+        )
         if identifier not in self.filter_menus:
-            item_type = "parameter definition" if identifier == self._PARAM_INDEX_ID else "object"
-            self.filter_menus[identifier] = menu = TabularViewFilterMenu(self, identifier, item_type)
-            index_values = set(self.pivot_table_model.model.index_values.get(identifier, []))
-            index_values.discard(None)
-            menu.set_filter_list(index_values)
+            data_to_value = parameter_id_to_name if identifier == self._PARAM_INDEX_ID else object_id_to_name
+            self.filter_menus[identifier] = menu = TabularViewFilterMenu(
+                self, identifier, data_to_value, show_empty=False
+            )
+            index_values = dict.fromkeys(self.pivot_table_model.model.index_values.get(identifier, []))
+            index_values.pop(None, None)
+            menu.set_filter_list(index_values.keys())
             menu.filterChanged.connect(self.change_filter)
         return self.filter_menus[identifier]
 
@@ -584,7 +599,7 @@ class TabularViewMixin:
         Returns:
             list(tuple(list(int)))
         """
-        return sorted(set(zip(*[self.pivot_table_model.model.index_values.get(k, []) for k in frozen])))
+        return list(dict.fromkeys(zip(*[self.pivot_table_model.model.index_values.get(k, []) for k in frozen])).keys())
 
     @staticmethod
     def refresh_table_view(table_view):
@@ -605,13 +620,14 @@ class TabularViewMixin:
         elif action == "remove":
             self.pivot_table_model.remove_from_model(data)
         for identifier, menu in self.filter_menus.items():
-            current = set(self.pivot_table_model.model.index_values.get(identifier, []))
-            current.discard(None)
-            previous = menu._filter._filter_model._id_data_set
+            index_values = dict.fromkeys(self.pivot_table_model.model.index_values.get(identifier, []))
+            index_values.pop(None, None)
+            self.menu_values[identifier] = menu_values = self._get_menu_values(identifier, index_values)
             if action == "add":
-                menu.add_items_to_filter_list(list(current - previous))
+                menu.add_items_to_filter_list(list(menu_values.keys()))
             elif action == "remove":
-                menu.remove_items_from_filter_list(list(previous - current))
+                previous = menu._filter._filter_model._data_set
+                menu.remove_items_from_filter_list(list(previous - menu_values.keys()))
         self.reload_frozen_table()
 
     def receive_objects_added_or_removed(self, db_map_data, action):
@@ -676,6 +692,7 @@ class TabularViewMixin:
             if get_class_id(item) == self.current_class_id:
                 self.refresh_table_view(self.ui.pivot_table)
                 self.refresh_table_view(self.ui.frozen_table)
+                self.make_pivot_headers()
                 break
 
     def receive_classes_removed(self, db_map_data):

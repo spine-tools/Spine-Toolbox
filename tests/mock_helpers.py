@@ -48,10 +48,13 @@ def create_toolboxui():
 
 def create_project(toolbox):
     """Creates a project for the given ToolboxUI."""
-    with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project") as mock_save_project, \
-            mock.patch("spinetoolbox.project.create_dir") as mock_create_dir, \
-            mock.patch("spinetoolbox.ui_main.ToolboxUI.update_recent_projects") as mock_upd_rec_projects, \
-            mock.patch("spinetoolbox.widgets.open_project_widget.OpenProjectDialog.update_recents") as mock_upd_recents:
+    with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project") as mock_save_project, mock.patch(
+        "spinetoolbox.project.create_dir"
+    ) as mock_create_dir, mock.patch(
+        "spinetoolbox.ui_main.ToolboxUI.update_recent_projects"
+    ) as mock_upd_rec_projects, mock.patch(
+        "spinetoolbox.widgets.open_project_widget.OpenProjectDialog.update_recents"
+    ) as mock_upd_recents:
         project_dir = os.path.abspath(
             os.path.join(os.curdir, "tests", "test_resources", "This dir should not exist after tests")
         )
@@ -62,13 +65,17 @@ def create_project(toolbox):
 def create_toolboxui_with_project():
     """Returns ToolboxUI with a project instance where
     QSettings among others has been mocked."""
-    with mock.patch("spinetoolbox.ui_main.JuliaREPLWidget") as mock_julia_repl, \
-            mock.patch("spinetoolbox.ui_main.PythonReplWidget") as mock_python_repl, \
-            mock.patch("spinetoolbox.project.create_dir") as mock_create_dir, \
-            mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project") as mock_save_project, \
-            mock.patch("spinetoolbox.ui_main.ToolboxUI.update_recent_projects") as mock_update_recents, \
-            mock.patch("spinetoolbox.ui_main.QSettings.value") as mock_qsettings_value, \
-            mock.patch("spinetoolbox.widgets.open_project_widget.OpenProjectDialog.update_recents") as mock_upd_recents:
+    with mock.patch("spinetoolbox.ui_main.JuliaREPLWidget") as mock_julia_repl, mock.patch(
+        "spinetoolbox.ui_main.PythonReplWidget"
+    ) as mock_python_repl, mock.patch("spinetoolbox.project.create_dir") as mock_create_dir, mock.patch(
+        "spinetoolbox.ui_main.ToolboxUI.save_project"
+    ) as mock_save_project, mock.patch(
+        "spinetoolbox.ui_main.ToolboxUI.update_recent_projects"
+    ) as mock_update_recents, mock.patch(
+        "spinetoolbox.ui_main.QSettings.value"
+    ) as mock_qsettings_value, mock.patch(
+        "spinetoolbox.widgets.open_project_widget.OpenProjectDialog.update_recents"
+    ) as mock_upd_recents:
         # Replace Julia REPL Widget with a QWidget so that the DeprecationWarning from qtconsole is not printed
         mock_julia_repl.return_value = QWidget()
         mock_python_repl.return_value = MockQWidget()

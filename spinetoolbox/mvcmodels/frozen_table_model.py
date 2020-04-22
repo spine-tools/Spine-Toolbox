@@ -74,14 +74,23 @@ class FrozenTableModel(QAbstractItemModel):
             return self._data[index.row()]
 
     def data(self, index, role):
-        if role == Qt.DisplayRole:
+        if role in (Qt.DisplayRole, Qt.ToolTipRole):
             id_ = self._data[index.row()][index.column()]
             if index.row() == 0:
                 return id_
             index_id = self._data[0][index.column()]
             if index_id == -1:
-                return self.db_mngr.get_item(self.db_map, "parameter definition", id_)["parameter_name"]
-            return self.db_mngr.get_item(self.db_map, "object", id_)["name"]
+                item = self.db_mngr.get_item(self.db_map, "parameter definition", id_)
+                name = item.get("parameter_name")
+            else:
+                item = self.db_mngr.get_item(self.db_map, "object", id_)
+                name = item.get("name")
+            if role == Qt.DisplayRole:
+                return name
+            description = item.get("description")
+            if description in (None, ""):
+                description = name
+            return description
 
     @property
     def headers(self):

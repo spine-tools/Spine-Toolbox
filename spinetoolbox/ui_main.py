@@ -33,6 +33,7 @@ from PySide2.QtWidgets import (
     QCheckBox,
     QDockWidget,
     QAction,
+    QUndoStack,
 )
 from .graphics_items import ProjectItemIcon
 from .mvcmodels.project_item_model import ProjectItemModel
@@ -46,7 +47,6 @@ from .widgets.custom_menus import (
     RecentProjectsPopupMenu,
 )
 from .widgets.settings_widget import SettingsWidget
-from .widgets.tool_configuration_assistant_widget import ToolConfigurationAssistantWidget
 from .widgets.tool_specification_widget import ToolSpecificationWidget
 from .widgets.custom_qwidgets import ZoomWidgetAction
 from .widgets.julia_repl_widget import JuliaREPLWidget
@@ -65,7 +65,6 @@ from .config import (
 )
 from .helpers import (
     get_datetime,
-    erase_dir,
     busy_effect,
     set_taskbar_icon,
     supported_img_formats,
@@ -77,6 +76,12 @@ from .helpers import (
 from .project_upgrader import ProjectUpgrader
 from .project_tree_item import CategoryProjectTreeItem, LeafProjectTreeItem, RootProjectTreeItem
 from .project_items import data_store, data_connection, exporter, tool, view, importer
+from .project_commands import (
+    AddToolSpecificationCommand,
+    RemoveToolSpecificationCommand,
+    UpdateToolSpecificationCommand,
+)
+from .configuration_assistants import spine_model
 
 
 class ToolboxUI(QMainWindow):
@@ -117,6 +122,7 @@ class ToolboxUI(QMainWindow):
         self.ui.textBrowser_process_output.setStyleSheet(TEXTBROWSER_SS)
         self.setStyleSheet(MAINWINDOW_SS)
         # Class variables
+        self.undo_stack = QUndoStack(self)
         self.categories = dict()  # Holds category data parsed from project item plugins
         self._project = None
         self.project_item_model = None
@@ -147,7 +153,7 @@ class ToolboxUI(QMainWindow):
         self.ui.dockWidgetContents_python_repl.layout().addWidget(self.python_repl)
         # Setup main window menu
         self.setup_zoom_widget_action()
-        self.add_toggle_view_actions()
+        self.add_menu_actions()
         # Hidden QActions for debugging or testing
         self.show_properties_tabbar = QAction(self)
         self.show_supported_img_formats = QAction(self)
@@ -156,9 +162,12 @@ class ToolboxUI(QMainWindow):
         self.ui.tabWidget_item_properties.tabBar().hide()  # Hide tab bar in properties dock widget
         # Finalize init
         self._proposed_item_name_counts = dict()
+        self.ui.actionSave.setDisabled(True)
+        self.ui.actionSave_As.setDisabled(True)
         self.connect_signals()
         self.restore_ui()
         self.parse_project_item_modules()
+        self.parse_assistant_modules()
         self.set_work_directory()
 
     def connect_signals(self):
@@ -184,7 +193,6 @@ class ToolboxUI(QMainWindow):
         self.ui.actionUpgrade_project.triggered.connect(self.upgrade_project)
         self.ui.actionExport_project_to_GraphML.triggered.connect(self.export_as_graphml)
         self.ui.actionSettings.triggered.connect(self.show_settings)
-        self.ui.actionPackages.triggered.connect(self.show_tool_config_asst)
         self.ui.actionQuit.triggered.connect(self.close)
         self.ui.actionRemove_all.triggered.connect(self.remove_all_items)
         self.ui.actionUser_Guide.triggered.connect(self.show_user_guide)
@@ -210,6 +218,14 @@ class ToolboxUI(QMainWindow):
         self.zoom_widget_action.minus_pressed.connect(self._handle_zoom_minus_pressed)
         self.zoom_widget_action.plus_pressed.connect(self._handle_zoom_plus_pressed)
         self.zoom_widget_action.reset_pressed.connect(self._handle_zoom_reset_pressed)
+        # Undo stack
+        self.undo_stack.cleanChanged.connect(self.update_window_modified)
+
+    @Slot(bool)
+    def update_window_modified(self, clean):
+        """Updates window modified status and save actions depending on the state of the undo stack."""
+        self.setWindowModified(not clean)
+        self.ui.actionSave.setDisabled(clean)
 
     def parse_project_item_modules(self):
         """Collects attributes from project item modules into a dict.
@@ -246,6 +262,26 @@ class ToolboxUI(QMainWindow):
         # Add draggable widgets to toolbar
         self.item_toolbar.add_draggable_widgets(category_icon)
 
+    def parse_assistant_modules(self):
+        """Makes actions to run assistants from assistant modules."""
+        menu = self.ui.menuTool_configuration_assistants
+        for module in (spine_model,):  # NOTE: add others as needed
+            action = menu.addAction(module.assistant_name)
+            action.triggered.connect(
+                lambda checked=False, module=module, action=action: self.show_assistant(module, action)
+            )
+
+    def show_assistant(self, module, action):
+        """Creates and shows the assistant for the given module.
+        Disables the given action while the assistant is shown,
+        enables the action back when the assistant is destroyed.
+        This is to make sure we don't open the same assistant twice.
+        """
+        assistant = module.make_assistant(self)
+        action.setEnabled(False)
+        assistant.destroyed.connect(lambda obj=None: action.setEnabled(True))
+        assistant.show()
+
     def set_work_directory(self, new_work_dir=None):
         """Creates a work directory if it does not exist or changes the current work directory to given.
 
@@ -278,7 +314,10 @@ class ToolboxUI(QMainWindow):
         """Returns application preferences object."""
         return self._qsettings
 
-    @Slot(name="init_project")
+    def update_window_title(self):
+        self.setWindowTitle("{0} [{1}][*] - Spine Toolbox".format(self._project.name, self._project.project_dir))
+
+    @Slot()
     def init_project(self, project_dir):
         """Initializes project at application start-up. Opens the last project that was open
         when app was closed (if enabled in Settings) or starts the app without a project.
@@ -287,13 +326,13 @@ class ToolboxUI(QMainWindow):
         getting_started_anchor = (
             "<a style='color:#99CCFF;' title='" + p + "' href='file:///" + p + "'>Getting Started</a>"
         )
-        wlcme_msg = "Welcome to Spine Toolbox! If you need help, please read the {0} guide.".format(
+        welcome_msg = "Welcome to Spine Toolbox! If you need help, please read the {0} guide.".format(
             getting_started_anchor
         )
         if not project_dir:
             open_previous_project = int(self._qsettings.value("appSettings/openPreviousProject", defaultValue="0"))
-            if open_previous_project != 2:  # 2: Qt.Checked, ie. open_previous_project==True
-                self.msg.emit(wlcme_msg)
+            if open_previous_project != Qt.Checked:  # 2: Qt.Checked, ie. open_previous_project==True
+                self.msg.emit(welcome_msg)
                 return
             # Get previous project (directory)
             project_dir = self._qsettings.value("appSettings/previousProject", defaultValue="")
@@ -301,7 +340,7 @@ class ToolboxUI(QMainWindow):
                 return
         if os.path.isfile(project_dir) and project_dir.endswith(".proj"):
             # Previous project was a .proj file -> Show welcome message instead
-            self.msg.emit(wlcme_msg)
+            self.msg.emit(welcome_msg)
             return
         if not os.path.isdir(project_dir):
             self.ui.statusbar.showMessage("Opening previous project failed", 10000)
@@ -349,6 +388,7 @@ class ToolboxUI(QMainWindow):
             description (str): Project description
             location (str): Path to project directory
         """
+        self.undo_critical_commands()
         self.clear_ui()
         self.init_project_item_model()
         self.ui.treeView_project.selectionModel().selectionChanged.connect(self.item_selection_changed)
@@ -358,7 +398,8 @@ class ToolboxUI(QMainWindow):
         self._project.connect_signals()
         self._connect_project_signals()
         self.init_tool_specification_model(list())  # Start project with no tool specifications
-        self.setWindowTitle("Spine Toolbox    -- {} --".format(self._project.name))
+        self.update_window_title()
+        self.ui.actionSave_As.setEnabled(True)
         self.ui.graphicsView.init_scene(empty=True)
         # Update recentProjects
         self.update_recent_projects()
@@ -366,7 +407,7 @@ class ToolboxUI(QMainWindow):
         OpenProjectDialog.update_recents(os.path.abspath(os.path.join(location, os.path.pardir)), self.qsettings())
         self.save_project()
 
-    @Slot(name="open_project")
+    @Slot()
     def open_project(self, load_dir=None, clear_logs=True):
         """Opens project from a selected or given directory.
 
@@ -418,6 +459,7 @@ class ToolboxUI(QMainWindow):
         # Upgrade project dictionary if needed
         if version < LATEST_PROJECT_VERSION:
             project_info = ProjectUpgrader(self).upgrade(project_info, project_dir, project_dir)
+        self.undo_critical_commands()
         # Make room for a new project
         self.clear_ui()
         # Parse project info
@@ -434,7 +476,9 @@ class ToolboxUI(QMainWindow):
             self, name, desc, project_dir, self.project_item_model, settings=self._qsettings, logger=self
         )
         self._connect_project_signals()
-        self.setWindowTitle("Spine Toolbox    -- {} --".format(self._project.name))
+        self.update_window_title()
+        self.ui.actionSave.setDisabled(True)
+        self.ui.actionSave_As.setEnabled(True)
         # Init tool spec model
         deserialized_paths = [deserialize_path(spec, self._project.project_dir) for spec in tool_spec_paths]
         self.init_tool_specification_model(deserialized_paths)
@@ -459,31 +503,33 @@ class ToolboxUI(QMainWindow):
         self.msg.emit("Project <b>{0}</b> is now open".format(self._project.name))
         return True
 
-    @Slot(name="show_recent_projects_menu")
+    @Slot()
     def show_recent_projects_menu(self):
         """Updates and sets up the recent projects menu to File-Open recent menu item."""
         if not self.recent_projects_menu.isVisible():
             self.recent_projects_menu = RecentProjectsPopupMenu(self)
             self.ui.actionOpen_recent.setMenu(self.recent_projects_menu)
 
-    @Slot(name="save_project")
+    @Slot()
     def save_project(self):
         """Save project."""
         if not self._project:
             self.msg.emit("Please open or create a project first")
             return
         # Put project's tool specification definition files into a list
-        tool_specifications = list()
-        for i in range(self.tool_specification_model.rowCount()):
-            tool_specifications.append(self.tool_specification_model.tool_specification(i).get_def_path())
+        tool_spec_paths = [
+            self.tool_specification_model.tool_specification(i).get_def_path()
+            for i in range(self.tool_specification_model.rowCount())
+        ]
         # Serialize tool spec paths
-        serialized_tool_spec_paths = [serialize_path(spec, self._project.project_dir) for spec in tool_specifications]
+        serialized_tool_spec_paths = [serialize_path(spec, self._project.project_dir) for spec in tool_spec_paths]
         if not self._project.save(serialized_tool_spec_paths):
             self.msg_error.emit("Project saving failed")
             return
         self.msg.emit("Project <b>{0}</b> saved".format(self._project.name))
+        self.undo_stack.setClean()
 
-    @Slot(name="save_project_as")
+    @Slot()
     def save_project_as(self):
         """Ask user for a new project name and save. Creates a duplicate of the open project."""
         if not self._project:
@@ -524,7 +570,7 @@ class ToolboxUI(QMainWindow):
             return
         # noinspection PyCallByClass, PyArgumentList
         QMessageBox.information(self, f"Project {self._project.name} saved", f"Project directory is now\n\n{answer}")
-        return
+        self.undo_stack.setClean()
 
     @Slot(bool)
     def upgrade_project(self, checked=False):
@@ -579,7 +625,6 @@ class ToolboxUI(QMainWindow):
             return
         # Save project to finish the upgrade process
         self.save_project()
-        return
 
     def init_project_item_model(self):
         """Initializes project item model. Create root and category items and
@@ -681,14 +726,23 @@ class ToolboxUI(QMainWindow):
             return
         item_names = self.project_item_model.item_names()
         for name in item_names:
-            ind = self.project_item_model.find_item(name)
-            self.remove_item(ind)
+            self.project().do_remove_item(name)
         self.activate_no_selection_tab()  # Clear properties widget
         if self._project:
             self._project.deleteLater()
         self._project = None
         self.tool_specification_model = None
         self.ui.graphicsView.scene().clear()  # Clear all items from scene
+
+    def undo_critical_commands(self):
+        """Undoes critical commands in the undo stack.
+        """
+        if self.undo_stack.isClean():
+            return
+        for ind in reversed(range(self.undo_stack.index())):
+            cmd = self.undo_stack.command(ind)
+            if cmd.is_critical():
+                cmd.undo()
 
     def overwrite_check(self, project_dir):
         """Checks if given directory is a project directory and/or empty
@@ -733,7 +787,7 @@ class ToolboxUI(QMainWindow):
                     return False
         return True
 
-    @Slot("QItemSelection", "QItemSelection", name="item_selection_changed")
+    @Slot("QItemSelection", "QItemSelection")
     def item_selection_changed(self, selected, deselected):
         """Synchronize selection with scene. Check if only one item is selected and make it the
         active item: disconnect signals of previous active item, connect signals of current active item
@@ -793,7 +847,7 @@ class ToolboxUI(QMainWindow):
         # Set QDockWidget title to selected item's type
         self.ui.dockWidget_item.setWindowTitle(item.item_type() + " Properties")
 
-    @Slot(name="open_tool_specification")
+    @Slot()
     def open_tool_specification(self):
         """Opens a file dialog where the user can select an existing tool specification
         definition file (.json). If file is valid, calls add_tool_specification().
@@ -802,7 +856,12 @@ class ToolboxUI(QMainWindow):
             self.msg.emit("Please create a new project or open an existing one first")
             return
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-        answer = QFileDialog.getOpenFileName(self, "Select Tool specification file", _program_root, "JSON (*.json)")
+        answer = QFileDialog.getOpenFileName(
+            self,
+            "Select Tool specification file",
+            self._project.project_dir,
+            "JSON (*.json)"
+        )
         if answer[0] == "":  # Cancel button clicked
             return
         def_file = os.path.abspath(answer[0])
@@ -819,102 +878,82 @@ class ToolboxUI(QMainWindow):
         self.add_tool_specification(tool_specification)
 
     def add_tool_specification(self, tool_specification):
+        """Pushes a new AddToolSpecificationCommand to the undo stack."""
+        self.undo_stack.push(AddToolSpecificationCommand(self, tool_specification))
+
+    def do_add_tool_specification(self, tool_specification, row=None):
         """Adds a ToolSpecification instance to project, which then can be added to a Tool item.
         Adds the tool specification file path into project file (project.json)
 
         Args:
             tool_specification (ToolSpecification): Tool specification that is added to project
         """
-        def_file = tool_specification.get_def_path()  # Definition file path (.json)
-        # Insert tool specification into model
-        self.tool_specification_model.insertRow(tool_specification)
-        # Save Tool def file path to project file
-        conf_file = self._project.config_file  # Path to project.json file
-        # Manipulate project file contents
-        try:
-            with open(conf_file, "r") as fh:
-                dicts = json.load(fh)
-        except OSError:
-            self.msg_error.emit("Loading file <b>{0}</b> failed".format(conf_file))
-            return
-        # Get project settings
-        project_dict = dicts["project"]
-        objects_dict = dicts["objects"]
-        tool_specs = project_dict["tool_specifications"]
-        deserialized_tool_specs = [deserialize_path(spec, self._project.project_dir) for spec in tool_specs]
-        if def_file not in deserialized_tool_specs:
-            deserialized_tool_specs.append(def_file)
-        serialized_tool_specs = [serialize_path(p, self._project.project_dir) for p in deserialized_tool_specs]
-        project_dict["tool_specifications"] = serialized_tool_specs
-        # Save dictionaries back to project save file
-        dicts["project"] = project_dict
-        dicts["objects"] = objects_dict
-        with open(conf_file, "w") as fp:
-            json.dump(dicts, fp, indent=4)
+        self.tool_specification_model.insertRow(tool_specification, row)
         self.msg_success.emit("Tool specification <b>{0}</b> added to project".format(tool_specification.name))
 
     def update_tool_specification(self, row, tool_specification):
+        """Pushes a new UpdateToolSpecificationCommand to the undo stack."""
+        self.undo_stack.push(UpdateToolSpecificationCommand(self, row, tool_specification))
+
+    def do_update_tool_specification(self, row, tool_specification):
         """Updates a Tool specification and refreshes all Tools that use it.
 
         Args:
             row (int): Row of tool specification in ToolSpecificationModel
             tool_specification (ToolSpecification): An updated Tool specification
         """
-        if not self.tool_specification_model.update_tool_specification(tool_specification, row):
+        if not self.tool_specification_model.update_tool_specification(row, tool_specification):
             self.msg_error.emit("Unable to update Tool specification <b>{0}</b>".format(tool_specification.name))
-            return
+            return False
         self.msg_success.emit("Tool specification <b>{0}</b> successfully updated".format(tool_specification.name))
-        # Reattach Tool specification to any Tools that use it
-        # Find the updated tool specification from ToolSpecificationModel
-        specification = self.tool_specification_model.find_tool_specification(tool_specification.name)
-        if not specification:
-            self.msg_error.emit("Could not find Tool specification <b>{0}</b>".format(tool_specification.name))
-            return
-        # Get all Tool project items
-        tools = [item.project_item for item in self.project_item_model.items("Tools")]
-        for tool_item in tools:
-            if not tool_item.tool_specification():
-                continue
-            if tool_item.tool_specification().name == tool_specification.name:
-                tool_item.update_execution_mode(specification.execute_in_work)
-                tool_item.set_tool_specification(specification)
-                self.msg.emit(
-                    "Tool specification <b>{0}</b> reattached to Tool <b>{1}</b>".format(
-                        specification.name, tool_item.name
-                    )
-                )
+        return True
 
-    @Slot(bool, name="remove_selected_tool_specification")
+    def update_tool_settings(self, tool_settings):
+        """Updates tool specification and execution mode for a bunch of tool items.
+        Called just after successfully updating a Tool Specification.
+
+        Args:
+            tool_settings (dict): mapping Tool items to a tuple of (ToolSpecification instance, bool execution mode)
+        """
+        for tool_item, (tool_specification, execute_in_work) in tool_settings.items():
+            tool_item.do_update_execution_mode(execute_in_work)
+            tool_item.do_set_tool_specification(tool_specification)
+            self.msg.emit(
+                "Tool specification <b>{0}</b> successfully updated in Tool <b>{1}</b>".format(
+                    tool_specification.name, tool_item.name
+                )
+            )
+
+    @Slot(bool)
     def remove_selected_tool_specification(self, checked=False):
-        """Prepares to remove tool specification selected in QListView."""
+        """Removes tool specification selected in QListView."""
         if not self._project:
             self.msg.emit("Please create a new project or open an existing one first")
             return
-        try:
-            index = self.ui.listView_tool_specifications.selectedIndexes()[0]
-        except IndexError:
-            # Nothing selected
+        selected = self.ui.listView_tool_specifications.selectedIndexes()
+        if not selected:
             self.msg.emit("Select a Tool specification to remove")
             return
+        index = selected[0]
         if not index.isValid():
             return
-        self.remove_tool_specification(index)
+        self.remove_tool_specification(index.row())
 
-    @Slot("QModelIndex", name="remove_tool_specification")
-    def remove_tool_specification(self, index, ask_verification=True):
-        """Removes tool specification from ToolSpecificationModel
-        and tool specification file path from project file.
+    def remove_tool_specification(self, row, ask_verification=True):
+        self.undo_stack.push(RemoveToolSpecificationCommand(self, row, ask_verification=ask_verification))
+
+    def do_remove_tool_specification(self, row, ask_verification=True):
+        """Removes tool specification from ToolSpecificationModel.
         Removes also Tool specifications from all Tool items
         that use this specification.
 
         Args:
-            index (QModelIndex): Index of selected Tool specification in ToolSpecificationModel
+            row (int): Row in ToolSpecificationModel
             ask_verification (bool): If True, displays a dialog box asking user to verify the removal
         """
-        sel_tool = self.tool_specification_model.tool_specification(index.row())
-        tool_def_path = sel_tool.def_file_path
+        tool_spec = self.tool_specification_model.tool_specification(row)
         if ask_verification:
-            message = "Remove Tool Specification <b>{0}</b> from Project?".format(sel_tool.name)
+            message = "Remove Tool Specification <b>{0}</b> from Project?".format(tool_spec.name)
             message_box = QMessageBox(
                 QMessageBox.Question,
                 "Remove Tool Specification",
@@ -926,131 +965,20 @@ class ToolboxUI(QMainWindow):
             answer = message_box.exec_()
             if answer != QMessageBox.Ok:
                 return
-        # Remove tool def file path from the project.json file
-        conf_file = self._project.config_file
-        try:
-            with open(conf_file, "r") as fh:
-                dicts = json.load(fh)
-        except OSError:
-            self.msg_error.emit("Opening file <b>{0}</b> failed".format(conf_file))
+        if not self.tool_specification_model.removeRow(row):
+            self.msg_error.emit("Error in removing Tool specification <b>{0}</b>".format(tool_spec.name))
             return
-        # Get project settings
-        project_dict = dicts["project"]
-        object_dict = dicts["objects"]
-        if not self.tool_specification_model.removeRow(index.row()):
-            self.msg_error.emit("Error in removing Tool specification <b>{0}</b>".format(sel_tool.name))
-            return
-        try:
-            tool_spec_paths = project_dict["tool_specifications"]
-            # Deserialize paths, remove tool spec path, serialize paths again
-            des_paths = [deserialize_path(p, self._project.project_dir) for p in tool_spec_paths]
-            des_paths.remove(tool_def_path)
-            ser_paths = [serialize_path(pa, self._project.project_dir) for pa in des_paths]
-            project_dict["tool_specifications"] = ser_paths
-        except KeyError:
-            self.msg_error.emit(
-                "This is odd. tool_specifications list not found in project file <b>{0}</b>".format(conf_file)
-            )
-            return
-        except ValueError:
-            self.msg_error.emit(
-                "This is odd. Tool specification file path <b>{0}</b> not found "
-                "in project file <b>{1}</b>".format(tool_def_path, conf_file)
-            )
-            return
-        # Save dictionaries back to project.json file
-        dicts["project"] = project_dict
-        dicts["objects"] = object_dict
-        with open(conf_file, "w") as fp:
-            json.dump(dicts, fp, indent=4)
         self.msg_success.emit("Tool specification removed")
 
-    @Slot(name="remove_all_items")
+    @Slot()
     def remove_all_items(self):
         """Removes all items from project. Slot for Remove All button."""
         if not self._project:
             self.msg.emit("No project items to remove")
             return
-        msg = "Remove all items from project?"
-        message_box = QMessageBox(
-            QMessageBox.Question, "Remove All Items", msg, buttons=QMessageBox.Ok | QMessageBox.Cancel, parent=self
-        )
-        message_box.button(QMessageBox.Ok).setText("Remove Items")
-        answer = message_box.exec_()
-        if answer != QMessageBox.Ok:
-            return
-        item_names = self.project_item_model.item_names()
-        n = len(item_names)
-        if n == 0:
-            return
-        for name in item_names:
-            ind = self.project_item_model.find_item(name)
-            delete_int = int(self._qsettings.value("appSettings/deleteData", defaultValue="0"))
-            delete_bool = delete_int != 0
-            self.remove_item(ind, delete_item=delete_bool)
-        self.msg.emit("All {0} items removed from project".format(n))
-        self.activate_no_selection_tab()
-        self.ui.graphicsView.scene().clear()
-        self.ui.graphicsView.init_scene()
+        self._project.remove_all_items()
 
-    def remove_item(self, ind, delete_item=False, check_dialog=False):
-        """Removes item from project when it's index in the project model is known.
-        To remove all items in project, loop all indices through this method.
-        This method is used in both opening and creating a new project as
-        well as when item(s) are deleted from project.
-        Use delete_item=False when closing the project or creating a new one.
-        Setting delete_item=True deletes the item irrevocably. This means that
-        data directories will be deleted from the hard drive. Handles also
-        removing the node from the dag graph that contains it.
-
-        Args:
-            ind (QModelIndex): Index of removed item in project model
-            delete_item (bool): If set to True, deletes the directories and data associated with the item
-            check_dialog (bool): If True, shows 'Are you sure?' message box
-        """
-        item = self.project_item_model.item(ind)
-        name = item.name
-        if check_dialog:
-            if not delete_item:
-                msg = (
-                    "Remove item <b>{}</b> from project?".format(name)
-                    + " Item data directory will still be available in the project directory after this operation."
-                )
-            else:
-                msg = "Remove item <b>{}</b> and its data directory from project?".format(name)
-            msg = msg + "<br><br>Tip: Remove items by pressing 'Delete' key to bypass this dialog."
-            # noinspection PyCallByClass, PyTypeChecker
-            message_box = QMessageBox(
-                QMessageBox.Question, "Remove Item", msg, buttons=QMessageBox.Ok | QMessageBox.Cancel, parent=self
-            )
-            message_box.button(QMessageBox.Ok).setText("Remove Item")
-            answer = message_box.exec_()
-            if answer != QMessageBox.Ok:
-                return
-        try:
-            data_dir = item.project_item.data_dir
-        except AttributeError:
-            data_dir = None
-        # Remove item from project model
-        if not self.project_item_model.remove_item(item, parent=ind.parent()):
-            self.msg_error.emit("Removing item <b>{0}</b> from project failed".format(name))
-        # Remove item icon and connected links (QGraphicsItems) from scene
-        icon = item.project_item.get_icon()
-        self.ui.graphicsView.remove_icon(icon)
-        self._project.dag_handler.remove_node_from_graph(name)
-        item.project_item.tear_down()
-        if delete_item:
-            if data_dir:
-                # Remove data directory and all its contents
-                self.msg.emit("Removing directory <b>{0}</b>".format(data_dir))
-                try:
-                    if not erase_dir(data_dir):
-                        self.msg_error.emit("Directory does not exist")
-                except OSError:
-                    self.msg_error.emit("[OSError] Removing directory failed. Check directory permissions.")
-            self.msg.emit("Item <b>{0}</b> removed from project".format(name))
-
-    @Slot("QUrl", name="open_anchor")
+    @Slot("QUrl")
     def open_anchor(self, qurl):
         """Open file explorer in the directory given in qurl.
 
@@ -1065,7 +993,7 @@ class ToolboxUI(QMainWindow):
         if not res:
             self.msg_error.emit("Opening path {} failed".format(path))
 
-    @Slot("QModelIndex", name="edit_tool_specification")
+    @Slot("QModelIndex")
     def edit_tool_specification(self, index):
         """Open the tool specification widget for editing an existing tool specification.
 
@@ -1079,7 +1007,7 @@ class ToolboxUI(QMainWindow):
         self.show_tool_specification_form(tool_specification)
 
     @busy_effect
-    @Slot("QModelIndex", name="open_tool_specification_file")
+    @Slot("QModelIndex")
     def open_tool_specification_file(self, index):
         """Open the Tool specification definition file in the default (.json) text-editor.
 
@@ -1110,7 +1038,7 @@ class ToolboxUI(QMainWindow):
         return
 
     @busy_effect
-    @Slot("QModelIndex", name="open_tool_main_program_file")
+    @Slot("QModelIndex")
     def open_tool_main_program_file(self, index):
         """Open the tool specification's main program file in the default editor.
 
@@ -1147,7 +1075,7 @@ class ToolboxUI(QMainWindow):
             )
         return
 
-    @Slot(name="export_as_graphml")
+    @Slot()
     def export_as_graphml(self):
         """Exports all DAGs in project to separate GraphML files."""
         if not self.project():
@@ -1155,17 +1083,17 @@ class ToolboxUI(QMainWindow):
             return
         self.project().export_graphs()
 
-    @Slot(name="_handle_zoom_minus_pressed")
+    @Slot()
     def _handle_zoom_minus_pressed(self):
         """Slot for handling case when '-' button in menu is pressed."""
         self.ui.graphicsView.zoom_out()
 
-    @Slot(name="_handle_zoom_plus_pressed")
+    @Slot()
     def _handle_zoom_plus_pressed(self):
         """Slot for handling case when '+' button in menu is pressed."""
         self.ui.graphicsView.zoom_in()
 
-    @Slot(name="_handle_zoom_reset_pressed")
+    @Slot()
     def _handle_zoom_reset_pressed(self):
         """Slot for handling case when 'reset zoom' button in menu is pressed."""
         self.ui.graphicsView.reset_zoom()
@@ -1176,7 +1104,7 @@ class ToolboxUI(QMainWindow):
         self.ui.menuView.addSeparator()
         self.ui.menuView.addAction(self.zoom_widget_action)
 
-    @Slot(name="restore_dock_widgets")
+    @Slot()
     def restore_dock_widgets(self):
         """Dock all floating and or hidden QDockWidgets back to the main window."""
         for dock in self.findChildren(QDockWidget):
@@ -1194,8 +1122,8 @@ class ToolboxUI(QMainWindow):
         self.addAction(self.show_supported_img_formats)
         self.addAction(self.test_variable_push)
 
-    def add_toggle_view_actions(self):
-        """Add toggle view actions to View menu."""
+    def add_menu_actions(self):
+        """Add extra actions to View menu."""
         self.ui.menuToolbars.addAction(self.item_toolbar.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_project.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_eventlog.toggleViewAction())
@@ -1203,6 +1131,16 @@ class ToolboxUI(QMainWindow):
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_item.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_python_repl.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_julia_repl.toggleViewAction())
+        undo_action = self.undo_stack.createUndoAction(self)
+        redo_action = self.undo_stack.createRedoAction(self)
+        undo_action.setShortcuts(QKeySequence.Undo)
+        redo_action.setShortcuts(QKeySequence.Redo)
+        undo_action.setIcon(QIcon(":/icons/menu_icons/undo.svg"))
+        redo_action.setIcon(QIcon(":/icons/menu_icons/redo.svg"))
+        before = self.ui.menuEdit.actions()[0]
+        self.ui.menuEdit.insertAction(before, undo_action)
+        self.ui.menuEdit.insertAction(before, redo_action)
+        self.ui.menuEdit.insertSeparator(before)
 
     def toggle_properties_tabbar_visibility(self):
         """Shows or hides the tab bar in properties dock widget. For debugging purposes."""
@@ -1217,7 +1155,7 @@ class ToolboxUI(QMainWindow):
         d = int(self._qsettings.value("appSettings/dateTime", defaultValue="2"))
         return d != 0
 
-    @Slot(str, name="add_message")
+    @Slot(str)
     def add_message(self, msg):
         """Append regular message to Event Log.
 
@@ -1231,7 +1169,7 @@ class ToolboxUI(QMainWindow):
         # noinspection PyArgumentList
         QApplication.processEvents()
 
-    @Slot(str, name="add_success_message")
+    @Slot(str)
     def add_success_message(self, msg):
         """Append message with green text color to Event Log.
 
@@ -1245,7 +1183,7 @@ class ToolboxUI(QMainWindow):
         # noinspection PyArgumentList
         QApplication.processEvents()
 
-    @Slot(str, name="add_error_message")
+    @Slot(str)
     def add_error_message(self, msg):
         """Append message with red color to Event Log.
 
@@ -1259,7 +1197,7 @@ class ToolboxUI(QMainWindow):
         # noinspection PyArgumentList
         QApplication.processEvents()
 
-    @Slot(str, name="add_warning_message")
+    @Slot(str)
     def add_warning_message(self, msg):
         """Append message with yellow (golden) color to Event Log.
 
@@ -1273,7 +1211,7 @@ class ToolboxUI(QMainWindow):
         # noinspection PyArgumentList
         QApplication.processEvents()
 
-    @Slot(str, name="add_process_message")
+    @Slot(str)
     def add_process_message(self, msg):
         """Writes message from stdout to process output QTextBrowser.
 
@@ -1286,7 +1224,7 @@ class ToolboxUI(QMainWindow):
         # noinspection PyArgumentList
         QApplication.processEvents()
 
-    @Slot(str, name="add_process_error_message")
+    @Slot(str)
     def add_process_error_message(self, msg):
         """Writes message from stderr to process output QTextBrowser.
 
@@ -1312,7 +1250,7 @@ class ToolboxUI(QMainWindow):
         self.add_project_item_form = category._add_form_maker(self, x, y)
         self.add_project_item_form.show()
 
-    @Slot(name="show_tool_specification_form")
+    @Slot()
     def show_tool_specification_form(self, tool_specification=None):
         """Show tool specification widget."""
         if not self._project:
@@ -1321,25 +1259,19 @@ class ToolboxUI(QMainWindow):
         form = ToolSpecificationWidget(self, tool_specification)
         form.show()
 
-    @Slot(name="show_settings")
+    @Slot()
     def show_settings(self):
         """Show Settings widget."""
         self.settings_form = SettingsWidget(self)
         self.settings_form.show()
 
-    @Slot(name="show_tool_config_asst")
-    def show_tool_config_asst(self):
-        """Show Tool configuration assistant widget."""
-        form = ToolConfigurationAssistantWidget(self)
-        form.show()
-
-    @Slot(name="show_about")
+    @Slot()
     def show_about(self):
         """Show About Spine Toolbox form."""
         form = AboutWidget(self)
         form.show()
 
-    @Slot(name="show_user_guide")
+    @Slot()
     def show_user_guide(self):
         """Open Spine Toolbox documentation index page in browser."""
         doc_index_path = os.path.join(DOCUMENTATION_PATH, "index.html")
@@ -1350,7 +1282,7 @@ class ToolboxUI(QMainWindow):
             logging.error("Failed to open editor for %s", index_url)
             self.msg_error.emit("Unable to open file <b>{0}</b>".format(doc_index_path))
 
-    @Slot(name="show_getting_started_guide")
+    @Slot()
     def show_getting_started_guide(self):
         """Open Spine Toolbox Getting Started HTML page in browser."""
         getting_started_path = os.path.join(DOCUMENTATION_PATH, "getting_started.html")
@@ -1361,7 +1293,7 @@ class ToolboxUI(QMainWindow):
             logging.error("Failed to open editor for %s", index_url)
             self.msg_error.emit("Unable to open file <b>{0}</b>".format(getting_started_path))
 
-    @Slot("QPoint", name="show_item_context_menu")
+    @Slot("QPoint")
     def show_item_context_menu(self, pos):
         """Context menu for project items listed in the project QTreeView.
 
@@ -1372,7 +1304,7 @@ class ToolboxUI(QMainWindow):
         global_pos = self.ui.treeView_project.viewport().mapToGlobal(pos)
         self.show_project_item_context_menu(global_pos, ind)
 
-    @Slot("QPoint", str, name="show_item_image_context_menu")
+    @Slot("QPoint", str)
     def show_item_image_context_menu(self, pos, name):
         """Context menu for project item images on the QGraphicsView.
 
@@ -1432,7 +1364,7 @@ class ToolboxUI(QMainWindow):
         self.link_context_menu.deleteLater()
         self.link_context_menu = None
 
-    @Slot("QPoint", name="show_tool_specification_context_menu")
+    @Slot("QPoint")
     def show_tool_specification_context_menu(self, pos):
         """Context menu for tool specifications.
 
@@ -1456,7 +1388,7 @@ class ToolboxUI(QMainWindow):
         elif option == "Open Tool specification file...":
             self.open_tool_specification_file(ind)
         elif option == "Remove Tool specification":
-            self.remove_tool_specification(ind)
+            self.remove_tool_specification(ind.row())
         else:  # No option selected
             pass
         self.tool_specification_context_menu.deleteLater()
@@ -1590,7 +1522,7 @@ class ToolboxUI(QMainWindow):
         recents_list = recents.split("\n")
         for entry in recents_list:
             _, path = entry.split("<>")
-            if path == p:
+            if os.path.normcase(path) == os.path.normcase(p):
                 recents_list.pop(recents_list.index(entry))
                 break
         updated_recents = "\n".join(recents_list)
@@ -1607,14 +1539,17 @@ class ToolboxUI(QMainWindow):
         else:
             recents = str(recents)
             recents_list = recents.split("\n")
-            # Add path only if it's not in the list already
-            if entry not in recents_list:
+            normalized_recents = list(map(os.path.normcase, recents_list))
+            try:
+                index = normalized_recents.index(os.path.normcase(entry))
+            except ValueError:
+                # Add path only if it's not in the list already
                 recents_list.insert(0, entry)
                 if len(recents_list) > 5:
                     recents_list.pop()
             else:
                 # If entry was on the list, move it as the first item
-                recents_list.insert(0, recents_list.pop(recents_list.index(entry)))
+                recents_list.insert(0, recents_list.pop(index))
             updated_recents = "\n".join(recents_list)
         # Save updated recent paths
         self._qsettings.setValue("appSettings/recentProjects", updated_recents)

@@ -189,12 +189,12 @@ class MultiDBTreeItem(TreeItem):
 
     def fetch_more(self):
         """Fetches children from all associated databases."""
+        super().fetch_more()
         db_map_ids = {db_map: list(self._get_children_ids(db_map)) for db_map in self.db_maps}
         self.append_children_by_id(db_map_ids)
-        self._fetched = True
 
     def _get_children_ids(self, db_map):
-        """Returns a set of children ids.
+        """Returns a list of children ids.
         Must be reimplemented in subclasses."""
         raise NotImplementedError()
 
@@ -205,6 +205,9 @@ class MultiDBTreeItem(TreeItem):
         Args:
             db_map_ids (dict): maps DiffDatabaseMapping instances to list of ids
         """
+        if self.can_fetch_more():
+            self.model.layoutChanged.emit()
+            return
         new_children = []
         for db_map, ids in db_map_ids.items():
             new_children += self._create_new_children(db_map, ids)
@@ -217,6 +220,9 @@ class MultiDBTreeItem(TreeItem):
         Args:
             db_map_ids (dict): maps DiffDatabaseMapping instances to list of ids
         """
+        if self.can_fetch_more():
+            self.model.layoutChanged.emit()
+            return
         for db_map, ids in db_map_ids.items():
             for child in self.find_children_by_id(db_map, *ids, reverse=True):
                 child.deep_remove_db_map(db_map)
@@ -236,6 +242,8 @@ class MultiDBTreeItem(TreeItem):
         Args:
             db_map_ids (dict): maps DiffDatabaseMapping instances to list of ids
         """
+        if self.can_fetch_more():
+            return
         # Find updated rows
         updated_rows = []
         for db_map, ids in db_map_ids.items():
@@ -283,7 +291,7 @@ class MultiDBTreeItem(TreeItem):
 
     def clear_children(self):
         """Clear children list."""
-        super.clear_children()
+        super().clear_children()
         self._child_map.clear()
 
     def _refresh_child_map(self):
@@ -327,9 +335,6 @@ class MultiDBTreeItem(TreeItem):
         """Returns data to set as default in a parameter table when this item is selected."""
         return {"database": self.first_db_map.codename}
 
-    def column_count(self):
-        return 2
-
 
 class TreeRootItem(MultiDBTreeItem):
 
@@ -349,11 +354,13 @@ class TreeRootItem(MultiDBTreeItem):
 class ObjectTreeRootItem(TreeRootItem):
     """An object tree root item."""
 
-    context_menu_actions = [{"Add object classes": QIcon(":/icons/menu_icons/cube_plus.svg")}]
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.context_menu_actions = [{"Add object classes": QIcon(":/icons/menu_icons/cube_plus.svg")}]
 
     def _get_children_ids(self, db_map):
-        """Returns a set of object class ids."""
-        return {x["id"] for x in self.db_mngr.get_object_classes(db_map)}
+        """Returns a list of object class ids."""
+        return [x["id"] for x in self.db_mngr.get_object_classes(db_map)]
 
     @property
     def child_item_type(self):
@@ -364,11 +371,13 @@ class ObjectTreeRootItem(TreeRootItem):
 class RelationshipTreeRootItem(TreeRootItem):
     """A relationship tree root item."""
 
-    context_menu_actions = [{"Add relationship classes": QIcon(":/icons/menu_icons/cubes_plus.svg")}]
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.context_menu_actions = [{"Add relationship classes": QIcon(":/icons/menu_icons/cubes_plus.svg")}]
 
     def _get_children_ids(self, db_map):
-        """Returns a set of relationship class ids."""
-        return {x["id"] for x in self.db_mngr.get_relationship_classes(db_map)}
+        """Returns a list of relationship class ids."""
+        return [x["id"] for x in self.db_mngr.get_relationship_classes(db_map)]
 
     @property
     def child_item_type(self):
@@ -397,14 +406,17 @@ class ObjectClassItem(EntityClassItem):
     """An object class item."""
 
     item_type = "object class"
-    context_menu_actions = [
-        {
-            "Add relationship classes": QIcon(":/icons/menu_icons/cubes_plus.svg"),
-            "Add objects": QIcon(":/icons/menu_icons/cube_plus.svg"),
-        },
-        {"Edit object classes": QIcon(":/icons/menu_icons/cube_pen.svg")},
-        {"Remove selection": QIcon(":/icons/menu_icons/cube_minus.svg")},
-    ]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.context_menu_actions = [
+            {
+                "Add relationship classes": QIcon(":/icons/menu_icons/cubes_plus.svg"),
+                "Add objects": QIcon(":/icons/menu_icons/cube_plus.svg"),
+            },
+            {"Edit object classes": QIcon(":/icons/menu_icons/cube_pen.svg")},
+            {"Remove selection": QIcon(":/icons/menu_icons/cube_minus.svg")},
+        ]
 
     @property
     def display_icon(self):
@@ -412,8 +424,8 @@ class ObjectClassItem(EntityClassItem):
         return self.db_mngr.entity_class_icon(self.first_db_map, "object class", self.db_map_id(self.first_db_map))
 
     def _get_children_ids(self, db_map):
-        """Returns a set of object ids in this class."""
-        return {x["id"] for x in self.db_mngr.get_items(db_map, "object") if x["class_id"] == self.db_map_id(db_map)}
+        """Returns a list of object ids in this class."""
+        return [x["id"] for x in self.db_mngr.get_items(db_map, "object") if x["class_id"] == self.db_map_id(db_map)]
 
     @property
     def child_item_type(self):
@@ -430,11 +442,14 @@ class RelationshipClassItem(EntityClassItem):
 
     visual_key = ["name", "object_class_name_list"]
     item_type = "relationship class"
-    context_menu_actions = [
-        {"Add relationships": QIcon(":/icons/menu_icons/cubes_plus.svg")},
-        {"Edit relationship classes": QIcon(":/icons/menu_icons/cubes_pen.svg")},
-        {"Remove selection": QIcon(":/icons/menu_icons/cubes_minus.svg")},
-    ]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.context_menu_actions = [
+            {"Add relationships": QIcon(":/icons/menu_icons/cubes_plus.svg")},
+            {"Edit relationship classes": QIcon(":/icons/menu_icons/cubes_pen.svg")},
+            {"Remove selection": QIcon(":/icons/menu_icons/cubes_minus.svg")},
+        ]
 
     @property
     def display_icon(self):
@@ -444,22 +459,22 @@ class RelationshipClassItem(EntityClassItem):
         )
 
     def _get_children_ids(self, db_map):
-        """Returns a set of relationship ids in this class.
+        """Returns a list of relationship ids in this class.
         If the parent is an ObjectItem, then only returns ids of relationships involving that object.
         """
         if not isinstance(self.parent_item, ObjectItem):
-            return {
+            return [
                 x["id"]
                 for x in self.db_mngr.get_items(db_map, "relationship")
                 if x["class_id"] == self.db_map_id(db_map)
-            }
+            ]
         object_id = self.parent_item.db_map_id(db_map)
-        return {
+        return [
             x["id"]
             for items in self.db_mngr.find_cascading_relationships({db_map: {object_id}}).values()
             for x in items
             if x["class_id"] == self.db_map_id(db_map)
-        }
+        ]
 
     @property
     def child_item_type(self):
@@ -485,20 +500,23 @@ class ObjectItem(EntityItem):
     """An object item."""
 
     item_type = "object"
-    context_menu_actions = [
-        {"Edit objects": QIcon(":/icons/menu_icons/cube_pen.svg")},
-        {"Remove selection": QIcon(":/icons/menu_icons/cube_minus.svg")},
-    ]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.context_menu_actions = [
+            {"Edit objects": QIcon(":/icons/menu_icons/cube_pen.svg")},
+            {"Remove selection": QIcon(":/icons/menu_icons/cube_minus.svg")},
+        ]
 
     def _get_children_ids(self, db_map):
-        """Returns a set of relationship class ids involving this item's class.
+        """Returns a list of relationship class ids involving this item's class.
         """
         object_class_id = self.db_map_data_field(db_map, 'class_id')
-        return {
+        return [
             x["id"]
             for items in self.db_mngr.find_cascading_relationship_classes({db_map: {object_class_id}}).values()
             for x in items
-        }
+        ]
 
     @property
     def child_item_type(self):
@@ -523,19 +541,18 @@ class RelationshipItem(EntityItem):
     """An object item."""
 
     visual_key = ["name", "object_name_list"]
-
     item_type = "relationship"
-    context_menu_actions = [
-        {"Edit relationships": QIcon(":/icons/menu_icons/cubes_pen.svg")},
-        {"Find next": QIcon(":/icons/menu_icons/ellipsis-h.png")},
-        {"Remove selection": QIcon(":/icons/menu_icons/cubes_minus.svg")},
-    ]
 
     def __init__(self, *args, **kwargs):
         """Overridden method to parse some data for convenience later.
         Also make sure we never try to fetch this item."""
         super().__init__(*args, **kwargs)
         self._fetched = True
+        self.context_menu_actions = [
+            {"Edit relationships": QIcon(":/icons/menu_icons/cubes_pen.svg")},
+            {"Find next": QIcon(":/icons/menu_icons/ellipsis-h.png")},
+            {"Remove selection": QIcon(":/icons/menu_icons/cubes_minus.svg")},
+        ]
 
     @property
     def object_name_list(self):

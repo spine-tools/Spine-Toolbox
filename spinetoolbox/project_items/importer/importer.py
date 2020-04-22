@@ -18,10 +18,8 @@ Contains Importer project item class.
 
 from collections import Counter
 import os
-import logging
-import json
 import sys
-from PySide2.QtCore import Qt, Slot, QFileInfo, QEventLoop, QProcess
+from PySide2.QtCore import Qt, Signal, Slot, QFileInfo, QEventLoop
 from PySide2.QtGui import QStandardItem, QStandardItemModel
 from PySide2.QtWidgets import QFileIconProvider, QListWidget, QDialog, QVBoxLayout, QDialogButtonBox
 from spinetoolbox.project_item import ProjectItem
@@ -29,17 +27,25 @@ from spinetoolbox.helpers import create_dir, deserialize_path, serialize_path
 from spinetoolbox.spine_io.importers.csv_reader import CSVConnector
 from spinetoolbox.spine_io.importers.excel_reader import ExcelConnector
 from spinetoolbox.spine_io.importers.gdx_connector import GdxConnector
+from spinetoolbox.spine_io.importers.json_reader import JSONConnector
 from spinetoolbox.widgets.import_preview_window import ImportPreviewWindow
+from spinetoolbox.project_commands import UpdateImporterSettingsCommand, UpdateImporterCancelOnErrorCommand
+from spinetoolbox.execution_managers import QProcessExecutionManager
+from spinetoolbox.config import _frozen, _program_root
 from . import importer_program
 
 _CONNECTOR_NAME_TO_CLASS = {
     "CSVConnector": CSVConnector,
     "ExcelConnector": ExcelConnector,
     "GdxConnector": GdxConnector,
+    "JSONConnector": JSONConnector,
 }
 
 
 class Importer(ProjectItem):
+
+    importing_finished = Signal()
+
     def __init__(self, name, description, mappings, x, y, toolbox, project, logger, cancel_on_error=True):
         """Importer class.
 
@@ -84,6 +90,7 @@ class Importer(ProjectItem):
         self.resources_from_downstream = list()
         self.file_model = QStandardItemModel()
         self.importer_process = None
+        self.return_value = False  # Import process return value (boolean)
         self.all_files = []  # All source files
         self.unchecked_files = []  # Unchecked source files
         # connector class
@@ -117,24 +124,28 @@ class Importer(ProjectItem):
         s[self._properties_ui.toolButton_open_dir.clicked] = lambda checked=False: self.open_directory()
         s[self._properties_ui.pushButton_import_editor.clicked] = self._handle_import_editor_clicked
         s[self._properties_ui.treeView_files.doubleClicked] = self._handle_files_double_clicked
+        s[self._properties_ui.cancel_on_error_checkBox.stateChanged] = self._handle_cancel_on_error_changed
         return s
 
-    def activate(self):
-        """Restores selections, cancel on error checkbox and connects signals."""
-        self._properties_ui.cancel_on_error_checkBox.setCheckState(Qt.Checked if self.cancel_on_error else Qt.Unchecked)
-        self.restore_selections()
-        super().connect_signals()
+    @Slot(int)
+    def _handle_cancel_on_error_changed(self, _state):
+        cancel_on_error = self._properties_ui.cancel_on_error_checkBox.isChecked()
+        if self.cancel_on_error == cancel_on_error:
+            return
+        self._toolbox.undo_stack.push(UpdateImporterCancelOnErrorCommand(self, cancel_on_error))
 
-    def deactivate(self):
-        """Saves selections and disconnects signals."""
-        self.save_selections()
-        if not super().disconnect_signals():
-            logging.error("Item %s deactivation failed.", self.name)
-            return False
-        return True
+    def set_cancel_on_error(self, cancel_on_error):
+        self.cancel_on_error = cancel_on_error
+        if not self._active:
+            return
+        check_state = Qt.Checked if self.cancel_on_error else Qt.Unchecked
+        self._properties_ui.cancel_on_error_checkBox.blockSignals(True)
+        self._properties_ui.cancel_on_error_checkBox.setCheckState(check_state)
+        self._properties_ui.cancel_on_error_checkBox.blockSignals(False)
 
     def restore_selections(self):
         """Restores selections into shared widgets when this project item is selected."""
+        self._properties_ui.cancel_on_error_checkBox.setCheckState(Qt.Checked if self.cancel_on_error else Qt.Unchecked)
         self._properties_ui.label_name.setText(self.name)
         self._properties_ui.treeView_files.setModel(self.file_model)
         self.file_model.itemChanged.connect(self._handle_file_model_item_changed)
@@ -209,7 +220,7 @@ class Importer(ProjectItem):
         Returns:
             Asynchronous data reader class for the given importee
         """
-        connector_list = [CSVConnector, ExcelConnector, GdxConnector]  # add others as needed
+        connector_list = [CSVConnector, ExcelConnector, GdxConnector, JSONConnector]  # add others as needed
         connector_names = [c.DISPLAY_NAME for c in connector_list]
         dialog = QDialog(self._toolbox)
         dialog.setLayout(QVBoxLayout())
@@ -223,6 +234,8 @@ class Importer(ProjectItem):
             row = connector_list.index(CSVConnector)
         elif file_extension.lower() == ".gdx":
             row = connector_list.index(GdxConnector)
+        elif file_extension.lower() == ".json":
+            row = connector_list.index(JSONConnector)
         else:
             row = None
         if row:
@@ -265,13 +278,7 @@ class Importer(ProjectItem):
         Returns:
             dict: Mapping dictionary for the requested importee or an empty dict if not found
         """
-        importee_settings = None
-        for p in self.settings:
-            if p == importee:
-                importee_settings = self.settings[p]
-        if not importee_settings:
-            return {}
-        return importee_settings
+        return self.settings.get(importee, {})
 
     def save_settings(self, settings, importee):
         """Updates an existing mapping or adds a new mapping
@@ -281,10 +288,9 @@ class Importer(ProjectItem):
             settings (dict): Updated mapping (settings) dictionary
             importee (str): Absolute path to a file, whose mapping has been updated
         """
-        if importee in self.settings.keys():
-            self.settings[importee].update(settings)
-        else:
-            self.settings[importee] = settings
+        if self.settings.get(importee) == settings:
+            return
+        self._toolbox.undo_stack.push(UpdateImporterSettingsCommand(self, settings, importee))
 
     def _preview_destroyed(self, importee):
         """Destroys preview widget instance for the given importee.
@@ -316,37 +322,72 @@ class Importer(ProjectItem):
                 qitem.setData(QFileIconProvider().icon(QFileInfo(item)), Qt.DecorationRole)
                 self.file_model.appendRow(qitem)
 
-    def _run_importer_program(self, args):
-        """Starts and runs the importer program in a separate process.
+    def _prepare_importer_program(self, importer_args):
+        """Prepares an execution manager instance for running importer_process.py
+        in a QProcess.
+
+        If app is not frozen, the Python to run it is the python
+        that was used in starting the app.
+
+        If app is frozen, we are running the importer_program application
+        found in application install directory.
 
         Args:
-            args (list): List of arguments for the importer program
+            importer_args (list): Arguments for the importer_program. Source file paths, their mapping specs,
+             URLs downstream, logs directory, cancel_on_error
+
+        Returns:
+            bool: True if preparing the program succeeded, False otherwise.
+
         """
-        self.importer_process = QProcess()
-        self.importer_process.readyReadStandardOutput.connect(self._log_importer_process_stdout)
-        self.importer_process.readyReadStandardError.connect(self._log_importer_process_stderr)
-        self.importer_process.finished.connect(self.importer_process.deleteLater)
         program_path = os.path.abspath(importer_program.__file__)
-        self.importer_process.start(sys.executable, [program_path])
-        self.importer_process.waitForStarted()
-        self.importer_process.write(json.dumps(args).encode("utf-8"))
-        self.importer_process.write(b'\n')
-        self.importer_process.closeWriteChannel()
-        if self.importer_process.state() == QProcess.Running:
-            loop = QEventLoop()
-            self.importer_process.finished.connect(loop.quit)
-            loop.exec_()
-        return self.importer_process.exitCode()
+        if not _frozen:
+            # sys.executable in here is the full path to python.exe that was used in starting the app
+            python_cmd = sys.executable
+            self.importer_process = QProcessExecutionManager(self._toolbox, python_cmd, [program_path])
+        else:
+            # sys.executable is the full path to spinetoolbox.exe here (cannot use it)
+            importer_program_app = os.path.abspath(
+                os.path.join(_program_root, "importer_program", "importer_program.exe"))
+            self.importer_process = QProcessExecutionManager(self._toolbox, importer_program_app, [])
+        self.importer_process.execution_finished.connect(self._handle_importer_program_process_finished)
+        self.importer_process.data_to_inject = importer_args
+        return True
 
-    @Slot()
-    def _log_importer_process_stdout(self):
-        output = str(self.importer_process.readAllStandardOutput().data(), "utf-8").strip()
-        self._logger.msg.emit(f"<b>{self.name}</b>: {output}")
+    @Slot(int)
+    def _handle_importer_program_process_finished(self, exit_code):
+        """Handles the return value from importer program when it has finished.
+        Emits a signal to indicate that this Importer has been executed.
 
-    @Slot()
-    def _log_importer_process_stderr(self):
-        output = str(self.importer_process.readAllStandardError().data(), "utf-8").strip()
-        self._logger.msg_error.emit(f"<b>{self.name}</b>: {output}")
+        Args:
+            exit_code (int): Process return value. 0: success, !0: failure
+        """
+        self.importer_process.execution_finished.disconnect()
+        self.importer_process.deleteLater()
+        self.importer_process = None
+        self.return_value = True if exit_code == 0 else False
+        self.importing_finished.emit()
+
+    def python_exists(self, program):
+        """Checks that Python is set up correctly in Settings.
+        This executes 'python -V' in a QProcess and if the process
+        finishes successfully, the python is ready to be used.
+
+        Args:
+            program (str): Python executable that is currently set in Settings
+
+        Returns:
+            bool: True if Python is found, False otherwise
+        """
+        args = ["-V"]
+        python_check_process = QProcessExecutionManager(self._toolbox, program, args, silent=True)
+        python_check_process.start_execution()
+        if not python_check_process.wait_for_process_finished(msecs=3000):
+            self._logger.msg_error.emit(
+                "Couldn't determine Python version. Please check " "the <b>Python interpreter</b> option in Settings."
+            )
+            return False
+        return True
 
     def execute_backward(self, resources):
         """See base class."""
@@ -355,15 +396,28 @@ class Importer(ProjectItem):
 
     def execute_forward(self, resources):
         """See base class."""
-        args = [
+        # Collect arguments for the importer_program
+        import_args = [
             [f for f in self.all_files if f not in self.unchecked_files],
             self.settings,
             [r.url for r in self.resources_from_downstream if r.type_ == "database"],
             self.logs_dir,
             self._properties_ui.cancel_on_error_checkBox.isChecked(),
         ]
-        exit_code = self._run_importer_program(args)
-        return exit_code == 0
+        if not self._prepare_importer_program(import_args):
+            self._logger.msg_error.emit(f"Executing Importer {self.name} failed.")
+            return False
+        self.importer_process.start_execution()
+        loop = QEventLoop()
+        self.importing_finished.connect(loop.quit)
+        # Wait for the importer program to finish right here
+        loop.exec_()
+        # This is executed after the import program has finished
+        if not self.return_value:
+            self._logger.msg_error.emit(f"Executing Importer {self.name} failed.")
+        else:
+            self._logger.msg_success.emit(f"Executing Importer {self.name} finished")
+        return self.return_value
 
     def stop_execution(self):
         """Stops executing this Importer."""

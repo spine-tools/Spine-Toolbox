@@ -13,7 +13,7 @@
 # Form implementation generated from reading ui file 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\ui\import_mapping_options.ui',
 # licensing of 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\ui\import_mapping_options.ui' applies.
 #
-# Created: Thu Feb  6 17:07:47 2020
+# Created: Thu Mar 12 14:58:57 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -45,6 +45,7 @@ class Ui_ImportMappingOptions(object):
         self.optons_layout.setWidget(0, QtWidgets.QFormLayout.FieldRole, self.class_type_combo_box)
         self.parameter_type_combo_box = QtWidgets.QComboBox(self.options_group)
         self.parameter_type_combo_box.setObjectName("parameter_type_combo_box")
+        self.parameter_type_combo_box.addItem("")
         self.parameter_type_combo_box.addItem("")
         self.parameter_type_combo_box.addItem("")
         self.parameter_type_combo_box.addItem("")
@@ -97,9 +98,10 @@ class Ui_ImportMappingOptions(object):
         self.parameter_type_combo_box.setItemText(0, QtWidgets.QApplication.translate("ImportMappingOptions", "Single value", None, -1))
         self.parameter_type_combo_box.setItemText(1, QtWidgets.QApplication.translate("ImportMappingOptions", "Time series", None, -1))
         self.parameter_type_combo_box.setItemText(2, QtWidgets.QApplication.translate("ImportMappingOptions", "Time pattern", None, -1))
-        self.parameter_type_combo_box.setItemText(3, QtWidgets.QApplication.translate("ImportMappingOptions", "Definition", None, -1))
-        self.parameter_type_combo_box.setItemText(4, QtWidgets.QApplication.translate("ImportMappingOptions", "List", None, -1))
-        self.parameter_type_combo_box.setItemText(5, QtWidgets.QApplication.translate("ImportMappingOptions", "None", None, -1))
+        self.parameter_type_combo_box.setItemText(3, QtWidgets.QApplication.translate("ImportMappingOptions", "Map", None, -1))
+        self.parameter_type_combo_box.setItemText(4, QtWidgets.QApplication.translate("ImportMappingOptions", "Definition", None, -1))
+        self.parameter_type_combo_box.setItemText(5, QtWidgets.QApplication.translate("ImportMappingOptions", "List", None, -1))
+        self.parameter_type_combo_box.setItemText(6, QtWidgets.QApplication.translate("ImportMappingOptions", "None", None, -1))
         self.ignore_columns_label.setText(QtWidgets.QApplication.translate("ImportMappingOptions", "Ignore columns:", None, -1))
         self.dimension_label.setText(QtWidgets.QApplication.translate("ImportMappingOptions", "Dimension:", None, -1))
         self.import_objects_check_box.setText(QtWidgets.QApplication.translate("ImportMappingOptions", "Import objects", None, -1))

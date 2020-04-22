@@ -10,12 +10,13 @@
 ######################################################################################################################
 
 """
-Contains Importer project item class.
+Contains importer_program script.
 
 :authors: P. Savolainen (VTT), P. Vennström (VTT), A. Soininen (VTT)
 :date:   10.6.2019
 """
 
+import io
 import sys
 import os
 import json
@@ -25,11 +26,12 @@ import spinedb_api
 from spinetoolbox.spine_io.importers.csv_reader import CSVConnector
 from spinetoolbox.spine_io.importers.excel_reader import ExcelConnector
 from spinetoolbox.spine_io.importers.gdx_connector import GdxConnector
+from spinetoolbox.spine_io.importers.json_reader import JSONConnector
 from spinetoolbox.spine_io.type_conversion import value_to_convert_spec
 
 
 def _create_log_file_timestamp():
-    """ Creates a new timestamp string that is used as Importer and Data Store error log file.
+    """Creates a new timestamp string that is used as Importer and Data Store error log file.
 
     Returns:
         Timestamp string or empty string if failed.
@@ -52,9 +54,12 @@ def run(checked_files, all_settings, urls_downstream, logs_dir, cancel_on_error)
             print("There are no mappings defined for {0}, moving on...".format(source))
             continue
         source_type = settings["source_type"]
-        connector = {"CSVConnector": CSVConnector, "ExcelConnector": ExcelConnector, "GdxConnector": GdxConnector}[
-            source_type
-        ]()
+        connector = {
+            "CSVConnector": CSVConnector,
+            "ExcelConnector": ExcelConnector,
+            "GdxConnector": GdxConnector,
+            "JSONConnector": JSONConnector,
+        }[source_type]()
         connector.connect_to_source(source)
         table_mappings = {
             name: mapping
@@ -134,4 +139,8 @@ def _import(all_data, url, logs_dir, cancel_on_error):
 
 
 if __name__ == "__main__":
+    # Force std streams to utf-8, since it may not be the default on all terminals (e.g Win cmd prompt)
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8")
+    sys.stdin = io.TextIOWrapper(sys.stdin.buffer, encoding="utf-8")
     run(*json.loads(input()))

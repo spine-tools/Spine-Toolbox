@@ -17,6 +17,7 @@ Contains a class for storing project items.
 """
 
 import logging
+from copy import copy
 from PySide2.QtCore import Qt, QModelIndex, QAbstractItemModel
 from PySide2.QtWidgets import QMessageBox
 from ..config import INVALID_CHARS
@@ -249,11 +250,14 @@ class ProjectItemModel(QAbstractItemModel):
         if not role == Qt.EditRole:
             return super().setData(index, value, role)
         item = index.internalPointer()
+        if item.parent() is None:
+            # The item has been removed from the model
+            return False
         old_name = item.name
         if not value.strip() or value == old_name:
             return False
         # Check that new name is legal
-        if any(True for x in value if x in INVALID_CHARS):
+        if any(x in INVALID_CHARS for x in value):
             msg = "<b>{0}</b> contains invalid characters.".format(value)
             # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
             QMessageBox.information(self._toolbox, "Invalid characters", msg)
@@ -272,13 +276,10 @@ class ProjectItemModel(QAbstractItemModel):
             # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
             QMessageBox.information(self._toolbox, "Invalid name", msg)
             return False
-        success = item.project_item.rename(value)
-        if not success:
+        if not item.project_item.rename(value):
             return False
         item.set_name(value)
         self._toolbox.project().dag_handler.rename_node(old_name, value)
-        # Force save project
-        self._toolbox.save_project()
         self._toolbox.msg_success.emit(f"Project item <b>{old_name}</b> renamed to <b>{value}</b>")
         return True
 
@@ -300,11 +301,11 @@ class ProjectItemModel(QAbstractItemModel):
             for category in self.root().children():
                 items += category.children()
             return items
-        category_item = self.find_category(category_name)
-        if not category_item:
+        category_index = self.find_category(category_name)
+        if not category_index:
             logging.error("Category item '%s' not found", category_name)
             return list()
-        return category_item.internalPointer().children()
+        return category_index.internalPointer().children()
 
     def n_items(self):
         """Returns the number of all items in the model excluding category items and root.
@@ -322,6 +323,15 @@ class ProjectItemModel(QAbstractItemModel):
         """
         return [item.name for item in self.items()]
 
+    def items_per_category(self):
+        """Returns a dict mapping category indexes to a list of items in that category.
+
+        Returns:
+            dict(QModelIndex,list(LeafProjectTreeItem))
+        """
+        category_inds = [self.index(row, 0) for row in range(self.rowCount())]
+        return {ind: copy(ind.internalPointer().children()) for ind in category_inds}
+
     def short_name_reserved(self, short_name):
         """Checks if the directory name derived from the name of the given item is in use.
 
@@ -331,8 +341,4 @@ class ProjectItemModel(QAbstractItemModel):
         Returns:
             bool: True if short name is taken, False if it is available.
         """
-        project_items = self.items()
-        for item in project_items:
-            if item.short_name == short_name:
-                return True
-        return False
+        return short_name in set(item.short_name for item in self.items())

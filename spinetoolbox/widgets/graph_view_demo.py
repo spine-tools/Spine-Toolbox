@@ -18,14 +18,12 @@ Contains the GraphViewForm class.
 
 import random
 from PySide2.QtCore import Slot, QFinalState, QState, QItemSelectionModel, QAbstractAnimation, QVariantAnimation
-from PySide2.QtGui import QColor, QCursor
-from spinetoolbox.live_demo import LiveDemo
+from PySide2.QtGui import QCursor
+from .state_machine_widget import StateMachineWidget
 
 
-class GraphViewDemo(LiveDemo):
+class GraphViewDemo(StateMachineWidget):
     """A widget that shows a demo for the graph view."""
-
-    _overlay_color = QColor(0, 0, 255, 32)
 
     def __init__(self, parent):
         """Initializes class.
@@ -36,7 +34,7 @@ class GraphViewDemo(LiveDemo):
         super().__init__("Live demo", parent)
 
     def _make_select_one(self):
-        select_one = QState(self.run)
+        select_one = QState(self.machine)
         begin = QState(select_one)
         simulate = QState(select_one)
         finalize = QFinalState(select_one)
@@ -56,13 +54,13 @@ class GraphViewDemo(LiveDemo):
 
         select_one.setInitialState(begin)
         transition = begin.addTransition(self.button_right.clicked, simulate)
-        animation = SelectionAnimation(self.parent(), command=QItemSelectionModel.ClearAndSelect)
+        animation = SelectionAnimation(self.parent().ui.treeView_object, command=QItemSelectionModel.ClearAndSelect)
         transition.addAnimation(animation)
         simulate.addTransition(animation.finished, finalize)
         return select_one
 
     def _make_select_more(self):
-        select_more = QState(self.run)
+        select_more = QState(self.machine)
         begin = QState(select_more)
         simulate = QState(select_more)
         finalize = QFinalState(select_more)
@@ -83,13 +81,13 @@ class GraphViewDemo(LiveDemo):
 
         select_more.setInitialState(begin)
         transition = begin.addTransition(self.button_right.clicked, simulate)
-        animation = SelectionAnimation(self.parent(), command=QItemSelectionModel.Select)
+        animation = SelectionAnimation(self.parent().ui.treeView_object, command=QItemSelectionModel.Select)
         transition.addAnimation(animation)
         simulate.addTransition(animation.finished, finalize)
         return select_more
 
     def _make_good_bye(self):
-        good_bye = QState(self.run)
+        good_bye = QState(self.machine)
         begin = QState(good_bye)
         finalize = QFinalState(good_bye)
         good_bye.assignProperty(self.label_msg, "text", "<html>That's all for now. Hope you liked it.</html>")
@@ -101,52 +99,38 @@ class GraphViewDemo(LiveDemo):
         begin.addTransition(self.button_right.clicked, finalize)
         return good_bye
 
-    def _handle_welcome_entered(self):
-        welcome = self.sender()
+    def set_up_machine(self):
+        super().set_up_machine()
         select_one = self._make_select_one()
-        welcome.addTransition(welcome.finished, select_one)
-        select_one.entered.connect(self._handle_select_one_entered)
-
-    def _handle_select_one_entered(self):
-        select_one = self.sender()
         select_more = self._make_select_more()
-        select_one.addTransition(select_one.finished, select_more)
-        select_more.entered.connect(self._handle_select_more_entered)
-
-    def _handle_select_more_entered(self):
-        select_more = self.sender()
         good_bye = self._make_good_bye()
+        self.welcome.addTransition(self.welcome.finished, select_one)
+        select_one.addTransition(select_one.finished, select_more)
         select_more.addTransition(select_more.finished, good_bye)
-        good_bye.entered.connect(self._handle_good_bye_entered)
-
-    def _handle_good_bye_entered(self):
-        good_bye = self.sender()
         good_bye.finished.connect(self.close)
 
 
 class SelectionAnimation(QVariantAnimation):
-    def __init__(self, parent, command, duration=2000, max_steps=4):
+    def __init__(self, view, command, duration=2000, max_steps=4):
         """
         Args:
-            parent (GraphViewForm)
+            view (QAbstractItemView)
             command (QItemSelectionModel.SelectionFlags)
             duration (int): milliseconds
             max_steps (int)
         """
-        super().__init__(parent)
+        super().__init__(view)
+        self.viewport = view.viewport()
         self._command = command
         self._duration = duration
-        self._selection_model = parent.ui.treeView_object.selectionModel()
-        model = parent.object_tree_model
+        self._selection_model = view.selectionModel()
+        model = view.model()
         root_item = model.root_item
         population_size = root_item.child_count()
         sample_size = min(max_steps, population_size)
         picks = random.sample(range(population_size), k=sample_size)
         self._indexes = [model.index_from_item(root_item.child(k)) for k in picks]
-        view = parent.ui.treeView_object
-        self._positions = [
-            view.viewport().mapToGlobal(self._random_point(view.visualRect(ind))) for ind in self._indexes
-        ]
+        self._positions = [self._random_point(view.visualRect(ind)) for ind in self._indexes]
         self._lines = None
         self.setStartValue(0.0)
         self.setEndValue(1.0)
@@ -163,7 +147,8 @@ class SelectionAnimation(QVariantAnimation):
     def updateState(self, new, old):
         if new == QAbstractAnimation.Running and old == QAbstractAnimation.Stopped:
             self._selection_model.clearSelection()
-            self._positions.insert(0, QCursor.pos())
+            pos = self.viewport.mapFromGlobal(QCursor.pos())
+            self._positions.insert(0, pos)
             self._lines = list(zip(self._positions[:-1], self._positions[1:]))
 
     @Slot("QVariant")
@@ -171,6 +156,7 @@ class SelectionAnimation(QVariantAnimation):
         src_pos, dst_pos = self._lines[self.currentLoop()]
         value = max(0.0, min(1.0, 4.0 * (value - 0.5)))
         pos = src_pos + (dst_pos - src_pos) * value
+        pos = self.viewport.mapToGlobal(pos)
         QCursor.setPos(pos)
 
     @Slot(int)

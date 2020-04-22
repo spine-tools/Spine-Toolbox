@@ -179,6 +179,9 @@
        <property name="selectionMode">
         <enum>QAbstractItemView::ExtendedSelection</enum>
        </property>
+       <property name="uniformRowHeights">
+        <bool>true</bool>
+       </property>
       </widget>
      </item>
     </layout>
@@ -586,6 +589,9 @@
          <width>20</width>
          <height>20</height>
         </size>
+       </property>
+       <property name="uniformRowHeights">
+        <bool>true</bool>
        </property>
       </widget>
      </item>

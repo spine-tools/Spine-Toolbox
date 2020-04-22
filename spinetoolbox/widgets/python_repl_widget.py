@@ -283,7 +283,8 @@ class PythonReplWidget(SpineConsoleWidget):
         self._kernel_starting = True
         km = QtKernelManager(kernel_name=self.kernel_name)
         try:
-            km.start_kernel()
+            blackhole = open(os.devnull, 'w')
+            km.start_kernel(stdout=blackhole, stderr=blackhole)
             kc = km.client()
             kc.start_channels()
             self.kernel_manager = km
@@ -386,7 +387,7 @@ class PythonReplWidget(SpineConsoleWidget):
                         # Kernel is idle after starting up -> execute pending command
                         self._kernel_starting = False
                         # Start executing the first command (if available) from the command buffer immediately
-                    self.ready_to_execute.emit()
+                        self.ready_to_execute.emit()
                 else:
                     # This should probably happen when _kernel_state is 'starting' but it doesn't seem to show up
                     self._toolbox.msg_error.emit(

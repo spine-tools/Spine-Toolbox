@@ -31,9 +31,9 @@ class VersionInfo(NamedTuple):
 
 
 major = 0
-minor = 3
-micro = 3
-releaselevel = "alpha"
+minor = 4
+micro = 0
+releaselevel = "final"
 serial = 0
 __version_info__ = VersionInfo(major, minor, micro, releaselevel, serial)
 __version__ = ".".join([str(a) for a in __version_info__[:3]])

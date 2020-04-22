@@ -30,10 +30,18 @@ from spinetoolbox.config import TOOL_OUTPUT_DIR
 from spinetoolbox.widgets.custom_menus import ToolSpecificationOptionsPopupmenu
 from spinetoolbox.project_items.tool.widgets.custom_menus import ToolContextMenu
 from spinetoolbox.helpers import create_dir, create_output_dir_timestamp
+from spinetoolbox.tool_specifications import ToolSpecification
+from spinetoolbox.project_commands import (
+    SetToolSpecificationCommand,
+    UpdateToolExecuteInWorkCommand,
+    UpdateToolCmdLineArgsCommand,
+)
 
 
 class Tool(ProjectItem):
-    def __init__(self, name, description, x, y, toolbox, project, logger, tool="", execute_in_work=True):
+    def __init__(
+        self, name, description, x, y, toolbox, project, logger, tool="", execute_in_work=True, cmd_line_args=None
+    ):
         """Tool class.
 
         Args:
@@ -46,6 +54,7 @@ class Tool(ProjectItem):
             logger (LoggerInterface): a logger instance
             tool (str): Name of this Tool's Tool specification
             execute_in_work (bool): Execute associated Tool specification in work (True) or source directory (False)
+            cmd_line_args (list): Tool command line arguments
         """
         super().__init__(name, description, x, y, project, logger)
         self._toolbox = toolbox
@@ -63,6 +72,7 @@ class Tool(ProjectItem):
         self.populate_specification_model(False)
         self.source_files = list()
         self.execute_in_work = execute_in_work
+        self.cmd_line_args = list() if not cmd_line_args else cmd_line_args
         self._tool_specification = self._toolbox.tool_specification_model.find_tool_specification(tool)
         if tool != "" and not self._tool_specification:
             self._logger.msg_error.emit(
@@ -70,14 +80,9 @@ class Tool(ProjectItem):
             )
         if self._tool_specification:
             self.execute_in_work = self._tool_specification.execute_in_work
-        self.set_tool_specification(self._tool_specification)
-        if not self._tool_specification:
-            self._tool_specification_name = ""
-        else:
-            self._tool_specification_name = self.tool_specification().name
+        self.do_set_tool_specification(self._tool_specification)
         self.tool_specification_options_popup_menu = None
         self.instance = None  # Instance of this Tool that can be sent to a subprocess for processing
-        self.extra_cmdline_args = ''  # This may be used for additional Tool specific command line arguments
         # Base directory for execution, maybe it should be called `execution_dir`
         self.basedir = None
         # Make directory for results
@@ -103,48 +108,37 @@ class Tool(ProjectItem):
         s[self._properties_ui.pushButton_tool_results.clicked] = self.open_results
         s[self._properties_ui.comboBox_tool.currentIndexChanged] = self.update_tool_specification
         s[self._properties_ui.radioButton_execute_in_work.toggled] = self.update_execution_mode
+        s[self._properties_ui.lineEdit_tool_args.editingFinished] = self.update_tool_cmd_line_args
         return s
-
-    def activate(self):
-        """Restore selections and connect signals."""
-        self.restore_selections()
-        super().connect_signals()
-
-    def deactivate(self):
-        """Save selections and disconnect signals."""
-        self.save_selections()
-        if not super().disconnect_signals():
-            logging.error("Item %s deactivation failed.", self.name)
-            return False
-        return True
 
     def restore_selections(self):
         """Restore selections into shared widgets when this project item is selected."""
         self._properties_ui.label_tool_name.setText(self.name)
         self._properties_ui.treeView_specification.setModel(self.specification_model)
-        self._properties_ui.radioButton_execute_in_work.setChecked(self.execute_in_work)
-        if self._tool_specification_name == "":
-            self._properties_ui.comboBox_tool.setCurrentIndex(-1)
-            self.set_tool_specification(None)
-        else:
-            tool_specification = self._toolbox.tool_specification_model.find_tool_specification(
-                self._tool_specification_name
-            )
-            row = self._toolbox.tool_specification_model.tool_specification_row(self._tool_specification_name)
-            self._properties_ui.comboBox_tool.setCurrentIndex(row)  # Row in tool temp model
-            self.set_tool_specification(tool_specification)
-
-    def save_selections(self):
-        """Save selections in shared widgets for this project item into instance variables."""
-        if not self._tool_specification:
-            self._tool_specification_name = ""
-        else:
-            self._tool_specification_name = self.tool_specification().name
+        self.update_execute_in_work_button()
+        self.update_tool_ui()
 
     @Slot(bool)
     def update_execution_mode(self, checked):
-        """Slot for execute in work radio button toggled signal."""
-        self.execute_in_work = checked
+        """Pushed a new UpdateToolExecuteInWorkCommand to the toolbox stack."""
+        self._toolbox.undo_stack.push(UpdateToolExecuteInWorkCommand(self, checked))
+
+    def do_update_execution_mode(self, execute_in_work):
+        """Updates execute_in_work setting."""
+        if self.execute_in_work == execute_in_work:
+            return
+        self.execute_in_work = execute_in_work
+        self.update_execute_in_work_button()
+
+    def update_execute_in_work_button(self):
+        if not self._active:
+            return
+        self._properties_ui.radioButton_execute_in_work.blockSignals(True)
+        if self.execute_in_work:
+            self._properties_ui.radioButton_execute_in_work.setChecked(True)
+        else:
+            self._properties_ui.radioButton_execute_in_source.setChecked(True)
+        self._properties_ui.radioButton_execute_in_work.blockSignals(False)
 
     @Slot(int)
     def update_tool_specification(self, row):
@@ -154,14 +148,37 @@ class Tool(ProjectItem):
             row (int): Selected row in the comboBox
         """
         if row == -1:
-            self._properties_ui.comboBox_tool.setCurrentIndex(-1)
             self.set_tool_specification(None)
         else:
             new_tool = self._toolbox.tool_specification_model.tool_specification(row)
-            self.execute_in_work = new_tool.execute_in_work
             self.set_tool_specification(new_tool)
+            self.do_update_execution_mode(new_tool.execute_in_work)
+
+    @Slot()
+    def update_tool_cmd_line_args(self):
+        """Updates tool cmd line args list as line edit text is changed."""
+        txt = self._properties_ui.lineEdit_tool_args.text()
+        cmd_line_args = ToolSpecification.split_cmdline_args(txt)
+        if self.cmd_line_args == cmd_line_args:
+            return
+        self._toolbox.undo_stack.push(UpdateToolCmdLineArgsCommand(self, cmd_line_args))
+
+    def do_update_tool_cmd_line_args(self, cmd_line_args):
+        self.cmd_line_args = cmd_line_args
+        if not self._active:
+            return
+        self._properties_ui.lineEdit_tool_args.blockSignals(True)
+        self._properties_ui.lineEdit_tool_args.setText(" ".join(self.cmd_line_args))
+        self._properties_ui.lineEdit_tool_args.blockSignals(False)
 
     def set_tool_specification(self, tool_specification):
+        """Pushes a new SetToolSpecificationCommand to the toolbox' undo stack.
+        """
+        if tool_specification == self._tool_specification:
+            return
+        self._toolbox.undo_stack.push(SetToolSpecificationCommand(self, tool_specification))
+
+    def do_set_tool_specification(self, tool_specification):
         """Sets Tool specification for this Tool. Removes Tool specification if None given as argument.
 
         Args:
@@ -175,22 +192,23 @@ class Tool(ProjectItem):
     def update_tool_ui(self):
         """Updates Tool UI to show Tool specification details. Used when Tool specification is changed.
         Overrides execution mode (work or source) with the specification default."""
+        if not self._active:
+            return
         if not self._properties_ui:
             # This happens when calling self.set_tool_specification() in the __init__ method,
             # because the UI only becomes available *after* adding the item to the project_item_model... problem??
             return
         if not self.tool_specification():
-            self._properties_ui.lineEdit_tool_args.setText("")
-            self._properties_ui.radioButton_execute_in_work.setChecked(True)
+            self._properties_ui.comboBox_tool.setCurrentIndex(-1)
+            self._properties_ui.lineEdit_tool_spec_args.setText("")
+            self.do_update_execution_mode(True)
         else:
-            self._properties_ui.lineEdit_tool_args.setText(" ".join(self.tool_specification().cmdline_args))
-            if self.execute_in_work:
-                self._properties_ui.radioButton_execute_in_work.setChecked(True)
-            else:
-                self._properties_ui.radioButton_execute_in_source.setChecked(True)
+            self._properties_ui.comboBox_tool.setCurrentText(self.tool_specification().name)
+            self._properties_ui.lineEdit_tool_spec_args.setText(" ".join(self.tool_specification().cmdline_args))
         self.tool_specification_options_popup_menu = ToolSpecificationOptionsPopupmenu(self._toolbox, self)
         self._properties_ui.toolButton_tool_specification.setMenu(self.tool_specification_options_popup_menu)
         self._properties_ui.treeView_specification.expandAll()
+        self._properties_ui.lineEdit_tool_args.setText(" ".join(self.cmd_line_args))
 
     def update_tool_models(self):
         """Update Tool models with Tool specification details. Used when Tool specification is changed.
@@ -208,7 +226,7 @@ class Tool(ProjectItem):
             self.populate_output_file_model(self.tool_specification().outputfiles)
             self.populate_specification_model(populate=True)
 
-    @Slot(bool, name="open_results")
+    @Slot(bool)
     def open_results(self, checked=False):
         """Open output directory in file browser."""
         if not os.path.exists(self.output_dir):
@@ -220,25 +238,25 @@ class Tool(ProjectItem):
         if not res:
             self._logger.msg_error.emit(f"Failed to open directory: {self.output_dir}")
 
-    @Slot(name="edit_tool_specification")
+    @Slot()
     def edit_tool_specification(self):
         """Open Tool specification editor for the Tool specification attached to this Tool."""
         index = self._toolbox.tool_specification_model.tool_specification_index(self.tool_specification().name)
         self._toolbox.edit_tool_specification(index)
 
-    @Slot(name="open_tool_specification_file")
+    @Slot()
     def open_tool_specification_file(self):
         """Open Tool specification file."""
         index = self._toolbox.tool_specification_model.tool_specification_index(self.tool_specification().name)
         self._toolbox.open_tool_specification_file(index)
 
-    @Slot(name="open_tool_main_program_file")
+    @Slot()
     def open_tool_main_program_file(self):
         """Open Tool specification main program file in an external text edit application."""
         index = self._toolbox.tool_specification_model.tool_specification_index(self.tool_specification().name)
         self._toolbox.open_tool_main_program_file(index)
 
-    @Slot(name="open_tool_main_directory")
+    @Slot()
     def open_tool_main_directory(self):
         """Open directory where the Tool specification main program is located in file explorer."""
         if not self.tool_specification():
@@ -457,7 +475,7 @@ class Tool(ProjectItem):
                 if not_found:
                     self._logger.msg_error.emit(f"Required file(s) <b>{', '.join(not_found)}</b> not found")
                     return False
-                # Required files and dirs should have been found at this point, so create instance
+                # Required files and dirs should have been found at this point
                 self._logger.msg.emit(f"*** Copying input files to {work_or_source} directory ***")
                 # Copy input files to ToolInstance work or source directory
                 if not self.copy_input_files(file_paths):
@@ -484,8 +502,11 @@ class Tool(ProjectItem):
         input_database_urls = self._database_urls(resources)
         output_database_urls = self._database_urls(self._downstream_resources)
         self.instance = self.tool_specification().create_tool_instance(self.basedir)
+
         try:
-            self.instance.prepare(list(optional_file_copy_paths.values()), input_database_urls, output_database_urls)
+            self.instance.prepare(
+                list(optional_file_copy_paths.values()), input_database_urls, output_database_urls, self.cmd_line_args
+            )
         except RuntimeError as error:
             self._logger.msg_error.emit(f"Failed to prepare tool instance: {error}")
             return False
@@ -988,6 +1009,7 @@ class Tool(ProjectItem):
         else:
             d["tool"] = self.tool_specification().name
         d["execute_in_work"] = self.execute_in_work
+        d["cmd_line_args"] = ToolSpecification.split_cmdline_args(" ".join(self.cmd_line_args))
         return d
 
     def custom_context_menu(self, parent, pos):
@@ -1029,8 +1051,7 @@ class Tool(ProjectItem):
         Returns:
             bool: Boolean value depending on success
         """
-        success = super().rename(new_name)
-        if not success:
+        if not super().rename(new_name):
             return False
         self.output_dir = os.path.join(self.data_dir, TOOL_OUTPUT_DIR)
         if self.output_files_watcher.files():

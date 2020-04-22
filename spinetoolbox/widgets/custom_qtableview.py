@@ -20,11 +20,9 @@ import csv
 import io
 import locale
 import numpy as np
-from PySide2.QtWidgets import QTableView, QApplication, QMenu, QLineEdit, QWidgetAction
-from PySide2.QtCore import Qt, Signal, Slot, QItemSelectionModel, QPoint
+from PySide2.QtWidgets import QTableView, QApplication
+from PySide2.QtCore import Qt, Slot, QItemSelectionModel, QPoint
 from PySide2.QtGui import QKeySequence
-from ..mvcmodels.auto_filter_menu_model import AutoFilterMenuValueItemModel, AutoFilterMenuAllItemModel
-from ..widgets.custom_qlistview import AutoFilterMenuView
 from ..widgets.pivot_table_header_view import PivotTableHeaderView
 from ..helpers import busy_effect
 
@@ -226,68 +224,6 @@ class PivotTableView(CopyPasteTableView):
         h_header.setContextMenuPolicy(Qt.CustomContextMenu)
 
 
-class AutoFilterMenu(QMenu):
-    """A widget to show the auto filter 'menu'.
-
-    Attributes:
-        parent (QTableView): the parent widget.
-    """
-
-    asc_sort_triggered = Signal()
-    desc_sort_triggered = Signal()
-    filter_triggered = Signal(dict)
-
-    def __init__(self, parent):
-        """Initialize class."""
-        super().__init__(parent)
-        self.auto_filter = dict()
-        # Layout
-        self.all_item_model = AutoFilterMenuAllItemModel(self)
-        self.value_item_model = AutoFilterMenuValueItemModel(self)
-        self.text_filter = QLineEdit(self)
-        self.text_filter.setPlaceholderText("Search...")
-        self.text_filter.setClearButtonEnabled(True)
-        self.all_item_view = AutoFilterMenuView(self)
-        self.value_item_view = AutoFilterMenuView(self)
-        self.all_item_view.setModel(self.all_item_model)
-        self.value_item_view.setModel(self.value_item_model)
-        text_filter_action = QWidgetAction(self)
-        text_filter_action.setDefaultWidget(self.text_filter)
-        all_item_view_action = QWidgetAction(self)
-        all_item_view_action.setDefaultWidget(self.all_item_view)
-        value_item_view_action = QWidgetAction(self)
-        value_item_view_action.setDefaultWidget(self.value_item_view)
-        self.addAction(text_filter_action)
-        self.addAction(all_item_view_action)
-        self.addAction(value_item_view_action)
-        ok_action = self.addAction("Ok")
-        self.text_filter.textEdited.connect(self.value_item_model.set_filter_reg_exp)
-        ok_action.triggered.connect(self._handle_ok_action_triggered)
-        self.all_item_model.checked_state_changed.connect(self.value_item_model.set_all_items_checked_state)
-        self.value_item_model.all_checked_state_changed.connect(self.all_item_model.set_checked_state)
-        self.aboutToShow.connect(self._fix_geometry)
-
-    def set_data(self, data):
-        """Set data to show in the menu."""
-        self.value_item_model.reset_model(data)
-
-    @Slot(name="_fix_geometry")
-    def _fix_geometry(self):
-        """Fix geometry, shrink views as possible."""
-        all_item_view_height = self.all_item_view.sizeHintForRow(0)
-        self.all_item_view.setMaximumHeight(all_item_view_height)
-        self.text_filter.clear()
-        self.text_filter.setFocus()
-
-    @Slot("bool", name="_handle_ok_action_triggered")
-    def _handle_ok_action_triggered(self, checked=False):
-        """Called when user presses Ok.
-        Collect selections and emit signal.
-        """
-        auto_filter = self.value_item_model.get_auto_filter()
-        self.filter_triggered.emit(auto_filter)
-
-
 class AutoFilterCopyPasteTableView(CopyPasteTableView):
     """Custom QTableView class with autofilter functionality.
 
@@ -302,11 +238,6 @@ class AutoFilterCopyPasteTableView(CopyPasteTableView):
             parent (QObject)
         """
         super().__init__(parent=parent)
-        self.auto_filter_column = None
-        self.auto_filter_menu = AutoFilterMenu(self)
-        self.auto_filter_menu.asc_sort_triggered.connect(self.sort_model_ascending)
-        self.auto_filter_menu.desc_sort_triggered.connect(self.sort_model_descending)
-        self.auto_filter_menu.filter_triggered.connect(self.update_auto_filter)
         self.horizontalHeader().sectionClicked.connect(self.show_auto_filter_menu)
 
     def keyPressEvent(self, event):
@@ -332,7 +263,7 @@ class AutoFilterCopyPasteTableView(CopyPasteTableView):
         super().setModel(model)
         self.horizontalHeader().sectionPressed.disconnect()
 
-    @Slot(int, name="show_filter_menu")
+    @Slot(int)
     def show_auto_filter_menu(self, logical_index):
         """Called when user clicks on a horizontal section header.
         Shows/hides the auto filter widget.
@@ -340,33 +271,13 @@ class AutoFilterCopyPasteTableView(CopyPasteTableView):
         Args:
             logical_index (int)
         """
-        self.auto_filter_column = logical_index
+        menu = self.model().get_auto_filter_menu(logical_index)
+        if menu is None:
+            return
         header_pos = self.mapToGlobal(self.horizontalHeader().pos())
-        pos_x = header_pos.x() + self.horizontalHeader().sectionViewportPosition(self.auto_filter_column)
+        pos_x = header_pos.x() + self.horizontalHeader().sectionViewportPosition(logical_index)
         pos_y = header_pos.y() + self.horizontalHeader().height()
-        menu_data = self.model().auto_filter_menu_data(logical_index)
-        self.auto_filter_menu.set_data(menu_data)
-        self.auto_filter_menu.popup(QPoint(pos_x, pos_y))
-
-    @Slot(dict)
-    def update_auto_filter(self, auto_filter):
-        """Called when the user selects Ok in the auto filter menu.
-        Sets auto filter in model.
-
-        Args:
-            auto_filter (dict)
-        """
-        self.model().update_auto_filter(self.auto_filter_column, auto_filter)
-
-    @Slot(name="sort_model_ascending")
-    def sort_model_ascending(self):
-        """Called when the user selects sort ascending in the auto filter widget."""
-        self.model().sort(self.auto_filter_column, Qt.AscendingOrder)
-
-    @Slot(name="sort_model_descending")
-    def sort_model_descending(self):
-        """Called when the user selects sort descending in the auto filter widget."""
-        self.model().sort(self.auto_filter_column, Qt.DescendingOrder)
+        menu.popup(QPoint(pos_x, pos_y))
 
 
 class IndexedParameterValueTableViewBase(CopyPasteTableView):

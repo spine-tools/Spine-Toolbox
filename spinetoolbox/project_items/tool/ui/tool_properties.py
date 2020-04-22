@@ -13,7 +13,7 @@
 # Form implementation generated from reading ui file 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\project_items\tool\ui\tool_properties.ui',
 # licensing of 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\project_items\tool\ui\tool_properties.ui' applies.
 #
-# Created: Thu Feb  6 17:07:36 2020
+# Created: Wed Feb 12 13:45:04 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -92,15 +92,19 @@ class Ui_Form(object):
         self.horizontalLayout_9.addWidget(self.toolButton_tool_specification)
         self.verticalLayout_17.addLayout(self.horizontalLayout_9)
         self.lineEdit_tool_args = QtWidgets.QLineEdit(self.scrollAreaWidgetContents_3)
-        self.lineEdit_tool_args.setEnabled(True)
-        font = QtGui.QFont()
-        font.setPointSize(8)
-        self.lineEdit_tool_args.setFont(font)
-        self.lineEdit_tool_args.setCursor(QtCore.Qt.ArrowCursor)
-        self.lineEdit_tool_args.setFocusPolicy(QtCore.Qt.NoFocus)
-        self.lineEdit_tool_args.setReadOnly(True)
+        self.lineEdit_tool_args.setClearButtonEnabled(True)
         self.lineEdit_tool_args.setObjectName("lineEdit_tool_args")
         self.verticalLayout_17.addWidget(self.lineEdit_tool_args)
+        self.lineEdit_tool_spec_args = QtWidgets.QLineEdit(self.scrollAreaWidgetContents_3)
+        self.lineEdit_tool_spec_args.setEnabled(True)
+        font = QtGui.QFont()
+        font.setPointSize(8)
+        self.lineEdit_tool_spec_args.setFont(font)
+        self.lineEdit_tool_spec_args.setCursor(QtCore.Qt.ArrowCursor)
+        self.lineEdit_tool_spec_args.setFocusPolicy(QtCore.Qt.NoFocus)
+        self.lineEdit_tool_spec_args.setReadOnly(True)
+        self.lineEdit_tool_spec_args.setObjectName("lineEdit_tool_spec_args")
+        self.verticalLayout_17.addWidget(self.lineEdit_tool_spec_args)
         self.treeView_specification = QtWidgets.QTreeView(self.scrollAreaWidgetContents_3)
         self.treeView_specification.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.treeView_specification.setIndentation(20)
@@ -157,6 +161,14 @@ class Ui_Form(object):
 
         self.retranslateUi(Form)
         QtCore.QMetaObject.connectSlotsByName(Form)
+        Form.setTabOrder(self.scrollArea_3, self.comboBox_tool)
+        Form.setTabOrder(self.comboBox_tool, self.toolButton_tool_specification)
+        Form.setTabOrder(self.toolButton_tool_specification, self.lineEdit_tool_args)
+        Form.setTabOrder(self.lineEdit_tool_args, self.treeView_specification)
+        Form.setTabOrder(self.treeView_specification, self.pushButton_tool_results)
+        Form.setTabOrder(self.pushButton_tool_results, self.radioButton_execute_in_work)
+        Form.setTabOrder(self.radioButton_execute_in_work, self.radioButton_execute_in_source)
+        Form.setTabOrder(self.radioButton_execute_in_source, self.toolButton_tool_open_dir)
 
     def retranslateUi(self, Form):
         Form.setWindowTitle(QtWidgets.QApplication.translate("Form", "Form", None, -1))
@@ -164,8 +176,10 @@ class Ui_Form(object):
         self.label_tool_specification.setText(QtWidgets.QApplication.translate("Form", "Specification", None, -1))
         self.comboBox_tool.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Tool specification for this Tool</p></body></html>", None, -1))
         self.toolButton_tool_specification.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Tool specification options.</p></body></html>", None, -1))
-        self.lineEdit_tool_args.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Command line arguments used when starting the main program. Edit Tool specification to modify these.</p></body></html>", None, -1))
-        self.lineEdit_tool_args.setPlaceholderText(QtWidgets.QApplication.translate("Form", "Command line arguments", None, -1))
+        self.lineEdit_tool_args.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Tool command line arguments</p></body></html>", None, -1))
+        self.lineEdit_tool_args.setPlaceholderText(QtWidgets.QApplication.translate("Form", "Tool command line args", None, -1))
+        self.lineEdit_tool_spec_args.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Tool specification command line arguments. </p><p>Modify by editing the selected Tool specification.</p></body></html>", None, -1))
+        self.lineEdit_tool_spec_args.setPlaceholderText(QtWidgets.QApplication.translate("Form", "Tool Specification command line args", None, -1))
         self.pushButton_tool_results.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Open results archive in file browser</p></body></html>", None, -1))
         self.pushButton_tool_results.setText(QtWidgets.QApplication.translate("Form", "Results...", None, -1))
         self.label_2.setText(QtWidgets.QApplication.translate("Form", "Execute in", None, -1))

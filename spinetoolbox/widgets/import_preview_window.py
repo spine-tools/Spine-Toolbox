@@ -28,7 +28,7 @@ class ImportPreviewWindow(QMainWindow):
     """A QMainWindow to let users define Mappings for an Importer item.
 
     Args:
-        importer (Importer): Project item that owns this preview window
+        importer (spinetoolbox.project_items.importer.importer.Importer): Project item that owns this preview window
         filepath (str): Importee path
         connector (SourceConnection): Asynchronous data reader
         settings (dict): Default mapping specification
@@ -58,8 +58,6 @@ class ImportPreviewWindow(QMainWindow):
         self.restore_ui()
         self._ui.buttonBox.button(QDialogButtonBox.Ok).clicked.connect(self.apply_and_close)
         self._ui.buttonBox.button(QDialogButtonBox.Cancel).clicked.connect(self.close)
-        # self._ui.buttonBox.button(QDialogButtonBox.Ok).setAutoDefault(True)
-        # self._ui.buttonBox.button(QDialogButtonBox.Ok).setFocus()
         self._ui.actionExportMappings.triggered.connect(self.export_mapping_to_file)
         self._ui.actionImportMappings.triggered.connect(self.import_mapping_from_file)
         self._ui.actionClose.triggered.connect(self.close)

@@ -109,11 +109,6 @@ class TreeItem:
             return None
         return self.parent_item.child(self.child_number() - 1)
 
-    # pylint: disable=no-self-use
-    def column_count(self):
-        """Returns 1."""
-        return 1
-
     def index(self):
         return self.model.index_from_item(self)
 
@@ -179,6 +174,10 @@ class TreeItem:
     def fetch_more(self):
         """Fetches more children."""
         self._fetched = True
+
+    @property
+    def display_name(self):
+        return "unnamed"
 
 
 class MinimalTreeModel(QAbstractItemModel):

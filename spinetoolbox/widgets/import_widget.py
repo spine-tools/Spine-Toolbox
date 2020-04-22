@@ -36,6 +36,7 @@ from ..spine_io.importers.csv_reader import CSVConnector
 from ..spine_io.importers.excel_reader import ExcelConnector
 from ..spine_io.importers.sqlalchemy_connector import SqlAlchemyConnector
 from ..spine_io.importers.gdx_connector import GdxConnector
+from ..spine_io.importers.json_reader import JSONConnector
 from .import_preview_widget import ImportPreviewWidget
 from .import_errors_widget import ImportErrorWidget
 
@@ -70,7 +71,7 @@ class ImportDialog(QDialog):
         # state
         self._mapped_data = None
         self._mapping_errors = []
-        self.connector_list = [CSVConnector, ExcelConnector, SqlAlchemyConnector, GdxConnector]
+        self.connector_list = [CSVConnector, ExcelConnector, SqlAlchemyConnector, GdxConnector, JSONConnector]
         self.connector_list = {c.DISPLAY_NAME: c for c in self.connector_list}
         self._selected_connector = None
         self.active_connector = None

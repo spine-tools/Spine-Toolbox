@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
 ######################################################################################################################
-# Copyright (C) 2017 - 2019 Spine project consortium
+# Copyright (C) 2017-2020 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and\/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -181,7 +181,7 @@
             <string/>
            </property>
            <property name="icon">
-            <iconset resource="../../../spinetoolbox/ui/resources/resources_icons.qrc">
+            <iconset resource="../../../ui/resources/resources_icons.qrc">
              <normaloff>:/icons/plus.svg</normaloff>:/icons/plus.svg</iconset>
            </property>
            <property name="popupMode">
@@ -223,7 +223,7 @@
             <string/>
            </property>
            <property name="icon">
-            <iconset resource="../../../spinetoolbox/ui/resources/resources_icons.qrc">
+            <iconset resource="../../../ui/resources/resources_icons.qrc">
              <normaloff>:/icons/minus.svg</normaloff>:/icons/minus.svg</iconset>
            </property>
            <property name="popupMode">
@@ -252,7 +252,7 @@
             <string/>
            </property>
            <property name="icon">
-            <iconset resource="../../../spinetoolbox/ui/resources/resources_icons.qrc">
+            <iconset resource="../../../ui/resources/resources_icons.qrc">
              <normaloff>:/icons/file-download.svg</normaloff>:/icons/file-download.svg</iconset>
            </property>
            <property name="iconSize">
@@ -352,7 +352,7 @@
             <string>Datapackage</string>
            </property>
            <property name="icon">
-            <iconset resource="../../../spinetoolbox/ui/resources/resources_icons.qrc">
+            <iconset resource="../../../ui/resources/resources_icons.qrc">
              <normaloff>:/icons/datapkg.png</normaloff>:/icons/datapkg.png</iconset>
            </property>
           </widget>
@@ -418,7 +418,7 @@
             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open this Data Connection's project directory in file browser&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
            </property>
            <property name="icon">
-            <iconset resource="../../../spinetoolbox/ui/resources/resources_icons.qrc">
+            <iconset resource="../../../ui/resources/resources_icons.qrc">
              <normaloff>:/icons/menu_icons/folder-open-solid.svg</normaloff>:/icons/menu_icons/folder-open-solid.svg</iconset>
            </property>
           </widget>
@@ -444,7 +444,7 @@
   </customwidget>
  </customwidgets>
  <resources>
-  <include location="../../../spinetoolbox/ui/resources/resources_icons.qrc"/>
+  <include location="../../../ui/resources/resources_icons.qrc"/>
  </resources>
  <connections/>
 </ui>

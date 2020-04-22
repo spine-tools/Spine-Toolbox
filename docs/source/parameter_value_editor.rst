@@ -7,7 +7,7 @@ Parameter value editor
 
 Parameter value editor is used to edit object and relationship parameter values
 such as time series, time patterns or durations.
-It can also convert between different value types like from a time series to a time pattern.
+It can also convert between different value types, e.g. from a time series to a time pattern.
 
 The editor is available from a **right click** popup menu
 or by **double clicking** a parameter value in one of the data store views.
@@ -28,6 +28,23 @@ which can be set by entering ``true`` or ``false`` on the *Parameter value* fiel
 
 .. image:: img/value_editor_plain.png
    :align: center
+
+Maps
+----
+
+Maps are nested data structures which can contain many different types of data including
+one and multi dimensional indexed arrays.
+The current support for maps in Parameter value editor is rather bare bones.
+The map is shown as a table where the last non-empty cells on each row contain the value
+while the preceding cells contain the value's index.
+
+.. image:: img/value_editor_map.png
+   :align: center
+
+A **Right click** popup menu gives options to add rows or columns
+(effectively adds a new dimension to map) or trim empty columns from the right hand side.
+
+At the moment the cell values have to be entered as JSON strings.
 
 Time series
 -----------
@@ -54,10 +71,10 @@ Copying from/to an external spreadsheet program is supported.
 The time steps of a fixed resolution series are edited by the *Start time* and *Resolution* fields.
 The format for the start time is `ISO8601 <https://en.wikipedia.org/wiki/ISO_8601>`_.
 The *Resolution* field takes a single time step or a comma separated list of steps.
-If a list of resolution steps are provided then the steps are repeated so as to fit the data in the table.
+If a list of resolution steps is provided then the steps are repeated so as to fit the data in the table.
 
 The *Ignore year* option available for both variable and fixed resolution time series
-allows the time series to be used independent of the the year.
+allows the time series to be used independent of the year.
 Only the month, day and time information is used by the model.
 
 The *Repeat* option means that the time series is cycled,
