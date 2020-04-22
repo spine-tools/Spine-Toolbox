@@ -20,6 +20,7 @@ from copy import deepcopy
 from datetime import datetime
 import pathlib
 import os.path
+import uuid
 from PySide2.QtCore import QObject, QThreadPool, Signal, Slot
 from spinedb_api import DatabaseMapping, SpineDBAPIError
 from spinetoolbox.project_item import ProjectItem, ProjectItemResource
@@ -58,7 +59,7 @@ class Exporter(ProjectItem):
         self._toolbox = toolbox
         self._settings_packs = dict()
         self._export_list_items = dict()
-        self._workers = dict()
+        self._worker_cookies = dict()
         if settings_packs is None:
             settings_packs = list()
         for pack in settings_packs:
@@ -80,7 +81,7 @@ class Exporter(ProjectItem):
     def set_up(self):
         """See base class."""
         self._project.db_mngr.session_committed.connect(self._update_settings_after_db_commit)
-        self._project.db_mngr.database_overwritten.connect(self._update_settings_after_db_overwrite)
+        self._project.db_mngr.database_created.connect(self._update_settings_after_db_creation)
 
     @staticmethod
     def item_type():
@@ -156,94 +157,61 @@ class Exporter(ProjectItem):
     def _start_worker(self, database_url, update_settings=False):
         """Starts fetching settings using a worker in another thread."""
         pool = QThreadPool.globalInstance()
-        worker = self._workers.get(database_url, None)
-        if worker is not None:
-            pool.cancel(worker)
-        worker = Worker(database_url)
-        worker.signals.settings_read.connect(self._update_export_settings)
-        worker.signals.indexing_settings_read.connect(self._update_indexing_settings)
-        worker.signals.indexing_domains_read.connect(self._update_indexing_domains)
-        worker.signals.merging_settings_read.connect(self._update_merging_settings)
-        worker.signals.merging_domains_read.connect(self._update_merging_domains)
-        worker.signals.time_stamp_read.connect(self._update_commit_time_stamp)
+        cookie = uuid.uuid4()
+        self._worker_cookies[database_url] = cookie
+        worker = Worker(database_url, cookie)
+        worker.signals.database_unavailable.connect(self._cancel_worker)
         worker.signals.finished.connect(self._worker_finished)
         worker.signals.errored.connect(self._worker_failed)
-        self._workers[database_url] = worker
         if update_settings:
             pack = self._settings_packs[database_url]
             worker.set_previous_settings(
                 pack.settings, pack.indexing_settings, pack.indexing_domains, pack.merging_settings
             )
-        else:
-            worker.reset_previous_settings()
         self._settings_packs[database_url].state = SettingsState.FETCHING
         pool.start(worker)
 
-    @Slot(str, "QVariant")
-    def _update_commit_time_stamp(self, database_url, time_stamp):
+    @Slot(str, "Qvariant", "QVariant")
+    def _worker_finished(self, database_url, cookie, result):
+        """Gets and updates and export settings pack from a worker."""
+        if cookie != self._worker_cookies.get(database_url):
+            return
+        del self._worker_cookies[database_url]
         pack = self._settings_packs.get(database_url)
-        if pack is not None:
-            pack.last_database_commit = time_stamp
+        if pack is None:
+            return
+        pack.last_database_commit = result.commit_time_stamp
+        pack.settings = result.settings
+        pack.indexing_settings = result.indexing_settings
+        pack.indexing_domains = result.indexing_domains
+        pack.merging_settings = result.merging_settings
+        pack.merging_domains = result.merging_domains
+        if pack.settings_window is not None:
+            self._send_settings_to_window(database_url)
+        pack.state = SettingsState.OK
+        self._toolbox.update_window_modified(False)
+        self._check_state()
 
-    @Slot(str, "QVariant")
-    def _update_export_settings(self, database_url, settings):
-        """Sets new settings for given database."""
-        pack = self._settings_packs.get(database_url)
-        if pack is not None:
-            pack.settings = settings
-
-    @Slot(str, "QVariant")
-    def _update_indexing_settings(self, database_url, indexing_settings):
-        """Sets new indexing settings for given database."""
-        pack = self._settings_packs.get(database_url)
-        if pack is not None:
-            pack.indexing_settings = indexing_settings
-
-    @Slot(str, "QVariant")
-    def _update_indexing_domains(self, database_url, domains):
-        """Sets new indexing domains for given database."""
-        pack = self._settings_packs.get(database_url)
-        if pack is not None:
-            pack.indexing_domains = domains
-
-    @Slot(str, "QVariant")
-    def _update_merging_settings(self, database_url, settings):
-        """Sets new merging settings for given database."""
-        pack = self._settings_packs.get(database_url)
-        if pack is not None:
-            pack.merging_settings = settings
-
-    @Slot(str, "QVariant")
-    def _update_merging_domains(self, database_url, domains):
-        """Sets new merging domains for given database."""
-        pack = self._settings_packs.get(database_url)
-        if pack is not None:
-            pack.merging_domains = domains
-
-    @Slot(str)
-    def _worker_finished(self, database_url):
-        """Cleans up after a worker has finished fetching export settings."""
-        if database_url in self._workers:
-            del self._workers[database_url]
-            settings_pack = self._settings_packs.get(database_url)
-            if settings_pack is not None:
-                if settings_pack.settings_window is not None:
-                    self._send_settings_to_window(database_url)
-                settings_pack.state = SettingsState.OK
-                self._toolbox.update_window_modified(False)
-            self._check_state()
-
-    @Slot(str, "QVariant")
-    def _worker_failed(self, database_url, exception):
+    @Slot(str, "QVariant", "QVariant")
+    def _worker_failed(self, database_url, cookie, exception):
         """Clean up after a worker has failed fetching export settings."""
+        if cookie != self._worker_cookies.get(database_url):
+            return
+        del self._worker_cookies[database_url]
         if database_url in self._settings_packs:
             self._logger.msg_error.emit(
                 f"<b>[{self.name}]</b> Initializing settings for database {database_url}" f" failed: {exception}"
             )
             self._settings_packs[database_url].state = SettingsState.ERROR
             self._report_notifications()
-        if database_url in self._workers:
-            del self._workers[database_url]
+
+    @Slot(str, "QVariant")
+    def _cancel_worker(self, database_url, cookie):
+        """Cleans up after worker has given up fetching export settings."""
+        if cookie != self._worker_cookies.get(database_url):
+            return
+        del self._worker_cookies[database_url]
+        self._settings_packs[database_url].state = SettingsState.ERROR
 
     def _check_state(self, clear_before_check=True):
         """
@@ -445,11 +413,14 @@ class Exporter(ProjectItem):
         """Refreshes export settings for databases after data has been committed to them."""
         for db_map in committed_db_maps:
             url = str(db_map.db_url)
-            if url in self._settings_packs:
-                self._start_worker(url, update_settings=True)
+            pack = self._settings_packs.get(url)
+            if pack is not None:
+                latest_stamp = _latest_database_commit_time_stamp(url)
+                if latest_stamp != pack.last_database_commit:
+                    self._start_worker(url, update_settings=True)
 
     @Slot(object)
-    def _update_settings_after_db_overwrite(self, url):
+    def _update_settings_after_db_creation(self, url):
         """Triggers settings override."""
         url_string = url.drivername + ":///" + url.database
         if url_string in self._settings_packs:
@@ -470,7 +441,7 @@ class Exporter(ProjectItem):
     def tear_down(self):
         """See base class."""
         self._project.db_mngr.session_committed.disconnect(self._update_settings_after_db_commit)
-        self._project.db_mngr.database_overwritten.disconnect(self._update_settings_after_db_overwrite)
+        self._project.db_mngr.database_created.disconnect(self._update_settings_after_db_creation)
 
 
 class SettingsPack(QObject):

@@ -31,55 +31,43 @@ class Worker(QRunnable):
         signals: contains signals that the worker may emit during its execution
     """
 
-    def __init__(self, database_url):
+    def __init__(self, database_url, cookie):
         """
         Args:
             database_url (str): database's URL
+            cookie (UUID): an identifier
         """
         super().__init__()
         self.signals = _Signals()
         self._database_url = str(database_url)
-        self._previous_settings = None
-        self._previous_indexing_settings = None
-        self._previous_indexing_domains = None
-        self._previous_merging_settings = None
-
-    def reset_previous_settings(self):
-        """Makes worker send new settings instead of updating old ones."""
+        self._cookie = cookie
         self._previous_settings = None
         self._previous_indexing_settings = None
         self._previous_indexing_domains = None
         self._previous_merging_settings = None
 
     def run(self):
-        """Constructs settings and parameter index settings and sends them to interested parties using signals."""
-        settings, indexing_settings, time_stamp = self._read_settings()
-        if settings is None:
+        """Constructs settings and parameter index settings."""
+        result = _Result(*self._read_settings())
+        if result.settings is None:
             return
         if self._previous_settings is not None:
             updated_settings = deepcopy(self._previous_settings)
-            updated_settings.update(settings)
+            updated_settings.update(result.settings)
             updated_indexing_settings, updated_indexing_domains = self._update_indexing_settings(
-                updated_settings, indexing_settings
+                updated_settings, result.indexing_settings
             )
             if updated_indexing_settings is None:
                 return
             updated_merging_settings, updated_merging_domains = self._update_merging_settings(updated_settings)
             if updated_merging_settings is None:
                 return
-            self.signals.time_stamp_read.emit(self._database_url, time_stamp)
-            self.signals.settings_read.emit(self._database_url, updated_settings)
-            self.signals.indexing_settings_read.emit(self._database_url, updated_indexing_settings)
-            self.signals.indexing_domains_read.emit(self._database_url, updated_indexing_domains)
-            self.signals.merging_settings_read.emit(self._database_url, updated_merging_settings)
-            self.signals.merging_domains_read.emit(self._database_url, updated_merging_domains)
-            self.signals.finished.emit(self._database_url)
-            return
-        self.signals.time_stamp_read.emit(self._database_url, time_stamp)
-        self.signals.settings_read.emit(self._database_url, settings)
-        self.signals.indexing_settings_read.emit(self._database_url, indexing_settings)
-        self.signals.indexing_domains_read.emit(self._database_url, list())
-        self.signals.finished.emit(self._database_url)
+            result.settings = updated_settings
+            result.indexing_settings = updated_indexing_settings
+            result.indexing_domains = updated_indexing_domains
+            result.merging_settings = updated_merging_settings
+            result.merging_domains = updated_merging_domains
+        self.signals.finished.emit(self._database_url, self._cookie, result)
 
     def set_previous_settings(
         self, previous_settings, previous_indexing_settings, previous_indexing_domains, previous_merging_settings
@@ -103,18 +91,18 @@ class Worker(QRunnable):
         try:
             database_map = DatabaseMapping(self._database_url)
         except SpineDBAPIError as error:
-            self.signals.errored.emit(self._database_url, error)
-            return None, None
+            self.signals.database_unavailable.emit(self._database_url, self._cookie)
+            return None, None, None
         try:
             time_stamp = latest_database_commit_time_stamp(database_map)
             settings = gdx.make_settings(database_map)
             indexing_settings = gdx.make_indexing_settings(database_map)
         except gdx.GdxExportException as error:
-            self.signals.errored.emit(self._database_url, error)
-            return None, None
+            self.signals.errored.emit(self._database_url, self._cookie, error)
+            return None, None, None
         finally:
             database_map.connection.close()
-        return settings, indexing_settings, time_stamp
+        return time_stamp, settings, indexing_settings
 
     def _update_indexing_settings(self, updated_settings, new_indexing_settings):
         """Updates the parameter indexing settings according to changes in the database."""
@@ -138,14 +126,14 @@ class Worker(QRunnable):
         try:
             database_map = DatabaseMapping(self._database_url)
         except SpineDBAPIError as error:
-            self.signals.errored.emit(self._database_url, error)
+            self.signals.errored.emit(self._database_url, self._cookie, error)
             return None, None
         try:
             updated_merging_settings = gdx.update_merging_settings(
                 self._previous_merging_settings, updated_settings, database_map
             )
         except gdx.GdxExportException as error:
-            self.signals.errored.emit(self._database_url, error)
+            self.signals.errored.emit(self._database_url, self._cookie, error)
             return None, None
         finally:
             database_map.connection.close()
@@ -156,22 +144,40 @@ class Worker(QRunnable):
         return updated_merging_settings, updated_merging_domains
 
 
+class _Result:
+    """
+    Contains fetched export settings.
+
+    Attributes:
+        commit_time_stamp (datetime): time of the database's last commit
+        settings (Settings): gdx export settings
+        indexing_settings (dict): parameter indexing settings
+        indexing_domains (list): additional domains needed for parameter indexing
+        merging_settings (dict): parameter merging settings
+        merging_domains (list): additional domains needed for parameter merging
+    """
+
+    def __init__(self, time_stamp, settings, indexing_settigns):
+        """
+        Args:
+            commit_time_stamp (datetime): time of the database's last commit
+            settings (Settings): gdx export settings
+            indexing_settings (dict): parameter indexing settings
+        """
+        self.commit_time_stamp = time_stamp
+        self.settings = settings
+        self.indexing_settings = indexing_settigns
+        self.indexing_domains = list()
+        self.merging_settings = dict()
+        self.merging_domains = list()
+
+
 class _Signals(QObject):
     """Signals which the Worker emits during its execution."""
 
-    errored = Signal(str, "QVariant")
+    database_unavailable = Signal(str, "QVariant")
+    """Emitted when opening the database fails."""
+    errored = Signal(str, "QVariant", "QVariant")
     """Emitted when an error occurs."""
-    finished = Signal(str)
+    finished = Signal(str, "QVariant", "QVariant")
     """Emitted when the worker has finished."""
-    indexing_domains_read = Signal(str, "QVariant")
-    """Sends new additional domains away."""
-    indexing_settings_read = Signal(str, "QVariant")
-    """Sends the indexing settings away."""
-    merging_settings_read = Signal(str, "QVariant")
-    """Sends updated merging settings away."""
-    merging_domains_read = Signal(str, "QVariant")
-    """Sends updated merging domains away."""
-    settings_read = Signal(str, "QVariant")
-    """Sends the settings away."""
-    time_stamp_read = Signal(str, "QVariant")
-    """Emits latest time stamp of database commits."""

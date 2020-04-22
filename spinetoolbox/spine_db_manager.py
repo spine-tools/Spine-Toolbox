@@ -67,7 +67,7 @@ class SpineDBManager(QObject):
     TODO: Expand description, how it works, the cache, the signals, etc.
     """
 
-    database_overwritten = Signal(object)
+    database_created = Signal(object)
     session_refreshed = Signal(set)
     session_committed = Signal(set, object)
     session_rolled_back = Signal(set)
@@ -136,7 +136,6 @@ class SpineDBManager(QObject):
             self._general_logger.error_box.emit("Error", message)
             return
         try:
-            overwritten = False
             if not is_empty(url):
                 msg = QMessageBox(self.parent()._toolbox)
                 msg.setIcon(QMessageBox.Question)
@@ -148,13 +147,12 @@ class SpineDBManager(QObject):
                 ret = msg.exec_()  # Show message box
                 if ret != QMessageBox.AcceptRole:
                     return
-                overwritten = True
             do_create_new_spine_database(url)
             self._general_logger.msg_success.emit(f"New Spine db successfully created at '{url}'.")
-            if overwritten:
-                self.database_overwritten.emit(url)
         except SpineDBAPIError as e:
             self._general_logger.msg_error.emit(f"Unable to create new Spine db at '{url}': {e}.")
+        else:
+            self.database_created.emit(url)
 
     def close_session(self, url):
         """Pops any db map on the given url and closes its connection.
