@@ -399,14 +399,14 @@ class IndexingDomain:
         """list of boolean values where True means the corresponding index should be picked"""
         return self._pick_list
 
-    def sort_indexes(self, settings):
+    def sort_indexes(self, set_settings):
         """
         Sorts the indexes according to settings.
 
         Args:
-            settings (Settings): a Settings object
+            set_settings (SetSettings): export settings for GAMS sets
         """
-        self._all_indexes = settings.sorted_record_key_lists(self.name)
+        self._all_indexes = set_settings.sorted_record_key_lists(self.name)
         self._picked_indexes = None
 
     def to_dict(self):
@@ -440,17 +440,17 @@ class IndexingDomain:
         return IndexingDomain(base_domain.name, base_domain.description, indexes, pick_list)
 
 
-def sort_indexing_domain_indexes(indexing_settings, settings):
+def sort_indexing_domain_indexes(indexing_settings, set_settings):
     """
     Sorts the index keys of an indexing domain in place.
 
     Args:
         indexing_settings (dict): a mapping from parameter name to IndexingSetting
-        settings (Settings): settings
+        set_settings (SetSettings): export settings for GAMS sets
     """
     for indexing_setting in indexing_settings.values():
         indexing_domain = indexing_setting.indexing_domain
-        indexing_domain.sort_indexes(settings)
+        indexing_domain.sort_indexes(set_settings)
 
 
 def _python_interpreter_bitness():
@@ -593,20 +593,20 @@ class MergingSetting:
         return setting
 
 
-def update_merging_settings(merging_settings, settings, db_map):
+def update_merging_settings(merging_settings, set_settings, db_map):
     """
     Returns parameter merging settings updated according to new export settings.
 
     Args:
-        merging_settings (dict): old settings to be updated
-        settings (Settings): new gdx export settings
+        merging_settings (dict): old merging settings
+        set_settings (SetSettings): new set settings
         db_map (spinedb_api.DatabaseMapping): a database map
     Returns:
-        dict: merged old and new merging settings
+        dict: updated merging settings
     """
     updated = dict()
     for merged_parameter_name, setting in merging_settings.items():
-        if setting.previous_set not in itertools.chain(settings.sorted_domain_names, settings.sorted_set_names):
+        if setting.previous_set not in itertools.chain(set_settings.sorted_domain_names, set_settings.sorted_set_names):
             continue
         entity_class_sq = db_map.entity_class_sq
         entity_class = db_map.query(entity_class_sq).filter(entity_class_sq.c.name == setting.previous_set).first()
@@ -928,7 +928,7 @@ def make_indexing_settings(db_map):
     return settings
 
 
-def update_indexing_settings(old_indexing_settings, new_indexing_settings, settings):
+def update_indexing_settings(old_indexing_settings, new_indexing_settings, set_settings):
     """
     Returns new indexing settings merged from old and new ones.
 
@@ -940,7 +940,7 @@ def update_indexing_settings(old_indexing_settings, new_indexing_settings, setti
     Args:
         old_indexing_settings (dict): settings to be updated
         new_indexing_settings (dict): settings used for updating
-        settings (Settings): new gdx export settings
+        set_settings (SetSettings): new set settings
     Returns:
         dict: merged old and new indexing settings
     """
@@ -954,8 +954,8 @@ def update_indexing_settings(old_indexing_settings, new_indexing_settings, setti
             updated[parameter_name] = setting
             continue
         if old_setting.indexing_domain is not None:
-            if old_setting.indexing_domain.name in settings.sorted_domain_names:
-                new_records = settings.sorted_record_key_lists(old_setting.indexing_domain.name)
+            if old_setting.indexing_domain.name in set_settings.sorted_domain_names:
+                new_records = set_settings.sorted_record_key_lists(old_setting.indexing_domain.name)
                 indexes = old_setting.indexing_domain.indexes
                 if all(index in new_records for index in indexes):
                     updated[parameter_name] = old_setting
@@ -1073,17 +1073,17 @@ def filter_and_sort_sets(sets, sorted_set_names, metadatas):
     return sorted_exportable_sets
 
 
-def sort_records_inplace(sets, settings):
+def sort_records_inplace(sets, set_settings):
     """
     Sorts the record lists of given domains according to the order given in settings.
 
     Args:
         sets (list): a list of DomainSet or Set objects whose records are to be sorted
-        settings (Settings): settings that define the sorting order
+        set_settings (SetSettings): settings that define the sorting order
     """
     for current_set in sets:
         current_records = list(current_set.records)
-        sorting_order = settings.sorted_record_key_lists(current_set.name)
+        sorting_order = set_settings.sorted_record_key_lists(current_set.name)
         sorted_records = list()
         for record_keys in sorting_order:
             for record in current_records:
@@ -1117,7 +1117,7 @@ def to_gdx_file(
     database_map,
     file_name,
     additional_domains,
-    settings,
+    set_settings,
     indexing_settings,
     merging_settings,
     gams_system_directory=None,
@@ -1129,21 +1129,21 @@ def to_gdx_file(
         database_map (spinedb_api.DatabaseMapping): a database to export
         file_name (str): output file name
         additional_domains (list): a list of extra domains not in the database
-        settings (Settings): export settings
+        set_settings (SetSettings): export settings
         indexing_settings (dict): a dictionary containing settings for indexed parameter expansion
         merging_settings (dict): a list of merging settings for parameter merging
         gams_system_directory (str): path to GAMS system directory or None to let GAMS choose one for you
     """
     domains, domain_parameters = object_classes_to_domains(database_map)
-    domains, global_parameters_domain = extract_domain(domains, settings.global_parameters_domain_name)
+    domains, global_parameters_domain = extract_domain(domains, set_settings.global_parameters_domain_name)
     domains += additional_domains
-    domains = filter_and_sort_sets(domains, settings.sorted_domain_names, settings.domain_metadatas)
-    sort_records_inplace(domains, settings)
-    sort_indexing_domain_indexes(indexing_settings, settings)
+    domains = filter_and_sort_sets(domains, set_settings.sorted_domain_names, set_settings.domain_metadatas)
+    sort_records_inplace(domains, set_settings)
+    sort_indexing_domain_indexes(indexing_settings, set_settings)
     expand_indexed_parameter_values(domain_parameters, indexing_settings)
     sets, set_parameters = relationship_classes_to_sets(database_map)
-    sets = filter_and_sort_sets(sets, settings.sorted_set_names, settings.set_metadatas)
-    sort_records_inplace(sets, settings)
+    sets = filter_and_sort_sets(sets, set_settings.sorted_set_names, set_settings.set_metadatas)
+    sort_records_inplace(sets, set_settings)
     expand_indexed_parameter_values(set_parameters, indexing_settings)
     parameters = {**domain_parameters, **set_parameters}
     merged_parameters = merge_parameters(parameters, merging_settings)
@@ -1161,28 +1161,29 @@ def to_gdx_file(
         parameters_to_gams(output_file, parameters)
 
 
-def make_settings(database_map):
+def make_set_settings(database_map):
     """
-    Builds a Settings object from given database.
+    Builds a SetSettings object from given database.
 
     Args:
         database_map (spinedb_api.DatabaseMapping): a database from which domains, sets, records etc are extracted
 
     Returns:
-        a Settings object useful for exporting the given `database_map`
+        SetSettings: settings needed for exporting the entities and class from the given ``database_map``
     """
     domain_names, domain_records = domain_names_and_records(database_map)
     set_names, set_records = set_names_and_records(database_map)
     records = domain_records
     records.update(set_records)
-    return Settings(domain_names, set_names, records)
+    return SetSettings(domain_names, set_names, records)
 
 
-class Settings:
+class SetSettings:
     """
-    This class holds some settings needed by `to_gdx_file()` for .gdx export.
+    This class holds the settings for domains, sets and records needed by `to_gdx_file()` for .gdx export.
 
-    Settings is mostly concerned about the order in which domains, sets and records are exported into the .gdx file.
+    :class:`SetSettings` keeps track which domains, sets and records are exported into the .gdx file
+    and in which order they are written to the file.
     This order is paramount for some models, like TIMES.
     """
 
@@ -1196,8 +1197,6 @@ class Settings:
         global_parameters_domain_name="",
     ):
         """
-        Constructs a new Settings object.
-
         Args:
             domain_names (list): a list of Set names
             set_names (list): a list of Set names
@@ -1314,7 +1313,7 @@ class Settings:
         New elements are appended to the common ones in the order they were in `updating_settings`
 
         Args:
-            updating_settings (Settings): settings to merge with
+            updating_settings (SetSettings): settings to merge with
         """
         self._domain_names, self._domain_metadatas = self._update_names(
             self._domain_names,
@@ -1368,7 +1367,7 @@ class Settings:
         return new_names, new_metadatas
 
     def to_dict(self):
-        """Serializes the Settings object to a dict."""
+        """Serializes the this object to a dict."""
         as_dictionary = {
             "domain_names": self._domain_names,
             "domain_metadatas": [metadata.to_dict() for metadata in self._domain_metadatas],
@@ -1381,7 +1380,7 @@ class Settings:
 
     @staticmethod
     def from_dict(dictionary):
-        """Deserializes Settings from a dict."""
+        """Deserializes ``SetSettings`` from a dict."""
         domain_names = dictionary.get("domain_names", list())
         domain_metadatas = dictionary.get("domain_metadatas", None)
         if domain_metadatas is not None:
@@ -1394,7 +1393,7 @@ class Settings:
             set_name: [tuple(key) for key in keys] for set_name, keys in dictionary.get("records", dict()).items()
         }
         global_parameters_domain_name = dictionary.get("global_parameters_domain_name", "")
-        settings = Settings(
+        settings = SetSettings(
             domain_names, set_names, records, domain_metadatas, set_metadatas, global_parameters_domain_name
         )
         return settings

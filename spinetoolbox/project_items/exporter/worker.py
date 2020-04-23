@@ -49,11 +49,11 @@ class Worker(QRunnable):
     def run(self):
         """Constructs settings and parameter index settings."""
         result = _Result(*self._read_settings())
-        if result.settings is None:
+        if result.set_settings is None:
             return
         if self._previous_settings is not None:
             updated_settings = deepcopy(self._previous_settings)
-            updated_settings.update(result.settings)
+            updated_settings.update(result.set_settings)
             updated_indexing_settings, updated_indexing_domains = self._update_indexing_settings(
                 updated_settings, result.indexing_settings
             )
@@ -62,7 +62,7 @@ class Worker(QRunnable):
             updated_merging_settings, updated_merging_domains = self._update_merging_settings(updated_settings)
             if updated_merging_settings is None:
                 return
-            result.settings = updated_settings
+            result.set_settings = updated_settings
             result.indexing_settings = updated_indexing_settings
             result.indexing_domains = updated_indexing_domains
             result.merging_settings = updated_merging_settings
@@ -76,7 +76,7 @@ class Worker(QRunnable):
         Makes worker update existing settings instead of just making new ones.
 
         Args:
-            previous_settings (Settings): existing settings
+            previous_settings (gdx.SetSettings): existing set settings
             previous_indexing_settings (dict): existing indexing settings
             previous_indexing_domains (list) existing indexing domains
             previous_merging_settings (dict): existing merging settings
@@ -95,7 +95,7 @@ class Worker(QRunnable):
             return None, None, None
         try:
             time_stamp = latest_database_commit_time_stamp(database_map)
-            settings = gdx.make_settings(database_map)
+            settings = gdx.make_set_settings(database_map)
             indexing_settings = gdx.make_indexing_settings(database_map)
         except gdx.GdxExportException as error:
             self.signals.errored.emit(self._database_url, self._cookie, error)
@@ -150,23 +150,23 @@ class _Result:
 
     Attributes:
         commit_time_stamp (datetime): time of the database's last commit
-        settings (Settings): gdx export settings
+        set_settings (gdx.SetSettings): gdx export settings
         indexing_settings (dict): parameter indexing settings
         indexing_domains (list): additional domains needed for parameter indexing
         merging_settings (dict): parameter merging settings
         merging_domains (list): additional domains needed for parameter merging
     """
 
-    def __init__(self, time_stamp, settings, indexing_settigns):
+    def __init__(self, time_stamp, set_settings, indexing_settings):
         """
         Args:
-            commit_time_stamp (datetime): time of the database's last commit
-            settings (Settings): gdx export settings
+            time_stamp (datetime): time of the database's last commit
+            set_settings (gdx.SetSettings): gdx export settings
             indexing_settings (dict): parameter indexing settings
         """
         self.commit_time_stamp = time_stamp
-        self.settings = settings
-        self.indexing_settings = indexing_settigns
+        self.set_settings = set_settings
+        self.indexing_settings = indexing_settings
         self.indexing_domains = list()
         self.merging_settings = dict()
         self.merging_domains = list()

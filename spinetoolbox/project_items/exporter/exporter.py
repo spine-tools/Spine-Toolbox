@@ -181,7 +181,7 @@ class Exporter(ProjectItem):
         if pack is None:
             return
         pack.last_database_commit = result.commit_time_stamp
-        pack.settings = result.settings
+        pack.settings = result.set_settings
         pack.indexing_settings = result.indexing_settings
         pack.indexing_domains = result.indexing_domains
         pack.merging_settings = result.merging_settings
@@ -330,7 +330,7 @@ class Exporter(ProjectItem):
     def _update_settings_from_settings_window(self, database_path):
         """Pushes a new UpdateExporterSettingsCommand to the toolbox undo stack."""
         window = self._settings_packs[database_path].settings_window
-        settings = window.settings
+        settings = window.set_settings
         indexing_settings = window.indexing_settings
         indexing_domains = window.indexing_domains
         merging_settings = window.merging_settings
@@ -450,7 +450,7 @@ class SettingsPack(QObject):
 
     Attributes:
         output_file_name (str): name of the export file
-        settings (Settings): export settings
+        settings (gdx.SetSettings): export settings
         indexing_settings (dict): parameter indexing settings
         indexing_domains (list): extra domains needed for parameter indexing
         merging_settings (dict): parameter merging settings
@@ -517,7 +517,7 @@ class SettingsPack(QObject):
         pack.state = SettingsState(pack_dict["state"])
         if pack.state != SettingsState.OK:
             return pack
-        pack.settings = gdx.Settings.from_dict(pack_dict["settings"])
+        pack.settings = gdx.SetSettings.from_dict(pack_dict["settings"])
         try:
             db_map = DatabaseMapping(database_url)
             pack.indexing_settings = gdx.indexing_settings_from_dict(pack_dict["indexing_settings"], db_map)

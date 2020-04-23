@@ -20,14 +20,14 @@ import unittest
 from PySide2.QtCore import QModelIndex, Qt
 from PySide2.QtGui import QColor
 from spinetoolbox.project_items.exporter.widgets.gdx_export_settings import GAMSRecordListModel, GAMSSetListModel
-from spinetoolbox.spine_io.exporters.gdx import ExportFlag, SetMetadata, Settings
+from spinetoolbox.spine_io.exporters.gdx import ExportFlag, SetMetadata, SetSettings
 
 
 class TestGAMSSetListModel(unittest.TestCase):
     """Unit tests for the GAMSSetListModel class used by the Gdx Export Settings Window."""
 
     def test_data_DisplayRole(self):
-        settings = Settings(['domain1'], ['set1'], {})
+        settings = SetSettings(['domain1'], ['set1'], {})
         model = GAMSSetListModel(settings)
         index = model.index(0, 0)
         self.assertEqual(index.data(), "domain1")
@@ -35,7 +35,7 @@ class TestGAMSSetListModel(unittest.TestCase):
         self.assertEqual(index.data(), "set1")
 
     def test_data_BackgroundRole(self):
-        settings = Settings(['domain1'], ['set1'], {})
+        settings = SetSettings(['domain1'], ['set1'], {})
         model = GAMSSetListModel(settings)
         index = model.index(0, 0)
         self.assertEqual(index.data(Qt.BackgroundRole), QColor(Qt.lightGray))
@@ -43,7 +43,7 @@ class TestGAMSSetListModel(unittest.TestCase):
         self.assertEqual(index.data(Qt.BackgroundRole), None)
 
     def test_data_CheckStateRole(self):
-        settings = Settings(
+        settings = SetSettings(
             ['domain1'],
             ['set1'],
             {},
@@ -57,24 +57,24 @@ class TestGAMSSetListModel(unittest.TestCase):
         self.assertEqual(index.data(Qt.CheckStateRole), Qt.Unchecked)
 
     def test_flags(self):
-        settings = Settings(['domain1'], ['set1'], {})
+        settings = SetSettings(['domain1'], ['set1'], {})
         model = GAMSSetListModel(settings)
         flags = model.flags(model.index(0, 0))
         self.assertEqual(flags, Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsUserCheckable)
 
     def test_headerData(self):
-        settings = Settings([], [], {})
+        settings = SetSettings([], [], {})
         model = GAMSSetListModel(settings)
         self.assertEqual(model.headerData(0, Qt.Horizontal), "")
 
     def test_is_domain(self):
-        settings = Settings(['domain1'], ['set1'], {})
+        settings = SetSettings(['domain1'], ['set1'], {})
         model = GAMSSetListModel(settings)
         self.assertTrue(model.is_domain(model.index(0, 0)))
         self.assertFalse(model.is_domain(model.index(1, 0)))
 
     def test_moveRows_move_domain_row_down(self):
-        settings = Settings(
+        settings = SetSettings(
             ['domain1', 'domain2', 'domain3'],
             [],
             {},
@@ -108,7 +108,7 @@ class TestGAMSSetListModel(unittest.TestCase):
         self.assertFalse(model.moveRows(QModelIndex(), 2, 1, QModelIndex(), 3))
 
     def test_moveRows_move_domain_row_up(self):
-        settings = Settings(
+        settings = SetSettings(
             ['domain1', 'domain2', 'domain3'],
             [],
             {},
@@ -142,12 +142,12 @@ class TestGAMSSetListModel(unittest.TestCase):
         self.assertFalse(model.moveRows(QModelIndex(), 0, 1, QModelIndex(), -1))
 
     def test_moveRows_domain_cannot_cross_to_sets(self):
-        settings = Settings(['domain1'], ['domain2'], {})
+        settings = SetSettings(['domain1'], ['domain2'], {})
         model = GAMSSetListModel(settings)
         self.assertFalse(model.moveRows(QModelIndex(), 0, 1, QModelIndex(), 1))
 
     def test_moveRows_move_set_row_down(self):
-        settings = Settings(
+        settings = SetSettings(
             [],
             ['set1', 'set2', 'set3'],
             {},
@@ -182,7 +182,7 @@ class TestGAMSSetListModel(unittest.TestCase):
         self.assertFalse(model.moveRows(QModelIndex(), 2, 1, QModelIndex(), 3))
 
     def test_moveRows_move_set_row_up(self):
-        settings = Settings(
+        settings = SetSettings(
             [],
             ['set1', 'set2', 'set3'],
             {},
@@ -217,17 +217,17 @@ class TestGAMSSetListModel(unittest.TestCase):
         self.assertFalse(model.moveRows(QModelIndex(), 0, 1, QModelIndex(), -1))
 
     def test_moveRows_set_cannot_cross_to_domains(self):
-        settings = Settings(['domain1'], ['set1'], {})
+        settings = SetSettings(['domain1'], ['set1'], {})
         model = GAMSSetListModel(settings)
         self.assertFalse(model.moveRows(QModelIndex(), 1, 1, QModelIndex(), 0))
 
     def test_rowCount(self):
-        settings = Settings(['domain1'], ['set1'], {})
+        settings = SetSettings(['domain1'], ['set1'], {})
         model = GAMSSetListModel(settings)
         self.assertEqual(model.rowCount(), 2)
 
     def test_setData_CheckStateRole(self):
-        settings = Settings(['domain1'], ['set1'], {})
+        settings = SetSettings(['domain1'], ['set1'], {})
         model = GAMSSetListModel(settings)
         index = model.index(0, 0)
         model.setData(index, Qt.Unchecked, Qt.CheckStateRole)
