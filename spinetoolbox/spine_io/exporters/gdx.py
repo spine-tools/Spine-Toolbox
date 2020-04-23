@@ -217,8 +217,6 @@ class Parameter:
             indexes (list): parameter's indexes
             values (list): parameter's values
         """
-        #        if len(domain_names) != len(indexes[0]) and len(indexes[0]) > 0:
-        #            raise GdxExportException("Different number of parameter indexing domains and index keys.")
         self.domain_names = domain_names
         if len(indexes) != len(values):
             raise GdxExportException("Parameter index and value length mismatch.")
@@ -1073,6 +1071,37 @@ def filter_and_sort_sets(sets, sorted_set_names, metadatas):
     return sorted_exportable_sets
 
 
+def filter_parameters(parameters, exported_domains, global_parameters_domain_name):
+    """
+    Filters parameters with indexing domains which will not be exported.
+
+    Also the parameter destined as a global scalar will be let through.
+
+    Args:
+        parameters (dict): a mapping from parameter name to :obj:`Parameter`
+        exported_domains (set): names of domains that will be exported
+        global_parameters_domain_name (str): name of the global parameters domain
+    Returns:
+        dict: a mapping from exportable parameter name to :obj:`Parameter`
+    """
+    exported_parameters = dict()
+    special_domains = [global_parameters_domain_name]
+    for parameter_name, parameter in parameters.items():
+        if (
+            all(name in exported_domains for name in parameter.domain_names)
+            or parameter.domain_names == special_domains
+        ):
+            exported_parameters[parameter_name] = parameter
+    return exported_parameters
+
+
+def _exported_domains(set_settings):
+    """Returns a set of names of the domains that are marked for exporting."""
+    names = set_settings.sorted_domain_names
+    metadatas = set_settings.domain_metadatas
+    return {name for name, metadata in zip(names, metadatas) if metadata.is_exportable()}
+
+
 def sort_records_inplace(sets, set_settings):
     """
     Sorts the record lists of given domains according to the order given in settings.
@@ -1138,11 +1167,16 @@ def to_gdx_file(
     domains, global_parameters_domain = extract_domain(domains, set_settings.global_parameters_domain_name)
     domains += additional_domains
     domains = filter_and_sort_sets(domains, set_settings.sorted_domain_names, set_settings.domain_metadatas)
+    exported_domains = _exported_domains(set_settings)
+    domain_parameters = filter_parameters(
+        domain_parameters, exported_domains, set_settings.global_parameters_domain_name
+    )
     sort_records_inplace(domains, set_settings)
     sort_indexing_domain_indexes(indexing_settings, set_settings)
     expand_indexed_parameter_values(domain_parameters, indexing_settings)
     sets, set_parameters = relationship_classes_to_sets(database_map)
     sets = filter_and_sort_sets(sets, set_settings.sorted_set_names, set_settings.set_metadatas)
+    set_parameters = filter_parameters(set_parameters, exported_domains, set_settings.global_parameters_domain_name)
     sort_records_inplace(sets, set_settings)
     expand_indexed_parameter_values(set_parameters, indexing_settings)
     parameters = {**domain_parameters, **set_parameters}
