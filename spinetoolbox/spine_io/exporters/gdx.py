@@ -135,9 +135,9 @@ class Set:
 
 class Record:
     """
-    Represents a GAMS set element in a Set.
+    Represents a GAMS set element in a :class:`Set`.
 
-    Parameters:
+    Attributes:
         keys (tuple): a tuple of record's keys
     """
 
@@ -312,6 +312,8 @@ class Parameter:
 
         Args:
             object_parameter (namedtuple): a parameter row from the database
+        Returns:
+            Parameter: a parameter constructed from the object parameter
         """
         domain_names = [object_parameter.object_class_name]
         index = (object_parameter.object_name,)
@@ -325,6 +327,8 @@ class Parameter:
 
         Args:
             relationship_parameter (namedtuple): a parameter row from the database
+        Returns:
+            Parameter: a parameter constructed from the relationship parameter
         """
         domain_names = [name.strip() for name in relationship_parameter.object_class_name_list.split(",")]
         index = tuple(name.strip() for name in relationship_parameter.object_name_list.split(","))
@@ -337,7 +341,9 @@ class Parameter:
         Constructs an empty GAMS parameter from database's parameter definition row
 
         Args:
-            entity_class: a parameter definition row from the database
+            entity_class (namedtuple): a parameter definition row from the database
+        Returns:
+            Parameter: a parameter without values constructed from the entity class
         """
         domain_names = list()
         if hasattr(entity_class, 'object_class_name_list'):
@@ -733,25 +739,27 @@ def domain_parameters_to_gams_scalars(gdx_file, parameters, domain_name):
     return erase_parameters
 
 
-def object_classes_to_domains(db_map):
+def object_classes_to_domains(db_map, domain_names):
     """
     Converts object classes, objects and object parameters from a database to the intermediate format.
 
-    Object classes get converted to Set objects
-    while objects are stored as Records in corresponding DomainSets.
-    Lastly, object parameters are read into Parameter objects.
+    Object classes get converted to :class:`Set` objects
+    while objects are stored as :class:`Record`s.
+    Lastly, object parameters are read into :class:`Parameter` objects.
 
     Args:
-        db_map (spinedb_api.DatabaseMapping): a database map
-
+        db_map (spinedb_api.DatabaseMapping or spindeb_api.DiffDatabaseMapping): a database map
+        domain_names (set): names of domains to convert
     Returns:
-         a tuple containing list of Set objects and a dict of Parameter objects
+         tuple: a tuple containing list of Set objects and a dict of Parameter objects
     """
     class_list = db_map.object_class_list().all()
     domains = list()
     parameters = dict()
     object_parameter_value_query = db_map.object_parameter_value_list()
     for object_class in class_list:
+        if object_class.name not in domain_names:
+            continue
         domain = Set.from_object_class(object_class)
         domains.append(domain)
         object_list = db_map.object_list(class_id=object_class.id)
@@ -777,25 +785,31 @@ def object_classes_to_domains(db_map):
     return domains, parameters
 
 
-def relationship_classes_to_sets(db_map):
+def relationship_classes_to_sets(db_map, domain_names, set_names):
     """
     Converts relationship classes, relationships and relationship parameters from a database to the intermediate format.
 
-    Relationship classes get converted to Set objects
-    while relationships are stored as SetRecords in corresponding Sets.
-    Lastly, relationship parameters are read into Parameter objects.
+    Relationship classes get converted to :class:`Set` objects
+    while relationships are stored as :class:`Records` in corresponding :class:`Set`s.
+    Lastly, relationship parameters are read into :class:`Parameter` objects.
 
     Args:
-        db_map (spinedb_api.DatabaseMapping): a database map
-
+        db_map (spinedb_api.DatabaseMapping or spinedb_api.DiffDatabaseMapping): a database map
+        domain_names (set): names of domains (a.k.a object classes) the relationships connect
+        set_names (set): names of sets to convert
     Returns:
-         a tuple containing a list of Set objects and a dict of Parameter objects
+         tuple: a tuple containing a list of Set objects and a dict of Parameter objects
     """
     class_list = db_map.wide_relationship_class_list().all()
     sets = list()
     parameters = dict()
     relationship_parameter_value_query = db_map.relationship_parameter_value_list()
     for relationship_class in class_list:
+        if relationship_class.name not in set_names:
+            continue
+        object_class_names = relationship_class.object_class_name_list.split(",")
+        if not all(name in domain_names for name in object_class_names):
+            continue
         current_set = Set.from_relationship_class(relationship_class)
         sets.append(current_set)
         relationship_list = db_map.wide_relationship_list(class_id=relationship_class.id).all()
@@ -826,10 +840,10 @@ def domain_names_and_records(db_map):
     Returns a list of domain names and a map from a name to list of record keys.
 
     Args:
-        db_map (spinedb_api.DatabaseMapping): a database map
+        db_map (spinedb_api.DatabaseMapping or spinedb_api.DiffDatabaseMapping): a database map
 
     Returns:
-         a tuple containing list of domain names and a dict from domain name to its records
+         tuple: a tuple containing list of domain names and a dict from domain name to its records
     """
     domain_names = list()
     domain_records = dict()
@@ -850,10 +864,10 @@ def set_names_and_records(db_map):
     Returns a list of set names and a map from a name to list of record keys.
 
     Args:
-        db_map (spinedb_api.DatabaseMapping): a database map
+        db_map (spinedb_api.DatabaseMapping or spinedb_api.DiffDatabaseMapping): a database map
 
     Returns:
-         a tuple containing list of set names and a dict from set name to its records
+         tuple: a tuple containing list of set names and a dict from set name to its records
     """
     names = list()
     set_records = dict()
@@ -1037,69 +1051,27 @@ def _find_parameter(parameter_name, db_map):
     return parameter
 
 
-def filter_and_sort_sets(sets, sorted_set_names, metadatas):
-    """
-    Returns a list of sets sorted by `sorted_set_names` and their filter flag set to True
-
-    This function removes the sets that are not supposed to be exported and sorts the rest
-    according to the order specified by `sorted_set_names`.
-
-    Args:
-        sets (list): a list of sets (DomainSet or Set) to be filtered and sorted
-        sorted_set_names (list): a list of set names in the order they should be in the output list,
-            including ones to be removed
-        metadatas (list): list of SetMetadata objects in the same order as `sorted_set_names`;
-
-    Returns:
-        list: a list of sets
-    """
-    sets = list(sets)
-    sorted_exportable_sets = list()
-    for name, metadata in zip(sorted_set_names, metadatas):
-        if not metadata.is_exportable():
-            for current_set in sets:
-                if current_set.name == name:
-                    sets.remove(current_set)
-                    break
-            continue
-        for current_set in sets:
-            if current_set.name != name:
-                continue
-            sorted_exportable_sets.append(current_set)
-            sets.remove(current_set)
-            break
-    return sorted_exportable_sets
-
-
-def filter_parameters(parameters, exported_domains, global_parameters_domain_name):
-    """
-    Filters parameters with indexing domains which will not be exported.
-
-    Also the parameter destined as a global scalar will be let through.
-
-    Args:
-        parameters (dict): a mapping from parameter name to :obj:`Parameter`
-        exported_domains (set): names of domains that will be exported
-        global_parameters_domain_name (str): name of the global parameters domain
-    Returns:
-        dict: a mapping from exportable parameter name to :obj:`Parameter`
-    """
-    exported_parameters = dict()
-    special_domains = [global_parameters_domain_name]
-    for parameter_name, parameter in parameters.items():
-        if (
-            all(name in exported_domains for name in parameter.domain_names)
-            or parameter.domain_names == special_domains
-        ):
-            exported_parameters[parameter_name] = parameter
-    return exported_parameters
-
-
-def _exported_domains(set_settings):
+def _exported_set_names(names, metadatas):
     """Returns a set of names of the domains that are marked for exporting."""
-    names = set_settings.sorted_domain_names
-    metadatas = set_settings.domain_metadatas
     return {name for name, metadata in zip(names, metadatas) if metadata.is_exportable()}
+
+
+def sort_sets(sets, sorted_names):
+    """
+    Sorts a list of sets according to ``sorted_names``
+
+    Args:
+        sets (list): a list of :class:`Set`s to be sorted
+        sorted_names (list): a list of set names in the sorted order
+    Returns:
+        list: sorted :class:`Set`s
+    """
+    sort_indexes = {name: index for index, name in enumerate(sorted_names)}
+    try:
+        sorted_sets = sorted(sets, key=lambda set_: sort_indexes[set_.name])
+    except KeyError as error:
+        raise GdxExportException(f"Cannot sort sets: missing set '{error}' in settings.")
+    return sorted_sets
 
 
 def sort_records_inplace(sets, set_settings):
@@ -1107,20 +1079,15 @@ def sort_records_inplace(sets, set_settings):
     Sorts the record lists of given domains according to the order given in settings.
 
     Args:
-        sets (list): a list of DomainSet or Set objects whose records are to be sorted
+        sets (list): a list of :class:`Set` objects whose records are to be sorted
         set_settings (SetSettings): settings that define the sorting order
     """
     for current_set in sets:
-        current_records = list(current_set.records)
-        sorting_order = set_settings.sorted_record_key_lists(current_set.name)
-        sorted_records = list()
-        for record_keys in sorting_order:
-            for record in current_records:
-                if record.keys != record_keys:
-                    continue
-                sorted_records.append(record)
-                current_records.remove(record)
-                break
+        sorted_keys = set_settings.sorted_record_key_lists(current_set.name)
+        sort_indexes = {key: index for index, key in enumerate(sorted_keys)}
+        sorted_records = len(sort_indexes) * [None]
+        for record in current_set.records:
+            sorted_records[sort_indexes[record.keys]] = record
         current_set.records = sorted_records
 
 
@@ -1155,7 +1122,7 @@ def to_gdx_file(
     Exports given database map into .gdx file.
 
     Args:
-        database_map (spinedb_api.DatabaseMapping): a database to export
+        database_map (spinedb_api.DatabaseMapping or spinedb_api.DiffDatabaseMapping): a database to export
         file_name (str): output file name
         additional_domains (list): a list of extra domains not in the database
         set_settings (SetSettings): export settings
@@ -1163,20 +1130,19 @@ def to_gdx_file(
         merging_settings (dict): a list of merging settings for parameter merging
         gams_system_directory (str): path to GAMS system directory or None to let GAMS choose one for you
     """
-    domains, domain_parameters = object_classes_to_domains(database_map)
+    exported_domain_names = _exported_set_names(set_settings.sorted_domain_names, set_settings.domain_metadatas) | {
+        set_settings.global_parameters_domain_name
+    }
+    domains, domain_parameters = object_classes_to_domains(database_map, exported_domain_names)
     domains, global_parameters_domain = extract_domain(domains, set_settings.global_parameters_domain_name)
     domains += additional_domains
-    domains = filter_and_sort_sets(domains, set_settings.sorted_domain_names, set_settings.domain_metadatas)
-    exported_domains = _exported_domains(set_settings)
-    domain_parameters = filter_parameters(
-        domain_parameters, exported_domains, set_settings.global_parameters_domain_name
-    )
+    domains = sort_sets(domains, set_settings.sorted_domain_names)
     sort_records_inplace(domains, set_settings)
     sort_indexing_domain_indexes(indexing_settings, set_settings)
     expand_indexed_parameter_values(domain_parameters, indexing_settings)
-    sets, set_parameters = relationship_classes_to_sets(database_map)
-    sets = filter_and_sort_sets(sets, set_settings.sorted_set_names, set_settings.set_metadatas)
-    set_parameters = filter_parameters(set_parameters, exported_domains, set_settings.global_parameters_domain_name)
+    exported_set_names = _exported_set_names(set_settings.sorted_set_names, set_settings.set_metadatas)
+    sets, set_parameters = relationship_classes_to_sets(database_map, exported_domain_names, exported_set_names)
+    sets = sort_sets(sets, set_settings.sorted_set_names)
     sort_records_inplace(sets, set_settings)
     expand_indexed_parameter_values(set_parameters, indexing_settings)
     parameters = {**domain_parameters, **set_parameters}

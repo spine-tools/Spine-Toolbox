@@ -296,14 +296,14 @@ class TestGdx(unittest.TestCase):
         create_new_spine_database(database_url)
         return DiffDatabaseMapping(database_url)
 
-    def test_domains_are_read_correctly_form_database(self):
+    def test_domains_are_read_correctly_from_database(self):
         with TemporaryDirectory() as tmp_dir_name:
-            database_map = self._make_database_map(tmp_dir_name, "test_domains_are_read_correctly_form_database.sqlite")
+            database_map = self._make_database_map(tmp_dir_name, "test_domains_are_read_correctly_from_database.sqlite")
             dbmanip.import_object_classes(database_map, ["domain"])
             dbmanip.import_objects(database_map, [("domain", "record")])
             dbmanip.import_object_parameters(database_map, [("domain", "parameter")])
             dbmanip.import_object_parameter_values(database_map, [("domain", "record", "parameter", -123.4)])
-            domains, parameters = gdx.object_classes_to_domains(database_map)
+            domains, parameters = gdx.object_classes_to_domains(database_map, {"domain"})
             database_map.connection.close()
         self.assertEqual(len(domains), 1)
         domain = domains[0]
@@ -319,16 +319,42 @@ class TestGdx(unittest.TestCase):
         self.assertEqual(parameter.indexes, [("record",)])
         self.assertEqual(parameter.values, [-123.4])
 
-    def test_sets_are_read_correctly_form_database(self):
+    def test_domains_not_on_the_list_get_filtered(self):
         with TemporaryDirectory() as tmp_dir_name:
-            database_map = self._make_database_map(tmp_dir_name, "test_sets_are_read_correctly_form_database.sqlite")
+            database_map = self._make_database_map(tmp_dir_name, "test_domains_are_read_correctly_from_database.sqlite")
+            dbmanip.import_object_classes(database_map, ["domain", "ignored"])
+            dbmanip.import_objects(database_map, [("domain", "record"), ("ignored", "ignored_record")])
+            dbmanip.import_object_parameters(database_map, [("domain", "parameter"), ("ignored", "ignored_parameter")])
+            dbmanip.import_object_parameter_values(database_map, [("domain", "record", "parameter", -123.4)])
+            dbmanip.import_object_parameter_values(
+                database_map, [("ignored", "ignored_record", "ignored_parameter", 5.0)]
+            )
+            domains, parameters = gdx.object_classes_to_domains(database_map, {"domain"})
+            database_map.connection.close()
+        self.assertEqual(len(domains), 1)
+        domain = domains[0]
+        self.assertEqual(domain.name, "domain")
+        self.assertEqual(domain.description, "")
+        records = domain.records
+        self.assertEqual(len(records), 1)
+        record = records[0]
+        self.assertEqual(record.keys, ("record",))
+        self.assertEqual(len(parameters), 1)
+        parameter = parameters["parameter"]
+        self.assertEqual(parameter.domain_names, ["domain"])
+        self.assertEqual(parameter.indexes, [("record",)])
+        self.assertEqual(parameter.values, [-123.4])
+
+    def test_sets_are_read_correctly_from_database(self):
+        with TemporaryDirectory() as tmp_dir_name:
+            database_map = self._make_database_map(tmp_dir_name, "test_sets_are_read_correctly_from_database.sqlite")
             dbmanip.import_object_classes(database_map, ["domain"])
             dbmanip.import_objects(database_map, [("domain", "record")])
             dbmanip.import_relationship_classes(database_map, [("set", ["domain"])])
             dbmanip.import_relationships(database_map, [("set", ["record"])])
             dbmanip.import_relationship_parameters(database_map, [("set", "parameter")])
             dbmanip.import_relationship_parameter_values(database_map, [["set", ["record"], "parameter", 3.14]])
-            sets, set_parameters = gdx.relationship_classes_to_sets(database_map)
+            sets, set_parameters = gdx.relationship_classes_to_sets(database_map, {"domain"}, {"set"})
             database_map.connection.close()
         self.assertEqual(len(sets), 1)
         set_item = sets[0]
@@ -342,6 +368,49 @@ class TestGdx(unittest.TestCase):
         self.assertEqual(set_parameters["parameter"].domain_names, ["domain"])
         self.assertEqual(set_parameters["parameter"].indexes, [("record",)])
         self.assertEqual(set_parameters["parameter"].values, [3.14])
+
+    def test_sets_not_on_the_list_get_filtered(self):
+        with TemporaryDirectory() as tmp_dir_name:
+            database_map = self._make_database_map(tmp_dir_name, "test_sets_are_read_correctly_from_database.sqlite")
+            dbmanip.import_object_classes(database_map, ["domain"])
+            dbmanip.import_objects(database_map, [("domain", "record")])
+            dbmanip.import_relationship_classes(database_map, [("set", ["domain"]), ("ignored", ["domain"])])
+            dbmanip.import_relationships(database_map, [("set", ["record"]), ("ignored", ["record"])])
+            dbmanip.import_relationship_parameters(
+                database_map, [("set", "parameter"), ("ignored", "ignored_parameter")]
+            )
+            dbmanip.import_relationship_parameter_values(database_map, [["set", ["record"], "parameter", 3.14]])
+            dbmanip.import_relationship_parameter_values(
+                database_map, [["ignored", ["record"], "ignored_parameter", 5.0]]
+            )
+            sets, set_parameters = gdx.relationship_classes_to_sets(database_map, {"domain"}, {"set"})
+            database_map.connection.close()
+        self.assertEqual(len(sets), 1)
+        set_item = sets[0]
+        self.assertEqual(set_item.name, "set")
+        self.assertEqual(set_item.domain_names, ["domain"])
+        self.assertEqual(set_item.dimensions, 1)
+        self.assertEqual(len(set_item.records), 1)
+        record = set_item.records[0]
+        self.assertEqual(record.keys, ("record",))
+        self.assertEqual(len(set_parameters), 1)
+        self.assertEqual(set_parameters["parameter"].domain_names, ["domain"])
+        self.assertEqual(set_parameters["parameter"].indexes, [("record",)])
+        self.assertEqual(set_parameters["parameter"].values, [3.14])
+
+    def test_sets_without_indexing_domains_get_filtered(self):
+        with TemporaryDirectory() as tmp_dir_name:
+            database_map = self._make_database_map(tmp_dir_name, "test_sets_are_read_correctly_from_database.sqlite")
+            dbmanip.import_object_classes(database_map, ["domain"])
+            dbmanip.import_objects(database_map, [("domain", "record")])
+            dbmanip.import_relationship_classes(database_map, [("set", ["domain"])])
+            dbmanip.import_relationships(database_map, [("set", ["record"])])
+            dbmanip.import_relationship_parameters(database_map, [("set", "parameter")])
+            dbmanip.import_relationship_parameter_values(database_map, [["set", ["record"], "parameter", 3.14]])
+            sets, set_parameters = gdx.relationship_classes_to_sets(database_map, set(), {"set"})
+            database_map.connection.close()
+        self.assertFalse(bool(sets))
+        self.assertFalse(bool(set_parameters))
 
     def test_domain_names_and_records(self):
         with TemporaryDirectory() as tmp_dir_name:
@@ -468,26 +537,21 @@ class TestGdx(unittest.TestCase):
         self.assertEqual(setting.parameter.indexes, [("keyA",), ("keyB",)])
         self.assertEqual(setting.parameter.values, [time_series1, time_series2])
 
-    def test_filter_and_sort_sets(self):
+    def test_sort_sets(self):
         set_object = self._NamedObject
         sets = [set_object("set1"), set_object("set2"), set_object("set3")]
         set_names = ["set2", "set1", "set3"]
-        set_metadata = [
-            gdx.SetMetadata(gdx.ExportFlag.EXPORTABLE),
-            gdx.SetMetadata(gdx.ExportFlag.FORCED_EXPORTABLE),
-            gdx.SetMetadata(gdx.ExportFlag.NON_EXPORTABLE),
-        ]
-        filtered = gdx.filter_and_sort_sets(sets, set_names, set_metadata)
-        self.assertEqual(filtered, [set_object("set2"), set_object("set1")])
+        sorted_sets = gdx.sort_sets(sets, set_names)
+        self.assertEqual(sorted_sets, [set_object("set2"), set_object("set1"), set_object("set3")])
 
     def test_sort_records_in_place(self):
         class Settings:
             # pylint: disable=no-self-use
             def sorted_record_key_lists(self, domain_name):
                 if domain_name == "d1":
-                    return [["rB"], ["rA"]]
+                    return [("rB",), ("rA",)]
                 if domain_name == "d2":
-                    return [["rD"], ["rC"]]
+                    return [("rD",), ("rC",)]
                 raise NotImplementedError()
 
         class Domain:
@@ -502,33 +566,10 @@ class TestGdx(unittest.TestCase):
             def __eq__(self, other):
                 return self.keys == other.keys
 
-        domains = [Domain("d1", [Record(["rA"]), Record(["rB"])]), Domain("d2", [Record(["rC"]), Record(["rD"])])]
+        domains = [Domain("d1", [Record(("rA",)), Record(("rB",))]), Domain("d2", [Record(("rC",)), Record(("rD",))])]
         gdx.sort_records_inplace(domains, Settings())
-        self.assertEqual(domains[0].records, [Record(["rB"]), Record(["rA"])])
-        self.assertEqual(domains[1].records, [Record(["rD"]), Record(["rC"])])
-
-    def test_filter_parameters(self):
-        domain_exportable_flags = [True, False]
-        domain_names, set_names, records, set_settings = self._make_settings(domain_exportable_flags)
-        parameters = {
-            "exported": gdx.Parameter(["domain1"], [("a1",)], [-1.0]),
-            "not_exported_1": gdx.Parameter(["domain2"], [("b1",)], [-1.0]),
-            "not_exported_2": gdx.Parameter(["domain1", "domain2"], [("a1", "b1")], [-1.0]),
-        }
-        exported_domains = gdx._exported_domains(set_settings)
-        filtered = gdx.filter_parameters(parameters, exported_domains, "")
-        self.assertEqual(filtered, {"exported": gdx.Parameter(["domain1"], [("a1",)], [-1.0])})
-
-    def test_filter_parameters_global_parameter_is_not_filtered(self):
-        domain_exportable_flags = [True, False]
-        domain_names, set_names, records, set_settings = self._make_settings(
-            domain_exportable_flags, global_parameters_domain_name="domain1"
-        )
-        parameters = {"scalar": gdx.Parameter(["domain1"], [("a1",)], [-1.0])}
-        exported_domains = gdx._exported_domains(set_settings)
-        self.assertFalse(bool(exported_domains))
-        filtered = gdx.filter_parameters(parameters, exported_domains, "domain1")
-        self.assertEqual(filtered, {"scalar": gdx.Parameter(["domain1"], [("a1",)], [-1.0])})
+        self.assertEqual(domains[0].records, [Record(("rB",)), Record(("rA",))])
+        self.assertEqual(domains[1].records, [Record(("rD",)), Record(("rC",))])
 
     def test_extract_domain(self):
         domain_set = self._NamedObject

@@ -147,7 +147,9 @@ class GdxExportSettings(QWidget):
         self._ui.global_parameters_combo_box.clear()
         self._populate_global_parameters_combo_box(set_settings)
         self._set_settings = set_settings
-        domain_dependencies, set_export_dependencies = _set_domain_export_dependencies(self._database_url)
+        domain_dependencies, set_export_dependencies = _set_domain_export_dependencies(
+            set_settings.sorted_domain_names, set_settings.domain_metadatas, self._database_url
+        )
         self._ui.set_list_view.setModel(GAMSSetListModel(set_settings, domain_dependencies, set_export_dependencies))
         self._ui.set_list_view.selectionModel().selectionChanged.connect(self._populate_set_contents)
         self._ui.record_list_view.setModel(GAMSRecordListModel())
