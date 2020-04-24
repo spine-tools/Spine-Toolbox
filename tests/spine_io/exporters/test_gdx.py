@@ -213,7 +213,7 @@ class TestGdx(unittest.TestCase):
         parameter = gdx.Parameter(
             ["domain1", "domain2"], [("index1", "index2"), ("index1", "index3")], [time_series1, time_series2]
         )
-        setting = gdx.IndexingSetting(parameter)
+        setting = gdx.IndexingSetting(parameter, "unknown_set")
         setting.index_position = 1
         setting.indexing_domain = gdx.IndexingDomain(
             "stamp domain", "description", [("stamp1",), ("stamp2",)], [True, True]
@@ -524,13 +524,14 @@ class TestGdx(unittest.TestCase):
 
     def test_IndexingSetting_construction(self):
         time_series = TimeSeriesFixedResolution("2019-12-05T01:01:00", "1h", [4.2, 5.3], False, False)
-        setting = gdx.IndexingSetting(gdx.Parameter(["domain"], [("keyA",)], [time_series]))
+        setting = gdx.IndexingSetting(gdx.Parameter(["domain"], [("keyA",)], [time_series]), "domain1")
         self.assertIsNone(setting.indexing_domain)
         self.assertEqual(setting.index_position, 1)
+        self.assertEqual(setting.set_name, "domain1")
 
     def test_IndexingSetting_append_parameter(self):
         time_series1 = TimeSeriesFixedResolution("2019-12-05T01:01:00", "1h", [4.2, 5.3], False, False)
-        setting = gdx.IndexingSetting(gdx.Parameter(["domain"], [("keyA",)], [time_series1]))
+        setting = gdx.IndexingSetting(gdx.Parameter(["domain"], [("keyA",)], [time_series1]), "domain")
         time_series2 = TimeSeriesFixedResolution("2019-12-05T01:01:00", "1h", [-4.2, -5.3], False, False)
         setting.append_parameter(gdx.Parameter(["domain"], [("keyB",)], [time_series2]))
         self.assertEqual(setting.parameter.domain_names, ["domain"])
@@ -741,12 +742,12 @@ class TestGdx(unittest.TestCase):
             }
             settings = gdx.SetSettings(sorted_domain_names, sorted_set_names, sorted_records)
             externally_indexed_parameter = gdx._find_parameter("externally_indexed", database_map)
-            externally_indexed_setting = gdx.IndexingSetting(externally_indexed_parameter)
+            externally_indexed_setting = gdx.IndexingSetting(externally_indexed_parameter, "set2")
             externally_indexed_setting.indexing_domain = gdx.IndexingDomain(
                 "external_indexes", "", [("T0001",), ("T0002",), ("T0003",)], [True, True, True]
             )
             internally_indexed_parameter = gdx._find_parameter("internally_indexed", database_map)
-            internally_indexed_setting = gdx.IndexingSetting(internally_indexed_parameter)
+            internally_indexed_setting = gdx.IndexingSetting(internally_indexed_parameter, "set2")
             internally_indexed_setting.indexing_domain = gdx.IndexingDomain(
                 "internal_indexes", "", [("stamp1",), ("stamp2",)], [True, True]
             )
@@ -909,7 +910,7 @@ class TestGdx(unittest.TestCase):
         record_keys = settings.sorted_record_key_lists("set2")
         self.assertEqual(record_keys, [("record12", "record21"), ("record11", "record21")])
 
-    def test_Settings_update_domains_and_domain_metadatas(self):
+    def test_SetSettings_update_domains_and_domain_metadatas(self):
         base_settings = gdx.SetSettings(
             ["a", "b"],
             [],
@@ -945,7 +946,7 @@ class TestGdx(unittest.TestCase):
         self.assertEqual(base_settings.set_metadatas, [])
         self.assertEqual(base_settings.global_parameters_domain_name, "")
 
-    def test_Settings_update_sets_and_set_metadatas(self):
+    def test_SetSettings_update_sets_and_set_metadatas(self):
         base_settings = gdx.SetSettings(
             [],
             ["a", "b"],
@@ -981,7 +982,7 @@ class TestGdx(unittest.TestCase):
         )
         self.assertEqual(base_settings.global_parameters_domain_name, "")
 
-    def test_Settings_update_global_parameters_domain_name(self):
+    def test_SetSettings_update_global_parameters_domain_name(self):
         base_settings = gdx.SetSettings(["a", "b"], [], {}, [gdx.SetMetadata(), gdx.SetMetadata()], [], "b")
         update_settings = gdx.SetSettings(["b", "c"], [], {}, [gdx.SetMetadata(), gdx.SetMetadata()], [], "c")
         base_settings.update(update_settings)
@@ -991,7 +992,7 @@ class TestGdx(unittest.TestCase):
         self.assertEqual(base_settings.set_metadatas, [])
         self.assertEqual(base_settings.global_parameters_domain_name, "b")
 
-    def test_Settings_update_records(self):
+    def test_SetSettings_update_records(self):
         base_settings = gdx.SetSettings(
             ["a", "b"],
             ["c"],
@@ -1087,6 +1088,18 @@ class TestGdx(unittest.TestCase):
         settings.del_domain_at(i)
         self.assertEqual(settings.global_parameters_domain_name, "")
 
+    def test_SetSettings_is_exportable_domain(self):
+        settings = gdx.SetSettings(["a"], [], {"a": []}, [gdx.SetMetadata()], [])
+        self.assertTrue(settings.is_exportable("a"))
+        settings.domain_metadatas[0].exportable = gdx.ExportFlag.NON_EXPORTABLE
+        self.assertFalse(settings.is_exportable("a"))
+
+    def test_SetSettings_is_exportable_set(self):
+        settings = gdx.SetSettings([], ["b"], {"b": []}, [], [gdx.SetMetadata()])
+        self.assertTrue(settings.is_exportable("b"))
+        settings.set_metadatas[0].exportable = gdx.ExportFlag.NON_EXPORTABLE
+        self.assertFalse(settings.is_exportable("b"))
+
     def test_expand_indexed_parameter_values_for_domains(self):
         domain = gdx.Set("domain name")
         record = gdx.Record(("element",))
@@ -1094,7 +1107,7 @@ class TestGdx(unittest.TestCase):
         time_series = TimeSeriesFixedResolution("2019-01-01T12:15", "1D", [3.3, 4.4], False, False)
         parameters = {"time series": gdx.Parameter(["domain name"], [("element",)], [time_series])}
         indexing_domain = gdx.IndexingDomain("indexes", "", [("stamp1",), ("stamp2",)], [True, True])
-        setting = gdx.IndexingSetting(parameters["time series"])
+        setting = gdx.IndexingSetting(parameters["time series"], "domain name")
         setting.indexing_domain = indexing_domain
         settings = {"time series": setting}
         gdx.expand_indexed_parameter_values(parameters, settings)
@@ -1112,7 +1125,7 @@ class TestGdx(unittest.TestCase):
         indexed_parameter = gdx.Parameter(["domain name"], [("element",)], [time_series])
         parameters = {"scalar": scalar_parameter, "time series": indexed_parameter}
         indexing_domain = gdx.IndexingDomain("indexes", "", [("stamp1",), ("stamp2",)], [True, True])
-        setting = gdx.IndexingSetting(parameters["time series"])
+        setting = gdx.IndexingSetting(parameters["time series"], "domain name")
         setting.indexing_domain = indexing_domain
         settings = {"time series": setting}
         gdx.expand_indexed_parameter_values(parameters, settings)
@@ -1131,7 +1144,7 @@ class TestGdx(unittest.TestCase):
         time_series = TimeSeriesFixedResolution("2019-01-01T12:15", "1D", [3.3, 4.4], False, False)
         parameters = {"time series": gdx.Parameter(original_set.domain_names, [record.keys], [time_series])}
         indexing_domain = gdx.IndexingDomain("indexes", "", [("stamp1",), ("stamp2",)], [True, True])
-        setting = gdx.IndexingSetting(parameters["time series"])
+        setting = gdx.IndexingSetting(parameters["time series"], "set name")
         setting.indexing_domain = indexing_domain
         settings = {"time series": setting}
         gdx.expand_indexed_parameter_values(parameters, settings)
@@ -1178,7 +1191,7 @@ class TestGdx(unittest.TestCase):
         with TemporaryDirectory() as tmp_dir_name:
             time_pattern = TimePattern(["Mo", "Tu"], [42.0, -4.2])
             parameter = gdx.Parameter(["domain1"], [("Espoo",)], [time_pattern])
-            original = {"parameter": gdx.IndexingSetting(parameter)}
+            original = {"parameter": gdx.IndexingSetting(parameter, "domain1")}
             original["parameter"].indexing_domain = gdx.IndexingDomain(
                 "indexing name", "indexing description", [("First",), ("Second",)], [False, True]
             )
@@ -1202,13 +1215,14 @@ class TestGdx(unittest.TestCase):
         self.assertTrue(restored["parameter"].indexing_domain.all_indexes, [("First",), ("Second",)])
         self.assertTrue(restored["parameter"].indexing_domain.pick_list, [False, True])
         self.assertTrue(restored["parameter"].index_position, 1)
+        self.assertTrue(restored["parameter"].set_name, "domain1")
 
     def test_update_indexing_settings_with_new_setting_overriding_old_one(self):
         time_series = TimeSeriesFixedResolution("2019-01-01T12:15", "1D", [3.3, 4.4], False, False)
         old_parameter = gdx.Parameter(["old_domain"], [("r1",)], [time_series])
-        old_settings = {"old_parameter_name": gdx.IndexingSetting(old_parameter)}
+        old_settings = {"old_parameter_name": gdx.IndexingSetting(old_parameter, "old_domain")}
         new_parameter = gdx.Parameter(["new_domain"], [("r1",)], [time_series])
-        new_indexing_setting = gdx.IndexingSetting(new_parameter)
+        new_indexing_setting = gdx.IndexingSetting(new_parameter, "new_domain")
         new_settings = {"new_parameter_name": new_indexing_setting}
         settings = gdx.SetSettings(["new_domain"], [], {"new_domain": [("r1",)]})
         updated = gdx.update_indexing_settings(old_settings, new_settings, settings)
@@ -1219,12 +1233,12 @@ class TestGdx(unittest.TestCase):
     def test_update_indexing_settings_with_old_setting_overriding_new_one_when_additional_domains_present(self):
         time_series = TimeSeriesFixedResolution("2019-01-01T12:15", "1D", [3.3, 4.4], False, False)
         old_parameter = gdx.Parameter(["domain"], [("r1",)], [time_series])
-        indexing_setting = gdx.IndexingSetting(old_parameter)
+        indexing_setting = gdx.IndexingSetting(old_parameter, "domain")
         indexing_setting.indexing_domain = gdx.IndexingDomain("indexing_domain", "", [("a",), ("b",)], [True, True])
         indexing_setting.index_position = 0
         old_settings = {"parameter_name": indexing_setting}
         new_parameter = gdx.Parameter(["domain"], [("r1",)], [time_series])
-        new_settings = {"parameter_name": gdx.IndexingSetting(new_parameter)}
+        new_settings = {"parameter_name": gdx.IndexingSetting(new_parameter, "domain")}
         settings = gdx.SetSettings(["domain"], [], {"domain": [("r1",)]})
         updated = gdx.update_indexing_settings(old_settings, new_settings, settings)
         self.assertEqual(len(updated), 1)
@@ -1234,12 +1248,12 @@ class TestGdx(unittest.TestCase):
     def test_update_indexing_settings_with_old_setting_overriding_new_one(self):
         time_series = TimeSeriesFixedResolution("2019-01-01T12:15", "1D", [3.3, 4.4], False, False)
         old_parameter = gdx.Parameter(["domain"], [("r1",)], [time_series])
-        indexing_setting = gdx.IndexingSetting(old_parameter)
+        indexing_setting = gdx.IndexingSetting(old_parameter, "domain")
         indexing_setting.indexing_domain = gdx.IndexingDomain("indexing_domain", "", [("a",), ("b",)], [True, True])
         indexing_setting.index_position = 0
         old_settings = {"parameter_name": indexing_setting}
         new_parameter = gdx.Parameter(["domain"], [("r1",)], [time_series])
-        new_settings = {"parameter_name": gdx.IndexingSetting(new_parameter)}
+        new_settings = {"parameter_name": gdx.IndexingSetting(new_parameter, "domain")}
         settings = gdx.SetSettings(["domain"], [], {"domain": [("r1",)], "indexing_domain": [("a",), ("b",)]})
         updated = gdx.update_indexing_settings(old_settings, new_settings, settings)
         self.assertEqual(len(updated), 1)
@@ -1249,12 +1263,12 @@ class TestGdx(unittest.TestCase):
     def test_update_indexing_settings_new_settings_overriding_when_domain_has_changed(self):
         time_series = TimeSeriesFixedResolution("2019-01-01T12:15", "1D", [3.3, 4.4], False, False)
         old_parameter = gdx.Parameter(["domain"], [("r1",)], [time_series])
-        old_indexing_setting = gdx.IndexingSetting(old_parameter)
+        old_indexing_setting = gdx.IndexingSetting(old_parameter, "domain")
         old_indexing_setting.indexing_domain = gdx.IndexingDomain("indexing_domain", "", [("a",), ("b",)], [True, True])
         old_indexing_setting.index_position = 0
         old_settings = {"parameter_name": old_indexing_setting}
         new_parameter = gdx.Parameter(["domain"], [("r1",)], [time_series])
-        new_indexing_setting = gdx.IndexingSetting(new_parameter)
+        new_indexing_setting = gdx.IndexingSetting(new_parameter, "domain")
         new_settings = {"parameter_name": new_indexing_setting}
         settings = gdx.SetSettings(
             ["domain", "indexing_domain"], [], {"domain": [("r1",)], "indexing_domain": [("A",), ("B",)]}
@@ -1271,7 +1285,7 @@ class TestGdx(unittest.TestCase):
         indexing_domain = gdx.IndexingDomain("domain2", "", [("b3",), ("b2",), ("b1",)], [False, True, True])
         time_series = TimeSeriesFixedResolution("2019-01-01T12:15", "1D", [3.3, 4.4], False, False)
         indexed_parameter = gdx.Parameter(["domain1"], [("a1",)], [time_series])
-        indexing_setting = gdx.IndexingSetting(indexed_parameter)
+        indexing_setting = gdx.IndexingSetting(indexed_parameter, "unknown_set")
         indexing_setting.indexing_domain = indexing_domain
         indexing_settings = {"parameter": indexing_setting}
         gdx.sort_indexing_domain_indexes(indexing_settings, settings)

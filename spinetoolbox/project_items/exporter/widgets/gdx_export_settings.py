@@ -94,6 +94,7 @@ class GdxExportSettings(QWidget):
             set_settings.sorted_domain_names, set_settings.domain_metadatas, database_url
         )
         set_list_model = GAMSSetListModel(set_settings, domain_dependencies, set_export_dependencies)
+        set_list_model.dataChanged.connect(self._domains_sets_exportable_state_changed)
         self._ui.set_list_view.setModel(set_list_model)
         record_list_model = GAMSRecordListModel()
         self._ui.record_list_view.setModel(record_list_model)
@@ -150,7 +151,9 @@ class GdxExportSettings(QWidget):
         domain_dependencies, set_export_dependencies = _set_domain_export_dependencies(
             set_settings.sorted_domain_names, set_settings.domain_metadatas, self._database_url
         )
-        self._ui.set_list_view.setModel(GAMSSetListModel(set_settings, domain_dependencies, set_export_dependencies))
+        set_list_model = GAMSSetListModel(set_settings, domain_dependencies, set_export_dependencies)
+        set_list_model.dataChanged.connect(self._domains_sets_exportable_state_changed)
+        self._ui.set_list_view.setModel(set_list_model)
         self._ui.set_list_view.selectionModel().selectionChanged.connect(self._populate_set_contents)
         self._ui.record_list_view.setModel(GAMSRecordListModel())
         self._indexing_settings = indexing_settings
@@ -162,12 +165,14 @@ class GdxExportSettings(QWidget):
     def _check_state(self):
         """Checks if there are parameters in need for indexing."""
         for setting in self.indexing_settings.values():
-            if setting.indexing_domain is None:
+            if setting.indexing_domain is None and self._set_settings.is_exportable(setting.set_name):
                 self._ui.indexing_status_label.setText(
                     "<span style='color:#ff3333;white-space: pre-wrap;'>Not all parameters correctly indexed.</span>"
                 )
                 self._state = State.BAD_INDEXING
-                break
+                return
+        self._state = State.OK
+        self._ui.indexing_status_label.setText("")
 
     def _populate_global_parameters_combo_box(self, settings):
         """(Re)populates the global parameters combo box."""
@@ -353,6 +358,20 @@ class GdxExportSettings(QWidget):
         """Removes references to the parameter merging settings window."""
         self._parameter_merging_settings_window = None
 
+    @Slot("QModelIndex", "QModelIndex", list)
+    def _domains_sets_exportable_state_changed(self, top_left, bottom_right, _):
+        row = top_left.row()
+        domain_count = len(self._set_settings.sorted_domain_names)
+        if row < domain_count:
+            name = self._set_settings.sorted_domain_names[row]
+        else:
+            row -= domain_count
+            name = self._set_settings.sorted_set_names[row]
+        for setting in self._indexing_settings.values():
+            if name == setting.set_name:
+                self._check_state()
+                return
+
 
 class GAMSSetListModel(QAbstractListModel):
     """
@@ -440,9 +459,11 @@ class GAMSSetListModel(QAbstractListModel):
             else:
                 exportable = self._set_settings.set_metadatas[row - domain_count].exportable
             if exportable == gdx.ExportFlag.FORCED_NON_EXPORTABLE:
-                return "Domain is the global parameter domain\n and cannot be exported as is."
+                if row < domain_count:
+                    return "This domain is the global parameter domain\nand cannot be exported as is."
+                return "Cannot export this set because not all its\ndomains are checked for export."
             if exportable == gdx.ExportFlag.FORCED_EXPORTABLE:
-                return "Domain is used for parameter indexing\n and must be exported."
+                return "Domain is used for parameter indexing\nand must be exported."
         return None
 
     def flags(self, index):
@@ -535,6 +556,7 @@ class GAMSSetListModel(QAbstractListModel):
                 return False
             exportable = gdx.ExportFlag.EXPORTABLE if value == Qt.Checked else gdx.ExportFlag.NON_EXPORTABLE
             self._set_settings.set_metadatas[row - domain_count].exportable = exportable
+            self.dataChanged.emit(index, index, [Qt.CheckStateRole, Qt.ToolTipRole])
         self.dataChanged.emit(index, index, [Qt.CheckStateRole, Qt.ToolTipRole])
         return True
 
@@ -547,11 +569,15 @@ class GAMSSetListModel(QAbstractListModel):
                 depending_domains[domain_name] = False
                 set_index = self._set_settings.sorted_set_names.index(set_name)
                 self._set_settings.set_metadatas[set_index].exportable = gdx.ExportFlag.FORCED_NON_EXPORTABLE
+                model_index = self.index(set_index + len(self._set_settings.sorted_domain_names), 0)
+                self.dataChanged.emit(model_index, model_index, [Qt.CheckStateRole, Qt.ToolTipRole])
                 continue
             depending_domains[domain_name] = True
             if all(exportable for exportable in depending_domains.values()):
                 set_index = self._set_settings.sorted_set_names.index(set_name)
                 self._set_settings.set_metadatas[set_index].exportable = gdx.ExportFlag.EXPORTABLE
+                model_index = self.index(set_index + len(self._set_settings.sorted_domain_names), 0)
+                self.dataChanged.emit(model_index, model_index, [Qt.CheckStateRole, Qt.ToolTipRole])
 
 
 class GAMSRecordListModel(QAbstractListModel):

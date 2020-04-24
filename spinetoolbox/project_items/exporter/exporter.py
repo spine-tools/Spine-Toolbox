@@ -251,7 +251,7 @@ class Exporter(ProjectItem):
             if pack.state not in (SettingsState.FETCHING, SettingsState.ERROR):
                 pack.state = SettingsState.OK
                 for setting in pack.indexing_settings.values():
-                    if setting.indexing_domain is None:
+                    if setting.indexing_domain is None and pack.settings.is_exportable(setting.set_name):
                         pack.state = SettingsState.INDEXING_PROBLEM
                         missing_indexing = True
                         break

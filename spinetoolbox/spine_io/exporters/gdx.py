@@ -454,7 +454,8 @@ def sort_indexing_domain_indexes(indexing_settings, set_settings):
     """
     for indexing_setting in indexing_settings.values():
         indexing_domain = indexing_setting.indexing_domain
-        indexing_domain.sort_indexes(set_settings)
+        if indexing_domain is not None:
+            indexing_domain.sort_indexes(set_settings)
 
 
 def _python_interpreter_bitness():
@@ -891,16 +892,19 @@ class IndexingSetting:
         parameter (Parameter): a parameter containing indexed values
         indexing_domain (IndexingDomain): indexing info
         index_position (int): where to insert the new index when expanding a parameter
+        set_name (str): name of the domain or set to which this parameter belongs
     """
 
-    def __init__(self, indexed_parameter):
+    def __init__(self, indexed_parameter, set_name):
         """
         Args:
             indexed_parameter (Parameter): a parameter containing indexed values
+            set_name (str): name of the original entity class to which this parameter belongs
         """
         self.parameter = indexed_parameter
         self.indexing_domain = None
         self.index_position = len(indexed_parameter.domain_names)
+        self.set_name = set_name
 
     def append_parameter(self, parameter):
         """Adds indexes and values from another parameter."""
@@ -926,7 +930,7 @@ def make_indexing_settings(db_map):
         if setting is not None:
             setting.append_parameter(parameter)
         else:
-            settings[object_parameter.parameter_name] = IndexingSetting(parameter)
+            settings[object_parameter.parameter_name] = IndexingSetting(parameter, object_parameter.object_class_name)
     relationship_parameter_value_query = db_map.relationship_parameter_value_list()
     for relationship_parameter in relationship_parameter_value_query.all():
         parameter = Parameter.from_relationship_parameter(relationship_parameter)
@@ -936,7 +940,9 @@ def make_indexing_settings(db_map):
         if setting is not None:
             setting.append_parameter(parameter)
         else:
-            settings[relationship_parameter.parameter_name] = IndexingSetting(parameter)
+            settings[relationship_parameter.parameter_name] = IndexingSetting(
+                parameter, relationship_parameter.relationship_class_name
+            )
     return settings
 
 
@@ -994,6 +1000,7 @@ def indexing_settings_to_dict(settings):
             setting.indexing_domain.to_dict() if setting.indexing_domain is not None else None
         )
         parameter_dict["index_position"] = setting.index_position
+        parameter_dict["set_name"] = setting.set_name
         settings_dict[parameter_name] = parameter_dict
     return settings_dict
 
@@ -1011,7 +1018,7 @@ def indexing_settings_from_dict(settings_dict, db_map):
     settings = dict()
     for parameter_name, setting_dict in settings_dict.items():
         parameter = _find_parameter(parameter_name, db_map)
-        setting = IndexingSetting(parameter)
+        setting = IndexingSetting(parameter, setting_dict["set_name"])
         indexing_domain_dict = setting_dict["indexing_domain"]
         if indexing_domain_dict is not None:
             setting.indexing_domain = IndexingDomain.from_dict(indexing_domain_dict)
@@ -1251,6 +1258,15 @@ class SetSettings:
             i = self._domain_names.index(name)
             self._domain_metadatas[i].exportable = ExportFlag.FORCED_NON_EXPORTABLE
         self._global_parameters_domain_name = name
+
+    def is_exportable(self, set_name):
+        """Returns True if the domain or set with the given name is exportable, False otherwise."""
+        try:
+            index = self._domain_names.index(set_name)
+            return self._domain_metadatas[index].is_exportable()
+        except ValueError:
+            index = self._set_names.index(set_name)
+            return self._set_metadatas[index].is_exportable()
 
     def add_or_replace_domain(self, domain, metadata):
         """
