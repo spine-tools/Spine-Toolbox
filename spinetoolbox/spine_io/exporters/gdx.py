@@ -658,13 +658,18 @@ def merge_parameters(parameters, merging_settings):
         indexes = list()
         values = list()
         index_position = setting.index_position
+        merged_domain_names = setting.domain_names()
         for name in setting.parameter_names:
             parameter = parameters.pop(name)
+            if len(merged_domain_names) < len(parameter.domain_names) + 1:
+                raise GdxExportException(
+                    f"Merged parameter '{parameter_name}' contains indexed values and therefore cannot be merged."
+                )
             for value, base_index in zip(parameter.values, parameter.indexes):
                 expanded_index = base_index[:index_position] + (name,) + base_index[index_position:]
                 indexes.append(expanded_index)
                 values.append(value)
-        merged[parameter_name] = Parameter(setting.domain_names(), indexes, values)
+        merged[parameter_name] = Parameter(merged_domain_names, indexes, values)
     return merged
 
 
