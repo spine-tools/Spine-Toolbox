@@ -26,6 +26,7 @@ to_gdx_file() that does basically everything needed for exporting is provided fo
 
 import enum
 import itertools
+import math
 import os
 import os.path
 import sys
@@ -75,7 +76,7 @@ class Set:
             description (str): set's explanatory text
             domain_names (list): a list of indexing domain names
         """
-        self.description = description
+        self.description = description if description is not None else ""
         self.domain_names = domain_names if domain_names is not None else [None]
         self.name = name
         self.records = list()
@@ -107,30 +108,6 @@ class Set:
         restored = Set(name, description, domain_names)
         restored.records = [Record.from_dict(record_dict) for record_dict in set_dict["records"]]
         return restored
-
-    @staticmethod
-    def from_object_class(object_class):
-        """
-        Constructs a Set from database's object class row.
-
-        Args:
-            object_class (namedtuple): an object class row from the database
-        """
-        name = object_class.name
-        description = object_class.description if object_class.description is not None else ""
-        return Set(name, description)
-
-    @staticmethod
-    def from_relationship_class(relationship_class):
-        """
-        Constructs a Set from database's relationship class row.
-
-        Args:
-            relationship_class (namedtuple): a relationship class row from the database
-        """
-        name = relationship_class.name
-        domain_names = [name.strip() for name in relationship_class.object_class_name_list.split(',')]
-        return Set(name, domain_names=domain_names)
 
 
 class Record:
@@ -177,28 +154,6 @@ class Record:
         restored = Record(tuple(keys))
         return restored
 
-    @staticmethod
-    def from_object(object_):
-        """
-        Constructs a record from database's object row.
-
-        Args:
-            object_ (namedtuple): an object or relationship row from the database
-        """
-        keys = (object_.name,)
-        return Record(keys)
-
-    @staticmethod
-    def from_relationship(relationship):
-        """
-        Constructs a record from database's relationship row.
-
-        Args:
-            relationship (namedtuple): a relationship row from the database
-        """
-        keys = tuple(name.strip() for name in relationship.object_name_list.split(','))
-        return Record(keys)
-
 
 class Parameter:
     """
@@ -230,38 +185,17 @@ class Parameter:
             return NotImplemented
         return other.domain_names == self.domain_names and other.indexes == self.indexes and other.values == self.values
 
-    def append_value(self, index, value):
+    def append_entity_parameter(self, index_keys, database_value):
         """
-        Appends a new value.
+        Appends a value from entity parameter.
 
         Args:
-            index (tuple): record keys indexing the value
-            value: a value
+            index_keys (tuple): indexing keys
+            database_value (str): parameter value in database representation
         """
-        self.indexes.append(index)
+        value = _read_value(database_value)
+        self.indexes.append(index_keys)
         self.values.append(value)
-
-    def append_object_parameter(self, object_parameter):
-        """
-        Appends a value from object parameter.
-
-        Args:
-            object_parameter (namedtuple): an object parameter row from the database
-        """
-        index = (object_parameter.object_name,)
-        value = _read_value(object_parameter.value)
-        self.append_value(index, value)
-
-    def append_relationship_parameter(self, relationship_parameter):
-        """
-        Appends a value from relationship parameter.
-
-        Args:
-            relationship_parameter (namedtuple): a relationship parameter row from the database
-        """
-        index = tuple(name.strip() for name in relationship_parameter.object_name_list.split(","))
-        value = _read_value(relationship_parameter.value)
-        self.append_value(index, value)
 
     def slurp(self, parameter):
         """
@@ -294,11 +228,14 @@ class Parameter:
         """
         index_position = indexing_setting.index_position
         indexing_domain = indexing_setting.indexing_domain
-        self.domain_names.insert(index_position, indexing_domain.name)
+        self.domain_names = (
+            self.domain_names[:index_position] + [indexing_domain.name] + self.domain_names[index_position:]
+        )
         new_values = list()
         new_indexes = list()
         for parameter_index, parameter_value in zip(self.indexes, self.values):
-            for new_index, new_value in zip(indexing_domain.indexes, parameter_value.values):
+            values = parameter_value.values if parameter_value is not None else len(indexing_domain.indexes) * [None]
+            for new_index, new_value in zip(indexing_domain.indexes, values):
                 expanded_index = tuple(parameter_index[:index_position] + new_index + parameter_index[index_position:])
                 new_indexes.append(expanded_index)
                 new_values.append(new_value)
@@ -306,52 +243,30 @@ class Parameter:
         self.values = new_values
 
     @staticmethod
-    def from_object_parameter(object_parameter):
+    def from_entity_parameter(domain_names, index_keys, database_value):
         """
-        Constructs a GAMS parameter from database's object parameter row
+        Constructs a GAMS parameter from database's parameter row
 
         Args:
-            object_parameter (namedtuple): a parameter row from the database
+            domain_names (list): a list of domain names
+            index_keys (tuple): a comma separated list of object names
+            database_value (str): parameter value in database representation
         Returns:
-            Parameter: a parameter constructed from the object parameter
+            Parameter: a parameter constructed from the entity parameter
         """
-        domain_names = [object_parameter.object_class_name]
-        index = (object_parameter.object_name,)
-        value = _read_value(object_parameter.value)
-        return Parameter(domain_names, [index], [value])
+        value = _read_value(database_value)
+        return Parameter(domain_names, [index_keys], [value])
 
     @staticmethod
-    def from_relationship_parameter(relationship_parameter):
-        """
-        Constructs a GAMS parameter from database's relationship parameter row
-
-        Args:
-            relationship_parameter (namedtuple): a parameter row from the database
-        Returns:
-            Parameter: a parameter constructed from the relationship parameter
-        """
-        domain_names = [name.strip() for name in relationship_parameter.object_class_name_list.split(",")]
-        index = tuple(name.strip() for name in relationship_parameter.object_name_list.split(","))
-        value = _read_value(relationship_parameter.value)
-        return Parameter(domain_names, [index], [value])
-
-    @staticmethod
-    def from_entity_class_parameter_definition(entity_class):
+    def from_entity_class_parameter_definition(domain_names):
         """
         Constructs an empty GAMS parameter from database's parameter definition row
 
         Args:
-            entity_class (namedtuple): a parameter definition row from the database
+            domain_names (list): list of indexing domain names
         Returns:
             Parameter: a parameter without values constructed from the entity class
         """
-        domain_names = list()
-        if hasattr(entity_class, 'object_class_name_list'):
-            domain_list = entity_class.object_class_name_list.split(",")
-            for dimension in domain_list:
-                domain_names.append(dimension)
-        else:
-            domain_names = [entity_class.name]
         index = None
         value = None
         return Parameter(domain_names, [index], [value])
@@ -705,18 +620,19 @@ def parameters_to_gams(gdx_file, parameters):
     for parameter_name, parameter in parameters.items():
         indexed_values = dict()
         for index, value in zip(parameter.indexes, parameter.values):
-            if not isinstance(value, float) and not (index is None and value is None):
-                if isinstance(value, IndexedValue):
-                    raise GdxExportException(
-                        f"Cannot write parameter '{parameter_name}':"
-                        + " parameter contains indexed values but indexing domain information is missing."
-                    )
+            if isinstance(value, IndexedValue):
                 raise GdxExportException(
                     f"Cannot write parameter '{parameter_name}':"
-                    + f" parameter contains unsupported values of type '{type(value)}'."
+                    + " parameter contains indexed values but indexing domain information is missing."
                 )
-            if isinstance(value, float):
-                indexed_values[tuple(index)] = value
+            if value is None:
+                value = math.nan
+            if not isinstance(value, float) and index is not None:
+                raise GdxExportException(
+                    f"Cannot write parameter '{parameter_name}':"
+                    + f" parameter contains unsupported values of type '{type(value).__name__}'."
+                )
+            indexed_values[tuple(index)] = value
         gams_parameter = GAMSParameter(indexed_values, domain=parameter.domain_names)
         gdx_file[parameter_name] = gams_parameter
 
@@ -766,28 +682,40 @@ def object_classes_to_domains(db_map, domain_names):
     for object_class in class_list:
         if object_class.name not in domain_names:
             continue
-        domain = Set.from_object_class(object_class)
+        domain = Set(object_class.name, object_class.description)
         domains.append(domain)
+        parameter_definitions = db_map.parameter_definition_list(object_class_id=object_class.id).all()
+        default_parameter_values = dict()
+        for parameter_definition in parameter_definitions:
+            default_parameter_values[parameter_definition.name] = parameter_definition.default_value
         object_list = db_map.object_list(class_id=object_class.id)
         for set_object in object_list:
-            record = Record.from_object(set_object)
+            record = Record((set_object.name,))
             domain.records.append(record)
             parameter_values = object_parameter_value_query.filter(
                 db_map.object_parameter_value_sq.c.object_id == set_object.id
             ).all()
+            valued_parameters = set()
             for object_parameter in parameter_values:
                 name = object_parameter.parameter_name
-                parameter = parameters.get(name, None)
-                if parameter is None:
-                    parameters[name] = Parameter.from_object_parameter(object_parameter)
+                valued_parameters.add(name)
+                if name not in parameters:
+                    parameters[name] = Parameter.from_entity_parameter(
+                        [object_parameter.object_class_name], (object_parameter.object_name,), object_parameter.value
+                    )
                 else:
-                    parameter.append_object_parameter(object_parameter)
-        parameter_definitions = db_map.parameter_definition_list(object_class_id=object_class.id).all()
+                    parameters[name].append_entity_parameter((object_parameter.object_name,), object_parameter.value)
+            for name, value in default_parameter_values.items():
+                if name in valued_parameters:
+                    continue
+                if name not in parameters:
+                    parameters[name] = Parameter.from_entity_parameter([object_class.name], (set_object.name,), value)
+                else:
+                    parameters[name].append_entity_parameter((set_object.name,), value)
         for parameter_definition in parameter_definitions:
             name = parameter_definition.name
-            parameter = parameters.get(name, None)
-            if parameter is None:
-                parameters[name] = Parameter.from_entity_class_parameter_definition(object_class)
+            if name not in parameters:
+                parameters[name] = Parameter.from_entity_class_parameter_definition([object_class])
     return domains, parameters
 
 
@@ -816,28 +744,41 @@ def relationship_classes_to_sets(db_map, domain_names, set_names):
         object_class_names = relationship_class.object_class_name_list.split(",")
         if not all(name in domain_names for name in object_class_names):
             continue
-        current_set = Set.from_relationship_class(relationship_class)
+        current_set = Set(relationship_class.name, domain_names=object_class_names)
         sets.append(current_set)
+        parameter_definitions = db_map.parameter_definition_list(relationship_class_id=relationship_class.id).all()
+        default_parameter_values = dict()
+        for parameter_definition in parameter_definitions:
+            default_parameter_values[parameter_definition.name] = parameter_definition.default_value
         relationship_list = db_map.wide_relationship_list(class_id=relationship_class.id).all()
         for relationship in relationship_list:
-            record = Record.from_relationship(relationship)
+            index_keys = tuple(relationship.object_name_list.split(","))
+            record = Record(index_keys)
             current_set.records.append(record)
             parameter_values = relationship_parameter_value_query.filter(
                 db_map.relationship_parameter_value_sq.c.relationship_id == relationship.id
             ).all()
+            valued_parameters = list()
             for relationship_parameter in parameter_values:
                 name = relationship_parameter.parameter_name
-                parameter = parameters.get(name, None)
-                if parameter is None:
-                    parameters[name] = Parameter.from_relationship_parameter(relationship_parameter)
+                valued_parameters.append(name)
+                if name not in parameters:
+                    parameters[name] = Parameter.from_entity_parameter(
+                        object_class_names, index_keys, relationship_parameter.value
+                    )
                 else:
-                    parameter.append_relationship_parameter(relationship_parameter)
-        parameter_definitions = db_map.parameter_definition_list(relationship_class_id=relationship_class.id).all()
+                    parameters[name].append_entity_parameter(index_keys, relationship_parameter.value)
+            for name, value in default_parameter_values.items():
+                if name in valued_parameters:
+                    continue
+                if name not in parameters:
+                    parameters[name] = Parameter.from_entity_parameter(object_class_names, index_keys, value)
+                else:
+                    parameters[name].append_entity_parameter(index_keys, value)
         for parameter_definition in parameter_definitions:
             name = parameter_definition.name
-            parameter = parameters.get(name, None)
-            if parameter is None:
-                parameters[name] = Parameter.from_entity_class_parameter_definition(relationship_class)
+            if name not in parameters:
+                parameters[name] = Parameter.from_entity_class_parameter_definition(object_class_names)
     return sets, parameters
 
 
@@ -921,33 +862,114 @@ def make_indexing_settings(db_map):
     Constructs skeleton indexing settings for parameter indexed value expansion.
 
     Args:
-        db_map (spinedb_api.DatabaseMapping): a database mapping
+        db_map (spinedb_api.DatabaseMapping or spinedb_api.DiffDatabaseMapping): a database mapping
+    Returns:
+        dict: a mapping from parameter name to IndexingSetting
+    """
+    settings = _object_indexing_settings(db_map)
+    settings.update(_relationship_indexing_settings(db_map))
+    return settings
+
+
+def _object_indexing_settings(db_map):
+    """
+    Constructs skeleton indexing settings from object parameters.
+
+    Args:
+        db_map (spinedb_api.DatabaseMapping or spinedb_api.DiffDatabaseMapping): a database mapping
     Returns:
         dict: a mapping from parameter name to IndexingSetting
     """
     settings = dict()
+    class_list = db_map.object_class_list().all()
     object_parameter_value_query = db_map.object_parameter_value_list()
-    for object_parameter in object_parameter_value_query.all():
-        parameter = Parameter.from_object_parameter(object_parameter)
-        if not parameter.is_indexed():
-            continue
-        setting = settings.get(object_parameter.parameter_name, None)
-        if setting is not None:
-            setting.append_parameter(parameter)
-        else:
-            settings[object_parameter.parameter_name] = IndexingSetting(parameter, object_parameter.object_class_name)
+    for object_class in class_list:
+        parameter_definitions = db_map.parameter_definition_list(object_class_id=object_class.id).all()
+        default_parameter_values = dict()
+        for parameter_definition in parameter_definitions:
+            default_parameter_values[parameter_definition.name] = parameter_definition.default_value
+        object_list = db_map.object_list(class_id=object_class.id)
+        for object_ in object_list:
+            parameter_value_rows = object_parameter_value_query.filter(
+                db_map.object_parameter_value_sq.c.object_id == object_.id
+            ).all()
+            checked_parameters = set()
+            for parameter_value_row in parameter_value_rows:
+                name = parameter_value_row.parameter_name
+                checked_parameters.add(name)
+                parameter = Parameter.from_entity_parameter(
+                    [parameter_value_row.object_class_name],
+                    (parameter_value_row.object_name,),
+                    parameter_value_row.value,
+                )
+                if not parameter.is_indexed():
+                    continue
+                setting = settings.get(name, None)
+                if setting is not None:
+                    setting.append_parameter(parameter)
+                else:
+                    settings[name] = IndexingSetting(parameter, parameter_value_row.object_class_name)
+            for name, value in default_parameter_values.items():
+                if name in checked_parameters:
+                    continue
+                parameter = Parameter.from_entity_parameter([object_class.name], (object_.name,), value)
+                if not parameter.is_indexed():
+                    continue
+                setting = settings.get(name, None)
+                if setting is not None:
+                    setting.append_parameter(parameter)
+                else:
+                    settings[name] = IndexingSetting(parameter, object_class.name)
+    return settings
+
+
+def _relationship_indexing_settings(db_map):
+    """
+    Constructs skeleton indexing settings from relationship parameters.
+
+    Args:
+        db_map (spinedb_api.DatabaseMapping or spinedb_api.DiffDatabaseMapping): a database mapping
+    Returns:
+        dict: a mapping from parameter name to IndexingSetting
+    """
+    settings = dict()
+    class_list = db_map.wide_relationship_class_list().all()
     relationship_parameter_value_query = db_map.relationship_parameter_value_list()
-    for relationship_parameter in relationship_parameter_value_query.all():
-        parameter = Parameter.from_relationship_parameter(relationship_parameter)
-        if not parameter.is_indexed():
-            continue
-        setting = settings.get(relationship_parameter.parameter_name, None)
-        if setting is not None:
-            setting.append_parameter(parameter)
-        else:
-            settings[relationship_parameter.parameter_name] = IndexingSetting(
-                parameter, relationship_parameter.relationship_class_name
-            )
+    for relationship_class in class_list:
+        object_class_names = relationship_class.object_class_name_list.split(",")
+        parameter_definitions = db_map.parameter_definition_list(relationship_class_id=relationship_class.id).all()
+        default_parameter_values = dict()
+        for parameter_definition in parameter_definitions:
+            default_parameter_values[parameter_definition.name] = parameter_definition.default_value
+        relationship_list = db_map.wide_relationship_list(class_id=relationship_class.id)
+        for relationship in relationship_list:
+            index_keys = tuple(relationship.object_name_list.split(","))
+            parameter_value_rows = relationship_parameter_value_query.filter(
+                db_map.relationship_parameter_value_sq.c.relationship_id == relationship.id
+            ).all()
+            checked_parameters = set()
+            for parameter_value_row in parameter_value_rows:
+                name = parameter_value_row.parameter_name
+                checked_parameters.add(name)
+                parameter = Parameter.from_entity_parameter(object_class_names, index_keys, parameter_value_row.value)
+                if not parameter.is_indexed():
+                    continue
+                setting = settings.get(name, None)
+                if setting is not None:
+                    setting.append_parameter(parameter)
+                else:
+                    settings[name] = IndexingSetting(parameter, relationship_class.name)
+            for name, value in default_parameter_values.items():
+                if name in checked_parameters:
+                    continue
+                parameter = Parameter.from_entity_parameter(object_class_names, index_keys, value)
+                if not parameter.is_indexed():
+                    continue
+                setting = settings.get(name, None)
+                if setting is not None:
+                    setting.append_parameter(parameter)
+                else:
+                    settings[name] = IndexingSetting(parameter, relationship_class.name)
     return settings
 
 
@@ -996,7 +1018,7 @@ def indexing_settings_to_dict(settings):
     Args:
         settings (dict): a mapping from parameter name to IndexingSetting.
     Returns:
-        a JSON serializable dictionary
+        dict: a JSON serializable dictionary
     """
     settings_dict = dict()
     for parameter_name, setting in settings.items():
@@ -1014,10 +1036,10 @@ def indexing_settings_from_dict(settings_dict, db_map):
     Restores indexing settings from a json compatible dictionary.
 
     Args:
-        settings (dict): a JSON compatible dictionary representing parameter indexing settings.
+        settings_dict (dict): a JSON compatible dictionary representing parameter indexing settings.
         db_map (DatabaseMapping): database mapping
     Returns:
-        a dictionary mapping parameter name to IndexingSetting.
+        dict: a dictionary mapping parameter name to IndexingSetting.
     """
     settings = dict()
     for parameter_name, setting_dict in settings_dict.items():
@@ -1044,10 +1066,10 @@ def _find_parameter(parameter_name, db_map):
     if parameter_rows:
         for row in parameter_rows:
             if parameter is None:
-                parameter = Parameter.from_object_parameter(row)
                 class_name = row.object_class_name
+                parameter = Parameter.from_entity_parameter([class_name], (row.object_name,), row.value)
             else:
-                parameter.append_object_parameter(row)
+                parameter.append_entity_parameter((row.object_name,), row.value)
     if parameter is None:
         parameter_rows = (
             db_map.relationship_parameter_value_list()
@@ -1057,10 +1079,12 @@ def _find_parameter(parameter_name, db_map):
         if parameter_rows:
             for row in parameter_rows:
                 if parameter is None:
-                    parameter = Parameter.from_relationship_parameter(row)
+                    parameter = Parameter.from_entity_parameter(
+                        row.object_class_name_list.split(","), tuple(row.object_name_list.split(",")), row.value
+                    )
                     class_name = row.relationship_class_name
                 else:
-                    parameter.append_relationship_parameter(row)
+                    parameter.append_entity_parameter(tuple(row.object_name_list.split(",")), row.value)
     if parameter is None:
         raise GdxExportException(f"Cannot find parameter '{parameter_name}' in the database.")
     return parameter, class_name
