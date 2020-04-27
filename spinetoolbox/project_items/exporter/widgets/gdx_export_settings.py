@@ -660,6 +660,8 @@ def _set_domain_export_dependencies(domain_names, domain_metadatas, database_url
     try:
         set_dependencies = dict()
         for domain_name, domain_metadata in zip(domain_names, domain_metadatas):
+            if domain_metadata.is_additional:
+                continue
             object_class_id = (
                 database_map.query(database_map.object_class_sq)
                 .filter(database_map.object_class_sq.c.name == domain_name)
