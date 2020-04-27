@@ -741,13 +741,13 @@ class TestGdx(unittest.TestCase):
                 "set2": [("record12", "record21"), ("record11", "record21")],
             }
             settings = gdx.SetSettings(sorted_domain_names, sorted_set_names, sorted_records)
-            externally_indexed_parameter = gdx._find_parameter("externally_indexed", database_map)
-            externally_indexed_setting = gdx.IndexingSetting(externally_indexed_parameter, "set2")
+            externally_indexed_parameter, set_name = gdx._find_parameter("externally_indexed", database_map)
+            externally_indexed_setting = gdx.IndexingSetting(externally_indexed_parameter, set_name)
             externally_indexed_setting.indexing_domain = gdx.IndexingDomain(
                 "external_indexes", "", [("T0001",), ("T0002",), ("T0003",)], [True, True, True]
             )
-            internally_indexed_parameter = gdx._find_parameter("internally_indexed", database_map)
-            internally_indexed_setting = gdx.IndexingSetting(internally_indexed_parameter, "set2")
+            internally_indexed_parameter, set_name = gdx._find_parameter("internally_indexed", database_map)
+            internally_indexed_setting = gdx.IndexingSetting(internally_indexed_parameter, set_name)
             internally_indexed_setting.indexing_domain = gdx.IndexingDomain(
                 "internal_indexes", "", [("stamp1",), ("stamp2",)], [True, True]
             )

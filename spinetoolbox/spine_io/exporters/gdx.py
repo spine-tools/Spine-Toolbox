@@ -1000,7 +1000,6 @@ def indexing_settings_to_dict(settings):
             setting.indexing_domain.to_dict() if setting.indexing_domain is not None else None
         )
         parameter_dict["index_position"] = setting.index_position
-        parameter_dict["set_name"] = setting.set_name
         settings_dict[parameter_name] = parameter_dict
     return settings_dict
 
@@ -1017,8 +1016,9 @@ def indexing_settings_from_dict(settings_dict, db_map):
     """
     settings = dict()
     for parameter_name, setting_dict in settings_dict.items():
-        parameter = _find_parameter(parameter_name, db_map)
-        setting = IndexingSetting(parameter, setting_dict["set_name"])
+        parameter, entity_class_name = _find_parameter(parameter_name, db_map)
+
+        setting = IndexingSetting(parameter, entity_class_name)
         indexing_domain_dict = setting_dict["indexing_domain"]
         if indexing_domain_dict is not None:
             setting.indexing_domain = IndexingDomain.from_dict(indexing_domain_dict)
@@ -1028,8 +1028,9 @@ def indexing_settings_from_dict(settings_dict, db_map):
 
 
 def _find_parameter(parameter_name, db_map):
-    """Searches for parameter_name in db_map and returns Parameter."""
+    """Searches for parameter_name in db_map and returns Parameter and its entity class name."""
     parameter = None
+    class_name = None
     parameter_rows = (
         db_map.object_parameter_value_list()
         .filter(db_map.object_parameter_value_sq.c.parameter_name == parameter_name)
@@ -1039,6 +1040,7 @@ def _find_parameter(parameter_name, db_map):
         for row in parameter_rows:
             if parameter is None:
                 parameter = Parameter.from_object_parameter(row)
+                class_name = row.object_class_name
             else:
                 parameter.append_object_parameter(row)
     if parameter is None:
@@ -1051,11 +1053,12 @@ def _find_parameter(parameter_name, db_map):
             for row in parameter_rows:
                 if parameter is None:
                     parameter = Parameter.from_relationship_parameter(row)
+                    class_name = row.relationship_class_name
                 else:
                     parameter.append_relationship_parameter(row)
     if parameter is None:
         raise GdxExportException(f"Cannot find parameter '{parameter_name}' in the database.")
-    return parameter
+    return parameter, class_name
 
 
 def _exported_set_names(names, metadatas):
