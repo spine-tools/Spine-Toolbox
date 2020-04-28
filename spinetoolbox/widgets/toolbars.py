@@ -17,16 +17,7 @@ Functions to make and handle QToolBars.
 """
 
 from PySide2.QtCore import Signal, Slot
-from PySide2.QtWidgets import (
-    QToolBar,
-    QLabel,
-    QAction,
-    QButtonGroup,
-    QPushButton,
-    QWidget,
-    QSizePolicy,
-    QToolButton,
-)
+from PySide2.QtWidgets import QToolBar, QLabel, QAction, QButtonGroup, QPushButton, QWidget, QSizePolicy, QToolButton
 from PySide2.QtGui import QIcon
 from ..config import ICON_TOOLBAR_SS, PARAMETER_TAG_TOOLBAR_SS
 from .custom_qlistview import ProjectItemDragListView
