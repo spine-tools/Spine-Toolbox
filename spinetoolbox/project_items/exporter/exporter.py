@@ -68,7 +68,8 @@ class Exporter(ProjectItem):
             url = _normalize_url(url)
             try:
                 settings_pack = SettingsPack.from_dict(pack, url, logger)
-            except gdx.GdxExportException:
+            except gdx.GdxExportException as error:
+                logger.msg_error.emit(f"Failed to fully restore Exporter settings: {error}")
                 settings_pack = SettingsPack("")
             settings_pack.notifications.changed_due_to_settings_state.connect(self._report_notifications)
             self._settings_packs[url] = settings_pack

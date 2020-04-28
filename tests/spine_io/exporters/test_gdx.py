@@ -1269,6 +1269,34 @@ class TestGdx(unittest.TestCase):
         self.assertTrue(restored["parameter"].index_position, 1)
         self.assertTrue(restored["parameter"].set_name, "domain1")
 
+    def test_indexing_settings_from_dict_when_default_values_present(self):
+        with TemporaryDirectory() as tmp_dir_name:
+            time_pattern = TimePattern(["Mo", "Tu"], [42.0, -4.2])
+            parameter = gdx.Parameter(["domain1"], [("Espoo",)], [time_pattern])
+            original = {"parameter": gdx.IndexingSetting(parameter, "domain1")}
+            original["parameter"].indexing_domain = gdx.IndexingDomain(
+                "indexing name", "indexing description", [("First",), ("Second",)], [False, True]
+            )
+            original["parameter"].index_position = 1
+            settings_dict = gdx.indexing_settings_to_dict(original)
+            database_map = self._make_database_map(tmp_dir_name, "test_indexing_settings_from_dict.sqlite")
+            dbmanip.import_object_classes(database_map, ["domain1"])
+            dbmanip.import_objects(database_map, [("domain1", "record")])
+            dbmanip.import_object_parameters(
+                database_map, [("domain1", "parameter", {"type": "time_pattern", "data": {"Mo": 42.0, "Tu": -4.2}}, "")]
+            )
+            restored = gdx.indexing_settings_from_dict(settings_dict, database_map)
+            database_map.connection.close()
+        self.assertTrue(len(restored), 1)
+        self.assertTrue("parameter" in restored)
+        self.assertTrue(restored["parameter"].parameter.values, [time_pattern])
+        self.assertTrue(restored["parameter"].indexing_domain.name, "indexing name")
+        self.assertTrue(restored["parameter"].indexing_domain.description, "indexing description")
+        self.assertTrue(restored["parameter"].indexing_domain.all_indexes, [("First",), ("Second",)])
+        self.assertTrue(restored["parameter"].indexing_domain.pick_list, [False, True])
+        self.assertTrue(restored["parameter"].index_position, 1)
+        self.assertTrue(restored["parameter"].set_name, "domain1")
+
     def test_update_indexing_settings_with_new_setting_overriding_old_one(self):
         time_series = TimeSeriesFixedResolution("2019-01-01T12:15", "1D", [3.3, 4.4], False, False)
         old_parameter = gdx.Parameter(["old_domain"], [("r1",)], [time_series])

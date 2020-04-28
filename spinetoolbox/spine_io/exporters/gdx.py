@@ -1044,7 +1044,6 @@ def indexing_settings_from_dict(settings_dict, db_map):
     settings = dict()
     for parameter_name, setting_dict in settings_dict.items():
         parameter, entity_class_name = _find_parameter(parameter_name, db_map)
-
         setting = IndexingSetting(parameter, entity_class_name)
         indexing_domain_dict = setting_dict["indexing_domain"]
         if indexing_domain_dict is not None:
@@ -1057,36 +1056,53 @@ def indexing_settings_from_dict(settings_dict, db_map):
 def _find_parameter(parameter_name, db_map):
     """Searches for parameter_name in db_map and returns Parameter and its entity class name."""
     parameter = None
-    class_name = None
-    parameter_rows = (
-        db_map.object_parameter_value_list()
-        .filter(db_map.object_parameter_value_sq.c.parameter_name == parameter_name)
-        .all()
+    definition = (
+        db_map.parameter_definition_list().filter(db_map.parameter_definition_sq.c.name == parameter_name).first()
     )
-    if parameter_rows:
-        for row in parameter_rows:
-            if parameter is None:
-                class_name = row.object_class_name
-                parameter = Parameter.from_entity_parameter([class_name], (row.object_name,), row.value)
-            else:
-                parameter.append_entity_parameter((row.object_name,), row.value)
-    if parameter is None:
-        parameter_rows = (
-            db_map.relationship_parameter_value_list()
-            .filter(db_map.relationship_parameter_value_sq.c.parameter_name == parameter_name)
-            .all()
-        )
-        if parameter_rows:
-            for row in parameter_rows:
-                if parameter is None:
-                    parameter = Parameter.from_entity_parameter(
-                        row.object_class_name_list.split(","), tuple(row.object_name_list.split(",")), row.value
-                    )
-                    class_name = row.relationship_class_name
-                else:
-                    parameter.append_entity_parameter(tuple(row.object_name_list.split(",")), row.value)
-    if parameter is None:
+    if definition is None:
         raise GdxExportException(f"Cannot find parameter '{parameter_name}' in the database.")
+    if definition.object_class_id is not None:
+        class_id = definition.object_class_id
+        class_name = db_map.query(db_map.entity_class_sq).filter(db_map.entity_class_sq.c.id == class_id).first().name
+        relationship_list = db_map.object_list(class_id=class_id)
+        for relationship_row in relationship_list:
+            parameter_value_row = (
+                db_map.object_parameter_value_list()
+                .filter(
+                    db_map.object_parameter_value_sq.c.object_id == relationship_row.id
+                    and db_map.object_parameter_value_sq.c.parameter_name == parameter_name
+                )
+                .first()
+            )
+            database_value = parameter_value_row.value if parameter_value_row is not None else definition.default_value
+            if parameter is None:
+                parameter = Parameter.from_entity_parameter([class_name], (relationship_row.name,), database_value)
+            else:
+                parameter.append_entity_parameter((relationship_row.name,), database_value)
+    else:
+        class_id = definition.relationship_class_id
+        class_name = db_map.query(db_map.entity_class_sq).filter(db_map.entity_class_sq.c.id == class_id).first().name
+        relationship_list = db_map.wide_relationship_list(class_id=class_id)
+        object_class_names = (
+            db_map.wide_relationship_class_list(id_list=[class_id]).first().object_class_name_list.split(",")
+        )
+        for relationship_row in relationship_list:
+            index_keys = tuple(relationship_row.object_name_list.split(","))
+            parameter_value_row = (
+                db_map.relationship_parameter_value_list()
+                .filter(
+                    db_map.relationship_parameter_value_sq.c.relationship_id == relationship_row.id
+                    and db_map.relationship_parameter_value_sq.c.parameter_name == parameter_name
+                )
+                .first()
+            )
+            database_value = parameter_value_row.value if parameter_value_row is not None else definition.default_value
+            if parameter is None:
+                parameter = Parameter.from_entity_parameter(object_class_names, index_keys, database_value)
+            else:
+                parameter.append_entity_parameter(index_keys, database_value)
+    if parameter is None:
+        raise GdxExportException(f"Cannot find values for parameter '{parameter_name}' in the database.")
     return parameter, class_name
 
 
