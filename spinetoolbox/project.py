@@ -17,7 +17,6 @@ Spine Toolbox project class.
 """
 
 import os
-import logging
 import json
 from PySide2.QtCore import Slot, Signal
 from PySide2.QtWidgets import QMessageBox

@@ -61,7 +61,7 @@ class DataStoreFormBase(QMainWindow):
             *db_urls (tuple): Database url, codename.
         """
         super().__init__(flags=Qt.Window)
-        from ..ui.data_store_view import Ui_MainWindow
+        from ..ui.data_store_view import Ui_MainWindow  # pylint: disable=import-outside-toplevel
 
         self.db_urls = list(db_urls)
         self.db_url = self.db_urls[0]

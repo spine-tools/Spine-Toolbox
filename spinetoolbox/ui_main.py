@@ -100,7 +100,7 @@ class ToolboxUI(QMainWindow):
 
     def __init__(self):
         """ Initialize application and main window."""
-        from .ui.mainwindow import Ui_MainWindow
+        from .ui.mainwindow import Ui_MainWindow  # pylint: disable=import-outside-toplevel
 
         super().__init__(flags=Qt.Window)
         self._qsettings = QSettings("SpineProject", "Spine Toolbox")

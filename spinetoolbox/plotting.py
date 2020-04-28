@@ -205,7 +205,8 @@ class PlottingHints:
         """Returns true if the cell given by index is actually plottable data."""
         raise NotImplementedError()
 
-    def normalize_row(self, row, model):
+    @staticmethod
+    def normalize_row(row, model):
         """Returns a 'human understandable' row number"""
         return row + 1
 
@@ -278,7 +279,8 @@ class PivotTablePlottingHints(PlottingHints):
         source_model = model.sourceModel()
         return source_model.index_in_data(source_index) or source_model.column_is_index_column(source_index.column())
 
-    def normalize_row(self, row, model):
+    @staticmethod
+    def normalize_row(row, model):
         """See base class."""
         source_row = model.mapToSource(model.index(row, 0)).row()
         return source_row + 1 - model.sourceModel().headerRowCount()

@@ -16,7 +16,7 @@ Functions to make and handle QToolBars.
 :date:   19.1.2018
 """
 
-from PySide2.QtCore import Qt, Signal, Slot, QSize
+from PySide2.QtCore import Signal, Slot
 from PySide2.QtWidgets import (
     QToolBar,
     QLabel,
@@ -26,8 +26,6 @@ from PySide2.QtWidgets import (
     QWidget,
     QSizePolicy,
     QToolButton,
-    QGroupBox,
-    QBoxLayout,
 )
 from PySide2.QtGui import QIcon
 from ..config import ICON_TOOLBAR_SS, PARAMETER_TAG_TOOLBAR_SS

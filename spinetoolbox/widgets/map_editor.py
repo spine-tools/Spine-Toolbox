@@ -31,7 +31,7 @@ class MapEditor(QWidget):
     """
 
     def __init__(self, parent=None):
-        from ..ui.map_editor import Ui_MapEditor
+        from ..ui.map_editor import Ui_MapEditor  # pylint: disable=import-outside-toplevel
 
         super().__init__(parent)
         self._model = MapModel(Map(["key_1"], [0.0]))

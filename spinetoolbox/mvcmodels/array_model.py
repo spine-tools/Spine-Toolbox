@@ -67,20 +67,20 @@ class ArrayModel(QAbstractTableModel):
             element = self._data[index.row()]
             if isinstance(element, (float, str)):
                 return element
-            elif isinstance(element, _ErrorCell):
+            if isinstance(element, _ErrorCell):
                 return "Error"
             return str(element)
-        elif role == Qt.EditRole:
+        if role == Qt.EditRole:
             element = self._data[index.row()]
             if isinstance(element, _ErrorCell):
                 return element.edit_value
             return to_database(self._data[index.row()])
-        elif role == Qt.ToolTipRole:
+        if role == Qt.ToolTipRole:
             element = self._data[index.row()]
             if isinstance(element, _ErrorCell):
                 return element.tooltip
             return str(element)
-        elif role == Qt.BackgroundColorRole:
+        if role == Qt.BackgroundColorRole:
             element = self._data[index.row()]
             if isinstance(element, _ErrorCell):
                 return QColor(255, 128, 128)

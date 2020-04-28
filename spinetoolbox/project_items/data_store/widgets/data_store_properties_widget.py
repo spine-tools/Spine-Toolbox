@@ -30,7 +30,7 @@ class DataStorePropertiesWidget(QWidget):
             toolbox (ToolboxUI): The toolbox instance where this widget should be embedded
         """
         super().__init__()
-        from ..ui.data_store_properties import Ui_Form
+        from ..ui.data_store_properties import Ui_Form  # pylint: disable=import-outside-toplevel
 
         self._toolbox = toolbox
         self.ui = Ui_Form()

@@ -36,7 +36,7 @@ class MappingWidget(QWidget):
     mappingDataChanged = Signal()
 
     def __init__(self, parent=None):
-        from ..ui.import_mapping import Ui_ImportMapping
+        from ..ui.import_mapping import Ui_ImportMapping  # pylint: disable=import-outside-toplevel
 
         super().__init__(parent)
 
@@ -132,7 +132,7 @@ class MappingOptionsWidget(QWidget):
     """
 
     def __init__(self, parent=None):
-        from ..ui.import_mapping_options import Ui_ImportMappingOptions
+        from ..ui.import_mapping_options import Ui_ImportMappingOptions  # pylint: disable=import-outside-toplevel
 
         super().__init__(parent)
 

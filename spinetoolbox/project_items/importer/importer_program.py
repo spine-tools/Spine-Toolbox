@@ -66,7 +66,7 @@ def run(checked_files, all_import_settings, all_source_settings, urls_downstream
             connector.connect_to_source(source)
         except IOError as error:
             print(f"Failed to connect to source: {error}", file=sys.stderr)
-            exit(1)
+            sys.exit(1)
         table_mappings = {
             name: mapping
             for name, mapping in settings.get("table_mappings", {}).items()

@@ -33,6 +33,7 @@ class TimeSeriesVariableResolutionEditor(QWidget):
     """
 
     def __init__(self, parent=None):
+        # pylint: disable=import-outside-toplevel
         from ..ui.time_series_variable_resolution_editor import Ui_TimeSeriesVariableResolutionEditor
 
         super().__init__(parent)

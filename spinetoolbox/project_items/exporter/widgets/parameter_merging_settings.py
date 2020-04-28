@@ -38,7 +38,7 @@ class ParameterMergingSettings(QWidget):
             parameter_name (str): merged parameter name of None for widget
             merging_setting (MergingSetting): merging settings or None for empty widget
         """
-        from ..ui.parameter_merging_settings import Ui_Form
+        from ..ui.parameter_merging_settings import Ui_Form  # pylint: disable=import-outside-toplevel
 
         super().__init__(parent)
         self._error_flags = (

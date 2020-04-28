@@ -15,7 +15,6 @@ Miscelaneous mixins for parameter models
 :authors: M. Marin (KTH)
 :date:   4.10.2019
 """
-from spinedb_api import to_database
 
 
 def _parse_csv_list(csv_list):

@@ -23,7 +23,7 @@ class ImportErrorWidget(QWidget):
     """Widget to display errors while importing and ask user for action."""
 
     def __init__(self, parent=None):
-        from ..ui.import_errors import Ui_ImportErrors
+        from ..ui.import_errors import Ui_ImportErrors  # pylint: disable=import-outside-toplevel
 
         super().__init__(parent)
 

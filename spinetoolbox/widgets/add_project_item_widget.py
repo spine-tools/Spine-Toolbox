@@ -32,7 +32,7 @@ class AddProjectItemWidget(QWidget):
 
     def __init__(self, toolbox, x, y, class_, spec=""):
         """Initialize class."""
-        from ..ui.add_project_item import Ui_Form
+        from ..ui.add_project_item import Ui_Form  # pylint: disable=import-outside-toplevel
 
         super().__init__(parent=toolbox, f=Qt.Window)  # Setting parent inherits stylesheet
         self._toolbox = toolbox

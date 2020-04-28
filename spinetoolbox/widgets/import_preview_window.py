@@ -40,7 +40,7 @@ class ImportPreviewWindow(QMainWindow):
     connection_failed = Signal(str)
 
     def __init__(self, importer, filepath, connector, connector_settings, settings, toolbox):
-        from ..ui.import_preview_window import Ui_MainWindow
+        from ..ui.import_preview_window import Ui_MainWindow  # pylint: disable=import-outside-toplevel
 
         super().__init__(parent=toolbox, flags=Qt.Window)
         self._importer = importer

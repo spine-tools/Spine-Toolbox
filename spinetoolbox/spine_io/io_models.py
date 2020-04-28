@@ -15,7 +15,8 @@ Classes for handling models in PySide2's model/view framework.
 :author: P. Vennström (VTT)
 :date:   1.6.2019
 """
-from collections import namedtuple, Iterable
+from collections import namedtuple
+from collections.abc import Iterable
 from six import unichr
 
 from spinedb_api import (
@@ -37,7 +38,7 @@ from spinedb_api import (
     ParameterValueFormatError,
     mapping_non_pivoted_columns,
 )
-from PySide2.QtWidgets import QHeaderView, QMenu, QAction, QTableView, QToolButton
+from PySide2.QtWidgets import QHeaderView, QMenu, QTableView, QToolButton
 from PySide2.QtCore import QModelIndex, Qt, QAbstractTableModel, QAbstractListModel, Signal, Slot
 from PySide2.QtGui import QColor, QFont
 from ..mvcmodels.minimal_table_model import MinimalTableModel
@@ -588,7 +589,7 @@ class MappingSpecModel(QAbstractTableModel):
         return prepend_str
 
     def data(self, index, role):
-        if role == Qt.DisplayRole or role == Qt.EditRole:
+        if role in (Qt.DisplayRole, Qt.EditRole):
             name = self._display_names[index.row()]
             m = self._mappings[index.row()]
             func = [
@@ -711,7 +712,7 @@ class MappingSpecModel(QAbstractTableModel):
                 mapping = ConstantMapping(reference=value)
             else:
                 return False
-        elif type(mapping) in (ConstantMapping, ColumnHeaderMapping):
+        elif isinstance(mapping, (ConstantMapping, ColumnHeaderMapping)):
             if not value:
                 mapping.reference = None
             else:

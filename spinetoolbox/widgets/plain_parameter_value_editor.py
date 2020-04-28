@@ -29,6 +29,7 @@ class PlainParameterValueEditor(QWidget):
     """
 
     def __init__(self, parent_widget=None):
+        # pylint: disable=import-outside-toplevel
         from ..ui.plain_parameter_value_editor import Ui_PlainParameterValueEditor
 
         super().__init__(parent_widget)

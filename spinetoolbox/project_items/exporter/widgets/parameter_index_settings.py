@@ -44,7 +44,7 @@ class ParameterIndexSettings(QWidget):
             new_domains (dict): a dict from new domain name to a list of its record keys
             parent (QWidget): a parent widget
         """
-        from ..ui.parameter_index_settings import Ui_Form
+        from ..ui.parameter_index_settings import Ui_Form  # pylint: disable=import-outside-toplevel
 
         super().__init__(parent)
         self._indexing_setting = indexing_setting

@@ -56,6 +56,7 @@ class TimeSeriesFixedResolutionEditor(QWidget):
     """
 
     def __init__(self, parent=None):
+        # pylint: disable=import-outside-toplevel
         from ..ui.time_series_fixed_resolution_editor import Ui_TimeSeriesFixedResolutionEditor
 
         super().__init__(parent)

@@ -24,7 +24,7 @@ from PySide2.QtCore import QUrl, Signal
 from PySide2.QtGui import QDesktopServices
 from .helpers import create_dir, rename_dir
 from .metaobject import MetaObject, shorten
-from spinetoolbox.project_commands import SetItemSpecificationCommand
+from .project_commands import SetItemSpecificationCommand
 
 
 class ProjectItem(MetaObject):

@@ -113,6 +113,9 @@ class ObjectClassListModel(EntityListModel):
     def entity_type(self):
         return "object class"
 
+    def _get_entity_class_ids(self):
+        raise NotImplementedError()
+
 
 class RelationshipClassListModel(EntityListModel):
     """A model for listing relationship classes in the GraphViewForm."""
@@ -124,3 +127,6 @@ class RelationshipClassListModel(EntityListModel):
     @property
     def entity_type(self):
         return "relationship class"
+
+    def _get_entity_class_ids(self):
+        raise NotImplementedError()

@@ -32,7 +32,7 @@ class TimePatternEditor(QWidget):
     """
 
     def __init__(self, parent=None):
-        from ..ui.time_pattern_editor import Ui_TimePatternEditor
+        from ..ui.time_pattern_editor import Ui_TimePatternEditor  # pylint: disable=import-outside-toplevel
 
         super().__init__(parent)
         self._model = TimePatternModel(TimePattern(["1-7d"], [0.0]))

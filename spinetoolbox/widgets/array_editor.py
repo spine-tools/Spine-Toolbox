@@ -26,7 +26,7 @@ from ..plotting import add_array_plot
 
 class ArrayEditor(QWidget):
     def __init__(self, parent=None):
-        from ..ui.array_editor import Ui_Form
+        from ..ui.array_editor import Ui_Form  # pylint: disable=import-outside-toplevel
 
         super().__init__(parent)
         self._ui = Ui_Form()

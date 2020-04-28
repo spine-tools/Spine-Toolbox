@@ -37,7 +37,7 @@ class ToolSpecificationWidget(QWidget):
             toolbox (ToolboxUI): QMainWindow instance
             specification (ToolSpecification): If given, the form is pre-filled with this specification
         """
-        from ..ui.tool_specification_form import Ui_Form
+        from ..ui.tool_specification_form import Ui_Form  # pylint: disable=import-outside-toplevel
 
         super().__init__(parent=toolbox, f=Qt.Window)  # Inherit stylesheet from ToolboxUI
         # Setup UI from Qt Designer file

@@ -18,7 +18,7 @@ Contains classes for handling DAGs.
 
 import logging
 import random
-from PySide2.QtCore import Signal, Slot, QObject, QTimer
+from PySide2.QtCore import Signal, QObject
 import networkx as nx
 
 

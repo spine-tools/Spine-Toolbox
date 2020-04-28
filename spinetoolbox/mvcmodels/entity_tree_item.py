@@ -368,6 +368,10 @@ class TreeRootItem(MultiDBTreeItem):
         """"See super class."""
         return "root"
 
+    def _get_children_ids(self, db_map):
+        """See super class."""
+        raise NotImplementedError()
+
 
 class ObjectTreeRootItem(TreeRootItem):
     """An object tree root item."""
@@ -418,6 +422,10 @@ class EntityClassItem(MultiDBTreeItem):
             if not self.has_children():
                 return QBrush(Qt.gray)
         return super().data(column, role)
+
+    def _get_children_ids(self, db_map):
+        """See base class"""
+        raise NotImplementedError()
 
 
 class ObjectClassItem(EntityClassItem):
@@ -511,6 +519,10 @@ class EntityItem(MultiDBTreeItem):
             return self.db_map_data_field(self.first_db_map, "description")
         return super().data(column, role)
 
+    def _get_children_ids(self, db_map):
+        """See base class."""
+        raise NotImplementedError()
+
 
 class ObjectItem(EntityItem):
     """An object item."""
@@ -600,3 +612,7 @@ class RelationshipItem(EntityItem):
 
     def can_fetch_more(self):
         return False
+
+    def _get_children_ids(self, db_map):
+        """See base class"""
+        raise NotImplementedError()

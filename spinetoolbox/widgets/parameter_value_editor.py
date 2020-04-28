@@ -73,7 +73,7 @@ class ParameterValueEditor(QDialog):
             index (QModelIndex): an index to a parameter value in parent_model
             parent (QWidget): a parent widget
         """
-        from ..ui.parameter_value_editor import Ui_ParameterValueEditor
+        from ..ui.parameter_value_editor import Ui_ParameterValueEditor  # pylint: disable=import-outside-toplevel
 
         super().__init__(parent)
         model = index.model()

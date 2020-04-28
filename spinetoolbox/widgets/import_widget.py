@@ -51,7 +51,7 @@ class ImportDialog(QDialog):
             settings (QSettings): settings for storing/restoring window state
             parent (DataStoreForm): parent widget
         """
-        from ..ui.import_source_selector import Ui_ImportSourceSelector
+        from ..ui.import_source_selector import Ui_ImportSourceSelector  # pylint: disable=import-outside-toplevel
 
         super().__init__(parent)
         self.setWindowFlag(Qt.Window, True)

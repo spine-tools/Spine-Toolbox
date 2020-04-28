@@ -21,6 +21,7 @@ from PySide2.QtWidgets import QWidget, QFileDialog, QMessageBox, QColorDialog
 from PySide2.QtCore import Slot, Qt, QSize
 from PySide2.QtGui import QPixmap
 from ..config import DEFAULT_WORK_DIR, SETTINGS_SS
+from ..graphics_items import Link
 
 
 class SettingsWidget(QWidget):
@@ -34,7 +35,7 @@ class SettingsWidget(QWidget):
         """Initialize class."""
         # FIXME: setting the parent to toolbox causes the checkboxes in the
         # groupBox_general to not layout correctly, this might be caused elsewhere?
-        from ..ui import settings
+        from ..ui import settings  # pylint: disable=import-outside-toplevel
 
         super().__init__(parent=None)  # Do not set parent. Uses own stylesheet.
         self._toolbox = toolbox  # QWidget parent
@@ -220,8 +221,6 @@ class SettingsWidget(QWidget):
 
     @Slot(bool)
     def update_links_geometry(self, checked=False):
-        from ..graphics_items import Link
-
         for item in self._toolbox.ui.graphicsView.items():
             if isinstance(item, Link):
                 item.do_update_geometry(checked)

@@ -68,7 +68,7 @@ class GdxExportSettings(QWidget):
             database_url (str): database URL
             parent (QWidget): a parent widget
         """
-        from ..ui.gdx_export_settings import Ui_Form
+        from ..ui.gdx_export_settings import Ui_Form  # pylint: disable=import-outside-toplevel
 
         super().__init__(parent=parent, f=Qt.Window)
         self._ui = Ui_Form()

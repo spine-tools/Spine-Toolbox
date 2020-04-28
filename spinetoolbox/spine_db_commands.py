@@ -368,6 +368,10 @@ class SetParameterDefinitionTagsCommand(CommandBase):
             self.undo_db_map_data, self.method_name, self.get_method_name, self.completed_signal_name
         )
 
+    def data(self):
+        """See base class."""
+        raise NotImplementedError()
+
 
 class RemoveItemsCommand(CommandBase):
     def __init__(self, db_mngr, db_map, typed_data):

@@ -41,7 +41,7 @@ class ImportPreviewWidget(QWidget):
     previewDataUpdated = Signal()
 
     def __init__(self, connector, parent):
-        from ..ui.import_preview import Ui_ImportPreview
+        from ..ui.import_preview import Ui_ImportPreview  # pylint: disable=import-outside-toplevel
 
         super().__init__(parent)
 
