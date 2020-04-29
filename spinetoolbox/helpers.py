@@ -652,7 +652,6 @@ def serialize_path(path, project_dir):
     Returns a dict representation of the given path.
 
     If path is in project_dir, converts the path to relative.
-    If path does not exist returns it as-is.
 
     Args:
         path (str): path to serialize
@@ -723,7 +722,8 @@ def deserialize_path(serialized, project_dir):
         if path_type == "file_url":
             path = serialized["path"]
             if serialized["relative"]:
-                path = os.path.normpath(os.path.join(project_dir, path))
+                path = os.path.join(project_dir, path)
+            path = os.path.normpath(path)
             return serialized["scheme"] + ":///" + path
         if path_type == "url":
             return serialized["path"]

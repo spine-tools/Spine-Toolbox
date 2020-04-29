@@ -16,10 +16,18 @@ Unit tests for the helpers module.
 :date:   23.3.2020
 """
 from pathlib import Path
-from tempfile import TemporaryDirectory
+from tempfile import gettempdir, NamedTemporaryFile, TemporaryDirectory
 import unittest
 from unittest.mock import MagicMock
-from spinetoolbox.helpers import first_non_null, interpret_icon_id, make_icon_id, rename_dir
+from spinetoolbox.helpers import (
+    deserialize_path,
+    first_non_null,
+    interpret_icon_id,
+    make_icon_id,
+    rename_dir,
+    serialize_path,
+    serialize_url,
+)
 
 
 class TestHelpers(unittest.TestCase):
@@ -64,6 +72,79 @@ class TestHelpers(unittest.TestCase):
             logger.information_box.emit.assert_called_once()
             self.assertTrue(old_dir.exists())
             self.assertTrue(new_dir.exists())
+
+    def test_serialize_path_makes_relative_paths_from_paths_in_project_dir(self):
+        with TemporaryDirectory() as path:
+            project_dir = gettempdir()
+            serialized = serialize_path(path, project_dir)
+            expected_path = str(Path(path).relative_to(project_dir).as_posix())
+            self.assertEqual(serialized, {"type": "path", "relative": True, "path": expected_path})
+
+    def test_serialize_path_makes_absolute_paths_from_paths_not_in_project_dir(self):
+        with TemporaryDirectory() as project_dir:
+            with TemporaryDirectory() as path:
+                serialized = serialize_path(path, project_dir)
+                expected_path = str(Path(path).as_posix())
+                self.assertEqual(serialized, {"type": "path", "relative": False, "path": expected_path})
+
+    def test_serialize_url_makes_file_path_in_project_dir_relative(self):
+        with NamedTemporaryFile(mode="r") as temp_file:
+            url = "sqlite:///" + str(Path(temp_file.name).as_posix())
+            project_dir = gettempdir()
+            expected_path = str(Path(temp_file.name).relative_to(project_dir).as_posix())
+            serialized = serialize_url(url, project_dir)
+            self.assertEqual(
+                serialized, {"type": "file_url", "relative": True, "path": expected_path, "scheme": "sqlite"}
+            )
+
+    def test_serialize_url_keeps_file_path_not_in_project_dir_absolute(self):
+        with TemporaryDirectory() as project_dir:
+            with NamedTemporaryFile(mode='r') as temp_file:
+                expected_path = str(Path(temp_file.name).as_posix())
+                url = "sqlite:///" + expected_path
+                serialized = serialize_url(url, project_dir)
+                self.assertEqual(
+                    serialized, {"type": "file_url", "relative": False, "path": expected_path, "scheme": "sqlite"}
+                )
+
+    def test_serialize_url_with_non_file_urls(self):
+        project_dir = gettempdir()
+        url = "http://www.spine-model.org/"
+        serialized = serialize_url(url, project_dir)
+        self.assertEqual(serialized, {"type": "url", "relative": False, "path": url})
+
+    def test_deserialize_path_with_relative_path(self):
+        project_dir = gettempdir()
+        serialized = {"type": "path", "relative": True, "path": "subdir/file.fat"}
+        deserialized = deserialize_path(serialized, project_dir)
+        self.assertEqual(deserialized, str(Path(project_dir, "subdir", "file.fat")))
+
+    def test_deserialize_path_with_absolute_path(self):
+        with TemporaryDirectory() as project_dir:
+            serialized = {"type": "path", "relative": False, "path": str(Path(gettempdir(), "file.fat").as_posix())}
+            deserialized = deserialize_path(serialized, project_dir)
+            self.assertEqual(deserialized, str(Path(gettempdir(), "file.fat")))
+
+    def test_deserialize_path_with_relative_file_url(self):
+        project_dir = gettempdir()
+        serialized = {"type": "file_url", "relative": True, "path": "subdir/database.sqlite", "scheme": "sqlite"}
+        deserialized = deserialize_path(serialized, project_dir)
+        expected = "sqlite:///" + str(Path(project_dir, "subdir", "database.sqlite"))
+        self.assertEqual(deserialized, expected)
+
+    def test_deserialize_path_with_absolute_file_url(self):
+        with TemporaryDirectory() as project_dir:
+            path = str(Path(gettempdir(), "database.sqlite").as_posix())
+            serialized = {"type": "file_url", "relative": False, "path": path, "scheme": "sqlite"}
+            deserialized = deserialize_path(serialized, project_dir)
+            expected = "sqlite:///" + str(Path(gettempdir(), "database.sqlite"))
+            self.assertEqual(deserialized, expected)
+
+    def test_deserialize_path_with_non_file_url(self):
+        project_dir = gettempdir()
+        serialized = {"type": "url", "path": "http://www.spine-model.org/"}
+        deserialized = deserialize_path(serialized, project_dir)
+        self.assertEqual(deserialized, "http://www.spine-model.org/")
 
 
 if __name__ == '__main__':
