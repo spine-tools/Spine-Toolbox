@@ -1192,7 +1192,7 @@ class TestGdx(unittest.TestCase):
                 database_map,
                 [["set", ["record"], "relationship_parameter", {"type": "time_series", "data": [3, 2, 1]}]],
             )
-            indexing_settings = gdx.make_indexing_settings(database_map)
+            indexing_settings = gdx.make_indexing_settings(database_map, logger=None)
             database_map.connection.close()
         self.assertEqual(len(indexing_settings), 2)
         self.assertEqual(
@@ -1223,7 +1223,7 @@ class TestGdx(unittest.TestCase):
             dbmanip.import_relationship_parameters(
                 database_map, [("set", "relationship_parameter", {"type": "time_series", "data": [3, 2, 1]}, "")]
             )
-            indexing_settings = gdx.make_indexing_settings(database_map)
+            indexing_settings = gdx.make_indexing_settings(database_map, logger=None)
             database_map.connection.close()
         self.assertEqual(len(indexing_settings), 2)
         self.assertEqual(

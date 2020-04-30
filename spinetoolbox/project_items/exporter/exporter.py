@@ -160,7 +160,7 @@ class Exporter(ProjectItem):
         pool = QThreadPool.globalInstance()
         cookie = uuid.uuid4()
         self._worker_cookies[database_url] = cookie
-        worker = Worker(database_url, cookie)
+        worker = Worker(database_url, cookie, self._logger)
         worker.signals.database_unavailable.connect(self._cancel_worker)
         worker.signals.finished.connect(self._worker_finished)
         worker.signals.errored.connect(self._worker_failed)

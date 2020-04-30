@@ -31,11 +31,12 @@ class Worker(QRunnable):
         signals: contains signals that the worker may emit during its execution
     """
 
-    def __init__(self, database_url, cookie):
+    def __init__(self, database_url, cookie, logger):
         """
         Args:
             database_url (str): database's URL
             cookie (UUID): an identifier
+            logger (LoggerInterface): a logger
         """
         super().__init__()
         self.signals = _Signals()
@@ -45,6 +46,7 @@ class Worker(QRunnable):
         self._previous_indexing_settings = None
         self._previous_indexing_domains = None
         self._previous_merging_settings = None
+        self._logger = logger
 
     def run(self):
         """Constructs settings and parameter index settings."""
@@ -96,7 +98,7 @@ class Worker(QRunnable):
         try:
             time_stamp = latest_database_commit_time_stamp(database_map)
             settings = gdx.make_set_settings(database_map)
-            indexing_settings = gdx.make_indexing_settings(database_map)
+            indexing_settings = gdx.make_indexing_settings(database_map, self._logger)
         except gdx.GdxExportException as error:
             self.signals.errored.emit(self._database_url, self._cookie, error)
             return None, None, None
