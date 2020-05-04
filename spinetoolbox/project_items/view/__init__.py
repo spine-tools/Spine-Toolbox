@@ -16,4 +16,5 @@ View plugin.
 :date:   12.9.2019
 """
 
-from .view_factory import ViewFactory as item_factory
+from .view_factory import ViewFactory as ItemFactory
+from .item_info import ItemInfo

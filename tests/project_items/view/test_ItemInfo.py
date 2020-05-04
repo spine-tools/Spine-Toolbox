@@ -10,11 +10,22 @@
 ######################################################################################################################
 
 """
-Importer plugin.
+Unit tests for View's ItemInfo class.
 
-:author: M. Marin (KTH)
-:date:   12.9.2019
+:author: A. Soininen (VTT)
+:date:   5.5.2020
 """
+import unittest
+from spinetoolbox.project_items.view.item_info import ItemInfo
 
-from .importer_factory import ImporterFactory as ItemFactory
-from .item_info import ItemInfo
+
+class TestItemInfo(unittest.TestCase):
+    def test_item_type(self):
+        self.assertEqual(ItemInfo.item_type(), "View")
+
+    def test_item_category(self):
+        self.assertEqual(ItemInfo.item_category(), "Views")
+
+
+if __name__ == '__main__':
+    unittest.main()

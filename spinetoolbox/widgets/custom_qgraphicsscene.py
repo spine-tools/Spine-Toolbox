@@ -139,15 +139,15 @@ class CustomQGraphicsScene(ShrinkingScene):
             event.ignore()
             return
         event.acceptProposedAction()
-        factory_name, spec = event.mimeData().text().split(",")
+        item_type, spec = event.mimeData().text().split(",")
         pos = event.scenePos()
         w = 70
         h = 70
         x = pos.x() - w / 2
         y = pos.y() - h / 2
-        factory = self._toolbox.item_factories[factory_name]
+        factory = self._toolbox.item_factories[item_type]
         self.item_shadow = factory.make_icon(self._toolbox, x, y, w, h, None)
-        self._toolbox.show_add_project_item_form(factory_name, pos.x(), pos.y(), spec=spec)
+        self._toolbox.show_add_project_item_form(item_type, pos.x(), pos.y(), spec=spec)
 
     def drawBackground(self, painter, rect):
         """Reimplemented method to make a custom background.

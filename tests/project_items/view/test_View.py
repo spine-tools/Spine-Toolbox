@@ -21,6 +21,7 @@ import unittest
 from unittest.mock import MagicMock, NonCallableMagicMock
 from PySide2.QtWidgets import QApplication
 import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
+from spinetoolbox.project_items.view.item_info import ItemInfo
 from spinetoolbox.project_items.view.view import View
 from ...mock_helpers import clean_up_toolboxui_with_project, create_toolboxui_with_project
 
@@ -30,7 +31,7 @@ class TestView(unittest.TestCase):
         """Set up."""
         self.toolbox = create_toolboxui_with_project()
         item_dict = dict(name="V", description="", x=0, y=0)
-        self.toolbox.project().add_project_items("Views", item_dict)
+        self.toolbox.project().add_project_items("View", item_dict)
         index = self.toolbox.project_item_model.find_item("V")
         self.view = self.toolbox.project_item_model.item(index).project_item
 
@@ -44,7 +45,10 @@ class TestView(unittest.TestCase):
             QApplication()
 
     def test_item_type(self):
-        self.assertEqual(self.view.item_type(), "View")
+        self.assertEqual(View.item_type(), ItemInfo.item_type())
+
+    def test_item_category(self):
+        self.assertEqual(View.item_category(), ItemInfo.item_category())
 
     def test_default_name_prefix(self):
         self.assertEqual(View.default_name_prefix(), "View")

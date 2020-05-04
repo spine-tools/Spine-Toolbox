@@ -18,6 +18,7 @@ Widget shown to user when a new Data Connection is created.
 
 from spinetoolbox.widgets.add_project_item_widget import AddProjectItemWidget
 from ..data_connection import DataConnection
+from ..item_info import ItemInfo
 
 
 class AddDataConnectionWidget(AddProjectItemWidget):
@@ -37,4 +38,4 @@ class AddDataConnectionWidget(AddProjectItemWidget):
     def call_add_item(self):
         """Creates new Item according to user's selections."""
         item = dict(name=self.name, description=self.description, x=self._x, y=self._y, references=list())
-        self._project.add_project_items("Data Connections", item, set_selected=True)
+        self._project.add_project_items(ItemInfo.item_type(), item, set_selected=True)

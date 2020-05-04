@@ -23,6 +23,7 @@ from sqlalchemy.engine.url import URL, make_url
 from spinedb_api import SpineDBAPIError
 from spinetoolbox.project_item import ProjectItem
 from spinetoolbox.widgets.data_store_widget import DataStoreForm
+from .item_info import ItemInfo
 from .view_executable import ViewExecutable
 
 
@@ -49,12 +50,12 @@ class View(ProjectItem):
     @staticmethod
     def item_type():
         """See base class."""
-        return "View"
+        return ItemInfo.item_type()
 
     @staticmethod
-    def category():
+    def item_category():
         """See base class."""
-        return "Views"
+        return ItemInfo.item_category()
 
     def execution_item(self):
         """Creates project item's execution counterpart."""

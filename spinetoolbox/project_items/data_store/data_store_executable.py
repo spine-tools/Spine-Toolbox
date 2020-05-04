@@ -17,7 +17,8 @@ Contains DataStoreExecutable, DataStore's executable counterpart as well as supp
 """
 
 from spinetoolbox.executable_item import ExecutableItem
-from spinetoolbox.project_item import ProjectItemResource
+from spinetoolbox.project_item_resource import ProjectItemResource
+from .item_info import ItemInfo
 
 
 class DataStoreExecutable(ExecutableItem):
@@ -34,7 +35,7 @@ class DataStoreExecutable(ExecutableItem):
     @staticmethod
     def item_type():
         """Returns the data store executable's type identifier string."""
-        return "Data Store"
+        return ItemInfo.item_type()
 
     def _output_resources_backward(self):
         """See base class."""

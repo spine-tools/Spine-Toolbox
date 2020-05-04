@@ -24,24 +24,9 @@ from .widgets.add_view_widget import AddViewWidget
 
 
 class ViewFactory(ProjectItemFactory):
-    def __init__(self, toolbox):
-        super().__init__(toolbox, "Views", "")
-
-    @staticmethod
-    def item_category():
-        return "Views"
-
     @staticmethod
     def icon():
         return ":/icons/project_item_icons/binoculars.svg"
-
-    @staticmethod
-    def item_type():
-        return "View"
-
-    @property
-    def properties_widget_maker(self):
-        return ViewPropertiesWidget
 
     @property
     def item_maker(self):
@@ -66,3 +51,7 @@ class ViewFactory(ProjectItemFactory):
     @property
     def specification_loader(self):
         raise NotImplementedError()
+
+    @staticmethod
+    def _make_properties_widget(toolbox):
+        return ViewPropertiesWidget(toolbox)

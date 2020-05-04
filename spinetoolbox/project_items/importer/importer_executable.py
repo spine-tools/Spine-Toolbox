@@ -22,6 +22,7 @@ from spinetoolbox.executable_item import ExecutableItem
 from spinetoolbox.execution_managers import QProcessExecutionManager
 from spinetoolbox.spine_io.gdx_utils import find_gams_directory
 from . import importer_program
+from .item_info import ItemInfo
 
 
 class ImporterExecutable(ExecutableItem, QObject):
@@ -54,7 +55,7 @@ class ImporterExecutable(ExecutableItem, QObject):
     @staticmethod
     def item_type():
         """Returns ImporterExecutable's type identifier string."""
-        return "Importer"
+        return ItemInfo.item_type()
 
     def stop_execution(self):
         """Stops executing this ImporterExecutable."""

@@ -16,4 +16,5 @@ Tool plugin.
 :date:   12.9.2019
 """
 
-from .tool_factory import ToolFactory as item_factory
+from .tool_factory import ToolFactory as ItemFactory
+from .item_info import ItemInfo

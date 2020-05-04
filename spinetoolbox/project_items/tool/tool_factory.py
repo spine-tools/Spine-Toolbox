@@ -27,24 +27,9 @@ from .widgets.custom_menus import ToolSpecificationMenu
 
 
 class ToolFactory(ProjectItemFactory):
-    def __init__(self, toolbox):
-        super().__init__(toolbox, "Tools", "")
-
-    @staticmethod
-    def item_category():
-        return "Tools"
-
     @staticmethod
     def icon():
         return ":/icons/project_item_icons/hammer.svg"
-
-    @staticmethod
-    def item_type():
-        return "Tool"
-
-    @property
-    def properties_widget_maker(self):
-        return ToolPropertiesWidget
 
     @property
     def item_maker(self):
@@ -73,3 +58,7 @@ class ToolFactory(ProjectItemFactory):
     @property
     def specification_loader(self):
         return ToolSpecification.toolbox_load
+
+    @staticmethod
+    def _make_properties_widget(toolbox):
+        return ToolPropertiesWidget(toolbox)

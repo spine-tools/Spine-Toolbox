@@ -24,24 +24,9 @@ from .widgets.add_importer_widget import AddImporterWidget
 
 
 class ImporterFactory(ProjectItemFactory):
-    def __init__(self, toolbox):
-        super().__init__(toolbox, "Importers", "")
-
-    @staticmethod
-    def item_category():
-        return "Importers"
-
     @staticmethod
     def icon():
         return ":/icons/project_item_icons/database-import.svg"
-
-    @staticmethod
-    def item_type():
-        return "Importer"
-
-    @property
-    def properties_widget_maker(self):
-        return ImporterPropertiesWidget
 
     @property
     def item_maker(self):
@@ -66,3 +51,7 @@ class ImporterFactory(ProjectItemFactory):
     @property
     def specification_loader(self):
         raise NotImplementedError()
+
+    @staticmethod
+    def _make_properties_widget(toolbox):
+        return ImporterPropertiesWidget(toolbox)

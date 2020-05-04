@@ -34,7 +34,7 @@ class TestProjectItem(unittest.TestCase):
         """Set up toolbox."""
         self.toolbox = create_toolboxui_with_project()
         item_dict = dict(name="DC", description="", x=0, y=0)
-        self.toolbox.project().add_project_items("Data Connections", item_dict)
+        self.toolbox.project().add_project_items("Data Connection", item_dict)
         index = self.toolbox.project_item_model.find_item("DC")
         self.data_connection = self.toolbox.project_item_model.item(index).project_item
 
@@ -53,6 +53,29 @@ class TestProjectItem(unittest.TestCase):
             "Link established."
             " Interaction between a <b>item_type</b> and a <b>item_type</b> has not been implemented yet."
         )
+
+    def test_item_dict(self):
+        project = MagicMock()
+        project.items_dir = "item_directory/"
+        item = ProjectItem("item name", "Item's description.", -2.3, 5.5, project, None)
+        item.item_type = MagicMock(return_value="item type")
+        point = NonCallableMagicMock()
+        point.x = MagicMock(return_value=-2.3)
+        point.y = MagicMock(return_value=5.5)
+        sceneBoundingRect = NonCallableMagicMock()
+        sceneBoundingRect.center = MagicMock(return_value=point)
+        icon = NonCallableMagicMock()
+        icon.sceneBoundingRect = MagicMock(return_value=sceneBoundingRect)
+        item.get_icon = MagicMock(return_value=icon)
+        item_dict = item.item_dict()
+        expected = {
+            "type": "item type",
+            "short name": "item_name",
+            "description": "Item's description.",
+            "x": -2.3,
+            "y": 5.5,
+        }
+        self.assertEqual(item_dict, expected)
 
 
 if __name__ == '__main__':

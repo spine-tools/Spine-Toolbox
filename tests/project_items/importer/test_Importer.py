@@ -21,9 +21,9 @@ import unittest
 from unittest.mock import MagicMock, NonCallableMagicMock
 from PySide2.QtCore import Qt
 from PySide2.QtWidgets import QApplication
-from networkx import DiGraph
 from spinetoolbox.project_items.importer.importer import Importer
-from spinetoolbox.project_item import ProjectItemResource
+from spinetoolbox.project_items.importer.item_info import ItemInfo
+from spinetoolbox.project_item_resource import ProjectItemResource
 from ...mock_helpers import clean_up_toolboxui_with_project, create_toolboxui_with_project
 
 
@@ -32,7 +32,7 @@ class TestImporter(unittest.TestCase):
         """Set up."""
         self.toolbox = create_toolboxui_with_project()
         item_dict = dict(name="importer", description="", mappings=dict(), x=0, y=0)
-        self.toolbox.project().add_project_items("Importers", item_dict)
+        self.toolbox.project().add_project_items("Importer", item_dict)
         index = self.toolbox.project_item_model.find_item("importer")
         self.importer = self.toolbox.project_item_model.item(index).project_item
 
@@ -46,7 +46,10 @@ class TestImporter(unittest.TestCase):
             QApplication()
 
     def test_item_type(self):
-        self.assertEqual(self.importer.item_type(), "Importer")
+        self.assertEqual(Importer.item_type(), ItemInfo.item_type())
+
+    def test_item_category(self):
+        self.assertEqual(Importer.item_category(), ItemInfo.item_category())
 
     def test_notify_destination(self):
         self.toolbox.msg = MagicMock()

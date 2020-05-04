@@ -101,7 +101,7 @@ class TestLeafProjectTreeItem(unittest.TestCase):
         expected_short_name = "abc"
         toolbox = create_toolboxui_with_project()
         project_item_dict = dict(name="View", description="", x=0, y=0)
-        toolbox.project().add_project_items("Views", project_item_dict)
+        toolbox.project().add_project_items("View", project_item_dict)
         index = toolbox.project_item_model.find_item("View")
         leaf = toolbox.project_item_model.item(index)
         leaf.rename(expected_name)

@@ -25,6 +25,7 @@ from PySide2.QtWidgets import QWidget, QStatusBar, QInputDialog, QFileDialog, QF
 from PySide2.QtCore import Slot, Qt, QUrl, QFileInfo
 from spinetoolbox.config import STATUSBAR_SS, TREEVIEW_HEADER_SS
 from spinetoolbox.helpers import busy_effect
+from ..item_info import ItemInfo
 from ..tool_specifications import CmdlineTag, TOOL_TYPES, REQUIRED_KEYS, CMDLINE_TAG_EDGE, ToolSpecification
 from .custom_menus import AddIncludesPopupMenu, CreateMainProgramPopupMenu
 
@@ -86,7 +87,7 @@ class ToolSpecificationWidget(QWidget):
         self.outputfiles = list(specification.outputfiles) if specification else list()
         self.def_file_path = specification.def_file_path if specification else None
         self.program_path = specification.path if specification else None
-        self.definition = dict(factory_name="Tools")
+        self.definition = dict(item_type=ItemInfo.item_type())
         # Get first item from sourcefiles list as the main program file
         try:
             self.main_program_file = self.sourcefiles.pop(0)

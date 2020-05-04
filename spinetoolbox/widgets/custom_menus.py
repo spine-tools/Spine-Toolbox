@@ -370,16 +370,15 @@ class AddSpecificationPopupMenu(CustomPopupMenu):
         # Open empty Tool specification Form
         self.add_action("Add Specification from file...", parent.import_specification)
         self.addSeparator()
-        for factory in parent.item_factories.values():
+        for item_type, factory in parent.item_factories.items():
             if not factory.supports_specifications():
                 continue
-            item_type = factory.item_type()
-            factory_name = factory.name
+            # Need to 'clone' item_type, otherwise show_specification_form() may be called with
+            # wrong item type as item_type is a cell variable.
+            specification_item_type = str(item_type)
             self.add_action(
                 f"Create {item_type} Specification...",
-                lambda checked=False, factory_name=factory_name: parent.show_specification_form(
-                    factory_name, specification=None
-                ),
+                lambda _: parent.show_specification_form(specification_item_type, specification=None),
             )
 
 

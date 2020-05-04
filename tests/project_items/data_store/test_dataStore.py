@@ -26,6 +26,7 @@ from PySide2.QtWidgets import QApplication, QMessageBox
 import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
 from spinetoolbox.widgets.data_store_widget import DataStoreForm
 from spinetoolbox.project_items.data_store.data_store import DataStore
+from spinetoolbox.project_items.data_store.item_info import ItemInfo
 from ...mock_helpers import clean_up_toolboxui_with_project, create_toolboxui_with_project
 
 
@@ -51,10 +52,10 @@ class TestDataStore(unittest.TestCase):
         is not called in tearDown().
         """
         self.toolbox = create_toolboxui_with_project()
-        self.ds_properties_ui = self.toolbox.item_factories["Data Stores"].properties_ui
+        self.ds_properties_ui = self.toolbox.item_factories["Data Store"].properties_ui
         # Let's add a Data Store to the project here since all tests in this class need it
         item_dict = dict(name="DS", description="", x=0, y=0, url=None)
-        self.toolbox.project().add_project_items("Data Stores", item_dict)
+        self.toolbox.project().add_project_items("Data Store", item_dict)
         self.ds_index = self.toolbox.project_item_model.find_item("DS")
         self.ds = self.toolbox.project_item_model.item(self.ds_index).project_item
 
@@ -86,8 +87,12 @@ class TestDataStore(unittest.TestCase):
         return temp_db_path
 
     def test_item_type(self):
-        """Tests that the item type class variable is correct."""
-        self.assertEqual(self.ds.item_type(), "Data Store")
+        """Tests that the item type is correct."""
+        self.assertEqual(DataStore.item_type(), ItemInfo.item_type())
+
+    def test_item_category(self):
+        """Tests that the item category is correct."""
+        self.assertEqual(DataStore.item_category(), ItemInfo.item_category())
 
     def test_create_new_empty_spine_database(self):
         """Test that a new Spine database is created when clicking on 'New Spine db tool button'
@@ -183,7 +188,7 @@ class TestDataStore(unittest.TestCase):
         # Select the sqlite dialect
         self.ds_properties_ui.comboBox_dialect.activated[str].emit("sqlite")
         # Browse to an existing db file
-        with mock.patch("spinetoolbox.project_items.data_store.data_store.QFileDialog") as mock_qfile_dialog:
+        with mock.patch("project_items.data_store.data_store.QFileDialog") as mock_qfile_dialog:
             mock_qfile_dialog.getOpenFileName.side_effect = lambda *args: [temp_db_path]
             self.ds_properties_ui.toolButton_open_sqlite_file.click()
             mock_qfile_dialog.getOpenFileName.assert_called_once()

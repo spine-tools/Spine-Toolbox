@@ -50,7 +50,7 @@ class ToolPropertiesWidget(QWidget):
 
     @Slot()
     def update_combo_box_tool_model(self):
-        model = self._toolbox.filtered_spec_factory_models["Tools"]
+        model = self._toolbox.filtered_spec_factory_models["Tool"]
         self.ui.comboBox_tool.setModel(model)
 
     @Slot("QPoint")

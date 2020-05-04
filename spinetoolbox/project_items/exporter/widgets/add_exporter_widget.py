@@ -18,6 +18,7 @@ Widget shown to user when a new Exporter item is created.
 
 from spinetoolbox.widgets.add_project_item_widget import AddProjectItemWidget
 from ..exporter import Exporter
+from ..item_info import ItemInfo
 
 
 class AddExporterWidget(AddProjectItemWidget):
@@ -35,4 +36,4 @@ class AddExporterWidget(AddProjectItemWidget):
     def call_add_item(self):
         """Creates new Item according to user's selections."""
         item = dict(name=self.name, description=self.description, settings_packs=None, x=self._x, y=self._y)
-        self._project.add_project_items("Exporters", item, set_selected=True)
+        self._project.add_project_items(ItemInfo.item_type(), item, set_selected=True)

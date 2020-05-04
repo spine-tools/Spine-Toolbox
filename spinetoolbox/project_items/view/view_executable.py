@@ -16,10 +16,11 @@ Contains ViewExecutable, Views's executable counterpart as well as support utili
 :date:   2.4.2020
 """
 from spinetoolbox.executable_item import ExecutableItem
+from .item_info import ItemInfo
 
 
 class ViewExecutable(ExecutableItem):
     @staticmethod
     def item_type():
         """Returns View's type identifier string."""
-        return "View"
+        return ItemInfo.item_type()

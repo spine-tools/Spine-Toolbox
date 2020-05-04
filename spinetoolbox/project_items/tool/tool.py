@@ -20,9 +20,11 @@ import pathlib
 from PySide2.QtCore import Slot, Qt, QUrl, QFileInfo, QTimeLine
 from PySide2.QtGui import QDesktopServices, QStandardItemModel, QStandardItem
 from PySide2.QtWidgets import QFileIconProvider
-from spinetoolbox.project_item import ProjectItem, ProjectItemResource
+from spinetoolbox.project_item import ProjectItem
+from spinetoolbox.project_item_resource import ProjectItemResource
 from spinetoolbox.config import TOOL_OUTPUT_DIR
 from .commands import UpdateToolExecuteInWorkCommand, UpdateToolCmdLineArgsCommand
+from .item_info import ItemInfo
 from .tool_specifications import ToolSpecification
 from .widgets.custom_menus import ToolContextMenu, ToolSpecificationMenu
 from .tool_executable import ToolExecutable
@@ -78,12 +80,12 @@ class Tool(ProjectItem):
     @staticmethod
     def item_type():
         """See base class."""
-        return "Tool"
+        return ItemInfo.item_type()
 
     @staticmethod
-    def category():
+    def item_category():
         """See base class."""
-        return "Tools"
+        return ItemInfo.item_category()
 
     def make_signal_handler_dict(self):
         """Returns a dictionary of all shared signals and their handlers.

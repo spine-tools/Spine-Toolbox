@@ -23,7 +23,7 @@ from unittest import mock
 from gdx2py import GdxFile
 from spine_engine import ExecutionDirection
 from spinedb_api import create_new_spine_database, DiffDatabaseMapping, import_functions
-from spinetoolbox.project_item import ProjectItemResource
+from spinetoolbox.project_item_resource import ProjectItemResource
 from spinetoolbox.project_items.exporter.exporter import SettingsPack
 from spinetoolbox.project_items.exporter.exporter_executable import ExporterExecutable
 from spinetoolbox.project_items.exporter.settings_state import SettingsState

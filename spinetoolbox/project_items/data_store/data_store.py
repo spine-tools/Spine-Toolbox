@@ -22,11 +22,13 @@ from PySide2.QtWidgets import QFileDialog, QApplication
 from sqlalchemy import create_engine
 from sqlalchemy.engine.url import URL
 import spinedb_api
-from spinetoolbox.project_item import ProjectItem, ProjectItemResource
+from spinetoolbox.project_item import ProjectItem
+from spinetoolbox.project_item_resource import ProjectItemResource
 from spinetoolbox.widgets.data_store_widget import DataStoreForm
 from spinetoolbox.helpers import create_dir, busy_effect, serialize_path, deserialize_path
 from .commands import UpdateDSURLCommand
 from .data_store_executable import DataStoreExecutable
+from .item_info import ItemInfo
 from .widgets.custom_menus import DataStoreContextMenu
 
 
@@ -64,12 +66,12 @@ class DataStore(ProjectItem):
     @staticmethod
     def item_type():
         """See base class."""
-        return "Data Store"
+        return ItemInfo.item_type()
 
     @staticmethod
-    def category():
+    def item_category():
         """See base class."""
-        return "Data Stores"
+        return ItemInfo.item_category()
 
     def execution_item(self):
         """Creates DataStore's execution counterpart."""

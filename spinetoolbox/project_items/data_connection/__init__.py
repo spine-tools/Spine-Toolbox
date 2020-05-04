@@ -16,4 +16,5 @@ Data connection plugin.
 :date:   12.9.2019
 """
 
-from .data_connection_factory import DataConnectionFactory as item_factory
+from .data_connection_factory import DataConnectionFactory as ItemFactory
+from .item_info import ItemInfo

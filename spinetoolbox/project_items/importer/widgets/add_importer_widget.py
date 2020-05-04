@@ -18,6 +18,7 @@ Widget shown to user when a new Importer is created.
 
 from spinetoolbox.widgets.add_project_item_widget import AddProjectItemWidget
 from ..importer import Importer
+from ..item_info import ItemInfo
 
 
 class AddImporterWidget(AddProjectItemWidget):
@@ -35,4 +36,4 @@ class AddImporterWidget(AddProjectItemWidget):
     def call_add_item(self):
         """Creates new Item according to user's selections."""
         item = dict(name=self.name, description=self.description, x=self._x, y=self._y, mappings=dict())
-        self._project.add_project_items("Importers", item, set_selected=True)
+        self._project.add_project_items(ItemInfo.item_type(), item, set_selected=True)

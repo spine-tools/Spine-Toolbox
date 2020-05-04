@@ -23,7 +23,7 @@ from unittest import mock
 from PySide2.QtCore import QCoreApplication
 from spinedb_api import create_new_spine_database, DatabaseMapping
 from spine_engine import ExecutionDirection
-from spinetoolbox.project_item import ProjectItemResource
+from spinetoolbox.project_item_resource import ProjectItemResource
 from spinetoolbox.project_items.importer.importer_executable import ImporterExecutable
 
 

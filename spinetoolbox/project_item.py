@@ -8,9 +8,8 @@
 # Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
-
 """
-ProjectItem and ProjectItemResource classes.
+Contains base classes for project items and item factories.
 
 :authors: P. Savolainen (VTT)
 :date:   4.10.2018
@@ -18,8 +17,6 @@ ProjectItem and ProjectItemResource classes.
 
 import os
 import logging
-from urllib.parse import urlparse
-from urllib.request import url2pathname
 from PySide2.QtCore import QUrl, Signal
 from PySide2.QtGui import QDesktopServices
 from .helpers import create_dir, rename_dir
@@ -50,7 +47,6 @@ class ProjectItem(MetaObject):
             logger (LoggerInterface): a logger instance
         """
         super().__init__(name, description)
-        self._item_factory = None
         self._project = project
         self.x = x
         self.y = y
@@ -76,12 +72,10 @@ class ProjectItem(MetaObject):
         """Item's type identifier string."""
         raise NotImplementedError()
 
-    def item_factory(self):
-        """Item's factory identifier string."""
-        return self._item_factory
-
-    def set_item_factory(self, item_factory):
-        self._item_factory = item_factory
+    @staticmethod
+    def item_category():
+        """Item's category."""
+        raise NotImplementedError()
 
     # pylint: disable=no-self-use
     def make_signal_handler_dict(self):
@@ -259,6 +253,7 @@ class ProjectItem(MetaObject):
     def item_dict(self):
         """Returns a dictionary corresponding to this item."""
         return {
+            "type": self.item_type(),
             "short name": self.short_name,
             "description": self.description,
             "x": self.get_icon().sceneBoundingRect().center().x(),
@@ -363,18 +358,15 @@ class ProjectItem(MetaObject):
         return old_item_dict
 
 
-class ProjectItemFactory(MetaObject):
+class ProjectItemFactory:
     """Class for project item factories."""
 
-    def __init__(self, toolbox, name, description):
+    def __init__(self, toolbox):
         """
         Args:
             toolbox (ToolboxUI)
-            name (str): Category name
-            description (str): Category description
         """
-        super().__init__(name, description)
-        self.properties_ui = self.properties_widget_maker(toolbox).ui
+        self.properties_ui = self._make_properties_widget(toolbox).ui
 
     @staticmethod
     def icon():
@@ -383,36 +375,6 @@ class ProjectItemFactory(MetaObject):
 
         Returns:
             str
-        """
-        raise NotImplementedError()
-
-    @staticmethod
-    def item_category():
-        """
-        Returns the item category string, e.g., "Tools".
-
-        Returns:
-            str
-        """
-        raise NotImplementedError()
-
-    @staticmethod
-    def item_type():
-        """
-        Returns the category item type string, e.g., "Gimlet".
-
-        Returns:
-            str
-        """
-        raise NotImplementedError()
-
-    @property
-    def properties_widget_maker(self):
-        """
-        Returns a QWidget subclass to create the properties ui.
-
-        Returns:
-            class
         """
         raise NotImplementedError()
 
@@ -510,7 +472,6 @@ class ProjectItemFactory(MetaObject):
             ProjectItem
         """
         item = self.item_maker(*args, **kwargs)
-        item.set_item_factory(self.name)
         return item
 
     def activate_project_item(self, toolbox, project_item):
@@ -532,20 +493,36 @@ class ProjectItemFactory(MetaObject):
         project_item.create_data_dir()
         project_item.set_up()
 
+    @staticmethod
+    def _make_properties_widget(toolbox):
+        """
+        Creates the item's properties tab widget.
+
+        Returns:
+            QWidget
+        """
+        raise NotImplementedError()
+
 
 class ProjectItemSpecification(MetaObject):
-    """Class to hold a project item specification."""
+    """
+    Class to hold a project item specification.
 
-    def __init__(self, name, description=None, factory_name=""):
+    Attributes:
+        item_type (str): project item's type
+        def_file_path (str): specification's JSON file path
+    """
+
+    def __init__(self, name, description=None, item_type=""):
         """
         Args:
             name (str): specification name
             description (str): description
-            factory_name (str): Project item factory name, e.g., "Tools"
+            item_type (str): Project item type
         """
         super().__init__(name, description)
-        self.factory_name = factory_name
-        self.def_file_path = ""  # specification's JSON file path
+        self.item_type = item_type
+        self.def_file_path = ""
 
     def set_def_path(self, path):
         """Sets the file path for this tool specification.
@@ -558,63 +535,3 @@ class ProjectItemSpecification(MetaObject):
     def get_def_path(self):
         """Returns tool specification file path."""
         return self.def_file_path
-
-
-class ProjectItemResource:
-    """Class to hold a resource made available by a project item
-    and that may be consumed by another project item."""
-
-    def __init__(self, provider, type_, url="", metadata=None):
-        """
-        Args:
-            provider (ProjectItem or ExecutionItem): The item that provides the resource
-            type_ (str): The resource type, currently available types:
-
-                - "file": url points to the file's path
-                - "database": url is the databases url
-                - "transient_file": a file that may not yet be available or may change its location;
-                  url points to latest version or is empty, metadata contains the "label" key
-                  and an optional "pattern" key
-                - "file_pattern": a file patter with wildcards that acts as a placeholder;
-                  url is empty, metadata contains the "label" key
-            url (str): The url of the resource
-            metadata (dict): Some metadata providing extra information about the resource.
-                Currently available keys:
-
-                - label (str): a textual label
-                - pattern (str): a file pattern if the file is part of that pattern
-        """
-        self.provider = provider
-        self.type_ = type_
-        self.url = url
-        self.parsed_url = urlparse(url)
-        self.metadata = metadata if metadata is not None else dict()
-
-    def __eq__(self, other):
-        if not isinstance(other, ProjectItemResource):
-            # don't attempt to compare against unrelated types
-            return NotImplemented
-        return (
-            self.provider == other.provider
-            and self.type_ == other.type_
-            and self.url == other.url
-            and self.metadata == other.metadata
-        )
-
-    def __repr__(self):
-        result = "ProjectItemResource("
-        result += f"provider={self.provider}, "
-        result += f"type_={self.type_}, "
-        result += f"url={self.url}, "
-        result += f"metadata={self.metadata})"
-        return result
-
-    @property
-    def path(self):
-        """Returns the resource path in the local syntax, as obtained from parsing the url."""
-        return url2pathname(self.parsed_url.path)
-
-    @property
-    def scheme(self):
-        """Returns the resource scheme, as obtained from parsing the url."""
-        return self.parsed_url.scheme

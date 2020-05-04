@@ -19,9 +19,10 @@ import os.path
 import pathlib
 from spinedb_api import DatabaseMapping, SpineDBAPIError
 from spinetoolbox.executable_item import ExecutableItem
-from spinetoolbox.project_item import ProjectItemResource
+from spinetoolbox.project_item_resource import ProjectItemResource
 from spinetoolbox.spine_io import gdx_utils
 from spinetoolbox.spine_io.exporters import gdx
+from .item_info import ItemInfo
 from .settings_state import SettingsState
 
 
@@ -45,7 +46,7 @@ class ExporterExecutable(ExecutableItem):
     @staticmethod
     def item_type():
         """Returns Exporter's type identifier string."""
-        return "Exporter"
+        return ItemInfo.item_type()
 
     def _execute_forward(self, resources):
         """See base class."""

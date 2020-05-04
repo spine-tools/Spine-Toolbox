@@ -21,6 +21,7 @@ import unittest
 from unittest.mock import MagicMock, NonCallableMagicMock
 from PySide2.QtWidgets import QApplication
 from spinetoolbox.project_items.data_connection.data_connection import DataConnection
+from spinetoolbox.project_items.data_connection.item_info import ItemInfo
 from ...mock_helpers import clean_up_toolboxui_with_project, create_toolboxui_with_project
 
 
@@ -29,7 +30,7 @@ class TestDataConnection(unittest.TestCase):
         """Set up toolbox."""
         self.toolbox = create_toolboxui_with_project()
         item_dict = dict(name="DC", description="", x=0, y=0)
-        self.toolbox.project().add_project_items("Data Connections", item_dict)
+        self.toolbox.project().add_project_items("Data Connection", item_dict)
         index = self.toolbox.project_item_model.find_item("DC")
         self.data_connection = self.toolbox.project_item_model.item(index).project_item
 
@@ -44,7 +45,10 @@ class TestDataConnection(unittest.TestCase):
             QApplication()
 
     def test_item_type(self):
-        self.assertEqual(self.data_connection.item_type(), "Data Connection")
+        self.assertEqual(DataConnection.item_type(), ItemInfo.item_type())
+
+    def test_item_category(self):
+        self.assertEqual(DataConnection.item_category(), ItemInfo.item_category())
 
     def test_notify_destination(self):
         self.toolbox.msg = MagicMock()

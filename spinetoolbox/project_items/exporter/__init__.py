@@ -16,4 +16,5 @@ Exporter project item plugin.
 :date:   25.9.2019
 """
 
-from .exporter_factory import ExporterFactory as item_factory
+from .exporter_factory import ExporterFactory as ItemFactory
+from .item_info import ItemInfo

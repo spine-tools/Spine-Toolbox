@@ -10,11 +10,23 @@
 ######################################################################################################################
 
 """
-Importer plugin.
+Contains facilities to open and execute projects without GUI.
 
-:author: M. Marin (KTH)
-:date:   12.9.2019
+:authors: A. Soininen (VTT)
+:date:   29.4.2020
 """
+from .dag_handler import DirectedGraphHandler
 
-from .importer_factory import ImporterFactory as ItemFactory
-from .item_info import ItemInfo
+
+def open_project(project_dict):
+    project_items = list()
+    dag_handler = DirectedGraphHandler()
+    for catecory_name, item_dicts in project_dict["objects"].items():
+        for item_name, item_dict in item_dicts.items():
+            dag_handler.add_dag_node(item_name)
+
+    for connection in project_dict["project"]["connections"]:
+        from_name = connection["from"][0]
+        to_name = connection["to"][0]
+        dag_handler.add_graph_edge(from_name, to_name)
+    return project_items, dag_handler

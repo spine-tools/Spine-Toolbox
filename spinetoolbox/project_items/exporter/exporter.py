@@ -22,12 +22,14 @@ import pathlib
 import os.path
 from PySide2.QtCore import QObject, Qt, Signal, Slot
 from spinedb_api import DatabaseMapping, SpineDBAPIError
-from spinetoolbox.project_item import ProjectItem, ProjectItemResource
+from spinetoolbox.project_item import ProjectItem
+from spinetoolbox.project_item_resource import ProjectItemResource
 from spinetoolbox.helpers import deserialize_path, serialize_url
 from spinetoolbox.spine_io.exporters import gdx
 from .commands import UpdateExporterOutFileNameCommand, UpdateExporterSettingsCommand, UpdateCancelOnErrorCommand
 from .db_utils import latest_database_commit_time_stamp
 from .exporter_executable import ExporterExecutable
+from .item_info import ItemInfo
 from .settings_state import SettingsState
 from .widgets.gdx_export_settings import GdxExportSettings
 from .widgets.export_list_item import ExportListItem
@@ -88,12 +90,12 @@ class Exporter(ProjectItem):
     @staticmethod
     def item_type():
         """See base class."""
-        return "Exporter"
+        return ItemInfo.item_type()
 
     @staticmethod
-    def category():
+    def item_category():
         """See base class."""
-        return "Exporters"
+        return ItemInfo.item_category()
 
     def execution_item(self):
         """Creates Exporter's execution counterpart."""

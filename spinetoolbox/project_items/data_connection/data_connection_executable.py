@@ -15,12 +15,17 @@ Contains DataConnectionExecutable, DataConnection's executable counterpart as we
 :authors: A. Soininen (VTT)
 :date:   1.4.2020
 """
+import os
 import pathlib
 from spinetoolbox.executable_item import ExecutableItem
-from spinetoolbox.project_item import ProjectItemResource
+from spinetoolbox.helpers import deserialize_path
+from spinetoolbox.project_item_resource import ProjectItemResource
+from .item_info import ItemInfo
 
 
 class DataConnectionExecutable(ExecutableItem):
+    """The executable parts of Data Connection."""
+
     def __init__(self, name, file_references, data_files, logger):
         """
         Args:
@@ -34,8 +39,22 @@ class DataConnectionExecutable(ExecutableItem):
     @staticmethod
     def item_type():
         """Returns DataConnectionExecutable's type identifier string."""
-        return "Data Connection"
+        return ItemInfo.item_type()
 
     def _output_resources_forward(self):
-        """see base class"""
+        """See base class."""
         return [ProjectItemResource(self, "file", url=pathlib.Path(ref).as_uri()) for ref in self._files]
+
+    @classmethod
+    def from_dict(cls, item_dict, name, project_dir, app_settings, logger):
+        """See base class."""
+        references = item_dict["references"]
+        file_references = [deserialize_path(r, project_dir) for r in references]
+        short_name = item_dict["short name"]
+        data_dir = pathlib.Path(project_dir, short_name)
+        data_files = list()
+        with os.scandir(data_dir) as scan_iterator:
+            for entry in scan_iterator:
+                if entry.is_file():
+                    data_files.append(entry.path)
+        return cls(name, file_references, data_files, logger)

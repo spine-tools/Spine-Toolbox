@@ -23,6 +23,7 @@ import re
 from PySide2.QtCore import QUrl
 from PySide2.QtGui import QDesktopServices
 from spinetoolbox.project_item import ProjectItemSpecification
+from .item_info import ItemInfo
 from .tool_instance import GAMSToolInstance, JuliaToolInstance, PythonToolInstance, ExecutableToolInstance
 
 # Tool types
@@ -85,7 +86,7 @@ class ToolSpecification(ProjectItemSpecification):
             cmdline_args (str, optional): Tool command line arguments (read from tool definition file)
             execute_in_work (bool): Execute in work folder
         """
-        super().__init__(name, description, factory_name="Tools")
+        super().__init__(name, description, item_type=ItemInfo.item_type())
         self._settings = settings
         self._logger = logger
         self.tooltype = tooltype

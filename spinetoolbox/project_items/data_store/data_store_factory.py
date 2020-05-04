@@ -24,24 +24,9 @@ from .widgets.add_data_store_widget import AddDataStoreWidget
 
 
 class DataStoreFactory(ProjectItemFactory):
-    def __init__(self, toolbox):
-        super().__init__(toolbox, "Data Stores", "")
-
-    @staticmethod
-    def item_category():
-        return "Data Stores"
-
     @staticmethod
     def icon():
         return ":/icons/project_item_icons/database.svg"
-
-    @staticmethod
-    def item_type():
-        return "Data Store"
-
-    @property
-    def properties_widget_maker(self):
-        return DataStorePropertiesWidget
 
     @property
     def item_maker(self):
@@ -66,3 +51,8 @@ class DataStoreFactory(ProjectItemFactory):
     @property
     def specification_loader(self):
         raise NotImplementedError()
+
+    @staticmethod
+    def _make_properties_widget(toolbox):
+        """See base class"""
+        return DataStorePropertiesWidget(toolbox)

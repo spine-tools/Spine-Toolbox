@@ -26,7 +26,8 @@ import time
 import uuid
 from PySide2.QtCore import QEventLoop, Slot
 from spinetoolbox.executable_item import ExecutableItem
-from spinetoolbox.project_item import ProjectItemResource
+from spinetoolbox.project_item_resource import ProjectItemResource
+from .item_info import ItemInfo
 from .utils import (
     file_paths_from_resources,
     find_file,
@@ -62,7 +63,7 @@ class ToolExecutable(ExecutableItem):
     @staticmethod
     def item_type():
         """Returns the item's type identifier string."""
-        return "Tool"
+        return ItemInfo.item_type()
 
     def execution_finished(self, execution_token, return_code, execution_dir):
         """Handles things after execution has finished."""

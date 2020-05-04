@@ -10,11 +10,20 @@
 ######################################################################################################################
 
 """
-Importer plugin.
+This module defines the project item categories available in the Toolbox.
 
-:author: M. Marin (KTH)
-:date:   12.9.2019
+:author: A.Soininen (VTT)
+:date:   6.5.2020
 """
+# The categories will appear in the main window in the same order they are declared here.
+CATEGORIES = ("Data Stores", "Data Connections", "Tools", "Views", "Importers", "Exporters")
 
-from .importer_factory import ImporterFactory as ItemFactory
-from .item_info import ItemInfo
+
+CATEGORY_DESCRIPTIONS = {
+    "Data Connections": "Generic data source",
+    "Data Stores": "Data in the Spine generic format",
+    "Exporters": "Data conversion from Spine to an external format",
+    "Importers": "Data conversion from an external format to Spine",
+    "Tools": "Custom data processing",
+    "Views": "Data visualization",
+}

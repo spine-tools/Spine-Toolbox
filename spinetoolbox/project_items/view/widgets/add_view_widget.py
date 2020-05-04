@@ -17,6 +17,7 @@ Widget shown to user when a new View is created.
 """
 
 from spinetoolbox.widgets.add_project_item_widget import AddProjectItemWidget
+from ..item_info import ItemInfo
 from ..view import View
 
 
@@ -36,4 +37,4 @@ class AddViewWidget(AddProjectItemWidget):
     def call_add_item(self):
         """Creates new Item according to user's selections."""
         item = dict(name=self.name, description=self.description, x=self._x, y=self._y)
-        self._project.add_project_items("Views", item, set_selected=True)
+        self._project.add_project_items(ItemInfo.item_type(), item, set_selected=True)

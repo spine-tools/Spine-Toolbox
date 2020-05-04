@@ -23,12 +23,14 @@ import pathlib
 from PySide2.QtCore import Slot, QUrl, QFileSystemWatcher, Qt, QFileInfo
 from PySide2.QtGui import QDesktopServices, QStandardItem, QStandardItemModel, QIcon, QPixmap
 from PySide2.QtWidgets import QFileDialog, QStyle, QFileIconProvider, QInputDialog, QMessageBox
-from spinetoolbox.project_item import ProjectItem, ProjectItemResource
+from spinetoolbox.project_item import ProjectItem
+from spinetoolbox.project_item_resource import ProjectItemResource
 from spinetoolbox.widgets.spine_datapackage_widget import SpineDatapackageWidget
 from spinetoolbox.helpers import busy_effect, deserialize_path, serialize_path
 from spinetoolbox.config import APPLICATION_PATH, INVALID_FILENAME_CHARS
 from .commands import AddDCReferencesCommand, RemoveDCReferencesCommand
 from .data_connection_executable import DataConnectionExecutable
+from .item_info import ItemInfo
 
 
 class DataConnection(ProjectItem):
@@ -55,8 +57,7 @@ class DataConnection(ProjectItem):
         if references is None:
             references = list()
         # Convert relative paths to absolute
-        absolute_refs = [deserialize_path(r, self._project.project_dir) for r in references]
-        self.references = absolute_refs
+        self.references = [deserialize_path(r, self._project.project_dir) for r in references]
         self.populate_reference_list(self.references)
         # Populate data (files) model
         data_files = self.data_files()
@@ -72,12 +73,12 @@ class DataConnection(ProjectItem):
     @staticmethod
     def item_type():
         """See base class."""
-        return "Data Connection"
+        return ItemInfo.item_type()
 
     @staticmethod
-    def category():
+    def item_category():
         """See base class."""
-        return "Data Connections"
+        return ItemInfo.item_category()
 
     def execution_item(self):
         """Creates DataConnection's execution counterpart."""

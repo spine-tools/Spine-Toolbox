@@ -31,6 +31,7 @@ from spinetoolbox.spine_io.importers.json_reader import JSONConnector
 from spinetoolbox.widgets.import_preview_window import ImportPreviewWindow
 from .commands import UpdateImporterSettingsCommand, UpdateImporterCancelOnErrorCommand
 from .importer_executable import ImporterExecutable
+from .item_info import ItemInfo
 
 _CONNECTOR_NAME_TO_CLASS = {
     "CSVConnector": CSVConnector,
@@ -91,12 +92,12 @@ class Importer(ProjectItem):
     @staticmethod
     def item_type():
         """See base class."""
-        return "Importer"
+        return ItemInfo.item_type()
 
     @staticmethod
-    def category():
+    def item_category():
         """See base class."""
-        return "Importers"
+        return ItemInfo.item_category()
 
     def execution_item(self):
         """Creates project item's execution counterpart."""

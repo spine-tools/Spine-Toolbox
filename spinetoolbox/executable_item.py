@@ -20,12 +20,22 @@ from spine_engine import ExecutionDirection
 
 
 class ExecutableItem:
+    """
+    The part of a project item that is executed by the Spine Engine.
+    """
+
     def __init__(self, name, logger):
+        """
+        Args:
+            name (str): item's name
+            logger (LoggerInterface): a logger
+        """
         self._name = name
         self._logger = logger
 
     @property
     def name(self):
+        """Project item's name."""
         return self._name
 
     def execute(self, resources, direction):
@@ -130,3 +140,19 @@ class ExecutableItem:
             a list of ProjectItemResources
         """
         return list()
+
+    @classmethod
+    def from_dict(cls, item_dict, name, project_dir, app_settings, logger):
+        """
+        Deserializes an executable item from item dictionary.
+
+        Args:
+            item_dict (dict): serialized project item
+            name (str): item's name
+            project_dir (str): absolute path to the project directory
+            app_settings (QSettings): Toolbox settings
+            logger (LoggingInterface): a logger
+        Returns:
+            ExecutableItem: deserialized executable item
+        """
+        raise NotImplementedError()

@@ -90,34 +90,34 @@ class TestToolboxUI(unittest.TestCase):
         self.assertEqual(self.toolbox.project_item_model.columnCount(), 1)
         # Check that the items DisplayRoles are (In this particular order)
         item1 = self.toolbox.project_item_model.root().child(0)
-        self.assertTrue(item1.name == "Data Stores", "Item on row 0 is not 'Data Stores'")
-        self.assertTrue(
-            isinstance(item1.parent(), RootProjectTreeItem), "Parent item of category item on row 0 should be root"
+        self.assertEqual(item1.name, "Data Stores", "Item on row 0 is not 'Data Stores'")
+        self.assertIsInstance(
+            item1.parent(), RootProjectTreeItem, "Parent item of category item on row 0 should be root"
         )
         item2 = self.toolbox.project_item_model.root().child(1)
-        self.assertTrue(item2.name == "Data Connections", "Item on row 1 is not 'Data Connections'")
-        self.assertTrue(
-            isinstance(item2.parent(), RootProjectTreeItem), "Parent item of category item on row 1 should be root"
+        self.assertEqual(item2.name, "Data Connections", "Item on row 1 is not 'Data Connections'")
+        self.assertIsInstance(
+            item2.parent(), RootProjectTreeItem, "Parent item of category item on row 1 should be root"
         )
         item3 = self.toolbox.project_item_model.root().child(2)
-        self.assertTrue(item3.name == "Tools", "Item on row 2 is not 'Tools'")
-        self.assertTrue(
-            isinstance(item3.parent(), RootProjectTreeItem), "Parent item of category item on row 2 should be root"
+        self.assertEqual(item3.name, "Tools", "Item on row 2 is not 'Tools'")
+        self.assertIsInstance(
+            item3.parent(), RootProjectTreeItem, "Parent item of category item on row 2 should be root"
         )
         item4 = self.toolbox.project_item_model.root().child(3)
-        self.assertTrue(item4.name == "Views", "Item on row 3 is not 'Views'")
-        self.assertTrue(
-            isinstance(item4.parent(), RootProjectTreeItem), "Parent item of category item on row 3 should be root"
+        self.assertEqual(item4.name, "Views", "Item on row 3 is not 'Views'")
+        self.assertIsInstance(
+            item4.parent(), RootProjectTreeItem, "Parent item of category item on row 3 should be root"
         )
         item5 = self.toolbox.project_item_model.root().child(4)
-        self.assertTrue(item5.name == "Importers", "Item on row 4 is not 'Importers'")
-        self.assertTrue(
-            isinstance(item5.parent(), RootProjectTreeItem), "Parent item of category item on row 4 should be root"
+        self.assertEqual(item5.name, "Importers", "Item on row 4 is not 'Importers'")
+        self.assertIsInstance(
+            item5.parent(), RootProjectTreeItem, "Parent item of category item on row 4 should be root"
         )
         item6 = self.toolbox.project_item_model.root().child(5)
-        self.assertTrue(item6.name == "Exporters", "Item on row 5 is not 'Exporters'")
-        self.assertTrue(
-            isinstance(item6.parent(), RootProjectTreeItem), "Parent item of category item on row 5 should be root"
+        self.assertEqual(item6.name, "Exporters", "Item on row 5 is not 'Exporters'")
+        self.assertIsInstance(
+            item6.parent(), RootProjectTreeItem, "Parent item of category item on row 5 should be root"
         )
 
     def test_init_specification_model(self):
@@ -542,7 +542,8 @@ class TestToolboxUI(unittest.TestCase):
         """Tests creating a PythonTool (specification) instance from a valid tool specification file."""
         spec_path = os.path.abspath(os.path.join(os.curdir, "tests", "test_resources", "test_tool_spec.json"))
         tool_spec = self.toolbox.load_specification_from_file(spec_path)
-        self.assertIsInstance(tool_spec, PythonTool)
+        self.assertIsNotNone(tool_spec)
+        self.assertEqual(tool_spec.name, "Python Tool Specification")
 
     def test_add_and_remove_specification(self):
         """Tests that adding and removing a specification

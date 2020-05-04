@@ -8,13 +8,31 @@
 # Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
-
 """
-Importer plugin.
+Provides the ProjectItemInfo class.
 
-:author: M. Marin (KTH)
-:date:   12.9.2019
+:authors: A. Soininen (VTT)
+:date:   29.4.2020
 """
 
-from .importer_factory import ImporterFactory as ItemFactory
-from .item_info import ItemInfo
+
+class ProjectItemInfo:
+    @staticmethod
+    def item_category():
+        """
+        Returns the item category string, e.g., "Tools".
+
+        Returns:
+            str
+        """
+        raise NotImplementedError()
+
+    @staticmethod
+    def item_type():
+        """
+        Returns the item type string, e.g., "Gimlet".
+
+        Returns:
+            str
+        """
+        raise NotImplementedError()

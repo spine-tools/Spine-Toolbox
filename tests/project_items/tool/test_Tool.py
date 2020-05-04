@@ -24,6 +24,7 @@ import shutil
 from PySide2.QtCore import Qt
 from PySide2.QtGui import QStandardItem, QStandardItemModel
 from PySide2.QtWidgets import QApplication
+from spinetoolbox.project_items.tool.item_info import ItemInfo
 from spinetoolbox.project_items.tool.tool_specifications import ExecutableTool
 from spinetoolbox.project_items.tool.tool import Tool
 from spinetoolbox.config import TOOL_OUTPUT_DIR
@@ -36,7 +37,7 @@ class TestTool(unittest.TestCase):
         self.basedir = mkdtemp()
         self.toolbox = create_toolboxui_with_project()
         model = _MockToolSpecModel(self.toolbox, self.basedir)
-        self.toolbox.specification_model = self.toolbox.filtered_spec_factory_models["Tools"] = model
+        self.toolbox.specification_model = self.toolbox.filtered_spec_factory_models["Tool"] = model
         self.toolbox.specification_model_changed.emit()
 
     def tearDown(self):
@@ -50,8 +51,10 @@ class TestTool(unittest.TestCase):
             QApplication()
 
     def test_item_type(self):
-        tool = self._add_tool()
-        self.assertEqual(tool.item_type(), "Tool")
+        self.assertEqual(Tool.item_type(), ItemInfo.item_type())
+
+    def test_item_category(self):
+        self.assertEqual(Tool.item_category(), ItemInfo.item_category())
 
     def test_notify_destination(self):
         self.toolbox.msg = mock.MagicMock()
@@ -119,7 +122,7 @@ class TestTool(unittest.TestCase):
         and then shown in the ui when Tool is activated.
         """
         item = dict(name="Tool", description="", x=0, y=0, tool="simple_exec", execute_in_work=False)
-        self.toolbox.project().add_project_items("Tools", item)  # Add Tool to project
+        self.toolbox.project().add_project_items("Tool", item)  # Add Tool to project
         ind = self.toolbox.project_item_model.find_item("Tool")
         tool = self.toolbox.project_item_model.item(ind).project_item
         tool.activate()
@@ -129,7 +132,7 @@ class TestTool(unittest.TestCase):
         """Test that selections are saved and restored when deactivating a Tool and activating it again.
         """
         item = dict(name="Tool", description="", x=0, y=0, tool="")
-        self.toolbox.project().add_project_items("Tools", item)  # Add Tool to project
+        self.toolbox.project().add_project_items("Tool", item)  # Add Tool to project
         ind = self.toolbox.project_item_model.find_item("Tool")
         tool = self.toolbox.project_item_model.item(ind).project_item
         tool.activate()
@@ -142,7 +145,7 @@ class TestTool(unittest.TestCase):
 
     def _add_tool(self):
         item_dict = dict(name="T", description="", x=0, y=0)
-        self.toolbox.project().add_project_items("Tools", item_dict)
+        self.toolbox.project().add_project_items("Tool", item_dict)
         index = self.toolbox.project_item_model.find_item("T")
         return self.toolbox.project_item_model.item(index).project_item
 

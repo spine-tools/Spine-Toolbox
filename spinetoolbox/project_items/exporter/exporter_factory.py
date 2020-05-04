@@ -24,24 +24,9 @@ from .widgets.exporter_properties import ExporterProperties
 
 
 class ExporterFactory(ProjectItemFactory):
-    def __init__(self, toolbox):
-        super().__init__(toolbox, "Exporters", "")
-
-    @staticmethod
-    def item_category():
-        return "Exporters"
-
     @staticmethod
     def icon():
         return ":/icons/project_item_icons/database-export.svg"
-
-    @staticmethod
-    def item_type():
-        return "Exporter"
-
-    @property
-    def properties_widget_maker(self):
-        return ExporterProperties
 
     @property
     def item_maker(self):
@@ -66,3 +51,8 @@ class ExporterFactory(ProjectItemFactory):
     @property
     def specification_loader(self):
         raise NotImplementedError()
+
+    @staticmethod
+    def _make_properties_widget(toolbox):
+        """See base class."""
+        return ExporterProperties(toolbox)

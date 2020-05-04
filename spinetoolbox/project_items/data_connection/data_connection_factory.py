@@ -24,24 +24,9 @@ from .widgets.add_data_connection_widget import AddDataConnectionWidget
 
 
 class DataConnectionFactory(ProjectItemFactory):
-    def __init__(self, toolbox):
-        super().__init__(toolbox, "Data Connections", "")
-
-    @staticmethod
-    def item_category():
-        return "Data Connections"
-
     @staticmethod
     def icon():
         return ":/icons/project_item_icons/file-alt.svg"
-
-    @staticmethod
-    def item_type():
-        return "Data Connection"
-
-    @property
-    def properties_widget_maker(self):
-        return DataConnectionPropertiesWidget
 
     @property
     def item_maker(self):
@@ -66,3 +51,8 @@ class DataConnectionFactory(ProjectItemFactory):
     @property
     def specification_loader(self):
         raise NotImplementedError()
+
+    @staticmethod
+    def _make_properties_widget(toolbox):
+        """See base class."""
+        return DataConnectionPropertiesWidget(toolbox)

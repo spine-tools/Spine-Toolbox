@@ -17,6 +17,7 @@ Widget shown to user when a new Tool is created.
 """
 
 from spinetoolbox.widgets.add_project_item_widget import AddProjectItemWidget
+from ..item_info import ItemInfo
 from ..tool import Tool
 
 
@@ -38,4 +39,4 @@ class AddToolWidget(AddProjectItemWidget):
         """Creates new Item according to user's selections."""
         spec = self.ui.comboBox_specification.currentText()
         item = dict(name=self.name, description=self.description, x=self._x, y=self._y, tool=spec, execute_in_work=True)
-        self._project.add_project_items("Tools", item, set_selected=True)
+        self._project.add_project_items(ItemInfo.item_type(), item, set_selected=True)
