@@ -86,7 +86,7 @@ class ExporterExecutable(ExecutableItem):
                     settings_pack.indexing_settings,
                     settings_pack.merging_settings,
                     gams_system_directory,
-                    self._logger
+                    self._logger,
                 )
             except gdx.GdxExportException as error:
                 self._logger.msg_error.emit(f"Failed to export <b>{url}</b> to .gdx: {error}")

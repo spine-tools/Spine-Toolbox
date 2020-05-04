@@ -17,13 +17,13 @@ A worker based machinery to construct the settings data structures needed for gd
 """
 
 from copy import deepcopy
-from PySide2.QtCore import QObject, QRunnable, Signal
+from PySide2.QtCore import QObject, QThread, Signal, Slot
 from spinedb_api import DatabaseMapping, SpineDBAPIError
 from spinetoolbox.spine_io.exporters import gdx
 from .db_utils import latest_database_commit_time_stamp
 
 
-class Worker(QRunnable):
+class Worker(QObject):
     """
     A worker to construct export settings for a database.
 
@@ -31,24 +31,36 @@ class Worker(QRunnable):
         signals: contains signals that the worker may emit during its execution
     """
 
-    def __init__(self, database_url, cookie, logger):
+    database_unavailable = Signal(str)
+    """Emitted when opening the database fails."""
+    errored = Signal(str, "QVariant")
+    """Emitted when an error occurs."""
+    finished = Signal(str, "QVariant")
+    """Emitted when the worker has finished."""
+    # LoggerInterface signals
+    msg = Signal(str, str)
+    msg_warning = Signal(str, str)
+    msg_error = Signal(str, str)
+
+    def __init__(self, database_url):
         """
         Args:
             database_url (str): database's URL
-            cookie (UUID): an identifier
-            logger (LoggerInterface): a logger
         """
         super().__init__()
-        self.signals = _Signals()
+        self.thread = QThread()
+        self.moveToThread(self.thread)
         self._database_url = str(database_url)
-        self._cookie = cookie
         self._previous_settings = None
         self._previous_indexing_settings = None
         self._previous_indexing_domains = None
         self._previous_merging_settings = None
-        self._logger = logger
+        self.thread.started.connect(self.fetch_settings)
+        self.thread.finished.connect(self.deleteLater)
+        self.thread.finished.connect(self.thread.deleteLater)
 
-    def run(self):
+    @Slot()
+    def fetch_settings(self):
         """Constructs settings and parameter index settings."""
         result = _Result(*self._read_settings())
         if result.set_settings is None:
@@ -69,7 +81,8 @@ class Worker(QRunnable):
             result.indexing_domains = updated_indexing_domains
             result.merging_settings = updated_merging_settings
             result.merging_domains = updated_merging_domains
-        self.signals.finished.emit(self._database_url, self._cookie, result)
+        self.finished.emit(self._database_url, result)
+        self.thread.quit()
 
     def set_previous_settings(
         self, previous_settings, previous_indexing_settings, previous_indexing_domains, previous_merging_settings
@@ -98,7 +111,8 @@ class Worker(QRunnable):
         try:
             time_stamp = latest_database_commit_time_stamp(database_map)
             settings = gdx.make_set_settings(database_map)
-            indexing_settings = gdx.make_indexing_settings(database_map, self._logger)
+            logger = _Logger(self._database_url, self)
+            indexing_settings = gdx.make_indexing_settings(database_map, logger)
         except gdx.GdxExportException as error:
             self.signals.errored.emit(self._database_url, self._cookie, error)
             return None, None, None
@@ -174,12 +188,34 @@ class _Result:
         self.merging_domains = list()
 
 
-class _Signals(QObject):
-    """Signals which the Worker emits during its execution."""
+class _Logger(QObject):
+    """A ``LoggerInterface`` compliant logger that relays messages to :class:`Worker`'s signals."""
 
-    database_unavailable = Signal(str, "QVariant")
-    """Emitted when opening the database fails."""
-    errored = Signal(str, "QVariant", "QVariant")
-    """Emitted when an error occurs."""
-    finished = Signal(str, "QVariant", "QVariant")
-    """Emitted when the worker has finished."""
+    msg = Signal(str)
+    msg_warning = Signal(str)
+    msg_error = Signal(str)
+
+    def __init__(self, database_url, worker):
+        """
+        Args:
+            database_url (str): a database url
+            worker (Worker): a worker
+        """
+        super().__init__()
+        self._url = database_url
+        self._worker = worker
+        self.msg.connect(self.relay_message)
+        self.msg_warning.connect(self.relay_warning)
+        self.msg_error.connect(self.relay_error)
+
+    @Slot(str)
+    def relay_message(self, text):
+        self._worker.msg.emit(self._url, text)
+
+    @Slot(str)
+    def relay_warning(self, text):
+        self._worker.msg_warning.emit(self._url, text)
+
+    @Slot(str)
+    def relay_error(self, text):
+        self._worker.msg_error.emit(self._url, text)

@@ -1257,7 +1257,7 @@ class TestGdx(unittest.TestCase):
                 database_map,
                 [("domain1", "record", "parameter", {"type": "time_pattern", "data": {"Mo": 42.0, "Tu": -4.2}})],
             )
-            restored = gdx.indexing_settings_from_dict(settings_dict, database_map)
+            restored = gdx.indexing_settings_from_dict(settings_dict, database_map, logger=None)
             database_map.connection.close()
         self.assertTrue(len(restored), 1)
         self.assertTrue("parameter" in restored)
@@ -1285,7 +1285,7 @@ class TestGdx(unittest.TestCase):
             dbmanip.import_object_parameters(
                 database_map, [("domain1", "parameter", {"type": "time_pattern", "data": {"Mo": 42.0, "Tu": -4.2}}, "")]
             )
-            restored = gdx.indexing_settings_from_dict(settings_dict, database_map)
+            restored = gdx.indexing_settings_from_dict(settings_dict, database_map, logger=None)
             database_map.connection.close()
         self.assertTrue(len(restored), 1)
         self.assertTrue("parameter" in restored)

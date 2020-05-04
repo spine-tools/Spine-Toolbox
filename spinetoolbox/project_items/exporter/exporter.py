@@ -20,8 +20,7 @@ from copy import deepcopy
 from datetime import datetime
 import pathlib
 import os.path
-import uuid
-from PySide2.QtCore import QObject, QThreadPool, Signal, Slot
+from PySide2.QtCore import QObject, Signal, Slot
 from spinedb_api import DatabaseMapping, SpineDBAPIError
 from spinetoolbox.project_item import ProjectItem, ProjectItemResource
 from spinetoolbox.project_commands import UpdateExporterOutFileNameCommand, UpdateExporterSettingsCommand
@@ -59,7 +58,7 @@ class Exporter(ProjectItem):
         self._toolbox = toolbox
         self._settings_packs = dict()
         self._export_list_items = dict()
-        self._worker_cookies = dict()
+        self._workers = dict()
         if settings_packs is None:
             settings_packs = list()
         for pack in settings_packs:
@@ -157,27 +156,52 @@ class Exporter(ProjectItem):
 
     def _start_worker(self, database_url, update_settings=False):
         """Starts fetching settings using a worker in another thread."""
-        pool = QThreadPool.globalInstance()
-        cookie = uuid.uuid4()
-        self._worker_cookies[database_url] = cookie
-        worker = Worker(database_url, cookie, self._logger)
-        worker.signals.database_unavailable.connect(self._cancel_worker)
-        worker.signals.finished.connect(self._worker_finished)
-        worker.signals.errored.connect(self._worker_failed)
+        worker = self._workers.get(database_url)
+        if worker is not None:
+            worker.thread.quit()
+            worker.thread.wait()
+        worker = Worker(database_url)
+        self._workers[database_url] = worker
+        worker.database_unavailable.connect(self._cancel_worker)
+        worker.finished.connect(self._worker_finished)
+        worker.errored.connect(self._worker_failed)
+        worker.msg.connect(self._worker_msg)
+        worker.msg_warning.connect(self._worker_msg_warning)
+        worker.msg_error.connect(self._worker_msg_error)
         if update_settings:
             pack = self._settings_packs[database_url]
             worker.set_previous_settings(
                 pack.settings, pack.indexing_settings, pack.indexing_domains, pack.merging_settings
             )
         self._settings_packs[database_url].state = SettingsState.FETCHING
-        pool.start(worker)
+        worker.thread.start()
+
+    @Slot(str, str)
+    def _worker_msg(self, database_url, text):
+        if database_url in self._workers:
+            message = f"<b>{self.name}</b>: While initializing export settings database '{database_url}': {text}"
+            self._logger.msg.emit(message)
+
+    @Slot(str, str)
+    def _worker_msg_warning(self, database_url, text):
+        if database_url in self._workers:
+            warning = f"<b>{self.name}</b>: While initializing export settings for database '{database_url}': {text}"
+            self._logger.msg_warning.emit(warning)
+
+    @Slot(str, str)
+    def _worker_msg_error(self, database_url, text):
+        if database_url in self._workers:
+            error = f"<b>{self.name}</b>: While initializing export settings database '{database_url}': {text}"
+            self._logger.msg_error.emit(error)
 
     @Slot(str, "Qvariant", "QVariant")
-    def _worker_finished(self, database_url, cookie, result):
+    def _worker_finished(self, database_url, result):
         """Gets and updates and export settings pack from a worker."""
-        if cookie != self._worker_cookies.get(database_url):
+        worker = self._workers.get(database_url)
+        if worker is None:
             return
-        del self._worker_cookies[database_url]
+        worker.thread.wait()
+        del self._workers[database_url]
         pack = self._settings_packs.get(database_url)
         if pack is None:
             return
@@ -194,24 +218,30 @@ class Exporter(ProjectItem):
         self._check_state()
 
     @Slot(str, "QVariant", "QVariant")
-    def _worker_failed(self, database_url, cookie, exception):
+    def _worker_failed(self, database_url, exception):
         """Clean up after a worker has failed fetching export settings."""
-        if cookie != self._worker_cookies.get(database_url):
+        worker = self._workers[database_url]
+        if worker is None:
             return
-        del self._worker_cookies[database_url]
+        worker.thread.quit()
+        worker.thread.wait()
+        del self._workers[database_url]
         if database_url in self._settings_packs:
             self._logger.msg_error.emit(
-                f"<b>[{self.name}]</b> Initializing settings for database {database_url}" f" failed: {exception}"
+                f"<b>[{self.name}]</b> Initializing settings for database {database_url} failed: {exception}"
             )
             self._settings_packs[database_url].state = SettingsState.ERROR
             self._report_notifications()
 
     @Slot(str, "QVariant")
-    def _cancel_worker(self, database_url, cookie):
+    def _cancel_worker(self, database_url):
         """Cleans up after worker has given up fetching export settings."""
-        if cookie != self._worker_cookies.get(database_url):
+        worker = self._workers[database_url]
+        if worker is None:
             return
-        del self._worker_cookies[database_url]
+        worker.thread.quit()
+        worker.wait()
+        del self._workers[database_url]
         self._settings_packs[database_url].state = SettingsState.ERROR
 
     def _check_state(self, clear_before_check=True):
@@ -443,6 +473,11 @@ class Exporter(ProjectItem):
         """See base class."""
         self._project.db_mngr.session_committed.disconnect(self._update_settings_after_db_commit)
         self._project.db_mngr.database_created.disconnect(self._update_settings_after_db_creation)
+        for worker in self._workers.values():
+            worker.thread.quit()
+        for database_url, worker in self._workers.items():
+            worker.thread.wait()
+        self._workers.clear()
 
 
 class SettingsPack(QObject):
@@ -521,7 +556,12 @@ class SettingsPack(QObject):
         pack.settings = gdx.SetSettings.from_dict(pack_dict["settings"])
         try:
             db_map = DatabaseMapping(database_url)
-            pack.indexing_settings = gdx.indexing_settings_from_dict(pack_dict["indexing_settings"], db_map)
+            value_type_logger = _UnsupportedValueTypeLogger(
+                f"Exporter settings ignoring some parameters from database '{database_url}':", logger
+            )
+            pack.indexing_settings = gdx.indexing_settings_from_dict(
+                pack_dict["indexing_settings"], db_map, value_type_logger
+            )
         except SpineDBAPIError as error:
             logger.msg_error.emit(
                 f"Failed to fully restore Exporter settings. Error while reading database '{database_url}': {error}"
@@ -592,6 +632,32 @@ class _Notifications(QObject):
             changed = True
         if changed:
             self.changed_due_to_settings_state.emit()
+
+
+class _UnsupportedValueTypeLogger(QObject):
+    msg = Signal(str)
+    msg_warning = Signal(str)
+    msg_error = Signal(str)
+
+    def __init__(self, preample, real_logger):
+        super().__init__()
+        self._preample = preample
+        self._logger = real_logger
+        self.msg.connect(self.relay_message)
+        self.msg_warning.connect(self.relay_warning)
+        self.msg_error.connect(self.relay_error)
+
+    @Slot(str)
+    def relay_message(self, text):
+        self._logger.msg.emit(self._preample + " " + text)
+
+    @Slot(str)
+    def relay_warning(self, text):
+        self._logger.msg_warning.emit(self._preample + " " + text)
+
+    @Slot(str)
+    def relay_error(self, text):
+        self._logger.msg_error.emit(self._preample + " " + text)
 
 
 def _normalize_url(url):

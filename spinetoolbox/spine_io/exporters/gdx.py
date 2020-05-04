@@ -238,7 +238,12 @@ class Parameter:
         new_values = list()
         new_indexes = list()
         for parameter_index, parameter_value in zip(self.indexes, self.values):
-            values = parameter_value.values if parameter_value is not None else len(indexing_domain.indexes) * [None]
+            if parameter_value is None:
+                values = len(indexing_domain.indexes) * [None]
+            elif isinstance(parameter_value, IndexedValue):
+                values = parameter_value.values
+            else:
+                raise GdxExportException("Cannot expand indexes of a scalar value.")
             for new_index, new_value in zip(indexing_domain.indexes, values):
                 expanded_index = tuple(parameter_index[:index_position] + new_index + parameter_index[index_position:])
                 new_indexes.append(expanded_index)
@@ -639,7 +644,10 @@ def parameters_to_gams(gdx_file, parameters):
                     + f" parameter contains unsupported values of type '{type(value).__name__}'."
                 )
             indexed_values[tuple(index)] = value
-        gams_parameter = GAMSParameter(indexed_values, domain=parameter.domain_names)
+        try:
+            gams_parameter = GAMSParameter(indexed_values, domain=parameter.domain_names)
+        except ValueError as error:
+            raise GdxExportException(f"Failed to create GAMS parameter: {error}")
         gdx_file[parameter_name] = gams_parameter
 
 
@@ -683,6 +691,7 @@ def object_classes_to_domains(db_map, domain_names, logger=None):
     Returns:
          tuple: a tuple containing list of Set objects and a dict of Parameter objects
     """
+    classes_with_ignored_parameters = set()
     class_list = db_map.object_class_list().all()
     domains = list()
     parameters = dict()
@@ -718,9 +727,9 @@ def object_classes_to_domains(db_map, domain_names, logger=None):
                         parameters[name].append_entity_parameter(
                             (object_parameter.object_name,), object_parameter.value
                         )
-                except GdxUnsupportedValueTypeException as error:
+                except GdxUnsupportedValueTypeException:
                     if logger is not None:
-                        logger.msg_warning.emit(f"Ignoring object parameter '{name}': {error}")
+                        classes_with_ignored_parameters.add(object_class.name)
                         continue
                     else:
                         raise
@@ -734,16 +743,29 @@ def object_classes_to_domains(db_map, domain_names, logger=None):
                         )
                     else:
                         parameters[name].append_entity_parameter((set_object.name,), value)
-                except GdxUnsupportedValueTypeException as error:
+                except GdxUnsupportedValueTypeException:
                     if logger is not None:
-                        logger.msg_warning.emit(f"Ignoring a default value of object parameter '{name}': {error}")
+                        classes_with_ignored_parameters.add(object_class.name)
                         continue
                     else:
                         raise
         for parameter_definition in parameter_definitions:
             name = parameter_definition.name
             if name not in parameters:
-                parameters[name] = Parameter.from_entity_class_parameter_definition([object_class.name])
+                try:
+                    parameters[name] = Parameter.from_entity_class_parameter_definition([object_class.name])
+                except GdxUnsupportedValueTypeException:
+                    if logger is not None:
+                        classes_with_ignored_parameters.add(object_class.name)
+                        continue
+                    else:
+                        raise
+    if logger is not None and classes_with_ignored_parameters:
+        class_list = ", ".join(classes_with_ignored_parameters)
+        logger.msg_warning.emit(
+            "Some object parameter values were of unsupported types and were ignored."
+            f" The values were from these object classes: {class_list}"
+        )
     return domains, parameters
 
 
@@ -763,6 +785,7 @@ def relationship_classes_to_sets(db_map, domain_names, set_names, logger=None):
     Returns:
          tuple: a tuple containing a list of Set objects and a dict of Parameter objects
     """
+    classes_with_ignored_parameters = set()
     class_list = db_map.wide_relationship_class_list().all()
     sets = list()
     parameters = dict()
@@ -798,9 +821,9 @@ def relationship_classes_to_sets(db_map, domain_names, set_names, logger=None):
                         )
                     else:
                         parameters[name].append_entity_parameter(index_keys, relationship_parameter.value)
-                except GdxUnsupportedValueTypeException as error:
+                except GdxUnsupportedValueTypeException:
                     if logger is not None:
-                        logger.msg_warning.emit(f"Ignoring a relationship parameter '{name}': {error}")
+                        classes_with_ignored_parameters.add(relationship_class.name)
                         continue
                     else:
                         raise
@@ -812,9 +835,9 @@ def relationship_classes_to_sets(db_map, domain_names, set_names, logger=None):
                         parameters[name] = Parameter.from_entity_parameter(object_class_names, index_keys, value)
                     else:
                         parameters[name].append_entity_parameter(index_keys, value)
-                except GdxUnsupportedValueTypeException as error:
+                except GdxUnsupportedValueTypeException:
                     if logger is not None:
-                        logger.msg_warning.emit(f"Ignoring a default value of relationship parameter '{name}': {error}")
+                        classes_with_ignored_parameters.add(relationship_class.name)
                         continue
                     else:
                         raise
@@ -822,6 +845,12 @@ def relationship_classes_to_sets(db_map, domain_names, set_names, logger=None):
             name = parameter_definition.name
             if name not in parameters:
                 parameters[name] = Parameter.from_entity_class_parameter_definition(object_class_names)
+    if logger is not None and classes_with_ignored_parameters:
+        class_list = ", ".join(classes_with_ignored_parameters)
+        logger.msg_warning.emit(
+            "Some relationship parameter values were of unsupported types and were ignored."
+            f" The values were from these relationship classes: {class_list}"
+        )
     return sets, parameters
 
 
@@ -928,6 +957,7 @@ def _object_indexing_settings(db_map, logger):
     settings = dict()
     class_list = db_map.object_class_list().all()
     object_parameter_value_query = db_map.object_parameter_value_list()
+    classes_with_unsupported_value_types = set()
     for object_class in class_list:
         parameter_definitions = db_map.parameter_definition_list(object_class_id=object_class.id).all()
         default_parameter_values = dict()
@@ -948,9 +978,9 @@ def _object_indexing_settings(db_map, logger):
                         (parameter_value_row.object_name,),
                         parameter_value_row.value,
                     )
-                except GdxUnsupportedValueTypeException as error:
+                except GdxUnsupportedValueTypeException:
                     if logger is not None:
-                        logger.msg_warning.emit(f"Ignoring object parameter '{name}': {error}")
+                        classes_with_unsupported_value_types.add(object_class.name)
                         continue
                     else:
                         raise
@@ -966,9 +996,9 @@ def _object_indexing_settings(db_map, logger):
                     continue
                 try:
                     parameter = Parameter.from_entity_parameter([object_class.name], (object_.name,), value)
-                except GdxUnsupportedValueTypeException as error:
+                except GdxUnsupportedValueTypeException:
                     if logger is not None:
-                        logger.msg_warning.emit(f"Ignoring the default value of object parameter '{name}': {error}")
+                        classes_with_unsupported_value_types.add(object_class.name)
                         continue
                     else:
                         raise
@@ -979,6 +1009,11 @@ def _object_indexing_settings(db_map, logger):
                     setting.append_parameter(parameter)
                 else:
                     settings[name] = IndexingSetting(parameter, object_class.name)
+    if classes_with_unsupported_value_types:
+        class_list = ', '.join(classes_with_unsupported_value_types)
+        logger.msg_warning.emit(
+            f"The following object classes have parameter values of unsupported types: {class_list}"
+        )
     return settings
 
 
@@ -995,6 +1030,7 @@ def _relationship_indexing_settings(db_map, logger):
     settings = dict()
     class_list = db_map.wide_relationship_class_list().all()
     relationship_parameter_value_query = db_map.relationship_parameter_value_list()
+    classes_with_unsupported_value_types = set()
     for relationship_class in class_list:
         object_class_names = relationship_class.object_class_name_list.split(",")
         parameter_definitions = db_map.parameter_definition_list(relationship_class_id=relationship_class.id).all()
@@ -1015,9 +1051,9 @@ def _relationship_indexing_settings(db_map, logger):
                     parameter = Parameter.from_entity_parameter(
                         object_class_names, index_keys, parameter_value_row.value
                     )
-                except GdxUnsupportedValueTypeException as error:
+                except GdxUnsupportedValueTypeException:
                     if logger is not None:
-                        logger.msg_warning.emit(f"Ignoring relationship parameter '{name}': {error}")
+                        classes_with_unsupported_value_types.add(relationship_class.name)
                         continue
                     else:
                         raise
@@ -1033,11 +1069,9 @@ def _relationship_indexing_settings(db_map, logger):
                     continue
                 try:
                     parameter = Parameter.from_entity_parameter(object_class_names, index_keys, value)
-                except GdxUnsupportedValueTypeException as error:
+                except GdxUnsupportedValueTypeException:
                     if logger is not None:
-                        logger.msg_warning.emit(
-                            f"Ignoring the default value of relationship parameter '{name}': {error}"
-                        )
+                        classes_with_unsupported_value_types.add(relationship_class.name)
                         continue
                     else:
                         raise
@@ -1048,6 +1082,11 @@ def _relationship_indexing_settings(db_map, logger):
                     setting.append_parameter(parameter)
                 else:
                     settings[name] = IndexingSetting(parameter, relationship_class.name)
+    if classes_with_unsupported_value_types:
+        class_list = ', '.join(classes_with_unsupported_value_types)
+        logger.msg_warning.emit(
+            f"The following relationship classes have parameter values of unsupported types: {class_list}"
+        )
     return settings
 
 
@@ -1109,19 +1148,20 @@ def indexing_settings_to_dict(settings):
     return settings_dict
 
 
-def indexing_settings_from_dict(settings_dict, db_map):
+def indexing_settings_from_dict(settings_dict, db_map, logger):
     """
     Restores indexing settings from a json compatible dictionary.
 
     Args:
         settings_dict (dict): a JSON compatible dictionary representing parameter indexing settings.
         db_map (DatabaseMapping): database mapping
+        logger (LoggerInterface, optional): a logger
     Returns:
         dict: a dictionary mapping parameter name to IndexingSetting.
     """
     settings = dict()
     for parameter_name, setting_dict in settings_dict.items():
-        parameter, entity_class_name = _find_parameter(parameter_name, db_map)
+        parameter, entity_class_name = _find_parameter(parameter_name, db_map, logger)
         setting = IndexingSetting(parameter, entity_class_name)
         indexing_domain_dict = setting_dict["indexing_domain"]
         if indexing_domain_dict is not None:
@@ -1133,6 +1173,8 @@ def indexing_settings_from_dict(settings_dict, db_map):
 
 def _find_parameter(parameter_name, db_map, logger=None):
     """Searches for parameter_name in db_map and returns Parameter and its entity class name."""
+    object_classes_with_unsupported_parameter_types = set()
+    relationship_classes_with_unsupported_parameter_types = set()
     parameter = None
     definition = (
         db_map.parameter_definition_list().filter(db_map.parameter_definition_sq.c.name == parameter_name).first()
@@ -1158,9 +1200,9 @@ def _find_parameter(parameter_name, db_map, logger=None):
                     parameter = Parameter.from_entity_parameter([class_name], (relationship_row.name,), database_value)
                 else:
                     parameter.append_entity_parameter((relationship_row.name,), database_value)
-            except GdxUnsupportedValueTypeException as error:
+            except GdxUnsupportedValueTypeException:
                 if logger is not None:
-                    logger.msg_warning.emit(f"Ignoring object parameter '{parameter_name}': {error}")
+                    object_classes_with_unsupported_parameter_types.add(class_name)
                 else:
                     raise
     else:
@@ -1186,13 +1228,24 @@ def _find_parameter(parameter_name, db_map, logger=None):
                     parameter = Parameter.from_entity_parameter(object_class_names, index_keys, database_value)
                 else:
                     parameter.append_entity_parameter(index_keys, database_value)
-            except GdxUnsupportedValueTypeException as error:
+            except GdxUnsupportedValueTypeException:
                 if logger is not None:
-                    logger.msg_warning.emit(f"Ignoring relationship parameter '{parameter_name}': {error}")
+                    relationship_classes_with_unsupported_parameter_types.add(class_name)
                 else:
                     raise
     if parameter is None:
         raise GdxExportException(f"Cannot find values for parameter '{parameter_name}' in the database.")
+    if logger is not None:
+        if object_classes_with_unsupported_parameter_types:
+            class_list = ", ".join(object_classes_with_unsupported_parameter_types)
+            logger.msg_warning.emit(
+                f"The following object classes contain parameter values of unsupported types: {class_list}"
+            )
+        if relationship_classes_with_unsupported_parameter_types:
+            class_list = ", ".join(relationship_classes_with_unsupported_parameter_types)
+            logger.msg_warning.emit(
+                f"The following relationship classes contain parameter values of unsupported types: {class_list}"
+            )
     return parameter, class_name
 
 
