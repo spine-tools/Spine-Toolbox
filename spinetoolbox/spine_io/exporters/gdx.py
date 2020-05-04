@@ -706,6 +706,7 @@ def object_classes_to_domains(db_map, domain_names, logger=None):
         for parameter_definition in parameter_definitions:
             default_parameter_values[parameter_definition.name] = parameter_definition.default_value
         object_list = db_map.object_list(class_id=object_class.id)
+        parameter_domain_names = [object_class.name]
         for set_object in object_list:
             record = Record((set_object.name,))
             domain.records.append(record)
@@ -736,13 +737,18 @@ def object_classes_to_domains(db_map, domain_names, logger=None):
             for name, value in default_parameter_values.items():
                 if name in valued_parameters:
                     continue
+                parameter = parameters.get(name)
                 try:
-                    if name not in parameters:
+                    if parameter is None:
                         parameters[name] = Parameter.from_entity_parameter(
-                            [object_class.name], (set_object.name,), value
+                            parameter_domain_names, (set_object.name,), value
                         )
                     else:
-                        parameters[name].append_entity_parameter((set_object.name,), value)
+                        if parameter.domain_names != parameter_domain_names:
+                            raise GdxExportException(
+                                f"Duplicate parameter name '{name}' found in different entity classes."
+                            )
+                        parameter.append_entity_parameter((set_object.name,), value)
                 except GdxUnsupportedValueTypeException:
                     if logger is not None:
                         classes_with_ignored_parameters.add(object_class.name)
@@ -830,11 +836,16 @@ def relationship_classes_to_sets(db_map, domain_names, set_names, logger=None):
             for name, value in default_parameter_values.items():
                 if name in valued_parameters:
                     continue
+                parameter = parameters.get(name)
                 try:
-                    if name not in parameters:
+                    if parameter is None:
                         parameters[name] = Parameter.from_entity_parameter(object_class_names, index_keys, value)
                     else:
-                        parameters[name].append_entity_parameter(index_keys, value)
+                        if parameter.domain_names != object_class_names:
+                            raise GdxExportException(
+                                f"Duplicate parameter name '{name}' found in different entity classes."
+                            )
+                        parameter.append_entity_parameter(index_keys, value)
                 except GdxUnsupportedValueTypeException:
                     if logger is not None:
                         classes_with_ignored_parameters.add(relationship_class.name)
@@ -1367,7 +1378,8 @@ def make_set_settings(database_map):
     Builds a SetSettings object from given database.
 
     Args:
-        database_map (spinedb_api.DatabaseMapping): a database from which domains, sets, records etc are extracted
+        database_map (spinedb_api.DatabaseMapping or spinedb_api.DiffDatabaseMapping): a database from which
+            domains, sets, records etc are extracted
 
     Returns:
         SetSettings: settings needed for exporting the entities and class from the given ``database_map``

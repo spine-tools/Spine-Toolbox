@@ -20,12 +20,13 @@ from copy import deepcopy
 from datetime import datetime
 import pathlib
 import os.path
-from PySide2.QtCore import QObject, Signal, Slot
+from PySide2.QtCore import QObject, Qt, Signal, Slot
 from spinedb_api import DatabaseMapping, SpineDBAPIError
 from spinetoolbox.project_item import ProjectItem, ProjectItemResource
 from spinetoolbox.project_commands import UpdateExporterOutFileNameCommand, UpdateExporterSettingsCommand
 from spinetoolbox.helpers import deserialize_path, serialize_url
 from spinetoolbox.spine_io.exporters import gdx
+from .commands import UpdateCancelOnErrorCommand
 from .db_utils import latest_database_commit_time_stamp
 from .exporter_executable import ExporterExecutable
 from .settings_state import SettingsState
@@ -41,9 +42,8 @@ class Exporter(ProjectItem):
     Currently, only .gdx format is supported.
     """
 
-    def __init__(self, toolbox, project, logger, name, description, settings_packs, x, y):
+    def __init__(self, toolbox, project, logger, name, description, settings_packs, x, y, cancel_on_export_error=None):
         """
-
         Args:
             toolbox (ToolboxUI): a ToolboxUI instance
             project (SpineToolboxProject): the project this item belongs to
@@ -51,11 +51,14 @@ class Exporter(ProjectItem):
             name (str): item name
             description (str): item description
             settings_packs (list): dicts mapping database URLs to _SettingsPack objects
+            cancel_on_export_error (bool, options): True if execution should fail on all export errors,
+                False to ignore certain error cases; optional to provide backwards compatibility
             x (float): initial X coordinate of item icon
             y (float): initial Y coordinate of item icon
         """
         super().__init__(name, description, x, y, project, logger)
         self._toolbox = toolbox
+        self._cancel_export_on_error = cancel_on_export_error if cancel_on_export_error is not None else True
         self._settings_packs = dict()
         self._export_list_items = dict()
         self._workers = dict()
@@ -96,7 +99,9 @@ class Exporter(ProjectItem):
     def execution_item(self):
         """Creates Exporter's execution counterpart."""
         gams_path = self._project.settings.value("appSettings/gamsPath", defaultValue=None)
-        executable = ExporterExecutable(self.name, self._settings_packs, self.data_dir, gams_path, self._logger)
+        executable = ExporterExecutable(
+            self.name, self._settings_packs, self._cancel_export_on_error, self.data_dir, gams_path, self._logger
+        )
         return executable
 
     def settings_pack(self, database_path):
@@ -104,7 +109,10 @@ class Exporter(ProjectItem):
 
     def make_signal_handler_dict(self):
         """Returns a dictionary of all shared signals and their handlers."""
-        s = {self._properties_ui.open_directory_button.clicked: self.open_directory}
+        s = {
+            self._properties_ui.open_directory_button.clicked: self.open_directory,
+            self._properties_ui.cancel_on_error_check_box.stateChanged: self._cancel_on_error_option_changed,
+        }
         return s
 
     def restore_selections(self):
@@ -131,6 +139,9 @@ class Exporter(ProjectItem):
             item.open_settings_clicked.connect(self._show_settings)
             item.file_name_changed.connect(self._update_out_file_name)
             pack.state_changed.connect(item.handle_settings_state_changed)
+        self._properties_ui.cancel_on_error_check_box.setCheckState(
+            Qt.Checked if self._cancel_export_on_error else Qt.Unchecked
+        )
 
     def _do_handle_dag_changed(self, resources):
         """See base class."""
@@ -372,6 +383,22 @@ class Exporter(ProjectItem):
             )
         )
 
+    @Slot(int)
+    def _cancel_on_error_option_changed(self, checkbox_state):
+        """Handles changes to the Cancel export on error option."""
+        cancel = checkbox_state == Qt.Checked
+        if self._cancel_export_on_error == cancel:
+            return
+        self._toolbox.undo_stack.push(UpdateCancelOnErrorCommand(self, cancel))
+
+    def set_cancel_on_error(self, cancel):
+        """Sets the Cancel export on error option."""
+        self._cancel_export_on_error = cancel
+        if not self._active:
+            return
+        # This does not trigger the stateChanged signal.
+        self._properties_ui.cancel_on_error_check_box.setCheckState(Qt.Checked if cancel else Qt.Unchecked)
+
     def undo_redo_out_file_name(self, file_name, database_path):
         """Updates the output file name for given database"""
         if self._active:
@@ -408,6 +435,7 @@ class Exporter(ProjectItem):
             pack_dict["database_url"] = serialized_url
             packs.append(pack_dict)
         d["settings_packs"] = packs
+        d["cancel_on_export_error"] = self._cancel_export_on_error
         return d
 
     def _discard_settings_window(self, database_path):

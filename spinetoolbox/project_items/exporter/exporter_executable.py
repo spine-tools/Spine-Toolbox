@@ -26,17 +26,19 @@ from .settings_state import SettingsState
 
 
 class ExporterExecutable(ExecutableItem):
-    def __init__(self, name, settings_packs, data_dir, gams_path, logger):
+    def __init__(self, name, settings_packs, cancel_on_error, data_dir, gams_path, logger):
         """
         Args:
             name (str): item's name
             settings_packs (dict): mapping from database URLs to SettingsPacks
+            cancel_on_error (bool): True if execution should fail on all errors, False if certain errors can be ignored
             data_dir (str): absolute path to exporter's data directory
             gams_path (str): GAMS path from Toolbox settings
             logger (LoggerInterface): a logger
         """
         super().__init__(name, logger)
         self._settings_packs = settings_packs
+        self._cancel_on_error = cancel_on_error
         self._data_dir = data_dir
         self._gams_path = gams_path
 
@@ -76,7 +78,8 @@ class ExporterExecutable(ExecutableItem):
                 database_map = DatabaseMapping(url)
             except SpineDBAPIError as error:
                 self._logger.msg_error.emit(f"Failed to export <b>{url}</b> to .gdx: {error}")
-                return False
+                return
+            export_logger = self._logger if not self._cancel_on_error else None
             try:
                 gdx.to_gdx_file(
                     database_map,
@@ -86,7 +89,7 @@ class ExporterExecutable(ExecutableItem):
                     settings_pack.indexing_settings,
                     settings_pack.merging_settings,
                     gams_system_directory,
-                    self._logger,
+                    export_logger,
                 )
             except gdx.GdxExportException as error:
                 self._logger.msg_error.emit(f"Failed to export <b>{url}</b> to .gdx: {error}")
