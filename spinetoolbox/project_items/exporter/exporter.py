@@ -23,10 +23,9 @@ import os.path
 from PySide2.QtCore import QObject, Qt, Signal, Slot
 from spinedb_api import DatabaseMapping, SpineDBAPIError
 from spinetoolbox.project_item import ProjectItem, ProjectItemResource
-from spinetoolbox.project_commands import UpdateExporterOutFileNameCommand, UpdateExporterSettingsCommand
 from spinetoolbox.helpers import deserialize_path, serialize_url
 from spinetoolbox.spine_io.exporters import gdx
-from .commands import UpdateCancelOnErrorCommand
+from .commands import UpdateExporterOutFileNameCommand, UpdateExporterSettingsCommand, UpdateCancelOnErrorCommand
 from .db_utils import latest_database_commit_time_stamp
 from .exporter_executable import ExporterExecutable
 from .settings_state import SettingsState

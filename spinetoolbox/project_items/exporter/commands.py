@@ -18,6 +18,61 @@ Undo/redo commands for the Exporter project item.
 from spinetoolbox.project_commands import SpineToolboxCommand
 
 
+class UpdateExporterOutFileNameCommand(SpineToolboxCommand):
+    def __init__(self, exporter, file_name, database_path):
+        """Command to update Exporter output file name.
+
+        Args:
+            exporter (Exporter): the Exporter
+            export_list_item (ExportListItem): the widget that holds the name
+            file_name (str): the output filename
+            database_path (str): the associated db path
+        """
+        super().__init__()
+        self.exporter = exporter
+        self.redo_file_name = file_name
+        self.undo_file_name = self.exporter._settings_packs[database_path].output_file_name
+        self.database_path = database_path
+        self.setText(f"change output file in {exporter.name}")
+
+    def redo(self):
+        self.exporter.undo_redo_out_file_name(self.redo_file_name, self.database_path)
+
+    def undo(self):
+        self.exporter.undo_redo_out_file_name(self.undo_file_name, self.database_path)
+
+
+class UpdateExporterSettingsCommand(SpineToolboxCommand):
+    def __init__(
+        self, exporter, settings, indexing_settings, indexing_domains, merging_settings, merging_domains, database_path
+    ):
+        """Command to update Exporter settings.
+
+        Args:
+            exporter (Exporter): the Exporter
+            database_path (str): the db path to update settings for
+        """
+        super().__init__()
+        self.exporter = exporter
+        self.database_path = database_path
+        self.redo_settings_tuple = (settings, indexing_settings, indexing_domains, merging_settings, merging_domains)
+        p = exporter.settings_pack(database_path)
+        self.undo_settings_tuple = (
+            p.settings,
+            p.indexing_settings,
+            p.indexing_domains,
+            p.merging_settings,
+            p.merging_domains,
+        )
+        self.setText(f"change settings of {exporter.name}")
+
+    def redo(self):
+        self.exporter.undo_or_redo_settings(*self.redo_settings_tuple, self.database_path)
+
+    def undo(self):
+        self.exporter.undo_or_redo_settings(*self.undo_settings_tuple, self.database_path)
+
+
 class UpdateCancelOnErrorCommand(SpineToolboxCommand):
     """Command to update Exporter cancel on error option."""
 

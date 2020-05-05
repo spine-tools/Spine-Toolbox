@@ -29,7 +29,7 @@ from spinetoolbox.spine_io.importers.excel_reader import ExcelConnector
 from spinetoolbox.spine_io.importers.gdx_connector import GdxConnector
 from spinetoolbox.spine_io.importers.json_reader import JSONConnector
 from spinetoolbox.widgets.import_preview_window import ImportPreviewWindow
-from spinetoolbox.project_commands import UpdateImporterSettingsCommand, UpdateImporterCancelOnErrorCommand
+from .commands import UpdateImporterSettingsCommand, UpdateImporterCancelOnErrorCommand
 from .importer_executable import ImporterExecutable
 
 _CONNECTOR_NAME_TO_CLASS = {

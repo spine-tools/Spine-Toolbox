@@ -22,7 +22,7 @@ from PySide2.QtGui import QDesktopServices, QStandardItemModel, QStandardItem
 from PySide2.QtWidgets import QFileIconProvider
 from spinetoolbox.project_item import ProjectItem, ProjectItemResource
 from spinetoolbox.config import TOOL_OUTPUT_DIR
-from spinetoolbox.project_commands import UpdateToolExecuteInWorkCommand, UpdateToolCmdLineArgsCommand
+from .commands import UpdateToolExecuteInWorkCommand, UpdateToolCmdLineArgsCommand
 from .tool_specifications import ToolSpecification
 from .widgets.custom_menus import ToolContextMenu, ToolSpecificationMenu
 from .tool_executable import ToolExecutable

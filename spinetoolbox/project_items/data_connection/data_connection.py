@@ -27,7 +27,7 @@ from spinetoolbox.project_item import ProjectItem, ProjectItemResource
 from spinetoolbox.widgets.spine_datapackage_widget import SpineDatapackageWidget
 from spinetoolbox.helpers import busy_effect, deserialize_path, serialize_path
 from spinetoolbox.config import APPLICATION_PATH, INVALID_FILENAME_CHARS
-from spinetoolbox.project_commands import AddDCReferencesCommand, RemoveDCReferencesCommand
+from .commands import AddDCReferencesCommand, RemoveDCReferencesCommand
 from .data_connection_executable import DataConnectionExecutable
 
 

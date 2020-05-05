@@ -25,7 +25,7 @@ import spinedb_api
 from spinetoolbox.project_item import ProjectItem, ProjectItemResource
 from spinetoolbox.widgets.data_store_widget import DataStoreForm
 from spinetoolbox.helpers import create_dir, busy_effect, serialize_path, deserialize_path
-from spinetoolbox.project_commands import UpdateDSURLCommand
+from .commands import UpdateDSURLCommand
 from .data_store_executable import DataStoreExecutable
 from .widgets.custom_menus import DataStoreContextMenu
 
