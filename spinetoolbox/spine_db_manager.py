@@ -788,7 +788,7 @@ class SpineDBManager(QObject):
         sq = getattr(db_map, sq_name)
         query = db_map.query(sq)
         if ids:
-            query = query.filter(sq.c.id.in_(ids))
+            query = query.filter(db_map.in_(sq.c.id, ids))
         return query
 
     def get_object_classes(self, db_map, ids=()):

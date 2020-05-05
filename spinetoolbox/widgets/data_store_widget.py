@@ -433,7 +433,7 @@ class DataStoreFormBase(QMainWindow):
     @Slot(bool)
     def commit_session(self, checked=False):
         """Commits session."""
-        self.db_mngr.commit_session(*self.db_maps)
+        self.db_mngr.commit_session(*self.db_maps, cookie=self)
 
     @Slot(bool)
     def rollback_session(self, checked=False):
