@@ -188,7 +188,7 @@ class TestDataStore(unittest.TestCase):
         # Select the sqlite dialect
         self.ds_properties_ui.comboBox_dialect.activated[str].emit("sqlite")
         # Browse to an existing db file
-        with mock.patch("project_items.data_store.data_store.QFileDialog") as mock_qfile_dialog:
+        with mock.patch("spinetoolbox.project_items.data_store.data_store.QFileDialog") as mock_qfile_dialog:
             mock_qfile_dialog.getOpenFileName.side_effect = lambda *args: [temp_db_path]
             self.ds_properties_ui.toolButton_open_sqlite_file.click()
             mock_qfile_dialog.getOpenFileName.assert_called_once()
