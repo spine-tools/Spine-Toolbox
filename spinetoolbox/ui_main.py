@@ -37,7 +37,7 @@ from PySide2.QtWidgets import (
 )
 from .category import CATEGORIES, CATEGORY_DESCRIPTIONS
 from .graphics_items import ProjectItemIcon
-from .load_project_items import load_project_items
+from .load_project_items import load_item_specification_factories, load_project_items
 from .mvcmodels.project_item_model import ProjectItemModel
 from .mvcmodels.project_item_factory_models import (
     ProjectItemFactoryModel,
@@ -125,6 +125,7 @@ class ToolboxUI(QMainWindow):
         self.undo_stack = QUndoStack(self)
         self._item_categories = dict()
         self.item_factories = dict()  # maps item types to `ProjectItemFactory` objects
+        self._item_specification_factories = dict()  # maps item types to `ProjectItemSpecificationFactory` objects
         self._project = None
         self.project_item_factory_model = None
         self.project_item_model = None
@@ -235,6 +236,7 @@ class ToolboxUI(QMainWindow):
         This dict is then used to perform all project item related tasks.
         """
         self._item_categories, self.item_factories = load_project_items(self)
+        self._item_specification_factories = load_item_specification_factories()
         self.init_project_item_factory_model()
         self.add_specification_popup_menu = AddSpecificationPopupMenu(self)
 
@@ -268,22 +270,21 @@ class ToolboxUI(QMainWindow):
         """Creates a work directory if it does not exist or changes the current work directory to given.
 
         Args:
-            new_work_dir (str): If given, changes the work directory to given
-            and creates the directory if it does not exist.
+            new_work_dir (str, optional): If given, changes the work directory to given
+                and creates the directory if it does not exist.
         """
         if not new_work_dir:
-            work_dir = self._qsettings.value("appSettings/workDir", defaultValue="")
-            if work_dir == "":
+            self.work_dir = self._qsettings.value("appSettings/workDir", defaultValue=DEFAULT_WORK_DIR)
+            if not self.work_dir:
+                # It is possible we still don't have a directory set
                 self.work_dir = DEFAULT_WORK_DIR
-            else:
-                self.work_dir = work_dir
         else:
             self.work_dir = new_work_dir
             self.msg.emit("Work directory is now <b>{0}</b>".format(self.work_dir))
         try:
             create_dir(self.work_dir)
         except OSError:
-            self._toolbox.msg_error.emit(
+            self.msg_error.emit(
                 "[OSError] Creating work directory {0} failed. Check permissions.".format(self.work_dir)
             )
             self.work_dir = None
@@ -421,7 +422,7 @@ class ToolboxUI(QMainWindow):
                 try:
                     proj_info = json.load(fh)
                 except json.decoder.JSONDecodeError:
-                    self.msg_error.emit("Error in project file <b>{0}</b>. Invalid JSON. {0}".format(load_path))
+                    self.msg_error.emit("Error in project file <b>{0}</b>. Invalid JSON.".format(load_path))
                     return False
         except OSError:
             # Remove path from recent projects
@@ -516,7 +517,7 @@ class ToolboxUI(QMainWindow):
             return
         # Put project's specification definition files into a list
         tool_spec_paths = [
-            self.specification_model.specification(i).get_def_path() for i in range(self.specification_model.rowCount())
+            self.specification_model.specification(i).definition_file_path for i in range(self.specification_model.rowCount())
         ]
         # Serialize tool spec paths
         serialized_tool_spec_paths = [serialize_path(spec, self._project.project_dir) for spec in tool_spec_paths]
@@ -654,14 +655,13 @@ class ToolboxUI(QMainWindow):
                 continue
             # Add tool specification into project
             spec = self.load_specification_from_file(path)
-            n_tools += 1
             if not spec:
                 continue
+            n_tools += 1
             # Add tool definition file path to tool instance variable
-            spec.set_def_path(path)
+            spec.definition_file_path = path
             # Insert tool into model
             self.specification_model.insertRow(spec)
-            # self.msg.emit("Tool specification <b>{0}</b> ready".format(spec.name))
         # Set model to the tool specification list view
         self.main_toolbar.project_item_spec_list_view.setModel(self.specification_model)
         # Set model to Tool project item combo box
@@ -700,7 +700,7 @@ class ToolboxUI(QMainWindow):
             def_path (str): Path of the specification definition file
 
         Returns:
-            ProjectItemSpecification or None if reading the file failed
+            ProjectItemSpecification: item specification or None if reading the file failed
         """
         try:
             with open(def_path, "r") as fp:
@@ -726,13 +726,13 @@ class ToolboxUI(QMainWindow):
             ToolSpecification, NoneType
         """
         # NOTE: Default to Tools so tool-specs work out of the box
-        item_type = definition.get(
-            "item_type", "Tool"
+        item_type = definition.get("item_type", "Tool")
+        factory = self._item_specification_factories.get(item_type)
+        if factory is None:
+            return None
+        return factory.make_specification(
+            definition, def_path, self._qsettings, self, self.julia_repl, self.python_repl
         )
-        factory = self.item_factories[item_type]
-        if not factory.supports_specifications():
-            return
-        return factory.specification_loader(self, definition, def_path)
 
     def restore_ui(self):
         """Restore UI state from previous session."""
@@ -745,11 +745,11 @@ class ToolboxUI(QMainWindow):
         n_screens_now = len(QGuiApplication.screens())  # Number of screens now
         original_size = self.size()
         # Note: cannot use booleans since Windows saves them as strings to registry
-        if not window_size == "false":
+        if window_size != "false":
             self.resize(window_size)  # Expects QSize
-        if not window_pos == "false":
+        if window_pos != "false":
             self.move(window_pos)  # Expects QPoint
-        if not window_state == "false":
+        if window_state != "false":
             self.restoreState(window_state, version=1)  # Toolbar and dockWidget positions. Expects QByteArray
         if n_screens_now < int(n_screens):
             # There are less screens available now than on previous application startup
@@ -910,7 +910,7 @@ class ToolboxUI(QMainWindow):
             self.msg_warning.emit("Specification <b>{0}</b> already in project".format(specification.name))
             return
         # Add definition file path into tool specification
-        specification.set_def_path(def_file)
+        specification.definition_file_path = def_file
         self.add_specification(specification)
 
     def add_specification(self, specification):
@@ -1093,7 +1093,7 @@ class ToolboxUI(QMainWindow):
         if not index.isValid():
             return
         specification = self.specification_model.specification(index.row())
-        file_path = specification.get_def_path()
+        file_path = specification.definition_file_path
         # Check if file exists first. openUrl may return True if file doesn't exist
         # TODO: this could still fail if the file is deleted or renamed right after the check
         if not os.path.isfile(file_path):

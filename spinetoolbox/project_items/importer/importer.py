@@ -22,7 +22,7 @@ from PySide2.QtCore import QAbstractListModel, QFileInfo, QModelIndex, Qt, Signa
 from PySide2.QtWidgets import QFileIconProvider, QListWidget, QDialog, QVBoxLayout, QDialogButtonBox
 from spine_engine import ExecutionDirection
 from spinetoolbox.project_item import ProjectItem
-from spinetoolbox.helpers import create_dir, deserialize_path, serialize_path
+from spinetoolbox.helpers import create_dir, serialize_path
 from spinetoolbox.spine_io.gdx_utils import find_gams_directory
 from spinetoolbox.spine_io.importers.csv_reader import CSVConnector
 from spinetoolbox.spine_io.importers.excel_reader import ExcelConnector
@@ -32,6 +32,7 @@ from spinetoolbox.widgets.import_preview_window import ImportPreviewWindow
 from .commands import UpdateImporterSettingsCommand, UpdateImporterCancelOnErrorCommand
 from .executable_item import ExecutableItem
 from .item_info import ItemInfo
+from .utils import deserialize_mappings
 
 _CONNECTOR_NAME_TO_CLASS = {
     "CSVConnector": CSVConnector,
@@ -81,7 +82,7 @@ class Importer(ProjectItem):
             }
         # Convert serialized paths to absolute in mappings
         _fix_1d_array_to_array(mappings)
-        self.settings = self.deserialize_mappings(mappings, self._project.project_dir)
+        self.settings = deserialize_mappings(mappings, self._project.project_dir)
         # self.settings is now a dictionary, where elements have the absolute path as the key and the mapping as value
         self.cancel_on_error = cancel_on_error
         self._file_model = _FileListModel()
@@ -101,8 +102,8 @@ class Importer(ProjectItem):
 
     def execution_item(self):
         """Creates project item's execution counterpart."""
-        python_path = self._toolbox.qsettings().value("appSettings/pythonPath", defaultValue="")
-        gams_path = self._gams_system_directory()
+        python_path = self._project.settings.value("appSettings/pythonPath", defaultValue="")
+        gams_path = self._project.settings.value("appSettings/gamsPath", defaultValue=None)
         cancel_on_error = self._properties_ui.cancel_on_error_checkBox.isChecked()
         executable = ExecutableItem(
             self.name, self.settings, self.logs_dir, python_path, gams_path, cancel_on_error, self._logger
@@ -409,22 +410,6 @@ class Importer(ProjectItem):
         return new_importer
 
     @staticmethod
-    def deserialize_mappings(mappings, project_path):
-        """Returns mapping settings as dict with absolute paths as keys.
-
-        Args:
-            mappings (list): List where each element contains two dictionaries (path dict and mapping dict)
-            project_path (str): Path to project directory
-
-        Returns:
-            dict: Dictionary with absolute paths as keys and mapping settings as values
-        """
-        abs_path_mappings = {}
-        for source, mapping in mappings:
-            abs_path_mappings[deserialize_path(source, project_path)] = mapping
-        return abs_path_mappings
-
-    @staticmethod
     def serialize_mappings(mappings, project_path):
         """Returns a list of mappings, where each element contains two dictionaries,
         the 'serialized' path in a dictionary and the mapping dictionary.
@@ -679,5 +664,5 @@ class _FileListModel(QAbstractListModel):
         item = self._files[index.row()]
         item.selected_for_import = checked
         self.selected_for_import_state_changed.emit(checked, item.label)
-        self.dataChanged(index, index, [Qt.CheckStateRole])
+        self.dataChanged.emit(index, index, [Qt.CheckStateRole])
         return True

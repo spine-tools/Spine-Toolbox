@@ -48,10 +48,6 @@ class DataStoreFactory(ProjectItemFactory):
     def specification_menu_maker(self):
         raise NotImplementedError()
 
-    @property
-    def specification_loader(self):
-        raise NotImplementedError()
-
     @staticmethod
     def _make_properties_widget(toolbox):
         """See base class"""

@@ -25,6 +25,7 @@ import shutil
 import time
 import uuid
 from PySide2.QtCore import QEventLoop, Slot
+from spinetoolbox.config import DEFAULT_WORK_DIR, TOOL_OUTPUT_DIR
 from spinetoolbox.executable_item_base import ExecutableItemBase
 from spinetoolbox.project_item_resource import ProjectItemResource
 from .item_info import ItemInfo
@@ -582,6 +583,30 @@ class ExecutableItem(ExecutableItemBase):
                 resource = ProjectItemResource(self, "transient_file", url=file_url, metadata=metadata)
                 resources.append(resource)
         return resources
+
+    @classmethod
+    def from_dict(cls, item_dict, name, project_dir, app_settings, specifications, logger):
+        """See base class."""
+        execute_in_work = item_dict["execute_in_work"]
+        if execute_in_work:
+            work_dir = app_settings.value("appSettings/workDir", defaultValue=DEFAULT_WORK_DIR)
+            if not work_dir:
+                work_dir = DEFAULT_WORK_DIR
+        else:
+            work_dir = None
+        data_dir = pathlib.Path(project_dir, ".spinetoolbox", "items", item_dict["short name"])
+        output_dir = pathlib.Path(data_dir, TOOL_OUTPUT_DIR)
+        specification_name = item_dict["tool"]
+        if not specification_name:
+            logger.msg_error.emit(f"<b>{name}<b>: No tool specification defined. Unable to execute.")
+            return None
+        try:
+            specification = specifications[specification_name]
+        except KeyError as missing_specification:
+            logger.msg_error.emit(f"Cannot find tool specification '{missing_specification}'.")
+            return None
+        cmd_line_args = item_dict["cmd_line_args"]
+        return cls(name, work_dir, output_dir, specification, cmd_line_args, logger)
 
 
 def _count_files_and_dirs(paths):

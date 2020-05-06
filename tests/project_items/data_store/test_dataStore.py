@@ -275,9 +275,7 @@ class TestDataStore(unittest.TestCase):
         self.assertEqual(expected_name, self.ds.get_icon().name_item.text())  # name item on Design View
         # Check data_dir and logs_dir
         expected_data_dir = os.path.join(self.toolbox.project().items_dir, expected_short_name)
-        expected_logs_dir = os.path.join(expected_data_dir, "logs")
         self.assertEqual(expected_data_dir, self.ds.data_dir)  # Check data dir
-        self.assertEqual(expected_logs_dir, self.ds.logs_dir)  # Check logs dir
         # Check that the database path in properties has been updated
         expected_db_path = os.path.join(expected_data_dir, "DS.sqlite")
         self.assertEqual(expected_db_path, le_db.text())

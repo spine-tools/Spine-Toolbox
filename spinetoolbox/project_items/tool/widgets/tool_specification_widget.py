@@ -545,11 +545,11 @@ class ToolSpecificationWidget(QWidget):
         row = self._toolbox.specification_model.specification_row(self.definition["name"])
         if row >= 0:
             old_tool = self._toolbox.specification_model.specification(row)
-            # FIXME: This test doesn't work because some attributes are set() and self.definiton has lists
+            # FIXME: This test doesn't work because some attributes are set() and self.definition has lists
             if all(old_tool.__dict__[k] == v for k, v in self.definition.items()):
                 # Nothing changed
                 return True
-            def_path = old_tool.get_def_path()
+            def_path = old_tool.definition_file_path
             tool = self._make_tool_specification(def_path)
             if not tool:
                 return False

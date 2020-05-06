@@ -10,22 +10,25 @@
 ######################################################################################################################
 
 """
-Contains View's executable item as well as support utilities.
+Contains Importer's utility functions.
 
 :authors: A. Soininen (VTT)
-:date:   2.4.2020
+:date:    6.5.2020
 """
-from spinetoolbox.executable_item_base import ExecutableItemBase
-from .item_info import ItemInfo
+from spinetoolbox.helpers import deserialize_path
 
 
-class ExecutableItem(ExecutableItemBase):
-    @staticmethod
-    def item_type():
-        """Returns View's type identifier string."""
-        return ItemInfo.item_type()
+def deserialize_mappings(mappings, project_path):
+    """Returns mapping settings as dict with absolute paths as keys.
 
-    @classmethod
-    def from_dict(cls, item_dict, name, project_dir, app_settings, specifications, logger):
-        """See base class."""
-        return cls(name, logger)
+    Args:
+        mappings (list): List where each element contains two dictionaries (path dict and mapping dict)
+        project_path (str): Path to project directory
+
+    Returns:
+        dict: Dictionary with absolute paths as keys and mapping settings as values
+    """
+    abs_path_mappings = {}
+    for source, mapping in mappings:
+        abs_path_mappings[deserialize_path(source, project_path)] = mapping
+    return abs_path_mappings

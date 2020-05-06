@@ -19,7 +19,6 @@ The ToolFactory class.
 from spinetoolbox.project_item import ProjectItemFactory
 from .tool import Tool
 from .tool_icon import ToolIcon
-from .tool_specifications import ToolSpecification
 from .widgets.tool_properties_widget import ToolPropertiesWidget
 from .widgets.tool_specification_widget import ToolSpecificationWidget
 from .widgets.add_tool_widget import AddToolWidget
@@ -54,10 +53,6 @@ class ToolFactory(ProjectItemFactory):
     @property
     def specification_menu_maker(self):
         return ToolSpecificationMenu
-
-    @property
-    def specification_loader(self):
-        return ToolSpecification.toolbox_load
 
     @staticmethod
     def _make_properties_widget(toolbox):

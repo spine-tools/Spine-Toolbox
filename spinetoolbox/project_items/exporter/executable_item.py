@@ -19,10 +19,12 @@ import os.path
 import pathlib
 from spinedb_api import DatabaseMapping, SpineDBAPIError
 from spinetoolbox.executable_item_base import ExecutableItemBase
+from spinetoolbox.helpers import deserialize_path
 from spinetoolbox.project_item_resource import ProjectItemResource
 from spinetoolbox.spine_io import gdx_utils
 from spinetoolbox.spine_io.exporters import gdx
 from .item_info import ItemInfo
+from .settings_pack import SettingsPack
 from .settings_state import SettingsState
 
 
@@ -115,3 +117,23 @@ class ExecutableItem(ExecutableItemBase):
         if path is not None and os.path.isfile(path):
             path = os.path.dirname(path)
         return path
+
+    @classmethod
+    def from_dict(cls, item_dict, name, project_dir, app_settings, specifications, logger):
+        """See base class."""
+        settings_packs = dict()
+        for pack_dict in item_dict["settings_packs"]:
+            serialized_url = pack_dict["database_url"]
+            url = deserialize_path(serialized_url, project_dir)
+            try:
+                settings_pack = SettingsPack.from_dict(pack_dict, url, logger)
+            except gdx.GdxExportException as error:
+                logger.msg_error.emit(f"Failed to fully restore Exporter settings: {error}")
+                settings_pack = SettingsPack("")
+            settings_packs[url] = settings_pack
+        cancel_on_error = item_dict.get("cancel_on_error")
+        if cancel_on_error is None:
+            cancel_on_error = True
+        data_dir = pathlib.Path(project_dir, ".spinetoolbox", "items", item_dict["short name"])
+        gams_path = app_settings.value("appSettings/gamsPath", defaultValue=None)
+        return cls(name, settings_packs, cancel_on_error, data_dir, gams_path, logger)

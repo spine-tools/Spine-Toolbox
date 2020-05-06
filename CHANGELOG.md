@@ -13,6 +13,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
   In this Input type the indexes, e.g. time stamps of time series get expanded as a new dimension in the table.
 - Import editor now has a new Source type: Table name. It can be used e.g. to pick an Excel sheet's
   or GAMS domain's name as the object class name.
+- It is now possible to execute a project from the command line without opening the Toolbox GUI.
+  The headless execution is enabled by the new command line option ``--execute-only``.
 
 ### Changed
 - The graph view behavior has changed. Now selecting objects in the object tree not only shows those objects but also 

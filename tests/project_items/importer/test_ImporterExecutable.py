@@ -58,9 +58,7 @@ class TestImporterExecutable(unittest.TestCase):
             database_url = 'sqlite:///' + str(database_path)
             create_new_spine_database(database_url)
             gams_path = ""
-            executable = ExecutableItem(
-                "name", mappings, temp_dir, sys.executable, gams_path, True, mock.MagicMock()
-            )
+            executable = ExecutableItem("name", mappings, temp_dir, sys.executable, gams_path, True, mock.MagicMock())
             database_resources = [ProjectItemResource(None, "database", database_url)]
             self.assertTrue(executable.execute(database_resources, ExecutionDirection.BACKWARD))
             file_resources = [ProjectItemResource(None, "file", data_file.as_uri())]

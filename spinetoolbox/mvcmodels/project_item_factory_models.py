@@ -60,8 +60,7 @@ class ProjectItemSpecFactoryModel(QAbstractListModel):
         self._icons = icons
 
     def rowCount(self, parent=None):
-        """Must be reimplemented when subclassing. Returns
-        the number of specs in the model.
+        """Returns the number of specs in the model.
 
         Args:
             parent (QModelIndex): Not used (because this is a list)

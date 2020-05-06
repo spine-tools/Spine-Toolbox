@@ -10,22 +10,30 @@
 ######################################################################################################################
 
 """
-Contains View's executable item as well as support utilities.
+Contains project item specification class.
 
-:authors: A. Soininen (VTT)
-:date:   2.4.2020
+:authors: M. Marin (KTH)
+:date:    7.5.2020
 """
-from spinetoolbox.executable_item_base import ExecutableItemBase
-from .item_info import ItemInfo
+from .metaobject import MetaObject
 
 
-class ExecutableItem(ExecutableItemBase):
-    @staticmethod
-    def item_type():
-        """Returns View's type identifier string."""
-        return ItemInfo.item_type()
+class ProjectItemSpecification(MetaObject):
+    """
+    Class to hold a project item specification.
 
-    @classmethod
-    def from_dict(cls, item_dict, name, project_dir, app_settings, specifications, logger):
-        """See base class."""
-        return cls(name, logger)
+    Attributes:
+        item_type (str): type of the project item the specification is compatible with
+        definition_file_path (str): specification's JSON file path
+    """
+
+    def __init__(self, name, description=None, item_type=""):
+        """
+        Args:
+            name (str): specification name
+            description (str): description
+            item_type (str): Project item type
+        """
+        super().__init__(name, description)
+        self.item_type = item_type
+        self.definition_file_path = ""

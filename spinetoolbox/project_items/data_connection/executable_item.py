@@ -46,12 +46,11 @@ class ExecutableItem(ExecutableItemBase):
         return [ProjectItemResource(self, "file", url=pathlib.Path(ref).as_uri()) for ref in self._files]
 
     @classmethod
-    def from_dict(cls, item_dict, name, project_dir, app_settings, logger):
+    def from_dict(cls, item_dict, name, project_dir, app_settings, specifications, logger):
         """See base class."""
         references = item_dict["references"]
         file_references = [deserialize_path(r, project_dir) for r in references]
-        short_name = item_dict["short name"]
-        data_dir = pathlib.Path(project_dir, short_name)
+        data_dir = pathlib.Path(project_dir, ".spinetoolbox", "items", item_dict["short name"])
         data_files = list()
         with os.scandir(data_dir) as scan_iterator:
             for entry in scan_iterator:

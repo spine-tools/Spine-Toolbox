@@ -17,8 +17,10 @@ Contains Data Store's executable item as well as support utilities.
 """
 
 from spinetoolbox.executable_item_base import ExecutableItemBase
+from spinetoolbox.helpers import deserialize_path
 from spinetoolbox.project_item_resource import ProjectItemResource
 from .item_info import ItemInfo
+from .utils import convert_to_sqlalchemy_url
 
 
 class ExecutableItem(ExecutableItemBase):
@@ -47,3 +49,11 @@ class ExecutableItem(ExecutableItemBase):
             return list()
         resource = ProjectItemResource(self, "database", url=str(self._url))
         return [resource]
+
+    @classmethod
+    def from_dict(cls, item_dict, name, project_dir, app_settings, specifications, logger):
+        """See base class."""
+        if item_dict["url"]["dialect"] == "sqlite":
+            item_dict["url"]["database"] = deserialize_path(item_dict["url"]["database"], project_dir)
+        url = convert_to_sqlalchemy_url(item_dict["url"], name, logger, log_errors=True)
+        return cls(name, url, logger)
