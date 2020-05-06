@@ -34,7 +34,7 @@ from .mock_helpers import (
     add_importer,
     add_exporter,
 )
-from spinetoolbox.executable_item import ExecutableItem
+from spinetoolbox.executable_item_base import ExecutableItemBase
 
 
 # noinspection PyUnusedLocal
@@ -257,7 +257,7 @@ class TestSpineToolboxProject(unittest.TestCase):
         return item, item_executable
 
 
-class _MockExecutableItem(ExecutableItem):
+class _MockExecutableItem(ExecutableItemBase):
     def __init__(self, name, logger):
         super().__init__(name, logger)
         self.execute_forward_called = False

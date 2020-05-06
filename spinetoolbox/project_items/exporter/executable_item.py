@@ -10,7 +10,7 @@
 ######################################################################################################################
 
 """
-Contains ExporterExecutable, an Exporter's counterpart in execution as well as support utilities.
+Contains Exporter's executable item as well as support utilities.
 
 :authors: A. Soininen (VTT)
 :date:   2.4.2020
@@ -18,7 +18,7 @@ Contains ExporterExecutable, an Exporter's counterpart in execution as well as s
 import os.path
 import pathlib
 from spinedb_api import DatabaseMapping, SpineDBAPIError
-from spinetoolbox.executable_item import ExecutableItem
+from spinetoolbox.executable_item_base import ExecutableItemBase
 from spinetoolbox.project_item_resource import ProjectItemResource
 from spinetoolbox.spine_io import gdx_utils
 from spinetoolbox.spine_io.exporters import gdx
@@ -26,7 +26,7 @@ from .item_info import ItemInfo
 from .settings_state import SettingsState
 
 
-class ExporterExecutable(ExecutableItem):
+class ExecutableItem(ExecutableItemBase):
     def __init__(self, name, settings_packs, cancel_on_error, data_dir, gams_path, logger):
         """
         Args:

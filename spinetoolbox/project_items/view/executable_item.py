@@ -10,40 +10,17 @@
 ######################################################################################################################
 
 """
-Contains DataStoreExecutable, DataStore's executable counterpart as well as support utilities.
+Contains View's executable item as well as support utilities.
 
 :authors: A. Soininen (VTT)
-:date:   1.4.2020
+:date:   2.4.2020
 """
-
-from spinetoolbox.executable_item import ExecutableItem
-from spinetoolbox.project_item_resource import ProjectItemResource
+from spinetoolbox.executable_item_base import ExecutableItemBase
 from .item_info import ItemInfo
 
 
-class DataStoreExecutable(ExecutableItem):
-    def __init__(self, name, url, logger):
-        """
-        Args:
-            name (str): item's name
-            url (str): database's URL
-            logger (LoggerInterface): a logger
-        """
-        super().__init__(name, logger)
-        self._url = url
-
+class ExecutableItem(ExecutableItemBase):
     @staticmethod
     def item_type():
-        """Returns the data store executable's type identifier string."""
+        """Returns View's type identifier string."""
         return ItemInfo.item_type()
-
-    def _output_resources_backward(self):
-        """See base class."""
-        return self._output_resources_forward()
-
-    def _output_resources_forward(self):
-        """See base class."""
-        if not self._url:
-            return list()
-        resource = ProjectItemResource(self, "database", url=str(self._url))
-        return [resource]

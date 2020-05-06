@@ -25,7 +25,7 @@ from spine_engine import ExecutionDirection
 from spinedb_api import create_new_spine_database, DiffDatabaseMapping, import_functions
 from spinetoolbox.project_item_resource import ProjectItemResource
 from spinetoolbox.project_items.exporter.exporter import SettingsPack
-from spinetoolbox.project_items.exporter.exporter_executable import ExporterExecutable
+from spinetoolbox.project_items.exporter.executable_item import ExecutableItem
 from spinetoolbox.project_items.exporter.settings_state import SettingsState
 from spinetoolbox.spine_io import gdx_utils
 from spinetoolbox.spine_io.exporters import gdx
@@ -33,15 +33,15 @@ from spinetoolbox.spine_io.exporters import gdx
 
 class TestExporterExecutable(unittest.TestCase):
     def test_item_type(self):
-        self.assertEqual(ExporterExecutable.item_type(), "Exporter")
+        self.assertEqual(ExecutableItem.item_type(), "Exporter")
 
     def test_execute_backward(self):
-        executable = ExporterExecutable("name", {}, False, "", "", mock.MagicMock())
+        executable = ExecutableItem("name", {}, False, "", "", mock.MagicMock())
         self.assertTrue(executable.execute([], ExecutionDirection.BACKWARD))
 
     @unittest.skipIf(gdx_utils.find_gams_directory() is None, "No working GAMS installation found.")
     def test_execute_forward_no_output(self):
-        executable = ExporterExecutable("name", {}, False, "", "", mock.MagicMock())
+        executable = ExecutableItem("name", {}, False, "", "", mock.MagicMock())
         self.assertTrue(executable.execute([], ExecutionDirection.FORWARD))
 
     @unittest.skipIf(gdx_utils.find_gams_directory() is None, "No working GAMS installation found.")
@@ -60,7 +60,7 @@ class TestExporterExecutable(unittest.TestCase):
             database_map.commit_session("Add an entity class and an entity for unit tests.")
             database_map.connection.close()
             packs = {database_url: settings_pack}
-            executable = ExporterExecutable("name", packs, False, tmp_dir_name, "", mock.MagicMock())
+            executable = ExecutableItem("name", packs, False, tmp_dir_name, "", mock.MagicMock())
             resources = [ProjectItemResource(None, "database", database_url)]
             self.assertTrue(executable.execute(resources, ExecutionDirection.FORWARD))
             self.assertTrue(Path(tmp_dir_name, "output.gdx").exists())
@@ -77,7 +77,7 @@ class TestExporterExecutable(unittest.TestCase):
                     self.assertEqual(gams_record, expected_name)
 
     def test_output_resources_backward(self):
-        executable = ExporterExecutable("name", {}, False, "", "", mock.MagicMock())
+        executable = ExecutableItem("name", {}, False, "", "", mock.MagicMock())
         self.assertEqual(executable.output_resources(ExecutionDirection.BACKWARD), [])
 
     def test_output_resources_forward(self):
@@ -85,7 +85,7 @@ class TestExporterExecutable(unittest.TestCase):
         settings_pack1 = SettingsPack("output.gdx")
         settings_pack2 = SettingsPack("exported.gdx")
         packs = {"sqlite:///first_database.sqlite": settings_pack1, "sqlite:///second_database.sqlite": settings_pack2}
-        executable = ExporterExecutable("name", packs, False, data_dir, "", mock.MagicMock())
+        executable = ExecutableItem("name", packs, False, data_dir, "", mock.MagicMock())
         resources = executable.output_resources(ExecutionDirection.FORWARD)
         self.assertEqual(len(resources), 2)
 

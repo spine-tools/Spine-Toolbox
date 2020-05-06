@@ -20,29 +20,29 @@ import tempfile
 import unittest
 from unittest import mock
 from spine_engine import ExecutionDirection
-from spinetoolbox.project_items.data_connection.data_connection_executable import DataConnectionExecutable
+from spinetoolbox.project_items.data_connection.executable_item import ExecutableItem
 
 
 class TestDataConnectionExecutable(unittest.TestCase):
     def test_item_type(self):
-        self.assertEqual(DataConnectionExecutable.item_type(), "Data Connection")
+        self.assertEqual(ExecutableItem.item_type(), "Data Connection")
 
     def test_execute_backward(self):
-        executable = DataConnectionExecutable("name", [], [], mock.MagicMock())
+        executable = ExecutableItem("name", [], [], mock.MagicMock())
         self.assertTrue(executable.execute([], ExecutionDirection.BACKWARD))
 
     def test_execute_forward(self):
-        executable = DataConnectionExecutable("name", [], [], mock.MagicMock())
+        executable = ExecutableItem("name", [], [], mock.MagicMock())
         self.assertTrue(executable.execute([], ExecutionDirection.FORWARD))
 
     def test_output_resources_backward(self):
-        executable = DataConnectionExecutable("name", ["file_reference"], ["data_file"], mock.MagicMock())
+        executable = ExecutableItem("name", ["file_reference"], ["data_file"], mock.MagicMock())
         self.assertEqual(executable.output_resources(ExecutionDirection.BACKWARD), [])
 
     def test_output_resources_forward(self):
         file_reference = os.path.join(tempfile.gettempdir(), "file_reference")
         data_file = os.path.join(tempfile.gettempdir(), "data_file")
-        executable = DataConnectionExecutable("name", [file_reference], [data_file], mock.MagicMock())
+        executable = ExecutableItem("name", [file_reference], [data_file], mock.MagicMock())
         output_resources = executable.output_resources(ExecutionDirection.FORWARD)
         self.assertEqual(len(output_resources), 2)
         resource = output_resources[0]

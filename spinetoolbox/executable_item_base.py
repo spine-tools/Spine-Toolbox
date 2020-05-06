@@ -19,7 +19,7 @@ Contains ExecutableItem, a project item's counterpart in execution as well as su
 from spine_engine import ExecutionDirection
 
 
-class ExecutableItem:
+class ExecutableItemBase:
     """
     The part of a project item that is executed by the Spine Engine.
     """
@@ -153,6 +153,6 @@ class ExecutableItem:
             app_settings (QSettings): Toolbox settings
             logger (LoggingInterface): a logger
         Returns:
-            ExecutableItem: deserialized executable item
+            ExecutableItemBase: deserialized executable item
         """
         raise NotImplementedError()

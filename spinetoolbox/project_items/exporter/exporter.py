@@ -28,7 +28,7 @@ from spinetoolbox.helpers import deserialize_path, serialize_url
 from spinetoolbox.spine_io.exporters import gdx
 from .commands import UpdateExporterOutFileNameCommand, UpdateExporterSettingsCommand, UpdateCancelOnErrorCommand
 from .db_utils import latest_database_commit_time_stamp
-from .exporter_executable import ExporterExecutable
+from .executable_item import ExecutableItem
 from .item_info import ItemInfo
 from .settings_state import SettingsState
 from .widgets.gdx_export_settings import GdxExportSettings
@@ -100,7 +100,7 @@ class Exporter(ProjectItem):
     def execution_item(self):
         """Creates Exporter's execution counterpart."""
         gams_path = self._project.settings.value("appSettings/gamsPath", defaultValue=None)
-        executable = ExporterExecutable(
+        executable = ExecutableItem(
             self.name, self._settings_packs, self._cancel_export_on_error, self.data_dir, gams_path, self._logger
         )
         return executable

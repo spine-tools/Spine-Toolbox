@@ -10,20 +10,20 @@
 ######################################################################################################################
 
 """
-Contains DataConnectionExecutable, DataConnection's executable counterpart as well as support utilities.
+Contains Data Connection's executable item as well as support utilities.
 
 :authors: A. Soininen (VTT)
 :date:   1.4.2020
 """
 import os
 import pathlib
-from spinetoolbox.executable_item import ExecutableItem
+from spinetoolbox.executable_item_base import ExecutableItemBase
 from spinetoolbox.helpers import deserialize_path
 from spinetoolbox.project_item_resource import ProjectItemResource
 from .item_info import ItemInfo
 
 
-class DataConnectionExecutable(ExecutableItem):
+class ExecutableItem(ExecutableItemBase):
     """The executable parts of Data Connection."""
 
     def __init__(self, name, file_references, data_files, logger):

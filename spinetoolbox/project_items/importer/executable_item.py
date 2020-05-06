@@ -10,7 +10,7 @@
 ######################################################################################################################
 
 """
-Contains ImporterExecutable, Importer's executable counterpart as well as support utilities.
+Contains Importer's executable item as well as support utilities.
 
 :authors: A. Soininen (VTT)
 :date:   1.4.2020
@@ -18,14 +18,14 @@ Contains ImporterExecutable, Importer's executable counterpart as well as suppor
 import os
 from PySide2.QtCore import QObject, QEventLoop, Signal, Slot
 from spinetoolbox.config import PYTHON_EXECUTABLE
-from spinetoolbox.executable_item import ExecutableItem
+from spinetoolbox.executable_item_base import ExecutableItemBase
 from spinetoolbox.execution_managers import QProcessExecutionManager
 from spinetoolbox.spine_io.gdx_utils import find_gams_directory
 from . import importer_program
 from .item_info import ItemInfo
 
 
-class ImporterExecutable(ExecutableItem, QObject):
+class ExecutableItem(ExecutableItemBase, QObject):
 
     importing_finished = Signal()
     """Emitted after the separate import process has finished executing."""
@@ -41,7 +41,7 @@ class ImporterExecutable(ExecutableItem, QObject):
             cancel_on_error (bool): if True, quit execution on import error
             logger (LoggerInterface): a logger
         """
-        ExecutableItem.__init__(self, name, logger)
+        ExecutableItemBase.__init__(self, name, logger)
         QObject.__init__(self)
         self._settings = settings
         self._logs_dir = logs_dir

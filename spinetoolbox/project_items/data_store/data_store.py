@@ -27,7 +27,7 @@ from spinetoolbox.project_item_resource import ProjectItemResource
 from spinetoolbox.widgets.data_store_widget import DataStoreForm
 from spinetoolbox.helpers import create_dir, busy_effect, serialize_path, deserialize_path
 from .commands import UpdateDSURLCommand
-from .data_store_executable import DataStoreExecutable
+from .executable_item import ExecutableItem
 from .item_info import ItemInfo
 from .widgets.custom_menus import DataStoreContextMenu
 
@@ -76,7 +76,7 @@ class DataStore(ProjectItem):
     def execution_item(self):
         """Creates DataStore's execution counterpart."""
         self._update_sa_url(log_errors=False)
-        return DataStoreExecutable(self.name, self._sa_url, self._logger)
+        return ExecutableItem(self.name, self._sa_url, self._logger)
 
     def parse_url(self, url):
         """Return a complete url dictionary from the given dict or string"""

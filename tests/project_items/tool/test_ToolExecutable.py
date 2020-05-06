@@ -23,7 +23,7 @@ from unittest import mock
 from PySide2.QtCore import QCoreApplication
 from spine_engine import ExecutionDirection
 from spinetoolbox.project_item_resource import ProjectItemResource
-from spinetoolbox.project_items.tool.tool_executable import ToolExecutable
+from spinetoolbox.project_items.tool.executable_item import ExecutableItem
 from spinetoolbox.project_items.tool.tool_specifications import ToolSpecification, PythonTool
 
 
@@ -39,11 +39,11 @@ class TestToolExecutable(unittest.TestCase):
             QCoreApplication.removePostedEvents(None)
 
     def test_item_type(self):
-        self.assertEqual(ToolExecutable.item_type(), "Tool")
+        self.assertEqual(ExecutableItem.item_type(), "Tool")
 
     def test_execute_forward_without_specification_fails(self):
         logger = mock.MagicMock()
-        executable = ToolExecutable(
+        executable = ExecutableItem(
             "executable name", work_dir="", output_dir="", tool_specification=None, cmd_line_args=[], logger=logger
         )
         self.assertFalse(executable.execute([], ExecutionDirection.FORWARD))
@@ -72,7 +72,7 @@ class TestToolExecutable(unittest.TestCase):
             work_dir.mkdir()
             archive_dir = pathlib.Path(temp_dir, "archive")
             archive_dir.mkdir()
-            executable = ToolExecutable("Create files", str(work_dir), str(archive_dir), tool_specification, [], logger)
+            executable = ExecutableItem("Create files", str(work_dir), str(archive_dir), tool_specification, [], logger)
             executable.execute([], ExecutionDirection.FORWARD)
             while executable._tool_instance is not None:
                 QCoreApplication.processEvents()
@@ -92,7 +92,7 @@ class TestToolExecutable(unittest.TestCase):
             tool_specification = ToolSpecification(
                 "spec name", "Python", temp_dir, [], None, logger, inputfiles_opt=optional_input_files
             )
-            executable = ToolExecutable(
+            executable = ExecutableItem(
                 "executable name",
                 work_dir=temp_dir,
                 output_dir="",
@@ -116,7 +116,7 @@ class TestToolExecutable(unittest.TestCase):
             tool_specification = ToolSpecification(
                 "spec name", "Python", temp_dir, [], None, logger, inputfiles_opt=optional_input_files
             )
-            executable = ToolExecutable(
+            executable = ExecutableItem(
                 "executable name",
                 work_dir=temp_dir,
                 output_dir="",
@@ -144,7 +144,7 @@ class TestToolExecutable(unittest.TestCase):
             tool_specification = ToolSpecification(
                 "spec name", "Python", temp_dir, [], None, logger, inputfiles_opt=optional_input_files
             )
-            executable = ToolExecutable(
+            executable = ExecutableItem(
                 "executable name",
                 work_dir=temp_dir,
                 output_dir="",

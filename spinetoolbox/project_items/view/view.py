@@ -24,7 +24,7 @@ from spinedb_api import SpineDBAPIError
 from spinetoolbox.project_item import ProjectItem
 from spinetoolbox.widgets.data_store_widget import DataStoreForm
 from .item_info import ItemInfo
-from .view_executable import ViewExecutable
+from .executable_item import ExecutableItem
 
 
 class View(ProjectItem):
@@ -59,7 +59,7 @@ class View(ProjectItem):
 
     def execution_item(self):
         """Creates project item's execution counterpart."""
-        return ViewExecutable(self.name, self._logger)
+        return ExecutableItem(self.name, self._logger)
 
     def make_signal_handler_dict(self):
         """Returns a dictionary of all shared signals and their handlers.

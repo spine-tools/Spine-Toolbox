@@ -30,7 +30,7 @@ from spinetoolbox.spine_io.importers.gdx_connector import GdxConnector
 from spinetoolbox.spine_io.importers.json_reader import JSONConnector
 from spinetoolbox.widgets.import_preview_window import ImportPreviewWindow
 from .commands import UpdateImporterSettingsCommand, UpdateImporterCancelOnErrorCommand
-from .importer_executable import ImporterExecutable
+from .executable_item import ExecutableItem
 from .item_info import ItemInfo
 
 _CONNECTOR_NAME_TO_CLASS = {
@@ -104,7 +104,7 @@ class Importer(ProjectItem):
         python_path = self._toolbox.qsettings().value("appSettings/pythonPath", defaultValue="")
         gams_path = self._gams_system_directory()
         cancel_on_error = self._properties_ui.cancel_on_error_checkBox.isChecked()
-        executable = ImporterExecutable(
+        executable = ExecutableItem(
             self.name, self.settings, self.logs_dir, python_path, gams_path, cancel_on_error, self._logger
         )
         return executable

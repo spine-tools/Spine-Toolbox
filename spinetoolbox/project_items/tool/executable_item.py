@@ -10,7 +10,7 @@
 ######################################################################################################################
 
 """
-Contains ToolExecutable, a Tool item's executable counterpart, and support functionality.
+Contains Tool's executable item and support functionality.
 
 :authors: A. Soininen (VTT)
 :date:   30.3.2020
@@ -25,7 +25,7 @@ import shutil
 import time
 import uuid
 from PySide2.QtCore import QEventLoop, Slot
-from spinetoolbox.executable_item import ExecutableItem
+from spinetoolbox.executable_item_base import ExecutableItemBase
 from spinetoolbox.project_item_resource import ProjectItemResource
 from .item_info import ItemInfo
 from .utils import (
@@ -37,7 +37,7 @@ from .utils import (
 )
 
 
-class ToolExecutable(ExecutableItem):
+class ExecutableItem(ExecutableItemBase):
     """Tool project item's executable parts."""
 
     def __init__(self, name, work_dir, output_dir, tool_specification, cmd_line_args, logger):
@@ -680,7 +680,7 @@ class _ExecutionToken:
     def __init__(self, tool_executable, execution_dir):
         """
         Args:
-            tool_executable (ToolExecutable): the object that has initiated the execution
+            tool_executable (ExecutableItem): the object that has initiated the execution
             execution_dir (str): absolute path to the execution working directory
         """
         self._tool_executable = tool_executable

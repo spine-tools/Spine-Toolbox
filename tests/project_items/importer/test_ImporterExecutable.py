@@ -24,7 +24,7 @@ from PySide2.QtCore import QCoreApplication
 from spinedb_api import create_new_spine_database, DatabaseMapping
 from spine_engine import ExecutionDirection
 from spinetoolbox.project_item_resource import ProjectItemResource
-from spinetoolbox.project_items.importer.importer_executable import ImporterExecutable
+from spinetoolbox.project_items.importer.executable_item import ExecutableItem
 
 
 class TestImporterExecutable(unittest.TestCase):
@@ -39,14 +39,14 @@ class TestImporterExecutable(unittest.TestCase):
             QCoreApplication.removePostedEvents(None)
 
     def test_item_type(self):
-        self.assertEqual(ImporterExecutable.item_type(), "Importer")
+        self.assertEqual(ExecutableItem.item_type(), "Importer")
 
     def test_execute_backward(self):
-        executable = ImporterExecutable("name", {}, "", "", "", True, mock.MagicMock())
+        executable = ExecutableItem("name", {}, "", "", "", True, mock.MagicMock())
         self.assertTrue(executable.execute([], ExecutionDirection.BACKWARD))
 
     def test_execute_forward_simplest_case(self):
-        executable = ImporterExecutable("name", {}, "", "", "", True, mock.MagicMock())
+        executable = ExecutableItem("name", {}, "", "", "", True, mock.MagicMock())
         self.assertTrue(executable.execute([], ExecutionDirection.FORWARD))
 
     def test_execute_forward_import_small_file(self):
@@ -58,7 +58,7 @@ class TestImporterExecutable(unittest.TestCase):
             database_url = 'sqlite:///' + str(database_path)
             create_new_spine_database(database_url)
             gams_path = ""
-            executable = ImporterExecutable(
+            executable = ExecutableItem(
                 "name", mappings, temp_dir, sys.executable, gams_path, True, mock.MagicMock()
             )
             database_resources = [ProjectItemResource(None, "database", database_url)]
