@@ -555,7 +555,7 @@ class ManageParameterTagsDialog(ManageItemsDialog):
         model_data = list()
         tag_dict = {}
         for db_map in self.db_maps:
-            for parameter_tag in self.db_mngr.get_parameter_tags(db_map):
+            for parameter_tag in self.db_mngr.get_items(db_map, "parameter tag"):
                 tag_dict.setdefault(parameter_tag["tag"], {})[db_map] = parameter_tag
         self.items = list(tag_dict.values())
         for item in self.items:

@@ -41,11 +41,9 @@ from ..mvcmodels.compound_parameter_models import (
     CompoundRelationshipParameterDefinitionModel,
     CompoundRelationshipParameterValueModel,
 )
-from ..widgets.parameter_value_editor import ParameterValueEditor
 from ..widgets.plot_widget import PlotWidget
 from ..widgets.object_name_list_editor import ObjectNameListEditor
 from ..plotting import plot_selection, PlottingError, ParameterTablePlottingHints
-from ..helpers import busy_effect
 
 
 class ParameterViewMixin:
@@ -65,7 +63,6 @@ class ParameterViewMixin:
         self.relationship_parameter_definition_model = CompoundRelationshipParameterDefinitionModel(
             self, self.db_mngr, *self.db_maps
         )
-        self.ui.treeView_parameter_value_list.setModel(self.parameter_value_list_model)
         self.ui.tableView_object_parameter_value.setModel(self.object_parameter_value_model)
         self.ui.tableView_relationship_parameter_value.setModel(self.relationship_parameter_value_model)
         self.ui.tableView_object_parameter_definition.setModel(self.object_parameter_definition_model)
@@ -233,7 +230,7 @@ class ParameterViewMixin:
         for id_ in object_class_id_list.split(","):
             id_ = int(id_)
             object_class_name = self.db_mngr.get_item(db_map, "object class", id_).get("name")
-            object_names_list = [x["name"] for x in self.db_mngr.get_objects(db_map, class_id=id_)]
+            object_names_list = [x["name"] for x in self.db_mngr.get_items_by_field(db_map, "object", "class_id", id_)]
             object_class_names.append(object_class_name)
             object_names_lists.append(object_names_list)
         object_name_list = index.data(Qt.EditRole)
@@ -243,14 +240,6 @@ class ParameterViewMixin:
             # Gibberish
             current_object_names = []
         editor = ObjectNameListEditor(self, index, object_class_names, object_names_lists, current_object_names)
-        editor.show()
-
-    @busy_effect
-    @Slot("QModelIndex", str, object)
-    def show_parameter_value_editor(self, index, value_name="", value=None):
-        """Shows the parameter value editor for the given index of given table view.
-        """
-        editor = ParameterValueEditor(index, value_name=value_name, value=value, parent_widget=self)
         editor.show()
 
     # TODO: nothing connected to these two below
@@ -399,8 +388,7 @@ class ParameterViewMixin:
             menu = ParameterContextMenu(self, global_pos, index)
         option = menu.get_action()
         if option == "Open in editor...":
-            value_name = model.value_name(index)
-            self.show_parameter_value_editor(index, value_name=value_name)
+            self.show_parameter_value_editor(index)
         elif option == "Plot":
             selection = table_view.selectedIndexes()
             try:

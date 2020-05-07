@@ -10,10 +10,10 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-# Form implementation generated from reading ui file 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\ui\import_mapping.ui',
-# licensing of 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\ui\import_mapping.ui' applies.
+# Form implementation generated from reading ui file 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\import_mapping.ui',
+# licensing of 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\import_mapping.ui' applies.
 #
-# Created: Thu Feb 13 11:54:00 2020
+# Created: Mon Mar 16 15:36:32 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -26,10 +26,10 @@ class Ui_ImportMapping(object):
         ImportMapping.resize(367, 536)
         self.verticalLayout_3 = QtWidgets.QVBoxLayout(ImportMapping)
         self.verticalLayout_3.setObjectName("verticalLayout_3")
-        self.splitter = QtWidgets.QSplitter(ImportMapping)
-        self.splitter.setOrientation(QtCore.Qt.Vertical)
-        self.splitter.setObjectName("splitter")
-        self.verticalLayoutWidget = QtWidgets.QWidget(self.splitter)
+        self.mapping_splitter = QtWidgets.QSplitter(ImportMapping)
+        self.mapping_splitter.setOrientation(QtCore.Qt.Vertical)
+        self.mapping_splitter.setObjectName("mapping_splitter")
+        self.verticalLayoutWidget = QtWidgets.QWidget(self.mapping_splitter)
         self.verticalLayoutWidget.setObjectName("verticalLayoutWidget")
         self.top_layout = QtWidgets.QVBoxLayout(self.verticalLayoutWidget)
         self.top_layout.setContentsMargins(0, 0, 0, 0)
@@ -46,7 +46,7 @@ class Ui_ImportMapping(object):
         self.list_view = QtWidgets.QListView(self.verticalLayoutWidget)
         self.list_view.setObjectName("list_view")
         self.top_layout.addWidget(self.list_view)
-        self.verticalLayoutWidget_2 = QtWidgets.QWidget(self.splitter)
+        self.verticalLayoutWidget_2 = QtWidgets.QWidget(self.mapping_splitter)
         self.verticalLayoutWidget_2.setObjectName("verticalLayoutWidget_2")
         self.bottom_layout = QtWidgets.QVBoxLayout(self.verticalLayoutWidget_2)
         self.bottom_layout.setContentsMargins(0, 0, 0, 0)
@@ -54,7 +54,7 @@ class Ui_ImportMapping(object):
         self.table_view = QtWidgets.QTableView(self.verticalLayoutWidget_2)
         self.table_view.setObjectName("table_view")
         self.bottom_layout.addWidget(self.table_view)
-        self.verticalLayout_3.addWidget(self.splitter)
+        self.verticalLayout_3.addWidget(self.mapping_splitter)
 
         self.retranslateUi(ImportMapping)
         QtCore.QMetaObject.connectSlotsByName(ImportMapping)

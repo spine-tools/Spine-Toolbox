@@ -92,7 +92,9 @@ class GetObjectClassesMixin:
     """
 
     def make_db_map_obj_cls_lookup(self):
-        return {db_map: {x["name"]: x for x in self.db_mngr.get_object_classes(db_map)} for db_map in self.db_maps}
+        return {
+            db_map: {x["name"]: x for x in self.db_mngr.get_items(db_map, "object class")} for db_map in self.db_maps
+        }
 
     def object_class_name_list(self, row):
         """Return a list of object class names present in all databases selected for given row.
@@ -118,12 +120,16 @@ class GetObjectsMixin:
 
     def make_db_map_obj_lookup(self):
         return {
-            db_map: {(x["class_id"], x["name"]): x for x in self.db_mngr.get_objects(db_map)} for db_map in self.db_maps
+            db_map: {(x["class_id"], x["name"]): x for x in self.db_mngr.get_items(db_map, "object")}
+            for db_map in self.db_maps
         }
 
     def make_db_map_rel_cls_lookup(self):
         return {
-            db_map: {(x["name"], x["object_class_name_list"]): x for x in self.db_mngr.get_relationship_classes(db_map)}
+            db_map: {
+                (x["name"], x["object_class_name_list"]): x
+                for x in self.db_mngr.get_items(db_map, "relationship class")
+            }
             for db_map in self.db_maps
         }
 

@@ -44,10 +44,6 @@ class ConvertToDBMixin:
             list: error log
         """
         item = item.copy()
-        if "value" in item:
-            item["value"] = to_database(item["value"])
-        elif "default_value" in item:
-            item["default_value"] = to_database(item["default_value"])
         return item, []
 
 

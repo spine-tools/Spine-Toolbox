@@ -20,6 +20,7 @@ import json
 from PySide2.QtCore import Qt, Signal
 from PySide2.QtGui import QGuiApplication
 from PySide2.QtWidgets import QMainWindow, QDialogButtonBox, QSplitter, QFileDialog
+from ..helpers import ensure_window_is_on_screen
 from ..spine_io.connection_manager import ConnectionManager
 from .import_preview_widget import ImportPreviewWidget
 
@@ -121,21 +122,23 @@ class ImportPreviewWindow(QMainWindow):
         for splitter in self.findChildren(QSplitter):
             splitter_state[splitter] = qsettings.value(splitter.objectName() + "_splitterState")
         qsettings.endGroup()
+        original_size = self.size()
         if window_size:
             self.resize(window_size)
         if window_pos:
             self.move(window_pos)
         if window_state:
             self.restoreState(window_state, version=1)  # Toolbar and dockWidget positions
+        # noinspection PyArgumentList
+        if len(QGuiApplication.screens()) < int(n_screens):
+            # There are less screens available now than on previous application startup
+            self.move(0, 0)  # Move this widget to primary screen position (0,0)
+        ensure_window_is_on_screen(self, original_size)
         if window_maximized == 'true':
             self.setWindowState(Qt.WindowMaximized)
         for splitter, state in splitter_state.items():
             if state:
                 splitter.restoreState(state)
-        # noinspection PyArgumentList
-        if len(QGuiApplication.screens()) < int(n_screens):
-            # There are less screens available now than on previous application startup
-            self.move(0, 0)  # Move this widget to primary screen position (0,0)
 
     def closeEvent(self, event=None):
         """Handle close window.
@@ -150,10 +153,8 @@ class ImportPreviewWindow(QMainWindow):
         qsettings.setValue("windowSize", self.size())
         qsettings.setValue("windowPosition", self.pos())
         qsettings.setValue("windowState", self.saveState(version=1))
-        if self.windowState() == Qt.WindowMaximized:
-            qsettings.setValue("windowMaximized", True)
-        else:
-            qsettings.setValue("windowMaximized", False)
+        qsettings.setValue("windowMaximized", self.windowState() == Qt.WindowMaximized)
+        qsettings.setValue("n_screens", len(QGuiApplication.screens()))
         qsettings.endGroup()
         if event:
             event.accept()

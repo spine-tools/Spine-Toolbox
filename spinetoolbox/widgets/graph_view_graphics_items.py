@@ -105,6 +105,10 @@ class EntityItem(QGraphicsPixmapItem):
     def boundingRect(self):
         return super().boundingRect() | self.childrenBoundingRect()
 
+    def moveBy(self, x, y):
+        super().moveBy(x, y)
+        self.update_arcs_line()
+
     def _init_bg(self):
         self._bg = QGraphicsRectItem(self.boundingRect(), self)
         self._bg.setPen(Qt.NoPen)
@@ -119,7 +123,8 @@ class EntityItem(QGraphicsPixmapItem):
     def shape(self):
         """Returns a shape containing the entire bounding rect, to work better with icon transparency."""
         path = QPainterPath()
-        path.addRect(self.boundingRect())
+        path.setFillRule(Qt.WindingFill)
+        path.addRect(self._bg.boundingRect())
         return path
 
     def paint(self, painter, option, widget=None):
@@ -245,7 +250,6 @@ class EntityItem(QGraphicsPixmapItem):
         for item in self.scene().selectedItems():
             if isinstance(item, (EntityItem)):
                 item.moveBy(move_by.x(), move_by.y())
-                item.move_arc_items(move_by)
         self._merge_target = self._find_merge_target()
         for view in self.scene().views():
             self._views_cursor.setdefault(view, view.viewport().cursor())
@@ -260,13 +264,10 @@ class EntityItem(QGraphicsPixmapItem):
             else:
                 view.viewport().setCursor(Qt.ForbiddenCursor)
 
-    def move_arc_items(self, pos_diff):
-        """Moves arc items.
-
-        Args:
-            pos_diff (QPoint)
-        """
-        raise NotImplementedError()
+    def update_arcs_line(self):
+        """Moves arc items."""
+        for item in self.arc_items:
+            item.update_line()
 
     def mouseReleaseEvent(self, event):
         """Merges the item into the registered target if any. Bounces it if not possible.
@@ -279,23 +280,21 @@ class EntityItem(QGraphicsPixmapItem):
         if self._merge_target:
             if self.merge_into_target():
                 return
-            self._bounce_back(self.pos())
+            self._bounce_back()
         if self._moved_on_scene:
             self._moved_on_scene = False
             scene = self.scene()
             scene.shrink_if_needed()
             scene.item_move_finished.emit(self)
 
-    def _bounce_back(self, current_pos):
+    def _bounce_back(self):
         """Bounces the item back from given position to its original position.
-
-        Args:
-            current_pos (QPoint)
         """
         if self._press_pos is None:
             return
-        self.move_arc_items(self._press_pos - current_pos)
-        self.setPos(self._press_pos)
+        delta = self._press_pos - self.pos()
+        self.moveBy(delta.x(), delta.y())
+        self.update_arcs_line()
 
     def itemChange(self, change, value):
         """
@@ -401,15 +400,6 @@ class RelationshipItem(EntityItem):
         self.become_whole()
         return True
 
-    def move_arc_items(self, pos_diff):
-        """Moves arc items.
-
-        Args:
-            pos_diff (QPoint)
-        """
-        for item in self.arc_items:
-            item.move_rel_item_by(pos_diff)
-
     def _make_wip_tool_tip(self):
         return """
             <html>This is a work-in-progress <b>{0}</b> relationship.</html>
@@ -425,6 +415,10 @@ class RelationshipItem(EntityItem):
 
     def _show_item_context_menu_in_parent(self, pos):
         self._graph_view_form.show_relationship_item_context_menu(pos)
+
+    def follow_object_by(self, x, y):
+        factor = 1.0 / len(self.arc_items)
+        self.moveBy(factor * x, factor * y)
 
 
 class ObjectItem(EntityItem):
@@ -447,7 +441,7 @@ class ObjectItem(EntityItem):
         self.label_item = EntityLabelItem(self)
         self.label_item.entity_name_edited.connect(self.finish_name_editing)
         self.setZValue(0.5)
-        self.refresh_name()
+        self.update_name(self.entity_name)
 
     @property
     def entity_type(self):
@@ -457,15 +451,25 @@ class ObjectItem(EntityItem):
     def db_representation(self):
         return dict(class_id=self.entity_class_id, id=self.entity_id, name=self.entity_name)
 
-    def refresh_name(self):
+    def shape(self):
+        path = super().shape()
+        path.addPolygon(self.label_item.mapToItem(self, self.label_item.boundingRect()))
+        return path
+
+    def update_name(self, name):
         """Refreshes the name."""
-        self.label_item.setPlainText(self.entity_name)
+        self.label_item.setPlainText(name)
 
     def _paint_as_selected(self):
-        if not self.label_item.hasFocus():
-            super()._paint_as_selected()
-        else:
+        if self.label_item.hasFocus():
             self._paint_as_deselected()
+        else:
+            super()._paint_as_selected()
+            self.label_item._paint_as_selected()
+
+    def _paint_as_deselected(self):
+        super()._paint_as_deselected()
+        self.label_item._paint_as_deselected()
 
     def _make_wip_tool_tip(self):
         return "<html>This is a work-in-progress <b>{0}</b>. Give it a name to finish the job.</html>".format(
@@ -474,10 +478,10 @@ class ObjectItem(EntityItem):
 
     def become_whole(self):
         super().become_whole()
-        self.refresh_description()
-
-    def refresh_description(self):
         description = self.db_mngr.get_item(self.db_map, "object", self.entity_id).get("description")
+        self.update_description(description)
+
+    def update_description(self, description):
         self.setToolTip(f"<html>{description}</html>")
 
     def edit_name(self):
@@ -507,16 +511,7 @@ class ObjectItem(EntityItem):
         else:
             # Update
             self._graph_view_form.update_object(self.entity_id, text)
-        self.refresh_name()
-
-    def move_arc_items(self, pos_diff):
-        """Moves arc items.
-
-        Args:
-            pos_diff (QPoint)
-        """
-        for item in self.arc_items:
-            item.move_obj_item_by(pos_diff)
+        self.update_name(text)
 
     def keyPressEvent(self, event):
         """Starts editing the name if F2 is pressed.
@@ -579,12 +574,23 @@ class ObjectItem(EntityItem):
                 arc_item.obj_item = self
             return False
         self._merge_target.arc_items.extend(self.arc_items)
-        self.move_arc_items(self._merge_target.pos() - self.pos())
+        self.update_arcs_line()
         self.scene().removeItem(self)
         return True
 
     def _show_item_context_menu_in_parent(self, pos):
         self._graph_view_form.show_object_item_context_menu(pos, self)
+
+    def moveBy(self, x, y):
+        """Moves arc items."""
+        super().moveBy(x, y)
+        rel_items_follow = self._graph_view_form.qsettings.value(
+            "appSettings/relationshipItemsFollow", defaultValue="true"
+        )
+        if rel_items_follow == "false":
+            return
+        for arc_item in self.arc_items:
+            arc_item.rel_item.follow_object_by(x, y)
 
 
 class EntityLabelItem(QGraphicsTextItem):
@@ -604,9 +610,10 @@ class EntityLabelItem(QGraphicsTextItem):
         self._font.setPointSize(11)
         self.setFont(self._font)
         self.bg = QGraphicsRectItem(self)
-        color = QGuiApplication.palette().color(QPalette.Normal, QPalette.ToolTipBase)
-        color.setAlphaF(0.8)
-        self.set_bg_color(color)
+        self.bg_color = QGuiApplication.palette().color(QPalette.Normal, QPalette.ToolTipBase)
+        self.bg_color.setAlphaF(0.8)
+        self.bg.setBrush(QBrush(self.bg_color))
+        self.bg.setPen(Qt.NoPen)
         self.bg.setFlag(QGraphicsItem.ItemStacksBehindParent)
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=False)
         self.setAcceptHoverEvents(False)
@@ -630,13 +637,11 @@ class EntityLabelItem(QGraphicsTextItem):
         self.setPos(x, y)
         self.bg.setRect(self.boundingRect())
 
-    def set_bg_color(self, bg_color):
-        """Sets background color.
+    def _paint_as_selected(self):
+        self.bg.setBrush(QGuiApplication.palette().highlight())
 
-        Args:
-            bg_color (QColor)
-        """
-        self.bg.setBrush(QBrush(bg_color))
+    def _paint_as_deselected(self):
+        self.bg.setBrush(QBrush(self.bg_color))
 
     def start_editing(self):
         """Starts editing."""
@@ -695,11 +700,7 @@ class ArcItem(QGraphicsLineItem):
         self.obj_item = obj_item
         self._width = float(width)
         self.is_wip = is_wip
-        src_x = rel_item.x()
-        src_y = rel_item.y()
-        dst_x = obj_item.x()
-        dst_y = obj_item.y()
-        self.setLine(src_x, src_y, dst_x, dst_y)
+        self.update_line()
         self._pen = QPen()
         self._pen.setWidth(self._width)
         color = QGuiApplication.palette().color(QPalette.Normal, QPalette.WindowText)
@@ -714,6 +715,13 @@ class ArcItem(QGraphicsLineItem):
         if self.is_wip:
             self.become_wip()
         self.setCursor(Qt.ArrowCursor)
+
+    def update_line(self):
+        src_x = self.rel_item.x()
+        src_y = self.rel_item.y()
+        dst_x = self.obj_item.x()
+        dst_y = self.obj_item.y()
+        self.setLine(src_x, src_y, dst_x, dst_y)
 
     def mousePressEvent(self, event):
         """Accepts the event so it's not propagated."""
@@ -733,26 +741,6 @@ class ArcItem(QGraphicsLineItem):
         self.is_wip = False
         self._pen.setStyle(Qt.SolidLine)
         self.setPen(self._pen)
-
-    def move_rel_item_by(self, pos_diff):
-        """Moves source point.
-
-        Args:
-            pos_diff (QPoint)
-        """
-        line = self.line()
-        line.setP1(line.p1() + pos_diff)
-        self.setLine(line)
-
-    def move_obj_item_by(self, pos_diff):
-        """Moves destination point.
-
-        Args:
-            pos_diff (QPoint)
-        """
-        line = self.line()
-        line.setP2(line.p2() + pos_diff)
-        self.setLine(line)
 
     def adjust_to_zoom(self, transform):
         """Adjusts the item's geometry so it stays the same size after performing a zoom.

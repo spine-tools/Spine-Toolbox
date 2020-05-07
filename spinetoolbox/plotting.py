@@ -27,7 +27,7 @@ The main entrance points to plotting are:
 from matplotlib.ticker import MaxNLocator
 import numpy as np
 from PySide2.QtCore import QModelIndex, Qt
-from spinedb_api import from_database, IndexedValue, Map, ParameterValueFormatError, TimeSeries
+from spinedb_api import IndexedValue, Map, TimeSeries
 from .widgets.plot_widget import PlotWidget
 
 
@@ -258,7 +258,8 @@ class PivotTablePlottingHints(PlottingHints):
 
     def is_index_in_data(self, model, index):
         """Returns True if index is in the data portion of the table."""
-        return model.sourceModel().index_in_data(index)
+        source_index = model.mapToSource(index)
+        return model.sourceModel().index_in_data(source_index)
 
     def special_x_values(self, model, column, rows):
         """Returns the values from the X column if one is designated otherwise returns None."""
@@ -355,19 +356,14 @@ def _collect_single_column_values(model, column, rows, hints):
         data_index = model.index(row, column)
         if not hints.is_index_in_data(model, data_index):
             continue
-        data = model.data(data_index, role=Qt.EditRole)
-        if data:
-            try:
-                value = from_database(data)
-            except ParameterValueFormatError:
-                value = None
-            if isinstance(value, (float, int)):
-                values.append(float(value))
-            elif isinstance(value, (Map, TimeSeries)):
-                labels.append(hints.cell_label(model, data_index))
-                values.append(value)
-            else:
-                raise PlottingError("Cannot plot value on row {}".format(row))
+        value = model.data(data_index, role=Qt.UserRole)
+        if isinstance(value, (float, int)):
+            values.append(float(value))
+        elif isinstance(value, (Map, TimeSeries)):
+            labels.append(hints.cell_label(model, data_index))
+            values.append(value)
+        else:
+            raise PlottingError("Cannot plot value on row {}".format(row))
     if not values:
         return values, labels
     _raise_if_types_inconsistent(values)

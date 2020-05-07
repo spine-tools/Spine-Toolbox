@@ -84,10 +84,11 @@ class ConsoleExecutionManager(ExecutionManager):
         """Executes next command in the buffer."""
         if self._stopped:
             return
-        try:
+        if self._commands:
             command = self._commands.pop(0)
             self._console.execute(command)
-        except IndexError:
+        else:
+            self._stopped = True
             self.execution_finished.emit(0)
 
     def stop_execution(self):

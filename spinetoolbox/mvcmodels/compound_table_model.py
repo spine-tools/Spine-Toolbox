@@ -23,13 +23,13 @@ from ..mvcmodels.minimal_table_model import MinimalTableModel
 class CompoundTableModel(MinimalTableModel):
     """A model that concatenates several sub table models vertically."""
 
-    def __init__(self, parent, header=None):
+    def __init__(self, parent=None, header=None):
         """Initializes model.
 
         Args:
             parent (QObject): the parent object
         """
-        super().__init__(parent, header=header)
+        super().__init__(parent=parent, header=header)
         self.sub_models = []
         self._row_map = []  # Maps compound row to tuple (sub_model, sub_row)
         self._inv_row_map = {}  # Maps tuple (sub_model, sub_row) to compound row

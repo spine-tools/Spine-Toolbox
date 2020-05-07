@@ -16,9 +16,9 @@ These models concatenate several 'single' models and one 'empty' model.
 :authors: M. Marin (KTH)
 :date:   28.6.2019
 """
-from PySide2.QtCore import Qt, Signal, QModelIndex
+from PySide2.QtCore import Qt, Signal
 from PySide2.QtGui import QFont, QIcon
-from ..helpers import busy_effect, rows_to_row_count_tuples
+from ..helpers import rows_to_row_count_tuples
 from ..widgets.custom_menus import ParameterViewFilterMenu
 from .compound_table_model import CompoundWithEmptyTableModel
 from .empty_parameter_models import (
@@ -50,14 +50,16 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
             db_mngr (SpineDBManager): the database manager
             *db_maps (DiffDatabaseMapping): the database maps included in the model
         """
-        super().__init__(parent, header=self._make_header())
+        super().__init__(parent=parent, header=self._make_header())
+        self._parent = parent
         self.db_mngr = db_mngr
         self.db_maps = db_maps
         self._accepted_entity_class_ids = {}  # Accepted by main filter
         self.remove_icon = QIcon(":/icons/menu_icons/cog_minus.svg")
         self._auto_filter_menus = {}
-        self._auto_filter_menu_data = dict()  # Maps fields to auto filter data
-        self._auto_filter = dict()  # Maps fields to (db_map, entity_id) to accepted field ids
+        self._auto_filter_menu_data = dict()  # Maps field to value to list of (db map, entity id, item id)
+        self._inv_auto_filter_menu_data = dict()  # Maps field to (db map, entity id, item id) to value
+        self._auto_filter = dict()  # Maps field to db map, to entity id, to *accepted* item ids
 
     def _make_header(self):
         raise NotImplementedError()
@@ -130,71 +132,6 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
             self.entity_class_type
         ]
 
-    @property
-    def parameter_definition_id_key(self):
-        return {"parameter definition": "id", "parameter value": "parameter_id"}[self.item_type]
-
-    def _get_field_query_method(self, field):
-        """Returns a method for retrieving 'field' values given db_map and id.
-        Used in creating ``ParameterViewFilterMenu``s for header fields.
-
-        Args:
-            field (str): A field from the header
-
-        Returns:
-            method
-        """
-        get_field = self.db_mngr.get_field
-        get_value = self.db_mngr.get_value
-        return {
-            "object_class_name": lambda db_map, id_: get_field(db_map, "object class", id_, "name"),
-            "relationship_class_name": lambda db_map, id_: get_field(db_map, "relationship class", id_, "name"),
-            "object_class_name_list": lambda db_map, id_: get_field(
-                db_map, "relationship class", id_, "object_class_name_list"
-            ).replace(",", self.db_mngr._GROUP_SEP),
-            "object_name": lambda db_map, id_: get_field(db_map, "object", id_, "name"),
-            "object_name_list": lambda db_map, id_: get_field(db_map, "relationship", id_, "object_name_list").replace(
-                ",", self.db_mngr._GROUP_SEP
-            ),
-            "parameter_name": lambda db_map, id_: get_field(db_map, "parameter definition", id_, "parameter_name"),
-            "description": lambda db_map, id_: get_field(db_map, "parameter definition", id_, "description"),
-            "value_list_name": lambda db_map, id_: get_field(db_map, "parameter value list", id_, "name"),
-            "value": lambda db_map, id_: get_value(db_map, "parameter value", id_, "value"),
-            "default_value": lambda db_map, id_: get_value(db_map, "parameter definition", id_, "default_value"),
-            "alternative_id": lambda db_map, id_: get_field(db_map, "alternative", id_, "name"),
-            "database": lambda _, id_: id_,
-        }.get(field)
-
-    def get_field_item_data(self, field):
-        """Returns item data for given field.
-
-        Args:
-            field (str): A field from the header
-
-        Returns:
-            str, str
-        """
-        return {
-            "object_class_name": ("object_class_id", "object class"),
-            "relationship_class_name": ("relationship_class_id", "relationship class"),
-            "object_class_name_list": ("relationship_class_id", "relationship class"),
-            "object_name": ("object_id", "object"),
-            "object_name_list": ("relationship_id", "relationship"),
-            "parameter_name": (self.parameter_definition_id_key, "parameter definition"),
-            "value_list_name": ("value_list_id", "parameter value list"),
-            "description": ("id", "parameter definition"),
-            "value": ("id", "parameter value"),
-            "default_value": ("id", "parameter definition"),
-            "database": ("database", None),
-            "alternative_id": ("alternative_id", "alternative"),
-        }.get(field)
-
-    def get_id_key(self, field):
-        field_item_data = self.get_field_item_data(field)
-        if field_item_data is None:
-            return None
-        return field_item_data[0]
-
     def init_model(self):
         """Initializes the model."""
         super().init_model()
@@ -204,12 +141,10 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         """Makes auto filter menus."""
         self._auto_filter_menus.clear()
         self._auto_filter_menu_data.clear()
+        self._inv_auto_filter_menu_data.clear()
         for field in self.header:
-            query_method = self._get_field_query_method(field)
-            if query_method is None:
-                continue
             # TODO: show_empty=True
-            self._auto_filter_menus[field] = menu = ParameterViewFilterMenu(self.parent(), self, show_empty=False)
+            self._auto_filter_menus[field] = menu = ParameterViewFilterMenu(self._parent, self, show_empty=False)
             menu.filterChanged.connect(
                 lambda values, has_filter, field=field: self.update_auto_filter(field, values, has_filter)
             )
@@ -225,14 +160,6 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         """
         return self._auto_filter_menus.get(self.header[logical_index], None)
 
-    @busy_effect
-    def fetchMore(self, parent=QModelIndex()):
-        """Populates filter menus as submodels are fetched."""
-        super().fetchMore(parent=parent)
-        if not self._fetch_sub_model in self.single_models:
-            return
-        self._add_data_to_filter_menus(self._fetch_sub_model)
-
     def _add_data_to_filter_menus(self, sub_model):
         """Adds data of given sub-model to filter menus.
 
@@ -243,64 +170,66 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         db_map = sub_model.db_map
         self._do_add_data_to_filter_menus(db_map, db_items)
 
-    def _do_add_data_to_filter_menus(self, db_map, db_items):
-        """Adds data to filter menus.
+    def _modify_data_in_filter_menus(self, action, db_map, db_items):
+        """Modifies data in filter menus.
 
         Args:
+            action (str): either 'add', 'remove', or 'update'
             db_map (DiffDatabaseMapping)
             db_items (list(dict))
         """
+
+        def get_value_to_remove(db_map, db_item, field, field_menu_data, inv_field_menu_data):
+            if action not in ("remove", "update"):
+                return None
+            entity_class_id = db_item.get(self._entity_class_id_key)
+            item_id = db_item["id"]
+            identifier = (db_map, entity_class_id, item_id)
+            old_value = inv_field_menu_data.pop(identifier)
+            old_items = field_menu_data[old_value]
+            old_items.remove(identifier)
+            if not old_items:
+                del field_menu_data[old_value]
+                return old_value
+
+        def get_value_to_add(db_map, db_item, field, field_menu_data, inv_field_menu_data):
+            if action not in ("add", "update"):
+                return None
+            entity_class_id = db_item.get(self._entity_class_id_key)
+            item_id = db_item["id"]
+            identifier = (db_map, entity_class_id, item_id)
+            value = db_map.codename if field == "database" else db_item[field]
+            inv_field_menu_data[identifier] = value
+            if value not in field_menu_data:
+                field_menu_data[value] = [identifier]
+                return value
+            field_menu_data[value].append(identifier)
+
         for field, menu in self._auto_filter_menus.items():
+            values_to_add = list()
+            values_to_remove = list()
             field_menu_data = self._auto_filter_menu_data.setdefault(field, {})
-            query_method = self._get_field_query_method(field)
-            id_key = self.get_id_key(field)
+            inv_field_menu_data = self._inv_auto_filter_menu_data.setdefault(field, {})
             for db_item in db_items:
-                entity_class_id = db_item.get(self._entity_class_id_key)
-                item_id = db_item.get(id_key)
-                if item_id is None:
-                    continue
-                value = query_method(db_map, item_id)
-                field_menu_data.setdefault(value, []).append((db_map, entity_class_id, item_id))
-            new_items = list(field_menu_data.keys())
-            if None in new_items:
-                new_items.remove(None)
-            menu.add_items_to_filter_list(new_items)
+                to_remove = get_value_to_remove(db_map, db_item, field, field_menu_data, inv_field_menu_data)
+                to_add = get_value_to_add(db_map, db_item, field, field_menu_data, inv_field_menu_data)
+                if to_remove is not None:
+                    values_to_remove.append(to_remove)
+                if to_add is not None:
+                    values_to_add.append(to_add)
+            if values_to_remove:
+                menu.remove_items_from_filter_list(values_to_remove)
+            if values_to_add:
+                menu.add_items_to_filter_list(values_to_add)
+
+    def _do_add_data_to_filter_menus(self, db_map, db_items):
+        self._modify_data_in_filter_menus("add", db_map, db_items)
 
     def _do_update_data_in_filter_menus(self, db_map, db_items):
-        """Updates data in filter menus.
-
-        Args:
-            db_map (DiffDatabaseMapping)
-            db_items (list(dict))
-        """
+        self._modify_data_in_filter_menus("update", db_map, db_items)
 
     def _do_remove_data_from_filter_menus(self, db_map, db_items):
-        """Removes data from filter menus.
-
-        Args:
-            db_map (DiffDatabaseMapping)
-            db_items (list(dict))
-        """
-        for field, menu in self._auto_filter_menus.items():
-            field_menu_data = self._auto_filter_menu_data.setdefault(field, {})
-            query_method = self._get_field_query_method(field)
-            id_key = self.get_id_key(field)
-            removed_items = list()
-            for db_item in db_items:
-                entity_class_id = db_item.get(self._entity_class_id_key)
-                item_id = db_item.get(id_key)
-                value = query_method(db_map, item_id)
-                if value is None or value not in field_menu_data:
-                    continue
-                items = field_menu_data[value]
-                if (db_map, entity_class_id, item_id) not in items:
-                    continue
-                items.remove((db_map, entity_class_id, item_id))
-                if not items:
-                    del field_menu_data[value]
-                    removed_items.append(value)
-            if removed_items:
-                menu.remove_items_from_filter_list(removed_items)
+        self._modify_data_in_filter_menus("remove", db_map, db_items)
 
     def headerData(self, section, orientation=Qt.Horizontal, role=Qt.DisplayRole):
         """Returns an italic font in case the given column has an autofilter installed."""
@@ -314,33 +243,13 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
             return italic_font
         return super().headerData(section, orientation, role)
 
-    def _get_entity_classes(self, db_map):
-        """Returns a list of entity classes from the given db_map.
-
-        Args:
-            db_map (DiffDatabaseMapping)
-
-        Returns:
-            list
-        """
-        raise NotImplementedError()
-
     def _create_single_models(self):
         """Returns a list of single models for this compound model, one for each entity class in each database.
 
         Returns:
             list
         """
-        d = dict()
-        for db_map in self.db_maps:
-            for entity_class in self._get_entity_classes(db_map):
-                d.setdefault(entity_class["name"], {}).setdefault(db_map, set()).add(entity_class["id"])
-        models = []
-        for db_map_ids in d.values():
-            for db_map, entity_class_ids in db_map_ids.items():
-                for entity_class_id in entity_class_ids:
-                    models.append(self._single_model_type(self, self.header, self.db_mngr, db_map, entity_class_id))
-        return models
+        return []
 
     def _create_empty_model(self):
         """Returns the empty model for this compound model.
@@ -426,7 +335,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         a = bool(self._auto_filter)
         self._auto_filter = dict()
         b = self._settattr_if_different(
-            self, "_accepted_entity_class_ids", self.parent().selected_entity_class_ids(self.entity_class_type)
+            self, "_accepted_entity_class_ids", self._parent.selected_entity_class_ids(self.entity_class_type)
         )
         return a or b
 
@@ -441,7 +350,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         """
         a = bool(model._auto_filter)
         model._auto_filter.clear()
-        selected_param_def_ids = self.parent().selected_param_def_ids[self.entity_class_type]
+        selected_param_def_ids = self._parent.selected_param_def_ids[self.entity_class_type]
         if selected_param_def_ids is not None:
             selected_param_def_ids = selected_param_def_ids.get((model.db_map, model.entity_class_id), set())
         b = self._settattr_if_different(model, "_selected_param_def_ids", selected_param_def_ids)
@@ -544,8 +453,8 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         self.do_refresh()
         self.layoutChanged.emit()
 
-    def _item_ids_per_class_id(self, items):
-        """Returns a dict mapping entity class ids to a set of item ids.
+    def _items_per_class(self, items):
+        """Returns a dict mapping entity class ids to a set of items.
 
         Args:
             items (list)
@@ -558,7 +467,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
             entity_class_id = item.get(self._entity_class_id_key)
             if not entity_class_id:
                 continue
-            d.setdefault(entity_class_id, list()).append(item["id"])
+            d.setdefault(entity_class_id, list()).append(item)
         return d
 
     def receive_parameter_data_added(self, db_map_data):
@@ -571,15 +480,15 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         """
         new_models = []
         for db_map, items in db_map_data.items():
-            item_ids_per_class_id = self._item_ids_per_class_id(items)
-            for entity_class_id, ids in item_ids_per_class_id.items():
-                model = self._single_model_type(self, self.header, self.db_mngr, db_map, entity_class_id, lazy=False)
+            items_per_class = self._items_per_class(items)
+            for entity_class_id, class_items in items_per_class.items():
+                ids = [item["id"] for item in class_items]
+                model = self._single_model_type(self.header, self.db_mngr, db_map, entity_class_id)
                 model.reset_model(ids)
                 single_row_map = super()._row_map_for_model(model)  # NOTE: super() is to get all (unfiltered) rows
                 self._insert_single_row_map(single_row_map)
                 new_models.append(model)
-            if item_ids_per_class_id:
-                self._do_add_data_to_filter_menus(db_map, items)
+                self._do_add_data_to_filter_menus(db_map, class_items)
         pos = len(self.single_models)
         self.sub_models[pos:pos] = new_models
         self.empty_model.receive_parameter_data_added(db_map_data)
@@ -592,8 +501,9 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
             db_map_data (dict): list of updated dict-items keyed by DiffDatabaseMapping
         """
         for db_map, items in db_map_data.items():
-            if any(self._entity_class_id_key in item for item in items):
-                self._do_update_data_in_filter_menus(db_map, items)
+            items_per_class = self._items_per_class(items)
+            for class_items in items_per_class.values():
+                self._do_update_data_in_filter_menus(db_map, class_items)
         self._emit_data_changed_for_column("parameter_name")
         # TODO: parameter definition names aren't refreshed unless we emit dataChanged,
         # whereas entity and class names don't need it. Why?
@@ -607,16 +517,16 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         """
         self.layoutAboutToBeChanged.emit()
         for db_map, items in db_map_data.items():
-            item_ids_per_class_id = self._item_ids_per_class_id(items)
+            items_per_class = self._items_per_class(items)
             for model in self._models_with_db_map(db_map):
-                removed_ids = item_ids_per_class_id.get(model.entity_class_id)
+                removed_ids = [x["id"] for x in items_per_class.get(model.entity_class_id, {})]
                 if not removed_ids:
                     continue
                 removed_rows = [row for row in range(model.rowCount()) if model._main_data[row] in removed_ids]
                 for row, count in sorted(rows_to_row_count_tuples(removed_rows), reverse=True):
                     del model._main_data[row : row + count]
-            if item_ids_per_class_id:
-                self._do_remove_data_from_filter_menus(db_map, items)
+            for class_items in items_per_class.values():
+                self._do_remove_data_from_filter_menus(db_map, class_items)
         self.do_refresh()
         self.layoutChanged.emit()
 
@@ -658,9 +568,6 @@ class CompoundObjectParameterMixin:
     def entity_class_type(self):
         return "object class"
 
-    def _get_entity_classes(self, db_map):
-        return self.db_mngr.get_object_classes(db_map)
-
 
 class CompoundRelationshipParameterMixin:
     """Implements the interface for populating and filtering a compound relationship parameter model."""
@@ -668,9 +575,6 @@ class CompoundRelationshipParameterMixin:
     @property
     def entity_class_type(self):
         return "relationship class"
-
-    def _get_entity_classes(self, db_map):
-        return self.db_mngr.get_relationship_classes(db_map)
 
 
 class CompoundParameterDefinitionMixin:
@@ -707,7 +611,7 @@ class CompoundParameterValueMixin:
         b = self._settattr_if_different(
             model,
             "_selected_entity_ids",
-            self.parent().selected_ent_ids[self.entity_type].get((model.db_map, model.entity_class_id), set()),
+            self._parent.selected_ent_ids[self.entity_type].get((model.db_map, model.entity_class_id), set()),
         )
         return a or b
 

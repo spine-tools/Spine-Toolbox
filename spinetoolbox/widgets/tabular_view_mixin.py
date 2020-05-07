@@ -622,6 +622,9 @@ class TabularViewMixin:
     def refresh_table_view(table_view):
         top_left = table_view.indexAt(table_view.rect().topLeft())
         bottom_right = table_view.indexAt(table_view.rect().bottomRight())
+        if not bottom_right.isValid():
+            model = table_view.model()
+            bottom_right = table_view.model().index(model.rowCount() - 1, model.columnCount() - 1)
         table_view.model().dataChanged.emit(top_left, bottom_right)
 
     @staticmethod
@@ -639,12 +642,11 @@ class TabularViewMixin:
         for identifier, menu in self.filter_menus.items():
             index_values = dict.fromkeys(self.pivot_table_model.model.index_values.get(identifier, []))
             index_values.pop(None, None)
-            self.menu_values[identifier] = menu_values = self._get_menu_values(identifier, index_values)
             if action == "add":
-                menu.add_items_to_filter_list(list(menu_values.keys()))
+                menu.add_items_to_filter_list(list(index_values.keys()))
             elif action == "remove":
                 previous = menu._filter._filter_model._data_set
-                menu.remove_items_from_filter_list(list(previous - menu_values.keys()))
+                menu.remove_items_from_filter_list(list(previous - index_values.keys()))
         self.reload_frozen_table()
 
     def receive_objects_added_or_removed(self, db_map_data, action):

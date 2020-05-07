@@ -64,6 +64,7 @@ from .config import (
     DEFAULT_WORK_DIR,
 )
 from .helpers import (
+    ensure_window_is_on_screen,
     get_datetime,
     busy_effect,
     set_taskbar_icon,
@@ -705,6 +706,7 @@ class ToolboxUI(QMainWindow):
         n_screens = self._qsettings.value("mainWindow/n_screens", defaultValue=1)  # number of screens on last exit
         # noinspection PyArgumentList
         n_screens_now = len(QGuiApplication.screens())  # Number of screens now
+        original_size = self.size()
         # Note: cannot use booleans since Windows saves them as strings to registry
         if not window_size == "false":
             self.resize(window_size)  # Expects QSize
@@ -714,12 +716,13 @@ class ToolboxUI(QMainWindow):
             self.restoreState(window_state, version=1)  # Toolbar and dockWidget positions. Expects QByteArray
         if not splitter_state == "false":
             self.ui.splitter.restoreState(splitter_state)  # Project Dock Widget splitter position. Expects QByteArray
-        if window_maximized == "true":
-            self.setWindowState(Qt.WindowMaximized)
         if n_screens_now < int(n_screens):
             # There are less screens available now than on previous application startup
             # Move main window to position 0,0 to make sure that it is not lost on another screen that does not exist
             self.move(0, 0)
+        ensure_window_is_on_screen(self, original_size)
+        if window_maximized == "true":
+            self.setWindowState(Qt.WindowMaximized)
 
     def clear_ui(self):
         """Clean UI to make room for a new or opened project."""
@@ -857,7 +860,12 @@ class ToolboxUI(QMainWindow):
             self.msg.emit("Please create a new project or open an existing one first")
             return
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-        answer = QFileDialog.getOpenFileName(self, "Select Tool specification file", _program_root, "JSON (*.json)")
+        answer = QFileDialog.getOpenFileName(
+            self,
+            "Select Tool specification file",
+            self._project.project_dir,
+            "JSON (*.json)"
+        )
         if answer[0] == "":  # Cancel button clicked
             return
         def_file = os.path.abspath(answer[0])
@@ -1568,15 +1576,11 @@ class ToolboxUI(QMainWindow):
         else:
             self._qsettings.setValue("appSettings/previousProject", self._project.project_dir)
             self.update_recent_projects()
-            # Show save project prompt
         self._qsettings.setValue("mainWindow/windowSize", self.size())
         self._qsettings.setValue("mainWindow/windowPosition", self.pos())
         self._qsettings.setValue("mainWindow/windowState", self.saveState(version=1))
         self._qsettings.setValue("mainWindow/projectDockWidgetSplitterState", self.ui.splitter.saveState())
-        if self.windowState() == Qt.WindowMaximized:
-            self._qsettings.setValue("mainWindow/windowMaximized", True)
-        else:
-            self._qsettings.setValue("mainWindow/windowMaximized", False)
+        self._qsettings.setValue("mainWindow/windowMaximized", self.windowState() == Qt.WindowMaximized)
         # Save number of screens
         # noinspection PyArgumentList
         self._qsettings.setValue("mainWindow/n_screens", len(QGuiApplication.screens()))

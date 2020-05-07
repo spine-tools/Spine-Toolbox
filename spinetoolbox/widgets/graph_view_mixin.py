@@ -20,8 +20,11 @@ import time
 import numpy as np
 from numpy import atleast_1d as arr
 from scipy.sparse.csgraph import dijkstra
-from PySide2.QtCore import Qt, Signal, Slot, QTimer
-from PySide2.QtWidgets import QGraphicsTextItem
+from PySide2.QtCore import Qt, Signal, Slot, QTimer, QRectF
+from PySide2.QtWidgets import QGraphicsTextItem, QFileDialog
+from PySide2.QtPrintSupport import QPrinter
+from PySide2.QtGui import QPainter
+from spinedb_api import to_database, from_database
 from .custom_menus import GraphViewContextMenu, ObjectItemContextMenu, RelationshipItemContextMenu
 from .custom_qwidgets import ZoomWidgetAction
 from .shrinking_scene import ShrinkingScene
@@ -35,10 +38,13 @@ class GraphViewMixin:
     """Provides the graph view for the DS form."""
 
     graph_created = Signal()
+    objects_added_to_graph = Signal()
+    relationships_added_to_graph = Signal()
 
+    _POS_STR = "graph_view_position"
     _node_extent = 64
-    _arc_width = 0.25 * _node_extent
-    _arc_length_hint = 3 * _node_extent
+    _arc_width = 0.15 * _node_extent
+    _arc_length_hint = 1.5 * _node_extent
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -49,10 +55,10 @@ class GraphViewMixin:
         self.ui.listView_object_class.setModel(self.object_class_list_model)
         self.ui.listView_relationship_class.setModel(self.relationship_class_list_model)
         self.hidden_items = list()
-        self.rejected_items = list()
+        self.prunned_entity_ids = dict()
         self.removed_items = list()
         self.entity_item_selection = list()
-        self._nothing_item = QGraphicsTextItem("Nothing to show.")
+        self._blank_item = None
         self.zoom_widget_action = None
         area = self.dockWidgetArea(self.ui.dockWidget_item_palette)
         self._handle_item_palette_dock_location_changed(area)
@@ -76,9 +82,13 @@ class GraphViewMixin:
         self.ui.dockWidget_item_palette.dockLocationChanged.connect(self._handle_item_palette_dock_location_changed)
         self.ui.actionHide_selected.triggered.connect(self.hide_selected_items)
         self.ui.actionShow_hidden.triggered.connect(self.show_hidden_items)
-        self.ui.actionPrune_selected.triggered.connect(self.prune_selected_items)
-        self.ui.actionRestore_pruned.triggered.connect(self.restore_pruned_items)
+        self.ui.actionPrune_selected_entities.triggered.connect(self.prune_selected_entities)
+        self.ui.actionPrune_selected_classes.triggered.connect(self.prune_selected_classes)
+        self.ui.actionRestore_all_pruned.triggered.connect(self.restore_all_pruned_items)
         self.ui.actionLive_graph_demo.triggered.connect(self.show_demo)
+        self.ui.actionSave_positions.triggered.connect(self.save_positions)
+        self.ui.actionClear_positions.triggered.connect(self.clear_saved_positions)
+        self.ui.actionExport_as_pdf.triggered.connect(self.export_as_pdf)
         # Dock Widgets menu action
         self.ui.menuGraph.aboutToShow.connect(self._handle_menu_graph_about_to_show)
         self.zoom_widget_action.minus_pressed.connect(self._handle_zoom_minus_pressed)
@@ -87,6 +97,9 @@ class GraphViewMixin:
         # Connect Add more items in Item palette
         self.ui.listView_object_class.clicked.connect(self._add_more_object_classes)
         self.ui.listView_relationship_class.clicked.connect(self._add_more_relationship_classes)
+        # Added to graph
+        self.objects_added_to_graph.connect(self._ensure_objects_in_graph)
+        self.relationships_added_to_graph.connect(self._ensure_relationships_in_graph)
 
     def setup_zoom_widget_action(self):
         """Setups zoom widget action in view menu."""
@@ -137,10 +150,14 @@ class GraphViewMixin:
         super().receive_objects_added(db_map_data)
         objects = db_map_data.get(self.db_map, [])
         self._added_objects = {x["id"]: x for x in objects}
-        QTimer.singleShot(0, self._ensure_objects_in_graph)
+        self.objects_added_to_graph.emit()
 
     @Slot()
     def _ensure_objects_in_graph(self):
+        QTimer.singleShot(0, self._do_ensure_objects_in_graph)
+
+    @Slot()
+    def _do_ensure_objects_in_graph(self):
         """Makes sure all objects in ``self._added_objects`` are materialized in the graph if corresponds.
         It is assumed that ``self._added_objects`` doesn't contain information regarding objects added
         from the graph itself (through Item Palette etc.). These are materialized in ``add_object()``.
@@ -163,11 +180,12 @@ class GraphViewMixin:
             db_map_data (dict): list of dictionary-items keyed by DiffDatabaseMapping instance.
         """
         super().receive_objects_updated(db_map_data)
-        updated_ids = {x["id"] for x in db_map_data.get(self.db_map, [])}
+        updated_ids = {x["id"]: (x["name"], x["description"]) for x in db_map_data.get(self.db_map, [])}
         for item in self.ui.graphicsView.items():
             if isinstance(item, ObjectItem) and item.entity_id in updated_ids:
-                item.refresh_name()
-                item.refresh_description()
+                name, description = updated_ids[item.entity_id]
+                item.update_name(name)
+                item.update_description(description)
 
     def receive_objects_removed(self, db_map_data):
         """Runs when objects are removed from the db. Rebuilds graph if needed.
@@ -189,10 +207,14 @@ class GraphViewMixin:
         super().receive_relationships_added(db_map_data)
         relationships = db_map_data.get(self.db_map, [])
         self._added_relationships = {x["id"]: x for x in relationships}
-        QTimer.singleShot(0, self._ensure_relationships_in_graph)
+        self.relationships_added_to_graph.emit()
 
     @Slot()
     def _ensure_relationships_in_graph(self):
+        QTimer.singleShot(0, self._do_ensure_relationships_in_graph)
+
+    @Slot()
+    def _do_ensure_relationships_in_graph(self):
         """Makes sure all relationships in ``self._added_relationships`` are materialized in the graph if corresponds.
         It is assumed that ``self._added_relationships`` doesn't contain information regarding relationships added
         from the graph itself (through Item Palette etc.). These are materialized in ``add_relationship()``.
@@ -304,11 +326,20 @@ class GraphViewMixin:
     def _handle_menu_graph_about_to_show(self):
         """Enables or disables actions according to current selection in the graph."""
         visible = self.ui.dockWidget_entity_graph.isVisible()
+        scene = self.ui.graphicsView.scene()
+        has_graph = scene is not None and scene.items() != [self._blank_item]
+        self.ui.actionSave_positions.setEnabled(has_graph)
+        self.ui.actionClear_positions.setEnabled(has_graph)
+        self.ui.actionExport_as_pdf.setEnabled(has_graph)
         self.ui.actionHide_selected.setEnabled(visible and bool(self.entity_item_selection))
         self.ui.actionShow_hidden.setEnabled(visible and bool(self.hidden_items))
-        self.ui.actionPrune_selected.setEnabled(visible and bool(self.entity_item_selection))
-        self.ui.actionRestore_pruned.setEnabled(visible and bool(self.rejected_items))
+        self.ui.actionPrune_selected_entities.setEnabled(visible and bool(self.entity_item_selection))
+        self.ui.actionPrune_selected_classes.setEnabled(visible and bool(self.entity_item_selection))
+        self.ui.menuRestore_pruned.setEnabled(visible and any(self.prunned_entity_ids.values()))
+        self.ui.actionRestore_all_pruned.setEnabled(visible and any(self.prunned_entity_ids.values()))
         self.zoom_widget_action.setEnabled(visible)
+        self.ui.actionPrune_selected_entities.setText(f"Prune {self._get_selected_entity_names()}")
+        self.ui.actionPrune_selected_classes.setText(f"Prune {self._get_selected_class_names()}")
 
     @Slot("Qt.DockWidgetArea")
     def _handle_item_palette_dock_location_changed(self, area):
@@ -337,17 +368,26 @@ class GraphViewMixin:
         if self.ui.dockWidget_entity_graph.isVisible():
             self.build_graph()
 
+    @Slot("QItemSelection", "QItemSelection")
+    def _handle_relationship_tree_selection_changed(self, selected, deselected):
+        """Builds graph."""
+        super()._handle_relationship_tree_selection_changed(selected, deselected)
+        if self.ui.dockWidget_entity_graph.isVisible():
+            self.build_graph()
+
     @busy_effect
-    def build_graph(self, timeit=False):
+    @Slot(bool)
+    def build_graph(self, checked=False, timeit=False):
         """Builds the graph."""
-        tic = time.clock()
+        tic = time.process_time()
         new_items = self._get_new_items()
         wip_items = self._get_wip_items()
         scene = self.new_scene()
         self.hidden_items.clear()
         self.removed_items.clear()
-        if not new_items and not wip_items:
-            scene.addItem(self._nothing_item)
+        if not any(new_items) and not any(wip_items):
+            self._blank_item = QGraphicsTextItem("Nothing to show.")
+            scene.addItem(self._blank_item)
         else:
             if new_items:
                 object_items = new_items[0]
@@ -357,56 +397,156 @@ class GraphViewMixin:
             if wip_items:
                 self._add_wip_items(scene, object_items, *wip_items)  # pylint: disable=no-value-for-parameter
         self.extend_scene()
-        toc = time.clock()
-        _ = timeit and self.msg.emit("Graph built in {} seconds\t".format(toc - tic))
+        toc = time.process_time()
+        if timeit:
+            self.msg.emit("Graph built in {} seconds\t".format(toc - tic))
         self.graph_created.emit()
 
-    def _get_selected_object_ids(self):
-        """Returns a set of ids corresponding to selected objects in the object tree.
+    @Slot(bool)
+    def save_positions(self, checked=False):
+        scene = self.ui.graphicsView.scene()
+        if not scene:
+            return
+        class_items = {}
+        for item in scene.items():
+            if isinstance(item, ObjectItem):
+                class_items.setdefault(item.entity_class_id, []).append(item)
+        pos_def_class_ids = {
+            p["object_class_id"]
+            for p in self.db_mngr.get_items_by_field(
+                self.db_map, "parameter definition", "parameter_name", self._POS_STR
+            )
+        }
+        defs_to_add = [
+            {"name": self._POS_STR, "object_class_id": class_id} for class_id in class_items.keys() - pos_def_class_ids
+        ]
+        if defs_to_add:
+            self.db_mngr.add_parameter_definitions({self.db_map: defs_to_add})
+        pos_def_id_lookup = {
+            p["object_class_id"]: p["id"]
+            for p in self.db_mngr.get_items_by_field(
+                self.db_map, "parameter definition", "parameter_name", self._POS_STR
+            )
+        }
+        pos_val_id_lookup = {
+            (p["object_class_id"], p["object_id"]): p["id"]
+            for p in self.db_mngr.get_items_by_field(self.db_map, "parameter value", "parameter_name", self._POS_STR)
+        }
+        vals_to_add = list()
+        vals_to_update = list()
+        for class_id, items in class_items.items():
+            for item in items:
+                pos_val_id = pos_val_id_lookup.get((class_id, item.entity_id), None)
+                value = {"type": "map", "index_type": "str", "data": [["x", item.pos().x()], ["y", item.pos().y()]]}
+                if pos_val_id is None:
+                    vals_to_add.append(
+                        {
+                            "name": "pos_x",
+                            "object_class_id": class_id,
+                            "object_id": item.entity_id,
+                            "parameter_definition_id": pos_def_id_lookup[class_id],
+                            "value": to_database(value),
+                        }
+                    )
+                else:
+                    vals_to_update.append({"id": pos_val_id, "value": to_database(value)})
+        if vals_to_add:
+            self.db_mngr.add_parameter_values({self.db_map: vals_to_add})
+        if vals_to_update:
+            self.db_mngr.update_parameter_values({self.db_map: vals_to_update})
+
+    @Slot(bool)
+    def clear_saved_positions(self, checked=False):
+        scene = self.ui.graphicsView.scene()
+        if not scene:
+            return
+        object_ids = {x.entity_id for x in scene.items() if isinstance(x, ObjectItem)}
+        vals_to_remove = [
+            p
+            for p in self.db_mngr.get_items_by_field(self.db_map, "parameter value", "parameter_name", self._POS_STR)
+            if p["object_id"] in object_ids
+        ]
+        if vals_to_remove:
+            self.db_mngr.remove_items({self.db_map: {"parameter value": vals_to_remove}})
+        self.build_graph()
+
+    @Slot(bool)
+    def export_as_pdf(self, checked=False):
+        file_name, _ = QFileDialog.getSaveFileName(self, "Export as PDF...", self._get_base_dir(), "PDF files (*.pdf)")
+        if not file_name:
+            return
+        scene = self.ui.graphicsView.scene()
+        source = scene.itemsBoundingRect()
+        printer = QPrinter()
+        printer.setPaperSize(source.size(), QPrinter.Point)
+        printer.setOutputFileName(file_name)
+        painter = QPainter(printer)
+        scene.render(painter, QRectF(), source)
+        painter.end()
+        self.msg.emit(f"File {file_name} successfully exported.")
+
+    def _get_selected_entity_ids(self):
+        """Returns a set of ids corresponding to selected entities in the trees.
 
         Returns:
-            set
+            set: selected object ids
+            set: selected relationship ids
         """
-        root_index = self.object_tree_model.root_index
-        if self.ui.treeView_object.selectionModel().isSelected(root_index):
-            return {x["id"] for x in self.db_mngr.get_objects(self.db_map)}
-        unique_object_ids = set()
-        for index in self.object_tree_model.selected_object_indexes:
+        if self._selection_source not in (self.ui.treeView_object, self.ui.treeView_relationship):
+            return set(), set()
+        model = self._selection_source.model()
+        if self._selection_source.selectionModel().isSelected(model.root_index):
+            if self._selection_source is self.ui.treeView_object:
+                return {x["id"] for x in self.db_mngr.get_items(self.db_map, "object")}, set()
+            return set(), {x["id"] for x in self.db_mngr.get_items(self.db_map, "relationship")}
+        selected_object_ids = set()
+        selected_relationship_ids = set()
+        for index in model.selected_object_indexes:
             item = index.model().item_from_index(index)
             object_id = item.db_map_id(self.db_map)
-            unique_object_ids.add(object_id)
-        for index in self.object_tree_model.selected_object_class_indexes:
+            selected_object_ids.add(object_id)
+        for index in model.selected_relationship_indexes:
             item = index.model().item_from_index(index)
-            object_class_id = item.db_map_id(self.db_map)
-            object_ids = {x["id"] for x in self.db_mngr.get_objects(self.db_map, class_id=object_class_id)}
-            unique_object_ids.update(object_ids)
-        return unique_object_ids
+            relationship_id = item.db_map_id(self.db_map)
+            selected_relationship_ids.add(relationship_id)
+        for index in model.selected_object_class_indexes:
+            item = index.model().item_from_index(index)
+            object_ids = {child.db_map_id(self.db_map) for child in item.children}
+            selected_object_ids.update(object_ids)
+        for index in model.selected_relationship_class_indexes:
+            item = index.model().item_from_index(index)
+            relationship_ids = {child.db_map_id(self.db_map) for child in item.children}
+            selected_relationship_ids.update(relationship_ids)
+        return selected_object_ids, selected_relationship_ids
 
     def _get_graph_data(self):
-        """Returns data for making graph according to selection in Object tree.
+        """Returns data for making graph according to selection in trees.
 
         Returns:
-            list: integer object ids
-            list: integer relationship ids
-            list: arc source indices
-            list: arc destination indices
+            tuple: integer object ids
+            dict: map from integer relationship ids to object id lists
         """
-        rejected_entity_ids = {x.entity_id for x in self.rejected_items}
-        object_ids = self._get_selected_object_ids() - rejected_entity_ids
-        relationship_ids = list()
-        object_id_lists = list()
-        for relationship in self.db_mngr.find_cascading_relationships({self.db_map: object_ids}).get(self.db_map, []):
-            if relationship["id"] in rejected_entity_ids:
+        object_ids, relationship_ids = self._get_selected_entity_ids()
+        prunned_entity_ids = {id_ for ids in self.prunned_entity_ids.values() for id_ in ids}
+        object_ids -= prunned_entity_ids
+        relationship_ids -= prunned_entity_ids
+        relationships = self.db_mngr.find_cascading_relationships({self.db_map: object_ids}).get(self.db_map, [])
+        relationships += [self.db_mngr.get_item(self.db_map, "relationship", id_) for id_ in relationship_ids]
+        relationship_ids = dict()
+        for relationship in relationships:
+            if relationship["id"] in prunned_entity_ids:
                 continue
-            object_id_list = {int(x) for x in relationship["object_id_list"].split(",")} - rejected_entity_ids
+            object_id_list = {int(x) for x in relationship["object_id_list"].split(",")} - prunned_entity_ids
             if len(object_id_list) < 2:
                 continue
-            relationship_ids.append(relationship["id"])
-            object_id_lists.append(object_id_list)
             object_ids.update(object_id_list)
+            relationship_ids[relationship["id"]] = object_id_list
+        return tuple(object_ids), relationship_ids
+
+    @staticmethod
+    def _get_src_dst_inds(object_ids, object_id_lists):
         src_inds = list()
         dst_inds = list()
-        object_ids = list(object_ids)
         relationship_ind = len(object_ids)
         for object_id_list in object_id_lists:
             object_inds = [object_ids.index(id_) for id_ in object_id_list]
@@ -414,7 +554,7 @@ class GraphViewMixin:
                 src_inds.append(relationship_ind)
                 dst_inds.append(object_ind)
             relationship_ind += 1
-        return object_ids, relationship_ids, src_inds, dst_inds
+        return src_inds, dst_inds
 
     def _get_new_items(self):
         """Returns new items for the graph.
@@ -424,13 +564,18 @@ class GraphViewMixin:
             list: RelationshipItem instances
             list: ArcItem instances
         """
-        object_ids, relationship_ids, src_inds, dst_inds = self._get_graph_data()
-        d = self.shortest_path_matrix(
-            len(object_ids) + len(relationship_ids), src_inds, dst_inds, self._arc_length_hint
-        )
+        object_ids, relationship_ids = self._get_graph_data()
+        src_inds, dst_inds = self._get_src_dst_inds(object_ids, relationship_ids.values())
+        entity_ids = object_ids + tuple(relationship_ids.keys())
+        d = self.shortest_path_matrix(len(entity_ids), src_inds, dst_inds, self._arc_length_hint)
         if d is None:
-            return []
-        x, y = self.vertex_coordinates(d)
+            return ()
+        pos_lookup = {
+            p["object_id"]: dict(from_database(p["value"]).value_to_database_data())
+            for p in self.db_mngr.get_items_by_field(self.db_map, "parameter value", "parameter_name", self._POS_STR)
+        }
+        heavy_positions = {ind: pos_lookup[id_] for ind, id_ in enumerate(entity_ids) if id_ in pos_lookup}
+        x, y = self.vertex_coordinates(d, heavy_positions=heavy_positions)
         object_items = list()
         relationship_items = list()
         arc_items = list()
@@ -440,13 +585,13 @@ class GraphViewMixin:
         offset = len(object_items)
         for i, relationship_id in enumerate(relationship_ids):
             relationship_item = RelationshipItem(
-                self, x[offset + i], y[offset + i], self._node_extent, entity_id=relationship_id
+                self, x[offset + i], y[offset + i], 0.5 * self._node_extent, entity_id=relationship_id
             )
             relationship_items.append(relationship_item)
         for rel_ind, obj_ind in zip(src_inds, dst_inds):
             arc_item = ArcItem(relationship_items[rel_ind - offset], object_items[obj_ind], self._arc_width)
             arc_items.append(arc_item)
-        return object_items, relationship_items, arc_items
+        return (object_items, relationship_items, arc_items)
 
     def _get_wip_items(self):
         """Removes wip items from the current scene and returns them.
@@ -458,7 +603,7 @@ class GraphViewMixin:
         """
         scene = self.ui.graphicsView.scene()
         if not scene:
-            return []
+            return ()
         obj_items = set()
         rel_items = list()
         arc_items = list()
@@ -474,7 +619,7 @@ class GraphViewMixin:
             scene.removeItem(arc_item)
         for rel_item in rel_items:
             scene.removeItem(rel_item)
-        return list(obj_items), rel_items, arc_items
+        return (list(obj_items), rel_items, arc_items)
 
     @staticmethod
     def _add_new_items(scene, object_items, relationship_items, arc_items):
@@ -563,7 +708,7 @@ class GraphViewMixin:
         heavy_pos_list = list()
         for ind, pos in heavy_positions.items():
             heavy_ind_list.append(ind)
-            heavy_pos_list.append([pos.x(), pos.y()])
+            heavy_pos_list.append([pos["x"], pos["y"]])
         heavy_ind = arr(heavy_ind_list)
         heavy_pos = arr(heavy_pos_list)
         if heavy_ind.any():
@@ -660,8 +805,8 @@ class GraphViewMixin:
         scene = self.ui.graphicsView.scene()
         if not scene:
             scene = self.new_scene()
-        if scene.items() == [self._nothing_item]:
-            scene.removeItem(self._nothing_item)
+        if scene.items() == [self._blank_item]:
+            scene.removeItem(self._blank_item)
         scene_pos = self.ui.graphicsView.mapToScene(pos)
         entity_type, entity_class_id = text.split(":")
         entity_class_id = int(entity_class_id)
@@ -708,7 +853,7 @@ class GraphViewMixin:
         x += x_offset
         y += y_offset
         relationship_item = RelationshipItem(
-            self, x[-1], y[-1], self._node_extent, entity_class_id=relationship_class_id
+            self, x[-1], y[-1], 0.5 * self._node_extent, entity_class_id=relationship_class_id
         )
         object_items = list()
         arc_items = list()
@@ -780,18 +925,8 @@ class GraphViewMixin:
         Args:
             global_pos (QPoint)
         """
-        menu = GraphViewContextMenu(self, global_pos)
-        option = menu.get_action()
-        if option == "Hide selected":
-            self.hide_selected_items()
-        elif option == "Show hidden":
-            self.show_hidden_items()
-        elif option == "Prune selected":
-            self.prune_selected_items()
-        elif option == "Restore pruned":
-            self.restore_pruned_items()
-        else:
-            pass
+        menu = GraphViewContextMenu(self)
+        menu.exec_(global_pos)
         menu.deleteLater()
 
     @Slot(bool)
@@ -810,17 +945,52 @@ class GraphViewMixin:
             item.set_all_visible(True)
         self.hidden_items.clear()
 
+    def _get_selected_entity_names(self):
+        if len(self.entity_item_selection) == 1:
+            return "'" + self.entity_item_selection[0].entity_name + "'"
+        return "selected entities"
+
+    def _get_selected_class_names(self):
+        if len(self.entity_item_selection) == 1:
+            return "'" + self.entity_item_selection[0].entity_class_name + "'"
+        return "selected classes"
+
     @Slot(bool)
-    def prune_selected_items(self, checked=False):
+    def prune_selected_entities(self, checked=False):
         """Prunes selected items."""
-        self.rejected_items.extend(self.entity_item_selection)
+        entity_ids = {x.entity_id for x in self.entity_item_selection}
+        key = self._get_selected_entity_names()
+        self.prunned_entity_ids[key] = entity_ids
+        action = self.ui.menuRestore_pruned.addAction(key)
+        action.triggered.connect(lambda checked=False, key=key: self.restore_pruned_items(key))
         self.build_graph()
 
     @Slot(bool)
-    def restore_pruned_items(self, checked=False):
-        """Reinstates pruned items."""
-        self.rejected_items.clear()
+    def prune_selected_classes(self, checked=False):
+        """Prunes selected items."""
+        class_ids = {x.entity_class_id for x in self.entity_item_selection}
+        entity_ids = {x["id"] for x in self.db_mngr.get_items(self.db_map, "object") if x["class_id"] in class_ids}
+        entity_ids |= {
+            x["id"] for x in self.db_mngr.get_items(self.db_map, "relationship") if x["class_id"] in class_ids
+        }
+        key = self._get_selected_class_names()
+        self.prunned_entity_ids[key] = entity_ids
+        action = self.ui.menuRestore_pruned.addAction(key)
+        action.triggered.connect(lambda checked=False, key=key: self.restore_pruned_items(key))
         self.build_graph()
+
+    @Slot(bool)
+    def restore_all_pruned_items(self, checked=False):
+        """Reinstates all pruned items."""
+        self.prunned_entity_ids.clear()
+        self.build_graph()
+
+    def restore_pruned_items(self, key):
+        """Reinstates last pruned items."""
+        if self.prunned_entity_ids.pop(key, None) is not None:
+            action = next(iter(a for a in self.ui.menuRestore_pruned.actions() if a.text() == key))
+            self.ui.menuRestore_pruned.removeAction(action)
+            self.build_graph()
 
     @Slot(bool)
     def show_demo(self, checked=False):
@@ -845,8 +1015,8 @@ class GraphViewMixin:
         """
         menu = ObjectItemContextMenu(self, global_pos, main_item)
         option = menu.get_action()
-        if self._apply_entity_context_menu_option(option):
-            pass
+        if option == 'Remove':
+            self.remove_graph_items()
         elif option in ('Set name', 'Rename'):
             main_item.edit_name()
         elif option in menu.relationship_class_dict:
@@ -867,19 +1037,9 @@ class GraphViewMixin:
         """
         menu = RelationshipItemContextMenu(self, global_pos)
         option = menu.get_action()
-        self._apply_entity_context_menu_option(option)
-        menu.deleteLater()
-
-    def _apply_entity_context_menu_option(self, option):
-        if option == 'Hide':
-            self.hide_selected_items()
-        elif option == 'Prune':
-            self.prune_selected_items()
-        elif option == 'Remove':
+        if option == 'Remove':
             self.remove_graph_items()
-        else:
-            return False
-        return True
+        menu.deleteLater()
 
     @Slot("bool")
     def remove_graph_items(self, checked=False):

@@ -25,6 +25,7 @@ from PySide2.QtCore import QItemSelectionModel
 import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
 from spinetoolbox.widgets.data_store_widget import DataStoreForm
 from spinetoolbox.spine_db_manager import SpineDBManager
+from spinetoolbox.mvcmodels.compound_parameter_models import CompoundParameterModel
 from .test_treeViewFormAdd import TestTreeViewFormAddMixin
 from .test_treeViewFormUpdate import TestTreeViewFormUpdateMixin
 from .test_treeViewFormRemove import TestTreeViewFormRemoveMixin
@@ -57,7 +58,6 @@ class TestTreeViewForm(
     @staticmethod
     def _object_parameter_definition(*args):
         d = dict(zip(["id", "object_class_id", "object_class_name", "parameter_name"], args))
-        d["name"] = d["parameter_name"]
         return d
 
     @staticmethod
@@ -75,7 +75,6 @@ class TestTreeViewForm(
                 args,
             )
         )
-        d["name"] = d["parameter_name"]
         return d
 
     @staticmethod
@@ -269,6 +268,7 @@ class TestTreeViewForm(
             "spinetoolbox.widgets.data_store_widget.DataStoreForm.restore_ui"
         ):
             self.db_mngr = SpineDBManager(None, None)
+            self.db_mngr.fetch_db_maps_for_listener = lambda *args: None
 
             def DiffDBMapping_side_effect(url, upgrade=False, codename=None):
                 mock_db_map = mock.MagicMock()
@@ -293,136 +293,51 @@ class TestTreeViewForm(
 
     def put_mock_object_classes_in_db_mngr(self):
         """Put fish and dog object classes in the db mngr."""
-
-        def _get_object_classes(db_map):
-            self.db_mngr.cache_items("object class", {db_map: [self.fish_class, self.dog_class]})
-            return [self.fish_class, self.dog_class]
-
-        self.db_mngr.get_object_classes = _get_object_classes
+        object_classes = [self.fish_class, self.dog_class]
+        self.db_mngr.object_classes_added.emit({self.mock_db_map: object_classes})
 
     def put_mock_objects_in_db_mngr(self):
         """Put nemo, pluto and scooby objects in the db mngr."""
-
-        def _get_objects(db_map, class_id=None):
-            self.db_mngr.cache_items("object", {db_map: [self.nemo_object, self.pluto_object, self.scooby_object]})
-            if class_id == self.fish_class["id"]:
-                return [self.nemo_object]
-            if class_id == self.dog_class["id"]:
-                return [self.pluto_object, self.scooby_object]
-            if class_id is None:
-                return [self.nemo_object, self.pluto_object, self.scooby_object]
-            return []
-
-        self.db_mngr.get_objects = _get_objects
+        objects = [self.nemo_object, self.pluto_object, self.scooby_object]
+        self.db_mngr.objects_added.emit({self.mock_db_map: objects})
 
     def put_mock_relationship_classes_in_db_mngr(self):
         """Put dog__fish and fish__dog relationship classes in the db mngr."""
-
-        def _get_relationship_classes(db_map, ids=None, object_class_id=None):
-            self.db_mngr.cache_items("relationship class", {db_map: [self.fish_dog_class, self.dog_fish_class]})
-            if object_class_id in (self.fish_class["id"], self.dog_class["id"]):
-                return [self.fish_dog_class, self.dog_fish_class]
-            if object_class_id is None:
-                return [self.fish_dog_class, self.dog_fish_class]
-            return []
-
-        self.db_mngr.get_relationship_classes = _get_relationship_classes
+        relationship_classes = [self.fish_dog_class, self.dog_fish_class]
+        self.db_mngr.relationship_classes_added.emit({self.mock_db_map: relationship_classes})
 
     def put_mock_relationships_in_db_mngr(self):
         """Put pluto_nemo, nemo_pluto and nemo_scooby relationships in the db mngr."""
-
-        def _get_relationships(db_map, class_id=None, object_id=None):
-            self.db_mngr.cache_items(
-                "relationship", {db_map: [self.pluto_nemo_rel, self.nemo_pluto_rel, self.nemo_scooby_rel]}
-            )
-            if class_id == self.dog_fish_class["id"]:
-                if object_id in (self.nemo_object["id"], self.pluto_object["id"]):
-                    return [self.pluto_nemo_rel]
-            if class_id == self.fish_dog_class["id"]:
-                if object_id == self.nemo_object["id"]:
-                    return [self.nemo_pluto_rel, self.nemo_scooby_rel]
-                if object_id == self.pluto_object["id"]:
-                    return [self.nemo_pluto_rel]
-                if object_id == self.scooby_object["id"]:
-                    return [self.nemo_scooby_rel]
-            if class_id is None and object_id is None:
-                return [self.pluto_nemo_rel, self.nemo_pluto_rel, self.nemo_scooby_rel]
-            return []
-
-        self.db_mngr.get_relationships = _get_relationships
+        relationships = [self.pluto_nemo_rel, self.nemo_pluto_rel, self.nemo_scooby_rel]
+        self.db_mngr.relationships_added.emit({self.mock_db_map: relationships})
 
     def put_mock_object_parameter_definitions_in_db_mngr(self):
         """Put water and breed object parameter definitions in the db mngr."""
-
-        def _get_object_parameter_definitions(db_map, ids=None, object_class_id=None):
-            self.db_mngr.cache_items("parameter definition", {db_map: [self.water_parameter, self.breed_parameter]})
-            if object_class_id == self.fish_class["id"]:
-                return [self.water_parameter]
-            if object_class_id == self.dog_class["id"]:
-                return [self.breed_parameter]
-            if object_class_id is None:
-                return [self.water_parameter, self.breed_parameter]
-            return []
-
-        self.db_mngr.get_object_parameter_definitions = _get_object_parameter_definitions
+        parameter_definitions = [self.water_parameter, self.breed_parameter]
+        with mock.patch.object(CompoundParameterModel, "_modify_data_in_filter_menus"):
+            self.db_mngr.parameter_definitions_added.emit({self.mock_db_map: parameter_definitions})
 
     def put_mock_relationship_parameter_definitions_in_db_mngr(self):
         """Put relative speed and combined mojo relationship parameter definitions in the db mngr."""
-
-        def _get_relationship_parameter_definitions(db_map, ids=None, relationship_class_id=None):
-            self.db_mngr.cache_items(
-                "parameter definition", {db_map: [self.relative_speed_parameter, self.combined_mojo_parameter]}
-            )
-            if relationship_class_id == self.fish_dog_class["id"]:
-                return [self.relative_speed_parameter]
-            if relationship_class_id == self.dog_fish_class["id"]:
-                return [self.combined_mojo_parameter]
-            if relationship_class_id is None:
-                return [self.relative_speed_parameter, self.combined_mojo_parameter]
-            return []
-
-        self.db_mngr.get_relationship_parameter_definitions = _get_relationship_parameter_definitions
+        parameter_definitions = [self.relative_speed_parameter, self.combined_mojo_parameter]
+        with mock.patch.object(CompoundParameterModel, "_modify_data_in_filter_menus"):
+            self.db_mngr.parameter_definitions_added.emit({self.mock_db_map: parameter_definitions})
 
     def put_mock_object_parameter_values_in_db_mngr(self):
         """Put some object parameter values in the db mngr."""
-
-        def _get_object_parameter_values(db_map, ids=None, object_class_id=None):
-            self.db_mngr.cache_items(
-                "parameter value", {db_map: [self.nemo_water, self.pluto_breed, self.scooby_breed]}
-            )
-            if object_class_id == self.fish_class["id"]:
-                return [self.nemo_water]
-            if object_class_id == self.dog_class["id"]:
-                return [self.pluto_breed, self.scooby_breed]
-            if object_class_id is None:
-                return [self.nemo_water, self.pluto_breed, self.scooby_breed]
-            return []
-
-        self.db_mngr.get_object_parameter_values = _get_object_parameter_values
+        parameter_values = [self.nemo_water, self.pluto_breed, self.scooby_breed]
+        with mock.patch.object(CompoundParameterModel, "_modify_data_in_filter_menus"):
+            self.db_mngr.parameter_values_added.emit({self.mock_db_map: parameter_values})
 
     def put_mock_relationship_parameter_values_in_db_mngr(self):
         """Put some relationship parameter values in the db mngr."""
-
-        def _get_relationship_parameter_values(db_map, ids=None, relationship_class_id=None):
-            self.db_mngr.cache_items(
-                "parameter value",
-                {
-                    db_map: [
-                        self.nemo_pluto_relative_speed,
-                        self.nemo_scooby_relative_speed,
-                        self.pluto_nemo_combined_mojo,
-                    ]
-                },
-            )
-            if relationship_class_id == self.fish_dog_class["id"]:
-                return [self.nemo_pluto_relative_speed, self.nemo_scooby_relative_speed]
-            if relationship_class_id == self.dog_fish_class["id"]:
-                return [self.pluto_nemo_combined_mojo]
-            if relationship_class_id is None:
-                return [self.nemo_pluto_relative_speed, self.nemo_scooby_relative_speed, self.pluto_nemo_combined_mojo]
-            return []
-
-        self.db_mngr.get_relationship_parameter_values = _get_relationship_parameter_values
+        parameter_values = [
+            self.nemo_pluto_relative_speed,
+            self.nemo_scooby_relative_speed,
+            self.pluto_nemo_combined_mojo,
+        ]
+        with mock.patch.object(CompoundParameterModel, "_modify_data_in_filter_menus"):
+            self.db_mngr.parameter_values_added.emit({self.mock_db_map: parameter_values})
 
     def put_mock_dataset_in_db_mngr(self):
         """Put mock dataset in the db mngr."""
@@ -437,10 +352,8 @@ class TestTreeViewForm(
 
     def test_set_object_parameter_definition_defaults(self):
         """Test that defaults are set in object parameter definition models according the object tree selection."""
-        self.put_mock_object_classes_in_db_mngr()
         self.tree_view_form.init_models()
-        for item in self.tree_view_form.object_tree_model.visit_all():
-            item.fetch_more()
+        self.put_mock_object_classes_in_db_mngr()
         # Select fish item in object tree
         root_item = self.tree_view_form.object_tree_model.root_item
         fish_item = root_item.child(0)

@@ -168,7 +168,7 @@ class TestParameterValueFormatting(unittest.TestCase):
         value = "diibadaaba"
         self.db_mngr.get_item.return_value = {"value": value}
         formatted = self.get_value(Qt.ToolTipRole)
-        self.assertEqual(formatted, 'Could not decode the value')
+        self.assertTrue(formatted.startswith('Could not decode the value'))
 
 
 if __name__ == '__main__':

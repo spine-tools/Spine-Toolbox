@@ -6,12 +6,16 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 ## [Unreleased]
 
 ### Added
-- Undo/Redo in Design View
-- It is now possible to add new plots to existing plot windows in Data Store View.
+- Now it's possible to export graphs as PDF files from the *Graph* menu in the Data Store form.
+- Now it's possible to prune entire classes from the graph view. The option is available both from the *Graph* menu and
+  from *Entity Graph* context menus. Also, pruned items can be restored gradually.
 
 ### Changed
 - The graph view behavior has changed. Now selecting objects in the object tree not only shows those objects but also 
   all the cascading relationships. This is to facilitate exploring the system without a previous knowledge.
+- Moving object items in the graph view also causes relationship icons to follow. This behaviour can be disabled in the
+  Settings form.
+
 
 ### Deprecated
 ### Removed

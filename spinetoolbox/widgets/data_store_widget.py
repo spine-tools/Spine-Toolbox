@@ -32,19 +32,20 @@ from PySide2.QtWidgets import (
 from PySide2.QtCore import Qt, Signal, Slot, QSettings
 from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QIcon
 from spinedb_api import copy_database
-from ..config import MAINWINDOW_SS
+from ..config import MAINWINDOW_SS, APPLICATION_PATH
 from .edit_db_items_dialogs import ManageParameterTagsDialog
 from .custom_menus import ParameterValueListContextMenu
-from ..widgets.parameter_view_mixin import ParameterViewMixin
-from ..widgets.tree_view_mixin import TreeViewMixin
-from ..widgets.graph_view_mixin import GraphViewMixin
-from ..widgets.tabular_view_mixin import TabularViewMixin
-from ..widgets.toolbars import ParameterTagToolBar
-from ..widgets.db_session_history_dialog import DBSessionHistoryDialog
-from ..widgets.notification import NotificationStack
+from .parameter_view_mixin import ParameterViewMixin
+from .tree_view_mixin import TreeViewMixin
+from .graph_view_mixin import GraphViewMixin
+from .tabular_view_mixin import TabularViewMixin
+from .toolbars import ParameterTagToolBar
+from .db_session_history_dialog import DBSessionHistoryDialog
+from .notification import NotificationStack
 from ..mvcmodels.parameter_value_list_model import ParameterValueListModel
-from ..helpers import busy_effect
+from ..helpers import busy_effect, ensure_window_is_on_screen
 from .import_widget import ImportDialog
+from .parameter_value_editor import ParameterValueEditor
 from ..spine_io.exporters.excel import export_spine_database_to_xlsx
 
 
@@ -53,6 +54,7 @@ class DataStoreFormBase(QMainWindow):
 
     msg = Signal(str)
     msg_error = Signal(str)
+    error_box = Signal(str, str)
 
     def __init__(self, db_mngr, *db_urls):
         """Initializes form.
@@ -71,6 +73,7 @@ class DataStoreFormBase(QMainWindow):
             self.db_mngr.get_db_map_for_listener(self, url, codename=codename) for url, codename in self.db_urls
         ]
         self.db_map = self.db_maps[0]
+        self.db_mngr.set_logger_for_db_map(self, self.db_map)
         # Setup UI from Qt Designer file
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
@@ -80,8 +83,9 @@ class DataStoreFormBase(QMainWindow):
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.qsettings = QSettings("SpineProject", "Spine Toolbox")
         self.err_msg = QErrorMessage(self)
-        self.notification_stack = NotificationStack(self)
         self.err_msg.setWindowTitle("Error")
+        self.err_msg.setWindowFlag(Qt.WindowContextHelpButtonHint, False)
+        self.notification_stack = NotificationStack(self)
         self.parameter_tag_toolbar = ParameterTagToolBar(self, self.db_mngr, *self.db_maps)
         self.addToolBar(Qt.TopToolBarArea, self.parameter_tag_toolbar)
         self.selected_ent_cls_ids = {"object class": {}, "relationship class": {}}
@@ -89,6 +93,8 @@ class DataStoreFormBase(QMainWindow):
         self.selected_parameter_tag_ids = dict()
         self.selected_param_def_ids = {"object class": {}, "relationship class": {}}
         self.parameter_value_list_model = ParameterValueListModel(self, self.db_mngr, *self.db_maps)
+        self.ui.treeView_parameter_value_list.setModel(self.parameter_value_list_model)
+        self.silenced = False
         fm = QFontMetrics(QFont("", 0))
         self.default_row_height = 1.2 * fm.lineSpacing()
         max_screen_height = max([s.availableSize().height() for s in QGuiApplication.screens()])
@@ -120,6 +126,7 @@ class DataStoreFormBase(QMainWindow):
         # Message signals
         self.msg.connect(self.add_message)
         self.msg_error.connect(self.err_msg.showMessage)
+        self.error_box.connect(lambda title, msg: self.err_msg.showMessage(msg))
         # Menu actions
         self.ui.actionCommit.triggered.connect(self.commit_session)
         self.ui.actionRollback.triggered.connect(self.rollback_session)
@@ -190,6 +197,8 @@ class DataStoreFormBase(QMainWindow):
         Args:
             msg (str): String to show in QStatusBar
         """
+        if self.silenced:
+            return
         self.notification_stack.push(msg)
 
     def restore_dock_widgets(self):
@@ -310,6 +319,12 @@ class DataStoreFormBase(QMainWindow):
         dialog.close()
         dialog.deleteLater()
 
+    def _get_base_dir(self):
+        project = self.db_mngr.parent()
+        if project is None:
+            return APPLICATION_PATH
+        return project.project_dir
+
     @Slot(bool)
     def export_database(self, checked=False):
         """Exports data from database into a file."""
@@ -317,9 +332,8 @@ class DataStoreFormBase(QMainWindow):
         db_map = self._select_database()
         if db_map is None:  # Database selection cancelled
             return
-        proj_dir = self.db_mngr.parent().project_dir  # Parent should be SpineToolboxProject
         file_path, selected_filter = QFileDialog.getSaveFileName(
-            self, "Export to file", proj_dir, "Excel file (*.xlsx);;SQlite database (*.sqlite *.db)"
+            self, "Export to file", self._get_base_dir(), "Excel file (*.xlsx);;SQlite database (*.sqlite *.db)"
         )
         if not file_path:  # File selection cancelled
             return
@@ -354,7 +368,7 @@ class DataStoreFormBase(QMainWindow):
         filename = os.path.split(file_path)[1]
         try:
             export_spine_database_to_xlsx(db_map, file_path)
-            self.msg.emit("Excel file successfully exported.")
+            self.msg.emit(f"File {file_path} successfully exported.")
         except PermissionError:
             self.msg_error.emit(
                 "Unable to export to file <b>{0}</b>.<br/>" "Close the file in Excel and try again.".format(filename)
@@ -399,12 +413,12 @@ class DataStoreFormBase(QMainWindow):
         msg = f"All changes in {db_names} rolled back successfully."
         self.msg.emit(msg)
 
-    @Slot(bool)
     def receive_session_refreshed(self, db_maps):
         db_maps = set(self.db_maps) & set(db_maps)
         if not db_maps:
             return
         self.init_models()
+        self.db_mngr.fetch_db_maps_for_listener(self, *db_maps)
         self.msg.emit("Session refreshed.")
 
     @Slot("QVariant", bool)
@@ -512,6 +526,14 @@ class DataStoreFormBase(QMainWindow):
         self.db_mngr.update_parameter_value_lists(db_map_data_to_upd)
         self.db_mngr.remove_items(db_map_typed_data_to_rm)
         self.ui.treeView_parameter_value_list.selectionModel().clearSelection()
+
+    @busy_effect
+    @Slot("QModelIndex")
+    def show_parameter_value_editor(self, index):
+        """Shows the parameter value editor for the given index of given table view.
+        """
+        editor = ParameterValueEditor(index, parent=self)
+        editor.show()
 
     def notify_items_changed(self, action, item_type, db_map_data):
         """Enables or disables actions and informs the user about what just happened."""
@@ -636,18 +658,20 @@ class DataStoreFormBase(QMainWindow):
         window_maximized = self.qsettings.value("windowMaximized", defaultValue='false')
         n_screens = self.qsettings.value("n_screens", defaultValue=1)
         self.qsettings.endGroup()
+        original_size = self.size()
         if window_size:
             self.resize(window_size)
         if window_pos:
             self.move(window_pos)
         if window_state:
             self.restoreState(window_state, version=1)  # Toolbar and dockWidget positions
-        if window_maximized == 'true':
-            self.setWindowState(Qt.WindowMaximized)
-        # noinspection PyArgumentList
         if len(QGuiApplication.screens()) < int(n_screens):
             # There are less screens available now than on previous application startup
             self.move(0, 0)  # Move this widget to primary screen position (0,0)
+        ensure_window_is_on_screen(self, original_size)
+        if window_maximized == 'true':
+            self.setWindowState(Qt.WindowMaximized)
+        # noinspection PyArgumentList
 
     def save_window_state(self):
         """Save window state parameters (size, position, state) via QSettings."""
@@ -656,6 +680,7 @@ class DataStoreFormBase(QMainWindow):
         self.qsettings.setValue("windowPosition", self.pos())
         self.qsettings.setValue("windowState", self.saveState(version=1))
         self.qsettings.setValue("windowMaximized", self.windowState() == Qt.WindowMaximized)
+        self.qsettings.setValue("n_screens", len(QGuiApplication.screens()))
         self.qsettings.endGroup()
 
     def closeEvent(self, event):
@@ -668,6 +693,7 @@ class DataStoreFormBase(QMainWindow):
             if not self.db_mngr.remove_db_map_listener(db_map, self):
                 event.ignore()
                 return
+            self.db_mngr.unset_logger_for_db_map(db_map)
         # Save UI form state
         self.save_window_state()
         event.accept()
@@ -693,6 +719,7 @@ class DataStoreForm(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         self.restore_ui()
         toc = time.process_time()
         self.msg.emit("Data store view created in {0:.2f} seconds".format(toc - tic))
+        self.db_mngr.fetch_db_maps_for_listener(self, *self.db_maps)
 
     def connect_signals(self):
         super().connect_signals()
@@ -777,13 +804,13 @@ class DataStoreForm(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
     def apply_graph_style(self, checked=False):
         """Applies the tree style, inspired in the former graph view."""
         self.begin_style_change()
-        self.ui.dockWidget_relationship_tree.hide()
         self.ui.dockWidget_parameter_value_list.hide()
         self.ui.dockWidget_pivot_table.hide()
         self.ui.dockWidget_frozen_table.hide()
         self.splitDockWidget(self.ui.dockWidget_object_tree, self.ui.dockWidget_entity_graph, Qt.Horizontal)
         self.splitDockWidget(self.ui.dockWidget_entity_graph, self.ui.dockWidget_object_parameter_value, Qt.Vertical)
-        self.splitDockWidget(self.ui.dockWidget_object_tree, self.ui.dockWidget_item_palette, Qt.Vertical)
+        self.splitDockWidget(self.ui.dockWidget_object_tree, self.ui.dockWidget_relationship_tree, Qt.Vertical)
+        self.splitDockWidget(self.ui.dockWidget_entity_graph, self.ui.dockWidget_item_palette, Qt.Horizontal)
         self.tabify_and_raise(
             [
                 self.ui.dockWidget_object_parameter_value,
@@ -798,5 +825,8 @@ class DataStoreForm(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         docks = [self.ui.dockWidget_entity_graph, self.ui.dockWidget_object_parameter_value]
         height = sum(d.size().height() for d in docks)
         self.resizeDocks(docks, [0.7 * height, 0.3 * height], Qt.Vertical)
+        docks = [self.ui.dockWidget_entity_graph, self.ui.dockWidget_item_palette]
+        width = sum(d.size().width() for d in docks)
+        self.resizeDocks(docks, [0.9 * width, 0.1 * width], Qt.Horizontal)
         self.end_style_change()
         self.ui.graphicsView.reset_zoom()

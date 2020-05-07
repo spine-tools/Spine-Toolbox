@@ -16,7 +16,7 @@ Contains the TreeViewMixin class.
 :date:   26.11.2018
 """
 
-from PySide2.QtCore import Slot
+from PySide2.QtCore import Slot, Signal
 from .custom_menus import ObjectTreeContextMenu, RelationshipTreeContextMenu, AlternativeTreeContextMenu
 from .add_db_items_dialogs import (
     AddScenariosDialog,
@@ -42,6 +42,9 @@ from ..helpers import busy_effect
 class TreeViewMixin:
     """Provides object and relationship trees for the data store form.
     """
+
+    _object_classes_added = Signal()
+    _relationship_classes_added = Signal()
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -89,6 +92,8 @@ class TreeViewMixin:
         self.ui.treeView_object.doubleClicked.connect(self.find_next_relationship)
         self.ui.treeView_relationship.edit_key_pressed.connect(self.edit_relationship_tree_items)
         self.ui.treeView_relationship.customContextMenuRequested.connect(self.show_relationship_tree_context_menu)
+        self._object_classes_added.connect(lambda: self.ui.treeView_object.resizeColumnToContents(0))
+        self._relationship_classes_added.connect(lambda: self.ui.treeView_relationship.resizeColumnToContents(0))
 
         self.ui.treeView_alternative.customContextMenuRequested.connect(self.show_alternative_tree_context_menu)
 
@@ -101,9 +106,6 @@ class TreeViewMixin:
         self.ui.treeView_alternative.expand(self.alternative_tree_model.root_index)
         self.ui.treeView_object.expand(self.object_tree_model.root_index)
         self.ui.treeView_relationship.expand(self.relationship_tree_model.root_index)
-        self.ui.treeView_alternative.resizeColumnToContents(0)
-        self.ui.treeView_object.resizeColumnToContents(0)
-        self.ui.treeView_relationship.resizeColumnToContents(0)
         self.ui.actionExport.setEnabled(self.object_tree_model.root_item.has_children())
 
     @Slot("QItemSelection", "QItemSelection")
@@ -537,6 +539,7 @@ class TreeViewMixin:
     def receive_object_classes_added(self, db_map_data):
         super().receive_object_classes_added(db_map_data)
         self.object_tree_model.add_object_classes(db_map_data)
+        self._object_classes_added.emit()
 
     def receive_objects_added(self, db_map_data):
         super().receive_objects_added(db_map_data)
@@ -546,6 +549,7 @@ class TreeViewMixin:
         super().receive_relationship_classes_added(db_map_data)
         self.object_tree_model.add_relationship_classes(db_map_data)
         self.relationship_tree_model.add_relationship_classes(db_map_data)
+        self._relationship_classes_added.emit()
 
     def receive_relationships_added(self, db_map_data):
         super().receive_relationships_added(db_map_data)

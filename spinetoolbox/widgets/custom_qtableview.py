@@ -80,7 +80,7 @@ class CopyPasteTableView(QTableView):
                         str_data = ""
                     row.append(str_data)
         with io.StringIO() as output:
-            writer = csv.writer(output, delimiter='\t')
+            writer = csv.writer(output, delimiter="\t", quotechar="'")
             for key in sorted(row_dict):
                 writer.writerow(row_dict[key])
             QApplication.clipboard().setText(output.getvalue())
@@ -108,7 +108,7 @@ class CopyPasteTableView(QTableView):
             a list of rows
         """
         with io.StringIO(text) as input_stream:
-            reader = csv.reader(input_stream, delimiter='\t')
+            reader = csv.reader(input_stream, delimiter="\t", quotechar="'")
             rows = list()
             for row in reader:
                 rows.append([locale.delocalize(element) for element in row])

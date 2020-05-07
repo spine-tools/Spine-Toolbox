@@ -23,9 +23,7 @@ class TestTreeViewFormAddMixin:
         """Test that object classes are added to the object tree model.
         """
         root_item = self.tree_view_form.object_tree_model.root_item
-        root_item.fetch_more()
-        object_classes = [self.fish_class, self.dog_class]
-        self.db_mngr.object_classes_added.emit({self.mock_db_map: object_classes})
+        self.put_mock_object_classes_in_db_mngr()
         fish_item, dog_item = root_item.children
         self.assertEqual(fish_item.item_type, "object class")
         self.assertEqual(fish_item.display_name, "fish")
@@ -35,12 +33,9 @@ class TestTreeViewFormAddMixin:
 
     def test_add_objects_to_object_tree_model(self):
         """Test that objects are added to the object tree model."""
-        self.put_mock_object_classes_in_db_mngr()
         self.tree_view_form.init_models()
-        for item in self.tree_view_form.object_tree_model.visit_all():
-            item.fetch_more()
-        objects = [self.nemo_object, self.pluto_object, self.scooby_object]
-        self.db_mngr.objects_added.emit({self.mock_db_map: objects})
+        self.put_mock_object_classes_in_db_mngr()
+        self.put_mock_objects_in_db_mngr()
         root_item = self.tree_view_form.object_tree_model.root_item
         fish_item, dog_item = root_item.children
         nemo_item = fish_item.child(0)
@@ -56,13 +51,10 @@ class TestTreeViewFormAddMixin:
 
     def test_add_relationship_classes_to_object_tree_model(self):
         """Test that relationship classes are added to the object tree model."""
-        self.put_mock_object_classes_in_db_mngr()
-        self.put_mock_objects_in_db_mngr()
         self.tree_view_form.init_models()
-        for item in self.tree_view_form.object_tree_model.visit_all():
-            item.fetch_more()
-        relationship_classes = [self.fish_dog_class, self.dog_fish_class]
-        self.db_mngr.relationship_classes_added.emit({self.mock_db_map: relationship_classes})
+        self.put_mock_object_classes_in_db_mngr()
+        self.put_mock_relationship_classes_in_db_mngr()
+        self.put_mock_objects_in_db_mngr()
         root_item = self.tree_view_form.object_tree_model.root_item
         fish_item, dog_item = root_item.children
         nemo_item = fish_item.child(0)
@@ -78,14 +70,11 @@ class TestTreeViewFormAddMixin:
 
     def test_add_relationships_to_object_tree_model(self):
         """Test that relationships are added to the object tree model."""
+        self.tree_view_form.init_models()
         self.put_mock_object_classes_in_db_mngr()
         self.put_mock_objects_in_db_mngr()
         self.put_mock_relationship_classes_in_db_mngr()
-        self.tree_view_form.init_models()
-        for item in self.tree_view_form.object_tree_model.visit_all():
-            item.fetch_more()
-        relationships = [self.pluto_nemo_rel, self.nemo_pluto_rel, self.nemo_scooby_rel]
-        self.db_mngr.relationships_added.emit({self.mock_db_map: relationships})
+        self.put_mock_relationships_in_db_mngr()
         root_item = self.tree_view_form.object_tree_model.root_item
         fish_item, dog_item = root_item.children
         nemo_item = fish_item.child(0)
@@ -121,7 +110,6 @@ class TestTreeViewFormAddMixin:
     def test_add_object_parameter_definitions_to_model(self):
         """Test that object parameter definitions are added to the model."""
         self.put_mock_object_parameter_definitions_in_db_mngr()
-        self.db_mngr.parameter_definitions_added.emit({self.mock_db_map: [self.water_parameter, self.breed_parameter]})
         model = self.tree_view_form.object_parameter_definition_model
         h = model.header.index
         parameters = []
@@ -135,9 +123,6 @@ class TestTreeViewFormAddMixin:
     def test_add_relationship_parameter_definitions_to_model(self):
         """Test that relationship parameter definitions are added to the model."""
         self.put_mock_relationship_parameter_definitions_in_db_mngr()
-        self.db_mngr.parameter_definitions_added.emit(
-            {self.mock_db_map: [self.relative_speed_parameter, self.combined_mojo_parameter]}
-        )
         model = self.tree_view_form.relationship_parameter_definition_model
         h = model.header.index
         parameters = []
@@ -151,9 +136,6 @@ class TestTreeViewFormAddMixin:
     def test_add_object_parameter_values_to_model(self):
         """Test that object parameter values are added to the model."""
         self.put_mock_object_parameter_values_in_db_mngr()
-        self.db_mngr.parameter_values_added.emit(
-            {self.mock_db_map: [self.nemo_water, self.pluto_breed, self.scooby_breed]}
-        )
         model = self.tree_view_form.object_parameter_value_model
         h = model.header.index
         parameters = []
@@ -172,15 +154,6 @@ class TestTreeViewFormAddMixin:
     def test_add_relationship_parameter_values_to_model(self):
         """Test that object parameter values are added to the model."""
         self.put_mock_relationship_parameter_values_in_db_mngr()
-        self.db_mngr.parameter_values_added.emit(
-            {
-                self.mock_db_map: [
-                    self.nemo_pluto_relative_speed,
-                    self.nemo_scooby_relative_speed,
-                    self.pluto_nemo_combined_mojo,
-                ]
-            }
-        )
         model = self.tree_view_form.relationship_parameter_value_model
         h = model.header.index
         parameters = []

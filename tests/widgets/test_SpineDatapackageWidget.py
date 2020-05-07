@@ -10,32 +10,37 @@
 ######################################################################################################################
 
 """
-Unit tests for the PlainParameterValueEditor widget.
+Contains unit tests for the SpineDatapackageWidget class.
 
-:authors: A. Soininen (VTT)
-:date:   3.7.2019
+:author: A. Soininen
+:date:   16.3.2020
 """
 
 import unittest
+from unittest import mock
 from PySide2.QtWidgets import QApplication
-from spinetoolbox.widgets.plain_parameter_value_editor import PlainParameterValueEditor
+from spinetoolbox.widgets.spine_datapackage_widget import SpineDatapackageWidget
 
 
-class TestPlainParameterValueEditor(unittest.TestCase):
+class TestSpineDatapackageWidget(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         if not QApplication.instance():
             QApplication()
 
-    def test_initial_value(self):
-        editor = PlainParameterValueEditor()
-        value = editor.value()
-        self.assertEqual(value, "")
-
-    def test_value_access(self):
-        editor = PlainParameterValueEditor()
-        editor.set_value(True)
-        self.assertEqual(editor.value(), True)
+    def test_closeEvent(self):
+        widget = SpineDatapackageWidget(mock.MagicMock())
+        widget.qsettings = mock.NonCallableMagicMock()
+        widget.closeEvent()
+        qsettings_save_calls = widget.qsettings.setValue.call_args_list
+        self.assertEqual(len(qsettings_save_calls), 6)
+        saved_dict = {saved[0][0]: saved[0][1] for saved in qsettings_save_calls}
+        self.assertIn("dataPackageWidget/splitterState", saved_dict)
+        self.assertIn("dataPackageWidget/windowSize", saved_dict)
+        self.assertIn("dataPackageWidget/windowPosition", saved_dict)
+        self.assertIn("dataPackageWidget/windowState", saved_dict)
+        self.assertIn("dataPackageWidget/windowMaximized", saved_dict)
+        self.assertIn("dataPackageWidget/n_screens", saved_dict)
 
 
 if __name__ == '__main__':

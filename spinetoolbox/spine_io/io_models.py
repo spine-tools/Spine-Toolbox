@@ -948,7 +948,7 @@ class HeaderWithButton(QHeaderView):
     def _menu_pressed(self, action):
         """Sets the data type of a row or column according to menu action."""
         type_str = action.text()
-        self.set_data_types(self._button_logical_index, type_str,update_viewport=False)
+        self.set_data_types(self._button_logical_index, type_str, update_viewport=False)
 
     def set_data_types(self, sections, type_str, update_viewport=True):
         """
@@ -1140,6 +1140,7 @@ class HeaderWithButton(QHeaderView):
 
 class TableViewWithButtonHeader(QTableView):
     """Customized table with data type buttons on horizontal and vertical headers"""
+
     def __init__(self, parent=None):
         """
         Args:

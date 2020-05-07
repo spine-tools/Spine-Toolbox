@@ -281,21 +281,26 @@ class ParameterValueListContextMenu(CustomContextMenu):
         self.add_action("Remove selection", remove_icon)
 
 
-class GraphViewContextMenu(CustomContextMenu):
+class GraphViewContextMenu(QMenu):
     """Context menu class for qgraphics view in graph view."""
 
-    def __init__(self, parent, position):
+    def __init__(self, parent):
         """
         Args:
             parent (QWidget): Parent for menu widget (GraphViewForm)
-            position (QPoint): Position on screen
         """
-        super().__init__(parent, position)
-        self.add_action("Hide selected", enabled=len(parent.entity_item_selection) > 0)
-        self.add_action("Show hidden", enabled=len(parent.hidden_items) > 0)
+        super().__init__(parent)
+        parent._handle_menu_graph_about_to_show()
+        self.addAction(parent.ui.actionSave_positions)
+        self.addAction(parent.ui.actionClear_positions)
         self.addSeparator()
-        self.add_action("Prune selected", enabled=len(parent.entity_item_selection) > 0)
-        self.add_action("Restore pruned", enabled=len(parent.rejected_items) > 0)
+        self.addAction(parent.ui.actionHide_selected)
+        self.addAction(parent.ui.actionShow_hidden)
+        self.addSeparator()
+        self.addAction(parent.ui.actionPrune_selected_entities)
+        self.addAction(parent.ui.actionPrune_selected_classes)
+        self.addMenu(parent.ui.menuRestore_pruned)
+        self.addAction(parent.ui.actionRestore_all_pruned)
 
 
 class EntityItemContextMenu(CustomContextMenu):
@@ -309,8 +314,10 @@ class EntityItemContextMenu(CustomContextMenu):
         """
         super().__init__(parent, position)
         self.selection_count = len(parent.entity_item_selection)
-        self.add_action('Hide')
-        self.add_action('Prune')
+        parent._handle_menu_graph_about_to_show()
+        self.addAction(parent.ui.actionHide_selected)
+        self.addAction(parent.ui.actionPrune_selected_entities)
+        self.addAction(parent.ui.actionPrune_selected_classes)
 
 
 class ObjectItemContextMenu(EntityItemContextMenu):
@@ -488,7 +495,7 @@ class RecentProjectsPopupMenu(CustomPopupMenu):
                     tooltip=filepath,
                 )
 
-    @Slot(bool, str, name="call_open_project")
+    @Slot(bool, str)
     def call_open_project(self, checked, p):
         """Slot for catching the user selected action from the recent projects menu.
 

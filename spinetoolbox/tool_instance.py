@@ -297,9 +297,10 @@ class PythonToolInstance(ToolInstance):
                 optional_input_files, input_database_urls, output_database_urls
             )
             all_args = tool_spec_args + tool_args
-            args = '"' + '" "'.join(all_args) + '"'
-            cd_work_dir_cmd = "%cd -q {0} ".format(work_dir)  # -q: quiet
-            run_script_cmd = "%run \"{0}\" {1}".format(self.tool_specification.main_prgm, args)
+            cd_work_dir_cmd = f"%cd -q {work_dir}"  # -q: quiet
+            run_script_cmd = f'%run "{self.tool_specification.main_prgm}"'
+            if all_args:
+                run_script_cmd = run_script_cmd + " " + '"' + '" "'.join(all_args) + '"'
             # Populate FIFO command queue
             self.ipython_command_list.append(cd_work_dir_cmd)
             self.ipython_command_list.append(run_script_cmd)

@@ -5,9 +5,7 @@ Plotting
 ========
 
 Basic data visualization is available in the data store views.
-Currently, it is possible to plot plain parameter values as well as time series.
-There are some limitations in plotting data from different sources, however.
-For instance, object and relationship parameter time series cannot be plotted on the same graph at the moment.
+Currently, it is possible to plot plain parameter values as well as time series and maps.
 
 To plot a column, select the values from a table and then *Plot* from the **right click** popup menu.
 
@@ -18,6 +16,12 @@ To plot a column, select the values from a table and then *Plot* from the **righ
    :align: center
 
 Selecting data in multiple columns plots the selection in a single window.
+
+It is possible to add a plot to an existing plot window. Select the target plot window
+from the *Plot in window* submenu and the data will be added to the plot.
+
+.. image:: img/plotting_popup_menu_plot_in_window.png
+   :align: center
 
 X axis for plain values
 -----------------------

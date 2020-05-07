@@ -34,14 +34,13 @@ class SingleParameterModel(MinimalTableModel):
     to filter entities within the class.
     """
 
-    def __init__(self, parent, header, db_mngr, db_map, entity_class_id, lazy=True):
+    def __init__(self, header, db_mngr, db_map, entity_class_id, lazy=False):
         """Init class.
 
         Args:
-            parent (CompoundParameterModel): the parent object
             header (list): list of field names for the header
         """
-        super().__init__(parent, header, lazy=lazy)
+        super().__init__(header=header, lazy=lazy)
         self.db_mngr = db_mngr
         self.db_map = db_map
         self.entity_class_id = entity_class_id
@@ -86,6 +85,10 @@ class SingleParameterModel(MinimalTableModel):
         }[self.entity_class_type][self.item_type]
 
     @property
+    def parameter_definition_id_key(self):
+        return {"parameter definition": "id", "parameter value": "parameter_id"}[self.item_type]
+
+    @property
     def can_be_filtered(self):
         return True
 
@@ -101,9 +104,7 @@ class SingleParameterModel(MinimalTableModel):
         return self.db_item_from_id(id_)
 
     def db_item_from_id(self, id_):
-        db_item = self.db_mngr.get_item(self.db_map, self.item_type, id_)
-        db_item["database"] = self.db_map.codename
-        return db_item
+        return self.db_mngr.get_item(self.db_map, self.item_type, id_)
 
     def db_items(self):
         return [self._db_item(row) for row in range(self.rowCount())]
@@ -115,17 +116,46 @@ class SingleParameterModel(MinimalTableModel):
             return flags & ~Qt.ItemIsEditable
         return flags
 
-    def fetchMore(self, parent=None):
-        """Fetch data and use it to reset the model."""
-        data = self._fetch_data()
-        self.reset_model(data)
-        self._fetched = True
+    def get_field_item_data(self, field):
+        """Returns item data for given field.
 
-    def _fetch_data(self):
-        """Returns data to reset the model with and call it fetched.
-        Reimplement in subclasses if you want to populate your model automatically.
+        Args:
+            field (str): A field from the header
+
+        Returns:
+            str, str
         """
-        raise NotImplementedError()
+        return {
+            "object_class_name": ("object_class_id", "object class"),
+            "relationship_class_name": ("relationship_class_id", "relationship class"),
+            "object_class_name_list": ("relationship_class_id", "relationship class"),
+            "object_name": ("object_id", "object"),
+            "object_name_list": ("relationship_id", "relationship"),
+            "parameter_name": (self.parameter_definition_id_key, "parameter definition"),
+            "value_list_name": ("value_list_id", "parameter value list"),
+            "description": ("id", "parameter definition"),
+            "value": ("id", "parameter value"),
+            "default_value": ("id", "parameter definition"),
+            "database": ("database", None),
+            "alternative_id": ("alternative_id", "alternative"),
+        }.get(field)
+
+    def get_id_key(self, field):
+        field_item_data = self.get_field_item_data(field)
+        if field_item_data is None:
+            return None
+        return field_item_data[0]
+
+    def get_field_item(self, field, db_item):
+        """Returns a db item corresponding to the given field from the table header,
+        or an empty dict if the field doesn't contain db items.
+        """
+        field_item_data = self.get_field_item_data(field)
+        if field_item_data is None:
+            return {}
+        id_key, item_type = field_item_data
+        item_id = db_item.get(id_key)
+        return self.db_mngr.get_item(self.db_map, item_type, item_id)
 
     def data(self, index, role=Qt.DisplayRole):
         """Gets the id and database for the row, and reads data from the db manager
@@ -137,7 +167,7 @@ class SingleParameterModel(MinimalTableModel):
         if role == Qt.BackgroundRole and field in self.fixed_fields:
             return QGuiApplication.palette().button()
         # Display, edit, tool tip role
-        if role in (Qt.DisplayRole, Qt.EditRole, Qt.ToolTipRole):
+        if role in (Qt.DisplayRole, Qt.EditRole, Qt.ToolTipRole, Qt.UserRole):
             if field == "database":
                 return self.db_map.codename
             id_ = self._main_data[index.row()]
@@ -194,7 +224,7 @@ class SingleParameterModel(MinimalTableModel):
         if self._selected_param_def_ids == set():
             return True
         param_def_id = self.db_mngr.get_value(
-            self.db_map, self.item_type, self._main_data[row], self.parent().parameter_definition_id_key
+            self.db_map, self.item_type, self._main_data[row], self.parameter_definition_id_key
         )
         return param_def_id in self._selected_param_def_ids
 
@@ -202,27 +232,15 @@ class SingleParameterModel(MinimalTableModel):
         """Applies the autofilter, defined by the autofilter drop down menu."""
         if self._auto_filter is None:
             return False
-        db_item = self._db_item(row)
-        for field, valid_ids in self._auto_filter.items():
-            id_key = self.parent().get_id_key(field)
-            if valid_ids and db_item.get(id_key) not in valid_ids:
+        item_id = self._main_data[row]
+        for valid_ids in self._auto_filter.values():
+            if valid_ids and item_id not in valid_ids:
                 return False
         return True
 
     def accepted_rows(self):
         """Returns a list of accepted rows, for convenience."""
         return [row for row in range(self.rowCount()) if self._filter_accepts_row(row)]
-
-    def get_field_item(self, field, db_item):
-        """Returns a db item corresponding to the given field from the table header,
-        or an empty dict if the field doesn't contain db items.
-        """
-        field_item_data = self.parent().get_field_item_data(field)
-        if field_item_data is None:
-            return {}
-        id_key, item_type = field_item_data
-        item_id = db_item.get(id_key)
-        return self.db_mngr.get_item(self.db_map, item_type, item_id)
 
 
 class SingleObjectParameterMixin:
@@ -272,7 +290,7 @@ class SingleParameterDefinitionMixin(FillInParameterNameMixin, FillInValueListId
         if param_defs:
             self.db_mngr.update_parameter_definitions({self.db_map: param_defs})
         if error_log:
-            self.db_mngr.msg_error.emit({self.db_map: error_log})
+            self.db_mngr.error_msg({self.db_map: error_log})
 
 
 class SingleParameterValueMixin(FillInAlternativeNameMixin):
@@ -316,7 +334,7 @@ class SingleParameterValueMixin(FillInAlternativeNameMixin):
         if param_vals:
             self.db_mngr.update_parameter_values({self.db_map: param_vals})
         if error_log:
-            self.db_mngr.msg_error.emit({self.db_map: error_log})
+            self.db_mngr.error_msg({self.db_map: error_log})
 
 
 class SingleObjectParameterDefinitionModel(
@@ -324,49 +342,18 @@ class SingleObjectParameterDefinitionModel(
 ):
     """An object parameter definition model for a single object class."""
 
-    def _fetch_data(self):
-        """Returns object parameter definition ids."""
-        return [
-            x["id"]
-            for x in self.db_mngr.get_object_parameter_definitions(self.db_map, object_class_id=self.entity_class_id)
-        ]
-
 
 class SingleRelationshipParameterDefinitionModel(
     SingleRelationshipParameterMixin, SingleParameterDefinitionMixin, SingleParameterModel
 ):
     """A relationship parameter definition model for a single relationship class."""
 
-    def _fetch_data(self):
-        """Returns relationship parameter definition ids."""
-        return [
-            x["id"]
-            for x in self.db_mngr.get_relationship_parameter_definitions(
-                self.db_map, relationship_class_id=self.entity_class_id
-            )
-        ]
-
 
 class SingleObjectParameterValueModel(SingleObjectParameterMixin, SingleParameterValueMixin, SingleParameterModel):
     """An object parameter value model for a single object class."""
-
-    def _fetch_data(self):
-        """Returns object parameter value ids."""
-        return [
-            x["id"] for x in self.db_mngr.get_object_parameter_values(self.db_map, object_class_id=self.entity_class_id)
-        ]
 
 
 class SingleRelationshipParameterValueModel(
     SingleRelationshipParameterMixin, SingleParameterValueMixin, SingleParameterModel
 ):
     """A relationship parameter value model for a single relationship class."""
-
-    def _fetch_data(self):
-        """Returns relationship parameter value ids."""
-        return [
-            x["id"]
-            for x in self.db_mngr.get_relationship_parameter_values(
-                self.db_map, relationship_class_id=self.entity_class_id
-            )
-        ]

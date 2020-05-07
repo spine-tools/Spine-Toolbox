@@ -255,8 +255,6 @@ class DataConnection(ProjectItem):
             self._toolbox, "Create new file", msg, flags=Qt.WindowTitleHint | Qt.WindowCloseButtonHint
         )
         file_name = answer[0]
-        if not file_name:  # Cancel button clicked
-            return
         if not file_name.strip():
             return
         # Check that file name has no invalid chars

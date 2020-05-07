@@ -82,19 +82,12 @@ class EmptyParameterModel(EmptyRowModel):
         """Returns a unique id for the given model item (name-based). Used by receive_parameter_data_added."""
         return (item.get(self.entity_class_name_key), item.get("parameter_name"))
 
-    def get_entity_parameter_data(self, db_map, ids=None):
-        """Returns object or relationship parameter definitions or values.
-        Must be reimplemented in subclasses according to the entity type and to whether
-        it's a definition or value model. Used by receive_parameter_data_added."""
-        raise NotImplementedError()
-
     def receive_parameter_data_added(self, db_map_data):
         """Runs when parameter definitions or values are added.
         Finds and removes model items that were successfully added to the db."""
         added_ids = set()
         for db_map, items in db_map_data.items():
-            ids = {x["id"] for x in items}
-            for item in self.get_entity_parameter_data(db_map, ids=ids):
+            for item in items:
                 database = db_map.codename
                 unique_id = (database, *self._make_unique_id(item))
                 added_ids.add(unique_id)
@@ -167,7 +160,7 @@ class EmptyParameterDefinitionModel(
         if any(db_map_param_def.values()):
             self.db_mngr.add_parameter_definitions(db_map_param_def)
         if db_map_error_log:
-            self.db_mngr.msg_error.emit(db_map_error_log)
+            self.db_mngr.error_msg(db_map_error_log)
 
     def _check_item(self, item):
         """Checks if a db item is ready to be inserted."""
@@ -181,10 +174,6 @@ class EmptyObjectParameterDefinitionModel(EmptyParameterDefinitionModel):
     def entity_class_type(self):
         return "object class"
 
-    def get_entity_parameter_data(self, db_map, ids=None):
-        """Returns object parameter definitions. Used by receive_parameter_data_added."""
-        return self.db_mngr.get_object_parameter_definitions(db_map, ids=ids)
-
 
 class EmptyRelationshipParameterDefinitionModel(EmptyParameterDefinitionModel):
     """An empty relationship parameter definition model."""
@@ -192,10 +181,6 @@ class EmptyRelationshipParameterDefinitionModel(EmptyParameterDefinitionModel):
     @property
     def entity_class_type(self):
         return "relationship class"
-
-    def get_entity_parameter_data(self, db_map, ids=None):
-        """Returns relationship parameter definitions. Used by receive_parameter_data_added."""
-        return self.db_mngr.get_relationship_parameter_definitions(db_map, ids=ids)
 
     def flags(self, index):
         """Additional hack to make the object_class_name_list column non-editable."""
@@ -256,7 +241,7 @@ class EmptyParameterValueModel(
         if any(db_map_param_val.values()):
             self.db_mngr.add_parameter_values(db_map_param_val)
         if db_map_error_log:
-            self.db_mngr.msg_error.emit(db_map_error_log)
+            self.db_mngr.error_msg(db_map_error_log)
 
     def _check_item(self, item):
         """Checks if a db item is ready to be inserted."""
@@ -279,10 +264,6 @@ class EmptyObjectParameterValueModel(EmptyParameterValueModel):
     def entity_type(self):
         return "object"
 
-    def get_entity_parameter_data(self, db_map, ids=None):
-        """Returns object parameter values. Used by receive_parameter_data_added."""
-        return self.db_mngr.get_object_parameter_values(db_map, ids=ids)
-
 
 class EmptyRelationshipParameterValueModel(MakeRelationshipOnTheFlyMixin, EmptyParameterValueModel):
     """An empty relationship parameter value model."""
@@ -296,10 +277,6 @@ class EmptyRelationshipParameterValueModel(MakeRelationshipOnTheFlyMixin, EmptyP
     @property
     def entity_type(self):
         return "relationship"
-
-    def get_entity_parameter_data(self, db_map, ids=None):
-        """Returns relationship parameter values. Used by receive_parameter_data_added."""
-        return self.db_mngr.get_relationship_parameter_values(db_map, ids=ids)
 
     def add_items_to_db(self, rows):
         """Add items to db.
@@ -324,4 +301,4 @@ class EmptyRelationshipParameterValueModel(MakeRelationshipOnTheFlyMixin, EmptyP
             self.db_mngr.add_relationships(db_map_relationships)
             super().add_items_to_db(rows)
         if db_map_error_log:
-            self.db_mngr.msg_error.emit(db_map_error_log)
+            self.db_mngr.error_msg(db_map_error_log)

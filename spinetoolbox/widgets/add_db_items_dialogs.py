@@ -183,7 +183,7 @@ class AddObjectClassesDialog(ShowIconColorEditorMixin, AddItemsDialog):
         self.combo_box = QComboBox(self)
         self.layout().insertWidget(0, self.combo_box)
         self.db_map_obj_cls_lookup = {
-            db_map: {x["name"]: x for x in self.db_mngr.get_object_classes(db_map)} for db_map in self.db_maps
+            db_map: {x["name"]: x for x in self.db_mngr.get_items(db_map, "object class")} for db_map in self.db_maps
         }
         self.remove_rows_button.setIcon(QIcon(":/icons/menu_icons/cube_minus.svg"))
         self.table_view.setItemDelegate(ManageObjectClassesDelegate(self))
