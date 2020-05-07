@@ -763,11 +763,6 @@ class Ui_MainWindow(object):
 from spinetoolbox.widgets.custom_qtableview import AutoFilterCopyPasteTableView, PivotTableView
 from spinetoolbox.widgets.frozen_table_view import FrozenTableView
 from spinetoolbox.widgets.custom_qgraphicsviews import GraphQGraphicsView
-<<<<<<< HEAD
-from spinetoolbox.widgets.custom_qlistview import DragListView
-from spinetoolbox.widgets.frozen_table_view import FrozenTableView
-=======
 from spinetoolbox.widgets.custom_qtreeview import EntityTreeView, StickySelectionEntityTreeView, CopyTreeView
 from spinetoolbox.widgets.custom_qlistview import DragListView
->>>>>>> dev
 from spinetoolbox import resources_icons_rc
