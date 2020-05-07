@@ -16,19 +16,19 @@ General helper functions and classes.
 :date:   10.1.2018
 """
 
-import sys
-import logging
 import datetime
-import os
-import time
-import shutil
 import glob
 import json
+import logging
+import itertools
+import os
+import shutil
+import sys
 import urllib.parse
 from PySide2.QtCore import Qt, Slot, QFile, QIODevice, QSize, QRect, QPoint
 from PySide2.QtCore import __version__ as qt_version
 from PySide2.QtCore import __version_info__ as qt_version_info
-from PySide2.QtWidgets import QApplication, QMessageBox, QGraphicsScene, QFileIconProvider, QStyle
+from PySide2.QtWidgets import QApplication, QMessageBox, QGraphicsScene, QFileIconProvider, QStyle, QFileDialog
 from PySide2.QtGui import (
     QCursor,
     QImageReader,
@@ -41,9 +41,8 @@ from PySide2.QtGui import (
     QStandardItemModel,
     QStandardItem,
 )
-import spinedb_api
 import spine_engine
-from .config import REQUIRED_SPINEDB_API_VERSION, REQUIRED_SPINE_ENGINE_VERSION
+from .config import REQUIRED_SPINE_ENGINE_VERSION
 
 if os.name == "nt":
     import ctypes
@@ -89,37 +88,6 @@ def pyside2_version_check():
         )
         return False
     return True
-
-
-def spinedb_api_version_check():
-    """Check if spinedb_api is the correct version and explain how to upgrade if it is not."""
-    try:
-        current_version = spinedb_api.__version__
-        current_split = [int(x) for x in current_version.split(".")]
-        required_split = [int(x) for x in REQUIRED_SPINEDB_API_VERSION.split(".")]
-        if current_split >= required_split:
-            return True
-    except AttributeError:
-        current_version = "not reported"
-    script = "upgrade_spinedb_api.bat" if sys.platform == "win32" else "upgrade_spinedb_api.py"
-    print(
-        """SPINEDB_API OUTDATED.
-
-        Spine Toolbox failed to start because spinedb_api is outdated.
-        (Required version is {0}, whereas current is {1})
-        Please upgrade spinedb_api to v{0} and start Spine Toolbox again.
-
-        To upgrade, run script '{2}' in the '/bin' folder.
-
-        Or upgrade it manually by running,
-
-            pip install --upgrade git+https://github.com/Spine-project/Spine-Database-API.git
-
-        """.format(
-            REQUIRED_SPINEDB_API_VERSION, current_version, script
-        )
-    )
-    return False
 
 
 def spine_engine_version_check():
@@ -211,23 +179,6 @@ def create_dir(base_path, folder='', verbosity=False):
         if verbosity:
             logging.debug("Directory created: %s", directory)
     return True
-
-
-def create_output_dir_timestamp():
-    """ Creates a new timestamp string that is used as Tool output
-    directory.
-
-    Returns:
-        Timestamp string or empty string if failed.
-    """
-    try:
-        # Create timestamp
-        stamp = datetime.datetime.fromtimestamp(time.time())
-    except OverflowError:
-        logging.error('Timestamp out of range.')
-        return ''
-    extension = stamp.strftime('%Y-%m-%dT%H.%M.%S')
-    return extension
 
 
 @busy_effect
@@ -377,6 +328,13 @@ def rename_dir(old_dir, new_dir, logger):
         new_dir (str): Absolute path to new directory
         logger (LoggerInterface): A logger instance
     """
+    if os.path.exists(new_dir):
+        # If the target is a directory, then there will not be a name clash in shutil.move()
+        # as the old_dir will be moved inside new_dir which is not a rename operation.
+        # We guard against that here.
+        msg = "Directory<br/><b>{0}</b><br/>already exists".format(new_dir)
+        logger.information_box.emit("Renaming directory failed", msg)
+        return False
     try:
         shutil.move(old_dir, new_dir)
     except FileExistsError:
@@ -694,7 +652,6 @@ def serialize_path(path, project_dir):
     Returns a dict representation of the given path.
 
     If path is in project_dir, converts the path to relative.
-    If path does not exist returns it as-is.
 
     Args:
         path (str): path to serialize
@@ -765,7 +722,8 @@ def deserialize_path(serialized, project_dir):
         if path_type == "file_url":
             path = serialized["path"]
             if serialized["relative"]:
-                path = os.path.normpath(os.path.join(project_dir, path))
+                path = os.path.join(project_dir, path)
+            path = os.path.normpath(path)
             return serialized["scheme"] + ":///" + path
         if path_type == "url":
             return serialized["path"]
@@ -795,3 +753,38 @@ def ensure_window_is_on_screen(window, size):
         primary_screen = QApplication.primaryScreen()
         screen_geometry = primary_screen.availableGeometry()
         window.setGeometry(QStyle.alignedRect(Qt.LeftToRight, Qt.AlignCenter, size, screen_geometry))
+
+
+def first_non_null(s):
+    """Returns the first element in Iterable s that is not None."""
+    try:
+        return next(itertools.dropwhile(lambda x: x is None, s))
+    except StopIteration:
+        return None
+
+
+def get_save_file_name_in_last_dir(qsettings, key, parent, caption, given_dir, filter_=""):
+    """Calls QFileDialog.getSaveFileName in the directory that was selected last time the dialog was accepted.
+
+    Args:
+        qsettings (QSettings): A QSettings object where the last directory is stored
+        key (string): The name of the entry in the above QSettings
+        parent, caption, given_dir, filter_: Args passed to QFileDialog.getSaveFileName
+
+    Returns:
+        str: filename
+        str: selecte filter
+    """
+    dir_ = qsettings.value(key, default=given_dir)
+    filename, selected_filter = QFileDialog.getSaveFileName(parent, caption, dir_, filter_)
+    if filename:
+        qsettings.setValue(key, os.path.dirname(filename))
+    return filename, selected_filter
+
+
+def get_open_file_name_in_last_dir(qsettings, key, parent, caption, given_dir, filter_=""):
+    dir_ = qsettings.value(key, default=given_dir)
+    filename, selected_filter = QFileDialog.getOpenFileName(parent, caption, dir_, filter_)
+    if filename:
+        qsettings.setValue(key, os.path.dirname(filename))
+    return filename, selected_filter

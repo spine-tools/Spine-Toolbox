@@ -16,15 +16,5 @@ Tool plugin.
 :date:   12.9.2019
 """
 
-from .tool import Tool as item_maker
-from .tool_icon import ToolIcon
-from .widgets.tool_properties_widget import ToolPropertiesWidget
-from .widgets.add_tool_widget import AddToolWidget
-
-item_rank = 2
-item_category = item_maker.category()
-item_type = item_maker.item_type()
-item_icon = ":/icons/project_item_icons/hammer.svg"
-icon_maker = ToolIcon
-properties_widget_maker = ToolPropertiesWidget
-add_form_maker = AddToolWidget
+from .tool_factory import ToolFactory as ItemFactory
+from .item_info import ItemInfo

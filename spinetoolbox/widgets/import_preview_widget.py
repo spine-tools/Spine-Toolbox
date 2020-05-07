@@ -41,7 +41,7 @@ class ImportPreviewWidget(QWidget):
     previewDataUpdated = Signal()
 
     def __init__(self, connector, parent):
-        from ..ui.import_preview import Ui_ImportPreview
+        from ..ui.import_preview import Ui_ImportPreview  # pylint: disable=import-outside-toplevel
 
         super().__init__(parent)
 
@@ -84,7 +84,7 @@ class ImportPreviewWidget(QWidget):
         self._ui.source_list.itemChanged.connect(self.check_list_item)
 
         # signals for connector
-        self.connector.connectionReady.connect(self.connection_ready)
+        self.connector.connectionReady.connect(self.request_new_tables_from_connector)
         self.connector.dataReady.connect(self.update_preview_data)
         self.connector.tablesReady.connect(self.update_tables)
         self.connector.mappedDataReady.connect(self.mappedDataReady.emit)
@@ -134,7 +134,7 @@ class ImportPreviewWidget(QWidget):
         self._ui.source_preview_widget_stack.setCurrentIndex(loading_message if status else preview_table)
         self._ui_mapper.setDisabled(status)
 
-    def connection_ready(self):
+    def request_new_tables_from_connector(self):
         """
         Requests new tables data from connector
         """
@@ -146,7 +146,7 @@ class ImportPreviewWidget(QWidget):
         """
         if selection:
             if selection.text() not in self.table_mappings:
-                self.table_mappings[selection.text()] = MappingListModel([ObjectClassMapping()])
+                self.table_mappings[selection.text()] = MappingListModel([ObjectClassMapping()], selection.text())
             self._ui_mapper.set_model(self.table_mappings[selection.text()])
             # request new data
             self.connector.set_table(selection.text())
@@ -186,7 +186,7 @@ class ImportPreviewWidget(QWidget):
                     # add table to selected if connector gave a mapping object
                     # for the table
                     self.selected_source_tables.add(t_name)
-                self.table_mappings[t_name] = MappingListModel([t_mapping])
+                self.table_mappings[t_name] = MappingListModel([t_mapping], t_name)
         for k in list(self.table_mappings.keys()):
             if k not in tables:
                 self.table_mappings.pop(k)
@@ -255,11 +255,14 @@ class ImportPreviewWidget(QWidget):
         self.previewDataUpdated.emit()
 
     def use_settings(self, settings):
-
-        self.table_mappings = {
-            table: MappingListModel([dict_to_map(m) for m in mappings])
-            for table, mappings in settings.get("table_mappings", {}).items()
-        }
+        try:
+            self.table_mappings = {
+                table: MappingListModel([dict_to_map(m) for m in mappings], table)
+                for table, mappings in settings.get("table_mappings", {}).items()
+            }
+        except ValueError as error:
+            self._ui_error.showMessage(f"{error}")
+            return
 
         table_types = {
             tn: {int(col): value_to_convert_spec(spec) for col, spec in cols.items()}

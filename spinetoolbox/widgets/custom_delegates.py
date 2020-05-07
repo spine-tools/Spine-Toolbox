@@ -21,6 +21,7 @@ from PySide2.QtWidgets import QComboBox, QItemDelegate, QStyleOptionButton, QSty
 from PySide2.QtGui import QIcon
 from spinedb_api import from_database, to_database
 from .custom_editors import CustomComboEditor, CustomLineEditor, SearchBarEditor, CheckListEditor
+from ..mvcmodels.shared import PARSED_ROLE
 
 
 class ComboBoxDelegate(QItemDelegate):
@@ -168,7 +169,10 @@ class PivotTableDelegate(CheckBoxDelegate):
         self.data_committed.emit(index, editor.data())
 
     def _is_entity_index(self, index):
-        return not self.parent().is_value_input_type() and index.model().sourceModel().index_in_data(index)
+        parent = self.parent()
+        return not (
+            parent.is_value_input_type() or parent.is_index_expansion_input_type()
+        ) and index.model().sourceModel().index_in_data(index)
 
     def paint(self, painter, option, index):
         if self._is_entity_index(index):
@@ -303,7 +307,7 @@ class ParameterValueDelegate(ParameterValueOrDefaultValueDelegate):
         parameter_name = index.sibling(index.row(), h("parameter_name")).data()
         parameters = self.db_mngr.get_items_by_field(db_map, "parameter definition", "parameter_name", parameter_name)
         entity_class_id = self._get_entity_class_id(index, db_map)
-        parameter_ids = {p["id"] for p in parameters if p[self.entity_class_id_key] == entity_class_id}
+        parameter_ids = {p["id"] for p in parameters if p["entity_class_id"] == entity_class_id}
         value_list_ids = {
             self.db_mngr.get_item(db_map, "parameter definition", id_).get("value_list_id") for id_ in parameter_ids
         }
@@ -322,7 +326,7 @@ class ParameterValueDelegate(ParameterValueOrDefaultValueDelegate):
         if value_list:
             editor = SearchBarEditor(self.parent(), parent)
             value_list = [from_database(x) for x in value_list.split(",")]
-            editor.set_data(index.data(Qt.UserRole), value_list)
+            editor.set_data(index.data(PARSED_ROLE), value_list)
             editor.data_committed.connect(lambda editor=editor, index=index: self._close_editor(editor, index))
             return editor
         return self._create_or_request_parameter_value_editor(parent, option, index, db_map)
@@ -331,20 +335,12 @@ class ParameterValueDelegate(ParameterValueOrDefaultValueDelegate):
 class ObjectParameterValueDelegate(GetObjectClassIdMixin, ParameterValueDelegate):
     """A delegate for the object parameter value."""
 
-    @property
-    def entity_class_id_key(self):
-        return "object_class_id"
-
     def _get_entity_class_id(self, index, db_map):
         return self._get_object_class_id(index, db_map)
 
 
 class RelationshipParameterValueDelegate(GetRelationshipClassIdMixin, ParameterValueDelegate):
     """A delegate for the relationship parameter value."""
-
-    @property
-    def entity_class_id_key(self):
-        return "relationship_class_id"
 
     def _get_entity_class_id(self, index, db_map):
         return self._get_relationship_class_id(index, db_map)
@@ -408,7 +404,7 @@ class RelationshipClassNameDelegate(ParameterDelegate):
         if not db_map:
             return None
         editor = SearchBarEditor(self.parent(), parent)
-        relationship_classes = self.db_mngr.get_iems(db_map, "relationship class")
+        relationship_classes = self.db_mngr.get_items(db_map, "relationship class")
         editor.set_data(index.data(Qt.EditRole), [x["name"] for x in relationship_classes])
         editor.data_committed.connect(lambda editor=editor, index=index: self._close_editor(editor, index))
         return editor

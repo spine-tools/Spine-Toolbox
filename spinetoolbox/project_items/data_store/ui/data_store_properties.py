@@ -10,10 +10,10 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-# Form implementation generated from reading ui file 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\project_items\data_store\ui\data_store_properties.ui',
-# licensing of 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\project_items\data_store\ui\data_store_properties.ui' applies.
+# Form implementation generated from reading ui file 'C:\data\src\toolbox\bin\..\spinetoolbox\project_items\data_store\ui\data_store_properties.ui',
+# licensing of 'C:\data\src\toolbox\bin\..\spinetoolbox\project_items\data_store\ui\data_store_properties.ui' applies.
 #
-# Created: Thu Feb 13 11:53:45 2020
+# Created: Tue Apr 14 12:29:35 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -279,8 +279,10 @@ class Ui_Form(object):
         self.gridLayout_3.addWidget(self.label_host, 4, 0, 1, 1)
         self.verticalLayout_26.addLayout(self.gridLayout_3)
         self.verticalLayout_25.addWidget(self.groupBox_3)
-        self.gridLayout = QtWidgets.QGridLayout()
-        self.gridLayout.setObjectName("gridLayout")
+        spacerItem = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
+        self.verticalLayout_25.addItem(spacerItem)
+        self.horizontalLayout = QtWidgets.QHBoxLayout()
+        self.horizontalLayout.setObjectName("horizontalLayout")
         self.pushButton_create_new_spine_db = QtWidgets.QPushButton(self.scrollAreaWidgetContents_7)
         self.pushButton_create_new_spine_db.setMinimumSize(QtCore.QSize(85, 23))
         self.pushButton_create_new_spine_db.setMaximumSize(QtCore.QSize(16777215, 23))
@@ -288,19 +290,9 @@ class Ui_Form(object):
         icon1.addPixmap(QtGui.QPixmap(":/symbols/Spine_symbol.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.pushButton_create_new_spine_db.setIcon(icon1)
         self.pushButton_create_new_spine_db.setObjectName("pushButton_create_new_spine_db")
-        self.gridLayout.addWidget(self.pushButton_create_new_spine_db, 0, 1, 1, 1)
-        spacerItem = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
-        self.gridLayout.addItem(spacerItem, 0, 0, 1, 1)
-        self.checkBox_for_spine_model = QtWidgets.QCheckBox(self.scrollAreaWidgetContents_7)
-        self.checkBox_for_spine_model.setObjectName("checkBox_for_spine_model")
-        self.gridLayout.addWidget(self.checkBox_for_spine_model, 0, 2, 1, 1)
-        self.verticalLayout_25.addLayout(self.gridLayout)
-        spacerItem1 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
-        self.verticalLayout_25.addItem(spacerItem1)
-        self.horizontalLayout = QtWidgets.QHBoxLayout()
-        self.horizontalLayout.setObjectName("horizontalLayout")
-        spacerItem2 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
-        self.horizontalLayout.addItem(spacerItem2)
+        self.horizontalLayout.addWidget(self.pushButton_create_new_spine_db)
+        spacerItem1 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        self.horizontalLayout.addItem(spacerItem1)
         self.pushButton_ds_view = QtWidgets.QPushButton(self.scrollAreaWidgetContents_7)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
@@ -327,8 +319,8 @@ class Ui_Form(object):
         self.toolButton_copy_url.setIcon(icon2)
         self.toolButton_copy_url.setObjectName("toolButton_copy_url")
         self.horizontalLayout_27.addWidget(self.toolButton_copy_url)
-        spacerItem3 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
-        self.horizontalLayout_27.addItem(spacerItem3)
+        spacerItem2 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        self.horizontalLayout_27.addItem(spacerItem2)
         self.toolButton_ds_open_dir = QtWidgets.QToolButton(self.scrollAreaWidgetContents_7)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
@@ -364,8 +356,6 @@ class Ui_Form(object):
         self.label_host.setText(QtWidgets.QApplication.translate("Form", "Host", None, -1))
         self.pushButton_create_new_spine_db.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Create new Spine database at the selected URL, or at a default one if the selected is not valid.</p></body></html>", None, -1))
         self.pushButton_create_new_spine_db.setText(QtWidgets.QApplication.translate("Form", "New Spine db", None, -1))
-        self.checkBox_for_spine_model.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Add specific data structure for Spine model to the new Spine database.</p></body></html>", None, -1))
-        self.checkBox_for_spine_model.setText(QtWidgets.QApplication.translate("Form", "For Spine model", None, -1))
         self.pushButton_ds_view.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Open Data Store view</p></body></html>", None, -1))
         self.pushButton_ds_view.setText(QtWidgets.QApplication.translate("Form", "Open view", None, -1))
         self.toolButton_copy_url.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Copy current database url to clipboard.</p></body></html>", None, -1))

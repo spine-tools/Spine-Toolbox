@@ -29,11 +29,13 @@ class PlainParameterValueEditor(QWidget):
     """
 
     def __init__(self, parent_widget=None):
+        # pylint: disable=import-outside-toplevel
         from ..ui.plain_parameter_value_editor import Ui_PlainParameterValueEditor
 
         super().__init__(parent_widget)
         self._ui = Ui_PlainParameterValueEditor()
         self._ui.setupUi(self)
+        self._ui.value_edit.setEnabled(False)
         self._ui.radioButton_number_or_string.toggled.connect(self._set_number_or_string_enabled)
 
     @Slot(bool)

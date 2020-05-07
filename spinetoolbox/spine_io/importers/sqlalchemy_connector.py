@@ -42,8 +42,8 @@ class SqlAlchemyConnector(SourceConnection):
     # Modal widget that returns source object and action (OK, CANCEL)
     SELECT_SOURCE_UI = select_sa_conn_string
 
-    def __init__(self):
-        super(SqlAlchemyConnector, self).__init__()
+    def __init__(self, settings):
+        super().__init__(settings)
         self._connection_string = None
         self._engine = None
         self._connection = None

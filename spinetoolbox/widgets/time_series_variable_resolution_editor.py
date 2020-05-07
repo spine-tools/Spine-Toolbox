@@ -21,9 +21,7 @@ from PySide2.QtWidgets import QWidget
 from spinedb_api import TimeSeriesVariableResolution
 from ..plotting import add_time_series_plot
 from ..mvcmodels.time_series_model_variable_resolution import TimeSeriesModelVariableResolution
-from .custom_qtableview import IndexedValueTableView
 from .indexed_value_table_context_menu import handle_table_context_menu
-from .plot_widget import PlotWidget
 
 
 class TimeSeriesVariableResolutionEditor(QWidget):
@@ -35,6 +33,7 @@ class TimeSeriesVariableResolutionEditor(QWidget):
     """
 
     def __init__(self, parent=None):
+        # pylint: disable=import-outside-toplevel
         from ..ui.time_series_variable_resolution_editor import Ui_TimeSeriesVariableResolutionEditor
 
         super().__init__(parent)
@@ -48,23 +47,21 @@ class TimeSeriesVariableResolutionEditor(QWidget):
         self._model.rowsRemoved.connect(self._update_plot)
         self._ui = Ui_TimeSeriesVariableResolutionEditor()
         self._ui.setupUi(self)
-        self._plot_widget = PlotWidget()
-        self._ui.splitter.insertWidget(1, self._plot_widget)
-        self._time_series_table = IndexedValueTableView(self._ui.splitter)
-        self._ui.left_layout.addWidget(self._time_series_table)
-        self._time_series_table.setModel(self._model)
-        self._time_series_table.setContextMenuPolicy(Qt.CustomContextMenu)
-        self._time_series_table.customContextMenuRequested.connect(self._show_table_context_menu)
+        self._ui.time_series_table.setModel(self._model)
+        self._ui.time_series_table.setContextMenuPolicy(Qt.CustomContextMenu)
+        self._ui.time_series_table.customContextMenuRequested.connect(self._show_table_context_menu)
         self._ui.ignore_year_check_box.setChecked(self._model.value.ignore_year)
         self._ui.ignore_year_check_box.toggled.connect(self._model.set_ignore_year)
         self._ui.repeat_check_box.setChecked(self._model.value.repeat)
         self._ui.repeat_check_box.toggled.connect(self._model.set_repeat)
+        for i in range(self._ui.splitter.count()):
+            self._ui.splitter.setCollapsible(i, False)
         self._update_plot()
 
-    @Slot("QPoint", name="_show_table_context_menu")
+    @Slot("QPoint")
     def _show_table_context_menu(self, pos):
         """Shows the table's context menu."""
-        handle_table_context_menu(pos, self._time_series_table, self._model, self)
+        handle_table_context_menu(pos, self._ui.time_series_table, self._model, self)
 
     def set_value(self, value):
         """Sets the time series being edited."""
@@ -72,12 +69,12 @@ class TimeSeriesVariableResolutionEditor(QWidget):
         self._ui.ignore_year_check_box.setChecked(value.ignore_year)
         self._ui.repeat_check_box.setChecked(value.repeat)
 
-    @Slot("QModelIndex", "QModelIndex", "list", name="_update_plot")
+    @Slot("QModelIndex", "QModelIndex", "list")
     def _update_plot(self, topLeft=None, bottomRight=None, roles=None):
         """Updates the plot widget."""
-        self._plot_widget.canvas.axes.cla()
-        add_time_series_plot(self._plot_widget, self._model)
-        self._plot_widget.canvas.draw()
+        self._ui.plot_widget.canvas.axes.cla()
+        add_time_series_plot(self._ui.plot_widget, self._model)
+        self._ui.plot_widget.canvas.draw()
 
     def value(self):
         """Return the time series currently being edited."""

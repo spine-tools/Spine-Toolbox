@@ -35,7 +35,7 @@ class OpenProjectDialog(QDialog):
         Args:
             toolbox (ToolboxUI): QMainWindow instance
         """
-        from ..ui import open_project_dialog
+        from ..ui import open_project_dialog  # pylint: disable=import-outside-toplevel
 
         super().__init__(parent=toolbox, f=Qt.Dialog)  # Setting the parent inherits the stylesheet
         self._toolbox = toolbox

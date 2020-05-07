@@ -23,7 +23,7 @@ from .custom_menus import SimpleFilterMenu
 from .custom_delegates import ComboBoxDelegate
 from ..spine_io.io_models import MappingSpecModel
 
-MAPPING_CHOICES = ("Constant", "Column", "Row", "Column Header", "Headers", "None")
+MAPPING_CHOICES = ("Constant", "Column", "Row", "Column Header", "Headers", "Table Name", "None")
 
 
 class MappingWidget(QWidget):
@@ -36,7 +36,7 @@ class MappingWidget(QWidget):
     mappingDataChanged = Signal()
 
     def __init__(self, parent=None):
-        from ..ui.import_mapping import Ui_ImportMapping
+        from ..ui.import_mapping import Ui_ImportMapping  # pylint: disable=import-outside-toplevel
 
         super().__init__(parent)
 
@@ -132,7 +132,7 @@ class MappingOptionsWidget(QWidget):
     """
 
     def __init__(self, parent=None):
-        from ..ui.import_mapping_options import Ui_ImportMappingOptions
+        from ..ui.import_mapping_options import Ui_ImportMappingOptions  # pylint: disable=import-outside-toplevel
 
         super().__init__(parent)
 

@@ -9,77 +9,127 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - Now it's possible to export graphs as PDF files from the *Graph* menu in the Data Store form.
 - Now it's possible to prune entire classes from the graph view. The option is available both from the *Graph* menu and
   from *Entity Graph* context menus. Also, pruned items can be restored gradually.
+- A new Input type *Indexed parameter expansion* is now available in Data Store view's Pivot table.
+  In this Input type the indexes, e.g. time stamps of time series get expanded as a new dimension in the table.
+- Import editor now has a new Source type: Table name. It can be used e.g. to pick an Excel sheet's
+  or GAMS domain's name as the object class name.
 
 ### Changed
 - The graph view behavior has changed. Now selecting objects in the object tree not only shows those objects but also 
-  all the cascading relationships. This is to facilitate exploring the system without a previous knowledge.
+  all the cascading relationships. One can still go back to the previous behaviour in Settings.
 - Moving object items in the graph view also causes relationship icons to follow. This behaviour can be disabled in the
   Settings form.
 
-
 ### Deprecated
 ### Removed
 ### Fixed
 ### Security
 
-## [0.4.0.beta.0] - 2020-02-17
+## [0.4.0-final.0] - 2020-04-03
 
 ### Added
-- A small notification icon is painted next to project items in the design view whenever they are missing some
-  configuration. Hovering the icon shows tips for completing the configuration.
-- A small icon is painted next to the project items in the design view to show the order in which they will be
-  executed
+- A small notification icon is painted next to project items in the design view whenever they 
+  are missing some configuration. Hovering the icon shows tips for completing the 
+  configuration.
+- A small icon is painted next to the project items in the design view to show the order in 
+  which they will be executed
 - Main Window menu 'File -> Open recent'. Shortcut for opening a recent project.
-- A new project item *Exporter* allows a database contained in a *Data Store* to be exported as GAMS `.gdx` file.
+- A new project item *Exporter* allows a database contained in a *Data Store* to be exported 
+  as GAMS `.gdx` file.
 - It is now possible to copy and paste project items for example between projects.
 - It is now possible to duplicate project items.
 - Changes made in the tree view are also seen in the graph view and viceversa.
-- New Setting: *Sticky selection in Graph View*. Enables users to select if they want to use multi-selection or 
-  single selection in the Graph view Object tree when selecting items with the **left-mouse button**.
+- New Setting: *Sticky selection in Graph View*. Enables users to select if they want to use 
+  multi-selection or single selection in the Graph view Object tree when selecting items with 
+  the **left-mouse button**.
 - Projects can be saved to any directory
 - Project name can be changed in Settings
-- The graph view features a short live demonstration that new users can follow to discover the basic functionality.
-- New Setting: *Curved links*. When active, links on the Design View follow a smooth curve rather than a straight line.
-- When execution traverses a link, a small animation is played to denote the flow of data. Users can set how quick
-  they want this animation to be in Settings. The fastest setting effectively disables the animation.
-- Special 'tag' command line arguments are now available in Tool Specification which expand to, for example,
-  input database URLS or paths to optional input files when a Tool is executed.
+- The graph view features a short live demonstration that new users can follow to discover 
+  the basic functionality.
+- New Setting: *Curved links*. When active, links on the Design View follow a smooth curve 
+  rather than a straight line.
+- When execution traverses a link, a small animation is played to denote the flow of data. 
+  Users can set how quick they want this animation to be in Settings. The fastest setting 
+  effectively disables the animation.
+- Special 'tag' command line arguments are now available in Tool Specification which expand 
+  to, for example, input database URLS or paths to optional input files when a Tool is executed.
 - It is now possible to undo/redo database changes in the Data Store form.
-- It is now possible to visualize the history of database changes in the Data Store form. The option is 
-  available in the Session menu.
-- Support for Tool command line arguments. You can now give Tool (project item) command 
-  line arguments in addition to Tool Specification command line arguments.
-
-### Changed
-- spinetoolbox is now a Python package. To start the app, use command `python -m spinetoolbox` or
-  `python spinetoolbox.py` as spinetoolbox.py has been moved to repository root. 
-- Tool templates are now called Tool specifications
-- File->Open Project opens a file dialog, where you can open projects by selecting an old 
-  <project_name>.proj file or a Spine Toolbox Project directory. Valid Spine Toolbox projects are 
-  decorated with the Spine logo.
-- When opening an old style project (.proj file), the project must be upgraded to a new style project 
-  by selecting a new directory for the project.
-- Project information is not saved to a <project_name>.proj file anymore. This information is now located 
-  in file <project_dir>/.spinetoolbox/project.json. Every Spine Toolbox project has this file.
-- Work directory is now a global setting instead of a project setting
-- Renamed *Data Interface* project item to *Importer*.
-  The corresponding category *Data Importers* was renamed to *Importers*.
-- The status bar of the Data store view is gone. Instead, notifications are printed in a box on the right side of
-  the form.
-- Tree, graph, and tabular views have been merged into one consolidated view. You can choose your preferred style
-  from the View menu.
-
-### Deprecated
-- Saving project information to .proj files
-
-### Removed
+- It is now possible to visualize the history of database changes in the Data Store form. The 
+  option is available in the Session menu.
+- Support for Tool command line arguments. You can now give Tool (project item) command line 
+  arguments in addition to Tool Specification command line arguments.
+- Undo/Redo in Design View
+- It is now possible to add new plots to existing plot windows in Data Store View.
+- Objects in Data Store's Tree View are sorted alphabetically
+- A new parameter value type, *map* has been added. There is now a dedicated editor to 
+  modify maps. Plotting of non-nested maps is supported, as well.
+- [win-x64] importer_program.py has been built as an independent application. This program is 
+  now distributed with the Spine Toolbox single-file installer. When installing Spine Toolbox,
+  the Importer Program app can be found in the Spine Toolbox install directory 
+  (/importer_program).
+- Import preview window now supports copy-pasting mappings and options from a source table to 
+  another
+- Import preview window header context-menus for the preview table which, allows users to 
+  change all data types at once.
+- Provide data for EditRole for nicer editor experience in MappingSpecModel.
+- Red background is displayed for invalid values in MappingSpecModel
+- Object tooltips now show the descriptions Data Store view's
 
 ### Fixed
-- Data advertised by a project item during execution is only accessible by its direct children.
-  In other words, resources are passed to the next items in line but not beyond.
-- Executing the Importer project item has been fixed on Windows release version
+- Data advertised by a project item during execution is only accessible by its direct 
+  successors. In other words, resources are passed to the next items in line but not beyond.
+- [win-x64] Executing the Importer project item has been fixed on Windows release version
+- Bug fixes for Data Store View
+  - Disappearing object names in entity graph
+  - Spine db manager error dialogs
+- Tool configuration assistant for SpineModel.jl
+- [win-x64] A problem with displaying special characters in Process Log when executing the 
+  Importer project item.
+- The context menu in Graph view's pivot table resulted in a traceback when an entity class 
+  did not have parameter definitions.
+- Combobox delegate in Import preview window had wrong list of choices.
+- Don't set mapping to NoneMapping if user gives a None value.
+- Exporter now also exports empty object classes and empty parameters into GDX files
+- A bug that sometimes made duplicate entries to File->Open recents menu
+- Bug where an Excel import with empty rows would return a None in it's get_data_iterator
+- [win-x64] Executing Julia tools in the embedded Julia Console
+- [win-x64] Setting up Python Console. Installing ipykernel and kernel specs now works.
+- [win-x64] Setting up Julia Console. Installing IJulia and kernel specs now works.
+- Column indexing in Import Editor. When entering a time or time pattern index column 
+  manually in Import Editor's lower right corner table, the colors in the preview table 
+  failed to update. This should fix the bug and allow column selection both by column index 
+  or column header text.
 
-### Security
+### Changed
+- spinetoolbox is now a Python package. To start the app, use command 
+  `python -m spinetoolbox` or `python spinetoolbox.py` as spinetoolbox.py has been moved to 
+  repository root. 
+- Tool templates are now called Tool specifications
+- File->Open Project opens a file dialog, where you can open projects by selecting an old 
+  <project_name>.proj file or a Spine Toolbox Project directory. Valid Spine Toolbox projects 
+  are decorated with the Spine logo.
+- Old style projects (.proj files) cannot be opened anymore. The old style projects need to 
+  be upgraded before opening. You can upgrade your .proj file projects into new ones with 
+  *Project Upgrade Wizard* found in `File->Upgrade project` menu item.
+- Project information is not saved to a <project_name>.proj file anymore. This information 
+  is now located in file <project_dir>/.spinetoolbox/project.json. Every Spine Toolbox project 
+  has this file.
+- Work directory is now a global setting instead of a project setting
+- Renamed *Data Interface* project item to *Importer*. The corresponding category 
+  *Data Importers* was renamed to *Importers*.
+- Tree, graph, and tabular views have been merged into one consolidated view. You can choose 
+  your preferred style from the Data Store View's `View` menu.
+- The graph view behavior has changed. Now selecting objects in the object tree not only 
+  shows those objects but also all the cascading relationships. This is to facilitate exploring 
+  the system without a previous knowledge.
+- importer_program.py now uses the Python interpreter that the app was started with and not 
+  the one that is given by user in Settings -> Tools.
+- Importer now uses QProcessExecutionManager for running the importer_program.py
+
+### Removed
+- The status bar of the Data store view is gone. Instead, notifications are printed in a box 
+  on the right side of the form.
+- Saving project information to .proj files is not happening anymore
 
 ## [0.3] - 2019-09-06
 

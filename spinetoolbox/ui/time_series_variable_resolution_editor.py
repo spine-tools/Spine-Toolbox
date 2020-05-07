@@ -10,10 +10,10 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-# Form implementation generated from reading ui file 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\ui\time_series_variable_resolution_editor.ui',
-# licensing of 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\ui\time_series_variable_resolution_editor.ui' applies.
+# Form implementation generated from reading ui file 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\time_series_variable_resolution_editor.ui',
+# licensing of 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\time_series_variable_resolution_editor.ui' applies.
 #
-# Created: Thu Feb 13 11:54:15 2020
+# Created: Tue Apr 14 12:29:50 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -23,9 +23,9 @@ from PySide2 import QtCore, QtGui, QtWidgets
 class Ui_TimeSeriesVariableResolutionEditor(object):
     def setupUi(self, TimeSeriesVariableResolutionEditor):
         TimeSeriesVariableResolutionEditor.setObjectName("TimeSeriesVariableResolutionEditor")
-        TimeSeriesVariableResolutionEditor.resize(570, 391)
-        self.verticalLayout_2 = QtWidgets.QVBoxLayout(TimeSeriesVariableResolutionEditor)
-        self.verticalLayout_2.setObjectName("verticalLayout_2")
+        TimeSeriesVariableResolutionEditor.resize(718, 478)
+        self.verticalLayout = QtWidgets.QVBoxLayout(TimeSeriesVariableResolutionEditor)
+        self.verticalLayout.setObjectName("verticalLayout")
         self.splitter = QtWidgets.QSplitter(TimeSeriesVariableResolutionEditor)
         self.splitter.setOrientation(QtCore.Qt.Horizontal)
         self.splitter.setObjectName("splitter")
@@ -45,7 +45,12 @@ class Ui_TimeSeriesVariableResolutionEditor(object):
         spacerItem = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
         self.horizontalLayout_2.addItem(spacerItem)
         self.left_layout.addLayout(self.horizontalLayout_2)
-        self.verticalLayout_2.addWidget(self.splitter)
+        self.time_series_table = IndexedValueTableView(self.verticalLayoutWidget)
+        self.time_series_table.setObjectName("time_series_table")
+        self.left_layout.addWidget(self.time_series_table)
+        self.plot_widget = PlotWidget(self.splitter)
+        self.plot_widget.setObjectName("plot_widget")
+        self.verticalLayout.addWidget(self.splitter)
 
         self.retranslateUi(TimeSeriesVariableResolutionEditor)
         QtCore.QMetaObject.connectSlotsByName(TimeSeriesVariableResolutionEditor)
@@ -55,3 +60,5 @@ class Ui_TimeSeriesVariableResolutionEditor(object):
         self.ignore_year_check_box.setText(QtWidgets.QApplication.translate("TimeSeriesVariableResolutionEditor", "Ignore year", None, -1))
         self.repeat_check_box.setText(QtWidgets.QApplication.translate("TimeSeriesVariableResolutionEditor", "Repeat", None, -1))
 
+from spinetoolbox.widgets.custom_qtableview import IndexedValueTableView
+from spinetoolbox.widgets.plot_widget import PlotWidget

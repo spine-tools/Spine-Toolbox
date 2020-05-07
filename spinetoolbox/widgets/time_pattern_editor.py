@@ -20,7 +20,6 @@ from PySide2.QtCore import Qt, Slot
 from PySide2.QtWidgets import QWidget
 from spinedb_api import TimePattern
 from ..mvcmodels.time_pattern_model import TimePatternModel
-from .custom_qtableview import IndexedValueTableView
 from .indexed_value_table_context_menu import handle_table_context_menu
 
 
@@ -33,21 +32,19 @@ class TimePatternEditor(QWidget):
     """
 
     def __init__(self, parent=None):
-        from ..ui.time_pattern_editor import Ui_TimePatternEditor
+        from ..ui.time_pattern_editor import Ui_TimePatternEditor  # pylint: disable=import-outside-toplevel
 
         super().__init__(parent)
         self._model = TimePatternModel(TimePattern(["1-7d"], [0.0]))
         self._ui = Ui_TimePatternEditor()
         self._ui.setupUi(self)
-        self._pattern_edit_table = IndexedValueTableView(self)
-        self.layout().addWidget(self._pattern_edit_table)
-        self._pattern_edit_table.setModel(self._model)
-        self._pattern_edit_table.setContextMenuPolicy(Qt.CustomContextMenu)
-        self._pattern_edit_table.customContextMenuRequested.connect(self._show_table_context_menu)
+        self._ui.pattern_edit_table.setModel(self._model)
+        self._ui.pattern_edit_table.setContextMenuPolicy(Qt.CustomContextMenu)
+        self._ui.pattern_edit_table.customContextMenuRequested.connect(self._show_table_context_menu)
 
     @Slot("QPoint", name="_show_table_context_menu")
     def _show_table_context_menu(self, pos):
-        handle_table_context_menu(pos, self._pattern_edit_table, self._model, self)
+        handle_table_context_menu(pos, self._ui.pattern_edit_table, self._model, self)
 
     def set_value(self, value):
         """Sets the parameter value to be edited."""

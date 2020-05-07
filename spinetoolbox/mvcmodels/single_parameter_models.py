@@ -26,6 +26,7 @@ from ..mvcmodels.parameter_mixins import (
     FillInValueListIdMixin,
     MakeParameterTagMixin,
 )
+from .shared import PARSED_ROLE
 
 
 class SingleParameterModel(MinimalTableModel):
@@ -167,12 +168,12 @@ class SingleParameterModel(MinimalTableModel):
         if role == Qt.BackgroundRole and field in self.fixed_fields:
             return QGuiApplication.palette().button()
         # Display, edit, tool tip role
-        if role in (Qt.DisplayRole, Qt.EditRole, Qt.ToolTipRole, Qt.UserRole):
+        if role in (Qt.DisplayRole, Qt.EditRole, Qt.ToolTipRole, PARSED_ROLE):
             if field == "database":
                 return self.db_map.codename
             id_ = self._main_data[index.row()]
             if field in self.json_fields:
-                return self.db_mngr.get_value(self.db_map, self.item_type, id_, field, role)
+                return self.db_mngr.get_value(self.db_map, self.item_type, id_, role)
             item = self.db_mngr.get_item(self.db_map, self.item_type, id_)
             if role == Qt.ToolTipRole:
                 description = self.get_field_item(field, item).get("description", None)
@@ -223,9 +224,9 @@ class SingleParameterModel(MinimalTableModel):
             return False
         if self._selected_param_def_ids == set():
             return True
-        param_def_id = self.db_mngr.get_value(
-            self.db_map, self.item_type, self._main_data[row], self.parameter_definition_id_key
-        )
+        param_def_id = self.db_mngr.get_item(self.db_map, self.item_type, self._main_data[row])[
+            self.parameter_definition_id_key
+        ]
         return param_def_id in self._selected_param_def_ids
 
     def _auto_filter_accepts_row(self, row):

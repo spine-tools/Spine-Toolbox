@@ -18,6 +18,7 @@ Widget shown to user when a new Data Connection is created.
 
 from spinetoolbox.widgets.add_project_item_widget import AddProjectItemWidget
 from ..data_connection import DataConnection
+from ..item_info import ItemInfo
 
 
 class AddDataConnectionWidget(AddProjectItemWidget):
@@ -27,15 +28,14 @@ class AddDataConnectionWidget(AddProjectItemWidget):
         toolbox (ToolboxUI): Parent widget
         x (int): X coordinate of new item
         y (int): Y coordinate of new item
+        spec (str): The name of a spec
     """
 
-    def __init__(self, toolbox, x, y):
+    def __init__(self, toolbox, x, y, spec=""):
         """Initialize class."""
-        initial_name = toolbox.propose_item_name(DataConnection.default_name_prefix())
-        super().__init__(toolbox, x, y, initial_name)
-        self.setWindowTitle(f"Add Data Connection")
+        super().__init__(toolbox, x, y, DataConnection, spec=spec)
 
     def call_add_item(self):
         """Creates new Item according to user's selections."""
         item = dict(name=self.name, description=self.description, x=self._x, y=self._y, references=list())
-        self._project.add_project_items("Data Connections", item, set_selected=True)
+        self._project.add_project_items(ItemInfo.item_type(), item, set_selected=True)

@@ -42,8 +42,8 @@ class JSONConnector(SourceConnection):
     # Modal widget that that returns source object and action (OK, CANCEL)
     SELECT_SOURCE_UI = select_json_file
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, settings):
+        super().__init__(settings)
         self._filename = None
         self._root_prefix = None
 

@@ -20,11 +20,11 @@ from PySide2.QtCore import Slot, QItemSelectionModel
 from PySide2.QtGui import QColor, QPen, QBrush
 from ..graphics_items import ProjectItemIcon
 from .shrinking_scene import ShrinkingScene
-from .toolbars import DraggableWidget
+from ..mvcmodels.project_item_factory_models import ProjectItemFactoryModel, ProjectItemSpecFactoryModel
 
 
 class CustomQGraphicsScene(ShrinkingScene):
-    """A scene that handles drag and drop events of DraggableWidget sources."""
+    """A scene that handles drag and drop events of ProjectItemFactoryModel or ProjectItemSpecFactoryModel sources."""
 
     def __init__(self, parent, toolbox):
         """
@@ -57,7 +57,7 @@ class CustomQGraphicsScene(ShrinkingScene):
         union_rect = scene_rect | items_rect
         self.setSceneRect(union_rect)
 
-    @Slot("QList<QRectF>", name="scene_changed")
+    @Slot("QList<QRectF>")
     def scene_changed(self, rects):
         """Resize scene as it changes."""
         scene_rect = self.sceneRect()
@@ -65,7 +65,7 @@ class CustomQGraphicsScene(ShrinkingScene):
             return
         self.resize_scene()
 
-    @Slot(name="handle_selection_changed")
+    @Slot()
     def handle_selection_changed(self):
         """Synchronize selection with the project tree."""
         if not self.sync_selection:
@@ -97,33 +97,41 @@ class CustomQGraphicsScene(ShrinkingScene):
         """
         self.bg_grid = bg
 
+    @staticmethod
+    def _is_project_item_drag(source):
+        if not hasattr(source, "model"):
+            return False
+        return callable(source.model) and isinstance(
+            source.model(), (ProjectItemFactoryModel, ProjectItemSpecFactoryModel)
+        )
+
     def dragLeaveEvent(self, event):
         """Accept event."""
         event.accept()
 
     def dragEnterEvent(self, event):
         """Accept event. Then call the super class method
-        only if drag source is not a DraggableWidget (from Add Item toolbar)."""
+        only if drag source is not a ProjectItemFactoryModel or ProjectItemSpecFactoryModel."""
         event.accept()
         source = event.source()
-        if not isinstance(source, DraggableWidget):
+        if not self._is_project_item_drag(source):
             super().dragEnterEvent(event)
 
     def dragMoveEvent(self, event):
         """Accept event. Then call the super class method
-        only if drag source is not a DraggableWidget (from Add Item toolbar)."""
+        only if drag source is not a ProjectItemFactoryModel or ProjectItemSpecFactoryModel."""
         event.accept()
         source = event.source()
-        if not isinstance(source, DraggableWidget):
+        if not self._is_project_item_drag(source):
             super().dragMoveEvent(event)
 
     def dropEvent(self, event):
         """Only accept drops when the source is an instance of
-        DraggableWidget (from Add Item toolbar).
+        ProjectItemFactoryModel or ProjectItemSpecFactoryModel.
         Capture text from event's mimedata and show the appropriate 'Add Item form.'
         """
         source = event.source()
-        if not isinstance(source, DraggableWidget):
+        if not self._is_project_item_drag(source):
             super().dropEvent(event)
             return
         if not self._toolbox.project():
@@ -131,15 +139,15 @@ class CustomQGraphicsScene(ShrinkingScene):
             event.ignore()
             return
         event.acceptProposedAction()
-        category = event.mimeData().text()
+        item_type, spec = event.mimeData().text().split(",")
         pos = event.scenePos()
         w = 70
         h = 70
         x = pos.x() - w / 2
         y = pos.y() - h / 2
-        icon_maker = self._toolbox.categories[category]["icon_maker"]
-        self.item_shadow = icon_maker(self._toolbox, x, y, w, h, None)
-        self._toolbox.show_add_project_item_form(category, pos.x(), pos.y())
+        factory = self._toolbox.item_factories[item_type]
+        self.item_shadow = factory.make_icon(self._toolbox, x, y, w, h, None)
+        self._toolbox.show_add_project_item_form(item_type, pos.x(), pos.y(), spec=spec)
 
     def drawBackground(self, painter, rect):
         """Reimplemented method to make a custom background.

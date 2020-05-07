@@ -19,8 +19,8 @@ Application constants and style sheets
 import sys
 import os
 
-REQUIRED_SPINE_ENGINE_VERSION = "0.4.0"
-REQUIRED_SPINEDB_API_VERSION = "0.2.4"
+REQUIRED_SPINE_ENGINE_VERSION = "0.5.0"
+REQUIRED_SPINEDB_API_VERSION = "0.4.2"
 LATEST_PROJECT_VERSION = 1
 # SPINE GREEN HTML: #99cc33 RGBa: 153, 204, 51, 255
 # SPINE BLUE HTML: #004ac2 RGBa: 0, 74, 194, 255
@@ -66,21 +66,6 @@ JULIA_EXECUTABLE = _executable("julia")
 # Python
 PYTHON_EXECUTABLE = _executable("python" if _on_windows else "python3")
 
-# Tool types
-TOOL_TYPES = ["Julia", "Python", "GAMS", "Executable"]
-
-# Required and optional keywords for Tool specification dictionaries
-REQUIRED_KEYS = ['name', 'tooltype', 'includes']
-OPTIONAL_KEYS = [
-    'description',
-    'short_name',
-    'inputfiles',
-    'inputfiles_opt',
-    'outputfiles',
-    'cmdline_args',
-    'execute_in_work',
-]
-LIST_REQUIRED_KEYS = ['includes', 'inputfiles', 'inputfiles_opt', 'outputfiles']  # These should be lists
 
 # Julia REPL constants
 JL_REPL_TIME_TO_DEAD = 5.0

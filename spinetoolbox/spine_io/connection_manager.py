@@ -55,8 +55,8 @@ class ConnectionManager(QObject):
     # mapped data read from data source
     mappedDataReady = Signal(dict, list)
 
-    def __init__(self, connection, parent=None):
-        super(ConnectionManager, self).__init__(parent)
+    def __init__(self, connection, connection_settings, parent=None):
+        super().__init__(parent)
         self._thread = None
         self._worker = None
         self._source = None
@@ -65,6 +65,7 @@ class ConnectionManager(QObject):
         self._table_types = {}
         self._table_row_types = {}
         self._connection = connection
+        self._connection_settings = connection_settings
         self._options_widget = OptionsWidget(self._connection.OPTIONS)
         self._options_widget.optionsChanged.connect(self._new_options)
         self._is_connected = False
@@ -185,7 +186,7 @@ class ConnectionManager(QObject):
         self.close_connection()
         # create new thread and worker
         self._thread = QThread()
-        self._worker = ConnectionWorker(self._source, self._connection)
+        self._worker = ConnectionWorker(self._source, self._connection, self._connection_settings)
         self._worker.moveToThread(self._thread)
         # connect worker signals
         self._worker.connectionReady.connect(self._handle_connection_ready)
@@ -305,13 +306,13 @@ class ConnectionWorker(QObject):
     tablesReady = Signal(list)
     # Signal when data from a specific table in source is ready, list of data and list of headers
     dataReady = Signal(list, list)
-    # Signal when data is read an mapped, dict with data and list of errors when reading data with mappings
+    # Signal when data is read and mapped, dict with data and list of errors when reading data with mappings
     mappedDataReady = Signal(dict, list)
 
-    def __init__(self, source, connection, parent=None):
-        super(ConnectionWorker, self).__init__(parent)
+    def __init__(self, source, connection, connection_settings, parent=None):
+        super().__init__(parent)
         self._source = source
-        self._connection = connection()
+        self._connection = connection(connection_settings)
 
     def init_connection(self):
         """

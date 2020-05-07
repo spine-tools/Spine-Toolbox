@@ -51,7 +51,7 @@ class SpineDatapackageWidget(QMainWindow):
 
     def __init__(self, data_connection):
         """Initialize class."""
-        from ..ui.spine_datapackage_form import Ui_MainWindow
+        from ..ui.spine_datapackage_form import Ui_MainWindow  # pylint: disable=import-outside-toplevel
 
         super().__init__(flags=Qt.Window)  # TODO: Set parent as toolbox here if it makes sense
         # TODO: Maybe set the parent as ToolboxUI so that its stylesheet is inherited. This may need

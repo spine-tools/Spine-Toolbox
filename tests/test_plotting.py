@@ -17,10 +17,11 @@ Unit tests for the plotting module.
 """
 
 import unittest
-from unittest.mock import Mock, MagicMock
+from unittest.mock import Mock, MagicMock, patch
 from PySide2.QtCore import QAbstractTableModel, QModelIndex, Qt
 from PySide2.QtWidgets import QApplication, QAction
 from spinedb_api import from_database, Map, TimeSeries, TimeSeriesVariableResolution
+from spinetoolbox.mvcmodels.pivot_table_models import PARSED_ROLE
 from spinetoolbox.plotting import (
     add_map_plot,
     add_time_series_plot,
@@ -37,13 +38,14 @@ from spinetoolbox.widgets.data_store_widget import DataStoreForm
 def _make_pivot_proxy_model():
     """Returns a prefilled PivotTableModel."""
     db_mngr = MagicMock()
-    db_mngr.get_value.side_effect = lambda db_map, item_type, id_, field, role: from_database(id_)
+    db_mngr.get_value.side_effect = lambda db_map, item_type, id_, role: from_database(id_)
     mock_db_map = Mock()
     mock_db_map.codename = "codename"
     db_mngr.get_db_map_for_listener.side_effect = lambda *args, **kwargs: mock_db_map
     db_mngr.undo_action.__getitem__.side_effect = lambda key: QAction()
     db_mngr.redo_action.__getitem__.side_effect = lambda key: QAction()
-    data_store_widget = DataStoreForm(db_mngr, ("sqlite://", "codename"))
+    with patch.object(DataStoreForm, "restore_ui"):
+        data_store_widget = DataStoreForm(db_mngr, ("sqlite://", "codename"))
     data_store_widget.create_header_widget = lambda *args, **kwargs: None
     model = data_store_widget.pivot_table_model
     data = {
@@ -62,7 +64,7 @@ def _make_pivot_proxy_model():
     }
     index_ids = ['rows', 'col_types']
     model.reset_model(data, index_ids, ['rows'], ['col_types'], [], ())
-    model.fetchMore(QModelIndex())
+    model.start_fetching()
     return data_store_widget.pivot_table_proxy
 
 
@@ -88,7 +90,7 @@ class _MockParameterModel(QAbstractTableModel):
         return 2
 
     def data(self, index, role=Qt.DisplayRole):
-        if role not in (Qt.DisplayRole, Qt.EditRole, Qt.UserRole):
+        if role != PARSED_ROLE:
             return None
         return from_database(self._table[index.row()][index.column()])
 
@@ -101,7 +103,7 @@ class _MockParameterModel(QAbstractTableModel):
         self._table[index.row()][index.column()] = value
         return True
 
-    def value_name(self, index):
+    def index_name(self, index):
         return "entity - parameter"
 
 

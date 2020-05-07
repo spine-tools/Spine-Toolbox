@@ -22,25 +22,28 @@ from PySide2.QtWidgets import QFileDialog, QApplication
 from sqlalchemy import create_engine
 from sqlalchemy.engine.url import URL
 import spinedb_api
-from spinetoolbox.project_item import ProjectItem, ProjectItemResource
+from spinetoolbox.project_item import ProjectItem
+from spinetoolbox.project_item_resource import ProjectItemResource
 from spinetoolbox.widgets.data_store_widget import DataStoreForm
 from spinetoolbox.helpers import create_dir, busy_effect, serialize_path, deserialize_path
-from spinetoolbox.project_commands import UpdateDSURLCommand
+from .commands import UpdateDSURLCommand
+from .data_store_executable import DataStoreExecutable
+from .item_info import ItemInfo
 from .widgets.custom_menus import DataStoreContextMenu
 
 
 class DataStore(ProjectItem):
-    def __init__(self, name, description, x, y, toolbox, project, logger, url=None):
+    def __init__(self, toolbox, project, logger, name, description, x, y, url=None):
         """Data Store class.
 
         Args:
+            toolbox (ToolboxUI): QMainWindow instance
+            project (SpineToolboxProject): the project this item belongs to
+            logger (LoggerInterface): a logger instance
             name (str): Object name
             description (str): Object description
             x (float): Initial X coordinate of item icon
             y (float): Initial Y coordinate of item icon
-            toolbox (ToolboxUI): QMainWindow instance
-            project (SpineToolboxProject): the project this item belongs to
-            logger (LoggerInterface): a logger instance
             url (str or dict): SQLAlchemy url
         """
         super().__init__(name, description, x, y, project, logger)
@@ -63,12 +66,17 @@ class DataStore(ProjectItem):
     @staticmethod
     def item_type():
         """See base class."""
-        return "Data Store"
+        return ItemInfo.item_type()
 
     @staticmethod
-    def category():
+    def item_category():
         """See base class."""
-        return "Data Stores"
+        return ItemInfo.item_category()
+
+    def execution_item(self):
+        """Creates DataStore's execution counterpart."""
+        self._update_sa_url(log_errors=False)
+        return DataStoreExecutable(self.name, self._sa_url, self._logger)
 
     def parse_url(self, url):
         """Return a complete url dictionary from the given dict or string"""
@@ -105,16 +113,16 @@ class DataStore(ProjectItem):
     def restore_selections(self):
         """Load url into selections."""
         self._properties_ui.label_ds_name.setText(self.name)
-        self._properties_ui.checkBox_for_spine_model.setCheckState(self._for_spine_model_checkbox_state)
         self.load_url_into_selections(self._url)
 
-    def save_selections(self):
-        """Save checkbox state."""
-        self._for_spine_model_checkbox_state = self._properties_ui.checkBox_for_spine_model.checkState()
-
     def url(self):
-        """Return the url attribute, for saving the project."""
+        """Returns the url attribute."""
         return self._url
+
+    def sql_alchemy_url(self):
+        """Returns the URL as an SQLAlchemy URL object or None if no URL is set."""
+        self._update_sa_url()
+        return self._sa_url
 
     def _update_sa_url(self, log_errors=True):
         self._sa_url = self._make_url(log_errors=log_errors)
@@ -402,7 +410,6 @@ class DataStore(ProjectItem):
     @Slot(bool)
     def create_new_spine_database(self, checked=False):
         """Create new (empty) Spine database."""
-        for_spine_model = self._properties_ui.checkBox_for_spine_model.isChecked()
         # Try to make an url from the current status
         self._update_sa_url(log_errors=False)
         if not self._sa_url:
@@ -412,7 +419,7 @@ class DataStore(ProjectItem):
             dialect = "sqlite"
             database = os.path.abspath(os.path.join(self.data_dir, self.name + ".sqlite"))
             self.update_url(dialect=dialect, database=database)
-        self._project.db_mngr.create_new_spine_database(self._sa_url, for_spine_model)
+        self._project.db_mngr.create_new_spine_database(self._sa_url)
 
     def update_name_label(self):
         """Update Data Store tab name label. Used only when renaming project items."""
@@ -524,11 +531,7 @@ class DataStore(ProjectItem):
         """see base class"""
         return "Data Store"
 
-    def output_resources_backward(self):
-        """See base class."""
-        return self.output_resources_forward()
-
-    def output_resources_forward(self):
+    def resources_for_direct_successors(self):
         """See base class."""
         self._update_sa_url(log_errors=False)
         if self._sa_url:

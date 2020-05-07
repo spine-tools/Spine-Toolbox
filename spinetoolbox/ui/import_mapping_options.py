@@ -13,7 +13,7 @@
 # Form implementation generated from reading ui file 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\import_mapping_options.ui',
 # licensing of 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\import_mapping_options.ui' applies.
 #
-# Created: Thu Feb 13 08:36:43 2020
+# Created: Tue Apr 14 12:29:42 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -99,8 +99,8 @@ class Ui_ImportMappingOptions(object):
         self.parameter_type_combo_box.setItemText(1, QtWidgets.QApplication.translate("ImportMappingOptions", "Time series", None, -1))
         self.parameter_type_combo_box.setItemText(2, QtWidgets.QApplication.translate("ImportMappingOptions", "Time pattern", None, -1))
         self.parameter_type_combo_box.setItemText(3, QtWidgets.QApplication.translate("ImportMappingOptions", "Map", None, -1))
-        self.parameter_type_combo_box.setItemText(4, QtWidgets.QApplication.translate("ImportMappingOptions", "Definition", None, -1))
-        self.parameter_type_combo_box.setItemText(5, QtWidgets.QApplication.translate("ImportMappingOptions", "List", None, -1))
+        self.parameter_type_combo_box.setItemText(4, QtWidgets.QApplication.translate("ImportMappingOptions", "Array", None, -1))
+        self.parameter_type_combo_box.setItemText(5, QtWidgets.QApplication.translate("ImportMappingOptions", "Definition", None, -1))
         self.parameter_type_combo_box.setItemText(6, QtWidgets.QApplication.translate("ImportMappingOptions", "None", None, -1))
         self.ignore_columns_label.setText(QtWidgets.QApplication.translate("ImportMappingOptions", "Ignore columns:", None, -1))
         self.dimension_label.setText(QtWidgets.QApplication.translate("ImportMappingOptions", "Dimension:", None, -1))

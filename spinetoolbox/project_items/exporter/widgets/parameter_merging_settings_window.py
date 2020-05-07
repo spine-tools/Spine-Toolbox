@@ -38,7 +38,7 @@ class ParameterMergingSettingsWindow(QWidget):
             database_path (str): database URL
             parent (QWidget): a parent widget
         """
-        from ..ui.parameter_merging_settings_window import Ui_Form
+        from ..ui.parameter_merging_settings_window import Ui_Form  # pylint: disable=import-outside-toplevel
 
         super().__init__(parent, f=Qt.Window)
         self._merging_settings = merging_settings

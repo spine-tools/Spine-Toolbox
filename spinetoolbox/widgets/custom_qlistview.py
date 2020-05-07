@@ -18,7 +18,7 @@ Classes for custom QListView.
 
 from PySide2.QtWidgets import QListView, QApplication
 from PySide2.QtGui import QDrag
-from PySide2.QtCore import Qt, QMimeData
+from PySide2.QtCore import Qt, QMimeData, QSize, Slot
 
 
 class DragListView(QListView):
@@ -40,16 +40,16 @@ class DragListView(QListView):
         super().mousePressEvent(event)
         if event.button() == Qt.LeftButton:
             index = self.indexAt(event.pos())
-            if not index.isValid() or index == index.model().new_index:
+            if not index.isValid() or not index.model().is_index_draggable(index):
                 self.drag_start_pos = None
                 self.pixmap = None
                 self.mime_data = None
                 return
             self.drag_start_pos = event.pos()
             self.pixmap = index.data(Qt.DecorationRole).pixmap(self.iconSize())
-            entity_class_id = index.data(Qt.UserRole + 1)
+            mime_data_text = self.model().get_mime_data_text(index)
             self.mime_data = QMimeData()
-            self.mime_data.setText(str(entity_class_id))
+            self.mime_data.setText(mime_data_text)
 
     def mouseMoveEvent(self, event):
         """Start dragging action if needed"""
@@ -74,3 +74,35 @@ class DragListView(QListView):
         self.drag_start_pos = None
         self.pixmap = None
         self.mime_data = None
+
+
+class ProjectItemDragListView(DragListView):
+    def __init__(self, parent):
+        super().__init__(parent)
+        base_size = QSize(24, 24)
+        self.setIconSize(base_size)
+        font = self.font()
+        font.setPointSize(9)
+        self.setFont(font)
+        self.setStyleSheet("QListView {background: transparent;}")
+        self.setResizeMode(DragListView.Adjust)
+        self.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.set_orientation(self.parent().orientation())
+        self.parent().orientationChanged.connect(self.set_orientation)
+
+    @Slot("Qt.Orientation")
+    def set_orientation(self, orientation):
+        if orientation == Qt.Horizontal:
+            self.setFlow(QListView.LeftToRight)
+        elif orientation == Qt.Vertical:
+            self.setFlow(QListView.TopToBottom)
+
+    def updateGeometries(self):
+        """Resize to contents."""
+        super().updateGeometries()
+        size = self.contentsSize()
+        if not size.isValid():
+            size = QSize(0, 0)
+        margin = 2 * self.frameWidth()
+        size += QSize(margin, margin)
+        self.setMaximumSize(size)

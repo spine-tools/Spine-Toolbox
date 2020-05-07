@@ -31,7 +31,7 @@ class ToolPropertiesWidget(QWidget):
 
     def __init__(self, toolbox):
         """Init class."""
-        from ..ui.tool_properties import Ui_Form
+        from ..ui.tool_properties import Ui_Form  # pylint: disable=import-outside-toplevel
 
         super().__init__()
         self._toolbox = toolbox
@@ -45,10 +45,15 @@ class ToolPropertiesWidget(QWidget):
 
     def connect_signals(self):
         """Connect signals to slots."""
-        self._toolbox.tool_specification_model_changed.connect(self.ui.comboBox_tool.setModel)
+        self._toolbox.specification_model_changed.connect(self.update_combo_box_tool_model)
         self.ui.treeView_specification.customContextMenuRequested.connect(self.show_tool_properties_context_menu)
 
-    @Slot("QPoint", name="show_tool_properties_context_menu")
+    @Slot()
+    def update_combo_box_tool_model(self):
+        model = self._toolbox.filtered_spec_factory_models["Tool"]
+        self.ui.comboBox_tool.setModel(model)
+
+    @Slot("QPoint")
     def show_tool_properties_context_menu(self, pos):
         """Create and show a context-menu in Tool properties
         if selected Tool has a Tool specification.
@@ -61,22 +66,22 @@ class ToolPropertiesWidget(QWidget):
         )  # Index of selected QStandardItem in Tool properties tree view.
         curr_index = self._toolbox.ui.treeView_project.currentIndex()  # Get selected Tool
         tool = self._toolbox.project_item_model.item(curr_index).project_item
-        if not tool.tool_specification():
+        if not tool.specification():
             return
         # Find index of Tool specification
-        name = tool.tool_specification().name
-        tool_index = self._toolbox.tool_specification_model.tool_specification_index(name)
+        name = tool.specification().name
+        tool_index = self._toolbox.specification_model.specification_index(name)
         global_pos = self.ui.treeView_specification.viewport().mapToGlobal(pos)
         self.tool_prop_context_menu = ToolPropertiesContextMenu(self, global_pos, ind)
         option = self.tool_prop_context_menu.get_action()
         if option == "Edit Tool specification":
-            self._toolbox.edit_tool_specification(tool_index)  # index in tool specification model
+            self._toolbox.edit_specification(tool_index)  # index in tool specification model
         elif option == "Edit main program file...":
             self._toolbox.open_tool_main_program_file(tool_index)  # index in tool specification model
         elif option == "Open main program directory...":
-            tool.open_tool_main_directory()
+            tool.open_main_directory()
         elif option == "Open Tool specification file...":
-            self._toolbox.open_tool_specification_file(tool_index)
+            self._toolbox.open_specification_file(tool_index)
         elif option == "Open directory...":
             tool.open_directory()
         return

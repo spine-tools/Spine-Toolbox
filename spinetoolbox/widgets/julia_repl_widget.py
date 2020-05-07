@@ -24,9 +24,9 @@ from qtconsole.manager import QtKernelManager, QtKernelRestarter
 from jupyter_client.kernelspec import find_kernel_specs, NoSuchKernel
 from ..execution_managers import QProcessExecutionManager
 from ..config import JULIA_EXECUTABLE, JL_REPL_TIME_TO_DEAD, JL_REPL_RESTART_LIMIT
-from .toolbars import DraggableWidget
 from ..helpers import busy_effect
 from .spine_console_widget import SpineConsoleWidget
+from .custom_qlistview import DragListView
 
 
 class CustomQtKernelManager(QtKernelManager):
@@ -436,7 +436,7 @@ class JuliaREPLWidget(SpineConsoleWidget):
     def dragEnterEvent(self, e):
         """Don't accept drops from Add Item Toolbar."""
         source = e.source()
-        if isinstance(source, DraggableWidget):
+        if isinstance(source, DragListView):
             e.ignore()
         else:
             super().dragEnterEvent(e)

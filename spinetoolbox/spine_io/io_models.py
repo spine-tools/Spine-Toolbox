@@ -15,7 +15,8 @@ Classes for handling models in PySide2's model/view framework.
 :author: P. Vennström (VTT)
 :date:   1.6.2019
 """
-from collections import namedtuple, Iterable
+from collections import namedtuple
+from collections.abc import Iterable
 from six import unichr
 
 from spinedb_api import (
@@ -26,17 +27,18 @@ from spinedb_api import (
     ParameterMapMapping,
     ParameterTimeSeriesMapping,
     ParameterTimePatternMapping,
-    ParameterListMapping,
+    ParameterArrayMapping,
     MappingBase,
     NoneMapping,
     ConstantMapping,
     ColumnHeaderMapping,
     ColumnMapping,
     RowMapping,
+    TableNameMapping,
     ParameterValueFormatError,
     mapping_non_pivoted_columns,
 )
-from PySide2.QtWidgets import QHeaderView, QMenu, QAction, QTableView, QToolButton
+from PySide2.QtWidgets import QHeaderView, QMenu, QTableView, QToolButton
 from PySide2.QtCore import QModelIndex, Qt, QAbstractTableModel, QAbstractListModel, Signal, Slot
 from PySide2.QtGui import QColor, QFont
 from ..mvcmodels.minimal_table_model import MinimalTableModel
@@ -75,11 +77,12 @@ _MAPTYPE_DISPLAY_NAME = {
     ColumnMapping: "Column",
     ColumnHeaderMapping: "Column Header",
     RowMapping: "Row",
+    TableNameMapping: "Table Name",
 }
 
 _DISPLAY_TYPE_TO_TYPE = {
     "Single value": ParameterValueMapping,
-    "List": ParameterListMapping,
+    "Array": ParameterArrayMapping,
     "Map": ParameterMapMapping,
     "Time series": ParameterTimeSeriesMapping,
     "Time pattern": ParameterTimePatternMapping,
@@ -264,7 +267,7 @@ class MappingPreviewModel(MinimalTableModel):
                     return _MAPPING_COLORS["parameter value"]
             elif self.index_in_mapping(mapping.parameters.value, index):
                 return _MAPPING_COLORS["parameter value"]
-        if isinstance(mapping.parameters, ParameterListMapping) and mapping.parameters.extra_dimensions:
+        if isinstance(mapping.parameters, ParameterArrayMapping) and mapping.parameters.extra_dimensions:
             # parameter extra dimensions color
             for ed in mapping.parameters.extra_dimensions:
                 if self.index_in_mapping(ed, index):
@@ -359,13 +362,14 @@ class MappingSpecModel(QAbstractTableModel):
     A model to hold a Mapping specification.
     """
 
-    def __init__(self, model, parent=None):
+    def __init__(self, model, table_name, parent=None):
         super().__init__(parent)
         self._display_names = []
         self._mappings = []
         self._model = None
         if model is not None:
             self.set_mapping(model)
+        self._table_name = table_name
 
     @property
     def skip_columns(self):
@@ -498,8 +502,8 @@ class MappingSpecModel(QAbstractTableModel):
             self._model.parameters = None
         elif new_type == "Single value":
             self._model.parameters = ParameterValueMapping()
-        elif new_type == "List":
-            self._model.parameters = ParameterListMapping()
+        elif new_type == "Array":
+            self._model.parameters = ParameterArrayMapping()
         elif new_type == "Definition":
             self._model.parameters = ParameterDefinitionMapping()
         elif new_type == "Map":
@@ -585,7 +589,7 @@ class MappingSpecModel(QAbstractTableModel):
         return prepend_str
 
     def data(self, index, role):
-        if role == Qt.DisplayRole or role == Qt.EditRole:
+        if role in (Qt.DisplayRole, Qt.EditRole):
             name = self._display_names[index.row()]
             m = self._mappings[index.row()]
             func = [
@@ -692,6 +696,8 @@ class MappingSpecModel(QAbstractTableModel):
             value = RowMapping(reference=-1)
         elif value == "Row":
             value = RowMapping()
+        elif value == "Table Name":
+            value = TableNameMapping(self._table_name)
         else:
             return False
         return self.set_mapping_from_name(name, value)
@@ -706,7 +712,7 @@ class MappingSpecModel(QAbstractTableModel):
                 mapping = ConstantMapping(reference=value)
             else:
                 return False
-        elif type(mapping) in (ConstantMapping, ColumnHeaderMapping):
+        elif isinstance(mapping, (ConstantMapping, ColumnHeaderMapping)):
             if not value:
                 mapping.reference = None
             else:
@@ -824,11 +830,12 @@ class MappingListModel(QAbstractListModel):
     A model to hold a list of Mappings.
     """
 
-    def __init__(self, mapping_list, parent=None):
+    def __init__(self, mapping_list, table_name, parent=None):
         super().__init__(parent)
         self._qmappings = []
         self._names = []
         self._counter = 1
+        self._table_name = table_name
         self.set_model(mapping_list)
 
     def set_model(self, model):
@@ -837,7 +844,7 @@ class MappingListModel(QAbstractListModel):
         self._qmappings = []
         for m in model:
             self._names.append("Mapping " + str(self._counter))
-            self._qmappings.append(MappingSpecModel(m))
+            self._qmappings.append(MappingSpecModel(m, self._table_name))
             self._counter += 1
         self.endResetModel()
 
@@ -862,7 +869,7 @@ class MappingListModel(QAbstractListModel):
     def add_mapping(self):
         self.beginInsertRows(self.index(self.rowCount(), 0), self.rowCount(), self.rowCount())
         m = ObjectClassMapping()
-        self._qmappings.append(MappingSpecModel(m))
+        self._qmappings.append(MappingSpecModel(m, self._table_name))
         self._names.append("Mapping " + str(self._counter))
         self._counter += 1
         self.endInsertRows()

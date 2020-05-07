@@ -35,20 +35,24 @@ def fix_resources_imports(path):
 
 def build_ui(input_path, output_path, force):
     """Converts given .ui file to .py."""
-    output_name = os.path.basename(output_path)
-    print("Building " + output_name)
-    os.system(f"pyside2-uic --from-imports {input_path} -o {output_path}")
+    print("Building " + os.path.basename(output_path))
+    status = os.system(f"pyside2-uic --from-imports {input_path} -o {output_path}")
+    if status != 0:
+        print("Stop. Build failed.")
+        exit(1)
     append_license(output_path)
     fix_resources_imports(output_path)
-    append_license(input_path, force)
+    append_license(input_path)
 
 
 def build_qrc(input_path, output_path, force):
     """Converts given .qrc file to .py."""
-    output_name = os.path.basename(output_path)
-    print("Building " + output_name)
-    os.system(f"pyside2-rcc -o {output_path} {input_path}")
-    append_license(output_path, force)
+    print("Building " + os.path.basename(output_path))
+    status = os.system(f"pyside2-rcc -o {output_path} {input_path}")
+    if status != 0:
+        print("Stop. Build failed.")
+        exit(1)
+    append_license(output_path)
 
 
 print(

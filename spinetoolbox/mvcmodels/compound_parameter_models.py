@@ -16,7 +16,7 @@ These models concatenate several 'single' models and one 'empty' model.
 :authors: M. Marin (KTH)
 :date:   28.6.2019
 """
-from PySide2.QtCore import Qt, Signal
+from PySide2.QtCore import Qt, Signal, Slot
 from PySide2.QtGui import QFont, QIcon
 from ..helpers import rows_to_row_count_tuples
 from ..widgets.custom_menus import ParameterViewFilterMenu
@@ -41,6 +41,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
     """
 
     remove_selection_requested = Signal()
+    data_for_single_model_received = Signal(object, int, list)
 
     def __init__(self, parent, db_mngr, *db_maps):
         """Initializes model.
@@ -60,6 +61,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         self._auto_filter_menu_data = dict()  # Maps field to value to list of (db map, entity id, item id)
         self._inv_auto_filter_menu_data = dict()  # Maps field to (db map, entity id, item id) to value
         self._auto_filter = dict()  # Maps field to db map, to entity id, to *accepted* item ids
+        self.data_for_single_model_received.connect(self.create_and_append_single_model)
 
     def _make_header(self):
         raise NotImplementedError()
@@ -185,7 +187,9 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
             entity_class_id = db_item.get(self._entity_class_id_key)
             item_id = db_item["id"]
             identifier = (db_map, entity_class_id, item_id)
-            old_value = inv_field_menu_data.pop(identifier)
+            old_value = inv_field_menu_data.pop(identifier, None)
+            if old_value is None:
+                return None
             old_items = field_menu_data[old_value]
             old_items.remove(identifier)
             if not old_items:
@@ -478,20 +482,21 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         Args:
             db_map_data (dict): list of removed dict-items keyed by DiffDatabaseMapping
         """
-        new_models = []
         for db_map, items in db_map_data.items():
             items_per_class = self._items_per_class(items)
             for entity_class_id, class_items in items_per_class.items():
                 ids = [item["id"] for item in class_items]
-                model = self._single_model_type(self.header, self.db_mngr, db_map, entity_class_id)
-                model.reset_model(ids)
-                single_row_map = super()._row_map_for_model(model)  # NOTE: super() is to get all (unfiltered) rows
-                self._insert_single_row_map(single_row_map)
-                new_models.append(model)
+                self.data_for_single_model_received.emit(db_map, entity_class_id, ids)
                 self._do_add_data_to_filter_menus(db_map, class_items)
-        pos = len(self.single_models)
-        self.sub_models[pos:pos] = new_models
         self.empty_model.receive_parameter_data_added(db_map_data)
+
+    @Slot(object, int, list)
+    def create_and_append_single_model(self, db_map, entity_class_id, ids):
+        model = self._single_model_type(self.header, self.db_mngr, db_map, entity_class_id)
+        model.reset_model(ids)
+        single_row_map = super()._row_map_for_model(model)  # NOTE: super() is to get all (unfiltered) rows
+        self._insert_single_row_map(single_row_map)
+        self.sub_models.insert(len(self.single_models), model)
 
     def receive_parameter_data_updated(self, db_map_data):
         """Runs when either parameter definitions or values are updated in the dbs.
@@ -546,7 +551,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         sub_index = self.map_to_sub(index)
         return sub_index.model().db_item(sub_index)
 
-    def value_name(self, index):
+    def index_name(self, index):
         item = self.db_item(index)
         if item is None:
             return ""
@@ -559,6 +564,25 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         }[self.item_type][self.entity_class_type]
         entity_name = item[entity_name_key].replace(",", self.db_mngr._GROUP_SEP)
         return entity_name + " - " + item["parameter_name"]
+
+    def get_set_data_delayed(self, index):
+        """Returns a function that ParameterValueEditor can call to set data for the given index at any later time,
+        even if the model changes.
+
+        Args:
+            index (QModelIndex)
+
+        Returns:
+            function
+        """
+        sub_model = self.sub_model_at_row(index.row())
+        if sub_model == self.empty_model:
+            return lambda value, index=index: self.setData(index, value)
+        id_ = self.item_at_row(index.row())
+        value_field = {"parameter value": "value", "parameter definition": "default_value"}[self.item_type]
+        return lambda value, sub_model=sub_model, id_=id_: sub_model.update_items_in_db(
+            [{"id": id_, value_field: value}]
+        )
 
 
 class CompoundObjectParameterMixin:

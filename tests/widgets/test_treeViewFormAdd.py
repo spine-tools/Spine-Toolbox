@@ -24,6 +24,7 @@ class TestTreeViewFormAddMixin:
         """
         root_item = self.tree_view_form.object_tree_model.root_item
         self.put_mock_object_classes_in_db_mngr()
+        self.fetch_object_tree_model()
         fish_item, dog_item = root_item.children
         self.assertEqual(fish_item.item_type, "object class")
         self.assertEqual(fish_item.display_name, "fish")
@@ -36,6 +37,7 @@ class TestTreeViewFormAddMixin:
         self.tree_view_form.init_models()
         self.put_mock_object_classes_in_db_mngr()
         self.put_mock_objects_in_db_mngr()
+        self.fetch_object_tree_model()
         root_item = self.tree_view_form.object_tree_model.root_item
         fish_item, dog_item = root_item.children
         nemo_item = fish_item.child(0)
@@ -55,6 +57,7 @@ class TestTreeViewFormAddMixin:
         self.put_mock_object_classes_in_db_mngr()
         self.put_mock_relationship_classes_in_db_mngr()
         self.put_mock_objects_in_db_mngr()
+        self.fetch_object_tree_model()
         root_item = self.tree_view_form.object_tree_model.root_item
         fish_item, dog_item = root_item.children
         nemo_item = fish_item.child(0)
@@ -75,6 +78,7 @@ class TestTreeViewFormAddMixin:
         self.put_mock_objects_in_db_mngr()
         self.put_mock_relationship_classes_in_db_mngr()
         self.put_mock_relationships_in_db_mngr()
+        self.fetch_object_tree_model()
         root_item = self.tree_view_form.object_tree_model.root_item
         fish_item, dog_item = root_item.children
         nemo_item = fish_item.child(0)
@@ -165,6 +169,6 @@ class TestTreeViewFormAddMixin:
                     model.index(row, h("value")).data(),
                 )
             )
-        self.assertTrue(("nemo,pluto", "relative_speed", -1) in parameters)
-        self.assertTrue(("nemo,scooby", "relative_speed", 5) in parameters)
-        self.assertTrue(("pluto,nemo", "combined_mojo", 100) in parameters)
+        self.assertTrue(("nemo,pluto", "relative_speed", "-1.0") in parameters)
+        self.assertTrue(("nemo,scooby", "relative_speed", "5.0") in parameters)
+        self.assertTrue(("pluto,nemo", "combined_mojo", "100.0") in parameters)

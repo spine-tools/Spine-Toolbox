@@ -27,7 +27,7 @@ class DataConnectionIcon(ProjectItemIcon):
         files_dropped_on_icon = Signal("QGraphicsItem", list)
         """A signal that it triggered when files are dragged and dropped on the item."""
 
-    def __init__(self, toolbox, x, y, w, h, name):
+    def __init__(self, toolbox, x, y, w, h, project_item, icon):
         """Data Connection icon for the Design View.
 
         Args:
@@ -36,18 +36,11 @@ class DataConnectionIcon(ProjectItemIcon):
             y (float): Icon y coordinate
             w (float): Width of master icon
             h (float): Height of master icon
-            name (str): Item name
+            project_item (ProjectItem): Item
+            icon (str): icon resource path
         """
         super().__init__(
-            toolbox,
-            x,
-            y,
-            w,
-            h,
-            name,
-            ":/icons/project_item_icons/file-alt.svg",
-            icon_color=QColor(0, 0, 255),
-            background_color=QColor("#e6e6ff"),
+            toolbox, x, y, w, h, project_item, icon, icon_color=QColor(0, 0, 255), background_color=QColor("#e6e6ff")
         )
         self.setAcceptDrops(True)
         self._drag_over = False

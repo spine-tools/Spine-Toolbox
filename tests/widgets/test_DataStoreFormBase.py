@@ -34,7 +34,9 @@ class TestDataStoreFormBase(unittest.TestCase):
         with mock.patch("spinetoolbox.spine_db_manager.DiffDatabaseMapping") as mock_DiffDBMapping, mock.patch(
             "spinetoolbox.widgets.data_store_widget.DataStoreForm.restore_ui"
         ):
-            self.db_mngr = SpineDBManager(None, None)
+            mock_settings = mock.Mock()
+            mock_settings.value.side_effect = lambda *args, **kwards: 0
+            self.db_mngr = SpineDBManager(mock_settings, None, None)
             self.db_mngr.fetch_db_maps_for_listener = lambda *args: None
 
             def DiffDBMapping_side_effect(url, upgrade=False, codename=None):
@@ -55,9 +57,8 @@ class TestDataStoreFormBase(unittest.TestCase):
         self.form = None
 
     def test_save_window_state(self):
-        self.form.qsettings = mock.MagicMock()
         self.form.save_window_state()
-        self.form.qsettings.beginGroup.assert_called_once_with("treeViewWidget")
+        self.form.qsettings.beginGroup.assert_called_once_with("dataStoreForm")
         self.form.qsettings.endGroup.assert_called_once_with()
         qsettings_save_calls = self.form.qsettings.setValue.call_args_list
         self.assertEqual(len(qsettings_save_calls), 5)

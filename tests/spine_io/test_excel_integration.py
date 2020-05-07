@@ -247,7 +247,7 @@ class TestExcelIntegration(unittest.TestCase):
         self.assertEqual(parv, parv_org, msg='Difference in parameter values')
 
     def _import_xlsx_to_database(self, excel_file_name, db_map):
-        connector = ExcelConnector()
+        connector = ExcelConnector(None)
         connector.connect_to_source(excel_file_name)
         sheets = connector.get_tables()
         table_mappings = {

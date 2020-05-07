@@ -21,6 +21,7 @@ from PySide2.QtWidgets import QWidget, QFileDialog, QMessageBox, QColorDialog
 from PySide2.QtCore import Slot, Qt, QSize
 from PySide2.QtGui import QPixmap
 from ..config import DEFAULT_WORK_DIR, SETTINGS_SS
+from ..graphics_items import Link
 
 
 class SettingsWidget(QWidget):
@@ -34,7 +35,7 @@ class SettingsWidget(QWidget):
         """Initialize class."""
         # FIXME: setting the parent to toolbox causes the checkboxes in the
         # groupBox_general to not layout correctly, this might be caused elsewhere?
-        from ..ui import settings
+        from ..ui import settings  # pylint: disable=import-outside-toplevel
 
         super().__init__(parent=None)  # Do not set parent. Uses own stylesheet.
         self._toolbox = toolbox  # QWidget parent
@@ -204,7 +205,7 @@ class SettingsWidget(QWidget):
         self._toolbox.ui.graphicsView.scene().set_bg_color(self.bg_color)
         self._toolbox.ui.graphicsView.scene().update()
 
-    @Slot(bool, name="update_scene_bg")
+    @Slot(bool)
     def update_scene_bg(self, checked=False):
         """Draw background on scene depending on radiobutton states.
 
@@ -220,8 +221,6 @@ class SettingsWidget(QWidget):
 
     @Slot(bool)
     def update_links_geometry(self, checked=False):
-        from ..graphics_items import Link
-
         for item in self._toolbox.ui.graphicsView.items():
             if isinstance(item, Link):
                 item.do_update_geometry(checked)
@@ -249,6 +248,7 @@ class SettingsWidget(QWidget):
         python_path = self._qsettings.value("appSettings/pythonPath", defaultValue="")
         commit_at_exit = int(self._qsettings.value("appSettings/commitAtExit", defaultValue="1"))  # tri-state
         sticky_selection = self._qsettings.value("appSettings/stickySelection", defaultValue="false")
+        only_selected_objects = self._qsettings.value("appSettings/onlySelectedObjects", defaultValue="false")
         work_dir = self._qsettings.value("appSettings/workDir", defaultValue="")
         if open_previous_project == 2:
             self.ui.checkBox_open_previous_project.setCheckState(Qt.Checked)
@@ -288,6 +288,10 @@ class SettingsWidget(QWidget):
             self.ui.checkBox_commit_at_exit.setCheckState(Qt.Checked)
         if sticky_selection == "true":
             self.ui.checkBox_object_tree_sticky_selection.setCheckState(Qt.Checked)
+        if only_selected_objects == "true":
+            self.ui.radioButton_relationship_only_selected.setChecked(True)
+        else:
+            self.ui.radioButton_relationship_at_least_one_selected.setChecked(True)
         self.ui.lineEdit_gams_path.setText(gams_path)
         if use_embedded_julia == "2":
             self.ui.checkBox_use_embedded_julia.setCheckState(Qt.Checked)
@@ -365,6 +369,8 @@ class SettingsWidget(QWidget):
         self._qsettings.setValue("appSettings/commitAtExit", commit_at_exit)
         sticky_selection = "true" if int(self.ui.checkBox_object_tree_sticky_selection.checkState()) else "false"
         self._qsettings.setValue("appSettings/stickySelection", sticky_selection)
+        only_selected_objects = "true" if self.ui.radioButton_relationship_only_selected.isChecked() else "false"
+        self._qsettings.setValue("appSettings/onlySelectedObjects", only_selected_objects)
         # Work directory
         work_dir = self.ui.lineEdit_work_dir.text().strip()
         self._qsettings.setValue("appSettings/workDir", work_dir)

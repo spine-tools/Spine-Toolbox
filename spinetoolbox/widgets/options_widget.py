@@ -37,7 +37,7 @@ class OptionsWidget(QWidget):
             header (str): Title of groupbox (default: {"Options"})
             parent (QWidget, None): parent of widget
         """
-        from ..ui.import_options import Ui_ImportOptions
+        from ..ui.import_options import Ui_ImportOptions  # pylint: disable=import-outside-toplevel
 
         super().__init__(parent)
         self._options = options

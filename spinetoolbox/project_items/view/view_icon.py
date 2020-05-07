@@ -21,7 +21,7 @@ from spinetoolbox.graphics_items import ProjectItemIcon
 
 
 class ViewIcon(ProjectItemIcon):
-    def __init__(self, toolbox, x, y, w, h, name):
+    def __init__(self, toolbox, x, y, w, h, project_item, icon):
         """View icon for the Design View.
 
         Args:
@@ -30,16 +30,9 @@ class ViewIcon(ProjectItemIcon):
             y (float): Icon y coordinate
             w (float): Width of background rectangle
             h (float): Height of background rectangle
-            name (str): Item name
+            project_item (ProjectItem): Item
+            icon (str): icon resource path
         """
         super().__init__(
-            toolbox,
-            x,
-            y,
-            w,
-            h,
-            name,
-            ":/icons/project_item_icons/binoculars.svg",
-            icon_color=QColor("#33cc33"),
-            background_color=QColor("#ebfaeb"),
+            toolbox, x, y, w, h, project_item, icon, icon_color=QColor("#33cc33"), background_color=QColor("#ebfaeb")
         )

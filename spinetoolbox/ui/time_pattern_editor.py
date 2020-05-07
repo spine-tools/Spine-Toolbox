@@ -10,10 +10,10 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-# Form implementation generated from reading ui file 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\ui\time_pattern_editor.ui',
-# licensing of 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\ui\time_pattern_editor.ui' applies.
+# Form implementation generated from reading ui file 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\time_pattern_editor.ui',
+# licensing of 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\time_pattern_editor.ui' applies.
 #
-# Created: Thu Feb 13 11:54:13 2020
+# Created: Tue Apr 14 12:29:47 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -26,6 +26,9 @@ class Ui_TimePatternEditor(object):
         TimePatternEditor.resize(586, 443)
         self.verticalLayout = QtWidgets.QVBoxLayout(TimePatternEditor)
         self.verticalLayout.setObjectName("verticalLayout")
+        self.pattern_edit_table = IndexedValueTableView(TimePatternEditor)
+        self.pattern_edit_table.setObjectName("pattern_edit_table")
+        self.verticalLayout.addWidget(self.pattern_edit_table)
 
         self.retranslateUi(TimePatternEditor)
         QtCore.QMetaObject.connectSlotsByName(TimePatternEditor)
@@ -33,3 +36,4 @@ class Ui_TimePatternEditor(object):
     def retranslateUi(self, TimePatternEditor):
         TimePatternEditor.setWindowTitle(QtWidgets.QApplication.translate("TimePatternEditor", "Form", None, -1))
 
+from spinetoolbox.widgets.custom_qtableview import IndexedValueTableView

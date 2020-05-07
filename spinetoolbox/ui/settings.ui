@@ -324,6 +324,18 @@
               </property>
              </widget>
             </item>
+            <item row="10" column="0">
+             <widget class="QLabel" name="label_7">
+              <property name="font">
+               <font>
+                <pointsize>7</pointsize>
+               </font>
+              </property>
+              <property name="text">
+               <string>Design View background</string>
+              </property>
+             </widget>
+            </item>
             <item row="6" column="0">
              <layout class="QHBoxLayout" name="horizontalLayout_6">
               <item>
@@ -375,18 +387,6 @@
                </widget>
               </item>
              </layout>
-            </item>
-            <item row="10" column="0">
-             <widget class="QLabel" name="label_7">
-              <property name="font">
-               <font>
-                <pointsize>7</pointsize>
-               </font>
-              </property>
-              <property name="text">
-               <string>Design View background</string>
-              </property>
-             </widget>
             </item>
             <item row="11" column="0">
              <layout class="QHBoxLayout" name="horizontalLayout_4">
@@ -524,19 +524,6 @@
                </widget>
               </item>
              </layout>
-            </item>
-            <item row="14" column="0">
-             <spacer name="verticalSpacer_2">
-              <property name="orientation">
-               <enum>Qt::Vertical</enum>
-              </property>
-              <property name="sizeHint" stdset="0">
-               <size>
-                <width>20</width>
-                <height>40</height>
-               </size>
-              </property>
-             </spacer>
             </item>
             <item row="8" column="0">
              <widget class="QCheckBox" name="checkBox_use_curved_links">
@@ -1042,9 +1029,42 @@ p, li { white-space: pre-wrap; }
                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;When checked [default], moving Object items causes connected Relationship items to follow.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="text">
-               <string>Relationship items follow object items</string>
+               <string>Relationship items follow object items in entity graph</string>
               </property>
              </widget>
+            </item>
+            <item>
+             <layout class="QVBoxLayout" name="verticalLayout">
+              <property name="spacing">
+               <number>0</number>
+              </property>
+              <item>
+               <widget class="QLabel" name="label_6">
+                <property name="font">
+                 <font>
+                  <pointsize>11</pointsize>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>Automatically bring relationships to the entity graph if they involve:</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QRadioButton" name="radioButton_relationship_only_selected">
+                <property name="text">
+                 <string>only selected objects</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QRadioButton" name="radioButton_relationship_at_least_one_selected">
+                <property name="text">
+                 <string>at least one selected object</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
             </item>
            </layout>
           </widget>

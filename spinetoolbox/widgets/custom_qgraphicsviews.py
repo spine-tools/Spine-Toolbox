@@ -20,11 +20,21 @@ import logging
 import math
 from PySide2.QtWidgets import QGraphicsView
 from PySide2.QtGui import QCursor
-from PySide2.QtCore import Signal, Slot, Qt, QRectF, QTimeLine, QMarginsF, QSettings
-from spine_engine import ExecutionDirection
+from PySide2.QtCore import (
+    QEventLoop,
+    QParallelAnimationGroup,
+    Signal,
+    Slot,
+    Qt,
+    QRectF,
+    QTimeLine,
+    QMarginsF,
+    QSettings,
+)
+from spine_engine import ExecutionDirection, SpineEngineState
 from ..graphics_items import LinkDrawer, Link
 from ..project_commands import AddLinkCommand, RemoveLinkCommand
-from .custom_qlistview import DragListView
+from ..mvcmodels.entity_list_models import EntityListModel
 from .custom_qgraphicsscene import CustomQGraphicsScene
 
 
@@ -187,11 +197,11 @@ class CustomQGraphicsView(QGraphicsView):
 
     def zoom_in(self):
         """Perform a zoom in with a fixed scaling."""
-        self.gentle_zoom(self._zoom_factor_base ** self._angle, self.viewport().rect().center())
+        self.gentle_zoom(self._zoom_factor_base ** self._angle)
 
     def zoom_out(self):
         """Perform a zoom out with a fixed scaling."""
-        self.gentle_zoom(self._zoom_factor_base ** -self._angle, self.viewport().rect().center())
+        self.gentle_zoom(self._zoom_factor_base ** -self._angle)
 
     def reset_zoom(self):
         """Reset zoom to the default factor."""
@@ -199,7 +209,7 @@ class CustomQGraphicsView(QGraphicsView):
         if self._scene_fitting_zoom < 1.0:
             self.scale(self._scene_fitting_zoom, self._scene_fitting_zoom)
 
-    def gentle_zoom(self, factor, zoom_focus):
+    def gentle_zoom(self, factor, zoom_focus=None):
         """
         Perform a zoom by a given factor.
 
@@ -207,6 +217,8 @@ class CustomQGraphicsView(QGraphicsView):
             factor (float): a scaling factor relative to the current scene scaling
             zoom_focus (QPoint): focus of the zoom, e.g. mouse pointer position
         """
+        if zoom_focus is None:
+            zoom_focus = self.viewport().rect().center()
         initial_focus_on_scene = self.mapToScene(zoom_focus)
         transform = self.transform()
         current_zoom = transform.m11()  # The [1, 1] element contains the x scaling factor
@@ -496,6 +508,7 @@ class DesignQGraphicsView(CustomQGraphicsView):
         """Connects signals needed for icon animations from given engine."""
         engine.dag_node_execution_started.connect(self._start_animation)
         engine.dag_node_execution_finished.connect(self._stop_animation)
+        engine.dag_node_execution_finished.connect(self._run_leave_animation)
 
     @Slot(str, "QVariant")
     def _start_animation(self, item_name, direction):
@@ -507,8 +520,8 @@ class DesignQGraphicsView(CustomQGraphicsView):
         if hasattr(icon, "start_animation"):
             icon.start_animation()
 
-    @Slot(str, "QVariant")
-    def _stop_animation(self, item_name, direction):
+    @Slot(str, "QVariant", "QVariant")
+    def _stop_animation(self, item_name, direction, _):
         """Stops item icon animation when executing forward."""
         if direction == ExecutionDirection.BACKWARD:
             return
@@ -516,6 +529,36 @@ class DesignQGraphicsView(CustomQGraphicsView):
         icon = item.get_icon()
         if hasattr(icon, "stop_animation"):
             icon.stop_animation()
+
+    @Slot(str, "QVariant", "QVariant")
+    def _run_leave_animation(self, item_name, direction, engine_state):
+        """
+        Runs the animation that represents execution leaving this item.
+        Blocks until the animation is finished.
+        """
+        if direction == ExecutionDirection.BACKWARD or engine_state != SpineEngineState.RUNNING:
+            return
+        loop = QEventLoop()
+        animation = self._make_execution_leave_animation(item_name)
+        animation.finished.connect(loop.quit)
+        animation.start()
+        if animation.state() == QParallelAnimationGroup.Running:
+            loop.exec_()
+
+    def _make_execution_leave_animation(self, item_name):
+        """
+        Returns animation to play when execution leaves this item.
+
+        Returns:
+            QParallelAnimationGroup
+        """
+        item = self._project_item_model.get_item(item_name).project_item
+        icon = item.get_icon()
+        links = set(link for conn in icon.connectors.values() for link in conn.links if link.src_connector == conn)
+        animation_group = QParallelAnimationGroup(item)
+        for link in links:
+            animation_group.addAnimation(link.make_execution_animation())
+        return animation_group
 
 
 class GraphQGraphicsView(CustomQGraphicsView):
@@ -527,31 +570,31 @@ class GraphQGraphicsView(CustomQGraphicsView):
 
     def dragLeaveEvent(self, event):
         """Accept event. Then call the super class method
-        only if drag source is not DragListView."""
+        only if drag source is not EntityListModel."""
         event.accept()
 
     def dragEnterEvent(self, event):
         """Accept event. Then call the super class method
-        only if drag source is not DragListView."""
+        only if drag source is not EntityListModel."""
         event.accept()
         source = event.source()
-        if not isinstance(source, DragListView):
+        if not isinstance(source.model(), EntityListModel):
             super().dragEnterEvent(event)
 
     def dragMoveEvent(self, event):
         """Accept event. Then call the super class method
-        only if drag source is not DragListView."""
+        only if drag source is not EntityListModel."""
         event.accept()
         source = event.source()
-        if not isinstance(source, DragListView):
+        if not isinstance(source.model(), EntityListModel):
             super().dragMoveEvent(event)
 
     def dropEvent(self, event):
-        """Only accept drops when the source is an instance of DragListView.
+        """Only accept drops when the source is an instance of EntityListModel.
         Capture text from event's mimedata and emit signal.
         """
         source = event.source()
-        if not isinstance(source, DragListView):
+        if not isinstance(source.model(), EntityListModel):
             super().dropEvent(event)
             return
         entity_type = source.model().entity_type
@@ -573,7 +616,7 @@ class GraphQGraphicsView(CustomQGraphicsView):
         e.accept()
         self.context_menu_requested.emit(e.globalPos())
 
-    def gentle_zoom(self, factor, zoom_focus):
+    def gentle_zoom(self, factor, zoom_focus=None):
         """
         Perform a zoom by a given factor.
 
@@ -581,7 +624,7 @@ class GraphQGraphicsView(CustomQGraphicsView):
             factor (float): a scaling factor relative to the current scene scaling
             zoom_focus (QPoint): focus of the zoom, e.g. mouse pointer position
         """
-        if not super().gentle_zoom(factor, zoom_focus):
+        if not super().gentle_zoom(factor, zoom_focus=zoom_focus):
             return False
         self.adjust_items_to_zoom()
         return True

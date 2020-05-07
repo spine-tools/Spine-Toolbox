@@ -140,6 +140,11 @@ class EmptyParameterDefinitionModel(
 ):
     """An empty parameter definition model."""
 
+    @property
+    def entity_class_type(self):
+        """See base class."""
+        raise NotImplementedError()
+
     def add_items_to_db(self, rows):
         """Add items to db.
 

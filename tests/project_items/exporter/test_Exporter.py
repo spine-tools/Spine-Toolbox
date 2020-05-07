@@ -20,9 +20,9 @@ import os
 import unittest
 from unittest.mock import MagicMock, NonCallableMagicMock
 from PySide2.QtWidgets import QApplication
-from networkx import DiGraph
-from spinetoolbox.project_item import ProjectItemResource
+from spinetoolbox.project_item_resource import ProjectItemResource
 from spinetoolbox.project_items.exporter.exporter import Exporter
+from spinetoolbox.project_items.exporter.item_info import ItemInfo
 from ...mock_helpers import clean_up_toolboxui_with_project, create_toolboxui_with_project
 
 
@@ -31,7 +31,7 @@ class TestExporter(unittest.TestCase):
         """Set up."""
         self.toolbox = create_toolboxui_with_project()
         item_dict = dict(name="exporter", description="", settings_packs=None, x=0, y=0)
-        self.toolbox.project().add_project_items("Exporters", item_dict)
+        self.toolbox.project().add_project_items("Exporter", item_dict)
         index = self.toolbox.project_item_model.find_item("exporter")
         self.exporter = self.toolbox.project_item_model.item(index).project_item
 
@@ -45,7 +45,10 @@ class TestExporter(unittest.TestCase):
             QApplication()
 
     def test_item_type(self):
-        self.assertEqual(self.exporter.item_type(), "Exporter")
+        self.assertEqual(Exporter.item_type(), ItemInfo.item_type())
+
+    def test_item_category(self):
+        self.assertEqual(Exporter.item_category(), ItemInfo.item_category())
 
     def test_notify_destination(self):
         self.toolbox.msg = MagicMock()
@@ -120,7 +123,7 @@ class TestExporter(unittest.TestCase):
     def test_activating_second_exporter_with_less_database_urls_does_not_crash(self):
         self.exporter._start_worker = MagicMock()
         item_dict = dict(name="2nd exporter", description="", settings_packs=None, x=0, y=0)
-        self.toolbox.project().add_project_items("Exporters", item_dict)
+        self.toolbox.project().add_project_items("Exporter", item_dict)
         index = self.toolbox.project_item_model.find_item("2nd exporter")
         exporter2 = self.toolbox.project_item_model.item(index).project_item
         exporter2._start_worker = MagicMock()

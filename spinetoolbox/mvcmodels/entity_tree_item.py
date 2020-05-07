@@ -17,6 +17,7 @@ Classes to represent entities in a tree.
 """
 from PySide2.QtCore import Qt
 from PySide2.QtGui import QFont, QBrush, QIcon
+from spinetoolbox.helpers import rows_to_row_count_tuples
 from .minimal_tree_model import TreeItem
 
 
@@ -104,14 +105,26 @@ class MultiDBTreeItem(TreeItem):
 
     def take_db_map(self, db_map):
         """Removes the mapping for given db_map and returns it."""
-        id_ = self._db_map_id.pop(db_map, None)
-        if self._db_map_id:
-            index = self.index()
-            sibling = index.sibling(index.row(), 1)
-            self.model.dataChanged.emit(sibling, sibling)
-        else:
-            self.parent_item.remove_children(self.child_number(), 1)
-        return id_
+        return self._db_map_id.pop(db_map, None)
+
+    def _deep_refresh_children(self):
+        """Refreshes children after taking db_maps from them. Called after removing and updating children for this item."""
+        removed_rows = []
+        for row, child in reversed(list(enumerate(self.children))):
+            if not child._db_map_id:
+                removed_rows.append(row)
+        for row, count in reversed(rows_to_row_count_tuples(removed_rows)):
+            self.remove_children(row, count)
+        changed_rows = []
+        for row, child in enumerate(self.children):
+            child._deep_refresh_children()
+            changed_rows.append(row)
+        if changed_rows:
+            top_row = changed_rows[0]
+            bottom_row = changed_rows[-1]
+            top_index = self.children[top_row].index().sibling(top_row, 1)
+            bottom_index = self.children[bottom_row].index().sibling(bottom_row, 1)
+            self.model.dataChanged.emit(top_index, bottom_index)
 
     def deep_remove_db_map(self, db_map):
         """Removes given db_map from this item and all its descendants."""
@@ -120,11 +133,15 @@ class MultiDBTreeItem(TreeItem):
         _ = self.take_db_map(db_map)
 
     def deep_take_db_map(self, db_map):
-        """Takes given db_map from this item and all its descendants.
-        Returns a new item from taken data or None if db_map is not present in the first place.
+        """Removes given db_map from this item and all its descendants, and
+        returns a new item from the db_map's data.
+
+        Returns:
+            MultiDBTreeItem, NoneType
+
         """
         id_ = self.take_db_map(db_map)
-        if not id_:
+        if id_ is None:
             return None
         other = type(self)({db_map: id_})
         other_children = []
@@ -188,10 +205,20 @@ class MultiDBTreeItem(TreeItem):
 
     def has_children(self):
         """Returns whether or not this item has or could have children."""
+        if self.can_fetch_more():
+            return any(self._get_children_ids(db_map) for db_map in self.db_maps)
         return bool(self.child_count())
 
-    def can_fetch_more(self):
-        return False
+    def fetch_more(self):
+        """Fetches children from all associated databases."""
+        super().fetch_more()
+        db_map_ids = {db_map: list(self._get_children_ids(db_map)) for db_map in self.db_maps}
+        self.append_children_by_id(db_map_ids)
+
+    def _get_children_ids(self, db_map):
+        """Returns a list of children ids.
+        Must be reimplemented in subclasses."""
+        raise NotImplementedError()
 
     def append_children_by_id(self, db_map_ids):
         """
@@ -200,6 +227,9 @@ class MultiDBTreeItem(TreeItem):
         Args:
             db_map_ids (dict): maps DiffDatabaseMapping instances to list of ids
         """
+        if self.can_fetch_more():
+            self.model.layoutChanged.emit()
+            return
         new_children = []
         for db_map, ids in db_map_ids.items():
             new_children += self._create_new_children(db_map, ids)
@@ -212,9 +242,13 @@ class MultiDBTreeItem(TreeItem):
         Args:
             db_map_ids (dict): maps DiffDatabaseMapping instances to list of ids
         """
+        if self.can_fetch_more():
+            self.model.layoutChanged.emit()
+            return
         for db_map, ids in db_map_ids.items():
             for child in self.find_children_by_id(db_map, *ids, reverse=True):
                 child.deep_remove_db_map(db_map)
+        self._deep_refresh_children()
 
     def update_children_by_id(self, db_map_ids):
         """
@@ -231,6 +265,8 @@ class MultiDBTreeItem(TreeItem):
         Args:
             db_map_ids (dict): maps DiffDatabaseMapping instances to list of ids
         """
+        if self.can_fetch_more():
+            return
         # Find updated rows
         updated_rows = []
         for db_map, ids in db_map_ids.items():
@@ -252,6 +288,7 @@ class MultiDBTreeItem(TreeItem):
                 # Take the child and put it in the list to be merged
                 new_children.append(child)
                 self.remove_children(row, 1)
+        self._deep_refresh_children()
         self._merge_children(new_children)
 
     def insert_children(self, position, *children):
@@ -300,9 +337,8 @@ class MultiDBTreeItem(TreeItem):
 
     def _find_unsorted_rows_by_id(self, db_map, *ids):
         """Generates rows corresponding to children with the given ids in the given db_map.
-        If the first id is True, then generates rows corresponding to *all* children with the given db_map."""
-        if next(iter(ids), False) is True:
-            # Yield all children with the db_map regardless of the id
+        If the only id given is None, then generates rows corresponding to *all* children with the given db_map."""
+        if ids == (None,):
             d = self._child_map.get(db_map)
             if d:
                 yield from d.values()
@@ -337,6 +373,10 @@ class TreeRootItem(MultiDBTreeItem):
         """"See super class."""
         return "root"
 
+    def _get_children_ids(self, db_map):
+        """See super class."""
+        raise NotImplementedError()
+
 
 class ObjectTreeRootItem(TreeRootItem):
     """An object tree root item."""
@@ -347,8 +387,12 @@ class ObjectTreeRootItem(TreeRootItem):
 
     @property
     def child_item_type(self):
-        """Returns an ObjectClassItem."""
+        """Returns ObjectClassItem."""
         return ObjectClassItem
+
+    def _get_children_ids(self, db_map):
+        """Returns a list of object class ids."""
+        return [x["id"] for x in self.db_mngr.get_items(db_map, "object class")]
 
 
 class RelationshipTreeRootItem(TreeRootItem):
@@ -360,8 +404,12 @@ class RelationshipTreeRootItem(TreeRootItem):
 
     @property
     def child_item_type(self):
-        """Returns a RelationshipClassItem."""
+        """Returns RelationshipClassItem."""
         return RelationshipClassItem
+
+    def _get_children_ids(self, db_map):
+        """Returns a list of object class ids."""
+        return [x["id"] for x in self.db_mngr.get_items(db_map, "relationship class")]
 
 
 class AlternativeClassItem(MultiDBTreeItem):
@@ -448,6 +496,10 @@ class EntityClassItem(MultiDBTreeItem):
                 return QBrush(Qt.gray)
         return super().data(column, role)
 
+    def _get_children_ids(self, db_map):
+        """See base class"""
+        raise NotImplementedError()
+
 
 class ObjectClassItem(EntityClassItem):
     """An object class item."""
@@ -472,12 +524,16 @@ class ObjectClassItem(EntityClassItem):
 
     @property
     def child_item_type(self):
-        """Returns an ObjectItem."""
+        """Returns ObjectItem."""
         return ObjectItem
 
     def default_parameter_data(self):
         """Return data to put as default in a parameter table when this item is selected."""
         return dict(object_class_name=self.display_name, database=self.first_db_map.codename)
+
+    def _get_children_ids(self, db_map):
+        """Returns a list of object class ids."""
+        return [x["id"] for x in self.db_mngr.get_items(db_map, "object") if x["class_id"] == self.db_map_id(db_map)]
 
 
 class RelationshipClassItem(EntityClassItem):
@@ -503,12 +559,28 @@ class RelationshipClassItem(EntityClassItem):
 
     @property
     def child_item_type(self):
-        """Returns a RelationshipItem."""
+        """Returns RelationshipItem."""
         return RelationshipItem
 
     def default_parameter_data(self):
         """Return data to put as default in a parameter table when this item is selected."""
         return dict(relationship_class_name=self.display_name, database=self.first_db_map.codename)
+
+    def _get_children_ids(self, db_map):
+        """Returns a list of object class ids."""
+        if not isinstance(self.parent_item, ObjectItem):
+            return [
+                x["id"]
+                for x in self.db_mngr.get_items(db_map, "relationship")
+                if x["class_id"] == self.db_map_id(db_map)
+            ]
+        object_id = self.parent_item.db_map_id(db_map)
+        return [
+            x["id"]
+            for items in self.db_mngr.find_cascading_relationships({db_map: {object_id}}).values()
+            for x in items
+            if x["class_id"] == self.db_map_id(db_map)
+        ]
 
 
 class EntityItem(MultiDBTreeItem):
@@ -519,6 +591,10 @@ class EntityItem(MultiDBTreeItem):
         if role == Qt.ToolTipRole:
             return self.db_map_data_field(self.first_db_map, "description")
         return super().data(column, role)
+
+    def _get_children_ids(self, db_map):
+        """See base class."""
+        raise NotImplementedError()
 
 
 class AlternativeItem(EntityItem):
@@ -745,24 +821,10 @@ class ObjectItem(EntityItem):
             {"Edit objects": QIcon(":/icons/menu_icons/cube_pen.svg")},
             {"Remove selection": QIcon(":/icons/menu_icons/cube_minus.svg")},
         ]
-        self._append_relationship_class_items()
-
-    def _append_relationship_class_items(self):
-        """Appends relationship class items."""
-        db_map_ids = {db_map: list(self._get_cascading_relationship_class_ids(db_map)) for db_map in self.db_maps}
-        self.append_children_by_id(db_map_ids)
-
-    def _get_cascading_relationship_class_ids(self, db_map):
-        object_class_id = self.db_map_data_field(db_map, 'class_id')
-        return [
-            x["id"]
-            for items in self.db_mngr.find_cascading_relationship_classes({db_map: {object_class_id}}).values()
-            for x in items
-        ]
 
     @property
     def child_item_type(self):
-        """Returns a RelationshipClassItem."""
+        """Returns RelationshipClassItem."""
         return RelationshipClassItem
 
     @property
@@ -777,6 +839,14 @@ class ObjectItem(EntityItem):
             object_name=self.display_name,
             database=self.first_db_map.codename,
         )
+
+    def _get_children_ids(self, db_map):
+        object_class_id = self.db_map_data_field(db_map, 'class_id')
+        return [
+            x["id"]
+            for items in self.db_mngr.find_cascading_relationship_classes({db_map: {object_class_id}}).values()
+            for x in items
+        ]
 
 
 class RelationshipItem(EntityItem):
@@ -825,3 +895,10 @@ class RelationshipItem(EntityItem):
             object_name_list=self.db_map_data_field(self.first_db_map, "object_name_list"),
             database=self.first_db_map.codename,
         )
+
+    def can_fetch_more(self):
+        return False
+
+    def _get_children_ids(self, db_map):
+        """See base class"""
+        raise NotImplementedError()

@@ -28,6 +28,7 @@ class TestTreeViewFormUpdateMixin:
         """
         self.tree_view_form.init_models()
         self.put_mock_object_classes_in_db_mngr()
+        self.fetch_object_tree_model()
         self.fish_class = self._object_class(1, "octopus", "An octopus.", 1, None)
         self.db_mngr.object_classes_updated.emit({self.mock_db_map: [self.fish_class]})
         root_item = self.tree_view_form.object_tree_model.root_item
@@ -40,6 +41,7 @@ class TestTreeViewFormUpdateMixin:
         self.tree_view_form.init_models()
         self.put_mock_object_classes_in_db_mngr()
         self.put_mock_objects_in_db_mngr()
+        self.fetch_object_tree_model()
         self.nemo_object = self._object(1, self.fish_class["id"], 'dory', 'The one that forgets.')
         self.db_mngr.objects_updated.emit({self.mock_db_map: [self.nemo_object]})
         root_item = self.tree_view_form.object_tree_model.root_item
@@ -54,6 +56,7 @@ class TestTreeViewFormUpdateMixin:
         self.put_mock_object_classes_in_db_mngr()
         self.put_mock_objects_in_db_mngr()
         self.put_mock_relationship_classes_in_db_mngr()
+        self.fetch_object_tree_model()
         self.fish_dog_class = self._relationship_class(
             3, "octopus__dog", str(self.fish_class["id"]) + "," + str(self.dog_class["id"]), "octopus,dog"
         )
@@ -76,6 +79,7 @@ class TestTreeViewFormUpdateMixin:
         model.init_model()
         self.put_mock_object_classes_in_db_mngr()
         self.put_mock_object_parameter_definitions_in_db_mngr()
+        self.fetch_object_tree_model()
         self.water_parameter = self._object_parameter_definition(1, self.fish_class["id"], "fish", "fire")
         with mock.patch.object(CompoundParameterModel, "_modify_data_in_filter_menus"):
             self.db_mngr.parameter_definitions_updated.emit({self.mock_db_map: [self.water_parameter]})
@@ -93,6 +97,7 @@ class TestTreeViewFormUpdateMixin:
         model.init_model()
         self.put_mock_relationship_classes_in_db_mngr()
         self.put_mock_relationship_parameter_definitions_in_db_mngr()
+        self.fetch_object_tree_model()
         self.relative_speed_parameter = self._relationship_parameter_definition(
             3,
             self.fish_dog_class["id"],
@@ -117,6 +122,7 @@ class TestTreeViewFormUpdateMixin:
         model.init_model()
         self.put_mock_object_classes_in_db_mngr()
         self.put_mock_object_parameter_values_in_db_mngr()
+        self.fetch_object_tree_model()
         self.nemo_water = self._object_parameter_value(
             1,
             self.fish_class["id"],
@@ -147,6 +153,7 @@ class TestTreeViewFormUpdateMixin:
         model.init_model()
         self.put_mock_relationship_classes_in_db_mngr()
         self.put_mock_relationship_parameter_values_in_db_mngr()
+        self.fetch_object_tree_model()
         self.nemo_pluto_relative_speed = self._relationship_parameter_value(
             4,
             self.fish_dog_class["id"],
@@ -172,4 +179,4 @@ class TestTreeViewFormUpdateMixin:
                     model.index(row, h("value")).data(),
                 )
             )
-        self.assertTrue(("nemo,pluto", "relative_speed", 100.0) in parameters)
+        self.assertTrue(("nemo,pluto", "relative_speed", "100.0") in parameters)

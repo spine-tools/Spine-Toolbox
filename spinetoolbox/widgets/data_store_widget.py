@@ -18,32 +18,29 @@ Contains the DataStoreForm class.
 
 import os
 import time  # just to measure loading time and sqlalchemy ORM performance
-from PySide2.QtWidgets import (
-    QMainWindow,
-    QErrorMessage,
-    QDockWidget,
-    QMessageBox,
-    QDialog,
-    QFileDialog,
-    QInputDialog,
-    QTreeView,
-    QTableView,
-)
-from PySide2.QtCore import Qt, Signal, Slot, QSettings
+import json
+from PySide2.QtWidgets import QMainWindow, QErrorMessage, QDockWidget, QMessageBox, QInputDialog
+from PySide2.QtCore import Qt, Signal, Slot
 from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QIcon
-from spinedb_api import copy_database
+from spinedb_api import import_data, export_data, SpineIntegrityError, SpineDBAPIError, ParameterValueEncoder
 from ..config import MAINWINDOW_SS, APPLICATION_PATH
-from .edit_db_items_dialogs import ManageParameterTagsDialog
+from .data_store_edit_items_dialogs import ManageParameterTagsDialog
+from .data_store_manage_items_dialog import MassRemoveItemsDialog, CreateTemplateDialog
 from .custom_menus import ParameterValueListContextMenu
-from .parameter_view_mixin import ParameterViewMixin
-from .tree_view_mixin import TreeViewMixin
-from .graph_view_mixin import GraphViewMixin
-from .tabular_view_mixin import TabularViewMixin
+from .data_store_parameter_view_mixin import ParameterViewMixin
+from .data_store_tree_view_mixin import TreeViewMixin
+from .data_store_graph_view_mixin import GraphViewMixin
+from .data_store_tabular_view_mixin import TabularViewMixin
 from .toolbars import ParameterTagToolBar
 from .db_session_history_dialog import DBSessionHistoryDialog
 from .notification import NotificationStack
 from ..mvcmodels.parameter_value_list_model import ParameterValueListModel
-from ..helpers import busy_effect, ensure_window_is_on_screen
+from ..helpers import (
+    busy_effect,
+    ensure_window_is_on_screen,
+    get_save_file_name_in_last_dir,
+    get_open_file_name_in_last_dir,
+)
 from .import_widget import ImportDialog
 from .parameter_value_editor import ParameterValueEditor
 from ..spine_io.exporters.excel import export_spine_database_to_xlsx
@@ -64,7 +61,7 @@ class DataStoreFormBase(QMainWindow):
             *db_urls (tuple): Database url, codename.
         """
         super().__init__(flags=Qt.Window)
-        from ..ui.data_store_view import Ui_MainWindow
+        from ..ui.data_store_view import Ui_MainWindow  # pylint: disable=import-outside-toplevel
 
         self.db_urls = list(db_urls)
         self.db_url = self.db_urls[0]
@@ -81,7 +78,7 @@ class DataStoreFormBase(QMainWindow):
         self.setWindowIcon(QIcon(":/symbols/app.ico"))
         self.setStyleSheet(MAINWINDOW_SS)
         self.setAttribute(Qt.WA_DeleteOnClose)
-        self.qsettings = QSettings("SpineProject", "Spine Toolbox")
+        self.qsettings = self.db_mngr.qsettings
         self.err_msg = QErrorMessage(self)
         self.err_msg.setWindowTitle("Error")
         self.err_msg.setWindowFlag(Qt.WindowContextHelpButtonHint, False)
@@ -99,14 +96,12 @@ class DataStoreFormBase(QMainWindow):
         self.default_row_height = 1.2 * fm.lineSpacing()
         max_screen_height = max([s.availableSize().height() for s in QGuiApplication.screens()])
         self.visible_rows = int(max_screen_height / self.default_row_height)
-        self._selection_source = None
-        self._selection_locked = False
-        self._focusable_childs = [self.ui.treeView_parameter_value_list]
-        self.settings_group = 'treeViewWidget'
+        self.settings_group = 'dataStoreForm'
         self.undo_action = None
         self.redo_action = None
-        db_names = ", ".join(["{0}".format(db_map.codename) for db_map in self.db_maps])
-        self.setWindowTitle("{0}[*] - Data store view".format(db_names))
+        self.template_file_path = None
+        db_names = ", ".join([f"{db_map.codename}" for db_map in self.db_maps])
+        self.setWindowTitle(f"{db_names}[*] - Data store view")
         self.update_commit_enabled()
 
     def add_menu_actions(self):
@@ -136,15 +131,15 @@ class DataStoreFormBase(QMainWindow):
         self.ui.menuEdit.aboutToShow.connect(self._handle_menu_edit_about_to_show)
         self.ui.actionImport.triggered.connect(self.show_import_file_dialog)
         self.ui.actionExport.triggered.connect(self.export_database)
+        self.ui.actionLoadTemplate.triggered.connect(self.load_template)
+        self.ui.actionSaveAsTemplate.triggered.connect(self.save_as_template)
         self.ui.actionCopy.triggered.connect(self.copy)
         self.ui.actionPaste.triggered.connect(self.paste)
         self.ui.actionRemove_selection.triggered.connect(self.remove_selection)
         self.ui.actionManage_parameter_tags.triggered.connect(self.show_manage_parameter_tags_form)
+        self.ui.actionMass_remove_items.triggered.connect(self.show_mass_remove_items_form)
         self.parameter_tag_toolbar.manage_tags_action_triggered.connect(self.show_manage_parameter_tags_form)
         self.parameter_tag_toolbar.tag_button_toggled.connect(self._handle_tag_button_toggled)
-        self.ui.treeView_parameter_value_list.selectionModel().selectionChanged.connect(
-            self._handle_parameter_value_list_selection_changed
-        )
         self.ui.treeView_parameter_value_list.customContextMenuRequested.connect(
             self.show_parameter_value_list_context_menu
         )
@@ -214,35 +209,19 @@ class DataStoreFormBase(QMainWindow):
     def _handle_menu_edit_about_to_show(self):
         """Runs when the edit menu from the main menubar is about to show.
         Enables or disables actions according to selection status."""
-        selection_available = self._selection_source is not None
-        self.ui.actionCopy.setEnabled(selection_available)
-        self.ui.actionRemove_selection.setEnabled(selection_available)
-        object_classes_selected = self._selection_source is self.ui.treeView_object and bool(
-            self._selection_source.model().selected_object_class_indexes
+        self.ui.actionCopy.setEnabled(self._focused_widget_has_callable("copy"))
+        self.ui.actionRemove_selection.setEnabled(self._focused_widget_can_remove_selections())
+        object_classes_selected = self._focused_widgets_model_has_non_empty_list("selected_object_class_indexes")
+        objects_selected = self._focused_widgets_model_has_non_empty_list("selected_object_indexes")
+        relationship_classes_selected = self._focused_widgets_model_has_non_empty_list(
+            "selected_relationship_class_indexes"
         )
-        objects_selected = self._selection_source is self.ui.treeView_object and bool(
-            self._selection_source.model().selected_object_indexes
-        )
-        relationship_classes_selected = self._selection_source in (
-            self.ui.treeView_object,
-            self.ui.treeView_relationship,
-        ) and bool(self._selection_source.model().selected_relationship_class_indexes)
-        relationships_selected = self._selection_source in (
-            self.ui.treeView_object,
-            self.ui.treeView_relationship,
-        ) and bool(self._selection_source.model().selected_relationship_indexes)
+        relationships_selected = self._focused_widgets_model_has_non_empty_list("selected_relationship_indexes")
         self.ui.actionEdit_object_classes.setEnabled(object_classes_selected)
         self.ui.actionEdit_objects.setEnabled(objects_selected)
         self.ui.actionEdit_relationship_classes.setEnabled(relationship_classes_selected)
         self.ui.actionEdit_relationships.setEnabled(relationships_selected)
-        self.ui.actionPaste.setEnabled(True)
-        focus_widget = self._find_focus_child()
-        self.ui.actionPaste.setEnabled(focus_widget is not None)
-
-    def _find_focus_child(self):
-        for child in self._focusable_childs:
-            if child.hasFocus():
-                return child
+        self.ui.actionPaste.setEnabled(self._focused_widget_has_callable("paste"))
 
     def selected_entity_class_ids(self, entity_class_type):
         """Returns object class ids selected in object tree *and* parameter tag toolbar."""
@@ -264,66 +243,131 @@ class DataStoreFormBase(QMainWindow):
                 result[db_map] = tree_cls_ids & tag_cls_ids
         return result
 
-    def _accept_selection(self, widget):
-        """Clears selection from all widgets except the given one, so there's only one selection
-        in the form at a time. In addition, registers the given widget as the official source
-        for all operations involving selections (copy, remove, edit), but only in case it *has* a selection."""
-        if not self._selection_locked:
-            self._selection_source = widget if widget.selectionModel().hasSelection() else None
-            self._selection_locked = True
-            for w in self.findChildren(QTreeView) + self.findChildren(QTableView):
-                if w != widget:
-                    w.selectionModel().clearSelection()
-            self._selection_locked = False
-            return True
-        return False
-
     @Slot(bool)
     def remove_selection(self, checked=False):
         """Removes selection of items."""
-        if not self._selection_source:
-            return
-        self._selection_source.model().remove_selection_requested.emit()
+        focus_widget = self.focusWidget()
+        while focus_widget is not self:
+            if hasattr(focus_widget, "model") and callable(focus_widget.model):
+                model = focus_widget.model()
+                if hasattr(model, "remove_selection_requested"):
+                    model.remove_selection_requested.emit()
+                    break
+            focus_widget = focus_widget.parentWidget()
 
     @Slot(bool)
     def copy(self, checked=False):
         """Copies data to clipboard."""
-        if not self._selection_source:
-            return
-        self._selection_source.copy()
+        self._call_on_focused_widget("copy")
 
     @Slot(bool)
     def paste(self, checked=False):
         """Pastes data from clipboard."""
-        focus_widget = self._find_focus_child()
-        if not focus_widget:
+        self._call_on_focused_widget("paste")
+
+    @Slot(bool)
+    def load_template(self, checked=False):
+        """Loads JSON template."""
+        if not all(self.db_mngr.undo_stack[db_map].isClean() for db_map in self.db_maps):
+            commit_warning = QMessageBox(parent=self)
+            commit_warning.setText("Please commit or rollback before loading a template.")
+            commit_warning.setStandardButtons(QMessageBox.Ok)
+            commit_warning.exec()
             return
-        focus_widget.paste()
+        self.qsettings.beginGroup(self.settings_group)
+        file_path, _ = get_open_file_name_in_last_dir(
+            self.qsettings, "loadTemplate", self, "Load template", self._get_base_dir(), "Template file (*.json)"
+        )
+        self.qsettings.endGroup()
+        if not file_path:  # File selection cancelled
+            return
+        with open(file_path) as f:
+            data = json.load(f)
+        self.import_data(data)
+        self.msg.emit(f"Template {file_path} successfully loaded.")
+
+    @Slot(bool)
+    def save_as_template(self, checked=False):
+        self.qsettings.beginGroup(self.settings_group)
+        self.template_file_path, _ = get_save_file_name_in_last_dir(
+            self.qsettings, "saveAsTemplate", self, "Save as template", self._get_base_dir(), "Template file (*.json)"
+        )
+        self.qsettings.endGroup()
+        if not self.template_file_path:  # File selection cancelled
+            return
+        dialog = CreateTemplateDialog(self, self.db_mngr, *self.db_maps)
+        dialog.data_submitted.connect(self.do_save_as_template)
+        dialog.show()
+
+    @Slot(object)
+    def do_save_as_template(self, db_map_selected_item_types):
+        """Saves a db as a JSON template."""
+        data = {}
+        for db_map, selected_item_types in db_map_selected_item_types.items():
+            export_items = dict()
+            export_items["object_classes"] = "object class" in selected_item_types
+            export_items["relationship_classes"] = "relationship class" in selected_item_types
+            export_items["objects"] = "object" in selected_item_types
+            export_items["relationships"] = "relationship" in selected_item_types
+            export_items["object_parameters"] = export_items["relationship_parameters"] = (
+                "parameter definition" in selected_item_types
+            )
+            export_items["object_parameter_values"] = export_items["relationship_parameter_values"] = (
+                "parameter value" in selected_item_types
+            )
+            # export_items["parameter_value_lists"] = "parameter value list" in selected_item_types
+            # export_items["parameter_tags"] = "parameter tag" in selected_item_types
+            for key, items in export_data(db_map, **export_items).items():
+                data.setdefault(key, []).extend(items)
+        indent = 4 * " "
+        json_data = "{{{0}{1}{0}}}".format(
+            "\n" if data else "",
+            ",\n".join(
+                [
+                    indent
+                    + json.dumps(key)
+                    + ": [{0}{1}{0}]".format(
+                        "\n" + indent if values else "",
+                        (",\n" + indent).join(
+                            [indent + json.dumps(value, cls=ParameterValueEncoder) for value in values]
+                        ),
+                    )
+                    for key, values in data.items()
+                ]
+            ),
+        )
+        with open(self.template_file_path, 'w', encoding='utf-8') as f:
+            f.write(json_data)
+        self.msg.emit(f"Template {self.template_file_path} successfully saved.")
 
     @Slot(bool)
     def show_import_file_dialog(self, checked=False):
         """Shows dialog to allow user to select a file to import."""
-        db_map = next(iter(self.db_maps))
-        if db_map.has_pending_changes():
+        if not all(self.db_mngr.undo_stack[db_map].isClean() for db_map in self.db_maps):
             commit_warning = QMessageBox(parent=self)
-            commit_warning.setText("Please commit or rollback before importing data")
+            commit_warning.setText("Please commit or rollback before importing data.")
             commit_warning.setStandardButtons(QMessageBox.Ok)
             commit_warning.exec()
             return
         dialog = ImportDialog(self.qsettings, parent=self)
-        # assume that dialog is modal, if not use accepted, rejected signals
-        if dialog.exec() == QDialog.Accepted:
-            if db_map.has_pending_changes():
-                self.msg.emit("Import successful")
-                self.init_models()
-        dialog.close()
-        dialog.deleteLater()
+        dialog.exec()
 
-    def _get_base_dir(self):
-        project = self.db_mngr.parent()
-        if project is None:
-            return APPLICATION_PATH
-        return project.project_dir
+    @Slot(dict)
+    def import_data(self, data):
+        changed_db_maps = []
+        db_map_error_log = {}
+        for db_map in self.db_maps:
+            try:
+                _, import_errors = import_data(db_map, **data)
+                db_map_error_log[db_map] = [f"{e.db_type}: {e.msg}" for e in import_errors]
+                changed_db_maps.append(db_map)
+            except (SpineIntegrityError, SpineDBAPIError) as err:
+                db_map_error_log[db_map] = [err.msg]
+                db_map.rollback_session()
+        # Don't send a commit cookie as the database is updated by an 'outside force' here.
+        self.db_mngr.commit_session(*changed_db_maps, rollback_if_no_msg=True, cookie=None)
+        if any(db_map_error_log.values()):
+            self.db_mngr.error_msg(db_map_error_log)
 
     @Slot(bool)
     def export_database(self, checked=False):
@@ -332,15 +376,14 @@ class DataStoreFormBase(QMainWindow):
         db_map = self._select_database()
         if db_map is None:  # Database selection cancelled
             return
-        file_path, selected_filter = QFileDialog.getSaveFileName(
-            self, "Export to file", self._get_base_dir(), "Excel file (*.xlsx);;SQlite database (*.sqlite *.db)"
+        self.qsettings.beginGroup(self.settings_group)
+        file_path, _ = get_save_file_name_in_last_dir(
+            self.qsettings, "exportDB", self, "Export to file", self._get_base_dir(), "Excel file (*.xlsx)"
         )
+        self.qsettings.endGroup()
         if not file_path:  # File selection cancelled
             return
-        if selected_filter.startswith("SQlite"):
-            self.export_to_sqlite(db_map, file_path)
-        elif selected_filter.startswith("Excel"):
-            self.export_to_excel(db_map, file_path)
+        self.export_to_excel(db_map, file_path)
 
     def _select_database(self):
         """
@@ -376,12 +419,12 @@ class DataStoreFormBase(QMainWindow):
         except OSError:
             self.msg_error.emit("[OSError] Unable to export to file <b>{0}</b>".format(filename))
 
-    @busy_effect
-    def export_to_sqlite(self, db_map, file_path):
-        """Exports data from database into SQlite file."""
-        dst_url = 'sqlite:///{0}'.format(file_path)
-        copy_database(dst_url, db_map, overwrite=True)
-        self.msg.emit("SQlite file successfully exported.")
+    def reload_session(self, db_maps):
+        """Reloads data from given db_maps."""
+        self.init_models()
+        self.db_mngr.fetch_db_maps_for_listener(self, *db_maps)
+        db_names = ", ".join([x.codename for x in db_maps])
+        self.msg.emit(f"Reloaded databases {db_names}")
 
     @Slot(bool)
     def refresh_session(self, checked=False):
@@ -390,19 +433,22 @@ class DataStoreFormBase(QMainWindow):
     @Slot(bool)
     def commit_session(self, checked=False):
         """Commits session."""
-        self.db_mngr.commit_session(*self.db_maps)
+        self.db_mngr.commit_session(*self.db_maps, cookie=self)
 
     @Slot(bool)
     def rollback_session(self, checked=False):
         self.db_mngr.rollback_session(*self.db_maps)
 
-    def receive_session_committed(self, db_maps):
+    def receive_session_committed(self, db_maps, cookie):
         db_maps = set(self.db_maps) & set(db_maps)
         if not db_maps:
             return
-        db_names = ", ".join([x.codename for x in db_maps])
-        msg = f"All changes in {db_names} committed successfully."
-        self.msg.emit(msg)
+        if cookie is self:
+            db_names = ", ".join([x.codename for x in db_maps])
+            msg = f"All changes in {db_names} committed successfully."
+            self.msg.emit(msg)
+        else:  # Commit done by an 'outside force'.
+            self.reload_session(db_maps)
 
     def receive_session_rolled_back(self, db_maps):
         db_maps = set(self.db_maps) & set(db_maps)
@@ -456,11 +502,6 @@ class DataStoreFormBase(QMainWindow):
     def show_manage_parameter_tags_form(self, checked=False):
         dialog = ManageParameterTagsDialog(self, self.db_mngr, *self.db_maps)
         dialog.show()
-
-    @Slot("QItemSelection", "QItemSelection")
-    def _handle_parameter_value_list_selection_changed(self, selected, deselected):
-        """Accepts selection."""
-        self._accept_selection(self.ui.treeView_parameter_value_list)
 
     @Slot("QPoint")
     def show_parameter_value_list_context_menu(self, pos):
@@ -527,6 +568,11 @@ class DataStoreFormBase(QMainWindow):
         self.db_mngr.remove_items(db_map_typed_data_to_rm)
         self.ui.treeView_parameter_value_list.selectionModel().clearSelection()
 
+    @Slot(bool)
+    def show_mass_remove_items_form(self, checked=False):
+        dialog = MassRemoveItemsDialog(self, self.db_mngr, *self.db_maps)
+        dialog.show()
+
     @busy_effect
     @Slot("QModelIndex")
     def show_parameter_value_editor(self, index):
@@ -549,6 +595,41 @@ class DataStoreFormBase(QMainWindow):
 
     def receive_alternatives_added(self, db_map_data):
         self.notify_items_changed("added", "alternatives", db_map_data)
+
+    def receive_scenarios_fetched(self, db_map_data):
+        pass
+
+    def receive_scenario_alternatives_fetched(self, db_map_data):
+        pass
+
+    def receive_alternatives_fetched(self, db_map_data):
+        pass
+
+    def receive_object_classes_fetched(self, db_map_data):
+        pass
+
+    def receive_objects_fetched(self, db_map_data):
+        pass
+
+    def receive_relationship_classes_fetched(self, db_map_data):
+        pass
+
+    def receive_relationships_fetched(self, db_map_data):
+        pass
+
+    def receive_parameter_definitions_fetched(self, db_map_data):
+        pass
+
+    def receive_parameter_values_fetched(self, db_map_data):
+        pass
+
+    def receive_parameter_value_lists_fetched(self, db_map_data):
+        self.notify_items_changed("fetched", "parameter value list", db_map_data)
+        self.parameter_value_list_model.receive_parameter_value_lists_added(db_map_data)
+
+    def receive_parameter_tags_fetched(self, db_map_data):
+        self.notify_items_changed("fetched", "parameter tag", db_map_data)
+        self.parameter_tag_toolbar.receive_parameter_tags_added(db_map_data)
 
     def receive_object_classes_added(self, db_map_data):
         self.notify_items_changed("added", "object class", db_map_data)
@@ -696,7 +777,52 @@ class DataStoreFormBase(QMainWindow):
             self.db_mngr.unset_logger_for_db_map(db_map)
         # Save UI form state
         self.save_window_state()
-        event.accept()
+        QMainWindow.closeEvent(self, event)
+
+    def _focused_widget_can_remove_selections(self):
+        """Returns True if the currently focused widget or one of its parents can respond to actinoRemove_selection."""
+        focus_widget = self.focusWidget()
+        while focus_widget is not self:
+            if hasattr(focus_widget, "model") and callable(focus_widget.model):
+                model = focus_widget.model()
+                if hasattr(model, "remove_selection_requested"):
+                    return True
+            focus_widget = focus_widget.parentWidget()
+        return False
+
+    def _focused_widget_has_callable(self, callable_name):
+        """Returns True if the currently focused widget or one of its ancestors has the given callable."""
+        focus_widget = self.focusWidget()
+        while focus_widget is not None and focus_widget is not self:
+            if hasattr(focus_widget, callable_name):
+                method = getattr(focus_widget, callable_name)
+                if callable(method):
+                    return True
+            focus_widget = focus_widget.parentWidget()
+        return False
+
+    def _focused_widgets_model_has_non_empty_list(self, list_name):
+        """Returns True if the currently focused widget's or one of its ancestors' model has a non empty list."""
+        focus_widget = self.focusWidget()
+        while focus_widget is not self:
+            if hasattr(focus_widget, "model") and callable(focus_widget.model):
+                model = focus_widget.model()
+                if hasattr(model, list_name):
+                    a_list = getattr(model, list_name)
+                    return bool(a_list)
+            focus_widget = focus_widget.parentWidget()
+        return False
+
+    def _call_on_focused_widget(self, callable_name):
+        """Calls the given callable on the currently focused widget or one of its ancestors."""
+        focus_widget = self.focusWidget()
+        while focus_widget is not None and focus_widget is not self:
+            if hasattr(focus_widget, callable_name):
+                method = getattr(focus_widget, callable_name)
+                if callable(method):
+                    method()
+                    break
+            focus_widget = focus_widget.parentWidget()
 
 
 class DataStoreForm(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeViewMixin, DataStoreFormBase):
@@ -830,3 +956,9 @@ class DataStoreForm(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         self.resizeDocks(docks, [0.9 * width, 0.1 * width], Qt.Horizontal)
         self.end_style_change()
         self.ui.graphicsView.reset_zoom()
+
+    def _get_base_dir(self):
+        project = self.db_mngr.parent()
+        if project is None:
+            return APPLICATION_PATH
+        return project.project_dir

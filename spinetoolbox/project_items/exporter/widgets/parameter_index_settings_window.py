@@ -38,7 +38,7 @@ class ParameterIndexSettingsWindow(QWidget):
             database_path (str): a database url
             parent (QWidget): a parent widget
         """
-        from ..ui.parameter_index_settings_window import Ui_Form
+        from ..ui.parameter_index_settings_window import Ui_Form  # pylint: disable=import-outside-toplevel
 
         super().__init__(parent, f=Qt.Window)
         self._available_existing_domains = dict(available_existing_domains)

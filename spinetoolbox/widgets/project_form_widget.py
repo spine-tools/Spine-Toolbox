@@ -31,7 +31,7 @@ class NewProjectForm(QWidget):
         Args:
             toolbox (ToolboxUI): Parent widget.
         """
-        from ..ui import project_form
+        from ..ui import project_form  # pylint: disable=import-outside-toplevel
 
         super().__init__(parent=toolbox, f=Qt.Window)  # Inherits stylesheet from parent
         self._toolbox = toolbox

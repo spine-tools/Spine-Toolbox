@@ -35,7 +35,7 @@ class TestImportPreviewWindow(unittest.TestCase):
         importer.name = mock.MagicMock(return_value="importer")
         toolbox = QWidget()
         toolbox.qsettings = mock.MagicMock(return_value=QSettings())
-        widget = ImportPreviewWindow(importer, "", SourceConnection(), {}, toolbox)
+        widget = ImportPreviewWindow(importer, "", SourceConnection, {}, {}, toolbox)
         widget._qsettings = mock.NonCallableMagicMock()
         widget.closeEvent()
         widget._qsettings.beginGroup.assert_called_once_with("mappingPreviewWindow")

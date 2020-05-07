@@ -18,7 +18,7 @@ Contains unit tests for the tool_instance module.
 
 import unittest
 from unittest import mock
-from spinetoolbox.tool_specifications import PythonTool
+from spinetoolbox.project_items.tool.tool_specifications import PythonTool
 
 
 class TestPythonToolInstance(unittest.TestCase):
@@ -50,7 +50,7 @@ class TestPythonToolInstance(unittest.TestCase):
 
     @staticmethod
     def _make_tool_instance(execute_in_embedded_console):
-        toolbox = None
+        python_repl = None
         settings = mock.NonCallableMagicMock()
         if execute_in_embedded_console:
             settings.value = mock.MagicMock(return_value="2")
@@ -65,7 +65,7 @@ class TestPythonToolInstance(unittest.TestCase):
         logger = None
         path = ""
         source_files = ["main.py"]
-        specification = PythonTool(toolbox, "specification name", "python", path, source_files, settings, logger)
+        specification = PythonTool("specification name", "python", path, source_files, settings, python_repl, logger)
         base_directory = "path/"
         return specification.create_tool_instance(base_directory)
 

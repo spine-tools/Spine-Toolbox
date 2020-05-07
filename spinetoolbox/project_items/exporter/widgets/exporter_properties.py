@@ -27,7 +27,7 @@ class ExporterProperties(QWidget):
         Args:
             toolbox (ToolboxUI): a main window instance
         """
-        from ..ui.exporter_properties import Ui_Form
+        from ..ui.exporter_properties import Ui_Form  # pylint: disable=import-outside-toplevel
 
         super().__init__()
         self._ui = Ui_Form()

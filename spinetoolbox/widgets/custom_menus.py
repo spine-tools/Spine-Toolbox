@@ -132,28 +132,6 @@ class LinkContextMenu(CustomContextMenu):
             self.add_action("Send to bottom")
 
 
-class ToolSpecificationContextMenu(CustomContextMenu):
-    """Context menu class for Tool specifications."""
-
-    def __init__(self, parent, position, index):
-        """
-        Args:
-            parent (QWidget): Parent for menu widget (ToolboxUI)
-            position (QPoint): Position on screen
-            index (QModelIndex): Index of item that requested the context-menu
-        """
-        super().__init__(parent, position)
-        if not index.isValid():
-            # If no item at index
-            return
-        self.add_action("Edit Tool specification")
-        self.add_action("Edit main program file...")
-        self.add_action("Open main program directory...")
-        self.add_action("Open Tool specification file...")
-        self.addSeparator()
-        self.add_action("Remove Tool specification")
-
-
 class EntityTreeContextMenu(CustomContextMenu):
     """Context menu class for object tree items in tree view form."""
 
@@ -174,32 +152,10 @@ class EntityTreeContextMenu(CustomContextMenu):
             for text, icon in action_block.items():
                 self.add_action(text, icon)
             self.addSeparator()
-
-
-class ObjectTreeContextMenu(EntityTreeContextMenu):
-    """Context menu class for object tree items in tree view form."""
-
-    def __init__(self, parent, position, index):
-        """
-        Args:
-            parent (QWidget): Parent for menu widget
-            position (QPoint): Position on screen
-            index (QModelIndex): Index of item that requested the context-menu
-        """
-        super().__init__(parent, position, index)
-        item = index.model().item_from_index(index)
         if item.has_children():
             self.addSeparator()
             self.add_action("Fully expand", QIcon(":/icons/menu_icons/angle-double-right.svg"))
             self.add_action("Fully collapse", QIcon(":/icons/menu_icons/angle-double-left.svg"))
-
-
-class RelationshipTreeContextMenu(EntityTreeContextMenu):
-    """Context menu class for relationship tree items in tree view form."""
-
-
-class AlternativeTreeContextMenu(EntityTreeContextMenu):
-    """Context menu class for relationship tree items in tree view form."""
 
 
 class ParameterContextMenu(CustomContextMenu):
@@ -402,7 +358,7 @@ class CustomPopupMenu(QMenu):
             action.setToolTip(tooltip)
 
 
-class AddToolSpecificationPopupMenu(CustomPopupMenu):
+class AddSpecificationPopupMenu(CustomPopupMenu):
     """Popup menu class for add Tool specification button."""
 
     def __init__(self, parent):
@@ -412,60 +368,36 @@ class AddToolSpecificationPopupMenu(CustomPopupMenu):
         """
         super().__init__(parent)
         # Open empty Tool specification Form
-        self.add_action("New", self._parent.show_tool_specification_form)
-        # Add an existing Tool specification from file to project
-        self.add_action("Add existing...", self._parent.open_tool_specification)
-
-
-class ToolSpecificationOptionsPopupmenu(CustomPopupMenu):
-    """Popup menu class for tool specification options button in Tool item."""
-
-    def __init__(self, parent, tool):
-        """
-        Args:
-            parent (QWidget): Parent widget of this menu (ToolboxUI)
-            tool (Tool): Tool item that is associated with the pressed button
-        """
-        super().__init__(parent)
-        enabled = bool(tool.tool_specification())
-        self.add_action("Edit Tool specification", tool.edit_tool_specification, enabled=enabled)
-        self.add_action("Edit main program file...", tool.open_tool_main_program_file, enabled=enabled)
-        self.add_action("Open main program directory...", tool.open_tool_main_directory, enabled=enabled)
-        self.add_action("Open definition file", tool.open_tool_specification_file, enabled=enabled)
+        self.add_action("Add Specification from file...", parent.import_specification)
         self.addSeparator()
-        self.add_action("New Tool specification", self._parent.show_tool_specification_form)
-        self.add_action("Add Tool specification...", self._parent.open_tool_specification)
+        for item_type, factory in parent.item_factories.items():
+            if not factory.supports_specifications():
+                continue
+            # Need to 'clone' item_type, otherwise show_specification_form() may be called with
+            # wrong item type as item_type is a cell variable.
+            specification_item_type = str(item_type)
+            self.add_action(
+                f"Create {item_type} Specification...",
+                lambda _: parent.show_specification_form(specification_item_type, specification=None),
+            )
 
 
-class AddIncludesPopupMenu(CustomPopupMenu):
-    """Popup menu class for add includes button in Tool specification editor widget."""
+class ItemSpecificationMenu(CustomPopupMenu):
+    """Context menu class for item specifications."""
 
-    def __init__(self, parent):
+    def __init__(self, parent, index):
         """
         Args:
-            parent (QWidget): Parent widget (ToolSpecificationWidget)
+            parent (QWidget): Parent for menu widget (ToolboxUI)
+            position (QPoint): Position on screen
+            index (QModelIndex): the index
         """
         super().__init__(parent)
-        self._parent = parent
-        # Open a tool specification file
-        self.add_action("New file", self._parent.new_source_file)
+        self.index = index
+        self.add_action("Edit specification", lambda: parent.edit_specification(index))
+        self.add_action("Remove specification", lambda: parent.remove_specification(index.row()))
+        self.add_action("Open specification file...", lambda: parent.open_specification_file(index))
         self.addSeparator()
-        self.add_action("Open files...", self._parent.show_add_source_files_dialog)
-
-
-class CreateMainProgramPopupMenu(CustomPopupMenu):
-    """Popup menu class for add main program QToolButton in Tool specification editor widget."""
-
-    def __init__(self, parent):
-        """
-        Args:
-            parent (QWidget): Parent widget (ToolSpecificationWidget)
-        """
-        super().__init__(parent)
-        self._parent = parent
-        # Open a tool specification file
-        self.add_action("Make new main program", self._parent.new_main_program_file)
-        self.add_action("Select existing main program", self._parent.browse_main_program)
 
 
 class RecentProjectsPopupMenu(CustomPopupMenu):
@@ -735,8 +667,7 @@ class PivotTableModelMenu(QMenu):
     def open_value_editor(self):
         """Opens the parameter value editor for the first selected cell."""
         index = self._selected_value_indexes[0]
-        value_name = self._source.value_name(index)
-        self.parent().show_parameter_value_editor(index, value_name=value_name)
+        self.parent().show_parameter_value_editor(index)
 
     def plot(self):
         """Plots the selected cells in the pivot table."""
@@ -747,10 +678,11 @@ class PivotTableModelMenu(QMenu):
         except PlottingError as error:
             report_plotting_failure(error, self)
             return
-        plotted_column_names = set()
-        for index in selected_indexes:
-            label = hints.column_label(self._proxy, index.column())
-            plotted_column_names.add(label)
+        plotted_column_names = {
+            hints.column_label(self._proxy, index.column())
+            for index in selected_indexes
+            if hints.is_index_in_data(self._proxy, index)
+        }
         plot_window.use_as_window(self.parentWidget(), ", ".join(plotted_column_names))
         plot_window.show()
 
@@ -858,7 +790,11 @@ class PivotTableHorizontalHeaderMenu(QMenu):
         self.move(self.parent().mapToGlobal(pos))
         self._model_index = self.parent().indexAt(pos)
         source_index = self._proxy_model.mapToSource(self._model_index)
-        if self._proxy_model.sourceModel().index_in_top_left(source_index):
+        if self._proxy_model.sourceModel().column_is_index_column(self._model_index.column()):
+            self._plot_action.setEnabled(False)
+            self._set_as_X_action.setEnabled(True)
+            self._set_as_X_action.setChecked(source_index.column() == self._proxy_model.sourceModel().plot_x_column)
+        elif self._model_index.column() < self._proxy_model.sourceModel().headerColumnCount():
             self._plot_action.setEnabled(False)
             self._set_as_X_action.setEnabled(False)
             self._set_as_X_action.setChecked(False)

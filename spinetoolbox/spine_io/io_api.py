@@ -16,7 +16,7 @@ Contains a class template for a data source connector used in import ui.
 :date:   1.6.2019
 """
 
-from spinedb_api import read_with_mapping, DateTime, Duration
+from spinedb_api import read_with_mapping, DateTime, Duration, ParameterValueFormatError
 
 TYPE_STRING_TO_CLASS = {"string": str, "datetime": DateTime, "duration": Duration, "float": float}
 
@@ -34,6 +34,12 @@ class SourceConnection:
 
     # Modal widget that that returns action (OK, CANCEL) and source object
     SELECT_SOURCE_UI = NotImplemented
+
+    def __init__(self, settings):
+        """
+        Args:
+            settings (dict, optional): connector specific settings or None
+        """
 
     def connect_to_source(self, source):
         """Connects to source, ex: connecting to a database where source is a connection string.
@@ -94,7 +100,11 @@ class SourceConnection:
             row_types = {row: spec.convert_function() for row, spec in table_row_types.get(table, {}).items()}
             opt = options.get(table, {})
             data, header, num_cols = self.get_data_iterator(table, opt, max_rows)
-            data, t_errors = read_with_mapping(data, mapping, num_cols, header, types, row_types)
+            try:
+                data, t_errors = read_with_mapping(data, mapping, num_cols, header, types, row_types)
+            except ParameterValueFormatError as error:
+                errors.append(str(error))
+                continue
             for key, value in data.items():
                 mapped_data[key].extend(value)
             errors.extend([(table, f"Could not map row: {row_number}, Error: {err}") for row_number, err in t_errors])

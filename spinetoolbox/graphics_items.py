@@ -426,6 +426,7 @@ class ProjectItemIcon(QGraphicsRectItem):
     def mouseReleaseEvent(self, event):
         for icon in self.selected_icons:
             icon._current_pos = icon.scenePos()
+        # pylint: disable=undefined-variable
         if (self._current_pos - self._previous_pos).manhattanLength() > qApp.startDragDistance():
             self._toolbox.undo_stack.push(MoveIconCommand(self))
         super().mouseReleaseEvent(event)

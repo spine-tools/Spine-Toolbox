@@ -41,11 +41,20 @@ class GdxConnector(SourceConnection):
     SELECT_SOURCE_UI = select_gdx_file
     """Modal widget that returns source object and action (OK, CANCEL)."""
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, settings):
+        """
+        Args:
+            settings (dict): a dict from "gams_directory" to GAMS path; if the argument is None
+                or the path is empty or None, a default path is used
+        """
+        super().__init__(settings)
         self._filename = None
         self._gdx_file = None
-        self._gams_dir = find_gams_directory()
+        gams_directory = settings.get("gams_directory") if settings is not None else None
+        if gams_directory is not None and gams_directory:
+            self._gams_dir = gams_directory
+        else:
+            self._gams_dir = find_gams_directory()
 
     def __exit__(self, exc_type, exc_value, traceback):
         self.disconnect()
@@ -61,7 +70,7 @@ class GdxConnector(SourceConnection):
             source (str): path to .gdx file.
         """
         if self._gams_dir is None:
-            raise IOError(f"Could not find GAMS directory. Make sure that you have GAMS installed.")
+            raise IOError(f"Could not find GAMS directory. Make sure you have GAMS installed.")
         self._filename = source
         self._gdx_file = GdxFile(source, gams_dir=self._gams_dir)
 

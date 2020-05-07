@@ -23,25 +23,28 @@ import pathlib
 from PySide2.QtCore import Slot, QUrl, QFileSystemWatcher, Qt, QFileInfo
 from PySide2.QtGui import QDesktopServices, QStandardItem, QStandardItemModel, QIcon, QPixmap
 from PySide2.QtWidgets import QFileDialog, QStyle, QFileIconProvider, QInputDialog, QMessageBox
-from spinetoolbox.project_item import ProjectItem, ProjectItemResource
+from spinetoolbox.project_item import ProjectItem
+from spinetoolbox.project_item_resource import ProjectItemResource
 from spinetoolbox.widgets.spine_datapackage_widget import SpineDatapackageWidget
 from spinetoolbox.helpers import busy_effect, deserialize_path, serialize_path
 from spinetoolbox.config import APPLICATION_PATH, INVALID_FILENAME_CHARS
-from spinetoolbox.project_commands import AddDCReferencesCommand, RemoveDCReferencesCommand
+from .commands import AddDCReferencesCommand, RemoveDCReferencesCommand
+from .data_connection_executable import DataConnectionExecutable
+from .item_info import ItemInfo
 
 
 class DataConnection(ProjectItem):
-    def __init__(self, name, description, x, y, toolbox, project, logger, references=None):
+    def __init__(self, toolbox, project, logger, name, description, x, y, references=None):
         """Data Connection class.
 
         Args:
+            toolbox (ToolboxUI): QMainWindow instance
+            project (SpineToolboxProject): the project this item belongs to
+            logger (LoggerInterface): a logger instance
             name (str): Object name
             description (str): Object description
             x (float): Initial X coordinate of item icon
             y (float): Initial Y coordinate of item icon
-            toolbox (ToolboxUI): QMainWindow instance
-            project (SpineToolboxProject): the project this item belongs to
-            logger (LoggerInterface): a logger instance
             references (list): a list of file paths
         """
         super().__init__(name, description, x, y, project, logger)
@@ -54,8 +57,7 @@ class DataConnection(ProjectItem):
         if references is None:
             references = list()
         # Convert relative paths to absolute
-        absolute_refs = [deserialize_path(r, self._project.project_dir) for r in references]
-        self.references = absolute_refs
+        self.references = [deserialize_path(r, self._project.project_dir) for r in references]
         self.populate_reference_list(self.references)
         # Populate data (files) model
         data_files = self.data_files()
@@ -71,12 +73,17 @@ class DataConnection(ProjectItem):
     @staticmethod
     def item_type():
         """See base class."""
-        return "Data Connection"
+        return ItemInfo.item_type()
 
     @staticmethod
-    def category():
+    def item_category():
         """See base class."""
-        return "Data Connections"
+        return ItemInfo.item_category()
+
+    def execution_item(self):
+        """Creates DataConnection's execution counterpart."""
+        data_files = [os.path.join(self.data_dir, f) for f in self.data_files()]
+        return DataConnectionExecutable(self.name, self.file_references(), data_files, self._logger)
 
     def make_signal_handler_dict(self):
         """Returns a dictionary of all shared signals and their handlers.
@@ -102,7 +109,6 @@ class DataConnection(ProjectItem):
         self._properties_ui.label_dc_name.setText(self.name)
         self._properties_ui.treeView_dc_references.setModel(self.reference_model)
         self._properties_ui.treeView_dc_data.setModel(self.data_model)
-        self.refresh()
 
     @Slot("QVariant")
     def add_files_to_references(self, paths):
@@ -259,12 +265,12 @@ class DataConnection(ProjectItem):
             return
         # Check that file name has no invalid chars
         if any(True for x in file_name if x in INVALID_FILENAME_CHARS):
-            msg = "File name <b>{0}</b> contains invalid characters.".format(file_name)
+            msg = f"File name <b>{file_name}</b> contains invalid characters."
             self._logger.information_box.emit("Creating file failed", msg)
             return
         file_path = os.path.join(self.data_dir, file_name)
         if os.path.exists(file_path):
-            msg = "File <b>{0}</b> already exists.".format(file_name)
+            msg = f"File <b>{file_name}</b> already exists."
             self._logger.information_box.emit("Creating file failed", msg)
             return
         try:
@@ -324,7 +330,7 @@ class DataConnection(ProjectItem):
         return files
 
     @Slot("QString")
-    def refresh(self, path=None):
+    def refresh(self, _=None):
         """Refresh data files in Data Connection Properties.
         NOTE: Might lead to performance issues."""
         d = self.data_files()
@@ -369,7 +375,7 @@ class DataConnection(ProjectItem):
         """Update Data Connection tab name label. Used only when renaming project items."""
         self._properties_ui.label_dc_name.setText(self.name)
 
-    def output_resources_forward(self):
+    def resources_for_direct_successors(self):
         """see base class"""
         refs = self.file_references()
         f_list = [os.path.join(self.data_dir, f) for f in self.data_files()]
@@ -399,12 +405,14 @@ class DataConnection(ProjectItem):
         Returns:
             bool: True if renaming succeeded, False otherwise
         """
-        if not super().rename(new_name):
-            return False
         dirs = self.data_dir_watcher.directories()
         if dirs:
-            self.data_dir_watcher.removePaths(self.data_dir_watcher.directories())
+            self.data_dir_watcher.removePaths(dirs)
+        if not super().rename(new_name):
+            self.data_dir_watcher.addPaths(dirs)
+            return False
         self.data_dir_watcher.addPath(self.data_dir)
+        self.refresh()
         return True
 
     def tear_down(self):

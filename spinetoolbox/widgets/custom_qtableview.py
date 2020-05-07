@@ -555,3 +555,22 @@ class IndexedValueTableView(IndexedParameterValueTableViewBase):
                 raise ValueError()
             return single_column
         return data_indexes, data_values
+
+
+class ArrayTableView(CopyPasteTableView):
+    """Custom QTableView with copy and paste methods for single column tables."""
+
+    def copy(self):
+        """Copy current selection to clipboard in CSV format."""
+        selection_model = self.selectionModel()
+        if not selection_model.hasSelection():
+            return False
+        selected_indexes = sorted(selection_model.selectedIndexes(), key=lambda index: index.row())
+        values = [index.data() for index in selected_indexes]
+        with io.StringIO() as output:
+            writer = csv.writer(output, delimiter='\t')
+            for value in values:
+                value = locale.str(value) if value is not None else ""
+                writer.writerow([value])
+            QApplication.clipboard().setText(output.getvalue())
+        return True

@@ -37,7 +37,7 @@ def _cache_to_db_relationship(item):
 
 
 def _cache_to_db_parameter_definition(item):
-    item = {k: v for k, v in item.items() if k != "formatted_default_value"}
+    item = {k: v for k, v in item.items() if not any(k.startswith(x) for x in ("formatted_", "expanded_"))}
     item = deepcopy(item)
     if "parameter_name" in item:
         item["name"] = item.pop("parameter_name")
@@ -47,7 +47,7 @@ def _cache_to_db_parameter_definition(item):
 
 
 def _cache_to_db_parameter_value(item):
-    item = {k: v for k, v in item.items() if k != "formatted_value"}
+    item = {k: v for k, v in item.items() if not any(k.startswith(x) for x in ("formatted_", "expanded_"))}
     item = deepcopy(item)
     if "parameter_id" in item:
         item["parameter_definition_id"] = item.pop("parameter_id")
@@ -212,7 +212,7 @@ class CommandBase(QUndoCommand):
         super().__init__()
         self.db_mngr = db_mngr
         self.db_map = db_map
-        self.receive_signal = None
+        self.completed_signal = None
         self._completed = False
         self._age = time.time()
 
@@ -233,10 +233,10 @@ class CommandBase(QUndoCommand):
 
     @staticmethod
     def redomethod(func):
-        """Wraps the given function with a mechanism to determine this command's completion.
-        The command is considered completed if calling the function triggers a certain signal.
+        """Returns a new redo method that determines if the command was completed.
+        The command is completed if calling the function triggers the ``completed_signal``.
         Once the command is completed, we don't listen to the signal anymore
-        and we also block notifications on the affected Data Store forms.
+        and we also silence the affected Data Store forms.
         If the signal is not received, then the command is declared obsolete.
         """
 
@@ -244,9 +244,9 @@ class CommandBase(QUndoCommand):
             if self._completed:
                 self.silence_listener(func)
                 return
-            self.receive_signal.connect(self.receive_items_changed)
+            self.completed_signal.connect(self.receive_items_changed)
             func(self)
-            self.receive_signal.disconnect(self.receive_items_changed)
+            self.completed_signal.disconnect(self.receive_items_changed)
             if not self._completed:
                 self.setObsolete(True)
 
@@ -254,7 +254,7 @@ class CommandBase(QUndoCommand):
 
     @staticmethod
     def undomethod(func):
-        """Wraps the given function with an artifact to block notifications on the affected Data Store forms.
+        """Returns a new undo method that silences the affected Data Store forms.
         """
 
         def undo(self):
@@ -286,15 +286,15 @@ class AddItemsCommand(CommandBase):
         self.item_type = item_type
         self.method_name = self._add_method_name[item_type]
         self.get_method_name = self._get_method_name[item_type]
-        self.emit_signal_name = self._added_signal_name[item_type]
-        self.receive_signal = getattr(db_mngr, self.emit_signal_name)
+        self.completed_signal_name = self._added_signal_name[item_type]
+        self.completed_signal = getattr(db_mngr, self.completed_signal_name)
         self.setText(self._add_command_name[item_type] + f" to '{db_map.codename}'")
         self.undo_db_map_data = None
 
     @CommandBase.redomethod
     def redo(self):
         self.db_mngr.add_or_update_items(
-            self.redo_db_map_data, self.method_name, self.get_method_name, self.emit_signal_name
+            self.redo_db_map_data, self.method_name, self.get_method_name, self.completed_signal_name
         )
 
     @CommandBase.undomethod
@@ -335,8 +335,8 @@ class UpdateItemsCommand(CommandBase):
         self.undo_db_map_data = {db_map: [self._undo_item(db_map, item) for item in data]}
         self.method_name = self._update_method_name[item_type]
         self.get_method_name = self._get_method_name[item_type]
-        self.emit_signal_name = self._updated_signal_name[item_type]
-        self.receive_signal = getattr(db_mngr, self.emit_signal_name)
+        self.completed_signal_name = self._updated_signal_name[item_type]
+        self.completed_signal = getattr(db_mngr, self.completed_signal_name)
         self.setText(self._update_command_name[item_type] + f" in '{db_map.codename}'")
 
     def _undo_item(self, db_map, redo_item):
@@ -346,13 +346,13 @@ class UpdateItemsCommand(CommandBase):
     @CommandBase.redomethod
     def redo(self):
         self.db_mngr.add_or_update_items(
-            self.redo_db_map_data, self.method_name, self.get_method_name, self.emit_signal_name
+            self.redo_db_map_data, self.method_name, self.get_method_name, self.completed_signal_name
         )
 
     @CommandBase.undomethod
     def undo(self):
         self.db_mngr.add_or_update_items(
-            self.undo_db_map_data, self.method_name, self.get_method_name, self.emit_signal_name
+            self.undo_db_map_data, self.method_name, self.get_method_name, self.completed_signal_name
         )
 
     def data(self):
@@ -372,9 +372,9 @@ class SetParameterDefinitionTagsCommand(CommandBase):
         self.undo_db_map_data = {db_map: [self._undo_item(db_map, item) for item in data]}
         self.method_name = "set_parameter_definition_tags"
         self.get_method_name = "get_parameter_definition_tags"
-        self.emit_signal_name = "parameter_definition_tags_set"
+        self.completed_signal_name = "parameter_definition_tags_set"
         self.setText(f"set parameter definition tags in '{db_map.codename}'")
-        self.receive_signal = self.db_mngr.parameter_definition_tags_set
+        self.completed_signal = self.db_mngr.parameter_definition_tags_set
 
     def _undo_item(self, db_map, redo_item):
         undo_item = self.db_mngr.get_item(db_map, "parameter definition", redo_item["parameter_definition_id"])
@@ -383,14 +383,18 @@ class SetParameterDefinitionTagsCommand(CommandBase):
     @CommandBase.redomethod
     def redo(self):
         self.db_mngr.add_or_update_items(
-            self.redo_db_map_data, self.method_name, self.get_method_name, self.emit_signal_name
+            self.redo_db_map_data, self.method_name, self.get_method_name, self.completed_signal_name
         )
 
     @CommandBase.undomethod
     def undo(self):
         self.db_mngr.add_or_update_items(
-            self.undo_db_map_data, self.method_name, self.get_method_name, self.emit_signal_name
+            self.undo_db_map_data, self.method_name, self.get_method_name, self.completed_signal_name
         )
+
+    def data(self):
+        """See base class."""
+        raise NotImplementedError()
 
 
 class RemoveItemsCommand(CommandBase):
@@ -405,7 +409,7 @@ class RemoveItemsCommand(CommandBase):
         self.redo_db_map_typed_data = {db_map: typed_data}
         self.undo_typed_db_map_data = {}
         self.setText(f"remove items from '{db_map.codename}'")
-        self.receive_signal = self.db_mngr.items_removed_from_cache
+        self.completed_signal = self.db_mngr.items_removed_from_cache
 
     @CommandBase.redomethod
     def redo(self):
@@ -423,10 +427,10 @@ class RemoveItemsCommand(CommandBase):
     @Slot(object)
     def receive_items_changed(self, db_map_typed_data):  # pylint: disable=arguments-differ
         super().receive_items_changed(db_map_typed_data)
-        for db_map, typed_data in db_map_typed_data.items():
-            for item_type, data in typed_data.items():
-                data = [_cache_to_db_item(item_type, item) for item in data]
-                self.undo_typed_db_map_data.setdefault(item_type, {}).setdefault(db_map, []).extend(data)
+        typed_data = db_map_typed_data.get(self.db_map, {})
+        for item_type, data in typed_data.items():
+            data = [_cache_to_db_item(item_type, item) for item in data]
+            self.undo_typed_db_map_data.setdefault(item_type, {}).setdefault(self.db_map, []).extend(data)
 
     def data(self):
         return {

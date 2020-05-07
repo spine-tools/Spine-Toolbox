@@ -16,26 +16,16 @@ Functions to make and handle QToolBars.
 :date:   19.1.2018
 """
 
-from PySide2.QtCore import Qt, QMimeData, Signal, Slot
-from PySide2.QtWidgets import (
-    QToolBar,
-    QLabel,
-    QAction,
-    QApplication,
-    QButtonGroup,
-    QPushButton,
-    QWidget,
-    QSizePolicy,
-    QToolButton,
-)
-from PySide2.QtGui import QIcon, QDrag
+from PySide2.QtCore import Signal, Slot
+from PySide2.QtWidgets import QToolBar, QLabel, QAction, QButtonGroup, QPushButton, QWidget, QSizePolicy, QToolButton
+from PySide2.QtGui import QIcon
 from ..config import ICON_TOOLBAR_SS, PARAMETER_TAG_TOOLBAR_SS
+from .custom_qlistview import ProjectItemDragListView
 
 
-class ItemToolBar(QToolBar):
+class MainToolBar(QToolBar):
     """A toolbar to add items using drag and drop actions."""
 
-    # noinspection PyUnresolvedReferences, PyUnusedLocal
     def __init__(self, parent):
         """
 
@@ -44,67 +34,80 @@ class ItemToolBar(QToolBar):
         """
         super().__init__("Add Item Toolbar", parent=parent)  # Inherits stylesheet from ToolboxUI
         self._toolbox = parent
-        label = QLabel("Drag & Drop Icon")
-        self.addWidget(label)
-        icon_size = 24
-        # set remove all action
-        remove_all_icon = QIcon(":/icons/menu_icons/trash-alt.svg").pixmap(icon_size, icon_size)
-        remove_all = QToolButton(parent)
-        remove_all.setIcon(remove_all_icon)
-        remove_all.clicked.connect(self.remove_all)
-        remove_all.setToolTip("Remove all items from project.")
-        self.tool_separator = self.addSeparator()
-        self.addWidget(remove_all)
-        # Execute label and button
-        self.addSeparator()
-        ex_label = QLabel("Execute")
-        self.addWidget(ex_label)
-        execute_project_icon = QIcon(":/icons/project_item_icons/play-circle-solid.svg").pixmap(icon_size, icon_size)
-        execute_project = QToolButton(parent)
-        execute_project.setIcon(execute_project_icon)
-        execute_project.clicked.connect(self.execute_project)
-        execute_project.setToolTip("Execute project.")
-        self.addWidget(execute_project)
-        # ex_selected_label = QLabel("Execute Selected")
-        # self.addWidget(ex_selected_label)
-        execute_selected_icon = QIcon(":/icons/project_item_icons/play-circle-regular.svg").pixmap(icon_size, icon_size)
-        execute_selected = QToolButton(parent)
-        execute_selected.setIcon(execute_selected_icon)
-        execute_selected.clicked.connect(self.execute_selected)
-        execute_selected.setToolTip("Execute selection.")
-        self.addWidget(execute_selected)
-        self.addSeparator()
-        stop_icon = QIcon(":/icons/project_item_icons/stop-circle-regular.svg").pixmap(icon_size, icon_size)
-        stop = QToolButton(parent)
-        stop.setIcon(stop_icon)
-        stop.clicked.connect(self.stop_execution)
-        stop.setToolTip("Stop execution.")
-        self.addWidget(stop)
-        # Set stylesheet
+        self.project_item_list_view = ProjectItemDragListView(self)
+        self.project_item_spec_list_view = ProjectItemDragListView(self)
         self.setStyleSheet(ICON_TOOLBAR_SS)
         self.setObjectName("ItemToolbar")
 
-    def add_draggable_widgets(self, category_icon):
-        """Adds draggable widgets from the given list.
+    def setup(self):
+        self.add_project_item_list_view()
+        self.add_project_item_spec_list_view()
+        self.add_execute_buttons()
 
-        Args:
-            category_icon (list): List of tuples (item_type (str), item category (str), icon path (str))
-        """
-        widgets = list()
-        for item_type, category, icon in category_icon:
-            pixmap = QIcon(icon).pixmap(24, 24)
-            widget = DraggableWidget(self, pixmap, item_type, category)
-            widgets.append(widget)
-        for widget in widgets:
-            self.insertWidget(self.tool_separator, widget)
+    def add_project_item_list_view(self):
+        self.project_item_list_view.setModel(self._toolbox.project_item_factory_model)
+        self.addWidget(QLabel("Generic items"))
+        self.addWidget(self.project_item_list_view)
 
-    @Slot(bool, name="remove_all")
+    def add_project_item_spec_list_view(self):
+        icon_size = 16
+        self.addSeparator()
+        self.addWidget(QLabel("Specific items"))
+        self.addWidget(self.project_item_spec_list_view)
+        remove_spec = QToolButton(self)
+        remove_spec_icon = QIcon(":/icons/wrench_minus.svg").pixmap(icon_size, icon_size)
+        remove_spec.setIcon(remove_spec_icon)
+        remove_spec.clicked.connect(self._toolbox.remove_selected_specification)
+        remove_spec.setToolTip("<html><head/><body><p>Remove selected specific item from the project</p></body></html>")
+        self.addWidget(remove_spec)
+        add_spec = QToolButton(self)
+        add_spec_icon = QIcon(":/icons/wrench_plus.svg").pixmap(icon_size, icon_size)
+        add_spec.setIcon(add_spec_icon)
+        add_spec.setMenu(self._toolbox.add_specification_popup_menu)
+        add_spec.setPopupMode(QToolButton.InstantPopup)
+        add_spec.setToolTip("<html><head/><body><p>Add new specific item to the project</p></body></html>")
+        self.addWidget(add_spec)
+
+    def add_execute_buttons(self):
+        icon_size = 24
+        self.addSeparator()
+        self.addWidget(QLabel("Execution"))
+        execute_project_icon = QIcon(":/icons/project_item_icons/play-circle-solid.svg").pixmap(icon_size, icon_size)
+        execute_project = QToolButton(self)
+        execute_project.setIcon(execute_project_icon)
+        execute_project.clicked.connect(self.execute_project)
+        execute_project.setToolTip("Execute project")
+        self.addWidget(execute_project)
+        execute_selected_icon = QIcon(":/icons/project_item_icons/play-circle-regular.svg").pixmap(icon_size, icon_size)
+        execute_selected = QToolButton(self)
+        execute_selected.setIcon(execute_selected_icon)
+        execute_selected.clicked.connect(self.execute_selected)
+        execute_selected.setToolTip("Execute selection")
+        self.addWidget(execute_selected)
+        stop_icon = QIcon(":/icons/project_item_icons/stop-circle-regular.svg").pixmap(icon_size, icon_size)
+        stop = QToolButton(self)
+        stop.setIcon(stop_icon)
+        stop.clicked.connect(self.stop_execution)
+        stop.setToolTip("Stop execution")
+        self.addWidget(stop)
+
+    def add_remove_all_button(self):
+        icon_size = 24
+        remove_all_icon = QIcon(":/icons/menu_icons/trash-alt.svg").pixmap(icon_size, icon_size)
+        remove_all = QToolButton(self)
+        remove_all.setIcon(remove_all_icon)
+        remove_all.clicked.connect(self.remove_all)
+        remove_all.setToolTip("Remove all items from project.")
+        self.addSeparator()
+        self.addWidget(remove_all)
+
+    @Slot(bool)
     def remove_all(self, checked=False):
         """Slot for handling the remove all tool button clicked signal.
         Calls ToolboxUI remove_all_items() method."""
         self._toolbox.remove_all_items()
 
-    @Slot(bool, name="execute_project")
+    @Slot(bool)
     def execute_project(self, checked=False):
         """Slot for handling the Execute project tool button clicked signal."""
         if not self._toolbox.project():
@@ -113,7 +116,7 @@ class ItemToolBar(QToolBar):
         self._toolbox.project().execute_project()
         return
 
-    @Slot(bool, name="execute_selected")
+    @Slot(bool)
     def execute_selected(self, checked=False):
         """Slot for handling the Execute selected tool button clicked signal."""
         if not self._toolbox.project():
@@ -122,62 +125,13 @@ class ItemToolBar(QToolBar):
         self._toolbox.project().execute_selected()
         return
 
-    @Slot(bool, name="stop_execution")
+    @Slot(bool)
     def stop_execution(self, checked=False):
         """Slot for handling the Stop execution tool button clicked signal."""
         if not self._toolbox.project():
             self._toolbox.msg.emit("Please create a new project or open an existing one first")
             return
         self._toolbox.project().stop()
-
-
-class DraggableWidget(QLabel):
-    """A draggable QLabel."""
-
-    def __init__(self, parent, pixmap, item_type, category):
-        """
-
-        Args:
-            parent (QWidget): Parent widget
-            pixmap (QPixMap): Picture for the label
-            item_type (str): Item type (e.g. Data Store, Data Connection, etc...)
-            category (str): Item category (e.g. Data Stores, Data Connetions, etc...)
-        """
-        super().__init__(parent=parent)  # Parent passed to QLabel constructor. Inherits stylesheet from ToolboxUI.
-        self.category = category
-        self.setPixmap(pixmap)
-        self.drag_start_pos = None
-        self.setToolTip(
-            "<p>Drag-and-drop this icon into the Design View to create a new <b>{}</b> item.</p>".format(item_type)
-        )
-        self.setAlignment(Qt.AlignHCenter)
-        self.setAttribute(Qt.WA_DeleteOnClose)
-
-    def mousePressEvent(self, event):
-        """Register drag start position"""
-        if event.button() == Qt.LeftButton:
-            self.drag_start_pos = event.pos()
-
-    # noinspection PyArgumentList, PyUnusedLocal
-    def mouseMoveEvent(self, event):
-        """Start dragging action if needed"""
-        if not event.buttons() & Qt.LeftButton:
-            return
-        if not self.drag_start_pos:
-            return
-        if (event.pos() - self.drag_start_pos).manhattanLength() < QApplication.startDragDistance():
-            return
-        drag = QDrag(self)
-        mime_data = QMimeData()
-        mime_data.setText(self.category)
-        drag.setMimeData(mime_data)
-        drag.setPixmap(self.pixmap())
-        drag.setHotSpot(self.pixmap().rect().center())
-        drag.exec_()
-
-    def mouseReleaseEvent(self, event):
-        """Forget drag start position"""
-        self.drag_start_pos = None
 
 
 class ParameterTagToolBar(QToolBar):

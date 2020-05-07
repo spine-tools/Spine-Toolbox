@@ -94,6 +94,13 @@ class EntityListModel(QStandardItemModel):
     def flags(self, index):
         return super().flags(index) & ~Qt.ItemIsSelectable
 
+    def is_index_draggable(self, index):
+        return index != self.new_index
+
+    def get_mime_data_text(self, index):
+        entity_class_id = self.data(index, Qt.UserRole + 1)
+        return str(entity_class_id)
+
 
 class ObjectClassListModel(EntityListModel):
     """A model for listing object classes in the GraphViewForm."""
@@ -106,6 +113,9 @@ class ObjectClassListModel(EntityListModel):
     def entity_type(self):
         return "object class"
 
+    def _get_entity_class_ids(self):
+        raise NotImplementedError()
+
 
 class RelationshipClassListModel(EntityListModel):
     """A model for listing relationship classes in the GraphViewForm."""
@@ -117,3 +127,6 @@ class RelationshipClassListModel(EntityListModel):
     @property
     def entity_type(self):
         return "relationship class"
+
+    def _get_entity_class_ids(self):
+        raise NotImplementedError()
