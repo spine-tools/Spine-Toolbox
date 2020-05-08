@@ -178,7 +178,7 @@ class JuliaToolInstance(ToolInstance):
         """See base class."""
         work_dir = self.basedir
         use_embedded_julia = self._settings.value("appSettings/useEmbeddedJulia", defaultValue="2")
-        if use_embedded_julia == "2":
+        if use_embedded_julia == "2" and self._embedded_console is not None:
             # Prepare Julia REPL command
             mod_work_dir = repr(work_dir).strip("'")
             cmdline_args = self.tool_specification.get_cmdline_args(
@@ -210,7 +210,10 @@ class JuliaToolInstance(ToolInstance):
 
     def execute(self, **kwargs):
         """Executes a prepared instance."""
-        if self._settings.value("appSettings/useEmbeddedJulia", defaultValue="2") == "2":
+        if (
+            self._settings.value("appSettings/useEmbeddedJulia", defaultValue="2") == "2"
+            and self._embedded_console is not None
+        ):
             self.exec_mngr = ConsoleExecutionManager(self._embedded_console, self.ijulia_command_list, self._logger)
             self.exec_mngr.execution_finished.connect(self.handle_repl_execution_finished)
             self.exec_mngr.start_execution()
@@ -289,7 +292,7 @@ class PythonToolInstance(ToolInstance):
         """See base class."""
         work_dir = self.basedir
         use_embedded_python = self._settings.value("appSettings/useEmbeddedPython", defaultValue="0")
-        if use_embedded_python == "2":
+        if use_embedded_python == "2" and self._embedded_console is not None:
             # Prepare a command list (FIFO queue) with two commands for Python Console
             # 1st cmd: Change current work directory
             # 2nd cmd: Run script with given args
@@ -319,7 +322,10 @@ class PythonToolInstance(ToolInstance):
 
     def execute(self, **kwargs):
         """Executes a prepared instance."""
-        if self._settings.value("appSettings/useEmbeddedPython", defaultValue="0") == "2":
+        if (
+            self._settings.value("appSettings/useEmbeddedPython", defaultValue="0") == "2"
+            and self._embedded_console is not None
+        ):
             self.exec_mngr = ConsoleExecutionManager(self._embedded_console, self.ipython_command_list, self._logger)
             self.exec_mngr.execution_finished.connect(self.handle_console_execution_finished)
             self.exec_mngr.start_execution()

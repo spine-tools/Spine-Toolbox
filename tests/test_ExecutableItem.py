@@ -18,17 +18,17 @@ Unit tests for ExecutableItem.
 import unittest
 from unittest import mock
 from spine_engine import ExecutionDirection
-from spinetoolbox.executable_item import ExecutableItem
+from spinetoolbox.executable_item_base import ExecutableItemBase
 
 
 class TestExecutableItem(unittest.TestCase):
     def test_name(self):
-        item = ExecutableItem("name", mock.MagicMock())
+        item = ExecutableItemBase("name", mock.MagicMock())
         self.assertEqual(item.name, "name")
 
     def test_execute_backward(self):
         resources = [3, 5, 7]
-        item = ExecutableItem("name", mock.MagicMock())
+        item = ExecutableItemBase("name", mock.MagicMock())
         item.item_type = mock.MagicMock(return_value="Executable item")
         item._execute_backward = mock.MagicMock(return_value="return value")
         item._execute_forward = mock.MagicMock()
@@ -38,7 +38,7 @@ class TestExecutableItem(unittest.TestCase):
 
     def test_execute_forward(self):
         resources = [3, 5, 7]
-        item = ExecutableItem("name", mock.MagicMock())
+        item = ExecutableItemBase("name", mock.MagicMock())
         item.item_type = mock.MagicMock(return_value="Executable item")
         item._execute_backward = mock.MagicMock()
         item._execute_forward = mock.MagicMock(return_value="return value")
@@ -47,7 +47,7 @@ class TestExecutableItem(unittest.TestCase):
         item._execute_forward.assert_called_once_with(resources)
 
     def test_output_resources_backward(self):
-        item = ExecutableItem("name", mock.MagicMock())
+        item = ExecutableItemBase("name", mock.MagicMock())
         item._output_resources_backward = mock.MagicMock(return_value=[3, 5, 7])
         item._output_resources_forward = mock.MagicMock()
         self.assertEqual(item.output_resources(ExecutionDirection.BACKWARD), [3, 5, 7])
@@ -55,7 +55,7 @@ class TestExecutableItem(unittest.TestCase):
         item._output_resources_forward.assert_not_called()
 
     def test_output_resources_forward(self):
-        item = ExecutableItem("name", mock.MagicMock())
+        item = ExecutableItemBase("name", mock.MagicMock())
         item._output_resources_backward = mock.MagicMock()
         item._output_resources_forward = mock.MagicMock(return_value=[3, 5, 7])
         self.assertEqual(item.output_resources(ExecutionDirection.FORWARD), [3, 5, 7])

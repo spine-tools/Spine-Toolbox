@@ -10,34 +10,30 @@
 ######################################################################################################################
 
 """
-Unit tests for the DuratonEditor widget.
+Contains project item specification class.
 
-:authors: A. Soininen (VTT)
-:date:   3.7.2019
+:authors: M. Marin (KTH)
+:date:    7.5.2020
 """
-
-import unittest
-from PySide2.QtWidgets import QApplication
-from spinedb_api import Duration
-from spinetoolbox.widgets.duration_editor import DurationEditor
+from .metaobject import MetaObject
 
 
-class TestDurationEditor(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
+class ProjectItemSpecification(MetaObject):
+    """
+    Class to hold a project item specification.
 
-    def test_initial_value(self):
-        editor = DurationEditor()
-        value = editor.value()
-        self.assertEqual(value, Duration("1h"))
+    Attributes:
+        item_type (str): type of the project item the specification is compatible with
+        definition_file_path (str): specification's JSON file path
+    """
 
-    def test_value_access_single_duration(self):
-        editor = DurationEditor()
-        editor.set_value(Duration("3 months"))
-        self.assertEqual(editor.value(), Duration("3M"))
-
-
-if __name__ == '__main__':
-    unittest.main()
+    def __init__(self, name, description=None, item_type=""):
+        """
+        Args:
+            name (str): specification name
+            description (str): description
+            item_type (str): Project item type
+        """
+        super().__init__(name, description)
+        self.item_type = item_type
+        self.definition_file_path = ""

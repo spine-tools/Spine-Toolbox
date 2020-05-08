@@ -679,8 +679,6 @@ class SpineDBManager(QObject):
             display_data = "Array"
         elif isinstance(parsed_data, DateTime):
             display_data = str(parsed_data.value)
-        elif isinstance(parsed_data, Duration):
-            display_data = ", ".join(relativedelta_to_duration(delta) for delta in parsed_data.value)
         elif isinstance(parsed_data, TimePattern):
             display_data = "Time pattern"
         elif isinstance(parsed_data, ParameterValueFormatError):

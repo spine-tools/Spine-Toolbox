@@ -18,23 +18,23 @@ Unit tests for DataStoreExecutable.
 import unittest
 from unittest import mock
 from spine_engine import ExecutionDirection
-from spinetoolbox.project_items.data_store.data_store_executable import DataStoreExecutable
+from spinetoolbox.project_items.data_store.executable_item import ExecutableItem
 
 
 class TestDataStoreExecutable(unittest.TestCase):
     def test_item_type(self):
-        self.assertEqual(DataStoreExecutable.item_type(), "Data Store")
+        self.assertEqual(ExecutableItem.item_type(), "Data Store")
 
     def test_execute_backward(self):
-        executable = DataStoreExecutable("name", "", mock.MagicMock())
+        executable = ExecutableItem("name", "", mock.MagicMock())
         self.assertTrue(executable.execute([], ExecutionDirection.BACKWARD))
 
     def test_execute_forward(self):
-        executable = DataStoreExecutable("name", "", mock.MagicMock())
+        executable = ExecutableItem("name", "", mock.MagicMock())
         self.assertTrue(executable.execute([], ExecutionDirection.FORWARD))
 
     def test_output_resources_backward(self):
-        executable = DataStoreExecutable("name", "sqlite:///database.sqlite", mock.MagicMock())
+        executable = ExecutableItem("name", "sqlite:///database.sqlite", mock.MagicMock())
         resources = executable.output_resources(ExecutionDirection.BACKWARD)
         self.assertEqual(len(resources), 1)
         resource = resources[0]
@@ -43,7 +43,7 @@ class TestDataStoreExecutable(unittest.TestCase):
         self.assertEqual(resource.metadata, {})
 
     def test_output_resources_forward(self):
-        executable = DataStoreExecutable("name", "sqlite:///database.sqlite", mock.MagicMock())
+        executable = ExecutableItem("name", "sqlite:///database.sqlite", mock.MagicMock())
         resources = executable.output_resources(ExecutionDirection.FORWARD)
         self.assertEqual(len(resources), 1)
         resource = resources[0]

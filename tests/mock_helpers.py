@@ -120,9 +120,7 @@ def add_ds(project, name, x=0, y=0):
     """Helper function to create a Data Store to given project with given name and coordinates."""
     item = dict(name=name, description="", url=dict(), x=x, y=y)
     # This mocks create_dir in both project_item.py and in data_store.py
-    with mock.patch("spinetoolbox.project_item.create_dir") as mock_create_dir, mock.patch(
-        "spinetoolbox.project_items.data_store.data_store.create_dir"
-    ) as mock_create_dir2:
+    with mock.patch("spinetoolbox.project_item.create_dir") as mock_create_dir:
         project.add_project_items("Data Store", item)
     return
 

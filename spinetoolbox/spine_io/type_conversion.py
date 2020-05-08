@@ -10,7 +10,7 @@ from spinedb_api import DateTime, Duration, ParameterValueFormatError
 
 class NewIntegerSequenceDateTimeConvertSpecDialog(QDialog):
     def __init__(self, *args, **kwargs):
-        super(NewIntegerSequenceDateTimeConvertSpecDialog, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         self.setWindowTitle("New integer sequence datetime")
 
@@ -122,7 +122,7 @@ class IntegerSequenceDateTimeConvertSpec(ConvertSpec):
     def convert_function(self):
         pattern = re.compile(r"[0-9]+|$")
         start_datetime = self.start_datetime.value
-        duration = sum(self.duration.value, relativedelta())
+        duration = self.duration.value
         start_int = self.start_int
 
         def convert(value):
@@ -139,6 +139,6 @@ class IntegerSequenceDateTimeConvertSpec(ConvertSpec):
         return {
             "name": self.DISPLAY_NAME,
             "start_datetime": self.start_datetime.value.isoformat(),
-            "duration": self.duration.to_text(),
+            "duration": str(self.duration),
             "start_int": self.start_int,
         }

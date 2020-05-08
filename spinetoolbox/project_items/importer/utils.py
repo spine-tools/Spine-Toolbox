@@ -10,34 +10,25 @@
 ######################################################################################################################
 
 """
-Unit tests for the DuratonEditor widget.
+Contains Importer's utility functions.
 
 :authors: A. Soininen (VTT)
-:date:   3.7.2019
+:date:    6.5.2020
 """
-
-import unittest
-from PySide2.QtWidgets import QApplication
-from spinedb_api import Duration
-from spinetoolbox.widgets.duration_editor import DurationEditor
+from spinetoolbox.helpers import deserialize_path
 
 
-class TestDurationEditor(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
+def deserialize_mappings(mappings, project_path):
+    """Returns mapping settings as dict with absolute paths as keys.
 
-    def test_initial_value(self):
-        editor = DurationEditor()
-        value = editor.value()
-        self.assertEqual(value, Duration("1h"))
+    Args:
+        mappings (list): List where each element contains two dictionaries (path dict and mapping dict)
+        project_path (str): Path to project directory
 
-    def test_value_access_single_duration(self):
-        editor = DurationEditor()
-        editor.set_value(Duration("3 months"))
-        self.assertEqual(editor.value(), Duration("3M"))
-
-
-if __name__ == '__main__':
-    unittest.main()
+    Returns:
+        dict: Dictionary with absolute paths as keys and mapping settings as values
+    """
+    abs_path_mappings = {}
+    for source, mapping in mappings:
+        abs_path_mappings[deserialize_path(source, project_path)] = mapping
+    return abs_path_mappings

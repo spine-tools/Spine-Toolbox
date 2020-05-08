@@ -37,24 +37,21 @@ class DurationEditor(QWidget):
         self._ui = Ui_DurationEditor()
         self._ui.setupUi(self)
         self._ui.duration_edit.editingFinished.connect(self._change_duration)
-        self._ui.duration_edit.setText(self._value.to_text())
+        self._ui.duration_edit.setText(str(self._value))
 
     @Slot(name="_change_duration")
     def _change_duration(self):
         """Updates the value being edited."""
         text = self._ui.duration_edit.text()
-        tokens = text.split(',')
         try:
-            durations = [duration_to_relativedelta(token.strip()) for token in tokens]
+            self._value = Duration(text)
         except ParameterValueFormatError:
-            self._ui.duration_edit.setText(self._value.to_text())
-            return
-        self._value = Duration(durations)
+            self._ui.duration_edit.setText(str(self._value))
 
     def set_value(self, value):
         """Sets the value for editing."""
         self._value = value
-        self._ui.duration_edit.setText(self._value.to_text())
+        self._ui.duration_edit.setText(str(self._value))
 
     def value(self):
         """Returns the current Duration."""

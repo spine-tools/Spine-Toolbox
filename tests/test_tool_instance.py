@@ -50,7 +50,7 @@ class TestPythonToolInstance(unittest.TestCase):
 
     @staticmethod
     def _make_tool_instance(execute_in_embedded_console):
-        python_repl = None
+        python_repl = mock.MagicMock()
         settings = mock.NonCallableMagicMock()
         if execute_in_embedded_console:
             settings.value = mock.MagicMock(return_value="2")

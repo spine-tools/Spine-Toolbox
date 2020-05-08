@@ -10,34 +10,29 @@
 ######################################################################################################################
 
 """
-Unit tests for the DuratonEditor widget.
+Tool's specification factory.
 
 :authors: A. Soininen (VTT)
-:date:   3.7.2019
+:date:   6.5.2020
 """
-
-import unittest
-from PySide2.QtWidgets import QApplication
-from spinedb_api import Duration
-from spinetoolbox.widgets.duration_editor import DurationEditor
+from spinetoolbox.project_item_specification_factory import ProjectItemSpecificationFactory
+from .item_info import ItemInfo
+from .tool_specifications import ToolSpecification
 
 
-class TestDurationEditor(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
+class SpecificationFactory(ProjectItemSpecificationFactory):
+    """A factory to make tool specifications."""
 
-    def test_initial_value(self):
-        editor = DurationEditor()
-        value = editor.value()
-        self.assertEqual(value, Duration("1h"))
+    @staticmethod
+    def item_type():
+        """See base class."""
+        return ItemInfo.item_type()
 
-    def test_value_access_single_duration(self):
-        editor = DurationEditor()
-        editor.set_value(Duration("3 months"))
-        self.assertEqual(editor.value(), Duration("3M"))
-
-
-if __name__ == '__main__':
-    unittest.main()
+    @staticmethod
+    def make_specification(
+        definition, definition_path, app_settings, logger, embedded_julia_console, embedded_python_console
+    ):
+        """Returns a tool specifications."""
+        return ToolSpecification.toolbox_load(
+            definition, definition_path, app_settings, logger, embedded_julia_console, embedded_python_console
+        )

@@ -32,6 +32,7 @@ from . import resources_icons_rc  # pylint: disable=unused-import
 from .ui_main import ToolboxUI
 from .helpers import pyside2_version_check, spine_engine_version_check
 from .version import __version__
+from .headless import headless_main
 
 
 def main():
@@ -48,6 +49,8 @@ def main():
         return 1
     parser = _make_argument_parser()
     args = parser.parse_args()
+    if args.execute_only:
+        return headless_main(args)
     app = QApplication(sys.argv)
     status = QFontDatabase.addApplicationFont(":/fonts/fontawesome5-solid-webfont.ttf")
     if status < 0:
@@ -65,5 +68,6 @@ def _make_argument_parser():
     parser = ArgumentParser()
     version = f"Spine Toolbox {__version__}"
     parser.add_argument("-v", "--version", action="version", version=version)
+    parser.add_argument("--execute-only", help="execute given project only, do not open the GUI", action="store_true")
     parser.add_argument("project", help="project to open at startup", nargs="?", default="")
     return parser
