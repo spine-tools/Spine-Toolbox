@@ -446,6 +446,11 @@ class SpineDBManager(QObject):
         )
         self.parameter_tags_added.connect(lambda db_map_data: self.cache_items("parameter tag", db_map_data))
         # Update in cache
+        self.scenarios_updated.connect(lambda db_map_data: self.cache_items("scenario", db_map_data))
+        self.alternatives_updated.connect(lambda db_map_data: self.cache_items("alternative", db_map_data))
+        self.scenario_alternatives_updated.connect(
+            lambda db_map_data: self.cache_items("scenario_alternative", db_map_data)
+        )
         self.object_classes_updated.connect(lambda db_map_data: self.cache_items("object class", db_map_data))
         self.objects_updated.connect(lambda db_map_data: self.cache_items("object", db_map_data))
         self.relationship_classes_updated.connect(
@@ -476,9 +481,9 @@ class SpineDBManager(QObject):
         self.parameter_definitions_removed.connect(self.cascade_remove_parameter_values_by_definition)
         self.alternatives_removed.connect(self.cascade_remove_parameter_values_by_alternative)
         self.alternatives_removed.connect(self.cascade_remove_scenario_alternative_by_alternative)
-        self.alternatives_removed.connect(self.cascade_remove_scenario_alternative_by_scenario)
         # On cascade refresh
         self.alternatives_updated.connect(self.cascade_refresh_scenario_alternatives)
+        self.alternatives_updated.connect(self.cascade_refresh_parameter_values_by_alternative)
         self.object_classes_updated.connect(self.cascade_refresh_relationship_classes)
         self.object_classes_updated.connect(self.cascade_refresh_parameter_definitions)
         self.object_classes_updated.connect(self.cascade_refresh_parameter_values_by_entity_class)
@@ -1459,8 +1464,11 @@ class SpineDBManager(QObject):
         if any(db_map_cascading_data.values()):
             self.parameter_values_removed.emit(db_map_cascading_data)
 
+    @Slot(object)
     def cascade_remove_scenario_alternative_by_alternative(self, db_map_data):
-        pass
+        db_map_cascading_data = self.find_cascading_alternative_scenarios_by_alternative(self._to_ids(db_map_data))
+        if any(db_map_cascading_data.values()):
+            self.scenario_alternatives_removed.emit(db_map_cascading_data)
 
     def cascade_remove_scenario_alternative_by_scenario(self, db_map_data):
         pass
@@ -1582,6 +1590,22 @@ class SpineDBManager(QObject):
         self.parameter_values_updated.emit(db_map_cascading_data)
 
     @Slot(object)
+    def cascade_refresh_parameter_values_by_alternative(self, db_map_data):
+        """Refreshes cached parameter values in cascade when updating alternatives.
+
+        Args:
+            db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
+        """
+        db_map_cascading_data = self.find_cascading_parameter_values_by_alternative(self._to_ids(db_map_data))
+        if not any(db_map_cascading_data.values()):
+            return
+        db_map_cascading_data = {
+            db_map: self.get_parameter_values(db_map, ids={x["id"] for x in data})
+            for db_map, data in db_map_cascading_data.items()
+        }
+        self.parameter_values_updated.emit(db_map_cascading_data)
+
+    @Slot(object)
     def cascade_refresh_parameter_values_by_definition(self, db_map_data):
         """Refreshes cached parameter values in cascade when updating parameter definitions.
 
@@ -1686,5 +1710,23 @@ class SpineDBManager(QObject):
         for db_map, alt_ids in db_map_ids.items():
             db_map_cascading_data[db_map] = [
                 item for item in self.get_items(db_map, "parameter value") if item["alternative_id"] in alt_ids
+            ]
+        return db_map_cascading_data
+
+    def find_cascading_alternative_scenarios_by_alternative(self, db_map_ids):
+        """Finds and returns cascading parameter values for the given parameter alternative ids."""
+        db_map_cascading_data = dict()
+        for db_map, alt_ids in db_map_ids.items():
+            db_map_cascading_data[db_map] = [
+                item for item in self.get_items(db_map, "scenario_alternative") if item["alternative_id"] in alt_ids
+            ]
+        return db_map_cascading_data
+
+    def find_cascading_alternative_scenarios_by_scenario(self, db_map_ids):
+        """Finds and returns cascading parameter values for the given parameter alternative ids."""
+        db_map_cascading_data = dict()
+        for db_map, scen_ids in db_map_ids.items():
+            db_map_cascading_data[db_map] = [
+                item for item in self.get_items(db_map, "scenario_alternative") if item["scenario_id"] in scen_ids
             ]
         return db_map_cascading_data

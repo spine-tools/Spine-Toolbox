@@ -256,7 +256,7 @@ class AlternativeTreeModel(EntityTreeModel):
                 d.setdefault(item["scenario_id"], set()).add(item["id"])
             for scenario_id, ids in d.items():
                 # Find the parents corresponding the this class id and put them in the result
-                for parent_item in self.find_leaves(db_map, (scenario_id,), parent_items=(self._scenario_root,)):
+                for parent_item in self.find_items(db_map, (scenario_id,), parent_items=(self._scenario_root,)):
                     result.setdefault(parent_item, {})[db_map] = ids
         return result
 

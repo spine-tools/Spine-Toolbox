@@ -129,8 +129,6 @@ class TreeViewMixin:
         """Updates object filter and sets default rows."""
         indexes = self.ui.treeView_alternative.selectionModel().selectedIndexes()
         self.alternative_tree_model.select_indexes(indexes)
-        if not self._accept_selection(self.ui.treeView_alternative):
-            return
         # self.set_default_parameter_data(self.ui.treeView_object.currentIndex())
         # self._update_object_filter()
 
