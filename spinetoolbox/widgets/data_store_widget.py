@@ -315,7 +315,7 @@ class DataStoreFormBase(QMainWindow):
             export_items["object_parameter_values"] = export_items["relationship_parameter_values"] = (
                 "parameter value" in selected_item_types
             )
-            # export_items["parameter_value_lists"] = "parameter value list" in selected_item_types
+            export_items["parameter_value_lists"] = "parameter value list" in selected_item_types
             # export_items["parameter_tags"] = "parameter tag" in selected_item_types
             for key, items in export_data(db_map, **export_items).items():
                 data.setdefault(key, []).extend(items)
