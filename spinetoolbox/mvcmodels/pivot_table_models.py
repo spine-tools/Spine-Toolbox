@@ -26,8 +26,8 @@ from ..config import PIVOT_TABLE_HEADER_COLOR
 
 class IndexId(enum.IntEnum):
     PARAMETER = -1
+    ALTERNATIVE = -2
     PARAMETER_INDEX = -3
-    ALTERNATIVE = -4
 
 
 class PivotTableModel(QAbstractTableModel):
@@ -362,7 +362,7 @@ class PivotTableModel(QAbstractTableModel):
         """
         if top_left_id == IndexId.PARAMETER:
             return self.db_mngr.get_item(self.db_map, "parameter definition", header_id).get("parameter_name")
-        if top_left_id == -2:
+        if top_left_id == IndexId.ALTERNATIVE:
             return self.db_mngr.get_item(self.db_map, "alternative", header_id).get("name")
         return self.db_mngr.get_item(self.db_map, "object", header_id)["name"]
 
@@ -423,13 +423,17 @@ class PivotTableModel(QAbstractTableModel):
         """
         row, column = self.map_to_pivot(index)
         header_ids = self._header_ids(row, column)
-        last_object_id = -1 if not self._parent.is_index_expansion_input_type() else -2
-        objects_ids, parameter_id = header_ids[:last_object_id], header_ids[-1]
+        last_object_id = -2 if not self._parent.is_index_expansion_input_type() else -3
+        objects_ids = header_ids[:last_object_id]
+        parameter_id = header_ids[-2]
+        alternative_id = header_ids[-1]
         object_names = [self.db_mngr.get_item(self.db_map, "object", id_)["name"] for id_ in objects_ids]
         parameter_name = self.db_mngr.get_item(self.db_map, "parameter definition", parameter_id).get(
             "parameter_name", ""
         )
-        return object_names, parameter_name
+        alternative_name = self.db_mngr.get_item(self.db_map, "alternative", alternative_id).get("name", "")
+
+        return object_names, parameter_name, alternative_name
 
     def index_name(self, index):
         """Returns a string that concatenates the header names corresponding to the given data index.
@@ -442,8 +446,8 @@ class PivotTableModel(QAbstractTableModel):
         """
         if not self.index_in_data(index):
             return ""
-        object_names, parameter_name = self.header_names(index)
-        return self.db_mngr._GROUP_SEP.join(object_names) + " - " + parameter_name
+        object_names, parameter_name, alternative_name = self.header_names(index)
+        return self.db_mngr._GROUP_SEP.join(object_names) + " - " + parameter_name + " - " + alternative_name
 
     def column_name(self, column):
         """Returns a string that concatenates the header names corresponding to the given column.
@@ -485,7 +489,7 @@ class PivotTableModel(QAbstractTableModel):
                 if self._parent.is_value_input_type():
                     return self.db_mngr.get_value(self.db_map, "parameter value", data[0][0], role)
                 if self._parent.is_index_expansion_input_type():
-                    index = self._header_ids(row, column)[-2]
+                    index = self._header_ids(row, column)[-3]
                     return self.db_mngr.get_value_index(self.db_map, "parameter value", data[0][0], index, role)
                 return "Logic error"
             return None
@@ -570,20 +574,20 @@ class PivotTableModel(QAbstractTableModel):
         return dict(
             entity_class_id=self._parent.current_class_id,
             entity_id=header_ids[0],
-            parameter_definition_id=header_ids[-1],
+            parameter_definition_id=header_ids[-2],
             value=value,
-            alternative_id=header_ids[-2],
+            alternative_id=header_ids[-1],
         )
 
     def _relationship_parameter_value_to_add(self, header_ids, value, rel_id_lookup):
-        object_id_list = ",".join([str(id_) for id_ in header_ids[:-1]])
+        object_id_list = ",".join([str(id_) for id_ in header_ids[:-2]])
         relationship_id = rel_id_lookup[object_id_list]
         return dict(
             entity_class_id=self._parent.current_class_id,
             entity_id=relationship_id,
-            parameter_definition_id=header_ids[-1],
+            parameter_definition_id=header_ids[-2],
             value=value,
-            alternative_id=header_ids[-2],
+            alternative_id=header_ids[-1],
         )
 
     def _make_parameter_value_to_add(self):
@@ -601,9 +605,10 @@ class PivotTableModel(QAbstractTableModel):
     def _parameter_value_to_update(self, id_, header_ids, value):
         item = {"id": id_, "value": value}
         if self._parent.is_index_expansion_input_type():
-            item["index"] = header_ids[-2]
+            item["index"] = header_ids[-3]
         else:
-            item["parameter_definition_id"] = header_ids[-1]
+            item["parameter_definition_id"] = header_ids[-2]
+            item["alternative_id"] = header_ids[-1]
         return item
 
     def _batch_set_parameter_value_data(self, row_map, column_map, data, values):
@@ -702,7 +707,7 @@ class PivotTableModel(QAbstractTableModel):
             item = dict(id=header_id, name=value)
             if top_left_id == IndexId.PARAMETER:
                 param_defs.append(item)
-            elif top_left_id == -2:
+            elif top_left_id == IndexId.ALTERNATIVE:
                 alternatives.append(item)
             else:
                 objects.append(item)
@@ -729,7 +734,7 @@ class PivotTableModel(QAbstractTableModel):
                 )
                 item[class_key] = self._parent.current_class_id
                 param_defs.append(item)
-            elif top_left_id == -2:
+            elif top_left_id == IndexId.ALTERNATIVE:
                 alternatives.append(item)
             else:
                 item["class_id"] = self._parent.current_object_class_id_list()[top_left_id]

@@ -331,7 +331,7 @@ class TabularViewMixin:
         """
         data = self.load_parameter_value_data()
         return {
-            key[:-1] + (index, key[-1]): id_
+            key[:-2] + (index, key[-2], key[-1]): id_
             for key, id_ in data.items()
             for index in self.db_mngr.get_value_indexes(self.db_map, "parameter value", id_)
         }
@@ -420,7 +420,7 @@ class TabularViewMixin:
         self.pivot_table_model.reset_model(data, index_ids, rows, columns, frozen, frozen_value)
         self.pivot_table_proxy.clear_filter()
         if self.current_input_type == self._INDEX_EXPANSION:
-            x_column = self.pivot_table_model.headerColumnCount() - 1
+            x_column = self.pivot_table_model.headerColumnCount() - 2
             self.pivot_table_model.set_plot_x_column(x_column, is_x=True)
 
     def clear_pivot_table(self):
@@ -492,6 +492,8 @@ class TabularViewMixin:
                 data_to_value = parameter_id_to_name
             elif identifier == IndexId.PARAMETER_INDEX:
                 data_to_value = parameter_index_to_value
+            elif identifier == IndexId.ALTERNATIVE:
+                data_to_value = alternative_id_to_name
             else:
                 data_to_value = object_id_to_name
             self.filter_menus[identifier] = menu = TabularViewFilterMenu(
