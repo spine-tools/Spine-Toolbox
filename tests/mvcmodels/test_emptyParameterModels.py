@@ -47,7 +47,7 @@ class TestEmptyParameterModel(unittest.TestCase):
             "object_class_name",
             "object_name",
             "parameter_name",
-            "alternative",
+            "alternative_id",
             "value",
             "database",
         ]
@@ -55,7 +55,7 @@ class TestEmptyParameterModel(unittest.TestCase):
             "relationship_class_name",
             "object_name_list",
             "parameter_name",
-            "alternative",
+            "alternative_id",
             "value",
             "database",
         ]

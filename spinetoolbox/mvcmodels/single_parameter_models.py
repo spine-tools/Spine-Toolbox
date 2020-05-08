@@ -138,7 +138,7 @@ class SingleParameterModel(MinimalTableModel):
             "value": ("id", "parameter value"),
             "default_value": ("id", "parameter definition"),
             "database": ("database", None),
-            "alternative": ("alternative_id", "alternative"),
+            "alternative_id": ("alternative_id", "alternative"),
         }.get(field)
 
     def get_id_key(self, field):
@@ -179,7 +179,7 @@ class SingleParameterModel(MinimalTableModel):
                 description = self.get_field_item(field, item).get("description", None)
                 if description not in (None, ""):
                     return description
-            if field == "alternative":
+            if field == "alternative_id":
                 return self.get_field_item(field, item).get("name", None)
 
             if field in self.json_fields:
