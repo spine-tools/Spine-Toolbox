@@ -19,16 +19,15 @@ Module for data store class.
 import os
 from PySide2.QtCore import Slot, Qt
 from PySide2.QtWidgets import QFileDialog, QApplication
-from sqlalchemy import create_engine
-from sqlalchemy.engine.url import URL
 import spinedb_api
 from spinetoolbox.project_item import ProjectItem
 from spinetoolbox.project_item_resource import ProjectItemResource
 from spinetoolbox.widgets.data_store_widget import DataStoreForm
-from spinetoolbox.helpers import create_dir, busy_effect, serialize_path, deserialize_path
+from spinetoolbox.helpers import busy_effect, serialize_path, deserialize_path
 from .commands import UpdateDSURLCommand
-from .data_store_executable import DataStoreExecutable
+from .executable_item import ExecutableItem
 from .item_info import ItemInfo
+from .utils import convert_to_sqlalchemy_url
 from .widgets.custom_menus import DataStoreContextMenu
 
 
@@ -56,12 +55,6 @@ class DataStore(ProjectItem):
         self._sa_url = None
         self.ds_view = None
         self._for_spine_model_checkbox_state = Qt.Unchecked
-        # Make logs directory for this Data Store
-        self.logs_dir = os.path.join(self.data_dir, "logs")
-        try:
-            create_dir(self.logs_dir)
-        except OSError:
-            self._logger.msg_error.emit(f"[OSError] Creating directory {self.logs_dir} failed. Check permissions.")
 
     @staticmethod
     def item_type():
@@ -76,7 +69,7 @@ class DataStore(ProjectItem):
     def execution_item(self):
         """Creates DataStore's execution counterpart."""
         self._update_sa_url(log_errors=False)
-        return DataStoreExecutable(self.name, self._sa_url, self._logger)
+        return ExecutableItem(self.name, self._sa_url, self._logger)
 
     def parse_url(self, url):
         """Return a complete url dictionary from the given dict or string"""
@@ -124,62 +117,9 @@ class DataStore(ProjectItem):
         self._update_sa_url()
         return self._sa_url
 
-    def _update_sa_url(self, log_errors=True):
-        self._sa_url = self._make_url(log_errors=log_errors)
-
     @busy_effect
-    def _make_url(self, log_errors=True):
-        """Returns a sqlalchemy url from the current url attribute or None if not valid."""
-        if not self._url:
-            if log_errors:
-                self._logger.msg_error.emit(
-                    f"No URL specified for <b>{self.name}</b>. Please specify one and try again"
-                )
-            return None
-        try:
-            url = {key: value for key, value in self._url.items() if value}
-            dialect = url.pop("dialect")
-            if not dialect:
-                if log_errors:
-                    self._logger.msg_error.emit(
-                        f"Unable to generate URL from <b>{self.name}</b> selections: invalid dialect {dialect}. "
-                        "<br>Please select a new dialect and try again."
-                    )
-                return None
-            if dialect == 'sqlite':
-                sa_url = URL('sqlite', **url)  # pylint: disable=unexpected-keyword-arg
-            else:
-                db_api = spinedb_api.SUPPORTED_DIALECTS[dialect]
-                drivername = f"{dialect}+{db_api}"
-                sa_url = URL(drivername, **url)  # pylint: disable=unexpected-keyword-arg
-        except Exception as e:  # pylint: disable=broad-except
-            # This is in case one of the keys has invalid format
-            if log_errors:
-                self._logger.msg_error.emit(
-                    f"Unable to generate URL from <b>{self.name}</b> selections: {e} "
-                    "<br>Please make new selections and try again."
-                )
-            return None
-        if not sa_url.database:
-            if log_errors:
-                self._logger.msg_error.emit(
-                    f"Unable to generate URL from <b>{self.name}</b> selections: database missing. "
-                    "<br>Please select a database and try again."
-                )
-            return None
-        # Final check
-        try:
-            engine = create_engine(sa_url)
-            with engine.connect():
-                pass
-        except Exception as e:  # pylint: disable=broad-except
-            if log_errors:
-                self._logger.msg_error.emit(
-                    f"Unable to generate URL from <b>{self.name}</b> selections: {e} "
-                    "<br>Please make new selections and try again."
-                )
-            return None
-        return sa_url
+    def _update_sa_url(self, log_errors=True):
+        self._sa_url = convert_to_sqlalchemy_url(self._url, self.name, self._logger, log_errors)
 
     def project(self):
         """Returns current project or None if no project open."""
@@ -502,8 +442,6 @@ class DataStore(ProjectItem):
                 # Check that the db was moved successfully to the new data_dir
                 if os.path.exists(database):
                     self.do_update_url(database=database)
-        # Update logs dir
-        self.logs_dir = os.path.join(self.data_dir, "logs")
         return True
 
     def tear_down(self):

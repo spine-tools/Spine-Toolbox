@@ -10,45 +10,29 @@
 ######################################################################################################################
 
 """
-The ExporterFactory class.
+Tool's specification factory.
 
-:author: M. Marin (KTH)
-:date:   15.4.2020
+:authors: A. Soininen (VTT)
+:date:   6.5.2020
 """
-
-from spinetoolbox.project_item import ProjectItemFactory
-from .exporter import Exporter
-from .exporter_icon import ExporterIcon
-from .widgets.add_exporter_widget import AddExporterWidget
-from .widgets.exporter_properties import ExporterProperties
+from spinetoolbox.project_item_specification_factory import ProjectItemSpecificationFactory
+from .item_info import ItemInfo
+from .tool_specifications import ToolSpecification
 
 
-class ExporterFactory(ProjectItemFactory):
-    @staticmethod
-    def icon():
-        return ":/icons/project_item_icons/database-export.svg"
-
-    @property
-    def item_maker(self):
-        return Exporter
-
-    @property
-    def icon_maker(self):
-        return ExporterIcon
-
-    @property
-    def add_form_maker(self):
-        return AddExporterWidget
-
-    @property
-    def specification_form_maker(self):
-        raise NotImplementedError()
-
-    @property
-    def specification_menu_maker(self):
-        raise NotImplementedError()
+class SpecificationFactory(ProjectItemSpecificationFactory):
+    """A factory to make tool specifications."""
 
     @staticmethod
-    def _make_properties_widget(toolbox):
+    def item_type():
         """See base class."""
-        return ExporterProperties(toolbox)
+        return ItemInfo.item_type()
+
+    @staticmethod
+    def make_specification(
+        definition, definition_path, app_settings, logger, embedded_julia_console, embedded_python_console
+    ):
+        """Returns a tool specifications."""
+        return ToolSpecification.toolbox_load(
+            definition, definition_path, app_settings, logger, embedded_julia_console, embedded_python_console
+        )

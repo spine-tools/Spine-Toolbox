@@ -10,44 +10,25 @@
 ######################################################################################################################
 
 """
-The ViewFactory class.
+Contains Importer's utility functions.
 
-:author: M. Marin (KTH)
-:date:   15.4.2020
+:authors: A. Soininen (VTT)
+:date:    6.5.2020
 """
-
-from spinetoolbox.project_item import ProjectItemFactory
-from .view import View
-from .view_icon import ViewIcon
-from .widgets.view_properties_widget import ViewPropertiesWidget
-from .widgets.add_view_widget import AddViewWidget
+from spinetoolbox.helpers import deserialize_path
 
 
-class ViewFactory(ProjectItemFactory):
-    @staticmethod
-    def icon():
-        return ":/icons/project_item_icons/binoculars.svg"
+def deserialize_mappings(mappings, project_path):
+    """Returns mapping settings as dict with absolute paths as keys.
 
-    @property
-    def item_maker(self):
-        return View
+    Args:
+        mappings (list): List where each element contains two dictionaries (path dict and mapping dict)
+        project_path (str): Path to project directory
 
-    @property
-    def icon_maker(self):
-        return ViewIcon
-
-    @property
-    def add_form_maker(self):
-        return AddViewWidget
-
-    @property
-    def specification_form_maker(self):
-        raise NotImplementedError()
-
-    @property
-    def specification_menu_maker(self):
-        raise NotImplementedError()
-
-    @staticmethod
-    def _make_properties_widget(toolbox):
-        return ViewPropertiesWidget(toolbox)
+    Returns:
+        dict: Dictionary with absolute paths as keys and mapping settings as values
+    """
+    abs_path_mappings = {}
+    for source, mapping in mappings:
+        abs_path_mappings[deserialize_path(source, project_path)] = mapping
+    return abs_path_mappings

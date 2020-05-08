@@ -29,7 +29,6 @@ from spinetoolbox.project import SpineToolboxProject
 from spinetoolbox.graphics_items import ProjectItemIcon, Link
 from spinetoolbox.project_tree_item import RootProjectTreeItem
 from spinetoolbox.resources_icons_rc import qInitResources
-from spinetoolbox.project_items.tool.tool_specifications import PythonTool
 from .mock_helpers import create_toolboxui, create_project, add_ds, add_dc
 
 

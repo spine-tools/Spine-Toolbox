@@ -19,7 +19,7 @@ Contains ExecutableItem, a project item's counterpart in execution as well as su
 from spine_engine import ExecutionDirection
 
 
-class ExecutableItem:
+class ExecutableItemBase:
     """
     The part of a project item that is executed by the Spine Engine.
     """
@@ -142,7 +142,7 @@ class ExecutableItem:
         return list()
 
     @classmethod
-    def from_dict(cls, item_dict, name, project_dir, app_settings, logger):
+    def from_dict(cls, item_dict, name, project_dir, app_settings, specifications, logger):
         """
         Deserializes an executable item from item dictionary.
 
@@ -151,8 +151,9 @@ class ExecutableItem:
             name (str): item's name
             project_dir (str): absolute path to the project directory
             app_settings (QSettings): Toolbox settings
+            specifications (dict): mapping from item specification name to :class:`ProjectItemSpecification`
             logger (LoggingInterface): a logger
         Returns:
-            ExecutableItem: deserialized executable item
+            ExecutableItemBase: deserialized executable item
         """
         raise NotImplementedError()

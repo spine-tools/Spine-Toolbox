@@ -18,27 +18,27 @@ Unit tests for ViewExecutable.
 import unittest
 from unittest import mock
 from spine_engine import ExecutionDirection
-from spinetoolbox.project_items.view.view_executable import ViewExecutable
+from spinetoolbox.project_items.view.executable_item import ExecutableItem
 
 
 class TestViewExecutable(unittest.TestCase):
     def test_item_type(self):
-        self.assertEqual(ViewExecutable.item_type(), "View")
+        self.assertEqual(ExecutableItem.item_type(), "View")
 
     def test_execute_backward(self):
-        executable = ViewExecutable("name", mock.MagicMock())
+        executable = ExecutableItem("name", mock.MagicMock())
         self.assertTrue(executable.execute([], ExecutionDirection.BACKWARD))
 
     def test_execute_forward(self):
-        executable = ViewExecutable("name", mock.MagicMock())
+        executable = ExecutableItem("name", mock.MagicMock())
         self.assertTrue(executable.execute([], ExecutionDirection.FORWARD))
 
     def test_output_resources_backward(self):
-        executable = ViewExecutable("name", mock.MagicMock())
+        executable = ExecutableItem("name", mock.MagicMock())
         self.assertEqual(executable.output_resources(ExecutionDirection.BACKWARD), [])
 
     def test_output_resources_forward(self):
-        executable = ViewExecutable("name", mock.MagicMock())
+        executable = ExecutableItem("name", mock.MagicMock())
         self.assertEqual(executable.output_resources(ExecutionDirection.FORWARD), [])
 
 

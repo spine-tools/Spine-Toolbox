@@ -10,44 +10,30 @@
 ######################################################################################################################
 
 """
-The ViewFactory class.
+Contains project item specification class.
 
-:author: M. Marin (KTH)
-:date:   15.4.2020
+:authors: M. Marin (KTH)
+:date:    7.5.2020
 """
-
-from spinetoolbox.project_item import ProjectItemFactory
-from .view import View
-from .view_icon import ViewIcon
-from .widgets.view_properties_widget import ViewPropertiesWidget
-from .widgets.add_view_widget import AddViewWidget
+from .metaobject import MetaObject
 
 
-class ViewFactory(ProjectItemFactory):
-    @staticmethod
-    def icon():
-        return ":/icons/project_item_icons/binoculars.svg"
+class ProjectItemSpecification(MetaObject):
+    """
+    Class to hold a project item specification.
 
-    @property
-    def item_maker(self):
-        return View
+    Attributes:
+        item_type (str): type of the project item the specification is compatible with
+        definition_file_path (str): specification's JSON file path
+    """
 
-    @property
-    def icon_maker(self):
-        return ViewIcon
-
-    @property
-    def add_form_maker(self):
-        return AddViewWidget
-
-    @property
-    def specification_form_maker(self):
-        raise NotImplementedError()
-
-    @property
-    def specification_menu_maker(self):
-        raise NotImplementedError()
-
-    @staticmethod
-    def _make_properties_widget(toolbox):
-        return ViewPropertiesWidget(toolbox)
+    def __init__(self, name, description=None, item_type=""):
+        """
+        Args:
+            name (str): specification name
+            description (str): description
+            item_type (str): Project item type
+        """
+        super().__init__(name, description)
+        self.item_type = item_type
+        self.definition_file_path = ""

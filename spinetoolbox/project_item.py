@@ -412,8 +412,9 @@ class ProjectItemFactory:
     def supports_specifications():
         """
         Returns whether or not this factory supports specs.
+
         If the subclass implementation returns True, then it must also implement
-        ``specification_form_maker``, ``specification_menu_maker``, and  ``specification_loader``.
+        ``specification_form_maker``, and ``specification_menu_maker``.
 
         Returns:
             bool
@@ -434,16 +435,6 @@ class ProjectItemFactory:
     def specification_menu_maker(self):
         """
         Returns an ItemSpecificationMenu subclass.
-
-        Returns:
-            class
-        """
-        raise NotImplementedError()
-
-    @property
-    def specification_loader(self):
-        """
-        Returns a function to load specifications.
 
         Returns:
             class
@@ -502,36 +493,3 @@ class ProjectItemFactory:
             QWidget
         """
         raise NotImplementedError()
-
-
-class ProjectItemSpecification(MetaObject):
-    """
-    Class to hold a project item specification.
-
-    Attributes:
-        item_type (str): project item's type
-        def_file_path (str): specification's JSON file path
-    """
-
-    def __init__(self, name, description=None, item_type=""):
-        """
-        Args:
-            name (str): specification name
-            description (str): description
-            item_type (str): Project item type
-        """
-        super().__init__(name, description)
-        self.item_type = item_type
-        self.def_file_path = ""
-
-    def set_def_path(self, path):
-        """Sets the file path for this tool specification.
-
-        Args:
-            path (str): Absolute path to the specification file.
-        """
-        self.def_file_path = path
-
-    def get_def_path(self):
-        """Returns tool specification file path."""
-        return self.def_file_path

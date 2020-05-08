@@ -10,22 +10,24 @@
 ######################################################################################################################
 
 """
-Contains ImporterExecutable, Importer's executable counterpart as well as support utilities.
+Contains Importer's executable item as well as support utilities.
 
 :authors: A. Soininen (VTT)
 :date:   1.4.2020
 """
 import os
+import pathlib
 from PySide2.QtCore import QObject, QEventLoop, Signal, Slot
 from spinetoolbox.config import PYTHON_EXECUTABLE
-from spinetoolbox.executable_item import ExecutableItem
+from spinetoolbox.executable_item_base import ExecutableItemBase
 from spinetoolbox.execution_managers import QProcessExecutionManager
 from spinetoolbox.spine_io.gdx_utils import find_gams_directory
 from . import importer_program
 from .item_info import ItemInfo
+from .utils import deserialize_mappings
 
 
-class ImporterExecutable(ExecutableItem, QObject):
+class ExecutableItem(ExecutableItemBase, QObject):
 
     importing_finished = Signal()
     """Emitted after the separate import process has finished executing."""
@@ -41,7 +43,7 @@ class ImporterExecutable(ExecutableItem, QObject):
             cancel_on_error (bool): if True, quit execution on import error
             logger (LoggerInterface): a logger
         """
-        ExecutableItem.__init__(self, name, logger)
+        ExecutableItemBase.__init__(self, name, logger)
         QObject.__init__(self)
         self._settings = settings
         self._logs_dir = logs_dir
@@ -159,13 +161,24 @@ class ImporterExecutable(ExecutableItem, QObject):
         self.importing_finished.emit()
 
     def _gams_system_directory(self):
-        """Returns GAMS system path from Toolbox settings or None if GAMS default is to be used."""
+        """Returns GAMS system path or None if GAMS default is to be used."""
         path = self._gams_path
         if not path:
             path = find_gams_directory()
         if path is not None and os.path.isfile(path):
             path = os.path.dirname(path)
         return path
+
+    @classmethod
+    def from_dict(cls, item_dict, name, project_dir, app_settings, specifications, logger):
+        """See base class."""
+        settings = deserialize_mappings(item_dict["mappings"], project_dir)
+        data_dir = pathlib.Path(project_dir, ".spinetoolbox", "items", item_dict["short name"])
+        logs_dir = os.path.join(data_dir, "logs")
+        python_path = app_settings.value("appSettings/pythonPath", defaultValue="")
+        gams_path = app_settings.value("appSettings/gamsPath", defaultValue=None)
+        cancel_on_error = item_dict["cancel_on_error"]
+        return cls(name, settings, logs_dir, python_path, gams_path, cancel_on_error, logger)
 
 
 def _files_from_resources(resources):

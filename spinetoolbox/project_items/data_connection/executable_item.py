@@ -10,20 +10,20 @@
 ######################################################################################################################
 
 """
-Contains DataConnectionExecutable, DataConnection's executable counterpart as well as support utilities.
+Contains Data Connection's executable item as well as support utilities.
 
 :authors: A. Soininen (VTT)
 :date:   1.4.2020
 """
 import os
 import pathlib
-from spinetoolbox.executable_item import ExecutableItem
+from spinetoolbox.executable_item_base import ExecutableItemBase
 from spinetoolbox.helpers import deserialize_path
 from spinetoolbox.project_item_resource import ProjectItemResource
 from .item_info import ItemInfo
 
 
-class DataConnectionExecutable(ExecutableItem):
+class ExecutableItem(ExecutableItemBase):
     """The executable parts of Data Connection."""
 
     def __init__(self, name, file_references, data_files, logger):
@@ -46,12 +46,11 @@ class DataConnectionExecutable(ExecutableItem):
         return [ProjectItemResource(self, "file", url=pathlib.Path(ref).as_uri()) for ref in self._files]
 
     @classmethod
-    def from_dict(cls, item_dict, name, project_dir, app_settings, logger):
+    def from_dict(cls, item_dict, name, project_dir, app_settings, specifications, logger):
         """See base class."""
         references = item_dict["references"]
         file_references = [deserialize_path(r, project_dir) for r in references]
-        short_name = item_dict["short name"]
-        data_dir = pathlib.Path(project_dir, short_name)
+        data_dir = pathlib.Path(project_dir, ".spinetoolbox", "items", item_dict["short name"])
         data_files = list()
         with os.scandir(data_dir) as scan_iterator:
             for entry in scan_iterator:

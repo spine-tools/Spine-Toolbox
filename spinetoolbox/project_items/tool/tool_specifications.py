@@ -22,7 +22,7 @@ import os
 import re
 from PySide2.QtCore import QUrl
 from PySide2.QtGui import QDesktopServices
-from spinetoolbox.project_item import ProjectItemSpecification
+from spinetoolbox.project_item_specification import ProjectItemSpecification
 from .item_info import ItemInfo
 from .tool_instance import GAMSToolInstance, JuliaToolInstance, PythonToolInstance, ExecutableToolInstance
 
@@ -287,29 +287,47 @@ class ToolSpecification(ProjectItemSpecification):
         return did_expand, expanded_args
 
     @staticmethod
-    def toolbox_load(toolbox, definition, def_path):
+    def toolbox_load(
+        definition, definition_path, app_settings, logger, embedded_julia_console, embedded_python_console
+    ):
+        """
+        Deserializes and constructs a tool specification from definition.
+
+        Args:
+            definition (dict): a dictionary containing the serialized specification.
+            definition_path (str): path to the definition file
+            app_settings (QSettings): Toolbox settings
+            logger (LoggerInterface): a logger
+            embedded_julia_console (JuliaREPLWidget, optional): Julia console widget,
+                required if a Julia tool is to be run in the console
+            embedded_python_console (PythonReplWidget, optional): Python console widget,
+                required if a Python tool is to be run in the console
+        Returns:
+            ToolSpecification: a tool specification constructed from the given definition,
+                or None if there was an error
+        """
         includes_main_path = definition.get("includes_main_path", ".")
-        path = os.path.normpath(os.path.join(os.path.dirname(def_path), includes_main_path))
+        path = os.path.normpath(os.path.join(os.path.dirname(definition_path), includes_main_path))
         try:
             _tooltype = definition["tooltype"].lower()
         except KeyError:
-            toolbox.msg_error.emit(
+            logger.msg_error.emit(
                 "No tool type defined in tool definition file. Supported types "
                 "are 'python', 'gams', 'julia' and 'executable'"
             )
             return None
         if _tooltype == "julia":
-            spec = JuliaTool.load(path, definition, toolbox._qsettings, toolbox.julia_repl, toolbox)
+            spec = JuliaTool.load(path, definition, app_settings, embedded_julia_console, logger)
         elif _tooltype == "python":
-            spec = PythonTool.load(path, definition, toolbox._qsettings, toolbox.python_repl, toolbox)
+            spec = PythonTool.load(path, definition, app_settings, embedded_python_console, logger)
         elif _tooltype == "gams":
-            spec = GAMSTool.load(path, definition, toolbox._qsettings, toolbox)
+            spec = GAMSTool.load(path, definition, app_settings, logger)
         elif _tooltype == "executable":
-            spec = ExecutableTool.load(path, definition, toolbox._qsettings, toolbox)
+            spec = ExecutableTool.load(path, definition, app_settings, logger)
         else:
-            toolbox.msg_warning.emit("Tool type <b>{}</b> not available".format(_tooltype))
+            logger.msg_warning.emit("Tool type <b>{}</b> not available".format(_tooltype))
             return None
-        spec.set_def_path(def_path)
+        spec.definition_file_path = definition_path
         return spec
 
     def open_main_program_file(self):

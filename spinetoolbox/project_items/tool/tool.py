@@ -27,7 +27,7 @@ from .commands import UpdateToolExecuteInWorkCommand, UpdateToolCmdLineArgsComma
 from .item_info import ItemInfo
 from .tool_specifications import ToolSpecification
 from .widgets.custom_menus import ToolContextMenu, ToolSpecificationMenu
-from .tool_executable import ToolExecutable
+from .executable_item import ExecutableItem
 from .utils import flatten_file_path_duplicates, find_file, find_last_output_files, is_pattern
 
 
@@ -407,7 +407,7 @@ class Tool(ProjectItem):
     def execution_item(self):
         """Creates project item's execution counterpart."""
         work_dir = self._toolbox.work_dir if self.execute_in_work else None
-        return ToolExecutable(
+        return ExecutableItem(
             self.name, work_dir, self.output_dir, self._specification, self.cmd_line_args, self._logger
         )
 

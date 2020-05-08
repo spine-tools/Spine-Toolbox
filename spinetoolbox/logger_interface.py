@@ -39,6 +39,8 @@ class LoggerInterface(QObject):
     """Emits an error message."""
     msg_proc = Signal(str)
     """Emits a message originating from a subprocess (usually something printed to stdout)."""
+    msg_proc_error = Signal(str)
+    """Emits an error message originating from a subprocess (usually something printed to stderr)."""
     information_box = Signal(str, str)
     """Requests an 'information message box' (e.g. a message window) to be opened with a given title and message."""
     error_box = Signal(str, str)
