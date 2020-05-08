@@ -88,12 +88,6 @@ class TestParameterValueFormatting(unittest.TestCase):
         formatted = self.get_value(Qt.DisplayRole)
         self.assertEqual(formatted, "3Y")
 
-    def test_variable_duration_in_display_role(self):
-        value = Duration(["2Y", "3Y"])
-        self.db_mngr.get_item.return_value = {"value": to_database(value)}
-        formatted = self.get_value(Qt.DisplayRole)
-        self.assertEqual(formatted, "2Y, 3Y")
-
     def test_duration_in_edit_role(self):
         value = Duration("2M")
         self.db_mngr.get_item.return_value = {"value": to_database(value)}

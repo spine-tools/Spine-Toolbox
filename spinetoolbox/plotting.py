@@ -154,10 +154,7 @@ def add_map_plot(plot_widget, map_value, label=None):
     if not all(isinstance(value, float) for value in map_value.values):
         raise PlottingError("Cannot plot non-numerical values in map.")
     if not isinstance(map_value.indexes[0], str):
-        if hasattr(map_value.indexes[0], "to_text"):
-            indexes_as_strings = [index.to_text() for index in map_value.indexes]
-        else:
-            indexes_as_strings = list(map(str, map_value.indexes))
+        indexes_as_strings = list(map(str, map_value.indexes))
     else:
         indexes_as_strings = map_value.indexes
     plot_widget.canvas.axes.plot(indexes_as_strings, map_value.values, label=label, linestyle="", marker="o")
