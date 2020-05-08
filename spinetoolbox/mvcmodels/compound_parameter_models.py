@@ -645,7 +645,7 @@ class CompoundParameterValueMixin:
         Args:
             db_map_data (dict): list of updated dict-items keyed by DiffDatabaseMapping
         """
-        self._emit_data_changed_for_column("alternative_id")
+        self._emit_data_changed_for_column("alternative")
 
 
 class CompoundObjectParameterDefinitionModel(
@@ -695,7 +695,7 @@ class CompoundObjectParameterValueModel(
     """
 
     def _make_header(self):
-        return ["object_class_name", "object_name", "parameter_name", "alternative_id", "value", "database"]
+        return ["object_class_name", "object_name", "parameter_name", "alternative", "value", "database"]
 
     @property
     def entity_type(self):
@@ -710,7 +710,7 @@ class CompoundRelationshipParameterValueModel(
     """
 
     def _make_header(self):
-        return ["relationship_class_name", "object_name_list", "parameter_name", "alternative_id", "value", "database"]
+        return ["relationship_class_name", "object_name_list", "parameter_name", "alternative", "value", "database"]
 
     @property
     def entity_type(self):

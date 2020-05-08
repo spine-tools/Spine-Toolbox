@@ -184,14 +184,14 @@ class ParameterViewMixin:
         delegate.parameter_value_editor_requested.connect(self.show_parameter_value_editor)
         self._setup_delegate(table_view, h("parameter_name"), ObjectParameterNameDelegate)
         self._setup_delegate(table_view, h("object_name"), ObjectNameDelegate)
-        self._setup_delegate(table_view, h("alternative_id"), AlternativeNameDelegate)
+        self._setup_delegate(table_view, h("alternative"), AlternativeNameDelegate)
         # Relationship parameter value
         table_view = self.ui.tableView_relationship_parameter_value
         h = table_view.model().header.index
         delegate = self._setup_delegate(table_view, h("value"), RelationshipParameterValueDelegate)
         delegate.parameter_value_editor_requested.connect(self.show_parameter_value_editor)
         self._setup_delegate(table_view, h("parameter_name"), RelationshipParameterNameDelegate)
-        self._setup_delegate(table_view, h("alternative_id"), AlternativeNameDelegate)
+        self._setup_delegate(table_view, h("alternative"), AlternativeNameDelegate)
         delegate = self._setup_delegate(table_view, h("object_name_list"), ObjectNameListDelegate)
         delegate.object_name_list_editor_requested.connect(self.show_object_name_list_editor)
 
