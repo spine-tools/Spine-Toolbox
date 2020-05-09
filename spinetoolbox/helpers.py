@@ -788,3 +788,18 @@ def get_open_file_name_in_last_dir(qsettings, key, parent, caption, given_dir, f
     if filename:
         qsettings.setValue(key, os.path.dirname(filename))
     return filename, selected_filter
+
+
+def try_number_from_string(text):
+    """
+    Returns an integer or a float from the given text if possible.
+    """
+    try:
+        return int(text)
+    except ValueError:
+        try:
+            return float(text)
+        except ValueError:
+            return text
+    except TypeError:
+        return None

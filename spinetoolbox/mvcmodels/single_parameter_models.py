@@ -166,7 +166,7 @@ class SingleParameterModel(MinimalTableModel):
         if role == Qt.BackgroundRole and field in self.fixed_fields:
             return QGuiApplication.palette().button()
         # Display, edit, tool tip role
-        if role in (Qt.DisplayRole, Qt.EditRole, Qt.ToolTipRole, PARSED_ROLE):
+        if role in (Qt.DisplayRole, Qt.EditRole, Qt.ToolTipRole, Qt.TextAlignmentRole, PARSED_ROLE):
             if field == "database":
                 return self.db_map.codename
             id_ = self._main_data[index.row()]

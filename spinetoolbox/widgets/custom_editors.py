@@ -46,8 +46,8 @@ from PySide2.QtWidgets import (
     QStyle,
     QLabel,
 )
-from PySide2.QtGui import QIntValidator, QStandardItemModel, QStandardItem, QColor
-from ..helpers import IconListManager, interpret_icon_id, make_icon_id
+from PySide2.QtGui import QStandardItemModel, QStandardItem, QColor
+from ..helpers import IconListManager, interpret_icon_id, make_icon_id, try_number_from_string
 
 
 class CustomLineEditor(QLineEdit):
@@ -57,8 +57,6 @@ class CustomLineEditor(QLineEdit):
     def set_data(self, data):
         if data is not None:
             self.setText(str(data))
-        if isinstance(data, int):
-            self.setValidator(QIntValidator(self))
 
     def data(self):
         return self.text()
@@ -67,6 +65,16 @@ class CustomLineEditor(QLineEdit):
         """Prevents shift key press to clear the contents."""
         if event.key() != Qt.Key_Shift:
             super().keyPressEvent(event)
+
+
+class ParameterValueLineEditor(CustomLineEditor):
+    def set_data(self, data):
+        if not isinstance(data, str):
+            self.setAlignment(Qt.AlignRight)
+        super().set_data(data)
+
+    def data(self):
+        return try_number_from_string(super().data())
 
 
 class CustomComboEditor(QComboBox):

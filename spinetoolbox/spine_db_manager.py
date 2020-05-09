@@ -724,6 +724,10 @@ class SpineDBManager(QObject):
             return self._display_data(item[key])
         if role == Qt.ToolTipRole:
             return self._tool_tip_data(item[key])
+        if role == Qt.TextAlignmentRole:
+            if isinstance(item[key], str):
+                return Qt.AlignLeft
+            return Qt.AlignRight
         if role == PARSED_ROLE:
             return item[key]
         return None
