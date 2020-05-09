@@ -16,7 +16,10 @@ Contains the TreeViewMixin class.
 :date:   26.11.2018
 """
 
-from PySide2.QtCore import Slot, Signal
+import uuid
+import json
+from PySide2.QtCore import QByteArray, QMimeData, Signal, Slot
+from PySide2.QtWidgets import QApplication
 from .custom_menus import EntityTreeContextMenu
 from .data_store_add_items_dialogs import (
     AddObjectClassesDialog,
@@ -282,6 +285,10 @@ class TreeViewMixin:
             self.fully_expand_view(self.ui.treeView_object)
         elif option == "Fully collapse":
             self.fully_collapse_view(self.ui.treeView_object)
+        elif option == "Copy relationships":
+            self.copy_relationships_to_clipboard()
+        elif option == "Paste relationships":
+            self.paste_relationships_from_clipboard()
         else:  # No option selected
             pass
         object_tree_context_menu.deleteLater()
@@ -352,6 +359,151 @@ class TreeViewMixin:
         self.ui.treeView_object.setCurrentIndex(next_index)
         self.ui.treeView_object.scrollTo(next_index)
         self.ui.treeView_object.expand(next_index)
+
+    @staticmethod
+    def _make_relationship_template(relationship, object_id, object_name):
+        """
+        Returns a relationship template from given relationship by removing the given object information.
+
+        Args:
+            relationship (dict)
+            object_id (int)
+            object_name (str)
+
+        Returns:
+            dict: relationship template
+        """
+        template = relationship.copy()
+        template["object_class_id_list"] = [int(id_) for id_ in relationship["object_class_id_list"].split(",")]
+        template["object_id_list"] = [
+            id_ if id_ != object_id else None for id_ in (int(id_) for id_ in relationship["object_id_list"].split(","))
+        ]
+        template["object_name_list"] = [
+            name if name != object_name else None for name in relationship["object_name_list"].split(",")
+        ]
+        return template
+
+    @staticmethod
+    def _fill_relationship_template(template, object_id, object_name):
+        """
+        Returns a relationship from given template by injecting the given object information.
+
+        Args:
+            template (dict)
+            object_id (int)
+            object_name (str)
+
+        Returns:
+            dict: relationship
+        """
+        relationship = template.copy()
+        relationship["object_id_list"] = [id_ if id_ is not None else object_id for id_ in template["object_id_list"]]
+        relationship["object_name_list"] = [
+            name if name is not None else object_name for name in template["object_name_list"]
+        ]
+        relationship["name"] += str(uuid.uuid4())
+        return relationship
+
+    def _get_cascading_relationships(self, db_map, object_id):
+        """
+        Returns a list of cascading relationship for the given db map and object id.
+
+        Args:
+            db_map (DiffDatabaseMapping)
+            object_id (int)
+
+        Returns:
+            list
+        """
+        return [
+            rel
+            for rel in self.db_mngr.get_items(db_map, "relationship")
+            if str(object_id) in rel["object_id_list"].split(",")
+        ]
+
+    @staticmethod
+    def _object_id_name_iterator(db_map, object_items):
+        for object_item in object_items:
+            yield (object_item.db_map_id(db_map), object_item.display_name)
+
+    def _make_db_url_templates(self):
+        """
+        Returns a dictionary mapping db urls to a list of relationship templates for all objects currently
+        selected in the object tree.
+
+        Returns:
+            dict(str,list)
+        """
+        selected = iter(ind.internalPointer() for ind in self.object_tree_model.selected_object_indexes)
+        db_map_object_items = {}
+        for object_item in selected:
+            for db_map in object_item.db_maps:
+                db_map_object_items.setdefault(db_map, list()).append(object_item)
+        return {
+            db_map.db_url: [
+                self._make_relationship_template(relationship, object_id, object_name)
+                for (object_id, object_name) in self._object_id_name_iterator(db_map, object_items)
+                for relationship in self._get_cascading_relationships(db_map, object_id)
+            ]
+            for db_map, object_items in db_map_object_items.items()
+        }
+
+    def _make_db_map_relationships(self, db_url_templates):
+        """
+        Returns a dictionary mapping db maps to a list of relationship items for all objects currently
+        selected in the object tree and given db url templates.
+
+        Args:
+            db_url_templates (dict(str,list)): Dictionary mapping db urls to a list of relationship templates.
+
+        Returns:
+            dict(DiffDatabaseMapping,list)
+        """
+        selected = iter(ind.internalPointer() for ind in self.object_tree_model.selected_object_indexes)
+        return {
+            db_map: [
+                self._fill_relationship_template(template, object_id, object_name)
+                for template in templates
+                for (object_id, object_name) in self._object_id_name_iterator(db_map, selected)
+            ]
+            for db_map, templates in (
+                (self.db_mngr._db_maps[db_url], templates) for db_url, templates in db_url_templates.items()
+            )
+        }
+
+    def copy_relationships_to_clipboard(self):
+        """
+        Generates relationship templates for all selected objects in the object tree,
+        and copies them to system's clipboard.
+        """
+        selected = iter(ind.internalPointer() for ind in self.object_tree_model.selected_object_indexes)
+        db_map_object_items = {}
+        for object_item in selected:
+            for db_map in object_item.db_maps:
+                db_map_object_items.setdefault(db_map, list()).append(object_item)
+        db_url_templates = self._make_db_url_templates()
+        if not db_url_templates:
+            return
+        dump = json.dumps(db_url_templates)
+        clipboard = QApplication.clipboard()
+        data = QMimeData()
+        data.setData("application/vnd.spinetoolbox.ObjectRelationships", QByteArray(dump.encode("utf-8")))
+        clipboard.setMimeData(data)
+
+    def paste_relationships_from_clipboard(self):
+        """
+        Reads relationship templates from system's clipboard, and add corresponding relationships
+        for all selected objects in the object tree.
+        """
+        clipboard = QApplication.clipboard()
+        mime_data = clipboard.mimeData()
+        byte_data = mime_data.data("application/vnd.spinetoolbox.ObjectRelationships")
+        if byte_data.isNull():
+            return
+        dump = str(byte_data.data(), "utf-8")
+        db_url_templates = json.loads(dump)
+        db_map_data = self._make_db_map_relationships(db_url_templates)
+        self.db_mngr.add_relationships(db_map_data)
 
     def call_show_add_objects_form(self, index):
         class_name = index.internalPointer().display_name

@@ -353,6 +353,10 @@ class MultiDBTreeItem(TreeItem):
         """Returns data to set as default in a parameter table when this item is selected."""
         return {"database": self.first_db_map.codename}
 
+    @staticmethod
+    def is_context_menu_action_enabled(text):
+        return True
+
 
 class TreeRootItem(MultiDBTreeItem):
 
@@ -532,6 +536,10 @@ class ObjectItem(EntityItem):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.context_menu_actions = [
+            {
+                "Copy relationships": QIcon(":/icons/menu_icons/copy.svg"),
+                "Paste relationships": QIcon(":/icons/menu_icons/paste.svg"),
+            },
             {"Edit objects": QIcon(":/icons/menu_icons/cube_pen.svg")},
             {"Remove selection": QIcon(":/icons/menu_icons/cube_minus.svg")},
         ]
@@ -561,6 +569,15 @@ class ObjectItem(EntityItem):
             for items in self.db_mngr.find_cascading_relationship_classes({db_map: {object_class_id}}).values()
             for x in items
         ]
+
+    @staticmethod
+    def is_context_menu_action_enabled(text):
+        if text != "Paste relationships":
+            return True
+        clipboard = qApp.clipboard()
+        mime_data = clipboard.mimeData()
+        byte_data = mime_data.data("application/vnd.spinetoolbox.ObjectRelationships")
+        return not byte_data.isNull()
 
 
 class RelationshipItem(EntityItem):
