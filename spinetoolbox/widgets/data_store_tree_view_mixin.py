@@ -463,8 +463,8 @@ class TreeViewMixin:
         return {
             db_map: [
                 self._fill_relationship_template(template, object_id, object_name)
-                for template in templates
                 for (object_id, object_name) in self._object_id_name_iterator(db_map, selected)
+                for template in templates
             ]
             for db_map, templates in (
                 (self.db_mngr._db_maps[db_url], templates) for db_url, templates in db_url_templates.items()
