@@ -36,7 +36,7 @@ class CopyTreeView(QTreeView):
         if not selection:
             return False
         indexes = selection.indexes()
-        values = [index.data(Qt.DisplayRole) for index in indexes]
+        values = [index.data(Qt.EditRole) for index in indexes]
         content = "\n".join(values)
         QApplication.clipboard().setText(content)
         return True

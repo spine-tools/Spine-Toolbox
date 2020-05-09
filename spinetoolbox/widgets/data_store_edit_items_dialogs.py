@@ -69,7 +69,7 @@ class EditObjectClassesDialog(ShowIconColorEditorMixin, EditOrRemoveItemsDialog)
         model_data = list()
         for item in selected:
             data = item.db_map_data(item.first_db_map)
-            row_data = [item.display_name, data['description'], data['display_icon']]
+            row_data = [item.display_data, data['description'], data['display_icon']]
             self.orig_data.append(row_data.copy())
             row_data.append(item.display_database)
             model_data.append(row_data)
@@ -144,7 +144,7 @@ class EditObjectsDialog(EditOrRemoveItemsDialog):
         model_data = list()
         for item in selected:
             data = item.db_map_data(item.first_db_map)
-            row_data = [item.display_name, data['description']]
+            row_data = [item.display_data, data['description']]
             self.orig_data.append(row_data.copy())
             row_data.append(item.display_database)
             model_data.append(row_data)
@@ -209,7 +209,7 @@ class EditRelationshipClassesDialog(EditOrRemoveItemsDialog):
         self.orig_data = list()
         model_data = list()
         for item in selected:
-            row_data = [item.display_name]
+            row_data = [item.display_data]
             self.orig_data.append(row_data.copy())
             row_data.append(item.display_database)
             model_data.append(row_data)
@@ -380,7 +380,7 @@ class RemoveEntitiesDialog(EditOrRemoveItemsDialog):
         model_data = list()
         for class_, items in selected.items():
             for item in items:
-                row_data = [class_.item_type, item.display_name, item.display_database]
+                row_data = [class_.item_type, item.display_data, item.display_database]
                 model_data.append(row_data)
                 self.items.append(item)
         self.model.reset_model(model_data)

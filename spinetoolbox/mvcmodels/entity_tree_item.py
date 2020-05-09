@@ -61,7 +61,7 @@ class MultiDBTreeItem(TreeItem):
         return ids[0]
 
     @property
-    def display_name(self):
+    def display_data(self):
         """"Returns the name for display."""
         return self.db_map_data_field(self.first_db_map, "name")
 
@@ -347,7 +347,7 @@ class MultiDBTreeItem(TreeItem):
     def data(self, column, role=Qt.DisplayRole):
         """Returns data for given column and role."""
         if role == Qt.DisplayRole:
-            return (self.display_name, self.display_database)[column]
+            return (self.display_data, self.display_database)[column]
 
     def default_parameter_data(self):
         """Returns data to set as default in a parameter table when this item is selected."""
@@ -368,7 +368,7 @@ class TreeRootItem(MultiDBTreeItem):
         return "root"
 
     @property
-    def display_name(self):
+    def display_data(self):
         """"See super class."""
         return "root"
 
@@ -460,7 +460,7 @@ class ObjectClassItem(EntityClassItem):
 
     def default_parameter_data(self):
         """Return data to put as default in a parameter table when this item is selected."""
-        return dict(object_class_name=self.display_name, database=self.first_db_map.codename)
+        return dict(object_class_name=self.display_data, database=self.first_db_map.codename)
 
     def _get_children_ids(self, db_map):
         """Returns a list of object class ids."""
@@ -495,7 +495,7 @@ class RelationshipClassItem(EntityClassItem):
 
     def default_parameter_data(self):
         """Return data to put as default in a parameter table when this item is selected."""
-        return dict(relationship_class_name=self.display_name, database=self.first_db_map.codename)
+        return dict(relationship_class_name=self.display_data, database=self.first_db_map.codename)
 
     def _get_children_ids(self, db_map):
         """Returns a list of object class ids."""
@@ -557,8 +557,8 @@ class ObjectItem(EntityItem):
     def default_parameter_data(self):
         """Return data to put as default in a parameter table when this item is selected."""
         return dict(
-            object_class_name=self.parent_item.display_name,
-            object_name=self.display_name,
+            object_class_name=self.parent_item.display_data,
+            object_name=self.display_data,
             database=self.first_db_map.codename,
         )
 
@@ -602,13 +602,17 @@ class RelationshipItem(EntityItem):
         return self.db_map_data_field(self.first_db_map, "object_name_list", default="")
 
     @property
-    def display_name(self):
+    def display_data(self):
         """"Returns the name for display."""
         return (
-            self.object_name_list.replace(self.parent_item.parent_item.display_name + ",", "")
-            .replace("," + self.parent_item.parent_item.display_name, "")
+            self.object_name_list.replace(self.parent_item.parent_item.display_data + ",", "")
+            .replace("," + self.parent_item.parent_item.display_data, "")
             .replace(",", self.db_mngr._GROUP_SEP)
         )
+
+    @property
+    def edit_data(self):
+        return self.object_name_list
 
     @property
     def display_icon(self):
@@ -622,7 +626,7 @@ class RelationshipItem(EntityItem):
     def default_parameter_data(self):
         """Return data to put as default in a parameter table when this item is selected."""
         return dict(
-            relationship_class_name=self.parent_item.display_name,
+            relationship_class_name=self.parent_item.display_data,
             object_name_list=self.db_map_data_field(self.first_db_map, "object_name_list"),
             database=self.first_db_map.codename,
         )

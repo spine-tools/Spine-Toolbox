@@ -424,7 +424,7 @@ class TreeViewMixin:
     @staticmethod
     def _object_id_name_iterator(db_map, object_items):
         for object_item in object_items:
-            yield (object_item.db_map_id(db_map), object_item.display_name)
+            yield (object_item.db_map_id(db_map), object_item.display_data)
 
     def _make_db_url_templates(self):
         """
@@ -506,19 +506,19 @@ class TreeViewMixin:
         self.db_mngr.add_relationships(db_map_data)
 
     def call_show_add_objects_form(self, index):
-        class_name = index.internalPointer().display_name
+        class_name = index.internalPointer().display_data
         self.show_add_objects_form(class_name=class_name)
 
     def call_show_add_relationship_classes_form(self, index):
-        object_class_one_name = index.internalPointer().display_name
+        object_class_one_name = index.internalPointer().display_data
         self.show_add_relationship_classes_form(object_class_one_name=object_class_one_name)
 
     def call_show_add_relationships_form(self, index):
         item = index.internalPointer()
         relationship_class_key = item.display_id
         try:
-            object_name = item.parent_item.display_name
-            object_class_name = item.parent_item.parent_item.display_name
+            object_name = item.parent_item.display_data
+            object_class_name = item.parent_item.parent_item.display_data
         except AttributeError:
             object_name = object_class_name = None
         self.show_add_relationships_form(
