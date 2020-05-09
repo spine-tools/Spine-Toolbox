@@ -210,7 +210,7 @@ class PivotTableDelegate(CheckBoxDelegate):
             return super().createEditor(parent, option, index)
         if self.parent().pivot_table_model.index_in_data(index):
             value = index.model().mapToSource(index).data(PARSED_ROLE)
-            if value is None or isinstance(value, (Number, str)):
+            if value is None or isinstance(value, (Number, str)) and not isinstance(value, bool):
                 editor = ParameterValueLineEditor(parent)
                 editor.set_data(value)
                 return editor
@@ -310,7 +310,7 @@ class ParameterValueOrDefaultValueDelegate(ParameterDelegate):
     def _create_or_request_parameter_value_editor(self, parent, option, index, db_map):
         """Emits the signal to request a standalone `ParameterValueEditor` from parent widget."""
         value = index.data(PARSED_ROLE)
-        if value is None or isinstance(value, (Number, str)):
+        if value is None or isinstance(value, (Number, str)) and not isinstance(value, bool):
             editor = ParameterValueLineEditor(parent)
             editor.set_data(value)
             return editor
