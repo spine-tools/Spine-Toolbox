@@ -22,7 +22,7 @@ import json
 from PySide2.QtWidgets import QMainWindow, QErrorMessage, QDockWidget, QMessageBox, QInputDialog
 from PySide2.QtCore import Qt, Signal, Slot
 from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QIcon
-from spinedb_api import import_data, export_data, SpineIntegrityError, SpineDBAPIError, ParameterValueEncoder
+from spinedb_api import export_data, SpineIntegrityError, SpineDBAPIError, ParameterValueEncoder
 from ..config import MAINWINDOW_SS, APPLICATION_PATH
 from .data_store_edit_items_dialogs import ManageParameterTagsDialog
 from .data_store_manage_items_dialog import MassRemoveItemsDialog, CreateTemplateDialog
@@ -343,31 +343,12 @@ class DataStoreFormBase(QMainWindow):
     @Slot(bool)
     def show_import_file_dialog(self, checked=False):
         """Shows dialog to allow user to select a file to import."""
-        if not all(self.db_mngr.undo_stack[db_map].isClean() for db_map in self.db_maps):
-            commit_warning = QMessageBox(parent=self)
-            commit_warning.setText("Please commit or rollback before importing data.")
-            commit_warning.setStandardButtons(QMessageBox.Ok)
-            commit_warning.exec()
-            return
         dialog = ImportDialog(self.qsettings, parent=self)
         dialog.exec()
 
     @Slot(dict)
     def import_data(self, data):
-        changed_db_maps = []
-        db_map_error_log = {}
-        for db_map in self.db_maps:
-            try:
-                _, import_errors = import_data(db_map, **data)
-                db_map_error_log[db_map] = [f"{e.db_type}: {e.msg}" for e in import_errors]
-                changed_db_maps.append(db_map)
-            except (SpineIntegrityError, SpineDBAPIError) as err:
-                db_map_error_log[db_map] = [err.msg]
-                db_map.rollback_session()
-        # Don't send a commit cookie as the database is updated by an 'outside force' here.
-        self.db_mngr.commit_session(*changed_db_maps, rollback_if_no_msg=True, cookie=None)
-        if any(db_map_error_log.values()):
-            self.db_mngr.error_msg(db_map_error_log)
+        self.db_mngr.import_data(self.db_maps, data)
 
     @Slot(bool)
     def export_database(self, checked=False):

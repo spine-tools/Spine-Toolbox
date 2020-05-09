@@ -24,7 +24,7 @@ from spinedb_api import (
     create_new_spine_database,
     DateTime,
     DiffDatabaseMapping,
-    Duration,
+    get_data_for_import,
     from_database,
     IndexedValue,
     is_empty,
@@ -44,6 +44,7 @@ from .spine_db_signaller import SpineDBSignaller
 from .spine_db_fetcher import SpineDBFetcher
 from .spine_db_commands import (
     AgedUndoStack,
+    AgedUndoCommand,
     AddItemsCommand,
     AddCheckedParameterValuesCommand,
     UpdateItemsCommand,
@@ -968,6 +969,21 @@ class SpineDBManager(QObject):
             list: dictionary items
         """
         return self.get_db_items(self._make_query(db_map, "wide_parameter_definition_tag_sq", ids=ids), ("id",))
+
+    def import_data(self, db_maps, data):
+        error_log = dict()
+        for db_map in db_maps:
+            import_command = AgedUndoCommand()
+            import_command.setText("Import data")
+            self.undo_stack[db_map].push(import_command)
+            for item_type, (to_add, to_update, import_error_log) in get_data_for_import(db_map, **data):
+                error_log[db_map] = [x.msg for x in import_error_log]
+                add_cmd = AddItemsCommand(self, db_map, to_add, item_type, parent=import_command)
+                upd_cmd = UpdateItemsCommand(self, db_map, to_update, item_type, parent=import_command)
+                add_cmd.redo()
+                upd_cmd.redo()
+        if any(error_log.values()):
+            self.error_msg(error_log)
 
     @busy_effect
     def add_or_update_items(self, db_map_data, method_name, get_method_name, signal_name):

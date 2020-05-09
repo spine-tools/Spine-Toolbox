@@ -166,6 +166,28 @@ class CheckBoxDelegate(QItemDelegate):
         return QRect(checkbox_anchor, checkbox_rect.size())
 
 
+class GetObjectClassIdMixin:
+    """Allows getting the object class id from the name."""
+
+    def _get_object_class_id(self, index, db_map):
+        h = index.model().header.index
+        object_class_name = index.sibling(index.row(), h("object_class_name")).data()
+        object_class = self.db_mngr.get_item_by_field(db_map, "object class", "name", object_class_name)
+        return object_class.get("id")
+
+
+class GetRelationshipClassIdMixin:
+    """Allows getting the relationship class id from the name."""
+
+    def _get_relationship_class_id(self, index, db_map):
+        h = index.model().header.index
+        relationship_class_name = index.sibling(index.row(), h("relationship_class_name")).data()
+        relationship_class = self.db_mngr.get_item_by_field(
+            db_map, "relationship class", "name", relationship_class_name
+        )
+        return relationship_class.get("id")
+
+
 class PivotTableDelegate(CheckBoxDelegate):
 
     parameter_value_editor_requested = Signal("QModelIndex")
@@ -173,6 +195,9 @@ class PivotTableDelegate(CheckBoxDelegate):
 
     def setModelData(self, editor, model, index):
         """Send signal."""
+        if self._is_relationship_index(index):
+            super().setModelData(self, editor, model, index)
+            return
         data = editor.data()
         if isinstance(editor, ParameterValueLineEditor):
             data = to_database(data)
@@ -217,28 +242,6 @@ class PivotTableDelegate(CheckBoxDelegate):
             self.parameter_value_editor_requested.emit(index.model().mapToSource(index))
             return None
         return CustomLineEditor(parent)
-
-
-class GetObjectClassIdMixin:
-    """Allows getting the object class id from the name."""
-
-    def _get_object_class_id(self, index, db_map):
-        h = index.model().header.index
-        object_class_name = index.sibling(index.row(), h("object_class_name")).data()
-        object_class = self.db_mngr.get_item_by_field(db_map, "object class", "name", object_class_name)
-        return object_class.get("id")
-
-
-class GetRelationshipClassIdMixin:
-    """Allows getting the relationship class id from the name."""
-
-    def _get_relationship_class_id(self, index, db_map):
-        h = index.model().header.index
-        relationship_class_name = index.sibling(index.row(), h("relationship_class_name")).data()
-        relationship_class = self.db_mngr.get_item_by_field(
-            db_map, "relationship class", "name", relationship_class_name
-        )
-        return relationship_class.get("id")
 
 
 class ParameterDelegate(QItemDelegate):
