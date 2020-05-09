@@ -342,6 +342,8 @@ class SpineDBManager(QObject):
         for db_map in db_maps:
             if self.undo_stack[db_map].isClean() and not db_map.has_pending_changes():
                 continue
+            if not self._get_rollback_confirmation(db_map):
+                continue
             try:
                 db_map.rollback_session()
                 rolled_db_maps.add(db_map)
@@ -353,6 +355,19 @@ class SpineDBManager(QObject):
             self.error_msg(error_log)
         if rolled_db_maps:
             self.session_rolled_back.emit(rolled_db_maps)
+
+    @staticmethod
+    def _get_rollback_confirmation(db_map):
+        message_box = QMessageBox(
+            QMessageBox.Question,
+            f"Rollback changes in {db_map.codename}",
+            "Are you sure? All your changes since the last commit will be reverted and removed from the undo/redo stack.",
+            QMessageBox.Ok | QMessageBox.Cancel,
+            parent=qApp.activeWindow(),  # pylint: disable=undefined-variable
+        )
+        message_box.button(QMessageBox.Ok).setText("Rollback")
+        answer = message_box.exec_()
+        return answer == QMessageBox.Ok
 
     def _commit_db_map_session(self, db_map):
         commit_msg = self._get_commit_msg(db_map)

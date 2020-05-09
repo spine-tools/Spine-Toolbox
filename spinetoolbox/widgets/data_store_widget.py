@@ -455,6 +455,7 @@ class DataStoreFormBase(QMainWindow):
         if not db_maps:
             return
         self.init_models()
+        self.db_mngr.fetch_db_maps_for_listener(self, *db_maps)
         db_names = ", ".join([x.codename for x in db_maps])
         msg = f"All changes in {db_names} rolled back successfully."
         self.msg.emit(msg)
