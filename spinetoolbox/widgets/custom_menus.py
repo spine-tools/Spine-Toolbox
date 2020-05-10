@@ -156,6 +156,8 @@ class EntityTreeContextMenu(CustomContextMenu):
             self.addSeparator()
             self.add_action("Fully expand", QIcon(":/icons/menu_icons/angle-double-right.svg"))
             self.add_action("Fully collapse", QIcon(":/icons/menu_icons/angle-double-left.svg"))
+        self.addSeparator()
+        self.add_action("Export selection", QIcon(":/icons/project_item_icons/database-export.svg"))
 
 
 class ParameterContextMenu(CustomContextMenu):

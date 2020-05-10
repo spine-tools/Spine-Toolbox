@@ -32,7 +32,8 @@ from .data_store_edit_items_dialogs import (
     RemoveEntitiesDialog,
 )
 from ..mvcmodels.entity_tree_models import ObjectTreeModel, RelationshipTreeModel
-from ..helpers import busy_effect
+from ..helpers import busy_effect, get_save_file_name_in_last_dir
+from ..spine_db_parcel import SpineDBParcel
 
 
 class TreeViewMixin:
@@ -253,6 +254,8 @@ class TreeViewMixin:
             self.fully_collapse_view(self.ui.treeView_object)
         elif option == "Duplicate":
             self.duplicate_object(index)
+        elif option == "Export selection":
+            self.export_selection()
         else:  # No option selected
             pass
         object_tree_context_menu.deleteLater()
@@ -286,9 +289,38 @@ class TreeViewMixin:
             self.fully_expand_view(self.ui.treeView_relationship)
         elif option == "Fully collapse":
             self.fully_collapse_view(self.ui.treeView_relationship)
+        elif option == "Export selection":
+            self.export_selection()
         else:  # No option selected
             pass
         relationship_tree_context_menu.deleteLater()
+
+    def export_selection(self):
+        self.qsettings.beginGroup(self.settings_group)
+        file_path, _ = get_save_file_name_in_last_dir(
+            self.qsettings,
+            "exportDBSelection",
+            self,
+            "Export selection",
+            self._get_base_dir(),
+            "Template file (*.json)",
+        )
+        self.qsettings.endGroup()
+        if not file_path:  # File selection cancelled
+            return
+        parcel = SpineDBParcel(self.db_mngr)
+        db_map_obj_cls_ids = self._ids_per_db_map(self.object_tree_model.selected_object_class_indexes)
+        db_map_obj_ids = self._ids_per_db_map(self.object_tree_model.selected_object_indexes)
+        db_map_rel_cls_ids = self._ids_per_db_map(self.object_tree_model.selected_relationship_class_indexes)
+        db_map_rel_ids = self._ids_per_db_map(self.object_tree_model.selected_object_indexes)
+        parcel.push_object_class_ids(db_map_obj_cls_ids)
+        parcel.push_object_ids(db_map_obj_ids)
+        parcel.push_relationship_class_ids(db_map_rel_cls_ids)
+        parcel.push_relationship_ids(db_map_rel_ids)
+        json_data = self._make_json_data_for_export(parcel.data)
+        with open(file_path, 'w', encoding='utf-8') as f:
+            f.write(json_data)
+        self.msg.emit(f"Template {file_path} successfully saved.")
 
     @busy_effect
     def fully_expand_view(self, view):
