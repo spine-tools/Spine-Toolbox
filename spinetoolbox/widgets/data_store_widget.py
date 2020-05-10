@@ -25,7 +25,7 @@ from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QIcon
 from spinedb_api import export_data, ParameterValueEncoder
 from ..config import MAINWINDOW_SS, APPLICATION_PATH
 from .data_store_edit_items_dialogs import ManageParameterTagsDialog
-from .data_store_manage_items_dialog import MassRemoveItemsDialog, CreateTemplateDialog
+from .data_store_manage_items_dialog import MassRemoveItemsDialog, GetItemsForExportDialog
 from .custom_menus import ParameterValueListContextMenu
 from .data_store_parameter_view_mixin import ParameterViewMixin
 from .data_store_tree_view_mixin import TreeViewMixin
@@ -129,10 +129,9 @@ class DataStoreFormBase(QMainWindow):
         self.ui.actionView_history.triggered.connect(self.show_history_dialog)
         self.ui.actionClose.triggered.connect(self.close)
         self.ui.menuEdit.aboutToShow.connect(self._handle_menu_edit_about_to_show)
-        self.ui.actionImport.triggered.connect(self.show_import_file_dialog)
+        self.ui.actionImport.triggered.connect(self.import_file)
+        self.ui.actionMapping_import.triggered.connect(self.show_mapping_import_file_dialog)
         self.ui.actionExport.triggered.connect(self.export_database)
-        self.ui.actionLoadTemplate.triggered.connect(self.load_template)
-        self.ui.actionSaveAsTemplate.triggered.connect(self.save_as_template)
         self.ui.actionCopy.triggered.connect(self.copy)
         self.ui.actionPaste.triggered.connect(self.paste)
         self.ui.actionRemove_selection.triggered.connect(self.remove_selection)
@@ -266,17 +265,21 @@ class DataStoreFormBase(QMainWindow):
         self._call_on_focused_widget("paste")
 
     @Slot(bool)
-    def load_template(self, checked=False):
-        """Loads JSON template."""
-        if not all(self.db_mngr.undo_stack[db_map].isClean() for db_map in self.db_maps):
-            commit_warning = QMessageBox(parent=self)
-            commit_warning.setText("Please commit or rollback before loading a template.")
-            commit_warning.setStandardButtons(QMessageBox.Ok)
-            commit_warning.exec()
-            return
+    def show_mapping_import_file_dialog(self, checked=False):
+        """Shows dialog to allow user to select a file to import."""
+        dialog = ImportDialog(self.qsettings, parent=self)
+        dialog.exec()
+
+    @Slot(dict)
+    def import_data(self, data):
+        self.db_mngr.import_data({db_map: data for db_map in self.db_maps})
+
+    @Slot(bool)
+    def import_file(self, checked=False):
+        """Import file. For now it only supports JSON."""
         self.qsettings.beginGroup(self.settings_group)
         file_path, _ = get_open_file_name_in_last_dir(
-            self.qsettings, "loadTemplate", self, "Load template", self._get_base_dir(), "Template file (*.json)"
+            self.qsettings, "importFileIntoDB", self, "Import file", self._get_base_dir(), "JSON file (*.json)"
         )
         self.qsettings.endGroup()
         if not file_path:  # File selection cancelled
@@ -284,40 +287,19 @@ class DataStoreFormBase(QMainWindow):
         with open(file_path) as f:
             data = json.load(f)
         self.import_data(data)
-        self.msg.emit(f"Template {file_path} successfully loaded.")
+        self.msg.emit(f"File {file_path} successfully imported.")
 
-    @Slot(bool)
-    def save_as_template(self, checked=False):
-        self.qsettings.beginGroup(self.settings_group)
-        self.template_file_path, _ = get_save_file_name_in_last_dir(
-            self.qsettings, "saveAsTemplate", self, "Save as template", self._get_base_dir(), "Template file (*.json)"
-        )
-        self.qsettings.endGroup()
-        if not self.template_file_path:  # File selection cancelled
-            return
-        dialog = CreateTemplateDialog(self, self.db_mngr, *self.db_maps)
-        dialog.data_submitted.connect(self.do_save_as_template)
-        dialog.show()
+    @staticmethod
+    def _make_json_data_for_export(db_map_item_ids):
+        """
+        Return a JSON object with data for import.
 
-    @Slot(object)
-    def do_save_as_template(self, db_map_selected_item_types):
-        """Saves a db as a JSON template."""
+        Args:
+            data (dict)
+        """
         data = {}
-        for db_map, selected_item_types in db_map_selected_item_types.items():
-            export_items = dict()
-            export_items["object_classes"] = "object class" in selected_item_types
-            export_items["relationship_classes"] = "relationship class" in selected_item_types
-            export_items["objects"] = "object" in selected_item_types
-            export_items["relationships"] = "relationship" in selected_item_types
-            export_items["object_parameters"] = export_items["relationship_parameters"] = (
-                "parameter definition" in selected_item_types
-            )
-            export_items["object_parameter_values"] = export_items["relationship_parameter_values"] = (
-                "parameter value" in selected_item_types
-            )
-            export_items["parameter_value_lists"] = "parameter value list" in selected_item_types
-            # export_items["parameter_tags"] = "parameter tag" in selected_item_types
-            for key, items in export_data(db_map, **export_items).items():
+        for db_map, item_ids in db_map_item_ids.items():
+            for key, items in export_data(db_map, **item_ids).items():
                 data.setdefault(key, []).extend(items)
         indent = 4 * " "
         json_data = "{{{0}{1}{0}}}".format(
@@ -336,45 +318,70 @@ class DataStoreFormBase(QMainWindow):
                 ]
             ),
         )
-        with open(self.template_file_path, 'w', encoding='utf-8') as f:
-            f.write(json_data)
-        self.msg.emit(f"Template {self.template_file_path} successfully saved.")
-
-    @Slot(bool)
-    def show_import_file_dialog(self, checked=False):
-        """Shows dialog to allow user to select a file to import."""
-        dialog = ImportDialog(self.qsettings, parent=self)
-        dialog.exec()
-
-    @Slot(dict)
-    def import_data(self, data):
-        self.db_mngr.import_data({db_map: data for db_map in self.db_maps})
+        return json_data
 
     @Slot(bool)
     def export_database(self, checked=False):
         """Exports data from database into a file."""
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-        db_map = self._select_database()
-        if db_map is None:  # Database selection cancelled
-            return
         self.qsettings.beginGroup(self.settings_group)
-        file_path, _ = get_save_file_name_in_last_dir(
-            self.qsettings, "exportDB", self, "Export to file", self._get_base_dir(), "Excel file (*.xlsx)"
+        file_path, selected_filter = get_save_file_name_in_last_dir(
+            self.qsettings,
+            "exportDB",
+            self,
+            "Export to file",
+            self._get_base_dir(),
+            "JSON file (*.json);; Excel file (*.xlsx)",
         )
         self.qsettings.endGroup()
         if not file_path:  # File selection cancelled
             return
-        self.export_to_excel(db_map, file_path)
+        if selected_filter.startswith("JSON"):
+            self.export_to_json(file_path)
+        elif selected_filter.startswith("Excel"):
+            self.export_to_excel(file_path)
+        else:
+            raise ValueError()
+
+    def export_to_json(self, file_path):
+        """Prompts user to select dbs and items for export."""
+        dialog = GetItemsForExportDialog(self, self.db_mngr, *self.db_maps)
+        dialog.data_submitted.connect(lambda data, file_path=file_path: self.do_export_to_json(file_path, data))
+        dialog.show()
+
+    @Slot(object)
+    def do_export_to_json(self, file_path, db_map_items_for_export):
+        """Exports given dbs and items into JSON file."""
+        db_map_item_ids = {}
+        for db_map, item_types in db_map_items_for_export.items():
+            item_ids = db_map_item_ids[db_map] = dict()
+            # NOTE: None means no filter on the ids, i.e. bring all items
+            if "object class" in item_types:
+                item_ids["object_class_ids"] = None
+            if "relationship class" in item_types:
+                item_ids["relationship_class_ids"] = None
+            if "object" in item_types:
+                item_ids["object_ids"] = None
+            if "relationship" in item_types:
+                item_ids["relationship_ids"] = None
+            if "parameter definition" in item_types:
+                item_ids["object_parameter_ids"] = item_ids["relationship_parameter_ids"] = None
+            if "parameter value" in item_types:
+                item_ids["object_parameter_value_ids"] = item_ids["relationship_parameter_value_ids"] = None
+            if "parameter value list" in item_types:
+                item_ids["parameter_value_list_ids"] = None
+        json_data = self._make_json_data_for_export(db_map_item_ids)
+        with open(file_path, 'w', encoding='utf-8') as f:
+            f.write(json_data)
+        self.msg.emit(f"File {file_path} successfully exported.")
 
     def _select_database(self):
         """
-        Lets user select a database from available databases.
-
-        Shows a dialog from which user can select a single database.
-        If there is only a single database it is selected automatically and no dialog is shown.
+        Returns a database for the Excel import.
+        Prompts user to select a database if there's more than one.
 
         Returns:
-             the database map of the database or None if no database was selected
+            DiffDatabaseMapping
         """
         if len(self.db_maps) == 1:
             return next(iter(self.db_maps))
@@ -387,8 +394,11 @@ class DataStoreFormBase(QMainWindow):
         return self.db_maps[db_names.index(selected_database)]
 
     @busy_effect
-    def export_to_excel(self, db_map, file_path):
+    def export_to_excel(self, file_path):
         """Exports data from database into Excel file."""
+        db_map = self._select_database()
+        if db_map is None:  # Database selection cancelled
+            return
         filename = os.path.split(file_path)[1]
         try:
             export_spine_database_to_xlsx(db_map, file_path)
@@ -404,8 +414,6 @@ class DataStoreFormBase(QMainWindow):
         """Reloads data from given db_maps."""
         self.init_models()
         self.db_mngr.fetch_db_maps_for_listener(self, *db_maps)
-        db_names = ", ".join([x.codename for x in db_maps])
-        self.msg.emit(f"Reloaded databases {db_names}")
 
     @Slot(bool)
     def refresh_session(self, checked=False):
@@ -424,19 +432,19 @@ class DataStoreFormBase(QMainWindow):
         db_maps = set(self.db_maps) & set(db_maps)
         if not db_maps:
             return
+        db_names = ", ".join([x.codename for x in db_maps])
         if cookie is self:
-            db_names = ", ".join([x.codename for x in db_maps])
             msg = f"All changes in {db_names} committed successfully."
             self.msg.emit(msg)
         else:  # Commit done by an 'outside force'.
             self.reload_session(db_maps)
+            self.msg.emit(f"Databases {db_names} reloaded from an external action.")
 
     def receive_session_rolled_back(self, db_maps):
         db_maps = set(self.db_maps) & set(db_maps)
         if not db_maps:
             return
-        self.init_models()
-        self.db_mngr.fetch_db_maps_for_listener(self, *db_maps)
+        self.reload_session(db_maps)
         db_names = ", ".join([x.codename for x in db_maps])
         msg = f"All changes in {db_names} rolled back successfully."
         self.msg.emit(msg)
@@ -445,8 +453,7 @@ class DataStoreFormBase(QMainWindow):
         db_maps = set(self.db_maps) & set(db_maps)
         if not db_maps:
             return
-        self.init_models()
-        self.db_mngr.fetch_db_maps_for_listener(self, *db_maps)
+        self.reload_session(db_maps)
         self.msg.emit("Session refreshed.")
 
     @Slot("QVariant", bool)

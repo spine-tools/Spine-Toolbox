@@ -10,10 +10,10 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-# Form implementation generated from reading ui file 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\data_store_view.ui',
-# licensing of 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\data_store_view.ui' applies.
+# Form implementation generated from reading ui file '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/data_store_view.ui',
+# licensing of '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/data_store_view.ui' applies.
 #
-# Created: Tue Apr 14 12:29:40 2020
+# Created: Sun May 10 19:20:02 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -524,6 +524,9 @@ class Ui_MainWindow(object):
         self.actionSaveAsTemplate.setObjectName("actionSaveAsTemplate")
         self.actionLoadTemplate = QtWidgets.QAction(MainWindow)
         self.actionLoadTemplate.setObjectName("actionLoadTemplate")
+        self.actionMapping_import = QtWidgets.QAction(MainWindow)
+        self.actionMapping_import.setIcon(icon5)
+        self.actionMapping_import.setObjectName("actionMapping_import")
         self.menuSession.addAction(self.actionRefresh)
         self.menuSession.addAction(self.actionCommit)
         self.menuSession.addAction(self.actionRollback)
@@ -548,10 +551,8 @@ class Ui_MainWindow(object):
         self.menuEdit.addAction(self.actionManage_parameter_tags)
         self.menuEdit.addSeparator()
         self.menuFile.addSeparator()
-        self.menuFile.addAction(self.actionLoadTemplate)
-        self.menuFile.addAction(self.actionSaveAsTemplate)
-        self.menuFile.addSeparator()
         self.menuFile.addAction(self.actionImport)
+        self.menuFile.addAction(self.actionMapping_import)
         self.menuFile.addAction(self.actionExport)
         self.menuFile.addSeparator()
         self.menuFile.addAction(self.actionClose)
@@ -631,7 +632,9 @@ class Ui_MainWindow(object):
         self.actionAdd_relationships.setText(QtWidgets.QApplication.translate("MainWindow", "Add relationships", None, -1))
         self.actionAdd_relationships.setToolTip(QtWidgets.QApplication.translate("MainWindow", "Add relationships", None, -1))
         self.actionImport.setText(QtWidgets.QApplication.translate("MainWindow", "Import...", None, -1))
+        self.actionImport.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Import data from file into current urls</p></body></html>", None, -1))
         self.actionExport.setText(QtWidgets.QApplication.translate("MainWindow", "Export...", None, -1))
+        self.actionExport.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Export data from current url to a file</p></body></html>", None, -1))
         self.actionCopy.setText(QtWidgets.QApplication.translate("MainWindow", "Copy", None, -1))
         self.actionCopy.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+C", None, -1))
         self.actionPaste.setText(QtWidgets.QApplication.translate("MainWindow", "Paste", None, -1))
@@ -662,10 +665,12 @@ class Ui_MainWindow(object):
         self.actionMass_remove_items.setText(QtWidgets.QApplication.translate("MainWindow", "Mass remove items...", None, -1))
         self.actionSaveAsTemplate.setText(QtWidgets.QApplication.translate("MainWindow", "Save as template...", None, -1))
         self.actionLoadTemplate.setText(QtWidgets.QApplication.translate("MainWindow", "Load template...", None, -1))
+        self.actionMapping_import.setText(QtWidgets.QApplication.translate("MainWindow", "Mapping import...", None, -1))
+        self.actionMapping_import.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Import data from file into current urls by defining a mapping</p></body></html>", None, -1))
 
-from spinetoolbox.widgets.custom_qtableview import AutoFilterCopyPasteTableView, PivotTableView
+from spinetoolbox.widgets.custom_qlistview import DragListView
 from spinetoolbox.widgets.frozen_table_view import FrozenTableView
 from spinetoolbox.widgets.custom_qgraphicsviews import GraphQGraphicsView
-from spinetoolbox.widgets.custom_qtreeview import EntityTreeView, StickySelectionEntityTreeView, CopyTreeView
-from spinetoolbox.widgets.custom_qlistview import DragListView
+from spinetoolbox.widgets.custom_qtreeview import StickySelectionEntityTreeView, CopyTreeView, EntityTreeView
+from spinetoolbox.widgets.custom_qtableview import PivotTableView, AutoFilterCopyPasteTableView
 from spinetoolbox import resources_icons_rc

@@ -134,12 +134,6 @@ class TreeViewMixin:
             selection_model.clearSelection()
             selection_model.blockSignals(False)
 
-    def _ids_per_db_map(self, indexes):
-        return self.db_mngr.ids_per_db_map(self._db_map_items(indexes))
-
-    def _ids_per_db_map_and_class(self, indexes):
-        return self.db_mngr.ids_per_db_map_and_class(self._db_map_items(indexes))
-
     @staticmethod
     def _db_map_items(indexes):
         """Groups items from given tree indexes by db map.
@@ -154,12 +148,18 @@ class TreeViewMixin:
                 d.setdefault(db_map, []).append(item.db_map_data(db_map))
         return d
 
+    def _ids_per_db_map(self, indexes):
+        return self.db_mngr.ids_per_db_map(self._db_map_items(indexes))
+
+    def _ids_per_db_map_and_class(self, indexes):
+        return self.db_mngr.ids_per_db_map_and_class(self._db_map_items(indexes))
+
     def _update_object_filter(self):
         """Updates object filter according to object tree selection."""
         selected_obj_clss = set(self.object_tree_model.selected_object_class_indexes.keys())
         selected_objs = set(self.object_tree_model.selected_object_indexes.keys())
         selected_rel_clss = set(self.object_tree_model.selected_relationship_class_indexes.keys())
-        # Compute active indexes by adding up the parents from lower levels recursively
+        # Compute active indexes by merging in the parents from lower levels recursively
         active_rels = set(self.object_tree_model.selected_relationship_indexes.keys())
         active_rel_clss = selected_rel_clss | {ind.parent() for ind in active_rels}
         active_objs = selected_objs | {ind.parent() for ind in active_rel_clss}

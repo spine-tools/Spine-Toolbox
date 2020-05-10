@@ -356,8 +356,8 @@ class MassRemoveItemsDialog(SelectDBItemsDialog):
         super().accept()
 
 
-class CreateTemplateDialog(SelectDBItemsDialog):
-    """A dialog to query user's preferences for creating a template."""
+class GetItemsForExportDialog(SelectDBItemsDialog):
+    """A dialog to let users chose items for JSON export."""
 
     data_submitted = Signal(object)
 
@@ -370,7 +370,7 @@ class CreateTemplateDialog(SelectDBItemsDialog):
             db_maps (DiffDatabaseMapping): the dbs to select items from
         """
         super().__init__(parent, db_mngr, *db_maps)
-        self.setWindowTitle("Select items to include in the template")
+        self.setWindowTitle("Select items for export")
         for item_type in (
             "object class",
             "relationship class",
@@ -386,9 +386,9 @@ class CreateTemplateDialog(SelectDBItemsDialog):
 
     def accept(self):
         super().accept()
-        db_map_selected_item_types = {
+        db_map_items_for_export = {
             db_map: [item_type for item_type, check_box in self.item_check_boxes.items() if check_box.isChecked()]
             for db_map, check_box in self.db_map_check_boxes.items()
             if check_box.isChecked()
         }
-        self.data_submitted.emit(db_map_selected_item_types)
+        self.data_submitted.emit(db_map_items_for_export)
