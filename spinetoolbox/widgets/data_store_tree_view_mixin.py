@@ -255,7 +255,7 @@ class TreeViewMixin:
         elif option == "Duplicate":
             self.duplicate_object(index)
         elif option == "Export selection":
-            self.export_selection()
+            self.export_selection(self.object_tree_model)
         else:  # No option selected
             pass
         object_tree_context_menu.deleteLater()
@@ -290,12 +290,12 @@ class TreeViewMixin:
         elif option == "Fully collapse":
             self.fully_collapse_view(self.ui.treeView_relationship)
         elif option == "Export selection":
-            self.export_selection()
+            self.export_selection(self.relationship_tree_model)
         else:  # No option selected
             pass
         relationship_tree_context_menu.deleteLater()
 
-    def export_selection(self):
+    def export_selection(self, model):
         self.qsettings.beginGroup(self.settings_group)
         file_path, _ = get_save_file_name_in_last_dir(
             self.qsettings,
@@ -308,19 +308,23 @@ class TreeViewMixin:
         self.qsettings.endGroup()
         if not file_path:  # File selection cancelled
             return
-        parcel = SpineDBParcel(self.db_mngr)
-        db_map_obj_cls_ids = self._ids_per_db_map(self.object_tree_model.selected_object_class_indexes)
-        db_map_obj_ids = self._ids_per_db_map(self.object_tree_model.selected_object_indexes)
-        db_map_rel_cls_ids = self._ids_per_db_map(self.object_tree_model.selected_relationship_class_indexes)
-        db_map_rel_ids = self._ids_per_db_map(self.object_tree_model.selected_object_indexes)
-        parcel.push_object_class_ids(db_map_obj_cls_ids)
-        parcel.push_object_ids(db_map_obj_ids)
-        parcel.push_relationship_class_ids(db_map_rel_cls_ids)
-        parcel.push_relationship_ids(db_map_rel_ids)
+        parcel = self._make_data_parcel_from_selection(model)
         json_data = self._make_json_data_for_export(parcel.data)
         with open(file_path, 'w', encoding='utf-8') as f:
             f.write(json_data)
         self.msg.emit(f"Template {file_path} successfully saved.")
+
+    def _make_data_parcel_from_selection(self, model):
+        parcel = SpineDBParcel(self.db_mngr)
+        db_map_obj_cls_ids = self._ids_per_db_map(model.selected_object_class_indexes)
+        db_map_obj_ids = self._ids_per_db_map(model.selected_object_indexes)
+        db_map_rel_cls_ids = self._ids_per_db_map(model.selected_relationship_class_indexes)
+        db_map_rel_ids = self._ids_per_db_map(model.selected_relationship_indexes)
+        parcel.push_object_class_ids(db_map_obj_cls_ids)
+        parcel.push_object_ids(db_map_obj_ids)
+        parcel.push_relationship_class_ids(db_map_rel_cls_ids)
+        parcel.push_relationship_ids(db_map_rel_ids)
+        return parcel
 
     @busy_effect
     def fully_expand_view(self, view):
