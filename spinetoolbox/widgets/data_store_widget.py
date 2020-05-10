@@ -22,7 +22,7 @@ import json
 from PySide2.QtWidgets import QMainWindow, QErrorMessage, QDockWidget, QMessageBox, QInputDialog
 from PySide2.QtCore import Qt, Signal, Slot
 from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QIcon
-from spinedb_api import export_data, SpineIntegrityError, SpineDBAPIError, ParameterValueEncoder
+from spinedb_api import export_data, ParameterValueEncoder
 from ..config import MAINWINDOW_SS, APPLICATION_PATH
 from .data_store_edit_items_dialogs import ManageParameterTagsDialog
 from .data_store_manage_items_dialog import MassRemoveItemsDialog, CreateTemplateDialog

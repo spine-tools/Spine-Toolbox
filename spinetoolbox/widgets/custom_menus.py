@@ -150,7 +150,7 @@ class EntityTreeContextMenu(CustomContextMenu):
         self.addSeparator()
         for action_block in item.context_menu_actions:
             for text, icon in action_block.items():
-                self.add_action(text, icon, enabled=item.is_context_menu_action_enabled(text))
+                self.add_action(text, icon)
             self.addSeparator()
         if item.has_children():
             self.addSeparator()

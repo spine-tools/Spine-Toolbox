@@ -970,11 +970,11 @@ class SpineDBManager(QObject):
         """
         return self.get_db_items(self._make_query(db_map, "wide_parameter_definition_tag_sq", ids=ids), ("id",))
 
-    def import_data(self, db_maps, data):
+    def import_data(self, db_maps, data, command_text="Import data"):
         error_log = dict()
         for db_map in db_maps:
             import_command = AgedUndoCommand()
-            import_command.setText("Import data")
+            import_command.setText(command_text)
             self.undo_stack[db_map].push(import_command)
             for item_type, (to_add, to_update, import_error_log) in get_data_for_import(db_map, **data):
                 error_log[db_map] = [x.msg for x in import_error_log]
