@@ -387,7 +387,7 @@ class TreeViewMixin:
         """
         orig_name = index.data()
         dup_name, ok = QInputDialog.getText(
-            self, "Duplicate object", "Please enter the duplicate's name:", text=orig_name + "_copy"
+            self, "Duplicate object", "Enter a name for the duplicate object:", text=orig_name + "_copy"
         )
         if not ok:
             return
@@ -418,7 +418,7 @@ class TreeViewMixin:
             for rel in cascading_relationships[db_map]
             for val in self.db_mngr.get_items_by_field(db_map, "parameter value", "relationship_id", rel["id"])
         ]
-        self.db_mngr.import_data(object_item.db_maps, data, command_text="Duplicate object")
+        self.db_mngr.import_data({db_map: data for db_map in object_item.db_maps}, command_text="Duplicate object")
 
     def call_show_add_objects_form(self, index):
         class_name = index.internalPointer().display_data

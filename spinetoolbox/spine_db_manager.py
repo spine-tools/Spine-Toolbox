@@ -970,17 +970,17 @@ class SpineDBManager(QObject):
         """
         return self.get_db_items(self._make_query(db_map, "wide_parameter_definition_tag_sq", ids=ids), ("id",))
 
-    def import_data(self, db_maps, data, command_text="Import data"):
+    def import_data(self, db_map_data, command_text="Import data"):
         """Imports the given data into given db maps using the dedicated import functions from spinedb_api.
         Condenses all in a single command for undo/redo.
 
         Args:
-            db_maps (list(DiffDatabaseMapping))
-            data (dict): The data to be passed as keyword arguments to `get_data_for_import`
+            db_map_data (dict(DiffDatabaseMapping, list)): Maps dbs to data to be passed as keyword arguments
+                to `get_data_for_import`
             command_text (str, optional): What to call the command that condenses the operation.
         """
         error_log = dict()
-        for db_map in db_maps:
+        for db_map, data in db_map_data.items():
             import_command = AgedUndoCommand()
             import_command.setText(command_text)
             self.undo_stack[db_map].push(import_command)

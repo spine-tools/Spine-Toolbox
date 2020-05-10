@@ -348,7 +348,7 @@ class DataStoreFormBase(QMainWindow):
 
     @Slot(dict)
     def import_data(self, data):
-        self.db_mngr.import_data(self.db_maps, data)
+        self.db_mngr.import_data({db_map: data for db_map in self.db_maps})
 
     @Slot(bool)
     def export_database(self, checked=False):
