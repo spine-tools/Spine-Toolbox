@@ -134,6 +134,12 @@ class TreeViewMixin:
             selection_model.clearSelection()
             selection_model.blockSignals(False)
 
+    def _ids_per_db_map(self, indexes):
+        return self.db_mngr.ids_per_db_map(self._db_map_items(indexes))
+
+    def _ids_per_db_map_and_class(self, indexes):
+        return self.db_mngr.ids_per_db_map_and_class(self._db_map_items(indexes))
+
     @staticmethod
     def _db_map_items(indexes):
         """Groups items from given tree indexes by db map.
@@ -148,75 +154,38 @@ class TreeViewMixin:
                 d.setdefault(db_map, []).append(item.db_map_data(db_map))
         return d
 
-    @staticmethod
-    def _db_map_class_id_data(db_map_data):
-        """Returns a new dictionary where the class id is also part of the key.
-
-        Returns:
-            dict: lists of dictionary items keyed by tuple (DiffDatabaseMapping, integer class id)
-        """
-        d = dict()
-        for db_map, items in db_map_data.items():
-            for item in items:
-                d.setdefault((db_map, item["class_id"]), set()).add(item["id"])
-        return d
-
-    @staticmethod
-    def _extend_merge(left, right):
-        """Returns a new dictionary by uniting left and right.
-
-        Returns:
-            dict: lists of dictionary items keyed by DiffDatabaseMapping
-        """
-        result = left.copy()
-        for key, data in right.items():
-            result.setdefault(key, []).extend(data)
-        return result
-
     def _update_object_filter(self):
-        """Updates filters object filter according to object tree selection."""
-        selected_object_classes = self._db_map_items(self.object_tree_model.selected_object_class_indexes)
-        self.selected_ent_cls_ids["object class"] = self.db_mngr._to_ids(selected_object_classes)
-        selected_rel_clss = self._db_map_items(self.object_tree_model.selected_relationship_class_indexes)
-        cascading_rel_clss = self.db_mngr.find_cascading_relationship_classes(self.selected_ent_cls_ids["object class"])
-        selected_rel_clss = self._extend_merge(selected_rel_clss, cascading_rel_clss)
-        self.selected_ent_cls_ids["relationship class"] = self.db_mngr._to_ids(selected_rel_clss)
-        selected_objs = self._db_map_items(self.object_tree_model.selected_object_indexes)
-        selected_rels = self._db_map_items(self.object_tree_model.selected_relationship_indexes)
-        cascading_rels = self.db_mngr.find_cascading_relationships(self.db_mngr._to_ids(selected_objs))
-        selected_rels = self._extend_merge(selected_rels, cascading_rels)
-        for db_map, items in selected_rels.items():
-            self.selected_ent_cls_ids["relationship class"].setdefault(db_map, set()).update(
-                {x["class_id"] for x in items}
-            )
-        # Accending objects from selected relationships
-        ascending_objs = self._db_map_items(
-            {ind.parent().parent(): None for ind in self.object_tree_model.selected_relationship_indexes}
-        )
-        selected_objs = self._extend_merge(selected_objs, ascending_objs)
-        # Ascending objects from selected relationship class
-        ascending_objs = self._db_map_items(
-            {ind.parent(): None for ind in self.object_tree_model.selected_relationship_class_indexes}
-        )
-        cascading_rels = self.db_mngr.find_cascading_relationships(self.db_mngr._to_ids(ascending_objs))
-        selected_objs = self._extend_merge(selected_objs, ascending_objs)
-        selected_rels = self._extend_merge(selected_rels, cascading_rels)
-        for db_map, items in selected_objs.items():
-            self.selected_ent_cls_ids["object class"].setdefault(db_map, set()).update({x["class_id"] for x in items})
-        self.selected_ent_ids["object"] = self._db_map_class_id_data(selected_objs)
-        self.selected_ent_ids["relationship"] = self._db_map_class_id_data(selected_rels)
+        """Updates object filter according to object tree selection."""
+        selected_obj_clss = set(self.object_tree_model.selected_object_class_indexes.keys())
+        selected_objs = set(self.object_tree_model.selected_object_indexes.keys())
+        selected_rel_clss = set(self.object_tree_model.selected_relationship_class_indexes.keys())
+        # Compute active indexes by adding up the parents from lower levels recursively
+        active_rels = set(self.object_tree_model.selected_relationship_indexes.keys())
+        active_rel_clss = selected_rel_clss | {ind.parent() for ind in active_rels}
+        active_objs = selected_objs | {ind.parent() for ind in active_rel_clss}
+        active_obj_clss = selected_obj_clss | {ind.parent() for ind in active_objs}
+        self.selected_ent_cls_ids["object class"] = self._ids_per_db_map(active_obj_clss)
+        self.selected_ent_cls_ids["relationship class"] = self._ids_per_db_map(active_rel_clss)
+        self.selected_ent_ids["object"] = self._ids_per_db_map_and_class(active_objs)
+        self.selected_ent_ids["relationship"] = self._ids_per_db_map_and_class(active_rels)
+        # Cascade (note that we carefuly select where to cascade from, to avoid 'circularity')
+        from_obj_clss = selected_obj_clss | {ind.parent() for ind in selected_objs}
+        from_objs = selected_objs | {ind.parent() for ind in selected_rel_clss}
+        cascading_rel_clss = self.db_mngr.find_cascading_relationship_classes(self._ids_per_db_map(from_obj_clss))
+        cascading_rels = self.db_mngr.find_cascading_relationships(self._ids_per_db_map(from_objs))
+        for db_map, ids in self.db_mngr.ids_per_db_map(cascading_rel_clss).items():
+            self.selected_ent_cls_ids["relationship class"].setdefault(db_map, set()).update(ids)
+        for (db_map, class_id), ids in self.db_mngr.ids_per_db_map_and_class(cascading_rels).items():
+            self.selected_ent_ids["relationship"].setdefault((db_map, class_id), set()).update(ids)
         self.update_filter()
 
     def _update_relationship_filter(self):
-        """Update filters relationship filter according to relationship tree selection."""
-        selected_rel_clss = self._db_map_items(self.relationship_tree_model.selected_relationship_class_indexes)
-        self.selected_ent_cls_ids["relationship class"] = self.db_mngr._to_ids(selected_rel_clss)
-        selected_rels = self._db_map_items(self.relationship_tree_model.selected_relationship_indexes)
-        for db_map, items in selected_rels.items():
-            self.selected_ent_cls_ids["relationship class"].setdefault(db_map, set()).update(
-                {x["class_id"] for x in items}
-            )
-        self.selected_ent_ids["relationship"] = self._db_map_class_id_data(selected_rels)
+        """Update relationship filter according to relationship tree selection."""
+        selected_rel_clss = set(self.relationship_tree_model.selected_relationship_class_indexes.keys())
+        active_rels = set(self.relationship_tree_model.selected_relationship_indexes.keys())
+        active_rel_clss = selected_rel_clss | {ind.parent() for ind in active_rels}
+        self.selected_ent_cls_ids["relationship class"] = self._ids_per_db_map(active_rel_clss)
+        self.selected_ent_ids["relationship"] = self._ids_per_db_map_and_class(active_rels)
         self.update_filter()
 
     @Slot("QModelIndex")
@@ -391,8 +360,8 @@ class TreeViewMixin:
         )
         if not ok:
             return
-        object_item = index.internalPointer()
         class_name = index.parent().data()
+        object_item = index.internalPointer()
         cascading_relationships = self._get_cascading_relationships(object_item)
         data = {"objects": [(class_name, dup_name)]}
         data["relationships"] = [
