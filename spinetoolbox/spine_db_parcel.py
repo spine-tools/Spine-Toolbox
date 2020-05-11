@@ -66,8 +66,20 @@ class SpineDBParcel:
 
     def _push_parameter_definition_ids(self, db_map_ids, entity_type):
         """Pushes parameter definition ids, assuming all necessary classes are already pushed."""
+        db_map_par_val_lst_ids = dict()
         for db_map, ids in db_map_ids.items():
             self._data.setdefault(db_map, {}).setdefault(entity_type + "_parameter_ids", set()).update(ids)
+            db_map_par_val_lst_ids[db_map] = {
+                par_def["value_list_id"]
+                for par_def in (self.db_mngr.get_item(db_map, "parameter definition", id_) for id_ in ids)
+                if par_def
+            }
+        self._push_parameter_value_list_ids(db_map_par_val_lst_ids)
+
+    def _push_parameter_value_list_ids(self, db_map_ids):
+        """Pushes parameter value list ids."""
+        for db_map, ids in db_map_ids.items():
+            self._data.setdefault(db_map, {}).setdefault("parameter_value_list_ids", set()).update(ids)
 
     def _push_parameter_value_ids(self, db_map_ids, entity_type):
         """Pushes parameter value ids with the necessary parameter definition ids,
