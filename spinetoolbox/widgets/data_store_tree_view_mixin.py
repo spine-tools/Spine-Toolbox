@@ -297,24 +297,37 @@ class TreeViewMixin:
 
     def export_selection(self, model):
         self.qsettings.beginGroup(self.settings_group)
-        file_path, _ = get_save_file_name_in_last_dir(
+        file_path, selected_filter = get_save_file_name_in_last_dir(
             self.qsettings,
             "exportDBSelection",
             self,
             "Export selection",
             self._get_base_dir(),
-            "Template file (*.json)",
+            "SQLite (*.sqlite);; JSON file (*.json);; Excel file (*.xlsx)",
         )
         self.qsettings.endGroup()
         if not file_path:  # File selection cancelled
             return
         parcel = self._make_data_parcel_from_selection(model)
-        json_data = self._make_json_data_for_export(parcel.data)
-        with open(file_path, 'w', encoding='utf-8') as f:
-            f.write(json_data)
-        self.msg.emit(f"Template {file_path} successfully saved.")
+        data_for_export = self._make_data_for_export(parcel.data)
+        if selected_filter.startswith("JSON"):
+            self.export_to_json(file_path, data_for_export)
+        elif selected_filter.startswith("SQLite"):
+            self.export_to_sqlite(file_path, data_for_export)
+        elif selected_filter.startswith("Excel"):
+            self.export_to_excel(file_path, data_for_export)
+        else:
+            raise ValueError()
 
     def _make_data_parcel_from_selection(self, model):
+        """Returns a SpineDBParcel with data from the given model's selection.
+
+        Args:
+            model (EntityTreeModel)
+
+        Returns:
+            SpineDBParcel
+        """
         parcel = SpineDBParcel(self.db_mngr)
         db_map_obj_cls_ids = self._ids_per_db_map(model.selected_object_class_indexes)
         db_map_obj_ids = self._ids_per_db_map(model.selected_object_indexes)

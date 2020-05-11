@@ -133,7 +133,10 @@ class SpineDBManager(QObject):
 
     def create_new_spine_database(self, url):
         if url in self._db_maps:
-            message = f"The url <b>{url}</b> is being viewed. Please close all windows viewing this url and try again."
+            message = (
+                f"The db at <b>{url}</b> is open in a Data store view. "
+                "Please close all Data store views using this url and try again."
+            )
             self._general_logger.error_box.emit("Error", message)
             return
         try:
