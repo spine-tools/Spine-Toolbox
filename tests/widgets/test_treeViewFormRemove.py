@@ -31,7 +31,7 @@ class TestTreeViewFormRemoveMixin:
         self.db_mngr.object_classes_removed.emit({self.mock_db_map: [self.fish_class]})
         dog_item = root_item.child(0)
         self.assertEqual(root_item.child_count(), 1)
-        self.assertEqual(dog_item.display_name, "dog")
+        self.assertEqual(dog_item.display_data, "dog")
 
     def test_remove_objects_from_object_tree_model(self):
         """Test that objects are removed from the object tree model."""
@@ -71,7 +71,7 @@ class TestTreeViewFormRemoveMixin:
         dog_item = root_item.child(0)
         pluto_item = dog_item.child(0)
         pluto_fish_dog_item = pluto_item.child(0)
-        relationships = [x.display_name for x in pluto_fish_dog_item.children]
+        relationships = [x.display_data for x in pluto_fish_dog_item.children]
         self.assertEqual(pluto_fish_dog_item.child_count(), 2)
         self.assertEqual(relationships[0], "pluto")
         self.assertEqual(relationships[1], "scooby")

@@ -27,9 +27,9 @@ class TestTreeViewFormAddMixin:
         self.fetch_object_tree_model()
         fish_item, dog_item = root_item.children
         self.assertEqual(fish_item.item_type, "object class")
-        self.assertEqual(fish_item.display_name, "fish")
+        self.assertEqual(fish_item.display_data, "fish")
         self.assertEqual(dog_item.item_type, "object class")
-        self.assertEqual(dog_item.display_name, "dog")
+        self.assertEqual(dog_item.display_data, "dog")
         self.assertEqual(root_item.child_count(), 2)
 
     def test_add_objects_to_object_tree_model(self):
@@ -43,12 +43,12 @@ class TestTreeViewFormAddMixin:
         nemo_item = fish_item.child(0)
         pluto_item, scooby_item = dog_item.children
         self.assertEqual(nemo_item.item_type, "object")
-        self.assertEqual(nemo_item.display_name, "nemo")
+        self.assertEqual(nemo_item.display_data, "nemo")
         self.assertEqual(fish_item.child_count(), 1)
         self.assertEqual(pluto_item.item_type, "object")
-        self.assertEqual(pluto_item.display_name, "pluto")
+        self.assertEqual(pluto_item.display_data, "pluto")
         self.assertEqual(scooby_item.item_type, "object")
-        self.assertEqual(scooby_item.display_name, "scooby")
+        self.assertEqual(scooby_item.display_data, "scooby")
         self.assertEqual(dog_item.child_count(), 2)
 
     def test_add_relationship_classes_to_object_tree_model(self):
@@ -65,10 +65,10 @@ class TestTreeViewFormAddMixin:
         nemo_dog_fish_item = nemo_item.child(1)
         pluto_fish_dog_item = pluto_item.child(0)
         self.assertEqual(nemo_dog_fish_item.item_type, "relationship class")
-        self.assertEqual(nemo_dog_fish_item.display_name, "dog__fish")
+        self.assertEqual(nemo_dog_fish_item.display_data, "dog__fish")
         self.assertEqual(nemo_item.child_count(), 2)
         self.assertEqual(pluto_fish_dog_item.item_type, "relationship class")
-        self.assertEqual(pluto_fish_dog_item.display_name, "fish__dog")
+        self.assertEqual(pluto_fish_dog_item.display_data, "fish__dog")
         self.assertEqual(pluto_item.child_count(), 2)
 
     def test_add_relationships_to_object_tree_model(self):
@@ -99,17 +99,17 @@ class TestTreeViewFormAddMixin:
         self.assertEqual(scooby_dog_fish_item.child_count(), 0)
         self.assertEqual(scooby_fish_dog_item.child_count(), 1)
         self.assertEqual(pluto_nemo_item1.item_type, "relationship")
-        self.assertEqual(pluto_nemo_item1.display_name, 'nemo')
+        self.assertEqual(pluto_nemo_item1.display_data, 'nemo')
         self.assertEqual(pluto_nemo_item2.item_type, "relationship")
-        self.assertEqual(pluto_nemo_item2.display_name, 'pluto')
+        self.assertEqual(pluto_nemo_item2.display_data, 'pluto')
         self.assertEqual(nemo_pluto_item1.item_type, "relationship")
-        self.assertEqual(nemo_pluto_item1.display_name, 'nemo')
+        self.assertEqual(nemo_pluto_item1.display_data, 'nemo')
         self.assertEqual(nemo_pluto_item2.item_type, "relationship")
-        self.assertEqual(nemo_pluto_item2.display_name, 'pluto')
+        self.assertEqual(nemo_pluto_item2.display_data, 'pluto')
         self.assertEqual(nemo_scooby_item1.item_type, "relationship")
-        self.assertEqual(nemo_scooby_item1.display_name, 'nemo')
+        self.assertEqual(nemo_scooby_item1.display_data, 'nemo')
         self.assertEqual(nemo_scooby_item2.item_type, "relationship")
-        self.assertEqual(nemo_scooby_item2.display_name, 'scooby')
+        self.assertEqual(nemo_scooby_item2.display_data, 'scooby')
 
     def test_add_object_parameter_definitions_to_model(self):
         """Test that object parameter definitions are added to the model."""
