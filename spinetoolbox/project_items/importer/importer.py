@@ -18,6 +18,7 @@ Contains Importer project item class.
 
 from collections import Counter
 import os
+from itertools import takewhile
 from PySide2.QtCore import QAbstractListModel, QFileInfo, QModelIndex, Qt, Signal, Slot
 from PySide2.QtWidgets import QFileIconProvider, QListWidget, QDialog, QVBoxLayout, QDialogButtonBox
 from spine_engine import ExecutionDirection
@@ -29,7 +30,7 @@ from spinetoolbox.spine_io.importers.excel_reader import ExcelConnector
 from spinetoolbox.spine_io.importers.gdx_connector import GdxConnector
 from spinetoolbox.spine_io.importers.json_reader import JSONConnector
 from spinetoolbox.widgets.import_preview_window import ImportPreviewWindow
-from .commands import UpdateImporterSettingsCommand, UpdateImporterCancelOnErrorCommand
+from .commands import ChangeItemSelectionCommand, UpdateSettingsCommand, UpdateCancelOnErrorCommand
 from .executable_item import ExecutableItem
 from .item_info import ItemInfo
 from .utils import deserialize_mappings
@@ -91,7 +92,7 @@ class Importer(ProjectItem):
         if mapping_selection is None:
             mapping_selection = len(self.settings) * [True]
         self._file_model.set_initial_state(self.settings.keys(), mapping_selection)
-        self._file_model.selected_for_import_state_changed.connect(self._report_item_importability_change)
+        self._file_model.selected_for_import_state_changed.connect(self._push_file_selection_change_to_undo_stack)
         # connector class
         self._preview_widget = {}  # Key is the filepath, value is the ImportPreviewWindow instance
 
@@ -151,7 +152,7 @@ class Importer(ProjectItem):
         cancel_on_error = self._properties_ui.cancel_on_error_checkBox.isChecked()
         if self.cancel_on_error == cancel_on_error:
             return
-        self._toolbox.undo_stack.push(UpdateImporterCancelOnErrorCommand(self, cancel_on_error))
+        self._toolbox.undo_stack.push(UpdateCancelOnErrorCommand(self, cancel_on_error))
 
     def set_cancel_on_error(self, cancel_on_error):
         self.cancel_on_error = cancel_on_error
@@ -161,6 +162,9 @@ class Importer(ProjectItem):
         self._properties_ui.cancel_on_error_checkBox.blockSignals(True)
         self._properties_ui.cancel_on_error_checkBox.setCheckState(check_state)
         self._properties_ui.cancel_on_error_checkBox.blockSignals(False)
+
+    def set_file_selected(self, label, selected):
+        self._file_model.set_selected(label, selected)
 
     def restore_selections(self):
         """Restores selections into shared widgets when this project item is selected."""
@@ -316,7 +320,7 @@ class Importer(ProjectItem):
         """
         if self.settings.get(importee) == settings:
             return
-        self._toolbox.undo_stack.push(UpdateImporterSettingsCommand(self, settings, importee))
+        self._toolbox.undo_stack.push(UpdateSettingsCommand(self, settings, importee))
 
     def _preview_destroyed(self, importee):
         """Destroys preview widget instance for the given importee.
@@ -327,14 +331,9 @@ class Importer(ProjectItem):
         self._preview_widget.pop(importee, None)
 
     @Slot(bool, str)
-    def _report_item_importability_change(self, checked, label):
-        """Logs changes in item's importability."""
-        if checked:
-            self._logger.msg.emit(f"<b>{self.name}:</b> Source file '{label}' will be processed at execution.")
-        else:
-            self._logger.msg.emit(
-                f"<b>{self.name}:</b> Source file '{label}' will <b>not</b> be processed at execution."
-            )
+    def _push_file_selection_change_to_undo_stack(self, selected, label):
+        """Makes changes to file selection undoable."""
+        self._toolbox.undo_stack.push(ChangeItemSelectionCommand(self, selected, label))
 
     def _do_handle_dag_changed(self, resources):
         """See base class."""
@@ -679,15 +678,28 @@ class _FileListModel(QAbstractListModel):
         """Return the number of rows in the file list."""
         return len(self._files)
 
+    def set_selected(self, label, selected):
+        """
+        Changes the given item's selection status.
+
+        Args:
+            label (str): item's label
+            selected (bool): True to select the item, False to deselect
+        """
+        row = len(list(takewhile(lambda item: item.label != label, self._files)))
+        if row < len(self._files):
+            item = self._files[row]
+            item.selected_for_import = selected
+            index = self.index(row, 0)
+            self.dataChanged.emit(index, index, [Qt.CheckStateRole])
+
     def setData(self, index, value, role=Qt.EditRole):
         """Sets data in the model."""
         if role != Qt.CheckStateRole or not index.isValid():
             return False
         checked = value == Qt.Checked
         item = self._files[index.row()]
-        item.selected_for_import = checked
         self.selected_for_import_state_changed.emit(checked, item.label)
-        self.dataChanged.emit(index, index, [Qt.CheckStateRole])
         return True
 
     def set_initial_state(self, labels, selected_list):
