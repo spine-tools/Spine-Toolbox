@@ -986,13 +986,21 @@ class SpineDBManager(QObject):
         for db_map, data in db_map_data.items():
             import_command = AgedUndoCommand()
             import_command.setText(command_text)
+            child_cmds = []
+            # NOTE: we push the import command before adding the children,
+            # because we *need* to call redo() on the children one by one
             self.undo_stack[db_map].push(import_command)
             for item_type, (to_add, to_update, import_error_log) in get_data_for_import(db_map, **data):
-                error_log[db_map] = [x.msg for x in import_error_log]
+                error_log[db_map] = [str(x) for x in import_error_log]
                 add_cmd = AddItemsCommand(self, db_map, to_add, item_type, parent=import_command)
                 upd_cmd = UpdateItemsCommand(self, db_map, to_update, item_type, parent=import_command)
                 add_cmd.redo()
                 upd_cmd.redo()
+                child_cmds += [add_cmd, upd_cmd]
+            if all([cmd.isObsolete() for cmd in child_cmds]):
+                # Nothing imported. Set the command obsolete and call undo() on the stack to removed it
+                import_command.setObsolete(True)
+                self.undo_stack[db_map].undo()
         if any(error_log.values()):
             self.error_msg(error_log)
 
