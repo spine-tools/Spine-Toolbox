@@ -392,10 +392,7 @@ class TreeViewMixin:
             for db_map in object_item.db_maps
         }
 
-    @staticmethod
-    def _get_duplicate_object_name_list(object_name_list, orig_name, dup_name):
-        return tuple(name if name != orig_name else dup_name for name in object_name_list.split(","))
-
+    @busy_effect
     def duplicate_object(self, index):
         """
         Duplicates the object at the given object tree model index.
@@ -409,33 +406,26 @@ class TreeViewMixin:
         )
         if not ok:
             return
-        class_name = index.parent().data()
+        _replace_name = lambda name_list: [name if name != orig_name else dup_name for name in name_list]
+        parcel = SpineDBParcel(self.db_mngr)
         object_item = index.internalPointer()
-        cascading_relationships = self._get_cascading_relationships(object_item)
-        data = {"objects": [(class_name, dup_name)]}
-        data["relationships"] = [
-            (rel["class_name"], self._get_duplicate_object_name_list(rel["object_name_list"], orig_name, dup_name))
-            for db_map in object_item.db_maps
-            for rel in cascading_relationships[db_map]
-        ]
-        data["object_parameter_values"] = [
-            (class_name, dup_name, val["parameter_name"], val["formatted_value"])
-            for db_map in object_item.db_maps
-            for val in self.db_mngr.get_items_by_field(
-                db_map, "parameter value", "object_id", object_item.db_map_id(db_map)
-            )
-        ]
-        data["relationship_parameter_values"] = [
-            (
-                val["relationship_class_name"],
-                self._get_duplicate_object_name_list(val["object_name_list"], orig_name, dup_name),
-                val["parameter_name"],
-                val["formatted_value"],
-            )
-            for db_map in object_item.db_maps
-            for rel in cascading_relationships[db_map]
-            for val in self.db_mngr.get_items_by_field(db_map, "parameter value", "relationship_id", rel["id"])
-        ]
+        db_map_obj_ids = {db_map: {object_item.db_map_id(db_map)} for db_map in object_item.db_maps}
+        parcel.push_inside_object_ids(db_map_obj_ids)
+        data = self._make_data_for_export(parcel.data)
+        data = {
+            "objects": [(cls_name, dup_name) for (cls_name, obj_name) in data["objects"]],
+            "relationships": [
+                (cls_name, _replace_name(obj_name_lst)) for (cls_name, obj_name_lst) in data["relationships"]
+            ],
+            "object_parameter_values": [
+                (cls_name, dup_name, param_name, val)
+                for (cls_name, obj_name, param_name, val) in data["object_parameter_values"]
+            ],
+            "relationship_parameter_values": [
+                (cls_name, _replace_name(obj_name_lst), param_name, val)
+                for (cls_name, obj_name_lst, param_name, val) in data["relationship_parameter_values"]
+            ],
+        }
         self.db_mngr.import_data({db_map: data for db_map in object_item.db_maps}, command_text="Duplicate object")
 
     def call_show_add_objects_form(self, index):

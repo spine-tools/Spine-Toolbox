@@ -20,6 +20,7 @@ SpineDBParcel class.
 class SpineDBParcel:
     """
     A class to create parcels of data from a Spine db.
+    Mainly intended for the *Export selection* action in the Data Store form.
     """
 
     def __init__(self, db_mngr):
@@ -163,3 +164,32 @@ class SpineDBParcel:
             self.db_mngr.ids_per_db_map(self.db_mngr.find_cascading_parameter_values_by_entity(db_map_ids)),
             "relationship",
         )
+
+    def push_inside_object_ids(self, db_map_ids):
+        """Pushes object ids, cascading relationship ids, and the associated parameter values,
+        but not any entity classes or parameter definitions.
+        Mainly intended for the *Duplicate object* action.
+        """
+        for db_map, ids in db_map_ids.items():
+            self._data.setdefault(db_map, {}).setdefault("object_ids", set()).update(ids)
+        self._push_inside_relationship_ids(
+            self.db_mngr.ids_per_db_map(self.db_mngr.find_cascading_relationships(db_map_ids))
+        )
+        self._push_inside_parameter_value_ids(
+            self.db_mngr.ids_per_db_map(self.db_mngr.find_cascading_parameter_values_by_entity(db_map_ids)), "object"
+        )
+
+    def _push_inside_relationship_ids(self, db_map_ids):
+        """Pushes relationship ids, and the associated parameter values,
+        but not any entity classes or parameter definitions."""
+        for db_map, ids in db_map_ids.items():
+            self._data.setdefault(db_map, {}).setdefault("relationship_ids", set()).update(ids)
+        self._push_inside_parameter_value_ids(
+            self.db_mngr.ids_per_db_map(self.db_mngr.find_cascading_parameter_values_by_entity(db_map_ids)),
+            "relationship",
+        )
+
+    def _push_inside_parameter_value_ids(self, db_map_ids, entity_type):
+        """Pushes parameter value ids."""
+        for db_map, ids in db_map_ids.items():
+            self._data.setdefault(db_map, {}).setdefault(entity_type + "_parameter_value_ids", set()).update(ids)
