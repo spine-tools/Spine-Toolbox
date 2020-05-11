@@ -59,7 +59,7 @@ class Notification(QWidget):
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setAttribute(Qt.WA_TranslucentBackground)
         ss = (
-            "QWidget{background-color: rgba(255, 194, 179, 0.8);"
+            "QWidget{background-color: rgba(255, 194, 179, 0.9);"
             "border-width: 2px;"
             "border-color: #ffebe6;"
             "border-style: groove; border-radius: 8px;}"
@@ -127,6 +127,31 @@ class Notification(QWidget):
     opacity = Property(float, get_opacity, set_opacity)
 
 
+class LinkNotification(Notification):
+    """A notification that may have a link."""
+
+    def __init__(self, *args, slot=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.label.setTextInteractionFlags(Qt.TextBrowserInteraction)
+        if slot is None:
+            self.label.setOpenExternalLinks(True)
+        else:
+            self.label.linkActivated.connect(slot)
+
+    def enterEvent(self, e):
+        """Pauses timer as the mouse hovers the notification."""
+        QWidget.enterEvent(self, e)
+        if self.remaining_time():
+            self.timer.stop()
+
+    def leaveEvent(self, e):
+        """Resumes timer after the mouse leaves the notification."""
+        QWidget.leaveEvent(self, e)
+        remaining_time = self.remaining_time()
+        if remaining_time:
+            self.timer.start(remaining_time)
+
+
 class NotificationStack(QObject):
     def __init__(self, parent, anim_duration=500, life_span=None):
         super().__init__()
@@ -135,11 +160,10 @@ class NotificationStack(QObject):
         self._life_span = life_span
         self.notifications = list()
 
-    def push(self, txt):
+    def push_notification(self, notification):
         """Pushes a notification to the stack with the given text."""
         offset = sum((x.height() for x in self.notifications), 0)
         additional_life_span = 0.8 * self.notifications[-1].remaining_time() if self.notifications else 0
-        notification = Notification(self._parent, txt, anim_duration=self._anim_duration, life_span=self._life_span)
         notification.timer.setInterval(notification.timer.interval() + additional_life_span)
         notification.move(notification.pos().x(), offset)
         notification.destroyed.connect(
@@ -147,6 +171,16 @@ class NotificationStack(QObject):
         )
         self.notifications.append(notification)
         notification.show()
+
+    def push(self, txt):
+        notification = Notification(self._parent, txt, anim_duration=self._anim_duration, life_span=self._life_span)
+        self.push_notification(notification)
+
+    def push_link(self, txt, slot=None):
+        notification = LinkNotification(
+            self._parent, txt, anim_duration=self._anim_duration, life_span=self._life_span, slot=slot
+        )
+        self.push_notification(notification)
 
     def handle_notification_destroyed(self, notification, height):
         """Removes from the stack the given notification and move up

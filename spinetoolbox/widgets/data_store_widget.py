@@ -19,6 +19,7 @@ Contains the DataStoreForm class.
 import os
 import time  # just to measure loading time and sqlalchemy ORM performance
 import json
+import pathlib
 from PySide2.QtWidgets import QMainWindow, QErrorMessage, QDockWidget
 from PySide2.QtCore import Qt, Signal, Slot
 from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QIcon
@@ -61,6 +62,7 @@ class DataStoreFormBase(QMainWindow):
     """Base class for DataStoreForm"""
 
     msg = Signal(str)
+    link_msg = Signal(str, "QVariant")
     msg_error = Signal(str)
     error_box = Signal(str, str)
 
@@ -131,6 +133,7 @@ class DataStoreFormBase(QMainWindow):
         """Connects signals to slots."""
         # Message signals
         self.msg.connect(self.add_message)
+        self.link_msg.connect(self.add_link_msg)
         self.msg_error.connect(self.err_msg.showMessage)
         self.error_box.connect(lambda title, msg: self.err_msg.showMessage(msg))
         # Menu actions
@@ -197,14 +200,25 @@ class DataStoreFormBase(QMainWindow):
 
     @Slot(str)
     def add_message(self, msg):
-        """Appends regular message to status bar.
+        """Pushes message to notification stack.
 
         Args:
-            msg (str): String to show in QStatusBar
+            msg (str): String to show in the notification
         """
         if self.silenced:
             return
         self.notification_stack.push(msg)
+
+    @Slot(str, "QVariant")
+    def add_link_msg(self, msg, slot=None):
+        """Pushes link message to notification stack.
+
+        Args:
+            msg (str): String to show in notification
+        """
+        if self.silenced:
+            return
+        self.notification_stack.push_link(msg, slot=slot)
 
     def restore_dock_widgets(self):
         """Docks all floating and or hidden QDockWidgets back to the window."""
@@ -391,10 +405,19 @@ class DataStoreFormBase(QMainWindow):
         import_data(db_map, **data_for_export)
         try:
             db_map.commit_session("Export initial data from Spine Toolbox.")
-            filename = os.path.split(file_path)[1]
-            self.msg.emit(f"File {filename} successfully exported.")
         except SpineDBAPIError:
             self.msg_error.emit(f"[SpineDBAPIError] Unable to export file <b>{db_map.codename}</b>")
+        else:
+            self._emit_file_successfully_exported(str(URL("sqlite", database=file_path)), slot=self._open_sqlite_file)
+
+    def _open_sqlite_file(self, url):
+        codename = os.path.splitext(os.path.basename(url))[0]
+        try:
+            ds_view = DataStoreForm(self.db_mngr, (url, codename))
+        except SpineDBAPIError as e:
+            self.error_box.emit(e.msg)
+            return
+        ds_view.show()
 
     def export_to_json(self, file_path, data_for_export):
         """Exports given data into JSON file."""
@@ -417,8 +440,7 @@ class DataStoreFormBase(QMainWindow):
         )
         with open(file_path, 'w', encoding='utf-8') as f:
             f.write(json_data)
-        filename = os.path.split(file_path)[1]
-        self.msg.emit(f"File {filename} successfully exported.")
+        self._emit_file_successfully_exported(pathlib.Path(file_path).as_uri())
 
     @busy_effect
     def export_to_excel(self, file_path, data_for_export):
@@ -427,16 +449,22 @@ class DataStoreFormBase(QMainWindow):
         url = URL("sqlite", database="")
         db_map = DiffDatabaseMapping(url, _create_engine=create_new_spine_database)
         import_data(db_map, **data_for_export)
-        filename = os.path.split(file_path)[1]
+        file_name = os.path.split(file_path)[1]
         try:
             export_spine_database_to_xlsx(db_map, file_path)
-            self.msg.emit(f"File {file_path} successfully exported.")
         except PermissionError:
             self.msg_error.emit(
-                "Unable to export file <b>{0}</b>.<br/>" "Close the file in Excel and try again.".format(filename)
+                f"Unable to export file <b>{file_name}</b>.<br/>" "Close the file in Excel and try again."
             )
         except OSError:
-            self.msg_error.emit("[OSError] Unable to export file <b>{0}</b>".format(filename))
+            self.msg_error.emit(f"[OSError] Unable to export file <b>{file_name}</b>.")
+        else:
+            self._emit_file_successfully_exported(pathlib.Path(file_path).as_uri())
+
+    def _emit_file_successfully_exported(self, url, slot=None):
+        file_name = os.path.basename(url)
+        anchor = f"<p><a style='color:#223344;' title='{file_name}' href='{url}'>{file_name}</a></p>"
+        self.link_msg.emit(f"File {anchor} successfully exported.", slot)
 
     def reload_session(self, db_maps):
         """Reloads data from given db_maps."""
