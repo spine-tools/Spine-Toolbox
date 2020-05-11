@@ -108,10 +108,34 @@ class TestImporter(unittest.TestCase):
         item = NonCallableMagicMock()
         expected_file_list = ["url1", "url2"]
         resources = [ProjectItemResource(item, "file", url) for url in expected_file_list]
-        self.importer._do_handle_dag_changed(resources)
+        rank = 0
+        self.importer.handle_dag_changed(rank, resources)
         model = self.importer._properties_ui.treeView_files.model()
         file_list = [model.index(row, 0).data(Qt.DisplayRole) for row in range(model.rowCount())]
         self.assertEqual(sorted(file_list), sorted(expected_file_list))
+        checked = [model.index(row, 0).data(Qt.CheckStateRole) for row in range(model.rowCount())]
+        selected = [check == Qt.Checked for check in checked]
+        self.assertTrue(all(selected))
+
+    def test_handle_dag_changed_updates_previous_list_items(self):
+        self.importer.activate()
+        item = NonCallableMagicMock()
+        resources = [ProjectItemResource(item, "file", url) for url in ["url1", "url2"]]
+        rank = 0
+        # Add initial files
+        self.importer.handle_dag_changed(rank, resources)
+        model = self.importer._properties_ui.treeView_files.model()
+        for row in range(2):
+            index = model.index(row, 0)
+            model.setData(index, Qt.Unchecked, Qt.CheckStateRole)
+        # Update with one existing, one new file
+        resources = [ProjectItemResource(item, "file", url) for url in ["url2", "url3"]]
+        self.importer.handle_dag_changed(rank, resources)
+        file_list = [model.index(row, 0).data(Qt.DisplayRole) for row in range(model.rowCount())]
+        self.assertEqual(file_list, ["url2", "url3"])
+        checked = [model.index(row, 0).data(Qt.CheckStateRole) for row in range(model.rowCount())]
+        selected = [check == Qt.Checked for check in checked]
+        self.assertEqual(selected, [False, True])
 
 
 if __name__ == '__main__':
