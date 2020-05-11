@@ -30,6 +30,7 @@ from spinedb_api import (
     create_new_spine_database,
     DiffDatabaseMapping,
     SpineDBAPIError,
+    SpineDBVersionError,
 )
 from ..config import MAINWINDOW_SS, APPLICATION_PATH
 from .data_store_edit_items_dialogs import ManageParameterTagsDialog
@@ -286,16 +287,41 @@ class DataStoreFormBase(QMainWindow):
     def import_file(self, checked=False):
         """Import file. For now it only supports JSON."""
         self.qsettings.beginGroup(self.settings_group)
-        file_path, _ = get_open_file_name_in_last_dir(
-            self.qsettings, "importFileIntoDB", self, "Import file", self._get_base_dir(), "JSON file (*.json)"
+        file_path, selected_filter = get_open_file_name_in_last_dir(
+            self.qsettings,
+            "importFileIntoDB",
+            self,
+            "Import file",
+            self._get_base_dir(),
+            "SQLite (*.sqlite);; JSON file (*.json)",
         )
         self.qsettings.endGroup()
         if not file_path:  # File selection cancelled
             return
+        if selected_filter.startswith("JSON"):
+            self.import_from_json(file_path)
+        elif selected_filter.startswith("SQLite"):
+            self.import_from_sqlite(file_path)
+        else:
+            raise ValueError()
+
+    def import_from_json(self, file_path):
         with open(file_path) as f:
             data = json.load(f)
         self.import_data(data)
-        self.msg.emit(f"File {file_path} successfully imported.")
+        filename = os.path.split(file_path)[1]
+        self.msg.emit(f"File {filename} successfully imported.")
+
+    def import_from_sqlite(self, file_path):
+        url = URL("sqlite", database=file_path)
+        filename = os.path.split(file_path)[1]
+        try:
+            db_map = DiffDatabaseMapping(url)
+        except (SpineDBAPIError, SpineDBVersionError) as err:
+            self.msg.emit(f"Could'n import file {filename}: {str(err)}")
+        data = export_data(db_map)
+        self.import_data(data)
+        self.msg.emit(f"File {filename} successfully imported.")
 
     @staticmethod
     def _make_data_for_export(db_map_item_ids):

@@ -394,19 +394,18 @@ class GetItemsForExportDialog(SelectDBItemsDialog):
         db_map_ids_for_export = {}
         for db_map, item_types in db_map_items_for_export.items():
             item_ids = db_map_ids_for_export[db_map] = dict()
-            # NOTE: None means no filter on the ids, i.e. bring all items
-            if "object class" in item_types:
-                item_ids["object_class_ids"] = None
-            if "relationship class" in item_types:
-                item_ids["relationship_class_ids"] = None
-            if "object" in item_types:
-                item_ids["object_ids"] = None
-            if "relationship" in item_types:
-                item_ids["relationship_ids"] = None
-            if "parameter definition" in item_types:
-                item_ids["object_parameter_ids"] = item_ids["relationship_parameter_ids"] = None
-            if "parameter value" in item_types:
-                item_ids["object_parameter_value_ids"] = item_ids["relationship_parameter_value_ids"] = None
-            if "parameter value list" in item_types:
-                item_ids["parameter_value_list_ids"] = None
+            if "object class" not in item_types:
+                item_ids["object_class_ids"] = ()
+            if "relationship class" not in item_types:
+                item_ids["relationship_class_ids"] = ()
+            if "object" not in item_types:
+                item_ids["object_ids"] = ()
+            if "relationship" not in item_types:
+                item_ids["relationship_ids"] = ()
+            if "parameter definition" not in item_types:
+                item_ids["object_parameter_ids"] = item_ids["relationship_parameter_ids"] = ()
+            if "parameter value" not in item_types:
+                item_ids["object_parameter_value_ids"] = item_ids["relationship_parameter_value_ids"] = ()
+            if "parameter value list" not in item_types:
+                item_ids["parameter_value_list_ids"] = ()
         self.data_submitted.emit(db_map_ids_for_export)
