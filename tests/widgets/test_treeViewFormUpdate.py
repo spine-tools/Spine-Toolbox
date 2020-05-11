@@ -34,7 +34,7 @@ class TestTreeViewFormUpdateMixin:
         root_item = self.tree_view_form.object_tree_model.root_item
         fish_item = root_item.child(0)
         self.assertEqual(fish_item.item_type, "object class")
-        self.assertEqual(fish_item.display_name, "octopus")
+        self.assertEqual(fish_item.display_data, "octopus")
 
     def test_update_objects_in_object_tree_model(self):
         """Test that objects are updated in the object tree model."""
@@ -48,7 +48,7 @@ class TestTreeViewFormUpdateMixin:
         fish_item = root_item.child(0)
         nemo_item = fish_item.child(0)
         self.assertEqual(nemo_item.item_type, "object")
-        self.assertEqual(nemo_item.display_name, "dory")
+        self.assertEqual(nemo_item.display_data, "dory")
 
     def test_update_relationship_classes_in_object_tree_model(self):
         """Test that relationship classes are updated in the object tree model."""
@@ -66,7 +66,7 @@ class TestTreeViewFormUpdateMixin:
         pluto_item = dog_item.child(0)
         pluto_fish_dog_item = pluto_item.child(0)
         self.assertEqual(pluto_fish_dog_item.item_type, "relationship class")
-        self.assertEqual(pluto_fish_dog_item.display_name, "octopus__dog")
+        self.assertEqual(pluto_fish_dog_item.display_data, "octopus__dog")
 
     @unittest.skip("TODO")
     def test_update_relationships_in_object_tree_model(self):
