@@ -102,11 +102,15 @@ class Importer(ProjectItem):
 
     def execution_item(self):
         """Creates project item's execution counterpart."""
+        selected_settings = dict()
+        for file_item in self._file_model.existing_files():
+            label = file_item.label
+            selected_settings[label] = self.settings[label] if file_item.selected_for_import else "deselected"
         python_path = self._project.settings.value("appSettings/pythonPath", defaultValue="")
         gams_path = self._project.settings.value("appSettings/gamsPath", defaultValue=None)
         cancel_on_error = self._properties_ui.cancel_on_error_checkBox.isChecked()
         executable = ExecutableItem(
-            self.name, self.settings, self.logs_dir, python_path, gams_path, cancel_on_error, self._logger
+            self.name, selected_settings, self.logs_dir, python_path, gams_path, cancel_on_error, self._logger
         )
         return executable
 
@@ -579,13 +583,9 @@ class _FileListModel(QAbstractListModel):
         """All model's file items."""
         return self._files
 
-    def all_importables(self):
-        """Returns a list of items that exist and are selected for importing."""
-        importables = list()
-        for item in self._files:
-            if item.selected_for_import and item.exists():
-                importables.append(item)
-        return importables
+    def existing_files(self):
+        """Returns a list of items that exist."""
+        return [item for item in self._files if item.exists()]
 
     def data(self, index, role=Qt.DisplayRole):
         """Returns data associated with given role at given index."""

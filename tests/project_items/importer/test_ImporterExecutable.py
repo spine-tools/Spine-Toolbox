@@ -72,6 +72,25 @@ class TestImporterExecutable(unittest.TestCase):
             self.assertEqual(object_list[0].name, "entity")
             database_map.connection.close()
 
+    def test_execute_forward_skip_deselected_file(self):
+        with TemporaryDirectory() as temp_dir:
+            data_file = Path(temp_dir, "data.dat")
+            self._write_simple_data(data_file)
+            mappings = {data_file: "deselected"}
+            database_path = Path(temp_dir).joinpath("database.sqlite")
+            database_url = 'sqlite:///' + str(database_path)
+            create_new_spine_database(database_url)
+            gams_path = ""
+            executable = ExecutableItem("name", mappings, temp_dir, sys.executable, gams_path, True, mock.MagicMock())
+            database_resources = [ProjectItemResource(None, "database", database_url)]
+            self.assertTrue(executable.execute(database_resources, ExecutionDirection.BACKWARD))
+            file_resources = [ProjectItemResource(None, "file", data_file.as_uri())]
+            self.assertTrue(executable.execute(file_resources, ExecutionDirection.FORWARD))
+            database_map = DatabaseMapping(database_url)
+            class_list = database_map.object_class_list().all()
+            self.assertEqual(len(class_list), 0)
+            database_map.connection.close()
+
     @staticmethod
     def _write_simple_data(file_name):
         with open(file_name, "w") as out_file:
