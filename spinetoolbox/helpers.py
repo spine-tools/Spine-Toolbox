@@ -390,7 +390,7 @@ def tuple_itemgetter(itemgetter_func, num_indexes):
 
 
 def format_string_list(str_list):
-    """Return an unordered html list with all elements in str_list.
+    """Returns a html unordered list from the given list of strings.
     Intended to print error logs as returned by spinedb_api.
 
     Args:

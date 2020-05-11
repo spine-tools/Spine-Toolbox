@@ -512,16 +512,16 @@ class SpineDBManager(QObject):
         self.parameter_tags_removed.connect(lambda db_map_data: self.uncache_items("parameter tag", db_map_data))
 
     def error_msg(self, db_map_error_log):
-        msg = ""
+        db_msgs = []
         for db_map, error_log in db_map_error_log.items():
-            database = "From " + db_map.codename + ":"
             if isinstance(error_log, str):
                 error_log = [error_log]
-            formatted_log = format_string_list(error_log)
-            msg += format_string_list([database, formatted_log])
+            db_msg = "From " + db_map.codename + ":" + format_string_list(error_log)
+            db_msgs.append(db_msg)
         for db_map in db_map_error_log:
             logger = self._db_specific_loggers.get(db_map.codename)
             if logger is not None:
+                msg = format_string_list(db_msgs)
                 logger.error_box.emit("Error", msg)
 
     def cache_items(self, item_type, db_map_data):
