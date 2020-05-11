@@ -130,13 +130,13 @@ class Notification(QWidget):
 class LinkNotification(Notification):
     """A notification that may have a link."""
 
-    def __init__(self, *args, slot=None, **kwargs):
+    def __init__(self, *args, open_link=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.label.setTextInteractionFlags(Qt.TextBrowserInteraction)
-        if slot is None:
+        if open_link is None:
             self.label.setOpenExternalLinks(True)
         else:
-            self.label.linkActivated.connect(slot)
+            self.label.linkActivated.connect(open_link)
 
     def enterEvent(self, e):
         """Pauses timer as the mouse hovers the notification."""
@@ -176,9 +176,9 @@ class NotificationStack(QObject):
         notification = Notification(self._parent, txt, anim_duration=self._anim_duration, life_span=self._life_span)
         self.push_notification(notification)
 
-    def push_link(self, txt, slot=None):
+    def push_link(self, txt, open_link=None):
         notification = LinkNotification(
-            self._parent, txt, anim_duration=self._anim_duration, life_span=self._life_span, slot=slot
+            self._parent, txt, anim_duration=self._anim_duration, life_span=self._life_span, open_link=open_link
         )
         self.push_notification(notification)
 

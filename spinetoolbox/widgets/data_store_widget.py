@@ -210,7 +210,7 @@ class DataStoreFormBase(QMainWindow):
         self.notification_stack.push(msg)
 
     @Slot(str, "QVariant")
-    def add_link_msg(self, msg, slot=None):
+    def add_link_msg(self, msg, open_link=None):
         """Pushes link message to notification stack.
 
         Args:
@@ -218,7 +218,7 @@ class DataStoreFormBase(QMainWindow):
         """
         if self.silenced:
             return
-        self.notification_stack.push_link(msg, slot=slot)
+        self.notification_stack.push_link(msg, open_link=open_link)
 
     def restore_dock_widgets(self):
         """Docks all floating and or hidden QDockWidgets back to the window."""
@@ -408,7 +408,9 @@ class DataStoreFormBase(QMainWindow):
         except SpineDBAPIError:
             self.msg_error.emit(f"[SpineDBAPIError] Unable to export file <b>{db_map.codename}</b>")
         else:
-            self._emit_file_successfully_exported(str(URL("sqlite", database=file_path)), slot=self._open_sqlite_file)
+            self._emit_file_successfully_exported(
+                str(URL("sqlite", database=file_path)), open_link=self._open_sqlite_file
+            )
 
     def _open_sqlite_file(self, url):
         codename = os.path.splitext(os.path.basename(url))[0]
@@ -461,10 +463,10 @@ class DataStoreFormBase(QMainWindow):
         else:
             self._emit_file_successfully_exported(pathlib.Path(file_path).as_uri())
 
-    def _emit_file_successfully_exported(self, url, slot=None):
+    def _emit_file_successfully_exported(self, url, open_link=None):
         file_name = os.path.basename(url)
         anchor = f"<p><a style='color:#223344;' title='{file_name}' href='{url}'>{file_name}</a></p>"
-        self.link_msg.emit(f"File {anchor} successfully exported.", slot)
+        self.link_msg.emit(f"File {anchor} successfully exported.", open_link)
 
     def reload_session(self, db_maps):
         """Reloads data from given db_maps."""
