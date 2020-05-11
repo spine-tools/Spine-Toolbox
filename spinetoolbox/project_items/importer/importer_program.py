@@ -51,8 +51,10 @@ def run(checked_files, all_import_settings, all_source_settings, urls_downstream
     all_errors = []
     for source in checked_files:
         settings = all_import_settings.get(source, None)
+        if settings == "deselected":
+            continue
         if settings is None or not settings:
-            print("There are no mappings defined for {0}, moving on...".format(source))
+            print(f"There are no mappings defined for {source}, moving on...")
             continue
         source_type = settings["source_type"]
         source_settings = all_source_settings.get(source_type)

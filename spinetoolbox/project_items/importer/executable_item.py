@@ -73,6 +73,8 @@ class ExecutableItem(ExecutableItemBase, QObject):
 
     def _execute_forward(self, resources):
         """See base class."""
+        if not self._settings:
+            return True
         absolute_paths = _files_from_resources(resources)
         absolute_path_settings = dict()
         for label in self._settings:

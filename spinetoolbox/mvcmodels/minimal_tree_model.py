@@ -178,8 +178,12 @@ class TreeItem:
         self._fetched = True
 
     @property
-    def display_name(self):
+    def display_data(self):
         return "unnamed"
+
+    @property
+    def edit_data(self):
+        return self.display_data
 
 
 class MinimalTreeModel(QAbstractItemModel):

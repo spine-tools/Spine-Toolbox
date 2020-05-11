@@ -17,6 +17,7 @@ Provides FilterCheckboxListModel for FilterWidget.
 """
 
 import re
+import bisect
 from PySide2.QtCore import Qt, QModelIndex, QAbstractListModel
 
 
@@ -217,22 +218,25 @@ class SimpleFilterCheckboxListModel(QAbstractListModel):
         self._all_selected = self._check_all_selected()
         self.endResetModel()
 
+    def _do_add_items(self, data):
+        first = len(self._data)
+        last = first + len(data) - 1
+        self.beginInsertRows(self.index(0, 0), first, last)
+        self._data += data
+        self.endInsertRows()
+
     def add_items(self, data, selected=None):
         if selected is None:
             selected = self._all_selected
         data = [x for x in data if x not in self._data_set]
         if not data:
             return
-        first = len(self._data)
-        last = first + len(data) - 1
-        self.beginInsertRows(self.index(0, 0), first, last)
-        self._data += data
+        self._do_add_items(data)
         self._data_set.update(data)
         if selected:
             self._selected.update(data)
             if self._is_filtered:
                 self._selected_filtered.update(data)
-        self.endInsertRows()
         if self._is_filtered:
             self._filter_index = [i for i, item in enumerate(self._data) if re.search(self._list_filter, item)]
         self._all_selected = self._check_all_selected()
@@ -279,6 +283,29 @@ class LazyFilterCheckboxListModel(SimpleFilterCheckboxListModel):
         # If the source model didn't bring any new data, emit layoutChanged to trigger fetching again.
         if row_count == self.rowCount():
             self.layoutChanged.emit()
+
+    def _do_add_items(self, data):
+        """Adds items so the list is always sorted, while assuming that both existing and new items are sorted.
+        """
+        data_iter = iter(data)
+        item = next(data_iter)
+        consecutive_items = [item]
+        lo = bisect.bisect_left(self._data, item)
+        for item in data_iter:
+            row = bisect.bisect_left(self._data, item, lo=lo)
+            if row == lo:
+                consecutive_items.append(item)
+                continue
+            count = len(consecutive_items)
+            self.beginInsertRows(self.index(0, 0), lo, lo + count - 1)
+            self._data[lo:lo] = consecutive_items
+            self.endInsertRows()
+            consecutive_items = [item]
+            lo = row + count
+        count = len(consecutive_items)
+        self.beginInsertRows(self.index(0, 0), lo, lo + count - 1)
+        self._data[lo:lo] = consecutive_items
+        self.endInsertRows()
 
 
 class DataToValueFilterCheckboxListModel(SimpleFilterCheckboxListModel):

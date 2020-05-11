@@ -19,13 +19,21 @@ Contains the DataStoreForm class.
 import os
 import time  # just to measure loading time and sqlalchemy ORM performance
 import json
-from PySide2.QtWidgets import QMainWindow, QErrorMessage, QDockWidget, QMessageBox, QInputDialog
+from PySide2.QtWidgets import QMainWindow, QErrorMessage, QDockWidget
 from PySide2.QtCore import Qt, Signal, Slot
 from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QIcon
-from spinedb_api import import_data, export_data, SpineIntegrityError, SpineDBAPIError, ParameterValueEncoder
+from sqlalchemy.engine.url import URL
+from spinedb_api import (
+    import_data,
+    export_data,
+    ParameterValueEncoder,
+    create_new_spine_database,
+    DiffDatabaseMapping,
+    SpineDBAPIError,
+)
 from ..config import MAINWINDOW_SS, APPLICATION_PATH
 from .data_store_edit_items_dialogs import ManageParameterTagsDialog
-from .data_store_manage_items_dialog import MassRemoveItemsDialog, CreateTemplateDialog
+from .data_store_manage_items_dialog import MassRemoveItemsDialog, GetItemsForExportDialog
 from .custom_menus import ParameterValueListContextMenu
 from .data_store_parameter_view_mixin import ParameterViewMixin
 from .data_store_tree_view_mixin import TreeViewMixin
@@ -129,10 +137,9 @@ class DataStoreFormBase(QMainWindow):
         self.ui.actionView_history.triggered.connect(self.show_history_dialog)
         self.ui.actionClose.triggered.connect(self.close)
         self.ui.menuEdit.aboutToShow.connect(self._handle_menu_edit_about_to_show)
-        self.ui.actionImport.triggered.connect(self.show_import_file_dialog)
-        self.ui.actionExport.triggered.connect(self.export_database)
-        self.ui.actionLoadTemplate.triggered.connect(self.load_template)
-        self.ui.actionSaveAsTemplate.triggered.connect(self.save_as_template)
+        self.ui.actionImport.triggered.connect(self.import_file)
+        self.ui.actionMapping_import.triggered.connect(self.show_mapping_import_file_dialog)
+        self.ui.actionExport.triggered.connect(self.show_get_items_for_export_dialog)
         self.ui.actionCopy.triggered.connect(self.copy)
         self.ui.actionPaste.triggered.connect(self.paste)
         self.ui.actionRemove_selection.triggered.connect(self.remove_selection)
@@ -266,17 +273,21 @@ class DataStoreFormBase(QMainWindow):
         self._call_on_focused_widget("paste")
 
     @Slot(bool)
-    def load_template(self, checked=False):
-        """Loads JSON template."""
-        if not all(self.db_mngr.undo_stack[db_map].isClean() for db_map in self.db_maps):
-            commit_warning = QMessageBox(parent=self)
-            commit_warning.setText("Please commit or rollback before loading a template.")
-            commit_warning.setStandardButtons(QMessageBox.Ok)
-            commit_warning.exec()
-            return
+    def show_mapping_import_file_dialog(self, checked=False):
+        """Shows dialog to allow user to select a file to import."""
+        dialog = ImportDialog(self.qsettings, parent=self)
+        dialog.exec()
+
+    @Slot(dict)
+    def import_data(self, data):
+        self.db_mngr.import_data({db_map: data for db_map in self.db_maps})
+
+    @Slot(bool)
+    def import_file(self, checked=False):
+        """Import file. For now it only supports JSON."""
         self.qsettings.beginGroup(self.settings_group)
         file_path, _ = get_open_file_name_in_last_dir(
-            self.qsettings, "loadTemplate", self, "Load template", self._get_base_dir(), "Template file (*.json)"
+            self.qsettings, "importFileIntoDB", self, "Import file", self._get_base_dir(), "JSON file (*.json)"
         )
         self.qsettings.endGroup()
         if not file_path:  # File selection cancelled
@@ -284,44 +295,70 @@ class DataStoreFormBase(QMainWindow):
         with open(file_path) as f:
             data = json.load(f)
         self.import_data(data)
-        self.msg.emit(f"Template {file_path} successfully loaded.")
+        self.msg.emit(f"File {file_path} successfully imported.")
+
+    @staticmethod
+    def _make_data_for_export(db_map_item_ids):
+        data = {}
+        for db_map, item_ids in db_map_item_ids.items():
+            for key, items in export_data(db_map, **item_ids).items():
+                data.setdefault(key, []).extend(items)
+        return data
 
     @Slot(bool)
-    def save_as_template(self, checked=False):
-        self.qsettings.beginGroup(self.settings_group)
-        self.template_file_path, _ = get_save_file_name_in_last_dir(
-            self.qsettings, "saveAsTemplate", self, "Save as template", self._get_base_dir(), "Template file (*.json)"
-        )
-        self.qsettings.endGroup()
-        if not self.template_file_path:  # File selection cancelled
-            return
-        dialog = CreateTemplateDialog(self, self.db_mngr, *self.db_maps)
-        dialog.data_submitted.connect(self.do_save_as_template)
+    def show_get_items_for_export_dialog(self):
+        """Shows dialog for user to select dbs and items for export."""
+        dialog = GetItemsForExportDialog(self, self.db_mngr, *self.db_maps)
+        dialog.data_submitted.connect(self.export_data)
         dialog.show()
 
     @Slot(object)
-    def do_save_as_template(self, db_map_selected_item_types):
-        """Saves a db as a JSON template."""
-        data = {}
-        for db_map, selected_item_types in db_map_selected_item_types.items():
-            export_items = dict()
-            export_items["object_classes"] = "object class" in selected_item_types
-            export_items["relationship_classes"] = "relationship class" in selected_item_types
-            export_items["objects"] = "object" in selected_item_types
-            export_items["relationships"] = "relationship" in selected_item_types
-            export_items["object_parameters"] = export_items["relationship_parameters"] = (
-                "parameter definition" in selected_item_types
-            )
-            export_items["object_parameter_values"] = export_items["relationship_parameter_values"] = (
-                "parameter value" in selected_item_types
-            )
-            # export_items["parameter_value_lists"] = "parameter value list" in selected_item_types
-            # export_items["parameter_tags"] = "parameter tag" in selected_item_types
-            for key, items in export_data(db_map, **export_items).items():
-                data.setdefault(key, []).extend(items)
+    def export_data(self, db_map_ids_for_export):
+        """Exports data from given dictionary into a file.
+
+        Args:
+            db_map_ids_for_export: Dictionary mapping db maps to keyword arguments for spinedb_api.export_data
+        """
+        # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
+        self.qsettings.beginGroup(self.settings_group)
+        file_path, selected_filter = get_save_file_name_in_last_dir(
+            self.qsettings,
+            "exportDB",
+            self,
+            "Export to file",
+            self._get_base_dir(),
+            "SQLite (*.sqlite);; JSON file (*.json);; Excel file (*.xlsx)",
+        )
+        self.qsettings.endGroup()
+        if not file_path:  # File selection cancelled
+            return
+        data_for_export = self._make_data_for_export(db_map_ids_for_export)
+        if selected_filter.startswith("JSON"):
+            self.export_to_json(file_path, data_for_export)
+        elif selected_filter.startswith("SQLite"):
+            self.export_to_sqlite(file_path, data_for_export)
+        elif selected_filter.startswith("Excel"):
+            self.export_to_excel(file_path, data_for_export)
+        else:
+            raise ValueError()
+
+    def export_to_sqlite(self, file_path, data_for_export):
+        """Exports given data into SQLite file."""
+        url = URL("sqlite", database=file_path)
+        db_map = DiffDatabaseMapping(url, _create_engine=create_new_spine_database)
+        import_data(db_map, **data_for_export)
+        try:
+            db_map.commit_session("Export initial data from Spine Toolbox.")
+            filename = os.path.split(file_path)[1]
+            self.msg.emit(f"File {filename} successfully exported.")
+        except SpineDBAPIError:
+            self.msg_error.emit(f"[SpineDBAPIError] Unable to export file <b>{db_map.codename}</b>")
+
+    def export_to_json(self, file_path, data_for_export):
+        """Exports given data into JSON file."""
         indent = 4 * " "
         json_data = "{{{0}{1}{0}}}".format(
-            "\n" if data else "",
+            "\n" if data_for_export else "",
             ",\n".join(
                 [
                     indent
@@ -332,99 +369,37 @@ class DataStoreFormBase(QMainWindow):
                             [indent + json.dumps(value, cls=ParameterValueEncoder) for value in values]
                         ),
                     )
-                    for key, values in data.items()
+                    for key, values in data_for_export.items()
                 ]
             ),
         )
-        with open(self.template_file_path, 'w', encoding='utf-8') as f:
+        with open(file_path, 'w', encoding='utf-8') as f:
             f.write(json_data)
-        self.msg.emit(f"Template {self.template_file_path} successfully saved.")
-
-    @Slot(bool)
-    def show_import_file_dialog(self, checked=False):
-        """Shows dialog to allow user to select a file to import."""
-        if not all(self.db_mngr.undo_stack[db_map].isClean() for db_map in self.db_maps):
-            commit_warning = QMessageBox(parent=self)
-            commit_warning.setText("Please commit or rollback before importing data.")
-            commit_warning.setStandardButtons(QMessageBox.Ok)
-            commit_warning.exec()
-            return
-        dialog = ImportDialog(self.qsettings, parent=self)
-        dialog.exec()
-
-    @Slot(dict)
-    def import_data(self, data):
-        changed_db_maps = []
-        db_map_error_log = {}
-        for db_map in self.db_maps:
-            try:
-                _, import_errors = import_data(db_map, **data)
-                db_map_error_log[db_map] = [f"{e.db_type}: {e.msg}" for e in import_errors]
-                changed_db_maps.append(db_map)
-            except (SpineIntegrityError, SpineDBAPIError) as err:
-                db_map_error_log[db_map] = [err.msg]
-                db_map.rollback_session()
-        # Don't send a commit cookie as the database is updated by an 'outside force' here.
-        self.db_mngr.commit_session(*changed_db_maps, rollback_if_no_msg=True, cookie=None)
-        if any(db_map_error_log.values()):
-            self.db_mngr.error_msg(db_map_error_log)
-
-    @Slot(bool)
-    def export_database(self, checked=False):
-        """Exports data from database into a file."""
-        # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-        db_map = self._select_database()
-        if db_map is None:  # Database selection cancelled
-            return
-        self.qsettings.beginGroup(self.settings_group)
-        file_path, _ = get_save_file_name_in_last_dir(
-            self.qsettings, "exportDB", self, "Export to file", self._get_base_dir(), "Excel file (*.xlsx)"
-        )
-        self.qsettings.endGroup()
-        if not file_path:  # File selection cancelled
-            return
-        self.export_to_excel(db_map, file_path)
-
-    def _select_database(self):
-        """
-        Lets user select a database from available databases.
-
-        Shows a dialog from which user can select a single database.
-        If there is only a single database it is selected automatically and no dialog is shown.
-
-        Returns:
-             the database map of the database or None if no database was selected
-        """
-        if len(self.db_maps) == 1:
-            return next(iter(self.db_maps))
-        db_names = [x.codename for x in self.db_maps]
-        selected_database, ok = QInputDialog.getItem(
-            self, "Select database", "Select database to export", db_names, editable=False
-        )
-        if not ok:
-            return None
-        return self.db_maps[db_names.index(selected_database)]
+        filename = os.path.split(file_path)[1]
+        self.msg.emit(f"File {filename} successfully exported.")
 
     @busy_effect
-    def export_to_excel(self, db_map, file_path):
-        """Exports data from database into Excel file."""
+    def export_to_excel(self, file_path, data_for_export):
+        """Exports given data into Excel file."""
+        # NOTE: We import data into an in-memory Spine db and then export that to excel.
+        url = URL("sqlite", database="")
+        db_map = DiffDatabaseMapping(url, _create_engine=create_new_spine_database)
+        import_data(db_map, **data_for_export)
         filename = os.path.split(file_path)[1]
         try:
             export_spine_database_to_xlsx(db_map, file_path)
             self.msg.emit(f"File {file_path} successfully exported.")
         except PermissionError:
             self.msg_error.emit(
-                "Unable to export to file <b>{0}</b>.<br/>" "Close the file in Excel and try again.".format(filename)
+                "Unable to export file <b>{0}</b>.<br/>" "Close the file in Excel and try again.".format(filename)
             )
         except OSError:
-            self.msg_error.emit("[OSError] Unable to export to file <b>{0}</b>".format(filename))
+            self.msg_error.emit("[OSError] Unable to export file <b>{0}</b>".format(filename))
 
     def reload_session(self, db_maps):
         """Reloads data from given db_maps."""
         self.init_models()
         self.db_mngr.fetch_db_maps_for_listener(self, *db_maps)
-        db_names = ", ".join([x.codename for x in db_maps])
-        self.msg.emit(f"Reloaded databases {db_names}")
 
     @Slot(bool)
     def refresh_session(self, checked=False):
@@ -443,18 +418,19 @@ class DataStoreFormBase(QMainWindow):
         db_maps = set(self.db_maps) & set(db_maps)
         if not db_maps:
             return
+        db_names = ", ".join([x.codename for x in db_maps])
         if cookie is self:
-            db_names = ", ".join([x.codename for x in db_maps])
             msg = f"All changes in {db_names} committed successfully."
             self.msg.emit(msg)
         else:  # Commit done by an 'outside force'.
             self.reload_session(db_maps)
+            self.msg.emit(f"Databases {db_names} reloaded from an external action.")
 
     def receive_session_rolled_back(self, db_maps):
         db_maps = set(self.db_maps) & set(db_maps)
         if not db_maps:
             return
-        self.init_models()
+        self.reload_session(db_maps)
         db_names = ", ".join([x.codename for x in db_maps])
         msg = f"All changes in {db_names} rolled back successfully."
         self.msg.emit(msg)
@@ -463,8 +439,7 @@ class DataStoreFormBase(QMainWindow):
         db_maps = set(self.db_maps) & set(db_maps)
         if not db_maps:
             return
-        self.init_models()
-        self.db_mngr.fetch_db_maps_for_listener(self, *db_maps)
+        self.reload_session(db_maps)
         self.msg.emit("Session refreshed.")
 
     @Slot("QVariant", bool)

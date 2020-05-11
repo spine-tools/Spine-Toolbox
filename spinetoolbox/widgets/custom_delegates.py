@@ -16,11 +16,18 @@ Custom item delegates.
 :date:   1.9.2018
 """
 
+from numbers import Number
 from PySide2.QtCore import Qt, Signal, QEvent, QPoint, QRect
 from PySide2.QtWidgets import QComboBox, QItemDelegate, QStyleOptionButton, QStyle, QApplication, QStyleOptionComboBox
 from PySide2.QtGui import QIcon
 from spinedb_api import from_database, to_database
-from .custom_editors import CustomComboEditor, CustomLineEditor, SearchBarEditor, CheckListEditor
+from .custom_editors import (
+    CustomComboEditor,
+    CustomLineEditor,
+    SearchBarEditor,
+    CheckListEditor,
+    ParameterValueLineEditor,
+)
 from ..mvcmodels.shared import PARSED_ROLE
 
 
@@ -71,7 +78,7 @@ class LineEditDelegate(QItemDelegate):
     data_committed = Signal("QModelIndex", "QVariant", name="data_committed")
 
     def createEditor(self, parent, option, index):
-        """Return CustomLineEditor. Set up a validator depending on datatype."""
+        """Return CustomLineEditor."""
         return CustomLineEditor(parent)
 
     def setEditorData(self, editor, index):
@@ -159,41 +166,6 @@ class CheckBoxDelegate(QItemDelegate):
         return QRect(checkbox_anchor, checkbox_rect.size())
 
 
-class PivotTableDelegate(CheckBoxDelegate):
-
-    parameter_value_editor_requested = Signal("QModelIndex")
-    data_committed = Signal("QModelIndex", "QVariant")
-
-    def setModelData(self, editor, model, index):
-        """Send signal."""
-        self.data_committed.emit(index, editor.data())
-
-    def _is_entity_index(self, index):
-        parent = self.parent()
-        return not (
-            parent.is_value_input_type() or parent.is_index_expansion_input_type()
-        ) and index.model().sourceModel().index_in_data(index)
-
-    def paint(self, painter, option, index):
-        if self._is_entity_index(index):
-            super().paint(painter, option, index)
-        else:
-            QItemDelegate.paint(self, painter, option, index)
-
-    def editorEvent(self, event, model, option, index):
-        if self._is_entity_index(index):
-            return super().editorEvent(event, model, option, index)
-        return QItemDelegate.editorEvent(self, event, model, option, index)
-
-    def createEditor(self, parent, option, index):
-        if self._is_entity_index(index):
-            return super().createEditor(parent, option, index)
-        if self.parent().pivot_table_model.index_in_data(index):
-            self.parameter_value_editor_requested.emit(index.model().mapToSource(index))
-            return None
-        return CustomLineEditor(parent)
-
-
 class GetObjectClassIdMixin:
     """Allows getting the object class id from the name."""
 
@@ -216,6 +188,62 @@ class GetRelationshipClassIdMixin:
         return relationship_class.get("id")
 
 
+class PivotTableDelegate(CheckBoxDelegate):
+
+    parameter_value_editor_requested = Signal("QModelIndex")
+    data_committed = Signal("QModelIndex", "QVariant")
+
+    def setModelData(self, editor, model, index):
+        """Send signal."""
+        if self._is_relationship_index(index):
+            super().setModelData(self, editor, model, index)
+            return
+        data = editor.data()
+        if isinstance(editor, ParameterValueLineEditor):
+            data = to_database(data)
+        self.data_committed.emit(index, data)
+
+    def setEditorData(self, editor, index):
+        """Do nothing. We're setting editor data right away in createEditor."""
+
+    def _is_relationship_index(self, index):
+        """
+        Checks whether or not the given index corresponds to a relationship,
+        in which case we need to use the check box delegate.
+
+        Returns:
+            bool
+        """
+        parent = self.parent()
+        return not (
+            parent.is_value_input_type() or parent.is_index_expansion_input_type()
+        ) and index.model().sourceModel().index_in_data(index)
+
+    def paint(self, painter, option, index):
+        if self._is_relationship_index(index):
+            super().paint(painter, option, index)
+        else:
+            QItemDelegate.paint(self, painter, option, index)
+
+    def editorEvent(self, event, model, option, index):
+        if self._is_relationship_index(index):
+            return super().editorEvent(event, model, option, index)
+        return QItemDelegate.editorEvent(self, event, model, option, index)
+
+    def createEditor(self, parent, option, index):
+        if self._is_relationship_index(index):
+            return super().createEditor(parent, option, index)
+        if self.parent().pivot_table_model.index_in_data(index):
+            value = index.model().mapToSource(index).data(PARSED_ROLE)
+            if value is None or isinstance(value, (Number, str)) and not isinstance(value, bool):
+                editor = ParameterValueLineEditor(parent)
+                editor.set_data(value)
+                return editor
+            self.parameter_value_editor_requested.emit(index.model().mapToSource(index))
+            return None
+        return CustomLineEditor(parent)
+
+
 class ParameterDelegate(QItemDelegate):
     """Base class for all custom parameter delegates.
 
@@ -233,6 +261,9 @@ class ParameterDelegate(QItemDelegate):
     def setModelData(self, editor, model, index):
         """Send signal."""
         self.data_committed.emit(index, editor.data())
+
+    def setEditorData(self, editor, index):
+        """Do nothing. We're setting editor data right away in createEditor."""
 
     def updateEditorGeometry(self, editor, option, index):
         super().updateEditorGeometry(editor, option, index)
@@ -275,8 +306,17 @@ class ParameterValueOrDefaultValueDelegate(ParameterDelegate):
 
     parameter_value_editor_requested = Signal("QModelIndex")
 
+    def setModelData(self, editor, model, index):
+        """Sends signal."""
+        self.data_committed.emit(index, to_database(editor.data()))
+
     def _create_or_request_parameter_value_editor(self, parent, option, index, db_map):
         """Emits the signal to request a standalone `ParameterValueEditor` from parent widget."""
+        value = index.data(PARSED_ROLE)
+        if value is None or isinstance(value, (Number, str)) and not isinstance(value, bool):
+            editor = ParameterValueLineEditor(parent)
+            editor.set_data(value)
+            return editor
         self.parameter_value_editor_requested.emit(index)
 
 
@@ -296,10 +336,6 @@ class ParameterValueDelegate(ParameterValueOrDefaultValueDelegate):
 
     def _get_entity_class_id(self, index, db_map):
         raise NotImplementedError()
-
-    def setModelData(self, editor, model, index):
-        """Sends signal."""
-        self.data_committed.emit(index, to_database(editor.data()))
 
     def _get_value_list(self, index, db_map):
         """Returns a value list item for the given index and db_map."""

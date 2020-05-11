@@ -24,7 +24,7 @@ from spinedb_api import (
     create_new_spine_database,
     DateTime,
     DiffDatabaseMapping,
-    Duration,
+    get_data_for_import,
     from_database,
     IndexedValue,
     is_empty,
@@ -44,6 +44,7 @@ from .spine_db_signaller import SpineDBSignaller
 from .spine_db_fetcher import SpineDBFetcher
 from .spine_db_commands import (
     AgedUndoStack,
+    AgedUndoCommand,
     AddItemsCommand,
     AddCheckedParameterValuesCommand,
     UpdateItemsCommand,
@@ -141,7 +142,10 @@ class SpineDBManager(QObject):
 
     def create_new_spine_database(self, url):
         if url in self._db_maps:
-            message = f"The url <b>{url}</b> is being viewed. Please close all windows viewing this url and try again."
+            message = (
+                f"The db at <b>{url}</b> is open in a Data store view. "
+                "Please close all Data store views using this url and try again."
+            )
             self._general_logger.error_box.emit("Error", message)
             return
         try:
@@ -351,6 +355,8 @@ class SpineDBManager(QObject):
         for db_map in db_maps:
             if self.undo_stack[db_map].isClean() and not db_map.has_pending_changes():
                 continue
+            if not self._get_rollback_confirmation(db_map):
+                continue
             try:
                 db_map.rollback_session()
                 rolled_db_maps.add(db_map)
@@ -362,6 +368,19 @@ class SpineDBManager(QObject):
             self.error_msg(error_log)
         if rolled_db_maps:
             self.session_rolled_back.emit(rolled_db_maps)
+
+    @staticmethod
+    def _get_rollback_confirmation(db_map):
+        message_box = QMessageBox(
+            QMessageBox.Question,
+            f"Rollback changes in {db_map.codename}",
+            "Are you sure? All your changes since the last commit will be reverted and removed from the undo/redo stack.",
+            QMessageBox.Ok | QMessageBox.Cancel,
+            parent=qApp.activeWindow(),  # pylint: disable=undefined-variable
+        )
+        message_box.button(QMessageBox.Ok).setText("Rollback")
+        answer = message_box.exec_()
+        return answer == QMessageBox.Ok
 
     def _commit_db_map_session(self, db_map):
         commit_msg = self._get_commit_msg(db_map)
@@ -737,6 +756,10 @@ class SpineDBManager(QObject):
             return self._display_data(item[key])
         if role == Qt.ToolTipRole:
             return self._tool_tip_data(item[key])
+        if role == Qt.TextAlignmentRole:
+            if isinstance(item[key], str):
+                return Qt.AlignLeft
+            return Qt.AlignRight
         if role == PARSED_ROLE:
             return item[key]
         return None
@@ -1010,6 +1033,29 @@ class SpineDBManager(QObject):
             list: dictionary items
         """
         return self.get_db_items(self._make_query(db_map, "wide_parameter_definition_tag_sq", ids=ids), ("id",))
+
+    def import_data(self, db_map_data, command_text="Import data"):
+        """Imports the given data into given db maps using the dedicated import functions from spinedb_api.
+        Condenses all in a single command for undo/redo.
+
+        Args:
+            db_map_data (dict(DiffDatabaseMapping, list)): Maps dbs to data to be passed as keyword arguments
+                to `get_data_for_import`
+            command_text (str, optional): What to call the command that condenses the operation.
+        """
+        error_log = dict()
+        for db_map, data in db_map_data.items():
+            import_command = AgedUndoCommand()
+            import_command.setText(command_text)
+            self.undo_stack[db_map].push(import_command)
+            for item_type, (to_add, to_update, import_error_log) in get_data_for_import(db_map, **data):
+                error_log[db_map] = [x.msg for x in import_error_log]
+                add_cmd = AddItemsCommand(self, db_map, to_add, item_type, parent=import_command)
+                upd_cmd = UpdateItemsCommand(self, db_map, to_update, item_type, parent=import_command)
+                add_cmd.redo()
+                upd_cmd.redo()
+        if any(error_log.values()):
+            self.error_msg(error_log)
 
     @busy_effect
     def add_or_update_items(self, db_map_data, method_name, get_method_name, signal_name):
@@ -1371,8 +1417,16 @@ class SpineDBManager(QObject):
             self.scenario_alternatives_removed.emit(db_map_scenario_alternatives)
 
     @staticmethod
-    def _to_ids(db_map_data):
+    def ids_per_db_map(db_map_data):
         return {db_map: {x["id"] for x in data} for db_map, data in db_map_data.items()}
+
+    @staticmethod
+    def ids_per_db_map_and_class(db_map_data):
+        d = dict()
+        for db_map, items in db_map_data.items():
+            for item in items:
+                d.setdefault((db_map, item["class_id"]), set()).add(item["id"])
+        return d
 
     @Slot(object)
     def cascade_remove_objects(self, db_map_data):
@@ -1381,7 +1435,7 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of removed items keyed by DiffDatabaseMapping
         """
-        db_map_cascading_data = self.find_cascading_entities(self._to_ids(db_map_data), "object")
+        db_map_cascading_data = self.find_cascading_entities(self.ids_per_db_map(db_map_data), "object")
         if any(db_map_cascading_data.values()):
             self.objects_removed.emit(db_map_cascading_data)
 
@@ -1392,7 +1446,7 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of removed items keyed by DiffDatabaseMapping
         """
-        db_map_cascading_data = self.find_cascading_relationship_classes(self._to_ids(db_map_data))
+        db_map_cascading_data = self.find_cascading_relationship_classes(self.ids_per_db_map(db_map_data))
         if any(db_map_cascading_data.values()):
             self.relationship_classes_removed.emit(db_map_cascading_data)
 
@@ -1403,7 +1457,7 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of removed items keyed by DiffDatabaseMapping
         """
-        db_map_cascading_data = self.find_cascading_entities(self._to_ids(db_map_data), "relationship")
+        db_map_cascading_data = self.find_cascading_entities(self.ids_per_db_map(db_map_data), "relationship")
         if any(db_map_cascading_data.values()):
             self.relationships_removed.emit(db_map_cascading_data)
 
@@ -1414,7 +1468,7 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of removed items keyed by DiffDatabaseMapping
         """
-        db_map_cascading_data = self.find_cascading_relationships(self._to_ids(db_map_data))
+        db_map_cascading_data = self.find_cascading_relationships(self.ids_per_db_map(db_map_data))
         if any(db_map_cascading_data.values()):
             self.relationships_removed.emit(db_map_cascading_data)
 
@@ -1425,7 +1479,9 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of removed items keyed by DiffDatabaseMapping
         """
-        db_map_cascading_data = self.find_cascading_parameter_data(self._to_ids(db_map_data), "parameter definition")
+        db_map_cascading_data = self.find_cascading_parameter_data(
+            self.ids_per_db_map(db_map_data), "parameter definition"
+        )
         if any(db_map_cascading_data.values()):
             self.parameter_definitions_removed.emit(db_map_cascading_data)
 
@@ -1436,7 +1492,7 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of removed items keyed by DiffDatabaseMapping
         """
-        db_map_cascading_data = self.find_cascading_parameter_values_by_entity(self._to_ids(db_map_data))
+        db_map_cascading_data = self.find_cascading_parameter_values_by_entity(self.ids_per_db_map(db_map_data))
         if any(db_map_cascading_data.values()):
             self.parameter_values_removed.emit(db_map_cascading_data)
 
@@ -1447,7 +1503,7 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of removed items keyed by DiffDatabaseMapping
         """
-        db_map_cascading_data = self.find_cascading_parameter_values_by_definition(self._to_ids(db_map_data))
+        db_map_cascading_data = self.find_cascading_parameter_values_by_definition(self.ids_per_db_map(db_map_data))
         if any(db_map_cascading_data.values()):
             self.parameter_values_removed.emit(db_map_cascading_data)
 
@@ -1458,13 +1514,15 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of removed items keyed by DiffDatabaseMapping
         """
-        db_map_cascading_data = self.find_cascading_parameter_values_by_alternative(self._to_ids(db_map_data))
+        db_map_cascading_data = self.find_cascading_parameter_values_by_alternative(self.ids_per_db_map(db_map_data))
         if any(db_map_cascading_data.values()):
             self.parameter_values_removed.emit(db_map_cascading_data)
 
     @Slot(object)
     def cascade_remove_scenario_alternative_by_alternative(self, db_map_data):
-        db_map_cascading_data = self.find_cascading_alternative_scenarios_by_alternative(self._to_ids(db_map_data))
+        db_map_cascading_data = self.find_cascading_alternative_scenarios_by_alternative(
+            self.ids_per_db_map(db_map_data)
+        )
         if any(db_map_cascading_data.values()):
             self.scenario_alternatives_removed.emit(db_map_cascading_data)
 
@@ -1482,7 +1540,7 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
         """
-        db_map_cascading_data = self.find_cascading_relationship_classes(self._to_ids(db_map_data))
+        db_map_cascading_data = self.find_cascading_relationship_classes(self.ids_per_db_map(db_map_data))
         if not any(db_map_cascading_data.values()):
             return
         db_map_cascading_data = {
@@ -1498,7 +1556,7 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
         """
-        db_map_cascading_data = self.find_cascading_relationships(self._to_ids(db_map_data))
+        db_map_cascading_data = self.find_cascading_relationships(self.ids_per_db_map(db_map_data))
         if not any(db_map_cascading_data.values()):
             return
         db_map_cascading_data = {
@@ -1514,7 +1572,9 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
         """
-        db_map_cascading_data = self.find_cascading_parameter_data(self._to_ids(db_map_data), "parameter definition")
+        db_map_cascading_data = self.find_cascading_parameter_data(
+            self.ids_per_db_map(db_map_data), "parameter definition"
+        )
         if not any(db_map_cascading_data.values()):
             return
         db_map_cascading_data = {
@@ -1530,7 +1590,9 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
         """
-        db_map_cascading_data = self.find_cascading_parameter_definitions_by_value_list(self._to_ids(db_map_data))
+        db_map_cascading_data = self.find_cascading_parameter_definitions_by_value_list(
+            self.ids_per_db_map(db_map_data)
+        )
         if not any(db_map_cascading_data.values()):
             return
         db_map_cascading_data = {
@@ -1546,7 +1608,7 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
         """
-        db_map_cascading_data = self.find_cascading_parameter_definitions_by_tag(self._to_ids(db_map_data))
+        db_map_cascading_data = self.find_cascading_parameter_definitions_by_tag(self.ids_per_db_map(db_map_data))
         if not any(db_map_cascading_data.values()):
             return
         db_map_cascading_data = {
@@ -1562,7 +1624,7 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
         """
-        db_map_cascading_data = self.find_cascading_parameter_data(self._to_ids(db_map_data), "parameter value")
+        db_map_cascading_data = self.find_cascading_parameter_data(self.ids_per_db_map(db_map_data), "parameter value")
         if not any(db_map_cascading_data.values()):
             return
         db_map_cascading_data = {
@@ -1578,7 +1640,7 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
         """
-        db_map_cascading_data = self.find_cascading_parameter_values_by_entity(self._to_ids(db_map_data))
+        db_map_cascading_data = self.find_cascading_parameter_values_by_entity(self.ids_per_db_map(db_map_data))
         if not any(db_map_cascading_data.values()):
             return
         db_map_cascading_data = {
@@ -1610,7 +1672,7 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
         """
-        db_map_cascading_data = self.find_cascading_parameter_values_by_definition(self._to_ids(db_map_data))
+        db_map_cascading_data = self.find_cascading_parameter_values_by_definition(self.ids_per_db_map(db_map_data))
         if not any(db_map_cascading_data.values()):
             return
         db_map_cascading_data = {

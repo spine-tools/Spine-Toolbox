@@ -101,7 +101,9 @@ class EntityTreeModel(MinimalTreeModel):
             if role == Qt.DecorationRole:
                 return item.display_icon
             if role == Qt.DisplayRole:
-                return item.display_name
+                return item.display_data
+            if role == Qt.EditRole:
+                return item.edit_data
         return item.data(index.column(), role)
 
     def headerData(self, section, orientation, role):

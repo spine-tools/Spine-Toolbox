@@ -97,7 +97,21 @@ class AgedUndoStack(QUndoStack):
         return [self.command(idx) for idx in range(self.index())]
 
 
-class CommandBase(QUndoCommand):
+class AgedUndoCommand(QUndoCommand):
+    def __init__(self, parent=None):
+        """
+        Args:
+            parent (QUndoCommand, optional): The parent command, used for defining macros.
+        """
+        super().__init__(parent=parent)
+        self._age = time.time()
+
+    @property
+    def age(self):
+        return self._age
+
+
+class SpineDBCommand(AgedUndoCommand):
     _add_command_name = {
         "object class": "add object classes",
         "object": "add objects",
@@ -203,22 +217,18 @@ class CommandBase(QUndoCommand):
         "scenario_alternative": "scenario_alternatives_updated",
     }
 
-    def __init__(self, db_mngr, db_map):
+    def __init__(self, db_mngr, db_map, parent=None):
         """
         Args:
             db_mngr (SpineDBManager): SpineDBManager instance
             db_map (DiffDatabaseMapping): DiffDatabaseMapping instance
+            parent (QUndoCommand, optional): The parent command, used for defining macros.
         """
-        super().__init__()
+        super().__init__(parent=parent)
         self.db_mngr = db_mngr
         self.db_map = db_map
         self.completed_signal = None
         self._completed = False
-        self._age = time.time()
-
-    @property
-    def age(self):
-        return self._age
 
     def silence_listener(self, func):
         """Calls given function while silencing the listener Data Store forms.
@@ -272,16 +282,17 @@ class CommandBase(QUndoCommand):
         raise NotImplementedError()
 
 
-class AddItemsCommand(CommandBase):
-    def __init__(self, db_mngr, db_map, data, item_type):
+class AddItemsCommand(SpineDBCommand):
+    def __init__(self, db_mngr, db_map, data, item_type, parent=None):
         """
         Args:
             db_mngr (SpineDBManager): SpineDBManager instance
             db_map (DiffDatabaseMapping): DiffDatabaseMapping instance
             data (list): list of dict-items to add
             item_type (str): the item type
+            parent (QUndoCommand, optional): The parent command, used for defining macros.
         """
-        super().__init__(db_mngr, db_map)
+        super().__init__(db_mngr, db_map, parent=parent)
         self.redo_db_map_data = {db_map: data}
         self.item_type = item_type
         self.method_name = self._add_method_name[item_type]
@@ -291,13 +302,13 @@ class AddItemsCommand(CommandBase):
         self.setText(self._add_command_name[item_type] + f" to '{db_map.codename}'")
         self.undo_db_map_data = None
 
-    @CommandBase.redomethod
+    @SpineDBCommand.redomethod
     def redo(self):
         self.db_mngr.add_or_update_items(
             self.redo_db_map_data, self.method_name, self.get_method_name, self.completed_signal_name
         )
 
-    @CommandBase.undomethod
+    @SpineDBCommand.undomethod
     def undo(self):
         self.db_mngr.do_remove_items(self.undo_db_map_data)
 
@@ -315,21 +326,22 @@ class AddItemsCommand(CommandBase):
 
 
 class AddCheckedParameterValuesCommand(AddItemsCommand):
-    def __init__(self, db_mngr, db_map, data):
-        super().__init__(db_mngr, db_map, data, "parameter value")
+    def __init__(self, db_mngr, db_map, data, parent=None):
+        super().__init__(db_mngr, db_map, data, "parameter value", parent=parent)
         self.method_name = "add_checked_parameter_values"
 
 
-class UpdateItemsCommand(CommandBase):
-    def __init__(self, db_mngr, db_map, data, item_type):
+class UpdateItemsCommand(SpineDBCommand):
+    def __init__(self, db_mngr, db_map, data, item_type, parent=None):
         """
         Args:
             db_mngr (SpineDBManager): SpineDBManager instance
             db_map (DiffDatabaseMapping): DiffDatabaseMapping instance
             data (list): list of dict-items to update
             item_type (str): the item type
+            parent (QUndoCommand, optional): The parent command, used for defining macros.
         """
-        super().__init__(db_mngr, db_map)
+        super().__init__(db_mngr, db_map, parent=parent)
         self.item_type = item_type
         self.redo_db_map_data = {db_map: data}
         self.undo_db_map_data = {db_map: [self._undo_item(db_map, item) for item in data]}
@@ -343,13 +355,13 @@ class UpdateItemsCommand(CommandBase):
         undo_item = self.db_mngr.get_item(db_map, self.item_type, redo_item["id"])
         return _cache_to_db_item(self.item_type, undo_item)
 
-    @CommandBase.redomethod
+    @SpineDBCommand.redomethod
     def redo(self):
         self.db_mngr.add_or_update_items(
             self.redo_db_map_data, self.method_name, self.get_method_name, self.completed_signal_name
         )
 
-    @CommandBase.undomethod
+    @SpineDBCommand.undomethod
     def undo(self):
         self.db_mngr.add_or_update_items(
             self.undo_db_map_data, self.method_name, self.get_method_name, self.completed_signal_name
@@ -360,14 +372,14 @@ class UpdateItemsCommand(CommandBase):
 
 
 class UpdateCheckedParameterValuesCommand(UpdateItemsCommand):
-    def __init__(self, db_mngr, db_map, data):
-        super().__init__(db_mngr, db_map, data, "parameter value")
+    def __init__(self, db_mngr, db_map, data, parent=None):
+        super().__init__(db_mngr, db_map, data, "parameter value", parent=parent)
         self.method_name = "update_checked_parameter_values"
 
 
-class SetParameterDefinitionTagsCommand(CommandBase):
-    def __init__(self, db_mngr, db_map, data):
-        super().__init__(db_mngr, db_map)
+class SetParameterDefinitionTagsCommand(SpineDBCommand):
+    def __init__(self, db_mngr, db_map, data, parent=None):
+        super().__init__(db_mngr, db_map, parent=parent)
         self.redo_db_map_data = {db_map: data}
         self.undo_db_map_data = {db_map: [self._undo_item(db_map, item) for item in data]}
         self.method_name = "set_parameter_definition_tags"
@@ -380,13 +392,13 @@ class SetParameterDefinitionTagsCommand(CommandBase):
         undo_item = self.db_mngr.get_item(db_map, "parameter definition", redo_item["parameter_definition_id"])
         return {"parameter_definition_id": undo_item["id"], "parameter_tag_id_list": undo_item["parameter_tag_id_list"]}
 
-    @CommandBase.redomethod
+    @SpineDBCommand.redomethod
     def redo(self):
         self.db_mngr.add_or_update_items(
             self.redo_db_map_data, self.method_name, self.get_method_name, self.completed_signal_name
         )
 
-    @CommandBase.undomethod
+    @SpineDBCommand.undomethod
     def undo(self):
         self.db_mngr.add_or_update_items(
             self.undo_db_map_data, self.method_name, self.get_method_name, self.completed_signal_name
@@ -397,25 +409,26 @@ class SetParameterDefinitionTagsCommand(CommandBase):
         raise NotImplementedError()
 
 
-class RemoveItemsCommand(CommandBase):
-    def __init__(self, db_mngr, db_map, typed_data):
+class RemoveItemsCommand(SpineDBCommand):
+    def __init__(self, db_mngr, db_map, typed_data, parent=None):
         """
         Args:
             db_mngr (SpineDBManager): SpineDBManager instance
             db_map (DiffDatabaseMapping): DiffDatabaseMapping instance
             typed_data (dict): lists of dict-items to remove keyed by string type
+            parent (QUndoCommand, optional): The parent command, used for defining macros.
         """
-        super().__init__(db_mngr, db_map)
+        super().__init__(db_mngr, db_map, parent=parent)
         self.redo_db_map_typed_data = {db_map: typed_data}
         self.undo_typed_db_map_data = {}
         self.setText(f"remove items from '{db_map.codename}'")
         self.completed_signal = self.db_mngr.items_removed_from_cache
 
-    @CommandBase.redomethod
+    @SpineDBCommand.redomethod
     def redo(self):
         self.db_mngr.do_remove_items(self.redo_db_map_typed_data)
 
-    @CommandBase.undomethod
+    @SpineDBCommand.undomethod
     def undo(self):
         for item_type in reversed(list(self.undo_typed_db_map_data.keys())):
             db_map_data = self.undo_typed_db_map_data[item_type]

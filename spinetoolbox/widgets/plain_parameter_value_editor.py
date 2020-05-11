@@ -18,6 +18,7 @@ An editor widget for editing plain number database (relationship) parameter valu
 
 from PySide2.QtCore import Slot
 from PySide2.QtWidgets import QWidget
+from spinetoolbox.helpers import try_number_from_string
 
 
 class PlainParameterValueEditor(QWidget):
@@ -64,14 +65,4 @@ class PlainParameterValueEditor(QWidget):
             return True
         if self._ui.radioButton_false.isChecked():
             return False
-        return self._number_or_string_value()
-
-    def _number_or_string_value(self):
-        text = self._ui.value_edit.text()
-        try:
-            return int(text)
-        except ValueError:
-            try:
-                return float(text)
-            except ValueError:
-                return text
+        return try_number_from_string(self._ui.value_edit.text())

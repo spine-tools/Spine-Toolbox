@@ -15,8 +15,8 @@ Contains the TreeViewMixin class.
 :author: M. Marin (KTH)
 :date:   26.11.2018
 """
-
-from PySide2.QtCore import Slot, Signal
+from PySide2.QtCore import Signal, Slot
+from PySide2.QtWidgets import QInputDialog
 from .custom_menus import EntityTreeContextMenu
 from .data_store_add_items_dialogs import (
     AddAlternativesDialog,
@@ -36,7 +36,8 @@ from .data_store_edit_items_dialogs import (
     RemoveEntitiesDialog,
 )
 from ..mvcmodels.entity_tree_models import ObjectTreeModel, RelationshipTreeModel, AlternativeTreeModel
-from ..helpers import busy_effect
+from ..helpers import busy_effect, get_save_file_name_in_last_dir
+from ..spine_db_parcel import SpineDBParcel
 
 
 class TreeViewMixin:
@@ -173,75 +174,44 @@ class TreeViewMixin:
                 d.setdefault(db_map, []).append(item.db_map_data(db_map))
         return d
 
-    @staticmethod
-    def _db_map_class_id_data(db_map_data):
-        """Returns a new dictionary where the class id is also part of the key.
+    def _ids_per_db_map(self, indexes):
+        return self.db_mngr.ids_per_db_map(self._db_map_items(indexes))
 
-        Returns:
-            dict: lists of dictionary items keyed by tuple (DiffDatabaseMapping, integer class id)
-        """
-        d = dict()
-        for db_map, items in db_map_data.items():
-            for item in items:
-                d.setdefault((db_map, item["class_id"]), set()).add(item["id"])
-        return d
-
-    @staticmethod
-    def _extend_merge(left, right):
-        """Returns a new dictionary by uniting left and right.
-
-        Returns:
-            dict: lists of dictionary items keyed by DiffDatabaseMapping
-        """
-        result = left.copy()
-        for key, data in right.items():
-            result.setdefault(key, []).extend(data)
-        return result
+    def _ids_per_db_map_and_class(self, indexes):
+        return self.db_mngr.ids_per_db_map_and_class(self._db_map_items(indexes))
 
     def _update_object_filter(self):
-        """Updates filters object filter according to object tree selection."""
-        selected_object_classes = self._db_map_items(self.object_tree_model.selected_object_class_indexes)
-        self.selected_ent_cls_ids["object class"] = self.db_mngr._to_ids(selected_object_classes)
-        selected_rel_clss = self._db_map_items(self.object_tree_model.selected_relationship_class_indexes)
-        cascading_rel_clss = self.db_mngr.find_cascading_relationship_classes(self.selected_ent_cls_ids["object class"])
-        selected_rel_clss = self._extend_merge(selected_rel_clss, cascading_rel_clss)
-        self.selected_ent_cls_ids["relationship class"] = self.db_mngr._to_ids(selected_rel_clss)
-        selected_objs = self._db_map_items(self.object_tree_model.selected_object_indexes)
-        selected_rels = self._db_map_items(self.object_tree_model.selected_relationship_indexes)
-        cascading_rels = self.db_mngr.find_cascading_relationships(self.db_mngr._to_ids(selected_objs))
-        selected_rels = self._extend_merge(selected_rels, cascading_rels)
-        for db_map, items in selected_rels.items():
-            self.selected_ent_cls_ids["relationship class"].setdefault(db_map, set()).update(
-                {x["class_id"] for x in items}
-            )
-        # Accending objects from selected relationships
-        ascending_objs = self._db_map_items(
-            {ind.parent().parent(): None for ind in self.object_tree_model.selected_relationship_indexes}
-        )
-        selected_objs = self._extend_merge(selected_objs, ascending_objs)
-        # Ascending objects from selected relationship class
-        ascending_objs = self._db_map_items(
-            {ind.parent(): None for ind in self.object_tree_model.selected_relationship_class_indexes}
-        )
-        cascading_rels = self.db_mngr.find_cascading_relationships(self.db_mngr._to_ids(ascending_objs))
-        selected_objs = self._extend_merge(selected_objs, ascending_objs)
-        selected_rels = self._extend_merge(selected_rels, cascading_rels)
-        for db_map, items in selected_objs.items():
-            self.selected_ent_cls_ids["object class"].setdefault(db_map, set()).update({x["class_id"] for x in items})
-        self.selected_ent_ids["object"] = self._db_map_class_id_data(selected_objs)
-        self.selected_ent_ids["relationship"] = self._db_map_class_id_data(selected_rels)
+        """Updates object filter according to object tree selection."""
+        selected_obj_clss = set(self.object_tree_model.selected_object_class_indexes.keys())
+        selected_objs = set(self.object_tree_model.selected_object_indexes.keys())
+        selected_rel_clss = set(self.object_tree_model.selected_relationship_class_indexes.keys())
+        # Compute active indexes by merging in the parents from lower levels recursively
+        active_rels = set(self.object_tree_model.selected_relationship_indexes.keys())
+        active_rel_clss = selected_rel_clss | {ind.parent() for ind in active_rels}
+        active_objs = selected_objs | {ind.parent() for ind in active_rel_clss}
+        active_obj_clss = selected_obj_clss | {ind.parent() for ind in active_objs}
+        self.selected_ent_cls_ids["object class"] = self._ids_per_db_map(active_obj_clss)
+        self.selected_ent_cls_ids["relationship class"] = self._ids_per_db_map(active_rel_clss)
+        self.selected_ent_ids["object"] = self._ids_per_db_map_and_class(active_objs)
+        self.selected_ent_ids["relationship"] = self._ids_per_db_map_and_class(active_rels)
+        # Cascade (note that we carefuly select where to cascade from, to avoid 'circularity')
+        from_obj_clss = selected_obj_clss | {ind.parent() for ind in selected_objs}
+        from_objs = selected_objs | {ind.parent() for ind in selected_rel_clss}
+        cascading_rel_clss = self.db_mngr.find_cascading_relationship_classes(self._ids_per_db_map(from_obj_clss))
+        cascading_rels = self.db_mngr.find_cascading_relationships(self._ids_per_db_map(from_objs))
+        for db_map, ids in self.db_mngr.ids_per_db_map(cascading_rel_clss).items():
+            self.selected_ent_cls_ids["relationship class"].setdefault(db_map, set()).update(ids)
+        for (db_map, class_id), ids in self.db_mngr.ids_per_db_map_and_class(cascading_rels).items():
+            self.selected_ent_ids["relationship"].setdefault((db_map, class_id), set()).update(ids)
         self.update_filter()
 
     def _update_relationship_filter(self):
-        """Update filters relationship filter according to relationship tree selection."""
-        selected_rel_clss = self._db_map_items(self.relationship_tree_model.selected_relationship_class_indexes)
-        self.selected_ent_cls_ids["relationship class"] = self.db_mngr._to_ids(selected_rel_clss)
-        selected_rels = self._db_map_items(self.relationship_tree_model.selected_relationship_indexes)
-        for db_map, items in selected_rels.items():
-            self.selected_ent_cls_ids["relationship class"].setdefault(db_map, set()).update(
-                {x["class_id"] for x in items}
-            )
-        self.selected_ent_ids["relationship"] = self._db_map_class_id_data(selected_rels)
+        """Update relationship filter according to relationship tree selection."""
+        selected_rel_clss = set(self.relationship_tree_model.selected_relationship_class_indexes.keys())
+        active_rels = set(self.relationship_tree_model.selected_relationship_indexes.keys())
+        active_rel_clss = selected_rel_clss | {ind.parent() for ind in active_rels}
+        self.selected_ent_cls_ids["relationship class"] = self._ids_per_db_map(active_rel_clss)
+        self.selected_ent_ids["relationship"] = self._ids_per_db_map_and_class(active_rels)
         self.update_filter()
 
     @Slot("QModelIndex")
@@ -307,6 +277,10 @@ class TreeViewMixin:
             self.fully_expand_view(self.ui.treeView_object)
         elif option == "Fully collapse":
             self.fully_collapse_view(self.ui.treeView_object)
+        elif option == "Duplicate":
+            self.duplicate_object(index)
+        elif option == "Export selection":
+            self.export_selection(self.object_tree_model)
         else:  # No option selected
             pass
         object_tree_context_menu.deleteLater()
@@ -340,6 +314,8 @@ class TreeViewMixin:
             self.fully_expand_view(self.ui.treeView_relationship)
         elif option == "Fully collapse":
             self.fully_collapse_view(self.ui.treeView_relationship)
+        elif option == "Export selection":
+            self.export_selection(self.relationship_tree_model)
         else:  # No option selected
             pass
         relationship_tree_context_menu.deleteLater()
@@ -372,6 +348,50 @@ class TreeViewMixin:
         else:  # No option selected
             pass
         alt_tree_context_menu.deleteLater()
+
+    def export_selection(self, model):
+        self.qsettings.beginGroup(self.settings_group)
+        file_path, selected_filter = get_save_file_name_in_last_dir(
+            self.qsettings,
+            "exportDBSelection",
+            self,
+            "Export selection",
+            self._get_base_dir(),
+            "SQLite (*.sqlite);; JSON file (*.json);; Excel file (*.xlsx)",
+        )
+        self.qsettings.endGroup()
+        if not file_path:  # File selection cancelled
+            return
+        parcel = self._make_data_parcel_from_selection(model)
+        data_for_export = self._make_data_for_export(parcel.data)
+        if selected_filter.startswith("JSON"):
+            self.export_to_json(file_path, data_for_export)
+        elif selected_filter.startswith("SQLite"):
+            self.export_to_sqlite(file_path, data_for_export)
+        elif selected_filter.startswith("Excel"):
+            self.export_to_excel(file_path, data_for_export)
+        else:
+            raise ValueError()
+
+    def _make_data_parcel_from_selection(self, model):
+        """Returns a SpineDBParcel with data from the given model's selection.
+
+        Args:
+            model (EntityTreeModel)
+
+        Returns:
+            SpineDBParcel
+        """
+        parcel = SpineDBParcel(self.db_mngr)
+        db_map_obj_cls_ids = self._ids_per_db_map(model.selected_object_class_indexes)
+        db_map_obj_ids = self._ids_per_db_map(model.selected_object_indexes)
+        db_map_rel_cls_ids = self._ids_per_db_map(model.selected_relationship_class_indexes)
+        db_map_rel_ids = self._ids_per_db_map(model.selected_relationship_indexes)
+        parcel.push_object_class_ids(db_map_obj_cls_ids)
+        parcel.push_object_ids(db_map_obj_ids)
+        parcel.push_relationship_class_ids(db_map_rel_cls_ids)
+        parcel.push_relationship_ids(db_map_rel_ids)
+        return parcel
 
     @busy_effect
     def fully_expand_view(self, view):
@@ -407,20 +427,85 @@ class TreeViewMixin:
         self.ui.treeView_object.scrollTo(next_index)
         self.ui.treeView_object.expand(next_index)
 
+    def _get_cascading_relationships(self, object_item):
+        """
+        Returns a dict mapping db maps to a list of cascading relationship for the given object item.
+
+        Args:
+            object_item (ObjectItem)
+
+        Returns:
+            dict(DiffDatabaseMapping, list)
+        """
+        return {
+            db_map: [
+                rel
+                for rel in self.db_mngr.get_items(db_map, "relationship")
+                if str(object_item.db_map_id(db_map)) in rel["object_id_list"].split(",")
+            ]
+            for db_map in object_item.db_maps
+        }
+
+    @staticmethod
+    def _get_duplicate_object_name_list(object_name_list, orig_name, dup_name):
+        return tuple(name if name != orig_name else dup_name for name in object_name_list.split(","))
+
+    def duplicate_object(self, index):
+        """
+        Duplicates the object at the given object tree model index.
+
+        Args:
+            index (QModelIndex)
+        """
+        orig_name = index.data()
+        dup_name, ok = QInputDialog.getText(
+            self, "Duplicate object", "Enter a name for the duplicate object:", text=orig_name + "_copy"
+        )
+        if not ok:
+            return
+        class_name = index.parent().data()
+        object_item = index.internalPointer()
+        cascading_relationships = self._get_cascading_relationships(object_item)
+        data = {"objects": [(class_name, dup_name)]}
+        data["relationships"] = [
+            (rel["class_name"], self._get_duplicate_object_name_list(rel["object_name_list"], orig_name, dup_name))
+            for db_map in object_item.db_maps
+            for rel in cascading_relationships[db_map]
+        ]
+        data["object_parameter_values"] = [
+            (class_name, dup_name, val["parameter_name"], val["formatted_value"])
+            for db_map in object_item.db_maps
+            for val in self.db_mngr.get_items_by_field(
+                db_map, "parameter value", "object_id", object_item.db_map_id(db_map)
+            )
+        ]
+        data["relationship_parameter_values"] = [
+            (
+                val["relationship_class_name"],
+                self._get_duplicate_object_name_list(val["object_name_list"], orig_name, dup_name),
+                val["parameter_name"],
+                val["formatted_value"],
+            )
+            for db_map in object_item.db_maps
+            for rel in cascading_relationships[db_map]
+            for val in self.db_mngr.get_items_by_field(db_map, "parameter value", "relationship_id", rel["id"])
+        ]
+        self.db_mngr.import_data({db_map: data for db_map in object_item.db_maps}, command_text="Duplicate object")
+
     def call_show_add_objects_form(self, index):
-        class_name = index.internalPointer().display_name
+        class_name = index.internalPointer().display_data
         self.show_add_objects_form(class_name=class_name)
 
     def call_show_add_relationship_classes_form(self, index):
-        object_class_one_name = index.internalPointer().display_name
+        object_class_one_name = index.internalPointer().display_data
         self.show_add_relationship_classes_form(object_class_one_name=object_class_one_name)
 
     def call_show_add_relationships_form(self, index):
         item = index.internalPointer()
         relationship_class_key = item.display_id
         try:
-            object_name = item.parent_item.display_name
-            object_class_name = item.parent_item.parent_item.display_name
+            object_name = item.parent_item.display_data
+            object_class_name = item.parent_item.parent_item.display_data
         except AttributeError:
             object_name = object_class_name = None
         self.show_add_relationships_form(
