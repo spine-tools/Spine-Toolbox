@@ -81,6 +81,6 @@ class CustomQTextBrowser(QTextBrowser):
         self._max_blocks = new_max if new_max > 0 else 2000
 
     # pylint: disable=no-self-use
-    Slot("QUrl")
+    @Slot("QUrl")
     def _open_external_link(self, link):
         QDesktopServices.openUrl(link)
