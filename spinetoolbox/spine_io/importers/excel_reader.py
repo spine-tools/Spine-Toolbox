@@ -182,9 +182,31 @@ class ExcelConnector(SourceConnection):
         return mapped_data, errors
 
 
+def get_mapped_data_from_xlsx(filepath):
+    """Returns mapped data from given Excel file assuming it has the default Spine Excel format.
+
+    Args:
+        filepath (str): path to Excel file
+    """
+    connector = ExcelConnector(None)
+    connector.connect_to_source(filepath)
+    mappings_per_sheet = {}
+    options_per_sheet = {}
+    for sheet in connector._wb.sheetnames:
+        mapping, options = create_mapping_from_sheet(connector._wb[sheet])
+        if mapping is not None:
+            mappings_per_sheet[sheet] = [mapping]
+        if options is not None:
+            options_per_sheet[sheet] = options
+    types = row_types = dict.fromkeys(mappings_per_sheet, {})
+    mapped_data, errors = connector.get_mapped_data(mappings_per_sheet, options_per_sheet, types, row_types)
+    connector.disconnect()
+    return mapped_data, errors
+
+
 def create_mapping_from_sheet(worksheet):
     """
-    Checks if sheet is a valid spine excel template, if so creates a
+    Checks if sheet has the default Spine Excel format, if so creates a
     mapping object for each sheet.
     """
 

@@ -49,10 +49,12 @@ from ..helpers import (
     ensure_window_is_on_screen,
     get_save_file_name_in_last_dir,
     get_open_file_name_in_last_dir,
+    format_string_list,
 )
 from .import_widget import ImportDialog
 from .parameter_value_editor import ParameterValueEditor
 from ..spine_io.exporters.excel import export_spine_database_to_xlsx
+from ..spine_io.importers.excel_reader import get_mapped_data_from_xlsx
 
 
 class DataStoreFormBase(QMainWindow):
@@ -293,7 +295,7 @@ class DataStoreFormBase(QMainWindow):
             self,
             "Import file",
             self._get_base_dir(),
-            "SQLite (*.sqlite);; JSON file (*.json)",
+            "SQLite (*.sqlite);; JSON file (*.json);; Excel file (*.xlsx)",
         )
         self.qsettings.endGroup()
         if not file_path:  # File selection cancelled
@@ -302,6 +304,8 @@ class DataStoreFormBase(QMainWindow):
             self.import_from_json(file_path)
         elif selected_filter.startswith("SQLite"):
             self.import_from_sqlite(file_path)
+        elif selected_filter.startswith("Excel"):
+            self.import_from_excel(file_path)
         else:
             raise ValueError()
 
@@ -321,6 +325,18 @@ class DataStoreFormBase(QMainWindow):
             self.msg.emit(f"Could'n import file {filename}: {str(err)}")
         data = export_data(db_map)
         self.import_data(data)
+        self.msg.emit(f"File {filename} successfully imported.")
+
+    def import_from_excel(self, file_path):
+        filename = os.path.split(file_path)[1]
+        try:
+            mapped_data, errors = get_mapped_data_from_xlsx(file_path)
+        except Exception as err:
+            self.msg.emit(f"Could'n import file {filename}: {str(err)}")
+        if errors:
+            msg = f"The following errors where found parsing {filename}:" + format_string_list(errors)
+            self.error_box.emit("Parse error", msg)
+        self.import_data(mapped_data)
         self.msg.emit(f"File {filename} successfully imported.")
 
     @staticmethod
