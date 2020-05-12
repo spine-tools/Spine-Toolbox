@@ -186,6 +186,12 @@ class Importer(ProjectItem):
     def _handle_import_editor_clicked(self, checked=False):
         """Opens Import editor for the file selected in list view."""
         index = self._properties_ui.treeView_files.currentIndex()
+        if not index.isValid():
+            for row, item in enumerate(self._file_model.files):
+                if item.exists():
+                    index = self._file_model.index(row, 0)
+                    self._properties_ui.treeView_files.setCurrentIndex(index)
+                    break
         self.open_import_editor(index)
 
     @Slot("QModelIndex")
