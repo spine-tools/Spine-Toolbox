@@ -517,7 +517,8 @@ class ToolboxUI(QMainWindow):
             return
         # Put project's specification definition files into a list
         tool_spec_paths = [
-            self.specification_model.specification(i).definition_file_path for i in range(self.specification_model.rowCount())
+            self.specification_model.specification(i).definition_file_path
+            for i in range(self.specification_model.rowCount())
         ]
         # Serialize tool spec paths
         serialized_tool_spec_paths = [serialize_path(spec, self._project.project_dir) for spec in tool_spec_paths]

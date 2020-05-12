@@ -63,7 +63,8 @@ class EntityTreeView(CopyTreeView):
         """
         if trigger == QTreeView.EditKeyPressed:
             self.edit_key_pressed.emit(index)
-        return False
+            return False
+        return super().edit(index, trigger, event)
 
 
 class StickySelectionEntityTreeView(EntityTreeView):

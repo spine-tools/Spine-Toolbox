@@ -161,11 +161,11 @@ class ParameterTagToolBar(QToolBar):
         empty = QWidget()
         empty.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.empty_action = self.addWidget(empty)
-        button = QPushButton("Manage tags...")
-        self.addWidget(button)
+        self.manage_tags_button = QPushButton("Manage tags...")
+        self.addWidget(self.manage_tags_button)
         # noinspection PyUnresolvedReferences
         # pylint: disable=unnecessary-lambda
-        button.clicked.connect(lambda checked: self.manage_tags_action_triggered.emit(checked))
+        self.manage_tags_button.clicked.connect(lambda checked: self.manage_tags_action_triggered.emit(checked))
         self.setStyleSheet(PARAMETER_TAG_TOOLBAR_SS)
         self.setObjectName("ParameterTagToolbar")
         self.tag_actions_added.connect(self._add_db_map_tag_actions)

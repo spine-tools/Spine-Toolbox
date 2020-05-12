@@ -45,6 +45,7 @@ class EntityTreeModel(MinimalTreeModel):
         self.db_mngr = db_mngr
         self.db_maps = db_maps
         self._root_item = None
+        self._checkable = False
         self.selected_indexes = dict()  # Maps item type to selected indexes
 
     @property
@@ -88,6 +89,12 @@ class EntityTreeModel(MinimalTreeModel):
     def columnCount(self, parent=QModelIndex()):
         return 2
 
+    def is_checkable(self):
+        return self._checkable
+
+    def set_checkable(self, on):
+        self._checkable = on
+
     def data(self, index, role=Qt.DisplayRole):
         item = self.item_from_index(index)
         if index.column() == 0:
@@ -97,7 +104,15 @@ class EntityTreeModel(MinimalTreeModel):
                 return item.display_data
             if role == Qt.EditRole:
                 return item.edit_data
+            if role == Qt.CheckStateRole and self.is_checkable():
+                return Qt.Checked if item.is_checked() else Qt.Unchecked
         return item.data(index.column(), role)
+
+    def setData(self, index, value=None, role=Qt.CheckStateRole):
+        if role != Qt.CheckStateRole:
+            return False
+        self.item_from_index(index).toggle_checked()
+        return True
 
     def headerData(self, section, orientation, role):
         if orientation == Qt.Horizontal and role == Qt.DisplayRole:

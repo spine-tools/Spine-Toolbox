@@ -20,7 +20,7 @@ import os
 import time  # just to measure loading time and sqlalchemy ORM performance
 import json
 import pathlib
-from PySide2.QtWidgets import QMainWindow, QErrorMessage, QDockWidget
+from PySide2.QtWidgets import QMainWindow, QErrorMessage, QDockWidget, QWidget, QAction, QDialogButtonBox, QHBoxLayout
 from PySide2.QtCore import Qt, Signal, Slot
 from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QIcon
 from sqlalchemy.engine.url import URL
@@ -981,3 +981,42 @@ class DataStoreForm(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         if project is None:
             return APPLICATION_PATH
         return project.project_dir
+
+
+class RecombinatorDataStoreForm(DataStoreForm):
+    """A widget to visualize Spine dbs in the Recombinator item."""
+
+    def __init__(self, *args, **kwargs):
+        """Initializes everything.
+        """
+        super().__init__(*args, **kwargs)
+        self.settings_group = 'recombinatorDataStoreForm'
+        for action in self.findChildren(QAction):
+            action.setShortcut(None)
+        for wg in self.findChildren(QWidget):
+            wg.setContextMenuPolicy(Qt.NoContextMenu)
+        self.ui.menubar.clear()
+        self.ui.menubar.addMenu(self.ui.menuView)
+        self.parameter_tag_toolbar.manage_tags_button.deleteLater()
+        self.object_tree_model.set_checkable(True)
+        self.relationship_tree_model.set_checkable(True)
+        button_box = QDialogButtonBox(QDialogButtonBox.Cancel | QDialogButtonBox.Ok)
+        widget = QWidget()
+        layout = QHBoxLayout(widget)
+        layout.addStretch()
+        layout.addWidget(button_box)
+        status_bar = self.statusBar()
+        status_bar.addPermanentWidget(widget)
+        button_box.accepted.connect(self.accept)
+        button_box.rejected.connect(self.close)
+
+    def accept(self):
+        self.close()
+
+    @Slot("QModelIndex")
+    def edit_object_tree_items(self, current):
+        """Don't edit indexes in the object tree."""
+
+    @Slot("QModelIndex")
+    def edit_relationship_tree_items(self, current):
+        """Don't edit indexes in the relationship tree."""

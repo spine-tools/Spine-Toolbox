@@ -10,21 +10,29 @@
 ######################################################################################################################
 
 """
-This module defines the project item categories available in the Toolbox.
+Module for view icon class.
 
-:author: A.Soininen (VTT)
-:date:   6.5.2020
+:authors: M. Marin (KTH), P. Savolainen (VTT)
+:date:   4.4.2018
 """
-# The categories will appear in the main window in the same order they are declared here.
-CATEGORIES = ("Data Stores", "Data Connections", "Tools", "Views", "Importers", "Exporters", "Manipulators")
+
+from PySide2.QtGui import QColor
+from spinetoolbox.graphics_items import ProjectItemIcon
 
 
-CATEGORY_DESCRIPTIONS = {
-    "Data Connections": "Generic data source",
-    "Data Stores": "Data in the Spine generic format",
-    "Exporters": "Data conversion from Spine to an external format",
-    "Importers": "Data conversion from an external format to Spine",
-    "Tools": "Custom data processing",
-    "Views": "Data visualization",
-    "Manipulators": "Data conversion from Spine to Spine",
-}
+class RecombinatorIcon(ProjectItemIcon):
+    def __init__(self, toolbox, x, y, w, h, project_item, icon):
+        """View icon for the Design View.
+
+        Args:
+            toolbox (ToolBoxUI): QMainWindow instance
+            x (float): Icon x coordinate
+            y (float): Icon y coordinate
+            w (float): Width of background rectangle
+            h (float): Height of background rectangle
+            project_item (ProjectItem): Item
+            icon (str): icon resource path
+        """
+        super().__init__(
+            toolbox, x, y, w, h, project_item, icon, icon_color=QColor("#990000"), background_color=QColor("#ffcccc")
+        )

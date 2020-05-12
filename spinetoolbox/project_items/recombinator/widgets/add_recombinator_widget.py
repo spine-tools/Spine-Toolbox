@@ -10,21 +10,31 @@
 ######################################################################################################################
 
 """
-This module defines the project item categories available in the Toolbox.
+Widget shown to user when a new Recombinator is created.
 
-:author: A.Soininen (VTT)
-:date:   6.5.2020
+:author: P. Savolainen (VTT)
+:date:   19.1.2017
 """
-# The categories will appear in the main window in the same order they are declared here.
-CATEGORIES = ("Data Stores", "Data Connections", "Tools", "Views", "Importers", "Exporters", "Manipulators")
+
+from spinetoolbox.widgets.add_project_item_widget import AddProjectItemWidget
+from ..item_info import ItemInfo
+from ..recombinator import Recombinator
 
 
-CATEGORY_DESCRIPTIONS = {
-    "Data Connections": "Generic data source",
-    "Data Stores": "Data in the Spine generic format",
-    "Exporters": "Data conversion from Spine to an external format",
-    "Importers": "Data conversion from an external format to Spine",
-    "Tools": "Custom data processing",
-    "Views": "Data visualization",
-    "Manipulators": "Data conversion from Spine to Spine",
-}
+class AddRecombinatorWidget(AddProjectItemWidget):
+    """A widget to query user's preferences for a new item.
+
+    Attributes:
+        toolbox (ToolboxUI): Parent widget
+        x (int): X coordinate of new item
+        y (int): Y coordinate of new item
+    """
+
+    def __init__(self, toolbox, x, y, spec=""):
+        """Initialize class."""
+        super().__init__(toolbox, x, y, Recombinator, spec=spec)
+
+    def call_add_item(self):
+        """Creates new Item according to user's selections."""
+        item = dict(name=self.name, description=self.description, x=self._x, y=self._y)
+        self._project.add_project_items(ItemInfo.item_type(), item, set_selected=True)
