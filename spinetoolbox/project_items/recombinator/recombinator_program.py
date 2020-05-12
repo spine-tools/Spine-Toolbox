@@ -62,7 +62,7 @@ def run(from_urls, to_urls, logs_dir, cancel_on_error):
             to_db_map_import_count += import_count
             to_db_map_error_count += len(import_errors)
         print(
-            "Inserted {0} data with {1} errors into {2}".format(
+            "Merged {0} data with {1} errors into {2}".format(
                 to_db_map_import_count, to_db_map_error_count, to_db_map.db_url
             )
         )
@@ -81,7 +81,6 @@ def run(from_urls, to_urls, logs_dir, cancel_on_error):
         )
 
         print("Import errors. Logfile: {0}".format(logfile_anchor), file=sys.stderr)
-        sys.exit(-1)
 
 
 def _get_db_map(url):
