@@ -344,6 +344,7 @@ class DataStoreFormBase(QMainWindow):
             db_map = DiffDatabaseMapping(url)
         except (SpineDBAPIError, SpineDBVersionError) as err:
             self.msg.emit(f"Could'n import file {filename}: {str(err)}")
+            return
         data = export_data(db_map)
         self.import_data(data)
         self.msg.emit(f"File {filename} successfully imported.")
@@ -354,6 +355,7 @@ class DataStoreFormBase(QMainWindow):
             mapped_data, errors = get_mapped_data_from_xlsx(file_path)
         except Exception as err:
             self.msg.emit(f"Could'n import file {filename}: {str(err)}")
+            return
         if errors:
             msg = f"The following errors where found parsing {filename}:" + format_string_list(errors)
             self.error_box.emit("Parse error", msg)

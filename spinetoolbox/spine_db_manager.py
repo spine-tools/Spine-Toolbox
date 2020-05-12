@@ -141,7 +141,7 @@ class SpineDBManager(QObject):
             return
         try:
             if not is_empty(url):
-                msg = QMessageBox(self.parent()._toolbox)
+                msg = QMessageBox(qApp.activeWindow())  # pylint: disable=undefined-variable
                 msg.setIcon(QMessageBox.Question)
                 msg.setWindowTitle("Database not empty")
                 msg.setText(f"The database at <b>'{url}'</b> is not empty.")
@@ -193,7 +193,7 @@ class SpineDBManager(QObject):
         try:
             return self.do_get_db_map(url, upgrade, codename)
         except SpineDBVersionError:
-            msg = QMessageBox(self.parent()._toolbox)
+            msg = QMessageBox(qApp.activeWindow())  # pylint: disable=undefined-variable
             msg.setIcon(QMessageBox.Question)
             msg.setWindowTitle("Incompatible database version")
             msg.setText(
