@@ -44,9 +44,9 @@ class ToolIcon(ProjectItemIcon):
         self.timer.setFrameRange(0, 10)
         # self.timer.setCurveShape(QTimeLine.CosineCurve)
         self.timer.valueForTime = self._value_for_time
-        self.tool_animation = QGraphicsItemAnimation()
-        self.tool_animation.setItem(self.svg_item)
-        self.tool_animation.setTimeLine(self.timer)
+        self.animation = QGraphicsItemAnimation()
+        self.animation.setItem(self.svg_item)
+        self.animation.setTimeLine(self.timer)
         self.delta = 0.25 * self.svg_item.sceneBoundingRect().height()
 
     @staticmethod
@@ -63,10 +63,10 @@ class ToolIcon(ProjectItemIcon):
         offset = 0.75 * self.svg_item.sceneBoundingRect().height()
         for angle in range(1, 45):
             step = angle / 45.0
-            self.tool_animation.setTranslationAt(step, 0, offset)
-            self.tool_animation.setRotationAt(step, angle)
-            self.tool_animation.setTranslationAt(step, 0, -offset)
-            self.tool_animation.setPosAt(step, QPointF(self.svg_item.pos().x(), self.svg_item.pos().y() + offset))
+            self.animation.setTranslationAt(step, 0, offset)
+            self.animation.setRotationAt(step, angle)
+            self.animation.setTranslationAt(step, 0, -offset)
+            self.animation.setPosAt(step, QPointF(self.svg_item.pos().x(), self.svg_item.pos().y() + offset))
         self.timer.start()
 
     def stop_animation(self):

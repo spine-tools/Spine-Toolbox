@@ -16,11 +16,16 @@ Module for view icon class.
 :date:   4.4.2018
 """
 
+import random
 from PySide2.QtGui import QColor
+from PySide2.QtCore import QTimeLine, QPointF
+from PySide2.QtWidgets import QGraphicsItemAnimation
 from spinetoolbox.graphics_items import ProjectItemIcon
 
 
 class RecombinatorIcon(ProjectItemIcon):
+    _SHAKE_FACTOR = 0.05
+
     def __init__(self, toolbox, x, y, w, h, project_item, icon):
         """View icon for the Design View.
 
@@ -36,3 +41,42 @@ class RecombinatorIcon(ProjectItemIcon):
         super().__init__(
             toolbox, x, y, w, h, project_item, icon, icon_color=QColor("#990000"), background_color=QColor("#ffcccc")
         )
+        # animation stuff
+        self.timer = QTimeLine()
+        self.timer.setLoopCount(0)  # loop forever
+        self.timer.setFrameRange(0, 10)
+        # self.timer.setCurveShape(QTimeLine.CosineCurve)
+        self.timer.valueForTime = self._value_for_time
+        self.animation = QGraphicsItemAnimation()
+        self.animation.setItem(self.svg_item)
+        self.animation.setTimeLine(self.timer)
+        self.initial_pos = self.svg_item.pos()
+
+    @staticmethod
+    def _value_for_time(msecs):
+        rem = (msecs % 1000) / 1000
+        return 1.0 - rem
+
+    def start_animation(self):
+        """Start the animation that plays when the Recombinator associated to this GraphicsItem is running.
+        """
+        if self.timer.state() == QTimeLine.Running:
+            return
+        initial_pos = self.svg_item.pos()
+        rect = self.svg_item.sceneBoundingRect()
+        width = rect.width()
+        height = rect.height()
+        for i in range(100):
+            step = i / 100.0
+            x = random.uniform(-self._SHAKE_FACTOR, self._SHAKE_FACTOR) * width
+            y = random.uniform(-self._SHAKE_FACTOR, self._SHAKE_FACTOR) * height
+            self.animation.setPosAt(step, initial_pos + QPointF(x, y))
+        self.animation.setPosAt(0, initial_pos)
+        self.timer.start()
+
+    def stop_animation(self):
+        """Stop animation"""
+        if self.timer.state() != QTimeLine.Running:
+            return
+        self.animation.setStep(0)
+        self.timer.stop()

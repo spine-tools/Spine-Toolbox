@@ -30,10 +30,13 @@ class ExecutableItem(ExecutableItemBase, QObject):
     recombination_finished = Signal()
     """Emitted after the separate recombinator process has finished executing."""
 
-    def __init__(self, name, logs_dir, python_path, logger):
+    def __init__(self, name, logs_dir, python_path, cancel_on_error, logger):
         """
         Args:
             name (str): item's name
+            logs_dir (str): path to the directory where logs should be stored
+            python_path (str): path to the system's python executable
+            cancel_on_error (bool): if True, revert changes on error and move on
             logger (LoggerInterface): a logger
         """
         ExecutableItemBase.__init__(self, name, logger)
@@ -41,6 +44,7 @@ class ExecutableItem(ExecutableItemBase, QObject):
         self._resources_from_downstream = list()
         self._logs_dir = logs_dir
         self._python_path = python_path
+        self._cancel_on_error = cancel_on_error
         self._recombinator_process = None
         self._recombinator_process_successful = None
 
@@ -55,7 +59,8 @@ class ExecutableItem(ExecutableItemBase, QObject):
         data_dir = pathlib.Path(project_dir, ".spinetoolbox", "items", item_dict["short name"])
         logs_dir = os.path.join(data_dir, "logs")
         python_path = app_settings.value("appSettings/pythonPath", defaultValue="")
-        return cls(name, logs_dir, python_path, logger)
+        cancel_on_error = item_dict["cancel_on_error"]
+        return cls(name, logs_dir, python_path, cancel_on_error, logger)
 
     def _execute_backward(self, resources):
         """See base class."""
@@ -73,7 +78,7 @@ class ExecutableItem(ExecutableItemBase, QObject):
         if not from_urls or not to_urls:
             # Moving on...
             return True
-        recombinator_args = [from_urls, to_urls, self._logs_dir]
+        recombinator_args = [from_urls, to_urls, self._logs_dir, self._cancel_on_error]
         if not self._prepare_recombinator_program(recombinator_args):
             self._logger.msg_error.emit(f"Executing Recombinator {self.name} failed.")
             return False

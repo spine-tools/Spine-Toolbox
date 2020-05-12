@@ -22,13 +22,15 @@ from PySide2.QtGui import QStandardItem, QStandardItemModel, QIcon, QPixmap
 from sqlalchemy.engine.url import URL, make_url
 from spinedb_api import SpineDBAPIError
 from spinetoolbox.project_item import ProjectItem
+from spinetoolbox.helpers import create_dir
 from spinetoolbox.widgets.data_store_widget import RecombinatorDataStoreForm
+from ..shared.commands import UpdateCancelOnErrorCommand
 from .item_info import ItemInfo
 from .executable_item import ExecutableItem
 
 
 class Recombinator(ProjectItem):
-    def __init__(self, toolbox, project, logger, name, description, x, y):
+    def __init__(self, toolbox, project, logger, name, description, x, y, cancel_on_error=False):
         """
         Recombinator class.
 
@@ -40,9 +42,16 @@ class Recombinator(ProjectItem):
             description (str): Object description
             x (float): Initial X coordinate of item icon
             y (float): Initial Y coordinate of item icon
+            cancel_on_error (bool, optional): if True, changes will be reverted on errors
         """
         super().__init__(name, description, x, y, project, logger)
+        self._toolbox = toolbox
         self.logs_dir = os.path.join(self.data_dir, "logs")
+        try:
+            create_dir(self.logs_dir)
+        except OSError:
+            self._logger.msg_error.emit(f"[OSError] Creating directory {self.logs_dir} failed. Check permissions.")
+        self.cancel_on_error = cancel_on_error
         self._ds_views = {}
         self._references = dict()
         self.reference_model = QStandardItemModel()  # References to databases
@@ -60,8 +69,9 @@ class Recombinator(ProjectItem):
 
     def execution_item(self):
         """Creates project item's execution counterpart."""
+        cancel_on_error = self.cancel_on_error
         python_path = self._project.settings.value("appSettings/pythonPath", defaultValue="")
-        return ExecutableItem(self.name, self.logs_dir, python_path, self._logger)
+        return ExecutableItem(self.name, self.logs_dir, python_path, cancel_on_error, self._logger)
 
     def make_signal_handler_dict(self):
         """Returns a dictionary of all shared signals and their handlers.
@@ -69,10 +79,28 @@ class Recombinator(ProjectItem):
         s = super().make_signal_handler_dict()
         s[self._properties_ui.toolButton_view_open_dir.clicked] = lambda checked=False: self.open_directory()
         s[self._properties_ui.pushButton_view_open_ds_view.clicked] = self.open_view
+        s[self._properties_ui.cancel_on_error_checkBox.stateChanged] = self._handle_cancel_on_error_changed
         return s
+
+    @Slot(int)
+    def _handle_cancel_on_error_changed(self, _state):
+        cancel_on_error = self._properties_ui.cancel_on_error_checkBox.isChecked()
+        if self.cancel_on_error == cancel_on_error:
+            return
+        self._toolbox.undo_stack.push(UpdateCancelOnErrorCommand(self, cancel_on_error))
+
+    def set_cancel_on_error(self, cancel_on_error):
+        self.cancel_on_error = cancel_on_error
+        if not self._active:
+            return
+        check_state = Qt.Checked if self.cancel_on_error else Qt.Unchecked
+        self._properties_ui.cancel_on_error_checkBox.blockSignals(True)
+        self._properties_ui.cancel_on_error_checkBox.setCheckState(check_state)
+        self._properties_ui.cancel_on_error_checkBox.blockSignals(False)
 
     def restore_selections(self):
         """Restore selections into shared widgets when this project item is selected."""
+        self._properties_ui.cancel_on_error_checkBox.setCheckState(Qt.Checked if self.cancel_on_error else Qt.Unchecked)
         self._properties_ui.label_view_name.setText(self.name)
         self._properties_ui.treeView_view.setModel(self.reference_model)
 
@@ -173,12 +201,19 @@ class Recombinator(ProjectItem):
         for view in self._ds_views.values():
             view.close()
 
+    def item_dict(self):
+        """Returns a dictionary corresponding to this item."""
+        d = super().item_dict()
+        d["cancel_on_error"] = self._properties_ui.cancel_on_error_checkBox.isChecked()
+        return d
+
     def notify_destination(self, source_item):
         """See base class."""
         if source_item.item_type() == "Data Store":
             self._logger.msg.emit(
-                "Link established. You can perform selective export from Data Store "
-                f"<b>{source_item.name}</b> in Recombinator <b>{self.name}</b>."
+                f"Link established. You can define slices of data from<b>{source_item.name}</b> "
+                f"in <b>{self.name}</b>'s Item properties."
+                f"They will be merged into <b>{self.name}</b>'s downstream Data Stores upon execution</b>."
             )
         else:
             super().notify_destination(source_item)

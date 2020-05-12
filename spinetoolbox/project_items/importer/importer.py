@@ -30,7 +30,8 @@ from spinetoolbox.spine_io.importers.excel_reader import ExcelConnector
 from spinetoolbox.spine_io.importers.gdx_connector import GdxConnector
 from spinetoolbox.spine_io.importers.json_reader import JSONConnector
 from spinetoolbox.widgets.import_preview_window import ImportPreviewWindow
-from .commands import ChangeItemSelectionCommand, UpdateSettingsCommand, UpdateCancelOnErrorCommand
+from .commands import ChangeItemSelectionCommand, UpdateSettingsCommand
+from ..shared.commands import UpdateCancelOnErrorCommand
 from .executable_item import ExecutableItem
 from .item_info import ItemInfo
 from .utils import deserialize_mappings
@@ -44,7 +45,9 @@ _CONNECTOR_NAME_TO_CLASS = {
 
 
 class Importer(ProjectItem):
-    def __init__(self, toolbox, project, logger, name, description, mappings, x, y, cancel_on_error=True, mapping_selection=None):
+    def __init__(
+        self, toolbox, project, logger, name, description, mappings, x, y, cancel_on_error=True, mapping_selection=None
+    ):
         """Importer class.
 
         Args:
@@ -56,7 +59,7 @@ class Importer(ProjectItem):
             mappings (list): List where each element contains two dicts (path dict and mapping dict)
             x (float): Initial icon scene X coordinate
             y (float): Initial icon scene Y coordinate
-            cancel_on_error (bool, optional): if True the item's execution will stop on import error
+            cancel_on_error (bool, optional): if True, changes will be reverted on errors
             mapping_selection (list, optional): a list of booleans, one for each mapping marking the mappings
                 either selected or unselected
        """
@@ -114,9 +117,8 @@ class Importer(ProjectItem):
             selected_settings[label] = self.settings[label] if file_item.selected_for_import else "deselected"
         python_path = self._project.settings.value("appSettings/pythonPath", defaultValue="")
         gams_path = self._project.settings.value("appSettings/gamsPath", defaultValue=None)
-        cancel_on_error = self._properties_ui.cancel_on_error_checkBox.isChecked()
         executable = ExecutableItem(
-            self.name, selected_settings, self.logs_dir, python_path, gams_path, cancel_on_error, self._logger
+            self.name, selected_settings, self.logs_dir, python_path, gams_path, self.cancel_on_error, self._logger
         )
         return executable
 
@@ -658,7 +660,7 @@ class _FileListModel(QAbstractListModel):
     def update(self, resources):
         """Updates the model according to given list of resources."""
         self.beginResetModel()
-        items = {item.label:item for item in self._files}
+        items = {item.label: item for item in self._files}
         updated = list()
         new = list()
         for resource in resources:

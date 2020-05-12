@@ -39,7 +39,7 @@ class ExecutableItem(ExecutableItemBase, QObject):
             logs_dir (str): path to the directory where logs should be stored
             python_path (str): path to the system's python executable
             gams_path (str): path to system's GAMS executable or empty string for the default path
-            cancel_on_error (bool): if True, quit execution on import error
+            cancel_on_error (bool): if True, revert changes on error and quit
             logger (LoggerInterface): a logger
         """
         ExecutableItemBase.__init__(self, name, logger)
