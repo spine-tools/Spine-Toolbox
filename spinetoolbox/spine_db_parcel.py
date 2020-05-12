@@ -178,7 +178,7 @@ class SpineDBParcel:
         This essentially pushes the object classes and their parameter definitions.
         """
         self._push_parameter_definition_ids(
-            self.db_mngr.ids_per_db_map(self.db_mngr.find_cascading_parameter_data(db_map_ids, "parameter definition")),
+            self.db_mngr.db_map_ids(self.db_mngr.find_cascading_parameter_data(db_map_ids, "parameter definition")),
             "object",
         )
 
@@ -187,7 +187,7 @@ class SpineDBParcel:
         This essentially pushes the relationships classes, their parameter definitions, and their member object classes.
         """
         self._push_parameter_definition_ids(
-            self.db_mngr.ids_per_db_map(self.db_mngr.find_cascading_parameter_data(db_map_ids, "parameter definition")),
+            self.db_mngr.db_map_ids(self.db_mngr.find_cascading_parameter_data(db_map_ids, "parameter definition")),
             "relationship",
         )
 
@@ -196,9 +196,9 @@ class SpineDBParcel:
         This essentially pushes objects, their relationships, all the parameter values, and all the necessary classes,
         definitions, and lists.
         """
-        self.push_relationship_ids(self.db_mngr.ids_per_db_map(self.db_mngr.find_cascading_relationships(db_map_ids)))
+        self.push_relationship_ids(self.db_mngr.db_map_ids(self.db_mngr.find_cascading_relationships(db_map_ids)))
         self._push_parameter_value_ids(
-            self.db_mngr.ids_per_db_map(self.db_mngr.find_cascading_parameter_values_by_entity(db_map_ids)), "object"
+            self.db_mngr.db_map_ids(self.db_mngr.find_cascading_parameter_values_by_entity(db_map_ids)), "object"
         )
 
     def push_relationship_ids(self, db_map_ids):
@@ -207,8 +207,7 @@ class SpineDBParcel:
         definitions, and lists.
         """
         self._push_parameter_value_ids(
-            self.db_mngr.ids_per_db_map(self.db_mngr.find_cascading_parameter_values_by_entity(db_map_ids)),
-            "relationship",
+            self.db_mngr.db_map_ids(self.db_mngr.find_cascading_parameter_values_by_entity(db_map_ids)), "relationship"
         )
 
     def push_inside_object_ids(self, db_map_ids):
@@ -219,10 +218,10 @@ class SpineDBParcel:
         for db_map, ids in db_map_ids.items():
             self._data.setdefault(db_map, {}).setdefault("object_ids", set()).update(ids)
         self.push_inside_relationship_ids(
-            self.db_mngr.ids_per_db_map(self.db_mngr.find_cascading_relationships(db_map_ids))
+            self.db_mngr.db_map_ids(self.db_mngr.find_cascading_relationships(db_map_ids))
         )
         self.push_inside_parameter_value_ids(
-            self.db_mngr.ids_per_db_map(self.db_mngr.find_cascading_parameter_values_by_entity(db_map_ids)), "object"
+            self.db_mngr.db_map_ids(self.db_mngr.find_cascading_parameter_values_by_entity(db_map_ids)), "object"
         )
 
     def push_inside_relationship_ids(self, db_map_ids):
@@ -231,8 +230,7 @@ class SpineDBParcel:
         for db_map, ids in db_map_ids.items():
             self._data.setdefault(db_map, {}).setdefault("relationship_ids", set()).update(ids)
         self.push_inside_parameter_value_ids(
-            self.db_mngr.ids_per_db_map(self.db_mngr.find_cascading_parameter_values_by_entity(db_map_ids)),
-            "relationship",
+            self.db_mngr.db_map_ids(self.db_mngr.find_cascading_parameter_values_by_entity(db_map_ids)), "relationship"
         )
 
     def push_inside_parameter_value_ids(self, db_map_ids, entity_type):

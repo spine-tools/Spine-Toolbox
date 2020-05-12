@@ -248,7 +248,14 @@ class DataStoreFormBase(QMainWindow):
         self.ui.actionPaste.setEnabled(self._focused_widget_has_callable("paste"))
 
     def selected_entity_class_ids(self, entity_class_type):
-        """Returns object class ids selected in object tree *and* parameter tag toolbar."""
+        """Returns entity class ids selected in entity tree *and* parameter tag toolbar.
+
+        Args:
+            entity_class_type (str)
+
+        Returns:
+            dict, NoneType: mapping db maps to sets of ids, or None if no id selected
+        """
         if self.selected_param_def_ids[entity_class_type] is None:
             return None
         tree_class_ids = self.selected_ent_cls_ids[entity_class_type]

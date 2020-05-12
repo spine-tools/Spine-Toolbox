@@ -149,34 +149,34 @@ class TreeViewMixin:
                 d.setdefault(db_map, []).append(item.db_map_data(db_map))
         return d
 
-    def _ids_per_db_map(self, indexes):
-        return self.db_mngr.ids_per_db_map(self._db_map_items(indexes))
+    def _db_map_ids(self, indexes):
+        return self.db_mngr.db_map_ids(self._db_map_items(indexes))
 
-    def _ids_per_db_map_and_class(self, indexes):
-        return self.db_mngr.ids_per_db_map_and_class(self._db_map_items(indexes))
+    def _db_map_class_ids(self, indexes):
+        return self.db_mngr.db_map_class_ids(self._db_map_items(indexes))
 
     def _update_object_filter(self):
         """Updates object filter according to object tree selection."""
         selected_obj_clss = set(self.object_tree_model.selected_object_class_indexes.keys())
         selected_objs = set(self.object_tree_model.selected_object_indexes.keys())
         selected_rel_clss = set(self.object_tree_model.selected_relationship_class_indexes.keys())
-        # Compute active indexes by merging in the parents from lower levels recursively
         active_rels = set(self.object_tree_model.selected_relationship_indexes.keys())
+        # Compute active indexes by merging in the parents from lower levels recursively
         active_rel_clss = selected_rel_clss | {ind.parent() for ind in active_rels}
         active_objs = selected_objs | {ind.parent() for ind in active_rel_clss}
         active_obj_clss = selected_obj_clss | {ind.parent() for ind in active_objs}
-        self.selected_ent_cls_ids["object class"] = self._ids_per_db_map(active_obj_clss)
-        self.selected_ent_cls_ids["relationship class"] = self._ids_per_db_map(active_rel_clss)
-        self.selected_ent_ids["object"] = self._ids_per_db_map_and_class(active_objs)
-        self.selected_ent_ids["relationship"] = self._ids_per_db_map_and_class(active_rels)
+        self.selected_ent_cls_ids["object class"] = self._db_map_ids(active_obj_clss)
+        self.selected_ent_cls_ids["relationship class"] = self._db_map_ids(active_rel_clss)
+        self.selected_ent_ids["object"] = self._db_map_class_ids(active_objs)
+        self.selected_ent_ids["relationship"] = self._db_map_class_ids(active_rels)
         # Cascade (note that we carefuly select where to cascade from, to avoid 'circularity')
         from_obj_clss = selected_obj_clss | {ind.parent() for ind in selected_objs}
         from_objs = selected_objs | {ind.parent() for ind in selected_rel_clss}
-        cascading_rel_clss = self.db_mngr.find_cascading_relationship_classes(self._ids_per_db_map(from_obj_clss))
-        cascading_rels = self.db_mngr.find_cascading_relationships(self._ids_per_db_map(from_objs))
-        for db_map, ids in self.db_mngr.ids_per_db_map(cascading_rel_clss).items():
+        cascading_rel_clss = self.db_mngr.find_cascading_relationship_classes(self._db_map_ids(from_obj_clss))
+        cascading_rels = self.db_mngr.find_cascading_relationships(self._db_map_ids(from_objs))
+        for db_map, ids in self.db_mngr.db_map_ids(cascading_rel_clss).items():
             self.selected_ent_cls_ids["relationship class"].setdefault(db_map, set()).update(ids)
-        for (db_map, class_id), ids in self.db_mngr.ids_per_db_map_and_class(cascading_rels).items():
+        for (db_map, class_id), ids in self.db_mngr.db_map_class_ids(cascading_rels).items():
             self.selected_ent_ids["relationship"].setdefault((db_map, class_id), set()).update(ids)
         self.update_filter()
 
@@ -185,8 +185,8 @@ class TreeViewMixin:
         selected_rel_clss = set(self.relationship_tree_model.selected_relationship_class_indexes.keys())
         active_rels = set(self.relationship_tree_model.selected_relationship_indexes.keys())
         active_rel_clss = selected_rel_clss | {ind.parent() for ind in active_rels}
-        self.selected_ent_cls_ids["relationship class"] = self._ids_per_db_map(active_rel_clss)
-        self.selected_ent_ids["relationship"] = self._ids_per_db_map_and_class(active_rels)
+        self.selected_ent_cls_ids["relationship class"] = self._db_map_ids(active_rel_clss)
+        self.selected_ent_ids["relationship"] = self._db_map_class_ids(active_rels)
         self.update_filter()
 
     @Slot("QModelIndex")
@@ -329,10 +329,10 @@ class TreeViewMixin:
             SpineDBParcel
         """
         parcel = SpineDBParcel(self.db_mngr)
-        db_map_obj_cls_ids = self._ids_per_db_map(model.selected_object_class_indexes)
-        db_map_obj_ids = self._ids_per_db_map(model.selected_object_indexes)
-        db_map_rel_cls_ids = self._ids_per_db_map(model.selected_relationship_class_indexes)
-        db_map_rel_ids = self._ids_per_db_map(model.selected_relationship_indexes)
+        db_map_obj_cls_ids = self._db_map_ids(model.selected_object_class_indexes)
+        db_map_obj_ids = self._db_map_ids(model.selected_object_indexes)
+        db_map_rel_cls_ids = self._db_map_ids(model.selected_relationship_class_indexes)
+        db_map_rel_ids = self._db_map_ids(model.selected_relationship_indexes)
         parcel.push_object_class_ids(db_map_obj_cls_ids)
         parcel.push_object_ids(db_map_obj_ids)
         parcel.push_relationship_class_ids(db_map_rel_cls_ids)

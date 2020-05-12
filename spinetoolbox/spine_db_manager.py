@@ -1292,11 +1292,11 @@ class SpineDBManager(QObject):
             self.parameter_tags_removed.emit(db_map_parameter_tags)
 
     @staticmethod
-    def ids_per_db_map(db_map_data):
+    def db_map_ids(db_map_data):
         return {db_map: {x["id"] for x in data} for db_map, data in db_map_data.items()}
 
     @staticmethod
-    def ids_per_db_map_and_class(db_map_data):
+    def db_map_class_ids(db_map_data):
         d = dict()
         for db_map, items in db_map_data.items():
             for item in items:
@@ -1310,7 +1310,7 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of removed items keyed by DiffDatabaseMapping
         """
-        db_map_cascading_data = self.find_cascading_entities(self.ids_per_db_map(db_map_data), "object")
+        db_map_cascading_data = self.find_cascading_entities(self.db_map_ids(db_map_data), "object")
         if any(db_map_cascading_data.values()):
             self.objects_removed.emit(db_map_cascading_data)
 
@@ -1321,7 +1321,7 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of removed items keyed by DiffDatabaseMapping
         """
-        db_map_cascading_data = self.find_cascading_relationship_classes(self.ids_per_db_map(db_map_data))
+        db_map_cascading_data = self.find_cascading_relationship_classes(self.db_map_ids(db_map_data))
         if any(db_map_cascading_data.values()):
             self.relationship_classes_removed.emit(db_map_cascading_data)
 
@@ -1332,7 +1332,7 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of removed items keyed by DiffDatabaseMapping
         """
-        db_map_cascading_data = self.find_cascading_entities(self.ids_per_db_map(db_map_data), "relationship")
+        db_map_cascading_data = self.find_cascading_entities(self.db_map_ids(db_map_data), "relationship")
         if any(db_map_cascading_data.values()):
             self.relationships_removed.emit(db_map_cascading_data)
 
@@ -1343,7 +1343,7 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of removed items keyed by DiffDatabaseMapping
         """
-        db_map_cascading_data = self.find_cascading_relationships(self.ids_per_db_map(db_map_data))
+        db_map_cascading_data = self.find_cascading_relationships(self.db_map_ids(db_map_data))
         if any(db_map_cascading_data.values()):
             self.relationships_removed.emit(db_map_cascading_data)
 
@@ -1354,9 +1354,7 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of removed items keyed by DiffDatabaseMapping
         """
-        db_map_cascading_data = self.find_cascading_parameter_data(
-            self.ids_per_db_map(db_map_data), "parameter definition"
-        )
+        db_map_cascading_data = self.find_cascading_parameter_data(self.db_map_ids(db_map_data), "parameter definition")
         if any(db_map_cascading_data.values()):
             self.parameter_definitions_removed.emit(db_map_cascading_data)
 
@@ -1367,7 +1365,7 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of removed items keyed by DiffDatabaseMapping
         """
-        db_map_cascading_data = self.find_cascading_parameter_values_by_entity(self.ids_per_db_map(db_map_data))
+        db_map_cascading_data = self.find_cascading_parameter_values_by_entity(self.db_map_ids(db_map_data))
         if any(db_map_cascading_data.values()):
             self.parameter_values_removed.emit(db_map_cascading_data)
 
@@ -1378,7 +1376,7 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of removed items keyed by DiffDatabaseMapping
         """
-        db_map_cascading_data = self.find_cascading_parameter_values_by_definition(self.ids_per_db_map(db_map_data))
+        db_map_cascading_data = self.find_cascading_parameter_values_by_definition(self.db_map_ids(db_map_data))
         if any(db_map_cascading_data.values()):
             self.parameter_values_removed.emit(db_map_cascading_data)
 
@@ -1389,7 +1387,7 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
         """
-        db_map_cascading_data = self.find_cascading_relationship_classes(self.ids_per_db_map(db_map_data))
+        db_map_cascading_data = self.find_cascading_relationship_classes(self.db_map_ids(db_map_data))
         if not any(db_map_cascading_data.values()):
             return
         db_map_cascading_data = {
@@ -1405,7 +1403,7 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
         """
-        db_map_cascading_data = self.find_cascading_relationships(self.ids_per_db_map(db_map_data))
+        db_map_cascading_data = self.find_cascading_relationships(self.db_map_ids(db_map_data))
         if not any(db_map_cascading_data.values()):
             return
         db_map_cascading_data = {
@@ -1421,9 +1419,7 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
         """
-        db_map_cascading_data = self.find_cascading_parameter_data(
-            self.ids_per_db_map(db_map_data), "parameter definition"
-        )
+        db_map_cascading_data = self.find_cascading_parameter_data(self.db_map_ids(db_map_data), "parameter definition")
         if not any(db_map_cascading_data.values()):
             return
         db_map_cascading_data = {
@@ -1439,9 +1435,7 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
         """
-        db_map_cascading_data = self.find_cascading_parameter_definitions_by_value_list(
-            self.ids_per_db_map(db_map_data)
-        )
+        db_map_cascading_data = self.find_cascading_parameter_definitions_by_value_list(self.db_map_ids(db_map_data))
         if not any(db_map_cascading_data.values()):
             return
         db_map_cascading_data = {
@@ -1457,7 +1451,7 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
         """
-        db_map_cascading_data = self.find_cascading_parameter_definitions_by_tag(self.ids_per_db_map(db_map_data))
+        db_map_cascading_data = self.find_cascading_parameter_definitions_by_tag(self.db_map_ids(db_map_data))
         if not any(db_map_cascading_data.values()):
             return
         db_map_cascading_data = {
@@ -1473,7 +1467,7 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
         """
-        db_map_cascading_data = self.find_cascading_parameter_data(self.ids_per_db_map(db_map_data), "parameter value")
+        db_map_cascading_data = self.find_cascading_parameter_data(self.db_map_ids(db_map_data), "parameter value")
         if not any(db_map_cascading_data.values()):
             return
         db_map_cascading_data = {
@@ -1489,7 +1483,7 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
         """
-        db_map_cascading_data = self.find_cascading_parameter_values_by_entity(self.ids_per_db_map(db_map_data))
+        db_map_cascading_data = self.find_cascading_parameter_values_by_entity(self.db_map_ids(db_map_data))
         if not any(db_map_cascading_data.values()):
             return
         db_map_cascading_data = {
@@ -1505,7 +1499,7 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
         """
-        db_map_cascading_data = self.find_cascading_parameter_values_by_definition(self.ids_per_db_map(db_map_data))
+        db_map_cascading_data = self.find_cascading_parameter_values_by_definition(self.db_map_ids(db_map_data))
         if not any(db_map_cascading_data.values()):
             return
         db_map_cascading_data = {

@@ -632,11 +632,12 @@ class CompoundParameterValueMixin:
     def update_single_main_filter(self, model):
         """Update the filter for the given model."""
         a = super().update_single_main_filter(model)
-        b = self._settattr_if_different(
-            model,
-            "_selected_entity_ids",
-            self._parent.selected_ent_ids[self.entity_type].get((model.db_map, model.entity_class_id), set()),
-        )
+        selected_ent_ids = self._parent.selected_ent_ids
+        if not any(selected_ent_ids.values()):
+            selected_ent_ids = set()  # All pass
+        else:
+            selected_ent_ids = selected_ent_ids[self.entity_type].get((model.db_map, model.entity_class_id))
+        b = self._settattr_if_different(model, "_selected_entity_ids", selected_ent_ids)
         return a or b
 
 
