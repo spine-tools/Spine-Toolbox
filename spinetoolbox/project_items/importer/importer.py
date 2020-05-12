@@ -276,7 +276,7 @@ class Importer(ProjectItem):
             row = connector_list.index(JSONConnector)
         else:
             row = None
-        if row:
+        if row is not None:
             connector_list_wg.setCurrentRow(row)
         button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         button_box.button(QDialogButtonBox.Ok).clicked.connect(dialog.accept)
