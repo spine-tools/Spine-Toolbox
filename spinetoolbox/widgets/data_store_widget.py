@@ -998,8 +998,9 @@ class RecombinatorDataStoreForm(DataStoreForm):
         self.ui.menubar.clear()
         self.ui.menubar.addMenu(self.ui.menuView)
         self.parameter_tag_toolbar.manage_tags_button.deleteLater()
-        self.object_tree_model.set_checkable(True)
-        self.relationship_tree_model.set_checkable(True)
+        # TODO: Uncomment when we have support for selective export within the Recombinator
+        # self.object_tree_model.set_checkable(True)
+        # self.relationship_tree_model.set_checkable(True)
         button_box = QDialogButtonBox(QDialogButtonBox.Cancel | QDialogButtonBox.Ok)
         widget = QWidget()
         layout = QHBoxLayout(widget)
