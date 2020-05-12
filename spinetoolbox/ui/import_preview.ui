@@ -53,7 +53,7 @@
          </widget>
          <widget class="QStackedWidget" name="source_preview_widget_stack">
           <property name="currentIndex">
-           <number>1</number>
+           <number>0</number>
           </property>
           <widget class="QWidget" name="table_page">
            <layout class="QVBoxLayout" name="verticalLayout_2">
@@ -121,7 +121,7 @@
   <customwidget>
    <class>TableViewWithButtonHeader</class>
    <extends>QTableView</extends>
-   <header>spinetoolbox/spine_io/io_models.h</header>
+   <header>spinetoolbox/widgets/table_view_with_button_header.h</header>
   </customwidget>
  </customwidgets>
  <resources/>

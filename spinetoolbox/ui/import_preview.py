@@ -13,7 +13,7 @@
 # Form implementation generated from reading ui file 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\import_preview.ui',
 # licensing of 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\import_preview.ui' applies.
 #
-# Created: Tue Apr 14 12:29:44 2020
+# Created: Tue May 12 08:29:43 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -73,7 +73,7 @@ class Ui_ImportPreview(object):
         self.verticalLayout.addWidget(self.main_splitter)
 
         self.retranslateUi(ImportPreview)
-        self.source_preview_widget_stack.setCurrentIndex(1)
+        self.source_preview_widget_stack.setCurrentIndex(0)
         QtCore.QMetaObject.connectSlotsByName(ImportPreview)
 
     def retranslateUi(self, ImportPreview):
@@ -82,4 +82,4 @@ class Ui_ImportPreview(object):
         self.waiting_label.setText(QtWidgets.QApplication.translate("ImportPreview", "Loading preview...", None, -1))
         self.mappings_box.setTitle(QtWidgets.QApplication.translate("ImportPreview", "Mappings", None, -1))
 
-from spinetoolbox.spine_io.io_models import TableViewWithButtonHeader
+from spinetoolbox.widgets.table_view_with_button_header import TableViewWithButtonHeader

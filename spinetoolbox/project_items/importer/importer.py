@@ -44,7 +44,9 @@ _CONNECTOR_NAME_TO_CLASS = {
 
 
 class Importer(ProjectItem):
-    def __init__(self, toolbox, project, logger, name, description, mappings, x, y, cancel_on_error=True, mapping_selection=None):
+    def __init__(
+        self, toolbox, project, logger, name, description, mappings, x, y, cancel_on_error=True, mapping_selection=None
+    ):
         """Importer class.
 
         Args:
@@ -658,7 +660,7 @@ class _FileListModel(QAbstractListModel):
     def update(self, resources):
         """Updates the model according to given list of resources."""
         self.beginResetModel()
-        items = {item.label:item for item in self._files}
+        items = {item.label: item for item in self._files}
         updated = list()
         new = list()
         for resource in resources:
