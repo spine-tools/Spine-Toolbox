@@ -29,7 +29,7 @@ from spinetoolbox.spine_io.importers.csv_reader import CSVConnector
 from spinetoolbox.spine_io.importers.excel_reader import ExcelConnector
 from spinetoolbox.spine_io.importers.gdx_connector import GdxConnector
 from spinetoolbox.spine_io.importers.json_reader import JSONConnector
-from spinetoolbox.widgets.import_preview_window import ImportPreviewWindow
+from spinetoolbox.import_editor.widgets.import_editor_window import ImportEditorWindow
 from .commands import ChangeItemSelectionCommand, UpdateSettingsCommand, UpdateCancelOnErrorCommand
 from .executable_item import ExecutableItem
 from .item_info import ItemInfo
@@ -239,7 +239,7 @@ class Importer(ProjectItem):
                 return
         self._logger.msg.emit(f"Opening Import editor for file: {file_path}")
         connector_settings = {"gams_directory": self._gams_system_directory()}
-        preview_widget = self._preview_widget[label] = ImportPreviewWindow(
+        preview_widget = self._preview_widget[label] = ImportEditorWindow(
             self, file_path, connector, connector_settings, settings, self._toolbox
         )
         preview_widget.settings_updated.connect(lambda s, importee=label: self.save_settings(s, importee))

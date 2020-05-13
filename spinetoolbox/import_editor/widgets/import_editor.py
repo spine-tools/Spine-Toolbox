@@ -10,7 +10,7 @@
 ######################################################################################################################
 
 """
-Contains ImportPreviewWidget, and MappingTableMenu classes.
+Contains ImportEditor widget and MappingTableMenu.
 
 :author: P. Vennström (VTT)
 :date:   1.6.2019
@@ -19,18 +19,17 @@ Contains ImportPreviewWidget, and MappingTableMenu classes.
 from copy import deepcopy
 
 from spinedb_api import ObjectClassMapping, dict_to_map, mapping_from_dict
-from PySide2.QtWidgets import QWidget, QVBoxLayout, QMenu, QListWidgetItem, QErrorMessage
+from PySide2.QtWidgets import QWidget, QMenu, QListWidgetItem, QErrorMessage
 from PySide2.QtCore import Signal, Qt, QItemSelectionModel, QPoint
-from .mapping_widget import MappingWidget
-from .custom_menus import CustomContextMenu
-from ..spine_io.io_models import MappingPreviewModel, MappingListModel
-from ..spine_io.type_conversion import value_to_convert_spec
+from ...widgets.custom_menus import CustomContextMenu
+from ...spine_io.io_models import MappingPreviewModel, MappingListModel
+from ...spine_io.type_conversion import value_to_convert_spec
 
 
-class ImportPreviewWidget(QWidget):
+class ImportEditor(QWidget):
     """
     A Widget for defining one or more Mappings associated to a data Source (CSV file, Excel file, etc).
-    Currently it's being embedded in ImportDialog and ImportPreviewWindow.
+    Currently it's being embedded in ImportDialog and ImportEditorWindow.
 
     Args:
         connector (ConnectionManager)
@@ -41,7 +40,7 @@ class ImportPreviewWidget(QWidget):
     previewDataUpdated = Signal()
 
     def __init__(self, connector, parent):
-        from ..ui.import_preview import Ui_ImportPreview  # pylint: disable=import-outside-toplevel
+        from ..ui.import_editor import Ui_ImportEditor  # pylint: disable=import-outside-toplevel
 
         super().__init__(parent)
 
@@ -56,7 +55,7 @@ class ImportPreviewWidget(QWidget):
         self._copied_mapping = None
         self._copied_options = {}
         # create ui
-        self._ui = Ui_ImportPreview()
+        self._ui = Ui_ImportEditor()
         self._ui.setupUi(self)
         self._ui.source_data_table.setModel(self.table)
         self._ui_error = QErrorMessage(self)
@@ -64,9 +63,6 @@ class ImportPreviewWidget(QWidget):
         self._ui_error.setWindowFlag(Qt.WindowContextHelpButtonHint, False)
         self._ui_preview_menu = MappingTableMenu(self._ui.source_data_table)
         self._ui.top_source_splitter.addWidget(self.connector.option_widget())
-        self._ui.mappings_box.setLayout(QVBoxLayout())
-        self._ui_mapper = MappingWidget()
-        self._ui.mappings_box.layout().addWidget(self._ui_mapper)
         self._ui.source_data_table.verticalHeader().display_all = False
         for i in range(self._ui.main_splitter.count()):
             self._ui.main_splitter.setCollapsible(i, False)
@@ -103,9 +99,9 @@ class ImportPreviewWidget(QWidget):
         self.parent().destroyed.connect(self.close_connection)
 
         # current mapping changed
-        self._ui_mapper.mappingChanged.connect(self._ui_preview_menu.set_model)
-        self._ui_mapper.mappingChanged.connect(self.table.set_mapping)
-        self._ui_mapper.mappingDataChanged.connect(self.table.set_mapping)
+        self._ui.mapper.mappingChanged.connect(self._ui_preview_menu.set_model)
+        self._ui.mapper.mappingChanged.connect(self.table.set_mapping)
+        self._ui.mapper.mappingDataChanged.connect(self.table.set_mapping)
         self.table.mappingChanged.connect(self._update_display_row_types)
 
         # data preview table
@@ -113,7 +109,7 @@ class ImportPreviewWidget(QWidget):
         self.table.rowTypesUpdated.connect(self._new_row_types)
 
         # preview new preview data
-        self.previewDataUpdated.connect(lambda: self._ui_mapper.set_data_source_column_num(self.table.columnCount()))
+        self.previewDataUpdated.connect(lambda: self._ui.mapper.set_data_source_column_num(self.table.columnCount()))
 
     @property
     def checked_tables(self):
@@ -132,7 +128,7 @@ class ImportPreviewWidget(QWidget):
         preview_table = 0
         loading_message = 1
         self._ui.source_preview_widget_stack.setCurrentIndex(loading_message if status else preview_table)
-        self._ui_mapper.setDisabled(status)
+        self._ui.mapper.setDisabled(status)
 
     def request_new_tables_from_connector(self):
         """
@@ -147,7 +143,7 @@ class ImportPreviewWidget(QWidget):
         if selection:
             if selection.text() not in self.table_mappings:
                 self.table_mappings[selection.text()] = MappingListModel([ObjectClassMapping()], selection.text())
-            self._ui_mapper.set_model(self.table_mappings[selection.text()])
+            self._ui.mapper.set_model(self.table_mappings[selection.text()])
             # request new data
             self.connector.set_table(selection.text())
             self.connector.request_data(selection.text(), max_rows=100)
@@ -291,7 +287,6 @@ class ImportPreviewWidget(QWidget):
         Returns:
             [Dict] -- dict with settings
         """
-
         tables = set(self._ui.source_list.item(i).text() for i in range(self._ui.source_list.count()))
 
         table_mappings = {
@@ -392,7 +387,7 @@ class ImportPreviewWidget(QWidget):
     def paste_mappings(self, table):
         self.table_mappings[table] = MappingListModel([deepcopy(m) for m in self._copied_mapping])
         if self.selected_table == table:
-            self._ui_mapper.set_model(self.table_mappings[table])
+            self._ui.mapper.set_model(self.table_mappings[table])
 
     def paste_options(self, table):
         self.connector.set_table_options({table: deepcopy(self._copied_options.get("options", {}))})

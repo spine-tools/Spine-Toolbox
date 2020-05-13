@@ -10,23 +10,23 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-# Form implementation generated from reading ui file 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\import_preview.ui',
-# licensing of 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\import_preview.ui' applies.
+# Form implementation generated from reading ui file 'C:\data\src\toolbox\bin\..\spinetoolbox\import_editor\ui\import_editor.ui',
+# licensing of 'C:\data\src\toolbox\bin\..\spinetoolbox\import_editor\ui\import_editor.ui' applies.
 #
-# Created: Tue May 12 08:29:43 2020
+# Created: Wed May 13 09:22:01 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
 
 from PySide2 import QtCore, QtGui, QtWidgets
 
-class Ui_ImportPreview(object):
-    def setupUi(self, ImportPreview):
-        ImportPreview.setObjectName("ImportPreview")
-        ImportPreview.resize(806, 632)
-        self.verticalLayout = QtWidgets.QVBoxLayout(ImportPreview)
+class Ui_ImportEditor(object):
+    def setupUi(self, ImportEditor):
+        ImportEditor.setObjectName("ImportEditor")
+        ImportEditor.resize(806, 632)
+        self.verticalLayout = QtWidgets.QVBoxLayout(ImportEditor)
         self.verticalLayout.setObjectName("verticalLayout")
-        self.main_splitter = QtWidgets.QSplitter(ImportPreview)
+        self.main_splitter = QtWidgets.QSplitter(ImportEditor)
         self.main_splitter.setOrientation(QtCore.Qt.Horizontal)
         self.main_splitter.setObjectName("main_splitter")
         self.sources_box = QtWidgets.QGroupBox(self.main_splitter)
@@ -70,16 +70,22 @@ class Ui_ImportPreview(object):
         self.verticalLayout_4.addWidget(self.sources_splitter)
         self.mappings_box = QtWidgets.QGroupBox(self.main_splitter)
         self.mappings_box.setObjectName("mappings_box")
+        self.verticalLayout_5 = QtWidgets.QVBoxLayout(self.mappings_box)
+        self.verticalLayout_5.setObjectName("verticalLayout_5")
+        self.mapper = ImportMappings(self.mappings_box)
+        self.mapper.setObjectName("mapper")
+        self.verticalLayout_5.addWidget(self.mapper)
         self.verticalLayout.addWidget(self.main_splitter)
 
-        self.retranslateUi(ImportPreview)
+        self.retranslateUi(ImportEditor)
         self.source_preview_widget_stack.setCurrentIndex(0)
-        QtCore.QMetaObject.connectSlotsByName(ImportPreview)
+        QtCore.QMetaObject.connectSlotsByName(ImportEditor)
 
-    def retranslateUi(self, ImportPreview):
-        ImportPreview.setWindowTitle(QtWidgets.QApplication.translate("ImportPreview", "Form", None, -1))
-        self.sources_box.setTitle(QtWidgets.QApplication.translate("ImportPreview", "Sources", None, -1))
-        self.waiting_label.setText(QtWidgets.QApplication.translate("ImportPreview", "Loading preview...", None, -1))
-        self.mappings_box.setTitle(QtWidgets.QApplication.translate("ImportPreview", "Mappings", None, -1))
+    def retranslateUi(self, ImportEditor):
+        ImportEditor.setWindowTitle(QtWidgets.QApplication.translate("ImportEditor", "Form", None, -1))
+        self.sources_box.setTitle(QtWidgets.QApplication.translate("ImportEditor", "Sources", None, -1))
+        self.waiting_label.setText(QtWidgets.QApplication.translate("ImportEditor", "Loading preview...", None, -1))
+        self.mappings_box.setTitle(QtWidgets.QApplication.translate("ImportEditor", "Mappings", None, -1))
 
+from spinetoolbox.import_editor.widgets.import_mappings import ImportMappings
 from spinetoolbox.widgets.table_view_with_button_header import TableViewWithButtonHeader

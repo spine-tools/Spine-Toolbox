@@ -10,7 +10,7 @@
 ######################################################################################################################
 
 """
-Contains unit tests for the ImportPreviewWindow class.
+Contains unit tests for the ImportEditorWindow class.
 
 :author: A. Soininen
 :date:   16.3.2020
@@ -20,11 +20,11 @@ import unittest
 from unittest import mock
 from PySide2.QtCore import QSettings
 from PySide2.QtWidgets import QApplication, QWidget
-from spinetoolbox.widgets.import_preview_window import ImportPreviewWindow
+from spinetoolbox.import_editor.widgets.import_editor_window import ImportEditorWindow
 from spinetoolbox.spine_io.io_api import SourceConnection
 
 
-class TestImportPreviewWindow(unittest.TestCase):
+class TestImportEditorWindow(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         if not QApplication.instance():
@@ -35,7 +35,7 @@ class TestImportPreviewWindow(unittest.TestCase):
         importer.name = mock.MagicMock(return_value="importer")
         toolbox = QWidget()
         toolbox.qsettings = mock.MagicMock(return_value=QSettings())
-        widget = ImportPreviewWindow(importer, "", SourceConnection, {}, {}, toolbox)
+        widget = ImportEditorWindow(importer, "", SourceConnection, {}, {}, toolbox)
         widget._qsettings = mock.NonCallableMagicMock()
         widget.closeEvent()
         widget._qsettings.beginGroup.assert_called_once_with("mappingPreviewWindow")

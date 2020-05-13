@@ -21,8 +21,7 @@ from PySide2.QtCore import Signal
 
 
 class OptionsWidget(QWidget):
-    """A widget for handling simple options. Used by ConnectionManager.
-    """
+    """A widget for handling simple options."""
 
     # Emitted whenever an option in the widget is changed.
     optionsChanged = Signal()

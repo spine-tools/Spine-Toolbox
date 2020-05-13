@@ -27,8 +27,8 @@ from ..spine_io.importers.excel_reader import ExcelConnector
 from ..spine_io.importers.sqlalchemy_connector import SqlAlchemyConnector
 from ..spine_io.importers.gdx_connector import GdxConnector
 from ..spine_io.importers.json_reader import JSONConnector
-from .import_preview_widget import ImportPreviewWidget
-from .import_errors_widget import ImportErrorWidget
+from ..import_editor.widgets.import_editor import ImportEditor
+from .data_store_import_errors_widget import ImportErrorsWidget
 from .notification import Notification
 
 
@@ -71,7 +71,7 @@ class ImportDialog(QDialog):
 
         # create widgets
         self._import_preview = None
-        self._error_widget = ImportErrorWidget()
+        self._error_widget = ImportErrorsWidget()
         self._error_widget.hide()
         self._dialog_buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Abort | QDialogButtonBox.Cancel)
         self._dialog_buttons.button(QDialogButtonBox.Abort).setText("Back")
@@ -174,7 +174,7 @@ class ImportDialog(QDialog):
             valid_source = self.active_connector.connection_ui()
             if valid_source:
                 # Create instance of ImportPreviewWidget and configure
-                self._import_preview = ImportPreviewWidget(self.active_connector, self)
+                self._import_preview = ImportEditor(self.active_connector, self)
                 self._import_preview.set_loading_status(True)
                 self._import_preview.tableChecked.connect(self.set_ok_button_availability)
                 # Connect handle_data_ready method to the widget

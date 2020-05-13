@@ -10,23 +10,23 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-# Form implementation generated from reading ui file 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\import_mapping.ui',
-# licensing of 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\import_mapping.ui' applies.
+# Form implementation generated from reading ui file 'C:\data\src\toolbox\bin\..\spinetoolbox\import_editor\ui\import_mappings.ui',
+# licensing of 'C:\data\src\toolbox\bin\..\spinetoolbox\import_editor\ui\import_mappings.ui' applies.
 #
-# Created: Mon May 11 15:50:32 2020
+# Created: Wed May 13 09:24:22 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
 
 from PySide2 import QtCore, QtGui, QtWidgets
 
-class Ui_ImportMapping(object):
-    def setupUi(self, ImportMapping):
-        ImportMapping.setObjectName("ImportMapping")
-        ImportMapping.resize(367, 536)
-        self.verticalLayout_3 = QtWidgets.QVBoxLayout(ImportMapping)
+class Ui_ImportMappings(object):
+    def setupUi(self, ImportMappings):
+        ImportMappings.setObjectName("ImportMappings")
+        ImportMappings.resize(367, 536)
+        self.verticalLayout_3 = QtWidgets.QVBoxLayout(ImportMappings)
         self.verticalLayout_3.setObjectName("verticalLayout_3")
-        self.mapping_splitter = QtWidgets.QSplitter(ImportMapping)
+        self.mapping_splitter = QtWidgets.QSplitter(ImportMappings)
         self.mapping_splitter.setOrientation(QtCore.Qt.Vertical)
         self.mapping_splitter.setObjectName("mapping_splitter")
         self.verticalLayoutWidget = QtWidgets.QWidget(self.mapping_splitter)
@@ -51,16 +51,20 @@ class Ui_ImportMapping(object):
         self.bottom_layout = QtWidgets.QVBoxLayout(self.verticalLayoutWidget_2)
         self.bottom_layout.setContentsMargins(0, 0, 0, 0)
         self.bottom_layout.setObjectName("bottom_layout")
+        self.options = ImportMappingOptions(self.verticalLayoutWidget_2)
+        self.options.setObjectName("options")
+        self.bottom_layout.addWidget(self.options)
         self.table_view = QtWidgets.QTableView(self.verticalLayoutWidget_2)
         self.table_view.setObjectName("table_view")
         self.bottom_layout.addWidget(self.table_view)
         self.verticalLayout_3.addWidget(self.mapping_splitter)
 
-        self.retranslateUi(ImportMapping)
-        QtCore.QMetaObject.connectSlotsByName(ImportMapping)
+        self.retranslateUi(ImportMappings)
+        QtCore.QMetaObject.connectSlotsByName(ImportMappings)
 
-    def retranslateUi(self, ImportMapping):
-        ImportMapping.setWindowTitle(QtWidgets.QApplication.translate("ImportMapping", "Form", None, -1))
-        self.new_button.setText(QtWidgets.QApplication.translate("ImportMapping", "New", None, -1))
-        self.remove_button.setText(QtWidgets.QApplication.translate("ImportMapping", "Remove", None, -1))
+    def retranslateUi(self, ImportMappings):
+        ImportMappings.setWindowTitle(QtWidgets.QApplication.translate("ImportMappings", "Form", None, -1))
+        self.new_button.setText(QtWidgets.QApplication.translate("ImportMappings", "New", None, -1))
+        self.remove_button.setText(QtWidgets.QApplication.translate("ImportMappings", "Remove", None, -1))
 
+from spinetoolbox.import_editor.widgets.import_mapping_options import ImportMappingOptions
