@@ -109,6 +109,7 @@
     <addaction name="actionImport"/>
     <addaction name="actionMapping_import"/>
     <addaction name="actionExport"/>
+    <addaction name="actionExport_session"/>
     <addaction name="separator"/>
     <addaction name="actionClose"/>
    </widget>
@@ -1333,6 +1334,18 @@
    </property>
    <property name="toolTip">
     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Import data from file into current urls by defining a mapping&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+   </property>
+  </action>
+  <action name="actionExport_session">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/project_item_icons/database-export.svg</normaloff>:/icons/project_item_icons/database-export.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Export session...</string>
+   </property>
+   <property name="toolTip">
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Export items added and updated in the current session (since last commit) into a file&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
   </action>
  </widget>

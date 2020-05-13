@@ -296,28 +296,8 @@ class TreeViewMixin:
         relationship_tree_context_menu.deleteLater()
 
     def export_selection(self, model):
-        self.qsettings.beginGroup(self.settings_group)
-        file_path, selected_filter = get_save_file_name_in_last_dir(
-            self.qsettings,
-            "exportDBSelection",
-            self,
-            "Export selection",
-            self._get_base_dir(),
-            "SQLite (*.sqlite);; JSON file (*.json);; Excel file (*.xlsx)",
-        )
-        self.qsettings.endGroup()
-        if not file_path:  # File selection cancelled
-            return
         parcel = self._make_data_parcel_from_selection(model)
-        data_for_export = self._make_data_for_export(parcel.data)
-        if selected_filter.startswith("JSON"):
-            self.export_to_json(file_path, data_for_export)
-        elif selected_filter.startswith("SQLite"):
-            self.export_to_sqlite(file_path, data_for_export)
-        elif selected_filter.startswith("Excel"):
-            self.export_to_excel(file_path, data_for_export)
-        else:
-            raise ValueError()
+        self.export_data(parcel.data)
 
     def _make_data_parcel_from_selection(self, model):
         """Returns a SpineDBParcel with data from the given model's selection.

@@ -56,6 +56,7 @@ from .import_widget import ImportDialog
 from .parameter_value_editor import ParameterValueEditor
 from ..spine_io.exporters.excel import export_spine_database_to_xlsx
 from ..spine_io.importers.excel_reader import get_mapped_data_from_xlsx
+from ..spine_db_parcel import SpineDBParcel
 
 
 class DataStoreFormBase(QMainWindow):
@@ -146,6 +147,7 @@ class DataStoreFormBase(QMainWindow):
         self.ui.actionImport.triggered.connect(self.import_file)
         self.ui.actionMapping_import.triggered.connect(self.show_mapping_import_file_dialog)
         self.ui.actionExport.triggered.connect(self.show_get_items_for_export_dialog)
+        self.ui.actionExport_session.triggered.connect(self.export_session)
         self.ui.actionCopy.triggered.connect(self.copy)
         self.ui.actionPaste.triggered.connect(self.paste)
         self.ui.actionRemove_selection.triggered.connect(self.remove_selection)
@@ -178,6 +180,7 @@ class DataStoreFormBase(QMainWindow):
     @Slot(bool)
     def update_commit_enabled(self, _clean=False):
         dirty = not all(self.db_mngr.undo_stack[db_map].isClean() for db_map in self.db_maps)
+        self.ui.actionExport_session.setEnabled(dirty)
         self.ui.actionCommit.setEnabled(dirty)
         self.ui.actionRollback.setEnabled(dirty)
         self.ui.actionView_history.setEnabled(dirty)
@@ -371,11 +374,41 @@ class DataStoreFormBase(QMainWindow):
         return data
 
     @Slot(bool)
-    def show_get_items_for_export_dialog(self):
+    def show_get_items_for_export_dialog(self, checked=False):
         """Shows dialog for user to select dbs and items for export."""
         dialog = GetItemsForExportDialog(self, self.db_mngr, *self.db_maps)
         dialog.data_submitted.connect(self.export_data)
         dialog.show()
+
+    @Slot(bool)
+    def export_session(self, checked=False):
+        """Exports changes made in the current session as reported by DiffDatabaseMapping.
+        """
+        parcel = SpineDBParcel(self.db_mngr)
+        db_map_diff_ids = {db_map: db_map.diff_ids() for db_map in self.db_maps}
+        db_map_obj_cls_ids = {db_map: diff_ids["object_class"] for db_map, diff_ids in db_map_diff_ids.items()}
+        db_map_rel_cls_ids = {db_map: diff_ids["relationship_class"] for db_map, diff_ids in db_map_diff_ids.items()}
+        db_map_obj_ids = {db_map: diff_ids["object"] for db_map, diff_ids in db_map_diff_ids.items()}
+        db_map_rel_ids = {db_map: diff_ids["relationship"] for db_map, diff_ids in db_map_diff_ids.items()}
+        db_map_par_val_lst_ids = {
+            db_map: diff_ids["parameter_value_list"] for db_map, diff_ids in db_map_diff_ids.items()
+        }
+        db_map_obj_par_def_ids = db_map_rel_par_def_ids = {
+            db_map: diff_ids["parameter_definition"] for db_map, diff_ids in db_map_diff_ids.items()
+        }
+        db_map_obj_par_val_ids = db_map_rel_par_val_ids = {
+            db_map: diff_ids["parameter_value"] for db_map, diff_ids in db_map_diff_ids.items()
+        }
+        parcel._push_object_class_ids(db_map_obj_cls_ids)
+        parcel._push_object_ids(db_map_obj_ids)
+        parcel._push_relationship_class_ids(db_map_rel_cls_ids)
+        parcel._push_relationship_ids(db_map_rel_ids)
+        parcel._push_parameter_definition_ids(db_map_obj_par_def_ids, "object")
+        parcel._push_parameter_definition_ids(db_map_rel_par_def_ids, "relationship")
+        parcel._push_parameter_value_ids(db_map_obj_par_val_ids, "object")
+        parcel._push_parameter_value_ids(db_map_rel_par_val_ids, "relationship")
+        parcel._push_parameter_value_list_ids(db_map_par_val_lst_ids)
+        self.export_data(parcel.data)
 
     @Slot(object)
     def export_data(self, db_map_ids_for_export):
