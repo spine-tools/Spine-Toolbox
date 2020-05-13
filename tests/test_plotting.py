@@ -32,7 +32,7 @@ from spinetoolbox.plotting import (
     PivotTablePlottingHints,
 )
 from spinetoolbox.widgets.plot_widget import PlotWidget
-from spinetoolbox.widgets.data_store_widget import DataStoreForm
+from spinetoolbox.data_store_form.widgets.data_store_form import DataStoreForm
 
 
 def _make_pivot_proxy_model():

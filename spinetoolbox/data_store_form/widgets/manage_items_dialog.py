@@ -31,9 +31,9 @@ from PySide2.QtWidgets import (
     QCheckBox,
 )
 from PySide2.QtCore import Slot, Qt, QTimer, Signal
-from .custom_editors import IconColorEditor
-from .custom_qtableview import CopyPasteTableView
-from ..helpers import busy_effect
+from ...widgets.custom_editors import IconColorEditor
+from ...widgets.custom_qtableview import CopyPasteTableView
+from ...helpers import busy_effect
 
 
 class ManageItemsDialog(QDialog):

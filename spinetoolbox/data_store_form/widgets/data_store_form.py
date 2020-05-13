@@ -32,31 +32,31 @@ from spinedb_api import (
     SpineDBAPIError,
     SpineDBVersionError,
 )
-from ..config import MAINWINDOW_SS, APPLICATION_PATH
-from .data_store_edit_items_dialogs import ManageParameterTagsDialog
-from .data_store_manage_items_dialog import MassRemoveItemsDialog, GetItemsForExportDialog
+from ...config import MAINWINDOW_SS, APPLICATION_PATH
+from .edit_or_remove_items_dialogs import ManageParameterTagsDialog
+from .manage_items_dialog import MassRemoveItemsDialog, GetItemsForExportDialog
 from .custom_menus import ParameterValueListContextMenu
 from .custom_qwidgets import OpenFileButton, OpenSQLiteFileButton, ClearableStatusBar, ShootingLabel
-from .data_store_parameter_view_mixin import ParameterViewMixin
-from .data_store_tree_view_mixin import TreeViewMixin
-from .data_store_graph_view_mixin import GraphViewMixin
-from .data_store_tabular_view_mixin import TabularViewMixin
+from .parameter_view_mixin import ParameterViewMixin
+from .tree_view_mixin import TreeViewMixin
+from .graph_view_mixin import GraphViewMixin
+from .tabular_view_mixin import TabularViewMixin
 from .toolbars import ParameterTagToolBar
 from .db_session_history_dialog import DBSessionHistoryDialog
-from .notification import NotificationStack
-from ..mvcmodels.parameter_value_list_model import ParameterValueListModel
-from ..helpers import (
+from ...widgets.notification import NotificationStack
+from ...mvcmodels.parameter_value_list_model import ParameterValueListModel
+from ...helpers import (
     busy_effect,
     ensure_window_is_on_screen,
     get_save_file_name_in_last_dir,
     get_open_file_name_in_last_dir,
     format_string_list,
 )
-from .data_store_import_dialog import ImportDialog
-from .parameter_value_editor import ParameterValueEditor
-from ..spine_io.exporters.excel import export_spine_database_to_xlsx
-from ..spine_io.importers.excel_reader import get_mapped_data_from_xlsx
-from ..spine_db_parcel import SpineDBParcel
+from .import_dialog import ImportDialog
+from ...widgets.parameter_value_editor import ParameterValueEditor
+from ...spine_io.exporters.excel import export_spine_database_to_xlsx
+from ...spine_io.importers.excel_reader import get_mapped_data_from_xlsx
+from ...spine_db_parcel import SpineDBParcel
 
 
 class DataStoreFormBase(QMainWindow):
@@ -75,7 +75,7 @@ class DataStoreFormBase(QMainWindow):
             *db_urls (tuple): Database url, codename.
         """
         super().__init__(flags=Qt.Window)
-        from ..ui.data_store_view import Ui_MainWindow  # pylint: disable=import-outside-toplevel
+        from ..ui.data_store_window import Ui_MainWindow  # pylint: disable=import-outside-toplevel
 
         self.db_urls = list(db_urls)
         self.db_url = self.db_urls[0]
@@ -452,7 +452,7 @@ class DataStoreFormBase(QMainWindow):
         except SpineDBAPIError:
             self.msg_error.emit(f"[SpineDBAPIError] Unable to export file <b>{db_map.codename}</b>")
         else:
-            self._drop_open_sqlite_file_button(file_path)
+            self._insert_open_sqlite_file_button(file_path)
 
     def _open_sqlite_url(self, url, codename):
         """Opens sqlite url."""
@@ -515,7 +515,7 @@ class DataStoreFormBase(QMainWindow):
         )
         with open(file_path, 'w', encoding='utf-8') as f:
             f.write(json_data)
-        self._drop_open_file_button(file_path)
+        self._insert_open_file_button(file_path)
 
     @busy_effect
     def export_to_excel(self, file_path, data_for_export):
@@ -534,17 +534,25 @@ class DataStoreFormBase(QMainWindow):
         except OSError:
             self.msg_error.emit(f"[OSError] Unable to export file <b>{file_name}</b>.")
         else:
-            self._drop_open_file_button(file_path)
+            self._insert_open_file_button(file_path)
 
-    def _drop_open_file_button(self, file_path):
+    def _insert_open_file_button(self, file_path):
         button = OpenFileButton(file_path, self)
-        self._drop_button_to_status_bar(button)
+        self._insert_button_to_status_bar(button)
 
-    def _drop_open_sqlite_file_button(self, file_path):
+    def _insert_open_sqlite_file_button(self, file_path):
         button = OpenSQLiteFileButton(file_path, self)
-        self._drop_button_to_status_bar(button)
+        self._insert_button_to_status_bar(button)
 
-    def _drop_button_to_status_bar(self, button):
+    def _insert_button_to_status_bar(self, button):
+        """
+        Inserts given button to the 'beginning' of the status bar and decorates the thing with a shooting label.
+        """
+        duplicates = [
+            x for x in self.status_bar.findChildren(OpenFileButton) if os.path.samefile(x.file_path, button.file_path)
+        ]
+        for dup in duplicates:
+            self.status_bar.removeWidget(dup)
         self.status_bar.insertWidget(0, button)
         self.status_bar.show()
         destination = QPoint(16, 0) + self.status_bar.mapToParent(QPoint(0, 0))

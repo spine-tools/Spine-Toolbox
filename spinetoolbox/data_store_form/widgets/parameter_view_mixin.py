@@ -33,16 +33,16 @@ from .custom_delegates import (
     ObjectNameListDelegate,
 )
 from .custom_menus import EditableParameterValueContextMenu, ParameterContextMenu
-from .report_plotting_failure import report_plotting_failure
-from ..mvcmodels.compound_parameter_models import (
+from .object_name_list_editor import ObjectNameListEditor
+from ...widgets.report_plotting_failure import report_plotting_failure
+from ...mvcmodels.compound_parameter_models import (
     CompoundObjectParameterDefinitionModel,
     CompoundObjectParameterValueModel,
     CompoundRelationshipParameterDefinitionModel,
     CompoundRelationshipParameterValueModel,
 )
-from ..widgets.plot_widget import PlotWidget
-from ..widgets.object_name_list_editor import ObjectNameListEditor
-from ..plotting import plot_selection, PlottingError, ParameterTablePlottingHints
+from ...widgets.plot_widget import PlotWidget
+from ...plotting import plot_selection, PlottingError, ParameterTablePlottingHints
 
 
 class ParameterViewMixin:

@@ -1009,7 +1009,7 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset resource="resources/resources_icons.qrc">
+    <iconset resource="../../ui/resources/resources_icons.qrc">
      <normaloff>:/icons/menu_icons/check.svg</normaloff>:/icons/menu_icons/check.svg</iconset>
    </property>
    <property name="text">
@@ -1024,7 +1024,7 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset resource="resources/resources_icons.qrc">
+    <iconset resource="../../ui/resources/resources_icons.qrc">
      <normaloff>:/icons/menu_icons/undo.svg</normaloff>:/icons/menu_icons/undo.svg</iconset>
    </property>
    <property name="text">
@@ -1036,7 +1036,7 @@
   </action>
   <action name="actionClose">
    <property name="icon">
-    <iconset resource="resources/resources_icons.qrc">
+    <iconset resource="../../ui/resources/resources_icons.qrc">
      <normaloff>:/icons/menu_icons/window-close.svg</normaloff>:/icons/menu_icons/window-close.svg</iconset>
    </property>
    <property name="text">
@@ -1048,7 +1048,7 @@
   </action>
   <action name="actionAdd_object_classes">
    <property name="icon">
-    <iconset resource="resources/resources_icons.qrc">
+    <iconset resource="../../ui/resources/resources_icons.qrc">
      <normaloff>:/icons/menu_icons/cube_plus.svg</normaloff>:/icons/menu_icons/cube_plus.svg</iconset>
    </property>
    <property name="text">
@@ -1060,7 +1060,7 @@
   </action>
   <action name="actionAdd_objects">
    <property name="icon">
-    <iconset resource="resources/resources_icons.qrc">
+    <iconset resource="../../ui/resources/resources_icons.qrc">
      <normaloff>:/icons/menu_icons/cube_plus.svg</normaloff>:/icons/menu_icons/cube_plus.svg</iconset>
    </property>
    <property name="text">
@@ -1072,7 +1072,7 @@
   </action>
   <action name="actionAdd_relationship_classes">
    <property name="icon">
-    <iconset resource="resources/resources_icons.qrc">
+    <iconset resource="../../ui/resources/resources_icons.qrc">
      <normaloff>:/icons/menu_icons/cubes_plus.svg</normaloff>:/icons/menu_icons/cubes_plus.svg</iconset>
    </property>
    <property name="text">
@@ -1084,7 +1084,7 @@
   </action>
   <action name="actionAdd_relationships">
    <property name="icon">
-    <iconset resource="resources/resources_icons.qrc">
+    <iconset resource="../../ui/resources/resources_icons.qrc">
      <normaloff>:/icons/menu_icons/cubes_plus.svg</normaloff>:/icons/menu_icons/cubes_plus.svg</iconset>
    </property>
    <property name="text">
@@ -1096,7 +1096,7 @@
   </action>
   <action name="actionImport">
    <property name="icon">
-    <iconset resource="resources/resources_icons.qrc">
+    <iconset resource="../../ui/resources/resources_icons.qrc">
      <normaloff>:/icons/project_item_icons/database-import.svg</normaloff>:/icons/project_item_icons/database-import.svg</iconset>
    </property>
    <property name="text">
@@ -1111,7 +1111,7 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset resource="resources/resources_icons.qrc">
+    <iconset resource="../../ui/resources/resources_icons.qrc">
      <normaloff>:/icons/project_item_icons/database-export.svg</normaloff>:/icons/project_item_icons/database-export.svg</iconset>
    </property>
    <property name="text">
@@ -1126,7 +1126,7 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset resource="resources/resources_icons.qrc">
+    <iconset resource="../../ui/resources/resources_icons.qrc">
      <normaloff>:/icons/menu_icons/copy.svg</normaloff>:/icons/menu_icons/copy.svg</iconset>
    </property>
    <property name="text">
@@ -1141,7 +1141,7 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset resource="resources/resources_icons.qrc">
+    <iconset resource="../../ui/resources/resources_icons.qrc">
      <normaloff>:/icons/menu_icons/paste.svg</normaloff>:/icons/menu_icons/paste.svg</iconset>
    </property>
    <property name="text">
@@ -1153,7 +1153,7 @@
   </action>
   <action name="actionRefresh">
    <property name="icon">
-    <iconset resource="resources/resources_icons.qrc">
+    <iconset resource="../../ui/resources/resources_icons.qrc">
      <normaloff>:/icons/menu_icons/sync.svg</normaloff>:/icons/menu_icons/sync.svg</iconset>
    </property>
    <property name="text">
@@ -1168,7 +1168,7 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset resource="resources/resources_icons.qrc">
+    <iconset resource="../../ui/resources/resources_icons.qrc">
      <normaloff>:/icons/menu_icons/cube_pen.svg</normaloff>:/icons/menu_icons/cube_pen.svg</iconset>
    </property>
    <property name="text">
@@ -1180,7 +1180,7 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset resource="resources/resources_icons.qrc">
+    <iconset resource="../../ui/resources/resources_icons.qrc">
      <normaloff>:/icons/menu_icons/cubes_pen.svg</normaloff>:/icons/menu_icons/cubes_pen.svg</iconset>
    </property>
    <property name="text">
@@ -1192,7 +1192,7 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset resource="resources/resources_icons.qrc">
+    <iconset resource="../../ui/resources/resources_icons.qrc">
      <normaloff>:/icons/menu_icons/cube_pen.svg</normaloff>:/icons/menu_icons/cube_pen.svg</iconset>
    </property>
    <property name="text">
@@ -1204,7 +1204,7 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset resource="resources/resources_icons.qrc">
+    <iconset resource="../../ui/resources/resources_icons.qrc">
      <normaloff>:/icons/menu_icons/cubes_pen.svg</normaloff>:/icons/menu_icons/cubes_pen.svg</iconset>
    </property>
    <property name="text">
@@ -1254,7 +1254,7 @@
   </action>
   <action name="actionTree_style">
    <property name="icon">
-    <iconset resource="resources/resources_icons.qrc">
+    <iconset resource="../../ui/resources/resources_icons.qrc">
      <normaloff>:/symbols/menu_icons/tree.svg</normaloff>:/symbols/menu_icons/tree.svg</iconset>
    </property>
    <property name="text">
@@ -1263,7 +1263,7 @@
   </action>
   <action name="actionGraph_style">
    <property name="icon">
-    <iconset resource="resources/resources_icons.qrc">
+    <iconset resource="../../ui/resources/resources_icons.qrc">
      <normaloff>:/icons/project-diagram.svg</normaloff>:/icons/project-diagram.svg</iconset>
    </property>
    <property name="text">
@@ -1272,7 +1272,7 @@
   </action>
   <action name="actionTabular_style">
    <property name="icon">
-    <iconset resource="resources/resources_icons.qrc">
+    <iconset resource="../../ui/resources/resources_icons.qrc">
      <normaloff>:/symbols/menu_icons/table.svg</normaloff>:/symbols/menu_icons/table.svg</iconset>
    </property>
    <property name="text">
@@ -1326,7 +1326,7 @@
   </action>
   <action name="actionMapping_import">
    <property name="icon">
-    <iconset resource="resources/resources_icons.qrc">
+    <iconset resource="../../ui/resources/resources_icons.qrc">
      <normaloff>:/icons/project_item_icons/database-import.svg</normaloff>:/icons/project_item_icons/database-import.svg</iconset>
    </property>
    <property name="text">
@@ -1338,7 +1338,7 @@
   </action>
   <action name="actionExport_session">
    <property name="icon">
-    <iconset resource="resources/resources_icons.qrc">
+    <iconset resource="../../ui/resources/resources_icons.qrc">
      <normaloff>:/icons/project_item_icons/database-export.svg</normaloff>:/icons/project_item_icons/database-export.svg</iconset>
    </property>
    <property name="text">
@@ -1378,7 +1378,7 @@
   <customwidget>
    <class>FrozenTableView</class>
    <extends>QTableView</extends>
-   <header>spinetoolbox/widgets/frozen_table_view.h</header>
+   <header>spinetoolbox/data_store_form/widgets/custom_qtableview.h</header>
   </customwidget>
   <customwidget>
    <class>StickySelectionEntityTreeView</class>
@@ -1388,7 +1388,7 @@
   <customwidget>
    <class>PivotTableView</class>
    <extends>QTableView</extends>
-   <header>spinetoolbox/widgets/custom_qtableview.h</header>
+   <header>spinetoolbox/data_store_form/widgets/custom_qtableview.h</header>
   </customwidget>
  </customwidgets>
  <tabstops>
@@ -1399,7 +1399,7 @@
   <tabstop>treeView_parameter_value_list</tabstop>
  </tabstops>
  <resources>
-  <include location="resources/resources_icons.qrc"/>
+  <include location="../../ui/resources/resources_icons.qrc"/>
  </resources>
  <connections/>
 </ui>

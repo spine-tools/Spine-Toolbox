@@ -449,21 +449,3 @@ class IconColorEditor(QDialog):
         icon_code = self.icon_list.currentIndex().data(Qt.UserRole)
         color_code = self.color_dialog.currentColor().rgb()
         return make_icon_id(icon_code, color_code)
-
-
-class NumberParameterInlineEditor(QDoubleSpinBox):
-    """
-    An editor widget for numeric (datatype double) parameter values.
-    """
-
-    def __init__(self, parent):
-        super().__init__(parent)
-        self.setRange(-sys.float_info.max, sys.float_info.max)
-        self.setDecimals(sys.float_info.mant_dig)
-
-    def set_data(self, data):
-        if data is not None:
-            self.setValue(float(data))
-
-    def data(self):
-        return self.value()

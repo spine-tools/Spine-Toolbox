@@ -6,7 +6,7 @@ from PySide2.QtCore import Slot, Qt, QSettings
 import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
 from spinetoolbox.logger_interface import LoggerInterface
 from spinetoolbox.spine_db_manager import SpineDBManager
-from spinetoolbox.widgets.data_store_widget import DataStoreForm
+from spinetoolbox.data_store_form.widgets.data_store_form import DataStoreForm
 from spinetoolbox.helpers import pyside2_version_check
 from spinetoolbox.spinedb_api_version_check import spinedb_api_version_check
 

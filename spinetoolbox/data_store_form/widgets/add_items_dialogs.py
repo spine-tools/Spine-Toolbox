@@ -19,20 +19,15 @@ Classes for custom QDialogs to add items to databases.
 from PySide2.QtWidgets import QHBoxLayout, QWidget, QLabel, QComboBox, QSpinBox, QToolButton
 from PySide2.QtCore import Slot, Qt
 from PySide2.QtGui import QIcon
-from ..mvcmodels.empty_row_model import EmptyRowModel
+from ...mvcmodels.empty_row_model import EmptyRowModel
 from .custom_delegates import (
     ManageObjectClassesDelegate,
     ManageObjectsDelegate,
     ManageRelationshipClassesDelegate,
     ManageRelationshipsDelegate,
 )
-from .data_store_manage_items_dialog import (
-    ShowIconColorEditorMixin,
-    GetObjectClassesMixin,
-    GetObjectsMixin,
-    ManageItemsDialog,
-)
-from ..helpers import default_icon_id
+from .manage_items_dialog import ShowIconColorEditorMixin, GetObjectClassesMixin, GetObjectsMixin, ManageItemsDialog
+from ...helpers import default_icon_id
 
 
 class AddItemsDialog(ManageItemsDialog):

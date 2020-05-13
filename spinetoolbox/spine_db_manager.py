@@ -52,7 +52,7 @@ from .spine_db_commands import (
     SetParameterDefinitionTagsCommand,
     RemoveItemsCommand,
 )
-from .widgets.data_store_manage_items_dialog import CommitDialog
+from .widgets.commit_dialog import CommitDialog
 from .mvcmodels.shared import PARSED_ROLE
 
 
