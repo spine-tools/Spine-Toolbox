@@ -10,36 +10,8 @@
 ######################################################################################################################
 
 """
-Contains ImportErrorWidget class.
+Unit tests for Import editor.
 
-:author: P. Vennström (VTT)
-:date:   1.6.2019
+:author: A. Soininen (VTT)
+:date:   13.5.2020
 """
-
-from PySide2.QtWidgets import QWidget
-
-
-class ImportErrorWidget(QWidget):
-    """Widget to display errors while importing and ask user for action."""
-
-    def __init__(self, parent=None):
-        from ..ui.import_errors import Ui_ImportErrors  # pylint: disable=import-outside-toplevel
-
-        super().__init__(parent)
-
-        # state
-        self._error_list = []
-
-        # ui
-        self._ui = Ui_ImportErrors()
-        self._ui.setupUi(self)
-
-    def set_import_state(self, errors):
-        """Sets state of error widget.
-
-        Arguments:
-            errors {list} -- list of errors.
-        """
-        self._ui.error_count_label.setText(f"Number of errors: {len(errors)}")
-        self._ui.error_list.clear()
-        self._ui.error_list.addItems(errors)

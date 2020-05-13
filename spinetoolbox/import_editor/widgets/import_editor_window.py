@@ -13,19 +13,19 @@
 Contains ImportPreviewWindow class.
 
 :authors: P. Savolainen (VTT), A. Soininen (VTT), P. Vennström (VTT)
-:date:   10.6.2019
+:date:    10.6.2019
 """
 
 import json
 from PySide2.QtCore import Qt, Signal
 from PySide2.QtGui import QGuiApplication
 from PySide2.QtWidgets import QMainWindow, QDialogButtonBox, QSplitter, QFileDialog
-from ..helpers import ensure_window_is_on_screen
-from ..spine_io.connection_manager import ConnectionManager
-from .import_preview_widget import ImportPreviewWidget
+from ...helpers import ensure_window_is_on_screen
+from ...spine_io.connection_manager import ConnectionManager
+from .import_editor import ImportEditor
 
 
-class ImportPreviewWindow(QMainWindow):
+class ImportEditorWindow(QMainWindow):
     """A QMainWindow to let users define Mappings for an Importer item.
 
     Args:
@@ -40,7 +40,7 @@ class ImportPreviewWindow(QMainWindow):
     connection_failed = Signal(str)
 
     def __init__(self, importer, filepath, connector, connector_settings, settings, toolbox):
-        from ..ui.import_preview_window import Ui_MainWindow  # pylint: disable=import-outside-toplevel
+        from ..ui.import_editor_window import Ui_MainWindow  # pylint: disable=import-outside-toplevel
 
         super().__init__(parent=toolbox, flags=Qt.Window)
         self._importer = importer
@@ -52,7 +52,7 @@ class ImportPreviewWindow(QMainWindow):
         self._ui.setupUi(self)
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setWindowTitle("Import Editor    -- {} --".format(importer.name))
-        self._preview_widget = ImportPreviewWidget(self._connection_manager, parent=self)
+        self._preview_widget = ImportEditor(self._connection_manager, parent=self)
         self._preview_widget.use_settings(settings)
         self._ui.centralwidget.layout().insertWidget(0, self._preview_widget)
         self.settings_group = "mappingPreviewWindow"

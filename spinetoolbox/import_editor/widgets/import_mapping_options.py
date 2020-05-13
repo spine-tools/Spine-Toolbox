@@ -10,122 +10,18 @@
 ######################################################################################################################
 
 """
-MappingWidget and MappingOptionsWidget class.
+ImportMappingOptions widget.
 
 :author: P. Vennström (VTT)
-:date:   1.6.2019
+:date:   12.5.2020
 """
-
+from PySide2.QtCore import Qt
 from PySide2.QtWidgets import QWidget
-from PySide2.QtCore import Qt, Signal
 from spinedb_api import RelationshipClassMapping, ParameterTimeSeriesMapping
-from .custom_menus import SimpleFilterMenu
-from .custom_delegates import ComboBoxDelegate
-from ..spine_io.io_models import MappingSpecModel
-
-MAPPING_CHOICES = ("Constant", "Column", "Row", "Column Header", "Headers", "Table Name", "None")
+from ...widgets.custom_menus import SimpleFilterMenu
 
 
-class MappingWidget(QWidget):
-    """
-    A widget for managing Mappings (add, remove, edit, visualize, and so on).
-    Intended to be embedded in a ImportPreviewWidget.
-    """
-
-    mappingChanged = Signal(MappingSpecModel)
-    mappingDataChanged = Signal()
-
-    def __init__(self, parent=None):
-        from ..ui.import_mapping import Ui_ImportMapping  # pylint: disable=import-outside-toplevel
-
-        super().__init__(parent)
-
-        # state
-        self._model = None
-
-        # initialize interface
-        self._ui = Ui_ImportMapping()
-        self._ui.setupUi(self)
-        self._ui_options = MappingOptionsWidget()
-        self._ui.bottom_layout.insertWidget(0, self._ui_options)
-        self._ui.table_view.setItemDelegateForColumn(1, ComboBoxDelegate(self, MAPPING_CHOICES))
-        for i in range(self._ui.mapping_splitter.count()):
-            self._ui.mapping_splitter.setCollapsible(i, False)
-
-        # connect signals
-        self._select_handle = None
-        self._ui.new_button.clicked.connect(self.new_mapping)
-        self._ui.remove_button.clicked.connect(self.delete_selected_mapping)
-        self.mappingChanged.connect(self._ui.table_view.setModel)
-        self.mappingChanged.connect(self._ui_options.set_model)
-
-    def set_data_source_column_num(self, num):
-        self._ui_options.set_num_available_columns(num)
-
-    def set_model(self, model):
-        """
-        Sets new model
-        """
-        if self._select_handle and self._ui.list_view.selectionModel():
-            self._ui.list_view.selectionModel().selectionChanged.disconnect(self.select_mapping)
-            self._select_handle = None
-        if self._model:
-            self._model.dataChanged.disconnect(self.data_changed)
-        self._model = model
-        self._ui.list_view.setModel(model)
-        self._select_handle = self._ui.list_view.selectionModel().selectionChanged.connect(self.select_mapping)
-        self._model.dataChanged.connect(self.data_changed)
-        if self._model.rowCount() > 0:
-            self._ui.list_view.setCurrentIndex(self._model.index(0, 0))
-        else:
-            self._ui.list_view.clearSelection()
-
-    def data_changed(self):
-        m = None
-        indexes = self._ui.list_view.selectedIndexes()
-        if self._model and indexes:
-            m = self._model.data_mapping(indexes()[0])
-        self.mappingDataChanged.emit(m)
-
-    def new_mapping(self):
-        """
-        Adds new empty mapping
-        """
-        if self._model:
-            self._model.add_mapping()
-            if not self._ui.list_view.selectedIndexes():
-                # if no item is selected, select the first item
-                self._ui.list_view.setCurrentIndex(self._model.index(0, 0))
-
-    def delete_selected_mapping(self):
-        """
-        deletes selected mapping
-        """
-        if self._model is not None:
-            # get selected mapping in list
-            indexes = self._ui.list_view.selectedIndexes()
-            if indexes:
-                self._model.remove_mapping(indexes[0].row())
-                if self._model.rowCount() > 0:
-                    # select the first item
-                    self._ui.list_view.setCurrentIndex(self._model.index(0, 0))
-                    self.select_mapping(self._ui.list_view.selectionModel().selection())
-                else:
-                    # no items clear selection so select_mapping is called
-                    self._ui.list_view.clearSelection()
-
-    def select_mapping(self, selection):
-        """
-        gets selected mapping and emits mappingChanged
-        """
-        if selection.indexes():
-            m = self._model.data_mapping(selection.indexes()[0])
-        else:
-            m = None
-        self.mappingChanged.emit(m)
-
-
-class MappingOptionsWidget(QWidget):
+class ImportMappingOptions(QWidget):
     """
     A widget for managing Mapping options (class type, dimensions, parameter type, ignore columns, and so on).
     Intended to be embedded in a MappingWidget.

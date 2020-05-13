@@ -21,6 +21,7 @@ from spinetoolbox.project_commands import SpineToolboxCommand
 
 class UpdateSettingsCommand(SpineToolboxCommand):
     """Command to update Importer settings."""
+
     def __init__(self, importer, settings, label):
         """
         Args:
@@ -44,6 +45,7 @@ class UpdateSettingsCommand(SpineToolboxCommand):
 
 class UpdateCancelOnErrorCommand(SpineToolboxCommand):
     """Command to update Importer cancel on error setting."""
+
     def __init__(self, importer, cancel_on_error):
         """
         Args:
@@ -65,6 +67,7 @@ class UpdateCancelOnErrorCommand(SpineToolboxCommand):
 
 class ChangeItemSelectionCommand(SpineToolboxCommand):
     """Command to change file item's selection status."""
+
     def __init__(self, importer, selected, label):
         """
         Args:

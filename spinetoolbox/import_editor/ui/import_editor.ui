@@ -12,8 +12,8 @@
 ######################################################################################################################
 -->
 <ui version="4.0">
- <class>ImportPreview</class>
- <widget class="QWidget" name="ImportPreview">
+ <class>ImportEditor</class>
+ <widget class="QWidget" name="ImportEditor">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -53,7 +53,7 @@
          </widget>
          <widget class="QStackedWidget" name="source_preview_widget_stack">
           <property name="currentIndex">
-           <number>1</number>
+           <number>0</number>
           </property>
           <widget class="QWidget" name="table_page">
            <layout class="QVBoxLayout" name="verticalLayout_2">
@@ -112,6 +112,11 @@
       <property name="title">
        <string>Mappings</string>
       </property>
+      <layout class="QVBoxLayout" name="verticalLayout_5">
+       <item>
+        <widget class="ImportMappings" name="mapper" native="true"/>
+       </item>
+      </layout>
      </widget>
     </widget>
    </item>
@@ -121,7 +126,13 @@
   <customwidget>
    <class>TableViewWithButtonHeader</class>
    <extends>QTableView</extends>
-   <header>spinetoolbox/spine_io/io_models.h</header>
+   <header>spinetoolbox/widgets/table_view_with_button_header.h</header>
+  </customwidget>
+  <customwidget>
+   <class>ImportMappings</class>
+   <extends>QWidget</extends>
+   <header>spinetoolbox/import_editor/widgets/import_mappings.h</header>
+   <container>1</container>
   </customwidget>
  </customwidgets>
  <resources/>

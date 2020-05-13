@@ -186,6 +186,12 @@ class Importer(ProjectItem):
     def _handle_import_editor_clicked(self, checked=False):
         """Opens Import editor for the file selected in list view."""
         index = self._properties_ui.treeView_files.currentIndex()
+        if not index.isValid():
+            for row, item in enumerate(self._file_model.files):
+                if item.exists():
+                    index = self._file_model.index(row, 0)
+                    self._properties_ui.treeView_files.setCurrentIndex(index)
+                    break
         self.open_import_editor(index)
 
     @Slot("QModelIndex")
@@ -233,7 +239,7 @@ class Importer(ProjectItem):
                 return
         self._logger.msg.emit(f"Opening Import editor for file: {file_path}")
         connector_settings = {"gams_directory": self._gams_system_directory()}
-        preview_widget = self._preview_widget[label] = ImportPreviewWindow(
+        preview_widget = self._preview_widget[label] = ImportEditorWindow(
             self, file_path, connector, connector_settings, settings, self._toolbox
         )
         preview_widget.settings_updated.connect(lambda s, importee=label: self.save_settings(s, importee))
@@ -270,7 +276,7 @@ class Importer(ProjectItem):
             row = connector_list.index(JSONConnector)
         else:
             row = None
-        if row:
+        if row is not None:
             connector_list_wg.setCurrentRow(row)
         button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         button_box.button(QDialogButtonBox.Ok).clicked.connect(dialog.accept)

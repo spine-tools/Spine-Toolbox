@@ -60,7 +60,7 @@ from ..helpers import (
     get_open_file_name_in_last_dir,
     format_string_list,
 )
-from .import_widget import ImportDialog
+from .data_store_import_dialog import ImportDialog
 from .parameter_value_editor import ParameterValueEditor
 from ..spine_io.exporters.excel import export_spine_database_to_xlsx
 from ..spine_io.importers.excel_reader import get_mapped_data_from_xlsx
