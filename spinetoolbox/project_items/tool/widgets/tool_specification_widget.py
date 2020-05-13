@@ -20,11 +20,11 @@ is filled with all the information from the specification being edited.
 
 import os
 import json
-from PySide2.QtGui import QDesktopServices, QStandardItemModel, QStandardItem
+from PySide2.QtGui import QStandardItemModel, QStandardItem
 from PySide2.QtWidgets import QWidget, QStatusBar, QInputDialog, QFileDialog, QFileIconProvider, QMessageBox, QMenu
-from PySide2.QtCore import Slot, Qt, QUrl, QFileInfo
+from PySide2.QtCore import Slot, Qt, QFileInfo
 from spinetoolbox.config import STATUSBAR_SS, TREEVIEW_HEADER_SS
-from spinetoolbox.helpers import busy_effect
+from spinetoolbox.helpers import busy_effect, open_url
 from ..item_info import ItemInfo
 from ..tool_specifications import CmdlineTag, TOOL_TYPES, REQUIRED_KEYS, CMDLINE_TAG_EDGE, ToolSpecification
 from .custom_menus import AddIncludesPopupMenu, CreateMainProgramPopupMenu
@@ -327,7 +327,7 @@ class ToolSpecificationWidget(QWidget):
             return
         url = "file:///" + os.path.join(self.program_path, includes_file)
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-        res = QDesktopServices.openUrl(QUrl(url, QUrl.TolerantMode))
+        res = open_url(url)
         if not res:
             self._toolbox.msg_error.emit("Failed to open file: <b>{0}</b>".format(includes_file))
 

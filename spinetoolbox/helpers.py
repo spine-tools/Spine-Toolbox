@@ -25,7 +25,7 @@ import os
 import shutil
 import sys
 import urllib.parse
-from PySide2.QtCore import Qt, Slot, QFile, QIODevice, QSize, QRect, QPoint
+from PySide2.QtCore import Qt, Slot, QFile, QIODevice, QSize, QRect, QPoint, QUrl
 from PySide2.QtCore import __version__ as qt_version
 from PySide2.QtCore import __version_info__ as qt_version_info
 from PySide2.QtWidgets import QApplication, QMessageBox, QGraphicsScene, QFileIconProvider, QStyle, QFileDialog
@@ -40,6 +40,7 @@ from PySide2.QtGui import (
     QFont,
     QStandardItemModel,
     QStandardItem,
+    QDesktopServices,
 )
 import spine_engine
 from .config import REQUIRED_SPINE_ENGINE_VERSION
@@ -55,7 +56,7 @@ def set_taskbar_icon():
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
 
 
-@Slot(name="supported_img_formats")
+@Slot()
 def supported_img_formats():
     """Function to check if reading .ico files is supported."""
     img_formats = QImageReader().supportedImageFormats()
@@ -803,3 +804,7 @@ def try_number_from_string(text):
             return text
     except TypeError:
         return None
+
+
+def open_url(url):
+    return QDesktopServices.openUrl(QUrl(url, QUrl.TolerantMode))

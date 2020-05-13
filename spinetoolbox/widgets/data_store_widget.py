@@ -19,9 +19,8 @@ Contains the DataStoreForm class.
 import os
 import time  # just to measure loading time and sqlalchemy ORM performance
 import json
-import pathlib
 from PySide2.QtWidgets import QMainWindow, QErrorMessage, QDockWidget, QInputDialog
-from PySide2.QtCore import Qt, Signal, Slot
+from PySide2.QtCore import Qt, Signal, Slot, QPoint
 from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QIcon
 from sqlalchemy.engine.url import URL, make_url
 from spinedb_api import (
@@ -37,6 +36,7 @@ from ..config import MAINWINDOW_SS, APPLICATION_PATH
 from .data_store_edit_items_dialogs import ManageParameterTagsDialog
 from .data_store_manage_items_dialog import MassRemoveItemsDialog, GetItemsForExportDialog
 from .custom_menus import ParameterValueListContextMenu
+from .custom_qwidgets import OpenFileButton, OpenSQLiteFileButton, ClearableStatusBar, ShootingLabel
 from .data_store_parameter_view_mixin import ParameterViewMixin
 from .data_store_tree_view_mixin import TreeViewMixin
 from .data_store_graph_view_mixin import GraphViewMixin
@@ -89,6 +89,8 @@ class DataStoreFormBase(QMainWindow):
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
         self.takeCentralWidget()
+        self.status_bar = ClearableStatusBar(self)
+        self.setStatusBar(self.status_bar)
         self.setWindowIcon(QIcon(":/symbols/app.ico"))
         self.setStyleSheet(MAINWINDOW_SS)
         self.setAttribute(Qt.WA_DeleteOnClose)
@@ -450,24 +452,10 @@ class DataStoreFormBase(QMainWindow):
         except SpineDBAPIError:
             self.msg_error.emit(f"[SpineDBAPIError] Unable to export file <b>{db_map.codename}</b>")
         else:
-            url = str(URL("sqlite", database=file_path))
-            open_url = f"open;;{url}"
-            add_to_project_url = f"add_to_project;;{url}"
-            addendum = f"<p><a style='color:#223344;' href='{add_to_project_url}'>Add to project</a></p>"
-            self._emit_file_successfully_exported(open_url, open_link=self._open_sqlite_action_url, addendum=addendum)
+            self._drop_open_sqlite_file_button(file_path)
 
-    @Slot(str)
-    def _open_sqlite_action_url(self, action_url):
-        """Opens sqlite url or adds it to project."""
-        action, url = action_url.split(";;")
-        if action == "open":
-            self._open_sqlite_url(url)
-        elif action == "add_to_project":
-            self._add_sqlite_url_to_project(url)
-
-    def _open_sqlite_url(self, url):
+    def _open_sqlite_url(self, url, codename):
         """Opens sqlite url."""
-        codename = os.path.splitext(os.path.basename(url))[0]
         try:
             ds_view = DataStoreForm(self.db_mngr, (url, codename))
         except SpineDBAPIError as e:
@@ -527,7 +515,7 @@ class DataStoreFormBase(QMainWindow):
         )
         with open(file_path, 'w', encoding='utf-8') as f:
             f.write(json_data)
-        self._emit_file_successfully_exported(pathlib.Path(file_path).as_uri())
+        self._drop_open_file_button(file_path)
 
     @busy_effect
     def export_to_excel(self, file_path, data_for_export):
@@ -546,12 +534,24 @@ class DataStoreFormBase(QMainWindow):
         except OSError:
             self.msg_error.emit(f"[OSError] Unable to export file <b>{file_name}</b>.")
         else:
-            self._emit_file_successfully_exported(pathlib.Path(file_path).as_uri())
+            self._drop_open_file_button(file_path)
 
-    def _emit_file_successfully_exported(self, url, open_link=None, addendum=""):
-        file_name = os.path.basename(url)
-        anchor = f"<p><a style='color:#223344;' title='{file_name}' href='{url}'>Open</a></p>"
-        self.link_msg.emit(f"File <i>{file_name}</i> successfully exported. {anchor} {addendum}", open_link)
+    def _drop_open_file_button(self, file_path):
+        button = OpenFileButton(file_path, self)
+        self._drop_button_to_status_bar(button)
+
+    def _drop_open_sqlite_file_button(self, file_path):
+        button = OpenSQLiteFileButton(file_path, self)
+        self._drop_button_to_status_bar(button)
+
+    def _drop_button_to_status_bar(self, button):
+        self.status_bar.insertWidget(0, button)
+        self.status_bar.show()
+        destination = QPoint(16, 0) + self.status_bar.mapToParent(QPoint(0, 0))
+        label = ShootingLabel(destination - QPoint(0, 64), destination, self)
+        pixmap = QIcon(":/icons/file-download.svg").pixmap(32, 32)
+        label.setPixmap(pixmap)
+        label.show()
 
     def reload_session(self, db_maps):
         """Reloads data from given db_maps."""

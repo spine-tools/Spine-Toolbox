@@ -17,9 +17,8 @@ Contains base classes for project items and item factories.
 
 import os
 import logging
-from PySide2.QtCore import QUrl, Signal
-from PySide2.QtGui import QDesktopServices
-from .helpers import create_dir, rename_dir
+from PySide2.QtCore import Signal
+from .helpers import create_dir, rename_dir, open_url
 from .metaobject import MetaObject, shorten
 from .project_commands import SetItemSpecificationCommand
 
@@ -299,7 +298,7 @@ class ProjectItem(MetaObject):
         """Open this item's data directory in file explorer."""
         url = "file:///" + self.data_dir
         # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
-        res = QDesktopServices.openUrl(QUrl(url, QUrl.TolerantMode))
+        res = open_url(url)
         if not res:
             self._logger.msg_error.emit(f"Failed to open directory: {self.data_dir}")
 
