@@ -34,7 +34,7 @@ from spinedb_api import (
 )
 from ...config import MAINWINDOW_SS, APPLICATION_PATH
 from .edit_or_remove_items_dialogs import ManageParameterTagsDialog
-from .manage_items_dialog import MassRemoveItemsDialog, GetItemsForExportDialog
+from .select_db_items_dialogs import MassRemoveItemsDialog, GetItemsForExportDialog
 from .custom_menus import ParameterValueListContextMenu
 from .custom_qwidgets import OpenFileButton, OpenSQLiteFileButton, ClearableStatusBar, ShootingLabel
 from .parameter_view_mixin import ParameterViewMixin
