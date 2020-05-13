@@ -13,7 +13,7 @@
 # Form implementation generated from reading ui file '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/data_store_view.ui',
 # licensing of '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/data_store_view.ui' applies.
 #
-# Created: Sun May 10 19:20:02 2020
+# Created: Tue May 12 20:35:07 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -527,6 +527,9 @@ class Ui_MainWindow(object):
         self.actionMapping_import = QtWidgets.QAction(MainWindow)
         self.actionMapping_import.setIcon(icon5)
         self.actionMapping_import.setObjectName("actionMapping_import")
+        self.actionExport_session = QtWidgets.QAction(MainWindow)
+        self.actionExport_session.setIcon(icon6)
+        self.actionExport_session.setObjectName("actionExport_session")
         self.menuSession.addAction(self.actionRefresh)
         self.menuSession.addAction(self.actionCommit)
         self.menuSession.addAction(self.actionRollback)
@@ -554,6 +557,7 @@ class Ui_MainWindow(object):
         self.menuFile.addAction(self.actionImport)
         self.menuFile.addAction(self.actionMapping_import)
         self.menuFile.addAction(self.actionExport)
+        self.menuFile.addAction(self.actionExport_session)
         self.menuFile.addSeparator()
         self.menuFile.addAction(self.actionClose)
         self.menuView.addSeparator()
@@ -667,10 +671,12 @@ class Ui_MainWindow(object):
         self.actionLoadTemplate.setText(QtWidgets.QApplication.translate("MainWindow", "Load template...", None, -1))
         self.actionMapping_import.setText(QtWidgets.QApplication.translate("MainWindow", "Mapping import...", None, -1))
         self.actionMapping_import.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Import data from file into current urls by defining a mapping</p></body></html>", None, -1))
+        self.actionExport_session.setText(QtWidgets.QApplication.translate("MainWindow", "Export session...", None, -1))
+        self.actionExport_session.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Export items added and updated in the current session (since last commit) into a file</p></body></html>", None, -1))
 
-from spinetoolbox.widgets.custom_qlistview import DragListView
-from spinetoolbox.widgets.frozen_table_view import FrozenTableView
 from spinetoolbox.widgets.custom_qgraphicsviews import GraphQGraphicsView
 from spinetoolbox.widgets.custom_qtreeview import StickySelectionEntityTreeView, CopyTreeView, EntityTreeView
 from spinetoolbox.widgets.custom_qtableview import PivotTableView, AutoFilterCopyPasteTableView
+from spinetoolbox.widgets.custom_qlistview import DragListView
+from spinetoolbox.widgets.frozen_table_view import FrozenTableView
 from spinetoolbox import resources_icons_rc

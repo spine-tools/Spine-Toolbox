@@ -43,6 +43,9 @@ class SpineDBParcel:
     def data(self):
         return self._data
 
+    def _get_fields(self, db_map, item_type, field, ids):
+        return {x for x in (self.db_mngr.get_item(db_map, item_type, id_).get(field) for id_ in ids) if x}
+
     def _push_object_class_ids(self, db_map_ids):
         """Pushes object class ids."""
         for db_map, ids in db_map_ids.items():
@@ -56,9 +59,8 @@ class SpineDBParcel:
             {
                 db_map: {
                     int(obj_cls_id)
-                    for rel_cls in (self.db_mngr.get_item(db_map, "relationship class", id_) for id_ in ids)
-                    if rel_cls
-                    for obj_cls_id in rel_cls.get("object_class_id_list", "").split(",")
+                    for obj_cls_id_list in self._get_fields(db_map, "relationship class", "object_class_id_list", ids)
+                    for obj_cls_id in obj_cls_id_list.split(",")
                 }
                 for db_map, ids in db_map_ids.items()
             }
@@ -69,12 +71,7 @@ class SpineDBParcel:
         for db_map, ids in db_map_ids.items():
             self._data.setdefault(db_map, {}).setdefault("object_ids", set()).update(ids)
         self._push_object_class_ids(
-            {
-                db_map: {
-                    obj["class_id"] for obj in (self.db_mngr.get_item(db_map, "object", id_) for id_ in ids) if obj
-                }
-                for db_map, ids in db_map_ids.items()
-            }
+            {db_map: self._get_fields(db_map, "object", "class_id", ids) for db_map, ids in db_map_ids.items()}
         )
 
     def _push_relationship_ids(self, db_map_ids):
@@ -85,9 +82,8 @@ class SpineDBParcel:
             {
                 db_map: {
                     int(obj_id)
-                    for rel in (self.db_mngr.get_item(db_map, "relationship", id_) for id_ in ids)
-                    if rel
-                    for obj_id in rel.get("object_id_list", "").split(",")
+                    for obj_id_list in self._get_fields(db_map, "relationship", "object_id_list", ids)
+                    for obj_id in obj_id_list.split(",")
                 }
                 for db_map, ids in db_map_ids.items()
             }
@@ -104,33 +100,21 @@ class SpineDBParcel:
             self._data.setdefault(db_map, {}).setdefault(entity_type + "_parameter_ids", set()).update(ids)
         self._push_parameter_value_list_ids(
             {
-                db_map: {
-                    par_def["value_list_id"]
-                    for par_def in (self.db_mngr.get_item(db_map, "parameter definition", id_) for id_ in ids)
-                    if par_def
-                }
+                db_map: self._get_fields(db_map, "parameter definition", "value_list_id", ids)
                 for db_map, ids in db_map_ids.items()
             }
         )
         if entity_type == "object":
             self._push_object_class_ids(
                 {
-                    db_map: {
-                        par_def["object_class_id"]
-                        for par_def in (self.db_mngr.get_item(db_map, "parameter definition", id_) for id_ in ids)
-                        if par_def
-                    }
+                    db_map: self._get_fields(db_map, "parameter definition", "object_class_id", ids)
                     for db_map, ids in db_map_ids.items()
                 }
             )
         elif entity_type == "relationship":
             self._push_relationship_class_ids(
                 {
-                    db_map: {
-                        par_def["relationship_class_id"]
-                        for par_def in (self.db_mngr.get_item(db_map, "parameter definition", id_) for id_ in ids)
-                        if par_def
-                    }
+                    db_map: self._get_fields(db_map, "parameter definition", "relationship_class_id", ids)
                     for db_map, ids in db_map_ids.items()
                 }
             )
@@ -141,11 +125,7 @@ class SpineDBParcel:
             self._data.setdefault(db_map, {}).setdefault(entity_type + "_parameter_value_ids", set()).update(ids)
         self._push_parameter_definition_ids(
             {
-                db_map: {
-                    par_val["parameter_id"]
-                    for par_val in (self.db_mngr.get_item(db_map, "parameter value", id_) for id_ in ids)
-                    if par_val
-                }
+                db_map: self._get_fields(db_map, "parameter value", "parameter_id", ids)
                 for db_map, ids in db_map_ids.items()
             },
             entity_type,
@@ -153,22 +133,14 @@ class SpineDBParcel:
         if entity_type == "object":
             self._push_object_ids(
                 {
-                    db_map: {
-                        par_val["object_id"]
-                        for par_val in (self.db_mngr.get_item(db_map, "parameter value", id_) for id_ in ids)
-                        if par_val
-                    }
+                    db_map: self._get_fields(db_map, "parameter value", "object_id", ids)
                     for db_map, ids in db_map_ids.items()
                 }
             )
         elif entity_type == "relationship":
             self._push_relationship_ids(
                 {
-                    db_map: {
-                        par_val["relationship_id"]
-                        for par_val in (self.db_mngr.get_item(db_map, "parameter value", id_) for id_ in ids)
-                        if par_val
-                    }
+                    db_map: self._get_fields(db_map, "parameter value", "relationship_id", ids)
                     for db_map, ids in db_map_ids.items()
                 }
             )
