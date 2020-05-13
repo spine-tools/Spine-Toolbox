@@ -114,6 +114,7 @@ class SpineDBManager(QObject):
             project (SpineToolboxProject)
         """
         super().__init__(project)
+        self._project = project
         self._general_logger = logger
         self._db_specific_loggers = dict()
         self._db_maps = {}

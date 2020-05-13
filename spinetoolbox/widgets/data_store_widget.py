@@ -20,10 +20,18 @@ import os
 import time  # just to measure loading time and sqlalchemy ORM performance
 import json
 import pathlib
-from PySide2.QtWidgets import QMainWindow, QErrorMessage, QDockWidget, QWidget, QAction, QDialogButtonBox, QHBoxLayout
+from PySide2.QtWidgets import (
+	QMainWindow,
+	QErrorMessage,
+	QDockWidget,
+	QInputDialog,
+	QWidget,
+	QAction,
+	QDialogButtonBox,
+	QHBoxLayout
+)
 from PySide2.QtCore import Qt, Signal, Slot
 from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QIcon
-from sqlalchemy.engine.url import URL
 from spinedb_api import (
     import_data,
     export_data,
@@ -450,11 +458,23 @@ class DataStoreFormBase(QMainWindow):
         except SpineDBAPIError:
             self.msg_error.emit(f"[SpineDBAPIError] Unable to export file <b>{db_map.codename}</b>")
         else:
-            self._emit_file_successfully_exported(
-                str(URL("sqlite", database=file_path)), open_link=self._open_sqlite_file
-            )
+            url = str(URL("sqlite", database=file_path))
+            open_url = f"open;;{url}"
+            add_to_project_url = f"add_to_project;;{url}"
+            addendum = f"<p><a style='color:#223344;' href='{add_to_project_url}'>Add to project</a></p>"
+            self._emit_file_successfully_exported(open_url, open_link=self._open_sqlite_action_url, addendum=addendum)
 
-    def _open_sqlite_file(self, url):
+    @Slot(str)
+    def _open_sqlite_action_url(self, action_url):
+        """Opens sqlite url or adds it to project."""
+        action, url = action_url.split(";;")
+        if action == "open":
+            self._open_sqlite_url(url)
+        elif action == "add_to_project":
+            self._add_sqlite_url_to_project(url)
+
+    def _open_sqlite_url(self, url):
+        """Opens sqlite url."""
         codename = os.path.splitext(os.path.basename(url))[0]
         try:
             ds_view = DataStoreForm(self.db_mngr, (url, codename))
@@ -462,6 +482,37 @@ class DataStoreFormBase(QMainWindow):
             self.error_box.emit(e.msg)
             return
         ds_view.show()
+
+    def _add_sqlite_url_to_project(self, url):
+        """Adds sqlite url to project."""
+        project = self.db_mngr._project
+        if not project:
+            return
+        data_stores = project._project_item_model.items(category_name="Data Stores")
+        other_data_stores = [x.project_item for x in data_stores if x is not self]
+        named_data_stores = {x.name: x for x in other_data_stores}
+        name, ok = QInputDialog.getItem(
+            self,
+            "Add SQLite file to project",
+            "Please select a recipient Data Store from the list,\n"
+            "or type a name to create a new one.\n"
+            "The url of the recipient Data Store will be pointed to the file.",
+            list(named_data_stores),
+        )
+        if not ok:
+            return
+        data_store = named_data_stores.get(name)
+        database = make_url(url).database
+        url_as_dict = {"dialect": "sqlite", "database": database}
+        if not data_store:
+            data_store_dict = {"name": name, "description": "", "x": 0, "y": 0, "url": url_as_dict}
+            project.add_project_items("Data Store", data_store_dict)
+            self.msg.emit(f"Data Store <i>{name}</i> successfully created.")
+            treated = "added"
+        else:
+            treated = "updated"
+            data_store.update_url(**url_as_dict)
+        self.msg.emit(f"Data Store <i>{name}</i> successfully {treated}.")
 
     def export_to_json(self, file_path, data_for_export):
         """Exports given data into JSON file."""
@@ -505,10 +556,10 @@ class DataStoreFormBase(QMainWindow):
         else:
             self._emit_file_successfully_exported(pathlib.Path(file_path).as_uri())
 
-    def _emit_file_successfully_exported(self, url, open_link=None):
+    def _emit_file_successfully_exported(self, url, open_link=None, addendum=""):
         file_name = os.path.basename(url)
-        anchor = f"<p><a style='color:#223344;' title='{file_name}' href='{url}'>{file_name}</a></p>"
-        self.link_msg.emit(f"File {anchor} successfully exported.", open_link)
+        anchor = f"<p><a style='color:#223344;' title='{file_name}' href='{url}'>Open</a></p>"
+        self.link_msg.emit(f"File <i>{file_name}</i> successfully exported. {anchor} {addendum}", open_link)
 
     def reload_session(self, db_maps):
         """Reloads data from given db_maps."""
