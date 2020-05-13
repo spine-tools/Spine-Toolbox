@@ -85,7 +85,7 @@ class ToolSpecificationWidget(QWidget):
         self.inputfiles = list(specification.inputfiles) if specification else list()
         self.inputfiles_opt = list(specification.inputfiles_opt) if specification else list()
         self.outputfiles = list(specification.outputfiles) if specification else list()
-        self.def_file_path = specification.def_file_path if specification else None
+        self.def_file_path = specification.definition_file_path if specification else None
         self.program_path = specification.path if specification else None
         self.definition = dict(item_type=ItemInfo.item_type())
         # Get first item from sourcefiles list as the main program file
