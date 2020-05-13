@@ -674,7 +674,7 @@ class Ui_MainWindow(object):
         self.actionExport_session.setText(QtWidgets.QApplication.translate("MainWindow", "Export session...", None, -1))
         self.actionExport_session.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Export items added and updated in the current session (since last commit) into a file</p></body></html>", None, -1))
 
-rom spinetoolbox.widgets.custom_qgraphicsviews import GraphQGraphicsView
+from spinetoolbox.widgets.custom_qgraphicsviews import GraphQGraphicsView
 from spinetoolbox.widgets.custom_qtreeview import StickySelectionEntityTreeView, CopyTreeView, EntityTreeView
 from spinetoolbox.widgets.custom_qtableview import PivotTableView, AutoFilterCopyPasteTableView
 from spinetoolbox.widgets.custom_qlistview import DragListView

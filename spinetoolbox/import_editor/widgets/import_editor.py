@@ -20,7 +20,7 @@ from copy import deepcopy
 
 from spinedb_api import ObjectClassMapping, dict_to_map, mapping_from_dict
 from PySide2.QtWidgets import QWidget, QMenu, QListWidgetItem, QErrorMessage
-from PySide2.QtCore import Signal, Qt, QItemSelectionModel, QPoint
+from PySide2.QtCore import QItemSelectionModel, QPoint, Qt, Signal, Slot
 from ...widgets.custom_menus import CustomContextMenu
 from ...spine_io.io_models import MappingPreviewModel, MappingListModel
 from ...spine_io.type_conversion import value_to_convert_spec
@@ -77,7 +77,6 @@ class ImportEditor(QWidget):
         self._ui.source_data_table.setContextMenuPolicy(Qt.CustomContextMenu)
         self._ui.source_data_table.customContextMenuRequested.connect(self._ui_preview_menu.request_menu)
         self._ui.source_list.currentItemChanged.connect(self.select_table)
-        self._ui.source_list.itemChanged.connect(self.check_list_item)
 
         # signals for connector
         self.connector.connectionReady.connect(self.request_new_tables_from_connector)
@@ -149,40 +148,25 @@ class ImportEditor(QWidget):
             self.connector.request_data(selection.text(), max_rows=100)
             self.selected_table = selection.text()
 
-    def check_list_item(self, item):
-        """
-        Set the check state of item
-        """
-        name = item.text()
-        if item.checkState() == Qt.Checked:
-            self.selected_source_tables.add(name)
-        else:
-            self.selected_source_tables.discard(name)
-        self.tableChecked.emit()
-
     def handle_connector_error(self, error_message):
         self._ui_error.showMessage(error_message)
 
     def request_mapped_data(self):
-        tables_mappings = {t: self.table_mappings[t].get_mappings() for t in self.selected_source_tables}
+        tables_mappings = {t: self.table_mappings[t].get_mappings() for t in self.checked_tables}
         self.connector.request_mapped_data(tables_mappings, max_rows=-1)
 
+    @Slot(dict)
     def update_tables(self, tables):
         """
         Update list of tables
         """
-        # create and delete mappings for tables
-        if isinstance(tables, list):
-            tables = {t: None for t in tables}
+        new_tables = list()
         for t_name, t_mapping in tables.items():
             if t_name not in self.table_mappings:
                 if t_mapping is None:
                     t_mapping = ObjectClassMapping()
-                else:
-                    # add table to selected if connector gave a mapping object
-                    # for the table
-                    self.selected_source_tables.add(t_name)
                 self.table_mappings[t_name] = MappingListModel([t_mapping], t_name)
+                new_tables.append(t_name)
         for k in list(self.table_mappings.keys()):
             if k not in tables:
                 self.table_mappings.pop(k)
@@ -194,23 +178,21 @@ class ImportEditor(QWidget):
 
         # current selected table
         selected = self._ui.source_list.selectedItems()
-        self.selected_source_tables = set(tables.keys()).intersection(self.selected_source_tables)
 
         # empty tables list and add new tables
+        tables_to_select = set(self.checked_tables + new_tables)
         self._ui.source_list.blockSignals(True)
-        self._ui.source_list.currentItemChanged.disconnect(self.select_table)
         self._ui.source_list.clear()
         self._ui.source_list.clearSelection()
         for t in tables:
             item = QListWidgetItem()
             item.setText(t)
             item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
-            if t in self.selected_source_tables:
+            if t in tables_to_select:
                 item.setCheckState(Qt.Checked)
             else:
                 item.setCheckState(Qt.Unchecked)
             self._ui.source_list.addItem(item)
-        self._ui.source_list.currentItemChanged.connect(self.select_table)
         self._ui.source_list.blockSignals(False)
 
         # reselect table if existing otherwise select first table
@@ -268,17 +250,21 @@ class ImportEditor(QWidget):
             tn: {int(col): value_to_convert_spec(spec) for col, spec in cols.items()}
             for tn, cols in settings.get("table_row_types", {}).items()
         }
-
         self.connector.set_table_options(settings.get("table_options", {}))
         self.connector.set_table_types(table_types)
         self.connector.set_table_row_types(table_row_types)
-        self.selected_source_tables.update(set(settings.get("selected_tables", [])))
-        for i in range(self._ui.source_list.count()):
-            item = self._ui.source_list.item(i)
-            selected = Qt.Checked if item.text() in self.selected_source_tables else Qt.Unchecked
-            item.setCheckState(selected)
-        if self._ui.source_list.selectedItems():
-            self.select_table(self._ui.source_list.selectedItems()[0])
+        self._ui.source_list.blockSignals(True)
+        self._ui.source_list.clear()
+        selected_tables = settings.get("selected_tables")
+        if selected_tables is None:
+            selected_tables = len(self.table_mappings) * [True]
+        for table_name, selected in zip(self.table_mappings, selected_tables):
+            item = QListWidgetItem()
+            item.setText(table_name)
+            item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
+            item.setCheckState(Qt.Checked if selected else Qt.Unchecked)
+            self._ui.source_list.addItem(item)
+        self._ui.source_list.blockSignals(False)
 
     def get_settings_dict(self):
         """Returns a dictionary with type of connector, connector options for tables,
@@ -287,7 +273,10 @@ class ImportEditor(QWidget):
         Returns:
             [Dict] -- dict with settings
         """
-        tables = set(self._ui.source_list.item(i).text() for i in range(self._ui.source_list.count()))
+        get_source_item = self._ui.source_list.item
+        table_count = self._ui.source_list.count()
+        tables = set(get_source_item(i).text() for i in range(table_count))
+        table_check_status = list(get_source_item(i).checkState() == Qt.Checked for i in range(table_count))
 
         table_mappings = {
             t: [m.to_dict() for m in mappings.get_mappings()]
@@ -314,7 +303,7 @@ class ImportEditor(QWidget):
             "table_options": table_options,
             "table_types": table_types,
             "table_row_types": table_row_types,
-            "selected_tables": list(tables.intersection(self.selected_source_tables)),
+            "selected_tables": table_check_status,
             "source_type": self.connector.source_type,
         }
         return settings
