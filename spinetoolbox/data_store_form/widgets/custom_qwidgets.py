@@ -18,10 +18,8 @@ Custom QWidgets.
 
 import os
 from PySide2.QtWidgets import (
-    QWidget,
     QMenu,
     QToolButton,
-    QStatusBar,
     QLabel,
     QGraphicsOpacityEffect,
     QDialog,
@@ -30,7 +28,6 @@ from PySide2.QtWidgets import (
     QListWidget,
 )
 from PySide2.QtCore import Slot, QVariantAnimation, QPointF, Qt
-from PySide2.QtGui import QIcon
 from sqlalchemy.engine.url import URL
 from ...helpers import open_url
 from ...mvcmodels.filter_checkbox_list_model import LazyFilterCheckboxListModel, DataToValueFilterCheckboxListModel
