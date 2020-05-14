@@ -23,7 +23,7 @@ from PySide2.QtWidgets import QGraphicsItemAnimation
 from spinetoolbox.graphics_items import ProjectItemIcon
 
 
-class RecombinatorIcon(ProjectItemIcon):
+class CombinerIcon(ProjectItemIcon):
     _SHAKE_FACTOR = 0.05
 
     def __init__(self, toolbox, x, y, w, h, project_item, icon):
@@ -58,7 +58,7 @@ class RecombinatorIcon(ProjectItemIcon):
         return 1.0 - rem
 
     def start_animation(self):
-        """Start the animation that plays when the Recombinator associated to this GraphicsItem is running.
+        """Start the animation that plays when the Combiner associated to this GraphicsItem is running.
         """
         if self.timer.state() == QTimeLine.Running:
             return

@@ -19,8 +19,8 @@ Classes for custom context menus and pop-up menus.
 from spinetoolbox.widgets.custom_menus import CustomContextMenu
 
 
-class RecombinatorPropertiesContextMenu(CustomContextMenu):
-    """Context menu class for the references tree view of the Recombinator project item properties."""
+class CombinerPropertiesContextMenu(CustomContextMenu):
+    """Context menu class for the references tree view of the Combiner project item properties."""
 
     def __init__(self, parent, position, index):
         """

@@ -10,7 +10,7 @@
 ######################################################################################################################
 
 """
-Widget shown to user when a new Recombinator is created.
+Widget shown to user when a new Combiner is created.
 
 :author: P. Savolainen (VTT)
 :date:   19.1.2017
@@ -18,10 +18,10 @@ Widget shown to user when a new Recombinator is created.
 
 from spinetoolbox.widgets.add_project_item_widget import AddProjectItemWidget
 from ..item_info import ItemInfo
-from ..recombinator import Recombinator
+from ..combiner import Combiner
 
 
-class AddRecombinatorWidget(AddProjectItemWidget):
+class AddCombinerWidget(AddProjectItemWidget):
     """A widget to query user's preferences for a new item.
 
     Attributes:
@@ -32,7 +32,7 @@ class AddRecombinatorWidget(AddProjectItemWidget):
 
     def __init__(self, toolbox, x, y, spec=""):
         """Initialize class."""
-        super().__init__(toolbox, x, y, Recombinator, spec=spec)
+        super().__init__(toolbox, x, y, Combiner, spec=spec)
 
     def call_add_item(self):
         """Creates new Item according to user's selections."""

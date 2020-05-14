@@ -19,11 +19,11 @@ View properties widget.
 from PySide2.QtCore import Slot
 from PySide2.QtWidgets import QWidget
 from spinetoolbox.config import TREEVIEW_HEADER_SS
-from .custom_menus import RecombinatorPropertiesContextMenu
+from .custom_menus import CombinerPropertiesContextMenu
 
 
-class RecombinatorPropertiesWidget(QWidget):
-    """Widget for the Recombinator Item Properties.
+class CombinerPropertiesWidget(QWidget):
+    """Widget for the Combiner Item Properties.
 
     Args:
         toolbox (ToolboxUI): The toolbox instance where this widget should be embeded
@@ -31,14 +31,14 @@ class RecombinatorPropertiesWidget(QWidget):
 
     def __init__(self, toolbox):
         """Init class."""
-        from ..ui.recombinator_properties import Ui_Form  # pylint: disable=import-outside-toplevel
+        from ..ui.combiner_properties import Ui_Form  # pylint: disable=import-outside-toplevel
 
         super().__init__()
         self._toolbox = toolbox
         self.ui = Ui_Form()
         self.ui.setupUi(self)
         self.ui.treeView_view.setStyleSheet(TREEVIEW_HEADER_SS)
-        toolbox.ui.tabWidget_item_properties.addTab(self, "Recombinator")
+        toolbox.ui.tabWidget_item_properties.addTab(self, "Combiner")
         # Class attributes
         self.properties_context_menu = None
         self.connect_signals()
@@ -49,7 +49,7 @@ class RecombinatorPropertiesWidget(QWidget):
 
     @Slot("QPoint")
     def show_view_properties_context_menu(self, pos):
-        """Create and show a context-menu in Recombinator properties.
+        """Create and show a context-menu in Combiner properties.
 
         Args:
             pos (QPoint): Mouse position
@@ -58,7 +58,7 @@ class RecombinatorPropertiesWidget(QWidget):
         curr_index = self._toolbox.ui.treeView_project.currentIndex()  # Get selected View
         view = self._toolbox.project_item_model.item(curr_index).project_item
         global_pos = self.ui.treeView_view.viewport().mapToGlobal(pos)
-        self.properties_context_menu = RecombinatorPropertiesContextMenu(self, global_pos, ind)
+        self.properties_context_menu = CombinerPropertiesContextMenu(self, global_pos, ind)
         option = self.properties_context_menu.get_action()
         if option == "Open view":
             view.open_view()

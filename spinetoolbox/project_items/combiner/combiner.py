@@ -23,16 +23,16 @@ from sqlalchemy.engine.url import URL, make_url
 from spinedb_api import SpineDBAPIError
 from spinetoolbox.project_item import ProjectItem
 from spinetoolbox.helpers import create_dir
-from spinetoolbox.data_store_form.widgets.data_store_form import RecombinatorDataStoreForm
+from spinetoolbox.data_store_form.widgets.data_store_form import DataStoreForm
 from ..shared.commands import UpdateCancelOnErrorCommand
 from .item_info import ItemInfo
 from .executable_item import ExecutableItem
 
 
-class Recombinator(ProjectItem):
+class Combiner(ProjectItem):
     def __init__(self, toolbox, project, logger, name, description, x, y, cancel_on_error=False):
         """
-        Recombinator class.
+        Combiner class.
 
         Args:
             toolbox (ToolboxUI): a toolbox instance
@@ -139,7 +139,7 @@ class Recombinator(ProjectItem):
             self.reference_model.appendRow(qitem)
 
     def update_name_label(self):
-        """Update Recombinator tab name label. Used only when renaming project items."""
+        """Update Combiner tab name label. Used only when renaming project items."""
         self._properties_ui.label_view_name.setText(self.name)
 
     def execute_forward(self, resources):
@@ -192,7 +192,7 @@ class Recombinator(ProjectItem):
 
     def _make_view_window(self, db_maps):
         try:
-            return RecombinatorDataStoreForm(self._project.db_mngr, *db_maps)
+            return DataStoreForm(self._project.db_mngr, *db_maps)
         except SpineDBAPIError as e:
             self._logger.msg_error.emit(e.msg)
 
@@ -221,4 +221,4 @@ class Recombinator(ProjectItem):
     @staticmethod
     def default_name_prefix():
         """see base class"""
-        return "Recombinator"
+        return "Combiner"

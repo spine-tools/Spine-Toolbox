@@ -17,28 +17,28 @@ The ViewFactory class.
 """
 
 from spinetoolbox.project_item import ProjectItemFactory
-from .recombinator import Recombinator
-from .recombinator_icon import RecombinatorIcon
-from .widgets.recombinator_properties_widget import RecombinatorPropertiesWidget
-from .widgets.add_recombinator_widget import AddRecombinatorWidget
+from .combiner import Combiner
+from .combiner_icon import CombinerIcon
+from .widgets.combiner_properties_widget import CombinerPropertiesWidget
+from .widgets.add_combiner_widget import AddCombinerWidget
 
 
-class RecombinatorFactory(ProjectItemFactory):
+class CombinerFactory(ProjectItemFactory):
     @staticmethod
     def icon():
         return ":/icons/project_item_icons/blender.svg"
 
     @property
     def item_maker(self):
-        return Recombinator
+        return Combiner
 
     @property
     def icon_maker(self):
-        return RecombinatorIcon
+        return CombinerIcon
 
     @property
     def add_form_maker(self):
-        return AddRecombinatorWidget
+        return AddCombinerWidget
 
     @property
     def specification_form_maker(self):
@@ -50,4 +50,4 @@ class RecombinatorFactory(ProjectItemFactory):
 
     @staticmethod
     def _make_properties_widget(toolbox):
-        return RecombinatorPropertiesWidget(toolbox)
+        return CombinerPropertiesWidget(toolbox)

@@ -10,7 +10,7 @@
 ######################################################################################################################
 
 """
-Contains Recombinator's executable item as well as support utilities.
+Contains Combiner's executable item as well as support utilities.
 
 :authors: A. Soininen (VTT)
 :date:   2.4.2020
@@ -21,14 +21,14 @@ import pathlib
 from PySide2.QtCore import QObject, QEventLoop, Signal, Slot
 from spinetoolbox.executable_item_base import ExecutableItemBase
 from .item_info import ItemInfo
-from . import recombinator_program
+from . import combiner_program
 from ..shared.helpers import make_python_process
 
 
 class ExecutableItem(ExecutableItemBase, QObject):
 
     recombination_finished = Signal()
-    """Emitted after the separate recombinator process has finished executing."""
+    """Emitted after the separate combiner process has finished executing."""
 
     def __init__(self, name, logs_dir, python_path, cancel_on_error, logger):
         """
@@ -45,12 +45,12 @@ class ExecutableItem(ExecutableItemBase, QObject):
         self._logs_dir = logs_dir
         self._python_path = python_path
         self._cancel_on_error = cancel_on_error
-        self._recombinator_process = None
-        self._recombinator_process_successful = None
+        self._combiner_process = None
+        self._combiner_process_successful = None
 
     @staticmethod
     def item_type():
-        """Returns Recombinator's type identifier string."""
+        """Returns Combiner's type identifier string."""
         return ItemInfo.item_type()
 
     @classmethod
@@ -78,51 +78,51 @@ class ExecutableItem(ExecutableItemBase, QObject):
         if not from_urls or not to_urls:
             # Moving on...
             return True
-        recombinator_args = [from_urls, to_urls, self._logs_dir, self._cancel_on_error]
-        if not self._prepare_recombinator_program(recombinator_args):
-            self._logger.msg_error.emit(f"Executing Recombinator {self.name} failed.")
+        combiner_args = [from_urls, to_urls, self._logs_dir, self._cancel_on_error]
+        if not self._prepare_combiner_program(combiner_args):
+            self._logger.msg_error.emit(f"Executing Combiner {self.name} failed.")
             return False
-        self._recombinator_process.start_execution()
+        self._combiner_process.start_execution()
         loop = QEventLoop()
         self.recombination_finished.connect(loop.quit)
         # Wait for finished right here
         loop.exec_()
         # This should be executed after the import process has finished
-        if not self._recombinator_process_successful:
-            self._logger.msg_error.emit(f"Executing Recombinator {self.name} failed.")
+        if not self._combiner_process_successful:
+            self._logger.msg_error.emit(f"Executing Combiner {self.name} failed.")
         else:
-            self._logger.msg_success.emit(f"Executing Recombinator {self.name} finished")
-        return self._recombinator_process_successful
+            self._logger.msg_success.emit(f"Executing Combiner {self.name} finished")
+        return self._combiner_process_successful
 
-    def _prepare_recombinator_program(self, recombinator_args):
+    def _prepare_combiner_program(self, combiner_args):
         """Prepares an execution manager instance for running
-        recombinator_program.py in a QProcess.
+        combiner_program.py in a QProcess.
 
         Args:
-            importer_args (list): Arguments for the recombinator_program. From urls, to urls, logs directory
+            importer_args (list): Arguments for the combiner_program. From urls, to urls, logs directory
 
         Returns:
             bool: True if preparing the program succeeded, False otherwise.
 
         """
-        self._recombinator_process = make_python_process(
-            recombinator_program.__file__, recombinator_args, self._python_path, self._logger
+        self._combiner_process = make_python_process(
+            combiner_program.__file__, combiner_args, self._python_path, self._logger
         )
-        if self._recombinator_process is None:
+        if self._combiner_process is None:
             return False
-        self._recombinator_process.execution_finished.connect(self._handle_recombinator_program_process_finished)
+        self._combiner_process.execution_finished.connect(self._handle_combiner_program_process_finished)
         return True
 
     @Slot(int)
-    def _handle_recombinator_program_process_finished(self, exit_code):
-        """Handles the return value from recombinator_program.py when it has finished.
-        Emits a signal to indicate that this Recombinator has been executed.
+    def _handle_combiner_program_process_finished(self, exit_code):
+        """Handles the return value from combiner_program.py when it has finished.
+        Emits a signal to indicate that this Combiner has been executed.
 
         Args:
             exit_code (int): Process return value. 0: success, !0: failure
         """
-        self._recombinator_process.execution_finished.disconnect()
-        self._recombinator_process.deleteLater()
-        self._recombinator_process = None
-        self._recombinator_process_successful = exit_code == 0
+        self._combiner_process.execution_finished.disconnect()
+        self._combiner_process.deleteLater()
+        self._combiner_process = None
+        self._combiner_process_successful = exit_code == 0
         self.recombination_finished.emit()

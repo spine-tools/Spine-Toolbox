@@ -10,7 +10,7 @@
 ######################################################################################################################
 
 """
-Contains Recombinator program.
+Contains Combiner program.
 
 :authors: M. Marin (KTH)
 :date:   12.5.2020
@@ -26,7 +26,7 @@ from spinedb_api import export_data, import_data, DiffDatabaseMapping, SpineDBAP
 
 
 def _create_log_file_timestamp():
-    """Creates a new timestamp string that is used as Recombinator and Data Store error log file.
+    """Creates a new timestamp string that is used as Combiner and Data Store error log file.
 
     Returns:
         Timestamp string or empty string if failed.
@@ -41,7 +41,7 @@ def _create_log_file_timestamp():
 
 
 def run(from_urls, to_urls, logs_dir, cancel_on_error):
-    print("starting recombinator program")
+    print("starting combiner program")
     from_db_maps = [db_map for db_map in (_get_db_map(url) for url in from_urls) if db_map]
     to_db_maps = [db_map for db_map in (_get_db_map(url) for url in to_urls) if db_map]
     from_db_map_data = {from_db_map: export_data(from_db_map) for from_db_map in from_db_maps}
@@ -57,7 +57,7 @@ def run(from_urls, to_urls, logs_dir, cancel_on_error):
                     to_db_map.rollback_session()
             elif import_count:
                 to_db_map.commit_session(
-                    f"Import {import_count} items from {from_db_map.db_url} by Spine Toolbox Recombinator"
+                    f"Import {import_count} items from {from_db_map.db_url} by Spine Toolbox Combiner"
                 )
             to_db_map_import_count += import_count
             to_db_map_error_count += len(import_errors)
@@ -85,7 +85,7 @@ def run(from_urls, to_urls, logs_dir, cancel_on_error):
 
 def _get_db_map(url):
     try:
-        return DiffDatabaseMapping(url, upgrade=False, username="Recombinator")
+        return DiffDatabaseMapping(url, upgrade=False, username="Combiner")
     except (SpineDBAPIError, SpineDBVersionError) as err:
         print("Unable to create database mapping for {0}, moving on...: {1}".format(url, err))
 

@@ -10,11 +10,21 @@
 ######################################################################################################################
 
 """
-Recombinator plugin.
+Combiner project item info.
 
-:author: M. Marin (KTH)
-:date:   12.9.2019
+:authors: A. Soininen (VTT)
+:date:   29.4.2020
 """
+from spinetoolbox.project_item_info import ProjectItemInfo
 
-from .recombinator_factory import RecombinatorFactory as ItemFactory
-from .item_info import ItemInfo
+
+class ItemInfo(ProjectItemInfo):
+    @staticmethod
+    def item_category():
+        """See base class."""
+        return "Manipulators"
+
+    @staticmethod
+    def item_type():
+        """See base class."""
+        return "Combiner"
