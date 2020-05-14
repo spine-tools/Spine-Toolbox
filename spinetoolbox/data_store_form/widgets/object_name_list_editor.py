@@ -20,8 +20,8 @@ Contains the ObjectNameListEditor class.
 from PySide2.QtCore import Qt, Slot, Signal, QEvent, QCoreApplication
 from PySide2.QtWidgets import QItemDelegate
 from PySide2.QtGui import QStandardItemModel, QStandardItem
-from .data_store_manage_items_dialog import ManageItemsDialog
-from .custom_editors import SearchBarEditor
+from .manage_items_dialog import ManageItemsDialog
+from ...widgets.custom_editors import SearchBarEditor
 
 
 class SearchBarDelegate(QItemDelegate):

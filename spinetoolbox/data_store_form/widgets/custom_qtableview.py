@@ -10,31 +10,52 @@
 ######################################################################################################################
 
 """
-Contains custom QHeaderView for the pivot table.
+Custom QTableView classes that support copy-paste and the like.
 
 :author: M. Marin (KTH)
-:date:   2.12.2019
+:date:   18.5.2018
 """
 
-from PySide2.QtCore import Signal
-from PySide2.QtWidgets import QHeaderView
+from PySide2.QtCore import Qt, Signal
+from PySide2.QtWidgets import QTableView, QAbstractItemView
+from .pivot_table_header_view import PivotTableHeaderView
 from .tabular_view_header_widget import TabularViewHeaderWidget
-from ..config import PIVOT_TABLE_HEADER_COLOR
+from ...widgets.custom_qtableview import CopyPasteTableView
 
 
-class PivotTableHeaderView(QHeaderView):
+class PivotTableView(CopyPasteTableView):
+    """Custom QTableView class with pivot capabilities.
+
+    Attributes:
+        parent (QWidget): The parent of this view
+    """
+
+    def __init__(self, parent=None):
+        """Initialize the class."""
+        super().__init__(parent)
+        h_header = PivotTableHeaderView(Qt.Horizontal, "columns", self)
+        v_header = PivotTableHeaderView(Qt.Vertical, "rows", self)
+        self.setHorizontalHeader(h_header)
+        self.setVerticalHeader(v_header)
+        h_header.setContextMenuPolicy(Qt.CustomContextMenu)
+
+
+class FrozenTableView(QTableView):
 
     header_dropped = Signal(object, object)
 
-    def __init__(self, orientation, area, parent=None):
-        super().__init__(orientation, parent=parent)
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.setSelectionMode(QAbstractItemView.SingleSelection)
+        self.horizontalHeader().setVisible(False)
+        self.verticalHeader().setVisible(False)
+        self.setSortingEnabled(True)
         self.setAcceptDrops(True)
-        self._area = area
-        self.setStyleSheet("QHeaderView::section {background-color: " + PIVOT_TABLE_HEADER_COLOR + ";}")
 
     @property
     def area(self):
-        return self._area
+        return "frozen"
 
     def dragEnterEvent(self, event):
         if isinstance(event.source(), TabularViewHeaderWidget):

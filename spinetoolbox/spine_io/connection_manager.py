@@ -16,7 +16,7 @@ Contains ConnectionManager class.
 :date:   1.6.2019
 """
 
-from PySide2.QtCore import QObject, Signal, QThread
+from PySide2.QtCore import QObject, QThread, Signal, Slot
 from ..import_editor.widgets.options_widget import OptionsWidget
 
 
@@ -209,6 +209,7 @@ class ConnectionManager(QObject):
         self._is_connected = True
         self.connectionReady.emit()
 
+    @Slot("QVariant")
     def _handle_tables_ready(self, table_options):
         if isinstance(table_options, list):
             table_options = {name: {} for name in table_options}

@@ -20,7 +20,7 @@ import unittest
 from unittest import mock
 from PySide2.QtWidgets import QApplication
 from spinetoolbox.spine_db_manager import SpineDBManager
-from spinetoolbox.widgets.data_store_widget import DataStoreFormBase
+from spinetoolbox.data_store_form.widgets.data_store_form import DataStoreFormBase
 
 
 class TestDataStoreFormBase(unittest.TestCase):
@@ -32,7 +32,7 @@ class TestDataStoreFormBase(unittest.TestCase):
     def setUp(self):
         """Builds a DataStoreFormBase object."""
         with mock.patch("spinetoolbox.spine_db_manager.DiffDatabaseMapping") as mock_DiffDBMapping, mock.patch(
-            "spinetoolbox.widgets.data_store_widget.DataStoreForm.restore_ui"
+            "spinetoolbox.data_store_form.widgets.data_store_form.DataStoreForm.restore_ui"
         ):
             mock_settings = mock.Mock()
             mock_settings.value.side_effect = lambda *args, **kwards: 0
@@ -49,9 +49,9 @@ class TestDataStoreFormBase(unittest.TestCase):
 
     def tearDown(self):
         """Frees resources after each test."""
-        with mock.patch("spinetoolbox.widgets.data_store_widget.DataStoreForm.save_window_state"), mock.patch(
-            "spinetoolbox.spine_db_manager.QMessageBox"
-        ):
+        with mock.patch(
+            "spinetoolbox.data_store_form.widgets.data_store_form.DataStoreForm.save_window_state"
+        ), mock.patch("spinetoolbox.spine_db_manager.QMessageBox"):
             self.form.close()
         self.form.deleteLater()
         self.form = None

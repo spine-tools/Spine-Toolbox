@@ -19,18 +19,8 @@ Contains the DataStoreForm class.
 import os
 import time  # just to measure loading time and sqlalchemy ORM performance
 import json
-import pathlib
-from PySide2.QtWidgets import (
-	QMainWindow,
-	QErrorMessage,
-	QDockWidget,
-	QInputDialog,
-	QWidget,
-	QAction,
-	QDialogButtonBox,
-	QHBoxLayout
-)
-from PySide2.QtCore import Qt, Signal, Slot
+from PySide2.QtWidgets import QMainWindow, QErrorMessage, QDockWidget, QInputDialog
+from PySide2.QtCore import Qt, Signal, Slot, QPoint
 from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QIcon
 from spinedb_api import (
     import_data,
@@ -41,30 +31,31 @@ from spinedb_api import (
     SpineDBAPIError,
     SpineDBVersionError,
 )
-from ..config import MAINWINDOW_SS, APPLICATION_PATH
-from .data_store_edit_items_dialogs import ManageParameterTagsDialog
-from .data_store_manage_items_dialog import MassRemoveItemsDialog, GetItemsForExportDialog
+from ...config import MAINWINDOW_SS, APPLICATION_PATH
+from .edit_or_remove_items_dialogs import ManageParameterTagsDialog
+from .select_db_items_dialogs import MassRemoveItemsDialog, GetItemsForExportDialog
 from .custom_menus import ParameterValueListContextMenu
-from .data_store_parameter_view_mixin import ParameterViewMixin
-from .data_store_tree_view_mixin import TreeViewMixin
-from .data_store_graph_view_mixin import GraphViewMixin
-from .data_store_tabular_view_mixin import TabularViewMixin
+from .custom_qwidgets import OpenFileButton, OpenSQLiteFileButton, ClearableStatusBar, ShootingLabel, CustomInputDialog
+from .parameter_view_mixin import ParameterViewMixin
+from .tree_view_mixin import TreeViewMixin
+from .graph_view_mixin import GraphViewMixin
+from .tabular_view_mixin import TabularViewMixin
 from .toolbars import ParameterTagToolBar
 from .db_session_history_dialog import DBSessionHistoryDialog
-from .notification import NotificationStack
-from ..mvcmodels.parameter_value_list_model import ParameterValueListModel
-from ..helpers import (
+from ...widgets.notification import NotificationStack
+from ...mvcmodels.parameter_value_list_model import ParameterValueListModel
+from ...helpers import (
     busy_effect,
     ensure_window_is_on_screen,
     get_save_file_name_in_last_dir,
     get_open_file_name_in_last_dir,
     format_string_list,
 )
-from .data_store_import_dialog import ImportDialog
-from .parameter_value_editor import ParameterValueEditor
-from ..spine_io.exporters.excel import export_spine_database_to_xlsx
-from ..spine_io.importers.excel_reader import get_mapped_data_from_xlsx
-from ..spine_db_parcel import SpineDBParcel
+from .import_dialog import ImportDialog
+from ...widgets.parameter_value_editor import ParameterValueEditor
+from ...spine_io.exporters.excel import export_spine_database_to_xlsx
+from ...spine_io.importers.excel_reader import get_mapped_data_from_xlsx
+from ...spine_db_parcel import SpineDBParcel
 
 
 class DataStoreFormBase(QMainWindow):
@@ -83,7 +74,7 @@ class DataStoreFormBase(QMainWindow):
             *db_urls (tuple): Database url, codename.
         """
         super().__init__(flags=Qt.Window)
-        from ..ui.data_store_view import Ui_MainWindow  # pylint: disable=import-outside-toplevel
+        from ..ui.data_store_window import Ui_MainWindow  # pylint: disable=import-outside-toplevel
 
         self.db_urls = list(db_urls)
         self.db_url = self.db_urls[0]
@@ -97,6 +88,8 @@ class DataStoreFormBase(QMainWindow):
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
         self.takeCentralWidget()
+        self.status_bar = ClearableStatusBar(self)
+        self.setStatusBar(self.status_bar)
         self.setWindowIcon(QIcon(":/symbols/app.ico"))
         self.setStyleSheet(MAINWINDOW_SS)
         self.setAttribute(Qt.WA_DeleteOnClose)
@@ -455,27 +448,13 @@ class DataStoreFormBase(QMainWindow):
         import_data(db_map, **data_for_export)
         try:
             db_map.commit_session("Export initial data from Spine Toolbox.")
-        except SpineDBAPIError:
-            self.msg_error.emit(f"[SpineDBAPIError] Unable to export file <b>{db_map.codename}</b>")
+        except SpineDBAPIError as err:
+            self.msg_error.emit(f"[SpineDBAPIError] Unable to export file <b>{db_map.codename}</b>: {err.msg}")
         else:
-            url = str(URL("sqlite", database=file_path))
-            open_url = f"open;;{url}"
-            add_to_project_url = f"add_to_project;;{url}"
-            addendum = f"<p><a style='color:#223344;' href='{add_to_project_url}'>Add to project</a></p>"
-            self._emit_file_successfully_exported(open_url, open_link=self._open_sqlite_action_url, addendum=addendum)
+            self._insert_open_sqlite_file_button(file_path)
 
-    @Slot(str)
-    def _open_sqlite_action_url(self, action_url):
-        """Opens sqlite url or adds it to project."""
-        action, url = action_url.split(";;")
-        if action == "open":
-            self._open_sqlite_url(url)
-        elif action == "add_to_project":
-            self._add_sqlite_url_to_project(url)
-
-    def _open_sqlite_url(self, url):
+    def _open_sqlite_url(self, url, codename):
         """Opens sqlite url."""
-        codename = os.path.splitext(os.path.basename(url))[0]
         try:
             ds_view = DataStoreForm(self.db_mngr, (url, codename))
         except SpineDBAPIError as e:
@@ -488,18 +467,18 @@ class DataStoreFormBase(QMainWindow):
         project = self.db_mngr._project
         if not project:
             return
+        icon_path = project._toolbox.item_factories["Data Store"].icon()
         data_stores = project._project_item_model.items(category_name="Data Stores")
-        other_data_stores = [x.project_item for x in data_stores if x is not self]
-        named_data_stores = {x.name: x for x in other_data_stores}
-        name, ok = QInputDialog.getItem(
+        data_stores = [x.project_item for x in data_stores]
+        named_data_stores = {x.name: x for x in data_stores}
+        name = CustomInputDialog.get_item(
             self,
-            "Add SQLite file to project",
-            "Please select a recipient Data Store from the list,\n"
-            "or type a name to create a new one.\n"
-            "The url of the recipient Data Store will be pointed to the file.",
+            "Add SQLite file to Project",
+            "<p>Select a Data Store from the list to be the recipient:</p>",
             list(named_data_stores),
+            QIcon(icon_path),
         )
-        if not ok:
+        if name is None:
             return
         data_store = named_data_stores.get(name)
         database = make_url(url).database
@@ -507,12 +486,25 @@ class DataStoreFormBase(QMainWindow):
         if not data_store:
             data_store_dict = {"name": name, "description": "", "x": 0, "y": 0, "url": url_as_dict}
             project.add_project_items("Data Store", data_store_dict)
-            self.msg.emit(f"Data Store <i>{name}</i> successfully created.")
-            treated = "added"
+            action = "added"
+        elif data_store.update_url(**url_as_dict):
+            action = "updated"
         else:
-            treated = "updated"
-            data_store.update_url(**url_as_dict)
-        self.msg.emit(f"Data Store <i>{name}</i> successfully {treated}.")
+            self.msg.emit(f"Data Store <i>{name}</i> is already set to use url {url}")
+            return
+        link = "<a href='#'>undo</a>"
+        stack = project._toolbox.undo_stack
+        index = stack.index()
+        open_link = lambda _, stack=stack, index=index: self._undo_add_sqlite_url_to_project(_, stack, index)
+        self.link_msg.emit(f"Data Store <i>{name}</i> successfully {action}.<br>{link}", open_link)
+
+    @Slot("str")
+    def _undo_add_sqlite_url_to_project(self, _, stack, index):
+        if not stack.canUndo() or stack.index() != index:
+            self.msg.emit(f"Already undone.")
+            return
+        stack.undo()
+        self.msg.emit(f"Successfully undone.")
 
     def export_to_json(self, file_path, data_for_export):
         """Exports given data into JSON file."""
@@ -535,7 +527,7 @@ class DataStoreFormBase(QMainWindow):
         )
         with open(file_path, 'w', encoding='utf-8') as f:
             f.write(json_data)
-        self._emit_file_successfully_exported(pathlib.Path(file_path).as_uri())
+        self._insert_open_file_button(file_path)
 
     @busy_effect
     def export_to_excel(self, file_path, data_for_export):
@@ -554,12 +546,32 @@ class DataStoreFormBase(QMainWindow):
         except OSError:
             self.msg_error.emit(f"[OSError] Unable to export file <b>{file_name}</b>.")
         else:
-            self._emit_file_successfully_exported(pathlib.Path(file_path).as_uri())
+            self._insert_open_file_button(file_path)
 
-    def _emit_file_successfully_exported(self, url, open_link=None, addendum=""):
-        file_name = os.path.basename(url)
-        anchor = f"<p><a style='color:#223344;' title='{file_name}' href='{url}'>Open</a></p>"
-        self.link_msg.emit(f"File <i>{file_name}</i> successfully exported. {anchor} {addendum}", open_link)
+    def _insert_open_file_button(self, file_path):
+        button = OpenFileButton(file_path, self)
+        self._insert_button_to_status_bar(button)
+
+    def _insert_open_sqlite_file_button(self, file_path):
+        button = OpenSQLiteFileButton(file_path, self)
+        self._insert_button_to_status_bar(button)
+
+    def _insert_button_to_status_bar(self, button):
+        """
+        Inserts given button to the 'beginning' of the status bar and decorates the thing with a shooting label.
+        """
+        duplicates = [
+            x for x in self.status_bar.findChildren(OpenFileButton) if os.path.samefile(x.file_path, button.file_path)
+        ]
+        for dup in duplicates:
+            self.status_bar.removeWidget(dup)
+        self.status_bar.insertWidget(0, button)
+        self.status_bar.show()
+        destination = QPoint(16, 0) + self.status_bar.mapToParent(QPoint(0, 0))
+        label = ShootingLabel(destination - QPoint(0, 64), destination, self)
+        pixmap = QIcon(":/icons/file-download.svg").pixmap(32, 32)
+        label.setPixmap(pixmap)
+        label.show()
 
     def reload_session(self, db_maps):
         """Reloads data from given db_maps."""

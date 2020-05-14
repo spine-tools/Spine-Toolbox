@@ -77,6 +77,7 @@ from .helpers import (
     recursive_overwrite,
     serialize_path,
     deserialize_path,
+    open_url,
 )
 from .project_upgrader import ProjectUpgrader
 from .project_tree_item import LeafProjectTreeItem, CategoryProjectTreeItem, RootProjectTreeItem
@@ -1104,7 +1105,7 @@ class ToolboxUI(QMainWindow):
         tool_specification_url = "file:///" + file_path
         # Open Tool specification file in editor
         # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
-        res = QDesktopServices.openUrl(QUrl(tool_specification_url, QUrl.TolerantMode))
+        res = open_url(tool_specification_url)
         if not res:
             logging.error("Failed to open editor for %s", tool_specification_url)
             self.msg_error.emit(
@@ -1318,7 +1319,7 @@ class ToolboxUI(QMainWindow):
         doc_index_path = os.path.join(DOCUMENTATION_PATH, "index.html")
         index_url = "file:///" + doc_index_path
         # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
-        res = QDesktopServices.openUrl(QUrl(index_url, QUrl.TolerantMode))
+        res = open_url(index_url)
         if not res:
             logging.error("Failed to open editor for %s", index_url)
             self.msg_error.emit("Unable to open file <b>{0}</b>".format(doc_index_path))
@@ -1329,7 +1330,7 @@ class ToolboxUI(QMainWindow):
         getting_started_path = os.path.join(DOCUMENTATION_PATH, "getting_started.html")
         index_url = "file:///" + getting_started_path
         # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
-        res = QDesktopServices.openUrl(QUrl(index_url, QUrl.TolerantMode))
+        res = open_url(index_url)
         if not res:
             logging.error("Failed to open editor for %s", index_url)
             self.msg_error.emit("Unable to open file <b>{0}</b>".format(getting_started_path))

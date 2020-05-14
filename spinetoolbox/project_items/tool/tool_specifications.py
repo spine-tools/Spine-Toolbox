@@ -20,9 +20,8 @@ from collections import ChainMap, OrderedDict
 import logging
 import os
 import re
-from PySide2.QtCore import QUrl
-from PySide2.QtGui import QDesktopServices
 from spinetoolbox.project_item_specification import ProjectItemSpecification
+from spinetoolbox.helpers import open_url
 from .item_info import ItemInfo
 from .tool_instance import GAMSToolInstance, JuliaToolInstance, PythonToolInstance, ExecutableToolInstance
 
@@ -348,7 +347,7 @@ class ToolSpecification(ProjectItemSpecification):
         main_program_url = "file:///" + file_path
         # Open Tool specification main program file in editor
         # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
-        res = QDesktopServices.openUrl(QUrl(main_program_url, QUrl.TolerantMode))
+        res = open_url(main_program_url)
         if not res:
             filename, file_extension = os.path.splitext(file_path)
             self._logger.msg_error.emit(

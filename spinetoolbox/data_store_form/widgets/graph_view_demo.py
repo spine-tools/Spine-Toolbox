@@ -19,7 +19,7 @@ Contains the GraphViewForm class.
 import random
 from PySide2.QtCore import Slot, QFinalState, QState, QItemSelectionModel, QAbstractAnimation, QVariantAnimation
 from PySide2.QtGui import QCursor
-from .state_machine_widget import StateMachineWidget
+from ...widgets.state_machine_widget import StateMachineWidget
 
 
 class GraphViewDemo(StateMachineWidget):

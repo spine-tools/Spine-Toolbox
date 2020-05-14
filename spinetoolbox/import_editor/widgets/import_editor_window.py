@@ -52,9 +52,9 @@ class ImportEditorWindow(QMainWindow):
         self._ui.setupUi(self)
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setWindowTitle("Import Editor    -- {} --".format(importer.name))
-        self._preview_widget = ImportEditor(self._connection_manager, parent=self)
-        self._preview_widget.use_settings(settings)
-        self._ui.centralwidget.layout().insertWidget(0, self._preview_widget)
+        self._editor = ImportEditor(self._connection_manager, parent=self)
+        self._editor.use_settings(settings)
+        self._ui.centralwidget.layout().insertWidget(0, self._editor)
         self.settings_group = "mappingPreviewWindow"
         self.restore_ui()
         self._ui.buttonBox.button(QDialogButtonBox.Ok).clicked.connect(self.apply_and_close)
@@ -83,7 +83,7 @@ class ImportEditorWindow(QMainWindow):
         expected_options = ("table_mappings", "table_types", "table_row_types", "table_options", "selected_tables")
         if not isinstance(settings, dict) or not any(key in expected_options for key in settings.keys()):
             self._ui.statusbar.showMessage(f"{filename[0]} does not contain mapping options", 10000)
-        self._preview_widget.use_settings(settings)
+        self._editor.use_settings(settings)
         self._ui.statusbar.showMessage(f"Mapping loaded from {filename[0]}", 10000)
 
     def export_mapping_to_file(self):
@@ -96,13 +96,13 @@ class ImportEditorWindow(QMainWindow):
         if not filename[0]:
             return
         with open(filename[0], 'w') as file_p:
-            settings = self._preview_widget.get_settings_dict()
+            settings = self._editor.get_settings_dict()
             json.dump(settings, file_p)
         self._ui.statusbar.showMessage(f"Mapping saved to: {filename[0]}", 10000)
 
     def apply_and_close(self):
         """Apply changes to mappings and close preview window."""
-        settings = self._preview_widget.get_settings_dict()
+        settings = self._editor.get_settings_dict()
         self.settings_updated.emit(settings)
         self.close()
 

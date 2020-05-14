@@ -24,7 +24,7 @@ import sys
 from spinedb_api import create_new_spine_database
 from PySide2.QtWidgets import QApplication, QMessageBox
 import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
-from spinetoolbox.widgets.data_store_widget import DataStoreForm
+from spinetoolbox.data_store_form.widgets.data_store_form import DataStoreForm
 from spinetoolbox.project_items.data_store.data_store import DataStore
 from spinetoolbox.project_items.data_store.item_info import ItemInfo
 from ...mock_helpers import clean_up_toolboxui_with_project, create_toolboxui_with_project

@@ -18,9 +18,9 @@ Classes for custom QDialogs to edit items in databases.
 
 from PySide2.QtCore import Slot
 from PySide2.QtWidgets import QCheckBox
-from ..mvcmodels.minimal_table_model import MinimalTableModel
-from ..mvcmodels.empty_row_model import EmptyRowModel
-from ..mvcmodels.compound_table_model import CompoundWithEmptyTableModel
+from ...mvcmodels.minimal_table_model import MinimalTableModel
+from ...mvcmodels.empty_row_model import EmptyRowModel
+from ...mvcmodels.compound_table_model import CompoundWithEmptyTableModel
 from .custom_delegates import (
     ManageObjectClassesDelegate,
     ManageObjectsDelegate,
@@ -29,8 +29,8 @@ from .custom_delegates import (
     RemoveEntitiesDelegate,
     ManageParameterTagsDelegate,
 )
-from .data_store_manage_items_dialog import ShowIconColorEditorMixin, GetObjectsMixin, ManageItemsDialog
-from ..helpers import default_icon_id
+from .manage_items_dialog import ShowIconColorEditorMixin, GetObjectsMixin, ManageItemsDialog
+from ...helpers import default_icon_id
 
 
 class EditOrRemoveItemsDialog(ManageItemsDialog):

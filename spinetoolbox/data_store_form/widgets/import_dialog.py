@@ -19,17 +19,17 @@ import os.path
 from PySide2.QtWidgets import QApplication, QDialog, QWidget, QVBoxLayout, QDialogButtonBox, QSplitter, QStyle
 from PySide2.QtCore import QSize, Qt, Signal, Slot
 from PySide2.QtGui import QGuiApplication
-from ..helpers import ensure_window_is_on_screen
-from ..spine_io.connection_manager import ConnectionManager
-from ..spine_io.gdx_utils import find_gams_directory
-from ..spine_io.importers.csv_reader import CSVConnector
-from ..spine_io.importers.excel_reader import ExcelConnector
-from ..spine_io.importers.sqlalchemy_connector import SqlAlchemyConnector
-from ..spine_io.importers.gdx_connector import GdxConnector
-from ..spine_io.importers.json_reader import JSONConnector
-from ..import_editor.widgets.import_editor import ImportEditor
-from .data_store_import_errors_widget import ImportErrorsWidget
-from .notification import Notification
+from ...helpers import ensure_window_is_on_screen
+from ...spine_io.connection_manager import ConnectionManager
+from ...spine_io.gdx_utils import find_gams_directory
+from ...spine_io.importers.csv_reader import CSVConnector
+from ...spine_io.importers.excel_reader import ExcelConnector
+from ...spine_io.importers.sqlalchemy_connector import SqlAlchemyConnector
+from ...spine_io.importers.gdx_connector import GdxConnector
+from ...spine_io.importers.json_reader import JSONConnector
+from ...import_editor.widgets.import_editor import ImportEditor
+from .import_errors_widget import ImportErrorsWidget
+from ...widgets.notification import Notification
 
 
 class ImportDialog(QDialog):
@@ -51,7 +51,7 @@ class ImportDialog(QDialog):
             settings (QSettings): settings for storing/restoring window state
             parent (DataStoreForm): parent widget
         """
-        from ..ui.import_source_selector import Ui_ImportSourceSelector  # pylint: disable=import-outside-toplevel
+        from ...ui.import_source_selector import Ui_ImportSourceSelector  # pylint: disable=import-outside-toplevel
 
         super().__init__(parent)
         self.setWindowFlag(Qt.Window, True)

@@ -18,22 +18,22 @@ Contains the TreeViewMixin class.
 from PySide2.QtCore import Signal, Slot
 from PySide2.QtWidgets import QInputDialog
 from .custom_menus import EntityTreeContextMenu
-from .data_store_add_items_dialogs import (
+from .add_items_dialogs import (
     AddObjectClassesDialog,
     AddObjectsDialog,
     AddRelationshipClassesDialog,
     AddRelationshipsDialog,
 )
-from .data_store_edit_items_dialogs import (
+from .edit_or_remove_items_dialogs import (
     EditObjectClassesDialog,
     EditObjectsDialog,
     EditRelationshipClassesDialog,
     EditRelationshipsDialog,
     RemoveEntitiesDialog,
 )
-from ..mvcmodels.entity_tree_models import ObjectTreeModel, RelationshipTreeModel
-from ..helpers import busy_effect, get_save_file_name_in_last_dir
-from ..spine_db_parcel import SpineDBParcel
+from ...mvcmodels.entity_tree_models import ObjectTreeModel, RelationshipTreeModel
+from ...helpers import busy_effect
+from ...spine_db_parcel import SpineDBParcel
 
 
 class TreeViewMixin:

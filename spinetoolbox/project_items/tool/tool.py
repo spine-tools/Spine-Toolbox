@@ -17,12 +17,13 @@ Tool class.
 """
 import os
 import pathlib
-from PySide2.QtCore import Slot, Qt, QUrl, QFileInfo, QTimeLine
-from PySide2.QtGui import QDesktopServices, QStandardItemModel, QStandardItem
+from PySide2.QtCore import Slot, Qt, QFileInfo, QTimeLine
+from PySide2.QtGui import QStandardItemModel, QStandardItem
 from PySide2.QtWidgets import QFileIconProvider
 from spinetoolbox.project_item import ProjectItem
 from spinetoolbox.project_item_resource import ProjectItemResource
 from spinetoolbox.config import TOOL_OUTPUT_DIR
+from spinetoolbox.helpers import open_url
 from .commands import UpdateToolExecuteInWorkCommand, UpdateToolCmdLineArgsCommand
 from .item_info import ItemInfo
 from .tool_specifications import ToolSpecification
@@ -224,7 +225,7 @@ class Tool(ProjectItem):
             return
         url = "file:///" + self.output_dir
         # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
-        res = QDesktopServices.openUrl(QUrl(url, QUrl.TolerantMode))
+        res = open_url(url)
         if not res:
             self._logger.msg_error.emit(f"Failed to open directory: {self.output_dir}")
 
@@ -257,7 +258,7 @@ class Tool(ProjectItem):
         if not self.specification():
             return
         dir_url = "file:///" + self.specification().path
-        self._toolbox.open_anchor(QUrl(dir_url, QUrl.TolerantMode))
+        open_url(dir_url)
 
     def specification(self):
         """Returns Tool specification."""

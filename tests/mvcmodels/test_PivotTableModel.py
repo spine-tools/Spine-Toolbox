@@ -20,7 +20,7 @@ import unittest
 from unittest.mock import Mock, MagicMock, patch
 from PySide2.QtWidgets import QApplication, QAction
 from spinetoolbox.mvcmodels.pivot_table_models import PivotTableModel
-from spinetoolbox.widgets.data_store_widget import DataStoreForm
+from spinetoolbox.data_store_form.widgets.data_store_form import DataStoreForm
 
 
 class TestPivotTableModel(unittest.TestCase):
