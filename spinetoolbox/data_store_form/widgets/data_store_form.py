@@ -973,7 +973,6 @@ class DataStoreForm(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         toc = time.process_time()
         self.msg.emit("Data store view created in {0:.2f} seconds".format(toc - tic))
         self.db_mngr.fetch_db_maps_for_listener(self, *self.db_maps)
-        self._insert_open_sqlite_file_button("ddd")
 
     def connect_signals(self):
         super().connect_signals()
