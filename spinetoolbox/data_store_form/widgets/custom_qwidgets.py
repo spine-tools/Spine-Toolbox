@@ -140,23 +140,6 @@ class OpenSQLiteFileButton(OpenFileButton):
         self.ds_form._add_sqlite_url_to_project(self.url)
 
 
-class ClearableStatusBar(QStatusBar):
-    def __init__(self, parent=None):
-        super().__init__(parent=parent)
-        self.hide()
-        self._widgets = list()
-        self.clear_button = QToolButton()
-        self.clear_button.setIcon(QIcon(":/icons/menu_icons/window-close.svg"))
-        self.addPermanentWidget(self.clear_button)
-        self.clear_button.clicked.connect(self.clear)
-
-    def clear(self):
-        widgets = [wg for wg in self.findChildren(QWidget) if wg is not self.clear_button]
-        for wg in widgets:
-            self.removeWidget(wg)
-        self.hide()
-
-
 class ShootingLabel(QLabel):
     def __init__(self, origin, destination, parent=None, duration=1200):
         super().__init__("FIXME", parent=parent)

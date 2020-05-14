@@ -19,7 +19,7 @@ Contains the DataStoreForm class.
 import os
 import time  # just to measure loading time and sqlalchemy ORM performance
 import json
-from PySide2.QtWidgets import QMainWindow, QErrorMessage, QDockWidget, QInputDialog
+from PySide2.QtWidgets import QMainWindow, QErrorMessage, QDockWidget
 from PySide2.QtCore import Qt, Signal, Slot, QPoint
 from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QIcon
 from sqlalchemy.engine.url import URL, make_url
@@ -36,7 +36,7 @@ from ...config import MAINWINDOW_SS, APPLICATION_PATH
 from .edit_or_remove_items_dialogs import ManageParameterTagsDialog
 from .select_db_items_dialogs import MassRemoveItemsDialog, GetItemsForExportDialog
 from .custom_menus import ParameterValueListContextMenu
-from .custom_qwidgets import OpenFileButton, OpenSQLiteFileButton, ClearableStatusBar, ShootingLabel, CustomInputDialog
+from .custom_qwidgets import OpenFileButton, OpenSQLiteFileButton, ShootingLabel, CustomInputDialog
 from .parameter_view_mixin import ParameterViewMixin
 from .tree_view_mixin import TreeViewMixin
 from .graph_view_mixin import GraphViewMixin
@@ -89,8 +89,6 @@ class DataStoreFormBase(QMainWindow):
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
         self.takeCentralWidget()
-        self.status_bar = ClearableStatusBar(self)
-        self.setStatusBar(self.status_bar)
         self.setWindowIcon(QIcon(":/symbols/app.ico"))
         self.setStyleSheet(MAINWINDOW_SS)
         self.setAttribute(Qt.WA_DeleteOnClose)
@@ -161,6 +159,7 @@ class DataStoreFormBase(QMainWindow):
             self.show_parameter_value_list_context_menu
         )
         self.parameter_value_list_model.remove_selection_requested.connect(self.remove_parameter_value_lists)
+        self.ui.dockWidget_exports.visibilityChanged.connect(self._handle_exports_visibility_changed)
 
     @Slot(int)
     def update_undo_redo_actions(self, index):
@@ -551,28 +550,39 @@ class DataStoreFormBase(QMainWindow):
 
     def _insert_open_file_button(self, file_path):
         button = OpenFileButton(file_path, self)
-        self._insert_button_to_status_bar(button)
+        self._insert_button_to_exports_widget(button)
 
     def _insert_open_sqlite_file_button(self, file_path):
         button = OpenSQLiteFileButton(file_path, self)
-        self._insert_button_to_status_bar(button)
+        self._insert_button_to_exports_widget(button)
 
-    def _insert_button_to_status_bar(self, button):
+    def _insert_button_to_exports_widget(self, button):
         """
         Inserts given button to the 'beginning' of the status bar and decorates the thing with a shooting label.
         """
         duplicates = [
-            x for x in self.status_bar.findChildren(OpenFileButton) if os.path.samefile(x.file_path, button.file_path)
+            x
+            for x in self.ui.dockWidget_exports.findChildren(OpenFileButton)
+            if os.path.samefile(x.file_path, button.file_path)
         ]
         for dup in duplicates:
-            self.status_bar.removeWidget(dup)
-        self.status_bar.insertWidget(0, button)
-        self.status_bar.show()
-        destination = QPoint(16, 0) + self.status_bar.mapToParent(QPoint(0, 0))
+            self.ui.horizontalLayout_exports.removeWidget(dup)
+        self.ui.horizontalLayout_exports.insertWidget(0, button)
+        self.ui.dockWidget_exports.show()
+        destination = QPoint(16, 0) + button.mapTo(self, QPoint(0, 0))
         label = ShootingLabel(destination - QPoint(0, 64), destination, self)
         pixmap = QIcon(":/icons/file-download.svg").pixmap(32, 32)
         label.setPixmap(pixmap)
         label.show()
+
+    @Slot(bool)
+    def _handle_exports_visibility_changed(self, visible):
+        """Remove all buttons when exports dock is closed."""
+        if visible:
+            return
+        for button in self.ui.dockWidget_exports.findChildren(OpenFileButton):
+            self.ui.horizontalLayout_exports.removeWidget(button)
+            button.hide()
 
     def reload_session(self, db_maps):
         """Reloads data from given db_maps."""
@@ -963,12 +973,18 @@ class DataStoreForm(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         toc = time.process_time()
         self.msg.emit("Data store view created in {0:.2f} seconds".format(toc - tic))
         self.db_mngr.fetch_db_maps_for_listener(self, *self.db_maps)
+        self._insert_open_sqlite_file_button("ddd")
 
     def connect_signals(self):
         super().connect_signals()
         self.ui.actionTree_style.triggered.connect(self.apply_tree_style)
         self.ui.actionGraph_style.triggered.connect(self.apply_graph_style)
         self.ui.actionTabular_style.triggered.connect(self.apply_tabular_style)
+
+    def add_menu_actions(self):
+        super().add_menu_actions()
+        self.ui.menuView.addSeparator()
+        self.ui.menuView.addAction(self.ui.dockWidget_exports.toggleViewAction())
 
     def tabify_and_raise(self, docks):
         """
@@ -989,6 +1005,7 @@ class DataStoreForm(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
     def end_style_change(self):
         """Ends a style change operation."""
         qApp.processEvents()  # pylint: disable=undefined-variable
+        self.ui.dockWidget_exports.hide()
         self.resize(self._size)
 
     @Slot(bool)
