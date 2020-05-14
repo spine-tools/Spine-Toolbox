@@ -19,9 +19,10 @@ Contains the DataStoreForm class.
 import os
 import time  # just to measure loading time and sqlalchemy ORM performance
 import json
-from PySide2.QtWidgets import QMainWindow, QErrorMessage, QDockWidget, QInputDialog
+from PySide2.QtWidgets import QMainWindow, QErrorMessage, QDockWidget
 from PySide2.QtCore import Qt, Signal, Slot, QPoint
 from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QIcon
+from sqlalchemy.engine.url import URL, make_url
 from spinedb_api import (
     import_data,
     export_data,
