@@ -23,7 +23,7 @@ from sqlalchemy.engine.url import URL, make_url
 from spinedb_api import SpineDBAPIError
 from spinetoolbox.project_item import ProjectItem
 from spinetoolbox.helpers import create_dir
-from spinetoolbox.widgets.data_store_widget import RecombinatorDataStoreForm
+from spinetoolbox.data_store_form.widgets.data_store_form import RecombinatorDataStoreForm
 from ..shared.commands import UpdateCancelOnErrorCommand
 from .item_info import ItemInfo
 from .executable_item import ExecutableItem

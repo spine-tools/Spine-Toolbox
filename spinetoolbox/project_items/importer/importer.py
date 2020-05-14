@@ -29,7 +29,7 @@ from spinetoolbox.spine_io.importers.csv_reader import CSVConnector
 from spinetoolbox.spine_io.importers.excel_reader import ExcelConnector
 from spinetoolbox.spine_io.importers.gdx_connector import GdxConnector
 from spinetoolbox.spine_io.importers.json_reader import JSONConnector
-from spinetoolbox.widgets.import_preview_window import ImportPreviewWindow
+from spinetoolbox.import_editor.widgets.import_editor_window import ImportEditorWindow
 from .commands import ChangeItemSelectionCommand, UpdateSettingsCommand
 from ..shared.commands import UpdateCancelOnErrorCommand
 from .executable_item import ExecutableItem
@@ -97,7 +97,7 @@ class Importer(ProjectItem):
         self._file_model.set_initial_state(self.settings.keys(), mapping_selection)
         self._file_model.selected_for_import_state_changed.connect(self._push_file_selection_change_to_undo_stack)
         # connector class
-        self._preview_widget = {}  # Key is the filepath, value is the ImportPreviewWindow instance
+        self._preview_widget = {}  # Key is the filepath, value is the ImportEditorWindow instance
 
     @staticmethod
     def item_type():
