@@ -36,7 +36,7 @@ from ...config import MAINWINDOW_SS, APPLICATION_PATH
 from .edit_or_remove_items_dialogs import ManageParameterTagsDialog
 from .select_db_items_dialogs import MassRemoveItemsDialog, GetItemsForExportDialog
 from .custom_menus import ParameterValueListContextMenu
-from .custom_qwidgets import OpenFileButton, OpenSQLiteFileButton, ClearableStatusBar, ShootingLabel
+from .custom_qwidgets import OpenFileButton, OpenSQLiteFileButton, ClearableStatusBar, ShootingLabel, CustomInputDialog
 from .parameter_view_mixin import ParameterViewMixin
 from .tree_view_mixin import TreeViewMixin
 from .graph_view_mixin import GraphViewMixin
@@ -449,8 +449,8 @@ class DataStoreFormBase(QMainWindow):
         import_data(db_map, **data_for_export)
         try:
             db_map.commit_session("Export initial data from Spine Toolbox.")
-        except SpineDBAPIError:
-            self.msg_error.emit(f"[SpineDBAPIError] Unable to export file <b>{db_map.codename}</b>")
+        except SpineDBAPIError as err:
+            self.msg_error.emit(f"[SpineDBAPIError] Unable to export file <b>{db_map.codename}</b>: {err.msg}")
         else:
             self._insert_open_sqlite_file_button(file_path)
 
@@ -468,18 +468,18 @@ class DataStoreFormBase(QMainWindow):
         project = self.db_mngr._project
         if not project:
             return
+        icon_path = project._toolbox.item_factories["Data Store"].icon()
         data_stores = project._project_item_model.items(category_name="Data Stores")
-        other_data_stores = [x.project_item for x in data_stores if x is not self]
-        named_data_stores = {x.name: x for x in other_data_stores}
-        name, ok = QInputDialog.getItem(
+        data_stores = [x.project_item for x in data_stores]
+        named_data_stores = {x.name: x for x in data_stores}
+        name = CustomInputDialog.get_item(
             self,
-            "Add SQLite file to project",
-            "Please select a recipient Data Store from the list,\n"
-            "or type a name to create a new one.\n"
-            "The url of the recipient Data Store will be pointed to the file.",
+            "Add SQLite file to Project",
+            "<p>Select a Data Store from the list to be the recipient:</p>",
             list(named_data_stores),
+            QIcon(icon_path),
         )
-        if not ok:
+        if name is None:
             return
         data_store = named_data_stores.get(name)
         database = make_url(url).database
@@ -487,12 +487,25 @@ class DataStoreFormBase(QMainWindow):
         if not data_store:
             data_store_dict = {"name": name, "description": "", "x": 0, "y": 0, "url": url_as_dict}
             project.add_project_items("Data Store", data_store_dict)
-            self.msg.emit(f"Data Store <i>{name}</i> successfully created.")
-            treated = "added"
+            action = "added"
+        elif data_store.update_url(**url_as_dict):
+            action = "updated"
         else:
-            treated = "updated"
-            data_store.update_url(**url_as_dict)
-        self.msg.emit(f"Data Store <i>{name}</i> successfully {treated}.")
+            self.msg.emit(f"Data Store <i>{name}</i> is already set to use url {url}")
+            return
+        link = "<a href='#'>undo</a>"
+        stack = project._toolbox.undo_stack
+        index = stack.index()
+        open_link = lambda _, stack=stack, index=index: self._undo_add_sqlite_url_to_project(_, stack, index)
+        self.link_msg.emit(f"Data Store <i>{name}</i> successfully {action}.<br>{link}", open_link)
+
+    @Slot("str")
+    def _undo_add_sqlite_url_to_project(self, _, stack, index):
+        if not stack.canUndo() or stack.index() != index:
+            self.msg.emit(f"Already undone.")
+            return
+        stack.undo()
+        self.msg.emit(f"Successfully undone.")
 
     def export_to_json(self, file_path, data_for_export):
         """Exports given data into JSON file."""

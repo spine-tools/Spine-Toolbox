@@ -179,8 +179,9 @@ class DataStore(ProjectItem):
         """Set url key to value."""
         kwargs = {k: v for k, v in kwargs.items() if v != self._url[k]}
         if not kwargs:
-            return
+            return False
         self._toolbox.undo_stack.push(UpdateDSURLCommand(self, **kwargs))
+        return True
 
     def do_update_url(self, **kwargs):
         self._url.update(kwargs)

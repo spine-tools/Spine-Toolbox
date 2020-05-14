@@ -17,8 +17,19 @@ Custom QWidgets.
 """
 
 import os
-from PySide2.QtWidgets import QWidget, QMenu, QToolButton, QStatusBar, QLabel, QGraphicsOpacityEffect
-from PySide2.QtCore import Slot, QVariantAnimation, QPointF
+from PySide2.QtWidgets import (
+    QWidget,
+    QMenu,
+    QToolButton,
+    QStatusBar,
+    QLabel,
+    QGraphicsOpacityEffect,
+    QDialog,
+    QVBoxLayout,
+    QDialogButtonBox,
+    QListWidget,
+)
+from PySide2.QtCore import Slot, QVariantAnimation, QPointF, Qt
 from PySide2.QtGui import QIcon
 from sqlalchemy.engine.url import URL
 from ...helpers import open_url
@@ -95,9 +106,9 @@ class OpenFileButton(QToolButton):
         menu = QMenu(ds_form)
         self.setMenu(menu)
         open_file_action = menu.addAction("Open")
-        show_in_folder_action = menu.addAction("Show in folder")
+        open_containing_folder_action = menu.addAction("Open containing folder")
         open_file_action.triggered.connect(self.open_file)
-        show_in_folder_action.triggered.connect(self.show_in_folder)
+        open_containing_folder_action.triggered.connect(self.open_containing_folder)
         self.clicked.connect(open_file_action.triggered)
 
     @Slot(bool)
@@ -105,7 +116,7 @@ class OpenFileButton(QToolButton):
         open_url(self.file_path)
 
     @Slot(bool)
-    def show_in_folder(self, checked=False):
+    def open_containing_folder(self, checked=False):
         open_url(self.dir_name)
 
 
@@ -170,3 +181,65 @@ class ShootingLabel(QLabel):
     def show(self):
         self.anim.start(QVariantAnimation.DeleteWhenStopped)
         super().show()
+
+
+class CustomInputDialog(QDialog):
+    def __init__(self, parent, title):
+        super().__init__(parent)
+        self.setWindowTitle(title)
+        self._new_item = None
+        self._new_item_text = "Add new Data Store..."
+        self._accepted_item = None
+        self._list_wg = QListWidget()
+        self._list_wg.itemDoubleClicked.connect(self._handle_item_double_clicked)
+        self._list_wg.itemChanged.connect(self._handle_item_changed)
+
+    def accept(self, item=None):
+        if item is None:
+            item = self._list_wg.currentItem()
+        if item is self._new_item and item.text() == self._new_item_text:
+            self._list_wg.editItem(item)
+            return
+        self._accepted_item = item
+        self.done(QDialog.Accepted)
+
+    def reject(self):
+        self.done(QDialog.Rejected)
+
+    @Slot("QListWidgetItem")
+    def _handle_item_double_clicked(self, item):
+        self.accept(item)
+
+    @Slot("QListWidgetItem")
+    def _handle_item_changed(self, item):
+        if item is self._new_item and item.text() != self._new_item_text:
+            item.setForeground(qApp.palette().text())
+            self._new_item = None
+
+    @classmethod
+    def get_item(cls, parent, title, label, items, icon):
+        dialog = cls(parent, title)
+        layout = QVBoxLayout(dialog)
+        label = QLabel(label)
+        label.setWordWrap(True)
+        items.append(dialog._new_item_text)
+        dialog._list_wg.addItems(items)
+        for item in dialog._list_wg.findItems("*", Qt.MatchWildcard):
+            item.setData(Qt.DecorationRole, icon)
+        dialog._new_item = dialog._list_wg.item(dialog._list_wg.count() - 1)
+        dialog._new_item.setFlags(dialog._new_item.flags() | Qt.ItemIsEditable)
+        foreground = qApp.palette().text()
+        color = foreground.color()
+        color.setAlpha(128)
+        foreground.setColor(color)
+        dialog._new_item.setForeground(foreground)
+        button_box = QDialogButtonBox()
+        button_box.setStandardButtons(QDialogButtonBox.Cancel | QDialogButtonBox.Ok)
+        layout.addWidget(label)
+        layout.addWidget(dialog._list_wg)
+        layout.addWidget(button_box)
+        button_box.accepted.connect(dialog.accept)
+        button_box.rejected.connect(dialog.close)
+        if dialog.exec_() == QDialog.Rejected:
+            return None
+        return dialog._accepted_item.text()
