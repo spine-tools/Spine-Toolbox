@@ -257,21 +257,22 @@ class SpineToolboxProject(MetaObject):
             return None, []
         project_items_by_category = {}
         for item_dict in items:
-            project_item = factory.make_item(self._toolbox, self, self._logger, **item_dict)
             try:
-                project_items_by_category.setdefault(project_item.item_category(), list()).append(project_item)
+                project_item = factory.make_item(self._toolbox, self, self._logger, **item_dict)
             except TypeError:
                 self._logger.msg_error.emit(
-                    f"Creating project item <b>{item_dict['name']}</b> of type <b>{item_type}</b> failed. "
+                    f"Creating <b>{item_type}</b> project item <b>{item_dict['name']}</b> failed. "
                     "This is most likely caused by an outdated project file."
                 )
                 continue
             except KeyError as error:
                 self._logger.msg_error.emit(
-                    f"Creating project item <b>{item_dict['name']}</b> with factory <b>{item_type}</b> failed. "
+                    f"Creating <b>{item_type}</b> project item <b>{item_dict['name']}</b> failed. "
                     f"This is most likely caused by an outdated or corrupted project file "
                     f"(missing JSON key: {str(error)})."
                 )
+                continue
+        project_items_by_category.setdefault(project_item.item_category(), list()).append(project_item)
         project_tree_items = {}
         for category, project_items in project_items_by_category.items():
             category_ind = self._project_item_model.find_category(category)
