@@ -18,8 +18,7 @@ Module for view icon class.
 
 import random
 from PySide2.QtGui import QColor
-from PySide2.QtCore import QTimeLine, QPointF
-from PySide2.QtWidgets import QGraphicsItemAnimation
+from PySide2.QtCore import QTimeLine, QPointF, Slot
 from spinetoolbox.graphics_items import ProjectItemIcon
 
 
@@ -41,42 +40,33 @@ class CombinerIcon(ProjectItemIcon):
         super().__init__(
             toolbox, x, y, w, h, project_item, icon, icon_color=QColor("#990000"), background_color=QColor("#ffcccc")
         )
-        # animation stuff
-        self.timer = QTimeLine()
-        self.timer.setLoopCount(0)  # loop forever
-        self.timer.setFrameRange(0, 10)
-        # self.timer.setCurveShape(QTimeLine.CosineCurve)
-        self.timer.valueForTime = self._value_for_time
-        self.animation = QGraphicsItemAnimation()
-        self.animation.setItem(self.svg_item)
-        self.animation.setTimeLine(self.timer)
-        self.initial_pos = self.svg_item.pos()
+        self.time_line = QTimeLine()
+        self.time_line.setLoopCount(0)  # loop forever
+        self.time_line.setFrameRange(0, 10)
+        self.time_line.setDirection(QTimeLine.Backward)
+        self.time_line.valueChanged.connect(self._handle_time_line_value_changed)
+        self._svg_item_pos = self.svg_item.pos()
 
-    @staticmethod
-    def _value_for_time(msecs):
-        rem = (msecs % 1000) / 1000
-        return 1.0 - rem
+    @Slot(float)
+    def _handle_time_line_value_changed(self, value):
+        rect = self.svg_item.sceneBoundingRect()
+        width = rect.width()
+        height = rect.height()
+        x = random.uniform(-self._SHAKE_FACTOR, self._SHAKE_FACTOR) * width
+        y = random.uniform(-self._SHAKE_FACTOR, self._SHAKE_FACTOR) * height
+        self.svg_item.setPos(self._svg_item_pos + QPointF(x, y))
 
     def start_animation(self):
         """Start the animation that plays when the Combiner associated to this GraphicsItem is running.
         """
-        if self.timer.state() == QTimeLine.Running:
+        if self.time_line.state() == QTimeLine.Running:
             return
-        initial_pos = self.svg_item.pos()
-        rect = self.svg_item.sceneBoundingRect()
-        width = rect.width()
-        height = rect.height()
-        for i in range(100):
-            step = i / 100.0
-            x = random.uniform(-self._SHAKE_FACTOR, self._SHAKE_FACTOR) * width
-            y = random.uniform(-self._SHAKE_FACTOR, self._SHAKE_FACTOR) * height
-            self.animation.setPosAt(step, initial_pos + QPointF(x, y))
-        self.animation.setPosAt(0, initial_pos)
-        self.timer.start()
+        self.time_line.start()
 
     def stop_animation(self):
         """Stop animation"""
-        if self.timer.state() != QTimeLine.Running:
+        if self.time_line.state() != QTimeLine.Running:
             return
-        self.animation.setStep(0)
-        self.timer.stop()
+        self.time_line.stop()
+        self.svg_item.setPos(self._svg_item_pos)
+        self.time_line.setCurrentTime(0)
