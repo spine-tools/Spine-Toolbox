@@ -276,7 +276,7 @@ class SpineToolboxProject(MetaObject):
                     f"(missing JSON key: {str(error)})."
                 )
                 continue
-        project_items_by_category.setdefault(project_item.item_category(), list()).append(project_item)
+            project_items_by_category.setdefault(project_item.item_category(), list()).append(project_item)
         project_tree_items = {}
         for category, project_items in project_items_by_category.items():
             category_ind = self._project_item_model.find_category(category)
