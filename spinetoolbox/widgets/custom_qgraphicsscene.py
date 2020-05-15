@@ -165,7 +165,7 @@ class CustomQGraphicsScene(ShrinkingScene):
         if not project_item_icons:
             return
         rect = QRectF()
-        for item in self._project_item_icons():
+        for item in project_item_icons:
             rect |= item.sceneBoundingRect()
         delta = -rect.center()
         for item in project_item_icons:
