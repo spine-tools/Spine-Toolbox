@@ -45,6 +45,7 @@ class CombinerIcon(ProjectItemIcon):
         self.time_line.setFrameRange(0, 10)
         self.time_line.setDirection(QTimeLine.Backward)
         self.time_line.valueChanged.connect(self._handle_time_line_value_changed)
+        self.time_line.stateChanged.connect(self._handle_time_line_state_changed)
         self._svg_item_pos = self.svg_item.pos()
 
     @Slot(float)
@@ -55,6 +56,11 @@ class CombinerIcon(ProjectItemIcon):
         x = random.uniform(-self._SHAKE_FACTOR, self._SHAKE_FACTOR) * width
         y = random.uniform(-self._SHAKE_FACTOR, self._SHAKE_FACTOR) * height
         self.svg_item.setPos(self._svg_item_pos + QPointF(x, y))
+
+    @Slot("QTimeLine::State")
+    def _handle_time_line_state_changed(self, new_state):
+        if new_state == QTimeLine.NotRunning:
+            self.svg_item.setPos(self._svg_item_pos)
 
     def start_animation(self):
         """Start the animation that plays when the Combiner associated to this GraphicsItem is running.
@@ -68,5 +74,3 @@ class CombinerIcon(ProjectItemIcon):
         if self.time_line.state() != QTimeLine.Running:
             return
         self.time_line.stop()
-        self.svg_item.setPos(self._svg_item_pos)
-        self.time_line.setCurrentTime(0)
