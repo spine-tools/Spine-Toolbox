@@ -113,7 +113,10 @@ class Importer(ProjectItem):
         selected_settings = dict()
         for file_item in self._file_model.existing_files():
             label = file_item.label
-            selected_settings[label] = self.settings[label] if file_item.selected_for_import else "deselected"
+            settings = self.settings.get(label) if file_item.selected_for_import else "deselected"
+            if not settings:
+                continue
+            selected_settings[label] = settings
         python_path = self._project.settings.value("appSettings/pythonPath", defaultValue="")
         gams_path = self._project.settings.value("appSettings/gamsPath", defaultValue=None)
         cancel_on_error = self._properties_ui.cancel_on_error_checkBox.isChecked()
