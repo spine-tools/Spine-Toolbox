@@ -17,7 +17,7 @@ Module for tool icon class.
 """
 
 from PySide2.QtGui import QColor
-from PySide2.QtCore import QTimeLine, Slot
+from PySide2.QtCore import QTimeLine, Slot, QPointF
 from PySide2.QtWidgets import QGraphicsItemAnimation
 from spinetoolbox.graphics_items import ProjectItemIcon
 
@@ -38,38 +38,30 @@ class ToolIcon(ProjectItemIcon):
         super().__init__(
             toolbox, x, y, w, h, project_item, icon, icon_color=QColor("red"), background_color=QColor("#ffe6e6")
         )
-        # animation stuff
         self.time_line = QTimeLine()
         self.time_line.setLoopCount(0)  # loop forever
         self.time_line.setFrameRange(0, 10)
-        # self.time_line.setCurveShape(QTimeLine.CosineCurve)
-        self.time_line.valueForTime = self._value_for_time
+        self.time_line.setDuration(1200)
+        self.time_line.setDirection(QTimeLine.Backward)
         self.time_line.valueChanged.connect(self._handle_time_line_value_changed)
-        self.animation = QGraphicsItemAnimation()
-        self.animation.setItem(self.svg_item)
-        self.animation.setTimeLine(self.time_line)
         self._svg_item_pos = self.svg_item.pos()
-
-    @staticmethod
-    def _value_for_time(msecs):
-        rem = (msecs % 1000) / 1000
-        return 1.0 - rem
+        rect = self.svg_item.sceneBoundingRect()
+        self.svg_item.setTransformOriginPoint(0, -0.75 * rect.height())
+        self._anim_delta_x_factor = 0.5 * rect.width()
 
     @Slot(float)
     def _handle_time_line_value_changed(self, value):
         angle = value * 45.0
-        self.animation.setRotationAt(value, angle)
+        self.svg_item.setRotation(angle)
+        delta_y = 0.5 * self.svg_item.sceneBoundingRect().height()
+        delta = QPointF(self._anim_delta_x_factor * value, delta_y)
+        self.svg_item.setPos(self._svg_item_pos + delta)
 
     def start_animation(self):
-        """Start the animation that plays when the Tool associated to this GraphicsItem is running.
+        """Starts the item execution animation.
         """
         if self.time_line.state() == QTimeLine.Running:
             return
-        height = self.svg_item.sceneBoundingRect().height()
-        delta = 0.5 * height
-        offset = 0.75 * height
-        self.svg_item.moveBy(0, delta)
-        self.svg_item.setTransformOriginPoint(0, -offset)
         self.time_line.start()
 
     def stop_animation(self):
@@ -78,5 +70,4 @@ class ToolIcon(ProjectItemIcon):
             return
         self.time_line.stop()
         self.svg_item.setPos(self._svg_item_pos)
-        self.svg_item.setTransformOriginPoint(0, 0)
         self.time_line.setCurrentTime(999)
