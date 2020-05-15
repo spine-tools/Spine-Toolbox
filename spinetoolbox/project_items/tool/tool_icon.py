@@ -17,7 +17,7 @@ Module for tool icon class.
 """
 
 from PySide2.QtGui import QColor
-from PySide2.QtCore import QTimeLine, QPointF
+from PySide2.QtCore import QTimeLine, Slot
 from PySide2.QtWidgets import QGraphicsItemAnimation
 from spinetoolbox.graphics_items import ProjectItemIcon
 
@@ -39,40 +39,44 @@ class ToolIcon(ProjectItemIcon):
             toolbox, x, y, w, h, project_item, icon, icon_color=QColor("red"), background_color=QColor("#ffe6e6")
         )
         # animation stuff
-        self.timer = QTimeLine()
-        self.timer.setLoopCount(0)  # loop forever
-        self.timer.setFrameRange(0, 10)
-        # self.timer.setCurveShape(QTimeLine.CosineCurve)
-        self.timer.valueForTime = self._value_for_time
+        self.time_line = QTimeLine()
+        self.time_line.setLoopCount(0)  # loop forever
+        self.time_line.setFrameRange(0, 10)
+        # self.time_line.setCurveShape(QTimeLine.CosineCurve)
+        self.time_line.valueForTime = self._value_for_time
+        self.time_line.valueChanged.connect(self._handle_time_line_value_changed)
         self.animation = QGraphicsItemAnimation()
         self.animation.setItem(self.svg_item)
-        self.animation.setTimeLine(self.timer)
-        self.delta = 0.25 * self.svg_item.sceneBoundingRect().height()
+        self.animation.setTimeLine(self.time_line)
+        self._svg_item_pos = self.svg_item.pos()
 
     @staticmethod
     def _value_for_time(msecs):
         rem = (msecs % 1000) / 1000
         return 1.0 - rem
 
+    @Slot(float)
+    def _handle_time_line_value_changed(self, value):
+        angle = value * 45.0
+        self.animation.setRotationAt(value, angle)
+
     def start_animation(self):
         """Start the animation that plays when the Tool associated to this GraphicsItem is running.
         """
-        if self.timer.state() == QTimeLine.Running:
+        if self.time_line.state() == QTimeLine.Running:
             return
-        self.svg_item.moveBy(0, -self.delta)
-        offset = 0.75 * self.svg_item.sceneBoundingRect().height()
-        for angle in range(1, 45):
-            step = angle / 45.0
-            self.animation.setTranslationAt(step, 0, offset)
-            self.animation.setRotationAt(step, angle)
-            self.animation.setTranslationAt(step, 0, -offset)
-            self.animation.setPosAt(step, QPointF(self.svg_item.pos().x(), self.svg_item.pos().y() + offset))
-        self.timer.start()
+        height = self.svg_item.sceneBoundingRect().height()
+        delta = 0.5 * height
+        offset = 0.75 * height
+        self.svg_item.moveBy(0, delta)
+        self.svg_item.setTransformOriginPoint(0, -offset)
+        self.time_line.start()
 
     def stop_animation(self):
         """Stop animation"""
-        if self.timer.state() != QTimeLine.Running:
+        if self.time_line.state() != QTimeLine.Running:
             return
-        self.timer.stop()
-        self.svg_item.moveBy(0, self.delta)
-        self.timer.setCurrentTime(999)
+        self.time_line.stop()
+        self.svg_item.setPos(self._svg_item_pos)
+        self.svg_item.setTransformOriginPoint(0, 0)
+        self.time_line.setCurrentTime(999)

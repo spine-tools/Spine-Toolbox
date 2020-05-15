@@ -13,7 +13,7 @@
 # Form implementation generated from reading ui file '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/data_store_form/ui/data_store_window.ui',
 # licensing of '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/data_store_form/ui/data_store_window.ui' applies.
 #
-# Created: Wed May 13 16:34:31 2020
+# Created: Thu May 14 19:10:37 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -395,6 +395,25 @@ class Ui_MainWindow(object):
         self.verticalLayout_14.addWidget(self.frozen_table)
         self.dockWidget_frozen_table.setWidget(self.dockWidgetContents_11)
         MainWindow.addDockWidget(QtCore.Qt.DockWidgetArea(2), self.dockWidget_frozen_table)
+        self.dockWidget_exports = QtWidgets.QDockWidget(MainWindow)
+        self.dockWidget_exports.setMaximumSize(QtCore.QSize(524287, 64))
+        self.dockWidget_exports.setFeatures(QtWidgets.QDockWidget.DockWidgetClosable)
+        self.dockWidget_exports.setAllowedAreas(QtCore.Qt.BottomDockWidgetArea)
+        self.dockWidget_exports.setObjectName("dockWidget_exports")
+        self.dockWidgetContents_12 = QtWidgets.QWidget()
+        self.dockWidgetContents_12.setObjectName("dockWidgetContents_12")
+        self.horizontalLayout_3 = QtWidgets.QHBoxLayout(self.dockWidgetContents_12)
+        self.horizontalLayout_3.setSpacing(0)
+        self.horizontalLayout_3.setContentsMargins(0, 0, 0, 0)
+        self.horizontalLayout_3.setObjectName("horizontalLayout_3")
+        self.horizontalLayout_exports = QtWidgets.QHBoxLayout()
+        self.horizontalLayout_exports.setSpacing(1)
+        self.horizontalLayout_exports.setObjectName("horizontalLayout_exports")
+        spacerItem = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        self.horizontalLayout_exports.addItem(spacerItem)
+        self.horizontalLayout_3.addLayout(self.horizontalLayout_exports)
+        self.dockWidget_exports.setWidget(self.dockWidgetContents_12)
+        MainWindow.addDockWidget(QtCore.Qt.DockWidgetArea(8), self.dockWidget_exports)
         self.actionCommit = QtWidgets.QAction(MainWindow)
         self.actionCommit.setEnabled(True)
         icon = QtGui.QIcon()
@@ -621,6 +640,7 @@ class Ui_MainWindow(object):
         self.dockWidget_pivot_table.setWindowTitle(QtWidgets.QApplication.translate("MainWindow", "Pivot table", None, -1))
         self.label_3.setText(QtWidgets.QApplication.translate("MainWindow", "Input type:", None, -1))
         self.dockWidget_frozen_table.setWindowTitle(QtWidgets.QApplication.translate("MainWindow", "Frozen table", None, -1))
+        self.dockWidget_exports.setWindowTitle(QtWidgets.QApplication.translate("MainWindow", "Exports", None, -1))
         self.actionCommit.setText(QtWidgets.QApplication.translate("MainWindow", "Commit", None, -1))
         self.actionCommit.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+Return", None, -1))
         self.actionRollback.setText(QtWidgets.QApplication.translate("MainWindow", "Rollback", None, -1))
@@ -674,9 +694,9 @@ class Ui_MainWindow(object):
         self.actionExport_session.setText(QtWidgets.QApplication.translate("MainWindow", "Export session...", None, -1))
         self.actionExport_session.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Export items added and updated in the current session (since last commit) into a file</p></body></html>", None, -1))
 
-from spinetoolbox.widgets.custom_qtableview import AutoFilterCopyPasteTableView
-from spinetoolbox.widgets.custom_qtreeview import CopyTreeView, EntityTreeView, StickySelectionEntityTreeView
+from spinetoolbox.widgets.custom_qtreeview import EntityTreeView, StickySelectionEntityTreeView, CopyTreeView
 from spinetoolbox.widgets.custom_qlistview import DragListView
-from spinetoolbox.data_store_form.widgets.custom_qtableview import FrozenTableView, PivotTableView
 from spinetoolbox.widgets.custom_qgraphicsviews import GraphQGraphicsView
+from spinetoolbox.widgets.custom_qtableview import AutoFilterCopyPasteTableView
+from spinetoolbox.data_store_form.widgets.custom_qtableview import PivotTableView, FrozenTableView
 from spinetoolbox import resources_icons_rc

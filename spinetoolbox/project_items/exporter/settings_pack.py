@@ -15,7 +15,7 @@ Contains the SettingsPack class.
 :author: A. Soininen (VTT)
 :date:   6.5.2020
 """
-from datetime import datetime
+import dateutil.parser
 from PySide2.QtCore import QObject, Signal, Slot
 from spinedb_api import DatabaseMapping, SpineDBAPIError
 from spinetoolbox.spine_io.exporters import gdx
@@ -121,7 +121,7 @@ class SettingsPack(QObject):
         latest_commit = pack_dict.get("latest_database_commit")
         if latest_commit is not None:
             try:
-                pack.last_database_commit = datetime.fromisoformat(latest_commit)
+                pack.last_database_commit = dateutil.parser.parse(latest_commit)
             except ValueError as error:
                 logger.msg_error.emit(f"Failed to read latest database commit: {error}")
         return pack

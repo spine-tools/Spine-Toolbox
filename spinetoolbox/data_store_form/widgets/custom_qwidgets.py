@@ -18,10 +18,8 @@ Custom QWidgets.
 
 import os
 from PySide2.QtWidgets import (
-    QWidget,
     QMenu,
     QToolButton,
-    QStatusBar,
     QLabel,
     QGraphicsOpacityEffect,
     QDialog,
@@ -30,7 +28,6 @@ from PySide2.QtWidgets import (
     QListWidget,
 )
 from PySide2.QtCore import Slot, QVariantAnimation, QPointF, Qt
-from PySide2.QtGui import QIcon
 from sqlalchemy.engine.url import URL
 from ...helpers import open_url
 from ...mvcmodels.filter_checkbox_list_model import LazyFilterCheckboxListModel, DataToValueFilterCheckboxListModel
@@ -138,23 +135,6 @@ class OpenSQLiteFileButton(OpenFileButton):
     @Slot(bool)
     def add_to_project(self, checked=False):
         self.ds_form._add_sqlite_url_to_project(self.url)
-
-
-class ClearableStatusBar(QStatusBar):
-    def __init__(self, parent=None):
-        super().__init__(parent=parent)
-        self.hide()
-        self._widgets = list()
-        self.clear_button = QToolButton()
-        self.clear_button.setIcon(QIcon(":/icons/menu_icons/window-close.svg"))
-        self.addPermanentWidget(self.clear_button)
-        self.clear_button.clicked.connect(self.clear)
-
-    def clear(self):
-        widgets = [wg for wg in self.findChildren(QWidget) if wg is not self.clear_button]
-        for wg in widgets:
-            self.removeWidget(wg)
-        self.hide()
 
 
 class ShootingLabel(QLabel):
