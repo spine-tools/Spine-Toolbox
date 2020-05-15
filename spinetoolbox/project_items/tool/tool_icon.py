@@ -44,9 +44,10 @@ class ToolIcon(ProjectItemIcon):
         self.time_line.setDuration(1200)
         self.time_line.setDirection(QTimeLine.Backward)
         self.time_line.valueChanged.connect(self._handle_time_line_value_changed)
+        self.time_line.stateChanged.connect(self._handle_time_line_state_changed)
         self._svg_item_pos = self.svg_item.pos()
         rect = self.svg_item.sceneBoundingRect()
-        self.svg_item.setTransformOriginPoint(0, -0.75 * rect.height())
+        self._anim_transformation_origin_point_y = -0.75 * rect.height()
         self._anim_delta_x_factor = 0.5 * rect.width()
 
     @Slot(float)
@@ -56,6 +57,15 @@ class ToolIcon(ProjectItemIcon):
         delta_y = 0.5 * self.svg_item.sceneBoundingRect().height()
         delta = QPointF(self._anim_delta_x_factor * value, delta_y)
         self.svg_item.setPos(self._svg_item_pos + delta)
+
+    @Slot("QTimeLine::State")
+    def _handle_time_line_state_changed(self, new_state):
+        if new_state == QTimeLine.Running:
+            self.svg_item.setTransformOriginPoint(0, self._anim_transformation_origin_point_y)
+        elif new_state == QTimeLine.NotRunning:
+            self.svg_item.setTransformOriginPoint(0, 0)
+            self.svg_item.setPos(self._svg_item_pos)
+            self.svg_item.setRotation(0)
 
     def start_animation(self):
         """Starts the item execution animation.
@@ -69,5 +79,3 @@ class ToolIcon(ProjectItemIcon):
         if self.time_line.state() != QTimeLine.Running:
             return
         self.time_line.stop()
-        self.svg_item.setPos(self._svg_item_pos)
-        self.time_line.setCurrentTime(999)
