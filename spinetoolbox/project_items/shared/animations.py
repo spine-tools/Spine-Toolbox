@@ -18,12 +18,12 @@ Animation class for the Exporter and Importer items.
 
 import random
 from PySide2.QtGui import QFont, QPainterPath
-from PySide2.QtCore import Slot, QTimeLine, QPoint
-from PySide2.QtWidgets import QGraphicsItemAnimation, QGraphicsOpacityEffect, QGraphicsTextItem
+from PySide2.QtCore import Slot, QTimeLine, QPointF
+from PySide2.QtWidgets import QGraphicsOpacityEffect, QGraphicsTextItem
 
 
 class ImporterExporterAnimation:
-    def __init__(self, item, duration=1200, count=10, percentage_size=0.2, x_shift=0):
+    def __init__(self, item, duration=2000, count=5, percentage_size=0.24, x_shift=0):
         """Initializes animation stuff.
 
         Args:
@@ -34,27 +34,30 @@ class ImporterExporterAnimation:
         self._x_shift = x_shift
         self.cubes = [QGraphicsTextItem("\uf1b2", item) for i in range(count)]
         self.effects = [QGraphicsOpacityEffect() for i in range(count)]
-        self.offsets = [random.random() for i in range(count)]
+        self.opacity_at_value_path = QPainterPath(QPointF(0.0, 0.0))
+        self.opacity_at_value_path.lineTo(QPointF(0.01, 1.0))
+        self.opacity_at_value_path.lineTo(QPointF(0.5, 1.0))
+        self.opacity_at_value_path.lineTo(QPointF(1.0, 0.0))
         self.time_line = QTimeLine()
         self.time_line.setLoopCount(0)  # loop forever
         self.time_line.setFrameRange(0, 10)
-        self.time_line.valueChanged.connect(self._handle_time_line_value_changed)
         self.time_line.setDuration(duration)
         self.time_line.setCurveShape(QTimeLine.LinearCurve)
+        self.time_line.valueChanged.connect(self._handle_time_line_value_changed)
         font = QFont('Font Awesome 5 Free Solid')
         item_rect = item.rect()
         self.cube_size = percentage_size * 0.875 * item_rect.height()
         font.setPixelSize(self.cube_size)
         rect = item_rect.translated(-0.5 * self.cube_size + x_shift, -self.cube_size)
         end = rect.center()
-        ctrl = rect.center() - QPoint(0, 0.6 * rect.height())
+        ctrl = end - QPointF(0, 0.6 * rect.height())
         lower, upper = 0.2, 0.8
         starts = [lower + i * (upper - lower) / count for i in range(count)]
-        random.shuffle(starts)
-        starts = [rect.topLeft() + QPoint(start * rect.width(), 0) for start in starts]
+        starts = [rect.topLeft() + QPointF(start * rect.width(), 0) for start in starts]
         self.paths = [QPainterPath(start) for start in starts]
         for path in self.paths:
             path.quadTo(ctrl, end)
+        self.offsets = [i / count for i in range(count)]
         for cube, effect in zip(self.cubes, self.effects):
             cube.setFont(font)
             cube.setDefaultTextColor("#003333")
@@ -65,8 +68,10 @@ class ImporterExporterAnimation:
     @Slot(float)
     def _handle_time_line_value_changed(self, value):
         for cube, effect, offset, path in zip(self.cubes, self.effects, self.offsets, self.paths):
-            effect.setOpacity(1.0 - ((offset + value) % 1.0))
-            percent = self.percent(value, offset)
+            value = (offset + value) % 1.0
+            opacity = self.opacity_at_value_path.pointAtPercent(value).y()
+            effect.setOpacity(opacity)
+            percent = self.percent(value)
             point = path.pointAtPercent(percent)
             angle = percent * 360.0
             cube.setPos(point)
@@ -78,10 +83,11 @@ class ImporterExporterAnimation:
             return
         for cube in self.cubes:
             cube.show()
+        random.shuffle(self.offsets)
         self.time_line.start()
 
     @staticmethod
-    def percent(step, offset):
+    def percent(value):
         raise NotImplementedError()
 
     def stop(self):
@@ -94,11 +100,11 @@ class ImporterExporterAnimation:
 
 class ImporterAnimation(ImporterExporterAnimation):
     @staticmethod
-    def percent(step, offset):
-        return (step + offset) % 1.0
+    def percent(value):
+        return value
 
 
 class ExporterAnimation(ImporterExporterAnimation):
     @staticmethod
-    def percent(step, offset):
-        return 1.0 - (step + offset) % 1.0
+    def percent(value):
+        return 1.0 - value
