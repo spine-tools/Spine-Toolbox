@@ -41,6 +41,7 @@ class ImporterExporterAnimation:
         self.time_line.setDuration(duration)
         self.time_line.setCurveShape(QTimeLine.LinearCurve)
         self.time_line.valueChanged.connect(self._handle_time_line_value_changed)
+        self.time_line.stateChanged.connect(self._handle_time_line_state_changed)
         font = QFont('Font Awesome 5 Free Solid')
         item_rect = item.rect()
         cube_size = percentage_size * 0.875 * item_rect.height()
@@ -59,6 +60,8 @@ class ImporterExporterAnimation:
             cube.setFont(font)
             cube.setDefaultTextColor("#003333")
             cube.setTransformOriginPoint(cube.boundingRect().center())
+            cube.hide()
+            cube.setOpacity(0)
 
     @Slot(float)
     def _handle_time_line_value_changed(self, value):
@@ -72,13 +75,20 @@ class ImporterExporterAnimation:
             cube.setPos(point)
             cube.setRotation(angle)
 
+    @Slot("QTimeLine::State")
+    def _handle_time_line_state_changed(self, new_state):
+        if new_state == QTimeLine.Running:
+            random.shuffle(self.offsets)
+            for cube in self.cubes:
+                cube.show()
+        elif new_state == QTimeLine.NotRunning:
+            for cube in self.cubes:
+                cube.hide()
+
     def start(self):
         """Starts the animation."""
         if self.time_line.state() == QTimeLine.Running:
             return
-        for cube in self.cubes:
-            cube.show()
-        random.shuffle(self.offsets)
         self.time_line.start()
 
     @staticmethod
@@ -88,9 +98,6 @@ class ImporterExporterAnimation:
     def stop(self):
         """Stops the animation"""
         self.time_line.stop()
-        for cube in self.cubes:
-            cube.hide()
-        self.time_line.setCurrentTime(999)
 
 
 class ImporterAnimation(ImporterExporterAnimation):
