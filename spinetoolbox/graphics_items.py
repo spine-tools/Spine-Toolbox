@@ -878,13 +878,10 @@ class LinkDrawer(LinkBase):
 
     @property
     def dst_connector(self):
-        items = self.scene().items(self.tip)
         # Now that feedback loops are disabled, we don't want the tip to 'snap' to any of the src
         # connector buttons.
         src_connectors = self.src_connector._parent.connectors.values()
-        for conn in src_connectors:
-            if conn in items:
-                return None  # Return None if the tip is on any source connector button
+        items = [x for x in self.scene().items(self.tip) if x not in src_connectors]
         return next(iter(x for x in items if isinstance(x, ConnectorButton)), None)
 
     @property

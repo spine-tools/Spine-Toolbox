@@ -239,7 +239,7 @@ class CustomQGraphicsView(QGraphicsView):
     @Slot("QGraphicsItem")
     def _ensure_item_visible(self, item):
         """Resets zoom if item is not visible."""
-        if not self.viewport().geometry().contains(self.mapFromScene(item.pos())):
+        if not self.viewport().geometry().contains(self.mapFromScene(item.scenePos())):
             self.reset_zoom()
 
 

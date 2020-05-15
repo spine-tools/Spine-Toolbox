@@ -46,7 +46,7 @@ class CustomQGraphicsScene(ShrinkingScene):
 
     def connect_signals(self):
         """Connect scene signals."""
-        self.changed.connect(self.scene_changed)
+        self.changed.connect(self._handle_changed)
         self.selectionChanged.connect(self.handle_selection_changed)
 
     def resize_scene(self):
@@ -58,7 +58,7 @@ class CustomQGraphicsScene(ShrinkingScene):
         self.setSceneRect(union_rect)
 
     @Slot("QList<QRectF>")
-    def scene_changed(self, rects):
+    def _handle_changed(self, rects):
         """Resize scene as it changes."""
         scene_rect = self.sceneRect()
         if all(scene_rect.contains(rect) for rect in rects):
@@ -99,6 +99,8 @@ class CustomQGraphicsScene(ShrinkingScene):
 
     @staticmethod
     def _is_project_item_drag(source):
+        """Checks whether or not source corresponds to a project item being dragged into the scene.
+        """
         if not hasattr(source, "model"):
             return False
         return callable(source.model) and isinstance(
