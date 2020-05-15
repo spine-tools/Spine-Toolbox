@@ -239,6 +239,7 @@ class CustomQGraphicsView(QGraphicsView):
     @Slot("QGraphicsItem")
     def _ensure_item_visible(self, item):
         """Resets zoom if item is not visible."""
+        # Because of zooming, we need to find the item scene's rect as below
         item_scene_rect = item.boundingRegion(item.sceneTransform()).boundingRect()
         item_viewport_rect = self.mapFromScene(item_scene_rect).boundingRect()
         if not self.viewport().geometry().contains(item_viewport_rect.topLeft()):
@@ -318,6 +319,7 @@ class DesignQGraphicsView(CustomQGraphicsView):
             # Loaded project has no project items
             empty = True
         if not empty:
+            self.scene().center_items()
             # Reset scene rectangle to be as big as the items bounding rectangle
             items_rect = self.scene().itemsBoundingRect()
             margin_rect = items_rect.marginsAdded(QMarginsF(20, 20, 20, 20))  # Add margins
