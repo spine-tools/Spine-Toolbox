@@ -91,7 +91,7 @@ def run(checked_files, all_import_settings, all_source_settings, urls_downstream
         data, errors = connector.get_mapped_data(
             table_mappings, table_options, table_types, table_row_types, max_rows=-1
         )
-        print("Read {0} data from {1} with {2} errors".format(sum(len(d) for d in data.values()), source, len(errors)))
+        print(f"Read {sum(len(d) for d in data.values())} data from {source} with {len(errors)} errors")
         all_data.append(data)
         all_errors.extend(errors)
     if all_errors:
@@ -100,7 +100,7 @@ def run(checked_files, all_import_settings, all_source_settings, urls_downstream
         logfilepath = os.path.abspath(os.path.join(logs_dir, timestamp + "_error.log"))
         with open(logfilepath, 'w') as f:
             for err in all_errors:
-                f.write("{0}\n".format(err))
+                f.write(f"{err}\n")
         # Make error log file anchor with path as tooltip
         logfile_anchor = (
             "<a style='color:#BB99FF;' title='" + logfilepath + "' href='file:///" + logfilepath + "'>error log</a>"

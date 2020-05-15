@@ -258,12 +258,12 @@ class ImportEditor(QWidget):
         self._ui.source_list.clear()
         selected_tables = settings.get("selected_tables")
         if selected_tables is None:
-            selected_tables = len(self.table_mappings) * [True]
-        for table_name, selected in zip(self.table_mappings, selected_tables):
+            selected_tables = set(self.table_mappings.keys())
+        for table_name in self.table_mappings:
             item = QListWidgetItem()
             item.setText(table_name)
             item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
-            item.setCheckState(Qt.Checked if selected else Qt.Unchecked)
+            item.setCheckState(Qt.Checked if table_name in selected_tables else Qt.Unchecked)
             self._ui.source_list.addItem(item)
         self._ui.source_list.blockSignals(False)
 
@@ -277,7 +277,11 @@ class ImportEditor(QWidget):
         get_source_item = self._ui.source_list.item
         table_count = self._ui.source_list.count()
         tables = set(get_source_item(i).text() for i in range(table_count))
-        table_check_status = list(get_source_item(i).checkState() == Qt.Checked for i in range(table_count))
+        selected_tables = list()
+        for i in range(table_count):
+            item = get_source_item(i)
+            if item.checkState() == Qt.Checked:
+                selected_tables.append(item.text())
 
         table_mappings = {
             t: [m.to_dict() for m in mappings.get_mappings()]
@@ -304,7 +308,7 @@ class ImportEditor(QWidget):
             "table_options": table_options,
             "table_types": table_types,
             "table_row_types": table_row_types,
-            "selected_tables": table_check_status,
+            "selected_tables": selected_tables,
             "source_type": self.connector.source_type,
         }
         return settings
