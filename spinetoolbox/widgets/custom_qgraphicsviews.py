@@ -243,7 +243,9 @@ class CustomQGraphicsView(QGraphicsView):
         item_scene_rect = item.boundingRegion(item.sceneTransform()).boundingRect()
         item_viewport_rect = self.mapFromScene(item_scene_rect).boundingRect()
         if not self.viewport().geometry().contains(item_viewport_rect.topLeft()):
-            self.reset_zoom()
+            viewport_scene_rect = self.mapToScene(self.viewport().geometry()).boundingRect()
+            scene_rect = viewport_scene_rect.united(item_scene_rect)
+            self.fitInView(scene_rect, Qt.KeepAspectRatio)
 
 
 class DesignQGraphicsView(CustomQGraphicsView):
@@ -636,12 +638,10 @@ class GraphQGraphicsView(CustomQGraphicsView):
     def reset_zoom(self):
         """Reset zoom to the default factor."""
         self.resetTransform()
-        self.init_zoom()
-
-    def init_zoom(self):
-        """Init zoom."""
-        self.resetTransform()
         self.scale(self._scene_fitting_zoom, self._scene_fitting_zoom)
+
+    def scale(self, x, y):
+        super().scale(x, y)
         self.adjust_items_to_zoom()
 
     def adjust_items_to_zoom(self):

@@ -633,7 +633,7 @@ class GraphViewMixin:
         """Extends the scene to show all items."""
         bounding_rect = self.ui.graphicsView.scene().itemsBoundingRect()
         self.ui.graphicsView.scene().setSceneRect(bounding_rect)
-        self.ui.graphicsView.init_zoom()
+        self.ui.graphicsView.reset_zoom()
 
     @Slot()
     def _handle_scene_selection_changed(self):
