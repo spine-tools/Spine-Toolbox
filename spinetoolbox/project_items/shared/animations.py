@@ -60,6 +60,7 @@ class ImporterExporterAnimation:
             cube.setDefaultTextColor("#003333")
             cube.setGraphicsEffect(effect)
             effect.setOpacity(0.0)
+            cube.setTransformOriginPoint(cube.boundingRect().center())
 
     @Slot(float)
     def _handle_time_line_value_changed(self, value):
@@ -67,7 +68,9 @@ class ImporterExporterAnimation:
             effect.setOpacity(1.0 - ((offset + value) % 1.0))
             percent = self.percent(value, offset)
             point = path.pointAtPercent(percent)
+            angle = percent * 360.0
             cube.setPos(point)
+            cube.setRotation(angle)
 
     def start(self):
         """Starts the animation."""
