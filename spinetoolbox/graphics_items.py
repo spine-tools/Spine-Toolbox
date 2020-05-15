@@ -28,6 +28,7 @@ from PySide2.QtWidgets import (
     QGraphicsColorizeEffect,
     QGraphicsDropShadowEffect,
     QApplication,
+    QToolTip,
 )
 from PySide2.QtGui import (
     QColor,
@@ -137,7 +138,7 @@ class ExclamationIcon(QGraphicsSvgItem):
         Args:
             parent (ProjectItemIcon): the parent item
         """
-        super().__init__()
+        super().__init__(parent)
         self._parent = parent
         self._notifications = list()
         self.renderer = QSvgRenderer()
@@ -153,7 +154,6 @@ class ExclamationIcon(QGraphicsSvgItem):
         rect_w = parent.rect().width()  # Parent rect width
         self.setScale(0.2 * rect_w / dim_max)
         self.setGraphicsEffect(self.colorizer)
-        self._notification_list_item = NotificationListItem()
         self.setAcceptHoverEvents(True)
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=False)
         self.hide()
@@ -177,9 +177,7 @@ class ExclamationIcon(QGraphicsSvgItem):
         if not self._notifications:
             return
         tip = "<p>" + "<p>".join(self._notifications)
-        self._notification_list_item.setHtml(tip)
-        self.scene().addItem(self._notification_list_item)
-        self._notification_list_item.setPos(self.sceneBoundingRect().topRight() + QPointF(1, 0))
+        QToolTip.showText(event.screenPos(), tip)
 
     def hoverLeaveEvent(self, event):
         """Hides tool tip.
@@ -187,26 +185,7 @@ class ExclamationIcon(QGraphicsSvgItem):
         Args:
             event (QGraphicsSceneMouseEvent): Event
         """
-        self.scene().removeItem(self._notification_list_item)
-
-
-class NotificationListItem(QGraphicsTextItem):
-    def __init__(self):
-        """Notification list graphics item.
-        Used to show notifications for a ProjectItem
-        """
-        super().__init__()
-        self.bg = QGraphicsRectItem(self.boundingRect(), self)
-        bg_brush = QApplication.palette().brush(QPalette.ToolTipBase)
-        self.bg.setBrush(bg_brush)
-        self.bg.setFlag(QGraphicsItem.ItemStacksBehindParent)
-        self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=False)
-        self.setZValue(2)
-
-    def setHtml(self, html):
-        super().setHtml(html)
-        self.adjustSize()
-        self.bg.setRect(self.boundingRect())
+        QToolTip.hideText()
 
 
 class RankIcon(QGraphicsTextItem):
