@@ -16,7 +16,7 @@ Custom QGraphicsScene used in the Design View.
 :date:   13.2.2019
 """
 
-from PySide2.QtCore import Slot, QItemSelectionModel
+from PySide2.QtCore import Slot, QItemSelectionModel, QEvent, QRectF
 from PySide2.QtGui import QColor, QPen, QBrush
 from ..graphics_items import ProjectItemIcon
 from .shrinking_scene import ShrinkingScene
@@ -149,6 +149,14 @@ class CustomQGraphicsScene(ShrinkingScene):
         self.item_shadow = factory.make_icon(self._toolbox, x, y, w, h, None)
         self._toolbox.show_add_project_item_form(item_type, pos.x(), pos.y(), spec=spec)
 
+    def event(self, event):
+        """Accepts GraphicsSceneHelp events without doing anything, as it interferes with out usage of
+        QToolTip.showText in graphics_items.ExclamationIcon.
+        """
+        if event.type() == QEvent.GraphicsSceneHelp:
+            event.accept()
+            return True
+        return super().event(event)
     def drawBackground(self, painter, rect):
         """Reimplemented method to make a custom background.
 
