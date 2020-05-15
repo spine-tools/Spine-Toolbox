@@ -18,7 +18,7 @@ Icon class for the Exporter project item.
 
 from PySide2.QtGui import QColor
 from spinetoolbox.graphics_items import ProjectItemIcon
-from ..shared.import_export_animation import ExporterAnimation
+from ..shared.animations import ExporterAnimation
 
 
 class ExporterIcon(ProjectItemIcon):

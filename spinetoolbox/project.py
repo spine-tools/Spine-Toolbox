@@ -296,9 +296,6 @@ class SpineToolboxProject(MetaObject):
             self._project_item_model.insert_item(project_tree_item, category_ind)
             factory = self._toolbox.item_factories[project_item.item_type()]
             factory.activate_project_item(self._toolbox, project_item)
-            icon = project_item.get_icon()
-            if hasattr(icon, "start_animation"):
-                icon.start_animation()
             # Append new node to networkx graph
             self.add_to_dag(project_item.name)
             if verbosity:
