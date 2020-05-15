@@ -39,14 +39,14 @@ class ToolIcon(ProjectItemIcon):
             toolbox, x, y, w, h, project_item, icon, icon_color=QColor("red"), background_color=QColor("#ffe6e6")
         )
         # animation stuff
-        self.timer = QTimeLine()
-        self.timer.setLoopCount(0)  # loop forever
-        self.timer.setFrameRange(0, 10)
-        # self.timer.setCurveShape(QTimeLine.CosineCurve)
-        self.timer.valueForTime = self._value_for_time
-        self.tool_animation = QGraphicsItemAnimation()
-        self.tool_animation.setItem(self.svg_item)
-        self.tool_animation.setTimeLine(self.timer)
+        self.time_line = QTimeLine()
+        self.time_line.setLoopCount(0)  # loop forever
+        self.time_line.setFrameRange(0, 10)
+        # self.time_line.setCurveShape(QTimeLine.CosineCurve)
+        self.time_line.valueForTime = self._value_for_time
+        self.animation = QGraphicsItemAnimation()
+        self.animation.setItem(self.svg_item)
+        self.animation.setTimeLine(self.time_line)
         self.delta = 0.25 * self.svg_item.sceneBoundingRect().height()
 
     @staticmethod
@@ -57,22 +57,22 @@ class ToolIcon(ProjectItemIcon):
     def start_animation(self):
         """Start the animation that plays when the Tool associated to this GraphicsItem is running.
         """
-        if self.timer.state() == QTimeLine.Running:
+        if self.time_line.state() == QTimeLine.Running:
             return
         self.svg_item.moveBy(0, -self.delta)
         offset = 0.75 * self.svg_item.sceneBoundingRect().height()
         for angle in range(1, 45):
             step = angle / 45.0
-            self.tool_animation.setTranslationAt(step, 0, offset)
-            self.tool_animation.setRotationAt(step, angle)
-            self.tool_animation.setTranslationAt(step, 0, -offset)
-            self.tool_animation.setPosAt(step, QPointF(self.svg_item.pos().x(), self.svg_item.pos().y() + offset))
-        self.timer.start()
+            self.animation.setTranslationAt(step, 0, offset)
+            self.animation.setRotationAt(step, angle)
+            self.animation.setTranslationAt(step, 0, -offset)
+            self.animation.setPosAt(step, QPointF(self.svg_item.pos().x(), self.svg_item.pos().y() + offset))
+        self.time_line.start()
 
     def stop_animation(self):
         """Stop animation"""
-        if self.timer.state() != QTimeLine.Running:
+        if self.time_line.state() != QTimeLine.Running:
             return
-        self.timer.stop()
+        self.time_line.stop()
         self.svg_item.moveBy(0, self.delta)
-        self.timer.setCurrentTime(999)
+        self.time_line.setCurrentTime(999)

@@ -17,9 +17,8 @@ Icon class for the Exporter project item.
 """
 
 from PySide2.QtGui import QColor
-from PySide2.QtWidgets import QGraphicsTextItem
 from spinetoolbox.graphics_items import ProjectItemIcon
-from ..shared.import_export_animation import ImportExportAnimation
+from ..shared.import_export_animation import ExporterAnimation
 
 
 class ExporterIcon(ProjectItemIcon):
@@ -38,10 +37,6 @@ class ExporterIcon(ProjectItemIcon):
         super().__init__(
             toolbox, x, y, w, h, project_item, icon, icon_color=QColor("#990000"), background_color=QColor("#ffcccc")
         )
-        src_item = QGraphicsTextItem("\uf1c0")
-        src_item.setDefaultTextColor("#cc33ff")
-        dst_item = QGraphicsTextItem("\uf15c")
-        dst_item.setDefaultTextColor("#0000ff")
-        self.animation = ImportExportAnimation(self, src_item, dst_item)
+        self.animation = ExporterAnimation(self, x_shift=-10)
         self.start_animation = self.animation.start
         self.stop_animation = self.animation.stop
