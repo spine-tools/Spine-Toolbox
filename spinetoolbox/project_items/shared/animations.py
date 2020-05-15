@@ -19,7 +19,7 @@ Animation class for the Exporter and Importer items.
 import random
 from PySide2.QtGui import QFont, QPainterPath
 from PySide2.QtCore import Slot, QTimeLine, QPointF
-from PySide2.QtWidgets import QGraphicsOpacityEffect, QGraphicsTextItem
+from PySide2.QtWidgets import QGraphicsTextItem
 
 
 class ImporterExporterAnimation:
@@ -30,10 +30,7 @@ class ImporterExporterAnimation:
             item (QGraphicsItem): The item on top of which the animation should play.
         """
         self._item = item
-        self._count = count
-        self._x_shift = x_shift
         self.cubes = [QGraphicsTextItem("\uf1b2", item) for i in range(count)]
-        self.effects = [QGraphicsOpacityEffect() for i in range(count)]
         self.opacity_at_value_path = QPainterPath(QPointF(0.0, 0.0))
         self.opacity_at_value_path.lineTo(QPointF(0.01, 1.0))
         self.opacity_at_value_path.lineTo(QPointF(0.5, 1.0))
@@ -46,9 +43,9 @@ class ImporterExporterAnimation:
         self.time_line.valueChanged.connect(self._handle_time_line_value_changed)
         font = QFont('Font Awesome 5 Free Solid')
         item_rect = item.rect()
-        self.cube_size = percentage_size * 0.875 * item_rect.height()
-        font.setPixelSize(self.cube_size)
-        rect = item_rect.translated(-0.5 * self.cube_size + x_shift, -self.cube_size)
+        cube_size = percentage_size * 0.875 * item_rect.height()
+        font.setPixelSize(cube_size)
+        rect = item_rect.translated(-0.5 * cube_size + x_shift, -cube_size)
         end = rect.center()
         ctrl = end - QPointF(0, 0.6 * rect.height())
         lower, upper = 0.2, 0.8
@@ -58,19 +55,17 @@ class ImporterExporterAnimation:
         for path in self.paths:
             path.quadTo(ctrl, end)
         self.offsets = [i / count for i in range(count)]
-        for cube, effect in zip(self.cubes, self.effects):
+        for cube in self.cubes:
             cube.setFont(font)
             cube.setDefaultTextColor("#003333")
-            cube.setGraphicsEffect(effect)
-            effect.setOpacity(0.0)
             cube.setTransformOriginPoint(cube.boundingRect().center())
 
     @Slot(float)
     def _handle_time_line_value_changed(self, value):
-        for cube, effect, offset, path in zip(self.cubes, self.effects, self.offsets, self.paths):
+        for cube, offset, path in zip(self.cubes, self.offsets, self.paths):
             value = (offset + value) % 1.0
             opacity = self.opacity_at_value_path.pointAtPercent(value).y()
-            effect.setOpacity(opacity)
+            cube.setOpacity(opacity)
             percent = self.percent(value)
             point = path.pointAtPercent(percent)
             angle = percent * 360.0
