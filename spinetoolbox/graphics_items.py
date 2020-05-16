@@ -910,6 +910,9 @@ class LinkDrawer(LinkBase):
         # the tip 'snap' to the center of the connector button
         return self.dst_rect.center()
 
+    def emit_unable_to_make_connection_message(self):
+        self._toolbox.msg_warning.emit("Unable to make connection. Try landing the connection onto a connector button.")
+
     def mousePressEvent(self, event):
         """
         Makes link if the left mouse button is pressed on a valid connector button.
@@ -920,9 +923,7 @@ class LinkDrawer(LinkBase):
         if event.button() != Qt.LeftButton:
             return
         if not dst_connector:
-            self._toolbox.msg_warning.emit(
-                "Unable to make connection. Try landing the connection onto a connector button."
-            )
+            self.emit_unable_to_make_connection_message()
             return
         self._toolbox.ui.graphicsView.add_link(self.src_connector, dst_connector)
 
@@ -940,6 +941,10 @@ class LinkDrawer(LinkBase):
         Makes link if the mouse is released on a valid connector. This allows users to also draw links
         with a single mouse drag.
         """
+        if not self.src_connector.isUnderMouse():
+            self.emit_unable_to_make_connection_message()
+            self.wipe_out()
+            return
         self.tip = event.pos()
         dst_connector = self.dst_connector
         if dst_connector:
