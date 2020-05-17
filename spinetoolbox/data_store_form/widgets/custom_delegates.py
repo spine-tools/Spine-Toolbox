@@ -486,7 +486,7 @@ class ManageRelationshipClassesDelegate(ManageItemsDelegate):
     def createEditor(self, parent, option, index):
         """Return editor."""
         header = index.model().horizontal_header_labels()
-        if header[index.column()] == 'relationship class name':
+        if header[index.column()] in ('relationship class name', 'description'):
             editor = CustomLineEditor(parent)
             editor.set_data(index.data(Qt.EditRole))
         elif header[index.column()] == 'databases':
