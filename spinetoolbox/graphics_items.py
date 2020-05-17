@@ -941,15 +941,14 @@ class LinkDrawer(LinkBase):
         Makes link if the mouse is released on a valid connector. This allows users to also draw links
         with a single mouse drag.
         """
-        if not self.src_connector.isUnderMouse():
-            self.emit_unable_to_make_connection_message()
-            self.wipe_out()
-            return
+
         self.tip = event.pos()
         dst_connector = self.dst_connector
         if dst_connector:
             self._toolbox.ui.graphicsView.add_link(self.src_connector, dst_connector)
-            self.wipe_out()
+        elif not self.src_connector.isUnderMouse():
+            self.emit_unable_to_make_connection_message()
+        self.wipe_out()
 
     def keyPressEvent(self, event):
         """Wipes this item out if user presses ESC."""
