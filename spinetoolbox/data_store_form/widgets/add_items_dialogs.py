@@ -109,6 +109,12 @@ class AddObjectClassesDialog(ShowIconColorEditorMixin, AddItemsDialog):
             lambda index: self.show_icon_color_editor(index)
         )
 
+    def all_db_maps(self, row):
+        """Returns a list of db maps available for a given row.
+        Used by ShowIconColorEditorMixin.
+        """
+        return self.db_maps
+
     @Slot()
     def accept(self):
         """Collect info from dialog and try to add items."""

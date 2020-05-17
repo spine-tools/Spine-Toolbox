@@ -170,6 +170,9 @@ class ShowIconColorEditorMixin:
         editor.accepted.connect(lambda index=index, editor=editor: self.set_model_data(index, editor.data()))
         editor.show()
 
-    def create_object_pixmap(self, object_class_name):
-        # TODO: create a better method in db_mngr so we don't need to access the icon_mngr attribute
-        return self.db_mngr.icon_mngr.create_object_pixmap(object_class_name)
+    def create_object_pixmap(self, index):
+        db_map = next(iter(self.all_db_maps(index.row())), None)
+        if db_map is None:
+            return None
+        object_class_name = index.data(Qt.DisplayRole)
+        return self.db_mngr.icon_mngr[db_map].create_object_pixmap(object_class_name)

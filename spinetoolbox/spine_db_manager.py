@@ -123,7 +123,7 @@ class SpineDBManager(QObject):
         self.undo_stack = {}
         self.undo_action = {}
         self.redo_action = {}
-        self.icon_mngr = IconManager()
+        self.icon_mngr = {}
         self.signaller = SpineDBSignaller(self)
         self.fetchers = []
         self.connect_signals()
@@ -577,8 +577,8 @@ class SpineDBManager(QObject):
             item_type (str)
             db_map_data (dict): lists of dictionary items keyed by DiffDatabaseMapping
         """
-        object_classes = [item for db_map, data in db_map_data.items() for item in data]
-        self.icon_mngr.setup_object_pixmaps(object_classes)
+        for db_map, object_classes in db_map_data.items():
+            self.icon_mngr.setdefault(db_map, IconManager()).setup_object_pixmaps(object_classes)
 
     def entity_class_icon(self, db_map, entity_type, entity_class_id):
         """Returns an appropriate icon for a given entity class.
@@ -595,9 +595,9 @@ class SpineDBManager(QObject):
         if not entity_class:
             return None
         if entity_type == "object class":
-            return self.icon_mngr.object_icon(entity_class["name"])
+            return self.icon_mngr[db_map].object_icon(entity_class["name"])
         if entity_type == "relationship class":
-            return self.icon_mngr.relationship_icon(entity_class["object_class_name_list"])
+            return self.icon_mngr[db_map].relationship_icon(entity_class["object_class_name_list"])
 
     def get_item(self, db_map, item_type, id_):
         """Returns the item of the given type in the given db map that has the given id,

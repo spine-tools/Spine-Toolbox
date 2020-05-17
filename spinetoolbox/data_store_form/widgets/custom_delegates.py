@@ -426,7 +426,7 @@ class ManageObjectClassesDelegate(ManageItemsDelegate):
         parent (ManageItemsDialog): parent dialog
     """
 
-    icon_color_editor_requested = Signal("QModelIndex", name="icon_color_editor_requested")
+    icon_color_editor_requested = Signal("QModelIndex")
 
     def createEditor(self, parent, option, index):
         """Return editor."""
@@ -446,7 +446,7 @@ class ManageObjectClassesDelegate(ManageItemsDelegate):
         """Get a pixmap from the index data and paint it in the middle of the cell."""
         header = index.model().horizontal_header_labels()
         if header[index.column()] == 'display icon':
-            pixmap = self.parent().create_object_pixmap(index.data(Qt.DisplayRole))
+            pixmap = self.parent().create_object_pixmap(index)
             icon = QIcon(pixmap)
             icon.paint(painter, option.rect, Qt.AlignVCenter | Qt.AlignHCenter)
         else:
