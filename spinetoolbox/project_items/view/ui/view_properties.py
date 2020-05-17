@@ -10,10 +10,10 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-# Form implementation generated from reading ui file 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\project_items\view\ui\view_properties.ui',
-# licensing of 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\project_items\view\ui\view_properties.ui' applies.
+# Form implementation generated from reading ui file '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/project_items/view/ui/view_properties.ui',
+# licensing of '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/project_items/view/ui/view_properties.ui' applies.
 #
-# Created: Thu Feb 13 11:53:53 2020
+# Created: Sun May 17 10:51:18 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -72,16 +72,16 @@ class Ui_Form(object):
         self.horizontalLayout_8.setObjectName("horizontalLayout_8")
         spacerItem = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
         self.horizontalLayout_8.addItem(spacerItem)
-        self.pushButton_view_open_ds_view = QtWidgets.QPushButton(self.scrollAreaWidgetContents_4)
+        self.pushButton_view_open_ds_form = QtWidgets.QPushButton(self.scrollAreaWidgetContents_4)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.pushButton_view_open_ds_view.sizePolicy().hasHeightForWidth())
-        self.pushButton_view_open_ds_view.setSizePolicy(sizePolicy)
-        self.pushButton_view_open_ds_view.setMinimumSize(QtCore.QSize(75, 23))
-        self.pushButton_view_open_ds_view.setMaximumSize(QtCore.QSize(16777215, 23))
-        self.pushButton_view_open_ds_view.setObjectName("pushButton_view_open_ds_view")
-        self.horizontalLayout_8.addWidget(self.pushButton_view_open_ds_view)
+        sizePolicy.setHeightForWidth(self.pushButton_view_open_ds_form.sizePolicy().hasHeightForWidth())
+        self.pushButton_view_open_ds_form.setSizePolicy(sizePolicy)
+        self.pushButton_view_open_ds_form.setMinimumSize(QtCore.QSize(75, 23))
+        self.pushButton_view_open_ds_form.setMaximumSize(QtCore.QSize(16777215, 23))
+        self.pushButton_view_open_ds_form.setObjectName("pushButton_view_open_ds_form")
+        self.horizontalLayout_8.addWidget(self.pushButton_view_open_ds_form)
         self.verticalLayout_18.addLayout(self.horizontalLayout_8)
         self.line_5 = QtWidgets.QFrame(self.scrollAreaWidgetContents_4)
         self.line_5.setFrameShape(QtWidgets.QFrame.HLine)
@@ -110,8 +110,8 @@ class Ui_Form(object):
     def retranslateUi(self, Form):
         Form.setWindowTitle(QtWidgets.QApplication.translate("Form", "Form", None, -1))
         self.label_view_name.setText(QtWidgets.QApplication.translate("Form", "Name", None, -1))
-        self.pushButton_view_open_ds_view.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Open Data store view for selected db references</p></body></html>", None, -1))
-        self.pushButton_view_open_ds_view.setText(QtWidgets.QApplication.translate("Form", "Open view", None, -1))
+        self.pushButton_view_open_ds_form.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Open Data store view for selected db references</p></body></html>", None, -1))
+        self.pushButton_view_open_ds_form.setText(QtWidgets.QApplication.translate("Form", "Open DS form", None, -1))
         self.toolButton_view_open_dir.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Open this View\'s project directory in file browser</p></body></html>", None, -1))
 
 from spinetoolbox.widgets.custom_qtreeview import ReferencesTreeView

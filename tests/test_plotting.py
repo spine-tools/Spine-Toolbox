@@ -41,11 +41,10 @@ def _make_pivot_proxy_model():
     db_mngr.get_value.side_effect = lambda db_map, item_type, id_, role: from_database(id_)
     mock_db_map = Mock()
     mock_db_map.codename = "codename"
-    db_mngr.get_db_map_for_listener.side_effect = lambda *args, **kwargs: mock_db_map
     db_mngr.undo_action.__getitem__.side_effect = lambda key: QAction()
     db_mngr.redo_action.__getitem__.side_effect = lambda key: QAction()
-    with patch.object(DataStoreForm, "restore_ui"):
-        data_store_widget = DataStoreForm(db_mngr, ("sqlite://", "codename"))
+    with patch.object(DataStoreForm, "restore_ui"), patch.object(DataStoreForm, "show"):
+        data_store_widget = DataStoreForm(db_mngr, mock_db_map)
     data_store_widget.create_header_widget = lambda *args, **kwargs: None
     model = data_store_widget.pivot_table_model
     data = {

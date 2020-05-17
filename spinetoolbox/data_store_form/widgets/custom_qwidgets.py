@@ -151,6 +151,7 @@ class ShootingLabel(QLabel):
         self.anim.valueChanged.connect(self._handle_value_changed)
         self.anim.finished.connect(self.close)
         self.move(origin)
+        self.setAttribute(Qt.WA_TransparentForMouseEvents)
 
     def _handle_value_changed(self, value):
         opacity = 1.0 - abs(2 * value - 1.0)

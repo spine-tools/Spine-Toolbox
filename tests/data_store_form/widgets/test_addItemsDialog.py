@@ -48,17 +48,11 @@ class TestAddItemsDialog(unittest.TestCase):
             "spinetoolbox.data_store_form.widgets.data_store_form.DataStoreForm.restore_ui"
         ):
             self.mock_db_mngr = mock.MagicMock()
-
-            def get_db_map_for_listener_side_effect(listener, url, codename=None):
-                mock_db_map = mock.MagicMock()
-                mock_db_map.codename = codename
-                return mock_db_map
-
-            self.mock_db_mngr.get_db_map_for_listener.side_effect = get_db_map_for_listener_side_effect
             self.mock_db_mngr.undo_action.__getitem__.side_effect = lambda key: QAction()
             self.mock_db_mngr.redo_action.__getitem__.side_effect = lambda key: QAction()
-            self.ds_view_form = DataStoreForm(self.mock_db_mngr, ("mock_url", "mock_db"))
-            self.mock_db_map = self.ds_view_form.db_map
+            self.mock_db_map = mock.MagicMock()
+            self.mock_db_map.codename = "mock_db"
+            self.ds_view_form = DataStoreForm(self.mock_db_mngr, self.mock_db_map)
 
     def tearDown(self):
         """Overridden method. Runs after each test.
