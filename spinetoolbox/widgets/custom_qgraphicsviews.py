@@ -41,7 +41,7 @@ class CustomQGraphicsView(QGraphicsView):
         self._zoom_factor_base = 1.0015
         self._angle = 120
         self._num_scheduled_scalings = 0
-        self.anim = None
+        self.time_line = None
         self._scene_fitting_zoom = 1.0
         self._max_zoom = 10.0
         self._min_zoom = 0.1
@@ -111,13 +111,13 @@ class CustomQGraphicsView(QGraphicsView):
             self._num_scheduled_scalings += num_steps
             if self._num_scheduled_scalings * num_steps < 0:
                 self._num_scheduled_scalings = num_steps
-            if self.anim:
-                self.anim.deleteLater()
-            self.anim = QTimeLine(200, self)
-            self.anim.setUpdateInterval(20)
-            self.anim.valueChanged.connect(lambda x, pos=event.pos(): self.scaling_time(pos))
-            self.anim.finished.connect(self.anim_finished)
-            self.anim.start()
+            if self.time_line:
+                self.time_line.deleteLater()
+            self.time_line = QTimeLine(200, self)
+            self.time_line.setUpdateInterval(20)
+            self.time_line.valueChanged.connect(lambda x, pos=event.pos(): self._handle_zoom_time_line_advanced(pos))
+            self.time_line.finished.connect(self._handle_zoom_time_line_finished)
+            self.time_line.start()
         else:
             angle = event.angleDelta().y()
             factor = self._zoom_factor_base ** angle
@@ -136,7 +136,12 @@ class CustomQGraphicsView(QGraphicsView):
         if new_size != old_size:
             scene = self.scene()
             if scene is not None:
-                self._update_zoom_limits(scene.sceneRect())
+                self._update_zoom_limits()
+                if self.time_line:
+                    self.time_line.deleteLater()
+                self.time_line = QTimeLine(200, self)
+                self.time_line.finished.connect(self._handle_resize_time_line_finished)
+                self.time_line.start()
                 if new_size.width() > old_size.width() or new_size.height() > old_size.height():
                     transform = self.transform()
                     zoom = transform.m11()
@@ -153,18 +158,24 @@ class CustomQGraphicsView(QGraphicsView):
             scene (ShrinkingScene): a new scene
         """
         super().setScene(scene)
-        scene.sceneRectChanged.connect(self._update_zoom_limits)
-        scene.item_move_finished.connect(self._ensure_item_visible)
-        scene.shrinking_requested.connect(self._set_preferred_scene_rect)
+        scene.item_move_finished.connect(self._handle_item_move_finished)
+        scene.shrinking_requested.connect(self._handle_shrinking_requested)
 
-    @Slot("QRectF")
-    def _update_zoom_limits(self, rect):
-        """
-        Updates the minimum zoom limit and the zoom level with which the entire scene fits the view.
+    @Slot("QGraphicsItem")
+    def _handle_item_move_finished(self, item):
+        self._ensure_item_visible(item)
+        self._update_zoom_limits()
 
-        Args:
-            rect (QRectF): the scene's rect
+    @Slot()
+    def _handle_shrinking_requested(self):
+        self._set_preferred_scene_rect()
+        self._update_zoom_limits()
+
+    def _update_zoom_limits(self):
         """
+        Updates the minimum zoom limit and the zoom level with which the view fits all the items in the scene.
+        """
+        rect = self.scene().itemsBoundingRect()
         scene_extent = max(rect.width(), rect.height())
         if not scene_extent:
             return
@@ -173,19 +184,29 @@ class CustomQGraphicsView(QGraphicsView):
         self._scene_fitting_zoom = extent / scene_extent
         self._min_zoom = min(self._scene_fitting_zoom, 0.1)
 
-    def scaling_time(self, pos):
-        """Called when animation value for smooth zoom changes. Perform zoom."""
+    def _handle_zoom_time_line_advanced(self, pos):
+        """Performs zoom whenever the smooth zoom time line advances."""
         factor = 1.0 + self._num_scheduled_scalings / 100.0
         self.gentle_zoom(factor, pos)
 
-    def anim_finished(self):
-        """Called when animation for smooth zoom finishes. Clean up."""
+    @Slot()
+    def _handle_zoom_time_line_finished(self):
+        """Cleans up after the smooth zoom time line finishes."""
         if self._num_scheduled_scalings > 0:
             self._num_scheduled_scalings -= 1
         else:
             self._num_scheduled_scalings += 1
-        self.sender().deleteLater()
-        self.anim = None
+        if self.sender():
+            self.sender().deleteLater()
+        self.time_line = None
+        self._set_preferred_scene_rect()
+
+    @Slot()
+    def _handle_resize_time_line_finished(self):
+        """Cleans up after resizing time line finishes."""
+        if self.sender():
+            self.sender().deleteLater()
+        self.time_line = None
         self._set_preferred_scene_rect()
 
     def zoom_in(self):
@@ -232,7 +253,6 @@ class CustomQGraphicsView(QGraphicsView):
         self.centerOn(center_on_scene - focus_diff)
         return True
 
-    @Slot("QGraphicsItem")
     def _ensure_item_visible(self, item):
         """Resets zoom if item is not visible."""
         # Because of zooming, we need to find the item scene's rect as below
@@ -277,6 +297,7 @@ class DesignQGraphicsView(CustomQGraphicsView):
         The scene must be cleared before calling this.
         """
         self.scene().center_items()
+        self._update_zoom_limits()
         self.reset_zoom()
 
     def set_project_item_model(self, model):
