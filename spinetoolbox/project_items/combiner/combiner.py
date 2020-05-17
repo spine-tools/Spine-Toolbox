@@ -20,10 +20,8 @@ import os
 from PySide2.QtCore import Qt, Slot
 from PySide2.QtGui import QStandardItem, QStandardItemModel, QIcon, QPixmap
 from sqlalchemy.engine.url import URL, make_url
-from spinedb_api import SpineDBAPIError
 from spinetoolbox.project_item import ProjectItem
 from spinetoolbox.helpers import create_dir
-from spinetoolbox.data_store_form.widgets.data_store_form import DataStoreForm
 from ..shared.commands import UpdateCancelOnErrorCommand
 from .item_info import ItemInfo
 from .executable_item import ExecutableItem
@@ -52,7 +50,6 @@ class Combiner(ProjectItem):
         except OSError:
             self._logger.msg_error.emit(f"[OSError] Creating directory {self.logs_dir} failed. Check permissions.")
         self.cancel_on_error = cancel_on_error
-        self._ds_views = {}
         self._references = dict()
         self.reference_model = QStandardItemModel()  # References to databases
         self._spine_ref_icon = QIcon(QPixmap(":/icons/Spine_db_ref_icon.png"))
@@ -78,7 +75,7 @@ class Combiner(ProjectItem):
         This is to enable simpler connecting and disconnecting."""
         s = super().make_signal_handler_dict()
         s[self._properties_ui.toolButton_view_open_dir.clicked] = lambda checked=False: self.open_directory()
-        s[self._properties_ui.pushButton_view_open_ds_view.clicked] = self.open_view
+        s[self._properties_ui.pushButton_view_open_ds_view.clicked] = self.open_ds_form
         s[self._properties_ui.cancel_on_error_checkBox.stateChanged] = self._handle_cancel_on_error_changed
         return s
 
@@ -109,24 +106,14 @@ class Combiner(ProjectItem):
         self._properties_ui.treeView_view.setModel(None)
 
     @Slot(bool)
-    def open_view(self, checked=False):
-        """Opens references in a view window.
+    def open_ds_form(self, checked=False):
+        """Opens references in the Data store form.
         """
         indexes = self._selected_indexes()
-        database_urls = self._database_urls(indexes)
-        if not database_urls:
+        db_url_codenames = self._db_url_codenames(indexes)
+        if not db_url_codenames:
             return
-        db_urls = [str(x[0]) for x in database_urls]
-        # Mangle database paths to get a hashable string identifying the view window.
-        view_id = ";".join(sorted(db_urls))
-        if self._restore_existing_view_window(view_id):
-            return
-        view_window = self._make_view_window(database_urls)
-        if not view_window:
-            return
-        view_window.show()
-        view_window.destroyed.connect(lambda: self._ds_views.pop(view_id))
-        self._ds_views[view_id] = view_window
+        self._project.db_mngr.show_data_store_form(db_url_codenames, self._logger)
 
     def populate_reference_list(self):
         """Populates reference list."""
@@ -150,6 +137,11 @@ class Combiner(ProjectItem):
     def _do_handle_dag_changed(self, resources):
         """Update the list of references that this item is viewing."""
         self._update_references_list(resources)
+        if not self._references:
+            self.add_notification(
+                "This Combiner does not have any input data. "
+                "Connect Data Stores to this Combiner to use their data as input."
+            )
 
     def _update_references_list(self, resources_upstream):
         """Updates the references list with resources upstream.
@@ -176,30 +168,9 @@ class Combiner(ProjectItem):
             self._properties_ui.treeView_view.selectAll()
         return self._properties_ui.treeView_view.selectionModel().selectedRows()
 
-    def _database_urls(self, indexes):
-        """Returns list of tuples (url, provider) for given indexes."""
-        return [self._references[index.data(Qt.DisplayRole)] for index in indexes]
-
-    def _restore_existing_view_window(self, view_id):
-        """Restores an existing view window and returns True if the operation was successful."""
-        if view_id not in self._ds_views:
-            return False
-        view_window = self._ds_views[view_id]
-        if view_window.windowState() & Qt.WindowMinimized:
-            view_window.setWindowState(view_window.windowState() & ~Qt.WindowMinimized | Qt.WindowActive)
-        view_window.activateWindow()
-        return True
-
-    def _make_view_window(self, db_maps):
-        try:
-            return DataStoreForm(self._project.db_mngr, *db_maps)
-        except SpineDBAPIError as e:
-            self._logger.msg_error.emit(e.msg)
-
-    def tear_down(self):
-        """Tears down this item. Called by toolbox just before closing. Closes all view windows."""
-        for view in self._ds_views.values():
-            view.close()
+    def _db_url_codenames(self, indexes):
+        """Returns a dict mapping url to provider's name for given indexes in the reference model."""
+        return dict(self._references[index.data(Qt.DisplayRole)] for index in indexes)
 
     def item_dict(self):
         """Returns a dictionary corresponding to this item."""
@@ -211,9 +182,9 @@ class Combiner(ProjectItem):
         """See base class."""
         if source_item.item_type() == "Data Store":
             self._logger.msg.emit(
-                f"Link established. You can define slices of data from<b>{source_item.name}</b> "
-                f"in <b>{self.name}</b>'s Item properties."
-                f"They will be merged into <b>{self.name}</b>'s downstream Data Stores upon execution</b>."
+                "Link established. "
+                f"Data from<b>{source_item.name}</b> will be merged "
+                f"into <b>{self.name}</b>'s downstream Data Stores upon execution."
             )
         else:
             super().notify_destination(source_item)
