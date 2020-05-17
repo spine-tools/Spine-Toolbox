@@ -266,7 +266,7 @@ class TestTreeViewForm(
         """Overridden method. Runs before each test. Makes instances of DataStoreForm classes."""
         with mock.patch("spinetoolbox.spine_db_manager.DiffDatabaseMapping") as mock_DiffDBMapping, mock.patch(
             "spinetoolbox.data_store_form.widgets.data_store_form.DataStoreForm.restore_ui"
-        ):
+        ), mock.patch("spinetoolbox.data_store_form.widgets.data_store_form.DataStoreForm.show"):
             mock_settings = mock.Mock()
             mock_settings.value.side_effect = lambda *args, **kwards: 0
             self.db_mngr = SpineDBManager(mock_settings, None, None)
@@ -278,7 +278,8 @@ class TestTreeViewForm(
                 return mock_db_map
 
             mock_DiffDBMapping.side_effect = DiffDBMapping_side_effect
-            self.tree_view_form = DataStoreForm(self.db_mngr, ("mock_url", "mock_db"))
+            self.db_mngr.show_data_store_form({"mock_url": "mock_db"}, None)
+            self.tree_view_form = self.db_mngr._ds_forms[("mock_url",)]
             self.mock_db_map = self.tree_view_form.db_map
 
     def tearDown(self):

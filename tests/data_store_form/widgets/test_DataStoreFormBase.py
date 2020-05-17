@@ -33,7 +33,7 @@ class TestDataStoreFormBase(unittest.TestCase):
         """Builds a DataStoreFormBase object."""
         with mock.patch("spinetoolbox.spine_db_manager.DiffDatabaseMapping") as mock_DiffDBMapping, mock.patch(
             "spinetoolbox.data_store_form.widgets.data_store_form.DataStoreForm.restore_ui"
-        ):
+        ), mock.patch("spinetoolbox.data_store_form.widgets.data_store_form.DataStoreForm.show"):
             mock_settings = mock.Mock()
             mock_settings.value.side_effect = lambda *args, **kwards: 0
             self.db_mngr = SpineDBManager(mock_settings, None, None)
@@ -45,7 +45,9 @@ class TestDataStoreFormBase(unittest.TestCase):
                 return mock_db_map
 
             mock_DiffDBMapping.side_effect = DiffDBMapping_side_effect
-            self.form = DataStoreFormBase(self.db_mngr, ("mock_url", "mock_db"))
+            self.db_mngr.show_data_store_form({"mock_url": "mock_db"}, None)
+            db_map = self.db_mngr._db_maps["mock_url"]
+            self.form = DataStoreFormBase(self.db_mngr, db_map)
 
     def tearDown(self):
         """Frees resources after each test."""

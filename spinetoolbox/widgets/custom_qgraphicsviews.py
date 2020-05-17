@@ -32,7 +32,7 @@ from PySide2.QtCore import (
     QSettings,
 )
 from spine_engine import ExecutionDirection, SpineEngineState
-from ..graphics_items import LinkDrawer, Link
+from ..graphics_items import Link
 from ..project_commands import AddLinkCommand, RemoveLinkCommand
 from ..mvcmodels.entity_list_models import EntityListModel
 from .custom_qgraphicsscene import CustomQGraphicsScene
@@ -239,8 +239,13 @@ class CustomQGraphicsView(QGraphicsView):
     @Slot("QGraphicsItem")
     def _ensure_item_visible(self, item):
         """Resets zoom if item is not visible."""
-        if not self.viewport().geometry().contains(self.mapFromScene(item.pos())):
-            self.reset_zoom()
+        # Because of zooming, we need to find the item scene's rect as below
+        item_scene_rect = item.boundingRegion(item.sceneTransform()).boundingRect()
+        item_viewport_rect = self.mapFromScene(item_scene_rect).boundingRect()
+        if not self.viewport().geometry().contains(item_viewport_rect.topLeft()):
+            viewport_scene_rect = self.mapToScene(self.viewport().geometry()).boundingRect()
+            scene_rect = viewport_scene_rect.united(item_scene_rect)
+            self.fitInView(scene_rect, Qt.KeepAspectRatio)
 
 
 class DesignQGraphicsView(CustomQGraphicsView):
@@ -256,47 +261,6 @@ class DesignQGraphicsView(CustomQGraphicsView):
         self._scene = None
         self._toolbox = None
         self._project_item_model = None
-        self.link_drawer = None
-        self.src_connector = None  # Source connector of a link drawing operation
-        self.dst_connector = None  # Destination connector of a link drawing operation
-        self.src_item_name = None  # Name of source project item when drawing links
-        self.dst_item_name = None  # Name of destination project item when drawing links
-
-    def mousePressEvent(self, event):
-        """Manage drawing of links. Handle the case where a link is being
-        drawn and the user doesn't hit a connector button.
-
-        Args:
-            event (QGraphicsSceneMouseEvent): Mouse event
-        """
-        was_drawing = self.link_drawer.drawing if self.link_drawer else None
-        # This below will trigger connector button if any
-        super().mousePressEvent(event)
-        if was_drawing:
-            # Enable source connector buttons
-            src_connectors = self.src_connector._parent.connectors.values()
-            for conn in src_connectors:
-                conn.setEnabled(True)
-            self.link_drawer.hide()
-            # If `drawing` is still `True` here, it means we didn't hit a connector
-            if self.link_drawer.drawing:
-                self.link_drawer.drawing = False
-                if event.button() != Qt.LeftButton:
-                    return
-                self._toolbox.msg_warning.emit(
-                    "Unable to make connection. Try landing the connection onto a connector button."
-                )
-
-    def mouseMoveEvent(self, event):
-        """Update line end position.
-
-        Args:
-            event (QGraphicsSceneMouseEvent): Mouse event
-        """
-        if self.link_drawer and self.link_drawer.drawing:
-            self.link_drawer.tip = self.mapToScene(event.pos())
-            self.link_drawer.update_geometry()
-        super().mouseMoveEvent(event)
 
     def set_ui(self, toolbox):
         """Set a new scene into the Design View when app is started."""
@@ -310,12 +274,11 @@ class DesignQGraphicsView(CustomQGraphicsView):
         Args:
             empty (boolean): True when creating a new project
         """
-        self.link_drawer = LinkDrawer(self._toolbox)
-        self.scene().addItem(self.link_drawer)
-        if len(self.scene().items()) == 1:
+        if not self.scene().items():
             # Loaded project has no project items
             empty = True
         if not empty:
+            self.scene().center_items()
             # Reset scene rectangle to be as big as the items bounding rectangle
             items_rect = self.scene().itemsBoundingRect()
             margin_rect = items_rect.marginsAdded(QMarginsF(20, 20, 20, 20))  # Add margins
@@ -352,6 +315,7 @@ class DesignQGraphicsView(CustomQGraphicsView):
         Pushes an AddLinkCommand to the toolbox undo stack.
         """
         self._toolbox.undo_stack.push(AddLinkCommand(self, src_connector, dst_connector))
+        self.notify_destination_items(src_connector, dst_connector)
 
     def make_link(self, src_connector, dst_connector):
         """Returns a Link between given connectors.
@@ -423,10 +387,10 @@ class DesignQGraphicsView(CustomQGraphicsView):
     def take_link(self, link):
         """Remove link, then start drawing another one from the same source connector."""
         self.remove_link(link)
-        self.draw_links(link.src_connector)
+        link_drawer = link.src_connector.start_link()
         # noinspection PyArgumentList
-        self.link_drawer.tip = self.mapToScene(self.mapFromGlobal(QCursor.pos()))
-        self.link_drawer.update_geometry()
+        link_drawer.tip = self.mapToScene(self.mapFromGlobal(QCursor.pos()))
+        link_drawer.update_geometry()
 
     def restore_links(self, connections):
         """Creates Links from the given connections list.
@@ -462,42 +426,17 @@ class DesignQGraphicsView(CustomQGraphicsView):
             dst_connector = dst_item.get_icon().conn_button(dst_anchor)
             self.do_add_link(src_connector, dst_connector)
 
-    def draw_links(self, connector):
-        """Draw links when slot button is clicked.
-
-        Args:
-            connector (ConnectorButton): Connector button that triggered the drawing
-        """
-        if not self.link_drawer.drawing:
-            # start drawing and remember source connector
-            self.link_drawer.drawing = True
-            self.link_drawer.start_drawing_at(connector)
-            self.src_connector = connector
-            # Disable source connector buttons
-            # These are enabled again in DesignQGraphicsView.mousePressEvent
-            parent_icon = self.src_connector._parent  # ProjectItemIcon
-            for conn in parent_icon.connectors.values():
-                conn.setEnabled(False)
-                conn.setBrush(conn.brush)  # Remove hover brush from src connector that was clicked
-        else:
-            # stop drawing and make connection
-            self.link_drawer.drawing = False
-            self.dst_connector = connector
-            self.src_item_name = self.src_connector.parent_name()
-            self.dst_item_name = self.dst_connector.parent_name()
-            # create connection
-            self.add_link(self.src_connector, self.dst_connector)
-            self.notify_destination_items()
-
-    def notify_destination_items(self):
+    def notify_destination_items(self, src_connector, dst_connector):
         """Notify destination items that they have been connected to a source item."""
-        src_leaf_item = self._project_item_model.get_item(self.src_item_name)
+        src_item_name = src_connector.parent_name()
+        dst_item_name = dst_connector.parent_name()
+        src_leaf_item = self._project_item_model.get_item(src_item_name)
         if src_leaf_item is None:
-            logging.error("Item %s not found", self.src_item_name)
+            logging.error("Item %s not found", src_item_name)
             return
-        dst_leaf_item = self._project_item_model.get_item(self.dst_item_name)
+        dst_leaf_item = self._project_item_model.get_item(dst_item_name)
         if dst_leaf_item is None:
-            logging.error("Item %s not found", self.dst_item_name)
+            logging.error("Item %s not found", dst_item_name)
             return
         src_item = src_leaf_item.project_item
         dst_item = dst_leaf_item.project_item
@@ -632,12 +571,10 @@ class GraphQGraphicsView(CustomQGraphicsView):
     def reset_zoom(self):
         """Reset zoom to the default factor."""
         self.resetTransform()
-        self.init_zoom()
-
-    def init_zoom(self):
-        """Init zoom."""
-        self.resetTransform()
         self.scale(self._scene_fitting_zoom, self._scene_fitting_zoom)
+
+    def scale(self, x, y):
+        super().scale(x, y)
         self.adjust_items_to_zoom()
 
     def adjust_items_to_zoom(self):

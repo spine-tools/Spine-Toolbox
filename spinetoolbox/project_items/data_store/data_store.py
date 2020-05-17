@@ -53,7 +53,6 @@ class DataStore(ProjectItem):
         self._toolbox = toolbox
         self._url = self.parse_url(url)
         self._sa_url = None
-        self.ds_view = None
         self._for_spine_model_checkbox_state = Qt.Unchecked
 
     @staticmethod
@@ -90,7 +89,7 @@ class DataStore(ProjectItem):
         This is to enable simpler connecting and disconnecting."""
         s = super().make_signal_handler_dict()
         s[self._properties_ui.toolButton_ds_open_dir.clicked] = lambda checked=False: self.open_directory()
-        s[self._properties_ui.pushButton_ds_view.clicked] = self.open_ds_view
+        s[self._properties_ui.pushButton_ds_form.clicked] = self.open_ds_form
         s[self._properties_ui.toolButton_open_sqlite_file.clicked] = self.open_sqlite_file
         s[self._properties_ui.pushButton_create_new_spine_db.clicked] = self.create_new_spine_database
         s[self._properties_ui.toolButton_copy_url.clicked] = self.copy_url
@@ -299,38 +298,10 @@ class DataStore(ProjectItem):
         self._properties_ui.lineEdit_password.setEnabled(True)
 
     @Slot(bool)
-    def open_ds_view(self, checked=False):
+    def open_ds_form(self, checked=False):
         """Opens current url in the data store view."""
         self._update_sa_url()
-        if not self._sa_url:
-            return
-        if self.ds_view:
-            # If the db_url is the same, just raise the current form
-            if self.ds_view.db_url == (self._sa_url, self.name):
-                if self.ds_view.windowState() & Qt.WindowMinimized:
-                    # Remove minimized status and restore window with the previous state (maximized/normal state)
-                    self.ds_view.setWindowState(self.ds_view.windowState() & ~Qt.WindowMinimized | Qt.WindowActive)
-                    self.ds_view.activateWindow()
-                else:
-                    self.ds_view.raise_()
-                return
-            self.ds_view.close()
-        self.do_open_ds_view()
-
-    @busy_effect
-    def do_open_ds_view(self):
-        """Opens current url in the data store view."""
-        try:
-            self.ds_view = DataStoreForm(self._project.db_mngr, (self._sa_url, self.name))
-        except spinedb_api.SpineDBAPIError as e:
-            self._logger.msg_error.emit(e.msg)
-            return
-        self.ds_view.destroyed.connect(self._handle_ds_view_destroyed)
-        self.ds_view.show()
-
-    @Slot()
-    def _handle_ds_view_destroyed(self):
-        self.ds_view = None
+        self._project.db_mngr.show_data_store_form({self._sa_url: self.name}, self._logger)
 
     def data_files(self):
         """Return a list of files that are in this items data directory."""
@@ -422,7 +393,7 @@ class DataStore(ProjectItem):
         """
         super().apply_context_menu_action(parent, action)
         if action == "Open view...":
-            self.open_ds_view()
+            self.open_ds_form()
 
     def rename(self, new_name):
         """Rename this item.
@@ -444,13 +415,6 @@ class DataStore(ProjectItem):
                 if os.path.exists(database):
                     self.do_update_url(database=database)
         return True
-
-    def tear_down(self):
-        """Tears down this item. Called by toolbox just before closing.
-        Closes the DataStoreForm instance opened by this item.
-        """
-        if self.ds_view:
-            self.ds_view.close()
 
     def notify_destination(self, source_item):
         """See base class."""

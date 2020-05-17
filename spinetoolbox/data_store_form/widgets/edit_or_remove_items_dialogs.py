@@ -83,6 +83,13 @@ class EditObjectClassesDialog(ShowIconColorEditorMixin, EditOrRemoveItemsDialog)
             lambda index: self.show_icon_color_editor(index)
         )
 
+    def all_db_maps(self, row):
+        """Returns a list of db maps available for a given row.
+        Used by ShowIconColorEditorMixin.
+        """
+        item = self.items[row]
+        return item.db_maps
+
     @Slot()
     def accept(self):
         """Collect info from dialog and try to update items."""
@@ -205,11 +212,12 @@ class EditRelationshipClassesDialog(EditOrRemoveItemsDialog):
         self.table_view.setModel(self.model)
         self.table_view.setItemDelegate(ManageRelationshipClassesDelegate(self))
         self.connect_signals()
-        self.model.set_horizontal_header_labels(['relationship class name', 'databases'])
+        self.model.set_horizontal_header_labels(['relationship class name', 'description', 'databases'])
         self.orig_data = list()
         model_data = list()
         for item in selected:
-            row_data = [item.display_data]
+            data = item.db_map_data(item.first_db_map)
+            row_data = [item.display_data, data['description']]
             self.orig_data.append(row_data.copy())
             row_data.append(item.display_database)
             model_data.append(row_data)
@@ -221,7 +229,7 @@ class EditRelationshipClassesDialog(EditOrRemoveItemsDialog):
         """Collect info from dialog and try to update items."""
         db_map_data = dict()
         for i in range(self.model.rowCount()):
-            name, db_names = self.model.row_data(i)
+            name, description, db_names = self.model.row_data(i)
             if db_names is None:
                 db_names = ""
             item = self.items[i]
@@ -238,9 +246,9 @@ class EditRelationshipClassesDialog(EditOrRemoveItemsDialog):
                 self.parent().msg_error.emit("Relationship class name missing at row {}".format(i + 1))
                 return
             orig_row = self.orig_data[i]
-            if [name] == orig_row:
+            if [name, description] == orig_row:
                 continue
-            pre_db_item = {'name': name}
+            pre_db_item = {'name': name, 'description': description}
             for db_map in db_maps:
                 db_item = pre_db_item.copy()
                 db_item['id'] = item.db_map_id(db_map)

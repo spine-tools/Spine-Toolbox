@@ -109,6 +109,12 @@ class AddObjectClassesDialog(ShowIconColorEditorMixin, AddItemsDialog):
             lambda index: self.show_icon_color_editor(index)
         )
 
+    def all_db_maps(self, row):
+        """Returns a list of db maps available for a given row.
+        Used by ShowIconColorEditorMixin.
+        """
+        return self.db_maps
+
     @Slot()
     def accept(self):
         """Collect info from dialog and try to add items."""
@@ -252,7 +258,9 @@ class AddRelationshipClassesDialog(GetObjectClassesMixin, AddItemsDialog):
         self.table_view.setItemDelegate(ManageRelationshipClassesDelegate(self))
         self.number_of_dimensions = 1
         self.connect_signals()
-        self.model.set_horizontal_header_labels(['object class 1 name', 'relationship class name', 'databases'])
+        self.model.set_horizontal_header_labels(
+            ['object class 1 name', 'relationship class name', 'description', 'databases']
+        )
         self.db_map_obj_cls_lookup = self.make_db_map_obj_cls_lookup()
         if object_class_one_name:
             default_db_maps = [
@@ -322,6 +330,7 @@ class AddRelationshipClassesDialog(GetObjectClassesMixin, AddItemsDialog):
         """Collect info from dialog and try to add items."""
         db_map_data = dict()
         name_column = self.model.horizontal_header_labels().index("relationship class name")
+        description_column = self.model.horizontal_header_labels().index("description")
         db_column = self.model.horizontal_header_labels().index("databases")
         for i in range(self.model.rowCount() - 1):  # last row will always be empty
             row_data = self.model.row_data(i)
@@ -329,7 +338,8 @@ class AddRelationshipClassesDialog(GetObjectClassesMixin, AddItemsDialog):
             if not relationship_class_name:
                 self.parent().msg_error.emit("Relationship class name missing at row {}".format(i + 1))
                 return
-            pre_item = {'name': relationship_class_name}
+            description = row_data[description_column]
+            pre_item = {'name': relationship_class_name, 'description': description}
             db_names = row_data[db_column]
             if db_names is None:
                 db_names = ""

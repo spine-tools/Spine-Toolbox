@@ -16,9 +16,9 @@ Custom QGraphicsScene used in the Design View.
 :date:   13.2.2019
 """
 
-from PySide2.QtCore import Slot, QItemSelectionModel
+from PySide2.QtCore import Slot, QItemSelectionModel, QEvent, QRectF
 from PySide2.QtGui import QColor, QPen, QBrush
-from ..graphics_items import ProjectItemIcon
+from ..graphics_items import ProjectItemIcon, Link
 from .shrinking_scene import ShrinkingScene
 from ..mvcmodels.project_item_factory_models import ProjectItemFactoryModel, ProjectItemSpecFactoryModel
 
@@ -46,7 +46,7 @@ class CustomQGraphicsScene(ShrinkingScene):
 
     def connect_signals(self):
         """Connect scene signals."""
-        self.changed.connect(self.scene_changed)
+        self.changed.connect(self._handle_changed)
         self.selectionChanged.connect(self.handle_selection_changed)
 
     def resize_scene(self):
@@ -58,7 +58,7 @@ class CustomQGraphicsScene(ShrinkingScene):
         self.setSceneRect(union_rect)
 
     @Slot("QList<QRectF>")
-    def scene_changed(self, rects):
+    def _handle_changed(self, rects):
         """Resize scene as it changes."""
         scene_rect = self.sceneRect()
         if all(scene_rect.contains(rect) for rect in rects):
@@ -99,6 +99,8 @@ class CustomQGraphicsScene(ShrinkingScene):
 
     @staticmethod
     def _is_project_item_drag(source):
+        """Checks whether or not source corresponds to a project item being dragged into the scene.
+        """
         if not hasattr(source, "model"):
             return False
         return callable(source.model) and isinstance(
@@ -148,6 +150,29 @@ class CustomQGraphicsScene(ShrinkingScene):
         factory = self._toolbox.item_factories[item_type]
         self.item_shadow = factory.make_icon(self._toolbox, x, y, w, h, None)
         self._toolbox.show_add_project_item_form(item_type, pos.x(), pos.y(), spec=spec)
+
+    def event(self, event):
+        """Accepts GraphicsSceneHelp events without doing anything, to not interfere with our usage of
+        QToolTip.showText in graphics_items.ExclamationIcon.
+        """
+        if event.type() == QEvent.GraphicsSceneHelp:
+            event.accept()
+            return True
+        return super().event(event)
+
+    def center_items(self):
+        project_item_icons = [item for item in self.items() if isinstance(item, ProjectItemIcon)]
+        if not project_item_icons:
+            return
+        rect = QRectF()
+        for item in project_item_icons:
+            rect |= item.sceneBoundingRect()
+        delta = -rect.center()
+        for item in project_item_icons:
+            item.moveBy(delta.x(), delta.y())
+        for item in self.items():
+            if isinstance(item, Link):
+                item.update_geometry()
 
     def drawBackground(self, painter, rect):
         """Reimplemented method to make a custom background.

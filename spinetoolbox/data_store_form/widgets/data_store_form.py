@@ -67,23 +67,22 @@ class DataStoreFormBase(QMainWindow):
     msg_error = Signal(str)
     error_box = Signal(str, str)
 
-    def __init__(self, db_mngr, *db_urls):
+    def __init__(self, db_mngr, *db_maps):
         """Initializes form.
 
         Args:
             db_mngr (SpineDBManager): The manager to use
-            *db_urls (tuple): Database url, codename.
+            *db_maps (DiffDatabaseMapping): The db map to visualize.
         """
         super().__init__(flags=Qt.Window)
         from ..ui.data_store_window import Ui_MainWindow  # pylint: disable=import-outside-toplevel
 
-        self.db_urls = list(db_urls)
-        self.db_url = self.db_urls[0]
         self.db_mngr = db_mngr
-        self.db_maps = [
-            self.db_mngr.get_db_map_for_listener(self, url, codename=codename) for url, codename in self.db_urls
-        ]
+        self.db_maps = db_maps
         self.db_map = self.db_maps[0]
+        self.db_urls = [db_map.db_url for db_map in self.db_maps]
+        self.db_url = self.db_urls[0]
+        self.db_mngr.register_listener(self, *self.db_maps)
         self.db_mngr.set_logger_for_db_map(self, self.db_map)
         # Setup UI from Qt Designer file
         self.ui = Ui_MainWindow()
@@ -455,12 +454,7 @@ class DataStoreFormBase(QMainWindow):
 
     def _open_sqlite_url(self, url, codename):
         """Opens sqlite url."""
-        try:
-            ds_view = DataStoreForm(self.db_mngr, (url, codename))
-        except SpineDBAPIError as e:
-            self.error_box.emit(e.msg)
-            return
-        ds_view.show()
+        self.db_mngr.show_data_store_form({url: codename}, None)
 
     def _add_sqlite_url_to_project(self, url):
         """Adds sqlite url to project."""
@@ -898,7 +892,7 @@ class DataStoreFormBase(QMainWindow):
             event (QCloseEvent): Closing event
         """
         for db_map in self.db_maps:
-            if not self.db_mngr.remove_db_map_listener(db_map, self):
+            if not self.db_mngr.unregister_listener(self, db_map):
                 event.ignore()
                 return
             self.db_mngr.unset_logger_for_db_map(db_map)
