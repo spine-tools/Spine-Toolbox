@@ -19,10 +19,8 @@ Module for data store class.
 import os
 from PySide2.QtCore import Slot, Qt
 from PySide2.QtWidgets import QFileDialog, QApplication
-import spinedb_api
 from spinetoolbox.project_item import ProjectItem
 from spinetoolbox.project_item_resource import ProjectItemResource
-from spinetoolbox.data_store_form.widgets.data_store_form import DataStoreForm
 from spinetoolbox.helpers import busy_effect, serialize_path, deserialize_path
 from .commands import UpdateDSURLCommand
 from .executable_item import ExecutableItem
