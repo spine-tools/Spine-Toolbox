@@ -392,7 +392,7 @@ class ToolboxUI(QMainWindow):
         self.init_specification_model(list())  # Start project with no specifications
         self.update_window_title()
         self.ui.actionSave_As.setEnabled(True)
-        self.ui.graphicsView.init_scene(empty=True)
+        self.ui.graphicsView.init_scene()
         # Update recentProjects
         self.update_recent_projects()
         # Update recentProjectStorages

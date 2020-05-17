@@ -161,6 +161,7 @@ class CustomQGraphicsScene(ShrinkingScene):
         return super().event(event)
 
     def center_items(self):
+        """Centers project item icons in the scene."""
         project_item_icons = [item for item in self.items() if isinstance(item, ProjectItemIcon)]
         if not project_item_icons:
             return

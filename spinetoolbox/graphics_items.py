@@ -877,7 +877,7 @@ class LinkDrawer(LinkBase):
         self.src_connector = src_connector
         self.src_connector.scene().addItem(self)
         self.src_connector.set_friend_connectors_enabled(False)
-        self.tip = src_connector.rect().center()
+        self.tip = src_connector.sceneBoundingRect().center()
         self.magic_number = 0.625 * self.src_rect.width()
         self.setBrush(QBrush(QColor(255, 0, 255, 204)))
         self.setPen(QPen(Qt.black, 0.5))
@@ -961,5 +961,7 @@ class LinkDrawer(LinkBase):
         disabled because of it.
         """
         self.src_connector.set_friend_connectors_enabled(True)
-        self.scene().removeItem(self)
+        scene = self.scene()
+        scene.removeItem(self)
+        scene.shrink_if_needed()
         self.hide()

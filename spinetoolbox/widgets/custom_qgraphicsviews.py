@@ -20,17 +20,7 @@ import logging
 import math
 from PySide2.QtWidgets import QGraphicsView
 from PySide2.QtGui import QCursor
-from PySide2.QtCore import (
-    QEventLoop,
-    QParallelAnimationGroup,
-    Signal,
-    Slot,
-    Qt,
-    QRectF,
-    QTimeLine,
-    QMarginsF,
-    QSettings,
-)
+from PySide2.QtCore import QEventLoop, QParallelAnimationGroup, Signal, Slot, Qt, QTimeLine, QSettings
 from spine_engine import ExecutionDirection, SpineEngineState
 from ..graphics_items import Link
 from ..project_commands import AddLinkCommand, RemoveLinkCommand
@@ -132,6 +122,7 @@ class CustomQGraphicsView(QGraphicsView):
             angle = event.angleDelta().y()
             factor = self._zoom_factor_base ** angle
             self.gentle_zoom(factor, event.pos())
+            self._set_preferred_scene_rect()
 
     def resizeEvent(self, event):
         """
@@ -164,6 +155,7 @@ class CustomQGraphicsView(QGraphicsView):
         super().setScene(scene)
         scene.sceneRectChanged.connect(self._update_zoom_limits)
         scene.item_move_finished.connect(self._ensure_item_visible)
+        scene.shrinking_requested.connect(self._set_preferred_scene_rect)
 
     @Slot("QRectF")
     def _update_zoom_limits(self, rect):
@@ -194,6 +186,7 @@ class CustomQGraphicsView(QGraphicsView):
             self._num_scheduled_scalings += 1
         self.sender().deleteLater()
         self.anim = None
+        self._set_preferred_scene_rect()
 
     def zoom_in(self):
         """Perform a zoom in with a fixed scaling."""
@@ -246,6 +239,15 @@ class CustomQGraphicsView(QGraphicsView):
             viewport_scene_rect = self.mapToScene(self.viewport().geometry()).boundingRect()
             scene_rect = viewport_scene_rect.united(item_scene_rect)
             self.fitInView(scene_rect, Qt.KeepAspectRatio)
+            self._set_preferred_scene_rect()
+
+    @Slot()
+    def _set_preferred_scene_rect(self):
+        """Sets the scene rect to the result of uniting the scene viewport rect and the items bounding rect.
+        """
+        viewport_scene_rect = self.mapToScene(self.viewport().rect()).boundingRect()
+        items_scene_rect = self.scene().itemsBoundingRect()
+        self.scene().setSceneRect(viewport_scene_rect.united(items_scene_rect))
 
 
 class DesignQGraphicsView(CustomQGraphicsView):
@@ -267,27 +269,14 @@ class DesignQGraphicsView(CustomQGraphicsView):
         self._toolbox = toolbox
         self.setScene(CustomQGraphicsScene(self, toolbox))
 
-    def init_scene(self, empty=False):
+    def init_scene(self):
         """Resize scene and add a link drawer on scene.
         The scene must be cleared before calling this.
-
-        Args:
-            empty (boolean): True when creating a new project
         """
-        if not self.scene().items():
-            # Loaded project has no project items
-            empty = True
-        if not empty:
+        if self.scene().items():
             self.scene().center_items()
-            # Reset scene rectangle to be as big as the items bounding rectangle
-            items_rect = self.scene().itemsBoundingRect()
-            margin_rect = items_rect.marginsAdded(QMarginsF(20, 20, 20, 20))  # Add margins
-            self.scene().setSceneRect(margin_rect)
-        else:
-            rect = QRectF(0, 0, 401, 301)
-            self.scene().setSceneRect(rect)
         self.scene().update()
-        self.reset_zoom()
+        self._set_preferred_scene_rect()
 
     def set_project_item_model(self, model):
         """Set project item model."""

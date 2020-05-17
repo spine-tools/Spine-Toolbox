@@ -17,7 +17,7 @@ Module for data store class.
 """
 
 import os
-from PySide2.QtCore import Slot, Qt
+from PySide2.QtCore import Slot
 from PySide2.QtWidgets import QFileDialog, QApplication
 from spinetoolbox.project_item import ProjectItem
 from spinetoolbox.project_item_resource import ProjectItemResource
@@ -51,7 +51,6 @@ class DataStore(ProjectItem):
         self._toolbox = toolbox
         self._url = self.parse_url(url)
         self._sa_url = None
-        self._for_spine_model_checkbox_state = Qt.Unchecked
 
     @staticmethod
     def item_type():

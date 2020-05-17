@@ -16,7 +16,7 @@ A QGraphicsScene that can shrink sometimes.
 :date:   18.10.2019
 """
 
-from PySide2.QtCore import QMarginsF, Signal
+from PySide2.QtCore import Signal
 from PySide2.QtWidgets import QGraphicsScene
 
 
@@ -32,6 +32,9 @@ class ShrinkingScene(QGraphicsScene):
     item_move_finished = Signal("QGraphicsItem")
     """Emitted when an item has finished moving."""
 
+    shrinking_requested = Signal()
+    """Emitted when shrinking is requested."""
+
     def __init__(self, horizontal_shrinking_threshold, vertical_shrinking_threshold, parent):
         """
         Args:
@@ -44,14 +47,5 @@ class ShrinkingScene(QGraphicsScene):
         self._vertical_threshold = vertical_shrinking_threshold
 
     def shrink_if_needed(self):
-        """Shrinks the scene rectangle if it is considerably larger than the area occupied by items."""
-        items_rect = self.itemsBoundingRect()
-        # Margins from initial Design View scene size.
-        # We don't want to shrink the scene immediately when user moves an item on a fresh scene.
-        margins = QMarginsF(
-            self._horizontal_threshold, self._vertical_threshold, self._horizontal_threshold, self._vertical_threshold
-        )
-        acceptable_items_rect = items_rect.marginsAdded(margins)
-        scene_rect = self.sceneRect()
-        if not acceptable_items_rect.contains(scene_rect):
-            self.setSceneRect(acceptable_items_rect.intersected(scene_rect))
+        """Emits shrinking_requested signal."""
+        self.shrinking_requested.emit()
