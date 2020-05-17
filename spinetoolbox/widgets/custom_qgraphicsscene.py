@@ -174,6 +174,7 @@ class CustomQGraphicsScene(ShrinkingScene):
         for item in self.items():
             if isinstance(item, Link):
                 item.update_geometry()
+        self.setSceneRect(rect.translated(delta))
 
     def drawBackground(self, painter, rect):
         """Reimplemented method to make a custom background.

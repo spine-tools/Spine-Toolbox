@@ -191,16 +191,19 @@ class CustomQGraphicsView(QGraphicsView):
     def zoom_in(self):
         """Perform a zoom in with a fixed scaling."""
         self.gentle_zoom(self._zoom_factor_base ** self._angle)
+        self._set_preferred_scene_rect()
 
     def zoom_out(self):
         """Perform a zoom out with a fixed scaling."""
         self.gentle_zoom(self._zoom_factor_base ** -self._angle)
+        self._set_preferred_scene_rect()
 
     def reset_zoom(self):
         """Reset zoom to the default factor."""
         self.resetTransform()
         if self._scene_fitting_zoom < 1.0:
             self.scale(self._scene_fitting_zoom, self._scene_fitting_zoom)
+        self._set_preferred_scene_rect()
 
     def gentle_zoom(self, factor, zoom_focus=None):
         """
@@ -270,13 +273,11 @@ class DesignQGraphicsView(CustomQGraphicsView):
         self.setScene(CustomQGraphicsScene(self, toolbox))
 
     def init_scene(self):
-        """Resize scene and add a link drawer on scene.
+        """Center items in scene and resets the zoom.
         The scene must be cleared before calling this.
         """
-        if self.scene().items():
-            self.scene().center_items()
-        self.scene().update()
-        self._set_preferred_scene_rect()
+        self.scene().center_items()
+        self.reset_zoom()
 
     def set_project_item_model(self, model):
         """Set project item model."""
