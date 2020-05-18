@@ -38,12 +38,13 @@ class CustomGraphicsScene(QGraphicsScene):
     """Emitted when an item has been removed."""
 
     def center_items(self):
-        """Centers project item icons in the scene."""
+        """Centers toplevel items in the scene."""
         rect = self.itemsBoundingRect()
         delta = -rect.center()
         for item in self.items():
             if item.topLevelItem() != item:
                 continue
+            # NOTE: we call the base class method in case items override `moveBy`
             QGraphicsItem.moveBy(item, delta.x(), delta.y())
         self.setSceneRect(rect.translated(delta))
 

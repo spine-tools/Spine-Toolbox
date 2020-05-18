@@ -173,9 +173,10 @@ class CustomQGraphicsView(QGraphicsView):
         rect = self.scene().itemsBoundingRect()
         if rect.isEmpty():
             return
+        fitting_margin = 70
         size = self.size()
-        x_factor = size.width() / rect.width()
-        y_factor = size.height() / rect.height()
+        x_factor = size.width() / (rect.width() + fitting_margin)
+        y_factor = size.height() / (rect.height() + fitting_margin)
         self._items_fitting_zoom = min(x_factor, y_factor)
         self._min_zoom = min(self._items_fitting_zoom, 0.1)
 

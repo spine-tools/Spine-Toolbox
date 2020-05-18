@@ -59,7 +59,7 @@ class ConnectorButton(QGraphicsRectItem):
             toolbox (ToolBoxUI): QMainWindow instance
             position (str): Either "top", "left", "bottom", or "right"
         """
-        super().__init__()
+        super().__init__(parent)
         self._parent = parent
         self._toolbox = toolbox
         self.position = position
