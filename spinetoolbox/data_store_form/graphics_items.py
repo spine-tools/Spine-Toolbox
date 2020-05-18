@@ -510,9 +510,7 @@ class ObjectItem(EntityItem):
             self._bounce_back()
         if self._moved_on_scene:
             self._moved_on_scene = False
-            scene = self.scene()
-            scene.shrink_if_needed()
-            scene.item_move_finished.emit(self)
+            self.scene().item_move_finished.emit(self)
 
     def _bounce_back(self):
         """Bounces the item back from given position to its original position.

@@ -425,11 +425,10 @@ class ProjectItemIcon(QGraphicsRectItem):
             self._toolbox.undo_stack.push(MoveIconCommand(self))
         super().mouseReleaseEvent(event)
 
-    def shrink_scene_if_needed(self):
+    def notify_item_move(self):
         if self._moved_on_scene:
             self._moved_on_scene = False
             scene = self.scene()
-            scene.shrink_if_needed()
             scene.item_move_finished.emit(self)
 
     def contextMenuEvent(self, event):
@@ -963,5 +962,5 @@ class LinkDrawer(LinkBase):
         self.src_connector.set_friend_connectors_enabled(True)
         scene = self.scene()
         scene.removeItem(self)
-        scene.shrink_if_needed()
+        scene.item_removed.emit(self)
         self.hide()

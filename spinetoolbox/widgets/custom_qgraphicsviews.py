@@ -25,11 +25,11 @@ from spine_engine import ExecutionDirection, SpineEngineState
 from ..graphics_items import Link
 from ..project_commands import AddLinkCommand, RemoveLinkCommand
 from ..mvcmodels.entity_list_models import EntityListModel
-from .custom_qgraphicsscene import CustomQGraphicsScene
+from .custom_qgraphicsscene import DesignGraphicsScene
 
 
 class CustomQGraphicsView(QGraphicsView):
-    """Super class for Design and Graph QGraphicsViews.
+    """Super class for Design and Entity QGraphicsViews.
 
     Attributes:
         parent (QWidget): Parent widget
@@ -159,16 +159,11 @@ class CustomQGraphicsView(QGraphicsView):
         """
         super().setScene(scene)
         scene.item_move_finished.connect(self._handle_item_move_finished)
-        scene.shrinking_requested.connect(self._handle_shrinking_requested)
+        scene.item_removed.connect(lambda _item: self._set_preferred_scene_rect())
 
     @Slot("QGraphicsItem")
     def _handle_item_move_finished(self, item):
         self._ensure_item_visible(item)
-        self._update_zoom_limits()
-
-    @Slot()
-    def _handle_shrinking_requested(self):
-        self._set_preferred_scene_rect()
         self._update_zoom_limits()
 
     def _update_zoom_limits(self):
@@ -223,6 +218,8 @@ class CustomQGraphicsView(QGraphicsView):
         """Reset zoom to the default factor."""
         self.resetTransform()
         self.scene().center_items()
+        self._update_zoom_limits()
+        self.scale(self._scene_fitting_zoom, self._scene_fitting_zoom)
         self._set_preferred_scene_rect()
 
     def gentle_zoom(self, factor, zoom_focus=None):
@@ -294,7 +291,7 @@ class DesignQGraphicsView(CustomQGraphicsView):
     def set_ui(self, toolbox):
         """Set a new scene into the Design View when app is started."""
         self._toolbox = toolbox
-        self.setScene(CustomQGraphicsScene(self, toolbox))
+        self.setScene(DesignGraphicsScene(self, toolbox))
 
     def init_scene(self):
         """Center items in scene and resets the zoom.
@@ -318,7 +315,7 @@ class DesignQGraphicsView(CustomQGraphicsView):
             link.dst_connector.links.remove(link)
         scene = self.scene()
         scene.removeItem(icon)
-        scene.shrink_if_needed()
+        self._set_preferred_scene_rect()
 
     def links(self):
         """Returns all Links in the scene.
@@ -515,8 +512,8 @@ class DesignQGraphicsView(CustomQGraphicsView):
         return animation_group
 
 
-class GraphQGraphicsView(CustomQGraphicsView):
-    """QGraphicsView for the Graph View."""
+class EntityQGraphicsView(CustomQGraphicsView):
+    """QGraphicsView for the Entity Graph View."""
 
     item_dropped = Signal("QPoint", "QString")
 
@@ -582,11 +579,6 @@ class GraphQGraphicsView(CustomQGraphicsView):
             return False
         self.adjust_items_to_zoom()
         return True
-
-    def reset_zoom(self):
-        """Reset zoom to the default factor."""
-        self.resetTransform()
-        self.scale(self._scene_fitting_zoom, self._scene_fitting_zoom)
 
     def scale(self, x, y):
         super().scale(x, y)

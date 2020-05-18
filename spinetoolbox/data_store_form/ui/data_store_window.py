@@ -13,7 +13,7 @@
 # Form implementation generated from reading ui file '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/data_store_form/ui/data_store_window.ui',
 # licensing of '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/data_store_form/ui/data_store_window.ui' applies.
 #
-# Created: Thu May 14 19:10:37 2020
+# Created: Mon May 18 09:12:28 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -23,7 +23,7 @@ from PySide2 import QtCore, QtGui, QtWidgets
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
-        MainWindow.resize(872, 814)
+        MainWindow.resize(872, 842)
         MainWindow.setLayoutDirection(QtCore.Qt.LeftToRight)
         MainWindow.setDockOptions(QtWidgets.QMainWindow.AllowNestedDocks|QtWidgets.QMainWindow.AllowTabbedDocks|QtWidgets.QMainWindow.AnimatedDocks|QtWidgets.QMainWindow.GroupedDragging)
         self.centralwidget = QtWidgets.QWidget(MainWindow)
@@ -244,7 +244,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_7.setSpacing(0)
         self.verticalLayout_7.setContentsMargins(0, 0, 0, 0)
         self.verticalLayout_7.setObjectName("verticalLayout_7")
-        self.graphicsView = GraphQGraphicsView(self.dockWidgetContents_8)
+        self.graphicsView = EntityQGraphicsView(self.dockWidgetContents_8)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(2)
         sizePolicy.setVerticalStretch(0)
@@ -694,9 +694,9 @@ class Ui_MainWindow(object):
         self.actionExport_session.setText(QtWidgets.QApplication.translate("MainWindow", "Export session...", None, -1))
         self.actionExport_session.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Export items added and updated in the current session (since last commit) into a file</p></body></html>", None, -1))
 
-from spinetoolbox.widgets.custom_qtreeview import EntityTreeView, StickySelectionEntityTreeView, CopyTreeView
+from spinetoolbox.widgets.custom_qtreeview import CopyTreeView, EntityTreeView, StickySelectionEntityTreeView
 from spinetoolbox.widgets.custom_qlistview import DragListView
-from spinetoolbox.widgets.custom_qgraphicsviews import GraphQGraphicsView
+from spinetoolbox.data_store_form.widgets.custom_qtableview import FrozenTableView, PivotTableView
+from spinetoolbox.widgets.custom_qgraphicsviews import EntityQGraphicsView
 from spinetoolbox.widgets.custom_qtableview import AutoFilterCopyPasteTableView
-from spinetoolbox.data_store_form.widgets.custom_qtableview import PivotTableView, FrozenTableView
 from spinetoolbox import resources_icons_rc

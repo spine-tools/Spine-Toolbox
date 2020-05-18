@@ -16,15 +16,43 @@ Custom QGraphicsScene used in the Design View.
 :date:   13.2.2019
 """
 
-from PySide2.QtCore import Slot, QItemSelectionModel, QEvent, QRectF
+from PySide2.QtCore import Signal, Slot, QItemSelectionModel, QEvent
+from PySide2.QtWidgets import QGraphicsScene, QGraphicsItem
 from PySide2.QtGui import QColor, QPen, QBrush
-from ..graphics_items import ProjectItemIcon, Link
-from .shrinking_scene import ShrinkingScene
+from ..graphics_items import ProjectItemIcon
 from ..mvcmodels.project_item_factory_models import ProjectItemFactoryModel, ProjectItemSpecFactoryModel
 
 
-class CustomQGraphicsScene(ShrinkingScene):
-    """A scene that handles drag and drop events of ProjectItemFactoryModel or ProjectItemSpecFactoryModel sources."""
+class CustomGraphicsScene(QGraphicsScene):
+    """
+    A custom QGraphicsScene. It provides signals to notify about items,
+    and a method to center all items in the scene.
+
+    At the moment it's used by DesignGraphicsScene and the GraphViewMixin
+    """
+
+    item_move_finished = Signal("QGraphicsItem")
+    """Emitted when an item has finished moving."""
+
+    item_removed = Signal("QGraphicsItem")
+    """Emitted when an item has been removed."""
+
+    def center_items(self):
+        """Centers project item icons in the scene."""
+        rect = self.itemsBoundingRect()
+        delta = -rect.center()
+        for item in self.items():
+            if item.topLevelItem() != item:
+                continue
+            QGraphicsItem.moveBy(item, delta.x(), delta.y())
+        self.setSceneRect(rect.translated(delta))
+
+
+class DesignGraphicsScene(CustomGraphicsScene):
+    """A scene for the Design view.
+
+    Mainly, it handles drag and drop events of ProjectItemFactoryModel or ProjectItemSpecFactoryModel sources.
+    """
 
     def __init__(self, parent, toolbox):
         """
@@ -32,7 +60,7 @@ class CustomQGraphicsScene(ShrinkingScene):
             parent (QObject): scene's parent object
             toolbox (ToolboxUI): reference to the main window
         """
-        super().__init__(400.0, 300.0, parent)
+        super().__init__(parent)
         self._toolbox = toolbox
         self.item_shadow = None
         self.sync_selection = True
@@ -46,24 +74,7 @@ class CustomQGraphicsScene(ShrinkingScene):
 
     def connect_signals(self):
         """Connect scene signals."""
-        self.changed.connect(self._handle_changed)
         self.selectionChanged.connect(self.handle_selection_changed)
-
-    def resize_scene(self):
-        """Resize scene to be at least the size of items bounding rectangle.
-        Does not let the scene shrink."""
-        scene_rect = self.sceneRect()
-        items_rect = self.itemsBoundingRect()
-        union_rect = scene_rect | items_rect
-        self.setSceneRect(union_rect)
-
-    @Slot("QList<QRectF>")
-    def _handle_changed(self, rects):
-        """Resize scene as it changes."""
-        scene_rect = self.sceneRect()
-        if all(scene_rect.contains(rect) for rect in rects):
-            return
-        self.resize_scene()
 
     @Slot()
     def handle_selection_changed(self):
@@ -159,22 +170,6 @@ class CustomQGraphicsScene(ShrinkingScene):
             event.accept()
             return True
         return super().event(event)
-
-    def center_items(self):
-        """Centers project item icons in the scene."""
-        project_item_icons = [item for item in self.items() if isinstance(item, ProjectItemIcon)]
-        if not project_item_icons:
-            return
-        rect = QRectF()
-        for item in project_item_icons:
-            rect |= item.sceneBoundingRect()
-        delta = -rect.center()
-        for item in project_item_icons:
-            item.moveBy(delta.x(), delta.y())
-        for item in self.items():
-            if isinstance(item, Link):
-                item.update_geometry()
-        self.setSceneRect(rect.translated(delta))
 
     def drawBackground(self, painter, rect):
         """Reimplemented method to make a custom background.

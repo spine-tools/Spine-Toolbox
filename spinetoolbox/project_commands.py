@@ -260,13 +260,13 @@ class MoveIconCommand(SpineToolboxCommand):
         for item, current_post in self.current_pos.items():
             item.setPos(current_post)
         self.graphics_item.update_links_geometry()
-        self.graphics_item.shrink_scene_if_needed()
+        self.graphics_item.notify_item_move()
 
     def undo(self):
         for item, previous_pos in self.previous_pos.items():
             item.setPos(previous_pos)
         self.graphics_item.update_links_geometry()
-        self.graphics_item.shrink_scene_if_needed()
+        self.graphics_item.notify_item_move()
 
 
 class SetItemSpecificationCommand(SpineToolboxCommand):

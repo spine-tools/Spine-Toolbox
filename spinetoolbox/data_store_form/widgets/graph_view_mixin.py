@@ -23,8 +23,8 @@ from PySide2.QtGui import QPainter
 from spinedb_api import to_database, from_database
 from .custom_menus import GraphViewContextMenu, ObjectItemContextMenu, RelationshipItemContextMenu
 from ...widgets.custom_qwidgets import ZoomWidgetAction
-from ...widgets.shrinking_scene import ShrinkingScene
-from .graphics_items import EntityItem, ObjectItem, RelationshipItem, ArcItem
+from ...widgets.custom_qgraphicsscene import CustomGraphicsScene
+from ..graphics_items import EntityItem, ObjectItem, RelationshipItem, ArcItem
 from .graph_view_demo import GraphViewDemo
 from .graph_layout_generator import GraphLayoutGenerator
 from ...mvcmodels.entity_list_models import ObjectClassListModel, RelationshipClassListModel
@@ -396,7 +396,6 @@ class GraphViewMixin:
         progress_widget = layout_gen.create_progress_widget()
         scene = self.new_scene()
         scene.addWidget(progress_widget)
-        self.extend_scene()
         self.ui.graphicsView.gentle_zoom(0.5)
         layout_gen.finished.connect(self._complete_graph)
         layout_gen.done.connect(lambda layout_gen=layout_gen: self.layout_gens.remove(layout_gen))
@@ -615,9 +614,8 @@ class GraphViewMixin:
     def new_scene(self):
         """Replaces the current scene with a new one."""
         self.tear_down_scene()
-        scene = ShrinkingScene(100.0, 100.0, None)
+        scene = CustomGraphicsScene(self)
         self.ui.graphicsView.setScene(scene)
-        scene.changed.connect(self._handle_scene_changed)
         scene.selectionChanged.connect(self._handle_scene_selection_changed)
         return scene
 
@@ -631,8 +629,6 @@ class GraphViewMixin:
 
     def extend_scene(self):
         """Extends the scene to show all items."""
-        bounding_rect = self.ui.graphicsView.scene().itemsBoundingRect()
-        self.ui.graphicsView.scene().setSceneRect(bounding_rect)
         self.ui.graphicsView.reset_zoom()
 
     @Slot()
@@ -658,17 +654,6 @@ class GraphViewMixin:
         self.selected_ent_ids["relationship"] = self.db_mngr.db_map_class_ids(selected_rels)
         self.update_filter()
 
-    @Slot(list)
-    def _handle_scene_changed(self, region):
-        """Enlarges the scene rect if needed."""
-        scene_rect = self.ui.graphicsView.scene().sceneRect()
-        if all(scene_rect.contains(rect) for rect in region):
-            return
-        extended_rect = scene_rect
-        for rect in region:
-            extended_rect = extended_rect.united(rect)
-        self.ui.graphicsView.scene().setSceneRect(extended_rect)
-
     @Slot("QPoint", "QString")
     def _handle_item_dropped(self, pos, text):
         """Runs when an item is dropped from Item palette onto the view.
@@ -693,9 +678,9 @@ class GraphViewMixin:
             scene.addItem(object_item)
             self.ui.graphicsView.setFocus()
             object_item.edit_name()
+            object_item.adjust_to_zoom(self.ui.graphicsView.transform())
         elif entity_type == "relationship class":
             self.add_wip_relationship(scene, scene_pos, entity_class_id)
-        self.extend_scene()
 
     def add_wip_relationship(self, scene, pos, relationship_class_id, center_item=None, center_dimension=None):
         """Makes items for a wip relationship and adds them to the scene at the given coordinates.
@@ -736,8 +721,10 @@ class GraphViewMixin:
             arc_item = ArcItem(relationship_item, object_item, self._ARC_WIDTH, is_wip=True)
             arc_items.append(arc_item)
         entity_items = object_items + [relationship_item]
+        transform = self.ui.graphicsView.transform()
         for item in entity_items + arc_items:
             scene.addItem(item)
+            item.adjust_to_zoom(transform)
         if center_item and center_dimension is not None:
             center_item._merge_target = object_items[center_dimension]
             center_item.merge_into_target()
