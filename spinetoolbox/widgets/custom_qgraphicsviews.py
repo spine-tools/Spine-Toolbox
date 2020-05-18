@@ -42,7 +42,7 @@ class CustomQGraphicsView(QGraphicsView):
         self._angle = 120
         self._num_scheduled_scalings = 0
         self.time_line = None
-        self._scene_fitting_zoom = 1.0
+        self._items_fitting_zoom = 1.0
         self._max_zoom = 10.0
         self._min_zoom = 0.1
         self._qsettings = QSettings("SpineProject", "Spine Toolbox")
@@ -171,13 +171,13 @@ class CustomQGraphicsView(QGraphicsView):
         Updates the minimum zoom limit and the zoom level with which the view fits all the items in the scene.
         """
         rect = self.scene().itemsBoundingRect()
-        scene_extent = max(rect.width(), rect.height())
-        if not scene_extent:
+        if rect.isEmpty():
             return
         size = self.size()
-        extent = min(size.height(), size.width())
-        self._scene_fitting_zoom = extent / scene_extent
-        self._min_zoom = min(self._scene_fitting_zoom, 0.1)
+        x_factor = size.width() / rect.width()
+        y_factor = size.height() / rect.height()
+        self._items_fitting_zoom = min(x_factor, y_factor)
+        self._min_zoom = min(self._items_fitting_zoom, 0.1)
 
     def _handle_zoom_time_line_advanced(self, pos):
         """Performs zoom whenever the smooth zoom time line advances."""
@@ -215,11 +215,11 @@ class CustomQGraphicsView(QGraphicsView):
         self._set_preferred_scene_rect()
 
     def reset_zoom(self):
-        """Reset zoom to the default factor."""
+        """Resets zoom to the default factor."""
         self.resetTransform()
         self.scene().center_items()
         self._update_zoom_limits()
-        self.scale(self._scene_fitting_zoom, self._scene_fitting_zoom)
+        self.scale(self._items_fitting_zoom, self._items_fitting_zoom)
         self._set_preferred_scene_rect()
 
     def gentle_zoom(self, factor, zoom_focus=None):
@@ -292,14 +292,6 @@ class DesignQGraphicsView(CustomQGraphicsView):
         """Set a new scene into the Design View when app is started."""
         self._toolbox = toolbox
         self.setScene(DesignGraphicsScene(self, toolbox))
-
-    def init_scene(self):
-        """Center items in scene and resets the zoom.
-        The scene must be cleared before calling this.
-        """
-        self.scene().center_items()
-        self._update_zoom_limits()
-        self.reset_zoom()
 
     def set_project_item_model(self, model):
         """Set project item model."""

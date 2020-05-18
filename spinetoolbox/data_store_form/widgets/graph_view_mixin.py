@@ -426,7 +426,7 @@ class GraphViewMixin:
             if self.wip_items:
                 self._add_wip_items(scene, object_items, *self.wip_items)  # pylint: disable=no-value-for-parameter
                 self.wip_items = tuple()
-        self.extend_scene()
+        self.ui.graphicsView.reset_zoom()
 
     def _get_selected_entity_ids(self):
         """Returns a set of ids corresponding to selected entities in the trees.
@@ -626,10 +626,6 @@ class GraphViewMixin:
         if not scene:
             return
         scene.deleteLater()
-
-    def extend_scene(self):
-        """Extends the scene to show all items."""
-        self.ui.graphicsView.reset_zoom()
 
     @Slot()
     def _handle_scene_selection_changed(self):
