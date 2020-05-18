@@ -222,8 +222,7 @@ class CustomQGraphicsView(QGraphicsView):
     def reset_zoom(self):
         """Reset zoom to the default factor."""
         self.resetTransform()
-        if self._scene_fitting_zoom < 1.0:
-            self.scale(self._scene_fitting_zoom, self._scene_fitting_zoom)
+        self.scene().center_items()
         self._set_preferred_scene_rect()
 
     def gentle_zoom(self, factor, zoom_focus=None):
