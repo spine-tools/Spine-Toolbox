@@ -17,7 +17,7 @@ Custom QGraphicsScene used in the Design View.
 """
 
 from PySide2.QtCore import Signal, Slot, QItemSelectionModel, QEvent
-from PySide2.QtWidgets import QGraphicsScene, QGraphicsItem
+from PySide2.QtWidgets import QGraphicsScene
 from PySide2.QtGui import QColor, QPen, QBrush
 from ..graphics_items import ProjectItemIcon
 from ..mvcmodels.project_item_factory_models import ProjectItemFactoryModel, ProjectItemSpecFactoryModel
@@ -44,8 +44,7 @@ class CustomGraphicsScene(QGraphicsScene):
         for item in self.items():
             if item.topLevelItem() != item:
                 continue
-            # NOTE: we call the base class method in case items override `moveBy`
-            QGraphicsItem.moveBy(item, delta.x(), delta.y())
+            item.moveBy(delta.x(), delta.y())
         self.setSceneRect(rect.translated(delta))
 
 
@@ -155,12 +154,10 @@ class DesignGraphicsScene(CustomGraphicsScene):
         event.acceptProposedAction()
         item_type, spec = event.mimeData().text().split(",")
         pos = event.scenePos()
-        w = 70
-        h = 70
-        x = pos.x() - w / 2
-        y = pos.y() - h / 2
+        x = pos.x()
+        y = pos.y()
         factory = self._toolbox.item_factories[item_type]
-        self.item_shadow = factory.make_icon(self._toolbox, x, y, w, h, None)
+        self.item_shadow = factory.make_icon(self._toolbox, x, y, None)
         self._toolbox.show_add_project_item_form(item_type, pos.x(), pos.y(), spec=spec)
 
     def event(self, event):
@@ -184,7 +181,7 @@ class DesignGraphicsScene(CustomGraphicsScene):
         if not self.bg_grid:
             painter.fillRect(rect, QBrush(self.bg_color))
             return
-        step = 20  # Grid step
+        step = int(ProjectItemIcon.ITEM_EXTENT / 4)  # Grid step
         painter.setPen(QPen(QColor(0, 0, 0, 40)))
         # Draw horizontal grid
         start = round(rect.top(), step)

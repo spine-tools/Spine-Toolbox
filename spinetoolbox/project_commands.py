@@ -249,10 +249,10 @@ class MoveIconCommand(SpineToolboxCommand):
         """
         super().__init__()
         self.graphics_item = graphics_item
-        self.previous_pos = {x: x._previous_pos for x in graphics_item.selected_icons}
-        self.current_pos = {x: x._current_pos for x in graphics_item.selected_icons}
-        if len(graphics_item.selected_icons) == 1:
-            self.setText(f"move {list(graphics_item.selected_icons)[0]._project_item.name}")
+        self.previous_pos = {x: x._previous_pos for x in graphics_item.icon_group}
+        self.current_pos = {x: x._current_pos for x in graphics_item.icon_group}
+        if len(graphics_item.icon_group) == 1:
+            self.setText(f"move {list(graphics_item.icon_group)[0]._project_item.name}")
         else:
             self.setText("move multiple items")
 

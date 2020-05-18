@@ -103,8 +103,8 @@ class EntityItem(QGraphicsPixmapItem):
     def boundingRect(self):
         return super().boundingRect() | self.childrenBoundingRect()
 
-    def moveBy(self, x, y):
-        super().moveBy(x, y)
+    def moveBy(self, dx, dy):
+        super().moveBy(dx, dy)
         self.update_arcs_line()
 
     def _init_bg(self):
@@ -180,6 +180,9 @@ class EntityItem(QGraphicsPixmapItem):
         factor = transform.m11()
         self.setFlag(QGraphicsItem.ItemIgnoresTransformations, enabled=factor > 1)
 
+    def block_move_by(self, dx, dy):
+        self.moveBy(dx, dy)
+
     def mouseMoveEvent(self, event):
         """Moves the item and all connected arcs. Also checks for a merge target
         and sets an appropriate mouse cursor.
@@ -194,7 +197,7 @@ class EntityItem(QGraphicsPixmapItem):
         # Move selected items together
         for item in self.scene().selectedItems():
             if isinstance(item, (EntityItem)):
-                item.moveBy(move_by.x(), move_by.y())
+                item.block_move_by(move_by.x(), move_by.y())
 
     def update_arcs_line(self):
         """Moves arc items."""
@@ -321,9 +324,9 @@ class RelationshipItem(EntityItem):
     def _show_item_context_menu_in_parent(self, pos):
         self._graph_view_form.show_relationship_item_context_menu(pos)
 
-    def follow_object_by(self, x, y):
+    def follow_object_by(self, dx, dy):
         factor = 1.0 / len(self.arc_items)
-        self.moveBy(factor * x, factor * y)
+        self.moveBy(factor * dx, factor * dy)
 
 
 class ObjectItem(EntityItem):
@@ -560,16 +563,15 @@ class ObjectItem(EntityItem):
     def _show_item_context_menu_in_parent(self, pos):
         self._graph_view_form.show_object_item_context_menu(pos, self)
 
-    def moveBy(self, x, y):
-        """Moves arc items."""
-        super().moveBy(x, y)
+    def block_move_by(self, dx, dy):
+        super().block_move_by(dx, dy)
         rel_items_follow = self._graph_view_form.qsettings.value(
             "appSettings/relationshipItemsFollow", defaultValue="true"
         )
         if rel_items_follow == "false":
             return
         for arc_item in self.arc_items:
-            arc_item.rel_item.follow_object_by(x, y)
+            arc_item.rel_item.follow_object_by(dx, dy)
 
 
 class EntityLabelItem(QGraphicsTextItem):
@@ -694,6 +696,9 @@ class ArcItem(QGraphicsLineItem):
         if self.is_wip:
             self.become_wip()
         self.setCursor(Qt.ArrowCursor)
+
+    def moveBy(self, dx, dy):
+        pass
 
     def update_line(self):
         src_x = self.rel_item.x()
