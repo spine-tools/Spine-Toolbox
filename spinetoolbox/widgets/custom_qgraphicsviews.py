@@ -20,7 +20,7 @@ import logging
 import math
 from PySide2.QtWidgets import QGraphicsView
 from PySide2.QtGui import QCursor
-from PySide2.QtCore import QEventLoop, QParallelAnimationGroup, Signal, Slot, Qt, QTimeLine, QSettings
+from PySide2.QtCore import QEventLoop, QParallelAnimationGroup, Signal, Slot, Qt, QTimeLine, QSettings, QRectF
 from spine_engine import ExecutionDirection, SpineEngineState
 from ..graphics_items import Link
 from ..project_commands import AddLinkCommand, RemoveLinkCommand
@@ -252,13 +252,18 @@ class CustomQGraphicsView(QGraphicsView):
         self.centerOn(center_on_scene - focus_diff)
         return True
 
+    def _get_viewport_scene_rect(self):
+        rect = self.viewport().rect()
+        top_left = self.mapToScene(rect.topLeft())
+        bottom_right = self.mapToScene(rect.bottomRight())
+        return QRectF(top_left, bottom_right)
+
     def _ensure_item_visible(self, item):
         """Resets zoom if item is not visible."""
         # Because of zooming, we need to find the item scene's rect as below
         item_scene_rect = item.boundingRegion(item.sceneTransform()).boundingRect()
-        item_viewport_rect = self.mapFromScene(item_scene_rect).boundingRect()
-        if not self.viewport().geometry().contains(item_viewport_rect.topLeft()):
-            viewport_scene_rect = self.mapToScene(self.viewport().geometry()).boundingRect()
+        viewport_scene_rect = self._get_viewport_scene_rect()
+        if not viewport_scene_rect.contains(item_scene_rect.topLeft()):
             scene_rect = viewport_scene_rect.united(item_scene_rect)
             self.fitInView(scene_rect, Qt.KeepAspectRatio)
             self._set_preferred_scene_rect()
@@ -267,7 +272,7 @@ class CustomQGraphicsView(QGraphicsView):
     def _set_preferred_scene_rect(self):
         """Sets the scene rect to the result of uniting the scene viewport rect and the items bounding rect.
         """
-        viewport_scene_rect = self.mapToScene(self.viewport().rect()).boundingRect()
+        viewport_scene_rect = self._get_viewport_scene_rect()
         items_scene_rect = self.scene().itemsBoundingRect()
         self.scene().setSceneRect(viewport_scene_rect.united(items_scene_rect))
 
