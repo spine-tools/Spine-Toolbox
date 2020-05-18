@@ -70,6 +70,7 @@ class DesignGraphicsScene(CustomGraphicsScene):
         self.bg_grid = grid != "false"
         bg_color = settings.value("appSettings/bgColor", defaultValue="false")
         self.bg_color = QColor("#f5f5f5") if bg_color == "false" else bg_color
+        self.bg_grid_origin = None
         self.connect_signals()
 
     def connect_signals(self):
@@ -176,26 +177,22 @@ class DesignGraphicsScene(CustomGraphicsScene):
             painter (QPainter): Painter that is used to paint background
             rect (QRectF): The exposed (viewport) rectangle in scene coordinates
         """
-        scene_rect = self.sceneRect()
-        rect = rect.intersected(scene_rect)  # Limit to only draw background for the scene rectangle
         if not self.bg_grid:
             painter.fillRect(rect, QBrush(self.bg_color))
             return
-        step = int(ProjectItemIcon.ITEM_EXTENT / 4)  # Grid step
+        if self.bg_grid_origin is None:
+            self.bg_grid_origin = rect.center()
+        step = round(ProjectItemIcon.ITEM_EXTENT / 4)  # Grid step
         painter.setPen(QPen(QColor(0, 0, 0, 40)))
         # Draw horizontal grid
-        start = round(rect.top(), step)
-        if start > rect.top():
-            start -= step
-        y = start
-        while y < rect.bottom():
+        start = round(self.bg_grid_origin.y())
+        for y in range(start, round(rect.bottom()), step):
             painter.drawLine(rect.left(), y, rect.right(), y)
-            y += step
+        for y in range(start, round(rect.top()), -step):
+            painter.drawLine(rect.left(), y, rect.right(), y)
         # Now draw vertical grid
-        start = round(rect.left(), step)
-        if start > rect.left():
-            start -= step
-        x = start
-        while x < rect.right():
+        start = round(self.bg_grid_origin.x())
+        for x in range(start, round(rect.right()), step):
             painter.drawLine(x, rect.top(), x, rect.bottom())
-            x += step
+        for x in range(start, round(rect.left()), -step):
+            painter.drawLine(x, rect.top(), x, rect.bottom())

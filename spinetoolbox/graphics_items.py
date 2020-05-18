@@ -532,7 +532,7 @@ class LinkBase(QGraphicsPathItem):
         return self.dst_rect.center()
 
     def moveBy(self, _dx, _dy):
-        pass
+        """Does nothing. This item is not moved the regular way, but follows the ConnectorButtons it connects."""
 
     def update_geometry(self):
         """Updates geometry."""

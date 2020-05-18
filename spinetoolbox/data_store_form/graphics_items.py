@@ -698,7 +698,7 @@ class ArcItem(QGraphicsLineItem):
         self.setCursor(Qt.ArrowCursor)
 
     def moveBy(self, dx, dy):
-        pass
+        """Does nothing. This item is not moved the regular way, but follows the EntityItems it connects."""
 
     def update_line(self):
         src_x = self.rel_item.x()
