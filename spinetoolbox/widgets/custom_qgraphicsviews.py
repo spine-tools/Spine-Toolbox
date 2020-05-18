@@ -173,7 +173,7 @@ class CustomQGraphicsView(QGraphicsView):
         rect = self.scene().itemsBoundingRect()
         if rect.isEmpty():
             return
-        fitting_margin = 70
+        fitting_margin = 100
         size = self.size()
         x_factor = size.width() / (rect.width() + fitting_margin)
         y_factor = size.height() / (rect.height() + fitting_margin)

@@ -16,7 +16,8 @@ Custom QGraphicsScene used in the Design View.
 :date:   13.2.2019
 """
 
-from PySide2.QtCore import Signal, Slot, QItemSelectionModel, QEvent
+import math
+from PySide2.QtCore import Signal, Slot, QItemSelectionModel, QEvent, QPointF
 from PySide2.QtWidgets import QGraphicsScene
 from PySide2.QtGui import QColor, QPen, QBrush
 from ..graphics_items import ProjectItemIcon
@@ -66,11 +67,10 @@ class DesignGraphicsScene(CustomGraphicsScene):
         self.sync_selection = True
         # Set background attributes
         settings = toolbox.qsettings()
-        grid = settings.value("appSettings/bgGrid", defaultValue="false")
-        self.bg_grid = grid != "false"
+        self.bg_choice = settings.value("appSettings/bgChoice", defaultValue="solid")
         bg_color = settings.value("appSettings/bgColor", defaultValue="false")
         self.bg_color = QColor("#f5f5f5") if bg_color == "false" else bg_color
-        self.bg_grid_origin = None
+        self.bg_origin = None
         self.connect_signals()
 
     def connect_signals(self):
@@ -101,13 +101,13 @@ class DesignGraphicsScene(CustomGraphicsScene):
         """
         self.bg_color = color
 
-    def set_bg_grid(self, bg):
-        """Enable or disable background grid.
+    def set_bg_choice(self, bg_choice):
+        """Set background choice when this is changed in Settings.
 
         Args:
-            bg (boolean): True to draw grid, False to fill background with a solid color
+            bg (str): "grid", "tree", or "solid"
         """
-        self.bg_grid = bg
+        self.bg_choice = bg_choice
 
     @staticmethod
     def _is_project_item_drag(source):
@@ -177,22 +177,53 @@ class DesignGraphicsScene(CustomGraphicsScene):
             painter (QPainter): Painter that is used to paint background
             rect (QRectF): The exposed (viewport) rectangle in scene coordinates
         """
-        if not self.bg_grid:
-            painter.fillRect(rect, QBrush(self.bg_color))
-            return
-        if self.bg_grid_origin is None:
-            self.bg_grid_origin = rect.center()
-        step = round(ProjectItemIcon.ITEM_EXTENT / 4)  # Grid step
-        painter.setPen(QPen(QColor(0, 0, 0, 40)))
+        if self.bg_origin is None:
+            self.bg_origin = rect.center()
+        {"solid": self._draw_solid_bg, "grid": self._draw_grid_bg, "tree": self._draw_tree_bg}.get(
+            self.bg_choice, self._draw_solid_bg
+        )(painter, rect)
+
+    def _draw_solid_bg(self, painter, rect):
+        """Draws solid bg."""
+        painter.fillRect(rect, QBrush(self.bg_color))
+
+    def _draw_grid_bg(self, painter, rect):
+        """Draws grid bg."""
+        step = round(ProjectItemIcon.ITEM_EXTENT / 3)  # Grid step
+        painter.setPen(QPen(self.bg_color))
         # Draw horizontal grid
-        start = round(self.bg_grid_origin.y())
+        start = round(self.bg_origin.y())
         for y in range(start, round(rect.bottom()), step):
             painter.drawLine(rect.left(), y, rect.right(), y)
         for y in range(start, round(rect.top()), -step):
             painter.drawLine(rect.left(), y, rect.right(), y)
         # Now draw vertical grid
-        start = round(self.bg_grid_origin.x())
+        start = round(self.bg_origin.x())
         for x in range(start, round(rect.right()), step):
             painter.drawLine(x, rect.top(), x, rect.bottom())
         for x in range(start, round(rect.left()), -step):
             painter.drawLine(x, rect.top(), x, rect.bottom())
+
+    def _draw_tree_bg(self, painter, rect):
+        """Draws 'tree of life' bg."""
+        painter.setPen(QPen(self.bg_color))
+        radius = ProjectItemIcon.ITEM_EXTENT
+
+        def draw_column(y):
+            orig_to_bottom_count = round((rect.bottom() - y) / radius) + 1
+            for j in range(orig_to_bottom_count):
+                painter.drawEllipse(QPointF(i * dx, y + j * radius), radius, radius)
+            orig_to_top_count = round((y - rect.top()) / radius) + 1
+            for j in range(-1, -orig_to_top_count, -1):
+                painter.drawEllipse(QPointF(i * dx, y + j * radius), radius, radius)
+
+        dx = math.sin(math.pi / 3) * radius
+        dy = math.cos(math.pi / 3) * radius
+        x_orig = self.bg_origin.x()
+        y_orig = self.bg_origin.y()
+        orig_to_right_count = round((rect.right() - x_orig) / dx) + 1
+        orig_to_left_count = round((x_orig - rect.left()) / dx) + 1
+        for k, i in enumerate(range(orig_to_right_count)):
+            draw_column(y_orig + k * dy)
+        for k, i in enumerate(range(-1, -orig_to_left_count, -1)):
+            draw_column(y_orig - (k + 1) * dy)

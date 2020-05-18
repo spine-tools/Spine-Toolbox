@@ -206,7 +206,7 @@
         </sizepolicy>
        </property>
        <property name="currentIndex">
-        <number>3</number>
+        <number>0</number>
        </property>
        <widget class="QWidget" name="General">
         <layout class="QVBoxLayout" name="verticalLayout_6">
@@ -398,6 +398,23 @@
                </widget>
               </item>
               <item>
+               <widget class="QRadioButton" name="radioButton_bg_tree">
+                <property name="text">
+                 <string>Tree of Life</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QRadioButton" name="radioButton_bg_solid">
+                <property name="text">
+                 <string>Solid</string>
+                </property>
+                <property name="checked">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+              <item>
                <spacer name="horizontalSpacer_4">
                 <property name="orientation">
                  <enum>Qt::Horizontal</enum>
@@ -411,12 +428,9 @@
                </spacer>
               </item>
               <item>
-               <widget class="QRadioButton" name="radioButton_bg_solid">
+               <widget class="QLabel" name="label_9">
                 <property name="text">
-                 <string>Solid</string>
-                </property>
-                <property name="checked">
-                 <bool>true</bool>
+                 <string>Color</string>
                 </property>
                </widget>
               </item>
@@ -994,7 +1008,7 @@ p, li { white-space: pre-wrap; }
             </sizepolicy>
            </property>
            <property name="title">
-            <string>Data store view</string>
+            <string>Data store form</string>
            </property>
            <layout class="QVBoxLayout" name="verticalLayout_4">
             <property name="spacing">
@@ -1006,7 +1020,7 @@ p, li { white-space: pre-wrap; }
                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Unchecked: Does not commit session and does not show message box&lt;/p&gt;&lt;p&gt;Partially checked: Shows message box (default)&lt;/p&gt;&lt;p&gt;Checked: Commits session and does not show message box&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="text">
-               <string>Commit session when view is closed</string>
+               <string>Commit session when form is closed</string>
               </property>
               <property name="tristate">
                <bool>true</bool>
@@ -1019,7 +1033,7 @@ p, li { white-space: pre-wrap; }
                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Controls how selecting items in Object tree &lt;span style=&quot; font-weight:600;&quot;&gt;using the left mouse button&lt;/span&gt; works. &lt;/p&gt;&lt;p&gt;When unchecked [default], Single selection is enabled. Pressing the Ctrl-button down enables multiple selection.&lt;/p&gt;&lt;p&gt;When checked, Multiple selection is enabled. Pressing the Ctrl-button down enables single selection.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="text">
-               <string>Sticky selection in object tree</string>
+               <string>Sticky selection in Entity trees</string>
               </property>
              </widget>
             </item>
@@ -1029,38 +1043,44 @@ p, li { white-space: pre-wrap; }
                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;When checked [default], moving Object items causes connected Relationship items to follow.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="text">
-               <string>Relationship items follow object items in entity graph</string>
+               <string>Move relationships along with objects in the Entity graph</string>
               </property>
              </widget>
             </item>
             <item>
-             <layout class="QVBoxLayout" name="verticalLayout">
+             <widget class="QLabel" name="label_6">
+              <property name="font">
+               <font>
+                <pointsize>11</pointsize>
+               </font>
+              </property>
+              <property name="text">
+               <string>Entity graph relationship expansion policy:</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <layout class="QHBoxLayout" name="horizontalLayout_3">
               <property name="spacing">
                <number>0</number>
               </property>
               <item>
-               <widget class="QLabel" name="label_6">
-                <property name="font">
-                 <font>
-                  <pointsize>11</pointsize>
-                 </font>
+               <widget class="QRadioButton" name="radioButton_relationship_at_least_one_selected">
+                <property name="toolTip">
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Whenever an object is included in the graph, the graph automatically includes all its relationships.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                 </property>
                 <property name="text">
-                 <string>Automatically bring relationships to the entity graph if they involve:</string>
+                 <string>Maximum expansion</string>
                 </property>
                </widget>
               </item>
               <item>
                <widget class="QRadioButton" name="radioButton_relationship_only_selected">
-                <property name="text">
-                 <string>only selected objects</string>
+                <property name="toolTip">
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Whenever all the objects in a relationship are included in the graph, the graph automaticall includes the relationship.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                 </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QRadioButton" name="radioButton_relationship_at_least_one_selected">
                 <property name="text">
-                 <string>at least one selected object</string>
+                 <string>Minimum expansion</string>
                 </property>
                </widget>
               </item>
