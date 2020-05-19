@@ -191,39 +191,35 @@ class DesignGraphicsScene(CustomGraphicsScene):
         """Draws grid bg."""
         step = round(ProjectItemIcon.ITEM_EXTENT / 3)  # Grid step
         painter.setPen(QPen(self.bg_color))
-        # Draw horizontal grid
-        start = round(self.bg_origin.y())
-        for y in range(start, round(rect.bottom()), step):
-            painter.drawLine(rect.left(), y, rect.right(), y)
-        for y in range(start, round(rect.top()), -step):
-            painter.drawLine(rect.left(), y, rect.right(), y)
-        # Now draw vertical grid
-        start = round(self.bg_origin.x())
-        for x in range(start, round(rect.right()), step):
+        delta = rect.topLeft() - self.bg_origin
+        x_start = round(delta.x() / step)
+        y_start = round(delta.y() / step)
+        x_stop = x_start + round(rect.width() / step) + 1
+        y_stop = y_start + round(rect.height() / step) + 1
+        for i in range(x_start, x_stop):
+            x = step * i
             painter.drawLine(x, rect.top(), x, rect.bottom())
-        for x in range(start, round(rect.left()), -step):
-            painter.drawLine(x, rect.top(), x, rect.bottom())
+        for j in range(y_start, y_stop):
+            y = step * j
+            painter.drawLine(rect.left(), y, rect.right(), y)
+        painter.setPen(QPen(self.bg_color.darker(110)))
+        painter.drawLine(self.bg_origin.x(), rect.top(), self.bg_origin.x(), rect.bottom())
+        painter.drawLine(rect.left(), self.bg_origin.y(), rect.right(), self.bg_origin.y())
 
     def _draw_tree_bg(self, painter, rect):
         """Draws 'tree of life' bg."""
         painter.setPen(QPen(self.bg_color))
         radius = ProjectItemIcon.ITEM_EXTENT
-
-        def draw_column(y):
-            orig_to_bottom_count = round((rect.bottom() - y) / radius) + 1
-            for j in range(orig_to_bottom_count):
-                painter.drawEllipse(QPointF(i * dx, y + j * radius), radius, radius)
-            orig_to_top_count = round((y - rect.top()) / radius) + 1
-            for j in range(-1, -orig_to_top_count, -1):
-                painter.drawEllipse(QPointF(i * dx, y + j * radius), radius, radius)
-
         dx = math.sin(math.pi / 3) * radius
         dy = math.cos(math.pi / 3) * radius
-        x_orig = self.bg_origin.x()
-        y_orig = self.bg_origin.y()
-        orig_to_right_count = round((rect.right() - x_orig) / dx) + 1
-        orig_to_left_count = round((x_orig - rect.left()) / dx) + 1
-        for k, i in enumerate(range(orig_to_right_count)):
-            draw_column(y_orig + k * dy)
-        for k, i in enumerate(range(-1, -orig_to_left_count, -1)):
-            draw_column(y_orig - (k + 1) * dy)
+        delta = rect.topLeft() - self.bg_origin
+        x_start = round(delta.x() / dx)
+        y_start = round(delta.y() / radius)
+        x_stop = x_start + round(rect.width() / dx) + 1
+        y_stop = y_start + round(rect.height() / radius) + 1
+        for i in range(x_start, x_stop):
+            ref = QPointF(i * dx, (i & 1) * dy)
+            for j in range(y_start, y_stop):
+                painter.drawEllipse(ref + QPointF(0, j * radius), radius, radius)
+        painter.setPen(QPen(self.bg_color.darker(110)))
+        painter.drawEllipse(self.bg_origin, 2 * radius, 2 * radius)
