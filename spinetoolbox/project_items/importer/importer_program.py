@@ -88,9 +88,16 @@ def run(checked_files, all_import_settings, all_source_settings, urls_downstream
             tn: {int(col): value_to_convert_spec(spec) for col, spec in cols.items()}
             for tn, cols in settings.get("table_row_types", {}).items()
         }
-        data, errors = connector.get_mapped_data(
-            table_mappings, table_options, table_types, table_row_types, max_rows=-1
-        )
+        try:
+            data, errors = connector.get_mapped_data(
+                table_mappings, table_options, table_types, table_row_types, max_rows=-1
+            )
+        except spinedb_api.InvalidMapping as error:
+            print(f"Failed to imoport '{source}': {error}", file=sys.stderr)
+            if cancel_on_error:
+                sys.exit(1)
+            else:
+                continue
         print(f"Read {sum(len(d) for d in data.values())} data from {source} with {len(errors)} errors")
         all_data.append(data)
         all_errors.extend(errors)

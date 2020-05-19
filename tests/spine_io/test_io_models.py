@@ -156,7 +156,7 @@ class TestMappingPreviewModel(unittest.TestCase):
 
 
 class TestMappingSpecModel(unittest.TestCase):
-    def test_data_when_mapping_invalid_object_class_without_parameters(self):
+    def test_data_when_mapping_object_class_without_objects_or_parameters(self):
         model = MappingSpecModel(
             dict_to_map({"map_type": "ObjectClass", "name": None, "object": None}), "connector's name"
         )
@@ -176,8 +176,8 @@ class TestMappingSpecModel(unittest.TestCase):
         self.assertTrue(index.data(Qt.ToolTipRole))
         index = model.index(1, 2)
         self.assertEqual(index.data(), "")
-        self.assertEqual(index.data(Qt.BackgroundColorRole), _ERROR_COLOR)
-        self.assertTrue(index.data(Qt.ToolTipRole))
+        self.assertEqual(index.data(Qt.BackgroundColorRole), None)
+        self.assertFalse(index.data(Qt.ToolTipRole))
 
     def test_data_when_mapping_invalid_object_class_with_parameters(self):
         indexed_parameter_mapping_dict = {
@@ -221,12 +221,7 @@ class TestMappingSpecModel(unittest.TestCase):
             "parameter_type": "array",
             "value": {"map_type": "row", "reference": 0},
         }
-        mapping_dict = {
-            "map_type": "ObjectClass",
-            "name": 0,
-            "objects": 1,
-            "parameters": array_parameter_mapping_dict,
-        }
+        mapping_dict = {"map_type": "ObjectClass", "name": 0, "objects": 1, "parameters": array_parameter_mapping_dict}
         model = MappingSpecModel(dict_to_map(mapping_dict), "connector's name")
         self.assertEqual(model.rowCount(), 4)
         self.assertEqual(model.columnCount(), 3)
@@ -321,7 +316,7 @@ class TestMappingSpecModel(unittest.TestCase):
         self.assertEqual(index.data(Qt.BackgroundColorRole), None)
         self.assertFalse(index.data(Qt.ToolTipRole))
 
-    def test_data_when_mapping_invalid_relationship_class_without_parameters(self):
+    def test_data_when_mapping_relationship_class_without_objects_or_parameters(self):
         model = MappingSpecModel(
             dict_to_map({"map_type": "RelationshipClass", "name": None, "object_classes": None, "object": None}),
             "connector's name",
@@ -350,8 +345,8 @@ class TestMappingSpecModel(unittest.TestCase):
         self.assertTrue(index.data(Qt.ToolTipRole))
         index = model.index(2, 2)
         self.assertEqual(index.data(), "")
-        self.assertEqual(index.data(Qt.BackgroundColorRole), _ERROR_COLOR)
-        self.assertTrue(index.data(Qt.ToolTipRole))
+        self.assertEqual(index.data(Qt.BackgroundColorRole), None)
+        self.assertFalse(index.data(Qt.ToolTipRole))
 
     def test_data_when_mapping_invalid_relationship_class_with_parameters(self):
         indexed_parameter_mapping_dict = {
