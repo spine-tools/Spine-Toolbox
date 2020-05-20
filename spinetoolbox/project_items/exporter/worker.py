@@ -55,12 +55,12 @@ class Worker(QObject):
         self._previous_indexing_settings = None
         self._previous_indexing_domains = None
         self._previous_merging_settings = None
-        self.thread.started.connect(self.fetch_settings)
+        self.thread.started.connect(self._fetch_settings)
         self.thread.finished.connect(self.deleteLater)
         self.thread.finished.connect(self.thread.deleteLater)
 
     @Slot()
-    def fetch_settings(self):
+    def _fetch_settings(self):
         """Constructs settings and parameter index settings."""
         result = _Result(*self._read_settings())
         if result.set_settings is None:
