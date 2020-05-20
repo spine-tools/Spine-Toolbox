@@ -40,6 +40,7 @@ class TabularViewMixin:
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # current state of ui
+        self.current = None  # Current QModelIndex selected in one of the entity tree views
         self.current_class_type = None
         self.current_class_id = None
         self.current_input_type = self._PARAMETER_VALUE
@@ -82,10 +83,8 @@ class TabularViewMixin:
     def connect_signals(self):
         """Connects signals to slots."""
         super().connect_signals()
-        self.ui.treeView_object.selectionModel().selectionChanged.connect(self._handle_entity_tree_selection_changed)
-        self.ui.treeView_relationship.selectionModel().selectionChanged.connect(
-            self._handle_entity_tree_selection_changed
-        )
+        self.ui.treeView_object.selectionModel().currentChanged.connect(self._handle_entity_tree_current_changed)
+        self.ui.treeView_relationship.selectionModel().currentChanged.connect(self._handle_entity_tree_current_changed)
         self.ui.pivot_table.customContextMenuRequested.connect(self.pivot_table_menu.request_menu)
         self.ui.pivot_table.horizontalHeader().customContextMenuRequested.connect(
             self._pivot_table_horizontal_header_menu.request_menu
@@ -130,16 +129,15 @@ class TabularViewMixin:
         return fix_name_ambiguity(relationship_class["object_class_name_list"].split(","))
 
     @staticmethod
-    def _is_class_index(index, class_type):
+    def _is_class_index(index):
         """Returns whether or not the given tree index is a class index.
 
         Args:
             index (QModelIndex): index from object or relationship tree
-            class_type (str)
         Returns:
             bool
         """
-        return index.column() == 0 and index.model().item_from_index(index).item_type == class_type
+        return index.column() == 0 and not index.parent().parent().isValid()
 
     @Slot(bool)
     def _handle_pivot_table_visibility_changed(self, visible):
@@ -153,10 +151,10 @@ class TabularViewMixin:
         if visible:
             self.ui.dockWidget_pivot_table.show()
 
-    @Slot("QItemSelection", "QItemSelection")
-    def _handle_entity_tree_selection_changed(self, selected, deselected):
+    @Slot("QModelIndex", "QModelIndex")
+    def _handle_entity_tree_current_changed(self, current, previous):
         if self.ui.dockWidget_pivot_table.isVisible():
-            self.reload_pivot_table()
+            self.reload_pivot_table(current=current)
             self.reload_frozen_table()
 
     def _get_entities(self, class_id=None, class_type=None):
@@ -359,22 +357,18 @@ class TabularViewMixin:
         return rows, columns, frozen, frozen_value
 
     @Slot(str)
-    def reload_pivot_table(self, text=""):
+    def reload_pivot_table(self, current=None, text=""):
         """Updates current class (type and id) and reloads pivot table for it."""
-        if self.ui.treeView_object.selectionModel().hasSelection():
-            tree_view = self.ui.treeView_object
-            class_type = "object class"
-        elif self.ui.treeView_relationship.selectionModel().hasSelection():
-            tree_view = self.ui.treeView_relationship
-            class_type = "relationship class"
-        else:
+        if current is not None:
+            self.current = current
+        if self.current is None:
             return
-        selected = tree_view.selectionModel().currentIndex()
-        if self._is_class_index(selected, class_type):
-            class_id = selected.model().item_from_index(selected).db_map_id(self.db_map)
+        if self._is_class_index(self.current):
+            item = self.current.model().item_from_index(self.current)
+            class_id = item.db_map_id(self.db_map)
             if self.current_class_id == class_id:
                 return
-            self.current_class_type = class_type
+            self.current_class_type = item.item_type
             self.current_class_id = class_id
             self.do_reload_pivot_table()
 

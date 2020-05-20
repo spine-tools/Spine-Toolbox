@@ -44,6 +44,7 @@ class GraphViewMixin:
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.selected_indexes = {}
         self._added_objects = {}
         self._added_relationships = {}
         self.object_class_list_model = ObjectClassListModel(self, self.db_mngr, self.db_map)
@@ -64,7 +65,8 @@ class GraphViewMixin:
         self.rotate_widget_action = None
         self.layout_gens = list()
         self._handle_item_palette_dock_location_changed(self.dockWidgetArea(self.ui.dockWidget_item_palette))
-        self.ui.treeView_object.qsettings = self.qsettings
+        self.ui.treeView_object.qsettings = self.qsettings  # FIXME
+        self.ui.treeView_relationship.qsettings = self.qsettings  # FIXME
         self.setup_widget_actions()
 
     def add_menu_actions(self):
@@ -77,6 +79,8 @@ class GraphViewMixin:
     def connect_signals(self):
         """Connects signals."""
         super().connect_signals()
+        self.ui.treeView_object.entity_selection_changed.connect(self.rebuild_graph)
+        self.ui.treeView_relationship.entity_selection_changed.connect(self.rebuild_graph)
         self.ui.graphicsView.context_menu_requested.connect(self.show_graph_view_context_menu)
         self.ui.graphicsView.item_dropped.connect(self._handle_item_dropped)
         self.ui.dockWidget_entity_graph.visibilityChanged.connect(self._handle_entity_graph_visibility_changed)
@@ -226,7 +230,7 @@ class GraphViewMixin:
         rem_class_ids = {x["class_id"] for id_, x in self._added_objects.items() if id_ not in restored_ids}
         sel_class_ids = {
             ind.model().item_from_index(ind).db_map_id(self.db_map)
-            for ind in self.object_tree_model.selected_object_class_indexes
+            for ind in self.ui.treeView_object.selected_indexes.get("object class", {})
         }
         self._added_objects.clear()
         if rem_class_ids.intersection(sel_class_ids):
@@ -385,17 +389,10 @@ class GraphViewMixin:
         if visible:
             self.ui.dockWidget_entity_graph.show()
 
-    @Slot("QItemSelection", "QItemSelection")
-    def _handle_object_tree_selection_changed(self, selected, deselected):
-        """Builds graph."""
-        super()._handle_object_tree_selection_changed(selected, deselected)
-        if self.ui.dockWidget_entity_graph.isVisible():
-            self.build_graph()
-
-    @Slot("QItemSelection", "QItemSelection")
-    def _handle_relationship_tree_selection_changed(self, selected, deselected):
-        """Builds graph."""
-        super()._handle_relationship_tree_selection_changed(selected, deselected)
+    @Slot(dict)
+    def rebuild_graph(self, selected):
+        """Stores the given selection and builds graph."""
+        self.selected_indexes = selected
         if self.ui.dockWidget_entity_graph.isVisible():
             self.build_graph()
 
@@ -450,32 +447,21 @@ class GraphViewMixin:
             set: selected object ids
             set: selected relationship ids
         """
-        if self.ui.treeView_object.selectionModel().hasSelection():
-            tree_view = self.ui.treeView_object
-        elif self.ui.treeView_relationship.selectionModel().hasSelection():
-            tree_view = self.ui.treeView_relationship
-        else:
-            return set(), set()
-        model = tree_view.model()
-        if tree_view.selectionModel().isSelected(model.root_index):
-            if tree_view is self.ui.treeView_object:
-                return {x["id"] for x in self.db_mngr.get_items(self.db_map, "object")}, set()
-            return set(), {x["id"] for x in self.db_mngr.get_items(self.db_map, "relationship")}
         selected_object_ids = set()
         selected_relationship_ids = set()
-        for index in model.selected_object_indexes:
+        for index in self.selected_indexes.get("object", {}):
             item = index.model().item_from_index(index)
             object_id = item.db_map_id(self.db_map)
             selected_object_ids.add(object_id)
-        for index in model.selected_relationship_indexes:
+        for index in self.selected_indexes.get("relationship", {}):
             item = index.model().item_from_index(index)
             relationship_id = item.db_map_id(self.db_map)
             selected_relationship_ids.add(relationship_id)
-        for index in model.selected_object_class_indexes:
+        for index in self.selected_indexes.get("object class", {}):
             item = index.model().item_from_index(index)
             object_ids = set(item._get_children_ids(self.db_map))
             selected_object_ids.update(object_ids)
-        for index in model.selected_relationship_class_indexes:
+        for index in self.selected_indexes.get("relationship class", {}):
             item = index.model().item_from_index(index)
             relationship_ids = set(item._get_children_ids(self.db_map))
             selected_relationship_ids.update(relationship_ids)

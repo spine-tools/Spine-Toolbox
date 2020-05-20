@@ -440,7 +440,7 @@ class ObjectClassItem(EntityClassItem):
                 "Add relationship classes": QIcon(":/icons/menu_icons/cubes_plus.svg"),
                 "Add objects": QIcon(":/icons/menu_icons/cube_plus.svg"),
             },
-            {"Edit object classes": QIcon(":/icons/menu_icons/cube_pen.svg")},
+            {"Edit selection": QIcon(":/icons/menu_icons/cube_pen.svg")},
             {"Remove selection": QIcon(":/icons/menu_icons/cube_minus.svg")},
         ]
 
@@ -473,7 +473,7 @@ class RelationshipClassItem(EntityClassItem):
         super().__init__(*args, **kwargs)
         self.context_menu_actions = [
             {"Add relationships": QIcon(":/icons/menu_icons/cubes_plus.svg")},
-            {"Edit relationship classes": QIcon(":/icons/menu_icons/cubes_pen.svg")},
+            {"Edit selection": QIcon(":/icons/menu_icons/cubes_pen.svg")},
             {"Remove selection": QIcon(":/icons/menu_icons/cubes_minus.svg")},
         ]
 
@@ -533,7 +533,7 @@ class ObjectItem(EntityItem):
         super().__init__(*args, **kwargs)
         self.context_menu_actions = [
             {"Duplicate": QIcon(":/icons/menu_icons/cube_plus.svg")},
-            {"Edit objects": QIcon(":/icons/menu_icons/cube_pen.svg")},
+            {"Edit selection": QIcon(":/icons/menu_icons/cube_pen.svg")},
             {"Remove selection": QIcon(":/icons/menu_icons/cube_minus.svg")},
         ]
 
@@ -576,9 +576,9 @@ class RelationshipItem(EntityItem):
         super().__init__(*args, **kwargs)
         self._fetched = True
         self.context_menu_actions = [
-            {"Edit relationships": QIcon(":/icons/menu_icons/cubes_pen.svg")},
-            {"Find next": QIcon(":/icons/menu_icons/ellipsis-h.png")},
+            {"Edit selection": QIcon(":/icons/menu_icons/cubes_pen.svg")},
             {"Remove selection": QIcon(":/icons/menu_icons/cubes_minus.svg")},
+            {"Find next": QIcon(":/icons/menu_icons/ellipsis-h.png")},
         ]
 
     @property

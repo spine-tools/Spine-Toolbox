@@ -20,7 +20,35 @@ from PySide2.QtCore import Qt, Signal
 from PySide2.QtWidgets import QTableView, QAbstractItemView
 from .pivot_table_header_view import PivotTableHeaderView
 from .tabular_view_header_widget import TabularViewHeaderWidget
-from ...widgets.custom_qtableview import CopyPasteTableView
+from ...widgets.custom_qtableview import CopyPasteTableView, AutoFilterCopyPasteTableView
+
+
+class ParameterTableView(AutoFilterCopyPasteTableView):
+    def remove_selected(self):
+        """Removes selected indexes."""
+        selection = self.selectionModel().selection()
+        rows = list()
+        while not selection.isEmpty():
+            current = selection.takeFirst()
+            top = current.top()
+            bottom = current.bottom()
+            rows += range(top, bottom + 1)
+        # Get parameter data grouped by db_map
+        db_map_typed_data = dict()
+        model = self.model()
+        for row in sorted(rows, reverse=True):
+            try:
+                db_map = model.sub_model_at_row(row).db_map
+            except AttributeError:
+                # It's an empty model, just remove the row
+                _, sub_row = model._row_map[row]
+                model.empty_model.removeRow(sub_row)
+            else:
+                id_ = model.item_at_row(row)
+                item = model.db_mngr.get_item(db_map, model.item_type, id_)
+                db_map_typed_data.setdefault(db_map, {}).setdefault(model.item_type, []).append(item)
+        model.db_mngr.remove_items(db_map_typed_data)
+        self.selectionModel().clearSelection()
 
 
 class PivotTableView(CopyPasteTableView):

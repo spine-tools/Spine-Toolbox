@@ -15,23 +15,14 @@ Models to represent entities in a tree.
 :authors: P. Vennström (VTT), M. Marin (KTH)
 :date:   11.3.2019
 """
-from PySide2.QtCore import Qt, Signal, QModelIndex
+from PySide2.QtCore import Qt, QModelIndex
 from PySide2.QtGui import QIcon
-from .entity_tree_item import (
-    ObjectTreeRootItem,
-    ObjectClassItem,
-    ObjectItem,
-    RelationshipTreeRootItem,
-    RelationshipClassItem,
-    RelationshipItem,
-)
+from .entity_tree_item import ObjectTreeRootItem, RelationshipTreeRootItem
 from .minimal_tree_model import MinimalTreeModel, TreeItem
 
 
 class EntityTreeModel(MinimalTreeModel):
     """Base class for all entity tree models."""
-
-    remove_selection_requested = Signal()
 
     def __init__(self, parent, db_mngr, *db_maps):
         """Init class.
@@ -45,7 +36,6 @@ class EntityTreeModel(MinimalTreeModel):
         self.db_mngr = db_mngr
         self.db_maps = db_maps
         self._root_item = None
-        self.selected_indexes = dict()  # Maps item type to selected indexes
 
     @property
     def root_item_type(self):
@@ -60,28 +50,11 @@ class EntityTreeModel(MinimalTreeModel):
     def root_index(self):
         return self.index_from_item(self._root_item)
 
-    @property
-    def selected_object_class_indexes(self):
-        return self.selected_indexes.get(ObjectClassItem, {})
-
-    @property
-    def selected_object_indexes(self):
-        return self.selected_indexes.get(ObjectItem, {})
-
-    @property
-    def selected_relationship_class_indexes(self):
-        return self.selected_indexes.get(RelationshipClassItem, {})
-
-    @property
-    def selected_relationship_indexes(self):
-        return self.selected_indexes.get(RelationshipItem, {})
-
     def build_tree(self):
         """Builds tree."""
         self.beginResetModel()
         self._invisible_root_item = TreeItem(self)
         self.endResetModel()
-        self.selected_indexes.clear()
         self._root_item = self.root_item_type(self, dict.fromkeys(self.db_maps))
         self._invisible_root_item.append_children(self._root_item)
 
@@ -103,19 +76,6 @@ class EntityTreeModel(MinimalTreeModel):
         if orientation == Qt.Horizontal and role == Qt.DisplayRole:
             return ("name", "database")[section]
         return None
-
-    def _select_index(self, index):
-        """Marks the index as selected."""
-        if not index.isValid() or index.column() != 0:
-            return
-        item_type = type(self.item_from_index(index))
-        self.selected_indexes.setdefault(item_type, {})[index] = None
-
-    def select_indexes(self, indexes):
-        """Marks given indexes as selected."""
-        self.selected_indexes.clear()
-        for index in indexes:
-            self._select_index(index)
 
     def find_items(self, db_map, path_prefix, parent_items=(), fetch=False):
         """Returns items at given path prefix.
@@ -262,7 +222,7 @@ class ObjectTreeModel(EntityTreeModel):
         if not index.isValid():
             return
         rel_item = self.item_from_index(index)
-        if not isinstance(rel_item, RelationshipItem):
+        if not rel_item.item_type == "relationship":
             return
         # Get all ancestors
         rel_cls_item = rel_item.parent_item

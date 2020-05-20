@@ -149,7 +149,7 @@ class DataStoreFormBase(QMainWindow):
         self.ui.actionExport_session.triggered.connect(self.export_session)
         self.ui.actionCopy.triggered.connect(self.copy)
         self.ui.actionPaste.triggered.connect(self.paste)
-        self.ui.actionRemove_selection.triggered.connect(self.remove_selection)
+        self.ui.actionRemove_selected.triggered.connect(self.remove_selected)
         self.ui.actionManage_parameter_tags.triggered.connect(self.show_manage_parameter_tags_form)
         self.ui.actionMass_remove_items.triggered.connect(self.show_mass_remove_items_form)
         self.parameter_tag_toolbar.manage_tags_action_triggered.connect(self.show_manage_parameter_tags_form)
@@ -157,7 +157,6 @@ class DataStoreFormBase(QMainWindow):
         self.ui.treeView_parameter_value_list.customContextMenuRequested.connect(
             self.show_parameter_value_list_context_menu
         )
-        self.parameter_value_list_model.remove_selection_requested.connect(self.remove_parameter_value_lists)
         self.ui.dockWidget_exports.visibilityChanged.connect(self._handle_exports_visibility_changed)
 
     @Slot(int)
@@ -236,19 +235,14 @@ class DataStoreFormBase(QMainWindow):
     def _handle_menu_edit_about_to_show(self):
         """Runs when the edit menu from the main menubar is about to show.
         Enables or disables actions according to selection status."""
+        # TODO: Try to also check if there's a selection to enable copy and remove
         self.ui.actionCopy.setEnabled(self._focused_widget_has_callable("copy"))
-        self.ui.actionRemove_selection.setEnabled(self._focused_widget_can_remove_selections())
-        object_classes_selected = self._focused_widgets_model_has_non_empty_list("selected_object_class_indexes")
-        objects_selected = self._focused_widgets_model_has_non_empty_list("selected_object_indexes")
-        relationship_classes_selected = self._focused_widgets_model_has_non_empty_list(
-            "selected_relationship_class_indexes"
-        )
-        relationships_selected = self._focused_widgets_model_has_non_empty_list("selected_relationship_indexes")
-        self.ui.actionEdit_object_classes.setEnabled(object_classes_selected)
-        self.ui.actionEdit_objects.setEnabled(objects_selected)
-        self.ui.actionEdit_relationship_classes.setEnabled(relationship_classes_selected)
-        self.ui.actionEdit_relationships.setEnabled(relationships_selected)
         self.ui.actionPaste.setEnabled(self._focused_widget_has_callable("paste"))
+        self.ui.actionRemove_selected.setEnabled(self._focused_widget_has_callable("remove_selected"))
+        entity_trees_have_selection = (
+            self.ui.treeView_object.has_selection() or self.ui.treeView_relationship.has_selection()
+        )
+        self.ui.actionEdit_tree_items.setEnabled(entity_trees_have_selection)
 
     def selected_entity_class_ids(self, entity_class_type):
         """Returns entity class ids selected in entity tree *and* parameter tag toolbar.
@@ -278,16 +272,9 @@ class DataStoreFormBase(QMainWindow):
         return result
 
     @Slot(bool)
-    def remove_selection(self, checked=False):
-        """Removes selection of items."""
-        focus_widget = self.focusWidget()
-        while focus_widget is not self:
-            if hasattr(focus_widget, "model") and callable(focus_widget.model):
-                model = focus_widget.model()
-                if hasattr(model, "remove_selection_requested"):
-                    model.remove_selection_requested.emit()
-                    break
-            focus_widget = focus_widget.parentWidget()
+    def remove_selected(self, checked=False):
+        """Removes selected items."""
+        self._call_on_focused_widget("remove_selected")
 
     @Slot(bool)
     def copy(self, checked=False):
@@ -675,55 +662,9 @@ class DataStoreFormBase(QMainWindow):
         option = parameter_value_list_context_menu.get_action()
         if option == "Copy":
             self.ui.treeView_parameter_value_list.copy()
-        elif option == "Remove selection":
-            self.remove_parameter_value_lists()
+        elif option == "Remove selected":
+            self.ui.treeView_parameter_value_list.remove_selected()
         parameter_value_list_context_menu.deleteLater()
-
-    @Slot()
-    def remove_parameter_value_lists(self):
-        """Removes selection of parameter value-lists.
-        """
-        db_map_typed_data_to_rm = {}
-        db_map_data_to_upd = {}
-        selected = [
-            self.parameter_value_list_model.item_from_index(index)
-            for index in self.ui.treeView_parameter_value_list.selectionModel().selectedIndexes()
-        ]
-        for db_item in self.parameter_value_list_model._invisible_root_item.children:
-            db_map_typed_data_to_rm[db_item.db_map] = {"parameter value list": []}
-            db_map_data_to_upd[db_item.db_map] = []
-            for list_item in reversed(db_item.children[:-1]):
-                if list_item.id:
-                    if list_item in selected:
-                        db_map_typed_data_to_rm[db_item.db_map]["parameter value list"].append(
-                            {"id": list_item.id, "name": list_item.name}
-                        )
-                        continue
-                    curr_value_list = list_item.compile_value_list()
-                    value_list = [
-                        value
-                        for value_item, value in zip(list_item.children, curr_value_list)
-                        if value_item not in selected
-                    ]
-                    if not value_list:
-                        db_map_typed_data_to_rm[db_item.db_map]["parameter value list"].append(
-                            {"id": list_item.id, "name": list_item.name}
-                        )
-                        continue
-                    if value_list != curr_value_list:
-                        item = {"id": list_item.id, "value_list": value_list}
-                        db_map_data_to_upd[db_item.db_map].append(item)
-                else:
-                    # WIP lists, just remove everything selected
-                    if list_item in selected:
-                        db_item.remove_children(list_item.child_number(), list_item.child_number())
-                        continue
-                    for value_item in reversed(list_item.children[:-1]):
-                        if value_item in selected:
-                            list_item.remove_children(value_item.child_number(), value_item.child_number())
-        self.db_mngr.update_parameter_value_lists(db_map_data_to_upd)
-        self.db_mngr.remove_items(db_map_typed_data_to_rm)
-        self.ui.treeView_parameter_value_list.selectionModel().clearSelection()
 
     @Slot(bool)
     def show_mass_remove_items_form(self, checked=False):
@@ -900,17 +841,6 @@ class DataStoreFormBase(QMainWindow):
         self.save_window_state()
         QMainWindow.closeEvent(self, event)
 
-    def _focused_widget_can_remove_selections(self):
-        """Returns True if the currently focused widget or one of its parents can respond to actinoRemove_selection."""
-        focus_widget = self.focusWidget()
-        while focus_widget is not self:
-            if hasattr(focus_widget, "model") and callable(focus_widget.model):
-                model = focus_widget.model()
-                if hasattr(model, "remove_selection_requested"):
-                    return True
-            focus_widget = focus_widget.parentWidget()
-        return False
-
     def _focused_widget_has_callable(self, callable_name):
         """Returns True if the currently focused widget or one of its ancestors has the given callable."""
         focus_widget = self.focusWidget()
@@ -919,18 +849,6 @@ class DataStoreFormBase(QMainWindow):
                 method = getattr(focus_widget, callable_name)
                 if callable(method):
                     return True
-            focus_widget = focus_widget.parentWidget()
-        return False
-
-    def _focused_widgets_model_has_non_empty_list(self, list_name):
-        """Returns True if the currently focused widget's or one of its ancestors' model has a non empty list."""
-        focus_widget = self.focusWidget()
-        while focus_widget is not self:
-            if hasattr(focus_widget, "model") and callable(focus_widget.model):
-                model = focus_widget.model()
-                if hasattr(model, list_name):
-                    a_list = getattr(model, list_name)
-                    return bool(a_list)
             focus_widget = focus_widget.parentWidget()
         return False
 

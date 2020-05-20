@@ -52,7 +52,7 @@ class EntityTreeContextMenu(CustomContextMenu):
             self.add_action("Fully expand", QIcon(":/icons/menu_icons/angle-double-right.svg"))
             self.add_action("Fully collapse", QIcon(":/icons/menu_icons/angle-double-left.svg"))
         self.addSeparator()
-        self.add_action("Export selection", QIcon(":/icons/project_item_icons/database-export.svg"))
+        self.add_action("Export selected", QIcon(":/icons/project_item_icons/database-export.svg"))
 
 
 class ParameterContextMenu(CustomContextMenu):
@@ -74,7 +74,7 @@ class ParameterContextMenu(CustomContextMenu):
         self.add_action("Copy", copy_icon)
         self.add_action("Paste", paste_icon)
         self.addSeparator()
-        self.add_action("Remove selection", remove_icon)
+        self.add_action("Remove selected", remove_icon)
 
 
 class EditableParameterValueContextMenu(CustomContextMenu):
@@ -105,7 +105,7 @@ class EditableParameterValueContextMenu(CustomContextMenu):
         self.add_action("Copy", copy_icon)
         self.add_action("Paste", paste_icon)
         self.addSeparator()
-        self.add_action("Remove selection", remove_icon)
+        self.add_action("Remove selected", remove_icon)
 
     @Slot("QAction")
     def _plot_in_window(self, action):
@@ -131,7 +131,7 @@ class ParameterValueListContextMenu(CustomContextMenu):
         remove_icon = QIcon(":/icons/minus.png")
         self.add_action("Copy", copy_icon)
         self.addSeparator()
-        self.add_action("Remove selection", remove_icon)
+        self.add_action("Remove selected", remove_icon)
 
 
 class GraphViewContextMenu(QMenu):

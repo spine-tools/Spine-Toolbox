@@ -40,8 +40,8 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
     and one empty parameter model.
     """
 
-    remove_selection_requested = Signal()
     data_for_single_model_received = Signal(object, int, list)
+    """Emitted by the fetcher when there's data for another single model."""
 
     def __init__(self, parent, db_mngr, *db_maps):
         """Initializes model.
