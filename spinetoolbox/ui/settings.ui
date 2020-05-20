@@ -1062,7 +1062,7 @@ p, li { white-space: pre-wrap; }
                </font>
               </property>
               <property name="text">
-               <string>Entity graph relationship expansion policy:</string>
+               <string>Relationship graph expansion policy:</string>
               </property>
              </widget>
             </item>
@@ -1074,7 +1074,7 @@ p, li { white-space: pre-wrap; }
               <item>
                <widget class="QRadioButton" name="radioButton_relationship_at_least_one_selected">
                 <property name="toolTip">
-                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Whenever an object is included in the graph, the graph automatically includes all its relationships.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Whenever an object is included in the Entity graph, the graph automatically includes all its relationships.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                 </property>
                 <property name="text">
                  <string>Maximum expansion</string>
@@ -1084,7 +1084,7 @@ p, li { white-space: pre-wrap; }
               <item>
                <widget class="QRadioButton" name="radioButton_relationship_only_selected">
                 <property name="toolTip">
-                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Whenever all the objects in a relationship are included in the graph, the graph automaticall includes the relationship.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Whenever all the objects in a relationship are included in the Entity graph, the graph automatically includes the relationship.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                 </property>
                 <property name="text">
                  <string>Minimum expansion</string>

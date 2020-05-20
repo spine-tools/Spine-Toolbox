@@ -995,26 +995,26 @@ class GraphViewMixin:
     @Slot(bool)
     def export_as_pdf(self, checked=False):
         self.qsettings.beginGroup(self.settings_group)
-        file_name, _ = get_save_file_name_in_last_dir(
-            self.qsettings,
-            "exportGraphAsPDF",
-            self,
-            "Export as PDF...",
-            self._get_base_dir(),
-            filter_="PDF files (*.pdf)",
+        file_path, _ = get_save_file_name_in_last_dir(
+            self.qsettings, "exportGraphAsPDF", self, "Export as PDF...", self._get_base_dir(), "PDF files (*.pdf)"
         )
         self.qsettings.endGroup()
-        if not file_name:
+        if not file_path:
             return
-        scene = self.ui.graphicsView.scene()
-        source = scene.itemsBoundingRect()
+        view = self.ui.graphicsView
+        source = view._get_viewport_scene_rect()
+        current_zoom_factor = view.zoom_factor
+        view._zoom(1.0 / current_zoom_factor)
+        scene = view.scene()
+        scene.clearSelection()
         printer = QPrinter()
         printer.setPaperSize(source.size(), QPrinter.Point)
-        printer.setOutputFileName(file_name)
+        printer.setOutputFileName(file_path)
         painter = QPainter(printer)
         scene.render(painter, QRectF(), source)
         painter.end()
-        self.msg.emit(f"File {file_name} successfully exported.")
+        view._zoom(current_zoom_factor)
+        self._insert_open_file_button(file_path)
 
     def closeEvent(self, event=None):
         """Handles close window event.

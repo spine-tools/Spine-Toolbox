@@ -13,7 +13,7 @@
 # Form implementation generated from reading ui file '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/settings.ui',
 # licensing of '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/settings.ui' applies.
 #
-# Created: Tue May 19 20:04:46 2020
+# Created: Tue May 19 21:10:15 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -560,10 +560,10 @@ class Ui_SettingsForm(object):
         self.checkBox_relationship_items_follow.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>When checked [default], moving Object items causes connected Relationship items to follow.</p></body></html>", None, -1))
         self.checkBox_relationship_items_follow.setText(QtWidgets.QApplication.translate("SettingsForm", "Move relationships along with objects in the Entity graph", None, -1))
         self.checkBox_smooth_entity_graph_rotation.setText(QtWidgets.QApplication.translate("SettingsForm", "Smooth Entity graph rotation", None, -1))
-        self.label_6.setText(QtWidgets.QApplication.translate("SettingsForm", "Entity graph relationship expansion policy:", None, -1))
-        self.radioButton_relationship_at_least_one_selected.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>Whenever an object is included in the graph, the graph automatically includes all its relationships.</p></body></html>", None, -1))
+        self.label_6.setText(QtWidgets.QApplication.translate("SettingsForm", "Relationship graph expansion policy:", None, -1))
+        self.radioButton_relationship_at_least_one_selected.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>Whenever an object is included in the Entity graph, the graph automatically includes all its relationships.</p></body></html>", None, -1))
         self.radioButton_relationship_at_least_one_selected.setText(QtWidgets.QApplication.translate("SettingsForm", "Maximum expansion", None, -1))
-        self.radioButton_relationship_only_selected.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>Whenever all the objects in a relationship are included in the graph, the graph automaticall includes the relationship.</p></body></html>", None, -1))
+        self.radioButton_relationship_only_selected.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>Whenever all the objects in a relationship are included in the Entity graph, the graph automatically includes the relationship.</p></body></html>", None, -1))
         self.radioButton_relationship_only_selected.setText(QtWidgets.QApplication.translate("SettingsForm", "Minimum expansion", None, -1))
         self.pushButton_ok.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>Saves changes and closes the window</p></body></html>", None, -1))
         self.pushButton_ok.setText(QtWidgets.QApplication.translate("SettingsForm", "Ok", None, -1))

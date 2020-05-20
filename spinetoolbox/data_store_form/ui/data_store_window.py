@@ -13,7 +13,7 @@
 # Form implementation generated from reading ui file '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/data_store_form/ui/data_store_window.ui',
 # licensing of '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/data_store_form/ui/data_store_window.ui' applies.
 #
-# Created: Mon May 18 09:12:28 2020
+# Created: Tue May 19 21:30:51 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -696,7 +696,7 @@ class Ui_MainWindow(object):
 
 from spinetoolbox.widgets.custom_qtreeview import CopyTreeView, EntityTreeView, StickySelectionEntityTreeView
 from spinetoolbox.widgets.custom_qlistview import DragListView
-from spinetoolbox.data_store_form.widgets.custom_qtableview import FrozenTableView, PivotTableView
 from spinetoolbox.widgets.custom_qgraphicsviews import EntityQGraphicsView
+from spinetoolbox.data_store_form.widgets.custom_qtableview import PivotTableView, FrozenTableView
 from spinetoolbox.widgets.custom_qtableview import AutoFilterCopyPasteTableView
 from spinetoolbox import resources_icons_rc
