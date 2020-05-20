@@ -249,6 +249,7 @@ class SettingsWidget(QWidget):
         python_path = self._qsettings.value("appSettings/pythonPath", defaultValue="")
         commit_at_exit = int(self._qsettings.value("appSettings/commitAtExit", defaultValue="1"))  # tri-state
         sticky_selection = self._qsettings.value("appSettings/stickySelection", defaultValue="false")
+        smooth_rotation = self._qsettings.value("appSettings/smoothRotation", defaultValue="false")
         only_selected_objects = self._qsettings.value("appSettings/onlySelectedObjects", defaultValue="false")
         work_dir = self._qsettings.value("appSettings/workDir", defaultValue="")
         if open_previous_project == 2:
@@ -291,6 +292,8 @@ class SettingsWidget(QWidget):
             self.ui.checkBox_commit_at_exit.setCheckState(Qt.Checked)
         if sticky_selection == "true":
             self.ui.checkBox_object_tree_sticky_selection.setCheckState(Qt.Checked)
+        if smooth_rotation == "true":
+            self.ui.checkBox_smooth_entity_graph_rotation.setCheckState(Qt.Checked)
         if only_selected_objects == "true":
             self.ui.radioButton_relationship_only_selected.setChecked(True)
         else:
@@ -377,6 +380,8 @@ class SettingsWidget(QWidget):
         self._qsettings.setValue("appSettings/commitAtExit", commit_at_exit)
         sticky_selection = "true" if int(self.ui.checkBox_object_tree_sticky_selection.checkState()) else "false"
         self._qsettings.setValue("appSettings/stickySelection", sticky_selection)
+        smooth_rotation = "true" if int(self.ui.checkBox_smooth_entity_graph_rotation.checkState()) else "false"
+        self._qsettings.setValue("appSettings/smoothRotation", smooth_rotation)
         only_selected_objects = "true" if self.ui.radioButton_relationship_only_selected.isChecked() else "false"
         self._qsettings.setValue("appSettings/onlySelectedObjects", only_selected_objects)
         # Work directory

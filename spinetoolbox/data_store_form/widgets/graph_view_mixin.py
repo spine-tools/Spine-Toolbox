@@ -22,7 +22,7 @@ from PySide2.QtPrintSupport import QPrinter
 from PySide2.QtGui import QPainter
 from spinedb_api import to_database, from_database
 from .custom_menus import GraphViewContextMenu, ObjectItemContextMenu, RelationshipItemContextMenu
-from ...widgets.custom_qwidgets import ZoomWidgetAction
+from ...widgets.custom_qwidgets import ZoomWidgetAction, RotateWidgetAction
 from ...widgets.custom_qgraphicsscene import CustomGraphicsScene
 from ..graphics_items import EntityItem, ObjectItem, RelationshipItem, ArcItem
 from .graph_view_demo import GraphViewDemo
@@ -61,10 +61,11 @@ class GraphViewMixin:
         self.entity_item_selection = list()
         self._blank_item = None
         self.zoom_widget_action = None
+        self.rotate_widget_action = None
         self.layout_gens = list()
         self._handle_item_palette_dock_location_changed(self.dockWidgetArea(self.ui.dockWidget_item_palette))
         self.ui.treeView_object.qsettings = self.qsettings
-        self.setup_zoom_widget_action()
+        self.setup_widget_actions()
 
     def add_menu_actions(self):
         """Adds toggle view actions to View menu."""
@@ -95,6 +96,8 @@ class GraphViewMixin:
         self.zoom_widget_action.minus_pressed.connect(self._handle_zoom_minus_pressed)
         self.zoom_widget_action.plus_pressed.connect(self._handle_zoom_plus_pressed)
         self.zoom_widget_action.reset_pressed.connect(self._handle_zoom_reset_pressed)
+        self.rotate_widget_action.clockwise_pressed.connect(self._handle_rotate_clockwise_pressed)
+        self.rotate_widget_action.anticlockwise_pressed.connect(self._handle_rotate_anticlockwise_pressed)
         # Connect Add more items in Item palette
         self.ui.listView_object_class.clicked.connect(self._add_more_object_classes)
         self.ui.listView_relationship_class.clicked.connect(self._add_more_relationship_classes)
@@ -102,11 +105,13 @@ class GraphViewMixin:
         self.objects_added_to_graph.connect(self._ensure_objects_in_graph)
         self.relationships_added_to_graph.connect(self._ensure_relationships_in_graph)
 
-    def setup_zoom_widget_action(self):
-        """Setups zoom widget action in view menu."""
+    def setup_widget_actions(self):
+        """Setups zoom and rotate widget action in view menu."""
         self.zoom_widget_action = ZoomWidgetAction(self.ui.menuView)
+        self.rotate_widget_action = RotateWidgetAction(self.ui.menuView)
         self.ui.menuGraph.addSeparator()
         self.ui.menuGraph.addAction(self.zoom_widget_action)
+        self.ui.menuGraph.addAction(self.rotate_widget_action)
 
     def init_models(self):
         """Initializes models."""
@@ -330,6 +335,16 @@ class GraphViewMixin:
     def _handle_zoom_reset_pressed(self):
         """Resets the zoom on the view."""
         self.ui.graphicsView.reset_zoom()
+
+    @Slot()
+    def _handle_rotate_clockwise_pressed(self):
+        """Performs a rotate clockwise."""
+        self.ui.graphicsView.rotate_clockwise()
+
+    @Slot()
+    def _handle_rotate_anticlockwise_pressed(self):
+        """Performs a rotate anticlockwise."""
+        self.ui.graphicsView.rotate_anticlockwise()
 
     @Slot()
     def _handle_menu_graph_about_to_show(self):
@@ -674,7 +689,7 @@ class GraphViewMixin:
             scene.addItem(object_item)
             self.ui.graphicsView.setFocus()
             object_item.edit_name()
-            object_item.adjust_to_zoom(self.ui.graphicsView.transform())
+            object_item.apply_zoom(self.ui.graphicsView.zoom_factor)
         elif entity_type == "relationship class":
             self.add_wip_relationship(scene, scene_pos, entity_class_id)
 
@@ -717,10 +732,9 @@ class GraphViewMixin:
             arc_item = ArcItem(relationship_item, object_item, self._ARC_WIDTH, is_wip=True)
             arc_items.append(arc_item)
         entity_items = object_items + [relationship_item]
-        transform = self.ui.graphicsView.transform()
         for item in entity_items + arc_items:
             scene.addItem(item)
-            item.adjust_to_zoom(transform)
+            item.apply_zoom(self.ui.graphicsView.zoom_factor)
         if center_item and center_dimension is not None:
             center_item._merge_target = object_items[center_dimension]
             center_item.merge_into_target()

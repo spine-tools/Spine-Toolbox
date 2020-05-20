@@ -13,7 +13,7 @@
 # Form implementation generated from reading ui file '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/settings.ui',
 # licensing of '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/settings.ui' applies.
 #
-# Created: Mon May 18 18:58:03 2020
+# Created: Tue May 19 20:04:46 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -400,6 +400,9 @@ class Ui_SettingsForm(object):
         self.checkBox_relationship_items_follow = QtWidgets.QCheckBox(self.groupBox_data_store)
         self.checkBox_relationship_items_follow.setObjectName("checkBox_relationship_items_follow")
         self.verticalLayout_4.addWidget(self.checkBox_relationship_items_follow)
+        self.checkBox_smooth_entity_graph_rotation = QtWidgets.QCheckBox(self.groupBox_data_store)
+        self.checkBox_smooth_entity_graph_rotation.setObjectName("checkBox_smooth_entity_graph_rotation")
+        self.verticalLayout_4.addWidget(self.checkBox_smooth_entity_graph_rotation)
         self.label_6 = QtWidgets.QLabel(self.groupBox_data_store)
         font = QtGui.QFont()
         font.setPointSize(11)
@@ -446,7 +449,7 @@ class Ui_SettingsForm(object):
 
         self.retranslateUi(SettingsForm)
         self.listWidget.setCurrentRow(-1)
-        self.stackedWidget.setCurrentIndex(0)
+        self.stackedWidget.setCurrentIndex(3)
         QtCore.QObject.connect(self.listWidget, QtCore.SIGNAL("currentRowChanged(int)"), self.stackedWidget.setCurrentIndex)
         QtCore.QMetaObject.connectSlotsByName(SettingsForm)
         SettingsForm.setTabOrder(self.listWidget, self.checkBox_open_previous_project)
@@ -556,6 +559,7 @@ class Ui_SettingsForm(object):
         self.checkBox_object_tree_sticky_selection.setText(QtWidgets.QApplication.translate("SettingsForm", "Sticky selection in Entity trees", None, -1))
         self.checkBox_relationship_items_follow.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>When checked [default], moving Object items causes connected Relationship items to follow.</p></body></html>", None, -1))
         self.checkBox_relationship_items_follow.setText(QtWidgets.QApplication.translate("SettingsForm", "Move relationships along with objects in the Entity graph", None, -1))
+        self.checkBox_smooth_entity_graph_rotation.setText(QtWidgets.QApplication.translate("SettingsForm", "Smooth Entity graph rotation", None, -1))
         self.label_6.setText(QtWidgets.QApplication.translate("SettingsForm", "Entity graph relationship expansion policy:", None, -1))
         self.radioButton_relationship_at_least_one_selected.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>Whenever an object is included in the graph, the graph automatically includes all its relationships.</p></body></html>", None, -1))
         self.radioButton_relationship_at_least_one_selected.setText(QtWidgets.QApplication.translate("SettingsForm", "Maximum expansion", None, -1))

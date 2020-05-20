@@ -206,7 +206,7 @@
         </sizepolicy>
        </property>
        <property name="currentIndex">
-        <number>0</number>
+        <number>3</number>
        </property>
        <widget class="QWidget" name="General">
         <layout class="QVBoxLayout" name="verticalLayout_6">
@@ -1044,6 +1044,13 @@ p, li { white-space: pre-wrap; }
               </property>
               <property name="text">
                <string>Move relationships along with objects in the Entity graph</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QCheckBox" name="checkBox_smooth_entity_graph_rotation">
+              <property name="text">
+               <string>Smooth Entity graph rotation</string>
               </property>
              </widget>
             </item>

@@ -15,7 +15,7 @@ Classes for drawing graphics items on graph view's QGraphicsScene.
 :authors: M. Marin (KTH), P. Savolainen (VTT)
 :date:   4.4.2018
 """
-from PySide2.QtCore import Qt, Signal, Slot
+from PySide2.QtCore import Qt, Signal, Slot, QLineF
 from PySide2.QtWidgets import (
     QGraphicsItem,
     QGraphicsTextItem,
@@ -27,7 +27,7 @@ from PySide2.QtWidgets import (
     QStyle,
     QApplication,
 )
-from PySide2.QtGui import QPen, QBrush, QPainterPath, QFont, QTextCursor, QTransform, QPalette, QGuiApplication
+from PySide2.QtGui import QPen, QBrush, QPainterPath, QFont, QTextCursor, QPalette, QGuiApplication
 
 
 class EntityItem(QGraphicsPixmapItem):
@@ -58,8 +58,6 @@ class EntityItem(QGraphicsPixmapItem):
         rect = self.boundingRect()
         self.setOffset(-rect.width() / 2, -rect.height() / 2)
         self._moved_on_scene = False
-        self._view_transform = QTransform()  # To determine collisions in the view
-        self._views_cursor = {}
         self._bg = None
         self._bg_brush = Qt.NoBrush
         self._init_bg()
@@ -170,15 +168,27 @@ class EntityItem(QGraphicsPixmapItem):
         if self._question_item:
             self.scene().removeItem(self._question_item)
 
-    def adjust_to_zoom(self, transform):
-        """Saves the view's transform to determine collisions later on.
+    def apply_zoom(self, factor):
+        """Applies zoom.
 
         Args:
-            transform (QTransform): The view's transformation matrix after the zoom.
+            factor (float): The zoom factor.
         """
-        self._view_transform = transform
-        factor = transform.m11()
-        self.setFlag(QGraphicsItem.ItemIgnoresTransformations, enabled=factor > 1)
+        if factor > 1:
+            factor = 1
+        self.setScale(factor)
+
+    def apply_rotation(self, angle, center):
+        """Applies rotation.
+
+        Args:
+            angle (float): The angle in degrees.
+            center (QPoint): Rotates around this point.
+        """
+        line = QLineF(center, self.pos())
+        line.setAngle(line.angle() + angle)
+        self.setPos(line.p2())
+        self.update_arcs_line()
 
     def block_move_by(self, dx, dy):
         self.moveBy(dx, dy)
@@ -447,18 +457,14 @@ class ObjectItem(EntityItem):
     def _is_in_wip_relationship(self):
         return any(arc_item.rel_item.is_wip for arc_item in self.arc_items)
 
-    def device_rect(self):
+    def device_rect(self, view):
         """Returns the item's rect in devices's coordinates.
         Used to accurately determine collisions.
         """
-        return self.deviceTransform(self._view_transform).mapRect(QGraphicsPixmapItem.boundingRect(self))
+        return self.deviceTransform(view.transform()).mapRect(QGraphicsPixmapItem.boundingRect(self))
 
-    def _find_merge_target(self):
-        """Returns a suitable merge target if any.
-
-        Returns:
-            spinetoolbox.widgets.graph_view_graphics_items.EntityItem, NoneType
-        """
+    def update_merge_target(self, view):
+        """Finds a suitable merge target if any."""
         scene = self.scene()
         if not scene:
             return None
@@ -469,9 +475,9 @@ class ObjectItem(EntityItem):
             and isinstance(x, ObjectItem)
             and x is not self
             and (self._is_in_wip_relationship() or x._is_in_wip_relationship())
-            and x.device_rect().intersects(self.device_rect())
+            and x.device_rect(view).intersects(self.device_rect(view))
         ]
-        return next(iter(colliding), None)
+        self._merge_target = next(iter(colliding), None)
 
     def mousePressEvent(self, event):
         """Saves original position for bouncing purposes.
@@ -482,22 +488,6 @@ class ObjectItem(EntityItem):
         super().mousePressEvent(event)
         self._press_pos = self.pos()
         self._merge_target = None
-
-    def mouseMoveEvent(self, event):
-        super().mouseMoveEvent(event)
-        self._merge_target = self._find_merge_target()
-        for view in self.scene().views():
-            self._views_cursor.setdefault(view, view.viewport().cursor())
-            if not self._merge_target:
-                try:
-                    view.viewport().setCursor(self._views_cursor[view])
-                except KeyError:
-                    pass
-                continue
-            if self._is_target_valid():
-                view.viewport().setCursor(Qt.DragCopyCursor)
-            else:
-                view.viewport().setCursor(Qt.ForbiddenCursor)
 
     def mouseReleaseEvent(self, event):
         """Merges the item into the registered target if any. Bounces it if not possible.
@@ -521,10 +511,10 @@ class ObjectItem(EntityItem):
         if self._press_pos is None:
             return
         delta = self._press_pos - self.pos()
-        self.moveBy(delta.x(), delta.y())
+        self.block_move_by(delta.x(), delta.y())
         self.update_arcs_line()
 
-    def _is_target_valid(self):
+    def has_valid_merge_target(self):
         """Whether or not the registered merge target is valid.
 
         Returns:
@@ -541,7 +531,7 @@ class ObjectItem(EntityItem):
         Returns:
             bool: True if merged, False if not.
         """
-        if not self._is_target_valid() and not force:
+        if not self.has_valid_merge_target() and not force:
             return False
         if not self.is_wip and self._merge_target.is_wip:
             # Make sure we don't merge a non-wip into a wip item
@@ -726,15 +716,14 @@ class ArcItem(QGraphicsLineItem):
         self._pen.setStyle(Qt.SolidLine)
         self.setPen(self._pen)
 
-    def adjust_to_zoom(self, transform):
-        """Adjusts the item's geometry so it stays the same size after performing a zoom.
+    def apply_zoom(self, factor):
+        """Applies zoom.
 
         Args:
-            transform (QTransform): The view's transformation matrix after the zoom.
+            factor (float): The zoom factor.
         """
-        factor = transform.m11()
         if factor < 1:
-            return
+            factor = 1
         scaled_width = self._width / factor
         self._pen.setWidthF(scaled_width)
         self.setPen(self._pen)
