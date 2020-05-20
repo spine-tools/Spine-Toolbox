@@ -39,6 +39,7 @@ from spinedb_api import (
     TimePattern,
     to_database,
 )
+from .data_store_form.widgets.data_store_form import DataStoreForm
 from .helpers import IconManager, busy_effect, format_string_list
 from .spine_db_signaller import SpineDBSignaller
 from .spine_db_fetcher import SpineDBFetcher
@@ -52,7 +53,7 @@ from .spine_db_commands import (
     SetParameterDefinitionTagsCommand,
     RemoveItemsCommand,
 )
-from .widgets.data_store_manage_items_dialog import CommitDialog
+from .widgets.commit_dialog import CommitDialog
 from .mvcmodels.shared import PARSED_ROLE
 
 
@@ -123,15 +124,17 @@ class SpineDBManager(QObject):
             project (SpineToolboxProject)
         """
         super().__init__(project)
+        self._project = project
         self._general_logger = logger
         self._db_specific_loggers = dict()
         self._db_maps = {}
         self._cache = {}
+        self._ds_forms = {}
         self.qsettings = settings
         self.undo_stack = {}
         self.undo_action = {}
         self.redo_action = {}
-        self.icon_mngr = IconManager()
+        self.icon_mngr = {}
         self.signaller = SpineDBSignaller(self)
         self.fetchers = []
         self.connect_signals()
@@ -143,14 +146,14 @@ class SpineDBManager(QObject):
     def create_new_spine_database(self, url):
         if url in self._db_maps:
             message = (
-                f"The db at <b>{url}</b> is open in a Data store view. "
-                "Please close all Data store views using this url and try again."
+                f"The db at <b>{url}</b> is open in a Data store form. "
+                "Please close all Data store forms using this url and try again."
             )
             self._general_logger.error_box.emit("Error", message)
             return
         try:
             if not is_empty(url):
-                msg = QMessageBox(self.parent()._toolbox)
+                msg = QMessageBox(qApp.activeWindow())  # pylint: disable=undefined-variable
                 msg.setIcon(QMessageBox.Question)
                 msg.setWindowTitle("Database not empty")
                 msg.setText(f"The database at <b>'{url}'</b> is not empty.")
@@ -187,12 +190,34 @@ class SpineDBManager(QObject):
                 db_map.connection.close()
         self._db_specific_loggers.clear()
 
-    def get_db_map(self, url, upgrade=False, codename=None):
+    def show_data_store_form(self, db_url_codenames, logger):
+        """Creates a new DataStoreForm and shows it.
+        
+        Args:
+            db_url_codenames (dict): Mapping db urls to codenames.
+            logger (LoggingInterface): Where to log SpineDBAPIError
+        """
+        key = tuple(db_url_codenames.keys())
+        ds_form = self._ds_forms.get(key)
+        if ds_form is None:
+            db_maps = [self.get_db_map(url, logger, codename=codename) for url, codename in db_url_codenames.items()]
+            if not all(db_maps):
+                return
+            self._ds_forms[key] = ds_form = DataStoreForm(self, *db_maps)
+            ds_form.destroyed.connect(lambda: self._ds_forms.pop(key))
+            ds_form.show()
+        else:
+            if ds_form.windowState() & Qt.WindowMinimized:
+                ds_form.setWindowState(ds_form.windowState() & ~Qt.WindowMinimized | Qt.WindowActive)
+            ds_form.activateWindow()
+
+    def get_db_map(self, url, logger, upgrade=False, codename=None):
         """Returns a DiffDatabaseMapping instance from url if possible, None otherwise.
         If needed, asks the user to upgrade to the latest db version.
 
         Args:
             url (str, URL)
+            logger (LoggingInterface): Where to log SpineDBAPIError
             upgrade (bool, optional)
             codename (str, NoneType, optional)
 
@@ -200,9 +225,9 @@ class SpineDBManager(QObject):
             DiffDatabaseMapping, NoneType
         """
         try:
-            return self.do_get_db_map(url, upgrade, codename)
+            return self._do_get_db_map(url, upgrade, codename)
         except SpineDBVersionError:
-            msg = QMessageBox(self.parent()._toolbox)
+            msg = QMessageBox(qApp.activeWindow())  # pylint: disable=undefined-variable
             msg.setIcon(QMessageBox.Question)
             msg.setWindowTitle("Incompatible database version")
             msg.setText(
@@ -220,10 +245,13 @@ class SpineDBManager(QObject):
             ret = msg.exec_()  # Show message box
             if ret == QMessageBox.Cancel:
                 return None
-            return self.get_db_map(url, upgrade=True, codename=codename)
+            return self.get_db_map(url, logger, upgrade=True, codename=codename)
+        except SpineDBAPIError as err:
+            logger.msg_error.emit(err.msg)
+            return None
 
     @busy_effect
-    def do_get_db_map(self, url, upgrade, codename):
+    def _do_get_db_map(self, url, upgrade, codename):
         """Returns a memorized DiffDatabaseMapping instance from url.
         Called by `get_db_map`.
 
@@ -236,44 +264,44 @@ class SpineDBManager(QObject):
             DiffDatabaseMapping
         """
         if url not in self._db_maps:
-            self._db_maps[url] = DiffDatabaseMapping(url, upgrade=upgrade, codename=codename)
+            self._db_maps[url] = db_map = DiffDatabaseMapping(url, upgrade=upgrade, codename=codename)
+            stack = self.undo_stack[db_map] = AgedUndoStack(self)
+            undo_action = self.undo_action[db_map] = stack.createUndoAction(self)
+            redo_action = self.redo_action[db_map] = stack.createRedoAction(self)
+            undo_action.setShortcuts(QKeySequence.Undo)
+            redo_action.setShortcuts(QKeySequence.Redo)
+            undo_action.setIcon(QIcon(":/icons/menu_icons/undo.svg"))
+            redo_action.setIcon(QIcon(":/icons/menu_icons/redo.svg"))
         return self._db_maps[url]
 
-    def get_db_map_for_listener(self, listener, url, upgrade=False, codename=None):
-        """Returns a db_map for given listener.
+    def register_listener(self, ds_form, *db_maps):
+        """Register given ds_form as listener for all given db_map's signals.
 
         Args:
-            listener (DataStoreForm)
-            url (DiffDatabaseMapping)
+            ds_form (DataStoreForm)
+            db_maps (DiffDatabaseMapping)
         """
-        db_map = self.get_db_map(url, upgrade=upgrade, codename=codename)
-        self.signaller.add_db_map_listener(db_map, listener)
-        stack = self.undo_stack[db_map] = AgedUndoStack(self)
-        undo_action = self.undo_action[db_map] = stack.createUndoAction(self)
-        redo_action = self.redo_action[db_map] = stack.createRedoAction(self)
-        undo_action.setShortcuts(QKeySequence.Undo)
-        redo_action.setShortcuts(QKeySequence.Redo)
-        undo_action.setIcon(QIcon(":/icons/menu_icons/undo.svg"))
-        redo_action.setIcon(QIcon(":/icons/menu_icons/redo.svg"))
-        stack.indexChanged.connect(listener.update_undo_redo_actions)
-        stack.cleanChanged.connect(listener.update_commit_enabled)
-        return db_map
+        for db_map in db_maps:
+            self.signaller.add_db_map_listener(db_map, ds_form)
+            stack = self.undo_stack[db_map]
+            stack.indexChanged.connect(ds_form.update_undo_redo_actions)
+            stack.cleanChanged.connect(ds_form.update_commit_enabled)
 
-    def remove_db_map_listener(self, db_map, listener):
-        """Removes listener for a given db_map.
+    def unregister_listener(self, ds_form, db_map):
+        """Unregisters given ds_form from given db_map signals.
 
         Args:
+            ds_form (DataStoreForm)
             db_map (DiffDatabaseMapping)
-            listener (DataStoreForm)
         """
-        listeners = self.signaller.db_map_listeners(db_map) - {listener}
+        listeners = self.signaller.db_map_listeners(db_map) - {ds_form}
         if not listeners:
             if not self.ok_to_close(db_map):
                 return False
             self.close_session(db_map.db_url)
-        self.signaller.remove_db_map_listener(db_map, listener)
-        self.undo_stack[db_map].indexChanged.disconnect(listener.update_undo_redo_actions)
-        self.undo_stack[db_map].cleanChanged.disconnect(listener.update_commit_enabled)
+        self.signaller.remove_db_map_listener(db_map, ds_form)
+        self.undo_stack[db_map].indexChanged.disconnect(ds_form.update_undo_redo_actions)
+        self.undo_stack[db_map].cleanChanged.disconnect(ds_form.update_commit_enabled)
         if not self.signaller.db_map_listeners(db_map):
             del self.undo_stack[db_map]
             del self.undo_action[db_map]
@@ -540,16 +568,16 @@ class SpineDBManager(QObject):
         )
 
     def error_msg(self, db_map_error_log):
-        msg = ""
+        db_msgs = []
         for db_map, error_log in db_map_error_log.items():
-            database = "From " + db_map.codename + ":"
             if isinstance(error_log, str):
                 error_log = [error_log]
-            formatted_log = format_string_list(error_log)
-            msg += format_string_list([database, formatted_log])
+            db_msg = "From " + db_map.codename + ":" + format_string_list(error_log)
+            db_msgs.append(db_msg)
         for db_map in db_map_error_log:
             logger = self._db_specific_loggers.get(db_map.codename)
             if logger is not None:
+                msg = format_string_list(db_msgs)
                 logger.error_box.emit("Error", msg)
 
     def cache_items(self, item_type, db_map_data):
@@ -604,8 +632,8 @@ class SpineDBManager(QObject):
             item_type (str)
             db_map_data (dict): lists of dictionary items keyed by DiffDatabaseMapping
         """
-        object_classes = [item for db_map, data in db_map_data.items() for item in data]
-        self.icon_mngr.setup_object_pixmaps(object_classes)
+        for db_map, object_classes in db_map_data.items():
+            self.icon_mngr.setdefault(db_map, IconManager()).setup_object_pixmaps(object_classes)
 
     def entity_class_icon(self, db_map, entity_type, entity_class_id):
         """Returns an appropriate icon for a given entity class.
@@ -622,9 +650,9 @@ class SpineDBManager(QObject):
         if not entity_class:
             return None
         if entity_type == "object class":
-            return self.icon_mngr.object_icon(entity_class["name"])
+            return self.icon_mngr[db_map].object_icon(entity_class["name"])
         if entity_type == "relationship class":
-            return self.icon_mngr.relationship_icon(entity_class["object_class_name_list"])
+            return self.icon_mngr[db_map].relationship_icon(entity_class["object_class_name_list"])
 
     def get_item(self, db_map, item_type, id_):
         """Returns the item of the given type in the given db map that has the given id,
@@ -1047,13 +1075,21 @@ class SpineDBManager(QObject):
         for db_map, data in db_map_data.items():
             import_command = AgedUndoCommand()
             import_command.setText(command_text)
+            child_cmds = []
+            # NOTE: we push the import command before adding the children,
+            # because we *need* to call redo() on the children one by one
             self.undo_stack[db_map].push(import_command)
             for item_type, (to_add, to_update, import_error_log) in get_data_for_import(db_map, **data):
-                error_log[db_map] = [x.msg for x in import_error_log]
+                error_log[db_map] = [str(x) for x in import_error_log]
                 add_cmd = AddItemsCommand(self, db_map, to_add, item_type, parent=import_command)
                 upd_cmd = UpdateItemsCommand(self, db_map, to_update, item_type, parent=import_command)
                 add_cmd.redo()
                 upd_cmd.redo()
+                child_cmds += [add_cmd, upd_cmd]
+            if all([cmd.isObsolete() for cmd in child_cmds]):
+                # Nothing imported. Set the command obsolete and call undo() on the stack to removed it
+                import_command.setObsolete(True)
+                self.undo_stack[db_map].undo()
         if any(error_log.values()):
             self.error_msg(error_log)
 
@@ -1417,11 +1453,11 @@ class SpineDBManager(QObject):
             self.scenario_alternatives_removed.emit(db_map_scenario_alternatives)
 
     @staticmethod
-    def ids_per_db_map(db_map_data):
+    def db_map_ids(db_map_data):
         return {db_map: {x["id"] for x in data} for db_map, data in db_map_data.items()}
 
     @staticmethod
-    def ids_per_db_map_and_class(db_map_data):
+    def db_map_class_ids(db_map_data):
         d = dict()
         for db_map, items in db_map_data.items():
             for item in items:
@@ -1435,7 +1471,7 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of removed items keyed by DiffDatabaseMapping
         """
-        db_map_cascading_data = self.find_cascading_entities(self.ids_per_db_map(db_map_data), "object")
+        db_map_cascading_data = self.find_cascading_entities(self.db_map_ids(db_map_data), "object")
         if any(db_map_cascading_data.values()):
             self.objects_removed.emit(db_map_cascading_data)
 
@@ -1446,7 +1482,7 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of removed items keyed by DiffDatabaseMapping
         """
-        db_map_cascading_data = self.find_cascading_relationship_classes(self.ids_per_db_map(db_map_data))
+        db_map_cascading_data = self.find_cascading_relationship_classes(self.db_map_ids(db_map_data))
         if any(db_map_cascading_data.values()):
             self.relationship_classes_removed.emit(db_map_cascading_data)
 
@@ -1457,7 +1493,7 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of removed items keyed by DiffDatabaseMapping
         """
-        db_map_cascading_data = self.find_cascading_entities(self.ids_per_db_map(db_map_data), "relationship")
+        db_map_cascading_data = self.find_cascading_entities(self.db_map_ids(db_map_data), "relationship")
         if any(db_map_cascading_data.values()):
             self.relationships_removed.emit(db_map_cascading_data)
 
@@ -1468,7 +1504,7 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of removed items keyed by DiffDatabaseMapping
         """
-        db_map_cascading_data = self.find_cascading_relationships(self.ids_per_db_map(db_map_data))
+        db_map_cascading_data = self.find_cascading_relationships(self.db_map_ids(db_map_data))
         if any(db_map_cascading_data.values()):
             self.relationships_removed.emit(db_map_cascading_data)
 
@@ -1479,9 +1515,7 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of removed items keyed by DiffDatabaseMapping
         """
-        db_map_cascading_data = self.find_cascading_parameter_data(
-            self.ids_per_db_map(db_map_data), "parameter definition"
-        )
+        db_map_cascading_data = self.find_cascading_parameter_data(self.db_map_ids(db_map_data), "parameter definition")
         if any(db_map_cascading_data.values()):
             self.parameter_definitions_removed.emit(db_map_cascading_data)
 
@@ -1492,7 +1526,7 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of removed items keyed by DiffDatabaseMapping
         """
-        db_map_cascading_data = self.find_cascading_parameter_values_by_entity(self.ids_per_db_map(db_map_data))
+        db_map_cascading_data = self.find_cascading_parameter_values_by_entity(self.db_map_ids(db_map_data))
         if any(db_map_cascading_data.values()):
             self.parameter_values_removed.emit(db_map_cascading_data)
 
@@ -1503,7 +1537,7 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of removed items keyed by DiffDatabaseMapping
         """
-        db_map_cascading_data = self.find_cascading_parameter_values_by_definition(self.ids_per_db_map(db_map_data))
+        db_map_cascading_data = self.find_cascading_parameter_values_by_definition(self.db_map_ids(db_map_data))
         if any(db_map_cascading_data.values()):
             self.parameter_values_removed.emit(db_map_cascading_data)
 
@@ -1514,15 +1548,13 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of removed items keyed by DiffDatabaseMapping
         """
-        db_map_cascading_data = self.find_cascading_parameter_values_by_alternative(self.ids_per_db_map(db_map_data))
+        db_map_cascading_data = self.find_cascading_parameter_values_by_alternative(self.db_map_ids(db_map_data))
         if any(db_map_cascading_data.values()):
             self.parameter_values_removed.emit(db_map_cascading_data)
 
     @Slot(object)
     def cascade_remove_scenario_alternative_by_alternative(self, db_map_data):
-        db_map_cascading_data = self.find_cascading_alternative_scenarios_by_alternative(
-            self.ids_per_db_map(db_map_data)
-        )
+        db_map_cascading_data = self.find_cascading_alternative_scenarios_by_alternative(self.db_map_ids(db_map_data))
         if any(db_map_cascading_data.values()):
             self.scenario_alternatives_removed.emit(db_map_cascading_data)
 
@@ -1540,7 +1572,7 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
         """
-        db_map_cascading_data = self.find_cascading_relationship_classes(self.ids_per_db_map(db_map_data))
+        db_map_cascading_data = self.find_cascading_relationship_classes(self.db_map_ids(db_map_data))
         if not any(db_map_cascading_data.values()):
             return
         db_map_cascading_data = {
@@ -1556,7 +1588,7 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
         """
-        db_map_cascading_data = self.find_cascading_relationships(self.ids_per_db_map(db_map_data))
+        db_map_cascading_data = self.find_cascading_relationships(self.db_map_ids(db_map_data))
         if not any(db_map_cascading_data.values()):
             return
         db_map_cascading_data = {
@@ -1572,9 +1604,7 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
         """
-        db_map_cascading_data = self.find_cascading_parameter_data(
-            self.ids_per_db_map(db_map_data), "parameter definition"
-        )
+        db_map_cascading_data = self.find_cascading_parameter_data(self.db_map_ids(db_map_data), "parameter definition")
         if not any(db_map_cascading_data.values()):
             return
         db_map_cascading_data = {
@@ -1590,9 +1620,7 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
         """
-        db_map_cascading_data = self.find_cascading_parameter_definitions_by_value_list(
-            self.ids_per_db_map(db_map_data)
-        )
+        db_map_cascading_data = self.find_cascading_parameter_definitions_by_value_list(self.db_map_ids(db_map_data))
         if not any(db_map_cascading_data.values()):
             return
         db_map_cascading_data = {
@@ -1608,7 +1636,7 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
         """
-        db_map_cascading_data = self.find_cascading_parameter_definitions_by_tag(self.ids_per_db_map(db_map_data))
+        db_map_cascading_data = self.find_cascading_parameter_definitions_by_tag(self.db_map_ids(db_map_data))
         if not any(db_map_cascading_data.values()):
             return
         db_map_cascading_data = {
@@ -1624,7 +1652,7 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
         """
-        db_map_cascading_data = self.find_cascading_parameter_data(self.ids_per_db_map(db_map_data), "parameter value")
+        db_map_cascading_data = self.find_cascading_parameter_data(self.db_map_ids(db_map_data), "parameter value")
         if not any(db_map_cascading_data.values()):
             return
         db_map_cascading_data = {
@@ -1640,7 +1668,7 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
         """
-        db_map_cascading_data = self.find_cascading_parameter_values_by_entity(self.ids_per_db_map(db_map_data))
+        db_map_cascading_data = self.find_cascading_parameter_values_by_entity(self.db_map_ids(db_map_data))
         if not any(db_map_cascading_data.values()):
             return
         db_map_cascading_data = {
@@ -1672,7 +1700,7 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
         """
-        db_map_cascading_data = self.find_cascading_parameter_values_by_definition(self.ids_per_db_map(db_map_data))
+        db_map_cascading_data = self.find_cascading_parameter_values_by_definition(self.db_map_ids(db_map_data))
         if not any(db_map_cascading_data.values()):
             return
         db_map_cascading_data = {

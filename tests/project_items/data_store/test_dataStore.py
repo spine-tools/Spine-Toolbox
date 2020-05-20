@@ -24,7 +24,7 @@ import sys
 from spinedb_api import create_new_spine_database
 from PySide2.QtWidgets import QApplication, QMessageBox
 import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
-from spinetoolbox.widgets.data_store_widget import DataStoreForm
+from spinetoolbox.data_store_form.widgets.data_store_form import DataStoreForm
 from spinetoolbox.project_items.data_store.data_store import DataStore
 from spinetoolbox.project_items.data_store.item_info import ItemInfo
 from ...mock_helpers import clean_up_toolboxui_with_project, create_toolboxui_with_project
@@ -178,13 +178,12 @@ class TestDataStore(unittest.TestCase):
         expected_url = "sqlite:///" + os.path.join(self.ds.data_dir, "DS.sqlite")
         self.assertEqual(expected_url, clipboard_text.strip())
 
-    def test_open_treeview1(self):
+    def test_open_ds_form1(self):
         """Test that selecting the 'sqlite' dialect, browsing to an existing db file,
-        and pressing open tree view works as expected.
+        and pressing open form works as expected.
         """
         temp_db_path = self.create_temp_db()
         self.ds.activate()
-        self.assertIsNone(self.ds.ds_view)
         # Select the sqlite dialect
         self.ds_properties_ui.comboBox_dialect.activated[str].emit("sqlite")
         # Browse to an existing db file
@@ -192,32 +191,35 @@ class TestDataStore(unittest.TestCase):
             mock_qfile_dialog.getOpenFileName.side_effect = lambda *args: [temp_db_path]
             self.ds_properties_ui.toolButton_open_sqlite_file.click()
             mock_qfile_dialog.getOpenFileName.assert_called_once()
-        # Open treeview
-        self.ds_properties_ui.pushButton_ds_view.click()
-        self.assertIsInstance(self.ds.ds_view, DataStoreForm)
+        # Open form
+        with mock.patch("spinetoolbox.data_store_form.widgets.data_store_form.DataStoreForm.show"):
+            self.ds_properties_ui.pushButton_ds_form.click()
+        ds_form = self.ds._project.db_mngr._ds_forms[(self.ds._sa_url,)]
+        self.assertIsInstance(ds_form, DataStoreForm)
         expected_url = "sqlite:///" + temp_db_path
-        self.assertEqual(expected_url, str(self.ds.ds_view.db_map.db_url))
-        self.ds.ds_view.close()
+        self.assertEqual(expected_url, str(ds_form.db_map.db_url))
+        ds_form.close()
         self.ds._project.db_mngr.close_all_sessions()
 
-    def test_open_treeview2(self):
+    def test_open_ds_form2(self):
         """Test that selecting the 'sqlite' dialect, typing the path to an existing db file,
-        and pressing open tree view works as expected.
+        and pressing open form works as expected.
         """
         temp_db_path = self.create_temp_db()
         self.ds.activate()
-        self.assertIsNone(self.ds.ds_view)
         # Select the sqlite dialect
         self.ds_properties_ui.comboBox_dialect.activated[str].emit("sqlite")
         # Type the path to an existing db file
         self.ds_properties_ui.lineEdit_database.setText(temp_db_path)
         self.ds_properties_ui.lineEdit_database.editingFinished.emit()
-        # Open treeview
-        self.ds_properties_ui.pushButton_ds_view.click()
-        self.assertIsInstance(self.ds.ds_view, DataStoreForm)
+        # Open form
+        with mock.patch("spinetoolbox.data_store_form.widgets.data_store_form.DataStoreForm.show"):
+            self.ds_properties_ui.pushButton_ds_form.click()
+        ds_form = self.ds._project.db_mngr._ds_forms[(self.ds._sa_url,)]
+        self.assertIsInstance(ds_form, DataStoreForm)
         expected_url = "sqlite:///" + temp_db_path
-        self.assertEqual(expected_url, str(self.ds.ds_view.db_maps[0].db_url))
-        self.ds.ds_view.close()
+        self.assertEqual(expected_url, str(ds_form.db_maps[0].db_url))
+        ds_form.close()
         self.ds._project.db_mngr.close_all_sessions()
 
     def test_notify_destination(self):

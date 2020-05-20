@@ -13,7 +13,7 @@
 # Form implementation generated from reading ui file 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\time_series_variable_resolution_editor.ui',
 # licensing of 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\time_series_variable_resolution_editor.ui' applies.
 #
-# Created: Tue Apr 14 12:29:50 2020
+# Created: Mon May 11 15:50:47 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -60,5 +60,5 @@ class Ui_TimeSeriesVariableResolutionEditor(object):
         self.ignore_year_check_box.setText(QtWidgets.QApplication.translate("TimeSeriesVariableResolutionEditor", "Ignore year", None, -1))
         self.repeat_check_box.setText(QtWidgets.QApplication.translate("TimeSeriesVariableResolutionEditor", "Repeat", None, -1))
 
-from spinetoolbox.widgets.custom_qtableview import IndexedValueTableView
 from spinetoolbox.widgets.plot_widget import PlotWidget
+from spinetoolbox.widgets.custom_qtableview import IndexedValueTableView

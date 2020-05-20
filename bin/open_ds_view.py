@@ -1,4 +1,5 @@
 import sys
+import os
 import locale
 from PySide2.QtGui import QFontDatabase
 from PySide2.QtWidgets import QApplication, QErrorMessage
@@ -6,7 +7,6 @@ from PySide2.QtCore import Slot, Qt, QSettings
 import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
 from spinetoolbox.logger_interface import LoggerInterface
 from spinetoolbox.spine_db_manager import SpineDBManager
-from spinetoolbox.widgets.data_store_widget import DataStoreForm
 from spinetoolbox.helpers import pyside2_version_check
 from spinetoolbox.spinedb_api_version_check import spinedb_api_version_check
 
@@ -37,17 +37,18 @@ def main(argv):
     if not pyside2_version_check():
         return 1
     try:
-        path = argv[1]
+        file_path = argv[1]
     except IndexError:
         return 0
     app = QApplication(argv)
     QFontDatabase.addApplicationFont(":/fonts/fontawesome5-solid-webfont.ttf")
     locale.setlocale(locale.LC_NUMERIC, 'C')
-    url = f"sqlite:///{path}"
+    url = f"sqlite:///{file_path}"
     settings = QSettings("SpineProject", "Spine Toolbox")
-    db_mngr = SpineDBManager(settings, SimpleLogger(), None)
-    tree = DataStoreForm(db_mngr, (url, "main"))
-    tree.show()
+    logger = SimpleLogger()
+    db_mngr = SpineDBManager(settings, logger, None)
+    codename = os.path.splitext(os.path.basename(file_path))[0]
+    db_mngr.show_data_store_form({url: codename}, logger)
     return_code = app.exec_()
     return return_code
 

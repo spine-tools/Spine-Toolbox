@@ -88,10 +88,17 @@ def run(checked_files, all_import_settings, all_source_settings, urls_downstream
             tn: {int(col): value_to_convert_spec(spec) for col, spec in cols.items()}
             for tn, cols in settings.get("table_row_types", {}).items()
         }
-        data, errors = connector.get_mapped_data(
-            table_mappings, table_options, table_types, table_row_types, max_rows=-1
-        )
-        print("Read {0} data from {1} with {2} errors".format(sum(len(d) for d in data.values()), source, len(errors)))
+        try:
+            data, errors = connector.get_mapped_data(
+                table_mappings, table_options, table_types, table_row_types, max_rows=-1
+            )
+        except spinedb_api.InvalidMapping as error:
+            print(f"Failed to imoport '{source}': {error}", file=sys.stderr)
+            if cancel_on_error:
+                sys.exit(1)
+            else:
+                continue
+        print(f"Read {sum(len(d) for d in data.values())} data from {source} with {len(errors)} errors")
         all_data.append(data)
         all_errors.extend(errors)
     if all_errors:
@@ -100,7 +107,7 @@ def run(checked_files, all_import_settings, all_source_settings, urls_downstream
         logfilepath = os.path.abspath(os.path.join(logs_dir, timestamp + "_error.log"))
         with open(logfilepath, 'w') as f:
             for err in all_errors:
-                f.write("{0}\n".format(err))
+                f.write(f"{err}\n")
         # Make error log file anchor with path as tooltip
         logfile_anchor = (
             "<a style='color:#BB99FF;' title='" + logfilepath + "' href='file:///" + logfilepath + "'>error log</a>"

@@ -20,9 +20,7 @@ import os
 from PySide2.QtCore import Qt, Slot
 from PySide2.QtGui import QStandardItem, QStandardItemModel, QIcon, QPixmap
 from sqlalchemy.engine.url import URL, make_url
-from spinedb_api import SpineDBAPIError
 from spinetoolbox.project_item import ProjectItem
-from spinetoolbox.widgets.data_store_widget import DataStoreForm
 from .item_info import ItemInfo
 from .executable_item import ExecutableItem
 
@@ -42,7 +40,6 @@ class View(ProjectItem):
             y (float): Initial Y coordinate of item icon
         """
         super().__init__(name, description, x, y, project, logger)
-        self._ds_views = {}
         self._references = dict()
         self.reference_model = QStandardItemModel()  # References to databases
         self._spine_ref_icon = QIcon(QPixmap(":/icons/Spine_db_ref_icon.png"))
@@ -66,7 +63,7 @@ class View(ProjectItem):
         This is to enable simpler connecting and disconnecting."""
         s = super().make_signal_handler_dict()
         s[self._properties_ui.toolButton_view_open_dir.clicked] = lambda checked=False: self.open_directory()
-        s[self._properties_ui.pushButton_view_open_ds_view.clicked] = self.open_view
+        s[self._properties_ui.pushButton_view_open_ds_form.clicked] = self.open_view
         return s
 
     def restore_selections(self):
@@ -83,20 +80,10 @@ class View(ProjectItem):
         """Opens references in a view window.
         """
         indexes = self._selected_indexes()
-        database_urls = self._database_urls(indexes)
-        if not database_urls:
+        db_url_codenames = self._db_url_codenames(indexes)
+        if not db_url_codenames:
             return
-        db_urls = [str(x[0]) for x in database_urls]
-        # Mangle database paths to get a hashable string identifying the view window.
-        view_id = ";".join(sorted(db_urls))
-        if self._restore_existing_view_window(view_id):
-            return
-        view_window = self._make_view_window(database_urls)
-        if not view_window:
-            return
-        view_window.show()
-        view_window.destroyed.connect(lambda: self._ds_views.pop(view_id))
-        self._ds_views[view_id] = view_window
+        self._project.db_mngr.show_data_store_form(db_url_codenames, self._logger)
 
     def populate_reference_list(self):
         """Populates reference list."""
@@ -146,30 +133,9 @@ class View(ProjectItem):
             self._properties_ui.treeView_view.selectAll()
         return self._properties_ui.treeView_view.selectionModel().selectedRows()
 
-    def _database_urls(self, indexes):
-        """Returns list of tuples (url, provider) for given indexes."""
-        return [self._references[index.data(Qt.DisplayRole)] for index in indexes]
-
-    def _restore_existing_view_window(self, view_id):
-        """Restores an existing view window and returns True if the operation was successful."""
-        if view_id not in self._ds_views:
-            return False
-        view_window = self._ds_views[view_id]
-        if view_window.windowState() & Qt.WindowMinimized:
-            view_window.setWindowState(view_window.windowState() & ~Qt.WindowMinimized | Qt.WindowActive)
-        view_window.activateWindow()
-        return True
-
-    def _make_view_window(self, db_maps):
-        try:
-            return DataStoreForm(self._project.db_mngr, *db_maps)
-        except SpineDBAPIError as e:
-            self._logger.msg_error.emit(e.msg)
-
-    def tear_down(self):
-        """Tears down this item. Called by toolbox just before closing. Closes all view windows."""
-        for view in self._ds_views.values():
-            view.close()
+    def _db_url_codenames(self, indexes):
+        """Returns a dict mapping url to provider's name for given indexes in the reference model."""
+        return dict(self._references[index.data(Qt.DisplayRole)] for index in indexes)
 
     def notify_destination(self, source_item):
         """See base class."""

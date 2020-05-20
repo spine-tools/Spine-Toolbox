@@ -20,6 +20,13 @@ SpineDBParcel class.
 class SpineDBParcel:
     """
     A class to create parcels of data from a Spine db.
+    Mainly intended for the *Export selection* action in the Data Store form.
+
+    The strategy is the following:
+        - `_push` methods (with a leading underscore) push items with everything they need to live in a standalone db.
+            These are private methods.
+        - `push` methods (no leading underscore) call the `_push` methods to get away with pushing some specific content.
+            These are public methods.
     """
 
     def __init__(self, db_mngr):
@@ -36,111 +43,169 @@ class SpineDBParcel:
     def data(self):
         return self._data
 
+    def _get_fields(self, db_map, item_type, field, ids):
+        return {x for x in (self.db_mngr.get_item(db_map, item_type, id_).get(field) for id_ in ids) if x}
+
     def _push_object_class_ids(self, db_map_ids):
         """Pushes object class ids."""
         for db_map, ids in db_map_ids.items():
             self._data.setdefault(db_map, {}).setdefault("object_class_ids", set()).update(ids)
 
     def _push_relationship_class_ids(self, db_map_ids):
-        """Pushes relationship class ids with the necessary object class ids."""
-        db_map_obj_cls_ids = dict()
+        """Pushes relationship class ids."""
         for db_map, ids in db_map_ids.items():
             self._data.setdefault(db_map, {}).setdefault("relationship_class_ids", set()).update(ids)
-            db_map_obj_cls_ids[db_map] = {
-                int(obj_cls_id)
-                for rel_cls in (self.db_mngr.get_item(db_map, "relationship class", id_) for id_ in ids)
-                if rel_cls
-                for obj_cls_id in rel_cls.get("object_class_id_list", "").split(",")
+        self._push_object_class_ids(
+            {
+                db_map: {
+                    int(obj_cls_id)
+                    for obj_cls_id_list in self._get_fields(db_map, "relationship class", "object_class_id_list", ids)
+                    for obj_cls_id in obj_cls_id_list.split(",")
+                }
+                for db_map, ids in db_map_ids.items()
             }
-        self._push_object_class_ids(db_map_obj_cls_ids)
+        )
 
     def _push_object_ids(self, db_map_ids):
-        """Pushes object ids with the necessary object class ids."""
-        db_map_obj_cls_ids = dict()
+        """Pushes object ids."""
         for db_map, ids in db_map_ids.items():
             self._data.setdefault(db_map, {}).setdefault("object_ids", set()).update(ids)
-            db_map_obj_cls_ids[db_map] = {
-                obj["class_id"] for obj in (self.db_mngr.get_item(db_map, "object", id_) for id_ in ids) if obj
-            }
-        self._push_object_class_ids(db_map_obj_cls_ids)
+        self._push_object_class_ids(
+            {db_map: self._get_fields(db_map, "object", "class_id", ids) for db_map, ids in db_map_ids.items()}
+        )
 
-    def _push_parameter_definition_ids(self, db_map_ids, entity_type):
-        """Pushes parameter definition ids, assuming all necessary classes are already pushed."""
-        db_map_par_val_lst_ids = dict()
+    def _push_relationship_ids(self, db_map_ids):
+        """Pushes relationship ids."""
         for db_map, ids in db_map_ids.items():
-            self._data.setdefault(db_map, {}).setdefault(entity_type + "_parameter_ids", set()).update(ids)
-            db_map_par_val_lst_ids[db_map] = {
-                par_def["value_list_id"]
-                for par_def in (self.db_mngr.get_item(db_map, "parameter definition", id_) for id_ in ids)
-                if par_def
+            self._data.setdefault(db_map, {}).setdefault("relationship_ids", set()).update(ids)
+        self._push_object_ids(
+            {
+                db_map: {
+                    int(obj_id)
+                    for obj_id_list in self._get_fields(db_map, "relationship", "object_id_list", ids)
+                    for obj_id in obj_id_list.split(",")
+                }
+                for db_map, ids in db_map_ids.items()
             }
-        self._push_parameter_value_list_ids(db_map_par_val_lst_ids)
+        )
 
     def _push_parameter_value_list_ids(self, db_map_ids):
         """Pushes parameter value list ids."""
         for db_map, ids in db_map_ids.items():
             self._data.setdefault(db_map, {}).setdefault("parameter_value_list_ids", set()).update(ids)
 
+    def _push_parameter_definition_ids(self, db_map_ids, entity_type):
+        """Pushes parameter definition ids."""
+        for db_map, ids in db_map_ids.items():
+            self._data.setdefault(db_map, {}).setdefault(entity_type + "_parameter_ids", set()).update(ids)
+        self._push_parameter_value_list_ids(
+            {
+                db_map: self._get_fields(db_map, "parameter definition", "value_list_id", ids)
+                for db_map, ids in db_map_ids.items()
+            }
+        )
+        if entity_type == "object":
+            self._push_object_class_ids(
+                {
+                    db_map: self._get_fields(db_map, "parameter definition", "object_class_id", ids)
+                    for db_map, ids in db_map_ids.items()
+                }
+            )
+        elif entity_type == "relationship":
+            self._push_relationship_class_ids(
+                {
+                    db_map: self._get_fields(db_map, "parameter definition", "relationship_class_id", ids)
+                    for db_map, ids in db_map_ids.items()
+                }
+            )
+
     def _push_parameter_value_ids(self, db_map_ids, entity_type):
-        """Pushes parameter value ids with the necessary parameter definition ids,
-        assuming all necessary entities and classes are already pushed."""
-        db_map_par_def_ids = dict()
+        """Pushes parameter value ids."""
         for db_map, ids in db_map_ids.items():
             self._data.setdefault(db_map, {}).setdefault(entity_type + "_parameter_value_ids", set()).update(ids)
-            db_map_par_def_ids[db_map] = {
-                par_val["parameter_id"]
-                for par_val in (self.db_mngr.get_item(db_map, "parameter value", id_) for id_ in ids)
-                if par_val
-            }
-        self._push_parameter_definition_ids(db_map_par_def_ids, entity_type)
+        self._push_parameter_definition_ids(
+            {
+                db_map: self._get_fields(db_map, "parameter value", "parameter_id", ids)
+                for db_map, ids in db_map_ids.items()
+            },
+            entity_type,
+        )
+        if entity_type == "object":
+            self._push_object_ids(
+                {
+                    db_map: self._get_fields(db_map, "parameter value", "object_id", ids)
+                    for db_map, ids in db_map_ids.items()
+                }
+            )
+        elif entity_type == "relationship":
+            self._push_relationship_ids(
+                {
+                    db_map: self._get_fields(db_map, "parameter value", "relationship_id", ids)
+                    for db_map, ids in db_map_ids.items()
+                }
+            )
 
     def push_object_class_ids(self, db_map_ids):
-        """Pushes object class ids together with the associated parameter definitions."""
-        db_map_par_def_ids = self.db_mngr.ids_per_db_map(
-            self.db_mngr.find_cascading_parameter_data(db_map_ids, "parameter definition")
+        """Pushes parameter definitions associated with given object classes.
+        This essentially pushes the object classes and their parameter definitions.
+        """
+        self._push_parameter_definition_ids(
+            self.db_mngr.db_map_ids(self.db_mngr.find_cascading_parameter_data(db_map_ids, "parameter definition")),
+            "object",
         )
-        self._push_object_class_ids(db_map_ids)
-        self._push_parameter_definition_ids(db_map_par_def_ids, "object")
 
     def push_relationship_class_ids(self, db_map_ids):
-        """Pushes relationship class ids with the necessary object class ids,
-        together with the associated relationship parameter definitions."""
-        db_map_par_def_ids = self.db_mngr.ids_per_db_map(
-            self.db_mngr.find_cascading_parameter_data(db_map_ids, "parameter definition")
+        """Pushes parameter definitions associated with given relationship classes.
+        This essentially pushes the relationships classes, their parameter definitions, and their member object classes.
+        """
+        self._push_parameter_definition_ids(
+            self.db_mngr.db_map_ids(self.db_mngr.find_cascading_parameter_data(db_map_ids, "parameter definition")),
+            "relationship",
         )
-        self._push_relationship_class_ids(db_map_ids)
-        self._push_parameter_definition_ids(db_map_par_def_ids, "relationship")
 
     def push_object_ids(self, db_map_ids):
-        """Pushes object ids, cascading relationship ids, and the associated parameter values,
-        together with all the necessary entity classes and parameter definitions."""
-        db_map_rel_ids = self.db_mngr.ids_per_db_map(self.db_mngr.find_cascading_relationships(db_map_ids))
-        db_map_par_val_ids = self.db_mngr.ids_per_db_map(
-            self.db_mngr.find_cascading_parameter_values_by_entity(db_map_ids)
+        """Pushes parameter values associated with objects and with any relationships involving those objects.
+        This essentially pushes objects, their relationships, all the parameter values, and all the necessary classes,
+        definitions, and lists.
+        """
+        self.push_relationship_ids(self.db_mngr.db_map_ids(self.db_mngr.find_cascading_relationships(db_map_ids)))
+        self._push_parameter_value_ids(
+            self.db_mngr.db_map_ids(self.db_mngr.find_cascading_parameter_values_by_entity(db_map_ids)), "object"
         )
-        self._push_object_ids(db_map_ids)
-        self.push_relationship_ids(db_map_rel_ids)
-        self._push_parameter_value_ids(db_map_par_val_ids, "object")
 
     def push_relationship_ids(self, db_map_ids):
-        """Pushes relationship ids and the associated parameter values,
-        together with all the necessary objects, entity classes and parameter definitions."""
-        db_map_obj_ids = dict()
-        db_map_rel_cls_ids = dict()
+        """Pushes parameter values associated with relationships.
+        This essentially pushes relationships, their parameter values, and all the necessary classes,
+        definitions, and lists.
+        """
+        self._push_parameter_value_ids(
+            self.db_mngr.db_map_ids(self.db_mngr.find_cascading_parameter_values_by_entity(db_map_ids)), "relationship"
+        )
+
+    def push_inside_object_ids(self, db_map_ids):
+        """Pushes object ids, cascading relationship ids, and the associated parameter values,
+        but not any entity classes or parameter definitions.
+        Mainly intended for the *Duplicate object* action.
+        """
+        for db_map, ids in db_map_ids.items():
+            self._data.setdefault(db_map, {}).setdefault("object_ids", set()).update(ids)
+        self.push_inside_relationship_ids(
+            self.db_mngr.db_map_ids(self.db_mngr.find_cascading_relationships(db_map_ids))
+        )
+        self.push_inside_parameter_value_ids(
+            self.db_mngr.db_map_ids(self.db_mngr.find_cascading_parameter_values_by_entity(db_map_ids)), "object"
+        )
+
+    def push_inside_relationship_ids(self, db_map_ids):
+        """Pushes relationship ids, and the associated parameter values,
+        but not any entity classes or parameter definitions."""
         for db_map, ids in db_map_ids.items():
             self._data.setdefault(db_map, {}).setdefault("relationship_ids", set()).update(ids)
-            db_map_rel_cls_ids[db_map] = {
-                rel["class_id"] for rel in (self.db_mngr.get_item(db_map, "relationship", id_) for id_ in ids) if rel
-            }
-            db_map_obj_ids[db_map] = {
-                int(obj_id)
-                for rel in (self.db_mngr.get_item(db_map, "relationship", id_) for id_ in ids)
-                if rel
-                for obj_id in rel.get("object_id_list", "").split(",")
-            }
-        db_map_par_val_ids = self.db_mngr.ids_per_db_map(
-            self.db_mngr.find_cascading_parameter_values_by_entity(db_map_ids)
+        self.push_inside_parameter_value_ids(
+            self.db_mngr.db_map_ids(self.db_mngr.find_cascading_parameter_values_by_entity(db_map_ids)), "relationship"
         )
-        self._push_object_ids(db_map_obj_ids)
-        self._push_relationship_class_ids(db_map_rel_cls_ids)
-        self._push_parameter_value_ids(db_map_par_val_ids, "relationship")
+
+    def push_inside_parameter_value_ids(self, db_map_ids, entity_type):
+        """Pushes parameter value ids."""
+        for db_map, ids in db_map_ids.items():
+            self._data.setdefault(db_map, {}).setdefault(entity_type + "_parameter_value_ids", set()).update(ids)

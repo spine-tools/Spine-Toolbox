@@ -10,10 +10,10 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-# Form implementation generated from reading ui file 'C:\data\src\toolbox\bin\..\spinetoolbox\project_items\data_store\ui\data_store_properties.ui',
-# licensing of 'C:\data\src\toolbox\bin\..\spinetoolbox\project_items\data_store\ui\data_store_properties.ui' applies.
+# Form implementation generated from reading ui file '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/project_items/data_store/ui/data_store_properties.ui',
+# licensing of '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/project_items/data_store/ui/data_store_properties.ui' applies.
 #
-# Created: Tue Apr 14 12:29:35 2020
+# Created: Sun May 17 10:40:20 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -293,16 +293,16 @@ class Ui_Form(object):
         self.horizontalLayout.addWidget(self.pushButton_create_new_spine_db)
         spacerItem1 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
         self.horizontalLayout.addItem(spacerItem1)
-        self.pushButton_ds_view = QtWidgets.QPushButton(self.scrollAreaWidgetContents_7)
+        self.pushButton_ds_form = QtWidgets.QPushButton(self.scrollAreaWidgetContents_7)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.pushButton_ds_view.sizePolicy().hasHeightForWidth())
-        self.pushButton_ds_view.setSizePolicy(sizePolicy)
-        self.pushButton_ds_view.setMinimumSize(QtCore.QSize(75, 23))
-        self.pushButton_ds_view.setMaximumSize(QtCore.QSize(16777215, 23))
-        self.pushButton_ds_view.setObjectName("pushButton_ds_view")
-        self.horizontalLayout.addWidget(self.pushButton_ds_view)
+        sizePolicy.setHeightForWidth(self.pushButton_ds_form.sizePolicy().hasHeightForWidth())
+        self.pushButton_ds_form.setSizePolicy(sizePolicy)
+        self.pushButton_ds_form.setMinimumSize(QtCore.QSize(75, 23))
+        self.pushButton_ds_form.setMaximumSize(QtCore.QSize(16777215, 23))
+        self.pushButton_ds_form.setObjectName("pushButton_ds_form")
+        self.horizontalLayout.addWidget(self.pushButton_ds_form)
         self.verticalLayout_25.addLayout(self.horizontalLayout)
         self.line_8 = QtWidgets.QFrame(self.scrollAreaWidgetContents_7)
         self.line_8.setFrameShape(QtWidgets.QFrame.HLine)
@@ -356,8 +356,8 @@ class Ui_Form(object):
         self.label_host.setText(QtWidgets.QApplication.translate("Form", "Host", None, -1))
         self.pushButton_create_new_spine_db.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Create new Spine database at the selected URL, or at a default one if the selected is not valid.</p></body></html>", None, -1))
         self.pushButton_create_new_spine_db.setText(QtWidgets.QApplication.translate("Form", "New Spine db", None, -1))
-        self.pushButton_ds_view.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Open Data Store view</p></body></html>", None, -1))
-        self.pushButton_ds_view.setText(QtWidgets.QApplication.translate("Form", "Open view", None, -1))
+        self.pushButton_ds_form.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Open Data Store view</p></body></html>", None, -1))
+        self.pushButton_ds_form.setText(QtWidgets.QApplication.translate("Form", "Open form", None, -1))
         self.toolButton_copy_url.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Copy current database url to clipboard.</p></body></html>", None, -1))
         self.toolButton_copy_url.setText(QtWidgets.QApplication.translate("Form", "...", None, -1))
         self.toolButton_ds_open_dir.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Open this Data Store\'s project directory in file browser</p></body></html>", None, -1))

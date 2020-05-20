@@ -20,8 +20,8 @@ import os
 import shutil
 import logging
 import pathlib
-from PySide2.QtCore import Slot, QUrl, QFileSystemWatcher, Qt, QFileInfo
-from PySide2.QtGui import QDesktopServices, QStandardItem, QStandardItemModel, QIcon, QPixmap
+from PySide2.QtCore import Slot, QFileSystemWatcher, Qt, QFileInfo
+from PySide2.QtGui import QStandardItem, QStandardItemModel, QIcon, QPixmap
 from PySide2.QtWidgets import QFileDialog, QStyle, QFileIconProvider, QInputDialog, QMessageBox
 from spinetoolbox.project_item import ProjectItem
 from spinetoolbox.project_item_resource import ProjectItemResource
@@ -212,7 +212,7 @@ class DataConnection(ProjectItem):
         reference = self.file_references()[index.row()]
         url = "file:///" + reference
         # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
-        res = QDesktopServices.openUrl(QUrl(url, QUrl.TolerantMode))
+        res = open_url(url)
         if not res:
             self._logger.msg_error.emit(f"Failed to open reference:<b>{reference}</b>")
 
@@ -227,7 +227,7 @@ class DataConnection(ProjectItem):
         data_file = self.data_files()[index.row()]
         url = "file:///" + os.path.join(self.data_dir, data_file)
         # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
-        res = QDesktopServices.openUrl(QUrl(url, QUrl.TolerantMode))
+        res = open_url(url)
         if not res:
             self._logger.msg_error.emit(f"Opening file <b>{data_file}</b> failed")
 

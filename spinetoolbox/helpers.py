@@ -20,12 +20,13 @@ import datetime
 import glob
 import json
 import logging
+import matplotlib
 import itertools
 import os
 import shutil
 import sys
 import urllib.parse
-from PySide2.QtCore import Qt, Slot, QFile, QIODevice, QSize, QRect, QPoint
+from PySide2.QtCore import Qt, Slot, QFile, QIODevice, QSize, QRect, QPoint, QUrl
 from PySide2.QtCore import __version__ as qt_version
 from PySide2.QtCore import __version_info__ as qt_version_info
 from PySide2.QtWidgets import QApplication, QMessageBox, QGraphicsScene, QFileIconProvider, QStyle, QFileDialog
@@ -40,12 +41,22 @@ from PySide2.QtGui import (
     QFont,
     QStandardItemModel,
     QStandardItem,
+    QDesktopServices,
 )
 import spine_engine
 from .config import REQUIRED_SPINE_ENGINE_VERSION
 
 if os.name == "nt":
     import ctypes
+
+matplotlib.use('Qt5Agg')
+matplotlib.rcParams.update({"font.size": 8})
+logging.getLogger("matplotlib").setLevel(logging.WARNING)
+_matplotlib_version = [int(x) for x in matplotlib.__version__.split(".")]
+if _matplotlib_version[0] == 3 and _matplotlib_version[1] == 0:
+    from pandas.plotting import register_matplotlib_converters
+
+    register_matplotlib_converters()
 
 
 def set_taskbar_icon():
@@ -55,7 +66,7 @@ def set_taskbar_icon():
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
 
 
-@Slot(name="supported_img_formats")
+@Slot()
 def supported_img_formats():
     """Function to check if reading .ico files is supported."""
     img_formats = QImageReader().supportedImageFormats()
@@ -390,7 +401,7 @@ def tuple_itemgetter(itemgetter_func, num_indexes):
 
 
 def format_string_list(str_list):
-    """Return an unordered html list with all elements in str_list.
+    """Returns a html unordered list from the given list of strings.
     Intended to print error logs as returned by spinedb_api.
 
     Args:
@@ -803,3 +814,7 @@ def try_number_from_string(text):
             return text
     except TypeError:
         return None
+
+
+def open_url(url):
+    return QDesktopServices.openUrl(QUrl(url, QUrl.TolerantMode))

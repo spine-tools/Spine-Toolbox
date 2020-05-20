@@ -17,31 +17,24 @@ Module for Importer icon class.
 """
 
 from PySide2.QtGui import QColor
-from PySide2.QtWidgets import QGraphicsTextItem
 from spinetoolbox.graphics_items import ProjectItemIcon
-from ..shared.import_export_animation import ImportExportAnimation
+from ..shared.animations import ImporterAnimation
 
 
 class ImporterIcon(ProjectItemIcon):
-    def __init__(self, toolbox, x, y, w, h, project_item, icon):
+    def __init__(self, toolbox, x, y, project_item, icon):
         """Importer icon for the Design View.
 
         Args:
             toolbox (ToolBoxUI): QMainWindow instance
             x (float): Icon x coordinate
             y (float): Icon y coordinate
-            w (float): Width of master icon
-            h (float): Height of master icon
             project_item (ProjectItem): Item
             icon (str): icon resource path
         """
         super().__init__(
-            toolbox, x, y, w, h, project_item, icon, icon_color=QColor("#990000"), background_color=QColor("#ffcccc")
+            toolbox, x, y, project_item, icon, icon_color=QColor("#990000"), background_color=QColor("#ffcccc")
         )
-        src_item = QGraphicsTextItem("\uf15c")
-        src_item.setDefaultTextColor("#0000ff")
-        dst_item = QGraphicsTextItem("\uf1c0")
-        dst_item.setDefaultTextColor("#cc33ff")
-        self.animation = ImportExportAnimation(self, src_item, dst_item)
+        self.animation = ImporterAnimation(self, x_shift=4)
         self.start_animation = self.animation.start
         self.stop_animation = self.animation.stop

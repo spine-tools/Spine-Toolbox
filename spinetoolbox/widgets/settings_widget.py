@@ -73,10 +73,11 @@ class SettingsWidget(QWidget):
         self.ui.toolButton_browse_work.clicked.connect(self.browse_work_path)
         self.ui.toolButton_bg_color.clicked.connect(self.show_color_dialog)
         self.ui.radioButton_bg_grid.clicked.connect(self.update_scene_bg)
+        self.ui.radioButton_bg_tree.clicked.connect(self.update_scene_bg)
         self.ui.radioButton_bg_solid.clicked.connect(self.update_scene_bg)
         self.ui.checkBox_use_curved_links.clicked.connect(self.update_links_geometry)
 
-    @Slot(bool, name="browse_gams_path")
+    @Slot(bool)
     def browse_gams_path(self, checked=False):
         """Open file browser where user can select a GAMS program."""
         # noinspection PyCallByClass, PyArgumentList
@@ -107,7 +108,7 @@ class SettingsWidget(QWidget):
         self.ui.lineEdit_gams_path.setText(answer[0])
         return
 
-    @Slot(bool, name="browse_julia_path")
+    @Slot(bool)
     def browse_julia_path(self, checked=False):
         """Open file browser where user can select a Julia executable (i.e. julia.exe on Windows)."""
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
@@ -138,7 +139,7 @@ class SettingsWidget(QWidget):
         self.ui.lineEdit_julia_path.setText(answer[0])
         return
 
-    @Slot(bool, name="browse_julia_project_path")
+    @Slot(bool)
     def browse_julia_project_path(self, checked=False):
         """Open file browser where user can select a Julia project path."""
         answer = QFileDialog.getExistingDirectory(self, "Select Julia project directory", os.path.abspath("C:\\"))
@@ -146,7 +147,7 @@ class SettingsWidget(QWidget):
             return
         self.ui.lineEdit_julia_project_path.setText(answer)
 
-    @Slot(bool, name="browse_python_path")
+    @Slot(bool)
     def browse_python_path(self, checked=False):
         """Open file browser where user can select a python interpreter (i.e. python.exe on Windows)."""
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
@@ -171,7 +172,7 @@ class SettingsWidget(QWidget):
         self.ui.lineEdit_python_path.setText(answer[0])
         return
 
-    @Slot(bool, name="browse_work_path")
+    @Slot(bool)
     def browse_work_path(self, checked=False):
         """Open file browser where user can select the path to wanted work directory."""
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
@@ -181,7 +182,7 @@ class SettingsWidget(QWidget):
         selected_path = os.path.abspath(answer)
         self.ui.lineEdit_work_dir.setText(selected_path)
 
-    @Slot(bool, name="show_color_dialog")
+    @Slot(bool)
     def show_color_dialog(self, checked=False):
         """Let user pick the bg color.
 
@@ -192,7 +193,6 @@ class SettingsWidget(QWidget):
         color = QColorDialog.getColor(initial=self.bg_color)
         if not color.isValid():
             return  # Canceled
-        self.ui.radioButton_bg_solid.setChecked(True)
         self.bg_color = color
         self.update_bg_color()
 
@@ -213,11 +213,12 @@ class SettingsWidget(QWidget):
             checked (boolean): Toggle state
         """
         if self.ui.radioButton_bg_grid.isChecked():
-            self._toolbox.ui.graphicsView.scene().set_bg_grid(True)
-            self._toolbox.ui.graphicsView.scene().update()
+            self._toolbox.ui.graphicsView.scene().set_bg_choice("grid")
+        elif self.ui.radioButton_bg_tree.isChecked():
+            self._toolbox.ui.graphicsView.scene().set_bg_choice("tree")
         elif self.ui.radioButton_bg_solid.isChecked():
-            self._toolbox.ui.graphicsView.scene().set_bg_grid(False)
-            self._toolbox.ui.graphicsView.scene().update()
+            self._toolbox.ui.graphicsView.scene().set_bg_choice("solid")
+        self._toolbox.ui.graphicsView.scene().update()
 
     @Slot(bool)
     def update_links_geometry(self, checked=False):
@@ -238,7 +239,7 @@ class SettingsWidget(QWidget):
         curved_links = self._qsettings.value("appSettings/curvedLinks", defaultValue="false")
         relationship_items_follow = self._qsettings.value("appSettings/relationshipItemsFollow", defaultValue="true")
         data_flow_anim_dur = int(self._qsettings.value("appSettings/dataFlowAnimationDuration", defaultValue="100"))
-        bg_grid = self._qsettings.value("appSettings/bgGrid", defaultValue="false")
+        bg_choice = self._qsettings.value("appSettings/bgChoice", defaultValue="solid")
         bg_color = self._qsettings.value("appSettings/bgColor", defaultValue="false")
         gams_path = self._qsettings.value("appSettings/gamsPath", defaultValue="")
         use_embedded_julia = self._qsettings.value("appSettings/useEmbeddedJulia", defaultValue="2")
@@ -271,8 +272,10 @@ class SettingsWidget(QWidget):
         if relationship_items_follow == "true":
             self.ui.checkBox_relationship_items_follow.setCheckState(Qt.Checked)
         self.ui.horizontalSlider_data_flow_animation_duration.setValue(data_flow_anim_dur)
-        if bg_grid == "true":
+        if bg_choice == "grid":
             self.ui.radioButton_bg_grid.setChecked(True)
+        elif bg_choice == "tree":
+            self.ui.radioButton_bg_tree.setChecked(True)
         else:
             self.ui.radioButton_bg_solid.setChecked(True)
         if bg_color == "false":
@@ -338,8 +341,13 @@ class SettingsWidget(QWidget):
         self._qsettings.setValue("appSettings/relationshipItemsFollow", relationship_items_follow)
         data_flow_anim_dur = str(self.ui.horizontalSlider_data_flow_animation_duration.value())
         self._qsettings.setValue("appSettings/dataFlowAnimationDuration", data_flow_anim_dur)
-        bg_grid = "true" if self.ui.radioButton_bg_grid.isChecked() else "false"
-        self._qsettings.setValue("appSettings/bgGrid", bg_grid)
+        if self.ui.radioButton_bg_grid.isChecked():
+            bg_choice = "grid"
+        elif self.ui.radioButton_bg_tree.isChecked():
+            bg_choice = "tree"
+        else:
+            bg_choice = "solid"
+        self._qsettings.setValue("appSettings/bgChoice", bg_choice)
         self._qsettings.setValue("appSettings/bgColor", self.bg_color)
         # GAMS
         gams_path = self.ui.lineEdit_gams_path.text().strip()
@@ -458,11 +466,13 @@ class SettingsWidget(QWidget):
             event (QEvent): Closing event if 'X' is clicked.
         """
         curved_links = self._qsettings.value("appSettings/curvedLinks", defaultValue="false")
-        bg_grid = self._qsettings.value("appSettings/bgGrid", defaultValue="false")
+        bg_choice = self._qsettings.value("appSettings/bgChoice", defaultValue="solid")
         bg_color = self._qsettings.value("appSettings/bgColor", defaultValue="false")
         self.update_links_geometry(curved_links == "true")
-        if bg_grid == "true":
+        if bg_choice == "grid":
             self.ui.radioButton_bg_grid.setChecked(True)
+        elif bg_choice == "tree":
+            self.ui.radioButton_bg_tree.setChecked(True)
         else:
             self.ui.radioButton_bg_solid.setChecked(True)
         self.update_scene_bg()

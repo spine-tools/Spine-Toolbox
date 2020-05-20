@@ -13,7 +13,7 @@
 # Form implementation generated from reading ui file 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\datetime_editor.ui',
 # licensing of 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\datetime_editor.ui' applies.
 #
-# Created: Fri May  8 09:21:43 2020
+# Created: Mon May 11 15:50:30 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!

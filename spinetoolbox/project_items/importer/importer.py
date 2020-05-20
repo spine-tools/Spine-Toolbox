@@ -18,6 +18,7 @@ Contains Importer project item class.
 
 from collections import Counter
 import os
+from itertools import takewhile
 from PySide2.QtCore import QAbstractListModel, QFileInfo, QModelIndex, Qt, Signal, Slot
 from PySide2.QtWidgets import QFileIconProvider, QListWidget, QDialog, QVBoxLayout, QDialogButtonBox
 from spine_engine import ExecutionDirection
@@ -28,8 +29,8 @@ from spinetoolbox.spine_io.importers.csv_reader import CSVConnector
 from spinetoolbox.spine_io.importers.excel_reader import ExcelConnector
 from spinetoolbox.spine_io.importers.gdx_connector import GdxConnector
 from spinetoolbox.spine_io.importers.json_reader import JSONConnector
-from spinetoolbox.widgets.import_preview_window import ImportPreviewWindow
-from .commands import UpdateImporterSettingsCommand, UpdateImporterCancelOnErrorCommand
+from spinetoolbox.import_editor.widgets.import_editor_window import ImportEditorWindow
+from .commands import ChangeItemSelectionCommand, UpdateSettingsCommand, UpdateCancelOnErrorCommand
 from .executable_item import ExecutableItem
 from .item_info import ItemInfo
 from .utils import deserialize_mappings
@@ -43,7 +44,9 @@ _CONNECTOR_NAME_TO_CLASS = {
 
 
 class Importer(ProjectItem):
-    def __init__(self, toolbox, project, logger, name, description, mappings, x, y, cancel_on_error=True):
+    def __init__(
+        self, toolbox, project, logger, name, description, mappings, x, y, cancel_on_error=True, mapping_selection=None
+    ):
         """Importer class.
 
         Args:
@@ -55,7 +58,9 @@ class Importer(ProjectItem):
             mappings (list): List where each element contains two dicts (path dict and mapping dict)
             x (float): Initial icon scene X coordinate
             y (float): Initial icon scene Y coordinate
-            cancel_on_error (bool): if True the item's execution will stop on import error
+            cancel_on_error (bool, optional): if True the item's execution will stop on import error
+            mapping_selection (list, optional): a list of booleans, one for each mapping marking the mappings
+                either selected or unselected
        """
         super().__init__(name, description, x, y, project, logger)
         # Make logs subdirectory for this item
@@ -86,7 +91,10 @@ class Importer(ProjectItem):
         # self.settings is now a dictionary, where elements have the absolute path as the key and the mapping as value
         self.cancel_on_error = cancel_on_error
         self._file_model = _FileListModel()
-        self._file_model.selected_for_import_state_changed.connect(self._report_item_importability_change)
+        if mapping_selection is None:
+            mapping_selection = len(self.settings) * [True]
+        self._file_model.set_initial_state(self.settings.keys(), mapping_selection)
+        self._file_model.selected_for_import_state_changed.connect(self._push_file_selection_change_to_undo_stack)
         # connector class
         self._preview_widget = {}  # Key is the filepath, value is the ImportPreviewWindow instance
 
@@ -105,7 +113,10 @@ class Importer(ProjectItem):
         selected_settings = dict()
         for file_item in self._file_model.existing_files():
             label = file_item.label
-            selected_settings[label] = self.settings[label] if file_item.selected_for_import else "deselected"
+            settings = self.settings.get(label) if file_item.selected_for_import else "deselected"
+            if not settings:
+                continue
+            selected_settings[label] = settings
         python_path = self._project.settings.value("appSettings/pythonPath", defaultValue="")
         gams_path = self._project.settings.value("appSettings/gamsPath", defaultValue=None)
         cancel_on_error = self._properties_ui.cancel_on_error_checkBox.isChecked()
@@ -146,7 +157,7 @@ class Importer(ProjectItem):
         cancel_on_error = self._properties_ui.cancel_on_error_checkBox.isChecked()
         if self.cancel_on_error == cancel_on_error:
             return
-        self._toolbox.undo_stack.push(UpdateImporterCancelOnErrorCommand(self, cancel_on_error))
+        self._toolbox.undo_stack.push(UpdateCancelOnErrorCommand(self, cancel_on_error))
 
     def set_cancel_on_error(self, cancel_on_error):
         self.cancel_on_error = cancel_on_error
@@ -156,6 +167,9 @@ class Importer(ProjectItem):
         self._properties_ui.cancel_on_error_checkBox.blockSignals(True)
         self._properties_ui.cancel_on_error_checkBox.setCheckState(check_state)
         self._properties_ui.cancel_on_error_checkBox.blockSignals(False)
+
+    def set_file_selected(self, label, selected):
+        self._file_model.set_selected(label, selected)
 
     def restore_selections(self):
         """Restores selections into shared widgets when this project item is selected."""
@@ -175,6 +189,12 @@ class Importer(ProjectItem):
     def _handle_import_editor_clicked(self, checked=False):
         """Opens Import editor for the file selected in list view."""
         index = self._properties_ui.treeView_files.currentIndex()
+        if not index.isValid():
+            for row, item in enumerate(self._file_model.files):
+                if item.exists():
+                    index = self._file_model.index(row, 0)
+                    self._properties_ui.treeView_files.setCurrentIndex(index)
+                    break
         self.open_import_editor(index)
 
     @Slot("QModelIndex")
@@ -222,7 +242,7 @@ class Importer(ProjectItem):
                 return
         self._logger.msg.emit(f"Opening Import editor for file: {file_path}")
         connector_settings = {"gams_directory": self._gams_system_directory()}
-        preview_widget = self._preview_widget[label] = ImportPreviewWindow(
+        preview_widget = self._preview_widget[label] = ImportEditorWindow(
             self, file_path, connector, connector_settings, settings, self._toolbox
         )
         preview_widget.settings_updated.connect(lambda s, importee=label: self.save_settings(s, importee))
@@ -259,7 +279,7 @@ class Importer(ProjectItem):
             row = connector_list.index(JSONConnector)
         else:
             row = None
-        if row:
+        if row is not None:
             connector_list_wg.setCurrentRow(row)
         button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         button_box.button(QDialogButtonBox.Ok).clicked.connect(dialog.accept)
@@ -311,7 +331,7 @@ class Importer(ProjectItem):
         """
         if self.settings.get(importee) == settings:
             return
-        self._toolbox.undo_stack.push(UpdateImporterSettingsCommand(self, settings, importee))
+        self._toolbox.undo_stack.push(UpdateSettingsCommand(self, settings, importee))
 
     def _preview_destroyed(self, importee):
         """Destroys preview widget instance for the given importee.
@@ -322,18 +342,13 @@ class Importer(ProjectItem):
         self._preview_widget.pop(importee, None)
 
     @Slot(bool, str)
-    def _report_item_importability_change(self, checked, label):
-        """Logs changes in item's importability."""
-        if checked:
-            self._logger.msg.emit(f"<b>{self.name}:</b> Source file '{label}' will be processed at execution.")
-        else:
-            self._logger.msg.emit(
-                f"<b>{self.name}:</b> Source file '{label}' will <b>not</b> be processed at execution."
-            )
+    def _push_file_selection_change_to_undo_stack(self, selected, label):
+        """Makes changes to file selection undoable."""
+        self._toolbox.undo_stack.push(ChangeItemSelectionCommand(self, selected, label))
 
     def _do_handle_dag_changed(self, resources):
         """See base class."""
-        self._file_model.reset(resources)
+        self._file_model.update(resources)
         labels = self._file_model.labels()
         for settings_label in list(self.settings):
             if settings_label not in labels:
@@ -351,6 +366,7 @@ class Importer(ProjectItem):
         # Serialize mappings before saving
         d["mappings"] = self.serialize_mappings(self.settings, self._project.project_dir)
         d["cancel_on_error"] = self._properties_ui.cancel_on_error_checkBox.isChecked()
+        d["mapping_selection"] = [item.selected_for_import for item in self._file_model.files]
         return d
 
     def notify_destination(self, source_item):
@@ -415,15 +431,18 @@ class Importer(ProjectItem):
 
     @staticmethod
     def serialize_mappings(mappings, project_path):
-        """Returns a list of mappings, where each element contains two dictionaries,
-        the 'serialized' path in a dictionary and the mapping dictionary.
+        """
+        Serializes the importer's mappings.
+
+        Returns a list where each element contains two dictionaries:
+        the 'serialized' file label in a dictionary and the mapping dictionary.
 
         Args:
             mappings (dict): Dictionary with mapping specifications
             project_path (str): Path to project directory
 
         Returns:
-            list: List where each element contains two dictionaries.
+            list: serialized file item labels and mappings
         """
         serialized_mappings = list()
         for source, mapping in mappings.items():  # mappings is a dict with absolute paths as keys and mapping as values
@@ -495,13 +514,16 @@ def _fix_csv_connector_settings(settings):
 
 def _file_label(resource):
     """Picks a label for given file resource."""
-    metadata = resource.metadata
-    label = metadata.get("label")
-    if label is None:
-        if resource.url is None:
-            raise RuntimeError("ProjectItemResource is missing a url and metadata 'label'.")
+    if resource.type_ == "file":
         return resource.path
-    return label
+    elif resource.type_ in ("transient_file", "file_pattern"):
+        label = resource.metadata.get("label")
+        if label is None:
+            if resource.url is None:
+                raise RuntimeError("ProjectItemResource is missing a url and metadata 'label'.")
+            return resource.path
+        return label
+    raise RuntimeError(f"Unknown resource type '{resource.type_}'")
 
 
 class _FileListItem:
@@ -560,12 +582,14 @@ class _FileListItem:
 
     def update(self, resource):
         """
-        Updates path information if the file is transient.
+        Updates item information.
 
         Args:
             resource (ProjectItem): a fresh file resource
         """
-        self.path = resource.path
+        self.path = resource.path if resource.url else ""
+        self.provider_name = resource.provider.name
+        self.is_pattern = resource.type_ == "file_pattern"
 
 
 class _FileListModel(QAbstractListModel):
@@ -642,19 +666,43 @@ class _FileListModel(QAbstractListModel):
         self._files[index.row()].path = ""
         self.dataChanged.emit(index, index, [Qt.ToolTipRole])
 
-    def reset(self, resources):
-        """Resets the model to given list of resources."""
+    def update(self, resources):
+        """Updates the model according to given list of resources."""
         self.beginResetModel()
-        self._files.clear()
+        items = {item.label: item for item in self._files}
+        updated = list()
+        new = list()
         for resource in resources:
             if resource.type_ not in ("file", "transient_file", "file_pattern"):
                 continue
-            self._files.append(_FileListItem.from_resource(resource))
+            label = _file_label(resource)
+            item = items.get(label)
+            if item is not None:
+                item.update(resource)
+                updated.append(item)
+            else:
+                new.append(_FileListItem.from_resource(resource))
+        self._files = updated + new
         self.endResetModel()
 
     def rowCount(self, parent=QModelIndex()):
         """Return the number of rows in the file list."""
         return len(self._files)
+
+    def set_selected(self, label, selected):
+        """
+        Changes the given item's selection status.
+
+        Args:
+            label (str): item's label
+            selected (bool): True to select the item, False to deselect
+        """
+        row = len(list(takewhile(lambda item: item.label != label, self._files)))
+        if row < len(self._files):
+            item = self._files[row]
+            item.selected_for_import = selected
+            index = self.index(row, 0)
+            self.dataChanged.emit(index, index, [Qt.CheckStateRole])
 
     def setData(self, index, value, role=Qt.EditRole):
         """Sets data in the model."""
@@ -662,7 +710,11 @@ class _FileListModel(QAbstractListModel):
             return False
         checked = value == Qt.Checked
         item = self._files[index.row()]
-        item.selected_for_import = checked
         self.selected_for_import_state_changed.emit(checked, item.label)
-        self.dataChanged.emit(index, index, [Qt.CheckStateRole])
         return True
+
+    def set_initial_state(self, labels, selected_list):
+        """Fills model with incomplete data; needs a call to :func:`update` to make the model usable."""
+        for label, selected in zip(labels, selected_list):
+            self._files.append(_FileListItem(label, label, ""))
+            self._files[-1].selected_for_import = selected

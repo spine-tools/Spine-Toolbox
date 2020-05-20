@@ -615,7 +615,7 @@
           </spacer>
          </item>
          <item>
-          <widget class="QPushButton" name="pushButton_ds_view">
+          <widget class="QPushButton" name="pushButton_ds_form">
            <property name="sizePolicy">
             <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
              <horstretch>0</horstretch>
@@ -638,7 +638,7 @@
             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open Data Store view&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
            </property>
            <property name="text">
-            <string>Open view</string>
+            <string>Open form</string>
            </property>
           </widget>
          </item>

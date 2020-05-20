@@ -309,6 +309,8 @@ class SingleParameterValueMixin(FillInAlternativeNameMixin):
         """Reimplemented to filter objects."""
         if not super()._main_filter_accepts_row(row):
             return False
+        if self._selected_entity_ids is None:
+            return False
         if self._selected_entity_ids == set():
             return True
         entity_id_key = {"object class": "object_id", "relationship class": "relationship_id"}[self.entity_class_type]

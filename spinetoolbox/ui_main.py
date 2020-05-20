@@ -77,6 +77,7 @@ from .helpers import (
     recursive_overwrite,
     serialize_path,
     deserialize_path,
+    open_url,
 )
 from .project_upgrader import ProjectUpgrader
 from .project_tree_item import LeafProjectTreeItem, CategoryProjectTreeItem, RootProjectTreeItem
@@ -391,7 +392,7 @@ class ToolboxUI(QMainWindow):
         self.init_specification_model(list())  # Start project with no specifications
         self.update_window_title()
         self.ui.actionSave_As.setEnabled(True)
-        self.ui.graphicsView.init_scene(empty=True)
+        self.ui.graphicsView.reset_zoom()
         # Update recentProjects
         self.update_recent_projects()
         # Update recentProjectStorages
@@ -496,8 +497,8 @@ class ToolboxUI(QMainWindow):
         # Simulate project execution after restoring links
         self._project.notify_changes_in_all_dags()
         self._project.connect_signals()
-        # Initialize scene on Design View
-        self.ui.graphicsView.init_scene()
+        # Reset zoom on Design View
+        self.ui.graphicsView.reset_zoom()
         self.update_recent_projects()
         self.msg.emit("Project <b>{0}</b> is now open".format(self._project.name))
         return True
@@ -517,7 +518,8 @@ class ToolboxUI(QMainWindow):
             return
         # Put project's specification definition files into a list
         tool_spec_paths = [
-            self.specification_model.specification(i).definition_file_path for i in range(self.specification_model.rowCount())
+            self.specification_model.specification(i).definition_file_path
+            for i in range(self.specification_model.rowCount())
         ]
         # Serialize tool spec paths
         serialized_tool_spec_paths = [serialize_path(spec, self._project.project_dir) for spec in tool_spec_paths]
@@ -1103,7 +1105,7 @@ class ToolboxUI(QMainWindow):
         tool_specification_url = "file:///" + file_path
         # Open Tool specification file in editor
         # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
-        res = QDesktopServices.openUrl(QUrl(tool_specification_url, QUrl.TolerantMode))
+        res = open_url(tool_specification_url)
         if not res:
             logging.error("Failed to open editor for %s", tool_specification_url)
             self.msg_error.emit(
@@ -1317,7 +1319,7 @@ class ToolboxUI(QMainWindow):
         doc_index_path = os.path.join(DOCUMENTATION_PATH, "index.html")
         index_url = "file:///" + doc_index_path
         # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
-        res = QDesktopServices.openUrl(QUrl(index_url, QUrl.TolerantMode))
+        res = open_url(index_url)
         if not res:
             logging.error("Failed to open editor for %s", index_url)
             self.msg_error.emit("Unable to open file <b>{0}</b>".format(doc_index_path))
@@ -1328,7 +1330,7 @@ class ToolboxUI(QMainWindow):
         getting_started_path = os.path.join(DOCUMENTATION_PATH, "getting_started.html")
         index_url = "file:///" + getting_started_path
         # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
-        res = QDesktopServices.openUrl(QUrl(index_url, QUrl.TolerantMode))
+        res = open_url(index_url)
         if not res:
             logging.error("Failed to open editor for %s", index_url)
             self.msg_error.emit("Unable to open file <b>{0}</b>".format(getting_started_path))

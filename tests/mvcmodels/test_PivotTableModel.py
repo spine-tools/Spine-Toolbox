@@ -20,7 +20,7 @@ import unittest
 from unittest.mock import Mock, MagicMock, patch
 from PySide2.QtWidgets import QApplication, QAction
 from spinetoolbox.mvcmodels.pivot_table_models import PivotTableModel
-from spinetoolbox.widgets.data_store_widget import DataStoreForm
+from spinetoolbox.data_store_form.widgets.data_store_form import DataStoreForm
 
 
 class TestPivotTableModel(unittest.TestCase):
@@ -35,11 +35,10 @@ class TestPivotTableModel(unittest.TestCase):
         db_mngr.get_item.side_effect = lambda db_map, item_type, id_: {"name": id_, "parameter_name": id_}
         mock_db_map = Mock()
         mock_db_map.codename = "codename"
-        db_mngr.get_db_map_for_listener.side_effect = lambda *args, **kwargs: mock_db_map
         db_mngr.undo_action.__getitem__.side_effect = lambda key: QAction()
         db_mngr.redo_action.__getitem__.side_effect = lambda key: QAction()
         with patch.object(DataStoreForm, "restore_ui"):
-            tabular_view = DataStoreForm(db_mngr, ("sqlite://", "codename"))
+            tabular_view = DataStoreForm(db_mngr, mock_db_map)
         self._model = PivotTableModel(tabular_view)
         data = {
             ('row1', 'col1', 'alternative1'): '1',
