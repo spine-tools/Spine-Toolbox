@@ -13,7 +13,7 @@
 # Form implementation generated from reading ui file '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/data_store_form/ui/data_store_window.ui',
 # licensing of '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/data_store_form/ui/data_store_window.ui' applies.
 #
-# Created: Wed May 20 17:47:35 2020
+# Created: Wed May 20 19:18:49 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -82,7 +82,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_5.setSpacing(0)
         self.verticalLayout_5.setContentsMargins(0, 0, 0, 0)
         self.verticalLayout_5.setObjectName("verticalLayout_5")
-        self.tableView_relationship_parameter_value = ParameterTableView(self.dockWidgetContents_2)
+        self.tableView_relationship_parameter_value = RelationshipParameterValueTableView(self.dockWidgetContents_2)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(2)
         sizePolicy.setVerticalStretch(0)
@@ -110,7 +110,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_3.setSpacing(0)
         self.verticalLayout_3.setContentsMargins(0, 0, 0, 0)
         self.verticalLayout_3.setObjectName("verticalLayout_3")
-        self.tableView_object_parameter_value = ParameterTableView(self.dockWidgetContents_3)
+        self.tableView_object_parameter_value = ObjectParameterValueTableView(self.dockWidgetContents_3)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(2)
         sizePolicy.setVerticalStretch(0)
@@ -143,7 +143,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_8.setSpacing(0)
         self.verticalLayout_8.setContentsMargins(0, 0, 0, 0)
         self.verticalLayout_8.setObjectName("verticalLayout_8")
-        self.tableView_object_parameter_definition = ParameterTableView(self.dockWidgetContents_4)
+        self.tableView_object_parameter_definition = ObjectParameterDefinitionTableView(self.dockWidgetContents_4)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(2)
         sizePolicy.setVerticalStretch(0)
@@ -171,7 +171,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_10.setSpacing(0)
         self.verticalLayout_10.setContentsMargins(0, 0, 0, 0)
         self.verticalLayout_10.setObjectName("verticalLayout_10")
-        self.tableView_relationship_parameter_definition = ParameterTableView(self.dockWidgetContents_5)
+        self.tableView_relationship_parameter_definition = RelationshipParameterDefinitionTableView(self.dockWidgetContents_5)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(2)
         sizePolicy.setVerticalStretch(0)
@@ -674,8 +674,8 @@ class Ui_MainWindow(object):
         self.actionExport_session.setText(QtWidgets.QApplication.translate("MainWindow", "Export session...", None, -1))
         self.actionExport_session.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Export items added and updated in the current session (since last commit) into a file</p></body></html>", None, -1))
 
-from spinetoolbox.data_store_form.widgets.custom_qtreeview import ParameterValueListTreeView, StickySelectionEntityTreeView
-from spinetoolbox.widgets.custom_qgraphicsviews import EntityQGraphicsView
+from spinetoolbox.data_store_form.widgets.custom_qtableview import FrozenTableView, RelationshipParameterDefinitionTableView, PivotTableView, RelationshipParameterValueTableView, ObjectParameterDefinitionTableView, ObjectParameterValueTableView
+from spinetoolbox.data_store_form.widgets.custom_qtreeview import StickySelectionEntityTreeView, ParameterValueListTreeView
 from spinetoolbox.widgets.custom_qlistview import DragListView
-from spinetoolbox.data_store_form.widgets.custom_qtableview import ParameterTableView, FrozenTableView, PivotTableView
+from spinetoolbox.widgets.custom_qgraphicsviews import EntityQGraphicsView
 from spinetoolbox import resources_icons_rc

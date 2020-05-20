@@ -18,20 +18,6 @@ Contains the ParameterViewMixin class.
 
 from PySide2.QtCore import Qt, Slot
 from PySide2.QtWidgets import QHeaderView
-from .custom_delegates import (
-    DatabaseNameDelegate,
-    ParameterDefaultValueDelegate,
-    TagListDelegate,
-    ValueListDelegate,
-    ObjectParameterValueDelegate,
-    ObjectParameterNameDelegate,
-    ObjectClassNameDelegate,
-    ObjectNameDelegate,
-    RelationshipParameterValueDelegate,
-    RelationshipParameterNameDelegate,
-    RelationshipClassNameDelegate,
-    ObjectNameListDelegate,
-)
 from .custom_menus import EditableParameterValueContextMenu, ParameterContextMenu
 from .object_name_list_editor import ObjectNameListEditor
 from ...widgets.report_plotting_failure import report_plotting_failure
@@ -78,7 +64,7 @@ class ParameterViewMixin:
             view.verticalHeader().setDefaultSectionSize(self.default_row_height)
             view.horizontalHeader().setResizeContentsPrecision(self.visible_rows)
             view.horizontalHeader().setSectionsMovable(True)
-        self.setup_delegates()
+            view.setup_delegates(self)
 
     def add_menu_actions(self):
         """Adds toggle view actions to View menu."""
@@ -132,57 +118,6 @@ class ParameterViewMixin:
         self.ui.tableView_object_parameter_definition.resizeColumnsToContents()
         self.ui.tableView_relationship_parameter_value.resizeColumnsToContents()
         self.ui.tableView_relationship_parameter_definition.resizeColumnsToContents()
-
-    def _setup_delegate(self, table_view, column, delegate_class):
-        """Returns a custom delegate for a given view."""
-        delegate = delegate_class(self, self.db_mngr)
-        table_view.setItemDelegateForColumn(column, delegate)
-        delegate.data_committed.connect(self.set_parameter_data)
-        return delegate
-
-    def setup_delegates(self):
-        """Sets delegates for tables."""
-        # Parameter definitions
-        for table_view in (
-            self.ui.tableView_object_parameter_definition,
-            self.ui.tableView_relationship_parameter_definition,
-        ):
-            h = table_view.model().header.index
-            self._setup_delegate(table_view, h("database"), DatabaseNameDelegate)
-            self._setup_delegate(table_view, h("parameter_tag_list"), TagListDelegate)
-            self._setup_delegate(table_view, h("value_list_name"), ValueListDelegate)
-            delegate = self._setup_delegate(table_view, h("default_value"), ParameterDefaultValueDelegate)
-            delegate.parameter_value_editor_requested.connect(self.show_parameter_value_editor)
-        # Parameter values
-        for table_view in (self.ui.tableView_object_parameter_value, self.ui.tableView_relationship_parameter_value):
-            h = table_view.model().header.index
-            self._setup_delegate(table_view, h("database"), DatabaseNameDelegate)
-        # Object parameters
-        for table_view in (self.ui.tableView_object_parameter_value, self.ui.tableView_object_parameter_definition):
-            h = table_view.model().header.index
-            self._setup_delegate(table_view, h("object_class_name"), ObjectClassNameDelegate)
-        # Relationship parameters
-        for table_view in (
-            self.ui.tableView_relationship_parameter_value,
-            self.ui.tableView_relationship_parameter_definition,
-        ):
-            h = table_view.model().header.index
-            self._setup_delegate(table_view, h("relationship_class_name"), RelationshipClassNameDelegate)
-        # Object parameter value
-        table_view = self.ui.tableView_object_parameter_value
-        h = table_view.model().header.index
-        delegate = self._setup_delegate(table_view, h("value"), ObjectParameterValueDelegate)
-        delegate.parameter_value_editor_requested.connect(self.show_parameter_value_editor)
-        self._setup_delegate(table_view, h("parameter_name"), ObjectParameterNameDelegate)
-        self._setup_delegate(table_view, h("object_name"), ObjectNameDelegate)
-        # Relationship parameter value
-        table_view = self.ui.tableView_relationship_parameter_value
-        h = table_view.model().header.index
-        delegate = self._setup_delegate(table_view, h("value"), RelationshipParameterValueDelegate)
-        delegate.parameter_value_editor_requested.connect(self.show_parameter_value_editor)
-        self._setup_delegate(table_view, h("parameter_name"), RelationshipParameterNameDelegate)
-        delegate = self._setup_delegate(table_view, h("object_name_list"), ObjectNameListDelegate)
-        delegate.object_name_list_editor_requested.connect(self.show_object_name_list_editor)
 
     @Slot("QModelIndex", "QVariant")
     def set_parameter_data(self, index, new_value):  # pylint: disable=no-self-use

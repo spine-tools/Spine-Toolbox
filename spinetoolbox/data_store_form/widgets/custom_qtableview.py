@@ -21,6 +21,19 @@ from PySide2.QtWidgets import QTableView, QAbstractItemView
 from .pivot_table_header_view import PivotTableHeaderView
 from .tabular_view_header_widget import TabularViewHeaderWidget
 from ...widgets.custom_qtableview import CopyPasteTableView, AutoFilterCopyPasteTableView
+from .custom_delegates import (
+    DatabaseNameDelegate,
+    ParameterDefaultValueDelegate,
+    TagListDelegate,
+    ValueListDelegate,
+    ParameterValueDelegate,
+    ParameterNameDelegate,
+    ObjectClassNameDelegate,
+    ObjectNameDelegate,
+    RelationshipClassNameDelegate,
+    ObjectNameListDelegate,
+    PivotTableDelegate,
+)
 
 
 class ParameterTableView(AutoFilterCopyPasteTableView):
@@ -50,6 +63,67 @@ class ParameterTableView(AutoFilterCopyPasteTableView):
         model.db_mngr.remove_items(db_map_typed_data)
         self.selectionModel().clearSelection()
 
+    def _make_delegate(self, data_store_form, column_name, delegate_class):
+        """Returns a custom delegate for a given view."""
+        column = self.model().header.index(column_name)
+        delegate = delegate_class(data_store_form, data_store_form.db_mngr)
+        self.setItemDelegateForColumn(column, delegate)
+        delegate.data_committed.connect(data_store_form.set_parameter_data)
+        return delegate
+
+    def setup_delegates(self, data_store_form):
+        self._make_delegate(data_store_form, "database", DatabaseNameDelegate)
+
+
+class ObjectParameterTableMixin:
+    def setup_delegates(self, data_store_form):
+        super().setup_delegates(data_store_form)
+        self._make_delegate(data_store_form, "object_class_name", ObjectClassNameDelegate)
+
+
+class RelationshipParameterTableMixin:
+    def setup_delegates(self, data_store_form):
+        super().setup_delegates(data_store_form)
+        self._make_delegate(data_store_form, "relationship_class_name", RelationshipClassNameDelegate)
+
+
+class ParameterDefinitionTableView(ParameterTableView):
+    def setup_delegates(self, data_store_form):
+        super().setup_delegates(data_store_form)
+        self._make_delegate(data_store_form, "parameter_tag_list", TagListDelegate)
+        self._make_delegate(data_store_form, "value_list_name", ValueListDelegate)
+        delegate = self._make_delegate(data_store_form, "default_value", ParameterDefaultValueDelegate)
+        delegate.parameter_value_editor_requested.connect(data_store_form.show_parameter_value_editor)
+
+
+class ParameterValueTableView(ParameterTableView):
+    def setup_delegates(self, data_store_form):
+        super().setup_delegates(data_store_form)
+        self._make_delegate(data_store_form, "parameter_name", ParameterNameDelegate)
+        delegate = self._make_delegate(data_store_form, "value", ParameterValueDelegate)
+        delegate.parameter_value_editor_requested.connect(data_store_form.show_parameter_value_editor)
+
+
+class ObjectParameterDefinitionTableView(ObjectParameterTableMixin, ParameterDefinitionTableView):
+    pass
+
+
+class RelationshipParameterDefinitionTableView(RelationshipParameterTableMixin, ParameterDefinitionTableView):
+    pass
+
+
+class ObjectParameterValueTableView(ObjectParameterTableMixin, ParameterValueTableView):
+    def setup_delegates(self, data_store_form):
+        super().setup_delegates(data_store_form)
+        self._make_delegate(data_store_form, "object_name", ObjectNameDelegate)
+
+
+class RelationshipParameterValueTableView(RelationshipParameterTableMixin, ParameterValueTableView):
+    def setup_delegates(self, data_store_form):
+        super().setup_delegates(data_store_form)
+        delegate = self._make_delegate(data_store_form, "object_name_list", ObjectNameListDelegate)
+        delegate.object_name_list_editor_requested.connect(data_store_form.show_object_name_list_editor)
+
 
 class PivotTableView(CopyPasteTableView):
     """Custom QTableView class with pivot capabilities.
@@ -66,6 +140,12 @@ class PivotTableView(CopyPasteTableView):
         self.setHorizontalHeader(h_header)
         self.setVerticalHeader(v_header)
         h_header.setContextMenuPolicy(Qt.CustomContextMenu)
+
+    def setup_delegates(self, data_store_form):
+        delegate = PivotTableDelegate(data_store_form)
+        self.setItemDelegate(delegate)
+        delegate.parameter_value_editor_requested.connect(data_store_form.show_parameter_value_editor)
+        delegate.data_committed.connect(data_store_form._set_model_data)
 
 
 class FrozenTableView(QTableView):

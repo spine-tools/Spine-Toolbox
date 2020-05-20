@@ -584,6 +584,14 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
             [{"id": id_, value_field: value}]
         )
 
+    def get_entity_class_id(self, index, db_map):
+        entity_class_name_key = {"object class": "object_class_name", "relationship class": "relationship_class_name"}[
+            self.entity_class_type
+        ]
+        entity_class_name = index.sibling(index.row(), self.header.index(entity_class_name_key)).data()
+        entity_class = self.db_mngr.get_item_by_field(db_map, self.entity_class_type, "name", entity_class_name)
+        return entity_class.get("id")
+
 
 class CompoundObjectParameterMixin:
     """Implements the interface for populating and filtering a compound object parameter model."""

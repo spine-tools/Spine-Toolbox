@@ -61,6 +61,11 @@ class EmptyParameterModel(EmptyRowModel):
             self.entity_class_type
         ]
 
+    def get_entity_class_id(self, index, db_map):
+        entity_class_name = index.sibling(index.row(), self.header.index(self.entity_class_name_key)).data()
+        entity_class = self.db_mngr.get_item_by_field(db_map, self.entity_class_type, "name", entity_class_name)
+        return entity_class.get("id")
+
     @property
     def can_be_filtered(self):
         return False

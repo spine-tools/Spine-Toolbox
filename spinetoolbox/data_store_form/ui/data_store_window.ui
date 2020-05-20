@@ -1,4 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!--
+######################################################################################################################
+# Copyright (C) 2017-2020 Spine project consortium
+# This file is part of Spine Toolbox.
+# Spine Toolbox is free software: you can redistribute it and\/or modify it under the terms of the GNU Lesser General
+# Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
+# any later version. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General
+# Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
+# this program. If not, see <http:\/\/www.gnu.org\/licenses\/>.
+######################################################################################################################
+-->
 <ui version="4.0">
  <class>MainWindow</class>
  <widget class="QMainWindow" name="MainWindow">
@@ -213,7 +225,7 @@
       <number>0</number>
      </property>
      <item>
-      <widget class="ParameterTableView" name="tableView_relationship_parameter_value">
+      <widget class="RelationshipParameterValueTableView" name="tableView_relationship_parameter_value">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
          <horstretch>2</horstretch>
@@ -283,7 +295,7 @@
       <number>0</number>
      </property>
      <item>
-      <widget class="ParameterTableView" name="tableView_object_parameter_value">
+      <widget class="ObjectParameterValueTableView" name="tableView_object_parameter_value">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
          <horstretch>2</horstretch>
@@ -362,7 +374,7 @@
       <number>0</number>
      </property>
      <item>
-      <widget class="ParameterTableView" name="tableView_object_parameter_definition">
+      <widget class="ObjectParameterDefinitionTableView" name="tableView_object_parameter_definition">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
          <horstretch>2</horstretch>
@@ -432,7 +444,7 @@
       <number>0</number>
      </property>
      <item>
-      <widget class="ParameterTableView" name="tableView_relationship_parameter_definition">
+      <widget class="RelationshipParameterDefinitionTableView" name="tableView_relationship_parameter_definition">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
          <horstretch>2</horstretch>
@@ -1359,11 +1371,6 @@
  </widget>
  <customwidgets>
   <customwidget>
-   <class>ParameterTableView</class>
-   <extends>QTableView</extends>
-   <header>spinetoolbox/data_store_form/widgets/custom_qtableview.h</header>
-  </customwidget>
-  <customwidget>
    <class>EntityQGraphicsView</class>
    <extends>QGraphicsView</extends>
    <header>spinetoolbox/widgets/custom_qgraphicsviews.h</header>
@@ -1390,6 +1397,26 @@
   </customwidget>
   <customwidget>
    <class>PivotTableView</class>
+   <extends>QTableView</extends>
+   <header>spinetoolbox/data_store_form/widgets/custom_qtableview.h</header>
+  </customwidget>
+  <customwidget>
+   <class>ObjectParameterValueTableView</class>
+   <extends>QTableView</extends>
+   <header>spinetoolbox/data_store_form/widgets/custom_qtableview.h</header>
+  </customwidget>
+  <customwidget>
+   <class>ObjectParameterDefinitionTableView</class>
+   <extends>QTableView</extends>
+   <header>spinetoolbox/data_store_form/widgets/custom_qtableview.h</header>
+  </customwidget>
+  <customwidget>
+   <class>RelationshipParameterDefinitionTableView</class>
+   <extends>QTableView</extends>
+   <header>spinetoolbox/data_store_form/widgets/custom_qtableview.h</header>
+  </customwidget>
+  <customwidget>
+   <class>RelationshipParameterValueTableView</class>
    <extends>QTableView</extends>
    <header>spinetoolbox/data_store_form/widgets/custom_qtableview.h</header>
   </customwidget>

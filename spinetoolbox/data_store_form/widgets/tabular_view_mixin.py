@@ -21,7 +21,6 @@ from collections import namedtuple
 from PySide2.QtCore import Qt, Slot, QTimer
 from .custom_menus import TabularViewFilterMenu, PivotTableModelMenu, PivotTableHorizontalHeaderMenu
 from .tabular_view_header_widget import TabularViewHeaderWidget
-from .custom_delegates import PivotTableDelegate
 from ...helpers import fix_name_ambiguity, busy_effect
 from ...mvcmodels.pivot_table_models import IndexId, PivotTableSortFilterProxy, PivotTableModel
 from ...mvcmodels.frozen_table_model import FrozenTableModel
@@ -64,14 +63,7 @@ class TabularViewMixin:
         self._pivot_table_horizontal_header_menu = PivotTableHorizontalHeaderMenu(
             self.pivot_table_proxy, self.ui.pivot_table
         )
-
-    def setup_delegates(self):
-        """Sets delegates for tables."""
-        super().setup_delegates()
-        delegate = PivotTableDelegate(self)
-        self.ui.pivot_table.setItemDelegate(delegate)
-        delegate.parameter_value_editor_requested.connect(self.show_parameter_value_editor)
-        delegate.data_committed.connect(self._set_model_data)
+        self.ui.pivot_table.setup_delegates(self)
 
     def add_menu_actions(self):
         """Adds toggle view actions to View menu."""
