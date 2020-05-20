@@ -37,7 +37,7 @@ class GraphViewMixin:
     objects_added_to_graph = Signal()
     relationships_added_to_graph = Signal()
 
-    _POS_STR = "graph_view_position"
+    _POS_PARAM_NAME = "entity_graph_position"
     _VERTEX_EXTENT = 64
     _ARC_WIDTH = 0.15 * _VERTEX_EXTENT
     _ARC_LENGTH_HINT = 1.5 * _VERTEX_EXTENT
@@ -536,7 +536,9 @@ class GraphViewMixin:
         entity_ids = self.object_ids + self.relationship_ids
         pos_lookup = {
             p["entity_id"]: dict(from_database(p["value"]).value_to_database_data())
-            for p in self.db_mngr.get_items_by_field(self.db_map, "parameter value", "parameter_name", self._POS_STR)
+            for p in self.db_mngr.get_items_by_field(
+                self.db_map, "parameter value", "parameter_name", self._POS_PARAM_NAME
+            )
         }
         heavy_positions = {ind: pos_lookup[id_] for ind, id_ in enumerate(entity_ids) if id_ in pos_lookup}
         return GraphLayoutGenerator(
@@ -936,23 +938,26 @@ class GraphViewMixin:
         pos_def_class_ids = {
             p["entity_class_id"]
             for p in self.db_mngr.get_items_by_field(
-                self.db_map, "parameter definition", "parameter_name", self._POS_STR
+                self.db_map, "parameter definition", "parameter_name", self._POS_PARAM_NAME
             )
         }
         defs_to_add = [
-            {"name": self._POS_STR, "entity_class_id": class_id} for class_id in class_items.keys() - pos_def_class_ids
+            {"name": self._POS_PARAM_NAME, "entity_class_id": class_id}
+            for class_id in class_items.keys() - pos_def_class_ids
         ]
         if defs_to_add:
             self.db_mngr.add_parameter_definitions({self.db_map: defs_to_add})
         pos_def_id_lookup = {
             p["entity_class_id"]: p["id"]
             for p in self.db_mngr.get_items_by_field(
-                self.db_map, "parameter definition", "parameter_name", self._POS_STR
+                self.db_map, "parameter definition", "parameter_name", self._POS_PARAM_NAME
             )
         }
         pos_val_id_lookup = {
             (p["entity_class_id"], p["entity_id"]): p["id"]
-            for p in self.db_mngr.get_items_by_field(self.db_map, "parameter value", "parameter_name", self._POS_STR)
+            for p in self.db_mngr.get_items_by_field(
+                self.db_map, "parameter value", "parameter_name", self._POS_PARAM_NAME
+            )
         }
         vals_to_add = list()
         vals_to_update = list()
@@ -985,7 +990,9 @@ class GraphViewMixin:
         entity_ids = {x.entity_id for x in scene.items() if isinstance(x, EntityItem)}
         vals_to_remove = [
             p
-            for p in self.db_mngr.get_items_by_field(self.db_map, "parameter value", "parameter_name", self._POS_STR)
+            for p in self.db_mngr.get_items_by_field(
+                self.db_map, "parameter value", "parameter_name", self._POS_PARAM_NAME
+            )
             if p["entity_id"] in entity_ids
         ]
         if vals_to_remove:
