@@ -35,7 +35,6 @@ from spinedb_api import (
 from ...config import MAINWINDOW_SS, APPLICATION_PATH
 from .edit_or_remove_items_dialogs import ManageParameterTagsDialog
 from .select_db_items_dialogs import MassRemoveItemsDialog, GetItemsForExportDialog
-from .custom_menus import ParameterValueListContextMenu
 from .custom_qwidgets import OpenFileButton, OpenSQLiteFileButton, ShootingLabel, CustomInputDialog
 from .parameter_view_mixin import ParameterViewMixin
 from .tree_view_mixin import TreeViewMixin
@@ -104,6 +103,7 @@ class DataStoreFormBase(QMainWindow):
         self.selected_param_def_ids = {"object class": {}, "relationship class": {}}
         self.parameter_value_list_model = ParameterValueListModel(self, self.db_mngr, *self.db_maps)
         self.ui.treeView_parameter_value_list.setModel(self.parameter_value_list_model)
+        self.ui.treeView_parameter_value_list.connect_data_store_form(self)
         self.silenced = False
         fm = QFontMetrics(QFont("", 0))
         self.default_row_height = 1.2 * fm.lineSpacing()
@@ -154,9 +154,6 @@ class DataStoreFormBase(QMainWindow):
         self.ui.actionMass_remove_items.triggered.connect(self.show_mass_remove_items_form)
         self.parameter_tag_toolbar.manage_tags_action_triggered.connect(self.show_manage_parameter_tags_form)
         self.parameter_tag_toolbar.tag_button_toggled.connect(self._handle_tag_button_toggled)
-        self.ui.treeView_parameter_value_list.customContextMenuRequested.connect(
-            self.show_parameter_value_list_context_menu
-        )
         self.ui.dockWidget_exports.visibilityChanged.connect(self._handle_exports_visibility_changed)
 
     @Slot(int)

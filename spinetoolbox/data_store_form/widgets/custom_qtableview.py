@@ -16,8 +16,11 @@ Custom QTableView classes that support copy-paste and the like.
 :date:   18.5.2018
 """
 
-from PySide2.QtCore import Qt, Signal
-from PySide2.QtWidgets import QTableView, QAbstractItemView
+from PySide2.QtCore import Qt, Signal, Slot
+from PySide2.QtWidgets import QTableView, QAbstractItemView, QMenu
+from ...widgets.report_plotting_failure import report_plotting_failure
+from ...widgets.plot_widget import PlotWidget, _prepare_plot_in_window_menu
+from ...plotting import plot_selection, PlottingError, ParameterTablePlottingHints
 from .pivot_table_header_view import PivotTableHeaderView
 from .tabular_view_header_widget import TabularViewHeaderWidget
 from ...widgets.custom_qtableview import CopyPasteTableView, AutoFilterCopyPasteTableView
@@ -37,6 +40,89 @@ from .custom_delegates import (
 
 
 class ParameterTableView(AutoFilterCopyPasteTableView):
+    def __init__(self, parent):
+        """Initialize the view."""
+        super().__init__(parent=parent)
+        self._menu = QMenu(self)
+        self._data_store_form = None
+        self.open_in_editor_action = None
+        self.plot_action = None
+        self.plot_separator = None
+
+    @property
+    def value_column_header(self):
+        raise NotImplementedError()
+
+    def connect_data_store_form(self, data_store_form):
+        self._data_store_form = data_store_form
+        self.create_context_menu()
+        self.create_delegates()
+
+    def _make_delegate(self, column_name, delegate_class):
+        """Returns a custom delegate for a given view."""
+        column = self.model().header.index(column_name)
+        delegate = delegate_class(self._data_store_form, self._data_store_form.db_mngr)
+        self.setItemDelegateForColumn(column, delegate)
+        delegate.data_committed.connect(self._data_store_form.set_parameter_data)
+        return delegate
+
+    def create_delegates(self):
+        self._make_delegate("database", DatabaseNameDelegate)
+
+    def open_in_editor(self):
+        index = self.currentIndex()
+        self._data_store_form.show_parameter_value_editor(index)
+
+    @Slot(bool)
+    def plot(self, checked=False):
+        selection = self.selectedIndexes()
+        try:
+            hints = ParameterTablePlottingHints()
+            plot_widget = plot_selection(self.model(), selection, hints)
+        except PlottingError as error:
+            report_plotting_failure(error, self._data_store_form)
+        else:
+            plot_widget.use_as_window(self.window(), self.value_column_header)
+            plot_widget.show()
+
+    @Slot("QAction")
+    def plot_in_window(self, action):
+        """Plots in window given by the action's name."""
+        plot_window_name = action.text()
+        plot_window = PlotWidget.plot_windows.get(plot_window_name)
+        selection = self.selectedIndexes()
+        try:
+            hints = ParameterTablePlottingHints()
+            plot_selection(self.model(), selection, hints, plot_window)
+            plot_window.raise_()
+        except PlottingError as error:
+            report_plotting_failure(error, self._data_store_form)
+
+    def create_context_menu(self):
+        self.open_in_editor_action = self._menu.addAction("Open in editor...", self.open_in_editor)
+        self._menu.addSeparator()
+        self.plot_action = self._menu.addAction("Plot", self.plot)
+        self.plot_separator = self._menu.addSeparator()
+        self._menu.addAction(self._data_store_form.ui.actionCopy)
+        self._menu.addAction(self._data_store_form.ui.actionPaste)
+        self._menu.addSeparator()
+        self._menu.addAction(self._data_store_form.ui.actionRemove_selected)
+
+    def contextMenuEvent(self, event):
+        index = self.indexAt(event.pos())
+        model = self.model()
+        is_value = model.headerData(index.column(), Qt.Horizontal) == self.value_column_header
+        self.open_in_editor_action.setVisible(is_value)
+        self.plot_action.setVisible(is_value)
+        if is_value:
+            plot_in_window_menu = QMenu("Plot in window")
+            plot_in_window_menu.triggered.connect(self.plot_in_window)
+            _prepare_plot_in_window_menu(plot_in_window_menu)
+            self._menu.insertMenu(self.plot_separator, plot_in_window_menu)
+        self._menu.exec_(event.globalPos())
+        if is_value:
+            plot_in_window_menu.deleteLater()
+
     def remove_selected(self):
         """Removes selected indexes."""
         selection = self.selectionModel().selection()
@@ -63,66 +149,67 @@ class ParameterTableView(AutoFilterCopyPasteTableView):
         model.db_mngr.remove_items(db_map_typed_data)
         self.selectionModel().clearSelection()
 
-    def _make_delegate(self, data_store_form, column_name, delegate_class):
-        """Returns a custom delegate for a given view."""
-        column = self.model().header.index(column_name)
-        delegate = delegate_class(data_store_form, data_store_form.db_mngr)
-        self.setItemDelegateForColumn(column, delegate)
-        delegate.data_committed.connect(data_store_form.set_parameter_data)
-        return delegate
-
-    def setup_delegates(self, data_store_form):
-        self._make_delegate(data_store_form, "database", DatabaseNameDelegate)
-
 
 class ObjectParameterTableMixin:
-    def setup_delegates(self, data_store_form):
-        super().setup_delegates(data_store_form)
-        self._make_delegate(data_store_form, "object_class_name", ObjectClassNameDelegate)
+    def create_delegates(self):
+        super().create_delegates()
+        self._make_delegate("object_class_name", ObjectClassNameDelegate)
 
 
 class RelationshipParameterTableMixin:
-    def setup_delegates(self, data_store_form):
-        super().setup_delegates(data_store_form)
-        self._make_delegate(data_store_form, "relationship_class_name", RelationshipClassNameDelegate)
+    def create_delegates(self):
+        super().create_delegates()
+        self._make_delegate("relationship_class_name", RelationshipClassNameDelegate)
 
 
 class ParameterDefinitionTableView(ParameterTableView):
-    def setup_delegates(self, data_store_form):
-        super().setup_delegates(data_store_form)
-        self._make_delegate(data_store_form, "parameter_tag_list", TagListDelegate)
-        self._make_delegate(data_store_form, "value_list_name", ValueListDelegate)
-        delegate = self._make_delegate(data_store_form, "default_value", ParameterDefaultValueDelegate)
-        delegate.parameter_value_editor_requested.connect(data_store_form.show_parameter_value_editor)
+    @property
+    def value_column_header(self):
+        return "default_value"
+
+    def create_delegates(self):
+        super().create_delegates()
+        self._make_delegate("parameter_tag_list", TagListDelegate)
+        self._make_delegate("value_list_name", ValueListDelegate)
+        delegate = self._make_delegate("default_value", ParameterDefaultValueDelegate)
+        delegate.parameter_value_editor_requested.connect(self._data_store_form.show_parameter_value_editor)
 
 
 class ParameterValueTableView(ParameterTableView):
-    def setup_delegates(self, data_store_form):
-        super().setup_delegates(data_store_form)
-        self._make_delegate(data_store_form, "parameter_name", ParameterNameDelegate)
-        delegate = self._make_delegate(data_store_form, "value", ParameterValueDelegate)
-        delegate.parameter_value_editor_requested.connect(data_store_form.show_parameter_value_editor)
+    @property
+    def value_column_header(self):
+        return "value"
+
+    def create_delegates(self):
+        super().create_delegates()
+        self._make_delegate("parameter_name", ParameterNameDelegate)
+        delegate = self._make_delegate("value", ParameterValueDelegate)
+        delegate.parameter_value_editor_requested.connect(self._data_store_form.show_parameter_value_editor)
 
 
 class ObjectParameterDefinitionTableView(ObjectParameterTableMixin, ParameterDefinitionTableView):
-    pass
+    """A custom QTableView for the object parameter definition pane in Data Store Form."""
 
 
 class RelationshipParameterDefinitionTableView(RelationshipParameterTableMixin, ParameterDefinitionTableView):
-    pass
+    """A custom QTableView for the relationship parameter definition pane in Data Store Form."""
 
 
 class ObjectParameterValueTableView(ObjectParameterTableMixin, ParameterValueTableView):
-    def setup_delegates(self, data_store_form):
-        super().setup_delegates(data_store_form)
-        self._make_delegate(data_store_form, "object_name", ObjectNameDelegate)
+    """A custom QTableView for the object parameter value pane in Data Store Form."""
+
+    def create_delegates(self):
+        super().create_delegates()
+        self._make_delegate("object_name", ObjectNameDelegate)
 
 
 class RelationshipParameterValueTableView(RelationshipParameterTableMixin, ParameterValueTableView):
-    def setup_delegates(self, data_store_form):
-        super().setup_delegates(data_store_form)
-        delegate = self._make_delegate(data_store_form, "object_name_list", ObjectNameListDelegate)
-        delegate.object_name_list_editor_requested.connect(data_store_form.show_object_name_list_editor)
+    """A custom QTableView for the relationship parameter value pane in Data Store Form."""
+
+    def create_delegates(self):
+        super().create_delegates()
+        delegate = self._make_delegate("object_name_list", ObjectNameListDelegate)
+        delegate.object_name_list_editor_requested.connect(self._data_store_form.show_object_name_list_editor)
 
 
 class PivotTableView(CopyPasteTableView):

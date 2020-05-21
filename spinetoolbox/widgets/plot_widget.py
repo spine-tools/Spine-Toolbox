@@ -89,3 +89,16 @@ class PlotWidget(QWidget):
             proposition = f"{document_name} ({i + 1})"
             if proposition not in PlotWidget.plot_windows:
                 return proposition
+
+
+def _prepare_plot_in_window_menu(menu):
+    """Fills a given menu with available plot window names."""
+    menu.clear()
+    plot_windows = PlotWidget.plot_windows
+    if not plot_windows:
+        menu.setEnabled(False)
+        return
+    menu.setEnabled(True)
+    window_names = list(plot_windows.keys())
+    for name in sorted(window_names):
+        menu.addAction(name)

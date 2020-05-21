@@ -17,87 +17,13 @@ Classes for custom context menus and pop-up menus.
 """
 
 from PySide2.QtWidgets import QMenu, QWidgetAction
-from PySide2.QtGui import QIcon
 from PySide2.QtCore import QEvent, QPoint, Signal, Slot
 from ...helpers import fix_name_ambiguity
 from ...plotting import plot_pivot_column, plot_selection, PlottingError, PivotTablePlottingHints
 from .custom_qwidgets import LazyFilterWidget, DataToValueFilterWidget
-from ...widgets.plot_widget import PlotWidget
+from ...widgets.plot_widget import PlotWidget, _prepare_plot_in_window_menu
 from ...widgets.report_plotting_failure import report_plotting_failure
 from ...widgets.custom_menus import CustomContextMenu, FilterMenuBase
-
-
-class ParameterContextMenu(CustomContextMenu):
-    """Context menu class for object (relationship) parameter items in tree views."""
-
-    def __init__(self, parent, position, index):
-        """
-        Args:
-            parent (QWidget): Parent for menu widget
-            position (QPoint): Position on screen
-            index (QModelIndex): Index of item that requested the context-menu
-        """
-        super().__init__(parent, position)
-        if not index.isValid():
-            return
-        self.addAction(parent.ui.actionCopy)
-        self.addAction(parent.ui.actionPaste)
-        self.addSeparator()
-        self.addAction(parent.ui.actionRemove_selected)
-
-
-class EditableParameterValueContextMenu(CustomContextMenu):
-    """Context menu class for object (relationship) parameter value items in tree views."""
-
-    def __init__(self, parent, position, index):
-        """
-        Args:
-            parent (QWidget): Parent for menu widget
-            position (QPoint): Position on screen
-            index (QModelIndex): Index of item that requested the context-menu
-        """
-        super().__init__(parent, position)
-        if not index.isValid():
-            return
-        self.add_action("Open in editor...")
-        self.addSeparator()
-        self.add_action("Plot")
-        plot_in_window_menu = QMenu("Plot in window")
-        _prepare_plot_in_window_menu(plot_in_window_menu)
-        plot_in_window_menu.triggered.connect(self._plot_in_window)
-        self.plot_in_window_option = None
-        self.addMenu(plot_in_window_menu)
-        self.addSeparator()
-        self.addAction(parent.ui.actionCopy)
-        self.addAction(parent.ui.actionPaste)
-        self.addSeparator()
-        self.addAction(parent.ui.actionRemove_selected)
-
-    @Slot("QAction")
-    def _plot_in_window(self, action):
-        """Sets the option attributes ready for plotting in an existing window."""
-        self.option = "Plot in window"
-        self.plot_in_window_option = action.text()
-
-
-class ParameterValueListContextMenu(CustomContextMenu):
-    """Context menu class for parameter enum view in tree view form."""
-
-    def __init__(self, parent, position, index):
-        """
-        Args:
-            parent (QWidget): Parent for menu widget
-            position (QPoint): Position on screen
-            index (QModelIndex): Index of item that requested the context-menu
-        """
-        super().__init__(parent, position)
-        if not index.isValid():
-            return
-        copy_icon = self._parent.ui.actionCopy.icon()
-        remove_icon = QIcon(":/icons/minus.png")
-        self.add_action("Copy", copy_icon)
-        self.addSeparator()
-        self.add_action("Remove selected", remove_icon)
 
 
 class GraphViewContextMenu(QMenu):
@@ -477,16 +403,3 @@ class PivotTableHorizontalHeaderMenu(QMenu):
         """Sets the X flag for a column."""
         index = self._proxy_model.mapToSource(self._model_index)
         self._proxy_model.sourceModel().set_plot_x_column(index.column(), self._set_as_X_action.isChecked())
-
-
-def _prepare_plot_in_window_menu(menu):
-    """Fills a given menu with available plot window names."""
-    menu.clear()
-    plot_windows = PlotWidget.plot_windows
-    if not plot_windows:
-        menu.setEnabled(False)
-        return
-    menu.setEnabled(True)
-    window_names = list(plot_windows.keys())
-    for name in sorted(window_names):
-        menu.addAction(name)

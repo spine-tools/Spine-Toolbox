@@ -18,17 +18,13 @@ Contains the ParameterViewMixin class.
 
 from PySide2.QtCore import Qt, Slot
 from PySide2.QtWidgets import QHeaderView
-from .custom_menus import EditableParameterValueContextMenu, ParameterContextMenu
 from .object_name_list_editor import ObjectNameListEditor
-from ...widgets.report_plotting_failure import report_plotting_failure
 from ...mvcmodels.compound_parameter_models import (
     CompoundObjectParameterDefinitionModel,
     CompoundObjectParameterValueModel,
     CompoundRelationshipParameterDefinitionModel,
     CompoundRelationshipParameterValueModel,
 )
-from ...widgets.plot_widget import PlotWidget
-from ...plotting import plot_selection, PlottingError, ParameterTablePlottingHints
 
 
 class ParameterViewMixin:
@@ -64,7 +60,7 @@ class ParameterViewMixin:
             view.verticalHeader().setDefaultSectionSize(self.default_row_height)
             view.horizontalHeader().setResizeContentsPrecision(self.visible_rows)
             view.horizontalHeader().setSectionsMovable(True)
-            view.setup_delegates(self)
+            view.connect_data_store_form(self)
 
     def add_menu_actions(self):
         """Adds toggle view actions to View menu."""
@@ -89,19 +85,6 @@ class ParameterViewMixin:
         )
         self.ui.dockWidget_relationship_parameter_definition.visibilityChanged.connect(
             self._handle_relationship_parameter_definition_visibility_changed
-        )
-        # Parameter tables context menu requested
-        self.ui.tableView_object_parameter_definition.customContextMenuRequested.connect(
-            self.show_object_parameter_definition_context_menu
-        )
-        self.ui.tableView_object_parameter_value.customContextMenuRequested.connect(
-            self.show_object_parameter_value_context_menu
-        )
-        self.ui.tableView_relationship_parameter_definition.customContextMenuRequested.connect(
-            self.show_relationship_parameter_definition_context_menu
-        )
-        self.ui.tableView_relationship_parameter_value.customContextMenuRequested.connect(
-            self.show_relationship_parameter_value_context_menu
         )
         self.ui.treeView_object.selectionModel().currentChanged.connect(self.set_default_parameter_data)
         self.ui.treeView_relationship.selectionModel().currentChanged.connect(self.set_default_parameter_data)
@@ -151,24 +134,6 @@ class ParameterViewMixin:
             current_object_names = []
         editor = ObjectNameListEditor(self, index, object_class_names, object_names_lists, current_object_names)
         editor.show()
-
-    # TODO: nothing connected to these two below
-
-    @Slot(int)
-    def _handle_object_parameter_tab_changed(self, index):
-        """Updates filter."""
-        if index == 0:
-            self.object_parameter_value_model.update_main_filter()
-        else:
-            self.object_parameter_definition_model.update_main_filter()
-
-    @Slot(int)
-    def _handle_relationship_parameter_tab_changed(self, index):
-        """Updates filter."""
-        if index == 0:
-            self.relationship_parameter_value_model.update_main_filter()
-        else:
-            self.relationship_parameter_definition_model.update_main_filter()
 
     @Slot(bool)
     def _handle_object_parameter_value_visibility_changed(self, visible):
@@ -220,85 +185,6 @@ class ParameterViewMixin:
             self.relationship_parameter_value_model.update_main_filter()
         if self.ui.dockWidget_relationship_parameter_definition.isVisible():
             self.relationship_parameter_definition_model.update_main_filter()
-
-    @Slot("QPoint")
-    def show_object_parameter_value_context_menu(self, pos):
-        """Shows the context menu for object parameter value table view.
-
-        Args:
-            pos (QPoint): Mouse position
-        """
-        self._show_parameter_context_menu(pos, self.ui.tableView_object_parameter_value, "value")
-
-    @Slot("QPoint")
-    def show_relationship_parameter_value_context_menu(self, pos):
-        """Shows the context menu for relationship parameter value table view.
-
-        Args:
-            pos (QPoint): Mouse position
-        """
-        self._show_parameter_context_menu(pos, self.ui.tableView_relationship_parameter_value, "value")
-
-    @Slot("QPoint")
-    def show_object_parameter_definition_context_menu(self, pos):
-        """Shows the context menu for object parameter table view.
-
-        Args:
-            pos (QPoint): Mouse position
-        """
-        self._show_parameter_context_menu(pos, self.ui.tableView_object_parameter_definition, "default_value")
-
-    @Slot("QPoint")
-    def show_relationship_parameter_definition_context_menu(self, pos):
-        """Shows the context menu for relationship parameter table view.
-
-        Args:
-            pos (QPoint): Mouse position
-        """
-        self._show_parameter_context_menu(pos, self.ui.tableView_relationship_parameter_definition, "default_value")
-
-    def _show_parameter_context_menu(self, position, table_view, value_column_header):
-        """
-        Shows the context menu for the given parameter table.
-
-        Args:
-            position (QPoint): local mouse position in the table view
-            table_view (QTableView): the table view where the context menu was triggered
-            value_column_header (str): column header for editable/plottable values
-        """
-        index = table_view.indexAt(position)
-        global_pos = table_view.mapToGlobal(position)
-        model = table_view.model()
-        flags = model.flags(index)
-        editable = (flags & Qt.ItemIsEditable) == Qt.ItemIsEditable
-        is_value = model.headerData(index.column(), Qt.Horizontal) == value_column_header
-        if editable and is_value:
-            menu = EditableParameterValueContextMenu(self, global_pos, index)
-        else:
-            menu = ParameterContextMenu(self, global_pos, index)
-        option = menu.get_action()
-        if option == "Open in editor...":
-            self.show_parameter_value_editor(index)
-        elif option == "Plot":
-            selection = table_view.selectedIndexes()
-            try:
-                hints = ParameterTablePlottingHints()
-                plot_widget = plot_selection(model, selection, hints)
-            except PlottingError as error:
-                report_plotting_failure(error, self)
-            else:
-                plot_widget.use_as_window(table_view.window(), value_column_header)
-                plot_widget.show()
-        elif option == "Plot in window":
-            plot_window_name = menu.plot_in_window_option
-            plot_window = PlotWidget.plot_windows.get(plot_window_name)
-            selection = table_view.selectedIndexes()
-            try:
-                hints = ParameterTablePlottingHints()
-                plot_selection(model, selection, hints, plot_window)
-            except PlottingError as error:
-                report_plotting_failure(error, self)
-        menu.deleteLater()
 
     def restore_ui(self):
         """Restores UI state from previous session."""

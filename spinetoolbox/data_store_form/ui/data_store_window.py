@@ -13,7 +13,7 @@
 # Form implementation generated from reading ui file '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/data_store_form/ui/data_store_window.ui',
 # licensing of '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/data_store_form/ui/data_store_window.ui' applies.
 #
-# Created: Wed May 20 23:23:14 2020
+# Created: Thu May 21 09:00:09 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -66,7 +66,7 @@ class Ui_MainWindow(object):
         self.verticalLayout.setContentsMargins(0, 0, 0, 0)
         self.verticalLayout.setObjectName("verticalLayout")
         self.treeView_parameter_value_list = ParameterValueListTreeView(self.dockWidgetContents)
-        self.treeView_parameter_value_list.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        self.treeView_parameter_value_list.setContextMenuPolicy(QtCore.Qt.ActionsContextMenu)
         self.treeView_parameter_value_list.setEditTriggers(QtWidgets.QAbstractItemView.AnyKeyPressed|QtWidgets.QAbstractItemView.EditKeyPressed)
         self.treeView_parameter_value_list.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
         self.treeView_parameter_value_list.setUniformRowHeights(True)
@@ -89,7 +89,7 @@ class Ui_MainWindow(object):
         sizePolicy.setHeightForWidth(self.tableView_relationship_parameter_value.sizePolicy().hasHeightForWidth())
         self.tableView_relationship_parameter_value.setSizePolicy(sizePolicy)
         self.tableView_relationship_parameter_value.setMouseTracking(True)
-        self.tableView_relationship_parameter_value.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        self.tableView_relationship_parameter_value.setContextMenuPolicy(QtCore.Qt.DefaultContextMenu)
         self.tableView_relationship_parameter_value.setLayoutDirection(QtCore.Qt.LeftToRight)
         self.tableView_relationship_parameter_value.setTabKeyNavigation(False)
         self.tableView_relationship_parameter_value.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectItems)
@@ -121,7 +121,7 @@ class Ui_MainWindow(object):
         font.setBold(False)
         self.tableView_object_parameter_value.setFont(font)
         self.tableView_object_parameter_value.setMouseTracking(True)
-        self.tableView_object_parameter_value.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        self.tableView_object_parameter_value.setContextMenuPolicy(QtCore.Qt.DefaultContextMenu)
         self.tableView_object_parameter_value.setLayoutDirection(QtCore.Qt.LeftToRight)
         self.tableView_object_parameter_value.setTabKeyNavigation(False)
         self.tableView_object_parameter_value.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectItems)
@@ -149,7 +149,7 @@ class Ui_MainWindow(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.tableView_object_parameter_definition.sizePolicy().hasHeightForWidth())
         self.tableView_object_parameter_definition.setSizePolicy(sizePolicy)
-        self.tableView_object_parameter_definition.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        self.tableView_object_parameter_definition.setContextMenuPolicy(QtCore.Qt.DefaultContextMenu)
         self.tableView_object_parameter_definition.setLayoutDirection(QtCore.Qt.LeftToRight)
         self.tableView_object_parameter_definition.setTabKeyNavigation(False)
         self.tableView_object_parameter_definition.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectItems)
@@ -177,7 +177,7 @@ class Ui_MainWindow(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.tableView_relationship_parameter_definition.sizePolicy().hasHeightForWidth())
         self.tableView_relationship_parameter_definition.setSizePolicy(sizePolicy)
-        self.tableView_relationship_parameter_definition.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        self.tableView_relationship_parameter_definition.setContextMenuPolicy(QtCore.Qt.DefaultContextMenu)
         self.tableView_relationship_parameter_definition.setLayoutDirection(QtCore.Qt.LeftToRight)
         self.tableView_relationship_parameter_definition.setTabKeyNavigation(False)
         self.tableView_relationship_parameter_definition.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectItems)
@@ -674,8 +674,8 @@ class Ui_MainWindow(object):
         self.actionExport_session.setText(QtWidgets.QApplication.translate("MainWindow", "Export session...", None, -1))
         self.actionExport_session.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Export items added and updated in the current session (since last commit) into a file</p></body></html>", None, -1))
 
+from spinetoolbox.data_store_form.widgets.custom_qtableview import ObjectParameterDefinitionTableView, RelationshipParameterValueTableView, ObjectParameterValueTableView, FrozenTableView, PivotTableView, RelationshipParameterDefinitionTableView
 from spinetoolbox.widgets.custom_qlistview import DragListView
-from spinetoolbox.data_store_form.widgets.custom_qtableview import RelationshipParameterDefinitionTableView, ObjectParameterValueTableView, PivotTableView, RelationshipParameterValueTableView, FrozenTableView, ObjectParameterDefinitionTableView
-from spinetoolbox.data_store_form.widgets.custom_qtreeview import RelationshipTreeView, ParameterValueListTreeView, ObjectTreeView
 from spinetoolbox.widgets.custom_qgraphicsviews import EntityQGraphicsView
+from spinetoolbox.data_store_form.widgets.custom_qtreeview import ParameterValueListTreeView, RelationshipTreeView, ObjectTreeView
 from spinetoolbox import resources_icons_rc

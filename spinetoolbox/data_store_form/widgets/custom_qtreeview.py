@@ -24,10 +24,7 @@ from spinetoolbox.helpers import busy_effect
 
 
 class EntityTreeView(CopyTreeView):
-    """Custom QTreeView class for object tree in DataStoreForm.
-
-    Attributes:
-        parent (QWidget): The parent of this view
+    """Custom QTreeView class for entity trees in DataStoreForm.
     """
 
     entity_selection_changed = Signal(dict)
@@ -296,10 +293,11 @@ class RelationshipTreeView(EntityTreeView):
 
 class ParameterValueListTreeView(CopyTreeView):
     """Custom QTreeView class for parameter value list in DataStoreForm.
-
-    Attributes:
-        parent (QWidget): The parent of this view
     """
+
+    def connect_data_store_form(self, data_store_form):
+        self.addAction(data_store_form.ui.actionCopy)
+        self.addAction(data_store_form.ui.actionRemove_selected)
 
     def remove_selected(self):
         if not self.selectionModel().hasSelection():
