@@ -19,7 +19,7 @@ Contains TabularViewMixin class.
 from itertools import product
 from collections import namedtuple
 from PySide2.QtCore import Qt, Slot, QTimer
-from .custom_menus import TabularViewFilterMenu, PivotTableModelMenu, PivotTableHorizontalHeaderMenu
+from .custom_menus import TabularViewFilterMenu
 from .tabular_view_header_widget import TabularViewHeaderWidget
 from ...helpers import fix_name_ambiguity, busy_effect
 from ...mvcmodels.pivot_table_models import IndexId, PivotTableSortFilterProxy, PivotTableModel
@@ -54,16 +54,9 @@ class TabularViewMixin:
         self.pivot_table_proxy.setSourceModel(self.pivot_table_model)
         self.frozen_table_model = FrozenTableModel(self)
         self.ui.pivot_table.setModel(self.pivot_table_proxy)
+        self.ui.pivot_table.connect_data_store_form(self)
         self.ui.frozen_table.setModel(self.frozen_table_model)
-        self.ui.pivot_table.setContextMenuPolicy(Qt.CustomContextMenu)
-        self.ui.pivot_table.verticalHeader().setDefaultSectionSize(self.default_row_height)
         self.ui.frozen_table.verticalHeader().setDefaultSectionSize(self.default_row_height)
-        self.ui.pivot_table.horizontalHeader().setResizeContentsPrecision(self.visible_rows)
-        self.pivot_table_menu = PivotTableModelMenu(self)
-        self._pivot_table_horizontal_header_menu = PivotTableHorizontalHeaderMenu(
-            self.pivot_table_proxy, self.ui.pivot_table
-        )
-        self.ui.pivot_table.setup_delegates(self)
 
     def add_menu_actions(self):
         """Adds toggle view actions to View menu."""
@@ -77,10 +70,6 @@ class TabularViewMixin:
         super().connect_signals()
         self.ui.treeView_object.selectionModel().currentChanged.connect(self._handle_entity_tree_current_changed)
         self.ui.treeView_relationship.selectionModel().currentChanged.connect(self._handle_entity_tree_current_changed)
-        self.ui.pivot_table.customContextMenuRequested.connect(self.pivot_table_menu.request_menu)
-        self.ui.pivot_table.horizontalHeader().customContextMenuRequested.connect(
-            self._pivot_table_horizontal_header_menu.request_menu
-        )
         self.pivot_table_model.modelReset.connect(self.make_pivot_headers)
         self.ui.pivot_table.horizontalHeader().header_dropped.connect(self.handle_header_dropped)
         self.ui.pivot_table.verticalHeader().header_dropped.connect(self.handle_header_dropped)

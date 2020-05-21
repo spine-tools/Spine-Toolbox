@@ -24,8 +24,7 @@ from spinetoolbox.helpers import busy_effect
 
 
 class EntityTreeView(CopyTreeView):
-    """Custom QTreeView class for entity trees in DataStoreForm.
-    """
+    """Custom QTreeView class for entity trees in DataStoreForm."""
 
     entity_selection_changed = Signal(dict)
 
@@ -41,14 +40,25 @@ class EntityTreeView(CopyTreeView):
         self._data_store_form = None
 
     def connect_data_Store_form(self, data_store_form):
+        """Connects a data store form to work with this view.
+
+        Args:
+             data_store_form (DataStoreForm)
+        """
         self._data_store_form = data_store_form
         self.create_context_menu()
         self.connect_signals()
 
+    def add_middle_actions(self):
+        """Adds action at the middle of the context menu.
+        Subclasses can reimplement at will.
+        """
+
     def create_context_menu(self):
+        """Creates a context menu for this view."""
         self._menu.addAction(self._data_store_form.ui.actionCopy)
         self._menu.addSeparator()
-        self._add_custom_actions()
+        self.add_middle_actions()
         self._menu.addSeparator()
         self._menu.addAction(self._data_store_form.ui.actionEdit_tree_items)
         self._menu.addAction(self._data_store_form.ui.actionRemove_selected)
@@ -63,6 +73,7 @@ class EntityTreeView(CopyTreeView):
         self._menu.addAction("Export selected", self.export_selected)
 
     def connect_signals(self):
+        """Connects signals."""
         self._data_store_form.ui.actionEdit_tree_items.triggered.connect(self.edit_selected)
         self.expanded.connect(self._resize_first_column_to_contents)
         self.collapsed.connect(self._resize_first_column_to_contents)
@@ -70,6 +81,7 @@ class EntityTreeView(CopyTreeView):
 
     @Slot(bool)
     def edit_selected(self, _checked=False):
+        """Edits all selected indexes using the connected data store form."""
         self._data_store_form.edit_entity_tree_items(self.selected_indexes)
 
     @Slot("QModelIndex")
@@ -94,10 +106,7 @@ class EntityTreeView(CopyTreeView):
 
     @Slot("QModelIndex", "EditTrigger", "QEvent")
     def edit(self, index, trigger, event):
-        """Send signal instead of editing item, so
-        DataStoreForm can catch this signal and open a custom QDialog
-        for edition.
-        """
+        """Edit all selected items."""
         if trigger == QTreeView.EditKeyPressed:
             self.edit_selected()
         return False
@@ -110,6 +119,7 @@ class EntityTreeView(CopyTreeView):
 
     @busy_effect
     def fully_expand(self):
+        """Expands selected indexes and all their children."""
         self.expanded.disconnect(self._resize_first_column_to_contents)
         model = self.model()
         for index in self.selectionModel().selectedIndexes():
@@ -122,6 +132,7 @@ class EntityTreeView(CopyTreeView):
 
     @busy_effect
     def fully_collapse(self):
+        """Collapses selected indexes and all their children."""
         self.collapsed.disconnect(self._resize_first_column_to_contents)
         model = self.model()
         for index in self.selectionModel().selectedIndexes():
@@ -133,29 +144,35 @@ class EntityTreeView(CopyTreeView):
         self._resize_first_column_to_contents()
 
     def export_selected(self):
+        """Exports data from selected indexes using the connected data store form."""
         self._data_store_form.export_selected(self.selected_indexes)
 
     def remove_selected(self):
+        """Exports selected indexes using the connected data store form."""
         self._data_store_form.show_remove_entity_tree_items_form(self.selected_indexes)
 
-    def update_actions_visible(self, item):
+    def update_actions_visibility(self, item):
+        """Updates the visible property of actions according to whether or not they apply to given item."""
         self.fully_expand_action.setVisible(item.has_children())
         self.fully_collapse_action.setVisible(item.has_children())
 
     def contextMenuEvent(self, event):
+        """Shows context menu.
+
+        Args:
+            event (QContextMenuEvent)
+        """
         index = self.indexAt(event.pos())
         if index.column() != 0:
             return
         item = index.model().item_from_index(index)
-        self.update_actions_visible(item)
+        self.update_actions_visibility(item)
         self._menu.exec_(event.globalPos())
 
     def mousePressEvent(self, event):
-        """Overrides selection behaviour if the user has selected sticky
-        selection in Settings. If sticky selection is enabled, multi-selection is
-        enabled when selecting items in the Object tree. Pressing the Ctrl-button down,
-        enables single selection. If sticky selection is disabled, single selection is
-        enabled and pressing the Ctrl-button down enables multi-selection.
+        """Overrides selection behaviour if the user has selected sticky selection in Settings.
+        If sticky selection is enabled, multiple-selection is enabled when selecting items in the Object tree.
+        Pressing the Ctrl-button down, enables single selection.
 
         Args:
             event (QMouseEvent)
@@ -182,6 +199,8 @@ class EntityTreeView(CopyTreeView):
 
 
 class ObjectTreeView(EntityTreeView):
+    """Custom QTreeView class for the object tree in DataStoreForm."""
+
     def __init__(self, parent):
         """Initialize the view."""
         super().__init__(parent=parent)
@@ -190,8 +209,8 @@ class ObjectTreeView(EntityTreeView):
         self.find_next_action = None
         self.duplicate_object_action = None
 
-    def update_actions_visible(self, item):
-        super().update_actions_visible(item)
+    def update_actions_visibility(self, item):
+        super().update_actions_visibility(item)
         self.add_object_classes_action.setVisible(item.item_type == "root")
         self.add_objects_action.setVisible(item.item_type == "object class")
         self.add_relationship_classes_action.setVisible(item.item_type == "object class")
@@ -199,7 +218,7 @@ class ObjectTreeView(EntityTreeView):
         self.duplicate_object_action.setVisible(item.item_type == "object")
         self.find_next_action.setVisible(item.item_type == "relationship")
 
-    def _add_custom_actions(self):
+    def add_middle_actions(self):
         self.add_object_classes_action = self._menu.addAction(
             self._data_store_form.ui.actionAdd_object_classes.icon(), "Add objects classes", self.add_object_classes
         )
@@ -251,7 +270,7 @@ class ObjectTreeView(EntityTreeView):
         )
 
     def find_next_relationship(self):
-        """Expands next occurrence of a relationship in object tree."""
+        """Finds the next occurrence of the relationship at the current index and expands it."""
         index = self.currentIndex()
         next_index = self.model().find_next_relationship_index(index)
         if not next_index:
@@ -261,12 +280,15 @@ class ObjectTreeView(EntityTreeView):
         self.expand(next_index)
 
     def duplicate_object(self):
+        """Duplicate the object at the current index using the connected data store form."""
         index = self.currentIndex()
         self._data_store_form.duplicate_object(index)
 
 
 class RelationshipTreeView(EntityTreeView):
-    def _add_custom_actions(self):
+    """Custom QTreeView class for the relationship tree in DataStoreForm."""
+
+    def add_middle_actions(self):
         self.add_relationship_classes_action = self._menu.addAction(
             self._data_store_form.ui.actionAdd_object_classes.icon(),
             "Add relationship classes",
@@ -276,8 +298,8 @@ class RelationshipTreeView(EntityTreeView):
             self._data_store_form.ui.actionAdd_objects.icon(), "Add relationships", self.add_relationships
         )
 
-    def update_actions_visible(self, item):
-        super().update_actions_visible(item)
+    def update_actions_visibility(self, item):
+        super().update_actions_visibility(item)
         self.add_relationship_classes_action.setVisible(item.item_type == "root")
         self.add_relationships_action.setVisible(item.item_type == "relationship class")
 

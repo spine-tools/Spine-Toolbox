@@ -13,7 +13,7 @@
 # Form implementation generated from reading ui file '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/data_store_form/ui/data_store_window.ui',
 # licensing of '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/data_store_form/ui/data_store_window.ui' applies.
 #
-# Created: Thu May 21 09:00:09 2020
+# Created: Thu May 21 11:11:15 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -378,6 +378,7 @@ class Ui_MainWindow(object):
         self.horizontalLayout.addWidget(self.comboBox_pivot_table_input_type)
         self.verticalLayout_13.addLayout(self.horizontalLayout)
         self.pivot_table = PivotTableView(self.dockWidgetContents_10)
+        self.pivot_table.setContextMenuPolicy(QtCore.Qt.DefaultContextMenu)
         self.pivot_table.setObjectName("pivot_table")
         self.verticalLayout_13.addWidget(self.pivot_table)
         self.dockWidget_pivot_table.setWidget(self.dockWidgetContents_10)
@@ -674,8 +675,8 @@ class Ui_MainWindow(object):
         self.actionExport_session.setText(QtWidgets.QApplication.translate("MainWindow", "Export session...", None, -1))
         self.actionExport_session.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Export items added and updated in the current session (since last commit) into a file</p></body></html>", None, -1))
 
-from spinetoolbox.data_store_form.widgets.custom_qtableview import ObjectParameterDefinitionTableView, RelationshipParameterValueTableView, ObjectParameterValueTableView, FrozenTableView, PivotTableView, RelationshipParameterDefinitionTableView
-from spinetoolbox.widgets.custom_qlistview import DragListView
+from spinetoolbox.data_store_form.widgets.custom_qtableview import ObjectParameterValueTableView, PivotTableView, FrozenTableView, RelationshipParameterDefinitionTableView, RelationshipParameterValueTableView, ObjectParameterDefinitionTableView
+from spinetoolbox.data_store_form.widgets.custom_qtreeview import ParameterValueListTreeView, ObjectTreeView, RelationshipTreeView
 from spinetoolbox.widgets.custom_qgraphicsviews import EntityQGraphicsView
-from spinetoolbox.data_store_form.widgets.custom_qtreeview import ParameterValueListTreeView, RelationshipTreeView, ObjectTreeView
+from spinetoolbox.widgets.custom_qlistview import DragListView
 from spinetoolbox import resources_icons_rc

@@ -20,7 +20,7 @@ from PySide2.QtCore import Qt, Signal, Slot
 from PySide2.QtWidgets import QTableView, QAbstractItemView, QMenu
 from ...widgets.report_plotting_failure import report_plotting_failure
 from ...widgets.plot_widget import PlotWidget, _prepare_plot_in_window_menu
-from ...plotting import plot_selection, PlottingError, ParameterTablePlottingHints
+from ...plotting import plot_selection, PlottingError, ParameterTablePlottingHints, PivotTablePlottingHints
 from .pivot_table_header_view import PivotTableHeaderView
 from .tabular_view_header_widget import TabularViewHeaderWidget
 from ...widgets.custom_qtableview import CopyPasteTableView, AutoFilterCopyPasteTableView
@@ -51,15 +51,30 @@ class ParameterTableView(AutoFilterCopyPasteTableView):
 
     @property
     def value_column_header(self):
+        """Either "default value" or "value". Used to identifiy the value column for advanced editting and plotting.
+        """
         raise NotImplementedError()
 
     def connect_data_store_form(self, data_store_form):
+        """Connects a data store form to work with this view.
+
+        Args:
+             data_store_form (DataStoreForm)
+        """
         self._data_store_form = data_store_form
         self.create_context_menu()
         self.create_delegates()
 
     def _make_delegate(self, column_name, delegate_class):
-        """Returns a custom delegate for a given view."""
+        """Creates a delegate for the given column and returns it.
+
+        Args:
+            column_name (str)
+            delegate_class (ParameterDelegate)
+
+        Returns:
+            ParameterDelegate
+        """
         column = self.model().header.index(column_name)
         delegate = delegate_class(self._data_store_form, self._data_store_form.db_mngr)
         self.setItemDelegateForColumn(column, delegate)
@@ -67,14 +82,17 @@ class ParameterTableView(AutoFilterCopyPasteTableView):
         return delegate
 
     def create_delegates(self):
+        """Creates delegates for this view"""
         self._make_delegate("database", DatabaseNameDelegate)
 
     def open_in_editor(self):
+        """Opens the current index in a parameter value editor using the connected data store form."""
         index = self.currentIndex()
         self._data_store_form.show_parameter_value_editor(index)
 
     @Slot(bool)
     def plot(self, checked=False):
+        """Plots current index."""
         selection = self.selectedIndexes()
         try:
             hints = ParameterTablePlottingHints()
@@ -87,7 +105,7 @@ class ParameterTableView(AutoFilterCopyPasteTableView):
 
     @Slot("QAction")
     def plot_in_window(self, action):
-        """Plots in window given by the action's name."""
+        """Plots current index in the window given by action's name."""
         plot_window_name = action.text()
         plot_window = PlotWidget.plot_windows.get(plot_window_name)
         selection = self.selectedIndexes()
@@ -99,6 +117,7 @@ class ParameterTableView(AutoFilterCopyPasteTableView):
             report_plotting_failure(error, self._data_store_form)
 
     def create_context_menu(self):
+        """Creates a context menu for this view."""
         self.open_in_editor_action = self._menu.addAction("Open in editor...", self.open_in_editor)
         self._menu.addSeparator()
         self.plot_action = self._menu.addAction("Plot", self.plot)
@@ -109,6 +128,11 @@ class ParameterTableView(AutoFilterCopyPasteTableView):
         self._menu.addAction(self._data_store_form.ui.actionRemove_selected)
 
     def contextMenuEvent(self, event):
+        """Shows context menu.
+
+        Args:
+            event (QContextMenuEvent)
+        """
         index = self.indexAt(event.pos())
         model = self.model()
         is_value = model.headerData(index.column(), Qt.Horizontal) == self.value_column_header
@@ -214,25 +238,204 @@ class RelationshipParameterValueTableView(RelationshipParameterTableMixin, Param
 
 class PivotTableView(CopyPasteTableView):
     """Custom QTableView class with pivot capabilities.
-
-    Attributes:
-        parent (QWidget): The parent of this view
     """
+
+    _REMOVE_OBJECT = "Remove selected objects"
+    _REMOVE_RELATIONSHIP = "Remove selected relationships"
+    _REMOVE_PARAMETER = "Remove selected parameter definitions"
 
     def __init__(self, parent=None):
         """Initialize the class."""
         super().__init__(parent)
+        self._data_store_form = None
+        self._menu = QMenu(self)
+        self._selected_value_indexes = list()
+        self._selected_entity_indexes = list()
+        self._selected_parameter_indexes = list()
+        self.open_in_editor_action = None
+        self.plot_action = None
+        self._plot_in_window_menu = None
+        self.remove_values_action = None
+        self.delete_object_action = None
+        self.delete_relationship_action = None
+        self.delete_parameter_action = None
+
+    @property
+    def source_model(self):
+        return self.model().sourceModel()
+
+    @property
+    def db_mngr(self):
+        return self.source_model.db_mngr
+
+    @property
+    def db_map(self):
+        return self._data_store_form.db_map
+
+    def connect_data_store_form(self, data_store_form):
+        self._data_store_form = data_store_form
+        self.setup_delegates()
+        self.create_context_menu()
         h_header = PivotTableHeaderView(Qt.Horizontal, "columns", self)
+        h_header.setContextMenuPolicy(Qt.DefaultContextMenu)
+        h_header.setResizeContentsPrecision(data_store_form.visible_rows)
         v_header = PivotTableHeaderView(Qt.Vertical, "rows", self)
+        v_header.setContextMenuPolicy(Qt.NoContextMenu)
+        v_header.setDefaultSectionSize(data_store_form.default_row_height)
         self.setHorizontalHeader(h_header)
         self.setVerticalHeader(v_header)
-        h_header.setContextMenuPolicy(Qt.CustomContextMenu)
 
-    def setup_delegates(self, data_store_form):
-        delegate = PivotTableDelegate(data_store_form)
+    def create_context_menu(self):
+        self.open_in_editor_action = self._menu.addAction("Open in editor...", self.open_in_editor)
+        self._menu.addSeparator()
+        self.plot_action = self._menu.addAction("Plot", self.plot)
+        self._plot_in_window_menu = self._menu.addMenu("Plot in window")
+        self._plot_in_window_menu.triggered.connect(self._plot_in_window)
+        self._menu.addSeparator()
+        self.remove_values_action = self._menu.addAction("Remove selected parameter values", self.remove_values)
+        self.delete_object_action = self._menu.addAction(self._REMOVE_OBJECT, self.remove_objects)
+        self.delete_relationship_action = self._menu.addAction(self._REMOVE_RELATIONSHIP, self.remove_relationships)
+        self.delete_parameter_action = self._menu.addAction(self._REMOVE_PARAMETER, self.remove_parameters)
+
+    def setup_delegates(self):
+        delegate = PivotTableDelegate(self._data_store_form)
         self.setItemDelegate(delegate)
-        delegate.parameter_value_editor_requested.connect(data_store_form.show_parameter_value_editor)
-        delegate.data_committed.connect(data_store_form._set_model_data)
+        delegate.parameter_value_editor_requested.connect(self._data_store_form.show_parameter_value_editor)
+        delegate.data_committed.connect(self._data_store_form._set_model_data)
+
+    def remove_selected(self):
+        self._find_selected_indexes()
+        self.remove_values()
+        self.remove_relationships()
+        self.remove_objects()
+        self.remove_parameters()
+
+    def remove_values(self):
+        row_mask = set()
+        column_mask = set()
+        for index in self._selected_value_indexes:
+            row, column = self.source_model.map_to_pivot(index)
+            row_mask.add(row)
+            column_mask.add(column)
+        data = self.source_model.model.get_pivoted_data(row_mask, column_mask)
+        ids = {item for row in data for item in row if item is not None}
+        parameter_values = [self.db_mngr.get_item(self.db_map, "parameter value", id_) for id_ in ids]
+        db_map_typed_data = {self.db_map: {"parameter value": parameter_values}}
+        self.db_mngr.remove_items(db_map_typed_data)
+
+    def remove_objects(self):
+        ids = {self.source_model._header_id(index) for index in self._selected_entity_indexes}
+        objects = [self.db_mngr.get_item(self.db_map, "object", id_) for id_ in ids]
+        db_map_typed_data = {self.db_map: {"object": objects}}
+        self.db_mngr.remove_items(db_map_typed_data)
+
+    def remove_relationships(self):
+        rels_by_object_ids = {rel["object_id_list"]: rel for rel in self._data_store_form._get_entities()}
+        relationships = []
+        for index in self._selected_entity_indexes:
+            object_ids, _ = self.source_model.header_ids(index)
+            object_ids = ",".join([str(id_) for id_ in object_ids])
+            relationships.append(rels_by_object_ids[object_ids])
+        db_map_typed_data = {self.db_map: {"relationship": relationships}}
+        self.db_mngr.remove_items(db_map_typed_data)
+
+    def remove_parameters(self):
+        ids = {self.source_model._header_id(index) for index in self._selected_parameter_indexes}
+        parameters = [self.db_mngr.get_item(self.db_map, "parameter definition", id_) for id_ in ids]
+        db_map_typed_data = {self.db_map: {"parameter definition": parameters}}
+        self.db_mngr.remove_items(db_map_typed_data)
+
+    def open_in_editor(self):
+        """Opens the parameter value editor for the first selected cell."""
+        index = self._selected_value_indexes[0]
+        self._data_store_form.show_parameter_value_editor(index)
+
+    def plot(self):
+        """Plots the selected cells in the pivot table."""
+        selected_indexes = self.selectedIndexes()
+        hints = PivotTablePlottingHints()
+        try:
+            plot_window = plot_selection(self.model(), selected_indexes, hints)
+        except PlottingError as error:
+            report_plotting_failure(error, self)
+            return
+        plotted_column_names = {
+            hints.column_label(self.model(), index.column())
+            for index in selected_indexes
+            if hints.is_index_in_data(self.model(), index)
+        }
+        plot_window.use_as_window(self.parentWidget(), ", ".join(plotted_column_names))
+        plot_window.show()
+
+    def contextMenuEvent(self, event):
+        """Shows context menu.
+
+        Args:
+            event (QContextMenuEvent)
+        """
+        self._find_selected_indexes()
+        self._update_actions_availability()
+        self._update_actions_text()
+        pos = event.globalPos()
+        self._menu.move(pos)
+        _prepare_plot_in_window_menu(self._plot_in_window_menu)
+        self._menu.show()
+
+    def _find_selected_indexes(self):
+        indexes = [self.model().mapToSource(ind) for ind in self.selectedIndexes()]
+        self._selected_value_indexes = list()
+        self._selected_entity_indexes = list()
+        self._selected_parameter_indexes = list()
+        for index in indexes:
+            if self.source_model.index_in_data(index):
+                self._selected_value_indexes.append(index)
+            elif self.source_model.index_in_headers(index):
+                if self.source_model._top_left_id(index) == -1:
+                    self._selected_parameter_indexes.append(index)
+                else:
+                    self._selected_entity_indexes.append(index)
+
+    def _update_actions_availability(self):
+        self.open_in_editor_action.setEnabled(len(self._selected_value_indexes) == 1)
+        self.plot_action.setEnabled(len(self._selected_value_indexes) > 0)
+        self.remove_values_action.setEnabled(bool(self._selected_value_indexes))
+        self.delete_object_action.setEnabled(bool(self._selected_entity_indexes))
+        self.delete_relationship_action.setEnabled(
+            bool(self._selected_entity_indexes) and self._data_store_form.current_class_type == "relationship class"
+        )
+        self.delete_parameter_action.setEnabled(bool(self._selected_parameter_indexes))
+
+    def _update_actions_text(self):
+        self.delete_object_action.setText(self._REMOVE_OBJECT)
+        self.delete_relationship_action.setText(self._REMOVE_RELATIONSHIP)
+        self.delete_parameter_action.setText(self._REMOVE_PARAMETER)
+        if len(self._selected_entity_indexes) == 1:
+            index = self._selected_entity_indexes[0]
+            object_name = self.source_model.header_name(index)
+            self.delete_object_action.setText("Remove object: {}".format(object_name))
+            if self.delete_relationship_action.isEnabled():
+                object_names, _ = self.source_model.header_names(index)
+                relationship_name = self.db_mngr._GROUP_SEP.join(object_names)
+                self.delete_relationship_action.setText("Remove relationship: {}".format(relationship_name))
+        if len(self._selected_parameter_indexes) == 1:
+            index = self._selected_parameter_indexes[0]
+            parameter_name = self.source_model.header_name(index)
+            self.delete_parameter_action.setText("Remove parameter definition: {}".format(parameter_name))
+
+    @Slot("QAction")
+    def _plot_in_window(self, action):
+        window_id = action.text()
+        plot_window = PlotWidget.plot_windows.get(window_id)
+        if plot_window is None:
+            self.plot()
+            return
+        selected_indexes = self.selectedIndexes()
+        hints = PivotTablePlottingHints()
+        try:
+            plot_selection(self.model(), selected_indexes, hints, plot_window)
+            plot_window.raise_()
+        except PlottingError as error:
+            report_plotting_failure(error, self)
 
 
 class FrozenTableView(QTableView):

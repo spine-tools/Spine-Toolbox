@@ -966,7 +966,11 @@
       </layout>
      </item>
      <item>
-      <widget class="PivotTableView" name="pivot_table"/>
+      <widget class="PivotTableView" name="pivot_table">
+       <property name="contextMenuPolicy">
+        <enum>Qt::DefaultContextMenu</enum>
+       </property>
+      </widget>
      </item>
     </layout>
    </widget>
