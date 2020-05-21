@@ -298,12 +298,6 @@ class ParameterViewMixin:
                 plot_selection(model, selection, hints, plot_window)
             except PlottingError as error:
                 report_plotting_failure(error, self)
-        elif option == "Remove selected":
-            table_view.remove_selected()
-        elif option == "Copy":
-            table_view.copy()
-        elif option == "Paste":
-            table_view.paste()
         menu.deleteLater()
 
     def restore_ui(self):

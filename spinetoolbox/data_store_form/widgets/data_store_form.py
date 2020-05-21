@@ -239,10 +239,6 @@ class DataStoreFormBase(QMainWindow):
         self.ui.actionCopy.setEnabled(self._focused_widget_has_callable("copy"))
         self.ui.actionPaste.setEnabled(self._focused_widget_has_callable("paste"))
         self.ui.actionRemove_selected.setEnabled(self._focused_widget_has_callable("remove_selected"))
-        entity_trees_have_selection = (
-            self.ui.treeView_object.has_selection() or self.ui.treeView_relationship.has_selection()
-        )
-        self.ui.actionEdit_tree_items.setEnabled(entity_trees_have_selection)
 
     def selected_entity_class_ids(self, entity_class_type):
         """Returns entity class ids selected in entity tree *and* parameter tag toolbar.

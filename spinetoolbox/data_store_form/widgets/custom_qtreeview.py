@@ -16,9 +16,9 @@ Classes for custom QTreeView.
 :date:   25.4.2018
 """
 
-from PySide2.QtWidgets import QTreeView
+from PySide2.QtWidgets import QTreeView, QMenu
 from PySide2.QtCore import Signal, Slot, Qt, QEvent
-from PySide2.QtGui import QMouseEvent
+from PySide2.QtGui import QMouseEvent, QIcon
 from spinetoolbox.widgets.custom_qtreeview import CopyTreeView
 from spinetoolbox.helpers import busy_effect
 
@@ -30,20 +30,50 @@ class EntityTreeView(CopyTreeView):
         parent (QWidget): The parent of this view
     """
 
-    editing_requested = Signal(dict)
-    removing_requested = Signal(dict)
-    export_requested = Signal(dict)
     entity_selection_changed = Signal(dict)
 
     def __init__(self, parent):
         """Initialize the view."""
         super().__init__(parent=parent)
         self.selected_indexes = {}
+        self._menu = QMenu(self)
+        self.add_relationship_classes_action = None
+        self.add_relationships_action = None
+        self.fully_expand_action = None
+        self.fully_collapse_action = None
+        self._data_store_form = None
+
+    def connect_data_Store_form(self, data_store_form):
+        self._data_store_form = data_store_form
+        self.create_context_menu()
+        self.connect_signals()
+
+    def create_context_menu(self):
+        self._menu.addAction(self._data_store_form.ui.actionCopy)
+        self._menu.addSeparator()
+        self._add_custom_actions()
+        self._menu.addSeparator()
+        self._menu.addAction(self._data_store_form.ui.actionEdit_tree_items)
+        self._menu.addAction(self._data_store_form.ui.actionRemove_selected)
+        self._menu.addSeparator()
+        self.fully_expand_action = self._menu.addAction(
+            QIcon(":/icons/menu_icons/angle-double-right.svg"), "Fully expand", self.fully_expand
+        )
+        self.fully_collapse_action = self._menu.addAction(
+            QIcon(":/icons/menu_icons/angle-double-left.svg"), "Fully collapse", self.fully_collapse
+        )
+        self._menu.addSeparator()
+        self._menu.addAction("Export selected", self.export_selected)
 
     def connect_signals(self):
+        self._data_store_form.ui.actionEdit_tree_items.triggered.connect(self.edit_selected)
         self.expanded.connect(self._resize_first_column_to_contents)
         self.collapsed.connect(self._resize_first_column_to_contents)
         self.selectionModel().selectionChanged.connect(self._handle_selection_changed)
+
+    @Slot(bool)
+    def edit_selected(self, _checked=False):
+        self._data_store_form.edit_entity_tree_items(self.selected_indexes)
 
     @Slot("QModelIndex")
     def _resize_first_column_to_contents(self, _index=None):
@@ -60,9 +90,20 @@ class EntityTreeView(CopyTreeView):
                 continue
             item_type = model.item_from_index(index).item_type
             self.selected_indexes.setdefault(item_type, {})[index] = None
-        if not any(self.selected_indexes.values()):
+        self._data_store_form.ui.actionEdit_tree_items.setEnabled(bool(indexes))
+        if not indexes:
             return
         self.entity_selection_changed.emit(self.selected_indexes)
+
+    @Slot("QModelIndex", "EditTrigger", "QEvent")
+    def edit(self, index, trigger, event):
+        """Send signal instead of editing item, so
+        DataStoreForm can catch this signal and open a custom QDialog
+        for edition.
+        """
+        if trigger == QTreeView.EditKeyPressed:
+            self.edit_selected()
+        return False
 
     def clear_any_selections(self):
         """Clears the selection if any."""
@@ -94,41 +135,23 @@ class EntityTreeView(CopyTreeView):
         self.collapsed.connect(self._resize_first_column_to_contents)
         self._resize_first_column_to_contents()
 
-    @Slot("QModelIndex", "EditTrigger", "QEvent")
-    def edit(self, index, trigger, event):
-        """Send signal instead of editing item, so
-        DataStoreForm can catch this signal and open a custom QDialog
-        for edition.
-        """
-        if trigger == QTreeView.EditKeyPressed:
-            self.edit_selected()
-        return False
-
-    def has_selection(self):
-        return self.selectionModel().hasSelection()
-
-    def edit_selected(self):
-        if not self.has_selection():
-            return
-        self.editing_requested.emit(self.selected_indexes)
+    def export_selected(self):
+        self._data_store_form.export_selected(self.selected_indexes)
 
     def remove_selected(self):
-        if not self.has_selection():
+        self._data_store_form.show_remove_entity_tree_items_form(self.selected_indexes)
+
+    def update_actions_visible(self, item):
+        self.fully_expand_action.setVisible(item.has_children())
+        self.fully_collapse_action.setVisible(item.has_children())
+
+    def contextMenuEvent(self, event):
+        index = self.indexAt(event.pos())
+        if index.column() != 0:
             return
-        self.removing_requested.emit(self.selected_indexes)
-
-    def export_selected(self):
-        if not self.has_selection():
-            return
-        self.export_requested.emit(self.selected_indexes)
-
-
-class StickySelectionEntityTreeView(EntityTreeView):
-    """Custom QTreeView class for object tree in DataStoreForm.
-
-    Attributes:
-        parent (QWidget): The parent of this view
-    """
+        item = index.model().item_from_index(index)
+        self.update_actions_visible(item)
+        self._menu.exec_(event.globalPos())
 
     def mousePressEvent(self, event):
         """Overrides selection behaviour if the user has selected sticky
@@ -159,6 +182,116 @@ class StickySelectionEntityTreeView(EntityTreeView):
             QEvent.MouseButtonPress, local_pos, window_pos, screen_pos, button, buttons, modifiers, source
         )
         super().mousePressEvent(new_event)
+
+
+class ObjectTreeView(EntityTreeView):
+    def __init__(self, parent):
+        """Initialize the view."""
+        super().__init__(parent=parent)
+        self.add_objects_action = None
+        self.add_object_classes_action = None
+        self.find_next_action = None
+        self.duplicate_object_action = None
+
+    def update_actions_visible(self, item):
+        super().update_actions_visible(item)
+        self.add_object_classes_action.setVisible(item.item_type == "root")
+        self.add_objects_action.setVisible(item.item_type == "object class")
+        self.add_relationship_classes_action.setVisible(item.item_type == "object class")
+        self.add_relationships_action.setVisible(item.item_type == "relationship class")
+        self.duplicate_object_action.setVisible(item.item_type == "object")
+        self.find_next_action.setVisible(item.item_type == "relationship")
+
+    def _add_custom_actions(self):
+        self.add_object_classes_action = self._menu.addAction(
+            self._data_store_form.ui.actionAdd_object_classes.icon(), "Add objects classes", self.add_object_classes
+        )
+        self.add_objects_action = self._menu.addAction(
+            self._data_store_form.ui.actionAdd_objects.icon(), "Add objects", self.add_objects
+        )
+        self.add_relationship_classes_action = self._menu.addAction(
+            self._data_store_form.ui.actionAdd_object_classes.icon(),
+            "Add relationship classes",
+            self.add_relationship_classes,
+        )
+        self.add_relationships_action = self._menu.addAction(
+            self._data_store_form.ui.actionAdd_objects.icon(), "Add relationships", self.add_relationships
+        )
+        self._menu.addSeparator()
+        self.find_next_action = self._menu.addAction(
+            QIcon(":/icons/menu_icons/ellipsis-h.png"), "Find next", self.find_next_relationship
+        )
+        self.duplicate_object_action = self._menu.addAction(
+            self._data_store_form.ui.actionAdd_objects.icon(), "Duplicate object", self.duplicate_object
+        )
+        self._menu.addSeparator()
+
+    def connect_signals(self):
+        super().connect_signals()
+        self.doubleClicked.connect(self.find_next_relationship)
+
+    def add_object_classes(self):
+        self._data_store_form.show_add_object_classes_form()
+
+    def add_objects(self):
+        index = self.currentIndex()
+        class_name = index.internalPointer().display_data
+        self._data_store_form.show_add_objects_form(class_name=class_name)
+
+    def add_relationship_classes(self):
+        index = self.currentIndex()
+        object_class_one_name = index.internalPointer().display_data
+        self._data_store_form.show_add_relationship_classes_form(object_class_one_name=object_class_one_name)
+
+    def add_relationships(self):
+        index = self.currentIndex()
+        item = index.internalPointer()
+        relationship_class_key = item.display_id
+        object_name = item.parent_item.display_data
+        object_class_name = item.parent_item.parent_item.display_data
+        self._data_store_form.show_add_relationships_form(
+            relationship_class_key=relationship_class_key, object_class_name=object_class_name, object_name=object_name
+        )
+
+    def find_next_relationship(self):
+        """Expands next occurrence of a relationship in object tree."""
+        index = self.currentIndex()
+        next_index = self.model().find_next_relationship_index(index)
+        if not next_index:
+            return
+        self.setCurrentIndex(next_index)
+        self.scrollTo(next_index)
+        self.expand(next_index)
+
+    def duplicate_object(self):
+        index = self.currentIndex()
+        self._data_store_form.duplicate_object(index)
+
+
+class RelationshipTreeView(EntityTreeView):
+    def _add_custom_actions(self):
+        self.add_relationship_classes_action = self._menu.addAction(
+            self._data_store_form.ui.actionAdd_object_classes.icon(),
+            "Add relationship classes",
+            self.add_relationship_classes,
+        )
+        self.add_relationships_action = self._menu.addAction(
+            self._data_store_form.ui.actionAdd_objects.icon(), "Add relationships", self.add_relationships
+        )
+
+    def update_actions_visible(self, item):
+        super().update_actions_visible(item)
+        self.add_relationship_classes_action.setVisible(item.item_type == "root")
+        self.add_relationships_action.setVisible(item.item_type == "relationship class")
+
+    def add_relationship_classes(self):
+        self._data_store_form.show_add_relationship_classes_form()
+
+    def add_relationships(self):
+        index = self.currentIndex()
+        item = index.internalPointer()
+        relationship_class_key = item.display_id
+        self._data_store_form.show_add_relationships_form(relationship_class_key=relationship_class_key)
 
 
 class ParameterValueListTreeView(CopyTreeView):

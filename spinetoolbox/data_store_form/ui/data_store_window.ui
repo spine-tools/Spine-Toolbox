@@ -517,7 +517,7 @@
       <number>0</number>
      </property>
      <item>
-      <widget class="StickySelectionEntityTreeView" name="treeView_object">
+      <widget class="ObjectTreeView" name="treeView_object">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
          <horstretch>1</horstretch>
@@ -525,7 +525,7 @@
         </sizepolicy>
        </property>
        <property name="contextMenuPolicy">
-        <enum>Qt::CustomContextMenu</enum>
+        <enum>Qt::DefaultContextMenu</enum>
        </property>
        <property name="accessibleName">
         <string>object tree</string>
@@ -581,9 +581,9 @@
       <number>0</number>
      </property>
      <item>
-      <widget class="StickySelectionEntityTreeView" name="treeView_relationship">
+      <widget class="RelationshipTreeView" name="treeView_relationship">
        <property name="contextMenuPolicy">
-        <enum>Qt::CustomContextMenu</enum>
+        <enum>Qt::DefaultContextMenu</enum>
        </property>
        <property name="accessibleName">
         <string>relationship tree</string>
@@ -1221,7 +1221,7 @@
   </action>
   <action name="actionEdit_tree_items">
    <property name="enabled">
-    <bool>true</bool>
+    <bool>false</bool>
    </property>
    <property name="icon">
     <iconset resource="../../ui/resources/resources_icons.qrc">
@@ -1381,6 +1381,11 @@
    <header>spinetoolbox/widgets/custom_qlistview.h</header>
   </customwidget>
   <customwidget>
+   <class>ObjectTreeView</class>
+   <extends>QTreeView</extends>
+   <header>spinetoolbox/data_store_form/widgets/custom_qtreeview.h</header>
+  </customwidget>
+  <customwidget>
    <class>ParameterValueListTreeView</class>
    <extends>QTreeView</extends>
    <header>spinetoolbox/data_store_form/widgets/custom_qtreeview.h</header>
@@ -1391,7 +1396,7 @@
    <header>spinetoolbox/data_store_form/widgets/custom_qtableview.h</header>
   </customwidget>
   <customwidget>
-   <class>StickySelectionEntityTreeView</class>
+   <class>RelationshipTreeView</class>
    <extends>QTreeView</extends>
    <header>spinetoolbox/data_store_form/widgets/custom_qtreeview.h</header>
   </customwidget>

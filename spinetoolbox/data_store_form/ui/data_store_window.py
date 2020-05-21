@@ -13,7 +13,7 @@
 # Form implementation generated from reading ui file '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/data_store_form/ui/data_store_window.ui',
 # licensing of '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/data_store_form/ui/data_store_window.ui' applies.
 #
-# Created: Wed May 20 19:18:49 2020
+# Created: Wed May 20 23:23:14 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -200,13 +200,13 @@ class Ui_MainWindow(object):
         self.verticalLayout_4.setSpacing(0)
         self.verticalLayout_4.setContentsMargins(0, 0, 0, 0)
         self.verticalLayout_4.setObjectName("verticalLayout_4")
-        self.treeView_object = StickySelectionEntityTreeView(self.dockWidgetContents_6)
+        self.treeView_object = ObjectTreeView(self.dockWidgetContents_6)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(1)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.treeView_object.sizePolicy().hasHeightForWidth())
         self.treeView_object.setSizePolicy(sizePolicy)
-        self.treeView_object.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        self.treeView_object.setContextMenuPolicy(QtCore.Qt.DefaultContextMenu)
         self.treeView_object.setEditTriggers(QtWidgets.QAbstractItemView.EditKeyPressed)
         self.treeView_object.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
         self.treeView_object.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectItems)
@@ -225,8 +225,8 @@ class Ui_MainWindow(object):
         self.verticalLayout_6.setSpacing(0)
         self.verticalLayout_6.setContentsMargins(0, 0, 0, 0)
         self.verticalLayout_6.setObjectName("verticalLayout_6")
-        self.treeView_relationship = StickySelectionEntityTreeView(self.dockWidgetContents_7)
-        self.treeView_relationship.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        self.treeView_relationship = RelationshipTreeView(self.dockWidgetContents_7)
+        self.treeView_relationship.setContextMenuPolicy(QtCore.Qt.DefaultContextMenu)
         self.treeView_relationship.setEditTriggers(QtWidgets.QAbstractItemView.EditKeyPressed)
         self.treeView_relationship.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
         self.treeView_relationship.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectItems)
@@ -476,7 +476,7 @@ class Ui_MainWindow(object):
         self.actionRefresh.setIcon(icon9)
         self.actionRefresh.setObjectName("actionRefresh")
         self.actionEdit_tree_items = QtWidgets.QAction(MainWindow)
-        self.actionEdit_tree_items.setEnabled(True)
+        self.actionEdit_tree_items.setEnabled(False)
         icon10 = QtGui.QIcon()
         icon10.addPixmap(QtGui.QPixmap(":/icons/menu_icons/cube_pen.svg"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.actionEdit_tree_items.setIcon(icon10)
@@ -674,8 +674,8 @@ class Ui_MainWindow(object):
         self.actionExport_session.setText(QtWidgets.QApplication.translate("MainWindow", "Export session...", None, -1))
         self.actionExport_session.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Export items added and updated in the current session (since last commit) into a file</p></body></html>", None, -1))
 
-from spinetoolbox.data_store_form.widgets.custom_qtableview import FrozenTableView, RelationshipParameterDefinitionTableView, PivotTableView, RelationshipParameterValueTableView, ObjectParameterDefinitionTableView, ObjectParameterValueTableView
-from spinetoolbox.data_store_form.widgets.custom_qtreeview import StickySelectionEntityTreeView, ParameterValueListTreeView
 from spinetoolbox.widgets.custom_qlistview import DragListView
+from spinetoolbox.data_store_form.widgets.custom_qtableview import RelationshipParameterDefinitionTableView, ObjectParameterValueTableView, PivotTableView, RelationshipParameterValueTableView, FrozenTableView, ObjectParameterDefinitionTableView
+from spinetoolbox.data_store_form.widgets.custom_qtreeview import RelationshipTreeView, ParameterValueListTreeView, ObjectTreeView
 from spinetoolbox.widgets.custom_qgraphicsviews import EntityQGraphicsView
 from spinetoolbox import resources_icons_rc

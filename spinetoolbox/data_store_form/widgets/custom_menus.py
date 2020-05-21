@@ -27,34 +27,6 @@ from ...widgets.report_plotting_failure import report_plotting_failure
 from ...widgets.custom_menus import CustomContextMenu, FilterMenuBase
 
 
-class EntityTreeContextMenu(CustomContextMenu):
-    """Context menu class for object tree items in tree view form."""
-
-    def __init__(self, parent, position, index):
-        """
-        Args:
-            parent (QWidget): Parent for menu widget
-            position (QPoint): Position on screen
-            index (QModelIndex): Index of item that requested the context-menu
-        """
-        super().__init__(parent, position)
-        if not index.isValid():
-            return
-        item = index.model().item_from_index(index)
-        self.add_action("Copy text", QIcon(":/icons/menu_icons/copy.svg"))
-        self.addSeparator()
-        for action_block in item.context_menu_actions:
-            for text, icon in action_block.items():
-                self.add_action(text, icon)
-            self.addSeparator()
-        if item.has_children():
-            self.addSeparator()
-            self.add_action("Fully expand", QIcon(":/icons/menu_icons/angle-double-right.svg"))
-            self.add_action("Fully collapse", QIcon(":/icons/menu_icons/angle-double-left.svg"))
-        self.addSeparator()
-        self.add_action("Export selected", QIcon(":/icons/project_item_icons/database-export.svg"))
-
-
 class ParameterContextMenu(CustomContextMenu):
     """Context menu class for object (relationship) parameter items in tree views."""
 
@@ -68,13 +40,10 @@ class ParameterContextMenu(CustomContextMenu):
         super().__init__(parent, position)
         if not index.isValid():
             return
-        copy_icon = self._parent.ui.actionCopy.icon()
-        paste_icon = self._parent.ui.actionPaste.icon()
-        remove_icon = QIcon(":/icons/menu_icons/cog_minus.svg")
-        self.add_action("Copy", copy_icon)
-        self.add_action("Paste", paste_icon)
+        self.addAction(parent.ui.actionCopy)
+        self.addAction(parent.ui.actionPaste)
         self.addSeparator()
-        self.add_action("Remove selected", remove_icon)
+        self.addAction(parent.ui.actionRemove_selected)
 
 
 class EditableParameterValueContextMenu(CustomContextMenu):
@@ -90,9 +59,6 @@ class EditableParameterValueContextMenu(CustomContextMenu):
         super().__init__(parent, position)
         if not index.isValid():
             return
-        copy_icon = self._parent.ui.actionCopy.icon()
-        paste_icon = self._parent.ui.actionPaste.icon()
-        remove_icon = QIcon(":/icons/menu_icons/cog_minus.svg")
         self.add_action("Open in editor...")
         self.addSeparator()
         self.add_action("Plot")
@@ -102,10 +68,10 @@ class EditableParameterValueContextMenu(CustomContextMenu):
         self.plot_in_window_option = None
         self.addMenu(plot_in_window_menu)
         self.addSeparator()
-        self.add_action("Copy", copy_icon)
-        self.add_action("Paste", paste_icon)
+        self.addAction(parent.ui.actionCopy)
+        self.addAction(parent.ui.actionPaste)
         self.addSeparator()
-        self.add_action("Remove selected", remove_icon)
+        self.addAction(parent.ui.actionRemove_selected)
 
     @Slot("QAction")
     def _plot_in_window(self, action):
@@ -433,7 +399,6 @@ class PivotTableModelMenu(QMenu):
             plot_selection(self._proxy, selected_indexes, hints, plot_window)
         except PlottingError as error:
             report_plotting_failure(error, self)
-            return
 
 
 class PivotTableHorizontalHeaderMenu(QMenu):
