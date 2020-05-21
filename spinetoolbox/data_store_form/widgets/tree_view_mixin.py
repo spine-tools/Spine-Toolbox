@@ -142,17 +142,6 @@ class TreeViewMixin:
         self.selected_ent_ids["relationship"] = self._db_map_class_ids(active_rel_inds)
         self.update_filter()
 
-    def edit_entity_tree_items(self, selected_indexes):
-        """Starts editing given indexes."""
-        obj_cls_inds = set(selected_indexes.get("object class", {}).keys())
-        obj_inds = set(selected_indexes.get("object", {}).keys())
-        rel_cls_inds = set(selected_indexes.get("relationship class", {}).keys())
-        rel_inds = set(selected_indexes.get("relationship", {}).keys())
-        self.show_edit_object_classes_form(obj_cls_inds)
-        self.show_edit_objects_form(obj_inds)
-        self.show_edit_relationship_classes_form(rel_cls_inds)
-        self.show_edit_relationships_form(rel_inds)
-
     def export_selected(self, selected_indexes):
         """Exports data from given indexes in the entity tree."""
         parcel = SpineDBParcel(self.db_mngr)
@@ -241,37 +230,47 @@ class TreeViewMixin:
         )
         dialog.show()
 
-    def show_edit_object_classes_form(self, indexes):
-        if not indexes:
+    def edit_entity_tree_items(self, selected_indexes):
+        """Starts editing given indexes."""
+        obj_cls_items = {ind.internalPointer() for ind in selected_indexes.get("object class", {})}
+        obj_items = {ind.internalPointer() for ind in selected_indexes.get("object", {})}
+        rel_cls_items = {ind.internalPointer() for ind in selected_indexes.get("relationship class", {})}
+        rel_items = {ind.internalPointer() for ind in selected_indexes.get("relationship", {})}
+        self.show_edit_object_classes_form(obj_cls_items)
+        self.show_edit_objects_form(obj_items)
+        self.show_edit_relationship_classes_form(rel_cls_items)
+        self.show_edit_relationships_form(rel_items)
+
+    def show_edit_object_classes_form(self, items):
+        if not items:
             return
-        items = {ind.internalPointer() for ind in indexes}
         dialog = EditObjectClassesDialog(self, self.db_mngr, items)
         dialog.show()
 
-    def show_edit_objects_form(self, indexes):
-        if not indexes:
+    def show_edit_objects_form(self, items):
+        if not items:
             return
-        items = {ind.internalPointer() for ind in indexes}
         dialog = EditObjectsDialog(self, self.db_mngr, items)
         dialog.show()
 
-    def show_edit_relationship_classes_form(self, indexes):
-        if not indexes:
+    def show_edit_relationship_classes_form(self, items):
+        if not items:
             return
-        items = {ind.internalPointer() for ind in indexes}
         dialog = EditRelationshipClassesDialog(self, self.db_mngr, items)
         dialog.show()
 
-    def show_edit_relationships_form(self, indexes):
-        if not indexes:
+    def show_edit_relationships_form(self, items):
+        if not items:
             return
-        items = {ind.internalPointer() for ind in indexes}
-        relationship_class_key = lambda item: item.parent_item.display_id
         items_by_class = {}
         for item in items:
-            items_by_class.setdefault(relationship_class_key(item), set()).add(item)
-        for relationship_class_key, items in items_by_class.items():
-            dialog = EditRelationshipsDialog(self, self.db_mngr, items, relationship_class_key)
+            data = item.db_map_data(item.first_db_map)
+            relationship_class_name = data["class_name"]
+            object_class_name_list = data["object_class_name_list"]
+            class_key = (relationship_class_name, object_class_name_list)
+            items_by_class.setdefault(class_key, set()).add(item)
+        for class_key, classed_items in items_by_class.items():
+            dialog = EditRelationshipsDialog(self, self.db_mngr, classed_items, class_key)
             dialog.show()
 
     @Slot(dict)

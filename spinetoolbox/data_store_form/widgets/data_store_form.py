@@ -150,6 +150,7 @@ class DataStoreFormBase(QMainWindow):
         self.ui.actionCopy.triggered.connect(self.copy)
         self.ui.actionPaste.triggered.connect(self.paste)
         self.ui.actionRemove_selected.triggered.connect(self.remove_selected)
+        self.ui.actionEdit_selected.triggered.connect(self.edit_selected)
         self.ui.actionManage_parameter_tags.triggered.connect(self.show_manage_parameter_tags_form)
         self.ui.actionMass_remove_items.triggered.connect(self.show_mass_remove_items_form)
         self.parameter_tag_toolbar.manage_tags_action_triggered.connect(self.show_manage_parameter_tags_form)
@@ -232,10 +233,11 @@ class DataStoreFormBase(QMainWindow):
     def _handle_menu_edit_about_to_show(self):
         """Runs when the edit menu from the main menubar is about to show.
         Enables or disables actions according to selection status."""
-        # TODO: Try to also check if there's a selection to enable copy and remove
+        # TODO: Try to also check if there's a selection to enable copy, remove, edit, etc.
         self.ui.actionCopy.setEnabled(self._focused_widget_has_callable("copy"))
         self.ui.actionPaste.setEnabled(self._focused_widget_has_callable("paste"))
         self.ui.actionRemove_selected.setEnabled(self._focused_widget_has_callable("remove_selected"))
+        self.ui.actionEdit_selected.setEnabled(self._focused_widget_has_callable("edit_selected"))
 
     def selected_entity_class_ids(self, entity_class_type):
         """Returns entity class ids selected in entity tree *and* parameter tag toolbar.
@@ -268,6 +270,11 @@ class DataStoreFormBase(QMainWindow):
     def remove_selected(self, checked=False):
         """Removes selected items."""
         self._call_on_focused_widget("remove_selected")
+
+    @Slot(bool)
+    def edit_selected(self, checked=False):
+        """Edits selected items."""
+        self._call_on_focused_widget("edit_selected")
 
     @Slot(bool)
     def copy(self, checked=False):
@@ -640,25 +647,6 @@ class DataStoreFormBase(QMainWindow):
         dialog = ManageParameterTagsDialog(self, self.db_mngr, *self.db_maps)
         dialog.show()
 
-    @Slot("QPoint")
-    def show_parameter_value_list_context_menu(self, pos):
-        """
-        Shows the context menu for parameter value list tree view.
-
-        Args:
-            pos (QPoint): Mouse position
-        """
-        index = self.ui.treeView_parameter_value_list.indexAt(pos)
-        global_pos = self.ui.treeView_parameter_value_list.viewport().mapToGlobal(pos)
-        parameter_value_list_context_menu = ParameterValueListContextMenu(self, global_pos, index)
-        parameter_value_list_context_menu.deleteLater()
-        option = parameter_value_list_context_menu.get_action()
-        if option == "Copy":
-            self.ui.treeView_parameter_value_list.copy()
-        elif option == "Remove selected":
-            self.ui.treeView_parameter_value_list.remove_selected()
-        parameter_value_list_context_menu.deleteLater()
-
     @Slot(bool)
     def show_mass_remove_items_form(self, checked=False):
         dialog = MassRemoveItemsDialog(self, self.db_mngr, *self.db_maps)
@@ -931,7 +919,6 @@ class DataStoreForm(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
             [self.ui.dockWidget_relationship_parameter_value, self.ui.dockWidget_relationship_parameter_definition]
         )
         self.ui.dockWidget_entity_graph.hide()
-        self.ui.dockWidget_item_palette.hide()
         self.ui.dockWidget_pivot_table.hide()
         self.ui.dockWidget_frozen_table.hide()
         docks = [
@@ -951,7 +938,6 @@ class DataStoreForm(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         self.splitDockWidget(self.ui.dockWidget_pivot_table, self.ui.dockWidget_frozen_table, Qt.Horizontal)
         self.splitDockWidget(self.ui.dockWidget_object_tree, self.ui.dockWidget_relationship_tree, Qt.Vertical)
         self.ui.dockWidget_entity_graph.hide()
-        self.ui.dockWidget_item_palette.hide()
         self.ui.dockWidget_object_parameter_value.hide()
         self.ui.dockWidget_object_parameter_definition.hide()
         self.ui.dockWidget_relationship_parameter_value.hide()
@@ -973,7 +959,6 @@ class DataStoreForm(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         self.splitDockWidget(self.ui.dockWidget_object_tree, self.ui.dockWidget_entity_graph, Qt.Horizontal)
         self.splitDockWidget(self.ui.dockWidget_entity_graph, self.ui.dockWidget_object_parameter_value, Qt.Vertical)
         self.splitDockWidget(self.ui.dockWidget_object_tree, self.ui.dockWidget_relationship_tree, Qt.Vertical)
-        self.splitDockWidget(self.ui.dockWidget_entity_graph, self.ui.dockWidget_item_palette, Qt.Horizontal)
         self.tabify_and_raise(
             [
                 self.ui.dockWidget_object_parameter_value,
@@ -988,9 +973,6 @@ class DataStoreForm(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         docks = [self.ui.dockWidget_entity_graph, self.ui.dockWidget_object_parameter_value]
         height = sum(d.size().height() for d in docks)
         self.resizeDocks(docks, [0.7 * height, 0.3 * height], Qt.Vertical)
-        docks = [self.ui.dockWidget_entity_graph, self.ui.dockWidget_item_palette]
-        width = sum(d.size().width() for d in docks)
-        self.resizeDocks(docks, [0.9 * width, 0.1 * width], Qt.Horizontal)
         self.end_style_change()
         self.ui.graphicsView.reset_zoom()
 

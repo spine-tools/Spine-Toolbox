@@ -60,7 +60,7 @@ class EntityTreeView(CopyTreeView):
         self._menu.addSeparator()
         self.add_middle_actions()
         self._menu.addSeparator()
-        self._menu.addAction(self._data_store_form.ui.actionEdit_tree_items)
+        self._menu.addAction(self._data_store_form.ui.actionEdit_selected)
         self._menu.addAction(self._data_store_form.ui.actionRemove_selected)
         self._menu.addSeparator()
         self.fully_expand_action = self._menu.addAction(
@@ -74,15 +74,9 @@ class EntityTreeView(CopyTreeView):
 
     def connect_signals(self):
         """Connects signals."""
-        self._data_store_form.ui.actionEdit_tree_items.triggered.connect(self.edit_selected)
         self.expanded.connect(self._resize_first_column_to_contents)
         self.collapsed.connect(self._resize_first_column_to_contents)
         self.selectionModel().selectionChanged.connect(self._handle_selection_changed)
-
-    @Slot(bool)
-    def edit_selected(self, _checked=False):
-        """Edits all selected indexes using the connected data store form."""
-        self._data_store_form.edit_entity_tree_items(self.selected_indexes)
 
     @Slot("QModelIndex")
     def _resize_first_column_to_contents(self, _index=None):
@@ -99,7 +93,6 @@ class EntityTreeView(CopyTreeView):
                 continue
             item_type = model.item_from_index(index).item_type
             self.selected_indexes.setdefault(item_type, {})[index] = None
-        self._data_store_form.ui.actionEdit_tree_items.setEnabled(bool(indexes))
         if not indexes:
             return
         self.entity_selection_changed.emit(self.selected_indexes)
@@ -148,8 +141,13 @@ class EntityTreeView(CopyTreeView):
         self._data_store_form.export_selected(self.selected_indexes)
 
     def remove_selected(self):
-        """Exports selected indexes using the connected data store form."""
+        """Removes selected indexes using the connected data store form."""
         self._data_store_form.show_remove_entity_tree_items_form(self.selected_indexes)
+
+    @Slot(bool)
+    def edit_selected(self, _checked=False):
+        """Edits all selected indexes using the connected data store form."""
+        self._data_store_form.edit_entity_tree_items(self.selected_indexes)
 
     def update_actions_visibility(self, item):
         """Updates the visible property of actions according to whether or not they apply to given item."""
@@ -177,7 +175,7 @@ class EntityTreeView(CopyTreeView):
         Args:
             event (QMouseEvent)
         """
-        sticky_selection = self.qsettings.value("appSettings/stickySelection", defaultValue="false")
+        sticky_selection = self._data_store_form.qsettings.value("appSettings/stickySelection", defaultValue="false")
         if sticky_selection == "false":
             super().mousePressEvent(event)
             return

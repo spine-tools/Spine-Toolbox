@@ -15,7 +15,7 @@ Classes for drawing graphics items on graph view's QGraphicsScene.
 :authors: M. Marin (KTH), P. Savolainen (VTT)
 :date:   4.4.2018
 """
-from PySide2.QtCore import Qt, Signal, Slot, QLineF
+from PySide2.QtCore import Qt, Signal, QLineF
 from PySide2.QtWidgets import (
     QGraphicsItem,
     QGraphicsTextItem,
@@ -26,31 +26,27 @@ from PySide2.QtWidgets import (
     QGraphicsLineItem,
     QStyle,
     QApplication,
+    QMenu,
 )
-from PySide2.QtGui import QPen, QBrush, QPainterPath, QFont, QTextCursor, QPalette, QGuiApplication
+from PySide2.QtGui import QPen, QBrush, QPainterPath, QFont, QPalette, QGuiApplication
 
 
 class EntityItem(QGraphicsPixmapItem):
-    def __init__(self, graph_view_form, x, y, extent, entity_id=None, entity_class_id=None):
+    def __init__(self, data_store_form, x, y, extent, entity_id):
         """Initializes item
 
         Args:
-            graph_view_form (GraphViewForm): 'owner'
+            data_store_form (DataStoreForm): 'owner'
             x (float): x-coordinate of central point
             y (float): y-coordinate of central point
             extent (int): Preferred extent
-            entity_id (int, optional): The entity id in case of a non-wip item
-            entity_class_id (int, optional): The entity class id in case of a wip item
+            entity_id (int): The entity id
         """
-        if not entity_id and not entity_class_id:
-            raise ValueError("Can't create an RelationshipItem without relationship id nor relationship class id.")
         super().__init__()
-        self._graph_view_form = graph_view_form
-        self.db_mngr = graph_view_form.db_mngr
-        self.db_map = graph_view_form.db_map
+        self._data_store_form = data_store_form
+        self.db_mngr = data_store_form.db_mngr
+        self.db_map = data_store_form.db_map
         self.entity_id = entity_id
-        self._entity_class_id = entity_class_id
-        self._entity_name = f"<WIP {self.entity_class_name}>"
         self.arc_items = list()
         self._extent = extent
         self.refresh_icon()
@@ -62,12 +58,6 @@ class EntityItem(QGraphicsPixmapItem):
         self._bg_brush = Qt.NoBrush
         self._init_bg()
         self._bg.setFlag(QGraphicsItem.ItemStacksBehindParent, enabled=True)
-        self.is_wip = None
-        self._question_item = None  # In case this becomes a template
-        if not self.entity_id:
-            self.become_wip()
-        else:
-            self.become_whole()
         self.setZValue(0)
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
         self.setFlag(QGraphicsItem.ItemIsMovable, enabled=True)
@@ -75,6 +65,7 @@ class EntityItem(QGraphicsPixmapItem):
         self.setFlag(QGraphicsItem.ItemSendsScenePositionChanges, enabled=True)
         self.setAcceptHoverEvents(True)
         self.setCursor(Qt.ArrowCursor)
+        self._menu = self._make_menu()
 
     @property
     def entity_type(self):
@@ -82,7 +73,7 @@ class EntityItem(QGraphicsPixmapItem):
 
     @property
     def entity_name(self):
-        return self.db_mngr.get_item(self.db_map, self.entity_type, self.entity_id).get("name", self._entity_name)
+        return self.db_mngr.get_item(self.db_map, self.entity_type, self.entity_id)["name"]
 
     @property
     def entity_class_type(self):
@@ -90,13 +81,33 @@ class EntityItem(QGraphicsPixmapItem):
 
     @property
     def entity_class_id(self):
-        return self.db_mngr.get_item(self.db_map, self.entity_type, self.entity_id).get(
-            "class_id", self._entity_class_id
-        )
+        return self.db_mngr.get_item(self.db_map, self.entity_type, self.entity_id)["class_id"]
 
     @property
     def entity_class_name(self):
         return self.db_mngr.get_item(self.db_map, self.entity_class_type, self.entity_class_id)["name"]
+
+    @property
+    def first_db_map(self):
+        return self.db_map
+
+    @property
+    def display_data(self):
+        return self.entity_name
+
+    @property
+    def display_database(self):
+        return self.db_map.codename
+
+    @property
+    def db_maps(self):
+        return (self.db_map,)
+
+    def db_map_data(self, _db_map):
+        return self.db_mngr.get_item(self.db_map, self.entity_type, self.entity_id)
+
+    def db_map_id(self, _db_map):
+        return self.entity_id
 
     def boundingRect(self):
         return super().boundingRect() | self.childrenBoundingRect()
@@ -145,28 +156,6 @@ class EntityItem(QGraphicsPixmapItem):
             arc_item (ArcItem)
         """
         self.arc_items.append(arc_item)
-
-    def become_wip(self):
-        """Turns this item into a work-in-progress."""
-        self.is_wip = True
-        font = QFont("", 0.6 * self._extent)
-        self._question_item = OutlinedTextItem("?", self, font)
-        # Position question item
-        rect = super().boundingRect()
-        question_rect = self._question_item.boundingRect()
-        x = rect.center().x() - question_rect.width() / 2
-        y = rect.center().y() - question_rect.height() / 2
-        self._question_item.setPos(x, y)
-        self.setToolTip(self._make_wip_tool_tip())
-
-    def _make_wip_tool_tip(self):
-        raise NotImplementedError()
-
-    def become_whole(self):
-        """Removes the wip status from this item."""
-        self.is_wip = False
-        if self._question_item:
-            self.scene().removeItem(self._question_item)
 
     def apply_zoom(self, factor):
         """Applies zoom.
@@ -249,6 +238,16 @@ class EntityItem(QGraphicsPixmapItem):
                 if other_item.is_wip:
                     other_item.wipe_out()
 
+    def _make_menu(self):
+        menu = QMenu(self._data_store_form)
+        menu.addAction(self._data_store_form.ui.actionHide_selected)
+        menu.addAction(self._data_store_form.ui.actionPrune_selected_entities)
+        menu.addAction(self._data_store_form.ui.actionPrune_selected_classes)
+        menu.addSeparator()
+        menu.addAction(self._data_store_form.ui.actionEdit_selected)
+        menu.addAction(self._data_store_form.ui.actionRemove_selected)
+        return menu
+
     def contextMenuEvent(self, e):
         """Shows context menu.
 
@@ -259,10 +258,7 @@ class EntityItem(QGraphicsPixmapItem):
         if not self.isSelected() and not e.modifiers() & Qt.ControlModifier:
             self.scene().clearSelection()
         self.setSelected(True)
-        self._show_item_context_menu_in_parent(e.screenPos())
-
-    def _show_item_context_menu_in_parent(self, pos):
-        raise NotImplementedError()
+        self._menu.exec_(e.screenPos())
 
 
 class RelationshipItem(EntityItem):
@@ -278,13 +274,11 @@ class RelationshipItem(EntityItem):
 
     @property
     def object_name_list(self):
-        return self.db_mngr.get_item(self.db_map, "relationship", self.entity_id).get(
-            "object_name_list", ",".join(["<unnamed>" for _ in range(len(self.object_class_id_list))])
-        )
+        return self.db_mngr.get_item(self.db_map, "relationship", self.entity_id)["object_name_list"]
 
     @property
     def object_id_list(self):
-        return self.db_mngr.get_item(self.db_map, "relationship", self.entity_id).get("object_id_list")
+        return self.db_mngr.get_item(self.db_map, "relationship", self.entity_id)["object_id_list"]
 
     @property
     def db_representation(self):
@@ -303,36 +297,8 @@ class RelationshipItem(EntityItem):
         bg_color.setAlphaF(0.8)
         self._bg_brush = QBrush(bg_color)
 
-    def validate_member_objects(self):
-        """Goes through connected object items and tries to complete the relationship."""
-        if not self.is_wip:
-            return True
-        object_id_list = [arc_item.obj_item.entity_id for arc_item in self.arc_items]
-        if None in object_id_list:
-            return True
-        object_name_list = [arc_item.obj_item.entity_name for arc_item in self.arc_items]
-        entity_id = self._graph_view_form.add_relationship(self._entity_class_id, object_id_list, object_name_list)
-        if not entity_id:
-            return False
-        self.entity_id = entity_id
-        self.become_whole()
-        return True
-
-    def _make_wip_tool_tip(self):
-        return """
-            <html>This is a work-in-progress <b>{0}</b> relationship.</html>
-        """.format(
-            self.entity_class_name
-        )
-
-    def become_whole(self):
-        super().become_whole()
-        self.setToolTip(self.entity_class_name)
-        for item in self.arc_items:
-            item.become_whole()
-
     def _show_item_context_menu_in_parent(self, pos):
-        self._graph_view_form.show_relationship_item_context_menu(pos)
+        self._data_store_form.show_relationship_item_context_menu(pos)
 
     def follow_object_by(self, dx, dy):
         factor = 1.0 / len(self.arc_items)
@@ -340,28 +306,23 @@ class RelationshipItem(EntityItem):
 
 
 class ObjectItem(EntityItem):
-    def __init__(self, graph_view_form, x, y, extent, entity_id=None, entity_class_id=None):
+    def __init__(self, data_store_form, x, y, extent, entity_id):
         """Initializes the item.
 
         Args:
-            graph_view_form (GraphViewForm): 'owner'
+            data_store_form (GraphViewForm): 'owner'
             x (float): x-coordinate of central point
             y (float): y-coordinate of central point
             extent (int): preferred extent
-            entity_id (int, optional): object id, if not given the item becomes a template
-            entity_class_id (int, optional): object class id, for template items
-
-        Raises:
-            ValueError: in case object_id and object_class_id are both not provided
+            entity_id (int): object id
         """
-        super().__init__(graph_view_form, x, y, extent, entity_id, entity_class_id)
+        super().__init__(data_store_form, x, y, extent, entity_id)
         self.setFlag(QGraphicsItem.ItemIsFocusable, enabled=True)
         self.label_item = EntityLabelItem(self)
-        self.label_item.entity_name_edited.connect(self.finish_name_editing)
         self.setZValue(0.5)
         self.update_name(self.entity_name)
-        self._press_pos = None
-        self._merge_target = None
+        description = self.db_mngr.get_item(self.db_map, "object", self.entity_id).get("description")
+        self.update_description(description)
 
     @property
     def entity_type(self):
@@ -391,171 +352,12 @@ class ObjectItem(EntityItem):
         super()._paint_as_deselected()
         self.label_item._paint_as_deselected()
 
-    def _make_wip_tool_tip(self):
-        return "<html>This is a work-in-progress <b>{0}</b>. Give it a name to finish the job.</html>".format(
-            self.entity_class_name
-        )
-
-    def become_whole(self):
-        super().become_whole()
-        description = self.db_mngr.get_item(self.db_map, "object", self.entity_id).get("description")
-        self.update_description(description)
-
     def update_description(self, description):
         self.setToolTip(f"<html>{description}</html>")
 
-    def edit_name(self):
-        """Starts editing the object name."""
-        self.setSelected(True)
-        self.label_item.start_editing()
-
-    @Slot(str)
-    def finish_name_editing(self, text):
-        """Runs when the user finishes editing the name.
-        Adds or updates the object in the database.
-
-        Args:
-            text (str): The new name.
-        """
-        if text == self.entity_name:
-            return
-        if self.is_wip:
-            # Add
-            entity_id = self._graph_view_form.add_object(self._entity_class_id, text)
-            if not entity_id:
-                return
-            self.entity_id = entity_id
-            for arc_item in self.arc_items:
-                arc_item.rel_item.validate_member_objects()
-            self.become_whole()
-        else:
-            # Update
-            self._graph_view_form.update_object(self.entity_id, text)
-        self.update_name(text)
-
-    def keyPressEvent(self, event):
-        """Starts editing the name if F2 is pressed.
-
-        Args:
-            event (QKeyEvent)
-        """
-        if event.key() == Qt.Key_F2:
-            self.edit_name()
-            event.accept()
-        else:
-            super().keyPressEvent(event)
-
-    def mouseDoubleClickEvent(self, event):
-        """Starts editing the name.
-
-        Args:
-            event (QGraphicsSceneMouseEvent)
-        """
-        self.edit_name()
-        event.accept()
-
-    def _is_in_wip_relationship(self):
-        return any(arc_item.rel_item.is_wip for arc_item in self.arc_items)
-
-    def device_rect(self, view):
-        """Returns the item's rect in devices's coordinates.
-        Used to accurately determine collisions.
-        """
-        return self.deviceTransform(view.transform()).mapRect(QGraphicsPixmapItem.boundingRect(self))
-
-    def update_merge_target(self, view):
-        """Finds a suitable merge target if any."""
-        scene = self.scene()
-        if not scene:
-            return None
-        colliding = [
-            x
-            for x in scene.items()
-            if x.isVisible()
-            and isinstance(x, ObjectItem)
-            and x is not self
-            and (self._is_in_wip_relationship() or x._is_in_wip_relationship())
-            and x.device_rect(view).intersects(self.device_rect(view))
-        ]
-        self._merge_target = next(iter(colliding), None)
-
-    def mousePressEvent(self, event):
-        """Saves original position for bouncing purposes.
-
-        Args:
-            event (QGraphicsSceneMouseEvent)
-        """
-        super().mousePressEvent(event)
-        self._press_pos = self.pos()
-        self._merge_target = None
-
-    def mouseReleaseEvent(self, event):
-        """Merges the item into the registered target if any. Bounces it if not possible.
-        Shrinks the scene if needed.
-
-        Args:
-            event (QGraphicsSceneMouseEvent)
-        """
-        super().mouseReleaseEvent(event)
-        if self._merge_target:
-            if self.merge_into_target():
-                return
-            self._bounce_back()
-        if self._moved_on_scene:
-            self._moved_on_scene = False
-            self.scene().item_move_finished.emit(self)
-
-    def _bounce_back(self):
-        """Bounces the item back from given position to its original position.
-        """
-        if self._press_pos is None:
-            return
-        delta = self._press_pos - self.pos()
-        self.block_move_by(delta.x(), delta.y())
-        self.update_arcs_line()
-
-    def has_valid_merge_target(self):
-        """Whether or not the registered merge target is valid.
-
-        Returns:
-            bool
-        """
-        return self._merge_target and self._merge_target.entity_class_id == self.entity_class_id
-
-    def merge_into_target(self, force=False):
-        """Merges this item into the registered target if valid.
-
-        Args:
-            force (bool)
-
-        Returns:
-            bool: True if merged, False if not.
-        """
-        if not self.has_valid_merge_target() and not force:
-            return False
-        if not self.is_wip and self._merge_target.is_wip:
-            # Make sure we don't merge a non-wip into a wip item
-            other = self._merge_target
-            other._merge_target = self
-            return other.merge_into_target(force=force)
-        for arc_item in self.arc_items:
-            arc_item.obj_item = self._merge_target
-        if not all(arc_item.rel_item.validate_member_objects() for arc_item in self.arc_items):
-            # Revert
-            for arc_item in self.arc_items:
-                arc_item.obj_item = self
-            return False
-        self._merge_target.arc_items.extend(self.arc_items)
-        self.update_arcs_line()
-        self.scene().removeItem(self)
-        return True
-
-    def _show_item_context_menu_in_parent(self, pos):
-        self._graph_view_form.show_object_item_context_menu(pos, self)
-
     def block_move_by(self, dx, dy):
         super().block_move_by(dx, dy)
-        rel_items_follow = self._graph_view_form.qsettings.value(
+        rel_items_follow = self._data_store_form.qsettings.value(
             "appSettings/relationshipItemsFollow", defaultValue="true"
         )
         if rel_items_follow == "false":
@@ -614,51 +416,11 @@ class EntityLabelItem(QGraphicsTextItem):
     def _paint_as_deselected(self):
         self.bg.setBrush(QBrush(self.bg_color))
 
-    def start_editing(self):
-        """Starts editing."""
-        self.setTextInteractionFlags(Qt.TextEditorInteraction)
-        self.setFocus()
-        cursor = QTextCursor(self._cursor)
-        cursor.select(QTextCursor.Document)
-        self.setTextCursor(cursor)
-        self._text_backup = self.toPlainText()
-
-    def keyPressEvent(self, event):
-        """Keeps text centered as the user types.
-        Gives up focus when the user presses Enter or Return.
-
-        Args:
-            event (QKeyEvent)
-        """
-        if event.key() in (Qt.Key_Return, Qt.Key_Enter):
-            self.clearFocus()
-        elif event.key() == Qt.Key_Escape:
-            self.setPlainText(self._text_backup)
-            self.clearFocus()
-        else:
-            super().keyPressEvent(event)
-        self.reset_position()
-
-    def focusOutEvent(self, event):
-        """Ends editing and sends entity_name_edited signal."""
-        super().focusOutEvent(event)
-        self.setTextInteractionFlags(Qt.NoTextInteraction)
-        self.entity_name_edited.emit(self.toPlainText())
-        self.setTextCursor(self._cursor)
-
-    def mouseDoubleClickEvent(self, event):
-        """Starts editing the name.
-
-        Args:
-            event (QGraphicsSceneMouseEvent)
-        """
-        self.start_editing()
-
 
 class ArcItem(QGraphicsLineItem):
     """Arc item to use with GraphViewForm. Connects a RelationshipItem to an ObjectItem."""
 
-    def __init__(self, rel_item, obj_item, width, is_wip=False):
+    def __init__(self, rel_item, obj_item, width):
         """Initializes item.
 
         Args:
@@ -670,7 +432,6 @@ class ArcItem(QGraphicsLineItem):
         self.rel_item = rel_item
         self.obj_item = obj_item
         self._width = float(width)
-        self.is_wip = is_wip
         self.update_line()
         self._pen = QPen()
         self._pen.setWidth(self._width)
@@ -683,8 +444,6 @@ class ArcItem(QGraphicsLineItem):
         self.setZValue(-2)
         rel_item.add_arc_item(self)
         obj_item.add_arc_item(self)
-        if self.is_wip:
-            self.become_wip()
         self.setCursor(Qt.ArrowCursor)
 
     def moveBy(self, dx, dy):
@@ -703,18 +462,6 @@ class ArcItem(QGraphicsLineItem):
 
     def other_item(self, item):
         return {self.rel_item: self.obj_item, self.obj_item: self.rel_item}.get(item)
-
-    def become_wip(self):
-        """Turns this arc into a work-in-progress."""
-        self.is_wip = True
-        self._pen.setStyle(Qt.DotLine)
-        self.setPen(self._pen)
-
-    def become_whole(self):
-        """Removes the wip status from this arc."""
-        self.is_wip = False
-        self._pen.setStyle(Qt.SolidLine)
-        self.setPen(self._pen)
 
     def apply_zoom(self, factor):
         """Applies zoom.

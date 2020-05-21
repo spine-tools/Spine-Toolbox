@@ -16,94 +16,10 @@ Classes for custom context menus and pop-up menus.
 :date:   13.5.2020
 """
 
-from PySide2.QtWidgets import QMenu, QWidgetAction
+from PySide2.QtWidgets import QWidgetAction
 from PySide2.QtCore import QEvent, QPoint, Signal
-from ...helpers import fix_name_ambiguity
 from .custom_qwidgets import LazyFilterWidget, DataToValueFilterWidget
-from ...widgets.custom_menus import CustomContextMenu, FilterMenuBase
-
-
-class GraphViewContextMenu(QMenu):
-    """Context menu class for qgraphics view in graph view."""
-
-    def __init__(self, parent):
-        """
-        Args:
-            parent (QWidget): Parent for menu widget (GraphViewForm)
-        """
-        super().__init__(parent)
-        parent._handle_menu_graph_about_to_show()
-        self.addAction(parent.ui.actionSave_positions)
-        self.addAction(parent.ui.actionClear_positions)
-        self.addSeparator()
-        self.addAction(parent.ui.actionHide_selected)
-        self.addAction(parent.ui.actionShow_hidden)
-        self.addSeparator()
-        self.addAction(parent.ui.actionPrune_selected_entities)
-        self.addAction(parent.ui.actionPrune_selected_classes)
-        self.addMenu(parent.ui.menuRestore_pruned)
-        self.addAction(parent.ui.actionRestore_all_pruned)
-
-
-class EntityItemContextMenu(CustomContextMenu):
-    """Context menu class for entity graphic items in graph view."""
-
-    def __init__(self, parent, position):
-        """
-        Args:
-            parent (QWidget): Parent for menu widget (GraphViewForm)
-            position (QPoint): Position on screen
-        """
-        super().__init__(parent, position)
-        self.selection_count = len(parent.entity_item_selection)
-        parent._handle_menu_graph_about_to_show()
-        self.addAction(parent.ui.actionHide_selected)
-        self.addAction(parent.ui.actionPrune_selected_entities)
-        self.addAction(parent.ui.actionPrune_selected_classes)
-
-
-class ObjectItemContextMenu(EntityItemContextMenu):
-    def __init__(self, parent, position, graphics_item):
-        """
-        Args:
-            parent (QWidget): Parent for menu widget (GraphViewForm)
-            position (QPoint): Position on screen
-            graphics_item (spinetoolbox.widgets.graph_view_graphics_items.ObjectItem): item that requested the menu
-        """
-        super().__init__(parent, position)
-        self.relationship_class_dict = dict()
-        self.addSeparator()
-        if graphics_item.is_wip:
-            self.add_action("Set name", enabled=self.selection_count == 1)
-        else:
-            self.add_action("Rename", enabled=self.selection_count == 1)
-        self.add_action("Remove")
-        if graphics_item.is_wip or self.selection_count > 1:
-            return
-        self.addSeparator()
-        for relationship_class in parent.db_mngr.get_items(parent.db_map, "relationship class"):
-            object_class_names = relationship_class["object_class_name_list"].split(",")
-            fixed_object_class_names = fix_name_ambiguity(object_class_names)
-            for i, object_class_name in enumerate(object_class_names):
-                if object_class_name != graphics_item.entity_class_name:
-                    continue
-                option = "Add '{}' relationship".format(relationship_class['name'])
-                if object_class_name != fixed_object_class_names[i]:
-                    option += f" as dimension {i}"
-                self.add_action(option)
-                self.relationship_class_dict[option] = {'id': relationship_class["id"], 'dimension': i}
-
-
-class RelationshipItemContextMenu(EntityItemContextMenu):
-    def __init__(self, parent, position):
-        """
-        Args:
-            parent (QWidget): Parent for menu widget (GraphViewForm)
-            position (QPoint): Position on screen
-        """
-        super().__init__(parent, position)
-        self.addSeparator()
-        self.add_action("Remove")
+from ...widgets.custom_menus import FilterMenuBase
 
 
 class ParameterViewFilterMenu(FilterMenuBase):

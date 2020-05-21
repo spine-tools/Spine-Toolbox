@@ -20,13 +20,11 @@ import logging
 import math
 from PySide2.QtWidgets import QGraphicsView
 from PySide2.QtGui import QCursor
-from PySide2.QtCore import QEventLoop, QParallelAnimationGroup, Signal, Slot, Qt, QTimeLine, QSettings, QRectF
+from PySide2.QtCore import QEventLoop, QParallelAnimationGroup, Slot, Qt, QTimeLine, QSettings, QRectF
 from spine_engine import ExecutionDirection, SpineEngineState
 from ..graphics_items import Link
 from ..project_commands import AddLinkCommand, RemoveLinkCommand
-from ..mvcmodels.entity_list_models import EntityListModel
 from .custom_qgraphicsscene import DesignGraphicsScene
-from ..data_store_form.graphics_items import ObjectItem
 
 
 class CustomQGraphicsView(QGraphicsView):
@@ -510,133 +508,3 @@ class DesignQGraphicsView(CustomQGraphicsView):
         for link in links:
             animation_group.addAnimation(link.make_execution_animation())
         return animation_group
-
-
-class EntityQGraphicsView(CustomQGraphicsView):
-    """QGraphicsView for the Entity Graph View."""
-
-    item_dropped = Signal("QPoint", "QString")
-
-    context_menu_requested = Signal("QPoint")
-
-    def dragLeaveEvent(self, event):
-        """Accept event. Then call the super class method
-        only if drag source is not EntityListModel."""
-        event.accept()
-
-    def dragEnterEvent(self, event):
-        """Accept event. Then call the super class method
-        only if drag source is not EntityListModel."""
-        event.accept()
-        source = event.source()
-        if not isinstance(source.model(), EntityListModel):
-            super().dragEnterEvent(event)
-
-    def dragMoveEvent(self, event):
-        """Accept event. Then call the super class method
-        only if drag source is not EntityListModel."""
-        event.accept()
-        source = event.source()
-        if not isinstance(source.model(), EntityListModel):
-            super().dragMoveEvent(event)
-
-    def dropEvent(self, event):
-        """Only accept drops when the source is an instance of EntityListModel.
-        Capture text from event's mimedata and emit signal.
-        """
-        source = event.source()
-        if not isinstance(source.model(), EntityListModel):
-            super().dropEvent(event)
-            return
-        entity_type = source.model().entity_type
-        event.acceptProposedAction()
-        entity_class_id = event.mimeData().text()
-        pos = event.pos()
-        text = entity_type + ":" + entity_class_id
-        self.item_dropped.emit(pos, text)
-
-    def contextMenuEvent(self, e):
-        """Show context menu.
-
-        Args:
-            e (QContextMenuEvent): Context menu event
-        """
-        super().contextMenuEvent(e)
-        if e.isAccepted():
-            return
-        e.accept()
-        self.context_menu_requested.emit(e.globalPos())
-
-    def _zoom(self, factor):
-        super()._zoom(factor)
-        for item in self.items():
-            if hasattr(item, "apply_zoom"):
-                item.apply_zoom(self.zoom_factor)
-
-    def wheelEvent(self, event):
-        """Zooms in/out. If user has pressed the shift key, rotates instead.
-
-        Args:
-            event (QWheelEvent): Mouse wheel event
-        """
-        if event.modifiers() != Qt.ShiftModifier:
-            super().wheelEvent(event)
-            return
-        if event.orientation() != Qt.Vertical:
-            event.ignore()
-            return
-        event.accept()
-        smooth_rotation = self._qsettings.value("appSettings/smoothRotation", defaultValue="false")
-        if smooth_rotation == "true":
-            num_degrees = event.delta() / 8
-            num_steps = num_degrees / 15
-            self._scheduled_transformations += num_steps
-            if self._scheduled_transformations * num_steps < 0:
-                self._scheduled_transformations = num_steps
-            if self.time_line:
-                self.time_line.deleteLater()
-            self.time_line = QTimeLine(200, self)
-            self.time_line.setUpdateInterval(20)
-            self.time_line.valueChanged.connect(self._handle_rotation_time_line_advanced)
-            self.time_line.finished.connect(self._handle_transformation_time_line_finished)
-            self.time_line.start()
-        else:
-            angle = event.angleDelta().y() / 8
-            self._rotate(angle)
-            self._set_preferred_scene_rect()
-
-    def _handle_rotation_time_line_advanced(self, pos):
-        """Performs rotation whenever the smooth rotation time line advances."""
-        angle = self._scheduled_transformations / 2.0
-        self._rotate(angle)
-
-    def mouseMoveEvent(self, event):
-        """If the scene's mouse grabber is an ObjectItem, updates its merge target."""
-        super().mouseMoveEvent(event)
-        item = self.scene().mouseGrabberItem()
-        if not isinstance(item, ObjectItem):
-            return
-        item.update_merge_target(self)
-        if not item._merge_target:
-            self.viewport().setCursor(Qt.ArrowCursor)
-            return
-        if item.has_valid_merge_target():
-            self.viewport().setCursor(Qt.DragCopyCursor)
-        else:
-            self.viewport().setCursor(Qt.ForbiddenCursor)
-
-    def _rotate(self, angle):
-        center = self._get_viewport_scene_rect().center()
-        for item in self.items():
-            if hasattr(item, "apply_rotation"):
-                item.apply_rotation(angle, center)
-
-    def rotate_clockwise(self):
-        """Performs a rotate clockwise with fixed angle."""
-        self._rotate(-self._angle / 8)
-        self._set_preferred_scene_rect()
-
-    def rotate_anticlockwise(self):
-        """Performs a rotate anticlockwise with fixed angle."""
-        self._rotate(self._angle / 8)
-        self._set_preferred_scene_rect()
