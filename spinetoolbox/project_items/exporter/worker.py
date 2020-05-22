@@ -28,7 +28,7 @@ class Worker(QObject):
     A worker to construct export settings for a database.
 
     Attributes:
-        signals: contains signals that the worker may emit during its execution
+        thread (QThread): the thread the worker executes in
     """
 
     database_unavailable = Signal(str)

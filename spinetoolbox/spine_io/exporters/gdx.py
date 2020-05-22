@@ -30,6 +30,7 @@ import math
 import os
 import os.path
 import sys
+import time
 from gdx2py import GAMSSet, GAMSScalar, GAMSParameter, GdxFile
 from spinedb_api import from_database, IndexedValue, Map, ParameterValueFormatError
 
@@ -258,7 +259,7 @@ class Parameter:
 
         Args:
             domain_names (list): a list of domain names
-            index_keys (tuple): a comma separated list of object names
+            index_keys (tuple): a tuple of object names
             database_value (str): parameter value in database representation
         Returns:
             Parameter: a parameter constructed from the entity parameter
@@ -966,60 +967,62 @@ def _object_indexing_settings(db_map, logger):
         dict: a mapping from parameter name to IndexingSetting
     """
     settings = dict()
-    class_list = db_map.object_class_list().all()
-    object_parameter_value_query = db_map.object_parameter_value_list()
-    classes_with_unsupported_value_types = set()
-    for object_class in class_list:
-        parameter_definitions = db_map.parameter_definition_list(object_class_id=object_class.id).all()
-        default_parameter_values = dict()
-        for parameter_definition in parameter_definitions:
-            default_parameter_values[parameter_definition.name] = parameter_definition.default_value
-        object_list = db_map.object_list(class_id=object_class.id)
-        for object_ in object_list:
-            parameter_value_rows = object_parameter_value_query.filter(
-                db_map.object_parameter_value_sq.c.object_id == object_.id
-            ).all()
-            checked_parameters = set()
-            for parameter_value_row in parameter_value_rows:
-                name = parameter_value_row.parameter_name
-                checked_parameters.add(name)
-                try:
-                    parameter = Parameter.from_entity_parameter(
-                        [parameter_value_row.object_class_name],
-                        (parameter_value_row.object_name,),
-                        parameter_value_row.value,
-                    )
-                except GdxUnsupportedValueTypeException:
-                    if logger is not None:
-                        classes_with_unsupported_value_types.add(object_class.name)
-                        continue
-                    else:
-                        raise
-                if not parameter.is_indexed():
+    classes_with_unsupported_value_types =  set() if logger is not None else None
+    parameter_names_to_skip_on_second_pass = set()
+    for parameter_row in db_map.object_parameter_value_list():
+        value = _read_value(parameter_row.value)
+        if isinstance(value, IndexedValue):
+            dimensions = [parameter_row.object_class_name]
+            index_keys = (parameter_row.object_name,)
+            _add_to_indexing_settings(
+                settings,
+                parameter_row.parameter_name,
+                parameter_row.object_class_name,
+                dimensions,
+                value,
+                index_keys,
+                classes_with_unsupported_value_types,
+            )
+            parameter_names_to_skip_on_second_pass.add(parameter_row.parameter_name)
+        elif value is None:
+            name = parameter_row.parameter_name
+            for definition_row in db_map.object_parameter_definition_list(parameter_row.object_class_id):
+                if definition_row.parameter_name != name:
                     continue
-                setting = settings.get(name, None)
-                if setting is not None:
-                    setting.append_parameter(parameter)
-                else:
-                    settings[name] = IndexingSetting(parameter, parameter_value_row.object_class_name)
-            for name, value in default_parameter_values.items():
-                if name in checked_parameters:
-                    continue
-                try:
-                    parameter = Parameter.from_entity_parameter([object_class.name], (object_.name,), value)
-                except GdxUnsupportedValueTypeException:
-                    if logger is not None:
-                        classes_with_unsupported_value_types.add(object_class.name)
-                        continue
-                    else:
-                        raise
-                if not parameter.is_indexed():
-                    continue
-                setting = settings.get(name, None)
-                if setting is not None:
-                    setting.append_parameter(parameter)
-                else:
-                    settings[name] = IndexingSetting(parameter, object_class.name)
+                parameter_names_to_skip_on_second_pass.add(name)
+                value = _read_value(definition_row.default_value)
+                if not isinstance(value, IndexedValue):
+                    break
+                dimensions = [parameter_row.object_class_name]
+                index_keys = (parameter_row.object_name,)
+                _add_to_indexing_settings(
+                    settings,
+                    name,
+                    definition_row.object_class_name,
+                    dimensions,
+                    value,
+                    index_keys,
+                    classes_with_unsupported_value_types,
+                )
+                break
+    for definition_row in db_map.object_parameter_definition_list():
+        if definition_row.parameter_name in parameter_names_to_skip_on_second_pass:
+            continue
+        value = _read_value(definition_row.default_value)
+        if not isinstance(value, IndexedValue):
+            continue
+        dimensions = [definition_row.object_class_name]
+        for object_row in db_map.object_list(class_id=definition_row.object_class_id):
+            index_keys = (object_row.name,)
+            _add_to_indexing_settings(
+                settings,
+                definition_row.parameter_name,
+                definition_row.object_class_name,
+                dimensions,
+                value,
+                index_keys,
+                classes_with_unsupported_value_types,
+            )
     if classes_with_unsupported_value_types:
         class_list = ', '.join(classes_with_unsupported_value_types)
         logger.msg_warning.emit(
@@ -1039,66 +1042,104 @@ def _relationship_indexing_settings(db_map, logger):
         dict: a mapping from parameter name to IndexingSetting
     """
     settings = dict()
-    class_list = db_map.wide_relationship_class_list().all()
-    relationship_parameter_value_query = db_map.relationship_parameter_value_list()
-    classes_with_unsupported_value_types = set()
-    for relationship_class in class_list:
-        object_class_names = relationship_class.object_class_name_list.split(",")
-        parameter_definitions = db_map.parameter_definition_list(relationship_class_id=relationship_class.id).all()
-        default_parameter_values = dict()
-        for parameter_definition in parameter_definitions:
-            default_parameter_values[parameter_definition.name] = parameter_definition.default_value
-        relationship_list = db_map.wide_relationship_list(class_id=relationship_class.id)
-        for relationship in relationship_list:
-            index_keys = tuple(relationship.object_name_list.split(","))
-            parameter_value_rows = relationship_parameter_value_query.filter(
-                db_map.relationship_parameter_value_sq.c.relationship_id == relationship.id
-            ).all()
-            checked_parameters = set()
-            for parameter_value_row in parameter_value_rows:
-                name = parameter_value_row.parameter_name
-                checked_parameters.add(name)
-                try:
-                    parameter = Parameter.from_entity_parameter(
-                        object_class_names, index_keys, parameter_value_row.value
-                    )
-                except GdxUnsupportedValueTypeException:
-                    if logger is not None:
-                        classes_with_unsupported_value_types.add(relationship_class.name)
-                        continue
-                    else:
-                        raise
-                if not parameter.is_indexed():
+    classes_with_unsupported_value_types = set() if logger is not None else None
+    parameter_names_to_skip_on_second_pass = set()
+    for parameter_row in db_map.relationship_parameter_value_list():
+        value = _read_value(parameter_row.value)
+        if isinstance(value, IndexedValue):
+            dimensions = parameter_row.object_class_name_list.split(",")
+            index_keys = tuple(parameter_row.object_name_list.split(","))
+            _add_to_indexing_settings(
+                settings,
+                parameter_row.parameter_name,
+                parameter_row.relationship_class_name,
+                dimensions,
+                value,
+                index_keys,
+                classes_with_unsupported_value_types,
+            )
+            parameter_names_to_skip_on_second_pass.add(parameter_row.parameter_name)
+        elif value is None:
+            name = parameter_row.parameter_name
+            for definition_row in db_map.relationship_parameter_definition_list(parameter_row.relationship_class_id):
+                if definition_row.parameter_name != name:
                     continue
-                setting = settings.get(name, None)
-                if setting is not None:
-                    setting.append_parameter(parameter)
-                else:
-                    settings[name] = IndexingSetting(parameter, relationship_class.name)
-            for name, value in default_parameter_values.items():
-                if name in checked_parameters:
-                    continue
-                try:
-                    parameter = Parameter.from_entity_parameter(object_class_names, index_keys, value)
-                except GdxUnsupportedValueTypeException:
-                    if logger is not None:
-                        classes_with_unsupported_value_types.add(relationship_class.name)
-                        continue
-                    else:
-                        raise
-                if not parameter.is_indexed():
-                    continue
-                setting = settings.get(name, None)
-                if setting is not None:
-                    setting.append_parameter(parameter)
-                else:
-                    settings[name] = IndexingSetting(parameter, relationship_class.name)
+                parameter_names_to_skip_on_second_pass.add(name)
+                value = _read_value(definition_row.default_value)
+                if not isinstance(value, IndexedValue):
+                    break
+                dimensions = parameter_row.object_class_name_list.split(",")
+                index_keys = tuple(parameter_row.object_name_list.split(","))
+                _add_to_indexing_settings(
+                    settings,
+                    name,
+                    parameter_row.relationship_class_name,
+                    dimensions,
+                    value,
+                    index_keys,
+                    classes_with_unsupported_value_types,
+                )
+                break
+    for definition_row in db_map.relationship_parameter_definition_list():
+        if definition_row.parameter_name in parameter_names_to_skip_on_second_pass:
+            continue
+        value = _read_value(definition_row.default_value)
+        if not isinstance(value, IndexedValue):
+            continue
+        dimensions = definition_row.object_class_name_list.split(",")
+        for relationship_row in db_map.wide_relationship_list(class_id=definition_row.relationship_class_id):
+            index_keys = tuple(relationship_row.object_name_list.split(","))
+            _add_to_indexing_settings(
+                settings,
+                definition_row.parameter_name,
+                definition_row.relationship_class_name,
+                dimensions,
+                value,
+                index_keys,
+                classes_with_unsupported_value_types,
+            )
     if classes_with_unsupported_value_types:
         class_list = ', '.join(classes_with_unsupported_value_types)
         logger.msg_warning.emit(
             f"The following relationship classes have parameter values of unsupported types: {class_list}"
         )
     return settings
+
+
+def _add_to_indexing_settings(
+    settings,
+    parameter_name,
+    entity_class_name,
+    dimensions,
+    parsed_value,
+    index_keys,
+    classes_with_unsupported_value_types,
+):
+    """
+    Adds parameter to indexing settings.
+
+    Parameters:
+        settings (dict): indexing settings
+        parameter_name (str): parameter's name
+        entity_class_name (str): name of the object or relationship class the parameter belongs to
+        dimensions (list): a list of parameter's domain names
+        parsed_value (IndexedValue): parsed parameter value
+        index_keys (tuple): parameter's keys
+        classes_with_unsupported_value_types (set, optional): entity class names with unsupported value types
+    """
+    try:
+        parameter = Parameter(dimensions, [index_keys], [parsed_value])
+    except GdxUnsupportedValueTypeException:
+        if classes_with_unsupported_value_types is not None:
+            classes_with_unsupported_value_types.add(entity_class_name)
+            return
+        else:
+            raise
+    setting = settings.get(parameter_name, None)
+    if setting is not None:
+        setting.append_parameter(parameter)
+    else:
+        settings[parameter_name] = IndexingSetting(parameter, entity_class_name)
 
 
 def update_indexing_settings(old_indexing_settings, new_indexing_settings, set_settings):
