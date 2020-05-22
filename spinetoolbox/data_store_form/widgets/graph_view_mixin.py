@@ -197,6 +197,8 @@ class GraphViewMixin:
         """Hides removed entities while saving them into a list attribute.
         This allows entities to be restored in case the user undoes the operation."""
         removed_ids = {x["id"] for x in db_map_data.get(self.db_map, [])}
+        self.added_object_ids -= removed_ids
+        self.added_relationship_ids -= removed_ids
         removed_items = [
             item
             for item in self.ui.graphicsView.items()
