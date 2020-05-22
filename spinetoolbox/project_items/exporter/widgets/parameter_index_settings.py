@@ -375,15 +375,13 @@ class _IndexingTableModel(QAbstractTableModel):
 
     def data(self, index, role=Qt.DisplayRole):
         """Returns data associated with given model index and role."""
-        if role not in (Qt.DisplayRole, Qt.ToolTipRole) or not index.isValid():
+        if role not in (Qt.DisplayRole, Qt.ToolTipRole):
             return None
         row = index.row()
         column = index.column()
         if column == 0:
             return self._indexes[row]
-        column -= 1
-        value = self._values[column][row]
-        return str(value) if value is not None else None
+        return self._values[column - 1][row]
 
     def headerData(self, section, orientation, role=Qt.DisplayRole):
         """Returns header data."""
@@ -459,7 +457,7 @@ class _IndexingTableModel(QAbstractTableModel):
                 if value_index == value_length:
                     break
                 if is_selected:
-                    value_column[j] = parameter_value.values[value_index]
+                    value_column[j] = str(parameter_value.values[value_index])
                     value_index += 1
                 last_changed_row += 1
             max_changed_row = max(max_changed_row, last_changed_row)
