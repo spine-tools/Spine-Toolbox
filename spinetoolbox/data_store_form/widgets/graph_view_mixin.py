@@ -48,7 +48,9 @@ class GraphViewMixin:
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.selected_indexes = {}
+        self._persistent = False
+        self.scene = None
+        self.selected_tree_inds = {}
         self.object_ids = list()
         self.relationship_ids = list()
         self.src_inds = list()
@@ -110,16 +112,10 @@ class GraphViewMixin:
         """
         super().receive_objects_added(db_map_data)
         objects = db_map_data.get(self.db_map, [])
-        added_objects = {x["id"]: x for x in objects}
-        object_ids = added_objects.keys()
-        restored_ids = self.restore_removed_entities(object_ids)
-        non_restored_class_ids = {x["class_id"] for id_, x in added_objects.items() if id_ not in restored_ids}
-        selected_class_ids = {
-            ind.model().item_from_index(ind).db_map_id(self.db_map)
-            for ind in self.selected_indexes.get("object class", {})
-        }
-        if non_restored_class_ids.intersection(selected_class_ids):
-            self.build_graph()
+        added_ids = {x["id"] for x in objects}
+        restored_ids = self.restore_removed_entities(added_ids)
+        if restored_ids != added_ids:
+            self.build_graph(persistent=True)
 
     def receive_relationships_added(self, db_map_data):
         """Runs when relationships are added to the db.
@@ -130,14 +126,10 @@ class GraphViewMixin:
         """
         super().receive_relationships_added(db_map_data)
         relationships = db_map_data.get(self.db_map, [])
-        added_relationships = {x["id"]: x for x in relationships}
-        relationship_ids = added_relationships.keys()
-        restored_ids = self.restore_removed_entities(relationship_ids)
-        non_restored_rels = [x for id_, x in added_relationships.items() if id_ not in restored_ids]
-        non_restored_object_ids = {int(id_) for x in non_restored_rels for id_ in x["object_id_list"].split(",")}
-        graph_object_ids = {x.entity_id for x in self.ui.graphicsView.items() if isinstance(x, ObjectItem)}
-        if non_restored_object_ids - graph_object_ids:
-            self.build_graph()
+        added_ids = {x["id"] for x in relationships}
+        restored_ids = self.restore_removed_entities(added_ids)
+        if restored_ids != added_ids:
+            self.build_graph(persistent=True)
 
     def receive_object_classes_updated(self, db_map_data):
         super().receive_object_classes_updated(db_map_data)
@@ -209,11 +201,10 @@ class GraphViewMixin:
         self.removed_items.extend(removed_items)
         removed_item = removed_items.pop()
         if removed_items:
-            scene = self.ui.graphicsView.scene()
-            scene.selectionChanged.disconnect(self._handle_scene_selection_changed)
+            self.scene.selectionChanged.disconnect(self._handle_scene_selection_changed)
             for item in removed_items:
                 item.set_all_visible(False)
-            scene.selectionChanged.connect(self._handle_scene_selection_changed)
+            self.scene.selectionChanged.connect(self._handle_scene_selection_changed)
         removed_item.set_all_visible(False)
 
     def refresh_icons(self, db_map_data):
@@ -231,8 +222,7 @@ class GraphViewMixin:
     def _handle_menu_graph_about_to_show(self):
         """Enables or disables actions according to current selection in the graph."""
         visible = self.ui.dockWidget_entity_graph.isVisible()
-        scene = self.ui.graphicsView.scene()
-        has_graph = scene is not None and scene.items() != [self._blank_item]
+        has_graph = self.scene is not None and self.scene.items() != [self._blank_item]
         self.ui.actionSave_positions.setEnabled(has_graph)
         self.ui.actionClear_positions.setEnabled(has_graph)
         self.ui.actionExport_as_pdf.setEnabled(has_graph)
@@ -254,21 +244,24 @@ class GraphViewMixin:
     @Slot(dict)
     def rebuild_graph(self, selected):
         """Stores the given selection and builds graph."""
-        self.selected_indexes = selected
+        self.selected_tree_inds = selected
         if self.ui.dockWidget_entity_graph.isVisible():
             self.build_graph()
 
-    def build_graph(self):
-        """Builds the graph."""
+    def build_graph(self, persistent=False):
+        """Builds the graph.
+
+        Args:
+            persistent (bool, optional): If True, builds the graph on top of the current one.
+        """
+        self._persistent = persistent
         for layout_gen in self.layout_gens:
             layout_gen.stop()
         self.object_ids, self.relationship_ids, self.src_inds, self.dst_inds = self._get_graph_data()
         layout_gen = self._make_layout_generator()
         self.layout_gens.append(layout_gen)
-        progress_widget = layout_gen.create_progress_widget()
-        scene = self.new_scene()
-        scene.addWidget(progress_widget)
-        self.ui.graphicsView.gentle_zoom(0.5)
+        self.make_a_scene()
+        layout_gen.show_progress_widget(self.ui.graphicsView)
         layout_gen.finished.connect(self._complete_graph)
         layout_gen.done.connect(lambda layout_gen=layout_gen: self.layout_gens.remove(layout_gen))
         layout_gen.start()
@@ -283,15 +276,17 @@ class GraphViewMixin:
         if self.layout_gens:
             return
         new_items = self._get_new_items(x, y)
-        scene = self.new_scene()
         self.hidden_items.clear()
         self.removed_items.clear()
         if not any(new_items):
             self._blank_item = QGraphicsTextItem("Nothing to show.")
-            scene.addItem(self._blank_item)
+            self.scene.addItem(self._blank_item)
         else:
-            self._add_new_items(scene, *new_items)  # pylint: disable=no-value-for-parameter
-        self.ui.graphicsView.reset_zoom()
+            self._add_new_items(*new_items)  # pylint: disable=no-value-for-parameter
+        if not self._persistent:
+            self.ui.graphicsView.reset_zoom()
+        else:
+            self.ui.graphicsView.apply_zoom()
 
     def _get_selected_entity_ids(self):
         """Returns a set of ids corresponding to selected entities in the trees.
@@ -302,19 +297,19 @@ class GraphViewMixin:
         """
         selected_object_ids = set()
         selected_relationship_ids = set()
-        for index in self.selected_indexes.get("object", {}):
+        for index in self.selected_tree_inds.get("object", {}):
             item = index.model().item_from_index(index)
             object_id = item.db_map_id(self.db_map)
             selected_object_ids.add(object_id)
-        for index in self.selected_indexes.get("relationship", {}):
+        for index in self.selected_tree_inds.get("relationship", {}):
             item = index.model().item_from_index(index)
             relationship_id = item.db_map_id(self.db_map)
             selected_relationship_ids.add(relationship_id)
-        for index in self.selected_indexes.get("object class", {}):
+        for index in self.selected_tree_inds.get("object class", {}):
             item = index.model().item_from_index(index)
             object_ids = set(item._get_children_ids(self.db_map))
             selected_object_ids.update(object_ids)
-        for index in self.selected_indexes.get("relationship class", {}):
+        for index in self.selected_tree_inds.get("relationship class", {}):
             item = index.model().item_from_index(index)
             relationship_ids = set(item._get_children_ids(self.db_map))
             selected_relationship_ids.update(relationship_ids)
@@ -372,14 +367,23 @@ class GraphViewMixin:
         Returns:
             GraphLayoutGenerator
         """
-        entity_ids = self.object_ids + self.relationship_ids
-        pos_lookup = {
+        parameter_positions_by_id = {
             p["entity_id"]: dict(from_database(p["value"]).value_to_database_data())
             for p in self.db_mngr.get_items_by_field(
                 self.db_map, "parameter value", "parameter_name", self._POS_PARAM_NAME
             )
         }
-        heavy_positions = {ind: pos_lookup[id_] for ind, id_ in enumerate(entity_ids) if id_ in pos_lookup}
+        if self._persistent:
+            positions_by_id = {
+                item.entity_id: {"x": item.pos().x(), "y": item.pos().y()}
+                for item in self.ui.graphicsView.items()
+                if isinstance(item, EntityItem)
+            }
+        else:
+            positions_by_id = {}
+        positions_by_id.update(parameter_positions_by_id)
+        entity_ids = self.object_ids + self.relationship_ids
+        heavy_positions = {ind: positions_by_id[id_] for ind, id_ in enumerate(entity_ids) if id_ in positions_by_id}
         return GraphLayoutGenerator(
             len(entity_ids), self.src_inds, self.dst_inds, self._ARC_LENGTH_HINT, heavy_positions=heavy_positions
         )
@@ -413,32 +417,25 @@ class GraphViewMixin:
             arc_items.append(arc_item)
         return (object_items, relationship_items, arc_items)
 
-    @staticmethod
-    def _add_new_items(scene, object_items, relationship_items, arc_items):
+    def _add_new_items(self, object_items, relationship_items, arc_items):
         for item in object_items + relationship_items + arc_items:
-            scene.addItem(item)
+            self.scene.addItem(item)
 
-    def new_scene(self):
-        """Replaces the current scene with a new one."""
-        self.tear_down_scene()
-        scene = CustomGraphicsScene(self)
-        self.ui.graphicsView.setScene(scene)
-        scene.selectionChanged.connect(self._handle_scene_selection_changed)
-        return scene
-
-    def tear_down_scene(self):
-        """Removes all references to this form in graphics items and schedules
-        the scene for deletion."""
+    def make_a_scene(self):
+        """Empties the scene."""
         scene = self.ui.graphicsView.scene()
-        if not scene:
-            return
-        scene.deleteLater()
+        if scene:
+            scene.clear()
+        else:
+            scene = CustomGraphicsScene(self)
+            self.ui.graphicsView.setScene(scene)
+            scene.selectionChanged.connect(self._handle_scene_selection_changed)
+        self.scene = scene
 
     @Slot()
     def _handle_scene_selection_changed(self):
         """Filters parameters by selected objects in the graph."""
-        scene = self.ui.graphicsView.scene()
-        selected_items = scene.selectedItems()
+        selected_items = self.scene.selectedItems()
         obj_item_selection = [x for x in selected_items if isinstance(x, ObjectItem)]
         rel_item_selection = [x for x in selected_items if isinstance(x, RelationshipItem)]
         self.entity_item_selection = obj_item_selection + rel_item_selection
@@ -467,7 +464,7 @@ class GraphViewMixin:
     @Slot(bool)
     def show_hidden_items(self, checked=False):
         """Shows hidden items."""
-        if not self.ui.graphicsView.scene():
+        if not self.scene:
             return
         for item in self.hidden_items:
             item.set_all_visible(True)
@@ -553,11 +550,8 @@ class GraphViewMixin:
 
     @Slot(bool)
     def save_positions(self, checked=False):
-        scene = self.ui.graphicsView.scene()
-        if not scene:
-            return
         class_items = {}
-        for item in scene.items():
+        for item in self.ui.graphicsView.items():
             if isinstance(item, EntityItem):
                 class_items.setdefault(item.entity_class_id, []).append(item)
         pos_def_class_ids = {
@@ -609,10 +603,7 @@ class GraphViewMixin:
 
     @Slot(bool)
     def clear_saved_positions(self, checked=False):
-        scene = self.ui.graphicsView.scene()
-        if not scene:
-            return
-        entity_ids = {x.entity_id for x in scene.items() if isinstance(x, EntityItem)}
+        entity_ids = {x.entity_id for x in self.ui.graphicsView.items() if isinstance(x, EntityItem)}
         vals_to_remove = [
             p
             for p in self.db_mngr.get_items_by_field(
@@ -637,13 +628,12 @@ class GraphViewMixin:
         source = view._get_viewport_scene_rect()
         current_zoom_factor = view.zoom_factor
         view._zoom(1.0 / current_zoom_factor)
-        scene = view.scene()
-        scene.clearSelection()
+        self.scene.clearSelection()
         printer = QPrinter()
         printer.setPaperSize(source.size(), QPrinter.Point)
         printer.setOutputFileName(file_path)
         painter = QPainter(printer)
-        scene.render(painter, QRectF(), source)
+        self.scene.render(painter, QRectF(), source)
         painter.end()
         view._zoom(current_zoom_factor)
         self._insert_open_file_button(file_path)
@@ -656,8 +646,8 @@ class GraphViewMixin:
         """
         self.msg.emit(
             "<p>Click on objects in the graph to form new relationships.</p>"
-            "<ul><li>Right click adds members in the relationship.</li>"
-            "<li>Left click adds the last member and proceeds to add relationships.</li></ul>"
+            "<ul><li>Right click on an object to add it as member.</li>"
+            "<li>Left click to add the last member and proceed.</li></ul>"
         )
         rod_obj_item = RodObjectItem(self, obj_item.pos().x(), obj_item.pos().y(), self._VERTEX_EXTENT)
         rod_rel_item = RodRelationshipItem(self, obj_item.pos().x(), obj_item.pos().y(), 0.5 * self._VERTEX_EXTENT)
@@ -682,18 +672,9 @@ class GraphViewMixin:
                     relationships_per_class.setdefault(rel_cls_key, list()).append(relationship)
         if not relationships_per_class:
             self.msg.emit(
-                "<p>No relationship classes match the given combination of objects.</p>"
+                "<p>Sorry, no relationship classes match the given combination of objects.</p>"
                 "<p>Try to add a corresponding relationship class first.</p>"
             )
             return
         dialog = AddReadyRelationshipsDialog(self, relationships_per_class, self.db_mngr, *self.db_maps)
         dialog.show()
-
-    def closeEvent(self, event=None):
-        """Handles close window event.
-
-        Args:
-            event (QEvent): Closing event if 'X' is clicked.
-        """
-        super().closeEvent(event)
-        self.tear_down_scene()

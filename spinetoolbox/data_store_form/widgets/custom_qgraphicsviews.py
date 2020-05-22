@@ -18,6 +18,7 @@ Classes for custom QGraphicsViews for the Entity graph view.
 
 from PySide2.QtCore import Qt, QTimeLine
 from PySide2.QtWidgets import QMenu
+from PySide2.QtGui import QCursor
 from ...widgets.custom_qgraphicsviews import CustomQGraphicsView
 from ..graphics_items import ObjectItem, RodObjectItem, RodArcItem
 
@@ -43,7 +44,11 @@ class EntityQGraphicsView(CustomQGraphicsView):
         for item in rod_items:
             self.scene().addItem(item)
             item.apply_zoom(self.zoom_factor)
-        rod_items[0].grabMouse()
+        obj_item = rod_items[0]
+        obj_item.grabMouse()
+        pos = self.mapToScene(self.mapFromGlobal(QCursor.pos()))
+        delta = pos - obj_item.scenePos()
+        obj_item.block_move_by(delta.x(), delta.y())
 
     def clear_rod_items(self):
         for item in self.rod_items:
@@ -133,6 +138,9 @@ class EntityQGraphicsView(CustomQGraphicsView):
 
     def _zoom(self, factor):
         super()._zoom(factor)
+        self.apply_zoom()
+
+    def apply_zoom(self):
         for item in self.items():
             if hasattr(item, "apply_zoom"):
                 item.apply_zoom(self.zoom_factor)

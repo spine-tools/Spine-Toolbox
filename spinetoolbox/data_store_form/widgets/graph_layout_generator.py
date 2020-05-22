@@ -29,7 +29,7 @@ class _State(enum.Enum):
 
     ACTIVE = enum.auto()
     STOPPED = enum.auto()
-    RUSHED_OUT = enum.auto()
+    CANCELLED = enum.auto()
 
 
 class GraphLayoutGenerator(QObject):
@@ -60,10 +60,11 @@ class GraphLayoutGenerator(QObject):
         self.started.connect(self.get_coordinates)
         self.finished.connect(self.clean_up)
 
-    def create_progress_widget(self):
-        widget = QWidget()
+    def show_progress_widget(self, parent):
+        widget = QWidget(parent)
         widget.setAttribute(Qt.WA_NoSystemBackground)
         widget.setAttribute(Qt.WA_TranslucentBackground)
+        widget.setAttribute(Qt.WA_DeleteOnClose)
         layout = QVBoxLayout(widget)
         label = QLabel("Generating layout...")
         progress_bar = QProgressBar()
@@ -71,13 +72,16 @@ class GraphLayoutGenerator(QObject):
         progress_bar.setTextVisible(False)
         button_box = QDialogButtonBox()
         button_box.setCenterButtons(True)
-        button = button_box.addButton("Can't wait", QDialogButtonBox.NoRole)
-        button.clicked.connect(lambda checked=False: self.rush_out())
+        button = button_box.addButton("Cancel", QDialogButtonBox.NoRole)
+        button.clicked.connect(lambda checked=False: self.cancel())
         self.progressed.connect(progress_bar.setValue)
         layout.addWidget(label)
         layout.addWidget(progress_bar)
         layout.addWidget(button_box)
-        return widget
+        widget.show()
+        pos = parent.geometry().center() - widget.geometry().center()
+        widget.move(pos)
+        self.done.connect(widget.close)
 
     def clean_up(self):
         self._thread.quit()
@@ -86,8 +90,8 @@ class GraphLayoutGenerator(QObject):
     def stop(self):
         self._state = _State.STOPPED
 
-    def rush_out(self, checked=False):
-        self._state = _State.RUSHED_OUT
+    def cancel(self, checked=False):
+        self._state = _State.CANCELLED
 
     def start(self):
         self.started.emit()
@@ -166,7 +170,7 @@ class GraphLayoutGenerator(QObject):
                 self.vertex_count
             )  # we don't want to use the same pair order each iteration
             for s in sets:
-                if self._state in (_State.STOPPED, _State.RUSHED_OUT):
+                if self._state in (_State.STOPPED, _State.CANCELLED):
                     break
                 v1, v2 = rand_order[s[:, 0]], rand_order[s[:, 1]]  # arrays of vertex1 and vertex2
                 # current distance (possibly accounting for system rescaling)

@@ -370,7 +370,11 @@ class ObjectItem(EntityItem):
 class RodObjectItem(ObjectItem):
     @property
     def entity_class_name(self):
-        return "block"
+        return "?"
+
+    @property
+    def entity_name(self):
+        return "?"
 
     def refresh_icon(self):
         """Refreshes the icon."""
@@ -378,11 +382,11 @@ class RodObjectItem(ObjectItem):
         self.setPixmap(pixmap)
 
     def mouseMoveEvent(self, event):
-        move_by = event.scenePos() - event.lastScenePos()
+        move_by = event.scenePos() - self.scenePos()
         self.block_move_by(move_by.x(), move_by.y())
 
     def contextMenuEvent(self, e):
-        pass
+        e.accept()
 
 
 class RodRelationshipItem(RelationshipItem):
