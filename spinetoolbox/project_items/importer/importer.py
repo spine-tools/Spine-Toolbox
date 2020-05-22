@@ -135,7 +135,7 @@ class Importer(ProjectItem):
         for successor in successors:
             if successor.item_type() == "Data Store":
                 url = successor.sql_alchemy_url()
-                database_map = self._project.db_mngr.get_db_map(url)
+                database_map = self._project.db_mngr.get_db_map(url, self._logger)
                 if database_map is not None:
                     committed_db_maps.add(database_map)
         if committed_db_maps:
