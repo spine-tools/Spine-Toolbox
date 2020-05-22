@@ -73,7 +73,7 @@ class EntityItem(QGraphicsPixmapItem):
 
     @property
     def entity_name(self):
-        return self.db_mngr.get_item(self.db_map, self.entity_type, self.entity_id).get("name", "")
+        return self.db_mngr.get_item(self.db_map, self.entity_type, self.entity_id)["name"]
 
     @property
     def entity_class_type(self):
@@ -81,11 +81,11 @@ class EntityItem(QGraphicsPixmapItem):
 
     @property
     def entity_class_id(self):
-        return self.db_mngr.get_item(self.db_map, self.entity_type, self.entity_id).get("class_id")
+        return self.db_mngr.get_item(self.db_map, self.entity_type, self.entity_id)["class_id"]
 
     @property
     def entity_class_name(self):
-        return self.db_mngr.get_item(self.db_map, self.entity_class_type, self.entity_class_id).get("name", "")
+        return self.db_mngr.get_item(self.db_map, self.entity_class_type, self.entity_class_id)["name"]
 
     @property
     def first_db_map(self):
@@ -368,6 +368,10 @@ class ObjectItem(EntityItem):
 
 
 class RodObjectItem(ObjectItem):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=False)
+
     @property
     def entity_class_name(self):
         return "?"
@@ -390,6 +394,10 @@ class RodObjectItem(ObjectItem):
 
 
 class RodRelationshipItem(RelationshipItem):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=False)
+
     def refresh_icon(self):
         """Refreshes the icon."""
         object_class_name_list = [arc_item.obj_item.entity_class_name for arc_item in self.arc_items]

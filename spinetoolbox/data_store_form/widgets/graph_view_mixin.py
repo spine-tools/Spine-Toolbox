@@ -59,6 +59,8 @@ class GraphViewMixin:
         self.prunned_entity_ids = dict()
         self.removed_items = list()
         self.entity_item_selection = list()
+        self.added_object_ids = set()
+        self.added_relationship_ids = set()
         self._blank_item = None
         self.zoom_widget_action = None
         self.rotate_widget_action = None
@@ -114,7 +116,9 @@ class GraphViewMixin:
         objects = db_map_data.get(self.db_map, [])
         added_ids = {x["id"] for x in objects}
         restored_ids = self.restore_removed_entities(added_ids)
-        if restored_ids != added_ids:
+        added_ids -= restored_ids
+        if added_ids:
+            self.added_object_ids.update(added_ids)
             self.build_graph(persistent=True)
 
     def receive_relationships_added(self, db_map_data):
@@ -128,7 +132,9 @@ class GraphViewMixin:
         relationships = db_map_data.get(self.db_map, [])
         added_ids = {x["id"] for x in relationships}
         restored_ids = self.restore_removed_entities(added_ids)
-        if restored_ids != added_ids:
+        added_ids -= restored_ids
+        if added_ids:
+            self.added_relationship_ids.update(added_ids)
             self.build_graph(persistent=True)
 
     def receive_object_classes_updated(self, db_map_data):
@@ -243,8 +249,12 @@ class GraphViewMixin:
 
     @Slot(dict)
     def rebuild_graph(self, selected):
-        """Stores the given selection and builds graph."""
+        """Stores the given selection of entity tree indexes and builds graph."""
         self.selected_tree_inds = selected
+        self.hidden_items.clear()
+        self.removed_items.clear()
+        self.added_object_ids.clear()
+        self.added_relationship_ids.clear()
         if self.ui.dockWidget_entity_graph.isVisible():
             self.build_graph()
 
@@ -276,8 +286,6 @@ class GraphViewMixin:
         if self.layout_gens:
             return
         new_items = self._get_new_items(x, y)
-        self.hidden_items.clear()
-        self.removed_items.clear()
         if not any(new_items):
             self._blank_item = QGraphicsTextItem("Nothing to show.")
             self.scene.addItem(self._blank_item)
@@ -322,6 +330,8 @@ class GraphViewMixin:
 
         """
         object_ids, relationship_ids = self._get_selected_entity_ids()
+        object_ids.update(self.added_object_ids)
+        relationship_ids.update(self.added_relationship_ids)
         prunned_entity_ids = {id_ for ids in self.prunned_entity_ids.values() for id_ in ids}
         object_ids -= prunned_entity_ids
         relationship_ids -= prunned_entity_ids
@@ -646,8 +656,8 @@ class GraphViewMixin:
         """
         self.msg.emit(
             "<p>Click on objects in the graph to form new relationships.</p>"
-            "<ul><li>Right click on an object to add it as member.</li>"
-            "<li>Left click to add the last member and proceed.</li></ul>"
+            "<ul><li>Right click on an object to add it as a member.</li>"
+            "<li>Left click to add it as the last member and finish.</li></ul>"
         )
         rod_obj_item = RodObjectItem(self, obj_item.pos().x(), obj_item.pos().y(), self._VERTEX_EXTENT)
         rod_rel_item = RodRelationshipItem(self, obj_item.pos().x(), obj_item.pos().y(), 0.5 * self._VERTEX_EXTENT)
