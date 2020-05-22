@@ -16,7 +16,19 @@ Classes for custom QDialogs to add items to databases.
 :date:   13.5.2018
 """
 
-from PySide2.QtWidgets import QHBoxLayout, QWidget, QLabel, QComboBox, QSpinBox, QToolButton
+from PySide2.QtWidgets import (
+    QHBoxLayout,
+    QWidget,
+    QLabel,
+    QComboBox,
+    QSpinBox,
+    QToolButton,
+    QGroupBox,
+    QVBoxLayout,
+    QTableWidget,
+    QTableWidgetItem,
+    QCheckBox,
+)
 from PySide2.QtCore import Slot, Qt
 from PySide2.QtGui import QIcon
 from ...mvcmodels.empty_row_model import EmptyRowModel
@@ -26,8 +38,84 @@ from .custom_delegates import (
     ManageRelationshipClassesDelegate,
     ManageRelationshipsDelegate,
 )
-from .manage_items_dialog import ShowIconColorEditorMixin, GetObjectClassesMixin, GetObjectsMixin, ManageItemsDialog
+from .manage_items_dialog import (
+    ShowIconColorEditorMixin,
+    GetObjectClassesMixin,
+    GetObjectsMixin,
+    ManageItemsDialog,
+    ManageItemsDialogBase,
+)
 from ...helpers import default_icon_id
+
+
+class AddReadyRelationshipsDialog(ManageItemsDialogBase):
+    """A dialog to let the user add new 'ready' relationships."""
+
+    _MARGIN = 0
+
+    def __init__(self, parent, relationships_per_class, db_mngr, *db_maps):
+        """Init class.
+
+        Args
+            parent (DataStoreForm)
+            relationships_per_class (dict): mapping relationship class key (name, object class name list string),
+                to a list of relationships (object name list)
+            db_mngr (SpineDBManager)
+            db_maps (iter) DiffDatabaseMapping instances
+        """
+        super().__init__(parent, db_mngr)
+        self.setWindowTitle("Add relationships")
+        self.db_maps = db_maps
+        self.db_mngr = db_mngr
+        self.table_wgs_by_group_box = {}
+        for class_key, relationships in relationships_per_class.items():
+            class_name, object_class_names = class_key
+            object_class_names = object_class_names.split(",")
+            group_box = QGroupBox(class_name, self)
+            group_box.setCheckable(True)
+            group_box.setChecked(True)
+            layout = QVBoxLayout(group_box)
+            layout.setContentsMargins(self._MARGIN, self._MARGIN, self._MARGIN, self._MARGIN)
+            table_wg = self._make_table_widget(class_name, object_class_names, relationships)
+            layout.addWidget(table_wg)
+            self.layout().insertWidget(0, group_box)
+            self.table_wgs_by_group_box[group_box] = (table_wg, relationships)
+        self.connect_signals()
+
+    def _make_table_widget(self, class_name, object_class_names, relationships):
+        column_count = len(object_class_names) + 1
+        row_count = len(relationships)
+        table_wg = QTableWidget(row_count, column_count, self)
+        labels = [""] + [class_name + " name" for class_name in object_class_names] + ["relationship name"]
+        table_wg.setHorizontalHeaderLabels(labels)
+        table_wg.verticalHeader().hide()
+        for row, relationship in enumerate(relationships):
+            item = QTableWidgetItem()
+            item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsUserCheckable)
+            item.setCheckState(Qt.Checked)
+            item.setBackground(qApp.palette().window())
+            table_wg.setItem(row, 0, item)
+            for column, object_name in enumerate(relationship):
+                item = QTableWidgetItem(object_name)
+                item.setFlags(item.flags() & ~Qt.ItemIsEditable)
+                table_wg.setItem(row, column + 1, item)
+        table_wg.resizeColumnsToContents()
+        return table_wg
+
+    def accept(self):
+        super().accept()
+        data = []
+        for group_box, (table_wg, relationships) in self.table_wgs_by_group_box.items():
+            if not group_box.isChecked():
+                continue
+            class_name = group_box.title()
+            for row in range(table_wg.rowCount()):
+                if table_wg.item(row, 0).checkState() != Qt.Checked:
+                    continue
+                relationship = relationships[row]
+                data.append([class_name, relationship])
+        db_map_data = {db_map: {"relationships": data} for db_map in self.db_maps}
+        self.db_mngr.import_data(db_map_data, command_text="Add relationships")
 
 
 class AddItemsDialog(ManageItemsDialog):
@@ -373,14 +461,7 @@ class AddRelationshipsDialog(GetObjectsMixin, AddItemsDialog):
     """A dialog to query user's preferences for new relationships."""
 
     def __init__(
-        self,
-        parent,
-        db_mngr,
-        *db_maps,
-        relationship_class_key=None,
-        object_class_name=None,
-        object_name=None,
-        force_default=False,
+        self, parent, db_mngr, *db_maps, relationship_class_key=(), object_names_by_class_name=None, force_default=False
     ):
         """Init class.
 
@@ -388,14 +469,14 @@ class AddRelationshipsDialog(GetObjectsMixin, AddItemsDialog):
             parent (DataStoreForm)
             db_mngr (SpineDBManager)
             db_maps (iter) DiffDatabaseMapping instances
-            relationship_class_key (tuple): (class_name, object_class_name_list)
-            object_name (str): default object name
-            object_class_name (str): default object class name
+            relationship_class_key (tuple(str,str)): relationships class name, object class name list string
+            object_names_by_class_name (dict): mapping object class names to default object names
             force_default (bool): if True, defaults are non-editable
         """
         super().__init__(parent, db_mngr, *db_maps)
-        self.default_object_class_name = object_class_name
-        self.default_object_name = object_name
+        if object_names_by_class_name is None:
+            object_names_by_class_name = {}
+        self.object_names_by_class_name = object_names_by_class_name
         self.relationship_class = None
         self.setWindowTitle("Add relationships")
         self.model = EmptyRowModel(self)
@@ -424,6 +505,7 @@ class AddRelationshipsDialog(GetObjectsMixin, AddItemsDialog):
             self.class_name, self.object_class_name_list = relationship_class_key
             self.reset_model()
         else:
+            self.class_name = self.object_class_name_list = None
             self.combo_box.setCurrentIndex(-1)
         self.combo_box.setEnabled(not force_default)
 
@@ -455,9 +537,8 @@ class AddRelationshipsDialog(GetObjectsMixin, AddItemsDialog):
         header = [*[x + " name" for x in object_class_name_list], 'relationship name', 'databases']
         self.model.set_horizontal_header_labels(header)
         defaults = {'databases': db_names}
-        if self.default_object_name and self.default_object_class_name:
-            columns = [j for j, x in enumerate(object_class_name_list) if x == self.default_object_class_name]
-            defaults.update({header[j]: self.default_object_name for j in columns})
+        if self.object_names_by_class_name:
+            defaults.update({key + " name": value for key, value in self.object_names_by_class_name.items()})
         self.model.set_default_row(**defaults)
         self.model.clear()
 
@@ -475,10 +556,11 @@ class AddRelationshipsDialog(GetObjectsMixin, AddItemsDialog):
             if header.index('relationship name') not in range(left, right + 1):
                 col_data = lambda j: self.model.index(row, j).data()  # pylint: disable=cell-var-from-loop
                 obj_names = [col_data(j) for j in range(number_of_dimensions) if col_data(j)]
+                relationship_name = self.class_name + "_"
                 if len(obj_names) == 1:
-                    relationship_name = obj_names[0] + "__"
+                    relationship_name += obj_names[0] + "__"
                 else:
-                    relationship_name = "__".join(obj_names)
+                    relationship_name += "__".join(obj_names)
                 self.model.setData(self.model.index(row, number_of_dimensions), relationship_name)
 
     @Slot()

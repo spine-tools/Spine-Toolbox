@@ -216,17 +216,14 @@ class TreeViewMixin:
         dialog.show()
 
     @Slot(bool)
-    def show_add_relationships_form(
-        self, checked=False, relationship_class_key=(), object_class_name="", object_name=""
-    ):
+    def show_add_relationships_form(self, checked=False, relationship_class_key=None, object_names_by_class_name=None):
         """Shows dialog to let user select preferences for new relationships."""
         dialog = AddRelationshipsDialog(
             self,
             self.db_mngr,
             *self.db_maps,
             relationship_class_key=relationship_class_key,
-            object_class_name=object_class_name,
-            object_name=object_name,
+            object_names_by_class_name=object_names_by_class_name
         )
         dialog.show()
 

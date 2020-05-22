@@ -452,12 +452,14 @@ class DataStoreFormBase(QMainWindow):
         data_stores = project._project_item_model.items(category_name="Data Stores")
         data_stores = [x.project_item for x in data_stores]
         named_data_stores = {x.name: x for x in data_stores}
+        data_store_names = list(named_data_stores)
         name = CustomInputDialog.get_item(
             self,
             "Add SQLite file to Project",
             "<p>Select a Data Store from the list to be the recipient:</p>",
-            list(named_data_stores),
-            QIcon(icon_path),
+            data_store_names,
+            icons={name: QIcon(icon_path) for name in data_store_names},
+            editable_text="Add new Data Store...",
         )
         if name is None:
             return

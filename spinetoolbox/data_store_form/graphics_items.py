@@ -15,7 +15,7 @@ Classes for drawing graphics items on graph view's QGraphicsScene.
 :authors: M. Marin (KTH), P. Savolainen (VTT)
 :date:   4.4.2018
 """
-from PySide2.QtCore import Qt, Signal, QLineF
+from PySide2.QtCore import Qt, Signal, Slot, QLineF
 from PySide2.QtWidgets import (
     QGraphicsItem,
     QGraphicsTextItem,
@@ -32,7 +32,7 @@ from PySide2.QtGui import QPen, QBrush, QPainterPath, QFont, QPalette, QGuiAppli
 
 
 class EntityItem(QGraphicsPixmapItem):
-    def __init__(self, data_store_form, x, y, extent, entity_id):
+    def __init__(self, data_store_form, x, y, extent, entity_id=None):
         """Initializes item
 
         Args:
@@ -73,7 +73,7 @@ class EntityItem(QGraphicsPixmapItem):
 
     @property
     def entity_name(self):
-        return self.db_mngr.get_item(self.db_map, self.entity_type, self.entity_id)["name"]
+        return self.db_mngr.get_item(self.db_map, self.entity_type, self.entity_id).get("name", "")
 
     @property
     def entity_class_type(self):
@@ -81,11 +81,11 @@ class EntityItem(QGraphicsPixmapItem):
 
     @property
     def entity_class_id(self):
-        return self.db_mngr.get_item(self.db_map, self.entity_type, self.entity_id)["class_id"]
+        return self.db_mngr.get_item(self.db_map, self.entity_type, self.entity_id).get("class_id")
 
     @property
     def entity_class_name(self):
-        return self.db_mngr.get_item(self.db_map, self.entity_class_type, self.entity_class_id)["name"]
+        return self.db_mngr.get_item(self.db_map, self.entity_class_type, self.entity_class_id).get("name", "")
 
     @property
     def first_db_map(self):
@@ -270,15 +270,17 @@ class RelationshipItem(EntityItem):
 
     @property
     def object_class_id_list(self):
-        return self.db_mngr.get_item(self.db_map, "relationship class", self.entity_class_id)["object_class_id_list"]
+        return self.db_mngr.get_item(self.db_map, "relationship class", self.entity_class_id).get(
+            "object_class_id_list"
+        )
 
     @property
     def object_name_list(self):
-        return self.db_mngr.get_item(self.db_map, "relationship", self.entity_id)["object_name_list"]
+        return self.db_mngr.get_item(self.db_map, "relationship", self.entity_id).get("object_name_list")
 
     @property
     def object_id_list(self):
-        return self.db_mngr.get_item(self.db_map, "relationship", self.entity_id)["object_id_list"]
+        return self.db_mngr.get_item(self.db_map, "relationship", self.entity_id).get("object_id_list")
 
     @property
     def db_representation(self):
@@ -306,7 +308,7 @@ class RelationshipItem(EntityItem):
 
 
 class ObjectItem(EntityItem):
-    def __init__(self, data_store_form, x, y, extent, entity_id):
+    def __init__(self, data_store_form, x, y, extent, entity_id=None):
         """Initializes the item.
 
         Args:
@@ -316,7 +318,7 @@ class ObjectItem(EntityItem):
             extent (int): preferred extent
             entity_id (int): object id
         """
-        super().__init__(data_store_form, x, y, extent, entity_id)
+        super().__init__(data_store_form, x, y, extent, entity_id=entity_id)
         self.setFlag(QGraphicsItem.ItemIsFocusable, enabled=True)
         self.label_item = EntityLabelItem(self)
         self.setZValue(0.5)
@@ -341,17 +343,6 @@ class ObjectItem(EntityItem):
         """Refreshes the name."""
         self.label_item.setPlainText(name)
 
-    def _paint_as_selected(self):
-        if self.label_item.hasFocus():
-            self._paint_as_deselected()
-        else:
-            super()._paint_as_selected()
-            self.label_item._paint_as_selected()
-
-    def _paint_as_deselected(self):
-        super()._paint_as_deselected()
-        self.label_item._paint_as_deselected()
-
     def update_description(self, description):
         self.setToolTip(f"<html>{description}</html>")
 
@@ -364,6 +355,126 @@ class ObjectItem(EntityItem):
             return
         for arc_item in self.arc_items:
             arc_item.rel_item.follow_object_by(dx, dy)
+
+    def _make_menu(self):
+        menu = super()._make_menu()
+        menu.addSeparator()
+        menu.addAction("Add relationships...", self._start_relationship)
+        return menu
+
+    @Slot(bool)
+    def _start_relationship(self, checked=False):
+        self._data_store_form.start_relationship_from_object(self)
+
+
+class RodObjectItem(ObjectItem):
+    @property
+    def entity_class_name(self):
+        return "block"
+
+    def refresh_icon(self):
+        """Refreshes the icon."""
+        pixmap = self.db_mngr.icon_mngr[self.db_map].object_pixmap("").scaled(self._extent, self._extent)
+        self.setPixmap(pixmap)
+
+    def mouseMoveEvent(self, event):
+        move_by = event.scenePos() - event.lastScenePos()
+        self.block_move_by(move_by.x(), move_by.y())
+
+    def contextMenuEvent(self, e):
+        pass
+
+
+class RodRelationshipItem(RelationshipItem):
+    def refresh_icon(self):
+        """Refreshes the icon."""
+        object_class_name_list = [arc_item.obj_item.entity_class_name for arc_item in self.arc_items]
+        object_class_name_list = ",".join(object_class_name_list)
+        pixmap = (
+            self.db_mngr.icon_mngr[self.db_map]
+            .relationship_pixmap(object_class_name_list)
+            .scaled(self._extent, self._extent)
+        )
+        self.setPixmap(pixmap)
+
+    def block_move_by(self, dx, dy):
+        super().block_move_by(dx, dy)
+        for arc_item in self.arc_items:
+            arc_item.rel_item.follow_object_by(dx, dy)
+
+
+class ArcItem(QGraphicsLineItem):
+    """Arc item to use with GraphViewForm. Connects a RelationshipItem to an ObjectItem."""
+
+    def __init__(self, rel_item, obj_item, width):
+        """Initializes item.
+
+        Args:
+            rel_item (spinetoolbox.widgets.graph_view_graphics_items.RelationshipItem): relationship item
+            obj_item (spinetoolbox.widgets.graph_view_graphics_items.ObjectItem): object item
+            width (float): Preferred line width
+        """
+        super().__init__()
+        self.rel_item = rel_item
+        self.obj_item = obj_item
+        self._width = float(width)
+        self.update_line()
+        self._pen = self._make_pen()
+        self.setPen(self._pen)
+        self.setZValue(-2)
+        rel_item.add_arc_item(self)
+        obj_item.add_arc_item(self)
+        self.setCursor(Qt.ArrowCursor)
+
+    def _make_pen(self):
+        pen = QPen()
+        pen.setWidth(self._width)
+        color = QGuiApplication.palette().color(QPalette.Normal, QPalette.WindowText)
+        color.setAlphaF(0.8)
+        pen.setColor(color)
+        pen.setStyle(Qt.SolidLine)
+        pen.setCapStyle(Qt.RoundCap)
+        return pen
+
+    def moveBy(self, dx, dy):
+        """Does nothing. This item is not moved the regular way, but follows the EntityItems it connects."""
+
+    def update_line(self):
+        src_x = self.rel_item.x()
+        src_y = self.rel_item.y()
+        dst_x = self.obj_item.x()
+        dst_y = self.obj_item.y()
+        self.setLine(src_x, src_y, dst_x, dst_y)
+
+    def mousePressEvent(self, event):
+        """Accepts the event so it's not propagated."""
+        event.accept()
+
+    def other_item(self, item):
+        return {self.rel_item: self.obj_item, self.obj_item: self.rel_item}.get(item)
+
+    def apply_zoom(self, factor):
+        """Applies zoom.
+
+        Args:
+            factor (float): The zoom factor.
+        """
+        if factor < 1:
+            factor = 1
+        scaled_width = self._width / factor
+        self._pen.setWidthF(scaled_width)
+        self.setPen(self._pen)
+
+    def wipe_out(self):
+        self.obj_item.arc_items.remove(self)
+        self.rel_item.arc_items.remove(self)
+
+
+class RodArcItem(ArcItem):
+    def _make_pen(self):
+        pen = super()._make_pen()
+        pen.setStyle(Qt.DotLine)
+        return pen
 
 
 class EntityLabelItem(QGraphicsTextItem):
@@ -409,75 +520,6 @@ class EntityLabelItem(QGraphicsTextItem):
         y = rectf.height() + 4
         self.setPos(x, y)
         self.bg.setRect(self.boundingRect())
-
-    def _paint_as_selected(self):
-        self.bg.setBrush(QGuiApplication.palette().highlight())
-
-    def _paint_as_deselected(self):
-        self.bg.setBrush(QBrush(self.bg_color))
-
-
-class ArcItem(QGraphicsLineItem):
-    """Arc item to use with GraphViewForm. Connects a RelationshipItem to an ObjectItem."""
-
-    def __init__(self, rel_item, obj_item, width):
-        """Initializes item.
-
-        Args:
-            rel_item (spinetoolbox.widgets.graph_view_graphics_items.RelationshipItem): relationship item
-            obj_item (spinetoolbox.widgets.graph_view_graphics_items.ObjectItem): object item
-            width (float): Preferred line width
-        """
-        super().__init__()
-        self.rel_item = rel_item
-        self.obj_item = obj_item
-        self._width = float(width)
-        self.update_line()
-        self._pen = QPen()
-        self._pen.setWidth(self._width)
-        color = QGuiApplication.palette().color(QPalette.Normal, QPalette.WindowText)
-        color.setAlphaF(0.8)
-        self._pen.setColor(color)
-        self._pen.setStyle(Qt.SolidLine)
-        self._pen.setCapStyle(Qt.RoundCap)
-        self.setPen(self._pen)
-        self.setZValue(-2)
-        rel_item.add_arc_item(self)
-        obj_item.add_arc_item(self)
-        self.setCursor(Qt.ArrowCursor)
-
-    def moveBy(self, dx, dy):
-        """Does nothing. This item is not moved the regular way, but follows the EntityItems it connects."""
-
-    def update_line(self):
-        src_x = self.rel_item.x()
-        src_y = self.rel_item.y()
-        dst_x = self.obj_item.x()
-        dst_y = self.obj_item.y()
-        self.setLine(src_x, src_y, dst_x, dst_y)
-
-    def mousePressEvent(self, event):
-        """Accepts the event so it's not propagated."""
-        event.accept()
-
-    def other_item(self, item):
-        return {self.rel_item: self.obj_item, self.obj_item: self.rel_item}.get(item)
-
-    def apply_zoom(self, factor):
-        """Applies zoom.
-
-        Args:
-            factor (float): The zoom factor.
-        """
-        if factor < 1:
-            factor = 1
-        scaled_width = self._width / factor
-        self._pen.setWidthF(scaled_width)
-        self.setPen(self._pen)
-
-    def wipe_out(self):
-        self.obj_item.arc_items.remove(self)
-        self.rel_item.arc_items.remove(self)
 
 
 class OutlinedTextItem(QGraphicsSimpleTextItem):

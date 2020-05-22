@@ -263,8 +263,9 @@ class ObjectTreeView(EntityTreeView):
         relationship_class_key = item.display_id
         object_name = item.parent_item.display_data
         object_class_name = item.parent_item.parent_item.display_data
+        object_names_by_class_name = {object_class_name: object_name}
         self._data_store_form.show_add_relationships_form(
-            relationship_class_key=relationship_class_key, object_class_name=object_class_name, object_name=object_name
+            relationship_class_key=relationship_class_key, object_names_by_class_name=object_names_by_class_name
         )
 
     def find_next_relationship(self):

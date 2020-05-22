@@ -15,25 +15,31 @@ Contains the GraphViewMixin class.
 :author: M. Marin (KTH)
 :date:   26.11.2018
 """
-
-from PySide2.QtCore import Signal, Slot, QTimer, QRectF
+import itertools
+from PySide2.QtCore import Slot, QRectF
 from PySide2.QtWidgets import QGraphicsTextItem
 from PySide2.QtPrintSupport import QPrinter
 from PySide2.QtGui import QPainter
 from spinedb_api import to_database, from_database
 from ...widgets.custom_qwidgets import ZoomWidgetAction, RotateWidgetAction
 from ...widgets.custom_qgraphicsscene import CustomGraphicsScene
-from ..graphics_items import EntityItem, ObjectItem, RelationshipItem, ArcItem
+from ..graphics_items import (
+    EntityItem,
+    ObjectItem,
+    RelationshipItem,
+    ArcItem,
+    RodObjectItem,
+    RodRelationshipItem,
+    RodArcItem,
+)
 from .graph_view_demo import GraphViewDemo
 from .graph_layout_generator import GraphLayoutGenerator
 from ...helpers import get_save_file_name_in_last_dir
+from .add_items_dialogs import AddReadyRelationshipsDialog
 
 
 class GraphViewMixin:
     """Provides the graph view for the DS form."""
-
-    objects_added_to_graph = Signal()
-    relationships_added_to_graph = Signal()
 
     _POS_PARAM_NAME = "entity_graph_position"
     _VERTEX_EXTENT = 64
@@ -43,7 +49,6 @@ class GraphViewMixin:
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.selected_indexes = {}
-        self._added_relationships = {}
         self.object_ids = list()
         self.relationship_ids = list()
         self.src_inds = list()
@@ -87,9 +92,6 @@ class GraphViewMixin:
         self.zoom_widget_action.reset_pressed.connect(self.ui.graphicsView.reset_zoom)
         self.rotate_widget_action.clockwise_pressed.connect(self.ui.graphicsView.rotate_clockwise)
         self.rotate_widget_action.anticlockwise_pressed.connect(self.ui.graphicsView.rotate_anticlockwise)
-        # Added to graph
-        self.objects_added_to_graph.connect(self._ensure_objects_in_graph)
-        self.relationships_added_to_graph.connect(self._ensure_relationships_in_graph)
 
     def setup_widget_actions(self):
         """Setups zoom and rotate widget action in view menu."""
@@ -101,29 +103,41 @@ class GraphViewMixin:
 
     def receive_objects_added(self, db_map_data):
         """Runs when objects are added to the db.
-        Builds a lookup dictionary consumed by ``add_object``.
-        Also, adds the new objects to the graph if needed.
+        Adds the new objects to the graph if needed.
 
         Args:
             db_map_data (dict): list of dictionary-items keyed by DiffDatabaseMapping instance.
         """
         super().receive_objects_added(db_map_data)
         objects = db_map_data.get(self.db_map, [])
-        self._added_objects = {x["id"]: x for x in objects}
-        self.objects_added_to_graph.emit()
+        added_objects = {x["id"]: x for x in objects}
+        object_ids = added_objects.keys()
+        restored_ids = self.restore_removed_entities(object_ids)
+        non_restored_class_ids = {x["class_id"] for id_, x in added_objects.items() if id_ not in restored_ids}
+        selected_class_ids = {
+            ind.model().item_from_index(ind).db_map_id(self.db_map)
+            for ind in self.selected_indexes.get("object class", {})
+        }
+        if non_restored_class_ids.intersection(selected_class_ids):
+            self.build_graph()
 
     def receive_relationships_added(self, db_map_data):
         """Runs when relationships are added to the db.
-        Builds a lookup dictionary consumed by ``add_relationship``.
-        Also, adds the new relationships to the graph if needed.
+        Adds the new relationships to the graph if needed.
 
         Args:
             db_map_data (dict): list of dictionary-items keyed by DiffDatabaseMapping instance.
         """
         super().receive_relationships_added(db_map_data)
         relationships = db_map_data.get(self.db_map, [])
-        self._added_relationships = {x["id"]: x for x in relationships}
-        self.relationships_added_to_graph.emit()
+        added_relationships = {x["id"]: x for x in relationships}
+        relationship_ids = added_relationships.keys()
+        restored_ids = self.restore_removed_entities(relationship_ids)
+        non_restored_rels = [x for id_, x in added_relationships.items() if id_ not in restored_ids]
+        non_restored_object_ids = {int(id_) for x in non_restored_rels for id_ in x["object_id_list"].split(",")}
+        graph_object_ids = {x.entity_id for x in self.ui.graphicsView.items() if isinstance(x, ObjectItem)}
+        if non_restored_object_ids - graph_object_ids:
+            self.build_graph()
 
     def receive_object_classes_updated(self, db_map_data):
         super().receive_object_classes_updated(db_map_data)
@@ -164,46 +178,6 @@ class GraphViewMixin:
         """
         super().receive_relationships_removed(db_map_data)
         self.hide_removed_entities(db_map_data)
-
-    @Slot()
-    def _ensure_objects_in_graph(self):
-        QTimer.singleShot(0, self._do_ensure_objects_in_graph)
-
-    @Slot()
-    def _do_ensure_objects_in_graph(self):
-        """Makes sure all objects in ``self._added_objects`` are materialized in the graph if corresponds.
-        It is assumed that ``self._added_objects`` doesn't contain information regarding objects added
-        from the graph itself (through Item Palette etc.). These are materialized in ``add_object()``.
-        """
-        object_ids = self._added_objects.keys()
-        restored_ids = self.restore_removed_entities(object_ids)
-        rem_class_ids = {x["class_id"] for id_, x in self._added_objects.items() if id_ not in restored_ids}
-        sel_class_ids = {
-            ind.model().item_from_index(ind).db_map_id(self.db_map)
-            for ind in self.ui.treeView_object.selected_indexes.get("object class", {})
-        }
-        self._added_objects.clear()
-        if rem_class_ids.intersection(sel_class_ids):
-            self.build_graph()
-
-    @Slot()
-    def _ensure_relationships_in_graph(self):
-        QTimer.singleShot(0, self._do_ensure_relationships_in_graph)
-
-    @Slot()
-    def _do_ensure_relationships_in_graph(self):
-        """Makes sure all relationships in ``self._added_relationships`` are materialized in the graph if corresponds.
-        It is assumed that ``self._added_relationships`` doesn't contain information regarding relationships added
-        from the graph itself (through Item Palette etc.). These are materialized in ``add_relationship()``.
-        """
-        relationship_ids = self._added_relationships.keys()
-        restored_ids = self.restore_removed_entities(relationship_ids)
-        rem_relationships = [x for id_, x in self._added_relationships.items() if id_ not in restored_ids]
-        rem_object_id_lists = [{int(id_) for id_ in x["object_id_list"].split(",")} for x in rem_relationships]
-        object_ids = {x.entity_id for x in self.ui.graphicsView.items() if isinstance(x, ObjectItem)}
-        self._added_relationships.clear()
-        if any(object_ids.intersection(object_id_list) for object_id_list in rem_object_id_lists):
-            self.build_graph()
 
     def restore_removed_entities(self, added_ids):
         """Restores any entities that have been previously removed and returns their ids.
@@ -483,54 +457,6 @@ class GraphViewMixin:
         self.selected_ent_ids["relationship"] = self.db_mngr.db_map_class_ids(selected_rels)
         self.update_filter()
 
-    def add_object(self, object_class_id, name):
-        """Adds object to the database.
-
-        Args:
-            object_class_id (int)
-            name (str)
-
-        Returns:
-            int, NoneType: The id of the added object if successful, None otherwise.
-        """
-        item = dict(class_id=object_class_id, name=name)
-        db_map_data = {self.db_map: [item]}
-        self.db_mngr.add_objects(db_map_data)
-        object_lookup = {(v["class_id"], v["name"]): k for k, v in self._added_objects.items()}
-        object_id = object_lookup.get((object_class_id, name), None)
-        if object_id is not None:
-            self._added_objects.pop(object_id)
-        return object_id
-
-    def update_object(self, object_id, name):
-        """Updates object in the db.
-
-        Args:
-            object_id (int)
-            name (str)
-        """
-        item = dict(id=object_id, name=name)
-        db_map_data = {self.db_map: [item]}
-        self.db_mngr.update_objects(db_map_data)
-
-    def add_relationship(self, class_id, object_id_list, object_name_list):
-        """Adds relationship to the db.
-
-        Args:
-            class_id (int)
-            object_id_list (list)
-        """
-        class_name = self.db_mngr.get_item(self.db_map, "relationship class", class_id)["name"]
-        name = class_name + "_" + "__".join(object_name_list)
-        relationship = {'name': name, 'object_id_list': object_id_list, 'class_id': class_id}
-        self.db_mngr.add_relationships({self.db_map: [relationship]})
-        object_id_list = ",".join([str(id_) for id_ in object_id_list])
-        relationship_lookup = {(v["class_id"], v["object_id_list"]): k for k, v in self._added_relationships.items()}
-        relationship_id = relationship_lookup.get((class_id, object_id_list), None)
-        if relationship_id is not None:
-            self._added_relationships.pop(relationship_id)
-        return relationship_id
-
     @Slot(bool)
     def hide_selected_items(self, checked=False):
         """Hides selected items."""
@@ -721,6 +647,47 @@ class GraphViewMixin:
         painter.end()
         view._zoom(current_zoom_factor)
         self._insert_open_file_button(file_path)
+
+    def start_relationship_from_object(self, obj_item):
+        """Starts a relationship from the given object item.
+
+        Args:
+            obj_item (..graphics_items.ObjectItem)
+        """
+        self.msg.emit(
+            "<p>Click on objects in the graph to form new relationships.</p>"
+            "<ul><li>Right click adds members in the relationship.</li>"
+            "<li>Left click adds the last member and proceeds to add relationships.</li></ul>"
+        )
+        rod_obj_item = RodObjectItem(self, obj_item.pos().x(), obj_item.pos().y(), self._VERTEX_EXTENT)
+        rod_rel_item = RodRelationshipItem(self, obj_item.pos().x(), obj_item.pos().y(), 0.5 * self._VERTEX_EXTENT)
+        rod_arc_item1 = RodArcItem(rod_rel_item, obj_item, self._ARC_WIDTH)
+        rod_arc_item2 = RodArcItem(rod_rel_item, rod_obj_item, self._ARC_WIDTH)
+        rod_rel_item.refresh_icon()
+        self.ui.graphicsView.set_rod_items([rod_obj_item, rod_rel_item, rod_arc_item1, rod_arc_item2])
+
+    def try_and_add_relationships(self, *object_items):
+        """Tries to add relationships between the given object items.
+
+        Args:
+            object_items (..graphics_items.ObjectItem)
+        """
+        relationships_per_class = {}
+        for rel_cls in self.db_mngr.get_items(self.db_map, "relationship class"):
+            object_class_id_list = [int(id_) for id_ in rel_cls["object_class_id_list"].split(",")]
+            rel_cls_key = (rel_cls["name"], rel_cls["object_class_name_list"])
+            for item_permutation in itertools.permutations(object_items):
+                if [item.entity_class_id for item in item_permutation] == object_class_id_list:
+                    relationship = [item.entity_name for item in item_permutation]
+                    relationships_per_class.setdefault(rel_cls_key, list()).append(relationship)
+        if not relationships_per_class:
+            self.msg.emit(
+                "<p>No relationship classes match the given combination of objects.</p>"
+                "<p>Try to add a corresponding relationship class first.</p>"
+            )
+            return
+        dialog = AddReadyRelationshipsDialog(self, relationships_per_class, self.db_mngr, *self.db_maps)
+        dialog.show()
 
     def closeEvent(self, event=None):
         """Handles close window event.
