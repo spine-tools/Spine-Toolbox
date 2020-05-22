@@ -84,12 +84,13 @@ class ParameterIndexSettings(QWidget):
             selection_model.clearSelection()
             index = self._indexing_table_model.index
             last_column = self._indexing_table_model.columnCount() - 1
+            selection = QItemSelection()
             for i, pick in enumerate(indexing_domain.pick_list):
                 if pick:
                     top_left = index(i, 0)
                     bottom_right = index(i, last_column)
-                    selection = QItemSelection(top_left, bottom_right)
-                    selection_model.select(selection, QItemSelectionModel.Select)
+                    selection.select(top_left, bottom_right)
+            selection_model.select(selection, QItemSelectionModel.Select)
         else:
             self._set_enabled_use_existing_domain_widgets(True)
             self._set_enabled_create_domain_widgets(False)
@@ -377,9 +378,10 @@ class _IndexingTableModel(QAbstractTableModel):
         if role not in (Qt.DisplayRole, Qt.ToolTipRole) or not index.isValid():
             return None
         row = index.row()
-        if index.column() == 0:
+        column = index.column()
+        if column == 0:
             return self._indexes[row]
-        column = index.column() - 1
+        column -= 1
         value = self._values[column][row]
         return str(value) if value is not None else None
 
@@ -446,15 +448,23 @@ class _IndexingTableModel(QAbstractTableModel):
             row = i.row()
             self._selected[row] = False
             min_changed_row = min(min_changed_row, row)
+        max_changed_row = 0
         for i, parameter_value in enumerate(self._parameter_values):
-            self._values[i] = len(self._indexes) * [None]
+            value_column = len(self._indexes) * [None]
+            self._values[i] = value_column
             value_index = 0
+            value_length = len(parameter_value)
+            last_changed_row = 0
             for j, is_selected in enumerate(self._selected):
-                if is_selected and value_index < len(parameter_value):
-                    self._values[i][j] = parameter_value.values[value_index]
+                if value_index == value_length:
+                    break
+                if is_selected:
+                    value_column[j] = parameter_value.values[value_index]
                     value_index += 1
+                last_changed_row += 1
+            max_changed_row = max(max_changed_row, last_changed_row)
         top_left = self.index(min_changed_row, 1)
-        bottom_right = self.index(len(self._indexes), len(self._parameter_values))
+        bottom_right = self.index(max_changed_row, len(self._parameter_values))
         self.dataChanged.emit(top_left, bottom_right, [Qt.DisplayRole])
 
     def set_index_name(self, name):
