@@ -258,6 +258,7 @@ class EntityItem(QGraphicsPixmapItem):
         if not self.isSelected() and not e.modifiers() & Qt.ControlModifier:
             self.scene().clearSelection()
         self.setSelected(True)
+        self._data_store_form._handle_menu_graph_about_to_show()
         self._menu.exec_(e.screenPos())
 
 

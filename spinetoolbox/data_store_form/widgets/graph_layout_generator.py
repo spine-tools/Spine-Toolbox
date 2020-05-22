@@ -21,7 +21,8 @@ import numpy as np
 from numpy import atleast_1d as arr
 from scipy.sparse.csgraph import dijkstra
 from PySide2.QtCore import Signal, Slot, QObject, QThread, Qt
-from PySide2.QtWidgets import QProgressBar, QDialogButtonBox, QLabel, QWidget, QVBoxLayout
+from PySide2.QtWidgets import QProgressBar, QDialogButtonBox, QLabel, QWidget, QVBoxLayout, QHBoxLayout
+from PySide2.QtGui import QPainter, QColor
 
 
 class _State(enum.Enum):
@@ -30,6 +31,42 @@ class _State(enum.Enum):
     ACTIVE = enum.auto()
     STOPPED = enum.auto()
     CANCELLED = enum.auto()
+
+
+class ProgressBarWidget(QWidget):
+    def __init__(self, layout_generator, parent):
+        super().__init__(parent)
+        self.setAttribute(Qt.WA_DeleteOnClose)
+        inner_widget = QWidget(self)
+        layout = QHBoxLayout(self)
+        layout.addStretch()
+        layout.addWidget(inner_widget)
+        layout.addStretch()
+        inner_layout = QVBoxLayout(inner_widget)
+        label = QLabel("Generating layout...")
+        label.setStyleSheet("QLabel{color:white; font-weight: bold; font-size:18px;}")
+        label.setAlignment(Qt.AlignHCenter)
+        progress_bar = QProgressBar()
+        progress_bar.setRange(0, layout_generator.iterations - 1)
+        progress_bar.setTextVisible(False)
+        button_box = QDialogButtonBox()
+        button_box.setCenterButtons(True)
+        button = button_box.addButton("Cancel", QDialogButtonBox.NoRole)
+        button.clicked.connect(layout_generator.cancel)
+        inner_layout.addStretch()
+        inner_layout.addWidget(label)
+        inner_layout.addWidget(progress_bar)
+        inner_layout.addWidget(button_box)
+        inner_layout.addStretch()
+        self.setFixedSize(parent.size())
+        layout_generator.done.connect(self.close)
+        layout_generator.progressed.connect(progress_bar.setValue)
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.fillRect(event.rect(), QColor(0, 0, 0, 96))
+        super().paintEvent(event)
+        painter.end()
 
 
 class GraphLayoutGenerator(QObject):
@@ -49,7 +86,7 @@ class GraphLayoutGenerator(QObject):
         self.dst_inds = dst_inds
         self.spread = spread
         self.heavy_positions = heavy_positions
-        self.iterations = iterations
+        self.iterations = max(3, round(iterations * (1 - len(heavy_positions) / (vertex_count + 1))))
         self.weight_exp = weight_exp
         self.initial_diameter = self.vertex_count * self.spread
         self._state = _State.ACTIVE
@@ -61,27 +98,8 @@ class GraphLayoutGenerator(QObject):
         self.finished.connect(self.clean_up)
 
     def show_progress_widget(self, parent):
-        widget = QWidget(parent)
-        widget.setAttribute(Qt.WA_NoSystemBackground)
-        widget.setAttribute(Qt.WA_TranslucentBackground)
-        widget.setAttribute(Qt.WA_DeleteOnClose)
-        layout = QVBoxLayout(widget)
-        label = QLabel("Generating layout...")
-        progress_bar = QProgressBar()
-        progress_bar.setRange(0, self.iterations - 1)
-        progress_bar.setTextVisible(False)
-        button_box = QDialogButtonBox()
-        button_box.setCenterButtons(True)
-        button = button_box.addButton("Cancel", QDialogButtonBox.NoRole)
-        button.clicked.connect(lambda checked=False: self.cancel())
-        self.progressed.connect(progress_bar.setValue)
-        layout.addWidget(label)
-        layout.addWidget(progress_bar)
-        layout.addWidget(button_box)
+        widget = ProgressBarWidget(self, parent)
         widget.show()
-        pos = parent.geometry().center() - widget.geometry().center()
-        widget.move(pos)
-        self.done.connect(widget.close)
 
     def clean_up(self):
         self._thread.quit()

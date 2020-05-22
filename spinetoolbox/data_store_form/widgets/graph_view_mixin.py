@@ -270,7 +270,6 @@ class GraphViewMixin:
         self.object_ids, self.relationship_ids, self.src_inds, self.dst_inds = self._get_graph_data()
         layout_gen = self._make_layout_generator()
         self.layout_gens.append(layout_gen)
-        self.make_a_scene()
         layout_gen.show_progress_widget(self.ui.graphicsView)
         layout_gen.finished.connect(self._complete_graph)
         layout_gen.done.connect(lambda layout_gen=layout_gen: self.layout_gens.remove(layout_gen))
@@ -285,6 +284,7 @@ class GraphViewMixin:
         """
         if self.layout_gens:
             return
+        self.make_a_scene()
         new_items = self._get_new_items(x, y)
         if not any(new_items):
             self._blank_item = QGraphicsTextItem("Nothing to show.")
