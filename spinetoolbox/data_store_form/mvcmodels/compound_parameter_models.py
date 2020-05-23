@@ -125,7 +125,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
     @property
     def _entity_class_id_key(self):
         """
-        Returns the key of the entity class id in the model items (either "object_class_id" or "relationship_class_id")
+        Returns the key corresponding to the entity class id (either "object_class_id" or "relationship_class_id")
 
         Returns:
             str
@@ -148,7 +148,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
             # TODO: show_empty=True
             self._auto_filter_menus[field] = menu = ParameterViewFilterMenu(self._parent, self, show_empty=False)
             menu.filterChanged.connect(
-                lambda values, has_filter, field=field: self.update_auto_filter(field, values, has_filter)
+                lambda values, has_filter, field=field: self.set_auto_filter(field, values, has_filter)
             )
 
     def get_auto_filter_menu(self, logical_index):
@@ -264,7 +264,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         return self._empty_model_type(self, self.header, self.db_mngr)
 
     def filter_accepts_model(self, model):
-        """Returns a boolean indicating whether or not the given model should be included in this compound model.
+        """Returns a boolean indicating whether or not the given model passes the filter for compound model.
 
         Args:
             model (SingleParameterModel, EmptyParameterModel)
@@ -360,7 +360,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         b = self._settattr_if_different(model, "_selected_param_def_ids", selected_param_def_ids)
         return a or b
 
-    def update_auto_filter(self, field, valid_values, has_filter):
+    def set_auto_filter(self, field, valid_values, has_filter):
         """Updates and applies the auto filter.
 
         Args:

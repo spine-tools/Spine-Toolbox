@@ -33,14 +33,12 @@ from spinedb_api import (
     SpineDBVersionError,
 )
 from ...config import MAINWINDOW_SS, APPLICATION_PATH
-from .edit_or_remove_items_dialogs import ManageParameterTagsDialog
 from .select_db_items_dialogs import MassRemoveItemsDialog, GetItemsForExportDialog
 from .custom_qwidgets import OpenFileButton, OpenSQLiteFileButton, ShootingLabel, CustomInputDialog
 from .parameter_view_mixin import ParameterViewMixin
 from .tree_view_mixin import TreeViewMixin
 from .graph_view_mixin import GraphViewMixin
 from .tabular_view_mixin import TabularViewMixin
-from .toolbars import ParameterTagToolBar
 from .db_session_history_dialog import DBSessionHistoryDialog
 from ...widgets.notification import NotificationStack
 from ..mvcmodels.parameter_value_list_model import ParameterValueListModel
@@ -97,8 +95,6 @@ class DataStoreFormBase(QMainWindow):
         self.err_msg.setWindowTitle("Error")
         self.err_msg.setWindowFlag(Qt.WindowContextHelpButtonHint, False)
         self.notification_stack = NotificationStack(self)
-        self.parameter_tag_toolbar = ParameterTagToolBar(self, self.db_mngr, *self.db_maps)
-        self.addToolBar(Qt.TopToolBarArea, self.parameter_tag_toolbar)
         self.selected_ent_cls_ids = {"object class": {}, "relationship class": {}}
         self.selected_ent_ids = {"object": {}, "relationship": {}}
         self.selected_parameter_tag_ids = dict()
@@ -123,7 +119,6 @@ class DataStoreFormBase(QMainWindow):
         """Adds actions to View and Edit menu."""
         self.ui.menuView.addSeparator()
         self.ui.menuView.addAction(self.ui.dockWidget_parameter_value_list.toggleViewAction())
-        self.ui.menuView.addAction(self.parameter_tag_toolbar.toggleViewAction())
         before = self.ui.menuEdit.actions()[0]
         self.undo_action = self.db_mngr.undo_action[self.db_map]
         self.redo_action = self.db_mngr.redo_action[self.db_map]
@@ -156,8 +151,6 @@ class DataStoreFormBase(QMainWindow):
         self.ui.actionEdit_selected.triggered.connect(self.edit_selected)
         self.ui.actionManage_parameter_tags.triggered.connect(self.show_manage_parameter_tags_form)
         self.ui.actionMass_remove_items.triggered.connect(self.show_mass_remove_items_form)
-        self.parameter_tag_toolbar.manage_tags_action_triggered.connect(self.show_manage_parameter_tags_form)
-        self.parameter_tag_toolbar.tag_button_toggled.connect(self._handle_tag_button_toggled)
         self.ui.dockWidget_exports.visibilityChanged.connect(self._handle_exports_visibility_changed)
 
     @Slot(int)
@@ -199,7 +192,6 @@ class DataStoreFormBase(QMainWindow):
             self.ui.treeView_parameter_value_list.expand(index)
         self.ui.treeView_parameter_value_list.resizeColumnToContents(0)
         self.ui.treeView_parameter_value_list.header().hide()
-        self.parameter_tag_toolbar.init_toolbar()
 
     @Slot(str)
     def add_message(self, msg):
@@ -229,8 +221,6 @@ class DataStoreFormBase(QMainWindow):
             dock.setVisible(True)
             dock.setFloating(False)
             self.addDockWidget(Qt.RightDockWidgetArea, dock)
-        self.parameter_tag_toolbar.setVisible(True)
-        self.addToolBar(Qt.TopToolBarArea, self.parameter_tag_toolbar)
 
     @Slot()
     def _handle_menu_edit_about_to_show(self):
@@ -616,42 +606,6 @@ class DataStoreFormBase(QMainWindow):
         self.reload_session(db_maps)
         self.msg.emit("Session refreshed.")
 
-    @Slot("QVariant", bool)
-    def _handle_tag_button_toggled(self, db_map_ids, checked):
-        """Updates filter according to selected tags.
-        """
-        for db_map, id_ in db_map_ids:
-            if checked:
-                self.selected_parameter_tag_ids.setdefault(db_map, set()).add(id_)
-            else:
-                self.selected_parameter_tag_ids[db_map].remove(id_)
-        selected_param_defs = self.db_mngr.find_cascading_parameter_definitions_by_tag(self.selected_parameter_tag_ids)
-        if any(v for v in self.selected_parameter_tag_ids.values()) and not any(
-            v for v in selected_param_defs.values()
-        ):
-            # There are tags selected but no matching parameter definitions ~> we need to reject them all
-            self.selected_param_def_ids["object class"] = None
-            self.selected_param_def_ids["relationship class"] = None
-        else:
-            self.selected_param_def_ids["object class"] = {}
-            self.selected_param_def_ids["relationship class"] = {}
-            for db_map, param_defs in selected_param_defs.items():
-                for param_def in param_defs:
-                    if "object_class_id" in param_def:
-                        self.selected_param_def_ids["object class"].setdefault(
-                            (db_map, param_def["object_class_id"]), set()
-                        ).add(param_def["id"])
-                    elif "relationship_class_id" in param_def:
-                        self.selected_param_def_ids["relationship class"].setdefault(
-                            (db_map, param_def["relationship_class_id"]), set()
-                        ).add(param_def["id"])
-        self.update_filter()
-
-    @Slot(bool)
-    def show_manage_parameter_tags_form(self, checked=False):
-        dialog = ManageParameterTagsDialog(self, self.db_mngr, *self.db_maps)
-        dialog.show()
-
     @Slot(bool)
     def show_mass_remove_items_form(self, checked=False):
         dialog = MassRemoveItemsDialog(self, self.db_mngr, *self.db_maps)
@@ -695,7 +649,6 @@ class DataStoreFormBase(QMainWindow):
 
     def receive_parameter_tags_fetched(self, db_map_data):
         self.notify_items_changed("fetched", "parameter tag", db_map_data)
-        self.parameter_tag_toolbar.receive_parameter_tags_added(db_map_data)
 
     def receive_object_classes_added(self, db_map_data):
         self.notify_items_changed("added", "object class", db_map_data)
@@ -721,7 +674,6 @@ class DataStoreFormBase(QMainWindow):
 
     def receive_parameter_tags_added(self, db_map_data):
         self.notify_items_changed("added", "parameter tag", db_map_data)
-        self.parameter_tag_toolbar.receive_parameter_tags_added(db_map_data)
 
     def receive_object_classes_updated(self, db_map_data):
         self.notify_items_changed("updated", "object class", db_map_data)
@@ -747,7 +699,6 @@ class DataStoreFormBase(QMainWindow):
 
     def receive_parameter_tags_updated(self, db_map_data):
         self.notify_items_changed("updated", "parameter tag", db_map_data)
-        self.parameter_tag_toolbar.receive_parameter_tags_updated(db_map_data)
 
     def receive_parameter_definition_tags_set(self, db_map_data):
         self.notify_items_changed("set", "parameter definition tag", db_map_data)
@@ -776,7 +727,6 @@ class DataStoreFormBase(QMainWindow):
 
     def receive_parameter_tags_removed(self, db_map_data):
         self.notify_items_changed("removed", "parameter tag", db_map_data)
-        self.parameter_tag_toolbar.receive_parameter_tags_removed(db_map_data)
 
     def restore_ui(self):
         """Restore UI state from previous session."""

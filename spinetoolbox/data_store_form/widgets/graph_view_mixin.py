@@ -78,6 +78,11 @@ class GraphViewMixin:
         self.ui.menuView.addSeparator()
         self.ui.menuView.addAction(self.ui.dockWidget_entity_graph.toggleViewAction())
 
+    def init_models(self):
+        super().init_models()
+        self.scene = CustomGraphicsScene(self)
+        self.ui.graphicsView.setScene(self.scene)
+
     def connect_signals(self):
         """Connects signals."""
         super().connect_signals()
@@ -101,6 +106,29 @@ class GraphViewMixin:
         self.zoom_widget_action.reset_pressed.connect(self.ui.graphicsView.reset_zoom)
         self.rotate_widget_action.clockwise_pressed.connect(self.ui.graphicsView.rotate_clockwise)
         self.rotate_widget_action.anticlockwise_pressed.connect(self.ui.graphicsView.rotate_anticlockwise)
+        self.scene.selectionChanged.connect(self._handle_scene_selection_changed)
+
+    @Slot()
+    def _handle_scene_selection_changed(self):
+        """Filters parameters by selected objects in the graph."""
+        selected_items = self.scene.selectedItems()
+        obj_item_selection = [x for x in selected_items if isinstance(x, ObjectItem)]
+        rel_item_selection = [x for x in selected_items if isinstance(x, RelationshipItem)]
+        self.entity_item_selection = obj_item_selection + rel_item_selection
+        selected_objs = {self.db_map: [x.db_representation for x in obj_item_selection]}
+        cascading_rels = self.db_mngr.find_cascading_relationships(self.db_mngr.db_map_ids(selected_objs))
+        selected_rels = {self.db_map: [x.db_representation for x in rel_item_selection] + cascading_rels[self.db_map]}
+        self.selected_ent_cls_ids["object class"] = {}
+        self.selected_ent_cls_ids["relationship class"] = {}
+        for db_map, items in selected_objs.items():
+            self.selected_ent_cls_ids["object class"].setdefault(db_map, set()).update({x["class_id"] for x in items})
+        for db_map, items in selected_rels.items():
+            self.selected_ent_cls_ids["relationship class"].setdefault(db_map, set()).update(
+                {x["class_id"] for x in items}
+            )
+        self.selected_ent_ids["object"] = self.db_mngr.db_map_class_ids(selected_objs)
+        self.selected_ent_ids["relationship"] = self.db_mngr.db_map_class_ids(selected_rels)
+        self.update_filter()
 
     @Slot(bool)
     def set_full_relationship_expansion(self, checked):
@@ -295,7 +323,7 @@ class GraphViewMixin:
         """
         if self.layout_gens:
             return
-        self.make_a_scene()
+        self.scene.clear()
         new_items = self._make_new_items(x, y)
         if not any(new_items):
             self._blank_item = QGraphicsTextItem("Nothing to show.")
@@ -439,39 +467,6 @@ class GraphViewMixin:
     def _add_new_items(self, object_items, relationship_items, arc_items):
         for item in object_items + relationship_items + arc_items:
             self.scene.addItem(item)
-
-    def make_a_scene(self):
-        """Empties the scene."""
-        scene = self.ui.graphicsView.scene()
-        if scene:
-            scene.clear()
-        else:
-            scene = CustomGraphicsScene(self)
-            self.ui.graphicsView.setScene(scene)
-            scene.selectionChanged.connect(self._handle_scene_selection_changed)
-        self.scene = scene
-
-    @Slot()
-    def _handle_scene_selection_changed(self):
-        """Filters parameters by selected objects in the graph."""
-        selected_items = self.scene.selectedItems()
-        obj_item_selection = [x for x in selected_items if isinstance(x, ObjectItem)]
-        rel_item_selection = [x for x in selected_items if isinstance(x, RelationshipItem)]
-        self.entity_item_selection = obj_item_selection + rel_item_selection
-        selected_objs = {self.db_map: [x.db_representation for x in obj_item_selection]}
-        cascading_rels = self.db_mngr.find_cascading_relationships(self.db_mngr.db_map_ids(selected_objs))
-        selected_rels = {self.db_map: [x.db_representation for x in rel_item_selection] + cascading_rels[self.db_map]}
-        self.selected_ent_cls_ids["object class"] = {}
-        self.selected_ent_cls_ids["relationship class"] = {}
-        for db_map, items in selected_objs.items():
-            self.selected_ent_cls_ids["object class"].setdefault(db_map, set()).update({x["class_id"] for x in items})
-        for db_map, items in selected_rels.items():
-            self.selected_ent_cls_ids["relationship class"].setdefault(db_map, set()).update(
-                {x["class_id"] for x in items}
-            )
-        self.selected_ent_ids["object"] = self.db_mngr.db_map_class_ids(selected_objs)
-        self.selected_ent_ids["relationship"] = self.db_mngr.db_map_class_ids(selected_rels)
-        self.update_filter()
 
     @Slot(bool)
     def hide_selected_items(self, checked=False):

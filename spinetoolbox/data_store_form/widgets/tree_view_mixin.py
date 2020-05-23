@@ -65,8 +65,6 @@ class TreeViewMixin:
         super().connect_signals()
         self.ui.treeView_object.entity_selection_changed.connect(self.ui.treeView_relationship.clear_any_selections)
         self.ui.treeView_relationship.entity_selection_changed.connect(self.ui.treeView_object.clear_any_selections)
-        self.ui.treeView_object.entity_selection_changed.connect(self.update_object_filter)
-        self.ui.treeView_relationship.entity_selection_changed.connect(self.update_relationship_filter)
         self.ui.actionAdd_object_classes.triggered.connect(self.show_add_object_classes_form)
         self.ui.actionAdd_relationship_classes.triggered.connect(self.show_add_relationship_classes_form)
         self.ui.actionAdd_objects.triggered.connect(self.show_add_objects_form)
@@ -104,43 +102,6 @@ class TreeViewMixin:
 
     def _db_map_class_ids(self, indexes):
         return self.db_mngr.db_map_class_ids(self._db_map_items(indexes))
-
-    @Slot(dict)
-    def update_object_filter(self, selected_indexes):
-        """Updates object filter."""
-        obj_cls_inds = set(selected_indexes.get("object class", {}).keys())
-        obj_inds = set(selected_indexes.get("object", {}).keys())
-        rel_cls_inds = set(selected_indexes.get("relationship class", {}).keys())
-        active_rel_inds = set(selected_indexes.get("relationship", {}).keys())
-        # Compute active indexes by merging in the parents from lower levels recursively
-        active_rel_cls_inds = rel_cls_inds | {ind.parent() for ind in active_rel_inds}
-        active_obj_inds = obj_inds | {ind.parent() for ind in active_rel_cls_inds}
-        active_obj_cls_inds = obj_cls_inds | {ind.parent() for ind in active_obj_inds}
-        self.selected_ent_cls_ids["object class"] = self._db_map_ids(active_obj_cls_inds)
-        self.selected_ent_cls_ids["relationship class"] = self._db_map_ids(active_rel_cls_inds)
-        self.selected_ent_ids["object"] = self._db_map_class_ids(active_obj_inds)
-        self.selected_ent_ids["relationship"] = self._db_map_class_ids(active_rel_inds)
-        # Cascade (note that we carefuly select where to cascade from, to avoid 'circularity')
-        from_obj_cls_inds = obj_cls_inds | {ind.parent() for ind in obj_inds}
-        from_obj_inds = obj_inds | {ind.parent() for ind in rel_cls_inds}
-        cascading_rel_cls_inds = self.db_mngr.find_cascading_relationship_classes(self._db_map_ids(from_obj_cls_inds))
-        cascading_rel_inds = self.db_mngr.find_cascading_relationships(self._db_map_ids(from_obj_inds))
-        for db_map, ids in self.db_mngr.db_map_ids(cascading_rel_cls_inds).items():
-            self.selected_ent_cls_ids["relationship class"].setdefault(db_map, set()).update(ids)
-        for (db_map, class_id), ids in self.db_mngr.db_map_class_ids(cascading_rel_inds).items():
-            self.selected_ent_ids["relationship"].setdefault((db_map, class_id), set()).update(ids)
-        self.update_filter()
-
-    @Slot(dict)
-    def update_relationship_filter(self, selected_indexes):
-        """Update relationship filter according to relationship tree selection.
-        """
-        rel_cls_inds = set(selected_indexes.get("relationship class", {}).keys())
-        active_rel_inds = set(selected_indexes.get("relationship", {}).keys())
-        active_rel_cls_inds = rel_cls_inds | {ind.parent() for ind in active_rel_inds}
-        self.selected_ent_cls_ids["relationship class"] = self._db_map_ids(active_rel_cls_inds)
-        self.selected_ent_ids["relationship"] = self._db_map_class_ids(active_rel_inds)
-        self.update_filter()
 
     def export_selected(self, selected_indexes):
         """Exports data from given indexes in the entity tree."""
