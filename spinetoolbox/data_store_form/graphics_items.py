@@ -15,7 +15,7 @@ Classes for drawing graphics items on graph view's QGraphicsScene.
 :authors: M. Marin (KTH), P. Savolainen (VTT)
 :date:   4.4.2018
 """
-from PySide2.QtCore import Qt, Signal, Slot, QLineF
+from PySide2.QtCore import Qt, Signal, Slot, QLineF, QSize
 from PySide2.QtWidgets import (
     QGraphicsItem,
     QGraphicsTextItem,
@@ -29,6 +29,7 @@ from PySide2.QtWidgets import (
     QMenu,
 )
 from PySide2.QtGui import QPen, QBrush, QPainterPath, QFont, QPalette, QGuiApplication
+from spinetoolbox.helpers import CharIconEngine
 
 
 class EntityItem(QGraphicsPixmapItem):
@@ -372,18 +373,23 @@ class RodObjectItem(ObjectItem):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=False)
+        self.setToolTip(
+            "<p>Click on any object to add it as a member in the relationship.</p>"
+            "<p>When you're done adding members, click on an empty space to add the relationship.</p>"
+        )
+        self.label_item.hide()
 
     @property
     def entity_class_name(self):
-        return "?"
+        return None
 
     @property
     def entity_name(self):
-        return "?"
+        return None
 
     def refresh_icon(self):
         """Refreshes the icon."""
-        pixmap = self.db_mngr.icon_mngr[self.db_map].object_pixmap("").scaled(self._extent, self._extent)
+        pixmap = CharIconEngine("\uf140", 0).pixmap(QSize(self._extent, self._extent))
         self.setPixmap(pixmap)
 
     def mouseMoveEvent(self, event):
@@ -401,7 +407,10 @@ class RodRelationshipItem(RelationshipItem):
 
     def refresh_icon(self):
         """Refreshes the icon."""
-        object_class_name_list = [arc_item.obj_item.entity_class_name for arc_item in self.arc_items]
+        obj_items = [arc_item.obj_item for arc_item in self.arc_items]
+        object_class_name_list = [
+            obj_item.entity_class_name for obj_item in obj_items if not isinstance(obj_item, RodObjectItem)
+        ]
         object_class_name_list = ",".join(object_class_name_list)
         pixmap = (
             self.db_mngr.icon_mngr[self.db_map]

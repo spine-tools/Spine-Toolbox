@@ -20,7 +20,7 @@ from PySide2.QtCore import Qt, QTimeLine
 from PySide2.QtWidgets import QMenu
 from PySide2.QtGui import QCursor
 from ...widgets.custom_qgraphicsviews import CustomQGraphicsView
-from ..graphics_items import ObjectItem, RodObjectItem, RodArcItem
+from ..graphics_items import ObjectItem, RelationshipItem, ArcItem, RodArcItem
 
 
 class EntityQGraphicsView(CustomQGraphicsView):
@@ -35,8 +35,6 @@ class EntityQGraphicsView(CustomQGraphicsView):
         super().__init__(parent=parent)  # Parent is passed to QWidget's constructor
         self._data_store_form = None
         self._menu = QMenu(self)
-        self._hovered_object_item = None
-        self.link_item = None
         self.rod_items = []
 
     def set_rod_items(self, rod_items):
@@ -55,6 +53,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
             item.hide()
             item.scene().removeItem(item)
         self.rod_items.clear()
+        self.viewport().setCursor(Qt.ArrowCursor)
 
     def connect_data_store_form(self, data_store_form):
         self._data_store_form = data_store_form
@@ -84,38 +83,43 @@ class EntityQGraphicsView(CustomQGraphicsView):
         super().mousePressEvent(event)
         if not self.rod_items:
             return
-        if not self._hovered_object_item:
+        if event.buttons() & Qt.RightButton:
             self.clear_rod_items()
             return
-        if event.buttons() & Qt.RightButton:
+        items = [item for item in self.items(event.pos()) if item not in self.rod_items]
+        obj_items = [x for x in items if isinstance(x, ObjectItem)]
+        if obj_items:
+            obj_item = obj_items[0]
             rod_rel_item = self.rod_items[1]
-            rod_arc_item = RodArcItem(rod_rel_item, self._hovered_object_item, self._data_store_form._ARC_WIDTH)
+            rod_arc_item = RodArcItem(rod_rel_item, obj_item, self._data_store_form._ARC_WIDTH)
             rod_rel_item.refresh_icon()
             self.scene().addItem(rod_arc_item)
             rod_arc_item.apply_zoom(self.zoom_factor)
             self.rod_items.append(rod_arc_item)
-            self._data_store_form.msg.emit(
-                "Successfuly added new member object '{0}'".format(self._hovered_object_item.entity_name)
-            )
+            self._data_store_form.msg.emit("Successfuly added new member object '{0}'".format(obj_item.entity_name))
             return
-        rod_obj_item, _, *rod_arc_items = self.rod_items
-        obj_items = [arc_item.obj_item for arc_item in rod_arc_items]
-        obj_items.remove(rod_obj_item)
+        items = [x for x in items if isinstance(x, (RelationshipItem, ArcItem))]
+        if not items:
+            rod_obj_item, _, *rod_arc_items = self.rod_items
+            obj_items = [arc_item.obj_item for arc_item in rod_arc_items]
+            obj_items.remove(rod_obj_item)
+            self._data_store_form.try_and_add_relationships(*obj_items)
         self.clear_rod_items()
-        self._data_store_form.try_and_add_relationships(self._hovered_object_item, *obj_items)
 
     def mouseMoveEvent(self, event):
         super().mouseMoveEvent(event)
         if not self.rod_items:
             return
-        obj_items = [
-            x for x in self.items(event.pos()) if isinstance(x, ObjectItem) and not isinstance(x, RodObjectItem)
-        ]
-        self._hovered_object_item = next(iter(obj_items), None)
-        if self._hovered_object_item is None:
-            self.viewport().setCursor(Qt.ArrowCursor)
-        else:
+        items = [item for item in self.items(event.pos()) if item not in self.rod_items]
+        obj_items = [x for x in items if isinstance(x, ObjectItem)]
+        if obj_items:
             self.viewport().setCursor(Qt.DragCopyCursor)
+            return
+        items = [x for x in items if isinstance(x, (RelationshipItem, ArcItem))]
+        if not items:
+            self.viewport().setCursor(Qt.PointingHandCursor)
+            return
+        self.viewport().setCursor(Qt.ForbiddenCursor)
 
     def keyPressEvent(self, event):
         """Wipes this item out if user presses ESC."""

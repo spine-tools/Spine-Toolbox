@@ -656,11 +656,7 @@ class GraphViewMixin:
         Args:
             obj_item (..graphics_items.ObjectItem)
         """
-        self.msg.emit(
-            "<p>Click on objects in the graph to form new relationships.</p>"
-            "<ul><li>Right click on an object to add it as a member.</li>"
-            "<li>Left click to add it as the last member and finish.</li></ul>"
-        )
+        self.msg.emit("Creating relationship with object '{0}'...".format(obj_item.entity_name))
         rod_obj_item = RodObjectItem(self, obj_item.pos().x(), obj_item.pos().y(), self._VERTEX_EXTENT)
         rod_rel_item = RodRelationshipItem(self, obj_item.pos().x(), obj_item.pos().y(), 0.5 * self._VERTEX_EXTENT)
         rod_arc_item1 = RodArcItem(rod_rel_item, obj_item, self._ARC_WIDTH)
