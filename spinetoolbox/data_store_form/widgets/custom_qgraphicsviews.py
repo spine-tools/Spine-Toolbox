@@ -62,16 +62,10 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self.create_context_menu()
 
     def create_context_menu(self):
-        self._menu.addAction(self._data_store_form.ui.actionSave_positions)
-        self._menu.addAction(self._data_store_form.ui.actionClear_positions)
+        self._menu.addAction(self._data_store_form.ui.actionExport_graph_as_pdf)
         self._menu.addSeparator()
-        self._menu.addAction(self._data_store_form.ui.actionHide_selected)
-        self._menu.addAction(self._data_store_form.ui.actionShow_hidden)
-        self._menu.addSeparator()
-        self._menu.addAction(self._data_store_form.ui.actionPrune_selected_entities)
-        self._menu.addAction(self._data_store_form.ui.actionPrune_selected_classes)
-        self._menu.addMenu(self._data_store_form.ui.menuRestore_pruned)
-        self._menu.addAction(self._data_store_form.ui.actionRestore_all_pruned)
+        for action in self._data_store_form.ui.menuGraph.actions():
+            self._menu.addAction(action)
 
     def edit_selected(self):
         """Edits selected items using the connected data store form."""
@@ -147,6 +141,9 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self._data_store_form._handle_menu_graph_about_to_show()
         self._menu.exec_(e.globalPos())
 
+    def _use_smooth_zoom(self):
+        return self._qsettings.value("appSettings/smoothEntityGraphZoom", defaultValue="false") == "true"
+
     def _zoom(self, factor):
         super()._zoom(factor)
         self.apply_zoom()
@@ -169,7 +166,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
             event.ignore()
             return
         event.accept()
-        smooth_rotation = self._qsettings.value("appSettings/smoothRotation", defaultValue="false")
+        smooth_rotation = self._qsettings.value("appSettings/smoothEntityGraphRotation", defaultValue="false")
         if smooth_rotation == "true":
             num_degrees = event.delta() / 8
             num_steps = num_degrees / 15

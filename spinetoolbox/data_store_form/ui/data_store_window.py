@@ -13,7 +13,7 @@
 # Form implementation generated from reading ui file '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/data_store_form/ui/data_store_window.ui',
 # licensing of '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/data_store_form/ui/data_store_window.ui' applies.
 #
-# Created: Thu May 21 15:58:04 2020
+# Created: Sat May 23 12:36:54 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -428,8 +428,9 @@ class Ui_MainWindow(object):
         self.actionClear_positions.setObjectName("actionClear_positions")
         self.actionSave_positions = QtWidgets.QAction(MainWindow)
         self.actionSave_positions.setObjectName("actionSave_positions")
-        self.actionExport_as_pdf = QtWidgets.QAction(MainWindow)
-        self.actionExport_as_pdf.setObjectName("actionExport_as_pdf")
+        self.actionExport_graph_as_pdf = QtWidgets.QAction(MainWindow)
+        self.actionExport_graph_as_pdf.setEnabled(False)
+        self.actionExport_graph_as_pdf.setObjectName("actionExport_graph_as_pdf")
         self.actionPrune_selected_classes = QtWidgets.QAction(MainWindow)
         self.actionPrune_selected_classes.setObjectName("actionPrune_selected_classes")
         self.actiontt = QtWidgets.QAction(MainWindow)
@@ -446,6 +447,11 @@ class Ui_MainWindow(object):
         self.actionExport_session = QtWidgets.QAction(MainWindow)
         self.actionExport_session.setIcon(icon6)
         self.actionExport_session.setObjectName("actionExport_session")
+        self.actionSettings = QtWidgets.QAction(MainWindow)
+        icon14 = QtGui.QIcon()
+        icon14.addPixmap(QtGui.QPixmap(":/icons/menu_icons/cog.svg"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.actionSettings.setIcon(icon14)
+        self.actionSettings.setObjectName("actionSettings")
         self.menuSession.addAction(self.actionRefresh)
         self.menuSession.addAction(self.actionCommit)
         self.menuSession.addAction(self.actionRollback)
@@ -472,12 +478,15 @@ class Ui_MainWindow(object):
         self.menuFile.addAction(self.actionExport)
         self.menuFile.addAction(self.actionExport_session)
         self.menuFile.addSeparator()
+        self.menuFile.addAction(self.actionExport_graph_as_pdf)
+        self.menuFile.addSeparator()
+        self.menuFile.addAction(self.actionSettings)
+        self.menuFile.addSeparator()
         self.menuFile.addAction(self.actionClose)
         self.menuView.addSeparator()
         self.menuView.addAction(self.actionTree_style)
         self.menuView.addAction(self.actionTabular_style)
         self.menuView.addAction(self.actionGraph_style)
-        self.menuGraph.addAction(self.actionExport_as_pdf)
         self.menuGraph.addSeparator()
         self.menuGraph.addAction(self.actionSave_positions)
         self.menuGraph.addAction(self.actionClear_positions)
@@ -571,7 +580,7 @@ class Ui_MainWindow(object):
         self.actionView_history.setText(QtWidgets.QApplication.translate("MainWindow", "View history...", None, -1))
         self.actionClear_positions.setText(QtWidgets.QApplication.translate("MainWindow", "Clear saved positions", None, -1))
         self.actionSave_positions.setText(QtWidgets.QApplication.translate("MainWindow", "Save positions", None, -1))
-        self.actionExport_as_pdf.setText(QtWidgets.QApplication.translate("MainWindow", "Export as PDF...", None, -1))
+        self.actionExport_graph_as_pdf.setText(QtWidgets.QApplication.translate("MainWindow", "Export graph as PDF...", None, -1))
         self.actionPrune_selected_classes.setText(QtWidgets.QApplication.translate("MainWindow", "Prune selected classes", None, -1))
         self.actiontt.setText(QtWidgets.QApplication.translate("MainWindow", "tt", None, -1))
         self.actionMass_remove_items.setText(QtWidgets.QApplication.translate("MainWindow", "Mass remove items...", None, -1))
@@ -581,8 +590,9 @@ class Ui_MainWindow(object):
         self.actionMapping_import.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Import data from file into current urls by defining a mapping</p></body></html>", None, -1))
         self.actionExport_session.setText(QtWidgets.QApplication.translate("MainWindow", "Export session...", None, -1))
         self.actionExport_session.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Export items added and updated in the current session (since last commit) into a file</p></body></html>", None, -1))
+        self.actionSettings.setText(QtWidgets.QApplication.translate("MainWindow", "Settings...", None, -1))
 
-from spinetoolbox.data_store_form.widgets.custom_qtableview import ObjectParameterDefinitionTableView, FrozenTableView, PivotTableView, ObjectParameterValueTableView, RelationshipParameterDefinitionTableView, RelationshipParameterValueTableView
-from spinetoolbox.data_store_form.widgets.custom_qtreeview import ObjectTreeView, RelationshipTreeView, ParameterValueListTreeView
+from spinetoolbox.data_store_form.widgets.custom_qtableview import RelationshipParameterDefinitionTableView, ObjectParameterDefinitionTableView, FrozenTableView, ObjectParameterValueTableView, PivotTableView, RelationshipParameterValueTableView
 from spinetoolbox.data_store_form.widgets.custom_qgraphicsviews import EntityQGraphicsView
+from spinetoolbox.data_store_form.widgets.custom_qtreeview import ObjectTreeView, RelationshipTreeView, ParameterValueListTreeView
 from spinetoolbox import resources_icons_rc

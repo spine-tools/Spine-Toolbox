@@ -1048,6 +1048,13 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item>
+             <widget class="QCheckBox" name="checkBox_smooth_entity_graph_zoom">
+              <property name="text">
+               <string>Smooth Entity graph zoom</string>
+              </property>
+             </widget>
+            </item>
+            <item>
              <widget class="QCheckBox" name="checkBox_smooth_entity_graph_rotation">
               <property name="text">
                <string>Smooth Entity graph rotation</string>
@@ -1072,22 +1079,22 @@ p, li { white-space: pre-wrap; }
                <number>0</number>
               </property>
               <item>
-               <widget class="QRadioButton" name="radioButton_relationship_expansion_maximum">
-                <property name="toolTip">
-                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Whenever an object is included in the Entity graph, the graph automatically includes all its relationships.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                </property>
-                <property name="text">
-                 <string>Maximum expansion</string>
-                </property>
-               </widget>
-              </item>
-              <item>
                <widget class="QRadioButton" name="radioButton_relationship_expansion_minimum">
                 <property name="toolTip">
                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Whenever all the objects in a relationship are included in the Entity graph, the graph automatically includes the relationship.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                 </property>
                 <property name="text">
                  <string>Minimum expansion</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QRadioButton" name="radioButton_relationship_expansion_maximum">
+                <property name="toolTip">
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Whenever an object is included in the Entity graph, the graph automatically includes all its relationships.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                </property>
+                <property name="text">
+                 <string>Maximum expansion</string>
                 </property>
                </widget>
               </item>

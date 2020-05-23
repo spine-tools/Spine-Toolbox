@@ -96,6 +96,9 @@ class CustomQGraphicsView(QGraphicsView):
             self.setDragMode(QGraphicsView.ScrollHandDrag)
             self.viewport().setCursor(Qt.ArrowCursor)
 
+    def _use_smooth_zoom(self):
+        return self._qsettings.value("appSettings/smoothZoom", defaultValue="false") == "true"
+
     def wheelEvent(self, event):
         """Zooms in/out.
 
@@ -106,8 +109,7 @@ class CustomQGraphicsView(QGraphicsView):
             event.ignore()
             return
         event.accept()
-        smooth_zoom = self._qsettings.value("appSettings/smoothZoom", defaultValue="false")
-        if smooth_zoom == "true":
+        if self._use_smooth_zoom():
             angle = event.delta() / 8
             steps = angle / 15
             self._scheduled_transformations += steps

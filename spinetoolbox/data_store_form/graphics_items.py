@@ -241,6 +241,9 @@ class EntityItem(QGraphicsPixmapItem):
 
     def _make_menu(self):
         menu = QMenu(self._data_store_form)
+        menu.addAction(self._data_store_form.ui.actionSave_positions)
+        menu.addAction(self._data_store_form.ui.actionClear_positions)
+        menu.addSeparator()
         menu.addAction(self._data_store_form.ui.actionHide_selected)
         menu.addAction(self._data_store_form.ui.actionPrune_selected_entities)
         menu.addAction(self._data_store_form.ui.actionPrune_selected_classes)

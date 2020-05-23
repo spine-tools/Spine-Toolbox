@@ -88,7 +88,7 @@ class GraphViewMixin:
         self.ui.actionLive_graph_demo.triggered.connect(self.show_demo)
         self.ui.actionSave_positions.triggered.connect(self.save_positions)
         self.ui.actionClear_positions.triggered.connect(self.clear_saved_positions)
-        self.ui.actionExport_as_pdf.triggered.connect(self.export_as_pdf)
+        self.ui.actionExport_graph_as_pdf.triggered.connect(self.export_as_pdf)
         # Dock Widgets menu action
         self.ui.menuGraph.aboutToShow.connect(self._handle_menu_graph_about_to_show)
         self.zoom_widget_action.minus_pressed.connect(self.ui.graphicsView.zoom_out)
@@ -230,10 +230,8 @@ class GraphViewMixin:
     def _handle_menu_graph_about_to_show(self):
         """Enables or disables actions according to current selection in the graph."""
         visible = self.ui.dockWidget_entity_graph.isVisible()
-        has_graph = self.scene is not None and self.scene.items() != [self._blank_item]
-        self.ui.actionSave_positions.setEnabled(has_graph)
-        self.ui.actionClear_positions.setEnabled(has_graph)
-        self.ui.actionExport_as_pdf.setEnabled(has_graph)
+        self.ui.actionSave_positions.setEnabled(visible and bool(self.entity_item_selection))
+        self.ui.actionClear_positions.setEnabled(visible and bool(self.entity_item_selection))
         self.ui.actionHide_selected.setEnabled(visible and bool(self.entity_item_selection))
         self.ui.actionShow_hidden.setEnabled(visible and bool(self.hidden_items))
         self.ui.actionPrune_selected_entities.setEnabled(visible and bool(self.entity_item_selection))
@@ -291,8 +289,10 @@ class GraphViewMixin:
         if not any(new_items):
             self._blank_item = QGraphicsTextItem("Nothing to show.")
             self.scene.addItem(self._blank_item)
+            self.ui.actionExport_graph_as_pdf.setEnabled(False)
         else:
             self._add_new_items(*new_items)  # pylint: disable=no-value-for-parameter
+            self.ui.actionExport_graph_as_pdf.setEnabled(True)
         if not self._persistent:
             self.ui.graphicsView.reset_zoom()
         else:
@@ -559,10 +559,9 @@ class GraphViewMixin:
 
     @Slot(bool)
     def save_positions(self, checked=False):
-        class_items = {}
-        for item in self.ui.graphicsView.items():
-            if isinstance(item, EntityItem):
-                class_items.setdefault(item.entity_class_id, []).append(item)
+        items_per_class_id = {}
+        for item in self.entity_item_selection:
+            items_per_class_id.setdefault(item.entity_class_id, []).append(item)
         pos_def_class_ids = {
             p["entity_class_id"]
             for p in self.db_mngr.get_items_by_field(
@@ -571,7 +570,7 @@ class GraphViewMixin:
         }
         defs_to_add = [
             {"name": self._POS_PARAM_NAME, "entity_class_id": class_id}
-            for class_id in class_items.keys() - pos_def_class_ids
+            for class_id in items_per_class_id.keys() - pos_def_class_ids
         ]
         if defs_to_add:
             self.db_mngr.add_parameter_definitions({self.db_map: defs_to_add})
@@ -589,7 +588,7 @@ class GraphViewMixin:
         }
         vals_to_add = list()
         vals_to_update = list()
-        for class_id, items in class_items.items():
+        for class_id, items in items_per_class_id.items():
             for item in items:
                 pos_val_id = pos_val_id_lookup.get((class_id, item.entity_id), None)
                 value = {"type": "map", "index_type": "str", "data": [["x", item.pos().x()], ["y", item.pos().y()]]}
@@ -612,7 +611,7 @@ class GraphViewMixin:
 
     @Slot(bool)
     def clear_saved_positions(self, checked=False):
-        entity_ids = {x.entity_id for x in self.ui.graphicsView.items() if isinstance(x, EntityItem)}
+        entity_ids = {x.entity_id for x in self.entity_item_selection}
         vals_to_remove = [
             p
             for p in self.db_mngr.get_items_by_field(

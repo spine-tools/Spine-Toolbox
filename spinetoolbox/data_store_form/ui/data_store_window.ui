@@ -108,6 +108,10 @@
     <addaction name="actionExport"/>
     <addaction name="actionExport_session"/>
     <addaction name="separator"/>
+    <addaction name="actionExport_graph_as_pdf"/>
+    <addaction name="separator"/>
+    <addaction name="actionSettings"/>
+    <addaction name="separator"/>
     <addaction name="actionClose"/>
    </widget>
    <widget class="QMenu" name="menuView">
@@ -128,7 +132,6 @@
       <string>Restore pruned</string>
      </property>
     </widget>
-    <addaction name="actionExport_as_pdf"/>
     <addaction name="separator"/>
     <addaction name="actionSave_positions"/>
     <addaction name="actionClear_positions"/>
@@ -1073,9 +1076,12 @@
     <string>Save positions</string>
    </property>
   </action>
-  <action name="actionExport_as_pdf">
+  <action name="actionExport_graph_as_pdf">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="text">
-    <string>Export as PDF...</string>
+    <string>Export graph as PDF...</string>
    </property>
   </action>
   <action name="actionPrune_selected_classes">
@@ -1125,6 +1131,15 @@
    </property>
    <property name="toolTip">
     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Export items added and updated in the current session (since last commit) into a file&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+   </property>
+  </action>
+  <action name="actionSettings">
+   <property name="icon">
+    <iconset resource="../../ui/resources/resources_icons.qrc">
+     <normaloff>:/icons/menu_icons/cog.svg</normaloff>:/icons/menu_icons/cog.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Settings...</string>
    </property>
   </action>
  </widget>
