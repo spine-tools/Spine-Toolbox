@@ -105,7 +105,6 @@ class DataStoreSettingsMixin:
         smooth_zoom = self._qsettings.value("appSettings/smoothEntityGraphZoom", defaultValue="false")
         smooth_rotation = self._qsettings.value("appSettings/smoothEntityGraphRotation", defaultValue="false")
         relationship_items_follow = self._qsettings.value("appSettings/relationshipItemsFollow", defaultValue="true")
-        relationship_expansion = self._qsettings.value("appSettings/relationshipExpansion", defaultValue="minimum")
         if commit_at_exit == 0:  # Not needed but makes the code more readable.
             self.ui.checkBox_commit_at_exit.setCheckState(Qt.Unchecked)
         elif commit_at_exit == 1:
@@ -120,10 +119,6 @@ class DataStoreSettingsMixin:
             self.ui.checkBox_smooth_entity_graph_rotation.setCheckState(Qt.Checked)
         if relationship_items_follow == "true":
             self.ui.checkBox_relationship_items_follow.setCheckState(Qt.Checked)
-        if relationship_expansion == "minimum":
-            self.ui.radioButton_relationship_expansion_minimum.setChecked(True)
-        else:
-            self.ui.radioButton_relationship_expansion_maximum.setChecked(True)
 
     @Slot()
     def handle_ok_clicked(self):
@@ -138,10 +133,6 @@ class DataStoreSettingsMixin:
         self._qsettings.setValue("appSettings/smoothEntityGraphRotation", smooth_rotation)
         relationship_items_follow = "true" if int(self.ui.checkBox_relationship_items_follow.checkState()) else "false"
         self._qsettings.setValue("appSettings/relationshipItemsFollow", relationship_items_follow)
-        relationship_expansion = (
-            "minimum" if self.ui.radioButton_relationship_expansion_minimum.isChecked() else "maximum"
-        )
-        self._qsettings.setValue("appSettings/relationshipExpansion", relationship_expansion)
 
 
 class DataStoreSettingsWidget(DataStoreSettingsMixin, SettingsWidgetBase):

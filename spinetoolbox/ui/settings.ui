@@ -1061,45 +1061,6 @@ p, li { white-space: pre-wrap; }
               </property>
              </widget>
             </item>
-            <item>
-             <widget class="QLabel" name="label_6">
-              <property name="font">
-               <font>
-                <pointsize>11</pointsize>
-               </font>
-              </property>
-              <property name="text">
-               <string>Relationship graph expansion policy:</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <layout class="QHBoxLayout" name="horizontalLayout_3">
-              <property name="spacing">
-               <number>0</number>
-              </property>
-              <item>
-               <widget class="QRadioButton" name="radioButton_relationship_expansion_minimum">
-                <property name="toolTip">
-                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Whenever all the objects in a relationship are included in the Entity graph, the graph automatically includes the relationship.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                </property>
-                <property name="text">
-                 <string>Minimum expansion</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QRadioButton" name="radioButton_relationship_expansion_maximum">
-                <property name="toolTip">
-                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Whenever an object is included in the Entity graph, the graph automatically includes all its relationships.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                </property>
-                <property name="text">
-                 <string>Maximum expansion</string>
-                </property>
-               </widget>
-              </item>
-             </layout>
-            </item>
            </layout>
           </widget>
          </item>

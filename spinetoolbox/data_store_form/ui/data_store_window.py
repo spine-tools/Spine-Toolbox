@@ -13,7 +13,7 @@
 # Form implementation generated from reading ui file '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/data_store_form/ui/data_store_window.ui',
 # licensing of '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/data_store_form/ui/data_store_window.ui' applies.
 #
-# Created: Sat May 23 12:36:54 2020
+# Created: Sat May 23 14:04:18 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -51,6 +51,7 @@ class Ui_MainWindow(object):
         self.menuView = QtWidgets.QMenu(self.menubar)
         self.menuView.setObjectName("menuView")
         self.menuGraph = QtWidgets.QMenu(self.menubar)
+        self.menuGraph.setToolTipsVisible(True)
         self.menuGraph.setObjectName("menuGraph")
         self.menuRestore_pruned = QtWidgets.QMenu(self.menuGraph)
         self.menuRestore_pruned.setObjectName("menuRestore_pruned")
@@ -452,6 +453,10 @@ class Ui_MainWindow(object):
         icon14.addPixmap(QtGui.QPixmap(":/icons/menu_icons/cog.svg"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.actionSettings.setIcon(icon14)
         self.actionSettings.setObjectName("actionSettings")
+        self.actionFull_relationship_expansion = QtWidgets.QAction(MainWindow)
+        self.actionFull_relationship_expansion.setCheckable(True)
+        self.actionFull_relationship_expansion.setChecked(True)
+        self.actionFull_relationship_expansion.setObjectName("actionFull_relationship_expansion")
         self.menuSession.addAction(self.actionRefresh)
         self.menuSession.addAction(self.actionCommit)
         self.menuSession.addAction(self.actionRollback)
@@ -487,6 +492,7 @@ class Ui_MainWindow(object):
         self.menuView.addAction(self.actionTree_style)
         self.menuView.addAction(self.actionTabular_style)
         self.menuView.addAction(self.actionGraph_style)
+        self.menuGraph.addAction(self.actionFull_relationship_expansion)
         self.menuGraph.addSeparator()
         self.menuGraph.addAction(self.actionSave_positions)
         self.menuGraph.addAction(self.actionClear_positions)
@@ -498,6 +504,7 @@ class Ui_MainWindow(object):
         self.menuGraph.addAction(self.actionPrune_selected_classes)
         self.menuGraph.addAction(self.menuRestore_pruned.menuAction())
         self.menuGraph.addAction(self.actionRestore_all_pruned)
+        self.menuGraph.addSeparator()
         self.menuHelp.addAction(self.actionLive_graph_demo)
         self.menubar.addAction(self.menuFile.menuAction())
         self.menubar.addAction(self.menuEdit.menuAction())
@@ -515,6 +522,7 @@ class Ui_MainWindow(object):
 
     def retranslateUi(self, MainWindow):
         MainWindow.setWindowTitle(QtWidgets.QApplication.translate("MainWindow", "MainWindow", None, -1))
+        MainWindow.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p><br/></p></body></html>", None, -1))
         self.menuSession.setTitle(QtWidgets.QApplication.translate("MainWindow", "Session", None, -1))
         self.menuEdit.setTitle(QtWidgets.QApplication.translate("MainWindow", "Edit", None, -1))
         self.menuFile.setTitle(QtWidgets.QApplication.translate("MainWindow", "File", None, -1))
@@ -591,8 +599,10 @@ class Ui_MainWindow(object):
         self.actionExport_session.setText(QtWidgets.QApplication.translate("MainWindow", "Export session...", None, -1))
         self.actionExport_session.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Export items added and updated in the current session (since last commit) into a file</p></body></html>", None, -1))
         self.actionSettings.setText(QtWidgets.QApplication.translate("MainWindow", "Settings...", None, -1))
+        self.actionFull_relationship_expansion.setText(QtWidgets.QApplication.translate("MainWindow", "Full relationship expansion", None, -1))
+        self.actionFull_relationship_expansion.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p><span style=\" font-weight:600;\">Checked</span>: Whenever an object is included in the Entity graph, the graph automatically includes <span style=\" font-style:italic;\">all</span> its relationships.</p><p><span style=\" font-weight:600;\">Unchecked</span>: Whenever <span style=\" font-style:italic;\">all</span> the objects in a relationship are included in the Entity graph, the graph automatically includes the relationship.</p></body></html>", None, -1))
 
-from spinetoolbox.data_store_form.widgets.custom_qtableview import RelationshipParameterDefinitionTableView, ObjectParameterDefinitionTableView, FrozenTableView, ObjectParameterValueTableView, PivotTableView, RelationshipParameterValueTableView
+from spinetoolbox.data_store_form.widgets.custom_qtreeview import ParameterValueListTreeView, RelationshipTreeView, ObjectTreeView
+from spinetoolbox.data_store_form.widgets.custom_qtableview import RelationshipParameterDefinitionTableView, FrozenTableView, ObjectParameterValueTableView, RelationshipParameterValueTableView, ObjectParameterDefinitionTableView, PivotTableView
 from spinetoolbox.data_store_form.widgets.custom_qgraphicsviews import EntityQGraphicsView
-from spinetoolbox.data_store_form.widgets.custom_qtreeview import ObjectTreeView, RelationshipTreeView, ParameterValueListTreeView
 from spinetoolbox import resources_icons_rc

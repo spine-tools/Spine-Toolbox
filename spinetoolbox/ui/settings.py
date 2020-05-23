@@ -13,7 +13,7 @@
 # Form implementation generated from reading ui file '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/settings.ui',
 # licensing of '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/settings.ui' applies.
 #
-# Created: Sat May 23 12:36:54 2020
+# Created: Sat May 23 13:58:02 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -406,22 +406,6 @@ class Ui_SettingsForm(object):
         self.checkBox_smooth_entity_graph_rotation = QtWidgets.QCheckBox(self.groupBox_data_store)
         self.checkBox_smooth_entity_graph_rotation.setObjectName("checkBox_smooth_entity_graph_rotation")
         self.verticalLayout_4.addWidget(self.checkBox_smooth_entity_graph_rotation)
-        self.label_6 = QtWidgets.QLabel(self.groupBox_data_store)
-        font = QtGui.QFont()
-        font.setPointSize(11)
-        self.label_6.setFont(font)
-        self.label_6.setObjectName("label_6")
-        self.verticalLayout_4.addWidget(self.label_6)
-        self.horizontalLayout_3 = QtWidgets.QHBoxLayout()
-        self.horizontalLayout_3.setSpacing(0)
-        self.horizontalLayout_3.setObjectName("horizontalLayout_3")
-        self.radioButton_relationship_expansion_minimum = QtWidgets.QRadioButton(self.groupBox_data_store)
-        self.radioButton_relationship_expansion_minimum.setObjectName("radioButton_relationship_expansion_minimum")
-        self.horizontalLayout_3.addWidget(self.radioButton_relationship_expansion_minimum)
-        self.radioButton_relationship_expansion_maximum = QtWidgets.QRadioButton(self.groupBox_data_store)
-        self.radioButton_relationship_expansion_maximum.setObjectName("radioButton_relationship_expansion_maximum")
-        self.horizontalLayout_3.addWidget(self.radioButton_relationship_expansion_maximum)
-        self.verticalLayout_4.addLayout(self.horizontalLayout_3)
         self.verticalLayout_9.addWidget(self.groupBox_data_store)
         spacerItem6 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
         self.verticalLayout_9.addItem(spacerItem6)
@@ -564,11 +548,6 @@ class Ui_SettingsForm(object):
         self.checkBox_relationship_items_follow.setText(QtWidgets.QApplication.translate("SettingsForm", "Move relationships along with objects in the Entity graph", None, -1))
         self.checkBox_smooth_entity_graph_zoom.setText(QtWidgets.QApplication.translate("SettingsForm", "Smooth Entity graph zoom", None, -1))
         self.checkBox_smooth_entity_graph_rotation.setText(QtWidgets.QApplication.translate("SettingsForm", "Smooth Entity graph rotation", None, -1))
-        self.label_6.setText(QtWidgets.QApplication.translate("SettingsForm", "Relationship graph expansion policy:", None, -1))
-        self.radioButton_relationship_expansion_minimum.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>Whenever all the objects in a relationship are included in the Entity graph, the graph automatically includes the relationship.</p></body></html>", None, -1))
-        self.radioButton_relationship_expansion_minimum.setText(QtWidgets.QApplication.translate("SettingsForm", "Minimum expansion", None, -1))
-        self.radioButton_relationship_expansion_maximum.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>Whenever an object is included in the Entity graph, the graph automatically includes all its relationships.</p></body></html>", None, -1))
-        self.radioButton_relationship_expansion_maximum.setText(QtWidgets.QApplication.translate("SettingsForm", "Maximum expansion", None, -1))
         self.pushButton_ok.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>Saves changes and closes the window</p></body></html>", None, -1))
         self.pushButton_ok.setText(QtWidgets.QApplication.translate("SettingsForm", "Ok", None, -1))
         self.pushButton_cancel.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>Closes the window without saving changes</p></body></html>", None, -1))

@@ -16,7 +16,7 @@ Contains the GraphViewMixin class.
 :date:   26.11.2018
 """
 import itertools
-from PySide2.QtCore import Slot, QRectF
+from PySide2.QtCore import Slot, QRectF, Qt
 from PySide2.QtWidgets import QGraphicsTextItem
 from PySide2.QtPrintSupport import QPrinter
 from PySide2.QtGui import QPainter
@@ -48,6 +48,10 @@ class GraphViewMixin:
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self._full_relationship_expansion = self.qsettings.value(
+            "appSettings/fullRelationshipExpansion", defaultValue="false"
+        )
+        self.ui.actionFull_relationship_expansion.setChecked(self._full_relationship_expansion == "true")
         self._persistent = False
         self.scene = None
         self.selected_tree_inds = {}
@@ -89,6 +93,7 @@ class GraphViewMixin:
         self.ui.actionSave_positions.triggered.connect(self.save_positions)
         self.ui.actionClear_positions.triggered.connect(self.clear_saved_positions)
         self.ui.actionExport_graph_as_pdf.triggered.connect(self.export_as_pdf)
+        self.ui.actionFull_relationship_expansion.toggled.connect(self.set_full_relationship_expansion)
         # Dock Widgets menu action
         self.ui.menuGraph.aboutToShow.connect(self._handle_menu_graph_about_to_show)
         self.zoom_widget_action.minus_pressed.connect(self.ui.graphicsView.zoom_out)
@@ -96,6 +101,12 @@ class GraphViewMixin:
         self.zoom_widget_action.reset_pressed.connect(self.ui.graphicsView.reset_zoom)
         self.rotate_widget_action.clockwise_pressed.connect(self.ui.graphicsView.rotate_clockwise)
         self.rotate_widget_action.anticlockwise_pressed.connect(self.ui.graphicsView.rotate_anticlockwise)
+
+    @Slot(bool)
+    def set_full_relationship_expansion(self, checked):
+        self._full_relationship_expansion = "true" if checked else "false"
+        self.qsettings.setValue("appSettings/fullRelationshipExpansion", self._full_relationship_expansion)
+        self.build_graph()
 
     def setup_widget_actions(self):
         """Setups zoom and rotate widget action in view menu."""
@@ -244,8 +255,7 @@ class GraphViewMixin:
 
     @Slot(bool)
     def _handle_entity_graph_visibility_changed(self, visible):
-        if visible:
-            self.build_graph()
+        self.build_graph()
 
     @Slot(dict)
     def rebuild_graph(self, selected):
@@ -255,8 +265,7 @@ class GraphViewMixin:
         self.removed_items.clear()
         self.added_object_ids.clear()
         self.added_relationship_ids.clear()
-        if self.ui.dockWidget_entity_graph.isVisible():
-            self.build_graph()
+        self.build_graph()
 
     def build_graph(self, persistent=False):
         """Builds the graph.
@@ -264,6 +273,8 @@ class GraphViewMixin:
         Args:
             persistent (bool, optional): If True, builds the graph on top of the current one.
         """
+        if not self.ui.dockWidget_entity_graph.isVisible():
+            return
         self._persistent = persistent
         for layout_gen in self.layout_gens:
             layout_gen.stop()
@@ -326,8 +337,7 @@ class GraphViewMixin:
         return selected_object_ids, selected_relationship_ids
 
     def _get_all_relationships_for_graph(self, object_ids, relationship_ids):
-        relationship_expansion = self.qsettings.value("appSettings/relationshipExpansion", defaultValue="minimum")
-        cond = all if relationship_expansion == "minimum" else any
+        cond = all if self._full_relationship_expansion == "false" else any
         return [
             x
             for x in self.db_mngr.get_items(self.db_map, "relationship")

@@ -25,6 +25,9 @@
   <property name="windowTitle">
    <string>MainWindow</string>
   </property>
+  <property name="toolTip">
+   <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+  </property>
   <property name="layoutDirection">
    <enum>Qt::LeftToRight</enum>
   </property>
@@ -127,11 +130,15 @@
     <property name="title">
      <string>Graph</string>
     </property>
+    <property name="toolTipsVisible">
+     <bool>true</bool>
+    </property>
     <widget class="QMenu" name="menuRestore_pruned">
      <property name="title">
       <string>Restore pruned</string>
      </property>
     </widget>
+    <addaction name="actionFull_relationship_expansion"/>
     <addaction name="separator"/>
     <addaction name="actionSave_positions"/>
     <addaction name="actionClear_positions"/>
@@ -143,6 +150,7 @@
     <addaction name="actionPrune_selected_classes"/>
     <addaction name="menuRestore_pruned"/>
     <addaction name="actionRestore_all_pruned"/>
+    <addaction name="separator"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
     <property name="title">
@@ -1140,6 +1148,20 @@
    </property>
    <property name="text">
     <string>Settings...</string>
+   </property>
+  </action>
+  <action name="actionFull_relationship_expansion">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Full relationship expansion</string>
+   </property>
+   <property name="toolTip">
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Checked&lt;/span&gt;: Whenever an object is included in the Entity graph, the graph automatically includes &lt;span style=&quot; font-style:italic;&quot;&gt;all&lt;/span&gt; its relationships.&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Unchecked&lt;/span&gt;: Whenever &lt;span style=&quot; font-style:italic;&quot;&gt;all&lt;/span&gt; the objects in a relationship are included in the Entity graph, the graph automatically includes the relationship.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
   </action>
  </widget>
