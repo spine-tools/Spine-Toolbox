@@ -27,7 +27,7 @@ from PySide2.QtWidgets import (
     QVBoxLayout,
     QTableWidget,
     QTableWidgetItem,
-    QCheckBox,
+    QFrame,
 )
 from PySide2.QtCore import Slot, Qt
 from PySide2.QtGui import QIcon
@@ -80,6 +80,14 @@ class AddReadyRelationshipsDialog(ManageItemsDialogBase):
             layout.addWidget(table_wg)
             self.layout().insertWidget(0, group_box)
             self.table_wgs_by_group_box[group_box] = (table_wg, relationships)
+        frame = QFrame(self)
+        layout = QVBoxLayout(frame)
+        label = QLabel(
+            "<p>The following options match your choice.</p>"
+            "<p>Please uncheck the ones you don't want and press <b>Ok</b>.</p>"
+        )
+        layout.addWidget(label)
+        self.layout().insertWidget(0, frame)
         self.connect_signals()
 
     def _make_table_widget(self, class_name, object_class_names, relationships):

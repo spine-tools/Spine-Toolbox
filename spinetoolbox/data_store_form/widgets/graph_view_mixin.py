@@ -269,7 +269,7 @@ class GraphViewMixin:
         self._persistent = persistent
         for layout_gen in self.layout_gens:
             layout_gen.stop()
-        self.object_ids, self.relationship_ids, self.src_inds, self.dst_inds = self._get_graph_data()
+        self._update_graph_data()
         layout_gen = self._make_layout_generator()
         self.layout_gens.append(layout_gen)
         layout_gen.show_progress_widget(self.ui.graphicsView)
@@ -287,7 +287,7 @@ class GraphViewMixin:
         if self.layout_gens:
             return
         self.make_a_scene()
-        new_items = self._get_new_items(x, y)
+        new_items = self._make_new_items(x, y)
         if not any(new_items):
             self._blank_item = QGraphicsTextItem("Nothing to show.")
             self.scene.addItem(self._blank_item)
@@ -325,28 +325,25 @@ class GraphViewMixin:
             selected_relationship_ids.update(relationship_ids)
         return selected_object_ids, selected_relationship_ids
 
-    def _get_graph_data(self):
-        """Returns data for making graph according to selection in trees.
+    def _get_all_relationships_for_graph(self, object_ids, relationship_ids):
+        relationship_expansion = self.qsettings.value("appSettings/relationshipExpansion", defaultValue="minimum")
+        cond = all if relationship_expansion == "minimum" else any
+        return [
+            x
+            for x in self.db_mngr.get_items(self.db_map, "relationship")
+            if cond([int(id_) in object_ids for id_ in x["object_id_list"].split(",")])
+        ] + [self.db_mngr.get_item(self.db_map, "relationship", id_) for id_ in relationship_ids]
 
-        Returns:
-
-        """
+    def _update_graph_data(self):
+        """Updates data for graph according to selection in trees."""
         object_ids, relationship_ids = self._get_selected_entity_ids()
         object_ids.update(self.added_object_ids)
         relationship_ids.update(self.added_relationship_ids)
         prunned_entity_ids = {id_ for ids in self.prunned_entity_ids.values() for id_ in ids}
         object_ids -= prunned_entity_ids
         relationship_ids -= prunned_entity_ids
-        only_selected_objects = self.qsettings.value("appSettings/onlySelectedObjects", defaultValue="false")
-        cond = all if only_selected_objects == "true" else any
-        relationships = [
-            x
-            for x in self.db_mngr.get_items(self.db_map, "relationship")
-            if cond([int(id_) in object_ids for id_ in x["object_id_list"].split(",")])
-        ]
-        relationships += [self.db_mngr.get_item(self.db_map, "relationship", id_) for id_ in relationship_ids]
-        relationship_ids = list()
-        object_id_lists = list()
+        relationships = self._get_all_relationships_for_graph(object_ids, relationship_ids)
+        object_id_lists = dict()
         for relationship in relationships:
             if relationship["id"] in prunned_entity_ids:
                 continue
@@ -354,24 +351,22 @@ class GraphViewMixin:
             if len(object_id_list) < 2:
                 continue
             object_ids.update(object_id_list)
-            relationship_ids.append(relationship["id"])
-            object_id_lists.append(object_id_list)
-        object_ids = list(object_ids)
-        src_inds, dst_inds = self._get_src_dst_inds(object_ids, object_id_lists)
-        return object_ids, relationship_ids, src_inds, dst_inds
+            object_id_lists[relationship["id"]] = object_id_list
+        self.object_ids = list(object_ids)
+        self.relationship_ids = list(object_id_lists)
+        self._update_src_dst_inds(object_id_lists)
 
-    @staticmethod
-    def _get_src_dst_inds(object_ids, object_id_lists):
-        src_inds = list()
-        dst_inds = list()
-        relationship_ind = len(object_ids)
-        for object_id_list in object_id_lists:
-            object_inds = [object_ids.index(id_) for id_ in object_id_list]
+    def _update_src_dst_inds(self, object_id_lists):
+        self.src_inds = list()
+        self.dst_inds = list()
+        object_ind_lookup = {id_: k for k, id_ in enumerate(self.object_ids)}
+        relationship_ind_lookup = {id_: len(self.object_ids) + k for k, id_ in enumerate(self.relationship_ids)}
+        for relationship_id, object_id_list in object_id_lists.items():
+            object_inds = [object_ind_lookup[object_id] for object_id in object_id_list]
+            relationship_ind = relationship_ind_lookup[relationship_id]
             for object_ind in object_inds:
-                src_inds.append(relationship_ind)
-                dst_inds.append(object_ind)
-            relationship_ind += 1
-        return src_inds, dst_inds
+                self.src_inds.append(relationship_ind)
+                self.dst_inds.append(object_ind)
 
     def _make_layout_generator(self):
         """Returns a layout generator for the current graph.
@@ -379,28 +374,30 @@ class GraphViewMixin:
         Returns:
             GraphLayoutGenerator
         """
-        parameter_positions_by_id = {
+        parameter_positions = {
             p["entity_id"]: dict(from_database(p["value"]).value_to_database_data())
             for p in self.db_mngr.get_items_by_field(
                 self.db_map, "parameter value", "parameter_name", self._POS_PARAM_NAME
             )
         }
         if self._persistent:
-            positions_by_id = {
+            persisted_positions = {
                 item.entity_id: {"x": item.pos().x(), "y": item.pos().y()}
                 for item in self.ui.graphicsView.items()
                 if isinstance(item, EntityItem)
             }
         else:
-            positions_by_id = {}
-        positions_by_id.update(parameter_positions_by_id)
+            persisted_positions = {}
+        persisted_positions.update(parameter_positions)
         entity_ids = self.object_ids + self.relationship_ids
-        heavy_positions = {ind: positions_by_id[id_] for ind, id_ in enumerate(entity_ids) if id_ in positions_by_id}
+        heavy_positions = {
+            ind: persisted_positions[id_] for ind, id_ in enumerate(entity_ids) if id_ in persisted_positions
+        }
         return GraphLayoutGenerator(
             len(entity_ids), self.src_inds, self.dst_inds, self._ARC_LENGTH_HINT, heavy_positions=heavy_positions
         )
 
-    def _get_new_items(self, x, y):
+    def _make_new_items(self, x, y):
         """Returns new items for the graph.
 
         Args:

@@ -1072,7 +1072,7 @@ p, li { white-space: pre-wrap; }
                <number>0</number>
               </property>
               <item>
-               <widget class="QRadioButton" name="radioButton_relationship_at_least_one_selected">
+               <widget class="QRadioButton" name="radioButton_relationship_expansion_maximum">
                 <property name="toolTip">
                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Whenever an object is included in the Entity graph, the graph automatically includes all its relationships.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                 </property>
@@ -1082,7 +1082,7 @@ p, li { white-space: pre-wrap; }
                </widget>
               </item>
               <item>
-               <widget class="QRadioButton" name="radioButton_relationship_only_selected">
+               <widget class="QRadioButton" name="radioButton_relationship_expansion_minimum">
                 <property name="toolTip">
                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Whenever all the objects in a relationship are included in the Entity graph, the graph automatically includes the relationship.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                 </property>

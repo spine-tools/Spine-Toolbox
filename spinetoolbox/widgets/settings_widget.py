@@ -250,7 +250,7 @@ class SettingsWidget(QWidget):
         commit_at_exit = int(self._qsettings.value("appSettings/commitAtExit", defaultValue="1"))  # tri-state
         sticky_selection = self._qsettings.value("appSettings/stickySelection", defaultValue="false")
         smooth_rotation = self._qsettings.value("appSettings/smoothRotation", defaultValue="false")
-        only_selected_objects = self._qsettings.value("appSettings/onlySelectedObjects", defaultValue="false")
+        relationship_expansion = self._qsettings.value("appSettings/relationshipExpansion", defaultValue="minimum")
         work_dir = self._qsettings.value("appSettings/workDir", defaultValue="")
         if open_previous_project == 2:
             self.ui.checkBox_open_previous_project.setCheckState(Qt.Checked)
@@ -294,10 +294,10 @@ class SettingsWidget(QWidget):
             self.ui.checkBox_object_tree_sticky_selection.setCheckState(Qt.Checked)
         if smooth_rotation == "true":
             self.ui.checkBox_smooth_entity_graph_rotation.setCheckState(Qt.Checked)
-        if only_selected_objects == "true":
-            self.ui.radioButton_relationship_only_selected.setChecked(True)
+        if relationship_expansion == "minimum":
+            self.ui.radioButton_relationship_expansion_minimum.setChecked(True)
         else:
-            self.ui.radioButton_relationship_at_least_one_selected.setChecked(True)
+            self.ui.radioButton_relationship_expansion_maximum.setChecked(True)
         self.ui.lineEdit_gams_path.setText(gams_path)
         if use_embedded_julia == "2":
             self.ui.checkBox_use_embedded_julia.setCheckState(Qt.Checked)
@@ -382,8 +382,10 @@ class SettingsWidget(QWidget):
         self._qsettings.setValue("appSettings/stickySelection", sticky_selection)
         smooth_rotation = "true" if int(self.ui.checkBox_smooth_entity_graph_rotation.checkState()) else "false"
         self._qsettings.setValue("appSettings/smoothRotation", smooth_rotation)
-        only_selected_objects = "true" if self.ui.radioButton_relationship_only_selected.isChecked() else "false"
-        self._qsettings.setValue("appSettings/onlySelectedObjects", only_selected_objects)
+        relationship_expansion = (
+            "minimum" if self.ui.radioButton_relationship_expansion_minimum.isChecked() else "maximum"
+        )
+        self._qsettings.setValue("appSettings/relationshipExpansion", relationship_expansion)
         # Work directory
         work_dir = self.ui.lineEdit_work_dir.text().strip()
         self._qsettings.setValue("appSettings/workDir", work_dir)
