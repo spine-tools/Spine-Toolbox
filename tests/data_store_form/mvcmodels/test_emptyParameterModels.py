@@ -19,7 +19,7 @@ Unit tests for the EmptyParameterModel subclasses.
 import unittest
 from unittest import mock
 from PySide2.QtWidgets import QApplication
-from spinetoolbox.mvcmodels.empty_parameter_models import (
+from spinetoolbox.data_store_form.mvcmodels.empty_parameter_models import (
     EmptyObjectParameterValueModel,
     EmptyRelationshipParameterValueModel,
     EmptyObjectParameterDefinitionModel,
