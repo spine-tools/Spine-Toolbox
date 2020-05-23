@@ -13,7 +13,7 @@
 # Form implementation generated from reading ui file '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/data_store_form/ui/data_store_window.ui',
 # licensing of '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/data_store_form/ui/data_store_window.ui' applies.
 #
-# Created: Sat May 23 14:04:18 2020
+# Created: Sat May 23 15:02:09 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -23,7 +23,7 @@ from PySide2 import QtCore, QtGui, QtWidgets
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
-        MainWindow.resize(872, 842)
+        MainWindow.resize(540, 1636)
         MainWindow.setLayoutDirection(QtCore.Qt.LeftToRight)
         MainWindow.setDockOptions(QtWidgets.QMainWindow.AllowNestedDocks|QtWidgets.QMainWindow.AllowTabbedDocks|QtWidgets.QMainWindow.AnimatedDocks|QtWidgets.QMainWindow.GroupedDragging)
         self.centralwidget = QtWidgets.QWidget(MainWindow)
@@ -39,7 +39,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_2.setObjectName("verticalLayout_2")
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 872, 28))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 540, 28))
         self.menubar.setNativeMenuBar(False)
         self.menubar.setObjectName("menubar")
         self.menuSession = QtWidgets.QMenu(self.menubar)
@@ -57,6 +57,10 @@ class Ui_MainWindow(object):
         self.menuRestore_pruned.setObjectName("menuRestore_pruned")
         self.menuHelp = QtWidgets.QMenu(self.menubar)
         self.menuHelp.setObjectName("menuHelp")
+        self.menuPivot_table = QtWidgets.QMenu(self.menubar)
+        self.menuPivot_table.setObjectName("menuPivot_table")
+        self.menuInput_type = QtWidgets.QMenu(self.menuPivot_table)
+        self.menuInput_type.setObjectName("menuInput_type")
         MainWindow.setMenuBar(self.menubar)
         self.dockWidget_parameter_value_list = QtWidgets.QDockWidget(MainWindow)
         self.dockWidget_parameter_value_list.setObjectName("dockWidget_parameter_value_list")
@@ -266,28 +270,6 @@ class Ui_MainWindow(object):
         self.verticalLayout_13.setSpacing(0)
         self.verticalLayout_13.setContentsMargins(0, 0, 0, 0)
         self.verticalLayout_13.setObjectName("verticalLayout_13")
-        self.horizontalLayout = QtWidgets.QHBoxLayout()
-        self.horizontalLayout.setSpacing(3)
-        self.horizontalLayout.setObjectName("horizontalLayout")
-        self.label_3 = QtWidgets.QLabel(self.dockWidgetContents_10)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.label_3.sizePolicy().hasHeightForWidth())
-        self.label_3.setSizePolicy(sizePolicy)
-        self.label_3.setAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignTrailing|QtCore.Qt.AlignVCenter)
-        self.label_3.setObjectName("label_3")
-        self.horizontalLayout.addWidget(self.label_3)
-        self.comboBox_pivot_table_input_type = QtWidgets.QComboBox(self.dockWidgetContents_10)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.comboBox_pivot_table_input_type.sizePolicy().hasHeightForWidth())
-        self.comboBox_pivot_table_input_type.setSizePolicy(sizePolicy)
-        self.comboBox_pivot_table_input_type.setMaximumSize(QtCore.QSize(180, 23))
-        self.comboBox_pivot_table_input_type.setObjectName("comboBox_pivot_table_input_type")
-        self.horizontalLayout.addWidget(self.comboBox_pivot_table_input_type)
-        self.verticalLayout_13.addLayout(self.horizontalLayout)
         self.pivot_table = PivotTableView(self.dockWidgetContents_10)
         self.pivot_table.setContextMenuPolicy(QtCore.Qt.DefaultContextMenu)
         self.pivot_table.setObjectName("pivot_table")
@@ -457,6 +439,24 @@ class Ui_MainWindow(object):
         self.actionFull_relationship_expansion.setCheckable(True)
         self.actionFull_relationship_expansion.setChecked(True)
         self.actionFull_relationship_expansion.setObjectName("actionFull_relationship_expansion")
+        self.actionInput_type = QtWidgets.QAction(MainWindow)
+        self.actionInput_type.setObjectName("actionInput_type")
+        self.actionParameter_value = QtWidgets.QAction(MainWindow)
+        self.actionParameter_value.setObjectName("actionParameter_value")
+        self.actionRelationship = QtWidgets.QAction(MainWindow)
+        self.actionRelationship.setObjectName("actionRelationship")
+        self.actionIndexed_parameter_expansion = QtWidgets.QAction(MainWindow)
+        self.actionIndexed_parameter_expansion.setObjectName("actionIndexed_parameter_expansion")
+        self.actionInput_type_parameter_value = QtWidgets.QAction(MainWindow)
+        self.actionInput_type_parameter_value.setCheckable(True)
+        self.actionInput_type_parameter_value.setChecked(True)
+        self.actionInput_type_parameter_value.setObjectName("actionInput_type_parameter_value")
+        self.actionInput_type_relationship = QtWidgets.QAction(MainWindow)
+        self.actionInput_type_relationship.setCheckable(True)
+        self.actionInput_type_relationship.setObjectName("actionInput_type_relationship")
+        self.actionInput_type_index_expansion = QtWidgets.QAction(MainWindow)
+        self.actionInput_type_index_expansion.setCheckable(True)
+        self.actionInput_type_index_expansion.setObjectName("actionInput_type_index_expansion")
         self.menuSession.addAction(self.actionRefresh)
         self.menuSession.addAction(self.actionCommit)
         self.menuSession.addAction(self.actionRollback)
@@ -506,10 +506,12 @@ class Ui_MainWindow(object):
         self.menuGraph.addAction(self.actionRestore_all_pruned)
         self.menuGraph.addSeparator()
         self.menuHelp.addAction(self.actionLive_graph_demo)
+        self.menuPivot_table.addAction(self.menuInput_type.menuAction())
         self.menubar.addAction(self.menuFile.menuAction())
         self.menubar.addAction(self.menuEdit.menuAction())
         self.menubar.addAction(self.menuView.menuAction())
         self.menubar.addAction(self.menuGraph.menuAction())
+        self.menubar.addAction(self.menuPivot_table.menuAction())
         self.menubar.addAction(self.menuSession.menuAction())
         self.menubar.addAction(self.menuHelp.menuAction())
 
@@ -530,6 +532,8 @@ class Ui_MainWindow(object):
         self.menuGraph.setTitle(QtWidgets.QApplication.translate("MainWindow", "Graph", None, -1))
         self.menuRestore_pruned.setTitle(QtWidgets.QApplication.translate("MainWindow", "Restore pruned", None, -1))
         self.menuHelp.setTitle(QtWidgets.QApplication.translate("MainWindow", "Help", None, -1))
+        self.menuPivot_table.setTitle(QtWidgets.QApplication.translate("MainWindow", "Pivot table", None, -1))
+        self.menuInput_type.setTitle(QtWidgets.QApplication.translate("MainWindow", "Input type", None, -1))
         self.dockWidget_parameter_value_list.setWindowTitle(QtWidgets.QApplication.translate("MainWindow", "Parameter value list", None, -1))
         self.treeView_parameter_value_list.setAccessibleName(QtWidgets.QApplication.translate("MainWindow", "parameter value list", None, -1))
         self.dockWidget_relationship_parameter_value.setWindowTitle(QtWidgets.QApplication.translate("MainWindow", "Relationship parameter value", None, -1))
@@ -546,7 +550,6 @@ class Ui_MainWindow(object):
         self.treeView_relationship.setAccessibleName(QtWidgets.QApplication.translate("MainWindow", "relationship tree", None, -1))
         self.dockWidget_entity_graph.setWindowTitle(QtWidgets.QApplication.translate("MainWindow", "Entity graph", None, -1))
         self.dockWidget_pivot_table.setWindowTitle(QtWidgets.QApplication.translate("MainWindow", "Pivot table", None, -1))
-        self.label_3.setText(QtWidgets.QApplication.translate("MainWindow", "Input type:", None, -1))
         self.dockWidget_frozen_table.setWindowTitle(QtWidgets.QApplication.translate("MainWindow", "Frozen table", None, -1))
         self.dockWidget_exports.setWindowTitle(QtWidgets.QApplication.translate("MainWindow", "Exports", None, -1))
         self.actionCommit.setText(QtWidgets.QApplication.translate("MainWindow", "Commit", None, -1))
@@ -601,8 +604,15 @@ class Ui_MainWindow(object):
         self.actionSettings.setText(QtWidgets.QApplication.translate("MainWindow", "Settings...", None, -1))
         self.actionFull_relationship_expansion.setText(QtWidgets.QApplication.translate("MainWindow", "Full relationship expansion", None, -1))
         self.actionFull_relationship_expansion.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p><span style=\" font-weight:600;\">Checked</span>: Whenever an object is included in the Entity graph, the graph automatically includes <span style=\" font-style:italic;\">all</span> its relationships.</p><p><span style=\" font-weight:600;\">Unchecked</span>: Whenever <span style=\" font-style:italic;\">all</span> the objects in a relationship are included in the Entity graph, the graph automatically includes the relationship.</p></body></html>", None, -1))
+        self.actionInput_type.setText(QtWidgets.QApplication.translate("MainWindow", "Input type", None, -1))
+        self.actionParameter_value.setText(QtWidgets.QApplication.translate("MainWindow", "Parameter value", None, -1))
+        self.actionRelationship.setText(QtWidgets.QApplication.translate("MainWindow", "Relationship", None, -1))
+        self.actionIndexed_parameter_expansion.setText(QtWidgets.QApplication.translate("MainWindow", "Indexed parameter expansion", None, -1))
+        self.actionInput_type_parameter_value.setText(QtWidgets.QApplication.translate("MainWindow", "Parameter value", None, -1))
+        self.actionInput_type_relationship.setText(QtWidgets.QApplication.translate("MainWindow", "Relationship", None, -1))
+        self.actionInput_type_index_expansion.setText(QtWidgets.QApplication.translate("MainWindow", "Index expansion", None, -1))
 
-from spinetoolbox.data_store_form.widgets.custom_qtreeview import ParameterValueListTreeView, RelationshipTreeView, ObjectTreeView
-from spinetoolbox.data_store_form.widgets.custom_qtableview import RelationshipParameterDefinitionTableView, FrozenTableView, ObjectParameterValueTableView, RelationshipParameterValueTableView, ObjectParameterDefinitionTableView, PivotTableView
+from spinetoolbox.data_store_form.widgets.custom_qtreeview import ParameterValueListTreeView, ObjectTreeView, RelationshipTreeView
+from spinetoolbox.data_store_form.widgets.custom_qtableview import ObjectParameterDefinitionTableView, RelationshipParameterDefinitionTableView, RelationshipParameterValueTableView, ObjectParameterValueTableView, FrozenTableView, PivotTableView
 from spinetoolbox.data_store_form.widgets.custom_qgraphicsviews import EntityQGraphicsView
 from spinetoolbox import resources_icons_rc

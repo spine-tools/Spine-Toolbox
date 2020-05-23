@@ -18,8 +18,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>872</width>
-    <height>842</height>
+    <width>540</width>
+    <height>1636</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -64,7 +64,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>872</width>
+     <width>540</width>
      <height>28</height>
     </rect>
    </property>
@@ -158,10 +158,22 @@
     </property>
     <addaction name="actionLive_graph_demo"/>
    </widget>
+   <widget class="QMenu" name="menuPivot_table">
+    <property name="title">
+     <string>Pivot table</string>
+    </property>
+    <widget class="QMenu" name="menuInput_type">
+     <property name="title">
+      <string>Input type</string>
+     </property>
+    </widget>
+    <addaction name="menuInput_type"/>
+   </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
    <addaction name="menuView"/>
    <addaction name="menuGraph"/>
+   <addaction name="menuPivot_table"/>
    <addaction name="menuSession"/>
    <addaction name="menuHelp"/>
   </widget>
@@ -693,45 +705,6 @@
       <number>0</number>
      </property>
      <item>
-      <layout class="QHBoxLayout" name="horizontalLayout">
-       <property name="spacing">
-        <number>3</number>
-       </property>
-       <item>
-        <widget class="QLabel" name="label_3">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
-         <property name="text">
-          <string>Input type:</string>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QComboBox" name="comboBox_pivot_table_input_type">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
-         <property name="maximumSize">
-          <size>
-           <width>180</width>
-           <height>23</height>
-          </size>
-         </property>
-        </widget>
-       </item>
-      </layout>
-     </item>
-     <item>
       <widget class="PivotTableView" name="pivot_table">
        <property name="contextMenuPolicy">
         <enum>Qt::DefaultContextMenu</enum>
@@ -1162,6 +1135,53 @@
    </property>
    <property name="toolTip">
     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Checked&lt;/span&gt;: Whenever an object is included in the Entity graph, the graph automatically includes &lt;span style=&quot; font-style:italic;&quot;&gt;all&lt;/span&gt; its relationships.&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Unchecked&lt;/span&gt;: Whenever &lt;span style=&quot; font-style:italic;&quot;&gt;all&lt;/span&gt; the objects in a relationship are included in the Entity graph, the graph automatically includes the relationship.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+   </property>
+  </action>
+  <action name="actionInput_type">
+   <property name="text">
+    <string>Input type</string>
+   </property>
+  </action>
+  <action name="actionParameter_value">
+   <property name="text">
+    <string>Parameter value</string>
+   </property>
+  </action>
+  <action name="actionRelationship">
+   <property name="text">
+    <string>Relationship</string>
+   </property>
+  </action>
+  <action name="actionIndexed_parameter_expansion">
+   <property name="text">
+    <string>Indexed parameter expansion</string>
+   </property>
+  </action>
+  <action name="actionInput_type_parameter_value">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Parameter value</string>
+   </property>
+  </action>
+  <action name="actionInput_type_relationship">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Relationship</string>
+   </property>
+  </action>
+  <action name="actionInput_type_index_expansion">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Index expansion</string>
    </property>
   </action>
  </widget>

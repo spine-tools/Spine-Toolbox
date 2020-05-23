@@ -19,6 +19,7 @@ Contains TabularViewMixin class.
 from itertools import product
 from collections import namedtuple
 from PySide2.QtCore import Qt, Slot, QTimer
+from PySide2.QtWidgets import QActionGroup
 from .custom_menus import TabularViewFilterMenu
 from .tabular_view_header_widget import TabularViewHeaderWidget
 from ...helpers import fix_name_ambiguity, busy_effect
@@ -30,7 +31,7 @@ class TabularViewMixin:
     """Provides the pivot table and its frozen table for the DS form."""
 
     _PARAMETER_VALUE = "Parameter value"
-    _INDEX_EXPANSION = "Indexed parameter expansion"
+    _INDEX_EXPANSION = "Index expansion"
     _RELATIONSHIP = "Relationship"
 
     _PARAMETER = "parameter"
@@ -46,9 +47,15 @@ class TabularViewMixin:
         self.filter_menus = {}
         self.class_pivot_preferences = {}
         self.PivotPreferences = namedtuple("PivotPreferences", ["index", "columns", "frozen", "frozen_value"])
-        self.ui.comboBox_pivot_table_input_type.addItems(
-            [self._PARAMETER_VALUE, self._INDEX_EXPANSION, self._RELATIONSHIP]
-        )
+        self.input_type_action_group = QActionGroup(self)
+        actions = {
+            input_type: self.input_type_action_group.addAction(input_type)
+            for input_type in [self._PARAMETER_VALUE, self._INDEX_EXPANSION, self._RELATIONSHIP]
+        }
+        for action in actions.values():
+            action.setCheckable(True)
+            self.ui.menuInput_type.addAction(action)
+        actions[self._PARAMETER_VALUE].setChecked(True)
         self.pivot_table_proxy = PivotTableSortFilterProxy()
         self.pivot_table_model = PivotTableModel(self)
         self.pivot_table_proxy.setSourceModel(self.pivot_table_model)
@@ -75,7 +82,7 @@ class TabularViewMixin:
         self.ui.pivot_table.verticalHeader().header_dropped.connect(self.handle_header_dropped)
         self.ui.frozen_table.header_dropped.connect(self.handle_header_dropped)
         self.ui.frozen_table.selectionModel().currentChanged.connect(self.change_frozen_value)
-        self.ui.comboBox_pivot_table_input_type.currentTextChanged.connect(self.do_reload_pivot_table)
+        self.input_type_action_group.triggered.connect(self.do_reload_pivot_table)
         self.ui.dockWidget_pivot_table.visibilityChanged.connect(self._handle_pivot_table_visibility_changed)
         self.ui.dockWidget_frozen_table.visibilityChanged.connect(self._handle_frozen_table_visibility_changed)
 
@@ -354,15 +361,16 @@ class TabularViewMixin:
             self.do_reload_pivot_table()
 
     @busy_effect
-    @Slot("QString")
-    def do_reload_pivot_table(self, input_type=None):
+    @Slot("QAction")
+    def do_reload_pivot_table(self, action=None):
         """Reloads pivot table.
         """
         if self.current_class_id is None:
             return
         qApp.processEvents()  # pylint: disable=undefined-variable
-        if input_type is None:
-            input_type = self.ui.comboBox_pivot_table_input_type.currentText()
+        if action is None:
+            action = self.input_type_action_group.checkedAction()
+        input_type = action.text()
         self.current_input_type = input_type
         if self.current_input_type == self._RELATIONSHIP and self.current_class_type != "relationship class":
             self.clear_pivot_table()
