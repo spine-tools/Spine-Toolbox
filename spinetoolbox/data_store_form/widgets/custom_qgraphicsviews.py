@@ -44,9 +44,11 @@ class EntityQGraphicsView(CustomQGraphicsView):
             item.apply_zoom(self.zoom_factor)
         obj_item = rod_items[0]
         obj_item.grabMouse()
-        pos = self.mapToScene(self.mapFromGlobal(QCursor.pos()))
+        cursor_pos = self.mapFromGlobal(QCursor.pos())
+        pos = self.mapToScene(cursor_pos)
         delta = pos - obj_item.scenePos()
         obj_item.block_move_by(delta.x(), delta.y())
+        self.update_rod_object_item_icon(cursor_pos)
 
     def clear_rod_items(self):
         for item in self.rod_items:
@@ -109,17 +111,22 @@ class EntityQGraphicsView(CustomQGraphicsView):
     def mouseMoveEvent(self, event):
         super().mouseMoveEvent(event)
         if not self.rod_items:
+            self.viewport().setCursor(Qt.ArrowCursor)
             return
-        items = [item for item in self.items(event.pos()) if item not in self.rod_items]
+        self.viewport().setCursor(Qt.BlankCursor)
+        self.update_rod_object_item_icon(event.pos())
+
+    def update_rod_object_item_icon(self, pos):
+        items = [item for item in self.items(pos) if item not in self.rod_items]
         obj_items = [x for x in items if isinstance(x, ObjectItem)]
         if obj_items:
-            self.viewport().setCursor(Qt.DragCopyCursor)
+            self.rod_items[0].set_plus_icon()
             return
         items = [x for x in items if isinstance(x, (RelationshipItem, ArcItem))]
         if not items:
-            self.viewport().setCursor(Qt.PointingHandCursor)
+            self.rod_items[0].set_check_icon()
             return
-        self.viewport().setCursor(Qt.ForbiddenCursor)
+        self.rod_items[0].set_ban_icon()
 
     def keyPressEvent(self, event):
         """Wipes this item out if user presses ESC."""

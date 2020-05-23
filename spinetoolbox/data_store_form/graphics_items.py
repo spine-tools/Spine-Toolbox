@@ -370,8 +370,8 @@ class ObjectItem(EntityItem):
 
 
 class RodObjectItem(ObjectItem):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, data_store_form, x, y, extent):
+        super().__init__(data_store_form, x, y, 0.8 * extent)
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=False)
         self.setToolTip(
             "<p>Click on any object to add it as a member in the relationship.</p>"
@@ -388,8 +388,20 @@ class RodObjectItem(ObjectItem):
         return None
 
     def refresh_icon(self):
+        self.set_plus_icon()
+
+    def set_plus_icon(self):
+        self.set_icon("\uf0fe")
+
+    def set_check_icon(self):
+        self.set_icon("\uf14a")
+
+    def set_ban_icon(self):
+        self.set_icon("\uf05e")
+
+    def set_icon(self, unicode):
         """Refreshes the icon."""
-        pixmap = CharIconEngine("\uf140", 0).pixmap(QSize(self._extent, self._extent))
+        pixmap = CharIconEngine(unicode, 0).pixmap(QSize(self._extent, self._extent))
         self.setPixmap(pixmap)
 
     def mouseMoveEvent(self, event):
@@ -496,6 +508,9 @@ class RodArcItem(ArcItem):
     def _make_pen(self):
         pen = super()._make_pen()
         pen.setStyle(Qt.DotLine)
+        color = pen.color()
+        color.setAlphaF(0.5)
+        pen.setColor(color)
         return pen
 
 
