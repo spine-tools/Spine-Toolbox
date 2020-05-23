@@ -19,7 +19,7 @@ Contains the ParameterViewMixin class.
 from PySide2.QtCore import Qt, Slot
 from PySide2.QtWidgets import QHeaderView
 from .object_name_list_editor import ObjectNameListEditor
-from ...mvcmodels.compound_parameter_models import (
+from ..mvcmodels.compound_parameter_models import (
     CompoundObjectParameterDefinitionModel,
     CompoundObjectParameterValueModel,
     CompoundRelationshipParameterDefinitionModel,

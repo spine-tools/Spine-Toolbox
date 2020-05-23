@@ -18,9 +18,9 @@ These models concatenate several 'single' models and one 'empty' model.
 """
 from PySide2.QtCore import Qt, Signal, Slot
 from PySide2.QtGui import QFont, QIcon
-from ..helpers import rows_to_row_count_tuples
-from ..data_store_form.widgets.custom_menus import ParameterViewFilterMenu
-from .compound_table_model import CompoundWithEmptyTableModel
+from ...helpers import rows_to_row_count_tuples
+from ..widgets.custom_menus import ParameterViewFilterMenu
+from ...mvcmodels.compound_table_model import CompoundWithEmptyTableModel
 from .empty_parameter_models import (
     EmptyObjectParameterDefinitionModel,
     EmptyObjectParameterValueModel,

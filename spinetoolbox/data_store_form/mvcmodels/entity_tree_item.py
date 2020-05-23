@@ -18,7 +18,7 @@ Classes to represent entities in a tree.
 from PySide2.QtCore import Qt
 from PySide2.QtGui import QFont, QBrush
 from spinetoolbox.helpers import rows_to_row_count_tuples
-from .minimal_tree_model import TreeItem
+from spinetoolbox.mvcmodels.minimal_tree_model import TreeItem
 
 
 class MultiDBTreeItem(TreeItem):

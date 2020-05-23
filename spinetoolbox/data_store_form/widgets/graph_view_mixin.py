@@ -16,7 +16,7 @@ Contains the GraphViewMixin class.
 :date:   26.11.2018
 """
 import itertools
-from PySide2.QtCore import Slot, QRectF, Qt
+from PySide2.QtCore import Slot, QRectF
 from PySide2.QtWidgets import QGraphicsTextItem
 from PySide2.QtPrintSupport import QPrinter
 from PySide2.QtGui import QPainter

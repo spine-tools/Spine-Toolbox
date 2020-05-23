@@ -18,14 +18,14 @@ Single models for parameter definitions and values (as 'for a single entity').
 
 from PySide2.QtCore import Qt, QModelIndex
 from PySide2.QtGui import QGuiApplication
-from ..mvcmodels.minimal_table_model import MinimalTableModel
+from ...mvcmodels.minimal_table_model import MinimalTableModel
 from ..mvcmodels.parameter_mixins import (
     ConvertToDBMixin,
     FillInParameterNameMixin,
     FillInValueListIdMixin,
     MakeParameterTagMixin,
 )
-from .shared import PARSED_ROLE
+from ...mvcmodels.shared import PARSED_ROLE
 
 
 class SingleParameterModel(MinimalTableModel):

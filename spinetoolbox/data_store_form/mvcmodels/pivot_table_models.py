@@ -20,8 +20,8 @@ import enum
 from PySide2.QtCore import Qt, Slot, QTimer, QAbstractTableModel, QModelIndex, QSortFilterProxyModel
 from PySide2.QtGui import QColor, QFont
 from .pivot_model import PivotModel
-from .shared import PARSED_ROLE
-from ..config import PIVOT_TABLE_HEADER_COLOR
+from ...mvcmodels.shared import PARSED_ROLE
+from ...config import PIVOT_TABLE_HEADER_COLOR
 
 
 class IndexId(enum.IntEnum):

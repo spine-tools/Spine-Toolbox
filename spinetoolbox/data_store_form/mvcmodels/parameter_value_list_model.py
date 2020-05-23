@@ -16,10 +16,10 @@ A tree model for parameter value lists.
 :date:   28.6.2019
 """
 
-from PySide2.QtCore import Qt, Signal, QModelIndex
+from PySide2.QtCore import Qt, QModelIndex
 from PySide2.QtGui import QBrush, QFont, QIcon, QGuiApplication
 from spinedb_api import to_database, from_database
-from .minimal_tree_model import MinimalTreeModel, TreeItem
+from ...mvcmodels.minimal_tree_model import MinimalTreeModel, TreeItem
 
 
 class ValueListTreeItem(TreeItem):

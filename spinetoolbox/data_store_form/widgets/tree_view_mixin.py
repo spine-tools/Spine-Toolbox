@@ -30,7 +30,7 @@ from .edit_or_remove_items_dialogs import (
     EditRelationshipsDialog,
     RemoveEntitiesDialog,
 )
-from ...mvcmodels.entity_tree_models import ObjectTreeModel, RelationshipTreeModel
+from ..mvcmodels.entity_tree_models import ObjectTreeModel, RelationshipTreeModel
 from ...helpers import busy_effect
 from ...spine_db_parcel import SpineDBParcel
 

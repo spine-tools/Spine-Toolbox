@@ -43,7 +43,7 @@ from .tabular_view_mixin import TabularViewMixin
 from .toolbars import ParameterTagToolBar
 from .db_session_history_dialog import DBSessionHistoryDialog
 from ...widgets.notification import NotificationStack
-from ...mvcmodels.parameter_value_list_model import ParameterValueListModel
+from ..mvcmodels.parameter_value_list_model import ParameterValueListModel
 from ...helpers import (
     busy_effect,
     ensure_window_is_on_screen,
