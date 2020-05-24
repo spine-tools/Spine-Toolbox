@@ -16,7 +16,7 @@ Contains the GraphViewMixin class.
 :date:   26.11.2018
 """
 import itertools
-from PySide2.QtCore import Slot, QRectF
+from PySide2.QtCore import Signal, Slot, QRectF
 from PySide2.QtWidgets import QGraphicsTextItem
 from PySide2.QtPrintSupport import QPrinter
 from PySide2.QtGui import QPainter
@@ -46,6 +46,8 @@ class GraphViewMixin:
     _ARC_WIDTH = 0.15 * _VERTEX_EXTENT
     _ARC_LENGTH_HINT = 1.5 * _VERTEX_EXTENT
 
+    graph_selection_changed = Signal(object)
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._full_relationship_expansion = self.qsettings.value(
@@ -62,7 +64,7 @@ class GraphViewMixin:
         self.hidden_items = list()
         self.prunned_entity_ids = dict()
         self.removed_items = list()
-        self.entity_item_selection = list()
+        self.selected_items = list()
         self.added_object_ids = set()
         self.added_relationship_ids = set()
         self._blank_item = None
@@ -86,8 +88,8 @@ class GraphViewMixin:
     def connect_signals(self):
         """Connects signals."""
         super().connect_signals()
-        self.ui.treeView_object.entity_selection_changed.connect(self.rebuild_graph)
-        self.ui.treeView_relationship.entity_selection_changed.connect(self.rebuild_graph)
+        self.ui.treeView_object.tree_selection_changed.connect(self.rebuild_graph)
+        self.ui.treeView_relationship.tree_selection_changed.connect(self.rebuild_graph)
         self.ui.dockWidget_entity_graph.visibilityChanged.connect(self._handle_entity_graph_visibility_changed)
         self.ui.actionHide_selected.triggered.connect(self.hide_selected_items)
         self.ui.actionShow_hidden.triggered.connect(self.show_hidden_items)
@@ -112,23 +114,10 @@ class GraphViewMixin:
     def _handle_scene_selection_changed(self):
         """Filters parameters by selected objects in the graph."""
         selected_items = self.scene.selectedItems()
-        obj_item_selection = [x for x in selected_items if isinstance(x, ObjectItem)]
-        rel_item_selection = [x for x in selected_items if isinstance(x, RelationshipItem)]
-        self.entity_item_selection = obj_item_selection + rel_item_selection
-        selected_objs = {self.db_map: [x.db_representation for x in obj_item_selection]}
-        cascading_rels = self.db_mngr.find_cascading_relationships(self.db_mngr.db_map_ids(selected_objs))
-        selected_rels = {self.db_map: [x.db_representation for x in rel_item_selection] + cascading_rels[self.db_map]}
-        self.selected_ent_cls_ids["object class"] = {}
-        self.selected_ent_cls_ids["relationship class"] = {}
-        for db_map, items in selected_objs.items():
-            self.selected_ent_cls_ids["object class"].setdefault(db_map, set()).update({x["class_id"] for x in items})
-        for db_map, items in selected_rels.items():
-            self.selected_ent_cls_ids["relationship class"].setdefault(db_map, set()).update(
-                {x["class_id"] for x in items}
-            )
-        self.selected_ent_ids["object"] = self.db_mngr.db_map_class_ids(selected_objs)
-        self.selected_ent_ids["relationship"] = self.db_mngr.db_map_class_ids(selected_rels)
-        self.update_filter()
+        selected_objs = [x for x in selected_items if isinstance(x, ObjectItem)]
+        selected_rels = [x for x in selected_items if isinstance(x, RelationshipItem)]
+        self.selected_items = selected_objs + selected_rels
+        self.graph_selection_changed.emit({"object": selected_objs, "relationship": selected_rels})
 
     @Slot(bool)
     def set_full_relationship_expansion(self, checked):
@@ -269,12 +258,12 @@ class GraphViewMixin:
     def _handle_menu_graph_about_to_show(self):
         """Enables or disables actions according to current selection in the graph."""
         visible = self.ui.dockWidget_entity_graph.isVisible()
-        self.ui.actionSave_positions.setEnabled(visible and bool(self.entity_item_selection))
-        self.ui.actionClear_positions.setEnabled(visible and bool(self.entity_item_selection))
-        self.ui.actionHide_selected.setEnabled(visible and bool(self.entity_item_selection))
+        self.ui.actionSave_positions.setEnabled(visible and bool(self.selected_items))
+        self.ui.actionClear_positions.setEnabled(visible and bool(self.selected_items))
+        self.ui.actionHide_selected.setEnabled(visible and bool(self.selected_items))
         self.ui.actionShow_hidden.setEnabled(visible and bool(self.hidden_items))
-        self.ui.actionPrune_selected_entities.setEnabled(visible and bool(self.entity_item_selection))
-        self.ui.actionPrune_selected_classes.setEnabled(visible and bool(self.entity_item_selection))
+        self.ui.actionPrune_selected_entities.setEnabled(visible and bool(self.selected_items))
+        self.ui.actionPrune_selected_classes.setEnabled(visible and bool(self.selected_items))
         self.ui.menuRestore_pruned.setEnabled(visible and any(self.prunned_entity_ids.values()))
         self.ui.actionRestore_all_pruned.setEnabled(visible and any(self.prunned_entity_ids.values()))
         self.zoom_widget_action.setEnabled(visible)
@@ -471,8 +460,8 @@ class GraphViewMixin:
     @Slot(bool)
     def hide_selected_items(self, checked=False):
         """Hides selected items."""
-        self.hidden_items.extend(self.entity_item_selection)
-        for item in self.entity_item_selection:
+        self.hidden_items.extend(self.selected_items)
+        for item in self.selected_items:
             item.set_all_visible(False)
 
     @Slot(bool)
@@ -485,19 +474,19 @@ class GraphViewMixin:
         self.hidden_items.clear()
 
     def _get_selected_entity_names(self):
-        if len(self.entity_item_selection) == 1:
-            return "'" + self.entity_item_selection[0].entity_name + "'"
+        if len(self.selected_items) == 1:
+            return "'" + self.selected_items[0].entity_name + "'"
         return "selected entities"
 
     def _get_selected_class_names(self):
-        if len(self.entity_item_selection) == 1:
-            return "'" + self.entity_item_selection[0].entity_class_name + "'"
+        if len(self.selected_items) == 1:
+            return "'" + self.selected_items[0].entity_class_name + "'"
         return "selected classes"
 
     @Slot(bool)
     def prune_selected_entities(self, checked=False):
         """Prunes selected items."""
-        entity_ids = {x.entity_id for x in self.entity_item_selection}
+        entity_ids = {x.entity_id for x in self.selected_items}
         key = self._get_selected_entity_names()
         self.prunned_entity_ids[key] = entity_ids
         action = self.ui.menuRestore_pruned.addAction(key)
@@ -507,7 +496,7 @@ class GraphViewMixin:
     @Slot(bool)
     def prune_selected_classes(self, checked=False):
         """Prunes selected items."""
-        class_ids = {x.entity_class_id for x in self.entity_item_selection}
+        class_ids = {x.entity_class_id for x in self.selected_items}
         entity_ids = {x["id"] for x in self.db_mngr.get_items(self.db_map, "object") if x["class_id"] in class_ids}
         entity_ids |= {
             x["id"] for x in self.db_mngr.get_items(self.db_map, "relationship") if x["class_id"] in class_ids
@@ -547,17 +536,17 @@ class GraphViewMixin:
 
     def edit_entity_graph_items(self):
         """Starts editing given indexes."""
-        obj_items = [item for item in self.entity_item_selection if isinstance(item, ObjectItem)]
-        rel_items = [item for item in self.entity_item_selection if isinstance(item, RelationshipItem)]
+        obj_items = [item for item in self.selected_items if isinstance(item, ObjectItem)]
+        rel_items = [item for item in self.selected_items if isinstance(item, RelationshipItem)]
         self.show_edit_objects_form(obj_items)
         self.show_edit_relationships_form(rel_items)
 
     def remove_entity_graph_items(self, checked=False):
         """Removes all selected items in the graph."""
-        if not self.entity_item_selection:
+        if not self.selected_items:
             return
         db_map_typed_data = {self.db_map: {}}
-        for item in self.entity_item_selection:
+        for item in self.selected_items:
             db_item = item.db_representation
             db_map_typed_data[self.db_map].setdefault(item.entity_type, []).append(db_item)
         self.db_mngr.remove_items(db_map_typed_data)
@@ -565,7 +554,7 @@ class GraphViewMixin:
     @Slot(bool)
     def save_positions(self, checked=False):
         items_per_class_id = {}
-        for item in self.entity_item_selection:
+        for item in self.selected_items:
             items_per_class_id.setdefault(item.entity_class_id, []).append(item)
         pos_def_class_ids = {
             p["entity_class_id"]
@@ -616,7 +605,7 @@ class GraphViewMixin:
 
     @Slot(bool)
     def clear_saved_positions(self, checked=False):
-        entity_ids = {x.entity_id for x in self.entity_item_selection}
+        entity_ids = {x.entity_id for x in self.selected_items}
         vals_to_remove = [
             p
             for p in self.db_mngr.get_items_by_field(
@@ -687,3 +676,12 @@ class GraphViewMixin:
             return
         dialog = AddReadyRelationshipsDialog(self, relationships_per_class, self.db_mngr, *self.db_maps)
         dialog.show()
+
+    def closeEvent(self, event):
+        """Handle close window.
+
+        Args:
+            event (QCloseEvent): Closing event
+        """
+        super().closeEvent(event)
+        self.scene.selectionChanged.disconnect(self._handle_scene_selection_changed)

@@ -26,7 +26,7 @@ from spinetoolbox.helpers import busy_effect
 class EntityTreeView(CopyTreeView):
     """Custom QTreeView class for entity trees in DataStoreForm."""
 
-    entity_selection_changed = Signal(dict)
+    tree_selection_changed = Signal(dict)
 
     def __init__(self, parent):
         """Initialize the view."""
@@ -95,7 +95,7 @@ class EntityTreeView(CopyTreeView):
             self.selected_indexes.setdefault(item_type, {})[index] = None
         if not indexes:
             return
-        self.entity_selection_changed.emit(self.selected_indexes)
+        self.tree_selection_changed.emit(self.selected_indexes)
 
     @Slot("QModelIndex", "EditTrigger", "QEvent")
     def edit(self, index, trigger, event):

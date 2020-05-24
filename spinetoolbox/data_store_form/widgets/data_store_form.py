@@ -95,10 +95,6 @@ class DataStoreFormBase(QMainWindow):
         self.err_msg.setWindowTitle("Error")
         self.err_msg.setWindowFlag(Qt.WindowContextHelpButtonHint, False)
         self.notification_stack = NotificationStack(self)
-        self.selected_ent_cls_ids = {"object class": {}, "relationship class": {}}
-        self.selected_ent_ids = {"object": {}, "relationship": {}}
-        self.selected_parameter_tag_ids = dict()
-        self.selected_param_def_ids = {"object class": {}, "relationship class": {}}
         self.parameter_value_list_model = ParameterValueListModel(self, self.db_mngr, *self.db_maps)
         self.ui.treeView_parameter_value_list.setModel(self.parameter_value_list_model)
         self.ui.treeView_parameter_value_list.connect_data_store_form(self)
@@ -231,33 +227,6 @@ class DataStoreFormBase(QMainWindow):
         self.ui.actionPaste.setEnabled(self._focused_widget_has_callable("paste"))
         self.ui.actionRemove_selected.setEnabled(self._focused_widget_has_callable("remove_selected"))
         self.ui.actionEdit_selected.setEnabled(self._focused_widget_has_callable("edit_selected"))
-
-    def selected_entity_class_ids(self, entity_class_type):
-        """Returns entity class ids selected in entity tree *and* parameter tag toolbar.
-
-        Args:
-            entity_class_type (str)
-
-        Returns:
-            dict, NoneType: mapping db maps to sets of ids, or None if no id selected
-        """
-        if self.selected_param_def_ids[entity_class_type] is None:
-            return None
-        tree_class_ids = self.selected_ent_cls_ids[entity_class_type]
-        tag_class_ids = dict()
-        for db_map, class_id in self.selected_param_def_ids[entity_class_type]:
-            tag_class_ids.setdefault(db_map, set()).add(class_id)
-        result = dict()
-        for db_map in tree_class_ids.keys() | tag_class_ids.keys():
-            tree_cls_ids = tree_class_ids.get(db_map, set())
-            tag_cls_ids = tag_class_ids.get(db_map, set())
-            if tree_cls_ids == set():
-                result[db_map] = tag_cls_ids
-            elif tag_cls_ids == set():
-                result[db_map] = tree_cls_ids
-            else:
-                result[db_map] = tree_cls_ids & tag_cls_ids
-        return result
 
     @Slot(bool)
     def remove_selected(self, checked=False):
