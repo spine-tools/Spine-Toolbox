@@ -20,7 +20,7 @@ from PySide2.QtCore import Qt, QTimeLine
 from PySide2.QtWidgets import QMenu
 from PySide2.QtGui import QCursor
 from ...widgets.custom_qgraphicsviews import CustomQGraphicsView
-from ..graphics_items import ObjectItem, RelationshipItem, ArcItem, RodArcItem
+from ..graphics_items import ObjectItem, CrossHairsArcItem
 
 
 class EntityQGraphicsView(CustomQGraphicsView):
@@ -35,26 +35,36 @@ class EntityQGraphicsView(CustomQGraphicsView):
         super().__init__(parent=parent)  # Parent is passed to QWidget's constructor
         self._data_store_form = None
         self._menu = QMenu(self)
-        self.rod_items = []
+        self._hovered_obj_item = None
+        self.relationship_class = None
+        self.cross_hairs_items = []
 
-    def set_rod_items(self, rod_items):
-        self.rod_items = rod_items
-        for item in rod_items:
+    def set_cross_hairs_items(self, relationship_class, cross_hairs_items):
+        """Sets 'cross_hairs' items for relationship creation.
+
+        Args:
+            relationship_class (dict)
+            cross_hairs_items (list(QGraphicsItems))
+        """
+        self.relationship_class = relationship_class
+        self.cross_hairs_items = cross_hairs_items
+        for item in cross_hairs_items:
             self.scene().addItem(item)
             item.apply_zoom(self.zoom_factor)
-        obj_item = rod_items[0]
+        obj_item = cross_hairs_items[0]
         obj_item.grabMouse()
         cursor_pos = self.mapFromGlobal(QCursor.pos())
         pos = self.mapToScene(cursor_pos)
         delta = pos - obj_item.scenePos()
         obj_item.block_move_by(delta.x(), delta.y())
-        self.update_rod_object_item_icon(cursor_pos)
+        self._update_hovered_obj_item(cursor_pos)
 
-    def clear_rod_items(self):
-        for item in self.rod_items:
+    def clear_cross_hairs_items(self):
+        self.relationship_class = None
+        for item in self.cross_hairs_items:
             item.hide()
             item.scene().removeItem(item)
-        self.rod_items.clear()
+        self.cross_hairs_items.clear()
         self.viewport().setCursor(Qt.ArrowCursor)
 
     def connect_data_store_form(self, data_store_form):
@@ -76,60 +86,82 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self._data_store_form.remove_entity_graph_items()
 
     def mousePressEvent(self, event):
-        super().mousePressEvent(event)
-        if not self.rod_items:
+        """Handles relationship creation if one it's in process."""
+        if not self.cross_hairs_items:
+            super().mousePressEvent(event)
             return
         if event.buttons() & Qt.RightButton:
-            self.clear_rod_items()
+            self.clear_cross_hairs_items()
+            self._data_store_form.msg.emit("Relationship creation aborted.")
             return
-        items = [item for item in self.items(event.pos()) if item not in self.rod_items]
-        obj_items = [x for x in items if isinstance(x, ObjectItem)]
-        if obj_items:
-            obj_item = obj_items[0]
-            rod_rel_item = self.rod_items[1]
-            rod_arc_item = RodArcItem(rod_rel_item, obj_item, self._data_store_form._ARC_WIDTH)
-            rod_rel_item.refresh_icon()
-            self.scene().addItem(rod_arc_item)
-            rod_arc_item.apply_zoom(self.zoom_factor)
-            self.rod_items.append(rod_arc_item)
-            self._data_store_form.msg.emit("Successfuly added new member object '{0}'".format(obj_item.entity_name))
+        if not self._hovered_obj_item:
+            self.clear_cross_hairs_items()
+            self._data_store_form.msg.emit("Unable to create relationship. You didn't click on an object.")
             return
-        items = [x for x in items if isinstance(x, (RelationshipItem, ArcItem))]
-        if not items:
-            rod_obj_item, _, *rod_arc_items = self.rod_items
-            obj_items = [arc_item.obj_item for arc_item in rod_arc_items]
-            obj_items.remove(rod_obj_item)
-            self._data_store_form.try_and_add_relationships(*obj_items)
-        self.clear_rod_items()
+        if self._hovered_obj_item.entity_class_id in self.relationship_class["object_class_ids_to_go"]:
+            self.relationship_class["object_class_ids_to_go"].remove(self._hovered_obj_item.entity_class_id)
+            if self.relationship_class["object_class_ids_to_go"]:
+                # Add hovered as member and keep going, we're not done yet
+                ch_rel_item = self.cross_hairs_items[1]
+                ch_arc_item = CrossHairsArcItem(ch_rel_item, self._hovered_obj_item, self._data_store_form._ARC_WIDTH)
+                ch_rel_item.refresh_icon()
+                self.scene().addItem(ch_arc_item)
+                ch_arc_item.apply_zoom(self.zoom_factor)
+                self.cross_hairs_items.append(ch_arc_item)
+                self._data_store_form.msg.emit(
+                    "Successfuly added new member object '{0}'".format(self._hovered_obj_item.entity_name)
+                )
+                return
+            # Here we're done, add the relationships between the hovered and the members
+            ch_item, _, *ch_arc_items = self.cross_hairs_items
+            obj_items = [arc_item.obj_item for arc_item in ch_arc_items]
+            obj_items.remove(ch_item)
+            self._data_store_form.finalize_relationship(self.relationship_class, self._hovered_obj_item, *obj_items)
+            self.clear_cross_hairs_items()
+            return
+        self._data_store_form.msg.emit("Not a valid member object for this relationship.")
 
     def mouseMoveEvent(self, event):
+        """Updates the hovered object item if we're in relationship creation mode."""
         super().mouseMoveEvent(event)
-        if not self.rod_items:
-            self.viewport().setCursor(Qt.ArrowCursor)
+        if not self.cross_hairs_items:
             return
-        self.viewport().setCursor(Qt.BlankCursor)
-        self.update_rod_object_item_icon(event.pos())
+        self._update_hovered_obj_item(event.pos())
 
-    def update_rod_object_item_icon(self, pos):
-        items = [item for item in self.items(pos) if item not in self.rod_items]
-        obj_items = [x for x in items if isinstance(x, ObjectItem)]
-        if obj_items:
-            self.rod_items[0].set_plus_icon()
+    def _update_hovered_obj_item(self, pos):
+        """Updates the hovered object item and sets the 'cross_hairs' icon accordingly.
+
+        Args:
+            pos (QPoint)
+        """
+        self.viewport().setCursor(Qt.BlankCursor)
+        self._hovered_obj_item = None
+        items_at_pos = [item for item in self.items(pos) if item not in self.cross_hairs_items]
+        self._hovered_obj_item = next(iter([x for x in items_at_pos if isinstance(x, ObjectItem)]), None)
+        if self._hovered_obj_item is not None:
+            if self._hovered_obj_item.entity_class_id in self.relationship_class["object_class_ids_to_go"]:
+                if len(self.relationship_class["object_class_ids_to_go"]) == 1:
+                    self.cross_hairs_items[0].set_check_icon()
+                else:
+                    self.cross_hairs_items[0].set_plus_icon()
+                return
+            self.cross_hairs_items[0].set_ban_icon()
             return
-        items = [x for x in items if isinstance(x, (RelationshipItem, ArcItem))]
-        if not items:
-            self.rod_items[0].set_check_icon()
-            return
-        self.rod_items[0].set_ban_icon()
+        self.cross_hairs_items[0].set_foo_icon()
+
+    def mouseReleaseEvent(self, event):
+        if not self.cross_hairs_items:
+            super().mouseReleaseEvent(event)
 
     def keyPressEvent(self, event):
-        """Wipes this item out if user presses ESC."""
+        """Aborts relationship creation if user presses ESC."""
         super().keyPressEvent(event)
-        if event.key() == Qt.Key_Escape and self.rod_items:
-            self.clear_rod_items()
+        if event.key() == Qt.Key_Escape and self.cross_hairs_items:
+            self._data_store_form.msg.emit("Relationship creation aborted.")
+            self.clear_cross_hairs_items()
 
     def contextMenuEvent(self, e):
-        """Show context menu.
+        """Shows context menu.
 
         Args:
             e (QContextMenuEvent): Context menu event

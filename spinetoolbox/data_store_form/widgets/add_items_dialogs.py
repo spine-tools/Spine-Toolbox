@@ -23,7 +23,6 @@ from PySide2.QtWidgets import (
     QComboBox,
     QSpinBox,
     QToolButton,
-    QGroupBox,
     QVBoxLayout,
     QTableWidget,
     QTableWidgetItem,
@@ -51,77 +50,76 @@ from ...helpers import default_icon_id
 class AddReadyRelationshipsDialog(ManageItemsDialogBase):
     """A dialog to let the user add new 'ready' relationships."""
 
-    _MARGIN = 0
-
-    def __init__(self, parent, relationships_per_class, db_mngr, *db_maps):
+    def __init__(self, parent, relationships_class, relationships, db_mngr, *db_maps):
         """Init class.
 
         Args
+            relationships_class (dict)
+            relationships (list(list(str))
             parent (DataStoreForm)
-            relationships_per_class (dict): mapping relationship class key (name, object class name list string),
-                to a list of relationships (object name list)
             db_mngr (SpineDBManager)
             db_maps (iter) DiffDatabaseMapping instances
         """
         super().__init__(parent, db_mngr)
-        self.setWindowTitle("Add relationships")
+        self.relationship_class = relationships_class
+        self.relationships = relationships
         self.db_maps = db_maps
-        self.db_mngr = db_mngr
-        self.table_wgs_by_group_box = {}
-        for class_key, relationships in relationships_per_class.items():
-            class_name, object_class_names = class_key
-            object_class_names = object_class_names.split(",")
-            group_box = QGroupBox(class_name, self)
-            group_box.setCheckable(True)
-            group_box.setChecked(True)
-            layout = QVBoxLayout(group_box)
-            layout.setContentsMargins(self._MARGIN, self._MARGIN, self._MARGIN, self._MARGIN)
-            table_wg = self._make_table_widget(class_name, object_class_names, relationships)
-            layout.addWidget(table_wg)
-            self.layout().insertWidget(0, group_box)
-            self.table_wgs_by_group_box[group_box] = (table_wg, relationships)
         frame = QFrame(self)
         layout = QVBoxLayout(frame)
         label = QLabel(
-            "<p>The following options match your choice.</p>"
-            "<p>Please uncheck the ones you don't want and press <b>Ok</b>.</p>"
+            "<p>The following relationships match your choice.</p>"
+            "<p>Please check the ones you want to add and press <b>Ok</b>.</p>"
         )
         layout.addWidget(label)
         self.layout().insertWidget(0, frame)
+        self.setWindowTitle("Add '{0}' relationships".format(self.relationship_class["name"]))
+        self.populate_table_view()
         self.connect_signals()
 
-    def _make_table_widget(self, class_name, object_class_names, relationships):
-        column_count = len(object_class_names) + 1
-        row_count = len(relationships)
-        table_wg = QTableWidget(row_count, column_count, self)
-        labels = [""] + [class_name + " name" for class_name in object_class_names] + ["relationship name"]
-        table_wg.setHorizontalHeaderLabels(labels)
-        table_wg.verticalHeader().hide()
-        for row, relationship in enumerate(relationships):
+    def make_table_view(self):
+        return QTableWidget(self)
+
+    def populate_table_view(self):
+        object_class_name_list = self.relationship_class["object_class_name_list"].split(",")
+        self.table_view.setRowCount(len(self.relationships))
+        self.table_view.setColumnCount(len(object_class_name_list) + 1)
+        labels = [""] + [class_name + " name" for class_name in object_class_name_list]
+        self.table_view.setHorizontalHeaderLabels(labels)
+        self.table_view.verticalHeader().hide()
+        for row, relationship in enumerate(self.relationships):
             item = QTableWidgetItem()
-            item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsUserCheckable)
-            item.setCheckState(Qt.Checked)
-            item.setBackground(qApp.palette().window())
-            table_wg.setItem(row, 0, item)
+            item.setFlags(Qt.ItemIsEnabled)
+            item.setCheckState(Qt.Unchecked)
+            self.table_view.setItem(row, 0, item)
             for column, object_name in enumerate(relationship):
                 item = QTableWidgetItem(object_name)
-                item.setFlags(item.flags() & ~Qt.ItemIsEditable)
-                table_wg.setItem(row, column + 1, item)
-        table_wg.resizeColumnsToContents()
-        return table_wg
+                item.setFlags(Qt.ItemIsEnabled)
+                self.table_view.setItem(row, column + 1, item)
+        self.table_view.resizeColumnsToContents()
+        self.resize_window_to_columns()
+
+    def connect_signals(self):
+        super().connect_signals()
+        self.table_view.cellClicked.connect(self._handle_table_view_cell_clicked)
+        self.table_view.selectionModel().currentChanged.connect(self._handle_table_view_current_changed)
+
+    def _handle_table_view_cell_clicked(self, row, column):
+        item = self.table_view.item(row, 0)
+        check_state = Qt.Unchecked if item.checkState() == Qt.Checked else Qt.Checked
+        item.setCheckState(check_state)
+
+    def _handle_table_view_current_changed(self, current, _previous):
+        if current.isValid():
+            self.table_view.selectionModel().clearCurrentIndex()
 
     def accept(self):
         super().accept()
         data = []
-        for group_box, (table_wg, relationships) in self.table_wgs_by_group_box.items():
-            if not group_box.isChecked():
+        for row in range(self.table_view.rowCount()):
+            if self.table_view.item(row, 0).checkState() != Qt.Checked:
                 continue
-            class_name = group_box.title()
-            for row in range(table_wg.rowCount()):
-                if table_wg.item(row, 0).checkState() != Qt.Checked:
-                    continue
-                relationship = relationships[row]
-                data.append([class_name, relationship])
+            relationship = self.relationships[row]
+            data.append([self.relationship_class["name"], relationship])
         db_map_data = {db_map: {"relationships": data} for db_map in self.db_maps}
         self.db_mngr.import_data(db_map_data, command_text="Add relationships")
 

@@ -28,9 +28,9 @@ from ..graphics_items import (
     ObjectItem,
     RelationshipItem,
     ArcItem,
-    RodObjectItem,
-    RodRelationshipItem,
-    RodArcItem,
+    CrossHairsItem,
+    CrossHairsRelationshipItem,
+    CrossHairsArcItem,
 )
 from .graph_view_demo import GraphViewDemo
 from .graph_layout_generator import GraphLayoutGenerator
@@ -47,13 +47,14 @@ class GraphViewMixin:
     _ARC_LENGTH_HINT = 1.5 * _VERTEX_EXTENT
 
     graph_selection_changed = Signal(object)
+    graph_build_finished = Signal()
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._full_relationship_expansion = self.qsettings.value(
-            "appSettings/fullRelationshipExpansion", defaultValue="false"
+        self._full_relationship_expansion = (
+            self.qsettings.value("appSettings/fullRelationshipExpansion", defaultValue="false") == "true"
         )
-        self.ui.actionFull_relationship_expansion.setChecked(self._full_relationship_expansion == "true")
+        self.ui.actionFull_relationship_expansion.setChecked(self._full_relationship_expansion)
         self._persistent = False
         self.scene = None
         self.selected_tree_inds = {}
@@ -67,6 +68,7 @@ class GraphViewMixin:
         self.selected_items = list()
         self.added_object_ids = set()
         self.added_relationship_ids = set()
+        self.wip_relationship_class = None
         self._blank_item = None
         self.zoom_widget_action = None
         self.rotate_widget_action = None
@@ -121,8 +123,8 @@ class GraphViewMixin:
 
     @Slot(bool)
     def set_full_relationship_expansion(self, checked):
-        self._full_relationship_expansion = "true" if checked else "false"
-        self.qsettings.setValue("appSettings/fullRelationshipExpansion", self._full_relationship_expansion)
+        self._full_relationship_expansion = checked
+        self.qsettings.setValue("appSettings/fullRelationshipExpansion", "true" if checked else "false")
         self.build_graph()
 
     def setup_widget_actions(self):
@@ -325,6 +327,7 @@ class GraphViewMixin:
             self.ui.graphicsView.reset_zoom()
         else:
             self.ui.graphicsView.apply_zoom()
+        self.graph_build_finished.emit()
 
     def _get_selected_entity_ids(self):
         """Returns a set of ids corresponding to selected entities in the trees.
@@ -354,7 +357,7 @@ class GraphViewMixin:
         return selected_object_ids, selected_relationship_ids
 
     def _get_all_relationships_for_graph(self, object_ids, relationship_ids):
-        cond = all if self._full_relationship_expansion == "false" else any
+        cond = all if not self._full_relationship_expansion else any
         return [
             x
             for x in self.db_mngr.get_items(self.db_map, "relationship")
@@ -640,41 +643,44 @@ class GraphViewMixin:
         view._zoom(current_zoom_factor)
         self._insert_open_file_button(file_path)
 
-    def start_relationship_from_object(self, obj_item):
+    def start_relationship(self, relationship_class, obj_item):
         """Starts a relationship from the given object item.
 
         Args:
+            relationship_class (dict)
             obj_item (..graphics_items.ObjectItem)
         """
-        self.msg.emit("Creating relationship with object '{0}'...".format(obj_item.entity_name))
-        rod_obj_item = RodObjectItem(self, obj_item.pos().x(), obj_item.pos().y(), self._VERTEX_EXTENT)
-        rod_rel_item = RodRelationshipItem(self, obj_item.pos().x(), obj_item.pos().y(), 0.5 * self._VERTEX_EXTENT)
-        rod_arc_item1 = RodArcItem(rod_rel_item, obj_item, self._ARC_WIDTH)
-        rod_arc_item2 = RodArcItem(rod_rel_item, rod_obj_item, self._ARC_WIDTH)
-        rod_rel_item.refresh_icon()
-        self.ui.graphicsView.set_rod_items([rod_obj_item, rod_rel_item, rod_arc_item1, rod_arc_item2])
+        self.msg.emit(
+            "Started '{0}' relationship for object '{1}'...".format(relationship_class["name"], obj_item.entity_name)
+        )
+        object_class_ids_to_go = relationship_class["object_class_id_list"].copy()
+        object_class_ids_to_go.remove(obj_item.entity_class_id)
+        relationship_class["object_class_ids_to_go"] = object_class_ids_to_go
+        ch_item = CrossHairsItem(self, obj_item.pos().x(), obj_item.pos().y(), self._VERTEX_EXTENT)
+        ch_rel_item = CrossHairsRelationshipItem(
+            self, obj_item.pos().x(), obj_item.pos().y(), 0.5 * self._VERTEX_EXTENT
+        )
+        ch_arc_item1 = CrossHairsArcItem(ch_rel_item, obj_item, self._ARC_WIDTH)
+        ch_arc_item2 = CrossHairsArcItem(ch_rel_item, ch_item, self._ARC_WIDTH)
+        ch_rel_item.refresh_icon()
+        self.ui.graphicsView.set_cross_hairs_items(
+            relationship_class, [ch_item, ch_rel_item, ch_arc_item1, ch_arc_item2]
+        )
 
-    def try_and_add_relationships(self, *object_items):
+    def finalize_relationship(self, relationship_class, *object_items):
         """Tries to add relationships between the given object items.
 
         Args:
+            relationship_class (dict)
             object_items (..graphics_items.ObjectItem)
         """
-        relationships_per_class = {}
-        for rel_cls in self.db_mngr.get_items(self.db_map, "relationship class"):
-            object_class_id_list = [int(id_) for id_ in rel_cls["object_class_id_list"].split(",")]
-            rel_cls_key = (rel_cls["name"], rel_cls["object_class_name_list"])
-            for item_permutation in itertools.permutations(object_items):
-                if [item.entity_class_id for item in item_permutation] == object_class_id_list:
-                    relationship = [item.entity_name for item in item_permutation]
-                    relationships_per_class.setdefault(rel_cls_key, list()).append(relationship)
-        if not relationships_per_class:
-            self.msg.emit(
-                "<p>Sorry, no relationship classes match the given combination of objects.</p>"
-                "<p>Try to add a corresponding relationship class first.</p>"
-            )
-            return
-        dialog = AddReadyRelationshipsDialog(self, relationships_per_class, self.db_mngr, *self.db_maps)
+        relationships = set()
+        object_class_id_list = relationship_class["object_class_id_list"]
+        for item_permutation in itertools.permutations(object_items):
+            if [item.entity_class_id for item in item_permutation] == object_class_id_list:
+                relationship = tuple(item.entity_name for item in item_permutation)
+                relationships.add(relationship)
+        dialog = AddReadyRelationshipsDialog(self, relationship_class, list(relationships), self.db_mngr, *self.db_maps)
         dialog.show()
 
     def closeEvent(self, event):

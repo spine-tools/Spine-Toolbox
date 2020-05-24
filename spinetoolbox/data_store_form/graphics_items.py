@@ -66,7 +66,6 @@ class EntityItem(QGraphicsPixmapItem):
         self.setFlag(QGraphicsItem.ItemSendsScenePositionChanges, enabled=True)
         self.setAcceptHoverEvents(True)
         self.setCursor(Qt.ArrowCursor)
-        self._menu = self._make_menu()
 
     @property
     def entity_type(self):
@@ -269,6 +268,19 @@ class EntityItem(QGraphicsPixmapItem):
 class RelationshipItem(EntityItem):
     """Relationship item to use with GraphViewForm."""
 
+    def __init__(self, data_store_form, x, y, extent, entity_id=None):
+        """Initializes the item.
+
+        Args:
+            data_store_form (GraphViewForm): 'owner'
+            x (float): x-coordinate of central point
+            y (float): y-coordinate of central point
+            extent (int): preferred extent
+            entity_id (int): object id
+        """
+        super().__init__(data_store_form, x, y, extent, entity_id=entity_id)
+        self._menu = self._make_menu()
+
     @property
     def entity_type(self):
         return "relationship"
@@ -324,12 +336,15 @@ class ObjectItem(EntityItem):
             entity_id (int): object id
         """
         super().__init__(data_store_form, x, y, extent, entity_id=entity_id)
+        self._add_relationships_menu = None
+        self._relationship_class_per_action = {}
         self.setFlag(QGraphicsItem.ItemIsFocusable, enabled=True)
         self.label_item = EntityLabelItem(self)
         self.setZValue(0.5)
         self.update_name(self.entity_name)
         description = self.db_mngr.get_item(self.db_map, "object", self.entity_id).get("description")
         self.update_description(description)
+        self._menu = self._make_menu()
 
     @property
     def entity_type(self):
@@ -364,80 +379,38 @@ class ObjectItem(EntityItem):
     def _make_menu(self):
         menu = super()._make_menu()
         menu.addSeparator()
-        menu.addAction("Add relationships...", self._start_relationship)
+        self._add_relationships_menu = menu.addMenu("Add relationships...")
+        self._add_relationships_menu.triggered.connect(self._start_relationship)
         return menu
 
-    @Slot(bool)
-    def _start_relationship(self, checked=False):
-        self._data_store_form.start_relationship_from_object(self)
-
-
-class RodObjectItem(ObjectItem):
-    def __init__(self, data_store_form, x, y, extent):
-        super().__init__(data_store_form, x, y, 0.8 * extent)
-        self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=False)
-        self.setToolTip(
-            "<p>Click on any object to add it as a member in the relationship.</p>"
-            "<p>When you're done adding members, click on an empty space to add the relationship.</p>"
-        )
-        self.label_item.hide()
-
-    @property
-    def entity_class_name(self):
-        return None
-
-    @property
-    def entity_name(self):
-        return None
-
-    def refresh_icon(self):
-        self.set_plus_icon()
-
-    def set_plus_icon(self):
-        self.set_icon("\uf0fe")
-
-    def set_check_icon(self):
-        self.set_icon("\uf14a")
-
-    def set_ban_icon(self):
-        self.set_icon("\uf05e")
-
-    def set_icon(self, unicode):
-        """Refreshes the icon."""
-        pixmap = CharIconEngine(unicode, 0).pixmap(QSize(self._extent, self._extent))
-        self.setPixmap(pixmap)
-
-    def mouseMoveEvent(self, event):
-        move_by = event.scenePos() - self.scenePos()
-        self.block_move_by(move_by.x(), move_by.y())
+    def _populate_add_relationships_menu(self):
+        self._add_relationships_menu.clear()
+        self._relationship_class_per_action.clear()
+        object_class_ids_in_graph = {x.entity_class_id for x in self.scene().items() if isinstance(x, ObjectItem)}
+        db_map_object_class_ids = {self.db_map: {self.entity_class_id}}
+        for rel_cls in self.db_mngr.find_cascading_relationship_classes(db_map_object_class_ids).get(self.db_map, []):
+            action = self._add_relationships_menu.addAction(rel_cls["name"])
+            object_class_id_list = [int(id_) for id_ in rel_cls["object_class_id_list"].split(",")]
+            enabled = set(object_class_id_list) <= object_class_ids_in_graph
+            action.setEnabled(enabled)
+            if not enabled:
+                continue
+            rel_cls = rel_cls.copy()
+            rel_cls["object_class_id_list"] = object_class_id_list
+            self._relationship_class_per_action[action] = rel_cls
 
     def contextMenuEvent(self, e):
-        e.accept()
+        """Shows context menu.
 
+        Args:
+            e (QGraphicsSceneMouseEvent): Mouse event
+        """
+        self._populate_add_relationships_menu()
+        super().contextMenuEvent(e)
 
-class RodRelationshipItem(RelationshipItem):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=False)
-
-    def refresh_icon(self):
-        """Refreshes the icon."""
-        obj_items = [arc_item.obj_item for arc_item in self.arc_items]
-        object_class_name_list = [
-            obj_item.entity_class_name for obj_item in obj_items if not isinstance(obj_item, RodObjectItem)
-        ]
-        object_class_name_list = ",".join(object_class_name_list)
-        pixmap = (
-            self.db_mngr.icon_mngr[self.db_map]
-            .relationship_pixmap(object_class_name_list)
-            .scaled(self._extent, self._extent)
-        )
-        self.setPixmap(pixmap)
-
-    def block_move_by(self, dx, dy):
-        super().block_move_by(dx, dy)
-        for arc_item in self.arc_items:
-            arc_item.rel_item.follow_object_by(dx, dy)
+    @Slot("QAction")
+    def _start_relationship(self, action):
+        self._data_store_form.start_relationship(self._relationship_class_per_action[action], self)
 
 
 class ArcItem(QGraphicsLineItem):
@@ -507,7 +480,75 @@ class ArcItem(QGraphicsLineItem):
         self.rel_item.arc_items.remove(self)
 
 
-class RodArcItem(ArcItem):
+class CrossHairsItem(RelationshipItem):
+    def __init__(self, data_store_form, x, y, extent):
+        super().__init__(data_store_form, x, y, extent)
+        self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=False)
+        self.setToolTip("<p>Click on an object to add it as member in the relationship.</p>")
+        self.setZValue(2)
+
+    @property
+    def entity_class_name(self):
+        return None
+
+    @property
+    def entity_name(self):
+        return None
+
+    def refresh_icon(self):
+        self.set_foo_icon()
+
+    def set_plus_icon(self):
+        self.set_icon("\uf067", Qt.blue)
+
+    def set_check_icon(self):
+        self.set_icon("\uf00c", Qt.green)
+
+    def set_foo_icon(self):
+        self.set_icon("\uf05b")
+
+    def set_ban_icon(self):
+        self.set_icon("\uf05e", Qt.red)
+
+    def set_icon(self, unicode, color=0):
+        """Refreshes the icon."""
+        pixmap = CharIconEngine(unicode, color).pixmap(QSize(self._extent, self._extent))
+        self.setPixmap(pixmap)
+
+    def mouseMoveEvent(self, event):
+        move_by = event.scenePos() - self.scenePos()
+        self.block_move_by(move_by.x(), move_by.y())
+
+    def block_move_by(self, dx, dy):
+        self.moveBy(dx, dy)
+        for arc_item in self.arc_items:
+            arc_item.rel_item.follow_object_by(dx, dy)
+
+    def contextMenuEvent(self, e):
+        e.accept()
+
+
+class CrossHairsRelationshipItem(RelationshipItem):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=False)
+
+    def refresh_icon(self):
+        """Refreshes the icon."""
+        obj_items = [arc_item.obj_item for arc_item in self.arc_items]
+        object_class_name_list = [
+            obj_item.entity_class_name for obj_item in obj_items if not isinstance(obj_item, CrossHairsItem)
+        ]
+        object_class_name_list = ",".join(object_class_name_list)
+        pixmap = (
+            self.db_mngr.icon_mngr[self.db_map]
+            .relationship_pixmap(object_class_name_list)
+            .scaled(self._extent, self._extent)
+        )
+        self.setPixmap(pixmap)
+
+
+class CrossHairsArcItem(ArcItem):
     def _make_pen(self):
         pen = super()._make_pen()
         pen.setStyle(Qt.DotLine)
