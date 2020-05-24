@@ -115,6 +115,8 @@ class GraphViewMixin:
     @Slot()
     def _handle_scene_selection_changed(self):
         """Filters parameters by selected objects in the graph."""
+        if self.scene is None:
+            return
         selected_items = self.scene.selectedItems()
         selected_objs = [x for x in selected_items if isinstance(x, ObjectItem)]
         selected_rels = [x for x in selected_items if isinstance(x, RelationshipItem)]
@@ -690,4 +692,4 @@ class GraphViewMixin:
             event (QCloseEvent): Closing event
         """
         super().closeEvent(event)
-        self.scene.selectionChanged.disconnect(self._handle_scene_selection_changed)
+        self.scene = None
