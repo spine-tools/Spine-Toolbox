@@ -69,7 +69,7 @@ class GraphViewMixin:
         self.prunned_entity_ids = dict()
         self.removed_items = list()
         self.selected_items = list()
-        self.added_object_ids = set()
+        self._relationships_being_added = False
         self.added_relationship_ids = set()
         self.wip_relationship_class = None
         self._blank_item = None
@@ -151,11 +151,7 @@ class GraphViewMixin:
         super().receive_objects_added(db_map_data)
         objects = db_map_data.get(self.db_map, [])
         added_ids = {x["id"] for x in objects}
-        restored_ids = self.restore_removed_entities(added_ids)
-        added_ids -= restored_ids
-        if added_ids:
-            self.added_object_ids.update(added_ids)
-            self.build_graph(persistent=True)
+        self.restore_removed_entities(added_ids)
 
     def receive_relationships_added(self, db_map_data):
         """Runs when relationships are added to the db.
@@ -169,9 +165,10 @@ class GraphViewMixin:
         added_ids = {x["id"] for x in relationships}
         restored_ids = self.restore_removed_entities(added_ids)
         added_ids -= restored_ids
-        if added_ids:
+        if added_ids and self._relationships_being_added:
             self.added_relationship_ids.update(added_ids)
             self.build_graph(persistent=True)
+            self._end_add_relationships()
 
     def receive_object_classes_updated(self, db_map_data):
         super().receive_object_classes_updated(db_map_data)
@@ -233,7 +230,6 @@ class GraphViewMixin:
         """Hides removed entities while saving them into a list attribute.
         This allows entities to be restored in case the user undoes the operation."""
         removed_ids = {x["id"] for x in db_map_data.get(self.db_map, [])}
-        self.added_object_ids -= removed_ids
         self.added_relationship_ids -= removed_ids
         removed_items = [
             item
@@ -283,7 +279,6 @@ class GraphViewMixin:
     def rebuild_graph(self, selected):
         """Stores the given selection of entity tree indexes and builds graph."""
         self.selected_tree_inds = selected
-        self.added_object_ids.clear()
         self.added_relationship_ids.clear()
         self.build_graph()
 
@@ -371,7 +366,6 @@ class GraphViewMixin:
     def _update_graph_data(self):
         """Updates data for graph according to selection in trees."""
         object_ids, relationship_ids = self._get_selected_entity_ids()
-        object_ids.update(self.added_object_ids)
         relationship_ids.update(self.added_relationship_ids)
         prunned_entity_ids = {id_ for ids in self.prunned_entity_ids.values() for id_ in ids}
         object_ids -= prunned_entity_ids
@@ -677,7 +671,15 @@ class GraphViewMixin:
                 relationship = tuple(item.entity_name for item in item_permutation)
                 relationships.add(relationship)
         dialog = AddReadyRelationshipsDialog(self, relationship_class, list(relationships), self.db_mngr, *self.db_maps)
+        dialog.accepted.connect(self._begin_add_relationships)
         dialog.show()
+
+    def _begin_add_relationships(self):
+        self._relationships_being_added = True
+
+    @Slot()
+    def _end_add_relationships(self):
+        self._relationships_being_added = False
 
     def closeEvent(self, event):
         """Handle close window.
