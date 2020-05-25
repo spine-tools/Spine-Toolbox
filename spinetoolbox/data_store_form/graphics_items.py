@@ -19,7 +19,6 @@ from PySide2.QtCore import Qt, Signal, Slot, QLineF, QSize
 from PySide2.QtWidgets import (
     QGraphicsItem,
     QGraphicsTextItem,
-    QGraphicsSimpleTextItem,
     QGraphicsRectItem,
     QGraphicsEllipseItem,
     QGraphicsPixmapItem,
@@ -28,12 +27,14 @@ from PySide2.QtWidgets import (
     QApplication,
     QMenu,
 )
-from PySide2.QtGui import QPen, QBrush, QPainterPath, QFont, QPalette, QGuiApplication
+from PySide2.QtGui import QPen, QBrush, QPainterPath, QPalette, QGuiApplication
 from spinetoolbox.helpers import CharIconEngine
 from spinetoolbox.widgets.custom_qwidgets import TitleWidgetAction
 
 
 class EntityItem(QGraphicsPixmapItem):
+    """Base class for ObjectItem and RelationshipItem."""
+
     def __init__(self, data_store_form, x, y, extent, entity_id=None):
         """Initializes item
 
@@ -257,7 +258,7 @@ class EntityItem(QGraphicsPixmapItem):
 
 
 class RelationshipItem(EntityItem):
-    """Relationship item to use with GraphViewForm."""
+    """Represents a relationship in the Entity graph."""
 
     def __init__(self, data_store_form, x, y, extent, entity_id=None):
         """Initializes the item.
@@ -322,6 +323,8 @@ class RelationshipItem(EntityItem):
 
 
 class ObjectItem(EntityItem):
+    """Represents an object in the Entity graph."""
+
     def __init__(self, data_store_form, x, y, extent, entity_id=None):
         """Initializes the item.
 
@@ -335,7 +338,7 @@ class ObjectItem(EntityItem):
         super().__init__(data_store_form, x, y, extent, entity_id=entity_id)
         self._add_relationships_menu = None
         self._relationship_class_per_action = {}
-        self.label_item = EntityLabelItem(self)
+        self.label_item = ObjectLabelItem(self)
         self.setZValue(0.5)
         self.update_name(self.entity_name)
         description = self.db_mngr.get_item(self.db_map, "object", self.entity_id).get("description")
@@ -418,7 +421,7 @@ class ObjectItem(EntityItem):
 
 
 class ArcItem(QGraphicsLineItem):
-    """Arc item to use with GraphViewForm. Connects a RelationshipItem to an ObjectItem."""
+    """Connects a RelationshipItem to an ObjectItem."""
 
     def __init__(self, rel_item, obj_item, width):
         """Initializes item.
@@ -481,6 +484,8 @@ class ArcItem(QGraphicsLineItem):
 
 
 class CrossHairsItem(RelationshipItem):
+    """Creates new relationships directly in the graph."""
+
     def __init__(self, data_store_form, x, y, extent):
         super().__init__(data_store_form, x, y, 0.8 * extent)
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=False)
@@ -536,6 +541,8 @@ class CrossHairsItem(RelationshipItem):
 
 
 class CrossHairsRelationshipItem(RelationshipItem):
+    """Represents the relationship that's being created using the CrossHairsItem."""
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=False)
@@ -562,6 +569,10 @@ class CrossHairsRelationshipItem(RelationshipItem):
 
 
 class CrossHairsArcItem(ArcItem):
+    """Connects a CrossHairsRelationshipItem with the CrossHairsItem,
+    and with all the ObjectItem's in the relationship so far.
+    """
+
     def _make_pen(self):
         pen = super()._make_pen()
         pen.setStyle(Qt.DotLine)
@@ -571,8 +582,8 @@ class CrossHairsArcItem(ArcItem):
         return pen
 
 
-class EntityLabelItem(QGraphicsTextItem):
-    """Label item for items in GraphViewForm."""
+class ObjectLabelItem(QGraphicsTextItem):
+    """Provides a label for ObjectItem's."""
 
     entity_name_edited = Signal(str)
 
@@ -614,22 +625,3 @@ class EntityLabelItem(QGraphicsTextItem):
         y = rectf.height() + 4
         self.setPos(x, y)
         self.bg.setRect(self.boundingRect())
-
-
-class OutlinedTextItem(QGraphicsSimpleTextItem):
-    """Outlined text item."""
-
-    def __init__(self, text, parent, font=QFont(), brush=QBrush(Qt.white), outline_pen=QPen(Qt.black, 3, Qt.SolidLine)):
-        """Initializes item.
-
-        Args:
-            text (str): text to show
-            font (QFont, optional): font to display the text
-            brush (QBrush, optional)
-            outline_pen (QPen, optional)
-        """
-        super().__init__(text, parent)
-        font.setWeight(QFont.Black)
-        self.setFont(font)
-        self.setBrush(brush)
-        self.setPen(outline_pen)
