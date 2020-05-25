@@ -385,6 +385,9 @@ class ObjectItem(EntityItem):
         return menu
 
     def _populate_add_relationships_menu(self, add_title=False):
+        """
+        Populates the 'Add relationships' menu.
+        """
         self._add_relationships_menu.clear()
         if add_title:
             title = TitleWidgetAction("Add relationships", self._data_store_form)
@@ -401,6 +404,7 @@ class ObjectItem(EntityItem):
             rel_cls = rel_cls.copy()
             rel_cls["object_class_id_list"] = object_class_id_list
             self._relationship_class_per_action[action] = rel_cls
+        self._add_relationships_menu.setEnabled(bool(self._relationship_class_per_action))
 
     def contextMenuEvent(self, e):
         """Shows context menu.

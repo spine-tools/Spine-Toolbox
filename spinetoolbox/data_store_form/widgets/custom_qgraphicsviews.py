@@ -53,6 +53,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
             item.apply_zoom(self.zoom_factor)
         cursor_pos = self.mapFromGlobal(QCursor.pos())
         self._update_cross_hairs_pos(cursor_pos)
+        self.viewport().setCursor(Qt.BlankCursor)
 
     def clear_cross_hairs_items(self):
         self.relationship_class = None
@@ -60,7 +61,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
             item.hide()
             item.scene().removeItem(item)
         self.cross_hairs_items.clear()
-        self.viewport().setCursor(Qt.ArrowCursor)
+        self.viewport().unsetCursor()
 
     def connect_data_store_form(self, data_store_form):
         self._data_store_form = data_store_form
@@ -85,13 +86,8 @@ class EntityQGraphicsView(CustomQGraphicsView):
         if not self.cross_hairs_items:
             super().mousePressEvent(event)
             return
-        if event.buttons() & Qt.RightButton:
+        if event.buttons() & Qt.RightButton or not self._hovered_obj_item:
             self.clear_cross_hairs_items()
-            self._data_store_form.msg.emit("Relationship creation aborted.")
-            return
-        if not self._hovered_obj_item:
-            self.clear_cross_hairs_items()
-            self._data_store_form.msg.emit("Unable to create relationship. You didn't click on an object.")
             return
         if self._hovered_obj_item.entity_class_id in self.relationship_class["object_class_ids_to_go"]:
             self.relationship_class["object_class_ids_to_go"].remove(self._hovered_obj_item.entity_class_id)
@@ -103,9 +99,6 @@ class EntityQGraphicsView(CustomQGraphicsView):
                 self.scene().addItem(ch_arc_item)
                 ch_arc_item.apply_zoom(self.zoom_factor)
                 self.cross_hairs_items.append(ch_arc_item)
-                self._data_store_form.msg.emit(
-                    "Successfuly added new member object '{0}'".format(self._hovered_obj_item.entity_name)
-                )
                 return
             # Here we're done, add the relationships between the hovered and the members
             ch_item, _, *ch_arc_items = self.cross_hairs_items
@@ -113,13 +106,11 @@ class EntityQGraphicsView(CustomQGraphicsView):
             obj_items.remove(ch_item)
             self._data_store_form.finalize_relationship(self.relationship_class, self._hovered_obj_item, *obj_items)
             self.clear_cross_hairs_items()
-            return
-        self._data_store_form.msg.emit("Not a valid member object for this relationship.")
 
     def mouseMoveEvent(self, event):
         """Updates the hovered object item if we're in relationship creation mode."""
-        super().mouseMoveEvent(event)
         if not self.cross_hairs_items:
+            super().mouseMoveEvent(event)
             return
         self._update_cross_hairs_pos(event.pos())
 
@@ -129,7 +120,6 @@ class EntityQGraphicsView(CustomQGraphicsView):
         Args:
             pos (QPoint): the desired position in view coordinates
         """
-        self.viewport().setCursor(Qt.BlankCursor)
         cross_hairs_item = self.cross_hairs_items[0]
         scene_pos = self.mapToScene(pos)
         delta = scene_pos - cross_hairs_item.scenePos()

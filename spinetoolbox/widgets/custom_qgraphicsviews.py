@@ -66,15 +66,6 @@ class CustomQGraphicsView(QGraphicsView):
         else:
             super().keyPressEvent(event)
 
-    def enterEvent(self, event):
-        """Overridden method. Do not show the stupid open hand mouse cursor.
-
-        Args:
-            event (QEvent): event
-        """
-        super().enterEvent(event)
-        self.viewport().setCursor(Qt.ArrowCursor)
-
     def mousePressEvent(self, event):
         """Set rubber band selection mode if Control pressed.
         Enable resetting the zoom factor from the middle mouse button.
@@ -162,6 +153,7 @@ class CustomQGraphicsView(QGraphicsView):
         super().setScene(scene)
         scene.item_move_finished.connect(self._handle_item_move_finished)
         scene.item_removed.connect(lambda _item: self._set_preferred_scene_rect())
+        self.viewport().setCursor(Qt.ArrowCursor)
 
     @Slot("QGraphicsItem")
     def _handle_item_move_finished(self, item):

@@ -295,7 +295,7 @@ class GraphViewMixin:
         """
         if not self.ui.dockWidget_entity_graph.isVisible():
             return
-        self.ui.graphicsView.clear_cross_hairs_items()
+        self.ui.graphicsView.clear_cross_hairs_items()  # Needed
         self._persistent = persistent
         for layout_gen in self.layout_gens:
             layout_gen.stop()
@@ -649,9 +649,6 @@ class GraphViewMixin:
             relationship_class (dict)
             obj_item (..graphics_items.ObjectItem)
         """
-        self.msg.emit(
-            "Started '{0}' relationship for object '{1}'...".format(relationship_class["name"], obj_item.entity_name)
-        )
         object_class_ids_to_go = relationship_class["object_class_id_list"].copy()
         object_class_ids_to_go.remove(obj_item.entity_class_id)
         relationship_class["object_class_ids_to_go"] = object_class_ids_to_go
