@@ -25,20 +25,18 @@ from spinetoolbox.graphics_items import ProjectItemIcon
 class CombinerIcon(ProjectItemIcon):
     _SHAKE_FACTOR = 0.05
 
-    def __init__(self, toolbox, x, y, w, h, project_item, icon):
+    def __init__(self, toolbox, x, y, project_item, icon):
         """View icon for the Design View.
 
         Args:
             toolbox (ToolBoxUI): QMainWindow instance
             x (float): Icon x coordinate
             y (float): Icon y coordinate
-            w (float): Width of background rectangle
-            h (float): Height of background rectangle
             project_item (ProjectItem): Item
             icon (str): icon resource path
         """
         super().__init__(
-            toolbox, x, y, w, h, project_item, icon, icon_color=QColor("#990000"), background_color=QColor("#ffcccc")
+            toolbox, x, y, project_item, icon, icon_color=QColor("#990000"), background_color=QColor("#ffcccc")
         )
         self.time_line = QTimeLine()
         self.time_line.setLoopCount(0)  # loop forever

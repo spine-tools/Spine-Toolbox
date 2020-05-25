@@ -40,9 +40,10 @@ class MyTestCase(unittest.TestCase):
             "Exporter": "Exporters",
             "Tool": "Tools",
             "View": "Views",
+            "Combiner": "Manipulators",
         }
         self.assertEqual(categories, expected_categories)
-        self.assertEqual(len(factories), 6)
+        self.assertEqual(len(factories), 7)
         for item_type in expected_categories:
             self.assertIn(item_type, factories)
         for factory in factories.values():
