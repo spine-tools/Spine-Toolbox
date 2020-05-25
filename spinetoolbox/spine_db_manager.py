@@ -183,7 +183,7 @@ class SpineDBManager(QObject):
 
     def show_data_store_form(self, db_url_codenames, logger):
         """Creates a new DataStoreForm and shows it.
-        
+
         Args:
             db_url_codenames (dict): Mapping db urls to codenames.
             logger (LoggingInterface): Where to log SpineDBAPIError
@@ -254,16 +254,19 @@ class SpineDBManager(QObject):
         Returns:
             DiffDatabaseMapping
         """
-        if url not in self._db_maps:
-            self._db_maps[url] = db_map = DiffDatabaseMapping(url, upgrade=upgrade, codename=codename)
-            stack = self.undo_stack[db_map] = AgedUndoStack(self)
-            undo_action = self.undo_action[db_map] = stack.createUndoAction(self)
-            redo_action = self.redo_action[db_map] = stack.createRedoAction(self)
-            undo_action.setShortcuts(QKeySequence.Undo)
-            redo_action.setShortcuts(QKeySequence.Redo)
-            undo_action.setIcon(QIcon(":/icons/menu_icons/undo.svg"))
-            redo_action.setIcon(QIcon(":/icons/menu_icons/redo.svg"))
-        return self._db_maps[url]
+        db_map = self._db_maps.get(url)
+        if db_map is not None:
+            db_map.codename = codename
+            return db_map
+        db_map = self._db_maps[url] = DiffDatabaseMapping(url, upgrade=upgrade, codename=codename)
+        stack = self.undo_stack[db_map] = AgedUndoStack(self)
+        undo_action = self.undo_action[db_map] = stack.createUndoAction(self)
+        redo_action = self.redo_action[db_map] = stack.createRedoAction(self)
+        undo_action.setShortcuts(QKeySequence.Undo)
+        redo_action.setShortcuts(QKeySequence.Redo)
+        undo_action.setIcon(QIcon(":/icons/menu_icons/undo.svg"))
+        redo_action.setIcon(QIcon(":/icons/menu_icons/redo.svg"))
+        return db_map
 
     def register_listener(self, ds_form, *db_maps):
         """Register given ds_form as listener for all given db_map's signals.
