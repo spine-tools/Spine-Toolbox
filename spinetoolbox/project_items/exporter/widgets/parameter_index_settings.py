@@ -343,11 +343,8 @@ class _IndexingTableModel(QAbstractTableModel):
         super().__init__()
         self._indexes = list()
         self._index_name = ""
-        self._parameter_values = list()
-        self._parameter_nonexpanded_indexes = list()
-        for value_index, parameter_value in zip(parameter.indexes, parameter.values):
-            self._parameter_nonexpanded_indexes.append(value_index)
-            self._parameter_values.append(parameter_value)
+        self._parameter_values = list(parameter.values)
+        self._parameter_nonexpanded_indexes = list(parameter.indexes)
         self._selected = list()
         self._values = len(parameter.values) * [list()]
 

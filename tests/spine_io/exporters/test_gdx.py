@@ -81,22 +81,21 @@ class TestGdx(unittest.TestCase):
     def test_Parameter_construction(self):
         parameter = gdx.Parameter(["set name1", "set name2"], [("key1", "key2")], [5.5])
         self.assertEqual(parameter.domain_names, ["set name1", "set name2"])
-        self.assertEqual(len(parameter.indexes), 1)
-        self.assertEqual(parameter.indexes[0], ("key1", "key2"))
-        self.assertEqual(len(parameter.values), 1)
-        self.assertEqual(parameter.values[0], 5.5)
+        self.assertEqual(parameter.data, {("key1", "key2"): 5.5})
+        self.assertEqual(list(parameter.indexes), [("key1", "key2")])
+        self.assertEqual(list(parameter.values), [5.5])
 
     def test_Parameter_from_entity_parameter(self):
         parameter = self._object_parameter()
         self.assertEqual(parameter.domain_names, ["domain"])
-        self.assertEqual(parameter.indexes, [("record",)])
-        self.assertEqual(parameter.values, [-4.2])
+        self.assertEqual(list(parameter.indexes), [("record",)])
+        self.assertEqual(list(parameter.values), [-4.2])
 
     def test_Parameter_from_relationship_parameter(self):
         parameter = self._relationship_parameter()
         self.assertEqual(parameter.domain_names, ["domain1", "domain2"])
-        self.assertEqual(parameter.indexes, [("recordA", "recordB")])
-        self.assertEqual(parameter.values, [3.14])
+        self.assertEqual(list(parameter.indexes), [("recordA", "recordB")])
+        self.assertEqual(list(parameter.values), [3.14])
 
     def test_Parameter_append_entity_parameter_with_objects(self):
         with TemporaryDirectory() as tmp_dir_name:
@@ -115,8 +114,8 @@ class TestGdx(unittest.TestCase):
             parameter.append_entity_parameter((parameter_row.object_name,), parameter_row.value)
             database_map.connection.close()
         self.assertEqual(parameter.domain_names, ["domain"])
-        self.assertEqual(parameter.indexes, [("record1",), ("record2",)])
-        self.assertEqual(parameter.values, [1.1, 2.2])
+        self.assertEqual(list(parameter.indexes), [("record1",), ("record2",)])
+        self.assertEqual(list(parameter.values), [1.1, 2.2])
 
     def test_Parameter_append_entity_parameter_with_relationships(self):
         with TemporaryDirectory() as tmp_dir_name:
@@ -140,27 +139,27 @@ class TestGdx(unittest.TestCase):
             parameter.append_entity_parameter(tuple(parameter_row.object_name_list.split(",")), parameter_row.value)
             database_map.connection.close()
         self.assertEqual(parameter.domain_names, ["domain"])
-        self.assertEqual(parameter.indexes, [("record1",), ("record2",)])
-        self.assertEqual(parameter.values, [3.14, 6.28])
+        self.assertEqual(list(parameter.indexes), [("record1",), ("record2",)])
+        self.assertEqual(list(parameter.values), [3.14, 6.28])
 
     def test_Parameter_slurp(self):
         parameter = gdx.Parameter(["domain"], [("label1",)], [4.2])
         slurpable = gdx.Parameter(["domain"], [("label2",)], [3.3])
         parameter.slurp(slurpable)
         self.assertEqual(parameter.domain_names, ["domain"])
-        self.assertEqual(parameter.indexes, [("label1",), ("label2",)])
-        self.assertEqual(parameter.values, [4.2, 3.3])
+        self.assertEqual(list(parameter.indexes), [("label1",), ("label2",)])
+        self.assertEqual(list(parameter.values), [4.2, 3.3])
 
     def test_parameter_is_scalar(self):
         parameter = gdx.Parameter(["domain"], [("label",)], [2.0])
         self.assertTrue(parameter.is_scalar())
-        parameter.values = [TimeSeriesFixedResolution("2019-12-05T01:01:00", "1h", [4.2, 5.3], False, False)]
+        parameter = gdx.Parameter(["domain"], [("label",)], [TimeSeriesFixedResolution("2019-12-05T01:01:00", "1h", [4.2, 5.3], False, False)])
         self.assertFalse(parameter.is_scalar())
 
     def test_parameter_is_indexed(self):
         parameter = gdx.Parameter(["domain"], [("label",)], [2.0])
         self.assertFalse(parameter.is_indexed())
-        parameter.values = [TimeSeriesFixedResolution("2019-12-05T01:01:00", "1h", [4.2, 5.3], False, False)]
+        parameter = gdx.Parameter(["domain"], [("label",)], [TimeSeriesFixedResolution("2019-12-05T01:01:00", "1h", [4.2, 5.3], False, False)])
         self.assertTrue(parameter.is_indexed())
 
     def test_Parameter_expand_indexes(self):
@@ -177,15 +176,14 @@ class TestGdx(unittest.TestCase):
         parameter.expand_indexes(setting)
         self.assertEqual(parameter.domain_names, ["domain1", "stamp domain", "domain2"])
         self.assertEqual(
-            parameter.indexes,
-            [
-                ("index1", "stamp1", "index2"),
-                ("index1", "stamp2", "index2"),
-                ("index1", "stamp1", "index3"),
-                ("index1", "stamp2", "index3"),
-            ],
+            parameter.data,
+            {
+                ("index1", "stamp1", "index2"): 4.2,
+                ("index1", "stamp2", "index2"): 5.3,
+                ("index1", "stamp1", "index3"): -4.2,
+                ("index1", "stamp2", "index3"): -5.3,
+            }
         )
-        self.assertEqual(parameter.values, [4.2, 5.3, -4.2, -5.3])
 
     def test_Parameter_equality(self):
         parameter1 = gdx.Parameter(["domain"], [("label",)], [2.0])
@@ -272,8 +270,7 @@ class TestGdx(unittest.TestCase):
         self.assertEqual(len(parameters), 1)
         parameter = parameters["parameter"]
         self.assertEqual(parameter.domain_names, ["domain"])
-        self.assertEqual(parameter.indexes, [("record",)])
-        self.assertEqual(parameter.values, [-123.4])
+        self.assertEqual(parameter.data, {("record",): -123.4})
 
     def test_object_classes_to_domains_filters_domains_not_on_the_list(self):
         with TemporaryDirectory() as tmp_dir_name:
@@ -300,8 +297,7 @@ class TestGdx(unittest.TestCase):
         self.assertEqual(len(parameters), 1)
         parameter = parameters["parameter"]
         self.assertEqual(parameter.domain_names, ["domain"])
-        self.assertEqual(parameter.indexes, [("record",)])
-        self.assertEqual(parameter.values, [-123.4])
+        self.assertEqual(parameter.data, {("record",): -123.4})
 
     def test_object_classes_to_domains_replaces_missing_parameter_values_with_default_values(self):
         with TemporaryDirectory() as tmp_dir_name:
@@ -325,8 +321,7 @@ class TestGdx(unittest.TestCase):
         self.assertEqual(len(parameters), 1)
         parameter = parameters["parameter"]
         self.assertEqual(parameter.domain_names, ["domain"])
-        self.assertEqual(parameter.indexes, [("record",)])
-        self.assertEqual(parameter.values, [2.3])
+        self.assertEqual(parameter.data, {("record",): 2.3})
 
     def test_relationship_classes_to_sets(self):
         with TemporaryDirectory() as tmp_dir_name:
@@ -349,8 +344,7 @@ class TestGdx(unittest.TestCase):
         self.assertEqual(record.keys, ("record",))
         self.assertEqual(len(set_parameters), 1)
         self.assertEqual(set_parameters["parameter"].domain_names, ["domain"])
-        self.assertEqual(set_parameters["parameter"].indexes, [("record",)])
-        self.assertEqual(set_parameters["parameter"].values, [3.14])
+        self.assertEqual(set_parameters["parameter"].data, {("record",): 3.14})
 
     def test_relationship_classes_to_sets_filters_sets_not_on_the_list(self):
         with TemporaryDirectory() as tmp_dir_name:
@@ -380,8 +374,7 @@ class TestGdx(unittest.TestCase):
         self.assertEqual(record.keys, ("record",))
         self.assertEqual(len(set_parameters), 1)
         self.assertEqual(set_parameters["parameter"].domain_names, ["domain"])
-        self.assertEqual(set_parameters["parameter"].indexes, [("record",)])
-        self.assertEqual(set_parameters["parameter"].values, [3.14])
+        self.assertEqual(set_parameters["parameter"].data, {("record",): 3.14})
 
     def test_relationship_classes_to_sets_filters_sets_without_indexing_domains(self):
         with TemporaryDirectory() as tmp_dir_name:
@@ -422,8 +415,7 @@ class TestGdx(unittest.TestCase):
         self.assertEqual(record.keys, ("record",))
         self.assertEqual(len(set_parameters), 1)
         self.assertEqual(set_parameters["parameter"].domain_names, ["domain"])
-        self.assertEqual(set_parameters["parameter"].indexes, [("record",)])
-        self.assertEqual(set_parameters["parameter"].values, [2.3])
+        self.assertEqual(set_parameters["parameter"].data, {("record",): 2.3})
 
     def test_domain_names_and_records(self):
         with TemporaryDirectory() as tmp_dir_name:
@@ -524,7 +516,7 @@ class TestGdx(unittest.TestCase):
         domain = gdx.Set("object_class_name")
         record = gdx.Record(("mock_object_name",))
         domain.records.append(record)
-        parameters = {"mock_parameter_name": gdx.Parameter(["object_class_name"], [["mock_object_name"]], [2.3])}
+        parameters = {"mock_parameter_name": gdx.Parameter(["object_class_name"], [("mock_object_name", )], [2.3])}
         gams_directory = gdx_utils.find_gams_directory()
         with TemporaryDirectory() as temp_directory:
             path_to_gdx = Path(temp_directory).joinpath("test_domain_parameters_to_gams_scalars.gdx")
@@ -548,8 +540,8 @@ class TestGdx(unittest.TestCase):
         time_series2 = TimeSeriesFixedResolution("2019-12-05T01:01:00", "1h", [-4.2, -5.3], False, False)
         setting.append_parameter(gdx.Parameter(["domain"], [("keyB",)], [time_series2]))
         self.assertEqual(setting.parameter.domain_names, ["domain"])
-        self.assertEqual(setting.parameter.indexes, [("keyA",), ("keyB",)])
-        self.assertEqual(setting.parameter.values, [time_series1, time_series2])
+        self.assertEqual(list(setting.parameter.indexes), [("keyA",), ("keyB",)])
+        self.assertEqual(list(setting.parameter.values), [time_series1, time_series2])
 
     def test_sort_sets(self):
         set_object = self._NamedObject
@@ -1134,8 +1126,8 @@ class TestGdx(unittest.TestCase):
         gdx.expand_indexed_parameter_values(parameters, settings)
         self.assertEqual(len(parameters), 1)
         self.assertEqual(parameters["time series"].domain_names, ["domain name", "indexes"])
-        self.assertEqual(parameters["time series"].indexes, [("element", "stamp1"), ("element", "stamp2")])
-        self.assertEqual(parameters["time series"].values, [3.3, 4.4])
+        self.assertEqual(list(parameters["time series"].indexes), [("element", "stamp1"), ("element", "stamp2")])
+        self.assertEqual(list(parameters["time series"].values), [3.3, 4.4])
 
     def test_expand_indexed_parameter_values_keeps_non_indexed_parameter_intact(self):
         domain = gdx.Set("domain name")
@@ -1152,11 +1144,9 @@ class TestGdx(unittest.TestCase):
         gdx.expand_indexed_parameter_values(parameters, settings)
         self.assertEqual(len(parameters), 2)
         self.assertEqual(parameters["scalar"].domain_names, ["domain name"])
-        self.assertEqual(parameters["scalar"].indexes, [("element",)])
-        self.assertEqual(parameters["scalar"].values, [2.2])
+        self.assertEqual(parameters["scalar"].data, {("element",): 2.2})
         self.assertEqual(parameters["time series"].domain_names, ["domain name", "indexes"])
-        self.assertEqual(parameters["time series"].indexes, [("element", "stamp1"), ("element", "stamp2")])
-        self.assertEqual(parameters["time series"].values, [3.3, 4.4])
+        self.assertEqual(parameters["time series"].data, {("element", "stamp1"): 3.3, ("element", "stamp2"): 4.4})
 
     def test_expand_sets_indexed_parameter_values_with_multidimensional_sets(self):
         original_set = gdx.Set("set name", domain_names=["domain1", "domain2"])
@@ -1171,10 +1161,7 @@ class TestGdx(unittest.TestCase):
         gdx.expand_indexed_parameter_values(parameters, settings)
         self.assertEqual(len(parameters), 1)
         self.assertEqual(parameters["time series"].domain_names, ["domain1", "domain2", "indexes"])
-        self.assertEqual(parameters["time series"].indexes[0], ("domain1_element", "domain2_element", "stamp1"))
-        self.assertEqual(parameters["time series"].values[0], 3.3)
-        self.assertEqual(parameters["time series"].indexes[1], ("domain1_element", "domain2_element", "stamp2"))
-        self.assertEqual(parameters["time series"].values[1], 4.4)
+        self.assertEqual(parameters["time series"].data, {("domain1_element", "domain2_element", "stamp1"): 3.3, ("domain1_element", "domain2_element", "stamp2"): 4.4})
 
     def test_make_indexing_settings(self):
         with TemporaryDirectory() as tmp_dir_name:
@@ -1196,13 +1183,13 @@ class TestGdx(unittest.TestCase):
             database_map.connection.close()
         self.assertEqual(len(indexing_settings), 2)
         self.assertEqual(
-            indexing_settings["parameter"].parameter.values[0],
+            list(indexing_settings["parameter"].parameter.values)[0],
             from_database('{"type": "time_series", "data": [1, 2, 3]}'),
         )
         self.assertIsNone(indexing_settings["parameter"].indexing_domain)
         self.assertEqual(indexing_settings["parameter"].index_position, 1)
         self.assertEqual(
-            indexing_settings["relationship_parameter"].parameter.values[0],
+            list(indexing_settings["relationship_parameter"].parameter.values)[0],
             from_database('{"type": "time_series", "data": [3, 2, 1]}'),
         )
         self.assertIsNone(indexing_settings["relationship_parameter"].indexing_domain)
@@ -1227,13 +1214,13 @@ class TestGdx(unittest.TestCase):
             database_map.connection.close()
         self.assertEqual(len(indexing_settings), 2)
         self.assertEqual(
-            indexing_settings["parameter"].parameter.values[0],
+            list(indexing_settings["parameter"].parameter.values)[0],
             from_database('{"type": "time_series", "data": [1, 2, 3]}'),
         )
         self.assertIsNone(indexing_settings["parameter"].indexing_domain)
         self.assertEqual(indexing_settings["parameter"].index_position, 1)
         self.assertEqual(
-            indexing_settings["relationship_parameter"].parameter.values[0],
+            list(indexing_settings["relationship_parameter"].parameter.values)[0],
             from_database('{"type": "time_series", "data": [3, 2, 1]}'),
         )
         self.assertIsNone(indexing_settings["relationship_parameter"].indexing_domain)
@@ -1437,15 +1424,14 @@ class TestGdx(unittest.TestCase):
         new_parameter = new_parameters["merged"]
         self.assertEqual(new_parameter.domain_names, ["domain1", "domain2", "new_domain"])
         self.assertEqual(
-            new_parameter.indexes,
-            [
-                ("a1", "b1", "parameter1"),
-                ("a2", "b2", "parameter1"),
-                ("a1", "b1", "parameter2"),
-                ("a2", "b2", "parameter2"),
-            ],
+            new_parameter.data,
+            {
+                ("a1", "b1", "parameter1"): 1.1,
+                ("a2", "b2", "parameter1"): 2.2,
+                ("a1", "b1", "parameter2"): 3.3,
+                ("a2", "b2", "parameter2"): 4.4,
+            }
         )
-        self.assertEqual(new_parameter.values, [1.1, 2.2, 3.3, 4.4])
 
     def test_merging_domain(self):
         setting = gdx.MergingSetting(

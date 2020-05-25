@@ -30,7 +30,6 @@ import math
 import os
 import os.path
 import sys
-import time
 from gdx2py import GAMSSet, GAMSScalar, GAMSParameter, GdxFile
 from spinedb_api import from_database, IndexedValue, Map, ParameterValueFormatError
 
@@ -166,8 +165,7 @@ class Parameter:
 
     Attributes:
         domain_names (list): indexing domain names (currently Parameters can be indexed by domains only)
-        indexes (list): parameter's indexes
-        values (list): parameter's values
+        data (dict): a map from index tuples to parsed values
     """
 
     def __init__(self, domain_names, indexes, values):
@@ -180,15 +178,24 @@ class Parameter:
         self.domain_names = domain_names
         if len(indexes) != len(values):
             raise GdxExportException("Parameter index and value length mismatch.")
-        self.indexes = indexes
         if not all([isinstance(value, type(values[0])) for value in values]):
             raise GdxExportException("Not all values are of the same type.")
-        self.values = values
+        self.data = {index: value for index, value in zip(indexes, values)}
 
     def __eq__(self, other):
         if not isinstance(other, Parameter):
             return NotImplemented
-        return other.domain_names == self.domain_names and other.indexes == self.indexes and other.values == self.values
+        return other.domain_names == self.domain_names and other.data == self.data
+
+    @property
+    def indexes(self):
+        """list: indexing key tuples"""
+        return self.data.keys()
+
+    @property
+    def values(self):
+        """list: parsed values"""
+        return self.data.values()
 
     def append_entity_parameter(self, index_keys, database_value):
         """
@@ -199,8 +206,7 @@ class Parameter:
             database_value (str): parameter value in database representation
         """
         value = _read_value(database_value)
-        self.indexes.append(index_keys)
-        self.values.append(value)
+        self.data[index_keys] = value
 
     def slurp(self, parameter):
         """
@@ -209,16 +215,15 @@ class Parameter:
         Args:
             parameter (Parameter): a parameter to append from
         """
-        self.indexes += parameter.indexes
-        self.values += parameter.values
+        self.data.update(parameter.data)
 
     def is_scalar(self):
         """Returns True if this parameter contains only scalars."""
-        return bool(self.values) and isinstance(self.values[0], float)
+        return bool(self.data) and isinstance(next(iter(self.data.values())), float)
 
     def is_indexed(self):
         """Returns True if this parameter contains only indexed values."""
-        return bool(self.values) and isinstance(self.values[0], IndexedValue)
+        return bool(self.data) and isinstance(next(iter(self.data.values())), IndexedValue)
 
     def expand_indexes(self, indexing_setting):
         """
@@ -236,9 +241,8 @@ class Parameter:
         self.domain_names = (
             self.domain_names[:index_position] + [indexing_domain.name] + self.domain_names[index_position:]
         )
-        new_values = list()
-        new_indexes = list()
-        for parameter_index, parameter_value in zip(self.indexes, self.values):
+        new_data = dict()
+        for parameter_index, parameter_value in self.data.items():
             if parameter_value is None:
                 values = len(indexing_domain.indexes) * [None]
             elif isinstance(parameter_value, IndexedValue):
@@ -247,10 +251,8 @@ class Parameter:
                 raise GdxExportException("Cannot expand indexes of a scalar value.")
             for new_index, new_value in zip(indexing_domain.indexes, values):
                 expanded_index = tuple(parameter_index[:index_position] + new_index + parameter_index[index_position:])
-                new_indexes.append(expanded_index)
-                new_values.append(new_value)
-        self.indexes = new_indexes
-        self.values = new_values
+                new_data[expanded_index] = new_value
+        self.data = new_data
 
     @staticmethod
     def from_entity_parameter(domain_names, index_keys, database_value):
@@ -266,20 +268,6 @@ class Parameter:
         """
         value = _read_value(database_value)
         return Parameter(domain_names, [index_keys], [value])
-
-    @staticmethod
-    def from_entity_class_parameter_definition(domain_names):
-        """
-        Constructs an empty GAMS parameter from database's parameter definition row
-
-        Args:
-            domain_names (list): list of indexing domain names
-        Returns:
-            Parameter: a parameter without values constructed from the entity class
-        """
-        index = None
-        value = None
-        return Parameter(domain_names, [index], [value])
 
 
 class IndexingDomain:
@@ -668,9 +656,9 @@ def domain_parameters_to_gams_scalars(gdx_file, parameters, domain_name):
     erase_parameters = list()
     for parameter_name, parameter in parameters.items():
         if parameter.domain_names == [domain_name]:
-            if len(parameter.values) != 1 or not parameter.is_scalar():
+            if len(parameter.data) != 1 or not parameter.is_scalar():
                 raise GdxExportException("Parameter {} is not suitable as GAMS scalar.")
-            gams_scalar = GAMSScalar(parameter.values[0])
+            gams_scalar = GAMSScalar(next(iter(parameter.values)))
             gdx_file[parameter_name] = gams_scalar
             erase_parameters.append(parameter_name)
     return erase_parameters
@@ -693,87 +681,60 @@ def object_classes_to_domains(db_map, domain_names, logger=None):
          tuple: a tuple containing list of Set objects and a dict of Parameter objects
     """
     classes_with_ignored_parameters = set()
-    class_list = db_map.object_class_list().all()
-    domains = list()
-    parameters = dict()
-    object_parameter_value_query = db_map.object_parameter_value_list()
-    for object_class in class_list:
-        if object_class.name not in domain_names:
+    domains = dict()
+    for object_class_row in db_map.object_class_list():
+        if object_class_row.name not in domain_names:
             continue
-        domain = Set(object_class.name, object_class.description)
-        domains.append(domain)
-        parameter_definitions = db_map.parameter_definition_list(object_class_id=object_class.id).all()
-        default_parameter_values = dict()
-        for parameter_definition in parameter_definitions:
-            default_parameter_values[parameter_definition.name] = parameter_definition.default_value
-        object_list = db_map.object_list(class_id=object_class.id)
-        parameter_domain_names = [object_class.name]
-        for set_object in object_list:
-            record = Record((set_object.name,))
-            domain.records.append(record)
-            parameter_values = object_parameter_value_query.filter(
-                db_map.object_parameter_value_sq.c.object_id == set_object.id
-            ).all()
-            valued_parameters = set()
-            for object_parameter in parameter_values:
-                name = object_parameter.parameter_name
-                valued_parameters.add(name)
-                try:
-                    if name not in parameters:
-                        parameters[name] = Parameter.from_entity_parameter(
-                            [object_parameter.object_class_name],
-                            (object_parameter.object_name,),
-                            object_parameter.value,
-                        )
-                    else:
-                        parameters[name].append_entity_parameter(
-                            (object_parameter.object_name,), object_parameter.value
-                        )
-                except GdxUnsupportedValueTypeException:
-                    if logger is not None:
-                        classes_with_ignored_parameters.add(object_class.name)
-                        continue
-                    else:
-                        raise
-            for name, value in default_parameter_values.items():
-                if name in valued_parameters:
-                    continue
-                parameter = parameters.get(name)
-                try:
-                    if parameter is None:
-                        parameters[name] = Parameter.from_entity_parameter(
-                            parameter_domain_names, (set_object.name,), value
-                        )
-                    else:
-                        if parameter.domain_names != parameter_domain_names:
-                            raise GdxExportException(
-                                f"Duplicate parameter name '{name}' found in different entity classes."
-                            )
-                        parameter.append_entity_parameter((set_object.name,), value)
-                except GdxUnsupportedValueTypeException:
-                    if logger is not None:
-                        classes_with_ignored_parameters.add(object_class.name)
-                        continue
-                    else:
-                        raise
-        for parameter_definition in parameter_definitions:
-            name = parameter_definition.name
-            if name not in parameters:
-                try:
-                    parameters[name] = Parameter.from_entity_class_parameter_definition([object_class.name])
-                except GdxUnsupportedValueTypeException:
-                    if logger is not None:
-                        classes_with_ignored_parameters.add(object_class.name)
-                        continue
-                    else:
-                        raise
+        class_id = object_class_row.id
+        domain = Set(object_class_row.name.strip(), object_class_row.description)
+        domains[class_id] = domain
+        for object_row in db_map.object_list(class_id=class_id):
+            domain.records.append(Record((object_row.name.strip(),)))
+    parameters = dict()
+    for definition_row in db_map.object_parameter_definition_list():
+        domain = domains.get(definition_row.object_class_id)
+        if domain is None:
+            continue
+        name = definition_row.parameter_name.strip()
+        if name in parameters:
+            raise GdxExportException(
+                f"Duplicate parameter name '{name}' found in different object classes."
+            )
+        try:
+            parsed_default_value = _read_value(definition_row.default_value)
+        except GdxUnsupportedValueTypeException:
+            if logger is not None:
+                class_name = domains[definition_row.object_class_id].name
+                classes_with_ignored_parameters.add(class_name)
+                continue
+            else:
+                raise
+        domain = domains[definition_row.object_class_id]
+        indexes = [record.keys for record in domain.records]
+        values = len(domain.records) * [parsed_default_value]
+        parameters[name] = Parameter([domain.name], indexes, values)
+    for parameter_row in db_map.object_parameter_value_list():
+        name = parameter_row.parameter_name.strip()
+        parameter = parameters.get(name)
+        if parameter is None:
+            continue
+        try:
+            parsed_value = _read_value(parameter_row.value)
+        except GdxUnsupportedValueTypeException:
+            if logger is not None:
+                class_name = domains[parameter_row.object_class_id].name
+                classes_with_ignored_parameters.add(class_name)
+                continue
+            else:
+                raise
+        parameter.data[(parameter_row.object_name,)] = parsed_value
     if logger is not None and classes_with_ignored_parameters:
         class_list = ", ".join(classes_with_ignored_parameters)
         logger.msg_warning.emit(
             "Some object parameter values were of unsupported types and were ignored."
             f" The values were from these object classes: {class_list}"
         )
-    return domains, parameters
+    return list(domains.values()), parameters
 
 
 def relationship_classes_to_sets(db_map, domain_names, set_names, logger=None):
@@ -793,77 +754,65 @@ def relationship_classes_to_sets(db_map, domain_names, set_names, logger=None):
          tuple: a tuple containing a list of Set objects and a dict of Parameter objects
     """
     classes_with_ignored_parameters = set()
-    class_list = db_map.wide_relationship_class_list().all()
-    sets = list()
+    sets = dict()
+    for relationship_class_row in db_map.wide_relationship_class_list():
+        if relationship_class_row.name not in set_names:
+            continue
+        object_class_names = [name.strip() for name in relationship_class_row.object_class_name_list.split(",")]
+        if not all([name in domain_names for name in object_class_names]):
+            continue
+        set_ = Set(relationship_class_row.name, relationship_class_row.description, object_class_names)
+        class_id = relationship_class_row.id
+        sets[class_id] = set_
+        for relationship_row in db_map.wide_relationship_list(class_id=class_id):
+            keys = tuple(name.strip() for name in relationship_row.object_name_list.split(","))
+            set_.records.append(Record(keys))
     parameters = dict()
-    relationship_parameter_value_query = db_map.relationship_parameter_value_list()
-    for relationship_class in class_list:
-        if relationship_class.name not in set_names:
+    for definition_row in db_map.relationship_parameter_definition_list():
+        set_ = sets.get(definition_row.relationship_class_id)
+        if set_ is None:
             continue
-        object_class_names = relationship_class.object_class_name_list.split(",")
-        if not all(name in domain_names for name in object_class_names):
+        name = definition_row.parameter_name.strip()
+        if name in parameters:
+            raise GdxExportException(
+                f"Duplicate parameter name '{name}' found in different relationship classes."
+            )
+        try:
+            parsed_default_value = _read_value(definition_row.default_value)
+        except GdxUnsupportedValueTypeException:
+            if logger is not None:
+                class_name = sets[definition_row.relationship_class_id].name
+                classes_with_ignored_parameters.add(class_name)
+                continue
+            else:
+                raise
+        set_ = sets[definition_row.relationship_class_id]
+        indexes = [record.keys for record in set_.records]
+        values = len(set_.records) * [parsed_default_value]
+        parameters[name] = Parameter(set_.domain_names, indexes, values)
+    for parameter_row in db_map.relationship_parameter_value_list():
+        name = parameter_row.parameter_name.strip()
+        parameter = parameters.get(name)
+        if parameter is None:
             continue
-        current_set = Set(relationship_class.name, domain_names=object_class_names)
-        sets.append(current_set)
-        parameter_definitions = db_map.parameter_definition_list(relationship_class_id=relationship_class.id).all()
-        default_parameter_values = dict()
-        for parameter_definition in parameter_definitions:
-            default_parameter_values[parameter_definition.name] = parameter_definition.default_value
-        relationship_list = db_map.wide_relationship_list(class_id=relationship_class.id).all()
-        for relationship in relationship_list:
-            index_keys = tuple(relationship.object_name_list.split(","))
-            record = Record(index_keys)
-            current_set.records.append(record)
-            parameter_values = relationship_parameter_value_query.filter(
-                db_map.relationship_parameter_value_sq.c.relationship_id == relationship.id
-            ).all()
-            valued_parameters = list()
-            for relationship_parameter in parameter_values:
-                name = relationship_parameter.parameter_name
-                valued_parameters.append(name)
-                try:
-                    if name not in parameters:
-                        parameters[name] = Parameter.from_entity_parameter(
-                            object_class_names, index_keys, relationship_parameter.value
-                        )
-                    else:
-                        parameters[name].append_entity_parameter(index_keys, relationship_parameter.value)
-                except GdxUnsupportedValueTypeException:
-                    if logger is not None:
-                        classes_with_ignored_parameters.add(relationship_class.name)
-                        continue
-                    else:
-                        raise
-            for name, value in default_parameter_values.items():
-                if name in valued_parameters:
-                    continue
-                parameter = parameters.get(name)
-                try:
-                    if parameter is None:
-                        parameters[name] = Parameter.from_entity_parameter(object_class_names, index_keys, value)
-                    else:
-                        if parameter.domain_names != object_class_names:
-                            raise GdxExportException(
-                                f"Duplicate parameter name '{name}' found in different entity classes."
-                            )
-                        parameter.append_entity_parameter(index_keys, value)
-                except GdxUnsupportedValueTypeException:
-                    if logger is not None:
-                        classes_with_ignored_parameters.add(relationship_class.name)
-                        continue
-                    else:
-                        raise
-        for parameter_definition in parameter_definitions:
-            name = parameter_definition.name
-            if name not in parameters:
-                parameters[name] = Parameter.from_entity_class_parameter_definition(object_class_names)
+        try:
+            parsed_value = _read_value(parameter_row.value)
+        except GdxUnsupportedValueTypeException:
+            if logger is not None:
+                class_name = sets[parameter_row.relationship_class_id].name
+                classes_with_ignored_parameters.add(class_name)
+                continue
+            else:
+                raise
+        keys = tuple(name.strip() for name in parameter_row.object_name_list.split(","))
+        parameter.data[keys] = parsed_value
     if logger is not None and classes_with_ignored_parameters:
         class_list = ", ".join(classes_with_ignored_parameters)
         logger.msg_warning.emit(
             "Some relationship parameter values were of unsupported types and were ignored."
             f" The values were from these relationship classes: {class_list}"
         )
-    return sets, parameters
+    return list(sets.values()), parameters
 
 
 def domain_names_and_records(db_map):
@@ -976,8 +925,8 @@ def _object_indexing_settings(db_map, logger):
             index_keys = (parameter_row.object_name,)
             _add_to_indexing_settings(
                 settings,
-                parameter_row.parameter_name,
-                parameter_row.object_class_name,
+                parameter_row.parameter_name.strip(),
+                parameter_row.object_class_name.strip(),
                 dimensions,
                 value,
                 index_keys,
@@ -993,12 +942,13 @@ def _object_indexing_settings(db_map, logger):
                 value = _read_value(definition_row.default_value)
                 if not isinstance(value, IndexedValue):
                     break
-                dimensions = [parameter_row.object_class_name]
-                index_keys = (parameter_row.object_name,)
+                object_class_name = parameter_row.object_class_name.strip()
+                dimensions = [object_class_name]
+                index_keys = (parameter_row.object_name.strip(),)
                 _add_to_indexing_settings(
                     settings,
                     name,
-                    definition_row.object_class_name,
+                    object_class_name,
                     dimensions,
                     value,
                     index_keys,
@@ -1011,13 +961,14 @@ def _object_indexing_settings(db_map, logger):
         value = _read_value(definition_row.default_value)
         if not isinstance(value, IndexedValue):
             continue
-        dimensions = [definition_row.object_class_name]
+        object_class_name = definition_row.object_class_name.strip()
+        dimensions = [object_class_name]
         for object_row in db_map.object_list(class_id=definition_row.object_class_id):
-            index_keys = (object_row.name,)
+            index_keys = (object_row.name.strip(),)
             _add_to_indexing_settings(
                 settings,
-                definition_row.parameter_name,
-                definition_row.object_class_name,
+                definition_row.parameter_name.strip(),
+                object_class_name,
                 dimensions,
                 value,
                 index_keys,
