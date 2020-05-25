@@ -183,7 +183,6 @@ class EntityQGraphicsView(CustomQGraphicsView):
         for item in self.items():
             if hasattr(item, "apply_zoom"):
                 item.apply_zoom(self.zoom_factor)
-        self._set_preferred_scene_rect()
 
     def wheelEvent(self, event):
         """Zooms in/out. If user has pressed the shift key, rotates instead.

@@ -126,6 +126,7 @@ class CustomQGraphicsView(QGraphicsView):
             angle = event.angleDelta().y()
             factor = self._zoom_factor_base ** angle
             self.gentle_zoom(factor, event.pos())
+            self._set_preferred_scene_rect()
 
     def resizeEvent(self, event):
         """
@@ -209,16 +210,19 @@ class CustomQGraphicsView(QGraphicsView):
     def zoom_in(self):
         """Perform a zoom in with a fixed scaling."""
         self.gentle_zoom(self._zoom_factor_base ** self._angle)
+        self._set_preferred_scene_rect()
 
     def zoom_out(self):
         """Perform a zoom out with a fixed scaling."""
         self.gentle_zoom(self._zoom_factor_base ** -self._angle)
+        self._set_preferred_scene_rect()
 
     def reset_zoom(self):
         """Resets zoom to the default factor."""
         self.scene().center_items()
         self._update_zoom_limits()
         self._zoom(self._items_fitting_zoom)
+        self._set_preferred_scene_rect()
 
     def gentle_zoom(self, factor, zoom_focus=None):
         """
@@ -247,7 +251,6 @@ class CustomQGraphicsView(QGraphicsView):
 
     def _zoom(self, factor):
         self.scale(factor, factor)
-        self._set_preferred_scene_rect()
 
     def _get_viewport_scene_rect(self):
         """Returns the viewport rect mapped to the scene.
