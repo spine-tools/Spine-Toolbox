@@ -16,9 +16,9 @@ Classes to represent entities in a tree.
 :date:   11.3.2019
 """
 from PySide2.QtCore import Qt
-from PySide2.QtGui import QFont, QBrush, QIcon
+from PySide2.QtGui import QFont, QBrush
 from spinetoolbox.helpers import rows_to_row_count_tuples
-from .minimal_tree_model import TreeItem
+from spinetoolbox.mvcmodels.minimal_tree_model import TreeItem
 
 
 class MultiDBTreeItem(TreeItem):
@@ -391,10 +391,6 @@ class TreeRootItem(MultiDBTreeItem):
 class ObjectTreeRootItem(TreeRootItem):
     """An object tree root item."""
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.context_menu_actions = [{"Add object classes": QIcon(":/icons/menu_icons/cube_plus.svg")}]
-
     @property
     def child_item_type(self):
         """Returns ObjectClassItem."""
@@ -407,10 +403,6 @@ class ObjectTreeRootItem(TreeRootItem):
 
 class RelationshipTreeRootItem(TreeRootItem):
     """A relationship tree root item."""
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.context_menu_actions = [{"Add relationship classes": QIcon(":/icons/menu_icons/cubes_plus.svg")}]
 
     @property
     def child_item_type(self):
@@ -448,17 +440,6 @@ class ObjectClassItem(EntityClassItem):
 
     item_type = "object class"
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.context_menu_actions = [
-            {
-                "Add relationship classes": QIcon(":/icons/menu_icons/cubes_plus.svg"),
-                "Add objects": QIcon(":/icons/menu_icons/cube_plus.svg"),
-            },
-            {"Edit object classes": QIcon(":/icons/menu_icons/cube_pen.svg")},
-            {"Remove selection": QIcon(":/icons/menu_icons/cube_minus.svg")},
-        ]
-
     @property
     def display_icon(self):
         """Returns the object class icon."""
@@ -483,14 +464,6 @@ class RelationshipClassItem(EntityClassItem):
 
     visual_key = ["name", "object_class_name_list"]
     item_type = "relationship class"
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.context_menu_actions = [
-            {"Add relationships": QIcon(":/icons/menu_icons/cubes_plus.svg")},
-            {"Edit relationship classes": QIcon(":/icons/menu_icons/cubes_pen.svg")},
-            {"Remove selection": QIcon(":/icons/menu_icons/cubes_minus.svg")},
-        ]
 
     @property
     def display_icon(self):
@@ -544,14 +517,6 @@ class ObjectItem(EntityItem):
 
     item_type = "object"
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.context_menu_actions = [
-            {"Duplicate": QIcon(":/icons/menu_icons/cube_plus.svg")},
-            {"Edit objects": QIcon(":/icons/menu_icons/cube_pen.svg")},
-            {"Remove selection": QIcon(":/icons/menu_icons/cube_minus.svg")},
-        ]
-
     @property
     def child_item_type(self):
         """Returns RelationshipClassItem."""
@@ -586,15 +551,9 @@ class RelationshipItem(EntityItem):
     item_type = "relationship"
 
     def __init__(self, *args, **kwargs):
-        """Overridden method to parse some data for convenience later.
-        Also make sure we never try to fetch this item."""
+        """Overridden method to make sure we never try to fetch this item."""
         super().__init__(*args, **kwargs)
         self._fetched = True
-        self.context_menu_actions = [
-            {"Edit relationships": QIcon(":/icons/menu_icons/cubes_pen.svg")},
-            {"Find next": QIcon(":/icons/menu_icons/ellipsis-h.png")},
-            {"Remove selection": QIcon(":/icons/menu_icons/cubes_minus.svg")},
-        ]
 
     @property
     def object_name_list(self):

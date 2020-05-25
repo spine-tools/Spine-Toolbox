@@ -392,7 +392,7 @@ class ToolboxUI(QMainWindow):
         self.init_specification_model(list())  # Start project with no specifications
         self.update_window_title()
         self.ui.actionSave_As.setEnabled(True)
-        self.ui.graphicsView.init_scene(empty=True)
+        self.ui.graphicsView.reset_zoom()
         # Update recentProjects
         self.update_recent_projects()
         # Update recentProjectStorages
@@ -497,8 +497,8 @@ class ToolboxUI(QMainWindow):
         # Simulate project execution after restoring links
         self._project.notify_changes_in_all_dags()
         self._project.connect_signals()
-        # Initialize scene on Design View
-        self.ui.graphicsView.init_scene()
+        # Reset zoom on Design View
+        self.ui.graphicsView.reset_zoom()
         self.update_recent_projects()
         self.msg.emit("Project <b>{0}</b> is now open".format(self._project.name))
         return True

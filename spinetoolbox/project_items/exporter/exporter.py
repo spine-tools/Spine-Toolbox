@@ -94,7 +94,7 @@ class Exporter(ProjectItem):
             settings_pack.notifications.changed_due_to_settings_state.connect(self._report_notifications)
             self._settings_packs[url] = settings_pack
         for url, pack in self._settings_packs.items():
-            if pack.state != SettingsState.OK:
+            if pack.state not in (SettingsState.OK, SettingsState.INDEXING_PROBLEM):
                 self._start_worker(url)
             elif pack.last_database_commit != _latest_database_commit_time_stamp(url):
                 self._start_worker(url, update_settings=True)

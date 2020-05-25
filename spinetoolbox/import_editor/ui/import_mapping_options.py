@@ -10,10 +10,10 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-# Form implementation generated from reading ui file 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\import_mapping_options.ui',
-# licensing of 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\import_mapping_options.ui' applies.
+# Form implementation generated from reading ui file 'C:\data\src\toolbox\bin\..\spinetoolbox\import_editor\ui\import_mapping_options.ui',
+# licensing of 'C:\data\src\toolbox\bin\..\spinetoolbox\import_editor\ui\import_mapping_options.ui' applies.
 #
-# Created: Mon May 11 15:50:33 2020
+# Created: Thu May 14 14:19:54 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!

@@ -217,8 +217,10 @@ class SpineToolboxProject(MetaObject):
         empty = True
         for category_name, category_dict in objects_dict.items():
             if category_name not in CATEGORIES:
-                self._logger.msg_error.emit(f"The project contains an unknown project item category '{category_name}'.")
-                return False
+                self._logger.msg_warning.emit(
+                    f"The project contains an unknown project item category: '{category_name}'. " "Moving on..."
+                )
+                continue
             items_in_category = dict()
             for name, item_dict in category_dict.items():
                 item_dict.pop("short name", None)

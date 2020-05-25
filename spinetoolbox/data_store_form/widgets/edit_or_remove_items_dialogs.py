@@ -386,9 +386,9 @@ class RemoveEntitiesDialog(EditOrRemoveItemsDialog):
         self.connect_signals()
         self.model.set_horizontal_header_labels(['type', 'name', 'databases'])
         model_data = list()
-        for class_, items in selected.items():
+        for item_type, items in selected.items():
             for item in items:
-                row_data = [class_.item_type, item.display_data, item.display_database]
+                row_data = [item_type, item.display_data, item.display_database]
                 model_data.append(row_data)
                 self.items.append(item)
         self.model.reset_model(model_data)

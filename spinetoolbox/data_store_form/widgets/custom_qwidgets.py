@@ -169,7 +169,7 @@ class CustomInputDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle(title)
         self._new_item = None
-        self._new_item_text = "Add new Data Store..."
+        self._editable_text = ""
         self._accepted_item = None
         self._list_wg = QListWidget()
         self._list_wg.itemDoubleClicked.connect(self._handle_item_double_clicked)
@@ -178,7 +178,7 @@ class CustomInputDialog(QDialog):
     def accept(self, item=None):
         if item is None:
             item = self._list_wg.currentItem()
-        if item is self._new_item and item.text() == self._new_item_text:
+        if item is self._new_item and item.text() == self._editable_text:
             self._list_wg.editItem(item)
             return
         self._accepted_item = item
@@ -193,27 +193,34 @@ class CustomInputDialog(QDialog):
 
     @Slot("QListWidgetItem")
     def _handle_item_changed(self, item):
-        if item is self._new_item and item.text() != self._new_item_text:
+        if item is self._new_item and item.text() != self._editable_text:
             item.setForeground(qApp.palette().text())
             self._new_item = None
 
     @classmethod
-    def get_item(cls, parent, title, label, items, icon):
+    def get_item(cls, parent, title, label, items, icons=None, editable_text=""):
+        if icons is None:
+            icons = {}
         dialog = cls(parent, title)
         layout = QVBoxLayout(dialog)
         label = QLabel(label)
         label.setWordWrap(True)
-        items.append(dialog._new_item_text)
+        if editable_text:
+            dialog._editable_text = editable_text
+            items.append(dialog._editable_text)
         dialog._list_wg.addItems(items)
         for item in dialog._list_wg.findItems("*", Qt.MatchWildcard):
-            item.setData(Qt.DecorationRole, icon)
-        dialog._new_item = dialog._list_wg.item(dialog._list_wg.count() - 1)
-        dialog._new_item.setFlags(dialog._new_item.flags() | Qt.ItemIsEditable)
-        foreground = qApp.palette().text()
-        color = foreground.color()
-        color.setAlpha(128)
-        foreground.setColor(color)
-        dialog._new_item.setForeground(foreground)
+            icon = icons.get(item.text())
+            if icon is not None:
+                item.setData(Qt.DecorationRole, icon)
+        if editable_text:
+            dialog._new_item = dialog._list_wg.item(dialog._list_wg.count() - 1)
+            dialog._new_item.setFlags(dialog._new_item.flags() | Qt.ItemIsEditable)
+            foreground = qApp.palette().text()
+            color = foreground.color()
+            color.setAlpha(128)
+            foreground.setColor(color)
+            dialog._new_item.setForeground(foreground)
         button_box = QDialogButtonBox()
         button_box.setStandardButtons(QDialogButtonBox.Cancel | QDialogButtonBox.Ok)
         layout.addWidget(label)

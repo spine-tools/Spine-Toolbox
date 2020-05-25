@@ -249,10 +249,10 @@ class MoveIconCommand(SpineToolboxCommand):
         """
         super().__init__()
         self.graphics_item = graphics_item
-        self.previous_pos = {x: x._previous_pos for x in graphics_item.selected_icons}
-        self.current_pos = {x: x._current_pos for x in graphics_item.selected_icons}
-        if len(graphics_item.selected_icons) == 1:
-            self.setText(f"move {list(graphics_item.selected_icons)[0]._project_item.name}")
+        self.previous_pos = {x: x._previous_pos for x in graphics_item.icon_group}
+        self.current_pos = {x: x._current_pos for x in graphics_item.icon_group}
+        if len(graphics_item.icon_group) == 1:
+            self.setText(f"move {list(graphics_item.icon_group)[0]._project_item.name}")
         else:
             self.setText("move multiple items")
 
@@ -260,13 +260,13 @@ class MoveIconCommand(SpineToolboxCommand):
         for item, current_post in self.current_pos.items():
             item.setPos(current_post)
         self.graphics_item.update_links_geometry()
-        self.graphics_item.shrink_scene_if_needed()
+        self.graphics_item.notify_item_move()
 
     def undo(self):
         for item, previous_pos in self.previous_pos.items():
             item.setPos(previous_pos)
         self.graphics_item.update_links_geometry()
-        self.graphics_item.shrink_scene_if_needed()
+        self.graphics_item.notify_item_move()
 
 
 class SetItemSpecificationCommand(SpineToolboxCommand):

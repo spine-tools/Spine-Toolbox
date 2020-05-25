@@ -23,7 +23,7 @@ from PySide2.QtCore import QAbstractListModel, QFileInfo, QModelIndex, Qt, Signa
 from PySide2.QtWidgets import QFileIconProvider, QListWidget, QDialog, QVBoxLayout, QDialogButtonBox
 from spine_engine import ExecutionDirection
 from spinetoolbox.project_item import ProjectItem
-from spinetoolbox.helpers import create_dir, serialize_path
+from spinetoolbox.helpers import create_dir, deserialize_path, serialize_path
 from spinetoolbox.spine_io.gdx_utils import find_gams_directory
 from spinetoolbox.spine_io.importers.csv_reader import CSVConnector
 from spinetoolbox.spine_io.importers.excel_reader import ExcelConnector
@@ -59,8 +59,8 @@ class Importer(ProjectItem):
             mappings (list): List where each element contains two dicts (path dict and mapping dict)
             x (float): Initial icon scene X coordinate
             y (float): Initial icon scene Y coordinate
-            cancel_on_error (bool, optional): if True, changes will be reverted on errors
-            mapping_selection (list, optional): a list of booleans, one for each mapping marking the mappings
+            cancel_on_error (bool, optional): if True the item's execution will stop on import error
+            mapping_selection (list, optional): serialized checked states for each file item
                 either selected or unselected
        """
         super().__init__(name, description, x, y, project, logger)
@@ -92,9 +92,14 @@ class Importer(ProjectItem):
         # self.settings is now a dictionary, where elements have the absolute path as the key and the mapping as value
         self.cancel_on_error = cancel_on_error
         self._file_model = _FileListModel()
-        if mapping_selection is None:
-            mapping_selection = len(self.settings) * [True]
-        self._file_model.set_initial_state(self.settings.keys(), mapping_selection)
+        if not mapping_selection or isinstance(mapping_selection[0], bool):
+            # This is for legacy selections which either did not exist in the item dict
+            # or were just a list of bools which caused problems with empty mappings.
+            # Consider removing this if in Toolbox 0.6
+            mapping_selection = {}
+        else:
+            mapping_selection = self.deserialize_checked_states(mapping_selection, self._project.project_dir)
+        self._file_model.set_initial_state(mapping_selection)
         self._file_model.selected_for_import_state_changed.connect(self._push_file_selection_change_to_undo_stack)
         # connector class
         self._preview_widget = {}  # Key is the filepath, value is the ImportEditorWindow instance
@@ -114,7 +119,10 @@ class Importer(ProjectItem):
         selected_settings = dict()
         for file_item in self._file_model.existing_files():
             label = file_item.label
-            selected_settings[label] = self.settings[label] if file_item.selected_for_import else "deselected"
+            settings = self.settings.get(label) if file_item.selected_for_import else "deselected"
+            if not settings:
+                continue
+            selected_settings[label] = settings
         python_path = self._project.settings.value("appSettings/pythonPath", defaultValue="")
         gams_path = self._project.settings.value("appSettings/gamsPath", defaultValue=None)
         executable = ExecutableItem(
@@ -132,7 +140,7 @@ class Importer(ProjectItem):
         for successor in successors:
             if successor.item_type() == "Data Store":
                 url = successor.sql_alchemy_url()
-                database_map = self._project.db_mngr.get_db_map(url)
+                database_map = self._project.db_mngr.get_db_map(url, self._logger)
                 if database_map is not None:
                     committed_db_maps.add(database_map)
         if committed_db_maps:
@@ -363,7 +371,7 @@ class Importer(ProjectItem):
         # Serialize mappings before saving
         d["mappings"] = self.serialize_mappings(self.settings, self._project.project_dir)
         d["cancel_on_error"] = self._properties_ui.cancel_on_error_checkBox.isChecked()
-        d["mapping_selection"] = [item.selected_for_import for item in self._file_model.files]
+        d["mapping_selection"] = self.serialize_checked_states()
         return d
 
     def notify_destination(self, source_item):
@@ -445,6 +453,20 @@ class Importer(ProjectItem):
         for source, mapping in mappings.items():  # mappings is a dict with absolute paths as keys and mapping as values
             serialized_mappings.append([serialize_path(source, project_path), mapping])
         return serialized_mappings
+
+    def serialize_checked_states(self):
+        return [
+            [serialize_path(item.label, self._project.project_dir), item.selected_for_import]
+            for item in self._file_model.files
+        ]
+
+    @staticmethod
+    def deserialize_checked_states(serialized, project_path):
+        deserialized = dict()
+        for serialized_label, checked in serialized:
+            label = deserialize_path(serialized_label, project_path)
+            deserialized[label] = checked
+        return deserialized
 
     def _gams_system_directory(self):
         """Returns GAMS system path from Toolbox settings or None if GAMS default is to be used."""
@@ -710,8 +732,8 @@ class _FileListModel(QAbstractListModel):
         self.selected_for_import_state_changed.emit(checked, item.label)
         return True
 
-    def set_initial_state(self, labels, selected_list):
+    def set_initial_state(self, selected_items):
         """Fills model with incomplete data; needs a call to :func:`update` to make the model usable."""
-        for label, selected in zip(labels, selected_list):
+        for label, selected in selected_items.items():
             self._files.append(_FileListItem(label, label, ""))
             self._files[-1].selected_for_import = selected

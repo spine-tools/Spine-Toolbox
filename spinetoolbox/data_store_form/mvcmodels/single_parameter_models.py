@@ -18,14 +18,14 @@ Single models for parameter definitions and values (as 'for a single entity').
 
 from PySide2.QtCore import Qt, QModelIndex
 from PySide2.QtGui import QGuiApplication
-from ..mvcmodels.minimal_table_model import MinimalTableModel
+from ...mvcmodels.minimal_table_model import MinimalTableModel
 from ..mvcmodels.parameter_mixins import (
     ConvertToDBMixin,
     FillInParameterNameMixin,
     FillInValueListIdMixin,
     MakeParameterTagMixin,
 )
-from .shared import PARSED_ROLE
+from ...mvcmodels.shared import PARSED_ROLE
 
 
 class SingleParameterModel(MinimalTableModel):
@@ -45,7 +45,7 @@ class SingleParameterModel(MinimalTableModel):
         self.db_map = db_map
         self.entity_class_id = entity_class_id
         self._auto_filter = dict()
-        self._selected_param_def_ids = set()
+        self._filter_parameter_ids = dict()
 
     @property
     def item_type(self):
@@ -209,21 +209,19 @@ class SingleParameterModel(MinimalTableModel):
         raise NotImplementedError()
 
     def _filter_accepts_row(self, row):
-        return self._main_filter_accepts_row(row) and self._auto_filter_accepts_row(row)
+        return self._parameter_filter_accepts_row(row) and self._auto_filter_accepts_row(row)
 
-    def _main_filter_accepts_row(self, row):
-        """Applies the main filter, defined by the selections in the grand parent."""
-        if self._selected_param_def_ids is None:
-            return False
-        if self._selected_param_def_ids == set():
+    def _parameter_filter_accepts_row(self, row):
+        """Returns the result of the parameter filter."""
+        if not self._filter_parameter_ids:
             return True
-        param_def_id = self.db_mngr.get_item(self.db_map, self.item_type, self._main_data[row])[
+        parameter_id = self.db_mngr.get_item(self.db_map, self.item_type, self._main_data[row])[
             self.parameter_definition_id_key
         ]
-        return param_def_id in self._selected_param_def_ids
+        return parameter_id in self._filter_parameter_ids.get((self.db_map, self.entity_class_id), set())
 
     def _auto_filter_accepts_row(self, row):
-        """Applies the autofilter, defined by the autofilter drop down menu."""
+        """Returns the result of the auto filter."""
         if self._auto_filter is None:
             return False
         item_id = self._main_data[row]
@@ -292,23 +290,27 @@ class SingleParameterValueMixin(ConvertToDBMixin):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._selected_entity_ids = set()
+        self._filter_entity_ids = dict()
 
     @property
     def item_type(self):
         return "parameter value"
 
-    def _main_filter_accepts_row(self, row):
-        """Reimplemented to filter objects."""
-        if not super()._main_filter_accepts_row(row):
-            return False
-        if self._selected_entity_ids is None:
-            return False
-        if self._selected_entity_ids == set():
+    def _filter_accepts_row(self, row):
+        """Reimplemented to also account for the entity filter."""
+        return (
+            self._parameter_filter_accepts_row(row)
+            and self._entity_filter_accepts_row(row)
+            and self._auto_filter_accepts_row(row)
+        )
+
+    def _entity_filter_accepts_row(self, row):
+        """Returns the result of the entity filter."""
+        if not self._filter_entity_ids:
             return True
         entity_id_key = {"object class": "object_id", "relationship class": "relationship_id"}[self.entity_class_type]
         entity_id = self.db_mngr.get_item(self.db_map, self.item_type, self._main_data[row])[entity_id_key]
-        return entity_id in self._selected_entity_ids
+        return entity_id in self._filter_entity_ids.get((self.db_map, self.entity_class_id), set())
 
     def update_items_in_db(self, items):
         """Update items in db.

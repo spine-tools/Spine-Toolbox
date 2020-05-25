@@ -20,8 +20,8 @@ import enum
 from PySide2.QtCore import Qt, Slot, QTimer, QAbstractTableModel, QModelIndex, QSortFilterProxyModel
 from PySide2.QtGui import QColor, QFont
 from .pivot_model import PivotModel
-from .shared import PARSED_ROLE
-from ..config import PIVOT_TABLE_HEADER_COLOR
+from ...mvcmodels.shared import PARSED_ROLE
+from ...config import PIVOT_TABLE_HEADER_COLOR
 
 
 class IndexId(enum.IntEnum):
@@ -416,15 +416,27 @@ class PivotTableModel(QAbstractTableModel):
             list(str): object names
             str: parameter name
         """
-        row, column = self.map_to_pivot(index)
-        header_ids = self._header_ids(row, column)
-        last_object_id = -1 if not self._parent.is_index_expansion_input_type() else -2
-        objects_ids, parameter_id = header_ids[:last_object_id], header_ids[-1]
+        objects_ids, parameter_id = self.header_ids(index)
         object_names = [self.db_mngr.get_item(self.db_map, "object", id_)["name"] for id_ in objects_ids]
         parameter_name = self.db_mngr.get_item(self.db_map, "parameter definition", parameter_id).get(
             "parameter_name", ""
         )
         return object_names, parameter_name
+
+    def header_ids(self, index):
+        """Returns the header ids corresponding to the given data index.
+
+        Args:
+            index (QModelIndex)
+
+        Returns:
+            list(int): object ids
+            int: parameter id
+        """
+        row, column = self.map_to_pivot(index)
+        header_ids = self._header_ids(row, column)
+        last_object_id = -1 if not self._parent.is_index_expansion_input_type() else -2
+        return header_ids[:last_object_id], header_ids[-1]
 
     def index_name(self, index):
         """Returns a string that concatenates the header names corresponding to the given data index.

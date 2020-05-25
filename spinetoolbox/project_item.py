@@ -440,19 +440,19 @@ class ProjectItemFactory:
         """
         raise NotImplementedError()
 
-    def make_icon(self, toolbox, x, y, w, h, project_item):
+    def make_icon(self, toolbox, x, y, project_item):
         """
         Returns a ProjectItemIcon to use with given toolbox, for given project item.
 
         Args:
             toolbox (ToolboxUI)
-            x, y, w, h (int): Icon coordinates and dimensions
+            x, y (int): Icon coordinates
             project_item (ProjectItem)
 
         Returns:
             ProjectItemIcon
         """
-        return self.icon_maker(toolbox, x, y, w, h, project_item, self.icon())
+        return self.icon_maker(toolbox, x, y, project_item, self.icon())
 
     def make_item(self, *args, **kwargs):
         """
@@ -477,7 +477,7 @@ class ProjectItemFactory:
         if icon is not None:
             icon.activate()
         else:
-            icon = self.make_icon(toolbox, project_item.x - 35, project_item.y - 35, 70, 70, project_item)
+            icon = self.make_icon(toolbox, project_item.x, project_item.y, project_item)
             project_item.set_icon(icon)
         project_item.set_properties_ui(self.properties_ui)
         project_item.create_data_dir()

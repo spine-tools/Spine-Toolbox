@@ -12,7 +12,7 @@
 """
 Functions for plotting on PlotWidget.
 
-Currently plotting from the table views found in Graph, Tree and Tabular views are supported.
+Currently plotting from the table views found in the DataStoreForm are supported.
 
 The main entrance points to plotting are:
 - plot_selection() which plots selected cells on a table view returning a PlotWidget object

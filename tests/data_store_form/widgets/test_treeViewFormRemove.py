@@ -16,7 +16,7 @@ Unit tests for the TreeViewFormRemoveMixin.
 :date:   6.12.2018
 """
 from unittest import mock
-from spinetoolbox.mvcmodels.compound_parameter_models import CompoundParameterModel
+from spinetoolbox.data_store_form.mvcmodels.compound_parameter_models import CompoundParameterModel
 
 
 class TestTreeViewFormRemoveMixin:

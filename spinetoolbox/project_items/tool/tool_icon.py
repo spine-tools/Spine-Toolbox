@@ -23,20 +23,18 @@ from spinetoolbox.graphics_items import ProjectItemIcon
 
 
 class ToolIcon(ProjectItemIcon):
-    def __init__(self, toolbox, x, y, w, h, project_item, icon):
+    def __init__(self, toolbox, x, y, project_item, icon):
         """Tool icon for the Design View.
 
         Args:
             toolbox (ToolBoxUI): QMainWindow instance
             x (float): Icon x coordinate
             y (float): Icon y coordinate
-            w (float): Width of master icon
-            h (float): Height of master icon
             project_item (ProjectItem): Item
             icon (str): icon resource path
         """
         super().__init__(
-            toolbox, x, y, w, h, project_item, icon, icon_color=QColor("red"), background_color=QColor("#ffe6e6")
+            toolbox, x, y, project_item, icon, icon_color=QColor("red"), background_color=QColor("#ffe6e6")
         )
         self.time_line = QTimeLine()
         self.time_line.setLoopCount(0)  # loop forever

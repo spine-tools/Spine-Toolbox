@@ -15,23 +15,14 @@ Models to represent entities in a tree.
 :authors: P. Vennström (VTT), M. Marin (KTH)
 :date:   11.3.2019
 """
-from PySide2.QtCore import Qt, Signal, QModelIndex
+from PySide2.QtCore import Qt, QModelIndex
 from PySide2.QtGui import QIcon
-from .entity_tree_item import (
-    ObjectTreeRootItem,
-    ObjectClassItem,
-    ObjectItem,
-    RelationshipTreeRootItem,
-    RelationshipClassItem,
-    RelationshipItem,
-)
-from .minimal_tree_model import MinimalTreeModel, TreeItem
+from .entity_tree_item import ObjectTreeRootItem, RelationshipTreeRootItem
+from ...mvcmodels.minimal_tree_model import MinimalTreeModel, TreeItem
 
 
 class EntityTreeModel(MinimalTreeModel):
     """Base class for all entity tree models."""
-
-    remove_selection_requested = Signal()
 
     def __init__(self, parent, db_mngr, *db_maps):
         """Init class.
@@ -45,8 +36,6 @@ class EntityTreeModel(MinimalTreeModel):
         self.db_mngr = db_mngr
         self.db_maps = db_maps
         self._root_item = None
-        self._checkable = False
-        self.selected_indexes = dict()  # Maps item type to selected indexes
 
     @property
     def root_item_type(self):
@@ -61,39 +50,16 @@ class EntityTreeModel(MinimalTreeModel):
     def root_index(self):
         return self.index_from_item(self._root_item)
 
-    @property
-    def selected_object_class_indexes(self):
-        return self.selected_indexes.get(ObjectClassItem, {})
-
-    @property
-    def selected_object_indexes(self):
-        return self.selected_indexes.get(ObjectItem, {})
-
-    @property
-    def selected_relationship_class_indexes(self):
-        return self.selected_indexes.get(RelationshipClassItem, {})
-
-    @property
-    def selected_relationship_indexes(self):
-        return self.selected_indexes.get(RelationshipItem, {})
-
     def build_tree(self):
         """Builds tree."""
         self.beginResetModel()
         self._invisible_root_item = TreeItem(self)
         self.endResetModel()
-        self.selected_indexes.clear()
         self._root_item = self.root_item_type(self, dict.fromkeys(self.db_maps))
         self._invisible_root_item.append_children(self._root_item)
 
     def columnCount(self, parent=QModelIndex()):
         return 2
-
-    def is_checkable(self):
-        return self._checkable
-
-    def set_checkable(self, on):
-        self._checkable = on
 
     def data(self, index, role=Qt.DisplayRole):
         item = self.item_from_index(index)
@@ -104,33 +70,12 @@ class EntityTreeModel(MinimalTreeModel):
                 return item.display_data
             if role == Qt.EditRole:
                 return item.edit_data
-            if role == Qt.CheckStateRole and self.is_checkable():
-                return Qt.Checked if item.is_checked() else Qt.Unchecked
         return item.data(index.column(), role)
-
-    def setData(self, index, value=None, role=Qt.CheckStateRole):
-        if role != Qt.CheckStateRole:
-            return False
-        self.item_from_index(index).toggle_checked()
-        return True
 
     def headerData(self, section, orientation, role):
         if orientation == Qt.Horizontal and role == Qt.DisplayRole:
             return ("name", "database")[section]
         return None
-
-    def _select_index(self, index):
-        """Marks the index as selected."""
-        if not index.isValid() or index.column() != 0:
-            return
-        item_type = type(self.item_from_index(index))
-        self.selected_indexes.setdefault(item_type, {})[index] = None
-
-    def select_indexes(self, indexes):
-        """Marks given indexes as selected."""
-        self.selected_indexes.clear()
-        for index in indexes:
-            self._select_index(index)
 
     def find_items(self, db_map, path_prefix, parent_items=(), fetch=False):
         """Returns items at given path prefix.
@@ -152,10 +97,6 @@ class EntityTreeModel(MinimalTreeModel):
 
 class ObjectTreeModel(EntityTreeModel):
     """An 'object-oriented' tree model."""
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.remove_icon = QIcon(":/icons/menu_icons/cube_minus.svg")
 
     @property
     def root_item_type(self):
@@ -277,7 +218,7 @@ class ObjectTreeModel(EntityTreeModel):
         if not index.isValid():
             return
         rel_item = self.item_from_index(index)
-        if not isinstance(rel_item, RelationshipItem):
+        if not rel_item.item_type == "relationship":
             return
         # Get all ancestors
         rel_cls_item = rel_item.parent_item
@@ -307,10 +248,6 @@ class ObjectTreeModel(EntityTreeModel):
 
 class RelationshipTreeModel(EntityTreeModel):
     """A relationship-oriented tree model."""
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.remove_icon = QIcon(":/icons/menu_icons/cubes_minus.svg")
 
     @property
     def root_item_type(self):

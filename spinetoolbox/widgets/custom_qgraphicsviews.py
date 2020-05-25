@@ -20,26 +20,15 @@ import logging
 import math
 from PySide2.QtWidgets import QGraphicsView
 from PySide2.QtGui import QCursor
-from PySide2.QtCore import (
-    QEventLoop,
-    QParallelAnimationGroup,
-    Signal,
-    Slot,
-    Qt,
-    QRectF,
-    QTimeLine,
-    QMarginsF,
-    QSettings,
-)
+from PySide2.QtCore import QEventLoop, QParallelAnimationGroup, Slot, Qt, QTimeLine, QSettings, QRectF
 from spine_engine import ExecutionDirection, SpineEngineState
 from ..graphics_items import Link
 from ..project_commands import AddLinkCommand, RemoveLinkCommand
-from ..mvcmodels.entity_list_models import EntityListModel
-from .custom_qgraphicsscene import CustomQGraphicsScene
+from .custom_qgraphicsscene import DesignGraphicsScene
 
 
 class CustomQGraphicsView(QGraphicsView):
-    """Super class for Design and Graph QGraphicsViews.
+    """Super class for Design and Entity QGraphicsViews.
 
     Attributes:
         parent (QWidget): Parent widget
@@ -50,12 +39,16 @@ class CustomQGraphicsView(QGraphicsView):
         super().__init__(parent=parent)
         self._zoom_factor_base = 1.0015
         self._angle = 120
-        self._num_scheduled_scalings = 0
-        self.anim = None
-        self._scene_fitting_zoom = 1.0
+        self._scheduled_transformations = 0
+        self.time_line = None
+        self._items_fitting_zoom = 1.0
         self._max_zoom = 10.0
         self._min_zoom = 0.1
         self._qsettings = QSettings("SpineProject", "Spine Toolbox")
+
+    @property
+    def zoom_factor(self):
+        return self.transform().m11()
 
     def keyPressEvent(self, event):
         """Overridden method. Enable zooming with plus and minus keys (comma resets zoom).
@@ -87,7 +80,6 @@ class CustomQGraphicsView(QGraphicsView):
         Enable resetting the zoom factor from the middle mouse button.
         """
         item = self.itemAt(event.pos())
-        # print(not item, not int(item.acceptedMouseButtons() & event.buttons()))
         if not item or not item.acceptedMouseButtons() & event.buttons():
             if event.modifiers() & Qt.ControlModifier:
                 self.setDragMode(QGraphicsView.RubberBandDrag)
@@ -104,8 +96,11 @@ class CustomQGraphicsView(QGraphicsView):
             self.setDragMode(QGraphicsView.ScrollHandDrag)
             self.viewport().setCursor(Qt.ArrowCursor)
 
+    def _use_smooth_zoom(self):
+        return self._qsettings.value("appSettings/smoothZoom", defaultValue="false") == "true"
+
     def wheelEvent(self, event):
-        """Zoom in/out.
+        """Zooms in/out.
 
         Args:
             event (QWheelEvent): Mouse wheel event
@@ -114,20 +109,19 @@ class CustomQGraphicsView(QGraphicsView):
             event.ignore()
             return
         event.accept()
-        smooth_zoom = self._qsettings.value("appSettings/smoothZoom", defaultValue="false")
-        if smooth_zoom == "true":
-            num_degrees = event.delta() / 8
-            num_steps = num_degrees / 15
-            self._num_scheduled_scalings += num_steps
-            if self._num_scheduled_scalings * num_steps < 0:
-                self._num_scheduled_scalings = num_steps
-            if self.anim:
-                self.anim.deleteLater()
-            self.anim = QTimeLine(200, self)
-            self.anim.setUpdateInterval(20)
-            self.anim.valueChanged.connect(lambda x, pos=event.pos(): self.scaling_time(pos))
-            self.anim.finished.connect(self.anim_finished)
-            self.anim.start()
+        if self._use_smooth_zoom():
+            angle = event.delta() / 8
+            steps = angle / 15
+            self._scheduled_transformations += steps
+            if self._scheduled_transformations * steps < 0:
+                self._scheduled_transformations = steps
+            if self.time_line:
+                self.time_line.deleteLater()
+            self.time_line = QTimeLine(200, self)
+            self.time_line.setUpdateInterval(20)
+            self.time_line.valueChanged.connect(lambda x, pos=event.pos(): self._handle_zoom_time_line_advanced(pos))
+            self.time_line.finished.connect(self._handle_transformation_time_line_finished)
+            self.time_line.start()
         else:
             angle = event.angleDelta().y()
             factor = self._zoom_factor_base ** angle
@@ -145,11 +139,14 @@ class CustomQGraphicsView(QGraphicsView):
         if new_size != old_size:
             scene = self.scene()
             if scene is not None:
-                self._update_zoom_limits(scene.sceneRect())
+                self._update_zoom_limits()
+                if self.time_line:
+                    self.time_line.deleteLater()
+                self.time_line = QTimeLine(200, self)
+                self.time_line.finished.connect(self._handle_resize_time_line_finished)
+                self.time_line.start()
                 if new_size.width() > old_size.width() or new_size.height() > old_size.height():
-                    transform = self.transform()
-                    zoom = transform.m11()
-                    if zoom < self._min_zoom:
+                    if self.zoom_factor < self._min_zoom:
                         # Reset the zoom if the view has grown and the current zoom is too small
                         self.reset_zoom()
         super().resizeEvent(event)
@@ -162,38 +159,52 @@ class CustomQGraphicsView(QGraphicsView):
             scene (ShrinkingScene): a new scene
         """
         super().setScene(scene)
-        scene.sceneRectChanged.connect(self._update_zoom_limits)
-        scene.item_move_finished.connect(self._ensure_item_visible)
+        scene.item_move_finished.connect(self._handle_item_move_finished)
+        scene.item_removed.connect(lambda _item: self._set_preferred_scene_rect())
 
-    @Slot("QRectF")
-    def _update_zoom_limits(self, rect):
-        """
-        Updates the minimum zoom limit and the zoom level with which the entire scene fits the view.
+    @Slot("QGraphicsItem")
+    def _handle_item_move_finished(self, item):
+        self._ensure_item_visible(item)
+        self._update_zoom_limits()
 
-        Args:
-            rect (QRectF): the scene's rect
+    def _update_zoom_limits(self):
         """
-        scene_extent = max(rect.width(), rect.height())
-        if not scene_extent:
+        Updates the minimum zoom limit and the zoom level with which the view fits all the items in the scene.
+        """
+        rect = self.scene().itemsBoundingRect()
+        if rect.isEmpty():
             return
-        size = self.size()
-        extent = min(size.height(), size.width())
-        self._scene_fitting_zoom = extent / scene_extent
-        self._min_zoom = min(self._scene_fitting_zoom, 0.1)
+        viewport_scene_rect = self._get_viewport_scene_rect()
+        fitting_margin = 100
+        x_factor = viewport_scene_rect.width() / (rect.width() + fitting_margin)
+        y_factor = viewport_scene_rect.height() / (rect.height() + fitting_margin)
+        self._items_fitting_zoom = min(x_factor, y_factor)
+        self._min_zoom = min(self._items_fitting_zoom, 0.1)
 
-    def scaling_time(self, pos):
-        """Called when animation value for smooth zoom changes. Perform zoom."""
-        factor = 1.0 + self._num_scheduled_scalings / 100.0
+    def _handle_zoom_time_line_advanced(self, pos):
+        """Performs zoom whenever the smooth zoom time line advances."""
+        factor = 1.0 + self._scheduled_transformations / 100.0
         self.gentle_zoom(factor, pos)
 
-    def anim_finished(self):
-        """Called when animation for smooth zoom finishes. Clean up."""
-        if self._num_scheduled_scalings > 0:
-            self._num_scheduled_scalings -= 1
+    @Slot()
+    def _handle_transformation_time_line_finished(self):
+        """Cleans up after the smooth transformation time line finishes."""
+        if self._scheduled_transformations > 0:
+            self._scheduled_transformations -= 1
         else:
-            self._num_scheduled_scalings += 1
-        self.sender().deleteLater()
-        self.anim = None
+            self._scheduled_transformations += 1
+        if self.sender():
+            self.sender().deleteLater()
+        self.time_line = None
+        self._set_preferred_scene_rect()
+
+    @Slot()
+    def _handle_resize_time_line_finished(self):
+        """Cleans up after resizing time line finishes."""
+        if self.sender():
+            self.sender().deleteLater()
+        self.time_line = None
+        self._set_preferred_scene_rect()
 
     def zoom_in(self):
         """Perform a zoom in with a fixed scaling."""
@@ -204,10 +215,10 @@ class CustomQGraphicsView(QGraphicsView):
         self.gentle_zoom(self._zoom_factor_base ** -self._angle)
 
     def reset_zoom(self):
-        """Reset zoom to the default factor."""
-        self.resetTransform()
-        if self._scene_fitting_zoom < 1.0:
-            self.scale(self._scene_fitting_zoom, self._scene_fitting_zoom)
+        """Resets zoom to the default factor."""
+        self.scene().center_items()
+        self._update_zoom_limits()
+        self._zoom(self._items_fitting_zoom)
 
     def gentle_zoom(self, factor, zoom_focus=None):
         """
@@ -220,32 +231,52 @@ class CustomQGraphicsView(QGraphicsView):
         if zoom_focus is None:
             zoom_focus = self.viewport().rect().center()
         initial_focus_on_scene = self.mapToScene(zoom_focus)
-        transform = self.transform()
-        current_zoom = transform.m11()  # The [1, 1] element contains the x scaling factor
+        current_zoom = self.zoom_factor  # The [1, 1] element contains the x scaling factor
         proposed_zoom = current_zoom * factor
         if proposed_zoom < self._min_zoom:
             factor = self._min_zoom / current_zoom
         elif proposed_zoom > self._max_zoom:
             factor = self._max_zoom / current_zoom
         if math.isclose(factor, 1.0):
-            return False
-        self.scale(factor, factor)
+            return
+        self._zoom(factor)
         post_scaling_focus_on_scene = self.mapToScene(zoom_focus)
         center_on_scene = self.mapToScene(self.viewport().rect().center())
         focus_diff = post_scaling_focus_on_scene - initial_focus_on_scene
         self.centerOn(center_on_scene - focus_diff)
-        return True
 
-    @Slot("QGraphicsItem")
+    def _zoom(self, factor):
+        self.scale(factor, factor)
+        self._set_preferred_scene_rect()
+
+    def _get_viewport_scene_rect(self):
+        """Returns the viewport rect mapped to the scene.
+
+        Returns:
+            QRectF
+        """
+        rect = self.viewport().rect()
+        top_left = self.mapToScene(rect.topLeft())
+        bottom_right = self.mapToScene(rect.bottomRight())
+        return QRectF(top_left, bottom_right)
+
     def _ensure_item_visible(self, item):
         """Resets zoom if item is not visible."""
         # Because of zooming, we need to find the item scene's rect as below
         item_scene_rect = item.boundingRegion(item.sceneTransform()).boundingRect()
-        item_viewport_rect = self.mapFromScene(item_scene_rect).boundingRect()
-        if not self.viewport().geometry().contains(item_viewport_rect.topLeft()):
-            viewport_scene_rect = self.mapToScene(self.viewport().geometry()).boundingRect()
+        viewport_scene_rect = self._get_viewport_scene_rect()
+        if not viewport_scene_rect.contains(item_scene_rect.topLeft()):
             scene_rect = viewport_scene_rect.united(item_scene_rect)
             self.fitInView(scene_rect, Qt.KeepAspectRatio)
+            self._set_preferred_scene_rect()
+
+    @Slot()
+    def _set_preferred_scene_rect(self):
+        """Sets the scene rect to the result of uniting the scene viewport rect and the items bounding rect.
+        """
+        viewport_scene_rect = self._get_viewport_scene_rect()
+        items_scene_rect = self.scene().itemsBoundingRect()
+        self.scene().setSceneRect(viewport_scene_rect.united(items_scene_rect))
 
 
 class DesignQGraphicsView(CustomQGraphicsView):
@@ -265,29 +296,7 @@ class DesignQGraphicsView(CustomQGraphicsView):
     def set_ui(self, toolbox):
         """Set a new scene into the Design View when app is started."""
         self._toolbox = toolbox
-        self.setScene(CustomQGraphicsScene(self, toolbox))
-
-    def init_scene(self, empty=False):
-        """Resize scene and add a link drawer on scene.
-        The scene must be cleared before calling this.
-
-        Args:
-            empty (boolean): True when creating a new project
-        """
-        if not self.scene().items():
-            # Loaded project has no project items
-            empty = True
-        if not empty:
-            self.scene().center_items()
-            # Reset scene rectangle to be as big as the items bounding rectangle
-            items_rect = self.scene().itemsBoundingRect()
-            margin_rect = items_rect.marginsAdded(QMarginsF(20, 20, 20, 20))  # Add margins
-            self.scene().setSceneRect(margin_rect)
-        else:
-            rect = QRectF(0, 0, 401, 301)
-            self.scene().setSceneRect(rect)
-        self.scene().update()
-        self.reset_zoom()
+        self.setScene(DesignGraphicsScene(self, toolbox))
 
     def set_project_item_model(self, model):
         """Set project item model."""
@@ -303,7 +312,7 @@ class DesignQGraphicsView(CustomQGraphicsView):
             link.dst_connector.links.remove(link)
         scene = self.scene()
         scene.removeItem(icon)
-        scene.shrink_if_needed()
+        self._set_preferred_scene_rect()
 
     def links(self):
         """Returns all Links in the scene.
@@ -498,91 +507,3 @@ class DesignQGraphicsView(CustomQGraphicsView):
         for link in links:
             animation_group.addAnimation(link.make_execution_animation())
         return animation_group
-
-
-class GraphQGraphicsView(CustomQGraphicsView):
-    """QGraphicsView for the Graph View."""
-
-    item_dropped = Signal("QPoint", "QString")
-
-    context_menu_requested = Signal("QPoint")
-
-    def dragLeaveEvent(self, event):
-        """Accept event. Then call the super class method
-        only if drag source is not EntityListModel."""
-        event.accept()
-
-    def dragEnterEvent(self, event):
-        """Accept event. Then call the super class method
-        only if drag source is not EntityListModel."""
-        event.accept()
-        source = event.source()
-        if not isinstance(source.model(), EntityListModel):
-            super().dragEnterEvent(event)
-
-    def dragMoveEvent(self, event):
-        """Accept event. Then call the super class method
-        only if drag source is not EntityListModel."""
-        event.accept()
-        source = event.source()
-        if not isinstance(source.model(), EntityListModel):
-            super().dragMoveEvent(event)
-
-    def dropEvent(self, event):
-        """Only accept drops when the source is an instance of EntityListModel.
-        Capture text from event's mimedata and emit signal.
-        """
-        source = event.source()
-        if not isinstance(source.model(), EntityListModel):
-            super().dropEvent(event)
-            return
-        entity_type = source.model().entity_type
-        event.acceptProposedAction()
-        entity_class_id = event.mimeData().text()
-        pos = event.pos()
-        text = entity_type + ":" + entity_class_id
-        self.item_dropped.emit(pos, text)
-
-    def contextMenuEvent(self, e):
-        """Show context menu.
-
-        Args:
-            e (QContextMenuEvent): Context menu event
-        """
-        super().contextMenuEvent(e)
-        if e.isAccepted():
-            return
-        e.accept()
-        self.context_menu_requested.emit(e.globalPos())
-
-    def gentle_zoom(self, factor, zoom_focus=None):
-        """
-        Perform a zoom by a given factor.
-
-        Args:
-            factor (float): a scaling factor relative to the current scene scaling
-            zoom_focus (QPoint): focus of the zoom, e.g. mouse pointer position
-        """
-        if not super().gentle_zoom(factor, zoom_focus=zoom_focus):
-            return False
-        self.adjust_items_to_zoom()
-        return True
-
-    def reset_zoom(self):
-        """Reset zoom to the default factor."""
-        self.resetTransform()
-        self.scale(self._scene_fitting_zoom, self._scene_fitting_zoom)
-
-    def scale(self, x, y):
-        super().scale(x, y)
-        self.adjust_items_to_zoom()
-
-    def adjust_items_to_zoom(self):
-        """
-        Update items geometry after performing a zoom.
-
-        Some items (e.g. ArcItem) need this to stay the same size after a zoom.
-        """
-        for item in self.items():
-            if hasattr(item, "adjust_to_zoom"):
-                item.adjust_to_zoom(self.transform())

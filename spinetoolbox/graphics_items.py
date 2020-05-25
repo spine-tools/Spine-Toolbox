@@ -45,6 +45,258 @@ from PySide2.QtSvg import QGraphicsSvgItem, QSvgRenderer
 from spinetoolbox.project_commands import MoveIconCommand
 
 
+class ProjectItemIcon(QGraphicsRectItem):
+
+    ITEM_EXTENT = 64
+
+    def __init__(self, toolbox, x, y, project_item, icon_file, icon_color, background_color):
+        """Base class for project item icons drawn in Design View.
+
+        Args:
+            toolbox (ToolBoxUI): QMainWindow instance
+            x (float): Icon x coordinate
+            y (float): Icon y coordinate
+            project_item (ProjectItem): Item
+            icon_file (str): Path to icon resource
+            icon_color (QColor): Icon's color
+            background_color (QColor): Background color
+        """
+        super().__init__()
+        self._toolbox = toolbox
+        self._project_item = project_item
+        self._moved_on_scene = False
+        self._previous_pos = QPointF()
+        self._current_pos = QPointF()
+        self.icon_group = {self}
+        self.renderer = QSvgRenderer()
+        self.svg_item = QGraphicsSvgItem(self)
+        self.colorizer = QGraphicsColorizeEffect()
+        self.setRect(QRectF(x - self.ITEM_EXTENT / 2, y - self.ITEM_EXTENT / 2, self.ITEM_EXTENT, self.ITEM_EXTENT))
+        self.text_font_size = 10  # point size
+        # Make item name graphics item.
+        name = project_item.name if project_item else ""
+        self.name_item = QGraphicsSimpleTextItem(name, self)
+        self.set_name_attributes()  # Set font, size, position, etc.
+        # Make connector buttons
+        self.connectors = dict(
+            bottom=ConnectorButton(self, toolbox, position="bottom"),
+            left=ConnectorButton(self, toolbox, position="left"),
+            right=ConnectorButton(self, toolbox, position="right"),
+        )
+        # Make exclamation and rank icons
+        self.exclamation_icon = ExclamationIcon(self)
+        self.rank_icon = RankIcon(self)
+        brush = QBrush(background_color)
+        self._setup(brush, icon_file, icon_color)
+        self.activate()
+
+    def activate(self):
+        """Adds items to scene and setup graphics effect.
+        Called in the constructor and when re-adding the item to the project in the context of undo/redo.
+        """
+        scene = self._toolbox.ui.graphicsView.scene()
+        scene.addItem(self)
+        shadow_effect = QGraphicsDropShadowEffect()
+        shadow_effect.setOffset(1)
+        shadow_effect.setEnabled(False)
+        self.setGraphicsEffect(shadow_effect)
+
+    def _setup(self, brush, svg, svg_color):
+        """Setup item's attributes.
+
+        Args:
+            brush (QBrush): Used in filling the background rectangle
+            svg (str): Path to SVG icon file
+            svg_color (QColor): Color of SVG icon
+        """
+        self.setPen(QPen(Qt.black, 1, Qt.SolidLine))
+        self.setBrush(brush)
+        self.colorizer.setColor(svg_color)
+        # Load SVG
+        loading_ok = self.renderer.load(svg)
+        if not loading_ok:
+            self._toolbox.msg_error.emit("Loading SVG icon from resource:{0} failed".format(svg))
+            return
+        size = self.renderer.defaultSize()
+        self.svg_item.setSharedRenderer(self.renderer)
+        self.svg_item.setElementId("")  # guess empty string loads the whole file
+        dim_max = max(size.width(), size.height())
+        rect_w = self.rect().width()  # Parent rect width
+        margin = 32
+        self.svg_item.setScale((rect_w - margin) / dim_max)
+        x_offset = (rect_w - self.svg_item.sceneBoundingRect().width()) / 2
+        y_offset = (rect_w - self.svg_item.sceneBoundingRect().height()) / 2
+        self.svg_item.setPos(self.rect().x() + x_offset, self.rect().y() + y_offset)
+        self.svg_item.setGraphicsEffect(self.colorizer)
+        self.setFlag(QGraphicsItem.ItemIsMovable, enabled=True)
+        self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
+        self.setFlag(QGraphicsItem.ItemIsFocusable, enabled=True)
+        self.setFlag(QGraphicsItem.ItemSendsScenePositionChanges, enabled=True)
+        self.setAcceptHoverEvents(True)
+        self.setCursor(Qt.PointingHandCursor)
+        # Set exclamation and rank icons position
+        self.exclamation_icon.setPos(self.rect().topRight() - self.exclamation_icon.sceneBoundingRect().topRight())
+        self.rank_icon.setPos(self.rect().topLeft())
+
+    def name(self):
+        """Returns name of the item that is represented by this icon."""
+        return self._project_item.name
+
+    def update_name_item(self, new_name):
+        """Set a new text to name item. Used when a project item is renamed."""
+        self.name_item.setText(new_name)
+        self.set_name_attributes()
+
+    def set_name_attributes(self):
+        """Set name QGraphicsSimpleTextItem attributes (font, size, position, etc.)"""
+        # Set font size and style
+        font = self.name_item.font()
+        font.setPointSize(self.text_font_size)
+        font.setBold(True)
+        self.name_item.setFont(font)
+        # Set name item position (centered on top of the master icon)
+        name_width = self.name_item.boundingRect().width()
+        name_height = self.name_item.boundingRect().height()
+        self.name_item.setPos(
+            self.rect().x() + self.rect().width() / 2 - name_width / 2, self.rect().y() - name_height - 4
+        )
+
+    def conn_button(self, position="left"):
+        """Returns items connector button (QWidget)."""
+        return self.connectors.get(position, self.connectors["left"])
+
+    def outgoing_links(self):
+        return [l for conn in self.connectors.values() for l in conn.outgoing_links()]
+
+    def incoming_links(self):
+        return [l for conn in self.connectors.values() for l in conn.incoming_links()]
+
+    def hoverEnterEvent(self, event):
+        """Sets a drop shadow effect to icon when mouse enters its boundaries.
+
+        Args:
+            event (QGraphicsSceneMouseEvent): Event
+        """
+        self.prepareGeometryChange()
+        self.graphicsEffect().setEnabled(True)
+        event.accept()
+
+    def hoverLeaveEvent(self, event):
+        """Disables the drop shadow when mouse leaves icon boundaries.
+
+        Args:
+            event (QGraphicsSceneMouseEvent): Event
+        """
+        self.prepareGeometryChange()
+        self.graphicsEffect().setEnabled(False)
+        event.accept()
+
+    def mousePressEvent(self, event):
+        super().mousePressEvent(event)
+        self.icon_group = set(x for x in self.scene().selectedItems() if isinstance(x, ProjectItemIcon)) | {self}
+        for icon in self.icon_group:
+            icon._previous_pos = icon.scenePos()
+
+    def mouseMoveEvent(self, event):
+        """Moves icon(s) while the mouse button is pressed.
+        Update links that are connected to selected icons.
+
+        Args:
+            event (QGraphicsSceneMouseEvent): Event
+        """
+        super().mouseMoveEvent(event)
+        self.update_links_geometry()
+
+    def moveBy(self, dx, dy):
+        super().moveBy(dx, dy)
+        self.update_links_geometry()
+
+    def update_links_geometry(self):
+        """Updates geometry of connected links to reflect this item's most recent position."""
+        links = set(link for icon in self.icon_group for conn in icon.connectors.values() for link in conn.links)
+        for link in links:
+            link.update_geometry()
+
+    def mouseReleaseEvent(self, event):
+        for icon in self.icon_group:
+            icon._current_pos = icon.scenePos()
+        # pylint: disable=undefined-variable
+        if (self._current_pos - self._previous_pos).manhattanLength() > qApp.startDragDistance():
+            self._toolbox.undo_stack.push(MoveIconCommand(self))
+        super().mouseReleaseEvent(event)
+
+    def notify_item_move(self):
+        if self._moved_on_scene:
+            self._moved_on_scene = False
+            scene = self.scene()
+            scene.item_move_finished.emit(self)
+
+    def contextMenuEvent(self, event):
+        """Show item context menu.
+
+        Args:
+            event (QGraphicsSceneMouseEvent): Mouse event
+        """
+        self.scene().clearSelection()
+        self.setSelected(True)
+        self._toolbox.show_item_image_context_menu(event.screenPos(), self.name())
+
+    def keyPressEvent(self, event):
+        """Handles deleting and rotating the selected
+        item when dedicated keys are pressed.
+
+        Args:
+            event (QKeyEvent): Key event
+        """
+        if event.key() == Qt.Key_Delete and self.isSelected():
+            self._project_item._project.remove_item(self.name())
+            event.accept()
+        elif event.key() == Qt.Key_R and self.isSelected():
+            # TODO:
+            # 1. Change name item text direction when rotating
+            # 2. Save rotation into project file
+            rect = self.mapToScene(self.boundingRect()).boundingRect()
+            center = rect.center()
+            t = QTransform()
+            t.translate(center.x(), center.y())
+            t.rotate(90)
+            t.translate(-center.x(), -center.y())
+            self.setPos(t.map(self.pos()))
+            self.setRotation(self.rotation() + 90)
+            links = set(lnk for conn in self.connectors.values() for lnk in conn.links)
+            for link in links:
+                link.update_geometry()
+            event.accept()
+        else:
+            super().keyPressEvent(event)
+
+    def itemChange(self, change, value):
+        """
+        Reacts to item removal and position changes.
+
+        In particular, destroys the drop shadow effect when the items is removed from a scene
+        and keeps track of item's movements on the scene.
+
+        Args:
+            change (GraphicsItemChange): a flag signalling the type of the change
+            value: a value related to the change
+
+        Returns:
+             Whatever super() does with the value parameter
+        """
+        if change == QGraphicsItem.ItemScenePositionHasChanged:
+            self._moved_on_scene = True
+        elif change == QGraphicsItem.GraphicsItemChange.ItemSceneChange and value is None:
+            self.prepareGeometryChange()
+            self.setGraphicsEffect(None)
+        return super().itemChange(change, value)
+
+    def show_item_info(self):
+        """Update GUI to show the details of the selected item."""
+        ind = self._toolbox.project_item_model.find_item(self.name())
+        self._toolbox.ui.treeView_project.setCurrentIndex(ind)
+
+
 class ConnectorButton(QGraphicsRectItem):
 
     # Regular and hover brushes
@@ -59,7 +311,7 @@ class ConnectorButton(QGraphicsRectItem):
             toolbox (ToolBoxUI): QMainWindow instance
             position (str): Either "top", "left", "bottom", or "right"
         """
-        super().__init__()
+        super().__init__(parent)
         self._parent = parent
         self._toolbox = toolbox
         self.position = position
@@ -242,266 +494,10 @@ class RankIcon(QGraphicsTextItem):
         self.setTextCursor(cursor)
 
 
-class ProjectItemIcon(QGraphicsRectItem):
-    def __init__(self, toolbox, x, y, w, h, project_item, icon_file, icon_color, background_color):
-        """Base class for project item icons drawn in Design View.
-
-        Args:
-            toolbox (ToolBoxUI): QMainWindow instance
-            x (float): Icon x coordinate
-            y (float): Icon y coordinate
-            w (float): Icon width
-            h (float): Icon height
-            project_item (ProjectItem): Item
-            icon_file (str): Path to icon resource
-            icon_color (QColor): Icon's color
-            background_color (QColor): Background color
-        """
-        super().__init__()
-        self._toolbox = toolbox
-        self._project_item = project_item
-        self._moved_on_scene = False
-        self._previous_pos = QPointF()
-        self._current_pos = QPointF()
-        self.selected_icons = []
-        self.renderer = QSvgRenderer()
-        self.svg_item = QGraphicsSvgItem()
-        self.colorizer = QGraphicsColorizeEffect()
-        self.setRect(QRectF(x, y, w, h))  # Set ellipse coordinates and size
-        self.text_font_size = 10  # point size
-        # Make item name graphics item.
-        name = project_item.name if project_item else ""
-        self.name_item = QGraphicsSimpleTextItem(name)
-        self.set_name_attributes()  # Set font, size, position, etc.
-        # Make connector buttons
-        self.connectors = dict(
-            bottom=ConnectorButton(self, toolbox, position="bottom"),
-            left=ConnectorButton(self, toolbox, position="left"),
-            right=ConnectorButton(self, toolbox, position="right"),
-        )
-        # Make exclamation and rank icons
-        self.exclamation_icon = ExclamationIcon(self)
-        self.rank_icon = RankIcon(self)
-        # Group the drawn items together by setting the background rectangle as the parent of other QGraphicsItems
-        # NOTE: setting the parent item moves the items as one!
-        self.name_item.setParentItem(self)
-        for conn in self.connectors.values():
-            conn.setParentItem(self)
-        self.svg_item.setParentItem(self)
-        self.exclamation_icon.setParentItem(self)
-        self.rank_icon.setParentItem(self)
-        brush = QBrush(background_color)
-        self._setup(brush, icon_file, icon_color)
-        self.activate()
-
-    def activate(self):
-        """Adds items to scene and setup graphics effect.
-        Called in the constructor and when re-adding the item to the project in the context of undo/redo.
-        """
-        scene = self._toolbox.ui.graphicsView.scene()
-        scene.addItem(self)
-        shadow_effect = QGraphicsDropShadowEffect()
-        shadow_effect.setOffset(1)
-        shadow_effect.setEnabled(False)
-        self.setGraphicsEffect(shadow_effect)
-
-    def _setup(self, brush, svg, svg_color):
-        """Setup item's attributes.
-
-        Args:
-            brush (QBrush): Used in filling the background rectangle
-            svg (str): Path to SVG icon file
-            svg_color (QColor): Color of SVG icon
-        """
-        self.setPen(QPen(Qt.black, 1, Qt.SolidLine))
-        self.setBrush(brush)
-        self.colorizer.setColor(svg_color)
-        # Load SVG
-        loading_ok = self.renderer.load(svg)
-        if not loading_ok:
-            self._toolbox.msg_error.emit("Loading SVG icon from resource:{0} failed".format(svg))
-            return
-        size = self.renderer.defaultSize()
-        self.svg_item.setSharedRenderer(self.renderer)
-        self.svg_item.setElementId("")  # guess empty string loads the whole file
-        dim_max = max(size.width(), size.height())
-        rect_w = self.rect().width()  # Parent rect width
-        margin = 32
-        self.svg_item.setScale((rect_w - margin) / dim_max)
-        x_offset = (rect_w - self.svg_item.sceneBoundingRect().width()) / 2
-        y_offset = (rect_w - self.svg_item.sceneBoundingRect().height()) / 2
-        self.svg_item.setPos(self.rect().x() + x_offset, self.rect().y() + y_offset)
-        self.svg_item.setGraphicsEffect(self.colorizer)
-        self.setFlag(QGraphicsItem.ItemIsMovable, enabled=True)
-        self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
-        self.setFlag(QGraphicsItem.ItemIsFocusable, enabled=True)
-        self.setFlag(QGraphicsItem.ItemSendsScenePositionChanges, enabled=True)
-        self.setAcceptHoverEvents(True)
-        self.setCursor(Qt.PointingHandCursor)
-        # Set exclamation and rank icons position
-        self.exclamation_icon.setPos(self.rect().topRight() - self.exclamation_icon.sceneBoundingRect().topRight())
-        self.rank_icon.setPos(self.rect().topLeft())
-
-    def name(self):
-        """Returns name of the item that is represented by this icon."""
-        return self._project_item.name
-
-    def update_name_item(self, new_name):
-        """Set a new text to name item. Used when a project item is renamed."""
-        self.name_item.setText(new_name)
-        self.set_name_attributes()
-
-    def set_name_attributes(self):
-        """Set name QGraphicsSimpleTextItem attributes (font, size, position, etc.)"""
-        # Set font size and style
-        font = self.name_item.font()
-        font.setPointSize(self.text_font_size)
-        font.setBold(True)
-        self.name_item.setFont(font)
-        # Set name item position (centered on top of the master icon)
-        name_width = self.name_item.boundingRect().width()
-        name_height = self.name_item.boundingRect().height()
-        self.name_item.setPos(
-            self.rect().x() + self.rect().width() / 2 - name_width / 2, self.rect().y() - name_height - 4
-        )
-
-    def conn_button(self, position="left"):
-        """Returns items connector button (QWidget)."""
-        return self.connectors.get(position, self.connectors["left"])
-
-    def outgoing_links(self):
-        return [l for conn in self.connectors.values() for l in conn.outgoing_links()]
-
-    def incoming_links(self):
-        return [l for conn in self.connectors.values() for l in conn.incoming_links()]
-
-    def hoverEnterEvent(self, event):
-        """Sets a drop shadow effect to icon when mouse enters its boundaries.
-
-        Args:
-            event (QGraphicsSceneMouseEvent): Event
-        """
-        self.prepareGeometryChange()
-        self.graphicsEffect().setEnabled(True)
-        event.accept()
-
-    def hoverLeaveEvent(self, event):
-        """Disables the drop shadow when mouse leaves icon boundaries.
-
-        Args:
-            event (QGraphicsSceneMouseEvent): Event
-        """
-        self.prepareGeometryChange()
-        self.graphicsEffect().setEnabled(False)
-        event.accept()
-
-    def mousePressEvent(self, event):
-        super().mousePressEvent(event)
-        self.selected_icons = set(x for x in self.scene().selectedItems() if isinstance(x, ProjectItemIcon))
-        for icon in self.selected_icons:
-            icon._previous_pos = icon.scenePos()
-
-    def mouseMoveEvent(self, event):
-        """Moves icon(s) while the mouse button is pressed.
-        Update links that are connected to selected icons.
-
-        Args:
-            event (QGraphicsSceneMouseEvent): Event
-        """
-        super().mouseMoveEvent(event)
-        self.update_links_geometry()
-
-    def update_links_geometry(self):
-        """Updates geometry of connected links to reflect this item's most recent position."""
-        links = set(link for icon in self.selected_icons for conn in icon.connectors.values() for link in conn.links)
-        for link in links:
-            link.update_geometry()
-
-    def mouseReleaseEvent(self, event):
-        for icon in self.selected_icons:
-            icon._current_pos = icon.scenePos()
-        # pylint: disable=undefined-variable
-        if (self._current_pos - self._previous_pos).manhattanLength() > qApp.startDragDistance():
-            self._toolbox.undo_stack.push(MoveIconCommand(self))
-        super().mouseReleaseEvent(event)
-
-    def shrink_scene_if_needed(self):
-        if self._moved_on_scene:
-            self._moved_on_scene = False
-            scene = self.scene()
-            scene.shrink_if_needed()
-            scene.item_move_finished.emit(self)
-
-    def contextMenuEvent(self, event):
-        """Show item context menu.
-
-        Args:
-            event (QGraphicsSceneMouseEvent): Mouse event
-        """
-        self.scene().clearSelection()
-        self.setSelected(True)
-        self._toolbox.show_item_image_context_menu(event.screenPos(), self.name())
-
-    def keyPressEvent(self, event):
-        """Handles deleting and rotating the selected
-        item when dedicated keys are pressed.
-
-        Args:
-            event (QKeyEvent): Key event
-        """
-        if event.key() == Qt.Key_Delete and self.isSelected():
-            self._project_item._project.remove_item(self.name())
-            event.accept()
-        elif event.key() == Qt.Key_R and self.isSelected():
-            # TODO:
-            # 1. Change name item text direction when rotating
-            # 2. Save rotation into project file
-            rect = self.mapToScene(self.boundingRect()).boundingRect()
-            center = rect.center()
-            t = QTransform()
-            t.translate(center.x(), center.y())
-            t.rotate(90)
-            t.translate(-center.x(), -center.y())
-            self.setPos(t.map(self.pos()))
-            self.setRotation(self.rotation() + 90)
-            links = set(lnk for conn in self.connectors.values() for lnk in conn.links)
-            for link in links:
-                link.update_geometry()
-            event.accept()
-        else:
-            super().keyPressEvent(event)
-
-    def itemChange(self, change, value):
-        """
-        Reacts to item removal and position changes.
-
-        In particular, destroys the drop shadow effect when the items is removed from a scene
-        and keeps track of item's movements on the scene.
-
-        Args:
-            change (GraphicsItemChange): a flag signalling the type of the change
-            value: a value related to the change
-
-        Returns:
-             Whatever super() does with the value parameter
-        """
-        if change == QGraphicsItem.ItemScenePositionHasChanged:
-            self._moved_on_scene = True
-        elif change == QGraphicsItem.GraphicsItemChange.ItemSceneChange and value is None:
-            self.prepareGeometryChange()
-            self.setGraphicsEffect(None)
-        return super().itemChange(change, value)
-
-    def show_item_info(self):
-        """Update GUI to show the details of the selected item."""
-        ind = self._toolbox.project_item_model.find_item(self.name())
-        self._toolbox.ui.treeView_project.setCurrentIndex(ind)
-
-
 class LinkBase(QGraphicsPathItem):
     """Base class for Link and LinkDrawer.
 
-    Mainly provides the `update_geometry` method for 'drawing' the link on the scene.
+    Mainly provides the ``update_geometry`` method for 'drawing' the link on the scene.
     """
 
     def __init__(self, toolbox):
@@ -534,6 +530,9 @@ class LinkBase(QGraphicsPathItem):
     def dst_center(self):
         """Returns the center point of the destination rectangle."""
         return self.dst_rect.center()
+
+    def moveBy(self, _dx, _dy):
+        """Does nothing. This item is not moved the regular way, but follows the ConnectorButtons it connects."""
 
     def update_geometry(self):
         """Updates geometry."""
@@ -877,7 +876,7 @@ class LinkDrawer(LinkBase):
         self.src_connector = src_connector
         self.src_connector.scene().addItem(self)
         self.src_connector.set_friend_connectors_enabled(False)
-        self.tip = src_connector.rect().center()
+        self.tip = src_connector.sceneBoundingRect().center()
         self.magic_number = 0.625 * self.src_rect.width()
         self.setBrush(QBrush(QColor(255, 0, 255, 204)))
         self.setPen(QPen(Qt.black, 0.5))
@@ -961,5 +960,7 @@ class LinkDrawer(LinkBase):
         disabled because of it.
         """
         self.src_connector.set_friend_connectors_enabled(True)
-        self.scene().removeItem(self)
+        scene = self.scene()
+        scene.removeItem(self)
+        scene.item_removed.emit(self)
         self.hide()

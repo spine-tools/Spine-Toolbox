@@ -24,11 +24,7 @@ from ...widgets.custom_qtableview import CopyPasteTableView
 from ...helpers import busy_effect
 
 
-class ManageItemsDialog(QDialog):
-    """A dialog with a CopyPasteTableView and a QDialogButtonBox. Base class for all
-    dialogs to query user's preferences for adding/editing/managing data items.
-    """
-
+class ManageItemsDialogBase(QDialog):
     def __init__(self, parent, db_mngr):
         """Init class.
 
@@ -38,8 +34,7 @@ class ManageItemsDialog(QDialog):
         """
         super().__init__(parent)
         self.db_mngr = db_mngr
-        self.model = None
-        self.table_view = CopyPasteTableView(self)
+        self.table_view = self.make_table_view()
         self.table_view.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
         self.table_view.horizontalHeader().setStretchLastSection(True)
         self.table_view.verticalHeader().setDefaultSectionSize(parent.default_row_height)
@@ -50,13 +45,13 @@ class ManageItemsDialog(QDialog):
         layout.addWidget(self.button_box)
         self.setAttribute(Qt.WA_DeleteOnClose)
 
+    def make_table_view(self):
+        return CopyPasteTableView(self)
+
     def connect_signals(self):
         """Connect signals to slots."""
         self.button_box.accepted.connect(self.accept)
         self.button_box.rejected.connect(self.reject)
-        self.table_view.itemDelegate().data_committed.connect(self.set_model_data)
-        self.model.dataChanged.connect(self._handle_model_data_changed)
-        self.model.modelReset.connect(self._handle_model_reset)
 
     def resize_window_to_columns(self, height=None):
         if height is None:
@@ -70,6 +65,29 @@ class ManageItemsDialog(QDialog):
             + self.table_view.horizontalHeader().length(),
             height,
         )
+
+
+class ManageItemsDialog(ManageItemsDialogBase):
+    """A dialog with a CopyPasteTableView and a QDialogButtonBox. Base class for all
+    dialogs to query user's preferences for adding/editing/managing data items.
+    """
+
+    def __init__(self, parent, db_mngr):
+        """Init class.
+
+        Args:
+            parent (DataStoreForm): data store widget
+            db_mngr (SpineDBManager)
+        """
+        super().__init__(parent, db_mngr)
+        self.model = None
+
+    def connect_signals(self):
+        """Connect signals to slots."""
+        super().connect_signals()
+        self.table_view.itemDelegate().data_committed.connect(self.set_model_data)
+        self.model.dataChanged.connect(self._handle_model_data_changed)
+        self.model.modelReset.connect(self._handle_model_reset)
 
     @Slot("QModelIndex", "QModelIndex", "QVector")
     def _handle_model_data_changed(self, top_left, bottom_right, roles):

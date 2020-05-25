@@ -19,19 +19,20 @@ Contains TabularViewMixin class.
 from itertools import product
 from collections import namedtuple
 from PySide2.QtCore import Qt, Slot, QTimer
-from .custom_menus import TabularViewFilterMenu, PivotTableModelMenu, PivotTableHorizontalHeaderMenu
+from PySide2.QtWidgets import QActionGroup
+from .custom_menus import TabularViewFilterMenu
 from .tabular_view_header_widget import TabularViewHeaderWidget
-from .custom_delegates import PivotTableDelegate
 from ...helpers import fix_name_ambiguity, busy_effect
-from ...mvcmodels.pivot_table_models import IndexId, PivotTableSortFilterProxy, PivotTableModel
-from ...mvcmodels.frozen_table_model import FrozenTableModel
+from ..mvcmodels.pivot_table_models import IndexId, PivotTableSortFilterProxy, PivotTableModel
+from ..mvcmodels.frozen_table_model import FrozenTableModel
+from spinetoolbox.widgets.custom_qwidgets import TitleWidgetAction
 
 
 class TabularViewMixin:
     """Provides the pivot table and its frozen table for the DS form."""
 
     _PARAMETER_VALUE = "Parameter value"
-    _INDEX_EXPANSION = "Indexed parameter expansion"
+    _INDEX_EXPANSION = "Index expansion"
     _RELATIONSHIP = "Relationship"
 
     _PARAMETER = "parameter"
@@ -40,37 +41,32 @@ class TabularViewMixin:
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # current state of ui
+        self.current = None  # Current QModelIndex selected in one of the entity tree views
         self.current_class_type = None
         self.current_class_id = None
         self.current_input_type = self._PARAMETER_VALUE
         self.filter_menus = {}
         self.class_pivot_preferences = {}
         self.PivotPreferences = namedtuple("PivotPreferences", ["index", "columns", "frozen", "frozen_value"])
-        self.ui.comboBox_pivot_table_input_type.addItems(
-            [self._PARAMETER_VALUE, self._INDEX_EXPANSION, self._RELATIONSHIP]
-        )
+        title_action = TitleWidgetAction("Input type", self)
+        self.ui.menuPivot_table.addAction(title_action)
+        self.input_type_action_group = QActionGroup(self)
+        actions = {
+            input_type: self.input_type_action_group.addAction(input_type)
+            for input_type in [self._PARAMETER_VALUE, self._INDEX_EXPANSION, self._RELATIONSHIP]
+        }
+        for action in actions.values():
+            action.setCheckable(True)
+            self.ui.menuPivot_table.addAction(action)
+        actions[self._PARAMETER_VALUE].setChecked(True)
         self.pivot_table_proxy = PivotTableSortFilterProxy()
         self.pivot_table_model = PivotTableModel(self)
         self.pivot_table_proxy.setSourceModel(self.pivot_table_model)
         self.frozen_table_model = FrozenTableModel(self)
         self.ui.pivot_table.setModel(self.pivot_table_proxy)
+        self.ui.pivot_table.connect_data_store_form(self)
         self.ui.frozen_table.setModel(self.frozen_table_model)
-        self.ui.pivot_table.setContextMenuPolicy(Qt.CustomContextMenu)
-        self.ui.pivot_table.verticalHeader().setDefaultSectionSize(self.default_row_height)
         self.ui.frozen_table.verticalHeader().setDefaultSectionSize(self.default_row_height)
-        self.ui.pivot_table.horizontalHeader().setResizeContentsPrecision(self.visible_rows)
-        self.pivot_table_menu = PivotTableModelMenu(self)
-        self._pivot_table_horizontal_header_menu = PivotTableHorizontalHeaderMenu(
-            self.pivot_table_proxy, self.ui.pivot_table
-        )
-
-    def setup_delegates(self):
-        """Sets delegates for tables."""
-        super().setup_delegates()
-        delegate = PivotTableDelegate(self)
-        self.ui.pivot_table.setItemDelegate(delegate)
-        delegate.parameter_value_editor_requested.connect(self.show_parameter_value_editor)
-        delegate.data_committed.connect(self._set_model_data)
 
     def add_menu_actions(self):
         """Adds toggle view actions to View menu."""
@@ -82,20 +78,14 @@ class TabularViewMixin:
     def connect_signals(self):
         """Connects signals to slots."""
         super().connect_signals()
-        self.ui.treeView_object.selectionModel().selectionChanged.connect(self._handle_entity_tree_selection_changed)
-        self.ui.treeView_relationship.selectionModel().selectionChanged.connect(
-            self._handle_entity_tree_selection_changed
-        )
-        self.ui.pivot_table.customContextMenuRequested.connect(self.pivot_table_menu.request_menu)
-        self.ui.pivot_table.horizontalHeader().customContextMenuRequested.connect(
-            self._pivot_table_horizontal_header_menu.request_menu
-        )
+        self.ui.treeView_object.selectionModel().currentChanged.connect(self._handle_entity_tree_current_changed)
+        self.ui.treeView_relationship.selectionModel().currentChanged.connect(self._handle_entity_tree_current_changed)
         self.pivot_table_model.modelReset.connect(self.make_pivot_headers)
         self.ui.pivot_table.horizontalHeader().header_dropped.connect(self.handle_header_dropped)
         self.ui.pivot_table.verticalHeader().header_dropped.connect(self.handle_header_dropped)
         self.ui.frozen_table.header_dropped.connect(self.handle_header_dropped)
         self.ui.frozen_table.selectionModel().currentChanged.connect(self.change_frozen_value)
-        self.ui.comboBox_pivot_table_input_type.currentTextChanged.connect(self.do_reload_pivot_table)
+        self.input_type_action_group.triggered.connect(self.do_reload_pivot_table)
         self.ui.dockWidget_pivot_table.visibilityChanged.connect(self._handle_pivot_table_visibility_changed)
         self.ui.dockWidget_frozen_table.visibilityChanged.connect(self._handle_frozen_table_visibility_changed)
 
@@ -130,16 +120,15 @@ class TabularViewMixin:
         return fix_name_ambiguity(relationship_class["object_class_name_list"].split(","))
 
     @staticmethod
-    def _is_class_index(index, class_type):
+    def _is_class_index(index):
         """Returns whether or not the given tree index is a class index.
 
         Args:
             index (QModelIndex): index from object or relationship tree
-            class_type (str)
         Returns:
             bool
         """
-        return index.column() == 0 and index.model().item_from_index(index).item_type == class_type
+        return index.column() == 0 and not index.parent().parent().isValid()
 
     @Slot(bool)
     def _handle_pivot_table_visibility_changed(self, visible):
@@ -153,10 +142,10 @@ class TabularViewMixin:
         if visible:
             self.ui.dockWidget_pivot_table.show()
 
-    @Slot("QItemSelection", "QItemSelection")
-    def _handle_entity_tree_selection_changed(self, selected, deselected):
+    @Slot("QModelIndex", "QModelIndex")
+    def _handle_entity_tree_current_changed(self, current, previous):
         if self.ui.dockWidget_pivot_table.isVisible():
-            self.reload_pivot_table()
+            self.reload_pivot_table(current=current)
             self.reload_frozen_table()
 
     def _get_entities(self, class_id=None, class_type=None):
@@ -359,35 +348,32 @@ class TabularViewMixin:
         return rows, columns, frozen, frozen_value
 
     @Slot(str)
-    def reload_pivot_table(self, text=""):
+    def reload_pivot_table(self, current=None, text=""):
         """Updates current class (type and id) and reloads pivot table for it."""
-        if self.ui.treeView_object.selectionModel().hasSelection():
-            tree_view = self.ui.treeView_object
-            class_type = "object class"
-        elif self.ui.treeView_relationship.selectionModel().hasSelection():
-            tree_view = self.ui.treeView_relationship
-            class_type = "relationship class"
-        else:
+        if current is not None:
+            self.current = current
+        if self.current is None:
             return
-        selected = tree_view.selectionModel().currentIndex()
-        if self._is_class_index(selected, class_type):
-            class_id = selected.model().item_from_index(selected).db_map_id(self.db_map)
+        if self._is_class_index(self.current):
+            item = self.current.model().item_from_index(self.current)
+            class_id = item.db_map_id(self.db_map)
             if self.current_class_id == class_id:
                 return
-            self.current_class_type = class_type
+            self.current_class_type = item.item_type
             self.current_class_id = class_id
             self.do_reload_pivot_table()
 
     @busy_effect
-    @Slot("QString")
-    def do_reload_pivot_table(self, input_type=None):
+    @Slot("QAction")
+    def do_reload_pivot_table(self, action=None):
         """Reloads pivot table.
         """
         if self.current_class_id is None:
             return
         qApp.processEvents()  # pylint: disable=undefined-variable
-        if input_type is None:
-            input_type = self.ui.comboBox_pivot_table_input_type.currentText()
+        if action is None:
+            action = self.input_type_action_group.checkedAction()
+        input_type = action.text()
         self.current_input_type = input_type
         if self.current_input_type == self._RELATIONSHIP and self.current_class_type != "relationship class":
             self.clear_pivot_table()

@@ -24,48 +24,163 @@ from ..config import DEFAULT_WORK_DIR, SETTINGS_SS
 from ..graphics_items import Link
 
 
-class SettingsWidget(QWidget):
-    """A widget to change user's preferred settings.
-
-    Attributes:
-        toolbox (ToolboxUI): Parent widget.
-    """
-
-    def __init__(self, toolbox):
+class SettingsWidgetBase(QWidget):
+    def __init__(self, qsettings):
         """Initialize class."""
         # FIXME: setting the parent to toolbox causes the checkboxes in the
         # groupBox_general to not layout correctly, this might be caused elsewhere?
-        from ..ui import settings  # pylint: disable=import-outside-toplevel
+        from ..ui.settings import Ui_SettingsForm  # pylint: disable=import-outside-toplevel
 
         super().__init__(parent=None)  # Do not set parent. Uses own stylesheet.
-        self._toolbox = toolbox  # QWidget parent
-        self._project = self._toolbox.project()
-        self._qsettings = self._toolbox.qsettings()
-        self.orig_work_dir = ""  # Work dir when this widget was opened
-        self.orig_python_env = ""  # Used in determining if Python environment was changed
-        # Initial scene bg color. Is overridden immediately in read_settings() if it exists in qSettings
-        self.bg_color = self._toolbox.ui.graphicsView.scene().bg_color
         # Set up the ui from Qt Designer files
-        self.ui = settings.Ui_SettingsForm()
+        self._qsettings = qsettings
+        self.ui = Ui_SettingsForm()
         self.ui.setupUi(self)
         self.setWindowFlags(Qt.Window | Qt.CustomizeWindowHint)
-        for item in self.ui.listWidget.findItems("*", Qt.MatchWildcard):
-            item.setSizeHint(QSize(128, 44))
-        # Ensure this window gets garbage-collected when closed
-        self.setAttribute(Qt.WA_DeleteOnClose)
         self.setStyleSheet(SETTINGS_SS)
         self.ui.pushButton_ok.setDefault(True)
         self._mousePressPos = None
         self._mouseReleasePos = None
         self._mouseMovePos = None
+
+    def connect_signals(self):
+        """Connect signals."""
+        self.ui.pushButton_ok.clicked.connect(self.handle_ok_clicked)
+        self.ui.pushButton_cancel.clicked.connect(self.close)
+
+    def keyPressEvent(self, e):
+        """Close settings form when escape key is pressed.
+
+        Args:
+            e (QKeyEvent): Received key press event.
+        """
+        if e.key() == Qt.Key_Escape:
+            self.close()
+
+    def mousePressEvent(self, e):
+        """Save mouse position at the start of dragging.
+
+        Args:
+            e (QMouseEvent): Mouse event
+        """
+        self._mousePressPos = e.globalPos()
+        self._mouseMovePos = e.globalPos()
+        super().mousePressEvent(e)
+
+    def mouseReleaseEvent(self, e):
+        """Save mouse position at the end of dragging.
+
+        Args:
+            e (QMouseEvent): Mouse event
+        """
+        if self._mousePressPos is not None:
+            self._mouseReleasePos = e.globalPos()
+            moved = self._mouseReleasePos - self._mousePressPos
+            if moved.manhattanLength() > 3:
+                e.ignore()
+                return
+
+    def mouseMoveEvent(self, e):
+        """Moves the window when mouse button is pressed and mouse cursor is moved.
+
+        Args:
+            e (QMouseEvent): Mouse event
+        """
+        currentpos = self.pos()
+        globalpos = e.globalPos()
+        if not self._mouseMovePos:
+            e.ignore()
+            return
+        diff = globalpos - self._mouseMovePos
+        newpos = currentpos + diff
+        self.move(newpos)
+        self._mouseMovePos = globalpos
+
+
+class DataStoreSettingsMixin:
+    def read_settings(self):
+        """Read saved settings from app QSettings instance and update UI to display them."""
+        commit_at_exit = int(self._qsettings.value("appSettings/commitAtExit", defaultValue="1"))  # tri-state
+        sticky_selection = self._qsettings.value("appSettings/stickySelection", defaultValue="false")
+        smooth_zoom = self._qsettings.value("appSettings/smoothEntityGraphZoom", defaultValue="false")
+        smooth_rotation = self._qsettings.value("appSettings/smoothEntityGraphRotation", defaultValue="false")
+        relationship_items_follow = self._qsettings.value("appSettings/relationshipItemsFollow", defaultValue="true")
+        if commit_at_exit == 0:  # Not needed but makes the code more readable.
+            self.ui.checkBox_commit_at_exit.setCheckState(Qt.Unchecked)
+        elif commit_at_exit == 1:
+            self.ui.checkBox_commit_at_exit.setCheckState(Qt.PartiallyChecked)
+        else:  # commit_at_exit == "2":
+            self.ui.checkBox_commit_at_exit.setCheckState(Qt.Checked)
+        if sticky_selection == "true":
+            self.ui.checkBox_object_tree_sticky_selection.setCheckState(Qt.Checked)
+        if smooth_zoom == "true":
+            self.ui.checkBox_smooth_entity_graph_zoom.setCheckState(Qt.Checked)
+        if smooth_rotation == "true":
+            self.ui.checkBox_smooth_entity_graph_rotation.setCheckState(Qt.Checked)
+        if relationship_items_follow == "true":
+            self.ui.checkBox_relationship_items_follow.setCheckState(Qt.Checked)
+
+    @Slot()
+    def handle_ok_clicked(self):
+        """Get selections and save them to persistent memory."""
+        commit_at_exit = str(int(self.ui.checkBox_commit_at_exit.checkState()))
+        self._qsettings.setValue("appSettings/commitAtExit", commit_at_exit)
+        sticky_selection = "true" if int(self.ui.checkBox_object_tree_sticky_selection.checkState()) else "false"
+        self._qsettings.setValue("appSettings/stickySelection", sticky_selection)
+        smooth_zoom = "true" if int(self.ui.checkBox_smooth_entity_graph_zoom.checkState()) else "false"
+        self._qsettings.setValue("appSettings/smoothEntityGraphZoom", smooth_zoom)
+        smooth_rotation = "true" if int(self.ui.checkBox_smooth_entity_graph_rotation.checkState()) else "false"
+        self._qsettings.setValue("appSettings/smoothEntityGraphRotation", smooth_rotation)
+        relationship_items_follow = "true" if int(self.ui.checkBox_relationship_items_follow.checkState()) else "false"
+        self._qsettings.setValue("appSettings/relationshipItemsFollow", relationship_items_follow)
+
+
+class DataStoreSettingsWidget(DataStoreSettingsMixin, SettingsWidgetBase):
+    """A widget to change user's preferred settings, but only for the Data store form.
+    """
+
+    def __init__(self, qsettings):
+        """Initialize class."""
+        super().__init__(qsettings)
+        self.ui.stackedWidget.setCurrentWidget(self.ui.Views)
+        self.ui.listWidget.hide()
+        self.connect_signals()
+        self.read_settings()
+
+    @Slot()
+    def handle_ok_clicked(self):
+        """Get selections and save them to persistent memory."""
+        super().handle_ok_clicked()
+        self.close()
+
+
+class SettingsWidget(DataStoreSettingsMixin, SettingsWidgetBase):
+    """A widget to change user's preferred settings."""
+
+    def __init__(self, toolbox):
+        """Initialize class.
+
+        Args:
+            toolbox (ToolboxUI): Parent widget.
+        """
+        super().__init__(toolbox.qsettings())
+        self._toolbox = toolbox  # QWidget parent
+        self._project = self._toolbox.project()
+        self.orig_work_dir = ""  # Work dir when this widget was opened
+        self.orig_python_env = ""  # Used in determining if Python environment was changed
+        # Initial scene bg color. Is overridden immediately in read_settings() if it exists in qSettings
+        self.bg_color = self._toolbox.ui.graphicsView.scene().bg_color
+        for item in self.ui.listWidget.findItems("*", Qt.MatchWildcard):
+            item.setSizeHint(QSize(128, 44))
+        # Ensure this window gets garbage-collected when closed
+        self.setAttribute(Qt.WA_DeleteOnClose)
         self.connect_signals()
         self.read_settings()
         self.read_project_settings()
 
     def connect_signals(self):
         """Connect signals."""
-        self.ui.pushButton_ok.clicked.connect(self.handle_ok_clicked)
-        self.ui.pushButton_cancel.clicked.connect(self.close)
+        super().connect_signals()
         self.ui.toolButton_browse_gams.clicked.connect(self.browse_gams_path)
         self.ui.toolButton_browse_julia.clicked.connect(self.browse_julia_path)
         self.ui.toolButton_browse_julia_project.clicked.connect(self.browse_julia_project_path)
@@ -73,10 +188,11 @@ class SettingsWidget(QWidget):
         self.ui.toolButton_browse_work.clicked.connect(self.browse_work_path)
         self.ui.toolButton_bg_color.clicked.connect(self.show_color_dialog)
         self.ui.radioButton_bg_grid.clicked.connect(self.update_scene_bg)
+        self.ui.radioButton_bg_tree.clicked.connect(self.update_scene_bg)
         self.ui.radioButton_bg_solid.clicked.connect(self.update_scene_bg)
         self.ui.checkBox_use_curved_links.clicked.connect(self.update_links_geometry)
 
-    @Slot(bool, name="browse_gams_path")
+    @Slot(bool)
     def browse_gams_path(self, checked=False):
         """Open file browser where user can select a GAMS program."""
         # noinspection PyCallByClass, PyArgumentList
@@ -107,7 +223,7 @@ class SettingsWidget(QWidget):
         self.ui.lineEdit_gams_path.setText(answer[0])
         return
 
-    @Slot(bool, name="browse_julia_path")
+    @Slot(bool)
     def browse_julia_path(self, checked=False):
         """Open file browser where user can select a Julia executable (i.e. julia.exe on Windows)."""
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
@@ -138,7 +254,7 @@ class SettingsWidget(QWidget):
         self.ui.lineEdit_julia_path.setText(answer[0])
         return
 
-    @Slot(bool, name="browse_julia_project_path")
+    @Slot(bool)
     def browse_julia_project_path(self, checked=False):
         """Open file browser where user can select a Julia project path."""
         answer = QFileDialog.getExistingDirectory(self, "Select Julia project directory", os.path.abspath("C:\\"))
@@ -146,7 +262,7 @@ class SettingsWidget(QWidget):
             return
         self.ui.lineEdit_julia_project_path.setText(answer)
 
-    @Slot(bool, name="browse_python_path")
+    @Slot(bool)
     def browse_python_path(self, checked=False):
         """Open file browser where user can select a python interpreter (i.e. python.exe on Windows)."""
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
@@ -171,7 +287,7 @@ class SettingsWidget(QWidget):
         self.ui.lineEdit_python_path.setText(answer[0])
         return
 
-    @Slot(bool, name="browse_work_path")
+    @Slot(bool)
     def browse_work_path(self, checked=False):
         """Open file browser where user can select the path to wanted work directory."""
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
@@ -181,7 +297,7 @@ class SettingsWidget(QWidget):
         selected_path = os.path.abspath(answer)
         self.ui.lineEdit_work_dir.setText(selected_path)
 
-    @Slot(bool, name="show_color_dialog")
+    @Slot(bool)
     def show_color_dialog(self, checked=False):
         """Let user pick the bg color.
 
@@ -192,7 +308,6 @@ class SettingsWidget(QWidget):
         color = QColorDialog.getColor(initial=self.bg_color)
         if not color.isValid():
             return  # Canceled
-        self.ui.radioButton_bg_solid.setChecked(True)
         self.bg_color = color
         self.update_bg_color()
 
@@ -213,11 +328,12 @@ class SettingsWidget(QWidget):
             checked (boolean): Toggle state
         """
         if self.ui.radioButton_bg_grid.isChecked():
-            self._toolbox.ui.graphicsView.scene().set_bg_grid(True)
-            self._toolbox.ui.graphicsView.scene().update()
+            self._toolbox.ui.graphicsView.scene().set_bg_choice("grid")
+        elif self.ui.radioButton_bg_tree.isChecked():
+            self._toolbox.ui.graphicsView.scene().set_bg_choice("tree")
         elif self.ui.radioButton_bg_solid.isChecked():
-            self._toolbox.ui.graphicsView.scene().set_bg_grid(False)
-            self._toolbox.ui.graphicsView.scene().update()
+            self._toolbox.ui.graphicsView.scene().set_bg_choice("solid")
+        self._toolbox.ui.graphicsView.scene().update()
 
     @Slot(bool)
     def update_links_geometry(self, checked=False):
@@ -229,6 +345,7 @@ class SettingsWidget(QWidget):
         """Read saved settings from app QSettings instance and update UI to display them."""
         # checkBox check state 0: unchecked, 1: partially checked, 2: checked
         # QSettings value() method returns a str even if a boolean was stored
+        super().read_settings()
         open_previous_project = int(self._qsettings.value("appSettings/openPreviousProject", defaultValue="0"))
         show_exit_prompt = int(self._qsettings.value("appSettings/showExitPrompt", defaultValue="2"))
         save_at_exit = int(self._qsettings.value("appSettings/saveAtExit", defaultValue="1"))  # tri-state
@@ -236,9 +353,8 @@ class SettingsWidget(QWidget):
         delete_data = int(self._qsettings.value("appSettings/deleteData", defaultValue="0"))
         smooth_zoom = self._qsettings.value("appSettings/smoothZoom", defaultValue="false")
         curved_links = self._qsettings.value("appSettings/curvedLinks", defaultValue="false")
-        relationship_items_follow = self._qsettings.value("appSettings/relationshipItemsFollow", defaultValue="true")
         data_flow_anim_dur = int(self._qsettings.value("appSettings/dataFlowAnimationDuration", defaultValue="100"))
-        bg_grid = self._qsettings.value("appSettings/bgGrid", defaultValue="false")
+        bg_choice = self._qsettings.value("appSettings/bgChoice", defaultValue="solid")
         bg_color = self._qsettings.value("appSettings/bgColor", defaultValue="false")
         gams_path = self._qsettings.value("appSettings/gamsPath", defaultValue="")
         use_embedded_julia = self._qsettings.value("appSettings/useEmbeddedJulia", defaultValue="2")
@@ -246,9 +362,6 @@ class SettingsWidget(QWidget):
         julia_project_path = self._qsettings.value("appSettings/juliaProjectPath", defaultValue="")
         use_embedded_python = self._qsettings.value("appSettings/useEmbeddedPython", defaultValue="0")
         python_path = self._qsettings.value("appSettings/pythonPath", defaultValue="")
-        commit_at_exit = int(self._qsettings.value("appSettings/commitAtExit", defaultValue="1"))  # tri-state
-        sticky_selection = self._qsettings.value("appSettings/stickySelection", defaultValue="false")
-        only_selected_objects = self._qsettings.value("appSettings/onlySelectedObjects", defaultValue="false")
         work_dir = self._qsettings.value("appSettings/workDir", defaultValue="")
         if open_previous_project == 2:
             self.ui.checkBox_open_previous_project.setCheckState(Qt.Checked)
@@ -268,11 +381,11 @@ class SettingsWidget(QWidget):
             self.ui.checkBox_use_smooth_zoom.setCheckState(Qt.Checked)
         if curved_links == "true":
             self.ui.checkBox_use_curved_links.setCheckState(Qt.Checked)
-        if relationship_items_follow == "true":
-            self.ui.checkBox_relationship_items_follow.setCheckState(Qt.Checked)
         self.ui.horizontalSlider_data_flow_animation_duration.setValue(data_flow_anim_dur)
-        if bg_grid == "true":
+        if bg_choice == "grid":
             self.ui.radioButton_bg_grid.setChecked(True)
+        elif bg_choice == "tree":
+            self.ui.radioButton_bg_tree.setChecked(True)
         else:
             self.ui.radioButton_bg_solid.setChecked(True)
         if bg_color == "false":
@@ -280,18 +393,6 @@ class SettingsWidget(QWidget):
         else:
             self.bg_color = bg_color
         self.update_bg_color()
-        if commit_at_exit == 0:  # Not needed but makes the code more readable.
-            self.ui.checkBox_commit_at_exit.setCheckState(Qt.Unchecked)
-        elif commit_at_exit == 1:
-            self.ui.checkBox_commit_at_exit.setCheckState(Qt.PartiallyChecked)
-        else:  # commit_at_exit == "2":
-            self.ui.checkBox_commit_at_exit.setCheckState(Qt.Checked)
-        if sticky_selection == "true":
-            self.ui.checkBox_object_tree_sticky_selection.setCheckState(Qt.Checked)
-        if only_selected_objects == "true":
-            self.ui.radioButton_relationship_only_selected.setChecked(True)
-        else:
-            self.ui.radioButton_relationship_at_least_one_selected.setChecked(True)
         self.ui.lineEdit_gams_path.setText(gams_path)
         if use_embedded_julia == "2":
             self.ui.checkBox_use_embedded_julia.setCheckState(Qt.Checked)
@@ -320,6 +421,7 @@ class SettingsWidget(QWidget):
         # checkBox check state 0: unchecked, 1: partially checked, 2: checked
         # checkBox check states are casted from integers to string because of Linux
         # General
+        super().handle_ok_clicked()
         open_prev_proj = str(int(self.ui.checkBox_open_previous_project.checkState()))
         self._qsettings.setValue("appSettings/openPreviousProject", open_prev_proj)
         exit_prompt = str(int(self.ui.checkBox_exit_prompt.checkState()))
@@ -334,12 +436,15 @@ class SettingsWidget(QWidget):
         self._qsettings.setValue("appSettings/smoothZoom", smooth_zoom)
         curved_links = "true" if int(self.ui.checkBox_use_curved_links.checkState()) else "false"
         self._qsettings.setValue("appSettings/curvedLinks", curved_links)
-        relationship_items_follow = "true" if int(self.ui.checkBox_relationship_items_follow.checkState()) else "false"
-        self._qsettings.setValue("appSettings/relationshipItemsFollow", relationship_items_follow)
         data_flow_anim_dur = str(self.ui.horizontalSlider_data_flow_animation_duration.value())
         self._qsettings.setValue("appSettings/dataFlowAnimationDuration", data_flow_anim_dur)
-        bg_grid = "true" if self.ui.radioButton_bg_grid.isChecked() else "false"
-        self._qsettings.setValue("appSettings/bgGrid", bg_grid)
+        if self.ui.radioButton_bg_grid.isChecked():
+            bg_choice = "grid"
+        elif self.ui.radioButton_bg_tree.isChecked():
+            bg_choice = "tree"
+        else:
+            bg_choice = "solid"
+        self._qsettings.setValue("appSettings/bgChoice", bg_choice)
         self._qsettings.setValue("appSettings/bgColor", self.bg_color)
         # GAMS
         gams_path = self.ui.lineEdit_gams_path.text().strip()
@@ -364,13 +469,6 @@ class SettingsWidget(QWidget):
         if not self.file_is_valid(python_path, "Invalid Python Interpreter"):  # Check it's a file and it exists
             return
         self._qsettings.setValue("appSettings/pythonPath", python_path)
-        # Data Store Views
-        commit_at_exit = str(int(self.ui.checkBox_commit_at_exit.checkState()))
-        self._qsettings.setValue("appSettings/commitAtExit", commit_at_exit)
-        sticky_selection = "true" if int(self.ui.checkBox_object_tree_sticky_selection.checkState()) else "false"
-        self._qsettings.setValue("appSettings/stickySelection", sticky_selection)
-        only_selected_objects = "true" if self.ui.radioButton_relationship_only_selected.isChecked() else "false"
-        self._qsettings.setValue("appSettings/onlySelectedObjects", only_selected_objects)
         # Work directory
         work_dir = self.ui.lineEdit_work_dir.text().strip()
         self._qsettings.setValue("appSettings/workDir", work_dir)
@@ -442,15 +540,6 @@ class SettingsWidget(QWidget):
             return False
         return True
 
-    def keyPressEvent(self, e):
-        """Close settings form when escape key is pressed.
-
-        Args:
-            e (QKeyEvent): Received key press event.
-        """
-        if e.key() == Qt.Key_Escape:
-            self.close()
-
     def closeEvent(self, event=None):
         """Handle close window.
 
@@ -458,11 +547,13 @@ class SettingsWidget(QWidget):
             event (QEvent): Closing event if 'X' is clicked.
         """
         curved_links = self._qsettings.value("appSettings/curvedLinks", defaultValue="false")
-        bg_grid = self._qsettings.value("appSettings/bgGrid", defaultValue="false")
+        bg_choice = self._qsettings.value("appSettings/bgChoice", defaultValue="solid")
         bg_color = self._qsettings.value("appSettings/bgColor", defaultValue="false")
         self.update_links_geometry(curved_links == "true")
-        if bg_grid == "true":
+        if bg_choice == "grid":
             self.ui.radioButton_bg_grid.setChecked(True)
+        elif bg_choice == "tree":
+            self.ui.radioButton_bg_tree.setChecked(True)
         else:
             self.ui.radioButton_bg_solid.setChecked(True)
         self.update_scene_bg()
@@ -473,42 +564,3 @@ class SettingsWidget(QWidget):
         self.update_bg_color()
         if event:
             event.accept()
-
-    def mousePressEvent(self, e):
-        """Save mouse position at the start of dragging.
-
-        Args:
-            e (QMouseEvent): Mouse event
-        """
-        self._mousePressPos = e.globalPos()
-        self._mouseMovePos = e.globalPos()
-        super().mousePressEvent(e)
-
-    def mouseReleaseEvent(self, e):
-        """Save mouse position at the end of dragging.
-
-        Args:
-            e (QMouseEvent): Mouse event
-        """
-        if self._mousePressPos is not None:
-            self._mouseReleasePos = e.globalPos()
-            moved = self._mouseReleasePos - self._mousePressPos
-            if moved.manhattanLength() > 3:
-                e.ignore()
-                return
-
-    def mouseMoveEvent(self, e):
-        """Moves the window when mouse button is pressed and mouse cursor is moved.
-
-        Args:
-            e (QMouseEvent): Mouse event
-        """
-        currentpos = self.pos()
-        globalpos = e.globalPos()
-        if not self._mouseMovePos:
-            e.ignore()
-            return
-        diff = globalpos - self._mouseMovePos
-        newpos = currentpos + diff
-        self.move(newpos)
-        self._mouseMovePos = globalpos

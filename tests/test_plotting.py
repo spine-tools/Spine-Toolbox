@@ -21,7 +21,7 @@ from unittest.mock import Mock, MagicMock, patch
 from PySide2.QtCore import QAbstractTableModel, QModelIndex, Qt
 from PySide2.QtWidgets import QApplication, QAction
 from spinedb_api import from_database, Map, TimeSeries, TimeSeriesVariableResolution
-from spinetoolbox.mvcmodels.pivot_table_models import PARSED_ROLE
+from spinetoolbox.mvcmodels.shared import PARSED_ROLE
 from spinetoolbox.plotting import (
     add_map_plot,
     add_time_series_plot,

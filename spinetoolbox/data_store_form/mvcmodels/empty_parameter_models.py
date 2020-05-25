@@ -16,8 +16,8 @@ Empty models for parameter definitions and values.
 :date:   28.6.2019
 """
 from PySide2.QtCore import Qt
-from ..mvcmodels.empty_row_model import EmptyRowModel
-from ..mvcmodels.parameter_mixins import (
+from ...mvcmodels.empty_row_model import EmptyRowModel
+from .parameter_mixins import (
     FillInParameterNameMixin,
     MakeRelationshipOnTheFlyMixin,
     InferEntityClassIdMixin,
@@ -27,7 +27,7 @@ from ..mvcmodels.parameter_mixins import (
     FillInValueListIdMixin,
 )
 
-from ..helpers import rows_to_row_count_tuples
+from ...helpers import rows_to_row_count_tuples
 
 
 class EmptyParameterModel(EmptyRowModel):
@@ -60,6 +60,11 @@ class EmptyParameterModel(EmptyRowModel):
         return {"object class": "object_class_name", "relationship class": "relationship_class_name"}[
             self.entity_class_type
         ]
+
+    def get_entity_class_id(self, index, db_map):
+        entity_class_name = index.sibling(index.row(), self.header.index(self.entity_class_name_key)).data()
+        entity_class = self.db_mngr.get_item_by_field(db_map, self.entity_class_type, "name", entity_class_name)
+        return entity_class.get("id")
 
     @property
     def can_be_filtered(self):

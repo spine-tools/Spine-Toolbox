@@ -23,9 +23,8 @@ import sys
 from PySide2.QtWidgets import QApplication
 from PySide2.QtCore import QItemSelectionModel
 import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
-from spinetoolbox.data_store_form.widgets.data_store_form import DataStoreForm
 from spinetoolbox.spine_db_manager import SpineDBManager
-from spinetoolbox.mvcmodels.compound_parameter_models import CompoundParameterModel
+from spinetoolbox.data_store_form.mvcmodels.compound_parameter_models import CompoundParameterModel
 from .test_treeViewFormAdd import TestTreeViewFormAddMixin
 from .test_treeViewFormUpdate import TestTreeViewFormUpdateMixin
 from .test_treeViewFormRemove import TestTreeViewFormRemoveMixin

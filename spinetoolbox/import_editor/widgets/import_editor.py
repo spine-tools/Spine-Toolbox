@@ -129,6 +129,7 @@ class ImportEditor(QWidget):
         self._ui.source_preview_widget_stack.setCurrentIndex(loading_message if status else preview_table)
         self._ui.mapper.setDisabled(status)
 
+    @Slot()
     def request_new_tables_from_connector(self):
         """
         Requests new tables data from connector
@@ -148,6 +149,7 @@ class ImportEditor(QWidget):
             self.connector.request_data(selection.text(), max_rows=100)
             self.selected_table = selection.text()
 
+    @Slot(str)
     def handle_connector_error(self, error_message):
         self._ui_error.showMessage(error_message)
 
@@ -202,10 +204,9 @@ class ImportEditor(QWidget):
         elif tables:
             # select first item
             self._ui.source_list.setCurrentRow(0, QItemSelectionModel.SelectCurrent)
-        if self._ui.source_list.selectedItems():
-            self.select_table(self._ui.source_list.selectedItems()[0])
         self.tableChecked.emit()
 
+    @Slot(list, list)
     def update_preview_data(self, data, header):
         if data:
             try:
@@ -257,12 +258,12 @@ class ImportEditor(QWidget):
         self._ui.source_list.clear()
         selected_tables = settings.get("selected_tables")
         if selected_tables is None:
-            selected_tables = len(self.table_mappings) * [True]
-        for table_name, selected in zip(self.table_mappings, selected_tables):
+            selected_tables = set(self.table_mappings.keys())
+        for table_name in self.table_mappings:
             item = QListWidgetItem()
             item.setText(table_name)
             item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
-            item.setCheckState(Qt.Checked if selected else Qt.Unchecked)
+            item.setCheckState(Qt.Checked if table_name in selected_tables else Qt.Unchecked)
             self._ui.source_list.addItem(item)
         self._ui.source_list.blockSignals(False)
 
@@ -276,7 +277,11 @@ class ImportEditor(QWidget):
         get_source_item = self._ui.source_list.item
         table_count = self._ui.source_list.count()
         tables = set(get_source_item(i).text() for i in range(table_count))
-        table_check_status = list(get_source_item(i).checkState() == Qt.Checked for i in range(table_count))
+        selected_tables = list()
+        for i in range(table_count):
+            item = get_source_item(i)
+            if item.checkState() == Qt.Checked:
+                selected_tables.append(item.text())
 
         table_mappings = {
             t: [m.to_dict() for m in mappings.get_mappings()]
@@ -303,23 +308,27 @@ class ImportEditor(QWidget):
             "table_options": table_options,
             "table_types": table_types,
             "table_row_types": table_row_types,
-            "selected_tables": table_check_status,
+            "selected_tables": selected_tables,
             "source_type": self.connector.source_type,
         }
         return settings
 
+    @Slot()
     def close_connection(self):
         """Close connector connection."""
         self.connector.close_connection()
 
+    @Slot()
     def _new_column_types(self):
         new_types = self.table.get_types(orientation=Qt.Horizontal)
         self.connector.set_table_types({self.connector.current_table: new_types})
 
+    @Slot()
     def _new_row_types(self):
         new_types = self.table.get_types(orientation=Qt.Vertical)
         self.connector.set_table_row_types({self.connector.current_table: new_types})
 
+    @Slot()
     def _update_display_row_types(self):
         mapping = self.table.mapping()
         if mapping.last_pivot_row == -1:
@@ -374,7 +383,7 @@ class ImportEditor(QWidget):
         self._copied_options["row_types"] = deepcopy(row_types.get(table, {}))
 
     def paste_mappings(self, table):
-        self.table_mappings[table] = MappingListModel([deepcopy(m) for m in self._copied_mapping])
+        self.table_mappings[table] = MappingListModel([deepcopy(m) for m in self._copied_mapping], table)
         if self.selected_table == table:
             self._ui.mapper.set_model(self.table_mappings[table])
 

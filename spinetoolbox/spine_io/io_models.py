@@ -76,8 +76,9 @@ _TYPE_TO_DISPLAY_TYPE = {value: key for key, value in _DISPLAY_TYPE_TO_TYPE.item
 
 
 class MappingPreviewModel(MinimalTableModel):
-    """A model for highlighting columns, rows, and so on, depending on Mapping specification.
-    Used by ImportPreviewWidget.
+    """A model for import mapping specification.
+
+    Highlights columns, rows, and so on, depending on Mapping specification.
     """
 
     columnTypesUpdated = Signal()
@@ -114,8 +115,8 @@ class MappingPreviewModel(MinimalTableModel):
     def set_mapping(self, mapping):
         """Set mapping to display colors from
 
-        Arguments:
-            mapping {MappingSpecModel} -- mapping model
+        Args:
+            mapping (MappingSpecModel): mapping model
         """
         if not mapping:
             return
@@ -182,7 +183,7 @@ class MappingPreviewModel(MinimalTableModel):
                 f"section_type must be a instance of ConvertSpec, instead got {type(section_type).__name__}"
             )
         if section < 0 or section > count:
-            raise ValueError(f"section must be within model data")
+            raise ValueError("section must be within model data")
         type_dict[section] = section_type
         emit_signal.emit()
         self.validate(section, orientation)
@@ -217,7 +218,7 @@ class MappingPreviewModel(MinimalTableModel):
 
         if index.row() <= last_pivoted_row:
             if (
-                index.column() not in mapping_non_pivoted_columns(self._mapping._model, self.columnCount(), self.header)
+                index.column() not in mapping_non_pivoted_columns(self._mapping.model, self.columnCount(), self.header)
                 and index.column() not in self._mapping.skip_columns
             ):
                 if (index.row(), index.column()) in self._row_type_errors:
@@ -228,15 +229,16 @@ class MappingPreviewModel(MinimalTableModel):
         return super().data(index, role)
 
     def data_color(self, index):
-        """returns background color for index depending on mapping
+        """
+        Returns background color for index depending on mapping.
 
         Arguments:
-            index {PySide2.QtCore.QModelIndex} -- index
+            index (PySide2.QtCore.QModelIndex): index
 
         Returns:
-            [QColor] -- QColor of index
+            QColor: color of index
         """
-        mapping = self._mapping._model
+        mapping = self._mapping.model
         if isinstance(mapping.parameters, ParameterValueMapping):
             # parameter values color
             if mapping.is_pivoted():
@@ -281,14 +283,15 @@ class MappingPreviewModel(MinimalTableModel):
                 return _MAPPING_COLORS["entity class"]
 
     def index_in_mapping(self, mapping, index):
-        """Checks if index is in mapping
+        """
+        Checks if index is in mapping
 
-        Arguments:
-            mapping {Mapping} -- mapping
-            index {QModelIndex} -- index
+        Args:
+            mapping (MappingBase): mapping
+            index (QModelIndex): index
 
         Returns:
-            [bool] -- returns True if mapping is in index
+            bool: True if mapping is in index
         """
         if not isinstance(mapping, MappingBase):
             return False
@@ -302,9 +305,9 @@ class MappingPreviewModel(MinimalTableModel):
                 if ref in self.header:
                     ref = self.header.index(ref)
             if index.column() == ref:
-                if self._mapping._model.is_pivoted():
+                if self._mapping.model.is_pivoted():
                     # only rows below pivoted rows
-                    last_row = max(self._mapping._model.last_pivot_row(), self._mapping.read_start_row - 1)
+                    last_row = max(self._mapping.model.last_pivot_row(), self._mapping.read_start_row - 1)
                     if last_row is not None and index.row() > last_row:
                         return True
                 elif index.row() >= self._mapping.read_start_row:
@@ -323,8 +326,8 @@ class MappingPreviewModel(MinimalTableModel):
         """
         if not self._mapping:
             return []
-        non_pivoted_columns = self._mapping._model.non_pivoted_columns()
-        skip_cols = self._mapping._model.skip_columns
+        non_pivoted_columns = self._mapping.model.non_pivoted_columns()
+        skip_cols = self._mapping.model.skip_columns
         if skip_cols is None:
             skip_cols = []
         int_non_piv_cols = []
@@ -352,6 +355,10 @@ class MappingSpecModel(QAbstractTableModel):
         if model is not None:
             self.set_mapping(model)
         self._table_name = table_name
+
+    @property
+    def model(self):
+        return self._model
 
     @property
     def skip_columns(self):
@@ -501,8 +508,7 @@ class MappingSpecModel(QAbstractTableModel):
 
     def update_display_table(self):
         display_name = []
-        mappings = []
-        mappings.append(self._model.name)
+        mappings = [self._model.name]
         if isinstance(self._model, RelationshipClassMapping):
             display_name.append("Relationship class names")
             if self._model.object_classes:
@@ -583,18 +589,19 @@ class MappingSpecModel(QAbstractTableModel):
             ]
             f = func[index.column()]
             return f()
-        if role == Qt.BackgroundColorRole and index.column() == 0:
+        column = index.column()
+        if role == Qt.BackgroundColorRole and column == 0:
             return self.data_color(self._display_names[index.row()])
-        if role == Qt.BackgroundColorRole and index.column() == 2:
-            # display error color if mapping is None
-            m = self._mappings[index.row()]
-            if not isinstance(m, NoneMapping) and m.reference is None:
-                return _ERROR_COLOR
-        if role == Qt.ToolTipRole and index.column() == 2:
-            # display error message if reference is None
-            m = self._mappings[index.row()]
-            if not isinstance(m, NoneMapping) and m.reference is None:
-                return "No reference for mapping"
+        if column == 2:
+            if role == Qt.BackgroundColorRole:
+                if self._mapping_issues(index.row()):
+                    return _ERROR_COLOR
+                return None
+            if role == Qt.ToolTipRole:
+                issue = self._mapping_issues(index.row())
+                if issue:
+                    return issue
+                return None
 
     def data_color(self, display_name):
         if display_name == "Relationship class names":
@@ -609,6 +616,33 @@ class MappingSpecModel(QAbstractTableModel):
             return _MAPPING_COLORS["parameter extra dimension"]
         if display_name == "Parameter values":
             return _MAPPING_COLORS["parameter value"]
+
+    def _mapping_issues(self, row):
+        """Returns a message string if given row contains issues, or an empty string if everything is OK."""
+        if row == 0:
+            return self._model.class_names_issues()
+        if isinstance(self._model, ObjectClassMapping):
+            if row == 1:
+                return self._model.object_names_issues()
+            extra_relationship_rows = 0
+        else:
+            dimensions = len(self._model.object_classes)
+            if 1 <= row < 2 * dimensions + 1:
+                display_name = self._display_names[row]
+                mapping_name, _, mapping_number = display_name.rpartition(" ")
+                index = int(mapping_number) - 1
+                if mapping_name == "Object class names":
+                    return self._model.object_class_names_issues(index)
+                else:
+                    return self._model.object_names_issues(index)
+            extra_relationship_rows = 2 * dimensions - 1
+        if row == 2 + extra_relationship_rows:
+            return self._model.parameters.names_issues()
+        if row == 3 + extra_relationship_rows:
+            return self._model.parameters.values_issues(self._model.is_pivoted())
+        if row == 4 + extra_relationship_rows:
+            return self._model.parameters.indexes_issues()
+        return ""
 
     def rowCount(self, index=None):
         if not self._model:
@@ -862,3 +896,17 @@ class MappingListModel(QAbstractListModel):
             self._qmappings.pop(row)
             self._names.pop(row)
             self.endRemoveRows()
+
+    def check_mapping_validity(self):
+        """
+        Checks if there are any issues with the mappings.
+
+        Returns:
+             dict: a map from mapping name to discovered issue; contains only mappings that have issues
+        """
+        issues = dict()
+        for name, mapping in zip(self._names, self._qmappings):
+            issue = mapping.check_mapping_validity()
+            if issue:
+                issues[name] = issue
+        return issues

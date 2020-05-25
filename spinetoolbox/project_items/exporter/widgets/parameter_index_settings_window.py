@@ -15,7 +15,6 @@ Parameter indexing settings window for .gdx export.
 :author: A. Soininen (VTT)
 :date:   25.11.2019
 """
-
 from PySide2.QtCore import Qt, Signal, Slot
 from PySide2.QtWidgets import QMessageBox, QWidget
 from .parameter_index_settings import IndexSettingsState, ParameterIndexSettings

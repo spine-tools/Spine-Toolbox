@@ -19,7 +19,7 @@ Unit tests for the plotting module.
 import unittest
 from unittest.mock import Mock, MagicMock, patch
 from PySide2.QtWidgets import QApplication, QAction
-from spinetoolbox.mvcmodels.pivot_table_models import PivotTableModel
+from spinetoolbox.data_store_form.mvcmodels.pivot_table_models import PivotTableModel
 from spinetoolbox.data_store_form.widgets.data_store_form import DataStoreForm
 
 

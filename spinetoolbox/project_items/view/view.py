@@ -20,9 +20,7 @@ import os
 from PySide2.QtCore import Qt, Slot
 from PySide2.QtGui import QStandardItem, QStandardItemModel, QIcon, QPixmap
 from sqlalchemy.engine.url import URL, make_url
-from spinedb_api import SpineDBAPIError
 from spinetoolbox.project_item import ProjectItem
-from spinetoolbox.data_store_form.widgets.data_store_form import DataStoreForm
 from .item_info import ItemInfo
 from .executable_item import ExecutableItem
 

@@ -33,18 +33,15 @@ from spinedb_api import (
     SpineDBVersionError,
 )
 from ...config import MAINWINDOW_SS, APPLICATION_PATH
-from .edit_or_remove_items_dialogs import ManageParameterTagsDialog
 from .select_db_items_dialogs import MassRemoveItemsDialog, GetItemsForExportDialog
-from .custom_menus import ParameterValueListContextMenu
 from .custom_qwidgets import OpenFileButton, OpenSQLiteFileButton, ShootingLabel, CustomInputDialog
 from .parameter_view_mixin import ParameterViewMixin
 from .tree_view_mixin import TreeViewMixin
 from .graph_view_mixin import GraphViewMixin
 from .tabular_view_mixin import TabularViewMixin
-from .toolbars import ParameterTagToolBar
 from .db_session_history_dialog import DBSessionHistoryDialog
 from ...widgets.notification import NotificationStack
-from ...mvcmodels.parameter_value_list_model import ParameterValueListModel
+from ..mvcmodels.parameter_value_list_model import ParameterValueListModel
 from ...helpers import (
     busy_effect,
     ensure_window_is_on_screen,
@@ -54,6 +51,7 @@ from ...helpers import (
 )
 from .import_dialog import ImportDialog
 from ...widgets.parameter_value_editor import ParameterValueEditor
+from ...widgets.settings_widget import DataStoreSettingsWidget
 from ...spine_io.exporters.excel import export_spine_database_to_xlsx
 from ...spine_io.importers.excel_reader import get_mapped_data_from_xlsx
 from ...spine_db_parcel import SpineDBParcel
@@ -92,18 +90,14 @@ class DataStoreFormBase(QMainWindow):
         self.setStyleSheet(MAINWINDOW_SS)
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.qsettings = self.db_mngr.qsettings
+        self.settings_form = DataStoreSettingsWidget(self.qsettings)
         self.err_msg = QErrorMessage(self)
         self.err_msg.setWindowTitle("Error")
         self.err_msg.setWindowFlag(Qt.WindowContextHelpButtonHint, False)
         self.notification_stack = NotificationStack(self)
-        self.parameter_tag_toolbar = ParameterTagToolBar(self, self.db_mngr, *self.db_maps)
-        self.addToolBar(Qt.TopToolBarArea, self.parameter_tag_toolbar)
-        self.selected_ent_cls_ids = {"object class": {}, "relationship class": {}}
-        self.selected_ent_ids = {"object": {}, "relationship": {}}
-        self.selected_parameter_tag_ids = dict()
-        self.selected_param_def_ids = {"object class": {}, "relationship class": {}}
         self.parameter_value_list_model = ParameterValueListModel(self, self.db_mngr, *self.db_maps)
         self.ui.treeView_parameter_value_list.setModel(self.parameter_value_list_model)
+        self.ui.treeView_parameter_value_list.connect_data_store_form(self)
         self.silenced = False
         fm = QFontMetrics(QFont("", 0))
         self.default_row_height = 1.2 * fm.lineSpacing()
@@ -121,7 +115,6 @@ class DataStoreFormBase(QMainWindow):
         """Adds actions to View and Edit menu."""
         self.ui.menuView.addSeparator()
         self.ui.menuView.addAction(self.ui.dockWidget_parameter_value_list.toggleViewAction())
-        self.ui.menuView.addAction(self.parameter_tag_toolbar.toggleViewAction())
         before = self.ui.menuEdit.actions()[0]
         self.undo_action = self.db_mngr.undo_action[self.db_map]
         self.redo_action = self.db_mngr.redo_action[self.db_map]
@@ -141,6 +134,7 @@ class DataStoreFormBase(QMainWindow):
         self.ui.actionRollback.triggered.connect(self.rollback_session)
         self.ui.actionRefresh.triggered.connect(self.refresh_session)
         self.ui.actionView_history.triggered.connect(self.show_history_dialog)
+        self.ui.actionSettings.triggered.connect(self.settings_form.show)
         self.ui.actionClose.triggered.connect(self.close)
         self.ui.menuEdit.aboutToShow.connect(self._handle_menu_edit_about_to_show)
         self.ui.actionImport.triggered.connect(self.import_file)
@@ -149,15 +143,10 @@ class DataStoreFormBase(QMainWindow):
         self.ui.actionExport_session.triggered.connect(self.export_session)
         self.ui.actionCopy.triggered.connect(self.copy)
         self.ui.actionPaste.triggered.connect(self.paste)
-        self.ui.actionRemove_selection.triggered.connect(self.remove_selection)
+        self.ui.actionRemove_selected.triggered.connect(self.remove_selected)
+        self.ui.actionEdit_selected.triggered.connect(self.edit_selected)
         self.ui.actionManage_parameter_tags.triggered.connect(self.show_manage_parameter_tags_form)
         self.ui.actionMass_remove_items.triggered.connect(self.show_mass_remove_items_form)
-        self.parameter_tag_toolbar.manage_tags_action_triggered.connect(self.show_manage_parameter_tags_form)
-        self.parameter_tag_toolbar.tag_button_toggled.connect(self._handle_tag_button_toggled)
-        self.ui.treeView_parameter_value_list.customContextMenuRequested.connect(
-            self.show_parameter_value_list_context_menu
-        )
-        self.parameter_value_list_model.remove_selection_requested.connect(self.remove_parameter_value_lists)
         self.ui.dockWidget_exports.visibilityChanged.connect(self._handle_exports_visibility_changed)
 
     @Slot(int)
@@ -199,7 +188,6 @@ class DataStoreFormBase(QMainWindow):
             self.ui.treeView_parameter_value_list.expand(index)
         self.ui.treeView_parameter_value_list.resizeColumnToContents(0)
         self.ui.treeView_parameter_value_list.header().hide()
-        self.parameter_tag_toolbar.init_toolbar()
 
     @Slot(str)
     def add_message(self, msg):
@@ -229,65 +217,26 @@ class DataStoreFormBase(QMainWindow):
             dock.setVisible(True)
             dock.setFloating(False)
             self.addDockWidget(Qt.RightDockWidgetArea, dock)
-        self.parameter_tag_toolbar.setVisible(True)
-        self.addToolBar(Qt.TopToolBarArea, self.parameter_tag_toolbar)
 
     @Slot()
     def _handle_menu_edit_about_to_show(self):
         """Runs when the edit menu from the main menubar is about to show.
         Enables or disables actions according to selection status."""
+        # TODO: Try to also check if there's a selection to enable copy, remove, edit, etc.
         self.ui.actionCopy.setEnabled(self._focused_widget_has_callable("copy"))
-        self.ui.actionRemove_selection.setEnabled(self._focused_widget_can_remove_selections())
-        object_classes_selected = self._focused_widgets_model_has_non_empty_list("selected_object_class_indexes")
-        objects_selected = self._focused_widgets_model_has_non_empty_list("selected_object_indexes")
-        relationship_classes_selected = self._focused_widgets_model_has_non_empty_list(
-            "selected_relationship_class_indexes"
-        )
-        relationships_selected = self._focused_widgets_model_has_non_empty_list("selected_relationship_indexes")
-        self.ui.actionEdit_object_classes.setEnabled(object_classes_selected)
-        self.ui.actionEdit_objects.setEnabled(objects_selected)
-        self.ui.actionEdit_relationship_classes.setEnabled(relationship_classes_selected)
-        self.ui.actionEdit_relationships.setEnabled(relationships_selected)
         self.ui.actionPaste.setEnabled(self._focused_widget_has_callable("paste"))
-
-    def selected_entity_class_ids(self, entity_class_type):
-        """Returns entity class ids selected in entity tree *and* parameter tag toolbar.
-
-        Args:
-            entity_class_type (str)
-
-        Returns:
-            dict, NoneType: mapping db maps to sets of ids, or None if no id selected
-        """
-        if self.selected_param_def_ids[entity_class_type] is None:
-            return None
-        tree_class_ids = self.selected_ent_cls_ids[entity_class_type]
-        tag_class_ids = dict()
-        for db_map, class_id in self.selected_param_def_ids[entity_class_type]:
-            tag_class_ids.setdefault(db_map, set()).add(class_id)
-        result = dict()
-        for db_map in tree_class_ids.keys() | tag_class_ids.keys():
-            tree_cls_ids = tree_class_ids.get(db_map, set())
-            tag_cls_ids = tag_class_ids.get(db_map, set())
-            if tree_cls_ids == set():
-                result[db_map] = tag_cls_ids
-            elif tag_cls_ids == set():
-                result[db_map] = tree_cls_ids
-            else:
-                result[db_map] = tree_cls_ids & tag_cls_ids
-        return result
+        self.ui.actionRemove_selected.setEnabled(self._focused_widget_has_callable("remove_selected"))
+        self.ui.actionEdit_selected.setEnabled(self._focused_widget_has_callable("edit_selected"))
 
     @Slot(bool)
-    def remove_selection(self, checked=False):
-        """Removes selection of items."""
-        focus_widget = self.focusWidget()
-        while focus_widget is not self:
-            if hasattr(focus_widget, "model") and callable(focus_widget.model):
-                model = focus_widget.model()
-                if hasattr(model, "remove_selection_requested"):
-                    model.remove_selection_requested.emit()
-                    break
-            focus_widget = focus_widget.parentWidget()
+    def remove_selected(self, checked=False):
+        """Removes selected items."""
+        self._call_on_focused_widget("remove_selected")
+
+    @Slot(bool)
+    def edit_selected(self, checked=False):
+        """Edits selected items."""
+        self._call_on_focused_widget("edit_selected")
 
     @Slot(bool)
     def copy(self, checked=False):
@@ -465,12 +414,14 @@ class DataStoreFormBase(QMainWindow):
         data_stores = project._project_item_model.items(category_name="Data Stores")
         data_stores = [x.project_item for x in data_stores]
         named_data_stores = {x.name: x for x in data_stores}
+        data_store_names = list(named_data_stores)
         name = CustomInputDialog.get_item(
             self,
             "Add SQLite file to Project",
             "<p>Select a Data Store from the list to be the recipient:</p>",
-            list(named_data_stores),
-            QIcon(icon_path),
+            data_store_names,
+            icons={name: QIcon(icon_path) for name in data_store_names},
+            editable_text="Add new Data Store...",
         )
         if name is None:
             return
@@ -624,107 +575,6 @@ class DataStoreFormBase(QMainWindow):
         self.reload_session(db_maps)
         self.msg.emit("Session refreshed.")
 
-    @Slot("QVariant", bool)
-    def _handle_tag_button_toggled(self, db_map_ids, checked):
-        """Updates filter according to selected tags.
-        """
-        for db_map, id_ in db_map_ids:
-            if checked:
-                self.selected_parameter_tag_ids.setdefault(db_map, set()).add(id_)
-            else:
-                self.selected_parameter_tag_ids[db_map].remove(id_)
-        selected_param_defs = self.db_mngr.find_cascading_parameter_definitions_by_tag(self.selected_parameter_tag_ids)
-        if any(v for v in self.selected_parameter_tag_ids.values()) and not any(
-            v for v in selected_param_defs.values()
-        ):
-            # There are tags selected but no matching parameter definitions ~> we need to reject them all
-            self.selected_param_def_ids["object class"] = None
-            self.selected_param_def_ids["relationship class"] = None
-        else:
-            self.selected_param_def_ids["object class"] = {}
-            self.selected_param_def_ids["relationship class"] = {}
-            for db_map, param_defs in selected_param_defs.items():
-                for param_def in param_defs:
-                    if "object_class_id" in param_def:
-                        self.selected_param_def_ids["object class"].setdefault(
-                            (db_map, param_def["object_class_id"]), set()
-                        ).add(param_def["id"])
-                    elif "relationship_class_id" in param_def:
-                        self.selected_param_def_ids["relationship class"].setdefault(
-                            (db_map, param_def["relationship_class_id"]), set()
-                        ).add(param_def["id"])
-        self.update_filter()
-
-    @Slot(bool)
-    def show_manage_parameter_tags_form(self, checked=False):
-        dialog = ManageParameterTagsDialog(self, self.db_mngr, *self.db_maps)
-        dialog.show()
-
-    @Slot("QPoint")
-    def show_parameter_value_list_context_menu(self, pos):
-        """
-        Shows the context menu for parameter value list tree view.
-
-        Args:
-            pos (QPoint): Mouse position
-        """
-        index = self.ui.treeView_parameter_value_list.indexAt(pos)
-        global_pos = self.ui.treeView_parameter_value_list.viewport().mapToGlobal(pos)
-        parameter_value_list_context_menu = ParameterValueListContextMenu(self, global_pos, index)
-        parameter_value_list_context_menu.deleteLater()
-        option = parameter_value_list_context_menu.get_action()
-        if option == "Copy":
-            self.ui.treeView_parameter_value_list.copy()
-        elif option == "Remove selection":
-            self.remove_parameter_value_lists()
-        parameter_value_list_context_menu.deleteLater()
-
-    @Slot()
-    def remove_parameter_value_lists(self):
-        """Removes selection of parameter value-lists.
-        """
-        db_map_typed_data_to_rm = {}
-        db_map_data_to_upd = {}
-        selected = [
-            self.parameter_value_list_model.item_from_index(index)
-            for index in self.ui.treeView_parameter_value_list.selectionModel().selectedIndexes()
-        ]
-        for db_item in self.parameter_value_list_model._invisible_root_item.children:
-            db_map_typed_data_to_rm[db_item.db_map] = {"parameter value list": []}
-            db_map_data_to_upd[db_item.db_map] = []
-            for list_item in reversed(db_item.children[:-1]):
-                if list_item.id:
-                    if list_item in selected:
-                        db_map_typed_data_to_rm[db_item.db_map]["parameter value list"].append(
-                            {"id": list_item.id, "name": list_item.name}
-                        )
-                        continue
-                    curr_value_list = list_item.compile_value_list()
-                    value_list = [
-                        value
-                        for value_item, value in zip(list_item.children, curr_value_list)
-                        if value_item not in selected
-                    ]
-                    if not value_list:
-                        db_map_typed_data_to_rm[db_item.db_map]["parameter value list"].append(
-                            {"id": list_item.id, "name": list_item.name}
-                        )
-                        continue
-                    if value_list != curr_value_list:
-                        item = {"id": list_item.id, "value_list": value_list}
-                        db_map_data_to_upd[db_item.db_map].append(item)
-                else:
-                    # WIP lists, just remove everything selected
-                    if list_item in selected:
-                        db_item.remove_children(list_item.child_number(), list_item.child_number())
-                        continue
-                    for value_item in reversed(list_item.children[:-1]):
-                        if value_item in selected:
-                            list_item.remove_children(value_item.child_number(), value_item.child_number())
-        self.db_mngr.update_parameter_value_lists(db_map_data_to_upd)
-        self.db_mngr.remove_items(db_map_typed_data_to_rm)
-        self.ui.treeView_parameter_value_list.selectionModel().clearSelection()
-
     @Slot(bool)
     def show_mass_remove_items_form(self, checked=False):
         dialog = MassRemoveItemsDialog(self, self.db_mngr, *self.db_maps)
@@ -763,12 +613,10 @@ class DataStoreFormBase(QMainWindow):
         pass
 
     def receive_parameter_value_lists_fetched(self, db_map_data):
-        self.notify_items_changed("fetched", "parameter value list", db_map_data)
         self.parameter_value_list_model.receive_parameter_value_lists_added(db_map_data)
 
     def receive_parameter_tags_fetched(self, db_map_data):
-        self.notify_items_changed("fetched", "parameter tag", db_map_data)
-        self.parameter_tag_toolbar.receive_parameter_tags_added(db_map_data)
+        pass
 
     def receive_object_classes_added(self, db_map_data):
         self.notify_items_changed("added", "object class", db_map_data)
@@ -794,7 +642,6 @@ class DataStoreFormBase(QMainWindow):
 
     def receive_parameter_tags_added(self, db_map_data):
         self.notify_items_changed("added", "parameter tag", db_map_data)
-        self.parameter_tag_toolbar.receive_parameter_tags_added(db_map_data)
 
     def receive_object_classes_updated(self, db_map_data):
         self.notify_items_changed("updated", "object class", db_map_data)
@@ -820,7 +667,6 @@ class DataStoreFormBase(QMainWindow):
 
     def receive_parameter_tags_updated(self, db_map_data):
         self.notify_items_changed("updated", "parameter tag", db_map_data)
-        self.parameter_tag_toolbar.receive_parameter_tags_updated(db_map_data)
 
     def receive_parameter_definition_tags_set(self, db_map_data):
         self.notify_items_changed("set", "parameter definition tag", db_map_data)
@@ -849,7 +695,6 @@ class DataStoreFormBase(QMainWindow):
 
     def receive_parameter_tags_removed(self, db_map_data):
         self.notify_items_changed("removed", "parameter tag", db_map_data)
-        self.parameter_tag_toolbar.receive_parameter_tags_removed(db_map_data)
 
     def restore_ui(self):
         """Restore UI state from previous session."""
@@ -900,17 +745,6 @@ class DataStoreFormBase(QMainWindow):
         self.save_window_state()
         QMainWindow.closeEvent(self, event)
 
-    def _focused_widget_can_remove_selections(self):
-        """Returns True if the currently focused widget or one of its parents can respond to actinoRemove_selection."""
-        focus_widget = self.focusWidget()
-        while focus_widget is not self:
-            if hasattr(focus_widget, "model") and callable(focus_widget.model):
-                model = focus_widget.model()
-                if hasattr(model, "remove_selection_requested"):
-                    return True
-            focus_widget = focus_widget.parentWidget()
-        return False
-
     def _focused_widget_has_callable(self, callable_name):
         """Returns True if the currently focused widget or one of its ancestors has the given callable."""
         focus_widget = self.focusWidget()
@@ -919,18 +753,6 @@ class DataStoreFormBase(QMainWindow):
                 method = getattr(focus_widget, callable_name)
                 if callable(method):
                     return True
-            focus_widget = focus_widget.parentWidget()
-        return False
-
-    def _focused_widgets_model_has_non_empty_list(self, list_name):
-        """Returns True if the currently focused widget's or one of its ancestors' model has a non empty list."""
-        focus_widget = self.focusWidget()
-        while focus_widget is not self:
-            if hasattr(focus_widget, "model") and callable(focus_widget.model):
-                model = focus_widget.model()
-                if hasattr(model, list_name):
-                    a_list = getattr(model, list_name)
-                    return bool(a_list)
             focus_widget = focus_widget.parentWidget()
         return False
 
@@ -1020,7 +842,6 @@ class DataStoreForm(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
             [self.ui.dockWidget_relationship_parameter_value, self.ui.dockWidget_relationship_parameter_definition]
         )
         self.ui.dockWidget_entity_graph.hide()
-        self.ui.dockWidget_item_palette.hide()
         self.ui.dockWidget_pivot_table.hide()
         self.ui.dockWidget_frozen_table.hide()
         docks = [
@@ -1040,7 +861,6 @@ class DataStoreForm(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         self.splitDockWidget(self.ui.dockWidget_pivot_table, self.ui.dockWidget_frozen_table, Qt.Horizontal)
         self.splitDockWidget(self.ui.dockWidget_object_tree, self.ui.dockWidget_relationship_tree, Qt.Vertical)
         self.ui.dockWidget_entity_graph.hide()
-        self.ui.dockWidget_item_palette.hide()
         self.ui.dockWidget_object_parameter_value.hide()
         self.ui.dockWidget_object_parameter_definition.hide()
         self.ui.dockWidget_relationship_parameter_value.hide()
@@ -1062,7 +882,6 @@ class DataStoreForm(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         self.splitDockWidget(self.ui.dockWidget_object_tree, self.ui.dockWidget_entity_graph, Qt.Horizontal)
         self.splitDockWidget(self.ui.dockWidget_entity_graph, self.ui.dockWidget_object_parameter_value, Qt.Vertical)
         self.splitDockWidget(self.ui.dockWidget_object_tree, self.ui.dockWidget_relationship_tree, Qt.Vertical)
-        self.splitDockWidget(self.ui.dockWidget_entity_graph, self.ui.dockWidget_item_palette, Qt.Horizontal)
         self.tabify_and_raise(
             [
                 self.ui.dockWidget_object_parameter_value,
@@ -1077,9 +896,6 @@ class DataStoreForm(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         docks = [self.ui.dockWidget_entity_graph, self.ui.dockWidget_object_parameter_value]
         height = sum(d.size().height() for d in docks)
         self.resizeDocks(docks, [0.7 * height, 0.3 * height], Qt.Vertical)
-        docks = [self.ui.dockWidget_entity_graph, self.ui.dockWidget_item_palette]
-        width = sum(d.size().width() for d in docks)
-        self.resizeDocks(docks, [0.9 * width, 0.1 * width], Qt.Horizontal)
         self.end_style_change()
         self.ui.graphicsView.reset_zoom()
 

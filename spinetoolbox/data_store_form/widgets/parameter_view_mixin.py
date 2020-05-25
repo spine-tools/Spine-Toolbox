@@ -18,31 +18,15 @@ Contains the ParameterViewMixin class.
 
 from PySide2.QtCore import Qt, Slot
 from PySide2.QtWidgets import QHeaderView
-from .custom_delegates import (
-    DatabaseNameDelegate,
-    ParameterDefaultValueDelegate,
-    TagListDelegate,
-    ValueListDelegate,
-    ObjectParameterValueDelegate,
-    ObjectParameterNameDelegate,
-    ObjectClassNameDelegate,
-    ObjectNameDelegate,
-    RelationshipParameterValueDelegate,
-    RelationshipParameterNameDelegate,
-    RelationshipClassNameDelegate,
-    ObjectNameListDelegate,
-)
-from .custom_menus import EditableParameterValueContextMenu, ParameterContextMenu
+from .toolbars import ParameterTagToolBar
 from .object_name_list_editor import ObjectNameListEditor
-from ...widgets.report_plotting_failure import report_plotting_failure
-from ...mvcmodels.compound_parameter_models import (
+from ..mvcmodels.compound_parameter_models import (
     CompoundObjectParameterDefinitionModel,
     CompoundObjectParameterValueModel,
     CompoundRelationshipParameterDefinitionModel,
     CompoundRelationshipParameterValueModel,
 )
-from ...widgets.plot_widget import PlotWidget
-from ...plotting import plot_selection, PlottingError, ParameterTablePlottingHints
+from .edit_or_remove_items_dialogs import ManageParameterTagsDialog
 
 
 class ParameterViewMixin:
@@ -52,6 +36,13 @@ class ParameterViewMixin:
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.filter_class_ids = {}
+        self.filter_entity_ids = {}
+        self.filter_tag_ids = dict()
+        self.tag_filter_class_ids = {}
+        self.filter_parameter_ids = {}
+        self.parameter_tag_toolbar = ParameterTagToolBar(self, self.db_mngr, *self.db_maps)
+        self.addToolBar(Qt.TopToolBarArea, self.parameter_tag_toolbar)
         self.object_parameter_value_model = CompoundObjectParameterValueModel(self, self.db_mngr, *self.db_maps)
         self.relationship_parameter_value_model = CompoundRelationshipParameterValueModel(
             self, self.db_mngr, *self.db_maps
@@ -62,28 +53,32 @@ class ParameterViewMixin:
         self.relationship_parameter_definition_model = CompoundRelationshipParameterDefinitionModel(
             self, self.db_mngr, *self.db_maps
         )
-        self.ui.tableView_object_parameter_value.setModel(self.object_parameter_value_model)
-        self.ui.tableView_relationship_parameter_value.setModel(self.relationship_parameter_value_model)
-        self.ui.tableView_object_parameter_definition.setModel(self.object_parameter_definition_model)
-        self.ui.tableView_relationship_parameter_definition.setModel(self.relationship_parameter_definition_model)
-        # Others
-        views = [
-            self.ui.tableView_object_parameter_definition,
+        self._parameter_models = (
+            self.object_parameter_value_model,
+            self.relationship_parameter_value_model,
+            self.object_parameter_definition_model,
+            self.relationship_parameter_definition_model,
+        )
+        self._parameter_value_models = (self.object_parameter_value_model, self.relationship_parameter_value_model)
+        views = (
             self.ui.tableView_object_parameter_value,
-            self.ui.tableView_relationship_parameter_definition,
             self.ui.tableView_relationship_parameter_value,
-        ]
-        for view in views:
+            self.ui.tableView_object_parameter_definition,
+            self.ui.tableView_relationship_parameter_definition,
+        )
+        for view, model in zip(views, self._parameter_models):
+            view.setModel(model)
             view.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
             view.verticalHeader().setDefaultSectionSize(self.default_row_height)
             view.horizontalHeader().setResizeContentsPrecision(self.visible_rows)
             view.horizontalHeader().setSectionsMovable(True)
-        self.setup_delegates()
+            view.connect_data_store_form(self)
 
     def add_menu_actions(self):
         """Adds toggle view actions to View menu."""
         super().add_menu_actions()
         self.ui.menuView.addSeparator()
+        self.ui.menuView.addAction(self.parameter_tag_toolbar.toggleViewAction())
         self.ui.menuView.addAction(self.ui.dockWidget_object_parameter_value.toggleViewAction())
         self.ui.menuView.addAction(self.ui.dockWidget_object_parameter_definition.toggleViewAction())
         self.ui.menuView.addAction(self.ui.dockWidget_relationship_parameter_value.toggleViewAction())
@@ -92,45 +87,18 @@ class ParameterViewMixin:
     def connect_signals(self):
         """Connects signals to slots."""
         super().connect_signals()
-        self.ui.dockWidget_object_parameter_value.visibilityChanged.connect(
-            self._handle_object_parameter_value_visibility_changed
-        )
-        self.ui.dockWidget_object_parameter_definition.visibilityChanged.connect(
-            self._handle_object_parameter_definition_visibility_changed
-        )
-        self.ui.dockWidget_relationship_parameter_value.visibilityChanged.connect(
-            self._handle_relationship_parameter_value_visibility_changed
-        )
-        self.ui.dockWidget_relationship_parameter_definition.visibilityChanged.connect(
-            self._handle_relationship_parameter_definition_visibility_changed
-        )
-        self.object_parameter_definition_model.remove_selection_requested.connect(
-            self.remove_object_parameter_definitions
-        )
-        self.object_parameter_value_model.remove_selection_requested.connect(self.remove_object_parameter_values)
-        self.relationship_parameter_definition_model.remove_selection_requested.connect(
-            self.remove_relationship_parameter_definitions
-        )
-        self.relationship_parameter_value_model.remove_selection_requested.connect(
-            self.remove_relationship_parameter_values
-        )
-        # Parameter tables context menu requested
-        self.ui.tableView_object_parameter_definition.customContextMenuRequested.connect(
-            self.show_object_parameter_definition_context_menu
-        )
-        self.ui.tableView_object_parameter_value.customContextMenuRequested.connect(
-            self.show_object_parameter_value_context_menu
-        )
-        self.ui.tableView_relationship_parameter_definition.customContextMenuRequested.connect(
-            self.show_relationship_parameter_definition_context_menu
-        )
-        self.ui.tableView_relationship_parameter_value.customContextMenuRequested.connect(
-            self.show_relationship_parameter_value_context_menu
-        )
+        self.parameter_tag_toolbar.manage_tags_action_triggered.connect(self.show_manage_parameter_tags_form)
+        self.parameter_tag_toolbar.tag_button_toggled.connect(self._handle_tag_button_toggled)
+        self.ui.treeView_object.selectionModel().currentChanged.connect(self.set_default_parameter_data)
+        self.ui.treeView_relationship.selectionModel().currentChanged.connect(self.set_default_parameter_data)
+        self.ui.treeView_object.tree_selection_changed.connect(self._handle_object_tree_selection_changed)
+        self.ui.treeView_relationship.tree_selection_changed.connect(self._handle_relationship_tree_selection_changed)
+        self.graph_selection_changed.connect(self._handle_graph_selection_changed)
 
     def init_models(self):
         """Initializes models."""
         super().init_models()
+        self.parameter_tag_toolbar.init_toolbar()
         self.object_parameter_value_model.init_model()
         self.object_parameter_definition_model.init_model()
         self.relationship_parameter_value_model.init_model()
@@ -140,57 +108,6 @@ class ParameterViewMixin:
         self.ui.tableView_object_parameter_definition.resizeColumnsToContents()
         self.ui.tableView_relationship_parameter_value.resizeColumnsToContents()
         self.ui.tableView_relationship_parameter_definition.resizeColumnsToContents()
-
-    def _setup_delegate(self, table_view, column, delegate_class):
-        """Returns a custom delegate for a given view."""
-        delegate = delegate_class(self, self.db_mngr)
-        table_view.setItemDelegateForColumn(column, delegate)
-        delegate.data_committed.connect(self.set_parameter_data)
-        return delegate
-
-    def setup_delegates(self):
-        """Sets delegates for tables."""
-        # Parameter definitions
-        for table_view in (
-            self.ui.tableView_object_parameter_definition,
-            self.ui.tableView_relationship_parameter_definition,
-        ):
-            h = table_view.model().header.index
-            self._setup_delegate(table_view, h("database"), DatabaseNameDelegate)
-            self._setup_delegate(table_view, h("parameter_tag_list"), TagListDelegate)
-            self._setup_delegate(table_view, h("value_list_name"), ValueListDelegate)
-            delegate = self._setup_delegate(table_view, h("default_value"), ParameterDefaultValueDelegate)
-            delegate.parameter_value_editor_requested.connect(self.show_parameter_value_editor)
-        # Parameter values
-        for table_view in (self.ui.tableView_object_parameter_value, self.ui.tableView_relationship_parameter_value):
-            h = table_view.model().header.index
-            self._setup_delegate(table_view, h("database"), DatabaseNameDelegate)
-        # Object parameters
-        for table_view in (self.ui.tableView_object_parameter_value, self.ui.tableView_object_parameter_definition):
-            h = table_view.model().header.index
-            self._setup_delegate(table_view, h("object_class_name"), ObjectClassNameDelegate)
-        # Relationship parameters
-        for table_view in (
-            self.ui.tableView_relationship_parameter_value,
-            self.ui.tableView_relationship_parameter_definition,
-        ):
-            h = table_view.model().header.index
-            self._setup_delegate(table_view, h("relationship_class_name"), RelationshipClassNameDelegate)
-        # Object parameter value
-        table_view = self.ui.tableView_object_parameter_value
-        h = table_view.model().header.index
-        delegate = self._setup_delegate(table_view, h("value"), ObjectParameterValueDelegate)
-        delegate.parameter_value_editor_requested.connect(self.show_parameter_value_editor)
-        self._setup_delegate(table_view, h("parameter_name"), ObjectParameterNameDelegate)
-        self._setup_delegate(table_view, h("object_name"), ObjectNameDelegate)
-        # Relationship parameter value
-        table_view = self.ui.tableView_relationship_parameter_value
-        h = table_view.model().header.index
-        delegate = self._setup_delegate(table_view, h("value"), RelationshipParameterValueDelegate)
-        delegate.parameter_value_editor_requested.connect(self.show_parameter_value_editor)
-        self._setup_delegate(table_view, h("parameter_name"), RelationshipParameterNameDelegate)
-        delegate = self._setup_delegate(table_view, h("object_name_list"), ObjectNameListDelegate)
-        delegate.object_name_list_editor_requested.connect(self.show_object_name_list_editor)
 
     @Slot("QModelIndex", "QVariant")
     def set_parameter_data(self, index, new_value):  # pylint: disable=no-self-use
@@ -225,44 +142,6 @@ class ParameterViewMixin:
         editor = ObjectNameListEditor(self, index, object_class_names, object_names_lists, current_object_names)
         editor.show()
 
-    # TODO: nothing connected to these two below
-
-    @Slot(int)
-    def _handle_object_parameter_tab_changed(self, index):
-        """Updates filter."""
-        if index == 0:
-            self.object_parameter_value_model.update_main_filter()
-        else:
-            self.object_parameter_definition_model.update_main_filter()
-
-    @Slot(int)
-    def _handle_relationship_parameter_tab_changed(self, index):
-        """Updates filter."""
-        if index == 0:
-            self.relationship_parameter_value_model.update_main_filter()
-        else:
-            self.relationship_parameter_definition_model.update_main_filter()
-
-    @Slot(bool)
-    def _handle_object_parameter_value_visibility_changed(self, visible):
-        if visible:
-            self.object_parameter_value_model.update_main_filter()
-
-    @Slot(bool)
-    def _handle_object_parameter_definition_visibility_changed(self, visible):
-        if visible:
-            self.object_parameter_definition_model.update_main_filter()
-
-    @Slot(bool)
-    def _handle_relationship_parameter_value_visibility_changed(self, visible):
-        if visible:
-            self.relationship_parameter_value_model.update_main_filter()
-
-    @Slot(bool)
-    def _handle_relationship_parameter_definition_visibility_changed(self, visible):
-        if visible:
-            self.relationship_parameter_definition_model.update_main_filter()
-
     def set_default_parameter_data(self, index=None):
         """Sets default rows for parameter models according to given index.
 
@@ -273,163 +152,128 @@ class ParameterViewMixin:
             default_data = dict(database=next(iter(self.db_maps)).codename)
         else:
             default_data = index.model().item_from_index(index).default_parameter_data()
-        self.set_and_apply_default_rows(self.object_parameter_definition_model, default_data)
-        self.set_and_apply_default_rows(self.object_parameter_value_model, default_data)
-        self.set_and_apply_default_rows(self.relationship_parameter_definition_model, default_data)
-        self.set_and_apply_default_rows(self.relationship_parameter_value_model, default_data)
 
-    @staticmethod
-    def set_and_apply_default_rows(model, default_data):
-        model.empty_model.set_default_row(**default_data)
-        model.empty_model.set_rows_to_default(model.empty_model.rowCount() - 1)
+        def set_and_apply_default_rows(model, default_data):
+            model.empty_model.set_default_row(**default_data)
+            model.empty_model.set_rows_to_default(model.empty_model.rowCount() - 1)
 
-    def update_filter(self):
-        """Updates filters."""
-        if self.ui.dockWidget_object_parameter_value.isVisible():
-            self.object_parameter_value_model.update_main_filter()
-        if self.ui.dockWidget_object_parameter_definition.isVisible():
-            self.object_parameter_definition_model.update_main_filter()
-        if self.ui.dockWidget_relationship_parameter_value.isVisible():
-            self.relationship_parameter_value_model.update_main_filter()
-        if self.ui.dockWidget_relationship_parameter_definition.isVisible():
-            self.relationship_parameter_definition_model.update_main_filter()
+        set_and_apply_default_rows(self.object_parameter_definition_model, default_data)
+        set_and_apply_default_rows(self.object_parameter_value_model, default_data)
+        set_and_apply_default_rows(self.relationship_parameter_definition_model, default_data)
+        set_and_apply_default_rows(self.relationship_parameter_value_model, default_data)
 
-    @Slot("QPoint")
-    def show_object_parameter_value_context_menu(self, pos):
-        """Shows the context menu for object parameter value table view.
+    def _get_filter_class_ids(self):
+        """Returns filter class ids by combining filter class ids from entity tree *and* parameter tag toolbar.
 
-        Args:
-            pos (QPoint): Mouse position
+        Returns:
+            dict, NoneType: mapping db maps to sets of ids, or None if no filter (none shall pass)
         """
-        self._show_parameter_context_menu(pos, self.ui.tableView_object_parameter_value, "value")
-
-    @Slot("QPoint")
-    def show_relationship_parameter_value_context_menu(self, pos):
-        """Shows the context menu for relationship parameter value table view.
-
-        Args:
-            pos (QPoint): Mouse position
-        """
-        self._show_parameter_context_menu(pos, self.ui.tableView_relationship_parameter_value, "value")
-
-    @Slot("QPoint")
-    def show_object_parameter_definition_context_menu(self, pos):
-        """Shows the context menu for object parameter table view.
-
-        Args:
-            pos (QPoint): Mouse position
-        """
-        self._show_parameter_context_menu(pos, self.ui.tableView_object_parameter_definition, "default_value")
-
-    @Slot("QPoint")
-    def show_relationship_parameter_definition_context_menu(self, pos):
-        """Shows the context menu for relationship parameter table view.
-
-        Args:
-            pos (QPoint): Mouse position
-        """
-        self._show_parameter_context_menu(pos, self.ui.tableView_relationship_parameter_definition, "default_value")
-
-    def _show_parameter_context_menu(self, position, table_view, value_column_header):
-        """
-        Shows the context menu for the given parameter table.
-
-        Args:
-            position (QPoint): local mouse position in the table view
-            table_view (QTableView): the table view where the context menu was triggered
-            value_column_header (str): column header for editable/plottable values
-        """
-        index = table_view.indexAt(position)
-        global_pos = table_view.mapToGlobal(position)
-        model = table_view.model()
-        flags = model.flags(index)
-        editable = (flags & Qt.ItemIsEditable) == Qt.ItemIsEditable
-        is_value = model.headerData(index.column(), Qt.Horizontal) == value_column_header
-        if editable and is_value:
-            menu = EditableParameterValueContextMenu(self, global_pos, index)
-        else:
-            menu = ParameterContextMenu(self, global_pos, index)
-        option = menu.get_action()
-        if option == "Open in editor...":
-            self.show_parameter_value_editor(index)
-        elif option == "Plot":
-            selection = table_view.selectedIndexes()
-            try:
-                hints = ParameterTablePlottingHints()
-                plot_widget = plot_selection(model, selection, hints)
-            except PlottingError as error:
-                report_plotting_failure(error, self)
+        if self.tag_filter_class_ids is None:
+            return None
+        filter_class_ids = dict()
+        for db_map in self.filter_class_ids.keys() | self.tag_filter_class_ids.keys():
+            if db_map not in self.filter_class_ids:
+                filter_class_ids[db_map] = self.tag_filter_class_ids[db_map]
+            elif db_map not in self.tag_filter_class_ids:
+                filter_class_ids[db_map] = self.filter_class_ids[db_map]
             else:
-                plot_widget.use_as_window(table_view.window(), value_column_header)
-                plot_widget.show()
-        elif option == "Plot in window":
-            plot_window_name = menu.plot_in_window_option
-            plot_window = PlotWidget.plot_windows.get(plot_window_name)
-            selection = table_view.selectedIndexes()
-            try:
-                hints = ParameterTablePlottingHints()
-                plot_selection(model, selection, hints, plot_window)
-            except PlottingError as error:
-                report_plotting_failure(error, self)
-        elif option == "Remove selection":
-            model.remove_selection_requested.emit()
-        elif option == "Copy":
-            table_view.copy()
-        elif option == "Paste":
-            table_view.paste()
-        menu.deleteLater()
+                filter_class_ids[db_map] = self.tag_filter_class_ids[db_map] & self.filter_class_ids[db_map]
+        return filter_class_ids
 
-    @Slot()
-    def remove_object_parameter_values(self):
-        """Removes selected rows from object parameter value table."""
-        self._remove_parameter_data(self.ui.tableView_object_parameter_value, "parameter value")
+    def reset_filters(self):
+        """Resets filters."""
+        for model in self._parameter_models:
+            model.set_filter_class_ids(self._get_filter_class_ids())
+            model.set_filter_parameter_ids(self.filter_parameter_ids)
+        for model in self._parameter_value_models:
+            model.set_filter_entity_ids(self.filter_entity_ids)
 
-    @Slot()
-    def remove_relationship_parameter_values(self):
-        """Removes selected rows from relationship parameter value table."""
-        self._remove_parameter_data(self.ui.tableView_relationship_parameter_value, "parameter value")
+    @Slot(dict)
+    def _handle_graph_selection_changed(self, selected_items):
+        """Resets filter according to graph selection."""
+        obj_items = selected_items["object"]
+        rel_items = selected_items["relationship"]
+        active_objs = {self.db_map: [x.db_representation for x in obj_items]}
+        cascading_rels = self.db_mngr.find_cascading_relationships(self.db_mngr.db_map_ids(active_objs))
+        active_rels = {self.db_map: [x.db_representation for x in rel_items] + cascading_rels[self.db_map]}
+        self.filter_class_ids = {}
+        for db_map, items in active_objs.items():
+            self.filter_class_ids.setdefault(db_map, set()).update({x["class_id"] for x in items})
+        for db_map, items in active_rels.items():
+            self.filter_class_ids.setdefault(db_map, set()).update({x["class_id"] for x in items})
+        self.filter_entity_ids = self.db_mngr.db_map_class_ids(active_objs)
+        self.filter_entity_ids.update(self.db_mngr.db_map_class_ids(active_rels))
+        self.reset_filters()
 
-    @Slot()
-    def remove_object_parameter_definitions(self):
-        """Removes selected rows from object parameter definition table."""
-        self._remove_parameter_data(self.ui.tableView_object_parameter_definition, "parameter definition")
+    @Slot(dict)
+    def _handle_object_tree_selection_changed(self, selected_indexes):
+        """Resets filter according to object tree selection."""
+        obj_cls_inds = set(selected_indexes.get("object class", {}).keys())
+        obj_inds = set(selected_indexes.get("object", {}).keys())
+        rel_cls_inds = set(selected_indexes.get("relationship class", {}).keys())
+        active_rel_inds = set(selected_indexes.get("relationship", {}).keys())
+        # Compute active indexes by merging in the parents from lower levels recursively
+        active_rel_cls_inds = rel_cls_inds | {ind.parent() for ind in active_rel_inds}
+        active_obj_inds = obj_inds | {ind.parent() for ind in active_rel_cls_inds}
+        active_obj_cls_inds = obj_cls_inds | {ind.parent() for ind in active_obj_inds}
+        self.filter_class_ids = self._db_map_ids(active_obj_cls_inds | active_rel_cls_inds)
+        self.filter_entity_ids = self._db_map_class_ids(active_obj_inds | active_rel_inds)
+        # Cascade (note that we carefuly select where to cascade from, to avoid 'circularity')
+        from_obj_cls_inds = obj_cls_inds | {ind.parent() for ind in obj_inds}
+        from_obj_inds = obj_inds | {ind.parent() for ind in rel_cls_inds}
+        cascading_rel_cls_inds = self.db_mngr.find_cascading_relationship_classes(self._db_map_ids(from_obj_cls_inds))
+        cascading_rel_inds = self.db_mngr.find_cascading_relationships(self._db_map_ids(from_obj_inds))
+        for db_map, ids in self.db_mngr.db_map_ids(cascading_rel_cls_inds).items():
+            self.filter_class_ids.setdefault(db_map, set()).update(ids)
+        for (db_map, class_id), ids in self.db_mngr.db_map_class_ids(cascading_rel_inds).items():
+            self.filter_entity_ids.setdefault((db_map, class_id), set()).update(ids)
+        self.reset_filters()
 
-    @Slot()
-    def remove_relationship_parameter_definitions(self):
-        """Removes selected rows from relationship parameter definition table."""
-        self._remove_parameter_data(self.ui.tableView_relationship_parameter_definition, "parameter definition")
+    @Slot(dict)
+    def _handle_relationship_tree_selection_changed(self, selected_indexes):
+        """Resets filter according to relationship tree selection."""
+        rel_cls_inds = set(selected_indexes.get("relationship class", {}).keys())
+        active_rel_inds = set(selected_indexes.get("relationship", {}).keys())
+        active_rel_cls_inds = rel_cls_inds | {ind.parent() for ind in active_rel_inds}
+        self.filter_class_ids = self._db_map_ids(active_rel_cls_inds)
+        self.filter_entity_ids = self._db_map_class_ids(active_rel_inds)
+        self.reset_filters()
 
-    def _remove_parameter_data(self, table_view, item_type):
-        """
-        Removes selected rows from parameter table.
-
-        Args:
-            table_view (QTableView): remove selection from this view
-            item_type (str)
-        """
-        selection = table_view.selectionModel().selection()
-        rows = list()
-        while not selection.isEmpty():
-            current = selection.takeFirst()
-            top = current.top()
-            bottom = current.bottom()
-            rows += range(top, bottom + 1)
-        # Get parameter data grouped by db_map
-        db_map_typed_data = dict()
-        model = table_view.model()
-        for row in sorted(rows, reverse=True):
-            try:
-                db_map = model.sub_model_at_row(row).db_map
-            except AttributeError:
-                # It's an empty model, just remove the row
-                _, sub_row = model._row_map[row]
-                model.empty_model.removeRow(sub_row)
+    @Slot("QVariant", bool)
+    def _handle_tag_button_toggled(self, db_map_ids, checked):
+        """Resets filter according to selection in parameter tag toolbar."""
+        for db_map, id_ in db_map_ids:
+            if checked:
+                self.filter_tag_ids.setdefault(db_map, set()).add(id_)
             else:
-                id_ = model.item_at_row(row)
-                item = model.db_mngr.get_item(db_map, item_type, id_)
-                db_map_typed_data.setdefault(db_map, {}).setdefault(item_type, []).append(item)
-        self.db_mngr.remove_items(db_map_typed_data)
-        table_view.selectionModel().clearSelection()
+                self.filter_tag_ids[db_map].remove(id_)
+        self.filter_tag_ids = {db_map: ids for db_map, ids in self.filter_tag_ids.items() if ids}
+        filter_parameters = self.db_mngr.find_cascading_parameter_definitions_by_tag(self.filter_tag_ids)
+        self.filter_parameter_ids = d = {}
+        for db_map, params in filter_parameters.items():
+            for param in params:
+                d.setdefault((db_map, param["entity_class_id"]), set()).add(param["id"])
+        if self.filter_tag_ids and not any(filter_parameters.values()):
+            # There are tags selected but no matching parameter definitions ~> no class shall pass
+            self.tag_filter_class_ids = None
+            self.reset_filters()
+            return
+        self.tag_filter_class_ids = d = {}
+        for db_map, params in filter_parameters.items():
+            for param in params:
+                d.setdefault(db_map, set()).add(param["entity_class_id"])
+        self.reset_filters()
+
+    @Slot(bool)
+    def show_manage_parameter_tags_form(self, checked=False):
+        dialog = ManageParameterTagsDialog(self, self.db_mngr, *self.db_maps)
+        dialog.show()
+
+    def restore_dock_widgets(self):
+        """Restores parameter tag toolbar."""
+        super().restore_dock_widgets()
+        self.parameter_tag_toolbar.setVisible(True)
+        self.addToolBar(Qt.TopToolBarArea, self.parameter_tag_toolbar)
 
     def restore_ui(self):
         """Restores UI state from previous session."""
@@ -470,6 +314,10 @@ class ParameterViewMixin:
         self.qsettings.setValue("relParValHeaderState", h.saveState())
         self.qsettings.endGroup()
 
+    def receive_parameter_tags_fetched(self, db_map_data):
+        super().receive_parameter_tags_fetched(db_map_data)
+        self.parameter_tag_toolbar.receive_parameter_tags_added(db_map_data)
+
     def receive_parameter_definitions_fetched(self, db_map_data):
         super().receive_parameter_definitions_added(db_map_data)
         self.object_parameter_definition_model.receive_parameter_data_added(db_map_data)
@@ -480,6 +328,10 @@ class ParameterViewMixin:
         self.object_parameter_value_model.receive_parameter_data_added(db_map_data)
         self.relationship_parameter_value_model.receive_parameter_data_added(db_map_data)
 
+    def receive_parameter_tags_added(self, db_map_data):
+        super().receive_parameter_tags_added(db_map_data)
+        self.parameter_tag_toolbar.receive_parameter_tags_added(db_map_data)
+
     def receive_parameter_definitions_added(self, db_map_data):
         super().receive_parameter_definitions_added(db_map_data)
         self.object_parameter_definition_model.receive_parameter_data_added(db_map_data)
@@ -489,6 +341,10 @@ class ParameterViewMixin:
         super().receive_parameter_values_added(db_map_data)
         self.object_parameter_value_model.receive_parameter_data_added(db_map_data)
         self.relationship_parameter_value_model.receive_parameter_data_added(db_map_data)
+
+    def receive_parameter_tags_updated(self, db_map_data):
+        super().receive_parameter_tags_updated(db_map_data)
+        self.parameter_tag_toolbar.receive_parameter_tags_updated(db_map_data)
 
     def receive_parameter_definitions_updated(self, db_map_data):
         super().receive_parameter_definitions_updated(db_map_data)
@@ -514,6 +370,10 @@ class ParameterViewMixin:
         super().receive_relationship_classes_removed(db_map_data)
         self.relationship_parameter_definition_model.receive_entity_classes_removed(db_map_data)
         self.relationship_parameter_value_model.receive_entity_classes_removed(db_map_data)
+
+    def receive_parameter_tags_removed(self, db_map_data):
+        super().receive_parameter_tags_removed(db_map_data)
+        self.parameter_tag_toolbar.receive_parameter_tags_removed(db_map_data)
 
     def receive_parameter_definitions_removed(self, db_map_data):
         super().receive_parameter_definitions_removed(db_map_data)
