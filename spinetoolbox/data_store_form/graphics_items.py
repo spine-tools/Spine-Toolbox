@@ -229,16 +229,6 @@ class EntityItem(QGraphicsPixmapItem):
             item.setVisible(on)
         self.setVisible(on)
 
-    def wipe_out(self):
-        """Removes this item and all its arc items from the scene."""
-        self.scene().removeItem(self)
-        for arc_item in self.arc_items:
-            if arc_item.scene():
-                arc_item.scene().removeItem(arc_item)
-                other_item = arc_item.other_item(self)
-                if other_item.is_wip:
-                    other_item.wipe_out()
-
     def _make_menu(self):
         menu = QMenu(self._data_store_form)
         menu.addAction(self._data_store_form.ui.actionSave_positions)
@@ -263,7 +253,7 @@ class EntityItem(QGraphicsPixmapItem):
             self.scene().clearSelection()
         self.setSelected(True)
         self._data_store_form._handle_menu_graph_about_to_show()
-        self._menu.exec_(e.screenPos())
+        self._menu.popup(e.screenPos())
 
 
 class RelationshipItem(EntityItem):
@@ -326,9 +316,6 @@ class RelationshipItem(EntityItem):
         bg_color.setAlphaF(0.8)
         self._bg_brush = QBrush(bg_color)
 
-    def _show_item_context_menu_in_parent(self, pos):
-        self._data_store_form.show_relationship_item_context_menu(pos)
-
     def follow_object_by(self, dx, dy):
         factor = 1.0 / len(self.arc_items)
         self.moveBy(factor * dx, factor * dy)
@@ -348,7 +335,6 @@ class ObjectItem(EntityItem):
         super().__init__(data_store_form, x, y, extent, entity_id=entity_id)
         self._add_relationships_menu = None
         self._relationship_class_per_action = {}
-        self.setFlag(QGraphicsItem.ItemIsFocusable, enabled=True)
         self.label_item = EntityLabelItem(self)
         self.setZValue(0.5)
         self.update_name(self.entity_name)
@@ -493,16 +479,13 @@ class ArcItem(QGraphicsLineItem):
         self._pen.setWidthF(scaled_width)
         self.setPen(self._pen)
 
-    def wipe_out(self):
-        self.obj_item.arc_items.remove(self)
-        self.rel_item.arc_items.remove(self)
-
 
 class CrossHairsItem(RelationshipItem):
     def __init__(self, data_store_form, x, y, extent):
         super().__init__(data_store_form, x, y, 0.8 * extent)
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=False)
         self.setZValue(2)
+        self._current_icon = None
 
     @property
     def entity_class_name(self):
@@ -516,7 +499,8 @@ class CrossHairsItem(RelationshipItem):
         return "<p>Click on an object to add it to the relationship.</p>"
 
     def refresh_icon(self):
-        self.set_foo_icon()
+        pixmap = CharIconEngine("\uf05b", 0).pixmap(QSize(self._extent, self._extent))
+        self.setPixmap(pixmap)
 
     def set_plus_icon(self):
         self.set_icon("\uf067", Qt.blue)
@@ -524,7 +508,7 @@ class CrossHairsItem(RelationshipItem):
     def set_check_icon(self):
         self.set_icon("\uf00c", Qt.green)
 
-    def set_foo_icon(self):
+    def set_normal_icon(self):
         self.set_icon("\uf05b")
 
     def set_ban_icon(self):
@@ -532,8 +516,11 @@ class CrossHairsItem(RelationshipItem):
 
     def set_icon(self, unicode, color=0):
         """Refreshes the icon."""
+        if (unicode, color) == self._current_icon:
+            return
         pixmap = CharIconEngine(unicode, color).pixmap(QSize(self._extent, self._extent))
         self.setPixmap(pixmap)
+        self._current_icon = (unicode, color)
 
     def mouseMoveEvent(self, event):
         move_by = event.scenePos() - self.scenePos()
@@ -569,6 +556,9 @@ class CrossHairsRelationshipItem(RelationshipItem):
             .scaled(self._extent, self._extent)
         )
         self.setPixmap(pixmap)
+
+    def contextMenuEvent(self, e):
+        e.accept()
 
 
 class CrossHairsArcItem(ArcItem):

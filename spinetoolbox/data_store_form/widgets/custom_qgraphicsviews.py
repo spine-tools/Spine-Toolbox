@@ -51,13 +51,8 @@ class EntityQGraphicsView(CustomQGraphicsView):
         for item in cross_hairs_items:
             self.scene().addItem(item)
             item.apply_zoom(self.zoom_factor)
-        obj_item = cross_hairs_items[0]
-        obj_item.grabMouse()
         cursor_pos = self.mapFromGlobal(QCursor.pos())
-        pos = self.mapToScene(cursor_pos)
-        delta = pos - obj_item.scenePos()
-        obj_item.block_move_by(delta.x(), delta.y())
-        self._update_hovered_obj_item(cursor_pos)
+        self._update_cross_hairs_pos(cursor_pos)
 
     def clear_cross_hairs_items(self):
         self.relationship_class = None
@@ -126,18 +121,22 @@ class EntityQGraphicsView(CustomQGraphicsView):
         super().mouseMoveEvent(event)
         if not self.cross_hairs_items:
             return
-        self._update_hovered_obj_item(event.pos())
+        self._update_cross_hairs_pos(event.pos())
 
-    def _update_hovered_obj_item(self, pos):
+    def _update_cross_hairs_pos(self, pos):
         """Updates the hovered object item and sets the 'cross_hairs' icon accordingly.
 
         Args:
-            pos (QPoint)
+            pos (QPoint): the desired position in view coordinates
         """
         self.viewport().setCursor(Qt.BlankCursor)
+        cross_hairs_item = self.cross_hairs_items[0]
+        scene_pos = self.mapToScene(pos)
+        delta = scene_pos - cross_hairs_item.scenePos()
+        cross_hairs_item.block_move_by(delta.x(), delta.y())
         self._hovered_obj_item = None
-        items_at_pos = [item for item in self.items(pos) if item not in self.cross_hairs_items]
-        self._hovered_obj_item = next(iter([x for x in items_at_pos if isinstance(x, ObjectItem)]), None)
+        obj_items = [item for item in self.items(pos) if isinstance(item, ObjectItem)]
+        self._hovered_obj_item = next(iter(obj_items), None)
         if self._hovered_obj_item is not None:
             if self._hovered_obj_item.entity_class_id in self.relationship_class["object_class_ids_to_go"]:
                 if len(self.relationship_class["object_class_ids_to_go"]) == 1:
@@ -147,7 +146,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
                 return
             self.cross_hairs_items[0].set_ban_icon()
             return
-        self.cross_hairs_items[0].set_foo_icon()
+        self.cross_hairs_items[0].set_normal_icon()
 
     def mouseReleaseEvent(self, event):
         if not self.cross_hairs_items:

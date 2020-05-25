@@ -613,11 +613,10 @@ class DataStoreFormBase(QMainWindow):
         pass
 
     def receive_parameter_value_lists_fetched(self, db_map_data):
-        self.notify_items_changed("fetched", "parameter value list", db_map_data)
         self.parameter_value_list_model.receive_parameter_value_lists_added(db_map_data)
 
     def receive_parameter_tags_fetched(self, db_map_data):
-        self.notify_items_changed("fetched", "parameter tag", db_map_data)
+        pass
 
     def receive_object_classes_added(self, db_map_data):
         self.notify_items_changed("added", "object class", db_map_data)

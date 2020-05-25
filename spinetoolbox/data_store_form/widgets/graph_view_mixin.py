@@ -57,6 +57,9 @@ class GraphViewMixin:
         self.ui.actionFull_relationship_expansion.setChecked(self._full_relationship_expansion)
         self._persistent = False
         self.scene = None
+        self.object_items = list()
+        self.relationship_items = list()
+        self.arc_items = list()
         self.selected_tree_inds = {}
         self.object_ids = list()
         self.relationship_ids = list()
@@ -240,13 +243,10 @@ class GraphViewMixin:
         if not removed_items:
             return
         self.removed_items.extend(removed_items)
-        removed_item = removed_items.pop()
-        if removed_items:
-            self.scene.selectionChanged.disconnect(self._handle_scene_selection_changed)
-            for item in removed_items:
-                item.set_all_visible(False)
-            self.scene.selectionChanged.connect(self._handle_scene_selection_changed)
-        removed_item.set_all_visible(False)
+        self.scene.selectionChanged.disconnect(self._handle_scene_selection_changed)
+        for item in removed_items:
+            item.set_all_visible(False)
+        self.scene.selectionChanged.connect(self._handle_scene_selection_changed)
 
     def refresh_icons(self, db_map_data):
         """Runs when entity classes are updated in the db. Refreshes icons of entities in graph.
@@ -283,8 +283,6 @@ class GraphViewMixin:
     def rebuild_graph(self, selected):
         """Stores the given selection of entity tree indexes and builds graph."""
         self.selected_tree_inds = selected
-        self.hidden_items.clear()
-        self.removed_items.clear()
         self.added_object_ids.clear()
         self.added_relationship_ids.clear()
         self.build_graph()
@@ -318,14 +316,16 @@ class GraphViewMixin:
         """
         if self.layout_gens:
             return
+        self.hidden_items.clear()
+        self.removed_items.clear()
+        self.selected_items.clear()
         self.scene.clear()
-        new_items = self._make_new_items(x, y)
-        if not any(new_items):
+        if not self._make_new_items(x, y):
             self._blank_item = QGraphicsTextItem("Nothing to show.")
             self.scene.addItem(self._blank_item)
             self.ui.actionExport_graph_as_pdf.setEnabled(False)
         else:
-            self._add_new_items(*new_items)  # pylint: disable=no-value-for-parameter
+            self._add_new_items()  # pylint: disable=no-value-for-parameter
             self.ui.actionExport_graph_as_pdf.setEnabled(True)
         if not self._persistent:
             self.ui.graphicsView.reset_zoom()
@@ -437,31 +437,26 @@ class GraphViewMixin:
         Args:
             x (list)
             y (list)
-
-        Returns
-            list: ObjectItem instances
-            list: RelationshipItem instances
-            list: ArcItem instances
         """
-        object_items = list()
-        relationship_items = list()
-        arc_items = list()
+        self.object_items = list()
+        self.relationship_items = list()
+        self.arc_items = list()
         for i, object_id in enumerate(self.object_ids):
             object_item = ObjectItem(self, x[i], y[i], self._VERTEX_EXTENT, object_id)
-            object_items.append(object_item)
-        offset = len(object_items)
+            self.object_items.append(object_item)
+        offset = len(self.object_items)
         for i, relationship_id in enumerate(self.relationship_ids):
             relationship_item = RelationshipItem(
                 self, x[offset + i], y[offset + i], 0.5 * self._VERTEX_EXTENT, relationship_id
             )
-            relationship_items.append(relationship_item)
+            self.relationship_items.append(relationship_item)
         for rel_ind, obj_ind in zip(self.src_inds, self.dst_inds):
-            arc_item = ArcItem(relationship_items[rel_ind - offset], object_items[obj_ind], self._ARC_WIDTH)
-            arc_items.append(arc_item)
-        return (object_items, relationship_items, arc_items)
+            arc_item = ArcItem(self.relationship_items[rel_ind - offset], self.object_items[obj_ind], self._ARC_WIDTH)
+            self.arc_items.append(arc_item)
+        return any(self.object_items)
 
-    def _add_new_items(self, object_items, relationship_items, arc_items):
-        for item in object_items + relationship_items + arc_items:
+    def _add_new_items(self):
+        for item in self.object_items + self.relationship_items + self.arc_items:
             self.scene.addItem(item)
 
     @Slot(bool)
