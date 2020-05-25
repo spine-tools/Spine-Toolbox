@@ -79,6 +79,8 @@ class GraphLayoutGenerator(QObject):
 
     def __init__(self, vertex_count, src_inds, dst_inds, spread, heavy_positions=None, iterations=10, weight_exp=-2):
         super().__init__()
+        if vertex_count == 0:
+            vertex_count = 1
         if heavy_positions is None:
             heavy_positions = dict()
         self.vertex_count = vertex_count
@@ -86,9 +88,9 @@ class GraphLayoutGenerator(QObject):
         self.dst_inds = dst_inds
         self.spread = spread
         self.heavy_positions = heavy_positions
-        self.iterations = max(3, round(iterations * (1 - len(heavy_positions) / (vertex_count + 1))))
+        self.iterations = max(3, round(iterations * (1 - len(heavy_positions) / self.vertex_count)))
         self.weight_exp = weight_exp
-        self.initial_diameter = self.vertex_count * self.spread
+        self.initial_diameter = (self.vertex_count ** (0.5)) * self.spread
         self._state = _State.ACTIVE
         self._thread = QThread()
         self.moveToThread(self._thread)
@@ -117,6 +119,11 @@ class GraphLayoutGenerator(QObject):
     def shortest_path_matrix(self):
         """Returns the shortest-path matrix.
         """
+        if not self.src_inds:
+            # Introduce fake pair of links to help 'sparcity'
+            self.src_inds = [self.vertex_count, self.vertex_count]
+            self.dst_inds = [np.random.randint(0, self.vertex_count), np.random.randint(0, self.vertex_count)]
+            self.vertex_count += 1
         dist = np.zeros((self.vertex_count, self.vertex_count))
         src_inds = arr(self.src_inds)
         dst_inds = arr(self.dst_inds)
@@ -126,7 +133,8 @@ class GraphLayoutGenerator(QObject):
             pass
         matrix = dijkstra(dist, directed=False)
         # Remove infinites and zeros
-        matrix[matrix == np.inf] = self.spread * 3
+        # matrix[matrix == np.inf] = self.spread * 3
+        matrix[matrix == np.inf] = self.spread * self.vertex_count ** (0.5)
         matrix[matrix == 0] = self.spread * 1e-6
         return matrix
 
@@ -193,7 +201,7 @@ class GraphLayoutGenerator(QObject):
                 v1, v2 = rand_order[s[:, 0]], rand_order[s[:, 1]]  # arrays of vertex1 and vertex2
                 # current distance (possibly accounting for system rescaling)
                 dist = ((layout[v1, 0] - layout[v2, 0]) ** 2 + (layout[v1, 1] - layout[v2, 1]) ** 2) ** 0.5
-                r = (matrix[v1, v2] - dist)[:, None] / 2 * (layout[v1] - layout[v2]) / dist[:, None]  # desired change
+                r = (matrix[v1, v2] - dist)[:, None] * (layout[v1] - layout[v2]) / dist[:, None] / 2  # desired change
                 dx1 = r * np.minimum(1, weights[v1, v2] * step)[:, None]
                 dx2 = -dx1
                 layout[v1, :] += dx1  # update position

@@ -25,6 +25,7 @@ from .tabular_view_header_widget import TabularViewHeaderWidget
 from ...helpers import fix_name_ambiguity, busy_effect
 from ..mvcmodels.pivot_table_models import IndexId, PivotTableSortFilterProxy, PivotTableModel
 from ..mvcmodels.frozen_table_model import FrozenTableModel
+from spinetoolbox.widgets.custom_qwidgets import TitleWidgetAction
 
 
 class TabularViewMixin:
@@ -47,6 +48,8 @@ class TabularViewMixin:
         self.filter_menus = {}
         self.class_pivot_preferences = {}
         self.PivotPreferences = namedtuple("PivotPreferences", ["index", "columns", "frozen", "frozen_value"])
+        title_action = TitleWidgetAction("Input type", self)
+        self.ui.menuPivot_table.addAction(title_action)
         self.input_type_action_group = QActionGroup(self)
         actions = {
             input_type: self.input_type_action_group.addAction(input_type)
@@ -54,7 +57,7 @@ class TabularViewMixin:
         }
         for action in actions.values():
             action.setCheckable(True)
-            self.ui.menuInput_type.addAction(action)
+            self.ui.menuPivot_table.addAction(action)
         actions[self._PARAMETER_VALUE].setChecked(True)
         self.pivot_table_proxy = PivotTableSortFilterProxy()
         self.pivot_table_model = PivotTableModel(self)

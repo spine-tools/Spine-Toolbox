@@ -13,7 +13,7 @@
 # Form implementation generated from reading ui file '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/data_store_form/ui/data_store_window.ui',
 # licensing of '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/data_store_form/ui/data_store_window.ui' applies.
 #
-# Created: Sat May 23 15:02:09 2020
+# Created: Sun May 24 19:57:00 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -23,7 +23,7 @@ from PySide2 import QtCore, QtGui, QtWidgets
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
-        MainWindow.resize(540, 1636)
+        MainWindow.resize(889, 817)
         MainWindow.setLayoutDirection(QtCore.Qt.LeftToRight)
         MainWindow.setDockOptions(QtWidgets.QMainWindow.AllowNestedDocks|QtWidgets.QMainWindow.AllowTabbedDocks|QtWidgets.QMainWindow.AnimatedDocks|QtWidgets.QMainWindow.GroupedDragging)
         self.centralwidget = QtWidgets.QWidget(MainWindow)
@@ -39,7 +39,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_2.setObjectName("verticalLayout_2")
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 540, 28))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 889, 28))
         self.menubar.setNativeMenuBar(False)
         self.menubar.setObjectName("menubar")
         self.menuSession = QtWidgets.QMenu(self.menubar)
@@ -59,8 +59,6 @@ class Ui_MainWindow(object):
         self.menuHelp.setObjectName("menuHelp")
         self.menuPivot_table = QtWidgets.QMenu(self.menubar)
         self.menuPivot_table.setObjectName("menuPivot_table")
-        self.menuInput_type = QtWidgets.QMenu(self.menuPivot_table)
-        self.menuInput_type.setObjectName("menuInput_type")
         MainWindow.setMenuBar(self.menubar)
         self.dockWidget_parameter_value_list = QtWidgets.QDockWidget(MainWindow)
         self.dockWidget_parameter_value_list.setObjectName("dockWidget_parameter_value_list")
@@ -457,6 +455,8 @@ class Ui_MainWindow(object):
         self.actionInput_type_index_expansion = QtWidgets.QAction(MainWindow)
         self.actionInput_type_index_expansion.setCheckable(True)
         self.actionInput_type_index_expansion.setObjectName("actionInput_type_index_expansion")
+        self.actionRebuild_graph = QtWidgets.QAction(MainWindow)
+        self.actionRebuild_graph.setObjectName("actionRebuild_graph")
         self.menuSession.addAction(self.actionRefresh)
         self.menuSession.addAction(self.actionCommit)
         self.menuSession.addAction(self.actionRollback)
@@ -505,8 +505,8 @@ class Ui_MainWindow(object):
         self.menuGraph.addAction(self.menuRestore_pruned.menuAction())
         self.menuGraph.addAction(self.actionRestore_all_pruned)
         self.menuGraph.addSeparator()
+        self.menuGraph.addAction(self.actionRebuild_graph)
         self.menuHelp.addAction(self.actionLive_graph_demo)
-        self.menuPivot_table.addAction(self.menuInput_type.menuAction())
         self.menubar.addAction(self.menuFile.menuAction())
         self.menubar.addAction(self.menuEdit.menuAction())
         self.menubar.addAction(self.menuView.menuAction())
@@ -524,7 +524,6 @@ class Ui_MainWindow(object):
 
     def retranslateUi(self, MainWindow):
         MainWindow.setWindowTitle(QtWidgets.QApplication.translate("MainWindow", "MainWindow", None, -1))
-        MainWindow.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p><br/></p></body></html>", None, -1))
         self.menuSession.setTitle(QtWidgets.QApplication.translate("MainWindow", "Session", None, -1))
         self.menuEdit.setTitle(QtWidgets.QApplication.translate("MainWindow", "Edit", None, -1))
         self.menuFile.setTitle(QtWidgets.QApplication.translate("MainWindow", "File", None, -1))
@@ -533,7 +532,6 @@ class Ui_MainWindow(object):
         self.menuRestore_pruned.setTitle(QtWidgets.QApplication.translate("MainWindow", "Restore pruned", None, -1))
         self.menuHelp.setTitle(QtWidgets.QApplication.translate("MainWindow", "Help", None, -1))
         self.menuPivot_table.setTitle(QtWidgets.QApplication.translate("MainWindow", "Pivot table", None, -1))
-        self.menuInput_type.setTitle(QtWidgets.QApplication.translate("MainWindow", "Input type", None, -1))
         self.dockWidget_parameter_value_list.setWindowTitle(QtWidgets.QApplication.translate("MainWindow", "Parameter value list", None, -1))
         self.treeView_parameter_value_list.setAccessibleName(QtWidgets.QApplication.translate("MainWindow", "parameter value list", None, -1))
         self.dockWidget_relationship_parameter_value.setWindowTitle(QtWidgets.QApplication.translate("MainWindow", "Relationship parameter value", None, -1))
@@ -611,8 +609,9 @@ class Ui_MainWindow(object):
         self.actionInput_type_parameter_value.setText(QtWidgets.QApplication.translate("MainWindow", "Parameter value", None, -1))
         self.actionInput_type_relationship.setText(QtWidgets.QApplication.translate("MainWindow", "Relationship", None, -1))
         self.actionInput_type_index_expansion.setText(QtWidgets.QApplication.translate("MainWindow", "Index expansion", None, -1))
+        self.actionRebuild_graph.setText(QtWidgets.QApplication.translate("MainWindow", "Rebuild graph", None, -1))
 
-from spinetoolbox.data_store_form.widgets.custom_qtreeview import ParameterValueListTreeView, ObjectTreeView, RelationshipTreeView
-from spinetoolbox.data_store_form.widgets.custom_qtableview import ObjectParameterDefinitionTableView, RelationshipParameterDefinitionTableView, RelationshipParameterValueTableView, ObjectParameterValueTableView, FrozenTableView, PivotTableView
+from spinetoolbox.data_store_form.widgets.custom_qtableview import PivotTableView, ObjectParameterValueTableView, RelationshipParameterValueTableView, FrozenTableView, ObjectParameterDefinitionTableView, RelationshipParameterDefinitionTableView
+from spinetoolbox.data_store_form.widgets.custom_qtreeview import RelationshipTreeView, ParameterValueListTreeView, ObjectTreeView
 from spinetoolbox.data_store_form.widgets.custom_qgraphicsviews import EntityQGraphicsView
 from spinetoolbox import resources_icons_rc

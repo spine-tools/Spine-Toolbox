@@ -18,15 +18,12 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>540</width>
-    <height>1636</height>
+    <width>889</width>
+    <height>817</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>MainWindow</string>
-  </property>
-  <property name="toolTip">
-   <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
   </property>
   <property name="layoutDirection">
    <enum>Qt::LeftToRight</enum>
@@ -64,7 +61,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>540</width>
+     <width>889</width>
      <height>28</height>
     </rect>
    </property>
@@ -151,6 +148,7 @@
     <addaction name="menuRestore_pruned"/>
     <addaction name="actionRestore_all_pruned"/>
     <addaction name="separator"/>
+    <addaction name="actionRebuild_graph"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
     <property name="title">
@@ -162,12 +160,6 @@
     <property name="title">
      <string>Pivot table</string>
     </property>
-    <widget class="QMenu" name="menuInput_type">
-     <property name="title">
-      <string>Input type</string>
-     </property>
-    </widget>
-    <addaction name="menuInput_type"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
@@ -1182,6 +1174,11 @@
    </property>
    <property name="text">
     <string>Index expansion</string>
+   </property>
+  </action>
+  <action name="actionRebuild_graph">
+   <property name="text">
+    <string>Rebuild graph</string>
    </property>
   </action>
  </widget>

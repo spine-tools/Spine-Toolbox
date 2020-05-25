@@ -89,7 +89,7 @@ class AddReadyRelationshipsDialog(ManageItemsDialogBase):
         for row, relationship in enumerate(self.relationships):
             item = QTableWidgetItem()
             item.setFlags(Qt.ItemIsEnabled)
-            item.setCheckState(Qt.Unchecked)
+            item.setCheckState(Qt.Checked)
             self.table_view.setItem(row, 0, item)
             for column, object_name in enumerate(relationship):
                 item = QTableWidgetItem(object_name)

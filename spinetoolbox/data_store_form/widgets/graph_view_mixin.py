@@ -102,6 +102,7 @@ class GraphViewMixin:
         self.ui.actionSave_positions.triggered.connect(self.save_positions)
         self.ui.actionClear_positions.triggered.connect(self.clear_saved_positions)
         self.ui.actionExport_graph_as_pdf.triggered.connect(self.export_as_pdf)
+        self.ui.actionRebuild_graph.triggered.connect(self.build_graph)
         self.ui.actionFull_relationship_expansion.toggled.connect(self.set_full_relationship_expansion)
         # Dock Widgets menu action
         self.ui.menuGraph.aboutToShow.connect(self._handle_menu_graph_about_to_show)
@@ -296,6 +297,7 @@ class GraphViewMixin:
         """
         if not self.ui.dockWidget_entity_graph.isVisible():
             return
+        self.ui.graphicsView.clear_cross_hairs_items()
         self._persistent = persistent
         for layout_gen in self.layout_gens:
             layout_gen.stop()

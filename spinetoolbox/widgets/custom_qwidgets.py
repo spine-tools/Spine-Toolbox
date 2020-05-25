@@ -29,9 +29,11 @@ from PySide2.QtWidgets import (
     QLineEdit,
     QDialogButtonBox,
     QWidgetAction,
+    QLabel,
+    QFrame,
 )
-from PySide2.QtCore import QTimer, Signal, Slot
-from PySide2.QtGui import QPainter
+from PySide2.QtCore import QTimer, Signal, Slot, Qt
+from PySide2.QtGui import QPainter, QFontMetrics
 from ..mvcmodels.filter_checkbox_list_model import SimpleFilterCheckboxListModel
 
 
@@ -155,12 +157,34 @@ class CustomWidgetAction(QWidgetAction):
 
     @Slot()
     def _handle_hovered(self):
-        """Runs when the widget action is hovered. Hides other menus under the parent widget
-        which are being shown. This is the default behavior for hovering QAction,
-        but for some reason it's not the case for hovering QWidgetAction."""
+        """Hides other menus that might be shown in the parent widget and repaints it.
+        This is to emulate the behavior of QAction."""
         for menu in self.parentWidget().findChildren(QMenu):
             if menu.isVisible():
                 menu.hide()
+        self.parentWidget().update(self.parentWidget().geometry())
+
+
+class TitleWidgetAction(CustomWidgetAction):
+    H_MARGIN = 6
+    V_MARGIN = 2
+
+    def __init__(self, title, parent=None):
+        super().__init__(parent)
+        widget = QWidget()
+        layout = QHBoxLayout(widget)
+        layout.setContentsMargins(self.H_MARGIN, self.V_MARGIN, self.H_MARGIN, self.V_MARGIN)
+        layout.setSpacing(self.V_MARGIN)
+        label = QLabel(title, widget)
+        fm = QFontMetrics(label.font())
+        label.setFixedWidth(fm.width(title))
+        lines = QFrame(widget), QFrame(widget)
+        for line in lines:
+            line.setFrameShape(QFrame.HLine)
+            line.setFrameShadow(QFrame.Sunken)
+            layout.addWidget(line)
+        layout.insertWidget(1, label)
+        self.setDefaultWidget(widget)
 
 
 class ZoomWidgetAction(CustomWidgetAction):
@@ -226,8 +250,8 @@ class ActionToolbarWidget(QWidget):
         """
         super().__init__(parent)
         self.option = QStyleOptionMenuItem()
-        zoom_action = QAction(text)
-        QMenu(parent).initStyleOption(self.option, zoom_action)
+        action = QAction(text)
+        QMenu(parent).initStyleOption(self.option, action)
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)

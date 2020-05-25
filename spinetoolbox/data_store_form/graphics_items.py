@@ -30,6 +30,7 @@ from PySide2.QtWidgets import (
 )
 from PySide2.QtGui import QPen, QBrush, QPainterPath, QFont, QPalette, QGuiApplication
 from spinetoolbox.helpers import CharIconEngine
+from spinetoolbox.widgets.custom_qwidgets import TitleWidgetAction
 
 
 class EntityItem(QGraphicsPixmapItem):
@@ -364,6 +365,8 @@ class ObjectItem(EntityItem):
         self.label_item.setPlainText(name)
 
     def update_description(self, description):
+        if not description:
+            description = "No description"
         self.setToolTip(f"<html>{description}</html>")
 
     def block_move_by(self, dx, dy):
@@ -383,18 +386,20 @@ class ObjectItem(EntityItem):
         self._add_relationships_menu.triggered.connect(self._start_relationship)
         return menu
 
-    def _populate_add_relationships_menu(self):
+    def _populate_add_relationships_menu(self, add_title=False):
         self._add_relationships_menu.clear()
+        if add_title:
+            title = TitleWidgetAction("Add relationships", self._data_store_form)
+            self._add_relationships_menu.addAction(title)
         self._relationship_class_per_action.clear()
         object_class_ids_in_graph = {x.entity_class_id for x in self.scene().items() if isinstance(x, ObjectItem)}
         db_map_object_class_ids = {self.db_map: {self.entity_class_id}}
         for rel_cls in self.db_mngr.find_cascading_relationship_classes(db_map_object_class_ids).get(self.db_map, []):
-            action = self._add_relationships_menu.addAction(rel_cls["name"])
             object_class_id_list = [int(id_) for id_ in rel_cls["object_class_id_list"].split(",")]
-            enabled = set(object_class_id_list) <= object_class_ids_in_graph
-            action.setEnabled(enabled)
-            if not enabled:
+            if not set(object_class_id_list) <= object_class_ids_in_graph:
                 continue
+            icon = self.db_mngr.entity_class_icon(self.db_map, "relationship class", rel_cls["id"])
+            action = self._add_relationships_menu.addAction(icon, rel_cls["name"])
             rel_cls = rel_cls.copy()
             rel_cls["object_class_id_list"] = object_class_id_list
             self._relationship_class_per_action[action] = rel_cls
@@ -407,6 +412,10 @@ class ObjectItem(EntityItem):
         """
         self._populate_add_relationships_menu()
         super().contextMenuEvent(e)
+
+    def mouseDoubleClickEvent(self, e):
+        self._populate_add_relationships_menu(add_title=True)
+        self._add_relationships_menu.popup(e.screenPos())
 
     @Slot("QAction")
     def _start_relationship(self, action):
@@ -482,9 +491,9 @@ class ArcItem(QGraphicsLineItem):
 
 class CrossHairsItem(RelationshipItem):
     def __init__(self, data_store_form, x, y, extent):
-        super().__init__(data_store_form, x, y, extent)
+        super().__init__(data_store_form, x, y, 0.8 * extent)
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=False)
-        self.setToolTip("<p>Click on an object to add it as member in the relationship.</p>")
+        self.setToolTip("<p>Click on an object to add it to the relationship.</p>")
         self.setZValue(2)
 
     @property
