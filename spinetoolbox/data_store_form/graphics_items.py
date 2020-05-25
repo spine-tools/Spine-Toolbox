@@ -281,6 +281,7 @@ class RelationshipItem(EntityItem):
         """
         super().__init__(data_store_form, x, y, extent, entity_id=entity_id)
         self._menu = self._make_menu()
+        self.setToolTip(self._make_tool_tip())
 
     @property
     def entity_type(self):
@@ -288,17 +289,19 @@ class RelationshipItem(EntityItem):
 
     @property
     def object_class_id_list(self):
-        return self.db_mngr.get_item(self.db_map, "relationship class", self.entity_class_id).get(
-            "object_class_id_list"
-        )
+        return self.db_mngr.get_item(self.db_map, "relationship class", self.entity_class_id)["object_class_id_list"]
 
     @property
     def object_name_list(self):
-        return self.db_mngr.get_item(self.db_map, "relationship", self.entity_id).get("object_name_list")
+        return self.db_mngr.get_item(self.db_map, "relationship", self.entity_id)["object_name_list"]
 
     @property
     def object_id_list(self):
-        return self.db_mngr.get_item(self.db_map, "relationship", self.entity_id).get("object_id_list")
+        return self.db_mngr.get_item(self.db_map, "relationship", self.entity_id)["object_id_list"]
+
+    @property
+    def entity_class_name(self):
+        return self.db_mngr.get_item(self.db_map, "relationship", self.entity_id)["class_name"]
 
     @property
     def db_representation(self):
@@ -307,6 +310,12 @@ class RelationshipItem(EntityItem):
             id=self.entity_id,
             object_id_list=self.object_id_list,
             object_name_list=self.object_name_list,
+        )
+
+    def _make_tool_tip(self):
+        return (
+            f"""<html><p style="text-align:center;">{self.entity_class_name}<br>"""
+            f"""{self.object_name_list.replace(",", self.db_mngr._GROUP_SEP)}</p></html>"""
         )
 
     def _init_bg(self):
@@ -493,7 +502,6 @@ class CrossHairsItem(RelationshipItem):
     def __init__(self, data_store_form, x, y, extent):
         super().__init__(data_store_form, x, y, 0.8 * extent)
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=False)
-        self.setToolTip("<p>Click on an object to add it to the relationship.</p>")
         self.setZValue(2)
 
     @property
@@ -503,6 +511,9 @@ class CrossHairsItem(RelationshipItem):
     @property
     def entity_name(self):
         return None
+
+    def _make_tool_tip(self):
+        return "<p>Click on an object to add it to the relationship.</p>"
 
     def refresh_icon(self):
         self.set_foo_icon()
@@ -541,6 +552,9 @@ class CrossHairsRelationshipItem(RelationshipItem):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=False)
+
+    def _make_tool_tip(self):
+        return None
 
     def refresh_icon(self):
         """Refreshes the icon."""
