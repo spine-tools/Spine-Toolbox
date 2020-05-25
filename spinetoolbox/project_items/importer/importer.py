@@ -30,7 +30,8 @@ from spinetoolbox.spine_io.importers.excel_reader import ExcelConnector
 from spinetoolbox.spine_io.importers.gdx_connector import GdxConnector
 from spinetoolbox.spine_io.importers.json_reader import JSONConnector
 from spinetoolbox.import_editor.widgets.import_editor_window import ImportEditorWindow
-from .commands import ChangeItemSelectionCommand, UpdateSettingsCommand, UpdateCancelOnErrorCommand
+from .commands import ChangeItemSelectionCommand, UpdateSettingsCommand
+from ..shared.commands import UpdateCancelOnErrorCommand
 from .executable_item import ExecutableItem
 from .item_info import ItemInfo
 from .utils import deserialize_mappings
@@ -101,7 +102,7 @@ class Importer(ProjectItem):
         self._file_model.set_initial_state(mapping_selection)
         self._file_model.selected_for_import_state_changed.connect(self._push_file_selection_change_to_undo_stack)
         # connector class
-        self._preview_widget = {}  # Key is the filepath, value is the ImportPreviewWindow instance
+        self._preview_widget = {}  # Key is the filepath, value is the ImportEditorWindow instance
 
     @staticmethod
     def item_type():
@@ -124,9 +125,8 @@ class Importer(ProjectItem):
             selected_settings[label] = settings
         python_path = self._project.settings.value("appSettings/pythonPath", defaultValue="")
         gams_path = self._project.settings.value("appSettings/gamsPath", defaultValue=None)
-        cancel_on_error = self._properties_ui.cancel_on_error_checkBox.isChecked()
         executable = ExecutableItem(
-            self.name, selected_settings, self.logs_dir, python_path, gams_path, cancel_on_error, self._logger
+            self.name, selected_settings, self.logs_dir, python_path, gams_path, self.cancel_on_error, self._logger
         )
         return executable
 

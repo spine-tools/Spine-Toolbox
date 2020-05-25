@@ -10,21 +10,44 @@
 ######################################################################################################################
 
 """
-This module defines the project item categories available in the Toolbox.
+The ViewFactory class.
 
-:author: A.Soininen (VTT)
-:date:   6.5.2020
+:author: M. Marin (KTH)
+:date:   15.4.2020
 """
-# The categories will appear in the main window in the same order they are declared here.
-CATEGORIES = ("Data Stores", "Data Connections", "Tools", "Views", "Importers", "Exporters", "Manipulators")
+
+from spinetoolbox.project_item import ProjectItemFactory
+from .combiner import Combiner
+from .combiner_icon import CombinerIcon
+from .widgets.combiner_properties_widget import CombinerPropertiesWidget
+from .widgets.add_combiner_widget import AddCombinerWidget
 
 
-CATEGORY_DESCRIPTIONS = {
-    "Data Connections": "Generic data source",
-    "Data Stores": "Data in the Spine generic format",
-    "Exporters": "Data conversion from Spine to an external format",
-    "Importers": "Data conversion from an external format to Spine",
-    "Tools": "Custom data processing",
-    "Views": "Data visualization",
-    "Manipulators": "Data conversion from Spine to Spine",
-}
+class CombinerFactory(ProjectItemFactory):
+    @staticmethod
+    def icon():
+        return ":/icons/project_item_icons/blender.svg"
+
+    @property
+    def item_maker(self):
+        return Combiner
+
+    @property
+    def icon_maker(self):
+        return CombinerIcon
+
+    @property
+    def add_form_maker(self):
+        return AddCombinerWidget
+
+    @property
+    def specification_form_maker(self):
+        raise NotImplementedError()
+
+    @property
+    def specification_menu_maker(self):
+        raise NotImplementedError()
+
+    @staticmethod
+    def _make_properties_widget(toolbox):
+        return CombinerPropertiesWidget(toolbox)

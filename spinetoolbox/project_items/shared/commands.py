@@ -10,21 +10,31 @@
 ######################################################################################################################
 
 """
-This module defines the project item categories available in the Toolbox.
+Undo/redo commands for the Importer project item.
 
-:author: A.Soininen (VTT)
-:date:   6.5.2020
+:authors: M. Marin (KTH)
+:date:   5.5.2020
 """
-# The categories will appear in the main window in the same order they are declared here.
-CATEGORIES = ("Data Stores", "Data Connections", "Tools", "Views", "Importers", "Exporters", "Manipulators")
+from spinetoolbox.project_commands import SpineToolboxCommand
 
 
-CATEGORY_DESCRIPTIONS = {
-    "Data Connections": "Generic data source",
-    "Data Stores": "Data in the Spine generic format",
-    "Exporters": "Data conversion from Spine to an external format",
-    "Importers": "Data conversion from an external format to Spine",
-    "Tools": "Custom data processing",
-    "Views": "Data visualization",
-    "Manipulators": "Data conversion from Spine to Spine",
-}
+class UpdateCancelOnErrorCommand(SpineToolboxCommand):
+    """Command to update Importer or Combiner cancel on error setting."""
+
+    def __init__(self, project_item, cancel_on_error):
+        """
+        Args:
+            project_item (ProjectItem): the item
+            cancel_on_error (bool): the new setting
+        """
+        super().__init__()
+        self._project_item = project_item
+        self._redo_cancel_on_error = cancel_on_error
+        self._undo_cancel_on_error = not cancel_on_error
+        self.setText(f"change cancel on error setting of {project_item.name}")
+
+    def redo(self):
+        self._project_item.set_cancel_on_error(self._redo_cancel_on_error)
+
+    def undo(self):
+        self._project_item.set_cancel_on_error(self._undo_cancel_on_error)

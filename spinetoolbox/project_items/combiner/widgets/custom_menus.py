@@ -10,21 +10,28 @@
 ######################################################################################################################
 
 """
-This module defines the project item categories available in the Toolbox.
+Classes for custom context menus and pop-up menus.
 
-:author: A.Soininen (VTT)
-:date:   6.5.2020
+:author: P. Savolainen (VTT)
+:date:   9.1.2018
 """
-# The categories will appear in the main window in the same order they are declared here.
-CATEGORIES = ("Data Stores", "Data Connections", "Tools", "Views", "Importers", "Exporters", "Manipulators")
+
+from spinetoolbox.widgets.custom_menus import CustomContextMenu
 
 
-CATEGORY_DESCRIPTIONS = {
-    "Data Connections": "Generic data source",
-    "Data Stores": "Data in the Spine generic format",
-    "Exporters": "Data conversion from Spine to an external format",
-    "Importers": "Data conversion from an external format to Spine",
-    "Tools": "Custom data processing",
-    "Views": "Data visualization",
-    "Manipulators": "Data conversion from Spine to Spine",
-}
+class CombinerPropertiesContextMenu(CustomContextMenu):
+    """Context menu class for the references tree view of the Combiner project item properties."""
+
+    def __init__(self, parent, position, index):
+        """
+
+        Args:
+            parent (QWidget): Parent for menu widget (ToolboxUI)
+            position (QPoint): Position on screen
+            index (QModelIndex): Index of item that requested the context-menu
+        """
+        super().__init__(parent, position)
+        if not index.isValid():
+            # If no item at index
+            return
+        self.add_action("Open view")
