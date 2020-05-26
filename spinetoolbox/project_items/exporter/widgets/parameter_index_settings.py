@@ -292,7 +292,7 @@ class ParameterIndexSettings(QWidget):
         """Builds indexes according to given expression."""
         indexes = list()
         try:
-            for index in range(len(self._indexing_setting.parameter.values[0])):
+            for index in range(len(next(iter(self._indexing_setting.parameter.values)))):
                 indexes.append(str(eval(expression, {}, {"i": index + 1})))  # pylint: disable=eval-used
         except (AttributeError, NameError, SyntaxError, ValueError):
             return
@@ -306,7 +306,7 @@ class ParameterIndexSettings(QWidget):
         self._ui.generator_expression_edit.blockSignals(True)
         self._ui.generator_expression_edit.clear()
         self._ui.generator_expression_edit.blockSignals(False)
-        indexes = [str(index) for index in self._indexing_setting.parameter.values[0].indexes]
+        indexes = [str(index) for index in next(iter(self._indexing_setting.parameter.values)).indexes]
         self._indexing_table_model.set_indexes(indexes)
         self._ui.index_table_view.selectAll()
 
@@ -343,13 +343,10 @@ class _IndexingTableModel(QAbstractTableModel):
         super().__init__()
         self._indexes = list()
         self._index_name = ""
-        self._parameter_values = list()
-        self._parameter_nonexpanded_indexes = list()
-        for value_index, parameter_value in zip(parameter.indexes, parameter.values):
-            self._parameter_nonexpanded_indexes.append(value_index)
-            self._parameter_values.append(parameter_value)
+        self._parameter_values = list(parameter.values)
+        self._parameter_nonexpanded_indexes = list(parameter.indexes)
         self._selected = list()
-        self._values = len(parameter.values) * [list()]
+        self._values = len(parameter.data) * [list()]
 
     @property
     def indexes(self):
@@ -453,11 +450,12 @@ class _IndexingTableModel(QAbstractTableModel):
             value_index = 0
             value_length = len(parameter_value)
             last_changed_row = 0
+            values = list(parameter_value.values)
             for j, is_selected in enumerate(self._selected):
                 if value_index == value_length:
                     break
                 if is_selected:
-                    value_column[j] = str(parameter_value.values[value_index])
+                    value_column[j] = str(values[value_index])
                     value_index += 1
                 last_changed_row += 1
             max_changed_row = max(max_changed_row, last_changed_row)
