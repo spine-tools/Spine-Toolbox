@@ -158,7 +158,7 @@ class DataConnection(ProjectItem):
     def add_references(self, checked=False):
         """Let user select references to files for this data connection."""
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-        answer = QFileDialog.getOpenFileNames(self._toolbox, "Add file references", APPLICATION_PATH, "*.*")
+        answer = QFileDialog.getOpenFileNames(self._toolbox, "Add file references", self._project.project_dir, "*.*")
         file_paths = answer[0]
         if not file_paths:  # Cancel button clicked
             return
