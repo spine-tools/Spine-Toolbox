@@ -25,7 +25,6 @@ from .tabular_view_header_widget import TabularViewHeaderWidget
 from ...helpers import fix_name_ambiguity, busy_effect
 from ...widgets.custom_qwidgets import TitleWidgetAction
 from ..mvcmodels.pivot_table_models import (
-    IndexId,
     PivotTableSortFilterProxy,
     ParameterValuePivotTableModel,
     RelationshipPivotTableModel,
@@ -364,11 +363,10 @@ class TabularViewMixin:
         if self.current_input_type == self._RELATIONSHIP and self.current_class_type != "relationship class":
             self.clear_pivot_table()
             return
-        length = len(self.current_object_class_id_list())
-        index_ids = tuple(range(length))
         pivot = self.get_pivot_preferences()
         self.wipe_out_filter_menus()
-        self.pivot_table_model.call_reset_model(index_ids, pivot)
+        object_class_names = dict(zip(self.current_object_class_id_list(), self.current_object_class_name_list()))
+        self.pivot_table_model.call_reset_model(object_class_names, pivot)
         self.pivot_table_proxy.clear_filter()
 
     def clear_pivot_table(self):
@@ -425,10 +423,8 @@ class TabularViewMixin:
         """
         _get_field = lambda *args: self.db_mngr.get_field(self.db_map, *args)
         if identifier not in self.filter_menus:
-            data_to_value = {
-                IndexId.PARAMETER: lambda id_: _get_field("parameter definition", id_, "parameter_name"),
-                IndexId.PARAMETER_INDEX: str,
-            }.get(identifier, lambda id_: _get_field("object", id_, "name"))
+            pivot_top_left_header = self.pivot_table_model.top_left_headers[identifier]
+            data_to_value = pivot_top_left_header.header_data
             self.filter_menus[identifier] = menu = TabularViewFilterMenu(
                 self, identifier, data_to_value, show_empty=False
             )
@@ -443,7 +439,7 @@ class TabularViewMixin:
         Returns a TabularViewHeaderWidget for given object class identifier.
 
         Args:
-            identifier (int)
+            identifier (str)
             area (str)
             with_menu (bool)
 
@@ -451,10 +447,7 @@ class TabularViewMixin:
             TabularViewHeaderWidget
         """
         menu = self.create_filter_menu(identifier) if with_menu else None
-        name = {IndexId.PARAMETER: self._PARAMETER, IndexId.PARAMETER_INDEX: self._INDEX}.get(
-            identifier, self.current_object_class_name_list()[identifier]
-        )
-        widget = TabularViewHeaderWidget(identifier, name, area, menu=menu, parent=self)
+        widget = TabularViewHeaderWidget(identifier, area, menu=menu, parent=self)
         widget.header_dropped.connect(self.handle_header_dropped)
         return widget
 

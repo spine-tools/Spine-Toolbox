@@ -16,17 +16,11 @@ Provides pivot table models for the Tabular View.
 :date:   1.11.2018
 """
 
-import enum
 from PySide2.QtCore import Qt, Slot, QTimer, QAbstractTableModel, QModelIndex, QSortFilterProxyModel
 from PySide2.QtGui import QColor, QFont
 from .pivot_model import PivotModel
 from ...mvcmodels.shared import PARSED_ROLE
 from ...config import PIVOT_TABLE_HEADER_COLOR
-
-
-class IndexId(enum.IntEnum):
-    PARAMETER = -1
-    PARAMETER_INDEX = -3
 
 
 class PivotTableModelBase(QAbstractTableModel):
@@ -46,6 +40,7 @@ class PivotTableModelBase(QAbstractTableModel):
         self.db_mngr = parent.db_mngr
         self.db_map = parent.db_map
         self.model = PivotModel()
+        self.top_left_headers = {}
         self._plot_x_column = None
         self._data_row_count = 0
         self._data_column_count = 0
@@ -163,11 +158,6 @@ class PivotTableModelBase(QAbstractTableModel):
     def plot_x_column(self):
         """Returns the index of the column designated as Y values for plotting or None."""
         return self._plot_x_column
-
-    def first_data_row(self):
-        """Returns the row index to the first data row."""
-        # Last row is an empty row, exclude it.
-        return self.headerRowCount()
 
     def headerRowCount(self):
         """Returns number of rows occupied by header."""
@@ -345,6 +335,7 @@ class PivotTableModelBase(QAbstractTableModel):
 
     def header_name(self, index):
         """Returns the name corresponding to the given header index.
+        Used by PivotTableView.
 
         Args:
             index (QModelIndex)
@@ -356,78 +347,6 @@ class PivotTableModelBase(QAbstractTableModel):
         top_left_id = self._top_left_id(index)
         return self._header_name(top_left_id, header_id)
 
-    def _get_header_data_from_db(self, item_type, header_id, field_name, role):
-        item = self.db_mngr.get_item(self.db_map, item_type, header_id)
-        if role in (Qt.DisplayRole, Qt.EditRole):
-            return item.get(field_name)
-        if role == Qt.ToolTipRole:
-            return item.get("description", "No description")
-
-    def header_names(self, index):
-        """Returns the header names corresponding to the given data index.
-
-        Args:
-            index (QModelIndex)
-
-        Returns:
-            list(str): object names
-            str: parameter name
-        """
-        objects_ids, parameter_id = self.header_ids(index)
-        object_names = [self.db_mngr.get_item(self.db_map, "object", id_)["name"] for id_ in objects_ids]
-        parameter_name = self.db_mngr.get_item(self.db_map, "parameter definition", parameter_id).get(
-            "parameter_name", ""
-        )
-        return object_names, parameter_name
-
-    @staticmethod
-    def _last_object_id_index():
-        return -1
-
-    def header_ids(self, index):
-        """Returns the header ids corresponding to the given data index.
-
-        Args:
-            index (QModelIndex)
-
-        Returns:
-            list(int): object ids
-            int: parameter id
-        """
-        row, column = self.map_to_pivot(index)
-        header_ids = self._header_ids(row, column)
-        return header_ids[: self._last_object_id_index()], header_ids[-1]
-
-    def index_name(self, index):
-        """Returns a string that concatenates the header names corresponding to the given data index.
-
-        Args:
-            index (QModelIndex)
-
-        Returns:
-            str
-        """
-        if not self.index_in_data(index):
-            return ""
-        object_names, parameter_name = self.header_names(index)
-        return self.db_mngr._GROUP_SEP.join(object_names) + " - " + parameter_name
-
-    def column_name(self, column):
-        """Returns a string that concatenates the header names corresponding to the given column.
-
-        Args:
-            column (int)
-
-        Returns:
-            str
-        """
-        header_names = []
-        column -= self.headerColumnCount()
-        for row, top_left_id in enumerate(self.model.pivot_columns):
-            header_id = self.model._column_data_header[column][row]
-            header_names.append(self._header_name(top_left_id, header_id))
-        return self.db_mngr._GROUP_SEP.join(header_names)
-
     def _color_data(self, index):
         if index.row() < self.headerRowCount() and index.column() < self.headerColumnCount():
             return QColor(PIVOT_TABLE_HEADER_COLOR)
@@ -435,8 +354,13 @@ class PivotTableModelBase(QAbstractTableModel):
     def _text_alignment_data(self, index):  # pylint: disable=no-self-use
         return None
 
-    def _header_data(self, index, role):
-        raise NotImplementedError()
+    def _header_data(self, index, role=Qt.DisplayRole):
+        header_id = self._header_id(index)
+        top_left_id = self._top_left_id(index)
+        return self._header_name(top_left_id, header_id)
+
+    def _header_name(self, top_left_id, header_id):
+        return self.top_left_headers[top_left_id].header_data(header_id)
 
     def _data(self, index, role):
         raise NotImplementedError()
@@ -515,76 +439,222 @@ class PivotTableModelBase(QAbstractTableModel):
             top_left_id = self._top_left_id(index)
             item = dict(id=header_id, name=value)
             data_by_top_left_id.setdefault(top_left_id, []).append(item)
-        if not data_by_top_left_id:
-            return False
-        return self._do_batch_set_header_data(data_by_top_left_id)
+        return any(self.top_left_headers[id_].update_data(data) for id_, data in data_by_top_left_id.items())
 
-    def _do_batch_set_header_data(self, data_by_top_left_id):
-        raise NotImplementedError()
-
-    # TODO: Try to split this across subclasses
     def _batch_set_empty_header_data(self, header_data, get_top_left_id):
-        objects = []
-        param_defs = []
-        for index, value in header_data:
-            top_left_id = get_top_left_id(index)
-            item = dict(name=value)
-            if top_left_id == IndexId.PARAMETER:
-                class_key = (
-                    "object_class_id" if self._parent.current_class_type == "object class" else "relationship_class_id"
-                )
-                item[class_key] = self._parent.current_class_id
-                param_defs.append(item)
-            else:
-                item["class_id"] = self._parent.current_object_class_id_list()[top_left_id]
-                objects.append(item)
-        if not objects and not param_defs:
-            return False
-        if objects:
-            self.db_mngr.add_objects({self.db_map: objects})
-        if param_defs:
-            self.db_mngr.add_parameter_definitions({self.db_map: param_defs})
-        return True
+        names_by_top_left_id = {get_top_left_id(index): name for index, name in header_data}
+        return any(self.top_left_headers[id_].add_data(names) for id_, names in names_by_top_left_id.items())
 
     def receive_data_added_or_removed(self, data, action):
         {"add": self.add_to_model, "remove": self.remove_from_model}[action](data)
 
 
+class TopLeftHeaderItem:
+    """Base class for all 'top left pivot headers'.
+    Represents a header located in the top left area of the pivot table."""
+
+    def __init__(self, model):
+        """
+        Args:
+            model (PivotTableModel)
+        """
+        self._model = model
+
+    @property
+    def model(self):
+        return self._model
+
+    @property
+    def db_mngr(self):
+        return self._model.db_mngr
+
+    @property
+    def db_map(self):
+        return self._model.db_map
+
+    def _get_header_data_from_db(self, item_type, header_id, field_name, role):
+        item = self.db_mngr.get_item(self.db_map, item_type, header_id)
+        if role in (Qt.DisplayRole, Qt.EditRole):
+            return item.get(field_name)
+        if role == Qt.ToolTipRole:
+            return item.get("description", "No description")
+
+
+class TopLeftObjectHeaderItem(TopLeftHeaderItem):
+    """A top left header for object class."""
+
+    def __init__(self, model, class_id, class_name):
+        super().__init__(model)
+        self._class_id = class_id
+        self._name = class_name
+
+    @property
+    def name(self):
+        return self._name
+
+    def header_data(self, header_id, role=Qt.DisplayRole):
+        return self._get_header_data_from_db("object", header_id, "name", role)
+
+    def update_data(self, data):
+        if not data:
+            return False
+        self.db_mngr.update_objects({self.db_map: data})
+        return True
+
+    def add_data(self, names):
+        if not names:
+            return False
+        data = []
+        for name in names:
+            item = {"name": name, "class_id": self._class_id}
+            data.append(item)
+        self.db_mngr.add_objects({self.db_map: data})
+        return True
+
+
+class TopLeftParameterHeaderItem(TopLeftHeaderItem):
+    """A top left header for parameter definition."""
+
+    @property
+    def name(self):
+        return "parameter"
+
+    def header_data(self, header_id, role=Qt.DisplayRole):
+        return self._get_header_data_from_db("parameter definition", header_id, "parameter_name", role)
+
+    def update_data(self, data):
+        if not data:
+            return False
+        self.db_mngr.update_parameter_definitions({self.db_map: data})
+        return True
+
+    def add_data(self, names):
+        if not names:
+            return False
+        data = []
+        for name in names:
+            item = {"name": name, "entity_class_id": self.model._parent.current_class_id}
+            data.append(item)
+        self.db_mngr.add_parameter_definitions({self.db_map: data})
+        return True
+
+
+class TopLeftParameterIndexHeaderItem(TopLeftHeaderItem):
+    """A top left header for parameter index."""
+
+    @property
+    def name(self):
+        return "index"
+
+    def header_data(self, header_id, role=Qt.DisplayRole):  # pylint: disable=no-self-use
+        if role == PARSED_ROLE:
+            return header_id
+        return str(header_id)
+
+    def update_data(self, _data):  # pylint: disable=no-self-use
+        return False
+
+    def add_data(self, _names):  # pylint: disable=no-self-use
+        return False
+
+
 class ParameterValuePivotTableModel(PivotTableModelBase):
+    """A model for the pivot table in parameter value input type."""
+
+    def __init__(self, parent):
+        """
+        Args:
+            parent (DataStoreForm)
+        """
+        super().__init__(parent)
+        self._object_class_count = None
+
     @property
     def item_type(self):
         """Returns the item type, always parameter value, for the ParameterValueEditor"""
         return "parameter value"
 
-    def call_reset_model(self, index_ids, pivot):
-        if pivot is None:
-            pivot = self.default_pivot(index_ids)
-        data = self._parent.load_parameter_value_data()
-        index_ids += (IndexId.PARAMETER,)
-        super().reset_model(data, index_ids, *pivot)
-        # FIXME: Does this work if there's a pivot preference applied?
-        x_column = self.headerColumnCount() - 1
-        self.set_plot_x_column(x_column, is_x=True)
+    def object_and_parameter_ids(self, index):
+        """Returns the object and parameter ids corresponding to the given data index.
+        Used by PivotTableView.
 
-    @staticmethod
-    def default_pivot(index_ids):
-        rows = list(index_ids)
-        columns = [IndexId.PARAMETER]
+        Args:
+            index (QModelIndex)
+
+        Returns:
+            list(int): object ids
+            int: parameter id
+        """
+        row, column = self.map_to_pivot(index)
+        header_ids = self._header_ids(row, column)
+        return header_ids[: self._object_class_count], header_ids[-1]
+
+    def object_and_parameter_names(self, index):
+        """Returns the object and parameter names corresponding to the given data index.
+        Used by PivotTableView.
+
+        Args:
+            index (QModelIndex)
+
+        Returns:
+            list(str): object names
+            str: parameter name
+        """
+        objects_ids, parameter_id = self.object_and_parameter_ids(index)
+        object_names = [self.db_mngr.get_item(self.db_map, "object", id_)["name"] for id_ in objects_ids]
+        parameter_name = self.db_mngr.get_item(self.db_map, "parameter definition", parameter_id).get(
+            "parameter_name", ""
+        )
+        return object_names, parameter_name
+
+    def index_name(self, index):
+        """Returns a string that concatenates the object and parameter names corresponding to the given data index.
+        Used by plotting and ParameterValueEditor.
+
+        Args:
+            index (QModelIndex)
+
+        Returns:
+            str
+        """
+        if not self.index_in_data(index):
+            return ""
+        object_names, parameter_name = self.object_and_parameter_names(index)
+        return self.db_mngr._GROUP_SEP.join(object_names) + " - " + parameter_name
+
+    def column_name(self, column):
+        """Returns a string that concatenates the object and parameter names corresponding to the given column.
+        Used by plotting.
+
+        Args:
+            column (int)
+
+        Returns:
+            str
+        """
+        header_names = []
+        column -= self.headerColumnCount()
+        for row, top_left_id in enumerate(self.model.pivot_columns):
+            header_id = self.model._column_data_header[column][row]
+            header_names.append(self._header_name(top_left_id, header_id))
+        return self.db_mngr._GROUP_SEP.join(header_names)
+
+    def call_reset_model(self, object_class_names, pivot):
+        data = self._parent.load_parameter_value_data()
+        top_left_headers = [TopLeftObjectHeaderItem(self, id_, name) for id_, name in object_class_names.items()]
+        top_left_headers += [TopLeftParameterHeaderItem(self)]
+        self.top_left_headers = {h.name: h for h in top_left_headers}
+        if pivot is None:
+            pivot = self._default_pivot()
+        super().reset_model(data, list(self.top_left_headers), *pivot)
+
+    def _default_pivot(self):
+        names = list(self.top_left_headers)
+        rows = names[:-1]
+        columns = [names[-1]]
         frozen = []
         frozen_value = ()
         return rows, columns, frozen, frozen_value
-
-    def _header_name(self, top_left_id, header_id):
-        if top_left_id == IndexId.PARAMETER:
-            return self.db_mngr.get_item(self.db_map, "parameter definition", header_id).get("parameter_name")
-        return self.db_mngr.get_item(self.db_map, "object", header_id)["name"]
-
-    def _header_data(self, index, role=Qt.DisplayRole):
-        header_id = self._header_id(index)
-        top_left_id = self._top_left_id(index)
-        if top_left_id == IndexId.PARAMETER:
-            return self._get_header_data_from_db("parameter definition", header_id, "parameter_name", role)
-        return self._get_header_data_from_db("object", header_id, "name", role)
 
     def _data(self, index, role):
         row, column = self.map_to_pivot(index)
@@ -687,15 +757,6 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
         items = self._checked_parameter_values(items)
         self.db_mngr.update_checked_parameter_values({self.db_map: items})
 
-    def _do_batch_set_header_data(self, data_by_top_left_id):
-        param_defs = data_by_top_left_id.pop(IndexId.PARAMETER, [])
-        objects = [obj for objs in data_by_top_left_id.values() for obj in objs]
-        if objects:
-            self.db_mngr.update_objects({self.db_map: objects})
-        if param_defs:
-            self.db_mngr.update_parameter_definitions({self.db_map: param_defs})
-        return True
-
     def get_set_data_delayed(self, index):
         """Returns a function that ParameterValueEditor can call to set data for the given index at any later time,
         even if the model changes.
@@ -746,25 +807,33 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
 
 
 class IndexExpansionPivotTableModel(ParameterValuePivotTableModel):
-    def call_reset_model(self, index_ids, pivot):
-        if pivot is None:
-            pivot = self.default_pivot(index_ids)
+    """A model for the pivot table in parameter index expansion input type."""
+
+    def __init__(self, parent):
+        """
+        Args:
+            parent (DataStoreForm)
+        """
+        super().__init__(parent)
+        self._index_top_left_header = None
+
+    def call_reset_model(self, object_class_names, pivot):
+        self._object_class_count = len(object_class_names)
         data = self._parent.load_expanded_parameter_value_data()
-        index_ids += (IndexId.PARAMETER_INDEX, IndexId.PARAMETER)
-        super().reset_model(data, index_ids, *pivot)
-
-    @staticmethod
-    def default_pivot(index_ids):
-        rows = list(index_ids)
-        rows.append(IndexId.PARAMETER_INDEX)
-        columns = [IndexId.PARAMETER]
-        frozen = []
-        frozen_value = ()
-        return rows, columns, frozen, frozen_value
-
-    @staticmethod
-    def _last_object_id_index():
-        return -2
+        top_left_headers = [TopLeftObjectHeaderItem(self, id_, name) for id_, name in object_class_names.items()]
+        self._index_top_left_header = TopLeftParameterIndexHeaderItem(self)
+        top_left_headers += [self._index_top_left_header, TopLeftParameterHeaderItem(self)]
+        self.top_left_headers = {h.name: h for h in top_left_headers}
+        if pivot is None:
+            pivot = self._default_pivot()
+        super().reset_model(data, list(self.top_left_headers), *pivot)
+        pivot_rows = pivot[0]
+        try:
+            x_column = pivot_rows.index(self._index_top_left_header.name)
+            self.set_plot_x_column(x_column, is_x=True)
+        except ValueError:
+            # The parameter index is not a column (it's either a row or frozen)
+            pass
 
     def flags(self, index):
         """Roles for data"""
@@ -774,24 +843,18 @@ class IndexExpansionPivotTableModel(ParameterValuePivotTableModel):
             if not data or data[0][0] is None:
                 # Don't add parameter values in index expansion mode
                 return Qt.ItemIsSelectable | Qt.ItemIsEnabled
-        if self._top_left_id(index) == IndexId.PARAMETER_INDEX:
+        if self._top_left_id(index) == self._index_top_left_header.name:
             return Qt.ItemIsSelectable | Qt.ItemIsEnabled
         return super().flags(index)
 
     def column_is_index_column(self, column):
         """Returns True if column is the column containing expanded parameter value indexes."""
-        # FIXME: Does this work if the header is moved/pivoted?
-        return column == self.headerColumnCount() - 1
-
-    def _header_data(self, index, role=Qt.DisplayRole):
-        header_id = self._header_id(index)
-        top_left_id = self._top_left_id(index)
-        if top_left_id == IndexId.PARAMETER_INDEX:
-            # header_id contains the index value already
-            if role == PARSED_ROLE:
-                return header_id
-            return str(header_id)
-        return super()._header_data(index, role)
+        try:
+            index_column = self.model.pivot_rows.index(self._index_top_left_header.name)
+            return column == index_column
+        except ValueError:
+            # The parameter index is not a column (it's either a row or frozen)
+            return False
 
     def _data(self, index, role):
         row, column = self.map_to_pivot(index)
@@ -812,26 +875,21 @@ class IndexExpansionPivotTableModel(ParameterValuePivotTableModel):
 
 
 class RelationshipPivotTableModel(PivotTableModelBase):
-    def call_reset_model(self, index_ids, pivot):
-        if pivot is None:
-            pivot = self.default_pivot(index_ids)
-        data = self._parent.load_relationship_data()
-        super().reset_model(data, index_ids, *pivot)
+    """A model for the pivot table in relationship input type."""
 
-    @staticmethod
-    def default_pivot(index_ids):
-        rows = list(index_ids)
+    def call_reset_model(self, object_class_names, pivot):
+        data = self._parent.load_relationship_data()
+        self.top_left_headers = [TopLeftObjectHeaderItem(self, id_, name) for id_, name in object_class_names.items()]
+        if pivot is None:
+            pivot = self._default_pivot()
+        super().reset_model(data, list(self.top_left_headers), *pivot)
+
+    def _default_pivot(self):
+        rows = list(self.top_left_headers)
         columns = []
         frozen = []
         frozen_value = ()
         return rows, columns, frozen, frozen_value
-
-    def _header_name(self, top_left_id, header_id):
-        return self.db_mngr.get_item(self.db_map, "object", header_id)["name"]
-
-    def _header_data(self, index, role=Qt.DisplayRole):
-        header_id = self._header_id(index)
-        return self._get_header_data_from_db("object", header_id, "name", role)
 
     def _data(self, index, role):
         row, column = self.map_to_pivot(index)
@@ -874,11 +932,6 @@ class RelationshipPivotTableModel(PivotTableModelBase):
             self.db_mngr.add_relationships({self.db_map: to_add})
         if to_remove:
             self.db_mngr.remove_items({self.db_map: {"relationship": to_remove}})
-        return True
-
-    def _do_batch_set_header_data(self, data_by_top_left_id):
-        objects = [obj for objs in data_by_top_left_id.values() for obj in objs]
-        self.db_mngr.update_objects({self.db_map: objects})
         return True
 
     def receive_objects_added_or_removed(self, items, action):

@@ -132,6 +132,7 @@ class ParameterTableView(AutoFilterCopyPasteTableView):
         Args:
             event (QContextMenuEvent)
         """
+        # TODO: Set remove relationhips and parameters active depending on the underlying model
         index = self.indexAt(event.pos())
         model = self.model()
         is_value = model.headerData(index.column(), Qt.Horizontal) == self.value_column_header
@@ -325,7 +326,7 @@ class PivotTableView(CopyPasteTableView):
         rels_by_object_ids = {rel["object_id_list"]: rel for rel in self._data_store_form._get_entities()}
         relationships = []
         for index in self._selected_entity_indexes:
-            object_ids, _ = self.source_model.header_ids(index)
+            object_ids, _ = self.source_model.object_and_parameter_ids(index)
             object_ids = ",".join([str(id_) for id_ in object_ids])
             relationships.append(rels_by_object_ids[object_ids])
         db_map_typed_data = {self.db_map: {"relationship": relationships}}
@@ -382,6 +383,7 @@ class PivotTableView(CopyPasteTableView):
             if self.source_model.index_in_data(index):
                 self._selected_value_indexes.append(index)
             elif self.source_model.index_in_headers(index):
+                # FIXME: what about the parameter index here (-2)?
                 if self.source_model._top_left_id(index) == -1:
                     self._selected_parameter_indexes.append(index)
                 else:
@@ -406,7 +408,7 @@ class PivotTableView(CopyPasteTableView):
             object_name = self.source_model.header_name(index)
             self.delete_object_action.setText("Remove object: {}".format(object_name))
             if self.delete_relationship_action.isEnabled():
-                object_names, _ = self.source_model.header_names(index)
+                object_names, _ = self.source_model.object_and_parameter_names(index)
                 relationship_name = self.db_mngr._GROUP_SEP.join(object_names)
                 self.delete_relationship_action.setText("Remove relationship: {}".format(relationship_name))
         if len(self._selected_parameter_indexes) == 1:
