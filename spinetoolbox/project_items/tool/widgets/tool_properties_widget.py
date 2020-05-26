@@ -77,7 +77,7 @@ class ToolPropertiesWidget(QWidget):
         if option == "Edit Tool specification":
             self._toolbox.edit_specification(tool_index)  # index in tool specification model
         elif option == "Edit main program file...":
-            self._toolbox.open_tool_main_program_file(tool_index)  # index in tool specification model
+            tool.open_main_program_file()
         elif option == "Open main program directory...":
             tool.open_main_directory()
         elif option == "Open Tool specification file...":
