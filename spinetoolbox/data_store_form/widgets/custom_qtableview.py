@@ -35,7 +35,6 @@ from .custom_delegates import (
     ObjectNameDelegate,
     RelationshipClassNameDelegate,
     ObjectNameListDelegate,
-    PivotTableDelegate,
 )
 
 
@@ -274,7 +273,6 @@ class PivotTableView(CopyPasteTableView):
 
     def connect_data_store_form(self, data_store_form):
         self._data_store_form = data_store_form
-        self.setup_delegates()
         self.create_context_menu()
         h_header = PivotTableHeaderView(Qt.Horizontal, "columns", self)
         h_header.setContextMenuPolicy(Qt.DefaultContextMenu)
@@ -296,12 +294,6 @@ class PivotTableView(CopyPasteTableView):
         self.delete_object_action = self._menu.addAction(self._REMOVE_OBJECT, self.remove_objects)
         self.delete_relationship_action = self._menu.addAction(self._REMOVE_RELATIONSHIP, self.remove_relationships)
         self.delete_parameter_action = self._menu.addAction(self._REMOVE_PARAMETER, self.remove_parameters)
-
-    def setup_delegates(self):
-        delegate = PivotTableDelegate(self._data_store_form)
-        self.setItemDelegate(delegate)
-        delegate.parameter_value_editor_requested.connect(self._data_store_form.show_parameter_value_editor)
-        delegate.data_committed.connect(self._data_store_form._set_model_data)
 
     def remove_selected(self):
         self._find_selected_indexes()
@@ -333,7 +325,7 @@ class PivotTableView(CopyPasteTableView):
         rels_by_object_ids = {rel["object_id_list"]: rel for rel in self._data_store_form._get_entities()}
         relationships = []
         for index in self._selected_entity_indexes:
-            object_ids, _ = self.source_model.header_ids(index)
+            object_ids, _ = self.source_model.object_and_parameter_ids(index)
             object_ids = ",".join([str(id_) for id_ in object_ids])
             relationships.append(rels_by_object_ids[object_ids])
         db_map_typed_data = {self.db_map: {"relationship": relationships}}
@@ -390,18 +382,21 @@ class PivotTableView(CopyPasteTableView):
             if self.source_model.index_in_data(index):
                 self._selected_value_indexes.append(index)
             elif self.source_model.index_in_headers(index):
-                if self.source_model._top_left_id(index) == -1:
+                top_left_id = self.source_model._top_left_id(index)
+                header_type = self.source_model.top_left_headers[top_left_id].header_type
+                if header_type == "parameter":
                     self._selected_parameter_indexes.append(index)
-                else:
+                elif header_type == "object":
                     self._selected_entity_indexes.append(index)
 
     def _update_actions_availability(self):
+        # TODO: Set remove relationhips and parameters active depending on the underlying model
         self.open_in_editor_action.setEnabled(len(self._selected_value_indexes) == 1)
         self.plot_action.setEnabled(len(self._selected_value_indexes) > 0)
         self.remove_values_action.setEnabled(bool(self._selected_value_indexes))
         self.delete_object_action.setEnabled(bool(self._selected_entity_indexes))
         self.delete_relationship_action.setEnabled(
-            bool(self._selected_entity_indexes) and self._data_store_form.current_class_type == "relationship class"
+            bool(self._selected_entity_indexes) and self.model().sourceModel().item_type != "relationship"
         )
         self.delete_parameter_action.setEnabled(bool(self._selected_parameter_indexes))
 
@@ -414,7 +409,7 @@ class PivotTableView(CopyPasteTableView):
             object_name = self.source_model.header_name(index)
             self.delete_object_action.setText("Remove object: {}".format(object_name))
             if self.delete_relationship_action.isEnabled():
-                object_names, _ = self.source_model.header_names(index)
+                object_names, _ = self.source_model.object_and_parameter_names(index)
                 relationship_name = self.db_mngr._GROUP_SEP.join(object_names)
                 self.delete_relationship_action.setText("Remove relationship: {}".format(relationship_name))
         if len(self._selected_parameter_indexes) == 1:

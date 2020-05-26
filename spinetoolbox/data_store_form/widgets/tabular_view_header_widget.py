@@ -29,12 +29,11 @@ class TabularViewHeaderWidget(QFrame):
     _H_MARGIN = 3
     _SPACING = 16
 
-    def __init__(self, identifier, name, area, menu=None, parent=None):
+    def __init__(self, identifier, area, menu=None, parent=None):
         """
 
         Args:
-            identifier (int)
-            name (str)
+            identifier (str)
             area (str): either "rows", "columns", or "frozen"
             menu (FilterMenu, optional)
             parent (QWidget, optional): Parent widget
@@ -52,7 +51,7 @@ class TabularViewHeaderWidget(QFrame):
             button.setMenu(self.menu)
             self.menu.anchor = self
         self.drag_start_pos = None
-        label = QLabel(name)
+        label = QLabel(identifier)
         layout.addWidget(label)
         layout.addWidget(button)
         layout.setContentsMargins(self._H_MARGIN, 0, self._H_MARGIN, 0)

@@ -26,25 +26,20 @@ from ...mvcmodels.shared import PARSED_ROLE
 from ...widgets.custom_delegates import CheckBoxDelegate
 
 
-class PivotTableDelegate(CheckBoxDelegate):
+class RelationshipPivotTableDelegate(CheckBoxDelegate):
 
-    parameter_value_editor_requested = Signal("QModelIndex")
     data_committed = Signal("QModelIndex", "QVariant")
 
-    def setModelData(self, editor, model, index):
-        """Send signal."""
-        if self._is_relationship_index(index):
-            super().setModelData(self, editor, model, index)
-            return
-        data = editor.data()
-        if isinstance(editor, ParameterValueLineEditor):
-            data = to_database(data)
-        self.data_committed.emit(index, data)
+    def __init__(self, parent):
+        """
+        Args:
+            parent (DataStoreForm)
+        """
+        super().__init__(parent)
+        self.data_committed.connect(parent._set_model_data)
 
-    def setEditorData(self, editor, index):
-        """Do nothing. We're setting editor data right away in createEditor."""
-
-    def _is_relationship_index(self, index):
+    @staticmethod
+    def _is_relationship_index(index):
         """
         Checks whether or not the given index corresponds to a relationship,
         in which case we need to use the check box delegate.
@@ -52,10 +47,17 @@ class PivotTableDelegate(CheckBoxDelegate):
         Returns:
             bool
         """
-        parent = self.parent()
-        return not (
-            parent.is_value_input_type() or parent.is_index_expansion_input_type()
-        ) and index.model().sourceModel().index_in_data(index)
+        return index.model().sourceModel().index_in_data(index)
+
+    def setModelData(self, editor, model, index):
+        """Send signal."""
+        if self._is_relationship_index(index):
+            super().setModelData(self, editor, model, index)
+            return
+        self.data_committed.emit(index, editor.data())
+
+    def setEditorData(self, editor, index):
+        """Do nothing. We're setting editor data right away in createEditor."""
 
     def paint(self, painter, option, index):
         if self._is_relationship_index(index):
@@ -71,6 +73,34 @@ class PivotTableDelegate(CheckBoxDelegate):
     def createEditor(self, parent, option, index):
         if self._is_relationship_index(index):
             return super().createEditor(parent, option, index)
+        return CustomLineEditor(parent)
+
+
+class ParameterPivotTableDelegate(QItemDelegate):
+
+    parameter_value_editor_requested = Signal("QModelIndex")
+    data_committed = Signal("QModelIndex", "QVariant")
+
+    def __init__(self, parent):
+        """
+        Args:
+            parent (DataStoreForm)
+        """
+        super().__init__(parent)
+        self.data_committed.connect(parent._set_model_data)
+        self.parameter_value_editor_requested.connect(parent.show_parameter_value_editor)
+
+    def setModelData(self, editor, model, index):
+        """Send signal."""
+        data = editor.data()
+        if isinstance(editor, ParameterValueLineEditor):
+            data = to_database(data)
+        self.data_committed.emit(index, data)
+
+    def setEditorData(self, editor, index):
+        """Do nothing. We're setting editor data right away in createEditor."""
+
+    def createEditor(self, parent, option, index):
         if self.parent().pivot_table_model.index_in_data(index):
             value = index.model().mapToSource(index).data(PARSED_ROLE)
             if value is None or isinstance(value, (Number, str)) and not isinstance(value, bool):
