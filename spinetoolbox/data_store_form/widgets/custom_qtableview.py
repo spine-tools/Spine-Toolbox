@@ -35,7 +35,6 @@ from .custom_delegates import (
     ObjectNameDelegate,
     RelationshipClassNameDelegate,
     ObjectNameListDelegate,
-    PivotTableDelegate,
 )
 
 
@@ -274,7 +273,6 @@ class PivotTableView(CopyPasteTableView):
 
     def connect_data_store_form(self, data_store_form):
         self._data_store_form = data_store_form
-        self.setup_delegates()
         self.create_context_menu()
         h_header = PivotTableHeaderView(Qt.Horizontal, "columns", self)
         h_header.setContextMenuPolicy(Qt.DefaultContextMenu)
@@ -296,12 +294,6 @@ class PivotTableView(CopyPasteTableView):
         self.delete_object_action = self._menu.addAction(self._REMOVE_OBJECT, self.remove_objects)
         self.delete_relationship_action = self._menu.addAction(self._REMOVE_RELATIONSHIP, self.remove_relationships)
         self.delete_parameter_action = self._menu.addAction(self._REMOVE_PARAMETER, self.remove_parameters)
-
-    def setup_delegates(self):
-        delegate = PivotTableDelegate(self._data_store_form)
-        self.setItemDelegate(delegate)
-        delegate.parameter_value_editor_requested.connect(self._data_store_form.show_parameter_value_editor)
-        delegate.data_committed.connect(self._data_store_form._set_model_data)
 
     def remove_selected(self):
         self._find_selected_indexes()

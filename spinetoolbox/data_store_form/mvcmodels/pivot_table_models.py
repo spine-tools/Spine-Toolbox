@@ -29,7 +29,7 @@ class IndexId(enum.IntEnum):
     PARAMETER_INDEX = -3
 
 
-class PivotTableModel(QAbstractTableModel):
+class PivotTableModelBase(QAbstractTableModel):
 
     _V_HEADER_WIDTH = 5
     _FETCH_STEP_COUNT = 64
@@ -39,7 +39,7 @@ class PivotTableModel(QAbstractTableModel):
     def __init__(self, parent):
         """
         Args:
-            parent (TabularViewForm)
+            parent (DataStoreForm)
         """
         super().__init__()
         self._parent = parent
@@ -53,11 +53,6 @@ class PivotTableModel(QAbstractTableModel):
         self.columnsInserted.connect(lambda *args: QTimer.singleShot(self._FETCH_DELAY, self.fetch_more_columns))
         self.modelAboutToBeReset.connect(self.reset_data_count)
         self.modelReset.connect(lambda *args: QTimer.singleShot(self._FETCH_DELAY, self.start_fetching))
-
-    @property
-    def item_type(self):
-        """Returns the item type, always parameter value, for the ParameterValueEditor"""
-        return "parameter value"
 
     @Slot()
     def reset_data_count(self):
@@ -104,9 +99,17 @@ class PivotTableModel(QAbstractTableModel):
         self._plot_x_column = None
 
     def update_model(self, data):
+        """Update model with new data, but doesn't grow the model.
+
+        Args:
+            data (dict)
+        """
         if not data:
             return
         self.model.update_model(data)
+        top_left = self.index(self.headerRowCount(), self.headerColumnCount())
+        bottom_right = self.index(self.rowCount(), self.columnCount())
+        self.dataChanged.emit(top_left, bottom_right)
 
     def add_to_model(self, data):
         if not data:
@@ -149,7 +152,7 @@ class PivotTableModel(QAbstractTableModel):
         self.endResetModel()
 
     def set_plot_x_column(self, column, is_x):
-        """Sets or clears the Y flag on a column"""
+        """Sets or clears the X flag on a column"""
         if is_x:
             self._plot_x_column = column
         elif column == self._plot_x_column:
@@ -207,15 +210,6 @@ class PivotTableModel(QAbstractTableModel):
         if self.model.pivot_rows and index.row() == len(self.model.pivot_columns):
             # empty line between column headers and data
             return Qt.ItemIsSelectable | Qt.ItemIsEnabled
-        if self._parent.is_index_expansion_input_type():
-            if self.index_in_data(index):
-                row, column = self.map_to_pivot(index)
-                data = self.model.get_pivoted_data([row], [column])
-                if not data or data[0][0] is None:
-                    # Don't add parameter values since in index expansion mode
-                    return Qt.ItemIsSelectable | Qt.ItemIsEnabled
-            if self._top_left_id(index) == IndexId.PARAMETER_INDEX:
-                return Qt.ItemIsSelectable | Qt.ItemIsEnabled
         return Qt.ItemIsEditable | Qt.ItemIsEnabled | Qt.ItemIsSelectable
 
     def top_left_indexes(self):
@@ -280,9 +274,9 @@ class PivotTableModel(QAbstractTableModel):
             and self.headerColumnCount() <= index.column() < self.columnCount() - self.emptyColumnCount()
         )
 
-    def column_is_index_column(self, column):
+    def column_is_index_column(self, column):  # pylint: disable=no-self-use
         """Returns True if column is the column containing expanded parameter value indexes."""
-        return self._parent.is_index_expansion_input_type() and column == self.headerColumnCount() - 1
+        return False
 
     def headerData(self, section, orientation, role=Qt.DisplayRole):
         if role == Qt.DisplayRole and orientation == Qt.Horizontal:
@@ -349,20 +343,6 @@ class PivotTableModel(QAbstractTableModel):
         column_key = self.model.column_key(max(0, column))
         return self.model._key_getter(row_key + column_key + self.model.frozen_value)
 
-    def _header_name(self, top_left_id, header_id):
-        """Returns the name of the header given by top_left_id and header_id.
-
-        Args:
-            top_left_id (int): The id of the top left header
-            header_id (int): The header id
-
-        Returns
-            str
-        """
-        if top_left_id == IndexId.PARAMETER:
-            return self.db_mngr.get_item(self.db_map, "parameter definition", header_id).get("parameter_name")
-        return self.db_mngr.get_item(self.db_map, "object", header_id)["name"]
-
     def header_name(self, index):
         """Returns the name corresponding to the given header index.
 
@@ -376,35 +356,12 @@ class PivotTableModel(QAbstractTableModel):
         top_left_id = self._top_left_id(index)
         return self._header_name(top_left_id, header_id)
 
-    def header_data(self, index, role=Qt.DisplayRole):
-        """Returns the data corresponding to the given header index based on role enum.
-
-        Args:
-            index (QModelIndex)
-            role (enum Qt.ItemDataRole)
-
-        Returns:
-            str: a string role-dependent string representation of the cell's contents.
-        """
-
-        def fetch_from_db(fetch_name, name_field):
-            item = self.db_mngr.get_item(self.db_map, fetch_name, header_id)
-            if role in (Qt.DisplayRole, Qt.EditRole):
-                return item.get(name_field)
-            if role == Qt.ToolTipRole:
-                description = item.get("description")
-                return description if description else item.get(name_field)
-
-        header_id = self._header_id(index)
-        top_left_id = self._top_left_id(index)
-        if top_left_id == IndexId.PARAMETER:
-            return fetch_from_db("parameter definition", "parameter_name")
-        if top_left_id == IndexId.PARAMETER_INDEX:
-            # header_id contains the index value already
-            if role == PARSED_ROLE:
-                return header_id
-            return str(header_id)
-        return fetch_from_db("object", "name")
+    def _get_header_data_from_db(self, item_type, header_id, field_name, role):
+        item = self.db_mngr.get_item(self.db_map, item_type, header_id)
+        if role in (Qt.DisplayRole, Qt.EditRole):
+            return item.get(field_name)
+        if role == Qt.ToolTipRole:
+            return item.get("description", "No description")
 
     def header_names(self, index):
         """Returns the header names corresponding to the given data index.
@@ -423,6 +380,10 @@ class PivotTableModel(QAbstractTableModel):
         )
         return object_names, parameter_name
 
+    @staticmethod
+    def _last_object_id_index():
+        return -1
+
     def header_ids(self, index):
         """Returns the header ids corresponding to the given data index.
 
@@ -435,8 +396,7 @@ class PivotTableModel(QAbstractTableModel):
         """
         row, column = self.map_to_pivot(index)
         header_ids = self._header_ids(row, column)
-        last_object_id = -1 if not self._parent.is_index_expansion_input_type() else -2
-        return header_ids[:last_object_id], header_ids[-1]
+        return header_ids[: self._last_object_id_index()], header_ids[-1]
 
     def index_name(self, index):
         """Returns a string that concatenates the header names corresponding to the given data index.
@@ -472,6 +432,15 @@ class PivotTableModel(QAbstractTableModel):
         if index.row() < self.headerRowCount() and index.column() < self.headerColumnCount():
             return QColor(PIVOT_TABLE_HEADER_COLOR)
 
+    def _text_alignment_data(self, index):  # pylint: disable=no-self-use
+        return None
+
+    def _header_data(self, index, role):
+        raise NotImplementedError()
+
+    def _data(self, index, role):
+        raise NotImplementedError()
+
     def data(self, index, role=Qt.DisplayRole):
         if role in (Qt.DisplayRole, Qt.EditRole, Qt.ToolTipRole, PARSED_ROLE):
             if self.index_in_top(index):
@@ -479,22 +448,9 @@ class PivotTableModel(QAbstractTableModel):
             if self.index_in_left(index):
                 return self.model.pivot_columns[index.row()]
             if self.index_in_headers(index):
-                return self.header_data(index, role)
+                return self._header_data(index, role)
             if self.index_in_data(index):
-                row, column = self.map_to_pivot(index)
-                data = self.model.get_pivoted_data([row], [column])
-                if not data:
-                    return None
-                if self._parent.is_relationship_input_type():
-                    return bool(data[0][0])
-                if data[0][0] is None:
-                    return None
-                if self._parent.is_value_input_type():
-                    return self.db_mngr.get_value(self.db_map, "parameter value", data[0][0], role)
-                if self._parent.is_index_expansion_input_type():
-                    index = self._header_ids(row, column)[-2]
-                    return self.db_mngr.get_value_index(self.db_map, "parameter value", data[0][0], index, role)
-                return "Logic error"
+                return self._data(index, role)
             return None
         if role == Qt.FontRole and self.index_in_top_left(index):
             font = QFont()
@@ -502,8 +458,8 @@ class PivotTableModel(QAbstractTableModel):
             return font
         if role == Qt.BackgroundColorRole:
             return self._color_data(index)
-        if role == Qt.TextAlignmentRole and self.index_in_data(index) and not self._parent.is_value_input_type():
-            return Qt.AlignHCenter
+        if role == Qt.TextAlignmentRole:
+            return self._text_alignment_data(index)
         return None
 
     def setData(self, index, value, role=Qt.EditRole):
@@ -547,31 +503,100 @@ class PivotTableModel(QAbstractTableModel):
         data = self.model.get_pivoted_data(row_map, column_map)
         if not data:
             return False
-        if self._parent.is_value_input_type() or self._parent.is_index_expansion_input_type():
-            return self._batch_set_parameter_value_data(row_map, column_map, data, values)
-        return self._batch_set_relationship_data(row_map, column_map, data, values)
+        return self._do_batch_set_inner_data(row_map, column_map, data, values)
 
-    def get_set_data_delayed(self, index):
-        """Returns a function that ParameterValueEditor can call to set data for the given index at any later time,
-        even if the model changes.
+    def _do_batch_set_inner_data(self, row_map, column_map, data, values):
+        raise NotImplementedError()
 
-        Args:
-            index (QModelIndex)
+    def _batch_set_header_data(self, header_data):
+        data_by_top_left_id = {}
+        for index, value in header_data:
+            header_id = self._header_id(index)
+            top_left_id = self._top_left_id(index)
+            item = dict(id=header_id, name=value)
+            data_by_top_left_id.setdefault(top_left_id, []).append(item)
+        if not data_by_top_left_id:
+            return False
+        return self._do_batch_set_header_data(data_by_top_left_id)
 
-        Returns:
-            function
-        """
+    def _do_batch_set_header_data(self, data_by_top_left_id):
+        raise NotImplementedError()
+
+    # TODO: Try to split this across subclasses
+    def _batch_set_empty_header_data(self, header_data, get_top_left_id):
+        objects = []
+        param_defs = []
+        for index, value in header_data:
+            top_left_id = get_top_left_id(index)
+            item = dict(name=value)
+            if top_left_id == IndexId.PARAMETER:
+                class_key = (
+                    "object_class_id" if self._parent.current_class_type == "object class" else "relationship_class_id"
+                )
+                item[class_key] = self._parent.current_class_id
+                param_defs.append(item)
+            else:
+                item["class_id"] = self._parent.current_object_class_id_list()[top_left_id]
+                objects.append(item)
+        if not objects and not param_defs:
+            return False
+        if objects:
+            self.db_mngr.add_objects({self.db_map: objects})
+        if param_defs:
+            self.db_mngr.add_parameter_definitions({self.db_map: param_defs})
+        return True
+
+    def receive_data_added_or_removed(self, data, action):
+        {"add": self.add_to_model, "remove": self.remove_from_model}[action](data)
+
+
+class ParameterValuePivotTableModel(PivotTableModelBase):
+    @property
+    def item_type(self):
+        """Returns the item type, always parameter value, for the ParameterValueEditor"""
+        return "parameter value"
+
+    def call_reset_model(self, index_ids, pivot):
+        if pivot is None:
+            pivot = self.default_pivot(index_ids)
+        data = self._parent.load_parameter_value_data()
+        index_ids += (IndexId.PARAMETER,)
+        super().reset_model(data, index_ids, *pivot)
+        # FIXME: Does this work if there's a pivot preference applied?
+        x_column = self.headerColumnCount() - 1
+        self.set_plot_x_column(x_column, is_x=True)
+
+    @staticmethod
+    def default_pivot(index_ids):
+        rows = list(index_ids)
+        columns = [IndexId.PARAMETER]
+        frozen = []
+        frozen_value = ()
+        return rows, columns, frozen, frozen_value
+
+    def _header_name(self, top_left_id, header_id):
+        if top_left_id == IndexId.PARAMETER:
+            return self.db_mngr.get_item(self.db_map, "parameter definition", header_id).get("parameter_name")
+        return self.db_mngr.get_item(self.db_map, "object", header_id)["name"]
+
+    def _header_data(self, index, role=Qt.DisplayRole):
+        header_id = self._header_id(index)
+        top_left_id = self._top_left_id(index)
+        if top_left_id == IndexId.PARAMETER:
+            return self._get_header_data_from_db("parameter definition", header_id, "parameter_name", role)
+        return self._get_header_data_from_db("object", header_id, "name", role)
+
+    def _data(self, index, role):
         row, column = self.map_to_pivot(index)
         data = self.model.get_pivoted_data([row], [column])
-        header_ids = self._header_ids(row, column)
+        if not data:
+            return None
         if data[0][0] is None:
-            parameter_value_to_add = self._make_parameter_value_to_add()
-            return lambda value, parameter_value_to_add=parameter_value_to_add, header_ids=header_ids: self._add_parameter_values(
-                [parameter_value_to_add(header_ids, value)]
-            )
-        return lambda value, id_=data[0][0], header_ids=header_ids: self._update_parameter_values(
-            [self._parameter_value_to_update(id_, header_ids, value)]
-        )
+            return None
+        return self.db_mngr.get_value(self.db_map, "parameter value", data[0][0], role)
+
+    def _do_batch_set_inner_data(self, row_map, column_map, data, values):
+        return self._batch_set_parameter_value_data(row_map, column_map, data, values)
 
     def _object_parameter_value_to_add(self, header_ids, value):
         return dict(
@@ -603,13 +628,9 @@ class PivotTableModel(QAbstractTableModel):
                 header_ids, value, rel_id_lookup
             )
 
-    def _parameter_value_to_update(self, id_, header_ids, value):
-        item = {"id": id_, "value": value}
-        if self._parent.is_index_expansion_input_type():
-            item["index"] = header_ids[-2]
-        else:
-            item["parameter_definition_id"] = header_ids[-1]
-        return item
+    @staticmethod
+    def _parameter_value_to_update(id_, header_ids, value):
+        return {"id": id_, "value": value, "parameter_definition_id": header_ids[-1]}
 
     def _batch_set_parameter_value_data(self, row_map, column_map, data, values):
         """Sets parameter values in batch."""
@@ -663,11 +684,169 @@ class PivotTableModel(QAbstractTableModel):
         self.db_mngr.add_checked_parameter_values({self.db_map: items})
 
     def _update_parameter_values(self, items):
-        if self._parent.is_index_expansion_input_type():
-            self.db_mngr.update_expanded_parameter_values({self.db_map: items})
-            return
         items = self._checked_parameter_values(items)
         self.db_mngr.update_checked_parameter_values({self.db_map: items})
+
+    def _do_batch_set_header_data(self, data_by_top_left_id):
+        param_defs = data_by_top_left_id.pop(IndexId.PARAMETER, [])
+        objects = [obj for objs in data_by_top_left_id.values() for obj in objs]
+        if objects:
+            self.db_mngr.update_objects({self.db_map: objects})
+        if param_defs:
+            self.db_mngr.update_parameter_definitions({self.db_map: param_defs})
+        return True
+
+    def get_set_data_delayed(self, index):
+        """Returns a function that ParameterValueEditor can call to set data for the given index at any later time,
+        even if the model changes.
+
+        Args:
+            index (QModelIndex)
+
+        Returns:
+            function
+        """
+        row, column = self.map_to_pivot(index)
+        data = self.model.get_pivoted_data([row], [column])
+        header_ids = self._header_ids(row, column)
+        if data[0][0] is None:
+            parameter_value_to_add = self._make_parameter_value_to_add()
+            return lambda value, parameter_value_to_add=parameter_value_to_add, header_ids=header_ids: self._add_parameter_values(
+                [parameter_value_to_add(header_ids, value)]
+            )
+        return lambda value, id_=data[0][0], header_ids=header_ids: self._update_parameter_values(
+            [self._parameter_value_to_update(id_, header_ids, value)]
+        )
+
+    def receive_objects_added_or_removed(self, items, action):
+        if self._parent.current_class_type != "object class":
+            return False
+        objects = [x for x in items if x["class_id"] == self.current_class_id]
+        if not objects:
+            return False
+        data = self._parent.load_empty_parameter_value_data(entities=objects)
+        self.receive_data_added_or_removed(data, action)
+        return True
+
+    def receive_relationships_added_or_removed(self, relationships, action):
+        data = self._parent.load_empty_parameter_value_data(entities=relationships)
+        self.receive_data_added_or_removed(data, action)
+        return True
+
+    def receive_parameter_definitions_added_or_removed(self, parameters, action):
+        parameter_ids = {x["id"] for x in parameters}
+        data = self._parent.load_empty_parameter_value_data(parameter_ids=parameter_ids)
+        self.receive_data_added_or_removed(data, action)
+        return True
+
+    def receive_parameter_values_added_or_removed(self, parameter_values, action):
+        data = self._parent.load_full_parameter_value_data(parameter_values=parameter_values, action=action)
+        self.update_model(data)
+        return True
+
+
+class IndexExpansionPivotTableModel(ParameterValuePivotTableModel):
+    def call_reset_model(self, index_ids, pivot):
+        if pivot is None:
+            pivot = self.default_pivot(index_ids)
+        data = self._parent.load_expanded_parameter_value_data()
+        index_ids += (IndexId.PARAMETER_INDEX, IndexId.PARAMETER)
+        super().reset_model(data, index_ids, *pivot)
+
+    @staticmethod
+    def default_pivot(index_ids):
+        rows = list(index_ids)
+        rows.append(IndexId.PARAMETER_INDEX)
+        columns = [IndexId.PARAMETER]
+        frozen = []
+        frozen_value = ()
+        return rows, columns, frozen, frozen_value
+
+    @staticmethod
+    def _last_object_id_index():
+        return -2
+
+    def flags(self, index):
+        """Roles for data"""
+        if self.index_in_data(index):
+            row, column = self.map_to_pivot(index)
+            data = self.model.get_pivoted_data([row], [column])
+            if not data or data[0][0] is None:
+                # Don't add parameter values in index expansion mode
+                return Qt.ItemIsSelectable | Qt.ItemIsEnabled
+        if self._top_left_id(index) == IndexId.PARAMETER_INDEX:
+            return Qt.ItemIsSelectable | Qt.ItemIsEnabled
+        return super().flags(index)
+
+    def column_is_index_column(self, column):
+        """Returns True if column is the column containing expanded parameter value indexes."""
+        # FIXME: Does this work if the header is moved/pivoted?
+        return column == self.headerColumnCount() - 1
+
+    def _header_data(self, index, role=Qt.DisplayRole):
+        header_id = self._header_id(index)
+        top_left_id = self._top_left_id(index)
+        if top_left_id == IndexId.PARAMETER_INDEX:
+            # header_id contains the index value already
+            if role == PARSED_ROLE:
+                return header_id
+            return str(header_id)
+        return super()._header_data(index, role)
+
+    def _data(self, index, role):
+        row, column = self.map_to_pivot(index)
+        data = self.model.get_pivoted_data([row], [column])
+        if not data:
+            return None
+        if data[0][0] is None:
+            return None
+        parameter_index = self._header_ids(row, column)[-2]
+        return self.db_mngr.get_value_index(self.db_map, "parameter value", data[0][0], parameter_index, role)
+
+    @staticmethod
+    def _parameter_value_to_update(id_, header_ids, value):
+        return {"id": id_, "value": value, "index": header_ids[-2]}
+
+    def _update_parameter_values(self, items):
+        self.db_mngr.update_expanded_parameter_values({self.db_map: items})
+
+
+class RelationshipPivotTableModel(PivotTableModelBase):
+    def call_reset_model(self, index_ids, pivot):
+        if pivot is None:
+            pivot = self.default_pivot(index_ids)
+        data = self._parent.load_relationship_data()
+        super().reset_model(data, index_ids, *pivot)
+
+    @staticmethod
+    def default_pivot(index_ids):
+        rows = list(index_ids)
+        columns = []
+        frozen = []
+        frozen_value = ()
+        return rows, columns, frozen, frozen_value
+
+    def _header_name(self, top_left_id, header_id):
+        return self.db_mngr.get_item(self.db_map, "object", header_id)["name"]
+
+    def _header_data(self, index, role=Qt.DisplayRole):
+        header_id = self._header_id(index)
+        return self._get_header_data_from_db("object", header_id, "name", role)
+
+    def _data(self, index, role):
+        row, column = self.map_to_pivot(index)
+        data = self.model.get_pivoted_data([row], [column])
+        if not data:
+            return None
+        return bool(data[0][0])
+
+    def _text_alignment_data(self, index):
+        if self.index_in_data(index):
+            return Qt.AlignHCenter
+        return None
+
+    def _do_batch_set_inner_data(self, row_map, column_map, data, values):
+        return self._batch_set_relationship_data(row_map, column_map, data, values)
 
     def _batch_set_relationship_data(self, row_map, column_map, data, values):
         def relationship_to_add(header_ids):
@@ -697,47 +876,33 @@ class PivotTableModel(QAbstractTableModel):
             self.db_mngr.remove_items({self.db_map: {"relationship": to_remove}})
         return True
 
-    def _batch_set_header_data(self, header_data):
-        objects = []
-        param_defs = []
-        for index, value in header_data:
-            header_id = self._header_id(index)
-            top_left_id = self._top_left_id(index)
-            item = dict(id=header_id, name=value)
-            if top_left_id == IndexId.PARAMETER:
-                param_defs.append(item)
-            else:
-                objects.append(item)
-        if not objects and not param_defs:
-            return False
-        if objects:
-            self.db_mngr.update_objects({self.db_map: objects})
-        if param_defs:
-            self.db_mngr.update_parameter_definitions({self.db_map: param_defs})
+    def _do_batch_set_header_data(self, data_by_top_left_id):
+        objects = [obj for objs in data_by_top_left_id.values() for obj in objs]
+        self.db_mngr.update_objects({self.db_map: objects})
         return True
 
-    def _batch_set_empty_header_data(self, header_data, get_top_left_id):
-        objects = []
-        param_defs = []
-        for index, value in header_data:
-            top_left_id = get_top_left_id(index)
-            item = dict(name=value)
-            if top_left_id == IndexId.PARAMETER:
-                class_key = (
-                    "object_class_id" if self._parent.current_class_type == "object class" else "relationship_class_id"
-                )
-                item[class_key] = self._parent.current_class_id
-                param_defs.append(item)
-            else:
-                item["class_id"] = self._parent.current_object_class_id_list()[top_left_id]
-                objects.append(item)
-        if not objects and not param_defs:
+    def receive_objects_added_or_removed(self, items, action):
+        objects_per_class = dict()
+        for item in items:
+            objects_per_class.setdefault(item["class_id"], []).append(item)
+        if not set(objects_per_class.keys()).intersection(self._parent.current_object_class_id_list()):
             return False
-        if objects:
-            self.db_mngr.add_objects({self.db_map: objects})
-        if param_defs:
-            self.db_mngr.add_parameter_definitions({self.db_map: param_defs})
+        data = self._parent.load_empty_relationship_data(objects_per_class=objects_per_class)
+        self.receive_data_added_or_removed(data, action)
         return True
+
+    def receive_relationships_added_or_removed(self, relationships, action):
+        data = self._parent.load_full_relationship_data(relationships=relationships, action=action)
+        self.update_model(data)
+        return True
+
+    def receive_parameter_definitions_added_or_removed(self, db_map_data, action):  # pylint: disable=no-self-use
+        """Returns False, this model does not hold parameter data."""
+        return False
+
+    def receive_parameter_values_added_or_removed(self, db_map_data, action):  # pylint: disable=no-self-use
+        """Returns False, this model does not hold parameter data."""
+        return False
 
 
 class PivotTableSortFilterProxy(QSortFilterProxyModel):
