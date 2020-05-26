@@ -33,6 +33,7 @@ from spinetoolbox.plotting import (
 )
 from spinetoolbox.widgets.plot_widget import PlotWidget
 from spinetoolbox.data_store_form.widgets.data_store_form import DataStoreForm
+from spinetoolbox.data_store_form.mvcmodels.pivot_table_models import ParameterValuePivotTableModel
 
 
 def _make_pivot_proxy_model():
@@ -46,8 +47,7 @@ def _make_pivot_proxy_model():
     with patch.object(DataStoreForm, "restore_ui"), patch.object(DataStoreForm, "show"):
         data_store_widget = DataStoreForm(db_mngr, mock_db_map)
     data_store_widget.create_header_widget = lambda *args, **kwargs: None
-    model = data_store_widget.pivot_table_model
-    data = {
+    data_store_widget.load_parameter_value_data = lambda: {
         ('1', 'int_col'): '-3',
         ('2', 'int_col'): '-1',
         ('3', 'int_col'): '2',
@@ -61,9 +61,12 @@ def _make_pivot_proxy_model():
         ): '{"type": "time_series", "index": {"start": "2019-07-10T13:00", "resolution": "20 minutes"}, "data": [3.3, 4.0]}',
         ('3', 'time_series_col'): '{"type": "time_series", "data": {"2019-07-10T13:00": 4.3, "2019-07-10T13:20": 3.0}}',
     }
-    index_ids = ['rows', 'col_types']
-    model.reset_model(data, index_ids, ['rows'], ['col_types'], [], ())
+    data_store_widget.pivot_table_model = model = ParameterValuePivotTableModel(data_store_widget)
+    object_class_names = {"object": 1}
+    model.call_reset_model(object_class_names, pivot=(['object'], ['parameter'], [], ()))
     model.start_fetching()
+    data_store_widget.pivot_table_model = model
+    data_store_widget.pivot_table_proxy.setSourceModel(model)
     return data_store_widget.pivot_table_proxy
 
 
@@ -143,7 +146,7 @@ class TestPlotting(unittest.TestCase):
 
     def test_plot_pivot_column_with_row_filtering(self):
         model = _make_pivot_proxy_model()
-        model.set_filter("rows", {"1", "3"})
+        model.set_filter("object", {"1", "3"})
         support = PivotTablePlottingHints()
         plot_widget = plot_pivot_column(model, 2, support)
         self.assertEqual(plot_widget.plot_type, float)
@@ -153,7 +156,7 @@ class TestPlotting(unittest.TestCase):
 
     def test_plot_pivot_column_with_column_filtering(self):
         model = _make_pivot_proxy_model()
-        model.set_filter("col_types", {"int_col"})
+        model.set_filter("parameter", {"int_col"})
         support = PivotTablePlottingHints()
         plot_widget = plot_pivot_column(model, 1, support)
         self.assertEqual(plot_widget.plot_type, float)
@@ -189,7 +192,7 @@ class TestPlotting(unittest.TestCase):
     def test_plot_pivot_column_when_x_column_hidden(self):
         model = _make_pivot_proxy_model()
         model.sourceModel().set_plot_x_column(1, True)
-        model.set_filter("col_types", {"int_col"})
+        model.set_filter("parameter", {"int_col"})
         support = PivotTablePlottingHints()
         plot_widget = plot_pivot_column(model, 1, support)
         self.assertEqual(plot_widget.plot_type, float)

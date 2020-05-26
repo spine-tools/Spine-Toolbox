@@ -102,12 +102,14 @@ class TabularViewMixin:
     def _set_model_data(self, index, value):
         self.pivot_table_proxy.setData(index, value)
 
+    @property
     def current_object_class_id_list(self):
         if self.current_class_type == "object class":
             return [self.current_class_id]
         relationship_class = self.db_mngr.get_item(self.db_map, "relationship class", self.current_class_id)
         return [int(id_) for id_ in relationship_class["object_class_id_list"].split(",")]
 
+    @property
     def current_object_class_name_list(self):
         if self.current_class_type == "object class":
             return [self.db_mngr.get_item(self.db_map, "object class", self.current_class_id)["name"]]
@@ -175,7 +177,7 @@ class TabularViewMixin:
         if self.current_class_type == "object class":
             return {}
         object_id_sets = []
-        for obj_cls_id in self.current_object_class_id_list():
+        for obj_cls_id in self.current_object_class_id_list:
             objects = objects_per_class.get(obj_cls_id, None)
             if objects is None:
                 objects = self._get_entities(obj_cls_id, "object class")
@@ -256,7 +258,7 @@ class TabularViewMixin:
         else:
             entity_ids = [(e["id"],) for e in entities]
         if not entity_ids:
-            entity_ids = [tuple(None for _ in self.current_object_class_id_list())]
+            entity_ids = [tuple(None for _ in self.current_object_class_id_list)]
         if not parameter_ids:
             parameter_ids = [None]
         return {entity_id + (parameter_id,): None for entity_id in entity_ids for parameter_id in parameter_ids}
@@ -365,8 +367,8 @@ class TabularViewMixin:
             return
         pivot = self.get_pivot_preferences()
         self.wipe_out_filter_menus()
-        object_class_names = dict(zip(self.current_object_class_id_list(), self.current_object_class_name_list()))
-        self.pivot_table_model.call_reset_model(object_class_names, pivot)
+        object_class_ids = dict(zip(self.current_object_class_name_list, self.current_object_class_id_list))
+        self.pivot_table_model.call_reset_model(object_class_ids, pivot)
         self.pivot_table_proxy.clear_filter()
 
     def clear_pivot_table(self):

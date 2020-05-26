@@ -49,6 +49,11 @@ class PivotTableModelBase(QAbstractTableModel):
         self.modelAboutToBeReset.connect(self.reset_data_count)
         self.modelReset.connect(lambda *args: QTimer.singleShot(self._FETCH_DELAY, self.start_fetching))
 
+    @property
+    def item_type(self):
+        """Returns the item type."""
+        raise NotImplementedError()
+
     @Slot()
     def reset_data_count(self):
         self._data_row_count = 0
@@ -80,6 +85,15 @@ class PivotTableModelBase(QAbstractTableModel):
         self.beginInsertColumns(QModelIndex(), first, first + count - 1)
         self._data_column_count += count
         self.endInsertColumns()
+
+    def call_reset_model(self, object_class_ids, pivot=None):
+        """
+
+        Args:
+            object_class_names (dict): mapping disambiguated class names to ids
+            pivot (tuple, optional): list of rows, list of columns, list of frozen indexes, frozen value
+        """
+        raise NotImplementedError()
 
     def reset_model(self, data, index_ids, rows=(), columns=(), frozen=(), frozen_value=()):
         self.beginResetModel()
@@ -483,10 +497,14 @@ class TopLeftHeaderItem:
 class TopLeftObjectHeaderItem(TopLeftHeaderItem):
     """A top left header for object class."""
 
-    def __init__(self, model, class_id, class_name):
+    def __init__(self, model, class_name, class_id):
         super().__init__(model)
-        self._class_id = class_id
         self._name = class_name
+        self._class_id = class_id
+
+    @property
+    def header_type(self):
+        return "object"
 
     @property
     def name(self):
@@ -516,6 +534,10 @@ class TopLeftParameterHeaderItem(TopLeftHeaderItem):
     """A top left header for parameter definition."""
 
     @property
+    def header_type(self):
+        return "parameter"
+
+    @property
     def name(self):
         return "parameter"
 
@@ -541,6 +563,10 @@ class TopLeftParameterHeaderItem(TopLeftHeaderItem):
 
 class TopLeftParameterIndexHeaderItem(TopLeftHeaderItem):
     """A top left header for parameter index."""
+
+    @property
+    def header_type(self):
+        return "index"
 
     @property
     def name(self):
@@ -571,7 +597,6 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
 
     @property
     def item_type(self):
-        """Returns the item type, always parameter value, for the ParameterValueEditor"""
         return "parameter value"
 
     def object_and_parameter_ids(self, index):
@@ -639,9 +664,11 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
             header_names.append(self._header_name(top_left_id, header_id))
         return self.db_mngr._GROUP_SEP.join(header_names)
 
-    def call_reset_model(self, object_class_names, pivot):
+    def call_reset_model(self, object_class_ids, pivot=None):
+        """See base class."""
+        self._object_class_count = len(object_class_ids)
         data = self._parent.load_parameter_value_data()
-        top_left_headers = [TopLeftObjectHeaderItem(self, id_, name) for id_, name in object_class_names.items()]
+        top_left_headers = [TopLeftObjectHeaderItem(self, name, id_) for name, id_ in object_class_ids.items()]
         top_left_headers += [TopLeftParameterHeaderItem(self)]
         self.top_left_headers = {h.name: h for h in top_left_headers}
         if pivot is None:
@@ -817,10 +844,11 @@ class IndexExpansionPivotTableModel(ParameterValuePivotTableModel):
         super().__init__(parent)
         self._index_top_left_header = None
 
-    def call_reset_model(self, object_class_names, pivot):
-        self._object_class_count = len(object_class_names)
+    def call_reset_model(self, object_class_ids, pivot=None):
+        """See base class."""
+        self._object_class_count = len(object_class_ids)
         data = self._parent.load_expanded_parameter_value_data()
-        top_left_headers = [TopLeftObjectHeaderItem(self, id_, name) for id_, name in object_class_names.items()]
+        top_left_headers = [TopLeftObjectHeaderItem(self, name, id_) for name, id_ in object_class_ids.items()]
         self._index_top_left_header = TopLeftParameterIndexHeaderItem(self)
         top_left_headers += [self._index_top_left_header, TopLeftParameterHeaderItem(self)]
         self.top_left_headers = {h.name: h for h in top_left_headers}
@@ -877,9 +905,16 @@ class IndexExpansionPivotTableModel(ParameterValuePivotTableModel):
 class RelationshipPivotTableModel(PivotTableModelBase):
     """A model for the pivot table in relationship input type."""
 
-    def call_reset_model(self, object_class_names, pivot):
+    @property
+    def item_type(self):
+        return "relationship"
+
+    def call_reset_model(self, object_class_ids, pivot=None):
+        """See base class."""
         data = self._parent.load_relationship_data()
-        self.top_left_headers = [TopLeftObjectHeaderItem(self, id_, name) for id_, name in object_class_names.items()]
+        self.top_left_headers = {
+            name: TopLeftObjectHeaderItem(self, name, id_) for name, id_ in object_class_ids.items()
+        }
         if pivot is None:
             pivot = self._default_pivot()
         super().reset_model(data, list(self.top_left_headers), *pivot)
@@ -938,7 +973,7 @@ class RelationshipPivotTableModel(PivotTableModelBase):
         objects_per_class = dict()
         for item in items:
             objects_per_class.setdefault(item["class_id"], []).append(item)
-        if not set(objects_per_class.keys()).intersection(self._parent.current_object_class_id_list()):
+        if not set(objects_per_class.keys()).intersection(self._parent.current_object_class_id_list):
             return False
         data = self._parent.load_empty_relationship_data(objects_per_class=objects_per_class)
         self.receive_data_added_or_removed(data, action)

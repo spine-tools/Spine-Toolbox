@@ -132,7 +132,6 @@ class ParameterTableView(AutoFilterCopyPasteTableView):
         Args:
             event (QContextMenuEvent)
         """
-        # TODO: Set remove relationhips and parameters active depending on the underlying model
         index = self.indexAt(event.pos())
         model = self.model()
         is_value = model.headerData(index.column(), Qt.Horizontal) == self.value_column_header
@@ -383,19 +382,21 @@ class PivotTableView(CopyPasteTableView):
             if self.source_model.index_in_data(index):
                 self._selected_value_indexes.append(index)
             elif self.source_model.index_in_headers(index):
-                # FIXME: what about the parameter index here (-2)?
-                if self.source_model._top_left_id(index) == -1:
+                top_left_id = self.source_model._top_left_id(index)
+                header_type = self.source_model.top_left_headers[top_left_id].header_type
+                if header_type == "parameter":
                     self._selected_parameter_indexes.append(index)
-                else:
+                elif header_type == "object":
                     self._selected_entity_indexes.append(index)
 
     def _update_actions_availability(self):
+        # TODO: Set remove relationhips and parameters active depending on the underlying model
         self.open_in_editor_action.setEnabled(len(self._selected_value_indexes) == 1)
         self.plot_action.setEnabled(len(self._selected_value_indexes) > 0)
         self.remove_values_action.setEnabled(bool(self._selected_value_indexes))
         self.delete_object_action.setEnabled(bool(self._selected_entity_indexes))
         self.delete_relationship_action.setEnabled(
-            bool(self._selected_entity_indexes) and self._data_store_form.current_class_type == "relationship class"
+            bool(self._selected_entity_indexes) and self.model().sourceModel().item_type != "relationship"
         )
         self.delete_parameter_action.setEnabled(bool(self._selected_parameter_indexes))
 
