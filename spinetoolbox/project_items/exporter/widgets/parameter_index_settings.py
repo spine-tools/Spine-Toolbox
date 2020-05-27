@@ -17,7 +17,8 @@ Parameter indexing settings window for .gdx export.
 """
 
 import enum
-from PySide2.QtCore import QAbstractTableModel, QItemSelection, QItemSelectionModel, QModelIndex, Qt, Slot
+import functools
+from PySide2.QtCore import QAbstractTableModel, QModelIndex, Qt, Signal, Slot
 from PySide2.QtWidgets import QWidget
 from spinetoolbox.spine_io.exporters import gdx
 from ..list_utils import move_list_elements
@@ -54,7 +55,6 @@ class ParameterIndexSettings(QWidget):
         self._ui.box.setTitle(parameter_name)
         self._indexing_table_model = _IndexingTableModel(indexing_setting.parameter)
         self._ui.index_table_view.setModel(self._indexing_table_model)
-        self._ui.index_table_view.selectionModel().selectionChanged.connect(self._update_model_to_selection)
         self._available_domains = available_existing_domains
         for domain_name in sorted(name for name in available_existing_domains.keys()):
             self._ui.existing_domains_combo.addItem(domain_name)
@@ -73,28 +73,21 @@ class ParameterIndexSettings(QWidget):
                 self._ui.existing_domains_combo.setCurrentText(indexing_domain.name)
                 self._set_enabled_use_existing_domain_widgets(True)
                 self._set_enabled_create_domain_widgets(False)
+                self._indexing_table_model.set_selection(list(indexing_domain.pick_list))
             else:
                 self._ui.create_domain_radio_button.setChecked(True)
                 self._set_enabled_use_existing_domain_widgets(False)
                 self._set_enabled_create_domain_widgets(True)
                 self._ui.domain_name_edit.setText(indexing_domain.name)
                 self._ui.domain_description_edit.setText(indexing_domain.description)
-                self._indexing_table_model.set_indexes(new_domains[indexing_domain.name])
-            selection_model = self._ui.index_table_view.selectionModel()
-            selection_model.clearSelection()
-            index = self._indexing_table_model.index
-            last_column = self._indexing_table_model.columnCount() - 1
-            selection = QItemSelection()
-            for i, pick in enumerate(indexing_domain.pick_list):
-                if pick:
-                    top_left = index(i, 0)
-                    bottom_right = index(i, last_column)
-                    selection.select(top_left, bottom_right)
-            selection_model.select(selection, QItemSelectionModel.Select)
+                self._indexing_table_model.set_indexes(
+                    new_domains[indexing_domain.name], list(indexing_domain.pick_list)
+                )
         else:
             self._set_enabled_use_existing_domain_widgets(True)
             self._set_enabled_create_domain_widgets(False)
         self._check_state()
+        self._indexing_table_model.selection_changed.connect(self._check_state)
 
     @property
     def new_domain_name(self):
@@ -120,6 +113,7 @@ class ParameterIndexSettings(QWidget):
             self.notification_message("Parameter successfully indexed.")
 
     def is_using_domain(self, domain_name):
+        """Returns True if the given domain_name is indexing the parameter in the widget."""
         if self._ui.use_existing_domain_radio_button.isChecked():
             return self._ui.existing_domains_combo.currentText() == domain_name
         return self._ui.domain_name_edit.text() == domain_name
@@ -162,8 +156,10 @@ class ParameterIndexSettings(QWidget):
         self._ui.message_label.setText(red_message)
 
     def reorder_indexes(self, first, last, target):
+        """Moves indexes in the index column around. """
         self._indexing_table_model.reorder_indexes(first, last, target)
 
+    @Slot()
     def _check_state(self):
         """Updated the widget's state."""
         mapped_values_balance = self._indexing_table_model.mapped_values_balance()
@@ -250,55 +246,39 @@ class ParameterIndexSettings(QWidget):
                 self._generate_index(expression)
             else:
                 self._indexing_table_model.clear()
-                self._check_state()
 
     @Slot(int)
     def _existing_domain_changed(self, index):
         """Reacts to changes in existing domains combo box."""
         selected_domain_name = self._ui.existing_domains_combo.itemText(index)
         self._indexing_table_model.set_indexes(self._available_domains[selected_domain_name])
-        self._ui.index_table_view.selectAll()
         self._update_indexing_domains_name()
 
     @Slot("QString")
     def _update_index_list_selection(self, expression, clear_selection_if_expression_empty=True):
         """Updates selection according to changed selection expression."""
         if not expression:
-            if clear_selection_if_expression_empty:
-                self._ui.index_table_view.clearSelection()
+            self._indexing_table_model.select_all()
             return
-        get_index = self._indexing_table_model.index
-        selection = QItemSelection()
         selected_domain_name = self._ui.existing_domains_combo.currentText()
+        length = len(self._available_domains[selected_domain_name])
+        is_selected = functools.partial(eval, expression, {})
         try:
-            for index in range(len(self._available_domains[selected_domain_name])):
-                if eval(expression, {}, {"i": index + 1}):  # pylint: disable=eval-used
-                    selected_top_left = get_index(index, 0)
-                    selected_bottom_right = get_index(index, 1)
-                    selection.select(selected_top_left, selected_bottom_right)
+            pick_list = [bool(is_selected({"i": i})) for i in range(1, length+1)]  # pylint: disable=eval-used
         except (AttributeError, NameError, SyntaxError):
             return
-        selection_model = self._ui.index_table_view.selectionModel()
-        selection_model.select(selection, QItemSelectionModel.ClearAndSelect)
-
-    @Slot("QItemSelection", "QItemSelection")
-    def _update_model_to_selection(self, selected, deselected):
-        """Updates the model after table selection has changed."""
-        self._indexing_table_model.selection_changed(selected, deselected)
-        self._check_state()
+        self._indexing_table_model.set_selection(pick_list)
 
     @Slot(str)
     def _generate_index(self, expression):
         """Builds indexes according to given expression."""
-        indexes = list()
+        length = len(next(iter(self._indexing_setting.parameter.values)))
+        generate_index = functools.partial(eval, expression, {})
         try:
-            for index in range(len(next(iter(self._indexing_setting.parameter.values)))):
-                indexes.append(str(eval(expression, {}, {"i": index + 1})))  # pylint: disable=eval-used
+            indexes = [generate_index({"i": i}) for i in range(1, length+1)]   # pylint: disable=eval-used
         except (AttributeError, NameError, SyntaxError, ValueError):
             return
         self._indexing_table_model.set_indexes(indexes)
-        self._ui.index_table_view.selectAll()
-        self._check_state()
 
     @Slot(bool)
     def _extract_index_from_parameter(self, _=True):
@@ -308,7 +288,6 @@ class ParameterIndexSettings(QWidget):
         self._ui.generator_expression_edit.blockSignals(False)
         indexes = [str(index) for index in next(iter(self._indexing_setting.parameter.values)).indexes]
         self._indexing_table_model.set_indexes(indexes)
-        self._ui.index_table_view.selectAll()
 
     @Slot(bool)
     def _move_indexing_domain_left(self, _):
@@ -335,6 +314,9 @@ class _IndexingTableModel(QAbstractTableModel):
     Unselected rows are left empty.
     """
 
+    selection_changed = Signal()
+    """Emitted after the values have been spread over the selected indexes."""
+
     def __init__(self, parameter):
         """
         Args:
@@ -346,7 +328,8 @@ class _IndexingTableModel(QAbstractTableModel):
         self._parameter_values = list(parameter.values)
         self._parameter_nonexpanded_indexes = list(parameter.indexes)
         self._selected = list()
-        self._values = len(parameter.data) * [list()]
+        self._rows_shown = 0
+        self._values = [list() for _ in range(len(self._parameter_values))]
 
     @property
     def indexes(self):
@@ -358,13 +341,19 @@ class _IndexingTableModel(QAbstractTableModel):
         """a boolean list of selected index keys, so called pick list"""
         return self._selected
 
+    def canFetchMore(self, parent):
+        """Returns True if more rows are available to show."""
+        return self._rows_shown < len(self._indexes)
+
     def clear(self):
         """Clears the model."""
         self.beginResetModel()
         self._indexes = list()
         self._selected = list()
-        self._values = len(self._parameter_values) * [list()]
+        self._values = [list() for _ in range(len(self._parameter_values))]
+        self._rows_shown = 0
         self.endResetModel()
+        self.selection_changed.emit()
 
     def columnCount(self, parent=QModelIndex()):
         """Returns the number of columns."""
@@ -372,13 +361,15 @@ class _IndexingTableModel(QAbstractTableModel):
 
     def data(self, index, role=Qt.DisplayRole):
         """Returns data associated with given model index and role."""
-        if role not in (Qt.DisplayRole, Qt.ToolTipRole):
-            return None
-        row = index.row()
-        column = index.column()
-        if column == 0:
-            return self._indexes[row]
-        return self._values[column - 1][row]
+        if role in (Qt.DisplayRole, Qt.ToolTipRole):
+            row = index.row()
+            column = index.column()
+            if column == 0:
+                return self._indexes[row]
+            return self._values[column - 1][row]
+        if index.column() == 0 and role == Qt.CheckStateRole:
+            return Qt.Checked if self._selected[index.row()] else Qt.Unchecked
+        return None
 
     def headerData(self, section, orientation, role=Qt.DisplayRole):
         """Returns header data."""
@@ -389,6 +380,26 @@ class _IndexingTableModel(QAbstractTableModel):
         if section == 0:
             return self._index_name
         return ", ".join(self._parameter_nonexpanded_indexes[section - 1])
+
+    def fetchMore(self, parent):
+        """Inserts a number of new rows to the table."""
+        remainder = len(self._indexes) - self._rows_shown
+        fetch_size = min(remainder, 100)
+        end = self._rows_shown + fetch_size
+        self.beginInsertRows(parent, self._rows_shown, end - 1)
+        for column in self._values:
+            column += fetch_size * [None]
+        start = self._rows_shown
+        self._rows_shown = end
+        self._spread_values_over_selected_rows(start)
+        self.endInsertRows()
+
+    def flags(self, index):
+        """Returns flags for given index."""
+        flags = Qt.ItemIsSelectable | Qt.ItemIsEnabled
+        if index.column() == 0:
+            flags = flags | Qt.ItemIsUserCheckable
+        return flags
 
     def mapped_values_balance(self):
         """
@@ -402,10 +413,7 @@ class _IndexingTableModel(QAbstractTableModel):
         Returns:
             int: mapped values' balance
         """
-        count = 0
-        for selected in self._selected:
-            if selected:
-                count += 1
+        count = sum(1 for selected in self._selected if selected)
         return count - len(self._parameter_values[0].values) if self._parameter_values else 0
 
     def reorder_indexes(self, first, last, target):
@@ -424,54 +432,67 @@ class _IndexingTableModel(QAbstractTableModel):
 
     def rowCount(self, parent=QModelIndex()):
         """Return the number of rows."""
-        return len(self._indexes)
+        return self._rows_shown
 
-    def selection_changed(self, selected, deselected):
-        """Updates selected and deselected rows on the table."""
-        selected_indexes = selected.indexes()
-        deselected_indexes = deselected.indexes()
-        min_changed_row = len(self._indexes)
-        for i in selected_indexes:
-            if i.column() != 1:
-                continue
-            row = i.row()
-            self._selected[row] = True
-            min_changed_row = min(min_changed_row, row)
-        for i in deselected_indexes:
-            if i.column() != 1:
-                continue
-            row = i.row()
-            self._selected[row] = False
-            min_changed_row = min(min_changed_row, row)
-        max_changed_row = 0
-        for i, parameter_value in enumerate(self._parameter_values):
-            value_column = len(self._indexes) * [None]
-            self._values[i] = value_column
-            value_index = 0
-            value_length = len(parameter_value)
-            last_changed_row = 0
-            values = list(parameter_value.values)
-            for j, is_selected in enumerate(self._selected):
-                if value_index == value_length:
-                    break
-                if is_selected:
-                    value_column[j] = str(values[value_index])
-                    value_index += 1
-                last_changed_row += 1
-            max_changed_row = max(max_changed_row, last_changed_row)
-        top_left = self.index(min_changed_row, 1)
-        bottom_right = self.index(max_changed_row, len(self._parameter_values))
-        self.dataChanged.emit(top_left, bottom_right, [Qt.DisplayRole])
+    def select_all(self):
+        """Selects all indexes."""
+        self._selected = len(self._indexes) * [True]
+        top_left = self.index(0, 0)
+        bottom_right = self.index(self._rows_shown - 1, 0)
+        self.dataChanged.emit(top_left, bottom_right, [Qt.CheckStateRole])
+        self._spread_values_over_selected_rows(0)
+        self.selection_changed.emit()
+
+    def setData(self, index, value, role=Qt.EditRole):
+        """Sets the checked state for given index."""
+        if role != Qt.CheckStateRole:
+            return False
+        row = index.row()
+        self._selected[row] = value == Qt.Checked
+        self.dataChanged.emit(index, index, [Qt.CheckStateRole])
+        self._spread_values_over_selected_rows(row)
+        self.selection_changed.emit()
+        return True
 
     def set_index_name(self, name):
         """Sets the indexing domain name."""
         self._index_name = name
         self.headerDataChanged.emit(Qt.Horizontal, 0, 0)
 
-    def set_indexes(self, indexes):
+    def set_indexes(self, indexes, pick_list=None):
         """Overwrites all new indexes."""
         self.beginResetModel()
         self._indexes = indexes
-        self._selected = len(indexes) * [False]
-        self._values = len(self._parameter_values) * [len(indexes) * [None]]
+        self._selected = pick_list if pick_list is not None else len(indexes) * [True]
+        self._values = [list() for _ in range(len(self._parameter_values))]
+        self._rows_shown = 0
+        self.selection_changed.emit()
         self.endResetModel()
+
+    def set_selection(self, pick_list):
+        """Selects the indexes specified by ``pick_list``"""
+        self._selected = pick_list
+        top_left = self.index(0, 0)
+        bottom_right = self.index(self._rows_shown - 1, 0)
+        self.dataChanged.emit(top_left, bottom_right, [Qt.CheckStateRole])
+        self._spread_values_over_selected_rows(0)
+        self.selection_changed.emit()
+
+    def _spread_values_over_selected_rows(self, first_row):
+        """Repopulates the table according to selected indexes."""
+        value_start = sum(1 for is_selected in self._selected[:first_row] if is_selected)
+        for i, parameter_value in enumerate(self._parameter_values):
+            value_index = value_start
+            value_length = len(parameter_value)
+            values = list(parameter_value.values)
+            column = self._values[i]
+            for j in range(first_row, self._rows_shown):
+                is_selected = self._selected[j]
+                if is_selected and value_index < value_length:
+                    column[j] = str(values[value_index])
+                    value_index += 1
+                else:
+                    column[j] = None
+        top_left = self.index(first_row, 1)
+        bottom_right = self.index(self._rows_shown - 1, len(self._values))
+        self.dataChanged.emit(top_left, bottom_right, [Qt.DisplayRole, Qt.ToolTipRole])

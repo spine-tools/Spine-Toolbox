@@ -10,10 +10,10 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-# Form implementation generated from reading ui file 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\project_items\exporter\ui\parameter_index_settings.ui',
-# licensing of 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\project_items\exporter\ui\parameter_index_settings.ui' applies.
+# Form implementation generated from reading ui file 'C:\data\src\toolbox\bin\..\spinetoolbox\project_items\exporter\ui\parameter_index_settings.ui',
+# licensing of 'C:\data\src\toolbox\bin\..\spinetoolbox\project_items\exporter\ui\parameter_index_settings.ui' applies.
 #
-# Created: Thu Feb 13 11:53:49 2020
+# Created: Wed May 27 09:58:58 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -128,8 +128,6 @@ class Ui_Form(object):
         spacerItem1 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
         self.verticalLayout_4.addItem(spacerItem1)
         self.index_table_view = QtWidgets.QTableView(self.splitter)
-        self.index_table_view.setSelectionMode(QtWidgets.QAbstractItemView.MultiSelection)
-        self.index_table_view.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
         self.index_table_view.setObjectName("index_table_view")
         self.index_table_view.horizontalHeader().setVisible(True)
         self.verticalLayout_3.addWidget(self.splitter)

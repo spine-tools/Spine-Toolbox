@@ -17,8 +17,7 @@ Tests for ParameterIndexSettings widget and its models.
 """
 
 import unittest
-from unittest.mock import MagicMock
-from PySide2.QtCore import Qt
+from PySide2.QtCore import QModelIndex, Qt
 from PySide2.QtWidgets import QApplication
 from spinedb_api.parameter_value import TimePattern
 import spinetoolbox.spine_io.exporters.gdx as gdx
@@ -47,23 +46,22 @@ class TestIndexingTableModel(unittest.TestCase):
 
     def test_set_indexes(self):
         self._model.set_indexes(["i1", "i2"])
+        self._model.fetchMore(QModelIndex())
         self.assertEqual(self._model.rowCount(), 2)
         self.assertEqual(self._model.indexes, ["i1", "i2"])
-        self.assertEqual(self._model.index_selection, [False, False])
+        self.assertEqual(self._model.index_selection, [True, True])
         self.assertEqual(self._model.index(0, 0).data(), "i1")
         self.assertEqual(self._model.index(1, 0).data(), "i2")
-        self.assertEqual(self._model.index(0, 1).data(), None)
-        self.assertEqual(self._model.index(1, 1).data(), None)
-        self.assertEqual(self._model.index(0, 2).data(), None)
-        self.assertEqual(self._model.index(1, 2).data(), None)
+        self.assertEqual(self._model.index(0, 1).data(), "-1.1")
+        self.assertEqual(self._model.index(1, 1).data(), "-2.2")
+        self.assertEqual(self._model.index(0, 2).data(), "1.1")
+        self.assertEqual(self._model.index(1, 2).data(), "2.2")
 
-    def test_selection_changed(self):
+    def test_set_selection(self):
         self._model.set_indexes(["i1", "i2", "i3"])
-        selected = MagicMock()
-        selected.indexes = MagicMock(return_value=[self._model.index(0, 1), self._model.index(2, 1)])
-        deselected = MagicMock()
-        deselected.indexes = MagicMock(return_value=[])
-        self._model.selection_changed(selected, deselected)
+        selected = [True, False, True]
+        self._model.set_selection(selected)
+        self._model.fetchMore(QModelIndex())
         self.assertEqual(self._model.rowCount(), 3)
         self.assertEqual(self._model.index(0, 0).data(), "i1")
         self.assertEqual(self._model.index(1, 0).data(), "i2")
@@ -79,12 +77,9 @@ class TestIndexingTableModel(unittest.TestCase):
 
     def test_reorder_indexes(self):
         self._model.set_indexes(["i1", "i2"])
-        selected = MagicMock()
-        selected.indexes = MagicMock(return_value=[self._model.index(0, 1), self._model.index(1, 1)])
-        deselected = MagicMock()
-        deselected.indexes = MagicMock(return_value=[])
-        self._model.selection_changed(selected, deselected)
+        self._model.set_selection([True, True])
         self._model.reorder_indexes(0, 0, 1)
+        self._model.fetchMore(QModelIndex())
         self.assertEqual(self._model.rowCount(), 2)
         self.assertEqual(self._model.index(0, 0).data(), "i2")
         self.assertEqual(self._model.index(1, 0).data(), "i1")

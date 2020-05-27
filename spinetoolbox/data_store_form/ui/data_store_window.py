@@ -10,10 +10,10 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-# Form implementation generated from reading ui file '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/data_store_form/ui/data_store_window.ui',
-# licensing of '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/data_store_form/ui/data_store_window.ui' applies.
+# Form implementation generated from reading ui file 'C:\data\src\toolbox\bin\..\spinetoolbox\data_store_form\ui\data_store_window.ui',
+# licensing of 'C:\data\src\toolbox\bin\..\spinetoolbox\data_store_form\ui\data_store_window.ui' applies.
 #
-# Created: Sun May 24 19:57:00 2020
+# Created: Wed May 27 09:58:54 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -611,7 +611,7 @@ class Ui_MainWindow(object):
         self.actionInput_type_index_expansion.setText(QtWidgets.QApplication.translate("MainWindow", "Index expansion", None, -1))
         self.actionRebuild_graph.setText(QtWidgets.QApplication.translate("MainWindow", "Rebuild graph", None, -1))
 
-from spinetoolbox.data_store_form.widgets.custom_qtableview import PivotTableView, ObjectParameterValueTableView, RelationshipParameterValueTableView, FrozenTableView, ObjectParameterDefinitionTableView, RelationshipParameterDefinitionTableView
-from spinetoolbox.data_store_form.widgets.custom_qtreeview import RelationshipTreeView, ParameterValueListTreeView, ObjectTreeView
+from spinetoolbox.data_store_form.widgets.custom_qtreeview import RelationshipTreeView, ObjectTreeView, ParameterValueListTreeView
+from spinetoolbox.data_store_form.widgets.custom_qtableview import RelationshipParameterDefinitionTableView, FrozenTableView, RelationshipParameterValueTableView, PivotTableView, ObjectParameterValueTableView, ObjectParameterDefinitionTableView
 from spinetoolbox.data_store_form.widgets.custom_qgraphicsviews import EntityQGraphicsView
 from spinetoolbox import resources_icons_rc

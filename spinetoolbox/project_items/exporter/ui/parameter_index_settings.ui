@@ -235,12 +235,6 @@
          </layout>
         </widget>
         <widget class="QTableView" name="index_table_view">
-         <property name="selectionMode">
-          <enum>QAbstractItemView::MultiSelection</enum>
-         </property>
-         <property name="selectionBehavior">
-          <enum>QAbstractItemView::SelectRows</enum>
-         </property>
          <attribute name="horizontalHeaderVisible">
           <bool>true</bool>
          </attribute>
