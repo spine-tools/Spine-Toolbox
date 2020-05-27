@@ -194,7 +194,7 @@ class CustomInputDialog(QDialog):
     @Slot("QListWidgetItem")
     def _handle_item_changed(self, item):
         if item is self._new_item and item.text() != self._editable_text:
-            item.setForeground(qApp.palette().text())
+            item.setForeground(qApp.palette().text())  # pylint: disable=undefined-variable
             self._new_item = None
 
     @classmethod
@@ -216,7 +216,7 @@ class CustomInputDialog(QDialog):
         if editable_text:
             dialog._new_item = dialog._list_wg.item(dialog._list_wg.count() - 1)
             dialog._new_item.setFlags(dialog._new_item.flags() | Qt.ItemIsEditable)
-            foreground = qApp.palette().text()
+            foreground = qApp.palette().text()  # pylint: disable=undefined-variable
             color = foreground.color()
             color.setAlpha(128)
             foreground.setColor(color)

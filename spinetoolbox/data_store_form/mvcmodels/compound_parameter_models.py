@@ -17,7 +17,7 @@ These models concatenate several 'single' models and one 'empty' model.
 :date:   28.6.2019
 """
 from PySide2.QtCore import Qt, Signal, Slot, QTimer
-from PySide2.QtGui import QFont, QIcon
+from PySide2.QtGui import QFont
 from ...helpers import rows_to_row_count_tuples
 from ..widgets.custom_menus import ParameterViewFilterMenu
 from ...mvcmodels.compound_table_model import CompoundWithEmptyTableModel

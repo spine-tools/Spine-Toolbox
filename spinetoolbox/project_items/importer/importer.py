@@ -535,7 +535,7 @@ def _file_label(resource):
     """Picks a label for given file resource."""
     if resource.type_ == "file":
         return resource.path
-    elif resource.type_ in ("transient_file", "file_pattern"):
+    if resource.type_ in ("transient_file", "file_pattern"):
         label = resource.metadata.get("label")
         if label is None:
             if resource.url is None:

@@ -184,6 +184,7 @@ class AddSpecificationPopupMenu(CustomPopupMenu):
             # Need to 'clone' item_type, otherwise show_specification_form() may be called with
             # wrong item type as item_type is a cell variable.
             specification_item_type = str(item_type)
+            # pylint: disable=cell-var-from-loop
             self.add_action(
                 f"Create {item_type} Specification...",
                 lambda _: parent.show_specification_form(specification_item_type, specification=None),

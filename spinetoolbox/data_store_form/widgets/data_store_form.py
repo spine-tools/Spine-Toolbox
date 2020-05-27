@@ -305,7 +305,7 @@ class DataStoreFormBase(QMainWindow):
         filename = os.path.split(file_path)[1]
         try:
             mapped_data, errors = get_mapped_data_from_xlsx(file_path)
-        except Exception as err:
+        except Exception as err:  # pylint: disable=broad-except
             self.msg.emit(f"Could'n import file {filename}: {str(err)}")
             return
         if errors:

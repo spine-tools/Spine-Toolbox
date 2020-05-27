@@ -180,7 +180,7 @@ class Parameter:
             raise GdxExportException("Parameter index and value length mismatch.")
         if values and not all([isinstance(value, type(values[0])) for value in values[1:]]):
             raise GdxExportException("Not all values are of the same type.")
-        self.data = {index: value for index, value in zip(indexes, values)}
+        self.data = dict(zip(indexes, values))
 
     def __eq__(self, other):
         if not isinstance(other, Parameter):
@@ -729,8 +729,7 @@ def _object_parameter_default_values(db_map, domains_with_ids, classes_with_igno
                 class_name = domains_with_ids[definition_row.object_class_id].name
                 classes_with_ignored_parameters.add(class_name)
                 continue
-            else:
-                raise
+            raise
         domain = domains_with_ids[definition_row.object_class_id]
         indexes = [record.keys for record in domain.records]
         values = len(domain.records) * [parsed_default_value]
@@ -763,8 +762,7 @@ def _update_using_existing_object_parameter_values(
                 class_name = domains_with_ids[parameter_row.object_class_id].name
                 classes_with_ignored_parameters.add(class_name)
                 continue
-            else:
-                raise
+            raise
         parameter.data[(parameter_row.object_name,)] = parsed_value
 
 
@@ -854,8 +852,7 @@ def _relationship_parameter_default_values(db_map, sets_with_ids, classes_with_i
                 class_name = sets_with_ids[definition_row.relationship_class_id].name
                 classes_with_ignored_parameters.add(class_name)
                 continue
-            else:
-                raise
+            raise
         set_ = sets_with_ids[definition_row.relationship_class_id]
         indexes = [record.keys for record in set_.records]
         values = len(set_.records) * [parsed_default_value]
@@ -888,8 +885,7 @@ def _update_using_existing_relationship_parameter_values(
                 class_name = sets_with_ids[parameter_row.relationship_class_id].name
                 classes_with_ignored_parameters.add(class_name)
                 continue
-            else:
-                raise
+            raise
         keys = tuple(parameter_row.object_name_list.split(","))
         parameter.data[keys] = parsed_value
 
@@ -1161,8 +1157,7 @@ def _add_to_indexing_settings(
         if classes_with_unsupported_value_types is not None:
             classes_with_unsupported_value_types.add(entity_class_name)
             return
-        else:
-            raise
+        raise
     setting = settings.get(parameter_name, None)
     if setting is not None:
         setting.append_parameter(parameter)
@@ -1271,8 +1266,7 @@ def _find_indexed_parameter(parameter_name, db_map, logger=None):
             if object_classes_with_unsupported_parameter_types is not None:
                 object_classes_with_unsupported_parameter_types.add(class_name)
                 return None, class_name
-            else:
-                raise
+            raise
         if isinstance(parsed_default_value, IndexedValue):
             key_list = [(object_row.name,) for object_row in db_map.object_list(class_id=class_id)]
             value_list = len(key_list) * [parsed_default_value]
@@ -1286,8 +1280,7 @@ def _find_indexed_parameter(parameter_name, db_map, logger=None):
                 if object_classes_with_unsupported_parameter_types is not None:
                     object_classes_with_unsupported_parameter_types.add(class_name)
                     return None, class_name
-                else:
-                    raise
+                raise
             parameter.data[(parameter_row.object_name,)] = parsed_value
     else:
         class_id = definition.relationship_class_id
@@ -1299,8 +1292,7 @@ def _find_indexed_parameter(parameter_name, db_map, logger=None):
             if relationship_classes_with_unsupported_parameter_types is not None:
                 relationship_classes_with_unsupported_parameter_types.add(class_name)
                 return None, class_name
-            else:
-                raise
+            raise
         if isinstance(parsed_default_value, IndexedValue):
             key_list = [
                 tuple(relationship_row.object_name_list.split(","))
@@ -1317,8 +1309,7 @@ def _find_indexed_parameter(parameter_name, db_map, logger=None):
                 if relationship_classes_with_unsupported_parameter_types is not None:
                     relationship_classes_with_unsupported_parameter_types.add(class_name)
                     return None, class_name
-                else:
-                    raise
+                raise
             parameter.data[tuple(parameter_row.object_name_list.split(","))] = parsed_value
     if parameter is None:
         raise GdxExportException(f"Cannot find values for parameter '{parameter_name}' in the database.")

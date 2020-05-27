@@ -17,7 +17,6 @@ Custom editors for model/view programming.
 :date:   2.9.2018
 """
 
-import sys
 from PySide2.QtCore import (
     Qt,
     Slot,
@@ -32,7 +31,6 @@ from PySide2.QtCore import (
 )
 from PySide2.QtWidgets import (
     QComboBox,
-    QDoubleSpinBox,
     QLineEdit,
     QTableView,
     QItemDelegate,

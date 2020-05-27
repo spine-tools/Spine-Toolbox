@@ -18,7 +18,6 @@ Module for tool icon class.
 
 from PySide2.QtGui import QColor
 from PySide2.QtCore import QTimeLine, Slot, QPointF
-from PySide2.QtWidgets import QGraphicsItemAnimation
 from spinetoolbox.graphics_items import ProjectItemIcon
 
 

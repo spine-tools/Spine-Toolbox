@@ -633,8 +633,7 @@ class MappingSpecModel(QAbstractTableModel):
                 index = int(mapping_number) - 1
                 if mapping_name == "Object class names":
                     return self._model.object_class_names_issues(index)
-                else:
-                    return self._model.object_names_issues(index)
+                return self._model.object_names_issues(index)
             extra_relationship_rows = 2 * dimensions - 1
         if row == 2 + extra_relationship_rows:
             return self._model.parameters.names_issues()

@@ -16,7 +16,6 @@ Models to represent entities in a tree.
 :date:   11.3.2019
 """
 from PySide2.QtCore import Qt, QModelIndex
-from PySide2.QtGui import QIcon
 from .entity_tree_item import ObjectTreeRootItem, RelationshipTreeRootItem
 from ...mvcmodels.minimal_tree_model import MinimalTreeModel, TreeItem
 
