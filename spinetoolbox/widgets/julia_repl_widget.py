@@ -44,10 +44,10 @@ class CustomQtKernelManager(QtKernelManager):
         return self._kernel_spec
 
     def override_project_arg(self):
-        if self.project_path is None:
-            return
         ind = next((k for k, x in enumerate(self._kernel_spec.argv) if x.startswith("--project")), None)
         if not ind:
+            return
+        if self.project_path is None:
             return
         self._kernel_spec.argv[ind] = f"--project={self.project_path}"
 
@@ -150,8 +150,6 @@ class JuliaREPLWidget(SpineConsoleWidget):
             self.execution_failed.emit(-1)
             return
         julia_project_path = self._toolbox.qsettings().value("appSettings/juliaProjectPath", defaultValue="")
-        if julia_project_path == "":
-            julia_project_path = "@."
         if self.kernel_manager and kernel_name == self.kernel_name and julia_project_path == self.julia_project_path:
             self._toolbox.msg.emit("*** Using previously started Julia Console ***")
             self.ready_to_execute.emit()
@@ -288,8 +286,6 @@ class JuliaREPLWidget(SpineConsoleWidget):
         if not kernel_name:
             return
         julia_project_path = self._toolbox.qsettings().value("appSettings/juliaProjectPath", defaultValue="")
-        if julia_project_path == "":
-            julia_project_path = "@."
         if self.kernel_manager and kernel_name == self.kernel_name and julia_project_path == self.julia_project_path:
             # Restart current kernel
             self.starting = True
