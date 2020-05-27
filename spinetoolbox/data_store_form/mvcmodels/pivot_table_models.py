@@ -456,7 +456,10 @@ class PivotTableModelBase(QAbstractTableModel):
         return any(self.top_left_headers[id_].update_data(data) for id_, data in data_by_top_left_id.items())
 
     def _batch_set_empty_header_data(self, header_data, get_top_left_id):
-        names_by_top_left_id = {get_top_left_id(index): name for index, name in header_data}
+        names_by_top_left_id = {}
+        for index, value in header_data:
+            top_left_id = get_top_left_id(index)
+            names_by_top_left_id.setdefault(top_left_id, set()).add(value)
         return any(self.top_left_headers[id_].add_data(names) for id_, names in names_by_top_left_id.items())
 
     def receive_data_added_or_removed(self, data, action):
@@ -809,7 +812,7 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
     def receive_objects_added_or_removed(self, items, action):
         if self._parent.current_class_type != "object class":
             return False
-        objects = [x for x in items if x["class_id"] == self.current_class_id]
+        objects = [x for x in items if x["class_id"] == self._parent.current_class_id]
         if not objects:
             return False
         data = self._parent.load_empty_parameter_value_data(entities=objects)

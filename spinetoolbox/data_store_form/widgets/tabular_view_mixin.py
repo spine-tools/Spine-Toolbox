@@ -532,7 +532,7 @@ class TabularViewMixin:
             self.pivot_table_model.model.frozen_value,
         )
 
-    @Slot(int, set, bool)
+    @Slot(str, set, bool)
     def change_filter(self, identifier, valid_values, has_filter):
         if has_filter:
             self.pivot_table_proxy.set_filter(identifier, valid_values)

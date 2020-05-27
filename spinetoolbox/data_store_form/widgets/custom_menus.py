@@ -47,7 +47,7 @@ class ParameterViewFilterMenu(FilterMenuBase):
 class TabularViewFilterMenu(FilterMenuBase):
     """Filter menu to use together with FilterWidget in TabularViewMixin."""
 
-    filterChanged = Signal(int, set, bool)
+    filterChanged = Signal(str, set, bool)
 
     def __init__(self, parent, identifier, data_to_value, show_empty=True):
         """
