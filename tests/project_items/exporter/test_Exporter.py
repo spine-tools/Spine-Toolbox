@@ -31,8 +31,17 @@ class TestExporter(unittest.TestCase):
     def setUp(self):
         """Set up."""
         self.toolbox = create_toolboxui_with_project()
-        item_dict = dict(name="exporter", description="", settings_packs=None, x=0, y=0)
-        self.toolbox.project().add_project_items("Exporter", item_dict)
+        item_dict = {
+            "exporter": {
+                "type": "Exporter",
+                "description": "",
+                "settings_packs": list(),
+                "cancel_on_error": True,
+                "x": 0,
+                "y": 0,
+            }
+        }
+        self.toolbox.project().add_project_items(item_dict)
         index = self.toolbox.project_item_model.find_item("exporter")
         self.exporter = self.toolbox.project_item_model.item(index).project_item
 
@@ -135,8 +144,8 @@ class TestExporter(unittest.TestCase):
 
     def test_activating_second_exporter_with_less_database_urls_does_not_crash(self):
         self.exporter._start_worker = MagicMock()
-        item_dict = dict(name="2nd exporter", description="", settings_packs=None, x=0, y=0)
-        self.toolbox.project().add_project_items("Exporter", item_dict)
+        item_dict = {"2nd exporter": {"type": "Exporter", "description": "", "settings_packs": None, "x": 0, "y": 0}}
+        self.toolbox.project().add_project_items(item_dict)
         index = self.toolbox.project_item_model.find_item("2nd exporter")
         exporter2 = self.toolbox.project_item_model.item(index).project_item
         exporter2._start_worker = MagicMock()

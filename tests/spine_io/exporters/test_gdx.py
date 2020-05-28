@@ -1220,7 +1220,9 @@ class TestGdx(unittest.TestCase):
         self.assertEqual(settings.domain_tiers, {"a": 0, "b": 1})
         self.assertEqual(settings.records("a").records, [("A",)])
         self.assertEqual(settings.records("b").records, [("B",)])
-        self.assertEqual(settings.metadata("a"), gdx.SetMetadata(gdx.ExportFlag.FORCED_NON_EXPORTABLE, gdx.Origin.MERGING))
+        self.assertEqual(
+            settings.metadata("a"), gdx.SetMetadata(gdx.ExportFlag.FORCED_NON_EXPORTABLE, gdx.Origin.MERGING)
+        )
         self.assertEqual(settings.metadata("b"), gdx.SetMetadata(gdx.ExportFlag.NON_EXPORTABLE))
         self.assertFalse(settings.set_names)
         self.assertFalse(settings.set_tiers)

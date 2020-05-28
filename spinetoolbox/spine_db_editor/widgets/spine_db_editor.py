@@ -473,8 +473,8 @@ class SpineDBEditorBase(QMainWindow):
         database = make_url(url).database
         url_as_dict = {"dialect": "sqlite", "database": database}
         if not data_store:
-            data_store_dict = {"name": name, "description": "", "x": 0, "y": 0, "url": url_as_dict}
-            project.add_project_items("Data Store", data_store_dict)
+            data_store_dict = {name: {"type": "Data Store", "description": "", "x": 0, "y": 0, "url": url_as_dict}}
+            project.add_project_items(data_store_dict)
             action = "added"
         elif data_store.update_url(**url_as_dict):
             action = "updated"

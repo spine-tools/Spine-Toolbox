@@ -27,33 +27,37 @@ from .widgets.custom_menus import ToolSpecificationMenu
 
 class ToolFactory(ProjectItemFactory):
     @staticmethod
-    def icon():
-        return ":/icons/project_item_icons/hammer.svg"
-
-    @property
-    def item_maker(self):
+    def item_class():
         return Tool
 
-    @property
-    def icon_maker(self):
-        return ToolIcon
-
-    @property
-    def add_form_maker(self):
-        return AddToolWidget
+    @staticmethod
+    def icon():
+        return ":/icons/project_item_icons/hammer.svg"
 
     @staticmethod
     def supports_specifications():
         return True
 
-    @property
-    def specification_form_maker(self):
-        return ToolSpecificationWidget
-
-    @property
-    def specification_menu_maker(self):
-        return ToolSpecificationMenu
+    @staticmethod
+    def make_add_item_widget(toolbox, x, y, specification):
+        return AddToolWidget(toolbox, x, y, specification)
 
     @staticmethod
-    def _make_properties_widget(toolbox):
+    def make_icon(toolbox, x, y, project_item):
+        return ToolIcon(toolbox, x, y, project_item, ToolFactory.icon())
+
+    @staticmethod
+    def make_item(name, item_dict, toolbox, project, logger):
+        return Tool.from_dict(name, item_dict, toolbox, project, logger)
+
+    @staticmethod
+    def make_properties_widget(toolbox):
         return ToolPropertiesWidget(toolbox)
+
+    @staticmethod
+    def make_specification_menu(parent, index):
+        return ToolSpecificationMenu(parent, index)
+
+    @staticmethod
+    def make_specification_widget(toolbox):
+        return ToolSpecificationWidget(toolbox)

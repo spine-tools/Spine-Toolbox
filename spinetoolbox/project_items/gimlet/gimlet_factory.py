@@ -25,37 +25,33 @@ from .widgets.add_gimlet_widget import AddGimletWidget
 
 class GimletFactory(ProjectItemFactory):
     @staticmethod
+    def item_class():
+        return Gimlet
+
+    @staticmethod
     def icon():
         return ":/icons/project_item_icons/screwdriver.svg"
 
     @staticmethod
-    def item_type():
-        return "Gimlet"
+    def make_add_item_widget(toolbox, x, y, specification):
+        return AddGimletWidget(toolbox, x, y, specification)
 
-    @property
-    def properties_widget_maker(self):
-        return GimletPropertiesWidget
+    @staticmethod
+    def make_icon(toolbox, x, y, project_item):
+        return GimletIcon(toolbox, x, y, project_item, GimletFactory.icon())
 
-    @property
-    def item_maker(self):
-        return Gimlet
+    @staticmethod
+    def make_item(name, item_dict, toolbox, project, logger):
+        return Gimlet.from_dict(name, item_dict, toolbox, project, logger)
 
-    @property
-    def icon_maker(self):
-        return GimletIcon
+    @staticmethod
+    def make_properties_widget(toolbox):
+        return GimletPropertiesWidget(toolbox)
 
-    @property
-    def add_form_maker(self):
-        return AddGimletWidget
-
-    @property
-    def specification_form_maker(self):
-        raise NotImplementedError()
-
-    @property
-    def specification_menu_maker(self):
+    @staticmethod
+    def make_specification_menu(parent, index):
         raise NotImplementedError()
 
     @staticmethod
-    def _make_properties_widget(toolbox):
-        return GimletPropertiesWidget(toolbox)
+    def make_specification_widget(toolbox):
+        raise NotImplementedError()

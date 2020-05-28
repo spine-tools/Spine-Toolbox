@@ -71,23 +71,22 @@ class SetProjectDescriptionCommand(SpineToolboxCommand):
 
 
 class AddProjectItemsCommand(SpineToolboxCommand):
-    def __init__(self, project, item_type, items, set_selected=False, verbosity=True):
+    def __init__(self, project, items_dict, set_selected=False, verbosity=True):
         """Command to add items.
 
         Args:
             project (SpineToolboxProject): the project
-            item_type (str): The factory name
-            items (Iterable): one or more dict of items to add
+            items_dict (dict): a mapping from item name to item dict
             set_selected (bool): Whether to set item selected after the item has been added to project
             verbosity (bool): If True, prints message
         """
         super().__init__()
         self.project = project
-        self.project_tree_items = project.make_project_tree_items(item_type, items)
+        self.project_tree_items = project.make_project_tree_items(items_dict)
         self.set_selected = set_selected
         self.verbosity = verbosity
-        if len(items) == 1:
-            self.setText(f"add {items[0]['name']}")
+        if len(items_dict) == 1:
+            self.setText(f"add {next(iter(items_dict))}")
         else:
             self.setText("add multiple items")
 

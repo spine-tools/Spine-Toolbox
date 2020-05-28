@@ -259,6 +259,37 @@ class ProjectItem(MetaObject):
         }
 
     @staticmethod
+    def parse_item_dict(item_dict):
+        """
+        Reads the information needed to construct the base ProjectItem class from an item dict.
+
+        Args:
+            item_dict (dict): an item dict
+        Returns:
+            tuple: item's name, description as well as x and y coordinates
+        """
+        description = item_dict["description"]
+        x = item_dict["x"]
+        y = item_dict["y"]
+        return description, x, y
+
+    @staticmethod
+    def from_dict(name, item_dict, toolbox, project, logger):
+        """
+        Deserialized an item from item dict.
+
+        Args:
+            name (str): item's name
+            item_dict (dict): serialized item
+            toolbox (ToolboxUI): the main window
+            project (SpineToolboxProject): a project
+            logger (LoggerInterface): a logger
+        Returns:
+            ProjectItem: deserialized item
+        """
+        raise NotImplementedError()
+
+    @staticmethod
     def default_name_prefix():
         """prefix for default item name"""
         raise NotImplementedError()
@@ -375,12 +406,15 @@ class ProjectItem(MetaObject):
 class ProjectItemFactory:
     """Class for project item factories."""
 
-    def __init__(self, toolbox):
+    @staticmethod
+    def item_class():
         """
-        Args:
-            toolbox (ToolboxUI)
+        Returns the project item's class.
+
+        Returns:
+            type: item's class
         """
-        self.properties_ui = self._make_properties_widget(toolbox).ui
+        raise NotImplementedError()
 
     @staticmethod
     def icon():
@@ -389,36 +423,6 @@ class ProjectItemFactory:
 
         Returns:
             str
-        """
-        raise NotImplementedError()
-
-    @property
-    def item_maker(self):
-        """
-        Returns a ProjectItem subclass.
-
-        Returns:
-            class
-        """
-        raise NotImplementedError()
-
-    @property
-    def icon_maker(self):
-        """
-        Returns a ProjectItemIcon subclass.
-
-        Returns:
-            class
-        """
-        raise NotImplementedError()
-
-    @property
-    def add_form_maker(self):
-        """
-        Returns an AddProjectItem subclass.
-
-        Returns:
-            class
         """
         raise NotImplementedError()
 
@@ -435,27 +439,23 @@ class ProjectItemFactory:
         """
         return False
 
-    @property
-    def specification_form_maker(self):
+    @staticmethod
+    def make_add_item_widget(toolbox, x, y, specification):
         """
-        Returns a QWidget subclass to create and edit specifications.
+        Returns an appropriate Add project item widget.
+
+        Args:
+            toolbox (ToolboxUI): the main window
+            x, y (int): Icon coordinates
+            specification (ProjectItemSpecification): item's specification
 
         Returns:
-            class
+            QWidget
         """
         raise NotImplementedError()
 
-    @property
-    def specification_menu_maker(self):
-        """
-        Returns an ItemSpecificationMenu subclass.
-
-        Returns:
-            class
-        """
-        raise NotImplementedError()
-
-    def make_icon(self, toolbox, x, y, project_item):
+    @staticmethod
+    def make_icon(toolbox, x, y, project_item):
         """
         Returns a ProjectItemIcon to use with given toolbox, for given project item.
 
@@ -466,45 +466,83 @@ class ProjectItemFactory:
             project_item (ProjectItem): Project item
 
         Returns:
-            ProjectItemIcon
+            ProjectItemIcon: item's icon
         """
-        return self.icon_maker(toolbox, x, y, project_item, self.icon())
+        raise NotImplementedError()
 
-    def make_item(self, *args, **kwargs):
+    @staticmethod
+    def make_item(name, item_dict, toolbox, project, logger):
         """
-        Returns a project item while setting its factory attribute.
+        Returns a project item constructed from the given ``item_dict``.
 
+        Args:
+            name (str): item's name
+            item_dict (dict): serialized project item
+            toolbox (ToolboxUI): Toolbox main window
+            project (SpineToolboxProject): the project the item belongs to
+            logger (LoggerInterface): a logger
         Returns:
             ProjectItem
         """
-        item = self.item_maker(*args, **kwargs)
-        return item
-
-    def activate_project_item(self, toolbox, project_item):
-        """
-        Activates the given project item so it works with the given toolbox.
-        This is mainly intended to facilitate adding items back with redo.
-
-        Args:
-            toolbox (ToolboxUI)
-            project_item (ProjectItem)
-        """
-        icon = project_item.get_icon()
-        if icon is not None:
-            icon.activate()
-        else:
-            icon = self.make_icon(toolbox, project_item.x, project_item.y, project_item)
-            project_item.set_icon(icon)
-        project_item.set_properties_ui(self.properties_ui)
-        project_item.create_data_dir()
-        project_item.set_up()
+        raise NotImplementedError()
 
     @staticmethod
-    def _make_properties_widget(toolbox):
+    def make_properties_widget(toolbox):
         """
         Creates the item's properties tab widget.
 
         Returns:
-            QWidget
+            QWidget: item's properties tab widget
         """
         raise NotImplementedError()
+
+    @staticmethod
+    def make_specification_menu(parent, index):
+        """
+        Creates item specification's context menu.
+
+        Subclasses that do not support specifications can still raise :class:`NotImplementedError`.
+
+        Args:
+            parent (QWidget): menu's parent widget
+            index (QModelIndex): an index from specification model
+        Returns:
+            ItemSpecificationMenu: specification's context menu
+        """
+        raise NotImplementedError()
+
+    @staticmethod
+    def make_specification_widget(toolbox):
+        """
+        Creates the item's specification widget.
+
+        Subclasses that do not support specifications can still raise :class:`NotImplementedError`.
+
+        Args:
+            toolbox (ToolboxUI): Toolbox main window
+        Returns:
+            QWidget: item's specification widget
+        """
+        raise NotImplementedError()
+
+
+def finish_project_item_construction(project_item, toolbox):
+    """
+    Activates the given project item so it works with the given toolbox.
+    This is mainly intended to facilitate adding items back with redo.
+
+    Args:
+        project_item (ProjectItem)
+        toolbox (ToolboxUI)
+    """
+    icon = project_item.get_icon()
+    if icon is not None:
+        icon.activate()
+    else:
+        icon = toolbox.item_factories[project_item.item_type()].make_icon(
+            toolbox, project_item.x, project_item.y, project_item
+        )
+        project_item.set_icon(icon)
+    project_item.set_properties_ui(toolbox.project_item_properties_ui(project_item.item_type()))
+    project_item.create_data_dir()
+    project_item.set_up()

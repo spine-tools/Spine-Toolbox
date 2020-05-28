@@ -24,7 +24,7 @@ from spinetoolbox.project_item import ProjectItemFactory
 from spinetoolbox.project_item_specification_factory import ProjectItemSpecificationFactory
 
 
-class MyTestCase(unittest.TestCase):
+class TestLoadProjectItems(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         if not QApplication.instance():
@@ -48,7 +48,7 @@ class MyTestCase(unittest.TestCase):
         for item_type in expected_categories:
             self.assertIn(item_type, factories)
         for factory in factories.values():
-            self.assertIsInstance(factory, ProjectItemFactory)
+            self.assertTrue(issubclass(factory, ProjectItemFactory))
 
     def test_load_item_specification_factories(self):
         factories = load_item_specification_factories()

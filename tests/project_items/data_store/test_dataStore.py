@@ -53,10 +53,10 @@ class TestDataStore(unittest.TestCase):
         is not called in tearDown().
         """
         self.toolbox = create_toolboxui_with_project()
-        self.ds_properties_ui = self.toolbox.item_factories["Data Store"].properties_ui
+        self.ds_properties_ui = self.toolbox.project_item_properties_ui("Data Store")
         # Let's add a Data Store to the project here since all tests in this class need it
-        item_dict = dict(name="DS", description="", x=0, y=0, url=None)
-        self.toolbox.project().add_project_items("Data Store", item_dict)
+        item_dict = {"DS": {"type": "Data Store", "description": "", "x": 0, "y": 0, "url": None}}
+        self.toolbox.project().add_project_items(item_dict)
         self.ds_index = self.toolbox.project_item_model.find_item("DS")
         self.ds = self.toolbox.project_item_model.item(self.ds_index).project_item
 

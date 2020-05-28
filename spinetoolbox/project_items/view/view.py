@@ -26,18 +26,17 @@ from .executable_item import ExecutableItem
 
 
 class View(ProjectItem):
-    def __init__(self, toolbox, project, logger, name, description, x, y):
+    def __init__(self, name, description, x, y, project, logger):
         """
         View class.
 
         Args:
-            toolbox (ToolboxUI): a toolbox instance
-            project (SpineToolboxProject): the project this item belongs to
-            logger (LoggerInterface): a logger instance
             name (str): Object name
             description (str): Object description
             x (float): Initial X coordinate of item icon
             y (float): Initial Y coordinate of item icon
+            project (SpineToolboxProject): the project this item belongs to
+            logger (LoggerInterface): a logger instance
         """
         super().__init__(name, description, x, y, project, logger)
         self._references = dict()
@@ -57,6 +56,12 @@ class View(ProjectItem):
     def execution_item(self):
         """Creates project item's execution counterpart."""
         return ExecutableItem(self.name, self._logger)
+
+    @staticmethod
+    def from_dict(name, item_dict, toolbox, project, logger):
+        """See base class."""
+        description, x, y = ProjectItem.parse_item_dict(item_dict)
+        return View(name, description, x, y, project, logger)
 
     def make_signal_handler_dict(self):
         """Returns a dictionary of all shared signals and their handlers.

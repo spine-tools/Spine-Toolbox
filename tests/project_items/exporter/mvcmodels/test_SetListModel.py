@@ -77,7 +77,7 @@ class TestSetListModel(unittest.TestCase):
 
     def test_moveRows_move_domain_row_down(self):
         set_settings = SetSettings({"domain1", "domain2", "domain3"}, set(), {})
-        model = SetListModel(set_settings,)
+        model = SetListModel(set_settings)
         self.assertTrue(model.moveRows(QModelIndex(), 0, 1, QModelIndex(), 1))
         self.assertEqual(set_settings.domain_tiers, {"domain1": 1, "domain2": 0, "domain3": 2})
         self.assertTrue(model.moveRows(QModelIndex(), 1, 1, QModelIndex(), 2))

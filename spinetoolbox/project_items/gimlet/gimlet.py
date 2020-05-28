@@ -36,13 +36,13 @@ class Gimlet(ProjectItem):
 
     def __init__(
         self,
-        toolbox,
-        project,
-        logger,
         name,
         description,
         x,
         y,
+        toolbox,
+        project,
+        logger,
         use_shell=True,
         shell_index=0,
         cmd="",
@@ -51,17 +51,17 @@ class Gimlet(ProjectItem):
     ):
         """
         Args:
-            toolbox (ToolboxUI): QMainWindow instance
-            project (SpineToolboxProject): Project this item belongs to
-            logger (LoggerInterface): Logger instance
             name (str): Project item name
             description (str): Description
             x (float): Initial X coordinate of item icon
             y (float): Initial Y coordinate of item icon
-            use_shell (bool, optional): Use shell flag
-            shell_index (int, optional): Selected shell as index
-            cmd (str, optional): Command that this Gimlet executes at run time
-            selections (list, optional): List of selected files in a serialized format
+            toolbox (ToolboxUI): QMainWindow instance
+            project (SpineToolboxProject): Project this item belongs to
+            logger (LoggerInterface): Logger instance
+            use_shell (bool): Use shell flag
+            shell_index (int): Selected shell as index
+            cmd (str): Command that this Gimlet executes at run time
+            selections (dict, optional): A mapping from file label to boolean 'checked' flag
             work_dir_mode (bool): True uses Gimlet's default work dir, False uses a unique work dir on every execution
         """
         super().__init__(name, description, x, y, project, logger)
@@ -71,8 +71,7 @@ class Gimlet(ProjectItem):
         self.use_shell = use_shell
         self.shell_index = shell_index
         self.cmd = cmd
-        selected_files = deserialize_checked_states(selections, self._project.project_dir)
-        self._file_model.set_initial_state(selected_files)
+        self._file_model.set_initial_state(selections if selections is not None else dict())
         self._file_model.selected_state_changed.connect(self._push_file_selection_change_to_undo_stack)
         self._work_dir_mode = None
         self.update_work_dir_mode(work_dir_mode)
@@ -280,6 +279,19 @@ class Gimlet(ProjectItem):
         d["selections"] = serialize_checked_states(self._file_model.files, self._project.project_dir)
         d["work_dir_mode"] = self._work_dir_mode
         return d
+
+    @staticmethod
+    def from_dict(name, item_dict, toolbox, project, logger):
+        """See base class."""
+        description, x, y = ProjectItem.parse_item_dict(item_dict)
+        use_shell = item_dict.get("use_shell", True)
+        shel_index = item_dict.get("shell_index", 0)
+        cmd = item_dict.get("cmd", "")
+        selections = deserialize_checked_states(item_dict.get("selections", list()), project.project_dir)
+        work_dir_mode = item_dict.get("work_dir_mode", True)
+        return Gimlet(
+            name, description, x, y, toolbox, project, logger, use_shell, shel_index, cmd, selections, work_dir_mode
+        )
 
     def notify_destination(self, source_item):
         """See base class."""

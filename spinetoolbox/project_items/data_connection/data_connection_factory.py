@@ -25,30 +25,34 @@ from .widgets.add_data_connection_widget import AddDataConnectionWidget
 
 class DataConnectionFactory(ProjectItemFactory):
     @staticmethod
+    def item_class():
+        return DataConnection
+
+    @staticmethod
     def icon():
         return ":/icons/project_item_icons/file-alt.svg"
 
-    @property
-    def item_maker(self):
-        return DataConnection
+    @staticmethod
+    def make_add_item_widget(toolbox, x, y, specification):
+        return AddDataConnectionWidget(toolbox, x, y, specification)
 
-    @property
-    def icon_maker(self):
-        return DataConnectionIcon
+    @staticmethod
+    def make_icon(toolbox, x, y, project_item):
+        return DataConnectionIcon(toolbox, x, y, project_item, DataConnectionFactory.icon())
 
-    @property
-    def add_form_maker(self):
-        return AddDataConnectionWidget
+    @staticmethod
+    def make_item(name, item_dict, toolbox, project, logger):
+        return DataConnection.from_dict(name, item_dict, toolbox, project, logger)
 
-    @property
-    def specification_form_maker(self):
-        raise NotImplementedError()
+    @staticmethod
+    def make_properties_widget(toolbox):
+        """See base class."""
+        return DataConnectionPropertiesWidget(toolbox)
 
-    @property
-    def specification_menu_maker(self):
+    @staticmethod
+    def make_specification_menu(parent, index):
         raise NotImplementedError()
 
     @staticmethod
-    def _make_properties_widget(toolbox):
-        """See base class."""
-        return DataConnectionPropertiesWidget(toolbox)
+    def make_specification_widget(toolbox):
+        raise NotImplementedError()

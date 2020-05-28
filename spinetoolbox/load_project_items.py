@@ -40,11 +40,11 @@ def load_project_items(toolbox):
             m = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(m)
             if hasattr(m, "ItemInfo") and hasattr(m, "ItemFactory"):
-                info = m.ItemInfo()
+                info = m.ItemInfo
                 category = info.item_category()
                 item_type = info.item_type()
                 categories[item_type] = category
-                factories[item_type] = m.ItemFactory(toolbox)
+                factories[item_type] = m.ItemFactory
     return categories, factories
 
 

@@ -25,6 +25,7 @@ from .metaobject import MetaObject
 from .helpers import create_dir, inverted, erase_dir
 from .config import LATEST_PROJECT_VERSION, PROJECT_FILENAME
 from .dag_handler import DirectedGraphHandler
+from .project_item import finish_project_item_construction
 from .project_tree_item import LeafProjectTreeItem
 from .spine_db_manager import SpineDBManager
 from .project_commands import (
@@ -212,58 +213,48 @@ class SpineToolboxProject(MetaObject):
             bool: True if successful, False otherwise
         """
         self._logger.msg.emit("Loading project items...")
-        empty = True
-        items_by_type = dict()  # Key: item_type, value: list of items
-        for item_name, item_dict in items_dict.items():
-            empty = False
-            item_type = item_dict.pop("type")  # ProjectItem constructors do not need this
-            item_dict["name"] = item_name  # ProjectItem constructors need this
-            items_by_type.setdefault(item_type, list()).append(item_dict)
-        for item_type, items in items_by_type.items():
-            if not self.make_and_add_project_items(item_type, items, verbosity=False):
-                return False
-        if empty:
+        if not items_dict:
             self._logger.msg_warning.emit("Project has no items")
+        self.make_and_add_project_items(items_dict, verbosity=False)
         return True
 
-    def add_project_items(self, item_type, *items, set_selected=False, verbosity=True):
+    def add_project_items(self, items_dict, set_selected=False, verbosity=True):
         """Pushes an AddProjectItemsCommand to the toolbox undo stack.
         """
-        if not items:
+        if not items_dict:
             return
         self._toolbox.undo_stack.push(
-            AddProjectItemsCommand(self, item_type, items, set_selected=set_selected, verbosity=verbosity)
+            AddProjectItemsCommand(self, items_dict, set_selected=set_selected, verbosity=verbosity)
         )
 
-    def make_project_tree_items(self, item_type, items):
+    def make_project_tree_items(self, items_dict):
         """Creates and returns a dictionary mapping category indexes to a list of corresponding LeafProjectTreeItem instances.
 
         Args:
-            item_type (str): item type
-            items (list): one or more dicts of items to add
+            items_dict (dict): a mapping from item name to item dict
 
         Returns:
             dict(QModelIndex, list(LeafProjectTreeItem))
         """
-        factory = self._toolbox.item_factories.get(item_type)
-        if factory is None:
-            self._logger.msg_error.emit(f"Unknown item type <b>{item_type}</b>")
-            for item in items:
-                self._logger.msg_error.emit(f"Loading project item <b>{item['name']}</b> failed")
-            return {None: None}
         project_items_by_category = {}
-        for item_dict in items:
+        for item_name, item_dict in items_dict.items():
+            item_type = item_dict["type"]
+            factory = self._toolbox.item_factories.get(item_type)
+            if factory is None:
+                self._logger.msg_error.emit(f"Unknown item type <b>{item_type}</b>")
+                self._logger.msg_error.emit(f"Loading project item <b>{item_name}</b> failed")
+                return {}
             try:
-                project_item = factory.make_item(self._toolbox, self, self._logger, **item_dict)
+                project_item = factory.make_item(item_name, item_dict, self._toolbox, self, self._logger)
             except TypeError:
                 self._logger.msg_error.emit(
-                    f"Creating <b>{item_type}</b> project item <b>{item_dict['name']}</b> failed. "
+                    f"Creating <b>{item_type}</b> project item <b>{item_name}</b> failed. "
                     "This is most likely caused by an outdated project file."
                 )
                 continue
             except KeyError as error:
                 self._logger.msg_error.emit(
-                    f"Creating <b>{item_type}</b> project item <b>{item_dict['name']}</b> failed. "
+                    f"Creating <b>{item_type}</b> project item <b>{item_name}</b> failed. "
                     f"This is most likely caused by an outdated or corrupted project file "
                     f"(missing JSON key: {str(error)})."
                 )
@@ -290,8 +281,7 @@ class SpineToolboxProject(MetaObject):
         for project_tree_item in project_tree_items:
             project_item = project_tree_item.project_item
             self._project_item_model.insert_item(project_tree_item, category_ind)
-            factory = self._toolbox.item_factories[project_item.item_type()]
-            factory.activate_project_item(self._toolbox, project_item)
+            finish_project_item_construction(project_item, self._toolbox)
             # Append new node to networkx graph
             self.add_to_dag(project_item.name)
             if verbosity:
@@ -312,22 +302,18 @@ class SpineToolboxProject(MetaObject):
         ind = self._project_item_model.find_item(item.name)
         self._toolbox.ui.treeView_project.setCurrentIndex(ind)
 
-    def make_and_add_project_items(self, item_type, items, set_selected=False, verbosity=True):
+    def make_and_add_project_items(self, items_dict, set_selected=False, verbosity=True):
         """Adds items to project at loading.
 
         Args:
-            item_type (str): Item type e.g. "Tool"
-            items (list): one or more dict of items to add
+            items_dict (dict): a mapping from item name to item dict
             set_selected (bool): Whether to set item selected after the item has been added to project
             verbosity (bool): If True, prints message
         """
-        for category_ind, project_tree_items in self.make_project_tree_items(item_type, items).items():
-            if not category_ind:
-                continue
+        for category_ind, project_tree_items in self.make_project_tree_items(items_dict).items():
             self.do_add_project_tree_items(
                 category_ind, *project_tree_items, set_selected=set_selected, verbosity=verbosity
             )
-        return True
 
     def add_to_dag(self, item_name):
         """Add new node (project item) to the directed graph."""
@@ -630,7 +616,7 @@ class SpineToolboxProject(MetaObject):
     def settings(self):
         return self._settings
 
-    @Slot(str, "QVariant", "QVariant")
+    @Slot(str, object, object)
     def _handle_dag_node_execution_finished(self, item_name, execution_direction, engine_state):
         """Handles successful execution of a dag node.
         Performs post successful execution actions in corresponding project item."""

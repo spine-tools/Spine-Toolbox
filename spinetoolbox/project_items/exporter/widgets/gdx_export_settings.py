@@ -95,7 +95,7 @@ class GdxExportSettings(QWidget):
         self._ui.record_move_up_button.clicked.connect(self._move_records_up)
         self._ui.record_move_down_button.clicked.connect(self._move_records_down)
         self._set_settings = set_settings
-        self._set_list_model = SetListModel(set_settings,)
+        self._set_list_model = SetListModel(set_settings)
         self._set_list_model.dataChanged.connect(self._domains_sets_exportable_state_changed)
         self._ui.set_list_view.setModel(self._set_list_model)
         record_list_model = RecordListModel()

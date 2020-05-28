@@ -34,18 +34,18 @@ from .item_info import ItemInfo
 
 
 class DataConnection(ProjectItem):
-    def __init__(self, toolbox, project, logger, name, description, x, y, references=None):
+    def __init__(self, name, description, x, y, toolbox, project, logger, references=None):
         """Data Connection class.
 
         Args:
-            toolbox (ToolboxUI): QMainWindow instance
-            project (SpineToolboxProject): the project this item belongs to
-            logger (LoggerInterface): a logger instance
             name (str): Object name
             description (str): Object description
             x (float): Initial X coordinate of item icon
             y (float): Initial Y coordinate of item icon
-            references (list): a list of file paths
+            toolbox (ToolboxUI): QMainWindow instance
+            project (SpineToolboxProject): the project this item belongs to
+            logger (LoggerInterface): a logger instance
+            references (list, optional): a list of file paths
         """
         super().__init__(name, description, x, y, project, logger)
         self._toolbox = toolbox
@@ -53,11 +53,7 @@ class DataConnection(ProjectItem):
         self.data_model = QStandardItemModel()  # Paths of project internal files. These are found in DC data directory
         self.datapackage_icon = QIcon(QPixmap(":/icons/datapkg.png"))
         self.data_dir_watcher = None
-        # Populate references model
-        if references is None:
-            references = list()
-        # Convert relative paths to absolute
-        self.references = [deserialize_path(r, self._project.project_dir) for r in references]
+        self.references = references if references is not None else list()
         self.populate_reference_list(self.references)
         # Populate data (files) model
         data_files = self.data_files()
@@ -396,6 +392,12 @@ class DataConnection(ProjectItem):
         # Convert paths to relative before saving
         d["references"] = [serialize_path(f, self._project.project_dir) for f in self.file_references()]
         return d
+
+    @staticmethod
+    def from_dict(name, item_dict, toolbox, project, logger):
+        description, x, y = ProjectItem.parse_item_dict(item_dict)
+        references = [deserialize_path(r, project.project_dir) for r in item_dict.get("references", list())]
+        return DataConnection(name, description, x, y, toolbox, project, logger, references)
 
     def rename(self, new_name):
         """Rename this item.

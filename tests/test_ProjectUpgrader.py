@@ -93,8 +93,9 @@ class TestProjectUpgrader(unittest.TestCase):
             proj_dict_v1 = pu.upgrade_to_v1(project_dict, project_dir)
             self.assertTrue(pu.is_valid(1, proj_dict_v1))
             # Upgrade to version 2
-            with mock.patch("spinetoolbox.project_upgrader.ProjectUpgrader.backup_project_file") as mock_backup, \
-                    mock.patch("spinetoolbox.project_upgrader.ProjectUpgrader.force_save") as mock_force_save:
+            with mock.patch(
+                "spinetoolbox.project_upgrader.ProjectUpgrader.backup_project_file"
+            ) as mock_backup, mock.patch("spinetoolbox.project_upgrader.ProjectUpgrader.force_save") as mock_force_save:
                 proj_dict_v2 = pu.upgrade(proj_dict_v1, project_dir)
                 mock_backup.assert_called_once()
                 mock_force_save.assert_called_once()

@@ -25,30 +25,34 @@ from .widgets.exporter_properties import ExporterProperties
 
 class ExporterFactory(ProjectItemFactory):
     @staticmethod
+    def item_class():
+        return Exporter
+
+    @staticmethod
     def icon():
         return ":/icons/project_item_icons/database-export.svg"
 
-    @property
-    def item_maker(self):
-        return Exporter
+    @staticmethod
+    def make_add_item_widget(toolbox, x, y, specification):
+        return AddExporterWidget(toolbox, x, y, specification)
 
-    @property
-    def icon_maker(self):
-        return ExporterIcon
+    @staticmethod
+    def make_icon(toolbox, x, y, project_item):
+        return ExporterIcon(toolbox, x, y, project_item, ExporterFactory.icon())
 
-    @property
-    def add_form_maker(self):
-        return AddExporterWidget
+    @staticmethod
+    def make_item(name, item_dict, toolbox, project, logger):
+        return Exporter.from_dict(name, item_dict, toolbox, project, logger)
 
-    @property
-    def specification_form_maker(self):
-        raise NotImplementedError()
+    @staticmethod
+    def make_properties_widget(toolbox):
+        """See base class."""
+        return ExporterProperties(toolbox)
 
-    @property
-    def specification_menu_maker(self):
+    @staticmethod
+    def make_specification_menu(parent, index):
         raise NotImplementedError()
 
     @staticmethod
-    def _make_properties_widget(toolbox):
-        """See base class."""
-        return ExporterProperties(toolbox)
+    def make_specification_widget(toolbox):
+        raise NotImplementedError()

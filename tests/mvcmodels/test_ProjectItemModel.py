@@ -79,8 +79,8 @@ class TestProjectItemModel(unittest.TestCase):
 
     def test_setData(self):
         model = self.toolbox.project_item_model
-        item_dict = dict(name="view", description="", x=0, y=0)
-        self.toolbox.project().add_project_items("View", item_dict)
+        item_dict = {"view": {"type": "View", "description": "", "x": 0, "y": 0}}
+        self.toolbox.project().add_project_items(item_dict)
         leaf_index = model.find_item("view")
         status = model.setData(leaf_index, "new view item name")
         self.assertTrue(status)

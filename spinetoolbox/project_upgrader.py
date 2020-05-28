@@ -80,10 +80,7 @@ class ProjectUpgrader:
         """
         while v < LATEST_PROJECT_VERSION:
             if v == 1:
-                item_makers = dict()
-                for item_type, factory in self._toolbox.item_factories.items():
-                    item_makers[item_type] = factory.item_maker
-                project_dict = self.upgrade_v1_to_v2(project_dict, item_makers)
+                project_dict = self.upgrade_v1_to_v2(project_dict, self._toolbox.item_factories)
                 self._toolbox.msg_success.emit("Project upgraded successfully")
                 v += 1
             # Example on what to do when version 3 comes
@@ -93,7 +90,7 @@ class ProjectUpgrader:
         return project_dict
 
     @staticmethod
-    def upgrade_v1_to_v2(old, item_makers):
+    def upgrade_v1_to_v2(old, factories):
         """Upgrades version 1 project dictionary to version 2.
 
         Changes:
@@ -105,7 +102,7 @@ class ProjectUpgrader:
 
         Args:
             old (dict): Version 1 project dictionary
-            item_makers (dict): Mapping of item type to item class
+            factories (dict): Mapping of item type to item factory
 
         Returns:
             dict: Version 2 project dictionary
@@ -129,8 +126,7 @@ class ProjectUpgrader:
                 # Upgrade item_dict to version 2 if needed
                 v1_item_dict = old["objects"][category][item_name]
                 item_type = old["objects"][category][item_name]["type"]
-                item_maker = item_makers[item_type]
-                v2_item_dict = item_maker.upgrade_v1_to_v2(item_name, v1_item_dict)
+                v2_item_dict = factories[item_type].item_class().upgrade_v1_to_v2(item_name, v1_item_dict)
                 items[item_name] = v2_item_dict  # Store items using their name as key
         return dict(project=new, items=items)
 
@@ -196,7 +192,7 @@ class ProjectUpgrader:
             if item_type not in self._toolbox.item_factories:
                 self._toolbox.msg_error.emit(f"Upgrading project item failed. Unknown item type '{item_type}'.")
                 continue
-            item_class = self._toolbox.item_factories[item_type].item_maker
+            item_class = self._toolbox.item_factories[item_type].item_class()
             for item_name, item_dict in old["objects"][category].items():
                 new_item_dict = item_class.upgrade_from_no_version_to_version_1(item_name, item_dict, old_project_dir)
                 new_objects[category][item_name] = new_item_dict

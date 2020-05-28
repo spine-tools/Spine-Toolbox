@@ -70,7 +70,7 @@ class ToolSpecificationWidget(QWidget):
         self.ui.comboBox_tooltype.addItem("Select type...")
         self.ui.comboBox_tooltype.addItems(TOOL_TYPES)
         # if a specification is given, fill the form with data from it
-        if specification:
+        if specification is not None:
             self.ui.lineEdit_name.setText(specification.name)
             check_state = Qt.Checked if specification.execute_in_work else Qt.Unchecked
             self.ui.checkBox_execute_in_work.setCheckState(check_state)

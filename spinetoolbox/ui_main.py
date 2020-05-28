@@ -129,6 +129,7 @@ class ToolboxUI(QMainWindow):
         # Class variables
         self.undo_stack = QUndoStack(self)
         self._item_categories = dict()
+        self._item_properties_uis = dict()
         self.item_factories = dict()  # maps item types to `ProjectItemFactory` objects
         self._item_specification_factories = dict()  # maps item types to `ProjectItemSpecificationFactory` objects
         self._project = None
@@ -237,11 +238,11 @@ class ToolboxUI(QMainWindow):
         self.ui.actionSave.setDisabled(clean)
 
     def parse_project_item_modules(self):
-        """Collects attributes from project item modules into a dict.
-        This dict is then used to perform all project item related tasks.
-        """
+        """Collects data from project item factories."""
         self._item_categories, self.item_factories = load_project_items(self)
         self._item_specification_factories = load_item_specification_factories()
+        for item_type, factory in self.item_factories.items():
+            self._item_properties_uis[item_type] = factory.make_properties_widget(self)
         self.init_project_item_factory_model()
         self.add_specification_popup_menu = AddSpecificationPopupMenu(self)
 
@@ -1097,7 +1098,7 @@ class ToolboxUI(QMainWindow):
         if not factory.supports_specifications():
             return
         global_pos = self.main_toolbar.project_item_spec_list_view.viewport().mapToGlobal(pos)
-        self.specification_context_menu = factory.specification_menu_maker(self, ind)
+        self.specification_context_menu = factory.make_specification_menu(self, ind)
         self.specification_context_menu.exec_(global_pos)
         self.specification_context_menu.deleteLater()
         self.specification_context_menu = None
@@ -1317,7 +1318,7 @@ class ToolboxUI(QMainWindow):
         if factory is None:
             self.msg_error.emit(f"{item_type} not found in factories")
             return
-        self.add_project_item_form = factory.add_form_maker(self, x, y, spec)
+        self.add_project_item_form = factory.make_add_item_widget(self, x, y, spec)
         self.add_project_item_form.show()
 
     @Slot()
@@ -1329,7 +1330,7 @@ class ToolboxUI(QMainWindow):
         factory = self.item_factories[item_type]
         if not factory.supports_specifications():
             return
-        form = factory.specification_form_maker(self, specification)
+        form = factory.make_specification_widget(self, specification)
         form.show()
 
     @Slot()
@@ -1632,28 +1633,22 @@ class ToolboxUI(QMainWindow):
         Serializes selected project items into a dictionary.
 
         The serialization protocol tries to imitate the format in which projects are saved.
-        The format of the dictionary is following:
-        `{"item_category_1": [{"name": "item_1_name", ...}, ...], ...}`
 
         Returns:
-             a dict containing serialized version of selected project items
+             dict: a dict containing serialized version of selected project items
         """
         selected_project_items = self.ui.graphicsView.scene().selectedItems()
-        serialized_items = dict()
+        items_dict = dict()
         for item_icon in selected_project_items:
             if not isinstance(item_icon, ProjectItemIcon):
                 continue
             name = item_icon.name()
             index = self.project_item_model.find_item(name)
             project_item = self.project_item_model.item(index).project_item
-            item_type = project_item.item_type()
-            items = serialized_items.setdefault(item_type, list())
-            item_dict = project_item.item_dict()
-            item_dict["name"] = project_item.name
-            items.append(item_dict)
-        return serialized_items
+            items_dict[name] = project_item.item_dict()
+        return items_dict
 
-    def _deserialized_item_position_shifts(self, serialized_items):
+    def _deserialized_item_position_shifts(self, item_dicts):
         """
         Calculates horizontal and vertical shifts for project items being deserialized.
 
@@ -1662,9 +1657,9 @@ class ToolboxUI(QMainWindow):
         In case the items don't fit the scene rect we clamp their coordinates within it.
 
         Args:
-            serialized_items (dict): a dictionary of serialized items being deserialized
+            item_dicts (dict): a dictionary of serialized items being deserialized
         Returns:
-            a tuple of (horizontal shift, vertical shift) in scene's coordinates
+            tuple: a tuple of (horizontal shift, vertical shift) in scene's coordinates
         """
         mouse_position = self.ui.graphicsView.mapFromGlobal(QCursor.pos())
         if self.ui.graphicsView.rect().contains(mouse_position):
@@ -1672,7 +1667,7 @@ class ToolboxUI(QMainWindow):
         else:
             mouse_over_design_view = None
         if mouse_over_design_view is not None:
-            first_item = next(iter(serialized_items.values()))[0]
+            first_item = next(iter(item_dicts.values()))
             x = first_item["x"]
             y = first_item["y"]
             shift_x = x - mouse_over_design_view.x()
@@ -1690,28 +1685,28 @@ class ToolboxUI(QMainWindow):
         item_dict["x"] = new_x
         item_dict["y"] = new_y
 
-    def _deserialize_items(self, serialized_items):
+    def _deserialize_items(self, items_dict):
         """
         Deserializes project items from a dictionary and adds them to the current project.
 
         Args:
-            serialized_items (dict): serialized project items
+            items_dict (dict): serialized project items
         """
         if self._project is None:
             return
         scene = self.ui.graphicsView.scene()
         scene.clearSelection()
-        shift_x, shift_y = self._deserialized_item_position_shifts(serialized_items)
+        shift_x, shift_y = self._deserialized_item_position_shifts(items_dict)
         scene_rect = scene.sceneRect()
-        for item_type, item_dicts in serialized_items.items():
-            for item in item_dicts:
-                name = item["name"]
-                if self.project_item_model.find_item(name) is not None:
-                    new_name = self.propose_item_name(name)
-                    item["name"] = new_name
-                self._set_deserialized_item_position(item, shift_x, shift_y, scene_rect)
-                item.pop("type")
-            self._project.add_project_items(item_type, *item_dicts, set_selected=True, verbosity=False)
+        final_items_dict = dict()
+        for name, item_dict in items_dict.items():
+            if self.project_item_model.find_item(name) is not None:
+                new_name = self.propose_item_name(name)
+                final_items_dict[new_name] = item_dict
+            else:
+                final_items_dict[name] = item_dict
+            self._set_deserialized_item_position(item_dict, shift_x, shift_y, scene_rect)
+        self._project.add_project_items(final_items_dict, set_selected=True, verbosity=False)
 
     @Slot()
     def project_item_to_clipboard(self):
@@ -1734,14 +1729,16 @@ class ToolboxUI(QMainWindow):
         if byte_data.isNull():
             return
         item_dump = str(byte_data.data(), "utf-8")
-        serialized_items = json.loads(item_dump)
-        self._deserialize_items(serialized_items)
+        item_dicts = json.loads(item_dump)
+        self._deserialize_items(item_dicts)
 
     @Slot()
     def duplicate_project_item(self):
         """Duplicates the selected project items."""
-        serialized_items = self._serialize_selected_items()
-        self._deserialize_items(serialized_items)
+        item_dicts = self._serialize_selected_items()
+        if not item_dicts:
+            return
+        self._deserialize_items(item_dicts)
 
     def propose_item_name(self, prefix):
         """
@@ -1821,3 +1818,14 @@ class ToolboxUI(QMainWindow):
     def _connect_project_signals(self):
         """Connects signals emitted by project."""
         self._project.project_execution_about_to_start.connect(self._scroll_event_log_to_end)
+
+    def project_item_properties_ui(self, item_type):
+        """
+        Returns the properties tab widget's ui.
+
+        Args:
+            item_type (str): project item's type
+        Returns:
+            QWidget: item's properties tab widget
+        """
+        return self._item_properties_uis[item_type].ui

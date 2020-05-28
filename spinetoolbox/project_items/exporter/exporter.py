@@ -45,57 +45,29 @@ class Exporter(ProjectItem):
     Currently, only .gdx format is supported.
     """
 
-    def __init__(
-        self,
-        toolbox,
-        project,
-        logger,
-        name,
-        description,
-        settings_packs,
-        x,
-        y,
-        cancel_on_export_error=None,
-        cancel_on_error=None,
-    ):
+    def __init__(self, name, description, x, y, toolbox, project, logger, cancel_on_error=True, settings_packs=None):
         """
         Args:
+            name (str): item name
+            description (str): item description
+            x (float): initial X coordinate of item icon
+            y (float): initial Y coordinate of item icon
             toolbox (ToolboxUI): a ToolboxUI instance
             project (SpineToolboxProject): the project this item belongs to
             logger (LoggerInterface): a logger instance
-            name (str): item name
-            description (str): item description
-            settings_packs (list): dicts mapping database URLs to _SettingsPack objects
-            x (float): initial X coordinate of item icon
-            y (float): initial Y coordinate of item icon
-            cancel_on_export_error (bool, options): legacy ``cancel_on_error`` option
-            cancel_on_error (bool, options): True if execution should fail on all export errors,
+            cancel_on_error (bool): True if execution should fail on all export errors,
                 False to ignore certain error cases; optional to provide backwards compatibility
+            settings_packs (dict, optional): dicts mapping database URLs to :class:`SettingsPack` objects
         """
         super().__init__(name, description, x, y, project, logger)
         self._toolbox = toolbox
-        if cancel_on_error is not None:
-            self._cancel_on_error = cancel_on_error
-        else:
-            self._cancel_on_error = cancel_on_export_error if cancel_on_export_error is not None else True
-        self._settings_packs = dict()
+        self._cancel_on_error = cancel_on_error
+        self._settings_packs = settings_packs if settings_packs is not None else dict()
         self._scenarios = dict()
         self._export_list_items = dict()
         self._workers = dict()
-        if settings_packs is None:
-            settings_packs = list()
-        for pack in settings_packs:
-            serialized_url = pack["database_url"]
-            url = deserialize_path(serialized_url, self._project.project_dir)
-            url = _normalize_url(url)
-            try:
-                settings_pack = SettingsPack.from_dict(pack, url, logger)
-            except gdx.GdxExportException as error:
-                logger.msg_error.emit(f"Failed to fully restore Exporter settings: {error}")
-                settings_pack = SettingsPack("")
-            settings_pack.notifications.changed_due_to_settings_state.connect(self._report_notifications)
-            self._settings_packs[url] = settings_pack
         for url, pack in self._settings_packs.items():
+            pack.notifications.changed_due_to_settings_state.connect(self._report_notifications)
             if pack.state not in (SettingsState.OK, SettingsState.INDEXING_PROBLEM):
                 self._start_worker(url)
             elif pack.last_database_commit != _latest_database_commit_time_stamp(url):
@@ -514,6 +486,27 @@ class Exporter(ProjectItem):
         d["settings_packs"] = packs
         d["cancel_on_error"] = self._cancel_on_error
         return d
+
+    @staticmethod
+    def from_dict(name, item_dict, toolbox, project, logger):
+        """See base class"""
+        description, x, y = ProjectItem.parse_item_dict(item_dict)
+        settings_packs = item_dict.get("settings_packs")
+        if settings_packs is None:
+            settings_packs = list()
+        deserialized_packs = dict()
+        for pack in settings_packs:
+            serialized_url = pack["database_url"]
+            url = deserialize_path(serialized_url, project.project_dir)
+            url = _normalize_url(url)
+            try:
+                settings_pack = SettingsPack.from_dict(pack, url, logger)
+            except gdx.GdxExportException as error:
+                logger.msg_error.emit(f"Failed to fully restore Exporter settings: {error}")
+                settings_pack = SettingsPack("")
+            deserialized_packs[url] = settings_pack
+        cancel_on_error = item_dict.get("cancel_on_error", True)
+        return Exporter(name, description, x, y, toolbox, project, logger, cancel_on_error, deserialized_packs)
 
     def _discard_settings_window(self, database_path):
         """Discards the settings window for given database."""

@@ -30,25 +30,23 @@ from .widgets.custom_menus import DataStoreContextMenu
 
 
 class DataStore(ProjectItem):
-    def __init__(self, toolbox, project, logger, name, description, x, y, url=None):
+    def __init__(self, name, description, x, y, toolbox, project, logger, url):
         """Data Store class.
 
         Args:
-            toolbox (ToolboxUI): QMainWindow instance
-            project (SpineToolboxProject): the project this item belongs to
-            logger (LoggerInterface): a logger instance
             name (str): Object name
             description (str): Object description
             x (float): Initial X coordinate of item icon
             y (float): Initial Y coordinate of item icon
-            url (str or dict): SQLAlchemy url
+            toolbox (ToolboxUI): QMainWindow instance
+            project (SpineToolboxProject): the project this item belongs to
+            logger (LoggerInterface): a logger instance
+            url (str or dict, optional): SQLAlchemy url
         """
         super().__init__(name, description, x, y, project, logger)
+        self._toolbox = toolbox
         if url is None:
             url = dict()
-        if url and not isinstance(url["database"], str):
-            url["database"] = deserialize_path(url["database"], self._project.project_dir)
-        self._toolbox = toolbox
         self._url = self.parse_url(url)
         self._sa_url = None
 
@@ -350,6 +348,15 @@ class DataStore(ProjectItem):
         if d["url"]["dialect"] == "sqlite" and d["url"]["database"]:
             d["url"]["database"] = serialize_path(d["url"]["database"], self._project.project_dir)
         return d
+
+    @staticmethod
+    def from_dict(name, item_dict, toolbox, project, logger):
+        """See base class."""
+        description, x, y = ProjectItem.parse_item_dict(item_dict)
+        url = item_dict["url"]
+        if url and not isinstance(url["database"], str):
+            url["database"] = deserialize_path(url["database"], project.project_dir)
+        return DataStore(name, description, x, y, toolbox, project, logger, url)
 
     @staticmethod
     def upgrade_from_no_version_to_version_1(item_name, old_item_dict, old_project_dir):
