@@ -83,8 +83,8 @@ class CustomQGraphicsView(QGraphicsView):
         """Reestablish scroll hand drag mode."""
         super().mouseReleaseEvent(event)
         item = self.itemAt(event.pos())
-        if not item or not item.acceptedMouseButtons():
-            self.setDragMode(QGraphicsView.ScrollHandDrag)
+        self.setDragMode(QGraphicsView.ScrollHandDrag)
+        if not item:
             self.viewport().setCursor(Qt.ArrowCursor)
 
     def _use_smooth_zoom(self):
@@ -391,7 +391,8 @@ class DesignQGraphicsView(CustomQGraphicsView):
     def take_link(self, link):
         """Remove link, then start drawing another one from the same source connector."""
         self.remove_link(link)
-        link_drawer = link.src_connector.start_link()
+        link_drawer = self.scene().link_drawer
+        link_drawer.wake_up(link.src_connector)
         # noinspection PyArgumentList
         link_drawer.tip = self.mapToScene(self.mapFromGlobal(QCursor.pos()))
         link_drawer.update_geometry()
