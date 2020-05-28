@@ -80,7 +80,7 @@ class DesignGraphicsScene(CustomGraphicsScene):
         if self.link_drawer.isVisible():
             self.link_drawer.tip = event.scenePos()
             self.link_drawer.update_geometry()
-            event.setButtons(0)
+            event.setButtons(0)  # this is so super().mouseMoveEvent send hover events to connector buttons
         super().mouseMoveEvent(event)
 
     def mousePressEvent(self, event):
