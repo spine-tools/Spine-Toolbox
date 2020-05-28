@@ -123,7 +123,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         }[self.entity_class_type][self.item_type]
 
     @property
-    def _entity_class_id_key(self):
+    def entity_class_id_key(self):
         """
         Returns the key corresponding to the entity class id (either "object_class_id" or "relationship_class_id")
 
@@ -133,6 +133,10 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         return {"object class": "object_class_id", "relationship class": "relationship_class_id"}[
             self.entity_class_type
         ]
+
+    @property
+    def parameter_definition_id_key(self):
+        return {"parameter definition": "id", "parameter value": "parameter_id"}[self.item_type]
 
     def init_model(self):
         """Initializes the model."""
@@ -184,7 +188,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         def get_value_to_remove(db_map, db_item, field, field_menu_data, inv_field_menu_data):
             if action not in ("remove", "update"):
                 return None
-            entity_class_id = db_item.get(self._entity_class_id_key)
+            entity_class_id = db_item.get(self.entity_class_id_key)
             item_id = db_item["id"]
             identifier = (db_map, entity_class_id, item_id)
             old_value = inv_field_menu_data.pop(identifier, None)
@@ -199,7 +203,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         def get_value_to_add(db_map, db_item, field, field_menu_data, inv_field_menu_data):
             if action not in ("add", "update"):
                 return None
-            entity_class_id = db_item.get(self._entity_class_id_key)
+            entity_class_id = db_item.get(self.entity_class_id_key)
             item_id = db_item["id"]
             identifier = (db_map, entity_class_id, item_id)
             value = db_map.codename if field == "database" else db_item[field]
@@ -449,7 +453,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         """
         d = dict()
         for item in items:
-            entity_class_id = item.get(self._entity_class_id_key)
+            entity_class_id = item.get(self.entity_class_id_key)
             if not entity_class_id:
                 continue
             d.setdefault(entity_class_id, list()).append(item)

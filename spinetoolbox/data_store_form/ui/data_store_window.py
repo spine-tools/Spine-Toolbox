@@ -13,7 +13,7 @@
 # Form implementation generated from reading ui file 'C:\data\src\toolbox\bin\..\spinetoolbox\data_store_form\ui\data_store_window.ui',
 # licensing of 'C:\data\src\toolbox\bin\..\spinetoolbox\data_store_form\ui\data_store_window.ui' applies.
 #
-# Created: Wed May 27 09:58:54 2020
+# Created: Wed May 27 19:59:44 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -55,6 +55,8 @@ class Ui_MainWindow(object):
         self.menuGraph.setObjectName("menuGraph")
         self.menuRestore_pruned = QtWidgets.QMenu(self.menuGraph)
         self.menuRestore_pruned.setObjectName("menuRestore_pruned")
+        self.menuAdd_parameter_heat_map = QtWidgets.QMenu(self.menuGraph)
+        self.menuAdd_parameter_heat_map.setObjectName("menuAdd_parameter_heat_map")
         self.menuHelp = QtWidgets.QMenu(self.menubar)
         self.menuHelp.setObjectName("menuHelp")
         self.menuPivot_table = QtWidgets.QMenu(self.menubar)
@@ -505,7 +507,9 @@ class Ui_MainWindow(object):
         self.menuGraph.addAction(self.menuRestore_pruned.menuAction())
         self.menuGraph.addAction(self.actionRestore_all_pruned)
         self.menuGraph.addSeparator()
+        self.menuGraph.addAction(self.menuAdd_parameter_heat_map.menuAction())
         self.menuGraph.addAction(self.actionRebuild_graph)
+        self.menuGraph.addSeparator()
         self.menuHelp.addAction(self.actionLive_graph_demo)
         self.menubar.addAction(self.menuFile.menuAction())
         self.menubar.addAction(self.menuEdit.menuAction())
@@ -530,6 +534,7 @@ class Ui_MainWindow(object):
         self.menuView.setTitle(QtWidgets.QApplication.translate("MainWindow", "View", None, -1))
         self.menuGraph.setTitle(QtWidgets.QApplication.translate("MainWindow", "Graph", None, -1))
         self.menuRestore_pruned.setTitle(QtWidgets.QApplication.translate("MainWindow", "Restore pruned", None, -1))
+        self.menuAdd_parameter_heat_map.setTitle(QtWidgets.QApplication.translate("MainWindow", "Add parameter heat map", None, -1))
         self.menuHelp.setTitle(QtWidgets.QApplication.translate("MainWindow", "Help", None, -1))
         self.menuPivot_table.setTitle(QtWidgets.QApplication.translate("MainWindow", "Pivot table", None, -1))
         self.dockWidget_parameter_value_list.setWindowTitle(QtWidgets.QApplication.translate("MainWindow", "Parameter value list", None, -1))
@@ -611,7 +616,7 @@ class Ui_MainWindow(object):
         self.actionInput_type_index_expansion.setText(QtWidgets.QApplication.translate("MainWindow", "Index expansion", None, -1))
         self.actionRebuild_graph.setText(QtWidgets.QApplication.translate("MainWindow", "Rebuild graph", None, -1))
 
-from spinetoolbox.data_store_form.widgets.custom_qtreeview import RelationshipTreeView, ObjectTreeView, ParameterValueListTreeView
-from spinetoolbox.data_store_form.widgets.custom_qtableview import RelationshipParameterDefinitionTableView, FrozenTableView, RelationshipParameterValueTableView, PivotTableView, ObjectParameterValueTableView, ObjectParameterDefinitionTableView
+from spinetoolbox.data_store_form.widgets.custom_qtreeview import ObjectTreeView, ParameterValueListTreeView, RelationshipTreeView
+from spinetoolbox.data_store_form.widgets.custom_qtableview import RelationshipParameterDefinitionTableView, PivotTableView, ObjectParameterValueTableView, RelationshipParameterValueTableView, FrozenTableView, ObjectParameterDefinitionTableView
 from spinetoolbox.data_store_form.widgets.custom_qgraphicsviews import EntityQGraphicsView
 from spinetoolbox import resources_icons_rc

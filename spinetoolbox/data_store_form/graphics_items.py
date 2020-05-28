@@ -28,8 +28,25 @@ from PySide2.QtWidgets import (
     QMenu,
 )
 from PySide2.QtGui import QPen, QBrush, QPainterPath, QPalette, QGuiApplication
+from matplotlib.figure import Figure
+from matplotlib.backends.backend_qt5agg import FigureCanvas  # pylint: disable=no-name-in-module
 from spinetoolbox.helpers import CharIconEngine
 from spinetoolbox.widgets.custom_qwidgets import TitleWidgetAction
+
+
+def make_figure_graphics_item(scene, z=0, static=True):
+    figure = Figure(tight_layout={"pad": 0})
+    axes = figure.gca(xmargin=0, ymargin=0, frame_on=None)
+    axes.get_xaxis().set_visible(False)
+    axes.get_yaxis().set_visible(False)
+    canvas = FigureCanvas(figure)
+    if static:
+        proxy_widget = scene.addWidget(canvas)
+        proxy_widget.setAcceptedMouseButtons(0)
+    else:
+        proxy_widget = scene.addWidget(canvas, Qt.Window)
+    proxy_widget.setZValue(z)
+    return proxy_widget, figure
 
 
 class EntityItem(QGraphicsPixmapItem):
