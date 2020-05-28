@@ -80,7 +80,7 @@ class DesignGraphicsScene(CustomGraphicsScene):
         if self.link_drawer.isVisible():
             self.link_drawer.tip = event.scenePos()
             self.link_drawer.update_geometry()
-            event.setButtons(0)  # this is so super().mouseMoveEvent send hover events to connector buttons
+            event.setButtons(0)  # this is so super().mouseMoveEvent sends hover events to connector buttons
         super().mouseMoveEvent(event)
 
     def mousePressEvent(self, event):
@@ -93,16 +93,15 @@ class DesignGraphicsScene(CustomGraphicsScene):
                 self.emit_connection_failed()
 
     def mouseReleaseEvent(self, event):
-        """Makes link if drawer is released under a valid connector button."""
+        """Makes link if drawer is released over a valid connector button."""
         super().mouseReleaseEvent(event)
-        if self.link_drawer.isVisible():
-            if self.link_drawer.src_connector.isUnderMouse():
-                return
-            if self.link_drawer.dst_connector is None:
-                self.link_drawer.sleep()
-                self.emit_connection_failed()
-                return
-            self.link_drawer.add_link()
+        if not self.link_drawer.isVisible() or self.link_drawer.src_connector.isUnderMouse():
+            return
+        if self.link_drawer.dst_connector is None:
+            self.link_drawer.sleep()
+            self.emit_connection_failed()
+            return
+        self.link_drawer.add_link()
 
     def emit_connection_failed(self):
         self._toolbox.msg_warning.emit(
