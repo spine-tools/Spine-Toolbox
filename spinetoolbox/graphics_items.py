@@ -512,6 +512,7 @@ class LinkBase(QGraphicsPathItem):
         super().__init__()
         self._toolbox = toolbox
         self.arrow_angle = pi / 4
+        self.setCursor(Qt.PointingHandCursor)
 
     @property
     def magic_number(self):
@@ -760,7 +761,6 @@ class Link(LinkBase):
         self.parallel_link = None
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
         self.setFlag(QGraphicsItem.ItemIsFocusable, enabled=True)
-        self.setCursor(Qt.PointingHandCursor)
         self.setZValue(0.5)  # This makes links appear on top of items because item zValue == 0.0
         self.update_geometry()
 
@@ -874,7 +874,6 @@ class LinkDrawer(LinkBase):
         self.setBrush(QBrush(QColor(255, 0, 255, 204)))
         self.setPen(QPen(Qt.black, 0.5))
         self.setZValue(1)  # LinkDrawer should be on top of every other item
-        self.setAcceptedMouseButtons(0)
 
     @property
     def src_rect(self):

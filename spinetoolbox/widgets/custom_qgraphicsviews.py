@@ -83,9 +83,11 @@ class CustomQGraphicsView(QGraphicsView):
         """Reestablish scroll hand drag mode."""
         super().mouseReleaseEvent(event)
         item = self.itemAt(event.pos())
+        if item and self.dragMode() != QGraphicsView.RubberBandDrag:
+            self.viewport().setCursor(item.cursor())
+            return
         self.setDragMode(QGraphicsView.ScrollHandDrag)
-        if not item:
-            self.viewport().setCursor(Qt.ArrowCursor)
+        self.viewport().setCursor(Qt.ArrowCursor)
 
     def _use_smooth_zoom(self):
         return self._qsettings.value("appSettings/smoothZoom", defaultValue="false") == "true"
