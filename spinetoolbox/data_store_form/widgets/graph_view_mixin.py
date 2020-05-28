@@ -74,9 +74,8 @@ class GraphViewMixin:
         self.added_relationship_ids = set()
         self.wip_relationship_class = None
         self._blank_item = None
-        self._parameter_ids_per_name = dict()  # Uset in the menu add heat map
-        self.heat_map_item = None
-        self.colorbar_item = None
+        self._point_value_tuples_per_parameter_name = dict()  # Used in the menu add heat map
+        self.heat_map_items = []
         self.zoom_widget_action = None
         self.rotate_widget_action = None
         self.layout_gens = list()
@@ -260,20 +259,6 @@ class GraphViewMixin:
             if isinstance(item, EntityItem) and item.entity_class_id in updated_ids:
                 item.refresh_icon()
 
-    def _populate_menu_add_parameter_heat_map(self):
-        """Populates the menu 'Add parameter heat map' with parameters for currently shown items in the graph."""
-        entity_class_ids = {x.entity_class_id for x in self.scene.items() if isinstance(x, EntityItem)}
-        parameters = self.db_mngr.find_cascading_parameter_data(
-            {self.db_map: entity_class_ids}, "parameter definition"
-        )[self.db_map]
-        self._parameter_ids_per_name.clear()
-        self.ui.menuAdd_parameter_heat_map.clear()
-        for parameter in parameters:
-            self._parameter_ids_per_name.setdefault(parameter["parameter_name"], set()).add(parameter["id"])
-        for name in self._parameter_ids_per_name:
-            self.ui.menuAdd_parameter_heat_map.addAction(name)
-        self.ui.menuAdd_parameter_heat_map.setDisabled(self.ui.menuAdd_parameter_heat_map.isEmpty())
-
     @Slot()
     def _handle_menu_graph_about_to_show(self):
         """Enables or disables actions according to current selection in the graph."""
@@ -334,9 +319,8 @@ class GraphViewMixin:
         self.hidden_items.clear()
         self.removed_items.clear()
         self.selected_items.clear()
+        self.heat_map_items.clear()
         self.scene.clear()
-        self.heat_map_item = None
-        self.colorbar_item = None
         if not self._make_new_items(x, y):
             self._blank_item = QGraphicsTextItem("Nothing to show.")
             self.scene.addItem(self._blank_item)
@@ -703,52 +687,65 @@ class GraphViewMixin:
     def _end_add_relationships(self):
         self._relationships_being_added = False
 
+    def _populate_menu_add_parameter_heat_map(self):
+        """Populates the menu 'Add parameter heat map' with parameters for currently shown items in the graph."""
+        entity_class_ids = {x.entity_class_id for x in self.scene.items() if isinstance(x, EntityItem)}
+        parameters = self.db_mngr.find_cascading_parameter_data(
+            {self.db_map: entity_class_ids}, "parameter definition"
+        )[self.db_map]
+        parameters_by_class_id = {}
+        for parameter in parameters:
+            parameters_by_class_id.setdefault(parameter["entity_class_id"], []).append(parameter)
+        value_ids = {
+            (val["parameter_id"], val["entity_id"]): val["id"]
+            for val in self.db_mngr.find_cascading_parameter_values_by_definition(
+                {self.db_map: {x["id"] for x in parameters}}
+            )[self.db_map]
+        }
+        self._point_value_tuples_per_parameter_name.clear()
+        for item in self.scene.items():
+            if not isinstance(item, EntityItem):
+                continue
+            for parameter in parameters_by_class_id[item.entity_class_id]:
+                value_id = value_ids.get((parameter["id"], item.entity_id))
+                try:
+                    value = float(self.db_mngr.get_value(self.db_map, "parameter value", value_id))
+                    pos = item.pos()
+                    self._point_value_tuples_per_parameter_name.setdefault(parameter["parameter_name"], []).append(
+                        (pos.x(), -pos.y(), value)
+                    )
+                except (TypeError, ValueError):
+                    pass
+        self.ui.menuAdd_parameter_heat_map.clear()
+        for name, point_value_tuples in self._point_value_tuples_per_parameter_name.items():
+            if len(point_value_tuples) > 1:
+                self.ui.menuAdd_parameter_heat_map.addAction(name)
+        self.ui.menuAdd_parameter_heat_map.setDisabled(self.ui.menuAdd_parameter_heat_map.isEmpty())
+
     @Slot("QAction")
     def add_heat_map(self, action):
         """Adds heat map for the parameter in the action text.
         """
-        if self.heat_map_item is not None:
-            self.heat_map_item.hide()
-            self.colorbar_item.hide()
-            self.scene.removeItem(self.heat_map_item)
-            self.scene.removeItem(self.colorbar_item)
-            self.heat_map_item = None
-            self.colorbar_item = None
-        parameter_ids = self._parameter_ids_per_name[action.text()]
-        value_ids = {
-            val["entity_id"]: val["id"]
-            for val in self.db_mngr.find_cascading_parameter_values_by_definition({self.db_map: parameter_ids})[
-                self.db_map
-            ]
-        }
-        x = []
-        y = []
-        values = []
-        for item in self.scene.items():
-            if isinstance(item, EntityItem):
-                value_id = value_ids.get(item.entity_id)
-                try:
-                    value = float(self.db_mngr.get_value(self.db_map, "parameter value", value_id))
-                    pos = item.pos()
-                    x.append(pos.x())
-                    y.append(-pos.y())
-                    values.append(value)
-                    continue
-                except (TypeError, ValueError):
-                    pass
-        if not values:
-            self.msg.emit(f"Unable to cast any values of {action.text()} as a number.")
-            return
+        self._clean_up_heat_map_items()
+        point_value_tuples = self._point_value_tuples_per_parameter_name[action.text()]
+        x, y, values = zip(*point_value_tuples)
         heat_map, xv, yv, min_x, min_y, max_x, max_y = make_heat_map(x, y, values)
-        self.heat_map_item, hm_figure = make_figure_graphics_item(self.scene, z=-3, static=True)
-        self.colorbar_item, cb_figure = make_figure_graphics_item(self.scene, z=3, static=False)
+        heat_map_item, hm_figure = make_figure_graphics_item(self.scene, z=-3, static=True)
+        colorbar_item, cb_figure = make_figure_graphics_item(self.scene, z=3, static=False)
         colormesh = hm_figure.gca().pcolormesh(xv, yv, heat_map)
         cb_figure.colorbar(colormesh, fraction=1)
         cb_figure.gca().set_visible(False)
         width = max_x - min_x
         height = max_y - min_y
-        self.heat_map_item.widget().setGeometry(min_x, min_y, width, height)
-        self.colorbar_item.widget().setGeometry(max_x + self._VERTEX_EXTENT, min_y, 2 * self._VERTEX_EXTENT, height)
+        heat_map_item.widget().setGeometry(min_x, min_y, width, height)
+        colorbar_item.widget().setGeometry(max_x + self._VERTEX_EXTENT, min_y, 2 * self._VERTEX_EXTENT, height)
+        self.heat_map_items += [heat_map_item, colorbar_item]
+
+    def _clean_up_heat_map_items(self):
+        for item in self.heat_map_items:
+            item.hide()
+            self.scene.removeItem(item)
+        self.heat_map_items.clear()
 
     def closeEvent(self, event):
         """Handle close window.
