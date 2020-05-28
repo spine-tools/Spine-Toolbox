@@ -976,7 +976,7 @@ class ToolboxUI(QMainWindow):
         Args:
             specification (ProjectItemSpecification)
         """
-        for item in self.project_item_model.items(specification.category):
+        for item in self.project_item_model.items(specification.item_category):
             project_item = item.project_item
             if project_item.specification() == specification:
                 yield project_item

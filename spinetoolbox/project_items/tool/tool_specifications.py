@@ -85,7 +85,7 @@ class ToolSpecification(ProjectItemSpecification):
             cmdline_args (str, optional): Tool command line arguments (read from tool definition file)
             execute_in_work (bool): Execute in work folder
         """
-        super().__init__(name, description, item_type=ItemInfo.item_type())
+        super().__init__(name, description, item_type=ItemInfo.item_type(), item_category=ItemInfo.item_category())
         self._settings = settings
         self._logger = logger
         self.tooltype = tooltype
@@ -431,10 +431,6 @@ class GAMSTool(ToolSpecification):
             62097: "Simulation interrupted by user",  # Not official
         }
 
-    def __repr__(self):
-        """[OBSOLETE]. Returns instance of this class as a string."""
-        return "GAMSTool('{}')".format(self.name)
-
     def update_gams_options(self, key, value):
         """[OBSOLETE?] Updates GAMS command line options. Only 'cerr and 'logoption' keywords supported.
 
@@ -533,10 +529,6 @@ class JuliaTool(ToolSpecification):
         self.julia_options = OrderedDict()
         self.return_codes = {0: "Normal return"}  # Not official
 
-    def __repr__(self):
-        """[OBSOLETE]. Returns instance of this class as a string."""
-        return "JuliaTool('{}')".format(self.name)
-
     def update_julia_options(self, key, value):
         """[OBSOLETE?] Updates Julia command line options.
 
@@ -632,10 +624,6 @@ class PythonTool(ToolSpecification):
         self.python_options = OrderedDict()
         self.return_codes = {0: "Normal return"}  # Not official
 
-    def __repr__(self):
-        """[OBSOLETE]. Returns instance of this class as a string."""
-        return "PythonTool('{}')".format(self.name)
-
     def update_python_options(self, key, value):
         """[OBSOLETE?] Updates Python command line options.
 
@@ -728,10 +716,6 @@ class ExecutableTool(ToolSpecification):
         self.main_dir, self.main_prgm = os.path.split(main_file)
         self.options = OrderedDict()
         self.return_codes = {0: "Normal exit", 1: "Error happened"}
-
-    def __repr__(self):
-        """[OBSOLETE]. Returns instance of this class as a string."""
-        return "ExecutableTool('{}')".format(self.name)
 
     @staticmethod
     def load(path, data, settings, logger):

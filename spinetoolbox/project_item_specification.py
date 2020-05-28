@@ -27,13 +27,19 @@ class ProjectItemSpecification(MetaObject):
         definition_file_path (str): specification's JSON file path
     """
 
-    def __init__(self, name, description=None, item_type=""):
+    def __init__(self, name, description=None, item_type="", item_category=""):
         """
         Args:
             name (str): specification name
             description (str): description
             item_type (str): Project item type
+            item_category (str): Project item category
         """
         super().__init__(name, description)
         self.item_type = item_type
+        self.item_category = item_category
         self.definition_file_path = ""
+
+    def __eq__(self, other):
+        """Overrides the default implementation"""
+        return isinstance(other, type(self)) and self.name == other.name
