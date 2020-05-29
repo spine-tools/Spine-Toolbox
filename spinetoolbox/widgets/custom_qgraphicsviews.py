@@ -81,12 +81,7 @@ class CustomQGraphicsView(QGraphicsView):
 
     def mouseReleaseEvent(self, event):
         """Reestablish scroll hand drag mode."""
-        link_drawer = self.scene().link_drawer
-        was_drawing = link_drawer.isVisible()
         super().mouseReleaseEvent(event)
-        if was_drawing or link_drawer.isVisible():
-            self.viewport().setCursor(link_drawer.cursor())
-            return
         item = self.itemAt(event.pos())
         if not item or self.dragMode() == QGraphicsView.RubberBandDrag:
             self.setDragMode(QGraphicsView.ScrollHandDrag)
@@ -318,6 +313,19 @@ class DesignQGraphicsView(CustomQGraphicsView):
         """Returns all Links in the scene.
         Used for saving the project."""
         return [item for item in self.items() if isinstance(item, Link)]
+
+    def mouseReleaseEvent(self, event):
+        """Reestablish scroll hand drag mode."""
+        link_drawer = self.scene().link_drawer
+        was_drawing = link_drawer.isVisible()
+        QGraphicsView.mouseReleaseEvent(self, event)
+        if was_drawing or link_drawer.isVisible():
+            self.viewport().setCursor(link_drawer.cursor())
+            return
+        item = self.itemAt(event.pos())
+        if not item or self.dragMode() == QGraphicsView.RubberBandDrag:
+            self.setDragMode(QGraphicsView.ScrollHandDrag)
+            self.viewport().setCursor(Qt.ArrowCursor)
 
     def add_link(self, src_connector, dst_connector):
         """
