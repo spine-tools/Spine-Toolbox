@@ -901,7 +901,12 @@ class LinkDrawer(LinkBase):
         self.sleep()
 
     def wake_up(self, src_connector):
-        """Wakes up this drawer."""
+        """Sets the source connector, shows this item and adds it to the scene.
+        After calling this, the scene is in link drawing mode.
+
+        Args:
+            src_connector (ConnectorButton)
+        """
         src_connector.scene().addItem(self)
         self.src_connector = src_connector
         self.src_connector.set_friend_connectors_enabled(False)
@@ -910,7 +915,9 @@ class LinkDrawer(LinkBase):
         self.show()
 
     def sleep(self):
-        """Puts this drawer to sleep."""
+        """Removes this drawer from the scene, clears its source and destination connectors, and hides it.
+        After calling this, the scene is no longer in link drawing mode.
+        """
         self.scene().removeItem(self)
         self.src_connector.set_friend_connectors_enabled(True)
         self.src_connector = self.dst_connector = self.tip = None
