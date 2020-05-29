@@ -19,9 +19,40 @@ Tests for ParameterIndexSettings widget and its models.
 import unittest
 from PySide2.QtCore import QModelIndex, Qt
 from PySide2.QtWidgets import QApplication
-from spinedb_api.parameter_value import TimePattern
+from spinedb_api.parameter_value import Map, TimePattern
 import spinetoolbox.spine_io.exporters.gdx as gdx
-from spinetoolbox.project_items.exporter.widgets.parameter_index_settings import _IndexingTableModel
+from spinetoolbox.project_items.exporter.widgets.parameter_index_settings import (
+    _IndexingTableModel,
+    ParameterIndexSettings,
+)
+
+
+_ERROR_PREFIX = "<span style='color:#ff3333;white-space: pre-wrap;'>"
+_ERROR_SUFFIX = "</span>"
+
+
+class TestParameterIndexSettings(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        if not QApplication.instance():
+            QApplication()
+
+    def test_domain_name_clash_warning(self):
+        value = Map(["s1", "s2"], [-1.1, -2.2])
+        parameter = gdx.Parameter(["domain name"], [("key_1",)], [value])
+        indexing_setting = gdx.IndexingSetting(parameter, "set name")
+        existing_domains = {"domain name": [("key_1",)]}
+        new_domains = {}
+        settings_widget = ParameterIndexSettings(
+            "parameter name", indexing_setting, existing_domains, new_domains, None
+        )
+        settings_widget._ui.create_domain_radio_button.click()
+        settings_widget._ui.extract_indexes_button.click()
+        settings_widget._ui.domain_name_edit.setText("domain name")
+        self.assertEqual(
+            settings_widget._ui.message_label.text(),
+            _ERROR_PREFIX + "Domain name already exists. Choose another name." + _ERROR_SUFFIX,
+        )
 
 
 class TestIndexingTableModel(unittest.TestCase):

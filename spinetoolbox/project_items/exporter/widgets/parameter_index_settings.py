@@ -43,7 +43,7 @@ class ParameterIndexSettings(QWidget):
             indexing_setting (IndexingSetting): indexing settings for the parameter
             available_existing_domains (dict): a dict from existing domain name to a list of its record keys
             new_domains (dict): a dict from new domain name to a list of its record keys
-            parent (QWidget): a parent widget
+            parent (QWidget, optional): a parent widget
         """
         from ..ui.parameter_index_settings import Ui_Form  # pylint: disable=import-outside-toplevel
 
@@ -174,9 +174,14 @@ class ParameterIndexSettings(QWidget):
         if mapped_values_balance < 0:
             self.state = IndexSettingsState.DOMAIN_MISSING_INDEXES
             return True
-        if self._ui.create_domain_radio_button.isChecked() and not self._ui.domain_name_edit.text():
-            self.state = IndexSettingsState.DOMAIN_NAME_MISSING
-            return True
+        if self._ui.create_domain_radio_button.isChecked():
+            new_domain_name = self._ui.domain_name_edit.text()
+            if not new_domain_name:
+                self.state = IndexSettingsState.DOMAIN_NAME_MISSING
+                return True
+            if new_domain_name in self._available_domains:
+                self.state = IndexSettingsState.DOMAIN_NAME_CLASH
+                return True
         return False
 
     def _check_warnings(self, mapped_values_balance):
@@ -213,10 +218,13 @@ class ParameterIndexSettings(QWidget):
     @Slot(str)
     def _domain_name_changed(self, text):
         """Reacts to changes in indexing domain name."""
-        if text and self._state in (IndexSettingsState.DOMAIN_NAME_MISSING, IndexSettingsState.DOMAIN_NAME_CLASH):
-            self._check_state()
+        if text:
+            if self._state in (IndexSettingsState.DOMAIN_NAME_MISSING, IndexSettingsState.DOMAIN_NAME_CLASH):
+                self._check_state()
+            elif self._state == IndexSettingsState.OK and text in self._available_domains:
+                self.state = IndexSettingsState.DOMAIN_NAME_CLASH
         elif not text and self._state == IndexSettingsState.OK:
-            self._check_state()
+            self.state = IndexSettingsState.DOMAIN_NAME_MISSING
         self._update_indexing_domains_name(text)
 
     @Slot(bool)
@@ -264,7 +272,7 @@ class ParameterIndexSettings(QWidget):
         length = len(self._available_domains[selected_domain_name])
         is_selected = functools.partial(eval, expression, {})
         try:
-            pick_list = [bool(is_selected({"i": i})) for i in range(1, length+1)]  # pylint: disable=eval-used
+            pick_list = [bool(is_selected({"i": i})) for i in range(1, length + 1)]  # pylint: disable=eval-used
         except (AttributeError, NameError, SyntaxError):
             return
         self._indexing_table_model.set_selection(pick_list)
@@ -275,7 +283,7 @@ class ParameterIndexSettings(QWidget):
         length = len(next(iter(self._indexing_setting.parameter.values)))
         generate_index = functools.partial(eval, expression, {})
         try:
-            indexes = [generate_index({"i": i}) for i in range(1, length+1)]   # pylint: disable=eval-used
+            indexes = [generate_index({"i": i}) for i in range(1, length + 1)]  # pylint: disable=eval-used
         except (AttributeError, NameError, SyntaxError, ValueError):
             return
         self._indexing_table_model.set_indexes(indexes)
