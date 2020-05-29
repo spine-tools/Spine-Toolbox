@@ -516,6 +516,11 @@ class ToolboxUI(QMainWindow):
         if not self._project:
             self.msg.emit("Please open or create a project first")
             return
+        # Save specs
+        for spec in self.specification_model.specifications():
+            if not spec.save():
+                self.msg_error.emit("Project saving failed")
+                return
         # Put project's specification definition files into a list
         tool_spec_paths = [
             self.specification_model.specification(i).definition_file_path

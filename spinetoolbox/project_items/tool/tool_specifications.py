@@ -20,6 +20,7 @@ from collections import ChainMap, OrderedDict
 import logging
 import os
 import re
+import json
 from spinetoolbox.project_item_specification import ProjectItemSpecification
 from spinetoolbox.helpers import open_url
 from .item_info import ItemInfo
@@ -107,6 +108,54 @@ class ToolSpecification(ProjectItemSpecification):
         self.outputfiles = set(outputfiles) if outputfiles else set()
         self.return_codes = {}
         self.execute_in_work = execute_in_work
+
+    def save(self):
+        """Saves this specification to a .json file in the definition path.
+
+        Returns:
+            bool: How it went
+        """
+        definition_path = self.definition_file_path
+        definition = {
+            "name": self.name,
+            "tooltype": self.tooltype,
+            "includes": self.includes,
+            "description": self.description,
+            "inputfiles": list(self.inputfiles),
+            "inputfiles_opt": list(self.inputfiles_opt),
+            "outputfiles": list(self.outputfiles),
+            "cmdline_args": self.cmdline_args,
+            "execute_in_work": self.execute_in_work,
+            "includes_main_path": os.path.relpath(self.path, os.path.dirname(definition_path)),
+        }
+        with open(definition_path, "w") as fp:
+            try:
+                json.dump(definition, fp, indent=4)
+                self._logger.msg.emit("Tool specification <b>{0}</b> saved.".format(self.name))
+                return True
+            except ValueError:
+                self.statusbar.showMessage("Error saving file", 3000)
+                self._logger.msg_error.emit("Saving Tool specification file failed. Path:{0}".format(definition_path))
+                return False
+
+    def is_equivalent(self, definition):
+        """Checks if this spec is equivalent to the given definition dictionary.
+        Used by the tool spec widget when updating specs.
+
+        Args:
+            definition (dict)
+
+        Returns:
+            bool: True if equivalent
+        """
+        for p in definition:
+            if p in LIST_REQUIRED_KEYS:
+                if set(self.__dict__[p]) != set(definition[p]):
+                    return False
+            else:
+                if self.__dict__[p] != definition[p]:
+                    return False
+        return True
 
     def set_return_code(self, code, description):
         """Sets a return code and an associated text description for the tool specification.
