@@ -19,23 +19,32 @@ Contains the GraphViewMixin class.
 import enum
 import numpy as np
 from numpy import atleast_1d as arr
-import scipy.interpolate
 from scipy.sparse.csgraph import dijkstra
 from PySide2.QtCore import Signal, Slot, QObject, QThread, Qt
 from PySide2.QtWidgets import QProgressBar, QDialogButtonBox, QLabel, QWidget, QVBoxLayout, QHBoxLayout
 from PySide2.QtGui import QPainter, QColor
+from spinetoolbox.helpers import busy_effect
 
 
+@busy_effect
 def make_heat_map(x, y, values):
-    points = np.column_stack((x, y))
     values = np.array(values)
     min_x, min_y, max_x, max_y = min(x), min(y), max(x), max(y)
     tick_count = round(len(values) ** 2)
     xticks = np.linspace(min_x, max_x, tick_count)
     yticks = np.linspace(min_y, max_y, tick_count)
     xv, yv = np.meshgrid(xticks, yticks)
-    f = scipy.interpolate.LinearNDInterpolator(points, values, fill_value=0)
-    heat_map = f(xv, yv)
+    try:
+        import scipy.interpolate
+
+        points = np.column_stack((x, y))
+        heat_map = scipy.interpolate.griddata(points, values, (xv, yv), method="cubic")
+    except ImportError:
+        import matplotlib.tri as tri
+
+        triang = tri.Triangulation(x, y)
+        interpolator = tri.CubicTriInterpolator(triang, values)
+        heat_map = interpolator(xv, yv)
     return heat_map, xv, yv, min_x, min_y, max_x, max_y
 
 
