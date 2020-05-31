@@ -143,7 +143,7 @@ class GraphLayoutGenerator(QObject):
         """Returns the shortest-path matrix.
         """
         if not self.src_inds:
-            # Introduce fake pair of links to help 'sparcity'
+            # Introduce fake pair of links to help 'spreadness'
             self.src_inds = [self.vertex_count, self.vertex_count]
             self.dst_inds = [np.random.randint(0, self.vertex_count), np.random.randint(0, self.vertex_count)]
             self.vertex_count += 1
@@ -156,7 +156,6 @@ class GraphLayoutGenerator(QObject):
             pass
         matrix = dijkstra(dist, directed=False)
         # Remove infinites and zeros
-        # matrix[matrix == np.inf] = self.spread * 3
         matrix[matrix == np.inf] = self.spread * self.vertex_count ** (0.5)
         matrix[matrix == 0] = self.spread * 1e-6
         return matrix

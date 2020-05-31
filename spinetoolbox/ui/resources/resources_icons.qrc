@@ -14,6 +14,8 @@
     <file>fontawesome5-searchterms.json</file>
   </qresource>
   <qresource prefix="/icons">
+    <file>menu_icons/pivot-table.svg</file>
+    <file>menu_icons/table.svg</file>
     <file>menu_icons/history.svg</file>
     <file>menu_icons/level-up-alt.svg</file>
     <file>book.svg</file>

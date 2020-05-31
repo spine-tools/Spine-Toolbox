@@ -10,10 +10,10 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-# Form implementation generated from reading ui file 'C:\data\src\toolbox\bin\..\spinetoolbox\data_store_form\ui\data_store_window.ui',
-# licensing of 'C:\data\src\toolbox\bin\..\spinetoolbox\data_store_form\ui\data_store_window.ui' applies.
+# Form implementation generated from reading ui file '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/data_store_form/ui/data_store_window.ui',
+# licensing of '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/data_store_form/ui/data_store_window.ui' applies.
 #
-# Created: Wed May 27 19:59:44 2020
+# Created: Sun May 31 13:05:39 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -390,21 +390,21 @@ class Ui_MainWindow(object):
         self.actionRestore_all_pruned.setObjectName("actionRestore_all_pruned")
         self.actionLive_graph_demo = QtWidgets.QAction(MainWindow)
         self.actionLive_graph_demo.setObjectName("actionLive_graph_demo")
-        self.actionTree_style = QtWidgets.QAction(MainWindow)
+        self.actionStacked_style = QtWidgets.QAction(MainWindow)
         icon11 = QtGui.QIcon()
-        icon11.addPixmap(QtGui.QPixmap(":/symbols/menu_icons/tree.svg"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        self.actionTree_style.setIcon(icon11)
-        self.actionTree_style.setObjectName("actionTree_style")
+        icon11.addPixmap(QtGui.QPixmap(":/icons/menu_icons/table.svg"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.actionStacked_style.setIcon(icon11)
+        self.actionStacked_style.setObjectName("actionStacked_style")
         self.actionGraph_style = QtWidgets.QAction(MainWindow)
         icon12 = QtGui.QIcon()
         icon12.addPixmap(QtGui.QPixmap(":/icons/project-diagram.svg"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.actionGraph_style.setIcon(icon12)
         self.actionGraph_style.setObjectName("actionGraph_style")
-        self.actionTabular_style = QtWidgets.QAction(MainWindow)
+        self.actionPivot_style = QtWidgets.QAction(MainWindow)
         icon13 = QtGui.QIcon()
-        icon13.addPixmap(QtGui.QPixmap(":/symbols/menu_icons/table.svg"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        self.actionTabular_style.setIcon(icon13)
-        self.actionTabular_style.setObjectName("actionTabular_style")
+        icon13.addPixmap(QtGui.QPixmap(":/icons/menu_icons/pivot-table.svg"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.actionPivot_style.setIcon(icon13)
+        self.actionPivot_style.setObjectName("actionPivot_style")
         self.actionView_history = QtWidgets.QAction(MainWindow)
         self.actionView_history.setObjectName("actionView_history")
         self.actionClear_positions = QtWidgets.QAction(MainWindow)
@@ -491,8 +491,8 @@ class Ui_MainWindow(object):
         self.menuFile.addSeparator()
         self.menuFile.addAction(self.actionClose)
         self.menuView.addSeparator()
-        self.menuView.addAction(self.actionTree_style)
-        self.menuView.addAction(self.actionTabular_style)
+        self.menuView.addAction(self.actionStacked_style)
+        self.menuView.addAction(self.actionPivot_style)
         self.menuView.addAction(self.actionGraph_style)
         self.menuGraph.addAction(self.actionFull_relationship_expansion)
         self.menuGraph.addSeparator()
@@ -588,9 +588,10 @@ class Ui_MainWindow(object):
         self.actionPrune_selected_entities.setText(QtWidgets.QApplication.translate("MainWindow", "Prune selected entities", None, -1))
         self.actionRestore_all_pruned.setText(QtWidgets.QApplication.translate("MainWindow", "Restore all pruned", None, -1))
         self.actionLive_graph_demo.setText(QtWidgets.QApplication.translate("MainWindow", "Live graph demo", None, -1))
-        self.actionTree_style.setText(QtWidgets.QApplication.translate("MainWindow", "Tree style", None, -1))
+        self.actionStacked_style.setText(QtWidgets.QApplication.translate("MainWindow", "Stacked style", None, -1))
+        self.actionStacked_style.setToolTip(QtWidgets.QApplication.translate("MainWindow", "Stacked-table style", None, -1))
         self.actionGraph_style.setText(QtWidgets.QApplication.translate("MainWindow", "Graph style", None, -1))
-        self.actionTabular_style.setText(QtWidgets.QApplication.translate("MainWindow", "Tabular style", None, -1))
+        self.actionPivot_style.setText(QtWidgets.QApplication.translate("MainWindow", "Pivot style", None, -1))
         self.actionView_history.setText(QtWidgets.QApplication.translate("MainWindow", "View history...", None, -1))
         self.actionClear_positions.setText(QtWidgets.QApplication.translate("MainWindow", "Clear saved positions", None, -1))
         self.actionSave_positions.setText(QtWidgets.QApplication.translate("MainWindow", "Save positions", None, -1))
@@ -616,7 +617,7 @@ class Ui_MainWindow(object):
         self.actionInput_type_index_expansion.setText(QtWidgets.QApplication.translate("MainWindow", "Index expansion", None, -1))
         self.actionRebuild_graph.setText(QtWidgets.QApplication.translate("MainWindow", "Rebuild graph", None, -1))
 
-from spinetoolbox.data_store_form.widgets.custom_qtreeview import ObjectTreeView, ParameterValueListTreeView, RelationshipTreeView
-from spinetoolbox.data_store_form.widgets.custom_qtableview import RelationshipParameterDefinitionTableView, PivotTableView, ObjectParameterValueTableView, RelationshipParameterValueTableView, FrozenTableView, ObjectParameterDefinitionTableView
+from spinetoolbox.data_store_form.widgets.custom_qtableview import FrozenTableView, ObjectParameterValueTableView, ObjectParameterDefinitionTableView, RelationshipParameterValueTableView, PivotTableView, RelationshipParameterDefinitionTableView
+from spinetoolbox.data_store_form.widgets.custom_qtreeview import ParameterValueListTreeView, ObjectTreeView, RelationshipTreeView
 from spinetoolbox.data_store_form.widgets.custom_qgraphicsviews import EntityQGraphicsView
 from spinetoolbox import resources_icons_rc

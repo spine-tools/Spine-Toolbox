@@ -119,8 +119,8 @@
      <string>View</string>
     </property>
     <addaction name="separator"/>
-    <addaction name="actionTree_style"/>
-    <addaction name="actionTabular_style"/>
+    <addaction name="actionStacked_style"/>
+    <addaction name="actionPivot_style"/>
     <addaction name="actionGraph_style"/>
    </widget>
    <widget class="QMenu" name="menuGraph">
@@ -1014,13 +1014,16 @@
     <string>Live graph demo</string>
    </property>
   </action>
-  <action name="actionTree_style">
+  <action name="actionStacked_style">
    <property name="icon">
     <iconset resource="../../ui/resources/resources_icons.qrc">
-     <normaloff>:/symbols/menu_icons/tree.svg</normaloff>:/symbols/menu_icons/tree.svg</iconset>
+     <normaloff>:/icons/menu_icons/table.svg</normaloff>:/icons/menu_icons/table.svg</iconset>
    </property>
    <property name="text">
-    <string>Tree style</string>
+    <string>Stacked style</string>
+   </property>
+   <property name="toolTip">
+    <string>Stacked-table style</string>
    </property>
   </action>
   <action name="actionGraph_style">
@@ -1032,13 +1035,13 @@
     <string>Graph style</string>
    </property>
   </action>
-  <action name="actionTabular_style">
+  <action name="actionPivot_style">
    <property name="icon">
     <iconset resource="../../ui/resources/resources_icons.qrc">
-     <normaloff>:/symbols/menu_icons/table.svg</normaloff>:/symbols/menu_icons/table.svg</iconset>
+     <normaloff>:/icons/menu_icons/pivot-table.svg</normaloff>:/icons/menu_icons/pivot-table.svg</iconset>
    </property>
    <property name="text">
-    <string>Tabular style</string>
+    <string>Pivot style</string>
    </property>
   </action>
   <action name="actionView_history">

@@ -792,9 +792,9 @@ class DataStoreForm(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
 
     def connect_signals(self):
         super().connect_signals()
-        self.ui.actionTree_style.triggered.connect(self.apply_tree_style)
+        self.ui.actionStacked_style.triggered.connect(self.apply_tree_style)
         self.ui.actionGraph_style.triggered.connect(self.apply_graph_style)
-        self.ui.actionTabular_style.triggered.connect(self.apply_tabular_style)
+        self.ui.actionPivot_style.triggered.connect(self.apply_tabular_style)
 
     def add_menu_actions(self):
         super().add_menu_actions()
