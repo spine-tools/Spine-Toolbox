@@ -49,7 +49,7 @@ class AboutWidget(QWidget):
             + str(__version_info__.minor)
             + "."
             + str(__version_info__.micro)
-            + "."
+            + "-"
             + __version_info__.releaselevel
             + "."
             + str(__version_info__.serial)

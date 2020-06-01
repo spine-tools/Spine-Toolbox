@@ -247,8 +247,7 @@ class ToolboxUI(QMainWindow):
             self.project_item_factory_model.add_item(item_type, factory)
 
     def parse_assistant_modules(self):
-        """Makes actions to run assistants from assistant modules.
-        """
+        """Makes actions to run assistants from assistant modules."""
         menu = self.ui.menuTool_configuration_assistants
         for module in (spine_model,):  # NOTE: add others as needed
             action = menu.addAction(module.assistant_name)

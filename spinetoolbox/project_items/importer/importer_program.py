@@ -10,7 +10,7 @@
 ######################################################################################################################
 
 """
-Contains Importer project item class.
+Contains importer_program script.
 
 :authors: P. Savolainen (VTT), P. Vennström (VTT), A. Soininen (VTT)
 :date:   10.6.2019

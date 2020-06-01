@@ -170,6 +170,10 @@ class SingleParameterModel(MinimalTableModel):
             if field == "database":
                 return self.db_map.codename
             id_ = self._main_data[index.row()]
+            if role == Qt.ToolTipRole:
+                description = self._get_field_item(field, id_).get("description", None)
+                if description not in (None, ""):
+                    return description
             if field in self.json_fields:
                 return self.db_mngr.get_value(self.db_map, self.item_type, id_, role)
             item = self.db_mngr.get_item(self.db_map, self.item_type, id_)
@@ -233,6 +237,25 @@ class SingleParameterModel(MinimalTableModel):
     def accepted_rows(self):
         """Returns a list of accepted rows, for convenience."""
         return [row for row in range(self.rowCount()) if self._filter_accepts_row(row)]
+
+    def _get_field_item(self, field, id_):
+        """Returns a item from the db_mngr.get_item depending on the
+        field. If a field doesn't correspond to a item in the database then
+        an empty dict is returned.
+        """
+        data = self.db_mngr.get_item(self.db_map, self.item_type, id_)
+        header_to_id = {
+            "object_class_name": ("entity_class_id", "object class"),
+            "relationship_class_name": ("entity_class_id", "relationship class"),
+            "object_name": ("entity_id", "object"),
+            "object_name_list": ("entity_id", "relationship"),
+            "parameter_name": (self.parameter_definition_id_key, "parameter definition"),
+        }
+        if field not in header_to_id:
+            return {}
+        id_field, item_type = header_to_id[field]
+        item_id = data.get(id_field)
+        return self.db_mngr.get_item(self.db_map, item_type, item_id)
 
 
 class SingleObjectParameterMixin:
