@@ -166,6 +166,12 @@ class CustomWidgetAction(QWidgetAction):
 
 
 class TitleWidgetAction(CustomWidgetAction):
+    """
+    A widget action for adding titled sections to menus.
+    """
+
+    # NOTE: I'm aware of QMenu.addSection(), but it doesn't seem to work on all platforms?
+
     H_MARGIN = 6
     V_MARGIN = 2
 

@@ -24,24 +24,79 @@ from ...widgets.custom_menus import FilterMenuBase
 
 class ParameterViewFilterMenu(FilterMenuBase):
 
-    filterChanged = Signal(set, bool)
+    filterChanged = Signal(str, set, bool)
 
-    def __init__(self, parent, source_model, show_empty=True):
+    def __init__(self, parent, source_model, field, show_empty=True):
         """
         Args:
             parent (DataStoreForm)
             source_model (CompoundParameterModel): a model to lazily get data from
+            field (str): the field name
         """
         super().__init__(parent)
+        self._entity_class_id_key = source_model.entity_class_id_key
+        self._field = field
         self._filter = LazyFilterWidget(self, source_model, show_empty=show_empty)
         self._filter_action = QWidgetAction(parent)
         self._filter_action.setDefaultWidget(self._filter)
         self.addAction(self._filter_action)
+        self._menu_data = dict()  # Maps value to list of (db map, entity id, item id)
+        self._inv_menu_data = dict()  # Maps tuple (db map, entity id, item id) to value
         self.connect_signals()
         self.aboutToShow.connect(self._filter.set_model)
 
     def emit_filter_changed(self, valid_values):
-        self.filterChanged.emit(valid_values, self._filter.has_filter())
+        self.filterChanged.emit(self._field, valid_values, self._filter.has_filter())
+
+    def _get_value_to_remove(self, action, db_map, db_item):
+        if action not in ("remove", "update"):
+            return None
+        entity_class_id = db_item.get(self._entity_class_id_key)
+        item_id = db_item["id"]
+        identifier = (db_map, entity_class_id, item_id)
+        old_value = self._inv_menu_data.pop(identifier, None)
+        if old_value is None:
+            return None
+        old_items = self._menu_data[old_value]
+        old_items.remove(identifier)
+        if not old_items:
+            del self._menu_data[old_value]
+            return old_value
+
+    def _get_value_to_add(self, action, db_map, db_item):
+        if action not in ("add", "update"):
+            return None
+        entity_class_id = db_item.get(self._entity_class_id_key)
+        item_id = db_item["id"]
+        identifier = (db_map, entity_class_id, item_id)
+        value = db_map.codename if self._field == "database" else db_item[self._field]
+        self._inv_menu_data[identifier] = value
+        if value not in self._menu_data:
+            self._menu_data[value] = [identifier]
+            return value
+        self._menu_data[value].append(identifier)
+
+    def modify_menu_data(self, action, db_map, db_items):
+        """Modifies data in the menu.
+
+        Args:
+            action (str): either 'add', 'remove', or 'update'
+            db_map (DiffDatabaseMapping)
+            db_items (list(dict))
+        """
+        values_to_add = list()
+        values_to_remove = list()
+        for db_item in db_items:
+            to_remove = self._get_value_to_remove(action, db_map, db_item)
+            to_add = self._get_value_to_add(action, db_map, db_item)
+            if to_remove is not None:
+                values_to_remove.append(to_remove)
+            if to_add is not None:
+                values_to_add.append(to_add)
+        if values_to_remove:
+            self.remove_items_from_filter_list(values_to_remove)
+        if values_to_add:
+            self.add_items_to_filter_list(values_to_add)
 
 
 class TabularViewFilterMenu(FilterMenuBase):

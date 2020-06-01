@@ -58,8 +58,6 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         self._filter_class_ids = {}
         self._filter_valid = True
         self._auto_filter_menus = {}
-        self._auto_filter_menu_data = dict()  # Maps field to value to list of (db map, entity id, item id)
-        self._inv_auto_filter_menu_data = dict()  # Maps field to (db map, entity id, item id) to value
         self._auto_filter = dict()  # Maps field to db map, to entity id, to *accepted* item ids
         self.data_for_single_model_received.connect(self.create_and_append_single_model)
 
@@ -146,14 +144,10 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
     def _make_auto_filter_menus(self):
         """Makes auto filter menus."""
         self._auto_filter_menus.clear()
-        self._auto_filter_menu_data.clear()
-        self._inv_auto_filter_menu_data.clear()
         for field in self.header:
             # TODO: show_empty=True
-            self._auto_filter_menus[field] = menu = ParameterViewFilterMenu(self._parent, self, show_empty=False)
-            menu.filterChanged.connect(
-                lambda values, has_filter, field=field: self.set_auto_filter(field, values, has_filter)
-            )
+            self._auto_filter_menus[field] = menu = ParameterViewFilterMenu(self._parent, self, field, show_empty=False)
+            menu.filterChanged.connect(self.set_auto_filter)
 
     def get_auto_filter_menu(self, logical_index):
         """Returns auto filter menu for given logical index from header view.
@@ -166,16 +160,6 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         """
         return self._auto_filter_menus.get(self.header[logical_index], None)
 
-    def _add_data_to_filter_menus(self, sub_model):
-        """Adds data of given sub-model to filter menus.
-
-        Args:
-            sub_model (SingleParameterModel)
-        """
-        db_items = sub_model.db_items()
-        db_map = sub_model.db_map
-        self._do_add_data_to_filter_menus(db_map, db_items)
-
     def _modify_data_in_filter_menus(self, action, db_map, db_items):
         """Modifies data in filter menus.
 
@@ -184,51 +168,8 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
             db_map (DiffDatabaseMapping)
             db_items (list(dict))
         """
-
-        def get_value_to_remove(db_map, db_item, field, field_menu_data, inv_field_menu_data):
-            if action not in ("remove", "update"):
-                return None
-            entity_class_id = db_item.get(self.entity_class_id_key)
-            item_id = db_item["id"]
-            identifier = (db_map, entity_class_id, item_id)
-            old_value = inv_field_menu_data.pop(identifier, None)
-            if old_value is None:
-                return None
-            old_items = field_menu_data[old_value]
-            old_items.remove(identifier)
-            if not old_items:
-                del field_menu_data[old_value]
-                return old_value
-
-        def get_value_to_add(db_map, db_item, field, field_menu_data, inv_field_menu_data):
-            if action not in ("add", "update"):
-                return None
-            entity_class_id = db_item.get(self.entity_class_id_key)
-            item_id = db_item["id"]
-            identifier = (db_map, entity_class_id, item_id)
-            value = db_map.codename if field == "database" else db_item[field]
-            inv_field_menu_data[identifier] = value
-            if value not in field_menu_data:
-                field_menu_data[value] = [identifier]
-                return value
-            field_menu_data[value].append(identifier)
-
-        for field, menu in self._auto_filter_menus.items():
-            values_to_add = list()
-            values_to_remove = list()
-            field_menu_data = self._auto_filter_menu_data.setdefault(field, {})
-            inv_field_menu_data = self._inv_auto_filter_menu_data.setdefault(field, {})
-            for db_item in db_items:
-                to_remove = get_value_to_remove(db_map, db_item, field, field_menu_data, inv_field_menu_data)
-                to_add = get_value_to_add(db_map, db_item, field, field_menu_data, inv_field_menu_data)
-                if to_remove is not None:
-                    values_to_remove.append(to_remove)
-                if to_add is not None:
-                    values_to_add.append(to_add)
-            if values_to_remove:
-                menu.remove_items_from_filter_list(values_to_remove)
-            if values_to_add:
-                menu.add_items_to_filter_list(values_to_add)
+        for menu in self._auto_filter_menus.values():
+            menu.modify_menu_data(action, db_map, db_items)
 
     def _do_add_data_to_filter_menus(self, db_map, db_items):
         self._modify_data_in_filter_menus("add", db_map, db_items)
@@ -347,6 +288,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
             if self._settattr_if_different(model, "_filter_parameter_ids", parameter_ids):
                 self._invalidate_filter()
 
+    @Slot(str, set, bool)
     def set_auto_filter(self, field, valid_values, has_filter):
         """Updates and applies the auto filter.
 
@@ -355,7 +297,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
             valid_values (list(str)): accepted values for the field
             has_filter (bool)
         """
-        field_menu_data = self._auto_filter_menu_data[field]
+        field_menu_data = self._auto_filter_menus[field]._menu_data
         auto_filter = self._build_auto_filter(field_menu_data, valid_values, has_filter)
         self.set_compound_auto_filter(field, auto_filter)
         for model in self.accepted_single_models():

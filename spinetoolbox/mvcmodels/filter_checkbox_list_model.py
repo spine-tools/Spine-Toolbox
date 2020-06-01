@@ -196,7 +196,7 @@ class SimpleFilterCheckboxListModel(QAbstractListModel):
             self._selected.update(self._selected_filtered)
             # remove unselected
             self._selected.difference_update(
-                set(self._data[i] for i in self._filter_index if self._data[i] not in self._selected_filtered)
+                set(item for item in (self._data[i] for i in self._filter_index) if item not in self._selected_filtered)
             )
         self.remove_filter()
 

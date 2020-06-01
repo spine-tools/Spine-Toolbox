@@ -274,7 +274,12 @@ class GraphViewMixin:
         self.zoom_widget_action.setEnabled(visible)
         self.ui.actionPrune_selected_entities.setText(f"Prune {self._get_selected_entity_names()}")
         self.ui.actionPrune_selected_classes.setText(f"Prune {self._get_selected_class_names()}")
-        self._populate_menu_add_parameter_heat_map()
+        self.ui.actionRebuild_graph.setEnabled(visible)
+        self.zoom_widget_action.setEnabled(visible)
+        self.rotate_widget_action.setEnabled(visible)
+        self.ui.menuAdd_parameter_heat_map.setEnabled(visible)
+        if visible:
+            self._populate_menu_add_parameter_heat_map()
 
     @Slot(bool)
     def _handle_entity_graph_visibility_changed(self, visible):
@@ -706,7 +711,7 @@ class GraphViewMixin:
         for item in self.scene.items():
             if not isinstance(item, EntityItem):
                 continue
-            for parameter in parameters_by_class_id[item.entity_class_id]:
+            for parameter in parameters_by_class_id.get(item.entity_class_id, ()):
                 value_id = value_ids.get((parameter["id"], item.entity_id))
                 try:
                     value = float(self.db_mngr.get_value(self.db_map, "parameter value", value_id))
