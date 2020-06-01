@@ -190,6 +190,12 @@ class SimpleFilterCheckboxListModel(QAbstractListModel):
             self.remove_filter()
 
     def set_base_filter(self, accepted_items):
+        """Sets the base filter. The other filter, the one that works by typing in the search bar, should be applied
+        on top of this base filter.
+
+        Args:
+            accepted_items (set): Items that are accepted by the base filter.
+        """
         self._base_filter_index = [i for i, item in enumerate(self._data) if item in accepted_items]
         self._is_base_filtered = True
         self._filter_index = self._base_filter_index
