@@ -37,7 +37,7 @@ class SimpleFilterCheckboxListModel(QAbstractListModel):
         self._base_filter_index = []
         self._is_filtered = False
         self._filter_index = []
-        self._filter_expression = None
+        self._filter_expression = ""
         self._all_selected = True
         self._empty_selected = True
         self._add_to_selection = False
@@ -235,7 +235,7 @@ class SimpleFilterCheckboxListModel(QAbstractListModel):
             return
         self.beginResetModel()
         self._select_all_str = '(Select all)'
-        self._filter_expression = None
+        self._filter_expression = ""
         if self._show_add_to_selection:
             self._action_rows.remove(self._add_to_selection_str)
         self._filter_index = self._base_filter_index
