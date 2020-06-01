@@ -53,7 +53,13 @@ class ParameterViewFilterMenu(FilterMenuBase):
         accepted_values = {
             value for value, identifiers in self._menu_data.items() if identifiers.intersection(accepted_identifiers)
         }
-        self._filter._filter_model.set_base_filter(accepted_values)
+        self.set_filter_accepted_values(accepted_values)
+
+    def set_filter_accepted_values(self, accepted_values):
+        self._filter._filter_model.set_base_filter(lambda x: x in accepted_values)
+
+    def set_filter_rejected_values(self, rejected_values):
+        self._filter._filter_model.set_base_filter(lambda x: x not in rejected_values)
 
     def _get_value_to_remove(self, action, db_map, db_item):
         if action not in ("remove", "update"):
@@ -113,7 +119,7 @@ class ParameterViewFilterMenu(FilterMenuBase):
             valid_values (Sequence): Values accepted by the filter.
 
         Returns:
-            dict: mapping db_map, to entity_class_id, to accepted item (parameter value or definition) id
+            dict: mapping db_map, to entity_class_id, to set of accepted parameter value/definition ids
         """
         if not self._filter.has_filter():
             return {}  # All-pass
@@ -122,7 +128,7 @@ class ParameterViewFilterMenu(FilterMenuBase):
         auto_filter = {}
         for value in valid_values:
             for db_map, entity_class_id, item_id in self._menu_data[value]:
-                auto_filter.setdefault(db_map, {}).setdefault(entity_class_id, []).append(item_id)
+                auto_filter.setdefault(db_map, {}).setdefault(entity_class_id, set()).add(item_id)
         return auto_filter
 
     def emit_filter_changed(self, valid_values):

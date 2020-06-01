@@ -504,6 +504,22 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         entity_class = self.db_mngr.get_item_by_field(db_map, self.entity_class_type, "name", entity_class_name)
         return entity_class.get("id")
 
+    def filter_by(self, rows_per_column):
+        for column, rows in rows_per_column.items():
+            field = self.headerData(column)
+            menu = self._auto_filter_menus[field]
+            accepted_values = {self.index(row, column).data(Qt.EditRole) for row in rows}
+            menu.set_filter_accepted_values(accepted_values)
+            menu._filter._apply_filter()
+
+    def filter_excluding(self, rows_per_column):
+        for column, rows in rows_per_column.items():
+            field = self.headerData(column)
+            menu = self._auto_filter_menus[field]
+            rejected_values = {self.index(row, column).data(Qt.EditRole) for row in rows}
+            menu.set_filter_rejected_values(rejected_values)
+            menu._filter._apply_filter()
+
 
 class CompoundObjectParameterMixin:
     """Implements the interface for populating and filtering a compound object parameter model."""

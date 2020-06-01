@@ -124,6 +124,9 @@ class ParameterTableView(AutoFilterCopyPasteTableView):
         self._menu.addAction(self._data_store_form.ui.actionCopy)
         self._menu.addAction(self._data_store_form.ui.actionPaste)
         self._menu.addSeparator()
+        self._menu.addAction("Filter by", self.filter_by_selection)
+        self._menu.addAction("Filter excluding", self.filter_excluding_selection)
+        self._menu.addSeparator()
         self._menu.addAction(self._data_store_form.ui.actionRemove_selected)
 
     def contextMenuEvent(self, event):
@@ -145,6 +148,39 @@ class ParameterTableView(AutoFilterCopyPasteTableView):
         self._menu.exec_(event.globalPos())
         if is_value:
             plot_in_window_menu.deleteLater()
+
+    def _selected_rows_per_column(self):
+        """Computes selected rows per column.
+
+        Returns:
+            dict: Mapping columns to selected rows in that column.
+        """
+        selection = self.selectionModel().selection()
+        if not selection:
+            return {}
+        v_header = self.verticalHeader()
+        h_header = self.horizontalHeader()
+        rows_per_column = {}
+        for rng in sorted(selection, key=lambda x: h_header.visualIndex(x.left())):
+            for j in range(rng.left(), rng.right() + 1):
+                if h_header.isSectionHidden(j):
+                    continue
+                rows = rows_per_column.setdefault(j, set())
+                for i in range(rng.top(), rng.bottom() + 1):
+                    if v_header.isSectionHidden(i):
+                        continue
+                    rows.add(i)
+        return rows_per_column
+
+    @Slot(bool)
+    def filter_by_selection(self, checked=False):
+        rows_per_column = self._selected_rows_per_column()
+        self.model().filter_by(rows_per_column)
+
+    @Slot(bool)
+    def filter_excluding_selection(self, checked=False):
+        rows_per_column = self._selected_rows_per_column()
+        self.model().filter_excluding(rows_per_column)
 
     def remove_selected(self):
         """Removes selected indexes."""
