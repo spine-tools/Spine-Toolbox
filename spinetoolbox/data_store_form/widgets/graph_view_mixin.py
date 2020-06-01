@@ -386,7 +386,11 @@ class GraphViewMixin:
         for relationship in relationships:
             if relationship["id"] in prunned_entity_ids:
                 continue
-            object_id_list = {int(x) for x in relationship["object_id_list"].split(",")} - prunned_entity_ids
+            object_id_list = [
+                id_
+                for id_ in (int(x) for x in relationship["object_id_list"].split(","))
+                if id_ not in prunned_entity_ids
+            ]
             if len(object_id_list) < 2:
                 continue
             object_ids.update(object_id_list)
