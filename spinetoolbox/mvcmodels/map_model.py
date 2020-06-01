@@ -92,10 +92,10 @@ class MapModel(QAbstractTableModel):
         data = row[column_index]
         if role == Qt.EditRole:
             return to_database(data if data is not None else "")
-        if hasattr(data, "to_text"):
-            return data.to_text()
         if isinstance(data, DateTime):
             return str(data.value)
+        if isinstance(data, Duration):
+            return str(data)
         return data
 
     def flags(self, index):

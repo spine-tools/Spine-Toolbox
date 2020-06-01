@@ -17,22 +17,25 @@ Class for a custom QTextBrowser for showing the logs and tool output.
 """
 
 from PySide2.QtCore import Slot
-from PySide2.QtGui import QTextCursor
+from PySide2.QtGui import QDesktopServices, QTextCursor
 from PySide2.QtWidgets import QTextBrowser, QAction
 
 
 class CustomQTextBrowser(QTextBrowser):
-    """Custom QTextBrowser class.
-
-    Attributes:
-        parent (QWidget): Parent widget
-    """
+    """Custom QTextBrowser class."""
 
     def __init__(self, parent):
+        """
+        Args:
+            parent (QWidget): Parent widget
+        """
         super().__init__(parent=parent)
         self._max_blocks = 2000
+        self.setOpenExternalLinks(True)
+        self.setOpenLinks(False)  # Don't try open file:/// links in the browser widget, we'll open them externally
+        self.anchorClicked.connect(self._open_external_link)
 
-    @Slot(str, name="append")
+    @Slot(str)
     def append(self, text):
         """
         Appends new text block to the end of the current contents.
@@ -70,10 +73,14 @@ class CustomQTextBrowser(QTextBrowser):
 
     @property
     def max_blocks(self):
-        """Returns the upper limit of text blocks that can be appended to the widget."""
+        """int: the upper limit of text blocks that can be appended to the widget."""
         return self._max_blocks
 
     @max_blocks.setter
     def max_blocks(self, new_max):
-        """Sets the upper limit of text blocks that can be appended to the widget."""
         self._max_blocks = new_max if new_max > 0 else 2000
+
+    # pylint: disable=no-self-use
+    @Slot("QUrl")
+    def _open_external_link(self, link):
+        QDesktopServices.openUrl(link)

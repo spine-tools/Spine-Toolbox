@@ -21,12 +21,18 @@ import sys
 import logging
 from PySide2.QtGui import QFontDatabase
 from PySide2.QtWidgets import QApplication
+from .spinedb_api_version_check import spinedb_api_version_check
 
+# pylint: disable=wrong-import-position
+# Check for spinedb_api version before we try to import possibly non-existent stuff below.
+if not spinedb_api_version_check():
+    sys.exit(1)
 # Importing resources_icons_rc initializes resources and Font Awesome gets added to the application
-import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
+from . import resources_icons_rc  # pylint: disable=unused-import
 from .ui_main import ToolboxUI
-from .helpers import spinedb_api_version_check, pyside2_version_check, spine_engine_version_check
+from .helpers import pyside2_version_check, spine_engine_version_check
 from .version import __version__
+from .headless import headless_main
 
 
 def main():
@@ -39,12 +45,12 @@ def main():
     )
     if not pyside2_version_check():
         return 1
-    if not spinedb_api_version_check():
-        return 1
     if not spine_engine_version_check():
         return 1
     parser = _make_argument_parser()
     args = parser.parse_args()
+    if args.execute_only:
+        return headless_main(args)
     app = QApplication(sys.argv)
     status = QFontDatabase.addApplicationFont(":/fonts/fontawesome5-solid-webfont.ttf")
     if status < 0:
@@ -62,5 +68,6 @@ def _make_argument_parser():
     parser = ArgumentParser()
     version = f"Spine Toolbox {__version__}"
     parser.add_argument("-v", "--version", action="version", version=version)
+    parser.add_argument("--execute-only", help="execute given project only, do not open the GUI", action="store_true")
     parser.add_argument("project", help="project to open at startup", nargs="?", default="")
     return parser

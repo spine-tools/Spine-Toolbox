@@ -149,36 +149,15 @@ class RootProjectTreeItem(BaseProjectTreeItem):
 class CategoryProjectTreeItem(BaseProjectTreeItem):
     """Class for category project tree items."""
 
-    def __init__(self, name, description, item_maker, icon_maker, add_form_maker, properties_ui):
-        """
-        Args:
-            name (str): Category name
-            description (str): Category description
-            item_maker (function): A function for creating project items in this category
-            icon_maker (function): A function for creating icons (QGraphicsItems) for project items in this category
-            add_form_maker (function): A function for creating the form to add project items to this category
-            properties_ui (object): An object holding the Item Properties UI
-        """
-        super().__init__(name, description)
-        self._item_maker = item_maker
-        self._icon_maker = icon_maker
-        self._add_form_maker = add_form_maker
-        self._properties_ui = properties_ui
-
     def flags(self):
         """Returns the item flags."""
         return Qt.ItemIsEnabled
-
-    def item_maker(self):
-        """Returns the item maker method."""
-        return self._item_maker
 
     def add_child(self, child_item):
         """Adds given project tree item as the child of this category item. New item is added as the last item.
 
         Args:
             child_item (LeafProjectTreeTreeItem): Item to add
-            toolbox (ToolboxUI): A toolbox instance
         Returns:
             True for success, False otherwise
         """
@@ -187,16 +166,6 @@ class CategoryProjectTreeItem(BaseProjectTreeItem):
             return False
         self._children.append(child_item)
         child_item._parent = self
-        project_item = child_item.project_item
-        icon = project_item.get_icon()
-        if icon is not None:
-            icon.activate()
-        else:
-            icon = self._icon_maker(child_item.toolbox, project_item.x - 35, project_item.y - 35, 70, 70, project_item)
-            project_item.set_icon(icon)
-        project_item.set_properties_ui(self._properties_ui)
-        project_item.create_data_dir()
-        project_item.set_up()
         return True
 
     def custom_context_menu(self, parent, pos):

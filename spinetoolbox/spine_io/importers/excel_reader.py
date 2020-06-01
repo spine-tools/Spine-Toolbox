@@ -49,8 +49,8 @@ class ExcelConnector(SourceConnection):
     # Modal widget that that returns source object and action (OK, CANCEL)
     SELECT_SOURCE_UI = select_excel_file
 
-    def __init__(self):
-        super(ExcelConnector, self).__init__()
+    def __init__(self, settings):
+        super().__init__(settings)
         self._filename = None
         self._wb = None
 
@@ -182,9 +182,31 @@ class ExcelConnector(SourceConnection):
         return mapped_data, errors
 
 
+def get_mapped_data_from_xlsx(filepath):
+    """Returns mapped data from given Excel file assuming it has the default Spine Excel format.
+
+    Args:
+        filepath (str): path to Excel file
+    """
+    connector = ExcelConnector(None)
+    connector.connect_to_source(filepath)
+    mappings_per_sheet = {}
+    options_per_sheet = {}
+    for sheet in connector._wb.sheetnames:
+        mapping, options = create_mapping_from_sheet(connector._wb[sheet])
+        if mapping is not None:
+            mappings_per_sheet[sheet] = [mapping]
+        if options is not None:
+            options_per_sheet[sheet] = options
+    types = row_types = dict.fromkeys(mappings_per_sheet, {})
+    mapped_data, errors = connector.get_mapped_data(mappings_per_sheet, options_per_sheet, types, row_types)
+    connector.disconnect()
+    return mapped_data, errors
+
+
 def create_mapping_from_sheet(worksheet):
     """
-    Checks if sheet is a valid spine excel template, if so creates a
+    Checks if sheet has the default Spine Excel format, if so creates a
     mapping object for each sheet.
     """
 
@@ -198,7 +220,7 @@ def create_mapping_from_sheet(worksheet):
         return None, None
     if sheet_type.lower() not in ["relationship", "object"]:
         return None, None
-    if sheet_data.lower() not in ["parameter", "time series", "time pattern", "1d array"]:
+    if sheet_data.lower() not in ["parameter", "time series", "time pattern", "map", "array"]:
         return None, None
     if sheet_type.lower() == "relationship":
         mapping = RelationshipClassMapping()
@@ -235,7 +257,7 @@ def create_mapping_from_sheet(worksheet):
                     },
                 }
             )
-        elif sheet_data.lower() == "1d array":
+        elif sheet_data.lower() == "array":
             options.update({"header": False, "row": 3, "read_until_col": True, "read_until_row": False})
             mapping = RelationshipClassMapping.from_dict(
                 {
@@ -247,7 +269,7 @@ def create_mapping_from_sheet(worksheet):
                         "map_type": "parameter",
                         "name": {"map_type": "row", "value_reference": rel_dimension},
                         "extra_dimensions": [0],
-                        "parameter_type": "1d array",
+                        "parameter_type": "array",
                     },
                 }
             )
@@ -288,7 +310,7 @@ def create_mapping_from_sheet(worksheet):
                     },
                 }
             )
-        elif sheet_data.lower() == "1d array":
+        elif sheet_data.lower() == "array":
             options.update({"header": False, "row": 3, "read_until_col": True, "read_until_row": False})
             mapping = ObjectClassMapping.from_dict(
                 {
@@ -299,7 +321,7 @@ def create_mapping_from_sheet(worksheet):
                         "map_type": "parameter",
                         "name": {"map_type": "row", "value_reference": 1},
                         "extra_dimensions": [0],
-                        "parameter_type": "1d array",
+                        "parameter_type": "array",
                     },
                 }
             )

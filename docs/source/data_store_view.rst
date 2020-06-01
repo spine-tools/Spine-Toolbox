@@ -121,6 +121,8 @@ you can select two different input types:
 
 * *Parameter value*: display all objects (or relationships), as well as all parameters and parameter values
   for the selected object (or relationship) class.
+* *Indexed parameter expansion*: expands all parameter indexes, such as time stamps, into a list
+  under a new header block 'index'. The header block can be used to rearrange the table like any other header block.
 * *Relationship*: display only the objects (or relationships) for the selected object (or relationship) class.
 
 Pivoting and filtering data

@@ -10,10 +10,10 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-# Form implementation generated from reading ui file 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\ui\datetime_editor.ui',
-# licensing of 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\ui\datetime_editor.ui' applies.
+# Form implementation generated from reading ui file 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\datetime_editor.ui',
+# licensing of 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\datetime_editor.ui' applies.
 #
-# Created: Thu Feb 13 11:53:57 2020
+# Created: Mon May 11 15:50:30 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -50,5 +50,5 @@ class Ui_DatetimeEditor(object):
         DatetimeEditor.setWindowTitle(QtWidgets.QApplication.translate("DatetimeEditor", "Form", None, -1))
         self.datetime_edit_label.setText(QtWidgets.QApplication.translate("DatetimeEditor", "Datetime", None, -1))
         self.datetime_edit.setDisplayFormat(QtWidgets.QApplication.translate("DatetimeEditor", "yyyy-MM-ddTHH:mm:ss", None, -1))
-        self.format_label.setText(QtWidgets.QApplication.translate("DatetimeEditor", "Format: YYYY-DD-MMThh:mm:ss", None, -1))
+        self.format_label.setText(QtWidgets.QApplication.translate("DatetimeEditor", "Format: YYYY--MM-DDThh:mm:ss", None, -1))
 

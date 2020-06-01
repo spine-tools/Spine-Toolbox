@@ -94,24 +94,16 @@ class TestExcelIntegration(unittest.TestCase):
         )
 
         # create parameters
-        p1 = db_map.add_parameter_definitions(*[{'name': 'parameter1', 'object_class_id': oc_1.id}])[0].first()
-        p2 = db_map.add_parameter_definitions(*[{'name': 'parameter2', 'object_class_id': oc_1.id}])[0].first()
-        p3 = db_map.add_parameter_definitions(*[{'name': 'parameter3', 'object_class_id': oc_2.id}])[0].first()
-        p4 = db_map.add_parameter_definitions(*[{'name': 'parameter4', 'object_class_id': oc_2.id}])[0].first()
-        p5 = db_map.add_parameter_definitions(*[{'name': 'parameter5', 'object_class_id': oc_3.id}])[0].first()
-        p6 = db_map.add_parameter_definitions(*[{'name': 'parameter6', 'object_class_id': oc_3.id}])[0].first()
-        rel_p1 = db_map.add_parameter_definitions(*[{'name': 'rel_parameter1', 'relationship_class_id': relc1.id}])[
-            0
-        ].first()
-        rel_p2 = db_map.add_parameter_definitions(*[{'name': 'rel_parameter2', 'relationship_class_id': relc1.id}])[
-            0
-        ].first()
-        rel_p3 = db_map.add_parameter_definitions(*[{'name': 'rel_parameter3', 'relationship_class_id': relc1.id}])[
-            0
-        ].first()
-        rel_p4 = db_map.add_parameter_definitions(*[{'name': 'rel_parameter4', 'relationship_class_id': relc1.id}])[
-            0
-        ].first()
+        p1 = db_map.add_parameter_definition(**{'name': 'parameter1', 'object_class_id': oc_1.id})
+        p2 = db_map.add_parameter_definition(**{'name': 'parameter2', 'object_class_id': oc_1.id})
+        p3 = db_map.add_parameter_definition(**{'name': 'parameter3', 'object_class_id': oc_2.id})
+        p4 = db_map.add_parameter_definition(**{'name': 'parameter4', 'object_class_id': oc_2.id})
+        p5 = db_map.add_parameter_definition(**{'name': 'parameter5', 'object_class_id': oc_3.id})
+        p6 = db_map.add_parameter_definition(**{'name': 'parameter6', 'object_class_id': oc_3.id})
+        rel_p1 = db_map.add_parameter_definition(**{'name': 'rel_parameter1', 'relationship_class_id': relc1.id})
+        rel_p2 = db_map.add_parameter_definition(**{'name': 'rel_parameter2', 'relationship_class_id': relc1.id})
+        rel_p3 = db_map.add_parameter_definition(**{'name': 'rel_parameter3', 'relationship_class_id': relc1.id})
+        rel_p4 = db_map.add_parameter_definition(**{'name': 'rel_parameter4', 'relationship_class_id': relc1.id})
 
         # add parameter values
         db_map.add_parameter_value(
@@ -255,7 +247,7 @@ class TestExcelIntegration(unittest.TestCase):
         self.assertEqual(parv, parv_org, msg='Difference in parameter values')
 
     def _import_xlsx_to_database(self, excel_file_name, db_map):
-        connector = ExcelConnector()
+        connector = ExcelConnector(None)
         connector.connect_to_source(excel_file_name)
         sheets = connector.get_tables()
         table_mappings = {

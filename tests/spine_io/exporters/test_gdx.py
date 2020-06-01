@@ -15,7 +15,7 @@ Unit tests for spinetoolbox.spine_io.exporters.gdx module.
 :author: A. Soininen (VTT)
 :date:   18.9.2019
 """
-
+import math
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
@@ -55,34 +55,6 @@ class TestGdx(unittest.TestCase):
         self.assertEqual(regular_set.name, "name")
         self.assertEqual(regular_set.records, [])
 
-    def test_Set_from_object_class(self):
-        with TemporaryDirectory() as tmp_dir_name:
-            database_map = self._make_database_map(tmp_dir_name, "test_Set_from_object_class.sqlite")
-            dbmanip.import_object_classes(database_map, ["domain"])
-            domain = gdx.Set.from_object_class(database_map.object_class_list()[0])
-            database_map.connection.close()
-        self.assertEqual(domain.description, "")
-        self.assertEqual(domain.domain_names, [None])
-        self.assertEqual(domain.dimensions, 1)
-        self.assertEqual(domain.name, "domain")
-        self.assertEqual(domain.records, [])
-        self.assertTrue(domain.is_domain())
-
-    def test_Set_from_relationship_class(self):
-        with TemporaryDirectory() as tmp_dir_name:
-            database_map = TestGdx._make_database_map(tmp_dir_name, "test_Set_from_relationship_class.sqlite")
-            dbmanip.import_object_classes(database_map, ["domain1"])
-            dbmanip.import_object_classes(database_map, ["domain2"])
-            dbmanip.import_relationship_classes(database_map, [("set", ["domain1", "domain2"])])
-            regular_set = gdx.Set.from_relationship_class(database_map.wide_relationship_class_list()[0])
-            database_map.connection.close()
-        self.assertEqual(regular_set.description, "")
-        self.assertEqual(regular_set.domain_names, ["domain1", "domain2"])
-        self.assertEqual(regular_set.dimensions, 2)
-        self.assertEqual(regular_set.name, "set")
-        self.assertEqual(regular_set.records, [])
-        self.assertFalse(regular_set.is_domain())
-
     def test_Set_from_dict(self):
         original_set = gdx.Set("set name", "description", ["index1", "index2"])
         original_set.records += [gdx.Record(("key1", "key2")), gdx.Record(("key1", "key3"))]
@@ -100,26 +72,6 @@ class TestGdx(unittest.TestCase):
         self.assertEqual(record.keys, ("key1", "key2"))
         self.assertEqual(record.name, "key1,key2")
 
-    def test_Record_from_object(self):
-        with TemporaryDirectory() as tmp_dir_name:
-            database_map = self._make_database_map(tmp_dir_name, "test_Record_from_object.sqlite")
-            dbmanip.import_object_classes(database_map, ["domain"])
-            dbmanip.import_objects(database_map, [("domain", "record")])
-            record = gdx.Record.from_object(database_map.object_list()[0])
-            database_map.connection.close()
-        self.assertEqual(record.keys, ("record",))
-
-    def test_Record_from_relationship(self):
-        with TemporaryDirectory() as tmp_dir_name:
-            database_map = self._make_database_map(tmp_dir_name, "test_Record_from_relationship.sqlite")
-            dbmanip.import_object_classes(database_map, ["domain"])
-            dbmanip.import_objects(database_map, [("domain", "record")])
-            dbmanip.import_relationship_classes(database_map, [("set", ["domain"])])
-            dbmanip.import_relationships(database_map, [("set", ["record"])])
-            record = gdx.Record.from_relationship(database_map.wide_relationship_list()[0])
-            database_map.connection.close()
-        self.assertEqual(record.keys, ("record",))
-
     def test_Record_from_dict(self):
         original = gdx.Record(("keyA", "keyB", "keyC"))
         record_dict = original.to_dict()
@@ -129,82 +81,32 @@ class TestGdx(unittest.TestCase):
     def test_Parameter_construction(self):
         parameter = gdx.Parameter(["set name1", "set name2"], [("key1", "key2")], [5.5])
         self.assertEqual(parameter.domain_names, ["set name1", "set name2"])
-        self.assertEqual(len(parameter.indexes), 1)
-        self.assertEqual(parameter.indexes[0], ("key1", "key2"))
-        self.assertEqual(len(parameter.values), 1)
-        self.assertEqual(parameter.values[0], 5.5)
-
-    def test_Parameter_from_object_parameter(self):
-        parameter = self._object_parameter()
-        self.assertEqual(parameter.domain_names, ["domain"])
-        self.assertEqual(parameter.indexes, [("record",)])
-        self.assertEqual(parameter.values, [-4.2])
-
-    def test_Parameter_from_relationship_parameter(self):
-        parameter = self._relationship_parameter()
-        self.assertEqual(parameter.domain_names, ["domain1", "domain2"])
-        self.assertEqual(parameter.indexes, [("recordA", "recordB")])
-        self.assertEqual(parameter.values, [3.14])
-
-    def test_Parameter_append_value(self):
-        parameter = gdx.Parameter(["domain"], [("index1",)], [-1.1])
-        parameter.append_value(("index2",), -2.2)
-        self.assertEqual(parameter.indexes, [("index1",), ("index2",)])
-        self.assertEqual(parameter.values, [-1.1, -2.2])
-
-    def test_Parameter_append_object_parameter(self):
-        with TemporaryDirectory() as tmp_dir_name:
-            database_map = self._make_database_map(tmp_dir_name, "test_Parameter_append_object_parameter.sqlite")
-            dbmanip.import_object_classes(database_map, ["domain"])
-            dbmanip.import_objects(database_map, [("domain", "record1")])
-            dbmanip.import_objects(database_map, [("domain", "record2")])
-            dbmanip.import_object_parameters(database_map, [("domain", "parameter")])
-            dbmanip.import_object_parameter_values(database_map, [("domain", "record1", "parameter", 1.1)])
-            dbmanip.import_object_parameter_values(database_map, [("domain", "record2", "parameter", 2.2)])
-            parameter = gdx.Parameter.from_object_parameter(database_map.object_parameter_value_list()[0])
-            parameter.append_object_parameter(database_map.object_parameter_value_list()[1])
-            database_map.connection.close()
-        self.assertEqual(parameter.domain_names, ["domain"])
-        self.assertEqual(parameter.indexes, [("record1",), ("record2",)])
-        self.assertEqual(parameter.values, [1.1, 2.2])
-
-    def test_Parameter_append_relationship_parameter(self):
-        with TemporaryDirectory() as tmp_dir_name:
-            database_map = self._make_database_map(tmp_dir_name, "test_Parameter_append_relationship_parameter.sqlite")
-            dbmanip.import_object_classes(database_map, ["domain"])
-            dbmanip.import_objects(database_map, [("domain", "record1")])
-            dbmanip.import_objects(database_map, [("domain", "record2")])
-            dbmanip.import_relationship_classes(database_map, [("set", ["domain"])])
-            dbmanip.import_relationships(database_map, [("set", ["record1"])])
-            dbmanip.import_relationships(database_map, [("set", ["record2"])])
-            dbmanip.import_relationship_parameters(database_map, [("set", "parameter")])
-            dbmanip.import_relationship_parameter_values(database_map, [["set", ["record1"], "parameter", 3.14]])
-            dbmanip.import_relationship_parameter_values(database_map, [["set", ["record2"], "parameter", 6.28]])
-            parameter = gdx.Parameter.from_relationship_parameter(database_map.relationship_parameter_value_list()[0])
-            parameter.append_relationship_parameter(database_map.relationship_parameter_value_list()[1])
-            database_map.connection.close()
-        self.assertEqual(parameter.domain_names, ["domain"])
-        self.assertEqual(parameter.indexes, [("record1",), ("record2",)])
-        self.assertEqual(parameter.values, [3.14, 6.28])
+        self.assertEqual(parameter.data, {("key1", "key2"): 5.5})
+        self.assertEqual(list(parameter.indexes), [("key1", "key2")])
+        self.assertEqual(list(parameter.values), [5.5])
 
     def test_Parameter_slurp(self):
         parameter = gdx.Parameter(["domain"], [("label1",)], [4.2])
         slurpable = gdx.Parameter(["domain"], [("label2",)], [3.3])
         parameter.slurp(slurpable)
         self.assertEqual(parameter.domain_names, ["domain"])
-        self.assertEqual(parameter.indexes, [("label1",), ("label2",)])
-        self.assertEqual(parameter.values, [4.2, 3.3])
+        self.assertEqual(list(parameter.indexes), [("label1",), ("label2",)])
+        self.assertEqual(list(parameter.values), [4.2, 3.3])
 
     def test_parameter_is_scalar(self):
         parameter = gdx.Parameter(["domain"], [("label",)], [2.0])
         self.assertTrue(parameter.is_scalar())
-        parameter.values = [TimeSeriesFixedResolution("2019-12-05T01:01:00", "1h", [4.2, 5.3], False, False)]
+        parameter = gdx.Parameter(
+            ["domain"], [("label",)], [TimeSeriesFixedResolution("2019-12-05T01:01:00", "1h", [4.2, 5.3], False, False)]
+        )
         self.assertFalse(parameter.is_scalar())
 
     def test_parameter_is_indexed(self):
         parameter = gdx.Parameter(["domain"], [("label",)], [2.0])
         self.assertFalse(parameter.is_indexed())
-        parameter.values = [TimeSeriesFixedResolution("2019-12-05T01:01:00", "1h", [4.2, 5.3], False, False)]
+        parameter = gdx.Parameter(
+            ["domain"], [("label",)], [TimeSeriesFixedResolution("2019-12-05T01:01:00", "1h", [4.2, 5.3], False, False)]
+        )
         self.assertTrue(parameter.is_indexed())
 
     def test_Parameter_expand_indexes(self):
@@ -213,7 +115,7 @@ class TestGdx(unittest.TestCase):
         parameter = gdx.Parameter(
             ["domain1", "domain2"], [("index1", "index2"), ("index1", "index3")], [time_series1, time_series2]
         )
-        setting = gdx.IndexingSetting(parameter)
+        setting = gdx.IndexingSetting(parameter, "unknown_set")
         setting.index_position = 1
         setting.indexing_domain = gdx.IndexingDomain(
             "stamp domain", "description", [("stamp1",), ("stamp2",)], [True, True]
@@ -221,15 +123,14 @@ class TestGdx(unittest.TestCase):
         parameter.expand_indexes(setting)
         self.assertEqual(parameter.domain_names, ["domain1", "stamp domain", "domain2"])
         self.assertEqual(
-            parameter.indexes,
-            [
-                ("index1", "stamp1", "index2"),
-                ("index1", "stamp2", "index2"),
-                ("index1", "stamp1", "index3"),
-                ("index1", "stamp2", "index3"),
-            ],
+            parameter.data,
+            {
+                ("index1", "stamp1", "index2"): 4.2,
+                ("index1", "stamp2", "index2"): 5.3,
+                ("index1", "stamp1", "index3"): -4.2,
+                ("index1", "stamp2", "index3"): -5.3,
+            },
         )
-        self.assertEqual(parameter.values, [4.2, 5.3, -4.2, -5.3])
 
     def test_Parameter_equality(self):
         parameter1 = gdx.Parameter(["domain"], [("label",)], [2.0])
@@ -256,7 +157,7 @@ class TestGdx(unittest.TestCase):
         self.assertEqual(restored.indexes, [("A", "B")])
         self.assertEqual(restored.pick_list, [True, False])
 
-    def test_Settings_construction(self):
+    def test_SetSettings_construction(self):
         domain_names, set_names, records, settings = self._make_settings()
         self.assertEqual(settings.sorted_domain_names, domain_names)
         self.assertEqual(settings.domain_metadatas, 2 * [gdx.SetMetadata()])
@@ -266,7 +167,7 @@ class TestGdx(unittest.TestCase):
             self.assertEqual(settings.sorted_record_key_lists(keys), records[keys])
         self.assertEqual(settings.global_parameters_domain_name, "")
 
-    def test_Settings_serialization_to_dictionary(self):
+    def test_SetSettings_serialization_to_dictionary(self):
         domain_metadatas = [
             gdx.SetMetadata(gdx.ExportFlag.FORCED_NON_EXPORTABLE, True),
             gdx.SetMetadata(gdx.ExportFlag.FORCED_EXPORTABLE, False),
@@ -279,7 +180,7 @@ class TestGdx(unittest.TestCase):
         global_domain_name = 'global parameter domain'
         domain_names, set_names, _, settings = self._make_settings(domain_metadatas, set_metadatas, global_domain_name)
         settings_as_dict = settings.to_dict()
-        recovered = gdx.Settings.from_dict(settings_as_dict)
+        recovered = gdx.SetSettings.from_dict(settings_as_dict)
         self.assertEqual(recovered.sorted_domain_names, settings.sorted_domain_names)
         self.assertEqual(recovered.domain_metadatas, settings.domain_metadatas)
         self.assertEqual(recovered.sorted_set_names, settings.sorted_set_names)
@@ -296,15 +197,14 @@ class TestGdx(unittest.TestCase):
         create_new_spine_database(database_url)
         return DiffDatabaseMapping(database_url)
 
-    def test_domains_are_read_correctly_form_database(self):
+    def test_object_classes_to_domains(self):
         with TemporaryDirectory() as tmp_dir_name:
-            database_map = self._make_database_map(tmp_dir_name, "test_domains_are_read_correctly_form_database.sqlite")
+            database_map = self._make_database_map(tmp_dir_name, "test_object_classes_to_domains.sqlite")
             dbmanip.import_object_classes(database_map, ["domain"])
             dbmanip.import_objects(database_map, [("domain", "record")])
-            dbmanip.import_object_parameters(database_map, [("domain", "parameter")])
-            dbmanip.import_object_parameter_values(database_map, [("domain", "record", "parameter", -123.4)])
-            domains, parameters = gdx.object_classes_to_domains(database_map)
+            domains_with_ids = gdx.object_classes_to_domains(database_map, {"domain"})
             database_map.connection.close()
+        domains = list(domains_with_ids.values())
         self.assertEqual(len(domains), 1)
         domain = domains[0]
         self.assertEqual(domain.name, "domain")
@@ -313,23 +213,79 @@ class TestGdx(unittest.TestCase):
         self.assertEqual(len(records), 1)
         record = records[0]
         self.assertEqual(record.keys, ("record",))
-        self.assertEqual(len(parameters), 1)
-        parameter = parameters["parameter"]
-        self.assertEqual(parameter.domain_names, ["domain"])
-        self.assertEqual(parameter.indexes, [("record",)])
-        self.assertEqual(parameter.values, [-123.4])
 
-    def test_sets_are_read_correctly_form_database(self):
+    def test_object_classes_to_domains_filters_domains_not_on_the_list(self):
         with TemporaryDirectory() as tmp_dir_name:
-            database_map = self._make_database_map(tmp_dir_name, "test_sets_are_read_correctly_form_database.sqlite")
+            database_map = self._make_database_map(
+                tmp_dir_name, "test_object_classes_to_domains_filters_domains_not_on_the_list.sqlite"
+            )
+            dbmanip.import_object_classes(database_map, ["domain", "ignored"])
+            dbmanip.import_objects(database_map, [("domain", "record"), ("ignored", "ignored_record")])
+            domains_with_ids = gdx.object_classes_to_domains(database_map, {"domain"})
+            database_map.connection.close()
+        domains = list(domains_with_ids.values())
+        self.assertEqual(len(domains), 1)
+        domain = domains[0]
+        self.assertEqual(domain.name, "domain")
+        self.assertEqual(domain.description, "")
+        records = domain.records
+        self.assertEqual(len(records), 1)
+        record = records[0]
+        self.assertEqual(record.keys, ("record",))
+
+    def test_object_classes_to_domains_replaces_missing_parameter_values_with_default_values(self):
+        with TemporaryDirectory() as tmp_dir_name:
+            database_map = self._make_database_map(
+                tmp_dir_name,
+                "test_object_classes_to_domains_replaces_missing_parameter_values_with_default_values.sqlite",
+            )
+            dbmanip.import_object_classes(database_map, ["domain"])
+            dbmanip.import_objects(database_map, [("domain", "record")])
+            domains_with_ids = gdx.object_classes_to_domains(database_map, {"domain"})
+            database_map.connection.close()
+        domains = list(domains_with_ids.values())
+        self.assertEqual(len(domains), 1)
+        domain = domains[0]
+        self.assertEqual(domain.name, "domain")
+        self.assertEqual(domain.description, "")
+        records = domain.records
+        self.assertEqual(len(records), 1)
+        record = records[0]
+        self.assertEqual(record.keys, ("record",))
+
+    def test_object_parameters_constructs_parameters_from_parameter_definitions(self):
+        with TemporaryDirectory() as tmp_dir_name:
+            database_map = self._make_database_map(tmp_dir_name, "test_object_classes_to_domains.sqlite")
+            dbmanip.import_object_classes(database_map, ["domain"])
+            dbmanip.import_objects(database_map, [("domain", "record")])
+            dbmanip.import_object_parameters(database_map, [("domain", "parameter", 3.14)])
+            domains_with_ids = gdx.object_classes_to_domains(database_map, {"domain"})
+            parameters = gdx.object_parameters(database_map, domains_with_ids, None)
+            database_map.connection.close()
+        self.assertEqual(parameters, {"parameter": gdx.Parameter(["domain"], [("record",)], [3.14])})
+
+    def test_object_parameters_uses_actual_parameter_value_if_available(self):
+        with TemporaryDirectory() as tmp_dir_name:
+            database_map = self._make_database_map(tmp_dir_name, "test_object_classes_to_domains.sqlite")
+            dbmanip.import_object_classes(database_map, ["domain"])
+            dbmanip.import_objects(database_map, [("domain", "record")])
+            dbmanip.import_object_parameters(database_map, [("domain", "parameter", 3.14)])
+            dbmanip.import_object_parameter_values(database_map, [("domain", "record", "parameter", 2.3)])
+            domains_with_ids = gdx.object_classes_to_domains(database_map, {"domain"})
+            parameters = gdx.object_parameters(database_map, domains_with_ids, None)
+            database_map.connection.close()
+        self.assertEqual(parameters, {"parameter": gdx.Parameter(["domain"], [("record",)], [2.3])})
+
+    def test_relationship_classes_to_sets(self):
+        with TemporaryDirectory() as tmp_dir_name:
+            database_map = self._make_database_map(tmp_dir_name, "test_relationship_classes_to_sets.sqlite")
             dbmanip.import_object_classes(database_map, ["domain"])
             dbmanip.import_objects(database_map, [("domain", "record")])
             dbmanip.import_relationship_classes(database_map, [("set", ["domain"])])
             dbmanip.import_relationships(database_map, [("set", ["record"])])
-            dbmanip.import_relationship_parameters(database_map, [("set", "parameter")])
-            dbmanip.import_relationship_parameter_values(database_map, [["set", ["record"], "parameter", 3.14]])
-            sets, set_parameters = gdx.relationship_classes_to_sets(database_map)
+            sets_with_ids = gdx.relationship_classes_to_sets(database_map, {"domain"}, {"set"})
             database_map.connection.close()
+        sets = list(sets_with_ids.values())
         self.assertEqual(len(sets), 1)
         set_item = sets[0]
         self.assertEqual(set_item.name, "set")
@@ -338,10 +294,67 @@ class TestGdx(unittest.TestCase):
         self.assertEqual(len(set_item.records), 1)
         record = set_item.records[0]
         self.assertEqual(record.keys, ("record",))
-        self.assertEqual(len(set_parameters), 1)
-        self.assertEqual(set_parameters["parameter"].domain_names, ["domain"])
-        self.assertEqual(set_parameters["parameter"].indexes, [("record",)])
-        self.assertEqual(set_parameters["parameter"].values, [3.14])
+
+    def test_relationship_classes_to_sets_filters_sets_not_on_the_list(self):
+        with TemporaryDirectory() as tmp_dir_name:
+            database_map = self._make_database_map(
+                tmp_dir_name, "test_relationship_classes_to_sets_filters_sets_not_on_the_list.sqlite"
+            )
+            dbmanip.import_object_classes(database_map, ["domain"])
+            dbmanip.import_objects(database_map, [("domain", "record")])
+            dbmanip.import_relationship_classes(database_map, [("set", ["domain"]), ("ignored", ["domain"])])
+            dbmanip.import_relationships(database_map, [("set", ["record"]), ("ignored", ["record"])])
+            sets_with_ids = gdx.relationship_classes_to_sets(database_map, {"domain"}, {"set"})
+            database_map.connection.close()
+        sets = list(sets_with_ids.values())
+        self.assertEqual(len(sets), 1)
+        set_item = sets[0]
+        self.assertEqual(set_item.name, "set")
+        self.assertEqual(set_item.domain_names, ["domain"])
+        self.assertEqual(set_item.dimensions, 1)
+        self.assertEqual(len(set_item.records), 1)
+        record = set_item.records[0]
+        self.assertEqual(record.keys, ("record",))
+
+    def test_relationship_classes_to_sets_filters_sets_without_indexing_domains(self):
+        with TemporaryDirectory() as tmp_dir_name:
+            database_map = self._make_database_map(
+                tmp_dir_name, "test_relationship_classes_to_sets_filters_sets_without_indexing_domains.sqlite"
+            )
+            dbmanip.import_object_classes(database_map, ["domain"])
+            dbmanip.import_objects(database_map, [("domain", "record")])
+            dbmanip.import_relationship_classes(database_map, [("set", ["domain"])])
+            dbmanip.import_relationships(database_map, [("set", ["record"])])
+            sets_with_ids = gdx.relationship_classes_to_sets(database_map, set(), {"set"})
+            database_map.connection.close()
+        self.assertFalse(bool(sets_with_ids))
+
+    def test_relationship_parameters_construct_parameters_from_parameter_definitions(self):
+        with TemporaryDirectory() as tmp_dir_name:
+            database_map = self._make_database_map(tmp_dir_name, "test_relationship_classes_to_sets.sqlite")
+            dbmanip.import_object_classes(database_map, ["domain"])
+            dbmanip.import_objects(database_map, [("domain", "record")])
+            dbmanip.import_relationship_classes(database_map, [("set", ["domain"])])
+            dbmanip.import_relationships(database_map, [("set", ["record"])])
+            dbmanip.import_relationship_parameters(database_map, [("set", "parameter", 3.14)])
+            sets_with_ids = gdx.relationship_classes_to_sets(database_map, {"domain"}, {"set"})
+            parameters = gdx.relationship_parameters(database_map, sets_with_ids, None)
+            database_map.connection.close()
+        self.assertEqual(parameters, {"parameter": gdx.Parameter(["domain"], [("record",)], [3.14])})
+
+    def test_relationship_parameters_uses_actual_parameter_values_if_available(self):
+        with TemporaryDirectory() as tmp_dir_name:
+            database_map = self._make_database_map(tmp_dir_name, "test_relationship_classes_to_sets.sqlite")
+            dbmanip.import_object_classes(database_map, ["domain"])
+            dbmanip.import_objects(database_map, [("domain", "record")])
+            dbmanip.import_relationship_classes(database_map, [("set", ["domain"])])
+            dbmanip.import_relationships(database_map, [("set", ["record"])])
+            dbmanip.import_relationship_parameters(database_map, [("set", "parameter", 3.14)])
+            dbmanip.import_relationship_parameter_values(database_map, [["set", ["record"], "parameter", 2.3]])
+            sets_with_ids = gdx.relationship_classes_to_sets(database_map, {"domain"}, {"set"})
+            parameters = gdx.relationship_parameters(database_map, sets_with_ids, None)
+            database_map.connection.close()
+        self.assertEqual(parameters, {"parameter": gdx.Parameter(["domain"], [("record",)], [2.3])})
 
     def test_domain_names_and_records(self):
         with TemporaryDirectory() as tmp_dir_name:
@@ -442,7 +455,7 @@ class TestGdx(unittest.TestCase):
         domain = gdx.Set("object_class_name")
         record = gdx.Record(("mock_object_name",))
         domain.records.append(record)
-        parameters = {"mock_parameter_name": gdx.Parameter(["object_class_name"], [["mock_object_name"]], [2.3])}
+        parameters = {"mock_parameter_name": gdx.Parameter(["object_class_name"], [("mock_object_name",)], [2.3])}
         gams_directory = gdx_utils.find_gams_directory()
         with TemporaryDirectory() as temp_directory:
             path_to_gdx = Path(temp_directory).joinpath("test_domain_parameters_to_gams_scalars.gdx")
@@ -455,39 +468,35 @@ class TestGdx(unittest.TestCase):
 
     def test_IndexingSetting_construction(self):
         time_series = TimeSeriesFixedResolution("2019-12-05T01:01:00", "1h", [4.2, 5.3], False, False)
-        setting = gdx.IndexingSetting(gdx.Parameter(["domain"], [("keyA",)], [time_series]))
+        setting = gdx.IndexingSetting(gdx.Parameter(["domain"], [("keyA",)], [time_series]), "domain1")
         self.assertIsNone(setting.indexing_domain)
         self.assertEqual(setting.index_position, 1)
+        self.assertEqual(setting.set_name, "domain1")
 
     def test_IndexingSetting_append_parameter(self):
         time_series1 = TimeSeriesFixedResolution("2019-12-05T01:01:00", "1h", [4.2, 5.3], False, False)
-        setting = gdx.IndexingSetting(gdx.Parameter(["domain"], [("keyA",)], [time_series1]))
+        setting = gdx.IndexingSetting(gdx.Parameter(["domain"], [("keyA",)], [time_series1]), "domain")
         time_series2 = TimeSeriesFixedResolution("2019-12-05T01:01:00", "1h", [-4.2, -5.3], False, False)
         setting.append_parameter(gdx.Parameter(["domain"], [("keyB",)], [time_series2]))
         self.assertEqual(setting.parameter.domain_names, ["domain"])
-        self.assertEqual(setting.parameter.indexes, [("keyA",), ("keyB",)])
-        self.assertEqual(setting.parameter.values, [time_series1, time_series2])
+        self.assertEqual(list(setting.parameter.indexes), [("keyA",), ("keyB",)])
+        self.assertEqual(list(setting.parameter.values), [time_series1, time_series2])
 
-    def test_filter_and_sort_sets(self):
+    def test_sort_sets(self):
         set_object = self._NamedObject
         sets = [set_object("set1"), set_object("set2"), set_object("set3")]
         set_names = ["set2", "set1", "set3"]
-        set_metadata = [
-            gdx.SetMetadata(gdx.ExportFlag.EXPORTABLE),
-            gdx.SetMetadata(gdx.ExportFlag.FORCED_EXPORTABLE),
-            gdx.SetMetadata(gdx.ExportFlag.NON_EXPORTABLE),
-        ]
-        filtered = gdx.filter_and_sort_sets(sets, set_names, set_metadata)
-        self.assertEqual(filtered, [set_object("set2"), set_object("set1")])
+        sorted_sets = gdx.sort_sets(sets, set_names)
+        self.assertEqual(sorted_sets, [set_object("set2"), set_object("set1"), set_object("set3")])
 
     def test_sort_records_in_place(self):
         class Settings:
             # pylint: disable=no-self-use
             def sorted_record_key_lists(self, domain_name):
                 if domain_name == "d1":
-                    return [["rB"], ["rA"]]
+                    return [("rB",), ("rA",)]
                 if domain_name == "d2":
-                    return [["rD"], ["rC"]]
+                    return [("rD",), ("rC",)]
                 raise NotImplementedError()
 
         class Domain:
@@ -502,10 +511,10 @@ class TestGdx(unittest.TestCase):
             def __eq__(self, other):
                 return self.keys == other.keys
 
-        domains = [Domain("d1", [Record(["rA"]), Record(["rB"])]), Domain("d2", [Record(["rC"]), Record(["rD"])])]
+        domains = [Domain("d1", [Record(("rA",)), Record(("rB",))]), Domain("d2", [Record(("rC",)), Record(("rD",))])]
         gdx.sort_records_inplace(domains, Settings())
-        self.assertEqual(domains[0].records, [Record(["rB"]), Record(["rA"])])
-        self.assertEqual(domains[1].records, [Record(["rD"]), Record(["rC"])])
+        self.assertEqual(domains[0].records, [Record(("rB",)), Record(("rA",))])
+        self.assertEqual(domains[1].records, [Record(("rD",)), Record(("rC",))])
 
     def test_extract_domain(self):
         domain_set = self._NamedObject
@@ -543,7 +552,7 @@ class TestGdx(unittest.TestCase):
                 "set1": [("record12",), ("record11",)],
                 "set2": [("record12", "record21"), ("record11", "record21")],
             }
-            settings = gdx.Settings(sorted_domain_names, sorted_set_names, sorted_records)
+            settings = gdx.SetSettings(sorted_domain_names, sorted_set_names, sorted_records)
             path_to_gdx = Path(tmp_dir_name).joinpath(
                 "test_to_gdx_file_sorts_domains_and_sets_and_records_correctly.gdx"
             )
@@ -587,7 +596,7 @@ class TestGdx(unittest.TestCase):
             dbmanip.import_object_parameter_values(
                 database_map, [("global_domain", "record", "global_parameter", -4.2)]
             )
-            settings = gdx.make_settings(database_map)
+            settings = gdx.make_set_settings(database_map)
             settings.global_parameters_domain_name = "global_domain"
             path_to_gdx = Path(tmp_dir_name).joinpath(
                 "test_to_gdx_file_sorts_domains_and_sets_and_records_correctly.gdx"
@@ -609,7 +618,7 @@ class TestGdx(unittest.TestCase):
             additional_domains = [gdx.Set("extra_domain", "A bonus domain")]
             additional_domains[0].records.append(gdx.Record(("record1",)))
             additional_domains[0].records.append(gdx.Record(("record2",)))
-            settings = gdx.Settings(sorted_domain_names, [], sorted_records)
+            settings = gdx.SetSettings(sorted_domain_names, [], sorted_records)
             path_to_gdx = Path(tmp_dir_name).joinpath("test_to_gdx_file_exports_additional_domains.gdx")
             gdx.to_gdx_file(database_map, path_to_gdx, additional_domains, settings, {}, {}, gams_directory)
             database_map.connection.close()
@@ -675,14 +684,14 @@ class TestGdx(unittest.TestCase):
                 "set1": [("record12",), ("record11",)],
                 "set2": [("record12", "record21"), ("record11", "record21")],
             }
-            settings = gdx.Settings(sorted_domain_names, sorted_set_names, sorted_records)
-            externally_indexed_parameter = gdx._find_parameter("externally_indexed", database_map)
-            externally_indexed_setting = gdx.IndexingSetting(externally_indexed_parameter)
+            settings = gdx.SetSettings(sorted_domain_names, sorted_set_names, sorted_records)
+            externally_indexed_parameter, set_name = gdx._find_indexed_parameter("externally_indexed", database_map)
+            externally_indexed_setting = gdx.IndexingSetting(externally_indexed_parameter, set_name)
             externally_indexed_setting.indexing_domain = gdx.IndexingDomain(
                 "external_indexes", "", [("T0001",), ("T0002",), ("T0003",)], [True, True, True]
             )
-            internally_indexed_parameter = gdx._find_parameter("internally_indexed", database_map)
-            internally_indexed_setting = gdx.IndexingSetting(internally_indexed_parameter)
+            internally_indexed_parameter, set_name = gdx._find_indexed_parameter("internally_indexed", database_map)
+            internally_indexed_setting = gdx.IndexingSetting(internally_indexed_parameter, set_name)
             internally_indexed_setting.indexing_domain = gdx.IndexingDomain(
                 "internal_indexes", "", [("stamp1",), ("stamp2",)], [True, True]
             )
@@ -739,26 +748,34 @@ class TestGdx(unittest.TestCase):
                     self.assertEqual(gams_record, expected_name)
                 gams_parameter = gdx_file["scalar"]
                 self.assertEqual(gams_parameter.domain, ["domain1"])
-                self.assertEqual(list(gams_parameter.keys()), ["record11"])
-                self.assertEqual(list(gams_parameter.values()), [3.14])
+                self.assertEqual(list(gams_parameter.keys()), ["record12", "record11"])
+                self.assertEqual(list(gams_parameter.values()), [math.nan, 3.14])
                 gams_parameter = gdx_file["internally_indexed"]
                 self.assertEqual(gams_parameter.domain, ["domain1", "internal_indexes", "domain2"])
                 self.assertEqual(
                     list(gams_parameter.keys()),
-                    [("record12", "stamp1", "record21"), ("record12", "stamp2", "record21")],
+                    [
+                        ("record12", "stamp1", "record21"),
+                        ("record12", "stamp2", "record21"),
+                        ("record11", "stamp1", "record21"),
+                        ("record11", "stamp2", "record21"),
+                    ],
                 )
-                self.assertEqual(list(gams_parameter.values()), [2.2, 1.1])
+                self.assertEqual(list(gams_parameter.values()), [2.2, 1.1, math.nan, math.nan])
                 gams_parameter = gdx_file["externally_indexed"]
                 self.assertEqual(gams_parameter.domain, ["domain1", "domain2", "external_indexes"])
                 self.assertEqual(
                     list(gams_parameter.keys()),
                     [
+                        ("record12", "record21", "T0001"),
+                        ("record12", "record21", "T0002"),
+                        ("record12", "record21", "T0003"),
                         ("record11", "record21", "T0001"),
                         ("record11", "record21", "T0002"),
                         ("record11", "record21", "T0003"),
                     ],
                 )
-                self.assertEqual(list(gams_parameter.values()), [-4.2, -2.3, -5.0])
+                self.assertEqual(list(gams_parameter.values()), [math.nan, math.nan, math.nan, -4.2, -2.3, -5.0])
 
     @unittest.skipIf(gdx_utils.find_gams_directory() is None, "No working GAMS installation found.")
     def test_to_gdx_file_works_with_empty_domains(self):
@@ -767,7 +784,7 @@ class TestGdx(unittest.TestCase):
             database_map = self._make_database_map(tmp_dir_name, "test_to_gdx_file_works_with_empty_domains.sqlite")
             dbmanip.import_object_classes(database_map, ["domain"])
             sorted_domain_names = ["domain"]
-            settings = gdx.Settings(sorted_domain_names, [], {"domain": []})
+            settings = gdx.SetSettings(sorted_domain_names, [], {"domain": []})
             path_to_gdx = Path(tmp_dir_name).joinpath("test_to_gdx_file_works_with_empty_domains.gdx")
             gdx.to_gdx_file(database_map, path_to_gdx, [], settings, {}, {}, gams_directory)
             database_map.connection.close()
@@ -785,12 +802,10 @@ class TestGdx(unittest.TestCase):
         with TemporaryDirectory() as tmp_dir_name:
             database_map = self._make_database_map(tmp_dir_name, "test_to_gdx_file_works_with_empty_parameters.sqlite")
             dbmanip.import_object_classes(database_map, ["domain"])
-            dbmanip.import_objects(
-                database_map, [("domain", "record")]
-            )
+            dbmanip.import_objects(database_map, [("domain", "record")])
             dbmanip.import_object_parameters(database_map, [("domain", "scalar")])
             sorted_domain_names = ["domain"]
-            settings = gdx.Settings(sorted_domain_names, [], {"domain": [("record", )]})
+            settings = gdx.SetSettings(sorted_domain_names, [], {"domain": [("record",)]})
             path_to_gdx = Path(tmp_dir_name).joinpath("test_to_gdx_file_works_with_empty_parameters.gdx")
             gdx.to_gdx_file(database_map, path_to_gdx, [], settings, {}, {}, gams_directory)
             database_map.connection.close()
@@ -806,10 +821,10 @@ class TestGdx(unittest.TestCase):
                     self.assertEqual(gams_record, expected_name)
                 gams_parameter = gdx_file["scalar"]
                 self.assertEqual(gams_parameter.domain, ["domain"])
-                self.assertEqual(list(gams_parameter.keys()), [])
-                self.assertEqual(list(gams_parameter.values()), [])
+                self.assertEqual(list(gams_parameter.keys()), ["record"])
+                self.assertEqual(list(gams_parameter.values()), [math.nan])
 
-    def test_make_settings(self):
+    def test_make_set_settings(self):
         with TemporaryDirectory() as tmp_dir_name:
             database_map = self._make_database_map(tmp_dir_name, "test_make_settings.sqlite")
             dbmanip.import_object_classes(database_map, ["domain1", "domain2"])
@@ -826,7 +841,7 @@ class TestGdx(unittest.TestCase):
                     ("set2", ["record11", "record21"]),
                 ],
             )
-            settings = gdx.make_settings(database_map)
+            settings = gdx.make_set_settings(database_map)
             database_map.connection.close()
         domain_names = settings.sorted_domain_names
         self.assertEqual(len(domain_names), 2)
@@ -847,8 +862,8 @@ class TestGdx(unittest.TestCase):
         record_keys = settings.sorted_record_key_lists("set2")
         self.assertEqual(record_keys, [("record12", "record21"), ("record11", "record21")])
 
-    def test_Settings_update_domains_and_domain_metadatas(self):
-        base_settings = gdx.Settings(
+    def test_SetSettings_update_domains_and_domain_metadatas(self):
+        base_settings = gdx.SetSettings(
             ["a", "b"],
             [],
             {},
@@ -859,7 +874,7 @@ class TestGdx(unittest.TestCase):
             [],
             "",
         )
-        update_settings = gdx.Settings(
+        update_settings = gdx.SetSettings(
             ["b", "c"],
             [],
             {},
@@ -883,8 +898,8 @@ class TestGdx(unittest.TestCase):
         self.assertEqual(base_settings.set_metadatas, [])
         self.assertEqual(base_settings.global_parameters_domain_name, "")
 
-    def test_Settings_update_sets_and_set_metadatas(self):
-        base_settings = gdx.Settings(
+    def test_SetSettings_update_sets_and_set_metadatas(self):
+        base_settings = gdx.SetSettings(
             [],
             ["a", "b"],
             {},
@@ -895,7 +910,7 @@ class TestGdx(unittest.TestCase):
             ],
             "",
         )
-        update_settings = gdx.Settings(
+        update_settings = gdx.SetSettings(
             [],
             ["b", "c"],
             {},
@@ -919,9 +934,9 @@ class TestGdx(unittest.TestCase):
         )
         self.assertEqual(base_settings.global_parameters_domain_name, "")
 
-    def test_Settings_update_global_parameters_domain_name(self):
-        base_settings = gdx.Settings(["a", "b"], [], {}, [gdx.SetMetadata(), gdx.SetMetadata()], [], "b")
-        update_settings = gdx.Settings(["b", "c"], [], {}, [gdx.SetMetadata(), gdx.SetMetadata()], [], "c")
+    def test_SetSettings_update_global_parameters_domain_name(self):
+        base_settings = gdx.SetSettings(["a", "b"], [], {}, [gdx.SetMetadata(), gdx.SetMetadata()], [], "b")
+        update_settings = gdx.SetSettings(["b", "c"], [], {}, [gdx.SetMetadata(), gdx.SetMetadata()], [], "c")
         base_settings.update(update_settings)
         self.assertEqual(base_settings.sorted_domain_names, ["b", "c"])
         self.assertEqual(base_settings.domain_metadatas, [gdx.SetMetadata(), gdx.SetMetadata()])
@@ -929,8 +944,8 @@ class TestGdx(unittest.TestCase):
         self.assertEqual(base_settings.set_metadatas, [])
         self.assertEqual(base_settings.global_parameters_domain_name, "b")
 
-    def test_Settings_update_records(self):
-        base_settings = gdx.Settings(
+    def test_SetSettings_update_records(self):
+        base_settings = gdx.SetSettings(
             ["a", "b"],
             ["c"],
             {"a": [("A",)], "b": [("B",), ("BB",)], "c": [("C",), ("CC",)]},
@@ -941,7 +956,7 @@ class TestGdx(unittest.TestCase):
             [gdx.SetMetadata(gdx.ExportFlag.FORCED_NON_EXPORTABLE, False)],
             "",
         )
-        update_settings = gdx.Settings(
+        update_settings = gdx.SetSettings(
             ["b", "d"],
             ["c"],
             {"b": [("BB",), ("BBB",)], "c": [("CC",), ("CCC",)], "d": [("D",)]},
@@ -968,8 +983,8 @@ class TestGdx(unittest.TestCase):
         self.assertEqual(base_settings.sorted_record_key_lists("c"), [("CC",), ("CCC",)])
         self.assertEqual(base_settings.sorted_record_key_lists("d"), [("D",)])
 
-    def test_Settings_add_domain(self):
-        settings = gdx.Settings(
+    def test_SetSettings_add_domain(self):
+        settings = gdx.SetSettings(
             ["a"], [], {"a": [("A",)]}, [gdx.SetMetadata(gdx.ExportFlag.FORCED_EXPORTABLE, True)], [], ""
         )
         domain = gdx.Set("b")
@@ -989,8 +1004,8 @@ class TestGdx(unittest.TestCase):
         self.assertEqual(settings.sorted_record_key_lists("a"), [("A",)])
         self.assertEqual(settings.sorted_record_key_lists("b"), [("B",)])
 
-    def test_Settings_replace_domain(self):
-        settings = gdx.Settings(
+    def test_SetSettings_replace_domain(self):
+        settings = gdx.SetSettings(
             ["a"], [], {"a": [("A",)]}, [gdx.SetMetadata(gdx.ExportFlag.FORCED_EXPORTABLE, True)], [], ""
         )
         domain = gdx.Set("a")
@@ -1003,8 +1018,8 @@ class TestGdx(unittest.TestCase):
         self.assertEqual(settings.global_parameters_domain_name, "")
         self.assertEqual(settings.sorted_record_key_lists("a"), [("B",)])
 
-    def test_Settings_del_domain_at(self):
-        settings = gdx.Settings(
+    def test_SetSettings_del_domain_at(self):
+        settings = gdx.SetSettings(
             ["a"], [], {"a": [("A",)]}, [gdx.SetMetadata(gdx.ExportFlag.FORCED_EXPORTABLE, True)], [], ""
         )
         domain = gdx.Set("a")
@@ -1017,13 +1032,25 @@ class TestGdx(unittest.TestCase):
         self.assertEqual(settings.global_parameters_domain_name, "")
         self.assertRaises(KeyError, settings.sorted_record_key_lists, "a")
 
-    def test_Settings_del_domain_at_clears_global_parameters_domain_name(self):
-        settings = gdx.Settings(["a"], [], {"a": []}, [gdx.SetMetadata()], [], "a")
+    def test_SetSettings_del_domain_at_clears_global_parameters_domain_name(self):
+        settings = gdx.SetSettings(["a"], [], {"a": []}, [gdx.SetMetadata()], [], "a")
         self.assertEqual(settings.global_parameters_domain_name, "a")
         domain = gdx.Set("a")
         i = settings.domain_index(domain)
         settings.del_domain_at(i)
         self.assertEqual(settings.global_parameters_domain_name, "")
+
+    def test_SetSettings_is_exportable_domain(self):
+        settings = gdx.SetSettings(["a"], [], {"a": []}, [gdx.SetMetadata()], [])
+        self.assertTrue(settings.is_exportable("a"))
+        settings.domain_metadatas[0].exportable = gdx.ExportFlag.NON_EXPORTABLE
+        self.assertFalse(settings.is_exportable("a"))
+
+    def test_SetSettings_is_exportable_set(self):
+        settings = gdx.SetSettings([], ["b"], {"b": []}, [], [gdx.SetMetadata()])
+        self.assertTrue(settings.is_exportable("b"))
+        settings.set_metadatas[0].exportable = gdx.ExportFlag.NON_EXPORTABLE
+        self.assertFalse(settings.is_exportable("b"))
 
     def test_expand_indexed_parameter_values_for_domains(self):
         domain = gdx.Set("domain name")
@@ -1032,14 +1059,14 @@ class TestGdx(unittest.TestCase):
         time_series = TimeSeriesFixedResolution("2019-01-01T12:15", "1D", [3.3, 4.4], False, False)
         parameters = {"time series": gdx.Parameter(["domain name"], [("element",)], [time_series])}
         indexing_domain = gdx.IndexingDomain("indexes", "", [("stamp1",), ("stamp2",)], [True, True])
-        setting = gdx.IndexingSetting(parameters["time series"])
+        setting = gdx.IndexingSetting(parameters["time series"], "domain name")
         setting.indexing_domain = indexing_domain
         settings = {"time series": setting}
         gdx.expand_indexed_parameter_values(parameters, settings)
         self.assertEqual(len(parameters), 1)
         self.assertEqual(parameters["time series"].domain_names, ["domain name", "indexes"])
-        self.assertEqual(parameters["time series"].indexes, [("element", "stamp1"), ("element", "stamp2")])
-        self.assertEqual(parameters["time series"].values, [3.3, 4.4])
+        self.assertEqual(list(parameters["time series"].indexes), [("element", "stamp1"), ("element", "stamp2")])
+        self.assertEqual(list(parameters["time series"].values), [3.3, 4.4])
 
     def test_expand_indexed_parameter_values_keeps_non_indexed_parameter_intact(self):
         domain = gdx.Set("domain name")
@@ -1050,17 +1077,15 @@ class TestGdx(unittest.TestCase):
         indexed_parameter = gdx.Parameter(["domain name"], [("element",)], [time_series])
         parameters = {"scalar": scalar_parameter, "time series": indexed_parameter}
         indexing_domain = gdx.IndexingDomain("indexes", "", [("stamp1",), ("stamp2",)], [True, True])
-        setting = gdx.IndexingSetting(parameters["time series"])
+        setting = gdx.IndexingSetting(parameters["time series"], "domain name")
         setting.indexing_domain = indexing_domain
         settings = {"time series": setting}
         gdx.expand_indexed_parameter_values(parameters, settings)
         self.assertEqual(len(parameters), 2)
         self.assertEqual(parameters["scalar"].domain_names, ["domain name"])
-        self.assertEqual(parameters["scalar"].indexes, [("element",)])
-        self.assertEqual(parameters["scalar"].values, [2.2])
+        self.assertEqual(parameters["scalar"].data, {("element",): 2.2})
         self.assertEqual(parameters["time series"].domain_names, ["domain name", "indexes"])
-        self.assertEqual(parameters["time series"].indexes, [("element", "stamp1"), ("element", "stamp2")])
-        self.assertEqual(parameters["time series"].values, [3.3, 4.4])
+        self.assertEqual(parameters["time series"].data, {("element", "stamp1"): 3.3, ("element", "stamp2"): 4.4})
 
     def test_expand_sets_indexed_parameter_values_with_multidimensional_sets(self):
         original_set = gdx.Set("set name", domain_names=["domain1", "domain2"])
@@ -1069,16 +1094,19 @@ class TestGdx(unittest.TestCase):
         time_series = TimeSeriesFixedResolution("2019-01-01T12:15", "1D", [3.3, 4.4], False, False)
         parameters = {"time series": gdx.Parameter(original_set.domain_names, [record.keys], [time_series])}
         indexing_domain = gdx.IndexingDomain("indexes", "", [("stamp1",), ("stamp2",)], [True, True])
-        setting = gdx.IndexingSetting(parameters["time series"])
+        setting = gdx.IndexingSetting(parameters["time series"], "set name")
         setting.indexing_domain = indexing_domain
         settings = {"time series": setting}
         gdx.expand_indexed_parameter_values(parameters, settings)
         self.assertEqual(len(parameters), 1)
         self.assertEqual(parameters["time series"].domain_names, ["domain1", "domain2", "indexes"])
-        self.assertEqual(parameters["time series"].indexes[0], ("domain1_element", "domain2_element", "stamp1"))
-        self.assertEqual(parameters["time series"].values[0], 3.3)
-        self.assertEqual(parameters["time series"].indexes[1], ("domain1_element", "domain2_element", "stamp2"))
-        self.assertEqual(parameters["time series"].values[1], 4.4)
+        self.assertEqual(
+            parameters["time series"].data,
+            {
+                ("domain1_element", "domain2_element", "stamp1"): 3.3,
+                ("domain1_element", "domain2_element", "stamp2"): 4.4,
+            },
+        )
 
     def test_make_indexing_settings(self):
         with TemporaryDirectory() as tmp_dir_name:
@@ -1096,17 +1124,48 @@ class TestGdx(unittest.TestCase):
                 database_map,
                 [["set", ["record"], "relationship_parameter", {"type": "time_series", "data": [3, 2, 1]}]],
             )
-            indexing_settings = gdx.make_indexing_settings(database_map)
+            indexing_settings = gdx.make_indexing_settings(database_map, logger=None)
             database_map.connection.close()
         self.assertEqual(len(indexing_settings), 2)
         self.assertEqual(
-            indexing_settings["parameter"].parameter.values[0],
+            list(indexing_settings["parameter"].parameter.values)[0],
             from_database('{"type": "time_series", "data": [1, 2, 3]}'),
         )
         self.assertIsNone(indexing_settings["parameter"].indexing_domain)
         self.assertEqual(indexing_settings["parameter"].index_position, 1)
         self.assertEqual(
-            indexing_settings["relationship_parameter"].parameter.values[0],
+            list(indexing_settings["relationship_parameter"].parameter.values)[0],
+            from_database('{"type": "time_series", "data": [3, 2, 1]}'),
+        )
+        self.assertIsNone(indexing_settings["relationship_parameter"].indexing_domain)
+        self.assertEqual(indexing_settings["relationship_parameter"].index_position, 1)
+
+    def test_make_indexing_settings_uses_default_values_when_actual_value_missing(self):
+        with TemporaryDirectory() as tmp_dir_name:
+            database_map = self._make_database_map(
+                tmp_dir_name, "test_make_indexing_settings_uses_default_values_when_actual_value_missing.sqlite"
+            )
+            dbmanip.import_object_classes(database_map, ["domain"])
+            dbmanip.import_objects(database_map, [("domain", "record")])
+            dbmanip.import_object_parameters(
+                database_map, [("domain", "parameter", {"type": "time_series", "data": [1, 2, 3]}, "")]
+            )
+            dbmanip.import_relationship_classes(database_map, [("set", ["domain"])])
+            dbmanip.import_relationships(database_map, [("set", ["record"])])
+            dbmanip.import_relationship_parameters(
+                database_map, [("set", "relationship_parameter", {"type": "time_series", "data": [3, 2, 1]}, "")]
+            )
+            indexing_settings = gdx.make_indexing_settings(database_map, logger=None)
+            database_map.connection.close()
+        self.assertEqual(len(indexing_settings), 2)
+        self.assertEqual(
+            list(indexing_settings["parameter"].parameter.values)[0],
+            from_database('{"type": "time_series", "data": [1, 2, 3]}'),
+        )
+        self.assertIsNone(indexing_settings["parameter"].indexing_domain)
+        self.assertEqual(indexing_settings["parameter"].index_position, 1)
+        self.assertEqual(
+            list(indexing_settings["relationship_parameter"].parameter.values)[0],
             from_database('{"type": "time_series", "data": [3, 2, 1]}'),
         )
         self.assertIsNone(indexing_settings["relationship_parameter"].indexing_domain)
@@ -1116,7 +1175,7 @@ class TestGdx(unittest.TestCase):
         with TemporaryDirectory() as tmp_dir_name:
             time_pattern = TimePattern(["Mo", "Tu"], [42.0, -4.2])
             parameter = gdx.Parameter(["domain1"], [("Espoo",)], [time_pattern])
-            original = {"parameter": gdx.IndexingSetting(parameter)}
+            original = {"parameter": gdx.IndexingSetting(parameter, "domain1")}
             original["parameter"].indexing_domain = gdx.IndexingDomain(
                 "indexing name", "indexing description", [("First",), ("Second",)], [False, True]
             )
@@ -1130,7 +1189,7 @@ class TestGdx(unittest.TestCase):
                 database_map,
                 [("domain1", "record", "parameter", {"type": "time_pattern", "data": {"Mo": 42.0, "Tu": -4.2}})],
             )
-            restored = gdx.indexing_settings_from_dict(settings_dict, database_map)
+            restored = gdx.indexing_settings_from_dict(settings_dict, database_map, logger=None)
             database_map.connection.close()
         self.assertTrue(len(restored), 1)
         self.assertTrue("parameter" in restored)
@@ -1140,15 +1199,44 @@ class TestGdx(unittest.TestCase):
         self.assertTrue(restored["parameter"].indexing_domain.all_indexes, [("First",), ("Second",)])
         self.assertTrue(restored["parameter"].indexing_domain.pick_list, [False, True])
         self.assertTrue(restored["parameter"].index_position, 1)
+        self.assertTrue(restored["parameter"].set_name, "domain1")
+
+    def test_indexing_settings_from_dict_when_default_values_present(self):
+        with TemporaryDirectory() as tmp_dir_name:
+            time_pattern = TimePattern(["Mo", "Tu"], [42.0, -4.2])
+            parameter = gdx.Parameter(["domain1"], [("Espoo",)], [time_pattern])
+            original = {"parameter": gdx.IndexingSetting(parameter, "domain1")}
+            original["parameter"].indexing_domain = gdx.IndexingDomain(
+                "indexing name", "indexing description", [("First",), ("Second",)], [False, True]
+            )
+            original["parameter"].index_position = 1
+            settings_dict = gdx.indexing_settings_to_dict(original)
+            database_map = self._make_database_map(tmp_dir_name, "test_indexing_settings_from_dict.sqlite")
+            dbmanip.import_object_classes(database_map, ["domain1"])
+            dbmanip.import_objects(database_map, [("domain1", "record")])
+            dbmanip.import_object_parameters(
+                database_map, [("domain1", "parameter", {"type": "time_pattern", "data": {"Mo": 42.0, "Tu": -4.2}}, "")]
+            )
+            restored = gdx.indexing_settings_from_dict(settings_dict, database_map, logger=None)
+            database_map.connection.close()
+        self.assertTrue(len(restored), 1)
+        self.assertTrue("parameter" in restored)
+        self.assertTrue(restored["parameter"].parameter.values, [time_pattern])
+        self.assertTrue(restored["parameter"].indexing_domain.name, "indexing name")
+        self.assertTrue(restored["parameter"].indexing_domain.description, "indexing description")
+        self.assertTrue(restored["parameter"].indexing_domain.all_indexes, [("First",), ("Second",)])
+        self.assertTrue(restored["parameter"].indexing_domain.pick_list, [False, True])
+        self.assertTrue(restored["parameter"].index_position, 1)
+        self.assertTrue(restored["parameter"].set_name, "domain1")
 
     def test_update_indexing_settings_with_new_setting_overriding_old_one(self):
         time_series = TimeSeriesFixedResolution("2019-01-01T12:15", "1D", [3.3, 4.4], False, False)
         old_parameter = gdx.Parameter(["old_domain"], [("r1",)], [time_series])
-        old_settings = {"old_parameter_name": gdx.IndexingSetting(old_parameter)}
+        old_settings = {"old_parameter_name": gdx.IndexingSetting(old_parameter, "old_domain")}
         new_parameter = gdx.Parameter(["new_domain"], [("r1",)], [time_series])
-        new_indexing_setting = gdx.IndexingSetting(new_parameter)
+        new_indexing_setting = gdx.IndexingSetting(new_parameter, "new_domain")
         new_settings = {"new_parameter_name": new_indexing_setting}
-        settings = gdx.Settings(["new_domain"], [], {"new_domain": [("r1",)]})
+        settings = gdx.SetSettings(["new_domain"], [], {"new_domain": [("r1",)]})
         updated = gdx.update_indexing_settings(old_settings, new_settings, settings)
         self.assertEqual(len(updated), 1)
         self.assertTrue("new_parameter_name" in updated)
@@ -1157,13 +1245,13 @@ class TestGdx(unittest.TestCase):
     def test_update_indexing_settings_with_old_setting_overriding_new_one_when_additional_domains_present(self):
         time_series = TimeSeriesFixedResolution("2019-01-01T12:15", "1D", [3.3, 4.4], False, False)
         old_parameter = gdx.Parameter(["domain"], [("r1",)], [time_series])
-        indexing_setting = gdx.IndexingSetting(old_parameter)
+        indexing_setting = gdx.IndexingSetting(old_parameter, "domain")
         indexing_setting.indexing_domain = gdx.IndexingDomain("indexing_domain", "", [("a",), ("b",)], [True, True])
         indexing_setting.index_position = 0
         old_settings = {"parameter_name": indexing_setting}
         new_parameter = gdx.Parameter(["domain"], [("r1",)], [time_series])
-        new_settings = {"parameter_name": gdx.IndexingSetting(new_parameter)}
-        settings = gdx.Settings(["domain"], [], {"domain": [("r1",)]})
+        new_settings = {"parameter_name": gdx.IndexingSetting(new_parameter, "domain")}
+        settings = gdx.SetSettings(["domain"], [], {"domain": [("r1",)]})
         updated = gdx.update_indexing_settings(old_settings, new_settings, settings)
         self.assertEqual(len(updated), 1)
         self.assertTrue("parameter_name" in updated)
@@ -1172,13 +1260,13 @@ class TestGdx(unittest.TestCase):
     def test_update_indexing_settings_with_old_setting_overriding_new_one(self):
         time_series = TimeSeriesFixedResolution("2019-01-01T12:15", "1D", [3.3, 4.4], False, False)
         old_parameter = gdx.Parameter(["domain"], [("r1",)], [time_series])
-        indexing_setting = gdx.IndexingSetting(old_parameter)
+        indexing_setting = gdx.IndexingSetting(old_parameter, "domain")
         indexing_setting.indexing_domain = gdx.IndexingDomain("indexing_domain", "", [("a",), ("b",)], [True, True])
         indexing_setting.index_position = 0
         old_settings = {"parameter_name": indexing_setting}
         new_parameter = gdx.Parameter(["domain"], [("r1",)], [time_series])
-        new_settings = {"parameter_name": gdx.IndexingSetting(new_parameter)}
-        settings = gdx.Settings(["domain"], [], {"domain": [("r1",)], "indexing_domain": [("a",), ("b",)]})
+        new_settings = {"parameter_name": gdx.IndexingSetting(new_parameter, "domain")}
+        settings = gdx.SetSettings(["domain"], [], {"domain": [("r1",)], "indexing_domain": [("a",), ("b",)]})
         updated = gdx.update_indexing_settings(old_settings, new_settings, settings)
         self.assertEqual(len(updated), 1)
         self.assertTrue("parameter_name" in updated)
@@ -1187,14 +1275,14 @@ class TestGdx(unittest.TestCase):
     def test_update_indexing_settings_new_settings_overriding_when_domain_has_changed(self):
         time_series = TimeSeriesFixedResolution("2019-01-01T12:15", "1D", [3.3, 4.4], False, False)
         old_parameter = gdx.Parameter(["domain"], [("r1",)], [time_series])
-        old_indexing_setting = gdx.IndexingSetting(old_parameter)
+        old_indexing_setting = gdx.IndexingSetting(old_parameter, "domain")
         old_indexing_setting.indexing_domain = gdx.IndexingDomain("indexing_domain", "", [("a",), ("b",)], [True, True])
         old_indexing_setting.index_position = 0
         old_settings = {"parameter_name": old_indexing_setting}
         new_parameter = gdx.Parameter(["domain"], [("r1",)], [time_series])
-        new_indexing_setting = gdx.IndexingSetting(new_parameter)
+        new_indexing_setting = gdx.IndexingSetting(new_parameter, "domain")
         new_settings = {"parameter_name": new_indexing_setting}
-        settings = gdx.Settings(
+        settings = gdx.SetSettings(
             ["domain", "indexing_domain"], [], {"domain": [("r1",)], "indexing_domain": [("A",), ("B",)]}
         )
         updated = gdx.update_indexing_settings(old_settings, new_settings, settings)
@@ -1203,13 +1291,13 @@ class TestGdx(unittest.TestCase):
         self.assertEqual(updated["parameter_name"], new_indexing_setting)
 
     def test_sort_indexing_domain_indexes(self):
-        settings = gdx.Settings(
+        settings = gdx.SetSettings(
             ["domain2", "domain1"], [], {"domain1": [("a1",), ("a2",)], "domain2": [("b1",), ("b2",), ("b3",)]}
         )
         indexing_domain = gdx.IndexingDomain("domain2", "", [("b3",), ("b2",), ("b1",)], [False, True, True])
         time_series = TimeSeriesFixedResolution("2019-01-01T12:15", "1D", [3.3, 4.4], False, False)
         indexed_parameter = gdx.Parameter(["domain1"], [("a1",)], [time_series])
-        indexing_setting = gdx.IndexingSetting(indexed_parameter)
+        indexing_setting = gdx.IndexingSetting(indexed_parameter, "unknown_set")
         indexing_setting.indexing_domain = indexing_domain
         indexing_settings = {"parameter": indexing_setting}
         gdx.sort_indexing_domain_indexes(indexing_settings, settings)
@@ -1281,15 +1369,14 @@ class TestGdx(unittest.TestCase):
         new_parameter = new_parameters["merged"]
         self.assertEqual(new_parameter.domain_names, ["domain1", "domain2", "new_domain"])
         self.assertEqual(
-            new_parameter.indexes,
-            [
-                ("a1", "b1", "parameter1"),
-                ("a2", "b2", "parameter1"),
-                ("a1", "b1", "parameter2"),
-                ("a2", "b2", "parameter2"),
-            ],
+            new_parameter.data,
+            {
+                ("a1", "b1", "parameter1"): 1.1,
+                ("a2", "b2", "parameter1"): 2.2,
+                ("a1", "b1", "parameter2"): 3.3,
+                ("a2", "b2", "parameter2"): 4.4,
+            },
         )
-        self.assertEqual(new_parameter.values, [1.1, 2.2, 3.3, 4.4])
 
     def test_merging_domain(self):
         setting = gdx.MergingSetting(
@@ -1302,7 +1389,7 @@ class TestGdx(unittest.TestCase):
         self.assertEqual(domain.records, [gdx.Record(("parameter1",)), gdx.Record(("parameter2",))])
 
     def test_update_merging_settings_after_parameter_addition(self):
-        settings = gdx.Settings(["domain"], [], {})
+        settings = gdx.SetSettings(["domain"], [], {})
         old_merging_settings = {"merged": gdx.MergingSetting(["parameter1"], "merged_domain", "", "domain", ["domain"])}
         with TemporaryDirectory() as tmp_dir_name:
             database_map = self._make_database_map(tmp_dir_name, "test_make_settings.sqlite")
@@ -1319,7 +1406,7 @@ class TestGdx(unittest.TestCase):
         self.assertEqual(setting.index_position, 1)
 
     def test_update_merging_settings_after_parameter_removal(self):
-        settings = gdx.Settings(["domain"], [], {})
+        settings = gdx.SetSettings(["domain"], [], {})
         old_merging_settings = {
             "merged": gdx.MergingSetting(["parameter1", "parameter2"], "merged_domain", "", "domain", ["domain"])
         }
@@ -1350,39 +1437,7 @@ class TestGdx(unittest.TestCase):
         self.assertEqual(restored.is_additional, True)
 
     @staticmethod
-    def _object_parameter():
-        with TemporaryDirectory() as tmp_dir_name:
-            database_map = TestGdx._make_database_map(tmp_dir_name, "_object_parameter.sqlite")
-            dbmanip.import_object_classes(database_map, ["domain"])
-            dbmanip.import_objects(database_map, [("domain", "record")])
-            dbmanip.import_object_parameters(database_map, [("domain", "parameter")])
-            dbmanip.import_object_parameter_values(database_map, [("domain", "record", "parameter", -4.2)])
-            object_parameters = database_map.object_parameter_value_list()
-            parameter = gdx.Parameter.from_object_parameter(object_parameters[0])
-            database_map.connection.close()
-        return parameter
-
-    @staticmethod
-    def _relationship_parameter():
-        with TemporaryDirectory() as tmp_dir_name:
-            database_map = TestGdx._make_database_map(tmp_dir_name, "test_Parameter_from_relationship_parameter.sqlite")
-            dbmanip.import_object_classes(database_map, ["domain1"])
-            dbmanip.import_objects(database_map, [("domain1", "recordA")])
-            dbmanip.import_object_classes(database_map, ["domain2"])
-            dbmanip.import_objects(database_map, [("domain2", "recordB")])
-            dbmanip.import_relationship_classes(database_map, [("set", ["domain1", "domain2"])])
-            dbmanip.import_relationships(database_map, [("set", ["recordA", "recordB"])])
-            dbmanip.import_relationship_parameters(database_map, [("set", "parameter")])
-            dbmanip.import_relationship_parameter_values(
-                database_map, [["set", ["recordA", "recordB"], "parameter", 3.14]]
-            )
-            relationship_parameters = database_map.relationship_parameter_value_list()
-            parameter = gdx.Parameter.from_relationship_parameter(relationship_parameters[0])
-            database_map.connection.close()
-        return parameter
-
-    @staticmethod
-    def _make_settings(domain_exportable_flags=None, set_exportable_flags=None, global_parameters_domain_name=''):
+    def _make_settings(domain_exportable_flags=None, set_exportable_flags=None, global_parameters_domain_name=""):
         domain_names = ["domain1", "domain2"]
         set_names = ["set1", "set2", "set3"]
         records = {
@@ -1392,17 +1447,27 @@ class TestGdx(unittest.TestCase):
             "set2": [("d1",)],
             "set3": [("e1",)],
         }
+        if domain_exportable_flags is None:
+            domain_exportable_flags = len(domain_names) * [True]
+        if set_exportable_flags is None:
+            set_exportable_flags = len(set_names) * [True]
+        domain_metadatas = list()
+        for exportable in domain_exportable_flags:
+            flag = gdx.ExportFlag.EXPORTABLE if exportable else gdx.ExportFlag.NON_EXPORTABLE
+            domain_metadatas.append(gdx.SetMetadata(flag))
+        if global_parameters_domain_name in domain_names:
+            index = domain_names.index(global_parameters_domain_name)
+            domain_metadatas[index].exportable = gdx.ExportFlag.FORCED_NON_EXPORTABLE
+        set_metadatas = list()
+        for exportable in set_exportable_flags:
+            flag = gdx.ExportFlag.EXPORTABLE if exportable else gdx.ExportFlag.NON_EXPORTABLE
+            set_metadatas.append(gdx.SetMetadata(flag))
         return (
             domain_names,
             set_names,
             records,
-            gdx.Settings(
-                domain_names,
-                set_names,
-                records,
-                domain_exportable_flags,
-                set_exportable_flags,
-                global_parameters_domain_name,
+            gdx.SetSettings(
+                domain_names, set_names, records, domain_metadatas, set_metadatas, global_parameters_domain_name
             ),
         )
 

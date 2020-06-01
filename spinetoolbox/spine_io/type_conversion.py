@@ -1,16 +1,30 @@
-import re
-from dateutil.relativedelta import relativedelta
+######################################################################################################################
+# Copyright (C) 2017-2020 Spine project consortium
+# This file is part of Spine Toolbox.
+# Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
+# Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
+# any later version. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General
+# Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
+# this program. If not, see <http://www.gnu.org/licenses/>.
+######################################################################################################################
 
+"""
+Type conversion functions.
+
+:author: P. Vennström (VTT)
+:date:   21.11.2019
+"""
+
+import re
 from PySide2.QtWidgets import QDialog, QDialogButtonBox, QVBoxLayout, QSpinBox, QDateTimeEdit, QLineEdit, QFormLayout
 from PySide2.QtCore import Qt
-
-
 from spinedb_api import DateTime, Duration, ParameterValueFormatError
 
 
 class NewIntegerSequenceDateTimeConvertSpecDialog(QDialog):
     def __init__(self, *args, **kwargs):
-        super(NewIntegerSequenceDateTimeConvertSpecDialog, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         self.setWindowTitle("New integer sequence datetime")
 
@@ -122,7 +136,7 @@ class IntegerSequenceDateTimeConvertSpec(ConvertSpec):
     def convert_function(self):
         pattern = re.compile(r"[0-9]+|$")
         start_datetime = self.start_datetime.value
-        duration = sum(self.duration.value, relativedelta())
+        duration = self.duration.value
         start_int = self.start_int
 
         def convert(value):
@@ -139,6 +153,6 @@ class IntegerSequenceDateTimeConvertSpec(ConvertSpec):
         return {
             "name": self.DISPLAY_NAME,
             "start_datetime": self.start_datetime.value.isoformat(),
-            "duration": self.duration.to_text(),
+            "duration": str(self.duration),
             "start_int": self.start_int,
         }

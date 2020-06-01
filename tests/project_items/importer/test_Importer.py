@@ -21,9 +21,9 @@ import unittest
 from unittest.mock import MagicMock, NonCallableMagicMock
 from PySide2.QtCore import Qt
 from PySide2.QtWidgets import QApplication
-from networkx import DiGraph
 from spinetoolbox.project_items.importer.importer import Importer
-from spinetoolbox.project_item import ProjectItemResource
+from spinetoolbox.project_items.importer.item_info import ItemInfo
+from spinetoolbox.project_item_resource import ProjectItemResource
 from ...mock_helpers import clean_up_toolboxui_with_project, create_toolboxui_with_project
 
 
@@ -32,7 +32,7 @@ class TestImporter(unittest.TestCase):
         """Set up."""
         self.toolbox = create_toolboxui_with_project()
         item_dict = dict(name="importer", description="", mappings=dict(), x=0, y=0)
-        self.toolbox.project().add_project_items("Importers", item_dict)
+        self.toolbox.project().add_project_items("Importer", item_dict)
         index = self.toolbox.project_item_model.find_item("importer")
         self.importer = self.toolbox.project_item_model.item(index).project_item
 
@@ -46,7 +46,10 @@ class TestImporter(unittest.TestCase):
             QApplication()
 
     def test_item_type(self):
-        self.assertEqual(self.importer.item_type(), "Importer")
+        self.assertEqual(Importer.item_type(), ItemInfo.item_type())
+
+    def test_item_category(self):
+        self.assertEqual(Importer.item_category(), ItemInfo.item_category())
 
     def test_notify_destination(self):
         self.toolbox.msg = MagicMock()
@@ -71,8 +74,9 @@ class TestImporter(unittest.TestCase):
         )
         source_item.item_type = MagicMock(return_value="Tool")
         self.importer.notify_destination(source_item)
-        self.toolbox.msg_warning.emit.assert_called_with(
-            "Link established. Interaction between a " "<b>Tool</b> and a <b>Importer</b> has not been implemented yet."
+        self.toolbox.msg.emit.assert_called_with(
+            "Link established."
+            " You can define mappings on output files from <b>source name</b> using item <b>importer</b>."
         )
         source_item.item_type = MagicMock(return_value="View")
         self.importer.notify_destination(source_item)
@@ -104,10 +108,34 @@ class TestImporter(unittest.TestCase):
         item = NonCallableMagicMock()
         expected_file_list = ["url1", "url2"]
         resources = [ProjectItemResource(item, "file", url) for url in expected_file_list]
-        self.importer._do_handle_dag_changed(resources)
+        rank = 0
+        self.importer.handle_dag_changed(rank, resources)
         model = self.importer._properties_ui.treeView_files.model()
         file_list = [model.index(row, 0).data(Qt.DisplayRole) for row in range(model.rowCount())]
         self.assertEqual(sorted(file_list), sorted(expected_file_list))
+        checked = [model.index(row, 0).data(Qt.CheckStateRole) for row in range(model.rowCount())]
+        selected = [check == Qt.Checked for check in checked]
+        self.assertTrue(all(selected))
+
+    def test_handle_dag_changed_updates_previous_list_items(self):
+        self.importer.activate()
+        item = NonCallableMagicMock()
+        resources = [ProjectItemResource(item, "file", url) for url in ["url1", "url2"]]
+        rank = 0
+        # Add initial files
+        self.importer.handle_dag_changed(rank, resources)
+        model = self.importer._properties_ui.treeView_files.model()
+        for row in range(2):
+            index = model.index(row, 0)
+            model.setData(index, Qt.Unchecked, Qt.CheckStateRole)
+        # Update with one existing, one new file
+        resources = [ProjectItemResource(item, "file", url) for url in ["url2", "url3"]]
+        self.importer.handle_dag_changed(rank, resources)
+        file_list = [model.index(row, 0).data(Qt.DisplayRole) for row in range(model.rowCount())]
+        self.assertEqual(file_list, ["url2", "url3"])
+        checked = [model.index(row, 0).data(Qt.CheckStateRole) for row in range(model.rowCount())]
+        selected = [check == Qt.Checked for check in checked]
+        self.assertEqual(selected, [False, True])
 
 
 if __name__ == '__main__':

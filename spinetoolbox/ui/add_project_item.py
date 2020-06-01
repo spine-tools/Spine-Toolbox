@@ -10,10 +10,10 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-# Form implementation generated from reading ui file 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\ui\add_project_item.ui',
-# licensing of 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\ui\add_project_item.ui' applies.
+# Form implementation generated from reading ui file 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\add_project_item.ui',
+# licensing of 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\add_project_item.ui' applies.
 #
-# Created: Thu Feb 13 11:53:55 2020
+# Created: Mon May 11 15:50:27 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -62,6 +62,9 @@ class Ui_Form(object):
         self.verticalLayout.addWidget(self.lineEdit_description)
         spacerItem = QtWidgets.QSpacerItem(20, 41, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
         self.verticalLayout.addItem(spacerItem)
+        self.comboBox_specification = QtWidgets.QComboBox(Form)
+        self.comboBox_specification.setObjectName("comboBox_specification")
+        self.verticalLayout.addWidget(self.comboBox_specification)
         self.label_folder = QtWidgets.QLabel(Form)
         self.label_folder.setEnabled(False)
         self.label_folder.setContextMenuPolicy(QtCore.Qt.NoContextMenu)

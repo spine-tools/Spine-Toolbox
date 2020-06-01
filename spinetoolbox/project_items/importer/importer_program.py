@@ -45,22 +45,30 @@ def _create_log_file_timestamp():
     return extension
 
 
-def run(checked_files, all_settings, urls_downstream, logs_dir, cancel_on_error):
+def run(checked_files, all_import_settings, all_source_settings, urls_downstream, logs_dir, cancel_on_error):
+    print("starting importer program")
     all_data = []
     all_errors = []
     for source in checked_files:
-        settings = all_settings.get(source, None)
+        settings = all_import_settings.get(source, None)
+        if settings == "deselected":
+            continue
         if settings is None or not settings:
-            print("There are no mappings defined for {0}, moving on...".format(source))
+            print(f"There are no mappings defined for {source}, moving on...")
             continue
         source_type = settings["source_type"]
+        source_settings = all_source_settings.get(source_type)
         connector = {
             "CSVConnector": CSVConnector,
             "ExcelConnector": ExcelConnector,
             "GdxConnector": GdxConnector,
             "JSONConnector": JSONConnector,
-        }[source_type]()
-        connector.connect_to_source(source)
+        }[source_type](source_settings)
+        try:
+            connector.connect_to_source(source)
+        except IOError as error:
+            print(f"Failed to connect to source: {error}", file=sys.stderr)
+            sys.exit(1)
         table_mappings = {
             name: mapping
             for name, mapping in settings.get("table_mappings", {}).items()
@@ -80,10 +88,17 @@ def run(checked_files, all_settings, urls_downstream, logs_dir, cancel_on_error)
             tn: {int(col): value_to_convert_spec(spec) for col, spec in cols.items()}
             for tn, cols in settings.get("table_row_types", {}).items()
         }
-        data, errors = connector.get_mapped_data(
-            table_mappings, table_options, table_types, table_row_types, max_rows=-1
-        )
-        print("Read {0} data from {1} with {2} errors".format(sum(len(d) for d in data.values()), source, len(errors)))
+        try:
+            data, errors = connector.get_mapped_data(
+                table_mappings, table_options, table_types, table_row_types, max_rows=-1
+            )
+        except spinedb_api.InvalidMapping as error:
+            print(f"Failed to imoport '{source}': {error}", file=sys.stderr)
+            if cancel_on_error:
+                sys.exit(1)
+            else:
+                continue
+        print(f"Read {sum(len(d) for d in data.values())} data from {source} with {len(errors)} errors")
         all_data.append(data)
         all_errors.extend(errors)
     if all_errors:
@@ -92,7 +107,7 @@ def run(checked_files, all_settings, urls_downstream, logs_dir, cancel_on_error)
         logfilepath = os.path.abspath(os.path.join(logs_dir, timestamp + "_error.log"))
         with open(logfilepath, 'w') as f:
             for err in all_errors:
-                f.write("{0}\n".format(err))
+                f.write(f"{err}\n")
         # Make error log file anchor with path as tooltip
         logfile_anchor = (
             "<a style='color:#BB99FF;' title='" + logfilepath + "' href='file:///" + logfilepath + "'>error log</a>"
@@ -120,7 +135,7 @@ def _import(all_data, url, logs_dir, cancel_on_error):
             if db_map.has_pending_changes():
                 db_map.rollback_session()
         elif import_num:
-            db_map.commit_session("imported with mapper")
+            db_map.commit_session("Import data by Spine Toolbox Importer")
             print("Inserted {0} data with {1} errors into {2}".format(import_num, len(import_errors), url))
     db_map.connection.close()
     if all_import_errors:

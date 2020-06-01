@@ -47,7 +47,7 @@ class _MockParentModel(QAbstractTableModel):
         return 2
 
     def data(self, index, role=Qt.DisplayRole):
-        if role not in (Qt.DisplayRole, Qt.EditRole):
+        if role not in (Qt.DisplayRole, Qt.EditRole, Qt.UserRole):
             return None
         return self._table[index.column()][index.row()]
 
@@ -56,6 +56,12 @@ class _MockParentModel(QAbstractTableModel):
             return False
         self._table[index.column()][index.row()] = value
         return True
+
+    def get_set_data_delayed(self, index):
+        return lambda value, index=index: self.setData(index, value)
+
+    def index_name(self, index):
+        return "index_name"
 
 
 class TestParameterValueEditor(unittest.TestCase):
@@ -67,7 +73,7 @@ class TestParameterValueEditor(unittest.TestCase):
     def _check_parent_model_updated_when_closed(self, value):
         model = _MockParentModel()
         model_index = model.index(1, 1)
-        model.setData(model_index, to_database(value))
+        model.setData(model_index, value)
         editor = ParameterValueEditor(model_index)
         # Reset model data to check that the value is written back from the editor
         model.setData(model_index, None)

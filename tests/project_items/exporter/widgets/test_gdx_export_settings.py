@@ -20,61 +20,73 @@ import unittest
 from PySide2.QtCore import QModelIndex, Qt
 from PySide2.QtGui import QColor
 from spinetoolbox.project_items.exporter.widgets.gdx_export_settings import GAMSRecordListModel, GAMSSetListModel
-from spinetoolbox.spine_io.exporters.gdx import ExportFlag, SetMetadata, Settings
+from spinetoolbox.spine_io.exporters.gdx import ExportFlag, SetMetadata, SetSettings
 
 
 class TestGAMSSetListModel(unittest.TestCase):
     """Unit tests for the GAMSSetListModel class used by the Gdx Export Settings Window."""
 
     def test_data_DisplayRole(self):
-        settings = Settings(['domain1'], ['set1'], {})
-        model = GAMSSetListModel(settings)
+        set_settings = SetSettings(['domain1'], ['set1'], {})
+        domain_dependencies = {"domain1": ["set1"]}
+        set_dependencies = {"set1": {"domain1": True}}
+        model = GAMSSetListModel(set_settings, domain_dependencies, set_dependencies)
         index = model.index(0, 0)
         self.assertEqual(index.data(), "domain1")
         index = model.index(1, 0)
         self.assertEqual(index.data(), "set1")
 
     def test_data_BackgroundRole(self):
-        settings = Settings(['domain1'], ['set1'], {})
-        model = GAMSSetListModel(settings)
+        set_settings = SetSettings(['domain1'], ['set1'], {})
+        domain_dependencies = {"domain1": ["set1"]}
+        set_export_dependencies = {"set1": {"domain1": True}}
+        model = GAMSSetListModel(set_settings, domain_dependencies, set_export_dependencies)
         index = model.index(0, 0)
         self.assertEqual(index.data(Qt.BackgroundRole), QColor(Qt.lightGray))
         index = model.index(1, 0)
         self.assertEqual(index.data(Qt.BackgroundRole), None)
 
     def test_data_CheckStateRole(self):
-        settings = Settings(
+        set_settings = SetSettings(
             ['domain1'],
             ['set1'],
             {},
             [SetMetadata(ExportFlag.NON_EXPORTABLE)],
             [SetMetadata(ExportFlag.NON_EXPORTABLE)],
         )
-        model = GAMSSetListModel(settings)
+        domain_dependencies = {"domain1": ["set1"]}
+        set_dependencies = {"set1": {"domain1": False}}
+        model = GAMSSetListModel(set_settings, domain_dependencies, set_dependencies)
         index = model.index(0, 0)
         self.assertEqual(index.data(Qt.CheckStateRole), Qt.Unchecked)
         index = model.index(1, 0)
         self.assertEqual(index.data(Qt.CheckStateRole), Qt.Unchecked)
 
     def test_flags(self):
-        settings = Settings(['domain1'], ['set1'], {})
-        model = GAMSSetListModel(settings)
+        set_settings = SetSettings(['domain1'], ['set1'], {})
+        domain_dependencies = {"domain1": ["set1"]}
+        set_dependencies = {"set1": {"domain1": False}}
+        model = GAMSSetListModel(set_settings, domain_dependencies, set_dependencies)
         flags = model.flags(model.index(0, 0))
         self.assertEqual(flags, Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsUserCheckable)
 
     def test_headerData(self):
-        settings = Settings([], [], {})
-        model = GAMSSetListModel(settings)
+        set_settings = SetSettings([], [], {})
+        domain_dependencies = {}
+        set_dependencies = {}
+        model = GAMSSetListModel(set_settings, domain_dependencies, set_dependencies)
         self.assertEqual(model.headerData(0, Qt.Horizontal), "")
 
     def test_is_domain(self):
-        settings = Settings(['domain1'], ['set1'], {})
-        model = GAMSSetListModel(settings)
+        set_settings = SetSettings(['domain1'], ['set1'], {})
+        domain_dependencies = {"domain1": ["set1"]}
+        set_dependencies = {"set1": {"domain1": False}}
+        model = GAMSSetListModel(set_settings, domain_dependencies, set_dependencies)
         self.assertTrue(model.is_domain(model.index(0, 0)))
         self.assertFalse(model.is_domain(model.index(1, 0)))
 
     def test_moveRows_move_domain_row_down(self):
-        settings = Settings(
+        set_settings = SetSettings(
             ['domain1', 'domain2', 'domain3'],
             [],
             {},
@@ -84,11 +96,13 @@ class TestGAMSSetListModel(unittest.TestCase):
                 SetMetadata(ExportFlag.FORCED_NON_EXPORTABLE),
             ],
         )
-        model = GAMSSetListModel(settings)
+        domain_dependencies = {"domain1": [], "domain2": [], "domain3": []}
+        set_dependencies = {}
+        model = GAMSSetListModel(set_settings, domain_dependencies, set_dependencies)
         self.assertTrue(model.moveRows(QModelIndex(), 0, 1, QModelIndex(), 1))
-        self.assertEqual(settings.sorted_domain_names, ['domain2', 'domain1', 'domain3'])
+        self.assertEqual(set_settings.sorted_domain_names, ['domain2', 'domain1', 'domain3'])
         self.assertEqual(
-            settings.domain_metadatas,
+            set_settings.domain_metadatas,
             [
                 SetMetadata(ExportFlag.NON_EXPORTABLE),
                 SetMetadata(ExportFlag.EXPORTABLE),
@@ -96,9 +110,9 @@ class TestGAMSSetListModel(unittest.TestCase):
             ],
         )
         self.assertTrue(model.moveRows(QModelIndex(), 1, 1, QModelIndex(), 2))
-        self.assertEqual(settings.sorted_domain_names, ['domain2', 'domain3', 'domain1'])
+        self.assertEqual(set_settings.sorted_domain_names, ['domain2', 'domain3', 'domain1'])
         self.assertEqual(
-            settings.domain_metadatas,
+            set_settings.domain_metadatas,
             [
                 SetMetadata(ExportFlag.NON_EXPORTABLE),
                 SetMetadata(ExportFlag.FORCED_NON_EXPORTABLE),
@@ -108,7 +122,7 @@ class TestGAMSSetListModel(unittest.TestCase):
         self.assertFalse(model.moveRows(QModelIndex(), 2, 1, QModelIndex(), 3))
 
     def test_moveRows_move_domain_row_up(self):
-        settings = Settings(
+        set_settings = SetSettings(
             ['domain1', 'domain2', 'domain3'],
             [],
             {},
@@ -118,11 +132,13 @@ class TestGAMSSetListModel(unittest.TestCase):
                 SetMetadata(ExportFlag.EXPORTABLE),
             ],
         )
-        model = GAMSSetListModel(settings)
+        domain_dependencies = {"domain1": [], "domain2": [], "domain3": []}
+        set_export_dependencies = {}
+        model = GAMSSetListModel(set_settings, domain_dependencies, set_export_dependencies)
         self.assertTrue(model.moveRows(QModelIndex(), 2, 1, QModelIndex(), 1))
-        self.assertEqual(settings.sorted_domain_names, ['domain1', 'domain3', 'domain2'])
+        self.assertEqual(set_settings.sorted_domain_names, ['domain1', 'domain3', 'domain2'])
         self.assertEqual(
-            settings.domain_metadatas,
+            set_settings.domain_metadatas,
             [
                 SetMetadata(ExportFlag.NON_EXPORTABLE),
                 SetMetadata(ExportFlag.EXPORTABLE),
@@ -130,9 +146,9 @@ class TestGAMSSetListModel(unittest.TestCase):
             ],
         )
         self.assertTrue(model.moveRows(QModelIndex(), 1, 1, QModelIndex(), 0))
-        self.assertEqual(settings.sorted_domain_names, ['domain3', 'domain1', 'domain2'])
+        self.assertEqual(set_settings.sorted_domain_names, ['domain3', 'domain1', 'domain2'])
         self.assertEqual(
-            settings.domain_metadatas,
+            set_settings.domain_metadatas,
             [
                 SetMetadata(ExportFlag.EXPORTABLE),
                 SetMetadata(ExportFlag.NON_EXPORTABLE),
@@ -142,12 +158,14 @@ class TestGAMSSetListModel(unittest.TestCase):
         self.assertFalse(model.moveRows(QModelIndex(), 0, 1, QModelIndex(), -1))
 
     def test_moveRows_domain_cannot_cross_to_sets(self):
-        settings = Settings(['domain1'], ['domain2'], {})
-        model = GAMSSetListModel(settings)
+        set_settings = SetSettings(['domain1'], ['domain2'], {})
+        domain_dependencies = {"domain1": ["set1"]}
+        set_export_dependencies = {"set1": {"domain1": True}}
+        model = GAMSSetListModel(set_settings, domain_dependencies, set_export_dependencies)
         self.assertFalse(model.moveRows(QModelIndex(), 0, 1, QModelIndex(), 1))
 
     def test_moveRows_move_set_row_down(self):
-        settings = Settings(
+        set_settings = SetSettings(
             [],
             ['set1', 'set2', 'set3'],
             {},
@@ -158,11 +176,13 @@ class TestGAMSSetListModel(unittest.TestCase):
                 SetMetadata(ExportFlag.FORCED_NON_EXPORTABLE),
             ],
         )
-        model = GAMSSetListModel(settings)
+        domain_dependencies = {}
+        set_export_dependencies = {"set1": {}, "set2": {}, "set3": {}}
+        model = GAMSSetListModel(set_settings, domain_dependencies, set_export_dependencies)
         self.assertTrue(model.moveRows(QModelIndex(), 0, 1, QModelIndex(), 1))
-        self.assertEqual(settings.sorted_set_names, ['set2', 'set1', 'set3'])
+        self.assertEqual(set_settings.sorted_set_names, ['set2', 'set1', 'set3'])
         self.assertEqual(
-            settings.set_metadatas,
+            set_settings.set_metadatas,
             [
                 SetMetadata(ExportFlag.NON_EXPORTABLE),
                 SetMetadata(ExportFlag.EXPORTABLE),
@@ -170,9 +190,9 @@ class TestGAMSSetListModel(unittest.TestCase):
             ],
         )
         self.assertTrue(model.moveRows(QModelIndex(), 1, 1, QModelIndex(), 2))
-        self.assertEqual(settings.sorted_set_names, ['set2', 'set3', 'set1'])
+        self.assertEqual(set_settings.sorted_set_names, ['set2', 'set3', 'set1'])
         self.assertEqual(
-            settings.set_metadatas,
+            set_settings.set_metadatas,
             [
                 SetMetadata(ExportFlag.NON_EXPORTABLE),
                 SetMetadata(ExportFlag.FORCED_NON_EXPORTABLE),
@@ -182,7 +202,7 @@ class TestGAMSSetListModel(unittest.TestCase):
         self.assertFalse(model.moveRows(QModelIndex(), 2, 1, QModelIndex(), 3))
 
     def test_moveRows_move_set_row_up(self):
-        settings = Settings(
+        set_settings = SetSettings(
             [],
             ['set1', 'set2', 'set3'],
             {},
@@ -193,11 +213,13 @@ class TestGAMSSetListModel(unittest.TestCase):
                 SetMetadata(ExportFlag.EXPORTABLE),
             ],
         )
-        model = GAMSSetListModel(settings)
+        domain_dependencies = {}
+        set_export_dependencies = {"set1": {}, "set2": {}, "set3": {}}
+        model = GAMSSetListModel(set_settings, domain_dependencies, set_export_dependencies)
         self.assertTrue(model.moveRows(QModelIndex(), 2, 1, QModelIndex(), 1))
-        self.assertEqual(settings.sorted_set_names, ['set1', 'set3', 'set2'])
+        self.assertEqual(set_settings.sorted_set_names, ['set1', 'set3', 'set2'])
         self.assertEqual(
-            settings.set_metadatas,
+            set_settings.set_metadatas,
             [
                 SetMetadata(ExportFlag.NON_EXPORTABLE),
                 SetMetadata(ExportFlag.EXPORTABLE),
@@ -205,9 +227,9 @@ class TestGAMSSetListModel(unittest.TestCase):
             ],
         )
         self.assertTrue(model.moveRows(QModelIndex(), 1, 1, QModelIndex(), 0))
-        self.assertEqual(settings.sorted_set_names, ['set3', 'set1', 'set2'])
+        self.assertEqual(set_settings.sorted_set_names, ['set3', 'set1', 'set2'])
         self.assertEqual(
-            settings.set_metadatas,
+            set_settings.set_metadatas,
             [
                 SetMetadata(ExportFlag.EXPORTABLE),
                 SetMetadata(ExportFlag.NON_EXPORTABLE),
@@ -217,24 +239,34 @@ class TestGAMSSetListModel(unittest.TestCase):
         self.assertFalse(model.moveRows(QModelIndex(), 0, 1, QModelIndex(), -1))
 
     def test_moveRows_set_cannot_cross_to_domains(self):
-        settings = Settings(['domain1'], ['set1'], {})
-        model = GAMSSetListModel(settings)
+        set_settings = SetSettings(['domain1'], ['set1'], {})
+        domain_dependencies = {"domain1": ["set1"]}
+        set_export_dependencies = {"set1": {"domain1": True}}
+        model = GAMSSetListModel(set_settings, domain_dependencies, set_export_dependencies)
         self.assertFalse(model.moveRows(QModelIndex(), 1, 1, QModelIndex(), 0))
 
     def test_rowCount(self):
-        settings = Settings(['domain1'], ['set1'], {})
-        model = GAMSSetListModel(settings)
+        set_settings = SetSettings(['domain1'], ['set1'], {})
+        domain_dependencies = {"domain1": ["set1"]}
+        set_export_dependencies = {"set1": {"domain1": True}}
+        model = GAMSSetListModel(set_settings, domain_dependencies, set_export_dependencies)
         self.assertEqual(model.rowCount(), 2)
 
     def test_setData_CheckStateRole(self):
-        settings = Settings(['domain1'], ['set1'], {})
-        model = GAMSSetListModel(settings)
+        set_settings = SetSettings(['domain1'], ['set1'], {})
+        domain_dependencies = {"domain1": ["set1"]}
+        set_export_dependencies = {"set1": {"domain1": True}}
+        model = GAMSSetListModel(set_settings, domain_dependencies, set_export_dependencies)
         index = model.index(0, 0)
         model.setData(index, Qt.Unchecked, Qt.CheckStateRole)
-        self.assertEqual(settings.domain_metadatas[0], SetMetadata(ExportFlag.NON_EXPORTABLE))
+        self.assertEqual(set_settings.domain_metadatas[0], SetMetadata(ExportFlag.NON_EXPORTABLE))
+        self.assertEqual(set_settings.set_metadatas[0], SetMetadata(ExportFlag.FORCED_NON_EXPORTABLE))
+        model.setData(index, Qt.Checked, Qt.CheckStateRole)
+        self.assertEqual(set_settings.domain_metadatas[0], SetMetadata(ExportFlag.EXPORTABLE))
+        self.assertEqual(set_settings.set_metadatas[0], SetMetadata(ExportFlag.EXPORTABLE))
         index = model.index(1, 0)
         model.setData(index, Qt.Unchecked, Qt.CheckStateRole)
-        self.assertEqual(settings.set_metadatas[0], SetMetadata(ExportFlag.NON_EXPORTABLE))
+        self.assertEqual(set_settings.set_metadatas[0], SetMetadata(ExportFlag.NON_EXPORTABLE))
 
 
 class TestGAMSRecordListModel(unittest.TestCase):

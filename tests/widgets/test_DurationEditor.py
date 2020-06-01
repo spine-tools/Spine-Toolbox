@@ -38,11 +38,6 @@ class TestDurationEditor(unittest.TestCase):
         editor.set_value(Duration("3 months"))
         self.assertEqual(editor.value(), Duration("3M"))
 
-    def test_value_access_variable_duration(self):
-        editor = DurationEditor()
-        editor.set_value(Duration(["3 months", "6 months"]))
-        self.assertEqual(editor.value(), Duration(["3M", "6M"]))
-
 
 if __name__ == '__main__':
     unittest.main()

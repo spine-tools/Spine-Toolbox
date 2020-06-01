@@ -8,9 +8,8 @@
 # Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
-
 """
-ProjectItem and ProjectItemResource classes.
+Contains base classes for project items and item factories.
 
 :authors: P. Savolainen (VTT)
 :date:   4.10.2018
@@ -18,12 +17,10 @@ ProjectItem and ProjectItemResource classes.
 
 import os
 import logging
-from urllib.parse import urlparse
-from urllib.request import url2pathname
-from PySide2.QtCore import Signal, QUrl, QParallelAnimationGroup, QEventLoop
-from PySide2.QtGui import QDesktopServices
-from .helpers import create_dir, rename_dir
+from PySide2.QtCore import Signal
+from .helpers import create_dir, rename_dir, open_url
 from .metaobject import MetaObject, shorten
+from .project_commands import SetItemSpecificationCommand
 
 
 class ProjectItem(MetaObject):
@@ -36,6 +33,7 @@ class ProjectItem(MetaObject):
     """
 
     item_changed = Signal()
+    """Request DAG update. Emitted when a change affects other items in the DAG."""
 
     def __init__(self, name, description, x, y, project, logger):
         """
@@ -59,6 +57,8 @@ class ProjectItem(MetaObject):
         self.item_changed.connect(lambda: self._project.notify_changes_in_containing_dag(self.name))
         # Make project directory for this Item
         self.data_dir = os.path.join(self._project.items_dir, self.short_name)
+        self._specification = None
+        self.undo_specification = None
 
     def create_data_dir(self):
         try:
@@ -72,8 +72,8 @@ class ProjectItem(MetaObject):
         raise NotImplementedError()
 
     @staticmethod
-    def category():
-        """Item's category identifier string."""
+    def item_category():
+        """Item's category."""
         raise NotImplementedError()
 
     # pylint: disable=no-self-use
@@ -126,11 +126,49 @@ class ProjectItem(MetaObject):
         return True
 
     def set_properties_ui(self, properties_ui):
+        """
+        Sets the properties tab widget for the item.
+
+        Note that this method expects the widget that is generated from the .ui files
+        and initialized with the setupUi() method rather than the entire properties tab widget.
+
+        Args:
+            properties_ui (QWidget): item's properties UI
+        """
         self._properties_ui = properties_ui
         if self._sigs is None:
             self._sigs = self.make_signal_handler_dict()
 
+    def specification(self):
+        """Returns the specification for this item."""
+        return self._specification
+
+    def set_specification(self, specification):
+        """Pushes a new SetToolSpecificationCommand to the toolbox' undo stack.
+        """
+        if specification == self._specification:
+            return
+        self._toolbox.undo_stack.push(SetItemSpecificationCommand(self, specification))
+
+    def do_set_specification(self, specification):
+        """Sets Tool specification for this Tool. Removes Tool specification if None given as argument.
+
+        Args:
+            specification (ToolSpecification): Tool specification of this Tool. None removes the specification.
+        """
+        self.undo_specification = self._specification
+        self._specification = specification
+
+    def undo_set_specification(self):
+        self.do_set_specification(self.undo_specification)
+
     def set_icon(self, icon):
+        """
+        Sets the icon for the item.
+
+        Args:
+            icon (ProjectItemIcon): item's icon
+        """
         self._icon = icon
 
     def get_icon(self):
@@ -152,111 +190,23 @@ class ProjectItem(MetaObject):
         else:
             self.get_icon().rank_icon.set_rank("X")
 
-    def stop_execution(self):
-        """Stops executing this View."""
-        self._logger.msg.emit(f"Stopping {self.name}")
+    def execution_item(self):
+        """Creates project item's execution counterpart."""
+        raise NotImplementedError()
 
-    def execute(self, resources, direction):
-        """
-        Executes this item in the given direction using the given resources and returns a boolean
-        indicating the outcome.
-
-        Subclasses need to implement execute_forward and execute_backward to do the appropriate work
-        in each direction.
-
-        Args:
-            resources (list): a list of ProjectItemResources available for execution
-            direction (str): either "forward" or "backward"
-
-        Returns:
-            bool: True if execution succeeded, False otherwise
-        """
-        if direction == "forward":
-            self._logger.msg.emit("")
-            self._logger.msg.emit(f"Executing {self.item_type()} <b>{self.name}</b>")
-            self._logger.msg.emit("***")
-            if self.execute_forward(resources):
-                self.run_leave_animation()
-                return True
-            return False
-        return self.execute_backward(resources)
-
-    def run_leave_animation(self):
-        """
-        Runs the animation that represents execution leaving this item.
-        Blocks until the animation is finished.
-        """
-        loop = QEventLoop()
-        animation = self.make_execution_leave_animation()
-        animation.finished.connect(loop.quit)
-        animation.start()
-        if animation.state() == QParallelAnimationGroup.Running:
-            loop.exec_()
-
-    def execute_forward(self, resources):
-        """
-        Executes this item in the forward direction.
-
-        The default implementation just returns True.
-
-        Args:
-            resources (list): a list of ProjectItemResources available for execution
-
-        Returns:
-            bool: True if execution succeeded, False otherwise
-        """
-        return True
-
-    def execute_backward(self, resources):
-        """
-        Executes this item in the backward direction.
-
-        The default implementation just returns True.
-
-        Args:
-            resources (list): a list of ProjectItemResources available for execution
-
-        Returns:
-            bool: True if execution succeeded, False otherwise
-        """
-        return True
-
-    def output_resources(self, direction):
-        """
-        Returns output resources for execution in the given direction.
-
-        Subclasses need to implement output_resources_backward and/or output_resources_forward
-        if they want to provide resources in any direction.
-
-        Args:
-            direction (str): Direction where output resources are passed
-
-        Returns:
-            a list of ProjectItemResources
-        """
-        return {"backward": self.output_resources_backward, "forward": self.output_resources_forward}[direction]()
+    def executed_successfully(self, execution_direction, engine_state):
+        """Performs item dependent actions after the execution item has finished successfully."""
 
     # pylint: disable=no-self-use
-    def output_resources_forward(self):
+    def resources_for_direct_successors(self):
         """
-        Returns output resources for forward execution.
+        Returns resources for direct successors.
 
+        These resources can include transient files that don't exist yet, or filename patterns.
         The default implementation returns an empty list.
 
         Returns:
-            a list of ProjectItemResources
-        """
-        return list()
-
-    # pylint: disable=no-self-use
-    def output_resources_backward(self):
-        """
-        Returns output resources for backward execution.
-
-        The default implementation returns an empty list.
-
-        Returns:
-            a list of ProjectItemResources
+            list: a list of ProjectItemResources
         """
         return list()
 
@@ -285,20 +235,6 @@ class ProjectItem(MetaObject):
             resources (list): resources available from input items
         """
 
-    def make_execution_leave_animation(self):
-        """
-        Returns animation to play when execution leaves this item.
-
-        Returns:
-            QParallelAnimationGroup
-        """
-        icon = self.get_icon()
-        links = set(link for conn in icon.connectors.values() for link in conn.links if link.src_connector == conn)
-        anim_group = QParallelAnimationGroup(self)
-        for link in links:
-            anim_group.addAnimation(link.make_execution_animation())
-        return anim_group
-
     def invalidate_workflow(self, edges):
         """Notifies that this item's workflow is not acyclic.
 
@@ -316,6 +252,7 @@ class ProjectItem(MetaObject):
     def item_dict(self):
         """Returns a dictionary corresponding to this item."""
         return {
+            "type": self.item_type(),
             "short name": self.short_name,
             "description": self.description,
             "x": self.get_icon().sceneBoundingRect().center().x(),
@@ -342,7 +279,7 @@ class ProjectItem(MetaObject):
         """
         new_short_name = shorten(new_name)
         # Rename project item data directory
-        new_data_dir = os.path.join(self._project.items_dir, new_short_name)  # Make path for new data dir
+        new_data_dir = os.path.join(self._project.items_dir, new_short_name)
         if not rename_dir(self.data_dir, new_data_dir, self._logger):
             return False
         # Rename project item
@@ -361,7 +298,7 @@ class ProjectItem(MetaObject):
         """Open this item's data directory in file explorer."""
         url = "file:///" + self.data_dir
         # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
-        res = QDesktopServices.openUrl(QUrl(url, QUrl.TolerantMode))
+        res = open_url(url)
         if not res:
             self._logger.msg_error.emit(f"Failed to open directory: {self.data_dir}")
 
@@ -399,35 +336,6 @@ class ProjectItem(MetaObject):
             "implemented yet."
         )
 
-    # pylint: disable=no-self-use
-    def available_resources_downstream(self, upstream_resources):
-        """
-        Returns resources available to downstream items.
-
-        Should be reimplemented by subclasses if they want to offer resources
-        to downstream items. The default implementation returns an empty list.
-
-        Args:
-            upstream_resources (list): a list of resources available from upstream items
-
-        Returns:
-            a list of ProjectItemResources
-        """
-        return list()
-
-    # pylint: disable=no-self-use
-    def available_resources_upstream(self):
-        """
-        Returns resources available to upstream items.
-
-        Should be reimplemented by subclasses if they want to offer resources
-        to upstream items. The default implementation returns an empty list.
-
-        Returns:
-            a list of ProjectItemResources
-        """
-        return list()
-
     @staticmethod
     def upgrade_from_no_version_to_version_1(item_name, old_item_dict, old_project_dir):
         """
@@ -449,53 +357,138 @@ class ProjectItem(MetaObject):
         return old_item_dict
 
 
-class ProjectItemResource:
-    """Class to hold a resource made available by a project item
-    and that may be consumed by another project item."""
+class ProjectItemFactory:
+    """Class for project item factories."""
 
-    def __init__(self, provider, type_, url="", metadata=None):
-        """Init class.
+    def __init__(self, toolbox):
+        """
+        Args:
+            toolbox (ToolboxUI)
+        """
+        self.properties_ui = self._make_properties_widget(toolbox).ui
+
+    @staticmethod
+    def icon():
+        """
+        Returns the icon resource path.
+
+        Returns:
+            str
+        """
+        raise NotImplementedError()
+
+    @property
+    def item_maker(self):
+        """
+        Returns a ProjectItem subclass.
+
+        Returns:
+            class
+        """
+        raise NotImplementedError()
+
+    @property
+    def icon_maker(self):
+        """
+        Returns a ProjectItemIcon subclass.
+
+        Returns:
+            class
+        """
+        raise NotImplementedError()
+
+    @property
+    def add_form_maker(self):
+        """
+        Returns an AddProjectItem subclass.
+
+        Returns:
+            class
+        """
+        raise NotImplementedError()
+
+    @staticmethod
+    def supports_specifications():
+        """
+        Returns whether or not this factory supports specs.
+
+        If the subclass implementation returns True, then it must also implement
+        ``specification_form_maker``, and ``specification_menu_maker``.
+
+        Returns:
+            bool
+        """
+        return False
+
+    @property
+    def specification_form_maker(self):
+        """
+        Returns a QWidget subclass to create and edit specifications.
+
+        Returns:
+            class
+        """
+        raise NotImplementedError()
+
+    @property
+    def specification_menu_maker(self):
+        """
+        Returns an ItemSpecificationMenu subclass.
+
+        Returns:
+            class
+        """
+        raise NotImplementedError()
+
+    def make_icon(self, toolbox, x, y, project_item):
+        """
+        Returns a ProjectItemIcon to use with given toolbox, for given project item.
 
         Args:
-            provider (ProjectItem): The item that provides the resource
-            type_ (str): The resource type, either "file" or "database" (for now)
-            url (str): The url of the resource
-            metadata (dict): Some metadata providing extra information about the resource. For now it has one key:
-                - future (bool): whether the resource is from the future, e.g. Tool output files advertised beforehand
+            toolbox (ToolboxUI)
+            x, y (int): Icon coordinates
+            project_item (ProjectItem)
+
+        Returns:
+            ProjectItemIcon
         """
-        self.provider = provider
-        self.type_ = type_
-        self.url = url
-        self.parsed_url = urlparse(url)
-        if not metadata:
-            metadata = dict()
-        self.metadata = metadata
+        return self.icon_maker(toolbox, x, y, project_item, self.icon())
 
-    def __eq__(self, other):
-        if not isinstance(other, ProjectItemResource):
-            # don't attempt to compare against unrelated types
-            return NotImplemented
-        return (
-            self.provider == other.provider
-            and self.type_ == other.type_
-            and self.url == other.url
-            and self.metadata == other.metadata
-        )
+    def make_item(self, *args, **kwargs):
+        """
+        Returns a project item while setting its factory attribute.
 
-    def __repr__(self):
-        result = "ProjectItemResource("
-        result += f"provider={self.provider}, "
-        result += f"type_={self.type_}, "
-        result += f"url={self.url}, "
-        result += f"metadata={self.metadata})"
-        return result
+        Returns:
+            ProjectItem
+        """
+        item = self.item_maker(*args, **kwargs)
+        return item
 
-    @property
-    def path(self):
-        """Returns the resource path in the local syntax, as obtained from parsing the url."""
-        return url2pathname(self.parsed_url.path)
+    def activate_project_item(self, toolbox, project_item):
+        """
+        Activates the given project item so it works with the given toolbox.
+        This is mainly intended to facilitate adding items back with redo.
 
-    @property
-    def scheme(self):
-        """Returns the resource scheme, as obtained from parsing the url."""
-        return self.parsed_url.scheme
+        Args:
+            toolbox (ToolboxUI)
+            project_item (ProjectItem)
+        """
+        icon = project_item.get_icon()
+        if icon is not None:
+            icon.activate()
+        else:
+            icon = self.make_icon(toolbox, project_item.x, project_item.y, project_item)
+            project_item.set_icon(icon)
+        project_item.set_properties_ui(self.properties_ui)
+        project_item.create_data_dir()
+        project_item.set_up()
+
+    @staticmethod
+    def _make_properties_widget(toolbox):
+        """
+        Creates the item's properties tab widget.
+
+        Returns:
+            QWidget
+        """
+        raise NotImplementedError()

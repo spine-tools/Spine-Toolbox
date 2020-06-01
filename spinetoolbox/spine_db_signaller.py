@@ -16,10 +16,10 @@ Spine DB Signaller class.
 :date:   31.10.2019
 """
 
-from PySide2.QtCore import Slot
+from PySide2.QtCore import Slot, QObject
 
 
-class SpineDBSignaller:
+class SpineDBSignaller(QObject):
     """Handles signals from DB manager and channels them to listeners."""
 
     def __init__(self, db_mngr):
@@ -28,6 +28,7 @@ class SpineDBSignaller:
         Args:
             db_mngr (SpineDBManager)
         """
+        super().__init__()
         self.db_mngr = db_mngr
         self.listeners = dict()
 
@@ -267,12 +268,12 @@ class SpineDBSignaller:
             if shared_db_maps:
                 listener.receive_session_refreshed(shared_db_maps)
 
-    @Slot(set)
-    def receive_session_committed(self, db_maps):
+    @Slot(set, object)
+    def receive_session_committed(self, db_maps, cookie):
         for listener, listener_db_maps in self.listeners.items():
             shared_db_maps = listener_db_maps.intersection(db_maps)
             if shared_db_maps:
-                listener.receive_session_committed(shared_db_maps)
+                listener.receive_session_committed(shared_db_maps, cookie)
 
     @Slot(set)
     def receive_session_rolled_back(self, db_maps):

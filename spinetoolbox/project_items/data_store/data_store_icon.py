@@ -21,25 +21,16 @@ from spinetoolbox.graphics_items import ProjectItemIcon
 
 
 class DataStoreIcon(ProjectItemIcon):
-    def __init__(self, toolbox, x, y, w, h, name):
+    def __init__(self, toolbox, x, y, project_item, icon):
         """Data Store icon for the Design View.
 
         Args:
             toolbox (ToolBoxUI): QMainWindow instance
             x (float): Icon x coordinate
             y (float): Icon y coordinate
-            w (float): Width of master icon
-            h (float): Height of master icon
-            name (str): Item name
+            project_item (ProjectItem): Item
+            icon (str): icon resource path
         """
         super().__init__(
-            toolbox,
-            x,
-            y,
-            w,
-            h,
-            name,
-            ":/icons/project_item_icons/database.svg",
-            icon_color=QColor("#cc33ff"),
-            background_color=QColor("#f9e6ff"),
+            toolbox, x, y, project_item, icon, icon_color=QColor("#cc33ff"), background_color=QColor("#f9e6ff")
         )

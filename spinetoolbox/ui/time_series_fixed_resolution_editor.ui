@@ -1,7 +1,7 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <!--
 ######################################################################################################################
-# Copyright (C) 2017 - 2019 Spine project consortium
+# Copyright (C) 2017-2020 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and\/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -18,8 +18,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>296</width>
-    <height>341</height>
+    <width>581</width>
+    <height>439</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -121,12 +121,29 @@
          </item>
         </layout>
        </item>
+       <item>
+        <widget class="TimeSeriesFixedResolutionTableView" name="time_series_table"/>
+       </item>
       </layout>
      </widget>
+     <widget class="PlotWidget" name="plot_widget" native="true"/>
     </widget>
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>PlotWidget</class>
+   <extends>QWidget</extends>
+   <header>spinetoolbox/widgets/plot_widget.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>TimeSeriesFixedResolutionTableView</class>
+   <extends>QTableView</extends>
+   <header>spinetoolbox/widgets/custom_qtableview.h</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

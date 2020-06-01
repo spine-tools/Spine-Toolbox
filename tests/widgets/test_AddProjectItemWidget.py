@@ -19,6 +19,7 @@ Unit tests for AddProjectItemWidget.
 import unittest
 from unittest.mock import MagicMock
 from PySide2.QtWidgets import QApplication, QWidget
+from PySide2.QtGui import QStandardItemModel
 from spinetoolbox.widgets.add_project_item_widget import AddProjectItemWidget
 
 
@@ -29,11 +30,17 @@ class TestAddProjectItemWidget(unittest.TestCase):
             QApplication()
 
     def test_name_field_initially_selected(self):
-        initial_name = "project_item"
+        prefix = "project_item"
         toolbox = QWidget()
         toolbox.project = MagicMock()
-        widget = AddProjectItemWidget(toolbox, 0.0, 0.0, initial_name=initial_name)
-        self.assertEqual(widget.ui.lineEdit_name.selectedText(), initial_name)
+        toolbox.filtered_spec_factory_models = MagicMock()
+        toolbox.filtered_spec_factory_models.__getitem__.side_effect = lambda x: QStandardItemModel()
+        toolbox.propose_item_name = MagicMock()
+        toolbox.propose_item_name.side_effect = lambda x: x
+        class_ = MagicMock()
+        class_.default_name_prefix.return_value = prefix
+        widget = AddProjectItemWidget(toolbox, 0.0, 0.0, class_=class_)
+        self.assertEqual(widget.ui.lineEdit_name.selectedText(), prefix)
 
 
 if __name__ == '__main__':

@@ -32,7 +32,7 @@ class DataConnectionPropertiesWidget(QWidget):
         Args:
             toolbox (ToolboxUI): The toolbox instance where this widget should be embedded
         """
-        from ..ui.data_connection_properties import Ui_Form
+        from ..ui.data_connection_properties import Ui_Form  # pylint: disable=import-outside-toplevel
 
         super().__init__()
         self._toolbox = toolbox

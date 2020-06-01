@@ -17,30 +17,30 @@ Module for data store class.
 """
 
 import os
-from PySide2.QtCore import Slot, Qt
+from PySide2.QtCore import Slot
 from PySide2.QtWidgets import QFileDialog, QApplication
-from sqlalchemy import create_engine
-from sqlalchemy.engine.url import URL
-import spinedb_api
-from spinetoolbox.project_item import ProjectItem, ProjectItemResource
-from spinetoolbox.widgets.data_store_widget import DataStoreForm
-from spinetoolbox.helpers import create_dir, busy_effect, serialize_path, deserialize_path
-from spinetoolbox.project_commands import UpdateDSURLCommand
+from spinetoolbox.project_item import ProjectItem
+from spinetoolbox.project_item_resource import ProjectItemResource
+from spinetoolbox.helpers import busy_effect, serialize_path, deserialize_path
+from .commands import UpdateDSURLCommand
+from .executable_item import ExecutableItem
+from .item_info import ItemInfo
+from .utils import convert_to_sqlalchemy_url
 from .widgets.custom_menus import DataStoreContextMenu
 
 
 class DataStore(ProjectItem):
-    def __init__(self, name, description, x, y, toolbox, project, logger, url=None):
+    def __init__(self, toolbox, project, logger, name, description, x, y, url=None):
         """Data Store class.
 
         Args:
+            toolbox (ToolboxUI): QMainWindow instance
+            project (SpineToolboxProject): the project this item belongs to
+            logger (LoggerInterface): a logger instance
             name (str): Object name
             description (str): Object description
             x (float): Initial X coordinate of item icon
             y (float): Initial Y coordinate of item icon
-            toolbox (ToolboxUI): QMainWindow instance
-            project (SpineToolboxProject): the project this item belongs to
-            logger (LoggerInterface): a logger instance
             url (str or dict): SQLAlchemy url
         """
         super().__init__(name, description, x, y, project, logger)
@@ -51,24 +51,21 @@ class DataStore(ProjectItem):
         self._toolbox = toolbox
         self._url = self.parse_url(url)
         self._sa_url = None
-        self.ds_view = None
-        self._for_spine_model_checkbox_state = Qt.Unchecked
-        # Make logs directory for this Data Store
-        self.logs_dir = os.path.join(self.data_dir, "logs")
-        try:
-            create_dir(self.logs_dir)
-        except OSError:
-            self._logger.msg_error.emit(f"[OSError] Creating directory {self.logs_dir} failed. Check permissions.")
 
     @staticmethod
     def item_type():
         """See base class."""
-        return "Data Store"
+        return ItemInfo.item_type()
 
     @staticmethod
-    def category():
+    def item_category():
         """See base class."""
-        return "Data Stores"
+        return ItemInfo.item_category()
+
+    def execution_item(self):
+        """Creates DataStore's execution counterpart."""
+        self._update_sa_url(log_errors=False)
+        return ExecutableItem(self.name, self._sa_url, self._logger)
 
     def parse_url(self, url):
         """Return a complete url dictionary from the given dict or string"""
@@ -89,7 +86,7 @@ class DataStore(ProjectItem):
         This is to enable simpler connecting and disconnecting."""
         s = super().make_signal_handler_dict()
         s[self._properties_ui.toolButton_ds_open_dir.clicked] = lambda checked=False: self.open_directory()
-        s[self._properties_ui.pushButton_ds_view.clicked] = self.open_ds_view
+        s[self._properties_ui.pushButton_ds_form.clicked] = self.open_ds_form
         s[self._properties_ui.toolButton_open_sqlite_file.clicked] = self.open_sqlite_file
         s[self._properties_ui.pushButton_create_new_spine_db.clicked] = self.create_new_spine_database
         s[self._properties_ui.toolButton_copy_url.clicked] = self.copy_url
@@ -105,73 +102,20 @@ class DataStore(ProjectItem):
     def restore_selections(self):
         """Load url into selections."""
         self._properties_ui.label_ds_name.setText(self.name)
-        self._properties_ui.checkBox_for_spine_model.setCheckState(self._for_spine_model_checkbox_state)
         self.load_url_into_selections(self._url)
 
-    def save_selections(self):
-        """Save checkbox state."""
-        self._for_spine_model_checkbox_state = self._properties_ui.checkBox_for_spine_model.checkState()
-
     def url(self):
-        """Return the url attribute, for saving the project."""
+        """Returns the url attribute."""
         return self._url
 
-    def _update_sa_url(self, log_errors=True):
-        self._sa_url = self._make_url(log_errors=log_errors)
+    def sql_alchemy_url(self):
+        """Returns the URL as an SQLAlchemy URL object or None if no URL is set."""
+        self._update_sa_url()
+        return self._sa_url
 
     @busy_effect
-    def _make_url(self, log_errors=True):
-        """Returns a sqlalchemy url from the current url attribute or None if not valid."""
-        if not self._url:
-            if log_errors:
-                self._logger.msg_error.emit(
-                    f"No URL specified for <b>{self.name}</b>. Please specify one and try again"
-                )
-            return None
-        try:
-            url = {key: value for key, value in self._url.items() if value}
-            dialect = url.pop("dialect")
-            if not dialect:
-                if log_errors:
-                    self._logger.msg_error.emit(
-                        f"Unable to generate URL from <b>{self.name}</b> selections: invalid dialect {dialect}. "
-                        "<br>Please select a new dialect and try again."
-                    )
-                return None
-            if dialect == 'sqlite':
-                sa_url = URL('sqlite', **url)  # pylint: disable=unexpected-keyword-arg
-            else:
-                db_api = spinedb_api.SUPPORTED_DIALECTS[dialect]
-                drivername = f"{dialect}+{db_api}"
-                sa_url = URL(drivername, **url)  # pylint: disable=unexpected-keyword-arg
-        except Exception as e:  # pylint: disable=broad-except
-            # This is in case one of the keys has invalid format
-            if log_errors:
-                self._logger.msg_error.emit(
-                    f"Unable to generate URL from <b>{self.name}</b> selections: {e} "
-                    "<br>Please make new selections and try again."
-                )
-            return None
-        if not sa_url.database:
-            if log_errors:
-                self._logger.msg_error.emit(
-                    f"Unable to generate URL from <b>{self.name}</b> selections: database missing. "
-                    "<br>Please select a database and try again."
-                )
-            return None
-        # Final check
-        try:
-            engine = create_engine(sa_url)
-            with engine.connect():
-                pass
-        except Exception as e:  # pylint: disable=broad-except
-            if log_errors:
-                self._logger.msg_error.emit(
-                    f"Unable to generate URL from <b>{self.name}</b> selections: {e} "
-                    "<br>Please make new selections and try again."
-                )
-            return None
-        return sa_url
+    def _update_sa_url(self, log_errors=True):
+        self._sa_url = convert_to_sqlalchemy_url(self._url, self.name, self._logger, log_errors)
 
     def project(self):
         """Returns current project or None if no project open."""
@@ -231,8 +175,9 @@ class DataStore(ProjectItem):
         """Set url key to value."""
         kwargs = {k: v for k, v in kwargs.items() if v != self._url[k]}
         if not kwargs:
-            return
+            return False
         self._toolbox.undo_stack.push(UpdateDSURLCommand(self, **kwargs))
+        return True
 
     def do_update_url(self, **kwargs):
         self._url.update(kwargs)
@@ -350,38 +295,10 @@ class DataStore(ProjectItem):
         self._properties_ui.lineEdit_password.setEnabled(True)
 
     @Slot(bool)
-    def open_ds_view(self, checked=False):
+    def open_ds_form(self, checked=False):
         """Opens current url in the data store view."""
         self._update_sa_url()
-        if not self._sa_url:
-            return
-        if self.ds_view:
-            # If the db_url is the same, just raise the current form
-            if self.ds_view.db_url == (self._sa_url, self.name):
-                if self.ds_view.windowState() & Qt.WindowMinimized:
-                    # Remove minimized status and restore window with the previous state (maximized/normal state)
-                    self.ds_view.setWindowState(self.ds_view.windowState() & ~Qt.WindowMinimized | Qt.WindowActive)
-                    self.ds_view.activateWindow()
-                else:
-                    self.ds_view.raise_()
-                return
-            self.ds_view.close()
-        self.do_open_ds_view()
-
-    @busy_effect
-    def do_open_ds_view(self):
-        """Opens current url in the data store view."""
-        try:
-            self.ds_view = DataStoreForm(self._project.db_mngr, (self._sa_url, self.name))
-        except spinedb_api.SpineDBAPIError as e:
-            self._logger.msg_error.emit(e.msg)
-            return
-        self.ds_view.destroyed.connect(self._handle_ds_view_destroyed)
-        self.ds_view.show()
-
-    @Slot()
-    def _handle_ds_view_destroyed(self):
-        self.ds_view = None
+        self._project.db_mngr.show_data_store_form({self._sa_url: self.name}, self._logger)
 
     def data_files(self):
         """Return a list of files that are in this items data directory."""
@@ -402,7 +319,6 @@ class DataStore(ProjectItem):
     @Slot(bool)
     def create_new_spine_database(self, checked=False):
         """Create new (empty) Spine database."""
-        for_spine_model = self._properties_ui.checkBox_for_spine_model.isChecked()
         # Try to make an url from the current status
         self._update_sa_url(log_errors=False)
         if not self._sa_url:
@@ -412,7 +328,7 @@ class DataStore(ProjectItem):
             dialect = "sqlite"
             database = os.path.abspath(os.path.join(self.data_dir, self.name + ".sqlite"))
             self.update_url(dialect=dialect, database=database)
-        self._project.db_mngr.create_new_spine_database(self._sa_url, for_spine_model)
+        self._project.db_mngr.create_new_spine_database(self._sa_url)
 
     def update_name_label(self):
         """Update Data Store tab name label. Used only when renaming project items."""
@@ -474,7 +390,7 @@ class DataStore(ProjectItem):
         """
         super().apply_context_menu_action(parent, action)
         if action == "Open view...":
-            self.open_ds_view()
+            self.open_ds_form()
 
     def rename(self, new_name):
         """Rename this item.
@@ -495,23 +411,19 @@ class DataStore(ProjectItem):
                 # Check that the db was moved successfully to the new data_dir
                 if os.path.exists(database):
                     self.do_update_url(database=database)
-        # Update logs dir
-        self.logs_dir = os.path.join(self.data_dir, "logs")
         return True
-
-    def tear_down(self):
-        """Tears down this item. Called by toolbox just before closing.
-        Closes the DataStoreForm instance opened by this item.
-        """
-        if self.ds_view:
-            self.ds_view.close()
 
     def notify_destination(self, source_item):
         """See base class."""
         if source_item.item_type() == "Importer":
             self._logger.msg.emit(
-                f"Link established. Mappings generated by <b>{source_item.name}</b> will be "
+                f"Link established. Mapped data generated by <b>{source_item.name}</b> will be "
                 f"imported in <b>{self.name}</b> when executing."
+            )
+        elif source_item.item_type() == "Combiner":
+            self._logger.msg.emit(
+                "Link established. "
+                f"Data from <b>{source_item.name}</b> will be merged into <b>{self.name}'s upon execution</b>."
             )
         elif source_item.item_type() in ["Data Connection", "Tool"]:
             # Does this type of link do anything?
@@ -524,11 +436,7 @@ class DataStore(ProjectItem):
         """see base class"""
         return "Data Store"
 
-    def output_resources_backward(self):
-        """See base class."""
-        return self.output_resources_forward()
-
-    def output_resources_forward(self):
+    def resources_for_direct_successors(self):
         """See base class."""
         self._update_sa_url(log_errors=False)
         if self._sa_url:

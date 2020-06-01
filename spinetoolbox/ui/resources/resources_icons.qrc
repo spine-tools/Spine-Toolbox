@@ -14,6 +14,8 @@
     <file>fontawesome5-searchterms.json</file>
   </qresource>
   <qresource prefix="/icons">
+    <file>menu_icons/pivot-table.svg</file>
+    <file>menu_icons/table.svg</file>
     <file>menu_icons/history.svg</file>
     <file>menu_icons/level-up-alt.svg</file>
     <file>book.svg</file>
@@ -40,6 +42,7 @@
     <file>project_item_icons/stop-circle-regular.svg</file>
     <file>project_item_icons/play-circle-regular.svg</file>
     <file>project_item_icons/play-circle-solid.svg</file>
+    <file>project_item_icons/blender.svg</file>
     <file>project_item_icons/binoculars.svg</file>
     <file>project_item_icons/database.svg</file>
     <file>project_item_icons/database-export.svg</file>

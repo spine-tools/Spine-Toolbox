@@ -10,10 +10,10 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-# Form implementation generated from reading ui file 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\project_items\tool\ui\add_tool.ui',
-# licensing of 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\project_items\tool\ui\add_tool.ui' applies.
+# Form implementation generated from reading ui file 'C:\data\src\toolbox\bin\..\spinetoolbox\project_items\tool\ui\add_tool.ui',
+# licensing of 'C:\data\src\toolbox\bin\..\spinetoolbox\project_items\tool\ui\add_tool.ui' applies.
 #
-# Created: Wed Feb 12 13:45:03 2020
+# Created: Mon May 11 15:50:22 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!

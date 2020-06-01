@@ -84,10 +84,10 @@ class TreeItem:
         return len(self._children)
 
     def child_number(self):
-        """Returns the rank of this item within its parent or 0 if it's an orphan."""
+        """Returns the rank of this item within its parent or -1 if it's an orphan."""
         if self.parent_item:
             return self.parent_item.children.index(self)
-        return 0
+        return -1
 
     def find_children(self, cond=lambda child: True):
         """Returns children that meet condition expressed as a lambda function."""
@@ -105,7 +105,7 @@ class TreeItem:
 
     def previous_sibling(self):
         """Returns the previous sibling or None if it's the first."""
-        if self.child_number() == 0:
+        if self.child_number() <= 0:
             return None
         return self.parent_item.child(self.child_number() - 1)
 
@@ -138,12 +138,14 @@ class TreeItem:
 
     def remove_children(self, position, count):
         """Removes count children starting from the given position."""
-        if position > self.child_count() or position < 0:
+        first = position
+        last = position + count - 1
+        if first >= self.child_count() or first < 0:
             return False
-        if position + count > self.child_count():
-            count = self.child_count() - position
-        self.model.beginRemoveRows(self.index(), position, position + count - 1)
-        del self._children[position : position + count]
+        if last >= self.child_count():
+            last = self.child_count() - 1
+        self.model.beginRemoveRows(self.index(), first, last)
+        del self._children[first : last + 1]
         self.model.endRemoveRows()
         return True
 
@@ -176,8 +178,12 @@ class TreeItem:
         self._fetched = True
 
     @property
-    def display_name(self):
+    def display_data(self):
         return "unnamed"
+
+    @property
+    def edit_data(self):
+        return self.display_data
 
 
 class MinimalTreeModel(QAbstractItemModel):

@@ -17,7 +17,6 @@ Custom editors for model/view programming.
 :date:   2.9.2018
 """
 
-import sys
 from PySide2.QtCore import (
     Qt,
     Slot,
@@ -32,7 +31,6 @@ from PySide2.QtCore import (
 )
 from PySide2.QtWidgets import (
     QComboBox,
-    QDoubleSpinBox,
     QLineEdit,
     QTableView,
     QItemDelegate,
@@ -46,8 +44,8 @@ from PySide2.QtWidgets import (
     QStyle,
     QLabel,
 )
-from PySide2.QtGui import QIntValidator, QStandardItemModel, QStandardItem, QColor
-from ..helpers import IconListManager, interpret_icon_id, make_icon_id
+from PySide2.QtGui import QStandardItemModel, QStandardItem, QColor
+from ..helpers import IconListManager, interpret_icon_id, make_icon_id, try_number_from_string
 
 
 class CustomLineEditor(QLineEdit):
@@ -57,8 +55,6 @@ class CustomLineEditor(QLineEdit):
     def set_data(self, data):
         if data is not None:
             self.setText(str(data))
-        if isinstance(data, int):
-            self.setValidator(QIntValidator(self))
 
     def data(self):
         return self.text()
@@ -67,6 +63,16 @@ class CustomLineEditor(QLineEdit):
         """Prevents shift key press to clear the contents."""
         if event.key() != Qt.Key_Shift:
             super().keyPressEvent(event)
+
+
+class ParameterValueLineEditor(CustomLineEditor):
+    def set_data(self, data):
+        if not isinstance(data, str):
+            self.setAlignment(Qt.AlignRight)
+        super().set_data(data)
+
+    def data(self):
+        return try_number_from_string(super().data())
 
 
 class CustomComboEditor(QComboBox):
@@ -441,21 +447,3 @@ class IconColorEditor(QDialog):
         icon_code = self.icon_list.currentIndex().data(Qt.UserRole)
         color_code = self.color_dialog.currentColor().rgb()
         return make_icon_id(icon_code, color_code)
-
-
-class NumberParameterInlineEditor(QDoubleSpinBox):
-    """
-    An editor widget for numeric (datatype double) parameter values.
-    """
-
-    def __init__(self, parent):
-        super().__init__(parent)
-        self.setRange(-sys.float_info.max, sys.float_info.max)
-        self.setDecimals(sys.float_info.mant_dig)
-
-    def set_data(self, data):
-        if data is not None:
-            self.setValue(float(data))
-
-    def data(self):
-        return self.value()

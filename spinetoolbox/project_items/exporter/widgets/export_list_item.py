@@ -36,7 +36,7 @@ class ExportListItem(QWidget):
             file_name (str): relative path to the exported file name
             parent (QWidget): a parent widget
         """
-        from ..ui.export_list_item import Ui_Form
+        from ..ui.export_list_item import Ui_Form  # pylint: disable=import-outside-toplevel
 
         super().__init__(parent)
         self._ui = Ui_Form()

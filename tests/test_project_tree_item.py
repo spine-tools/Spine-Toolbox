@@ -101,7 +101,7 @@ class TestLeafProjectTreeItem(unittest.TestCase):
         expected_short_name = "abc"
         toolbox = create_toolboxui_with_project()
         project_item_dict = dict(name="View", description="", x=0, y=0)
-        toolbox.project().add_project_items("Views", project_item_dict)
+        toolbox.project().add_project_items("View", project_item_dict)
         index = toolbox.project_item_model.find_item("View")
         leaf = toolbox.project_item_model.item(index)
         leaf.rename(expected_name)
@@ -123,17 +123,14 @@ class TestLeafProjectTreeItem(unittest.TestCase):
     def _category_item():
         """Set up toolbox."""
         toolbox = create_toolboxui_with_project()
-        properties_ui = ViewPropertiesWidget(toolbox).ui
-        item = CategoryProjectTreeItem(
-            "category item", "A category tree item", View, ViewIcon, AddProjectItemWidget, properties_ui
-        )
+        item = CategoryProjectTreeItem("category item", "A category tree item")
         return toolbox, item
 
     @staticmethod
     def _leaf_item(toolbox=None):
         if toolbox is None:
             toolbox = create_toolboxui_with_project()
-        project_item = View("View", "A View item", 0.0, 0.0, toolbox, toolbox.project(), toolbox)
+        project_item = View(toolbox, toolbox.project(), toolbox, "View", "A View item", 0.0, 0.0)
         item = LeafProjectTreeItem(project_item, toolbox)
         return toolbox, item
 

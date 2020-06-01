@@ -23,7 +23,6 @@ import numpy as np
 from PySide2.QtWidgets import QTableView, QApplication
 from PySide2.QtCore import Qt, Slot, QItemSelectionModel, QPoint
 from PySide2.QtGui import QKeySequence
-from ..widgets.pivot_table_header_view import PivotTableHeaderView
 from ..helpers import busy_effect
 
 
@@ -80,7 +79,7 @@ class CopyPasteTableView(QTableView):
                         str_data = ""
                     row.append(str_data)
         with io.StringIO() as output:
-            writer = csv.writer(output, delimiter='\t')
+            writer = csv.writer(output, delimiter="\t", quotechar="'")
             for key in sorted(row_dict):
                 writer.writerow(row_dict[key])
             QApplication.clipboard().setText(output.getvalue())
@@ -108,7 +107,7 @@ class CopyPasteTableView(QTableView):
             a list of rows
         """
         with io.StringIO(text) as input_stream:
-            reader = csv.reader(input_stream, delimiter='\t')
+            reader = csv.reader(input_stream, delimiter="\t", quotechar="'")
             rows = list()
             for row in reader:
                 rows.append([locale.delocalize(element) for element in row])
@@ -205,23 +204,6 @@ class CopyPasteTableView(QTableView):
                     values.append(value)
         self.model().batch_set_data(indexes, values)
         return True
-
-
-class PivotTableView(CopyPasteTableView):
-    """Custom QTableView class with pivot capabilities.
-
-    Attributes:
-        parent (QWidget): The parent of this view
-    """
-
-    def __init__(self, parent=None):
-        """Initialize the class."""
-        super().__init__(parent)
-        h_header = PivotTableHeaderView(Qt.Horizontal, "columns", self)
-        v_header = PivotTableHeaderView(Qt.Vertical, "rows", self)
-        self.setHorizontalHeader(h_header)
-        self.setVerticalHeader(v_header)
-        h_header.setContextMenuPolicy(Qt.CustomContextMenu)
 
 
 class AutoFilterCopyPasteTableView(CopyPasteTableView):
@@ -555,3 +537,22 @@ class IndexedValueTableView(IndexedParameterValueTableViewBase):
                 raise ValueError()
             return single_column
         return data_indexes, data_values
+
+
+class ArrayTableView(CopyPasteTableView):
+    """Custom QTableView with copy and paste methods for single column tables."""
+
+    def copy(self):
+        """Copy current selection to clipboard in CSV format."""
+        selection_model = self.selectionModel()
+        if not selection_model.hasSelection():
+            return False
+        selected_indexes = sorted(selection_model.selectedIndexes(), key=lambda index: index.row())
+        values = [index.data() for index in selected_indexes]
+        with io.StringIO() as output:
+            writer = csv.writer(output, delimiter='\t')
+            for value in values:
+                value = locale.str(value) if value is not None else ""
+                writer.writerow([value])
+            QApplication.clipboard().setText(output.getvalue())
+        return True

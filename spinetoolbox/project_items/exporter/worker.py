@@ -17,28 +17,30 @@ A worker based machinery to construct the settings data structures needed for gd
 """
 
 from copy import deepcopy
-from PySide2.QtCore import QThread, Signal
+from PySide2.QtCore import QObject, QThread, Signal, Slot
 from spinedb_api import DatabaseMapping, SpineDBAPIError
 from spinetoolbox.spine_io.exporters import gdx
+from .db_utils import latest_database_commit_time_stamp
 
 
-class Worker(QThread):
-    """A worker thread to construct export settings for a database."""
+class Worker(QObject):
+    """
+    A worker to construct export settings for a database.
 
+    Attributes:
+        thread (QThread): the thread the worker executes in
+    """
+
+    database_unavailable = Signal(str)
+    """Emitted when opening the database fails."""
     errored = Signal(str, "QVariant")
     """Emitted when an error occurs."""
-    finished = Signal(str)
+    finished = Signal(str, "QVariant")
     """Emitted when the worker has finished."""
-    indexing_domains_read = Signal(str, "QVariant")
-    """Sends new additional domains away."""
-    indexing_settings_read = Signal(str, "QVariant")
-    """Sends the indexing settings away."""
-    merging_settings_read = Signal(str, "QVariant")
-    """Sends updated merging settings away."""
-    merging_domains_read = Signal(str, "QVariant")
-    """Sends updated merging domains away."""
-    settings_read = Signal(str, "QVariant")
-    """Sends the settings away."""
+    # LoggerInterface signals
+    msg = Signal(str, str)
+    msg_warning = Signal(str, str)
+    msg_error = Signal(str, str)
 
     def __init__(self, database_url):
         """
@@ -46,48 +48,41 @@ class Worker(QThread):
             database_url (str): database's URL
         """
         super().__init__()
+        self.thread = QThread()
+        self.moveToThread(self.thread)
         self._database_url = str(database_url)
         self._previous_settings = None
         self._previous_indexing_settings = None
         self._previous_indexing_domains = None
         self._previous_merging_settings = None
+        self.thread.started.connect(self._fetch_settings)
+        self.thread.finished.connect(self.deleteLater)
+        self.thread.finished.connect(self.thread.deleteLater)
 
-    def reset_previous_settings(self):
-        """Makes worker send new settings instead of updating old ones."""
-        self._previous_settings = None
-        self._previous_indexing_settings = None
-        self._previous_indexing_domains = None
-        self._previous_merging_settings = None
-
-    def run(self):
-        """Constructs settings and parameter index settings and sends them to interested parties using signals."""
-        settings, indexing_settings = self._read_settings()
-        if settings is None or self.isInterruptionRequested():
+    @Slot()
+    def _fetch_settings(self):
+        """Constructs settings and parameter index settings."""
+        result = _Result(*self._read_settings())
+        if result.set_settings is None:
             return
         if self._previous_settings is not None:
             updated_settings = deepcopy(self._previous_settings)
-            updated_settings.update(settings)
-            if self.isInterruptionRequested():
-                return
+            updated_settings.update(result.set_settings)
             updated_indexing_settings, updated_indexing_domains = self._update_indexing_settings(
-                updated_settings, indexing_settings
+                updated_settings, result.indexing_settings
             )
-            if updated_indexing_settings is None or self.isInterruptionRequested():
+            if updated_indexing_settings is None:
                 return
             updated_merging_settings, updated_merging_domains = self._update_merging_settings(updated_settings)
-            if updated_merging_settings is None or self.isInterruptionRequested():
+            if updated_merging_settings is None:
                 return
-            self.settings_read.emit(self._database_url, updated_settings)
-            self.indexing_settings_read.emit(self._database_url, updated_indexing_settings)
-            self.indexing_domains_read.emit(self._database_url, updated_indexing_domains)
-            self.merging_settings_read.emit(self._database_url, updated_merging_settings)
-            self.merging_domains_read.emit(self._database_url, updated_merging_domains)
-            self.finished.emit(self._database_url)
-            return
-        self.settings_read.emit(self._database_url, settings)
-        self.indexing_settings_read.emit(self._database_url, indexing_settings)
-        self.indexing_domains_read.emit(self._database_url, list())
-        self.finished.emit(self._database_url)
+            result.set_settings = updated_settings
+            result.indexing_settings = updated_indexing_settings
+            result.indexing_domains = updated_indexing_domains
+            result.merging_settings = updated_merging_settings
+            result.merging_domains = updated_merging_domains
+        self.finished.emit(self._database_url, result)
+        self.thread.quit()
 
     def set_previous_settings(
         self, previous_settings, previous_indexing_settings, previous_indexing_domains, previous_merging_settings
@@ -96,7 +91,7 @@ class Worker(QThread):
         Makes worker update existing settings instead of just making new ones.
 
         Args:
-            previous_settings (Settings): existing settings
+            previous_settings (gdx.SetSettings): existing set settings
             previous_indexing_settings (dict): existing indexing settings
             previous_indexing_domains (list) existing indexing domains
             previous_merging_settings (dict): existing merging settings
@@ -107,31 +102,29 @@ class Worker(QThread):
         self._previous_merging_settings = previous_merging_settings
 
     def _read_settings(self):
+        """Reads fresh gdx settings from the database."""
         try:
             database_map = DatabaseMapping(self._database_url)
         except SpineDBAPIError as error:
-            self.errored.emit(self._database_url, error)
-            return None, None
+            self.signals.database_unavailable.emit(self._database_url, self._cookie)
+            return None, None, None
         try:
-            if self.isInterruptionRequested():
-                return None, None
-            settings = gdx.make_settings(database_map)
-            if self.isInterruptionRequested():
-                return None, None
-            indexing_settings = gdx.make_indexing_settings(database_map)
+            time_stamp = latest_database_commit_time_stamp(database_map)
+            settings = gdx.make_set_settings(database_map)
+            logger = _Logger(self._database_url, self)
+            indexing_settings = gdx.make_indexing_settings(database_map, logger)
         except gdx.GdxExportException as error:
-            self.errored.emit(self._database_url, error)
-            return None, None
+            self.signals.errored.emit(self._database_url, self._cookie, error)
+            return None, None, None
         finally:
             database_map.connection.close()
-        return settings, indexing_settings
+        return time_stamp, settings, indexing_settings
 
     def _update_indexing_settings(self, updated_settings, new_indexing_settings):
+        """Updates the parameter indexing settings according to changes in the database."""
         updated_indexing_settings = gdx.update_indexing_settings(
             self._previous_indexing_settings, new_indexing_settings, updated_settings
         )
-        if self.isInterruptionRequested():
-            return None, None
         indexing_domain_names = list()
         for indexing_setting in updated_indexing_settings.values():
             if indexing_setting.indexing_domain is not None:
@@ -145,17 +138,18 @@ class Worker(QThread):
         return updated_indexing_settings, updated_indexing_domains
 
     def _update_merging_settings(self, updated_settings):
+        """Updates the parameter merging settings according to changes in the database"""
         try:
             database_map = DatabaseMapping(self._database_url)
         except SpineDBAPIError as error:
-            self.errored.emit(self._database_url, error)
+            self.signals.errored.emit(self._database_url, self._cookie, error)
             return None, None
         try:
             updated_merging_settings = gdx.update_merging_settings(
                 self._previous_merging_settings, updated_settings, database_map
             )
         except gdx.GdxExportException as error:
-            self.errored.emit(self._database_url, error)
+            self.signals.errored.emit(self._database_url, self._cookie, error)
             return None, None
         finally:
             database_map.connection.close()
@@ -164,3 +158,64 @@ class Worker(QThread):
             metadata = gdx.SetMetadata(gdx.ExportFlag.FORCED_EXPORTABLE, True)
             updated_settings.add_or_replace_domain(domain, metadata)
         return updated_merging_settings, updated_merging_domains
+
+
+class _Result:
+    """
+    Contains fetched export settings.
+
+    Attributes:
+        commit_time_stamp (datetime): time of the database's last commit
+        set_settings (gdx.SetSettings): gdx export settings
+        indexing_settings (dict): parameter indexing settings
+        indexing_domains (list): additional domains needed for parameter indexing
+        merging_settings (dict): parameter merging settings
+        merging_domains (list): additional domains needed for parameter merging
+    """
+
+    def __init__(self, time_stamp, set_settings, indexing_settings):
+        """
+        Args:
+            time_stamp (datetime): time of the database's last commit
+            set_settings (gdx.SetSettings): gdx export settings
+            indexing_settings (dict): parameter indexing settings
+        """
+        self.commit_time_stamp = time_stamp
+        self.set_settings = set_settings
+        self.indexing_settings = indexing_settings
+        self.indexing_domains = list()
+        self.merging_settings = dict()
+        self.merging_domains = list()
+
+
+class _Logger(QObject):
+    """A ``LoggerInterface`` compliant logger that relays messages to :class:`Worker`'s signals."""
+
+    msg = Signal(str)
+    msg_warning = Signal(str)
+    msg_error = Signal(str)
+
+    def __init__(self, database_url, worker):
+        """
+        Args:
+            database_url (str): a database url
+            worker (Worker): a worker
+        """
+        super().__init__()
+        self._url = database_url
+        self._worker = worker
+        self.msg.connect(self.relay_message)
+        self.msg_warning.connect(self.relay_warning)
+        self.msg_error.connect(self.relay_error)
+
+    @Slot(str)
+    def relay_message(self, text):
+        self._worker.msg.emit(self._url, text)
+
+    @Slot(str)
+    def relay_warning(self, text):
+        self._worker.msg_warning.emit(self._url, text)
+
+    @Slot(str)
+    def relay_error(self, text):
+        self._worker.msg_error.emit(self._url, text)

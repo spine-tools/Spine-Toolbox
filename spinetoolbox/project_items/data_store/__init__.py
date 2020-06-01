@@ -16,15 +16,5 @@ Data store plugin.
 :date:   12.9.2019
 """
 
-from .data_store import DataStore as item_maker
-from .data_store_icon import DataStoreIcon
-from .widgets.data_store_properties_widget import DataStorePropertiesWidget
-from .widgets.add_data_store_widget import AddDataStoreWidget
-
-item_rank = 0
-item_category = item_maker.category()
-item_type = item_maker.item_type()
-item_icon = ":/icons/project_item_icons/database.svg"
-icon_maker = DataStoreIcon
-properties_widget_maker = DataStorePropertiesWidget
-add_form_maker = AddDataStoreWidget
+from .data_store_factory import DataStoreFactory as ItemFactory
+from .item_info import ItemInfo

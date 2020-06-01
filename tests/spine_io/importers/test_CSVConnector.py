@@ -35,7 +35,7 @@ class TestCSVConnector(unittest.TestCase):
         with TemporaryDirectory() as data_directory:
             file_name = os.path.join(data_directory, "test_get_tables.csv")
             self._write_basic_csv(file_name)
-            connector = CSVConnector()
+            connector = CSVConnector(None)
             connector.connect_to_source(file_name)
             tables = connector.get_tables()
             self.assertEqual(len(tables), 1)
@@ -51,7 +51,7 @@ class TestCSVConnector(unittest.TestCase):
         with TemporaryDirectory() as data_directory:
             file_name = os.path.join(data_directory, "test_get_data_iterator.csv")
             self._write_basic_csv(file_name)
-            connector = CSVConnector()
+            connector = CSVConnector(None)
             connector.connect_to_source(file_name)
             tables = connector.get_tables()
             options = tables["csv"]["options"]
@@ -63,7 +63,7 @@ class TestCSVConnector(unittest.TestCase):
         with TemporaryDirectory() as data_directory:
             file_name = os.path.join(data_directory, "test_get_data.csv")
             self._write_basic_csv(file_name)
-            connector = CSVConnector()
+            connector = CSVConnector(None)
             connector.connect_to_source(file_name)
             tables = connector.get_tables()
             options = tables["csv"]["options"]

@@ -17,23 +17,23 @@ license_text = [
 ]
 
 
-def append_license(path, force=False):
+def append_license(path):
     _, extension = os.path.splitext(path)
     if extension not in [".py", ".ui", ".xml"]:
         raise RuntimeError("Unsupported file type. Can only append license to .py, .ui or .xml files.")
     if extension == ".py":
-        _append_license_py(path, force)
+        _append_license_py(path)
     else:
-        _append_license_xml(path, force)
+        _append_license_xml(path)
 
 
-def _append_license_py(path, force):
+def _append_license_py(path):
     """Appends a license header to given .py, .ui or .xml file."""
     base_name = os.path.basename(path)
     print("Appending license to " + base_name)
     with open(path) as input_file:
         contents = input_file.readlines()
-    if not force and contents[2].startswith("# Copyright"):
+    if contents[2].startswith("# Copyright"):
         print(base_name + " seems to have a license already. Skipping.")
         return
     with open(path, "w") as output_file:
@@ -42,7 +42,7 @@ def _append_license_py(path, force):
         output_file.writelines(contents[1:])
 
 
-def _append_license_xml(path, force):
+def _append_license_xml(path):
     """Appends a license header to given .py, .ui or .xml file."""
     xml_license = list()
     xml_license.append("<!--\n")
@@ -52,7 +52,7 @@ def _append_license_xml(path, force):
     with open(path) as input_file:
         contents = input_file.readlines()
     base_name = os.path.basename(path)
-    if not force and contents[1].startswith("<!--"):
+    if contents[1].startswith("<!--"):
         print(base_name + " seems to have a license already. Skipping.")
         return
     print("Appending license to " + base_name)

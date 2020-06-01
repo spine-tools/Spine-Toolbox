@@ -18,7 +18,7 @@ Contains classes for handling DAGs.
 
 import logging
 import random
-from PySide2.QtCore import Signal, Slot, QObject, QTimer
+from PySide2.QtCore import Signal, QObject
 import networkx as nx
 
 
@@ -301,15 +301,3 @@ class DirectedGraphHandler(QObject):
             return False
         nx.write_graphml(g, path, prettyprint=True)
         return True
-
-    @Slot("QVariant")
-    def receive_item_execution_finished(self, item_finish_state):
-        """TODO: Method obsolete?
-        Pop next project item to execute or finish current graph if there are no items left.
-
-        Args:
-            item_finish_state (ExecutionState): an enumeration to indicate if execution should continue or not
-        """
-        anim = self.running_item.make_execution_leave_animation()
-        anim.finished.connect(lambda: QTimer.singleShot(0, self._execute_next_item))
-        anim.start()

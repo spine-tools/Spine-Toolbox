@@ -40,19 +40,19 @@ class TestParameterValueFormatting(unittest.TestCase):
             QApplication()
 
     def setUp(self):
-        self.db_mngr = SpineDBManager(None, None)
+        self.db_mngr = SpineDBManager(None, None, None)
         self.db_mngr.get_item = Mock()
 
     def get_value(self, role):
         mock_db_map = Mock()
         id_ = 0
-        return self.db_mngr.get_value(mock_db_map, "parameter value", id_, "value", role)
+        return self.db_mngr.get_value(mock_db_map, "parameter value", id_, role)
 
     def test_plain_number_in_display_role(self):
         value = 2.3
         self.db_mngr.get_item.return_value = {"value": to_database(value)}
         formatted = self.get_value(Qt.DisplayRole)
-        self.assertEqual(formatted, 2.3)
+        self.assertEqual(formatted, "2.3")
 
     def test_plain_number_in_edit_role(self):
         value = 2.3
@@ -87,12 +87,6 @@ class TestParameterValueFormatting(unittest.TestCase):
         self.db_mngr.get_item.return_value = {"value": to_database(value)}
         formatted = self.get_value(Qt.DisplayRole)
         self.assertEqual(formatted, "3Y")
-
-    def test_variable_duration_in_display_role(self):
-        value = Duration(["2Y", "3Y"])
-        self.db_mngr.get_item.return_value = {"value": to_database(value)}
-        formatted = self.get_value(Qt.DisplayRole)
-        self.assertEqual(formatted, "2Y, 3Y")
 
     def test_duration_in_edit_role(self):
         value = Duration("2M")
@@ -168,7 +162,7 @@ class TestParameterValueFormatting(unittest.TestCase):
         value = "diibadaaba"
         self.db_mngr.get_item.return_value = {"value": value}
         formatted = self.get_value(Qt.ToolTipRole)
-        self.assertEqual(formatted, 'Could not decode the value')
+        self.assertTrue(formatted.startswith('Could not decode the value'))
 
 
 if __name__ == '__main__':

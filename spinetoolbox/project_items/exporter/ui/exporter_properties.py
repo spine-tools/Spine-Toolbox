@@ -10,10 +10,10 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-# Form implementation generated from reading ui file 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\project_items\exporter\ui\exporter_properties.ui',
-# licensing of 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\project_items\exporter\ui\exporter_properties.ui' applies.
+# Form implementation generated from reading ui file 'C:\data\src\toolbox\bin\..\spinetoolbox\project_items\exporter\ui\exporter_properties.ui',
+# licensing of 'C:\data\src\toolbox\bin\..\spinetoolbox\project_items\exporter\ui\exporter_properties.ui' applies.
 #
-# Created: Thu Feb 13 11:53:46 2020
+# Created: Mon May 11 15:50:19 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -61,6 +61,13 @@ class Ui_Form(object):
         self.verticalLayout_21.addLayout(self.databases_list_layout)
         spacerItem = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
         self.verticalLayout_21.addItem(spacerItem)
+        self.horizontalLayout = QtWidgets.QHBoxLayout()
+        self.horizontalLayout.setObjectName("horizontalLayout")
+        self.cancel_on_error_check_box = QtWidgets.QCheckBox(self.scrollAreaWidgetContents_5)
+        self.cancel_on_error_check_box.setChecked(True)
+        self.cancel_on_error_check_box.setObjectName("cancel_on_error_check_box")
+        self.horizontalLayout.addWidget(self.cancel_on_error_check_box)
+        self.verticalLayout_21.addLayout(self.horizontalLayout)
         self.line_6 = QtWidgets.QFrame(self.scrollAreaWidgetContents_5)
         self.line_6.setFrameShape(QtWidgets.QFrame.HLine)
         self.line_6.setFrameShadow(QtWidgets.QFrame.Sunken)
@@ -93,6 +100,7 @@ class Ui_Form(object):
     def retranslateUi(self, Form):
         Form.setWindowTitle(QtWidgets.QApplication.translate("Form", "Form", None, -1))
         self.item_name_label.setText(QtWidgets.QApplication.translate("Form", "Name", None, -1))
+        self.cancel_on_error_check_box.setText(QtWidgets.QApplication.translate("Form", "Cancel export on error", None, -1))
         self.open_directory_button.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Open this Exporter\'s project directory in file browser</p></body></html>", None, -1))
 
 from spinetoolbox import resources_icons_rc

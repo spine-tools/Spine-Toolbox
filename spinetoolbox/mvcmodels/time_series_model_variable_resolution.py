@@ -174,7 +174,7 @@ class TimeSeriesModelVariableResolution(IndexedValueTableModel):
             self._value.indexes[index.row()] = value
         else:
             self._value.values[index.row()] = value
-        self.dataChanged.emit(index, index, [Qt.EditRole])
+        self.dataChanged.emit(index, index, [Qt.DisplayRole, Qt.EditRole])
         return True
 
     def batch_set_data(self, indexes, values):

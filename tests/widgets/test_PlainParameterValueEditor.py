@@ -30,7 +30,7 @@ class TestPlainParameterValueEditor(unittest.TestCase):
     def test_initial_value(self):
         editor = PlainParameterValueEditor()
         value = editor.value()
-        self.assertEqual(value, 0.0)
+        self.assertEqual(value, "")
 
     def test_value_access(self):
         editor = PlainParameterValueEditor()

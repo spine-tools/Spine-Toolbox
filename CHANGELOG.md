@@ -3,6 +3,30 @@ All **notable** changes to this project are documented here.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
+## [Unreleased]
+
+### Added
+- Now it's possible to export graphs as PDF files from the *Graph* menu in the Data Store form.
+- Now it's possible to prune entire classes from the graph view. The option is available both from the *Graph* menu and
+  from *Entity Graph* context menus. Also, pruned items can be restored gradually.
+- A new Input type *Indexed parameter expansion* is now available in Data Store view's Pivot table.
+  In this Input type the indexes, e.g. time stamps of time series get expanded as a new dimension in the table.
+- Import editor now has a new Source type: Table name. It can be used e.g. to pick an Excel sheet's
+  or GAMS domain's name as the object class name.
+- It is now possible to execute a project from the command line without opening the Toolbox GUI.
+  The headless execution is enabled by the new command line option ``--execute-only``.
+
+### Changed
+- The graph view behavior has changed. Now selecting objects in the object tree not only shows those objects but also 
+  all the cascading relationships. One can still go back to the previous behaviour in Settings.
+- Moving object items in the graph view also causes relationship icons to follow. This behaviour can be disabled in the
+  Settings form.
+
+### Deprecated
+### Removed
+### Fixed
+### Security
+
 ## [0.4.0-final.0] - 2020-04-03
 
 ### Added

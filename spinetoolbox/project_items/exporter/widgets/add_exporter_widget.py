@@ -18,23 +18,22 @@ Widget shown to user when a new Exporter item is created.
 
 from spinetoolbox.widgets.add_project_item_widget import AddProjectItemWidget
 from ..exporter import Exporter
+from ..item_info import ItemInfo
 
 
 class AddExporterWidget(AddProjectItemWidget):
     """A widget to query user's preferences for a new item."""
 
-    def __init__(self, toolbox, x, y):
+    def __init__(self, toolbox, x, y, spec=""):
         """
         Args:
             toolbox (ToolboxUI): Parent widget
             x (int): X coordinate of new item
             y (int): Y coordinate of new item
         """
-        initial_name = toolbox.propose_item_name(Exporter.default_name_prefix())
-        super().__init__(toolbox, x, y, initial_name)
-        self.setWindowTitle(f"Add Exporter")
+        super().__init__(toolbox, x, y, Exporter, spec=spec)
 
     def call_add_item(self):
         """Creates new Item according to user's selections."""
         item = dict(name=self.name, description=self.description, settings_packs=None, x=self._x, y=self._y)
-        self._project.add_project_items("Exporters", item, set_selected=True)
+        self._project.add_project_items(ItemInfo.item_type(), item, set_selected=True)

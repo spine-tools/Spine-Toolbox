@@ -18,21 +18,23 @@ Contains Importer project item class.
 
 from collections import Counter
 import os
-import sys
-from PySide2.QtCore import Qt, Signal, Slot, QFileInfo, QEventLoop
-from PySide2.QtGui import QStandardItem, QStandardItemModel
+from itertools import takewhile
+from PySide2.QtCore import QAbstractListModel, QFileInfo, QModelIndex, Qt, Signal, Slot
 from PySide2.QtWidgets import QFileIconProvider, QListWidget, QDialog, QVBoxLayout, QDialogButtonBox
+from spine_engine import ExecutionDirection
 from spinetoolbox.project_item import ProjectItem
 from spinetoolbox.helpers import create_dir, deserialize_path, serialize_path
+from spinetoolbox.spine_io.gdx_utils import find_gams_directory
 from spinetoolbox.spine_io.importers.csv_reader import CSVConnector
 from spinetoolbox.spine_io.importers.excel_reader import ExcelConnector
 from spinetoolbox.spine_io.importers.gdx_connector import GdxConnector
 from spinetoolbox.spine_io.importers.json_reader import JSONConnector
-from spinetoolbox.widgets.import_preview_window import ImportPreviewWindow
-from spinetoolbox.project_commands import UpdateImporterSettingsCommand, UpdateImporterCancelOnErrorCommand
-from spinetoolbox.execution_managers import QProcessExecutionManager
-from spinetoolbox.config import _frozen, _program_root
-from . import importer_program
+from spinetoolbox.import_editor.widgets.import_editor_window import ImportEditorWindow
+from .commands import ChangeItemSelectionCommand, UpdateSettingsCommand
+from ..shared.commands import UpdateCancelOnErrorCommand
+from .executable_item import ExecutableItem
+from .item_info import ItemInfo
+from .utils import deserialize_mappings
 
 _CONNECTOR_NAME_TO_CLASS = {
     "CSVConnector": CSVConnector,
@@ -43,22 +45,23 @@ _CONNECTOR_NAME_TO_CLASS = {
 
 
 class Importer(ProjectItem):
-
-    importing_finished = Signal()
-
-    def __init__(self, name, description, mappings, x, y, toolbox, project, logger, cancel_on_error=True):
+    def __init__(
+        self, toolbox, project, logger, name, description, mappings, x, y, cancel_on_error=True, mapping_selection=None
+    ):
         """Importer class.
 
         Args:
+            toolbox (ToolboxUI): QMainWindow instance
+            project (SpineToolboxProject): the project this item belongs to
+            logger (LoggerInterface): a logger instance
             name (str): Project item name
             description (str): Project item description
             mappings (list): List where each element contains two dicts (path dict and mapping dict)
             x (float): Initial icon scene X coordinate
             y (float): Initial icon scene Y coordinate
-            toolbox (ToolboxUI): QMainWindow instance
-            project (SpineToolboxProject): the project this item belongs to
-            logger (LoggerInterface): a logger instance
-            cancel_on_error (bool): if True the item's execution will stop on import error
+            cancel_on_error (bool, optional): if True the item's execution will stop on import error
+            mapping_selection (list, optional): serialized checked states for each file item
+                either selected or unselected
        """
         super().__init__(name, description, x, y, project, logger)
         # Make logs subdirectory for this item
@@ -84,38 +87,65 @@ class Importer(ProjectItem):
                 for table_name, row_types in table_row_types.items()
             }
         # Convert serialized paths to absolute in mappings
-        self.settings = self.deserialize_mappings(mappings, self._project.project_dir)
+        _fix_1d_array_to_array(mappings)
+        self.settings = deserialize_mappings(mappings, self._project.project_dir)
         # self.settings is now a dictionary, where elements have the absolute path as the key and the mapping as value
         self.cancel_on_error = cancel_on_error
-        self.resources_from_downstream = list()
-        self.file_model = QStandardItemModel()
-        self.importer_process = None
-        self.return_value = False  # Import process return value (boolean)
-        self.all_files = []  # All source files
-        self.unchecked_files = []  # Unchecked source files
+        self._file_model = _FileListModel()
+        if not mapping_selection or isinstance(mapping_selection[0], bool):
+            # This is for legacy selections which either did not exist in the item dict
+            # or were just a list of bools which caused problems with empty mappings.
+            # Consider removing this if in Toolbox 0.6
+            mapping_selection = {}
+        else:
+            mapping_selection = self.deserialize_checked_states(mapping_selection, self._project.project_dir)
+        self._file_model.set_initial_state(mapping_selection)
+        self._file_model.selected_for_import_state_changed.connect(self._push_file_selection_change_to_undo_stack)
         # connector class
-        self._preview_widget = {}  # Key is the filepath, value is the ImportPreviewWindow instance
+        self._preview_widget = {}  # Key is the filepath, value is the ImportEditorWindow instance
 
     @staticmethod
     def item_type():
         """See base class."""
-        return "Importer"
+        return ItemInfo.item_type()
 
     @staticmethod
-    def category():
+    def item_category():
         """See base class."""
-        return "Importers"
+        return ItemInfo.item_category()
 
-    @Slot(QStandardItem, name="_handle_file_model_item_changed")
-    def _handle_file_model_item_changed(self, item):
-        if item.checkState() == Qt.Checked:
-            self.unchecked_files.remove(item.text())
-            self._logger.msg.emit(f"<b>{self.name}:</b> Source file '{item.text()}' will be processed at execution.")
-        elif item.checkState() != Qt.Checked:
-            self.unchecked_files.append(item.text())
-            self._logger.msg.emit(
-                f"<b>{self.name}:</b> Source file '{item.text()}' will *NOT* be processed at execution."
-            )
+    def execution_item(self):
+        """Creates project item's execution counterpart."""
+        selected_settings = dict()
+        for file_item in self._file_model.existing_files():
+            label = file_item.label
+            settings = self.settings.get(label) if file_item.selected_for_import else "deselected"
+            if not settings:
+                continue
+            selected_settings[label] = settings
+        python_path = self._project.settings.value("appSettings/pythonPath", defaultValue="")
+        gams_path = self._project.settings.value("appSettings/gamsPath", defaultValue=None)
+        executable = ExecutableItem(
+            self.name, selected_settings, self.logs_dir, python_path, gams_path, self.cancel_on_error, self._logger
+        )
+        return executable
+
+    @Slot()
+    def executed_successfully(self, execution_direction, engine_state):
+        """Notifies Toolbox for successful database import."""
+        if execution_direction != ExecutionDirection.FORWARD:
+            return
+        successors = self._project.direct_successors(self)
+        committed_db_maps = set()
+        for successor in successors:
+            if successor.item_type() == "Data Store":
+                url = successor.sql_alchemy_url()
+                database_map = self._project.db_mngr.get_db_map(url, self._logger)
+                if database_map is not None:
+                    committed_db_maps.add(database_map)
+        if committed_db_maps:
+            cookie = self
+            self._project.db_mngr.session_committed.emit(committed_db_maps, cookie)
 
     def make_signal_handler_dict(self):
         """Returns a dictionary of all shared signals and their handlers.
@@ -132,7 +162,7 @@ class Importer(ProjectItem):
         cancel_on_error = self._properties_ui.cancel_on_error_checkBox.isChecked()
         if self.cancel_on_error == cancel_on_error:
             return
-        self._toolbox.undo_stack.push(UpdateImporterCancelOnErrorCommand(self, cancel_on_error))
+        self._toolbox.undo_stack.push(UpdateCancelOnErrorCommand(self, cancel_on_error))
 
     def set_cancel_on_error(self, cancel_on_error):
         self.cancel_on_error = cancel_on_error
@@ -143,44 +173,58 @@ class Importer(ProjectItem):
         self._properties_ui.cancel_on_error_checkBox.setCheckState(check_state)
         self._properties_ui.cancel_on_error_checkBox.blockSignals(False)
 
+    def set_file_selected(self, label, selected):
+        self._file_model.set_selected(label, selected)
+
     def restore_selections(self):
         """Restores selections into shared widgets when this project item is selected."""
         self._properties_ui.cancel_on_error_checkBox.setCheckState(Qt.Checked if self.cancel_on_error else Qt.Unchecked)
         self._properties_ui.label_name.setText(self.name)
-        self._properties_ui.treeView_files.setModel(self.file_model)
-        self.file_model.itemChanged.connect(self._handle_file_model_item_changed)
+        self._properties_ui.treeView_files.setModel(self._file_model)
 
     def save_selections(self):
         """Saves selections in shared widgets for this project item into instance variables."""
         self._properties_ui.treeView_files.setModel(None)
-        self.file_model.itemChanged.disconnect(self._handle_file_model_item_changed)
 
     def update_name_label(self):
         """Update Importer properties tab name label. Used only when renaming project items."""
         self._properties_ui.label_name.setText(self.name)
 
-    @Slot(bool, name="_handle_import_editor_clicked")
+    @Slot(bool)
     def _handle_import_editor_clicked(self, checked=False):
         """Opens Import editor for the file selected in list view."""
         index = self._properties_ui.treeView_files.currentIndex()
+        if not index.isValid():
+            for row, item in enumerate(self._file_model.files):
+                if item.exists():
+                    index = self._file_model.index(row, 0)
+                    self._properties_ui.treeView_files.setCurrentIndex(index)
+                    break
         self.open_import_editor(index)
 
-    @Slot("QModelIndex", name="_handle_files_double_clicked")
+    @Slot("QModelIndex")
     def _handle_files_double_clicked(self, index):
         """Opens Import editor for the double clicked index."""
         self.open_import_editor(index)
 
     def open_import_editor(self, index):
         """Opens Import editor for the given index."""
-        importee = index.data()
-        if importee is None:
+        label = index.data()
+        if label is None:
             self._logger.msg_error.emit("Please select a source file from the list first.")
             return
-        if not os.path.exists(importee):
-            self._logger.msg_error.emit(f"Invalid path: {importee}")
+        file_item = self._file_model.find_file(label)
+        file_path = file_item.path
+        if not file_item.exists():
+            self._logger.msg_error.emit(f"File does not exist yet.")
+            self._file_model.mark_as_nonexistent(index)
+            return
+        if not os.path.exists(file_path):
+            self._logger.msg_error.emit(f"Cannot find file '{file_path}'.")
+            self._file_model.mark_as_nonexistent(index)
             return
         # Raise current form for the selected file if any
-        preview_widget = self._preview_widget.get(importee, None)
+        preview_widget = self._preview_widget.get(label, None)
         if preview_widget:
             if preview_widget.windowState() & Qt.WindowMinimized:
                 # Remove minimized status and restore window with the previous state (maximized/normal state)
@@ -190,24 +234,25 @@ class Importer(ProjectItem):
                 preview_widget.raise_()
             return
         # Create a new form for the selected file
-        settings = self.get_settings(importee)
+        settings = self.get_settings(label)
         # Try and get connector from settings
         source_type = settings.get("source_type", None)
         if source_type is not None:
             connector = _CONNECTOR_NAME_TO_CLASS[source_type]
         else:
             # Ask user
-            connector = self.get_connector(importee)
+            connector = self.get_connector(label)
             if not connector:
                 # Aborted by the user
                 return
-        self._logger.msg.emit(f"Opening Import editor for file: {importee}")
-        preview_widget = self._preview_widget[importee] = ImportPreviewWindow(
-            self, importee, connector, settings, self._toolbox
+        self._logger.msg.emit(f"Opening Import editor for file: {file_path}")
+        connector_settings = {"gams_directory": self._gams_system_directory()}
+        preview_widget = self._preview_widget[label] = ImportEditorWindow(
+            self, file_path, connector, connector_settings, settings, self._toolbox
         )
-        preview_widget.settings_updated.connect(lambda s, importee=importee: self.save_settings(s, importee))
-        preview_widget.connection_failed.connect(lambda m, importee=importee: self._connection_failed(m, importee))
-        preview_widget.destroyed.connect(lambda o=None, importee=importee: self._preview_destroyed(importee))
+        preview_widget.settings_updated.connect(lambda s, importee=label: self.save_settings(s, importee))
+        preview_widget.connection_failed.connect(lambda m, importee=label: self._connection_failed(m, importee))
+        preview_widget.destroyed.connect(lambda o=None, importee=label: self._preview_destroyed(importee))
         preview_widget.start_ui()
 
     def get_connector(self, importee):
@@ -215,7 +260,7 @@ class Importer(ProjectItem):
         Mimics similar routine in `spine_io.widgets.import_widget.ImportDialog`
 
         Args:
-            importee (str): Path to file acting as an importee
+            importee (str): Label of the file acting as an importee
 
         Returns:
             Asynchronous data reader class for the given importee
@@ -228,17 +273,18 @@ class Importer(ProjectItem):
         connector_list_wg.addItems(connector_names)
         # Set current item in `connector_list_wg` based on file extension
         _filename, file_extension = os.path.splitext(importee)
-        if file_extension.lower().startswith(".xls"):
+        file_extension = file_extension.lower()
+        if file_extension.startswith(".xls"):
             row = connector_list.index(ExcelConnector)
-        elif file_extension.lower() == ".csv":
+        elif file_extension in (".csv", ".dat", ".txt"):
             row = connector_list.index(CSVConnector)
-        elif file_extension.lower() == ".gdx":
+        elif file_extension == ".gdx":
             row = connector_list.index(GdxConnector)
-        elif file_extension.lower() == ".json":
+        elif file_extension == ".json":
             row = connector_list.index(JSONConnector)
         else:
             row = None
-        if row:
+        if row is not None:
             connector_list_wg.setCurrentRow(row)
         button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         button_box.button(QDialogButtonBox.Ok).clicked.connect(dialog.accept)
@@ -264,7 +310,7 @@ class Importer(ProjectItem):
         settings["source_type"] = connector.__name__
 
     def _connection_failed(self, msg, importee):
-        self._logger.msg.emit(msg)
+        self._logger.msg_error.emit(msg)
         preview_widget = self._preview_widget.pop(importee, None)
         if preview_widget:
             preview_widget.close()
@@ -273,7 +319,7 @@ class Importer(ProjectItem):
         """Returns the mapping dictionary for the file in given path.
 
         Args:
-            importee (str): Absolute path to a file, whose mapping is queried
+            importee (str): Label of the file whose mapping is queried
 
         Returns:
             dict: Mapping dictionary for the requested importee or an empty dict if not found
@@ -290,7 +336,7 @@ class Importer(ProjectItem):
         """
         if self.settings.get(importee) == settings:
             return
-        self._toolbox.undo_stack.push(UpdateImporterSettingsCommand(self, settings, importee))
+        self._toolbox.undo_stack.push(UpdateSettingsCommand(self, settings, importee))
 
     def _preview_destroyed(self, importee):
         """Destroys preview widget instance for the given importee.
@@ -300,138 +346,20 @@ class Importer(ProjectItem):
         """
         self._preview_widget.pop(importee, None)
 
-    def update_file_model(self, items):
-        """Adds given list of items to the file model. If None or
-        an empty list is given, the model is cleared.
-
-        Args:
-            items (set): Set of absolute file paths
-        """
-        self.all_files = items
-        self.file_model.clear()
-        self.file_model.setHorizontalHeaderItem(0, QStandardItem("Source files"))  # Add header
-        if items is not None:
-            for item in items:
-                qitem = QStandardItem(item)
-                qitem.setEditable(False)
-                qitem.setCheckable(True)
-                if item in self.unchecked_files:
-                    qitem.setCheckState(Qt.Unchecked)
-                else:
-                    qitem.setCheckState(Qt.Checked)
-                qitem.setData(QFileIconProvider().icon(QFileInfo(item)), Qt.DecorationRole)
-                self.file_model.appendRow(qitem)
-
-    def _prepare_importer_program(self, importer_args):
-        """Prepares an execution manager instance for running importer_process.py
-        in a QProcess.
-
-        If app is not frozen, the Python to run it is the python
-        that was used in starting the app.
-
-        If app is frozen, we are running the importer_program application
-        found in application install directory.
-
-        Args:
-            importer_args (list): Arguments for the importer_program. Source file paths, their mapping specs,
-             URLs downstream, logs directory, cancel_on_error
-
-        Returns:
-            bool: True if preparing the program succeeded, False otherwise.
-
-        """
-        program_path = os.path.abspath(importer_program.__file__)
-        if not _frozen:
-            # sys.executable in here is the full path to python.exe that was used in starting the app
-            python_cmd = sys.executable
-            self.importer_process = QProcessExecutionManager(self._toolbox, python_cmd, [program_path])
-        else:
-            # sys.executable is the full path to spinetoolbox.exe here (cannot use it)
-            importer_program_app = os.path.abspath(
-                os.path.join(_program_root, "importer_program", "importer_program.exe"))
-            self.importer_process = QProcessExecutionManager(self._toolbox, importer_program_app, [])
-        self.importer_process.execution_finished.connect(self._handle_importer_program_process_finished)
-        self.importer_process.data_to_inject = importer_args
-        return True
-
-    @Slot(int)
-    def _handle_importer_program_process_finished(self, exit_code):
-        """Handles the return value from importer program when it has finished.
-        Emits a signal to indicate that this Importer has been executed.
-
-        Args:
-            exit_code (int): Process return value. 0: success, !0: failure
-        """
-        self.importer_process.execution_finished.disconnect()
-        self.importer_process.deleteLater()
-        self.importer_process = None
-        self.return_value = True if exit_code == 0 else False
-        self.importing_finished.emit()
-
-    def python_exists(self, program):
-        """Checks that Python is set up correctly in Settings.
-        This executes 'python -V' in a QProcess and if the process
-        finishes successfully, the python is ready to be used.
-
-        Args:
-            program (str): Python executable that is currently set in Settings
-
-        Returns:
-            bool: True if Python is found, False otherwise
-        """
-        args = ["-V"]
-        python_check_process = QProcessExecutionManager(self._toolbox, program, args, silent=True)
-        python_check_process.start_execution()
-        if not python_check_process.wait_for_process_finished(msecs=3000):
-            self._logger.msg_error.emit(
-                "Couldn't determine Python version. Please check " "the <b>Python interpreter</b> option in Settings."
-            )
-            return False
-        return True
-
-    def execute_backward(self, resources):
-        """See base class."""
-        self.resources_from_downstream = resources.copy()
-        return True
-
-    def execute_forward(self, resources):
-        """See base class."""
-        # Collect arguments for the importer_program
-        import_args = [
-            [f for f in self.all_files if f not in self.unchecked_files],
-            self.settings,
-            [r.url for r in self.resources_from_downstream if r.type_ == "database"],
-            self.logs_dir,
-            self._properties_ui.cancel_on_error_checkBox.isChecked(),
-        ]
-        if not self._prepare_importer_program(import_args):
-            self._logger.msg_error.emit(f"Executing Importer {self.name} failed.")
-            return False
-        self.importer_process.start_execution()
-        loop = QEventLoop()
-        self.importing_finished.connect(loop.quit)
-        # Wait for the importer program to finish right here
-        loop.exec_()
-        # This is executed after the import program has finished
-        if not self.return_value:
-            self._logger.msg_error.emit(f"Executing Importer {self.name} failed.")
-        else:
-            self._logger.msg_success.emit(f"Executing Importer {self.name} finished")
-        return self.return_value
-
-    def stop_execution(self):
-        """Stops executing this Importer."""
-        super().stop_execution()
-        if not self.importer_process:
-            return
-        self.importer_process.kill()
+    @Slot(bool, str)
+    def _push_file_selection_change_to_undo_stack(self, selected, label):
+        """Makes changes to file selection undoable."""
+        self._toolbox.undo_stack.push(ChangeItemSelectionCommand(self, selected, label))
 
     def _do_handle_dag_changed(self, resources):
         """See base class."""
-        file_list = [r.path for r in resources if r.type_ == "file" and not r.metadata.get("future")]
-        self._notify_if_duplicate_file_paths(file_list)
-        self.update_file_model(set(file_list))
-        if not file_list:
+        self._file_model.update(resources)
+        labels = self._file_model.labels()
+        for settings_label in list(self.settings):
+            if settings_label not in labels:
+                del self.settings[settings_label]
+        self._notify_if_duplicate_file_paths()
+        if self._file_model.rowCount() == 0:
             self.add_notification(
                 "This Importer does not have any input data. "
                 "Connect Data Connections to this Importer to use their data as input."
@@ -443,6 +371,7 @@ class Importer(ProjectItem):
         # Serialize mappings before saving
         d["mappings"] = self.serialize_mappings(self.settings, self._project.project_dir)
         d["cancel_on_error"] = self._properties_ui.cancel_on_error_checkBox.isChecked()
+        d["mapping_selection"] = self.serialize_checked_states()
         return d
 
     def notify_destination(self, source_item):
@@ -452,8 +381,12 @@ class Importer(ProjectItem):
                 "Link established. You can define mappings on data from "
                 f"<b>{source_item.name}</b> using item <b>{self.name}</b>."
             )
+        elif source_item.item_type() == "Tool":
+            self._logger.msg.emit(
+                "Link established. You can define mappings on output files from "
+                f"<b>{source_item.name}</b> using item <b>{self.name}</b>."
+            )
         elif source_item.item_type() == "Data Store":
-            # Does this type of link do anything?
             self._logger.msg.emit("Link established.")
         else:
             super().notify_destination(source_item)
@@ -468,13 +401,16 @@ class Importer(ProjectItem):
         for widget in self._preview_widget.values():
             widget.close()
 
-    def _notify_if_duplicate_file_paths(self, file_list):
+    def _notify_if_duplicate_file_paths(self):
         """Adds a notification if file_list contains duplicate entries."""
-        file_counter = Counter(file_list)
+        labels = list()
+        for item in self._file_model.files:
+            labels.append(item.label)
+        file_counter = Counter(labels)
         duplicates = list()
-        for file_name, count in file_counter.items():
+        for label, count in file_counter.items():
             if count > 1:
-                duplicates.append(file_name)
+                duplicates.append(label)
         if duplicates:
             self.add_notification("Duplicate input files from upstream items:<br>{}".format("<br>".join(duplicates)))
 
@@ -499,37 +435,67 @@ class Importer(ProjectItem):
         return new_importer
 
     @staticmethod
-    def deserialize_mappings(mappings, project_path):
-        """Returns mapping settings as dict with absolute paths as keys.
-
-        Args:
-            mappings (list): List where each element contains two dictionaries (path dict and mapping dict)
-            project_path (str): Path to project directory
-
-        Returns:
-            dict: Dictionary with absolute paths as keys and mapping settings as values
-        """
-        abs_path_mappings = {}
-        for source, mapping in mappings:
-            abs_path_mappings[deserialize_path(source, project_path)] = mapping
-        return abs_path_mappings
-
-    @staticmethod
     def serialize_mappings(mappings, project_path):
-        """Returns a list of mappings, where each element contains two dictionaries,
-        the 'serialized' path in a dictionary and the mapping dictionary.
+        """
+        Serializes the importer's mappings.
+
+        Returns a list where each element contains two dictionaries:
+        the 'serialized' file label in a dictionary and the mapping dictionary.
 
         Args:
             mappings (dict): Dictionary with mapping specifications
             project_path (str): Path to project directory
 
         Returns:
-            list: List where each element contains two dictionaries.
+            list: serialized file item labels and mappings
         """
         serialized_mappings = list()
         for source, mapping in mappings.items():  # mappings is a dict with absolute paths as keys and mapping as values
             serialized_mappings.append([serialize_path(source, project_path), mapping])
         return serialized_mappings
+
+    def serialize_checked_states(self):
+        return [
+            [serialize_path(item.label, self._project.project_dir), item.selected_for_import]
+            for item in self._file_model.files
+        ]
+
+    @staticmethod
+    def deserialize_checked_states(serialized, project_path):
+        deserialized = dict()
+        for serialized_label, checked in serialized:
+            label = deserialize_path(serialized_label, project_path)
+            deserialized[label] = checked
+        return deserialized
+
+    def _gams_system_directory(self):
+        """Returns GAMS system path from Toolbox settings or None if GAMS default is to be used."""
+        path = self._project.settings.value("appSettings/gamsPath", defaultValue=None)
+        if not path:
+            path = find_gams_directory()
+        if path is not None and os.path.isfile(path):
+            path = os.path.dirname(path)
+        return path
+
+
+def _fix_1d_array_to_array(mappings):
+    """
+    Replaces '1d array' with 'array' for parameter type in mappings.
+
+    With spinedb_api >= 0.3, '1d array' parameter type was replaced by 'array'.
+    Other settings in a mapping are backwards compatible except the name.
+    """
+    for more_mappings in mappings:
+        for settings in more_mappings:
+            table_mappings = settings.get("table_mappings")
+            if table_mappings is not None:
+                for sheet_settings in table_mappings.values():
+                    for setting in sheet_settings:
+                        parameter_setting = setting.get("parameters")
+                        if parameter_setting is not None:
+                            parameter_type = parameter_setting.get("parameter_type")
+                            if parameter_type == "1d array":
+                                parameter_setting["parameter_type"] = "array"
 
 
 def _fix_csv_connector_settings(settings):
@@ -563,3 +529,211 @@ def _fix_csv_connector_settings(settings):
     if len(selected_tables) == 1 and selected_tables[0] != "csv":
         selected_tables.pop(0)
         selected_tables.append("csv")
+
+
+def _file_label(resource):
+    """Picks a label for given file resource."""
+    if resource.type_ == "file":
+        return resource.path
+    if resource.type_ in ("transient_file", "file_pattern"):
+        label = resource.metadata.get("label")
+        if label is None:
+            if resource.url is None:
+                raise RuntimeError("ProjectItemResource is missing a url and metadata 'label'.")
+            return resource.path
+        return label
+    raise RuntimeError(f"Unknown resource type '{resource.type_}'")
+
+
+class _FileListItem:
+    """
+    An item for FileListModel.
+
+    Attributes:
+        label (str): a file's label; a full path for 'permanent' files or just the basename
+            for 'transient' files like Tool's output.
+        path (str): absolute path to file, can be an empty string if file doesn't exist yet
+        selected_for_import (bool): if True, the file has been selected for importing
+        provider_name (str): name of the item providing the file
+        is_pattern (bool): True if the file is actually a file name pattern
+    """
+
+    def __init__(self, label, path, provider_name, is_pattern=False):
+        """
+        Args:
+            label (str): a file's label; a full path for 'permanent' files or just the basename
+                for 'transient' files like Tool's output.
+            path (str): absolute path to the file, empty if not known
+            provider_name (str): name of the project item providing the file
+            is_pattern (bool): True if the file is actually a file name pattern
+        """
+        self.label = label
+        self.path = path
+        self.selected_for_import = True
+        self.provider_name = provider_name
+        self.is_pattern = is_pattern
+
+    @classmethod
+    def from_resource(cls, resource):
+        """
+        Constructs a _FileListItem from ProjectItemResource.
+
+        Args:
+            resource (ProjectItemResource): a resource
+        Return:
+            _FileListItem: an item based on given resource
+        """
+        is_pattern = False
+        if resource.type_ == "file":
+            label = resource.path
+        elif resource.type_ == "transient_file":
+            label = _file_label(resource)
+        elif resource.type_ == "file_pattern":
+            label = _file_label(resource)
+            is_pattern = True
+        else:
+            raise RuntimeError(f"Unknown resource type '{resource.type_}'")
+        return cls(label, resource.path if resource.url else "", resource.provider.name, is_pattern)
+
+    def exists(self):
+        """Returns true if the file exists."""
+        return bool(self.path)
+
+    def update(self, resource):
+        """
+        Updates item information.
+
+        Args:
+            resource (ProjectItem): a fresh file resource
+        """
+        self.path = resource.path if resource.url else ""
+        self.provider_name = resource.provider.name
+        self.is_pattern = resource.type_ == "file_pattern"
+
+
+class _FileListModel(QAbstractListModel):
+    """A model for Importer's file list widget."""
+
+    selected_for_import_state_changed = Signal(bool, str)
+    """Emitted when an item has been checked or unchecked for importing."""
+
+    def __init__(self):
+        super().__init__()
+        self._files = list()
+
+    @property
+    def files(self):
+        """All model's file items."""
+        return self._files
+
+    def existing_files(self):
+        """Returns a list of items that exist."""
+        return [item for item in self._files if item.exists()]
+
+    def data(self, index, role=Qt.DisplayRole):
+        """Returns data associated with given role at given index."""
+        if not index.isValid():
+            return None
+        if role == Qt.DisplayRole:
+            return self._files[index.row()].label
+        if role == Qt.CheckStateRole:
+            return Qt.Checked if self._files[index.row()].selected_for_import else Qt.Unchecked
+        if role == Qt.DecorationRole:
+            path = self._files[index.row()].path
+            if path:
+                return QFileIconProvider().icon(QFileInfo(path))
+        if role == Qt.ToolTipRole:
+            item = self._files[index.row()]
+            if not item.exists():
+                if item.is_pattern:
+                    tooltip = f"These files will be generated by {item.provider_name} upon execution."
+                else:
+                    tooltip = f"This file will be generated by {item.provider_name} upon execution."
+            else:
+                tooltip = item.path
+            return tooltip
+        return None
+
+    def flags(self, index):
+        """Returns item's flags."""
+        if not index.isValid():
+            return Qt.NoItemFlags
+        item = self._files[index.row()]
+        if item.exists():
+            return Qt.ItemIsSelectable | Qt.ItemIsUserCheckable | Qt.ItemIsEnabled | Qt.ItemNeverHasChildren
+        return Qt.ItemNeverHasChildren
+
+    def headerData(self, section, orientation, role=Qt.DisplayRole):
+        """Returns header information."""
+        if role != Qt.DisplayRole or orientation != Qt.Horizontal:
+            return None
+        return "Source files"
+
+    def find_file(self, label):
+        """Returns a file item with given label."""
+        for item in self._files:
+            if item.label == label:
+                return item
+        raise RuntimeError(f"Could not find file with label '{label}'")
+
+    def labels(self):
+        """Returns a list of file labels."""
+        return [item.label for item in self._files]
+
+    def mark_as_nonexistent(self, index):
+        """Marks item at index as not existing."""
+        self._files[index.row()].path = ""
+        self.dataChanged.emit(index, index, [Qt.ToolTipRole])
+
+    def update(self, resources):
+        """Updates the model according to given list of resources."""
+        self.beginResetModel()
+        items = {item.label: item for item in self._files}
+        updated = list()
+        new = list()
+        for resource in resources:
+            if resource.type_ not in ("file", "transient_file", "file_pattern"):
+                continue
+            label = _file_label(resource)
+            item = items.get(label)
+            if item is not None:
+                item.update(resource)
+                updated.append(item)
+            else:
+                new.append(_FileListItem.from_resource(resource))
+        self._files = updated + new
+        self.endResetModel()
+
+    def rowCount(self, parent=QModelIndex()):
+        """Return the number of rows in the file list."""
+        return len(self._files)
+
+    def set_selected(self, label, selected):
+        """
+        Changes the given item's selection status.
+
+        Args:
+            label (str): item's label
+            selected (bool): True to select the item, False to deselect
+        """
+        row = len(list(takewhile(lambda item: item.label != label, self._files)))
+        if row < len(self._files):
+            item = self._files[row]
+            item.selected_for_import = selected
+            index = self.index(row, 0)
+            self.dataChanged.emit(index, index, [Qt.CheckStateRole])
+
+    def setData(self, index, value, role=Qt.EditRole):
+        """Sets data in the model."""
+        if role != Qt.CheckStateRole or not index.isValid():
+            return False
+        checked = value == Qt.Checked
+        item = self._files[index.row()]
+        self.selected_for_import_state_changed.emit(checked, item.label)
+        return True
+
+    def set_initial_state(self, selected_items):
+        """Fills model with incomplete data; needs a call to :func:`update` to make the model usable."""
+        for label, selected in selected_items.items():
+            self._files.append(_FileListItem(label, label, ""))
+            self._files[-1].selected_for_import = selected

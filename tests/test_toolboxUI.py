@@ -83,71 +83,71 @@ class TestToolboxUI(unittest.TestCase):
     def check_init_project_item_model(self):
         """Checks that category items are created as expected."""
         n = self.toolbox.project_item_model.rowCount()
-        # Data Stores, Data Connections, Tools, Views, Importers, Exporters
-        self.assertEqual(n, 6)
+        # Data Stores, Data Connections, Tools, Views, Importers, Exporters, Manipulators
+        self.assertEqual(n, 7)
         # Check that there's only one column
         self.assertEqual(self.toolbox.project_item_model.columnCount(), 1)
         # Check that the items DisplayRoles are (In this particular order)
         item1 = self.toolbox.project_item_model.root().child(0)
-        self.assertTrue(item1.name == "Data Stores", "Item on row 0 is not 'Data Stores'")
-        self.assertTrue(
-            isinstance(item1.parent(), RootProjectTreeItem), "Parent item of category item on row 0 should be root"
+        self.assertEqual(item1.name, "Data Stores", "Item on row 0 is not 'Data Stores'")
+        self.assertIsInstance(
+            item1.parent(), RootProjectTreeItem, "Parent item of category item on row 0 should be root"
         )
         item2 = self.toolbox.project_item_model.root().child(1)
-        self.assertTrue(item2.name == "Data Connections", "Item on row 1 is not 'Data Connections'")
-        self.assertTrue(
-            isinstance(item2.parent(), RootProjectTreeItem), "Parent item of category item on row 1 should be root"
+        self.assertEqual(item2.name, "Data Connections", "Item on row 1 is not 'Data Connections'")
+        self.assertIsInstance(
+            item2.parent(), RootProjectTreeItem, "Parent item of category item on row 1 should be root"
         )
         item3 = self.toolbox.project_item_model.root().child(2)
-        self.assertTrue(item3.name == "Tools", "Item on row 2 is not 'Tools'")
-        self.assertTrue(
-            isinstance(item3.parent(), RootProjectTreeItem), "Parent item of category item on row 2 should be root"
+        self.assertEqual(item3.name, "Tools", "Item on row 2 is not 'Tools'")
+        self.assertIsInstance(
+            item3.parent(), RootProjectTreeItem, "Parent item of category item on row 2 should be root"
         )
         item4 = self.toolbox.project_item_model.root().child(3)
-        self.assertTrue(item4.name == "Views", "Item on row 3 is not 'Views'")
-        self.assertTrue(
-            isinstance(item4.parent(), RootProjectTreeItem), "Parent item of category item on row 3 should be root"
+        self.assertEqual(item4.name, "Views", "Item on row 3 is not 'Views'")
+        self.assertIsInstance(
+            item4.parent(), RootProjectTreeItem, "Parent item of category item on row 3 should be root"
         )
         item5 = self.toolbox.project_item_model.root().child(4)
-        self.assertTrue(item5.name == "Importers", "Item on row 4 is not 'Importers'")
-        self.assertTrue(
-            isinstance(item5.parent(), RootProjectTreeItem), "Parent item of category item on row 4 should be root"
+        self.assertEqual(item5.name, "Importers", "Item on row 4 is not 'Importers'")
+        self.assertIsInstance(
+            item5.parent(), RootProjectTreeItem, "Parent item of category item on row 4 should be root"
         )
         item6 = self.toolbox.project_item_model.root().child(5)
-        self.assertTrue(item6.name == "Exporters", "Item on row 5 is not 'Exporters'")
-        self.assertTrue(
-            isinstance(item6.parent(), RootProjectTreeItem), "Parent item of category item on row 5 should be root"
+        self.assertEqual(item6.name, "Exporters", "Item on row 5 is not 'Exporters'")
+        self.assertIsInstance(
+            item6.parent(), RootProjectTreeItem, "Parent item of category item on row 5 should be root"
         )
 
-    def test_init_tool_specification_model(self):
-        """Check that tool specification model has no items after init and that
+    def test_init_specification_model(self):
+        """Check that specification model has no items after init and that
         signals are connected just once.
         """
         self.assertIsNone(self.toolbox.project())  # Make sure that there is no project open
-        self.toolbox.init_tool_specification_model(list())
-        self.assertEqual(self.toolbox.tool_specification_model.rowCount(), 0)
+        self.toolbox.init_specification_model(list())
+        self.assertEqual(self.toolbox.specification_model.rowCount(), 0)
         # Test that QLisView signals are connected only once.
-        n_dbl_clicked_recv = self.toolbox.ui.listView_tool_specifications.receivers(
+        n_dbl_clicked_recv = self.toolbox.main_toolbar.project_item_spec_list_view.receivers(
             SIGNAL("doubleClicked(QModelIndex)")
         )
         self.assertEqual(n_dbl_clicked_recv, 1)
-        n_context_menu_recv = self.toolbox.ui.listView_tool_specifications.receivers(
+        n_context_menu_recv = self.toolbox.main_toolbar.project_item_spec_list_view.receivers(
             SIGNAL("customContextMenuRequested(QPoint)")
         )
         self.assertEqual(n_context_menu_recv, 1)
         # Initialize ToolSpecificationModel again and see that the signals are connected only once
-        self.toolbox.init_tool_specification_model(list())
+        self.toolbox.init_specification_model(list())
         # Test that QLisView signals are connected only once.
-        n_dbl_clicked_recv = self.toolbox.ui.listView_tool_specifications.receivers(
+        n_dbl_clicked_recv = self.toolbox.main_toolbar.project_item_spec_list_view.receivers(
             SIGNAL("doubleClicked(QModelIndex)")
         )
         self.assertEqual(n_dbl_clicked_recv, 1)
-        n_context_menu_recv = self.toolbox.ui.listView_tool_specifications.receivers(
+        n_context_menu_recv = self.toolbox.main_toolbar.project_item_spec_list_view.receivers(
             SIGNAL("customContextMenuRequested(QPoint)")
         )
         self.assertEqual(n_context_menu_recv, 1)
         # Check that there's still no items in the model
-        self.assertEqual(self.toolbox.tool_specification_model.rowCount(), 0)
+        self.assertEqual(self.toolbox.specification_model.rowCount(), 0)
 
     def test_create_project(self):
         """Test that create_project method makes a SpineToolboxProject instance.
@@ -538,42 +538,47 @@ class TestToolboxUI(unittest.TestCase):
         n_items_in_design_view = len([item for item in items_in_design_view if isinstance(item, ProjectItemIcon)])
         self.assertEqual(n_items_in_design_view, 0)
 
-    def test_add_and_remove_tool_specification(self):
-        """Tests that adding and removing a tool specification
+    def test_load_tool_specification_from_file(self):
+        """Tests creating a PythonTool (specification) instance from a valid tool specification file."""
+        spec_path = os.path.abspath(os.path.join(os.curdir, "tests", "test_resources", "test_tool_spec.json"))
+        tool_spec = self.toolbox.load_specification_from_file(spec_path)
+        self.assertIsNotNone(tool_spec)
+        self.assertEqual(tool_spec.name, "Python Tool Specification")
+
+    def test_add_and_remove_specification(self):
+        """Tests that adding and removing a specification
         to project works from a valid tool specification file.
         Uses an actual Spine Toolbox Project in order to actually
         test something.
 
         Note: Test 'project.json' file should not have any
-        tool_specifications when this test starts and ends."""
+        specifications when this test starts and ends."""
         project_dir = os.path.abspath(os.path.join(os.curdir, "tests", "test_resources", "Project Directory"))
         if not os.path.exists(project_dir):
             self.skipTest("Test project directory '{0}' does not exist".format(project_dir))
             return
         self.assertIsNone(self.toolbox.project())
         with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project") as mock_save_project, mock.patch(
-            "spinetoolbox.project.create_dir"
-        ) as mock_create_dir, mock.patch("spinetoolbox.project_item.create_dir") as mock_create_dir, mock.patch(
             "spinetoolbox.ui_main.ToolboxUI.update_recent_projects"
         ) as mock_update_recent_project:
             self.toolbox.open_project(project_dir)
         # Tool spec model must be empty at this point
-        self.assertEqual(0, self.toolbox.tool_specification_model.rowCount())
+        self.assertEqual(0, self.toolbox.specification_model.rowCount())
         tool_spec_path = os.path.abspath(os.path.join(os.curdir, "tests", "test_resources", "test_tool_spec.json"))
         # Add a Tool spec to 'project.json' file
         with mock.patch("spinetoolbox.ui_main.QFileDialog.getOpenFileName") as mock_filename:
             mock_filename.return_value = [tool_spec_path]
-            self.toolbox.open_tool_specification()
-        self.assertEqual(1, self.toolbox.tool_specification_model.rowCount())  # Tool spec model has one entry now
+            self.toolbox.import_specification()
+        self.assertEqual(1, self.toolbox.specification_model.rowCount())  # Tool spec model has one entry now
         # Find tool spec on row 0 from model and check that the name matches
-        tool_spec = self.toolbox.tool_specification_model.tool_specification(0)
+        tool_spec = self.toolbox.specification_model.specification(0)
         self.assertEqual("Python Tool Specification", tool_spec.name)
         # Now, remove the Tool Spec from the model
-        index = self.toolbox.tool_specification_model.tool_specification_index("Python Tool Specification")
+        index = self.toolbox.specification_model.specification_index("Python Tool Specification")
         self.assertTrue(index.isValid())
-        self.toolbox.remove_tool_specification(index.row(), ask_verification=False)
+        self.toolbox.remove_specification(index.row(), ask_verification=False)
         # Tool spec model must be empty again
-        self.assertEqual(0, self.toolbox.tool_specification_model.rowCount())
+        self.assertEqual(0, self.toolbox.specification_model.rowCount())
 
     def test_tasks_before_exit_without_open_project(self):
         """_tasks_before_exit is called with every possible combination of the two QSettings values that it uses.
@@ -718,6 +723,22 @@ class TestToolboxUI(unittest.TestCase):
         self.assertEqual(self.toolbox.project_item_model.n_items(), 2)
         new_item_index = self.toolbox.project_item_model.find_item("data_connection 1")
         self.assertIsNotNone(new_item_index)
+
+    def test_closeEvent_saves_window_state(self):
+        self.toolbox._qsettings = mock.NonCallableMagicMock()
+        self.toolbox._perform_pre_exit_tasks = mock.MagicMock(return_value=True)
+        self.toolbox.julia_repl = mock.NonCallableMagicMock()
+        self.toolbox.python_repl = mock.NonCallableMagicMock()
+        self.toolbox.closeEvent(mock.MagicMock())
+        qsettings_save_calls = self.toolbox._qsettings.setValue.call_args_list
+        self.assertEqual(len(qsettings_save_calls), 6)
+        saved_dict = {saved[0][0]: saved[0][1] for saved in qsettings_save_calls}
+        self.assertIn("appSettings/previousProject", saved_dict)
+        self.assertIn("mainWindow/windowSize", saved_dict)
+        self.assertIn("mainWindow/windowPosition", saved_dict)
+        self.assertIn("mainWindow/windowState", saved_dict)
+        self.assertIn("mainWindow/windowMaximized", saved_dict)
+        self.assertIn("mainWindow/n_screens", saved_dict)
 
     @staticmethod
     def find_click_point_of_pi(pi, gv):

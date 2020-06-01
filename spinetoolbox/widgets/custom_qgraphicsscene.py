@@ -16,15 +16,44 @@ Custom QGraphicsScene used in the Design View.
 :date:   13.2.2019
 """
 
-from PySide2.QtCore import Slot, QItemSelectionModel
+import math
+from PySide2.QtCore import Qt, Signal, Slot, QItemSelectionModel, QPointF, QEvent
+from PySide2.QtWidgets import QGraphicsScene
 from PySide2.QtGui import QColor, QPen, QBrush
-from ..graphics_items import ProjectItemIcon
-from .shrinking_scene import ShrinkingScene
-from .toolbars import DraggableWidget
+from ..graphics_items import ProjectItemIcon, LinkDrawer
+from ..mvcmodels.project_item_factory_models import ProjectItemFactoryModel, ProjectItemSpecFactoryModel
 
 
-class CustomQGraphicsScene(ShrinkingScene):
-    """A scene that handles drag and drop events of DraggableWidget sources."""
+class CustomGraphicsScene(QGraphicsScene):
+    """
+    A custom QGraphicsScene. It provides signals to notify about items,
+    and a method to center all items in the scene.
+
+    At the moment it's used by DesignGraphicsScene and the GraphViewMixin
+    """
+
+    item_move_finished = Signal("QGraphicsItem")
+    """Emitted when an item has finished moving."""
+
+    item_removed = Signal("QGraphicsItem")
+    """Emitted when an item has been removed."""
+
+    def center_items(self):
+        """Centers toplevel items in the scene."""
+        rect = self.itemsBoundingRect()
+        delta = -rect.center()
+        for item in self.items():
+            if item.topLevelItem() != item:
+                continue
+            item.moveBy(delta.x(), delta.y())
+        self.setSceneRect(rect.translated(delta))
+
+
+class DesignGraphicsScene(CustomGraphicsScene):
+    """A scene for the Design view.
+
+    Mainly, it handles drag and drop events of ProjectItemFactoryModel or ProjectItemSpecFactoryModel sources.
+    """
 
     def __init__(self, parent, toolbox):
         """
@@ -32,40 +61,64 @@ class CustomQGraphicsScene(ShrinkingScene):
             parent (QObject): scene's parent object
             toolbox (ToolboxUI): reference to the main window
         """
-        super().__init__(400.0, 300.0, parent)
+        super().__init__(parent)
         self._toolbox = toolbox
         self.item_shadow = None
         self.sync_selection = True
         # Set background attributes
         settings = toolbox.qsettings()
-        grid = settings.value("appSettings/bgGrid", defaultValue="false")
-        self.bg_grid = grid != "false"
+        self.bg_choice = settings.value("appSettings/bgChoice", defaultValue="solid")
         bg_color = settings.value("appSettings/bgColor", defaultValue="false")
         self.bg_color = QColor("#f5f5f5") if bg_color == "false" else bg_color
+        self.bg_origin = None
+        self.link_drawer = LinkDrawer(toolbox)
+        self.link_drawer.hide()
         self.connect_signals()
+
+    def mouseMoveEvent(self, event):
+        """Moves link drawer."""
+        if self.link_drawer.isVisible():
+            self.link_drawer.tip = event.scenePos()
+            self.link_drawer.update_geometry()
+            event.setButtons(0)  # this is so super().mouseMoveEvent sends hover events to connector buttons
+        super().mouseMoveEvent(event)
+
+    def mousePressEvent(self, event):
+        """Puts link drawer to sleep and log message if it looks like the user doesn't know what they're doing."""
+        was_drawing = self.link_drawer.isVisible()
+        super().mousePressEvent(event)
+        if was_drawing and self.link_drawer.isVisible():
+            self.link_drawer.sleep()
+            if event.button() == Qt.LeftButton:
+                self.emit_connection_failed()
+
+    def mouseReleaseEvent(self, event):
+        """Makes link if drawer is released over a valid connector button."""
+        super().mouseReleaseEvent(event)
+        if not self.link_drawer.isVisible() or self.link_drawer.src_connector.isUnderMouse():
+            return
+        if self.link_drawer.dst_connector is None:
+            self.link_drawer.sleep()
+            self.emit_connection_failed()
+            return
+        self.link_drawer.add_link()
+
+    def emit_connection_failed(self):
+        self._toolbox.msg_warning.emit(
+            "Unable to make connection. Try landing the connection onto a valid connector button."
+        )
+
+    def keyPressEvent(self, event):
+        """Puts link drawer to sleep if user presses ESC."""
+        super().keyPressEvent(event)
+        if self.link_drawer.isVisible() and event.key() == Qt.Key_Escape:
+            self.link_drawer.sleep()
 
     def connect_signals(self):
         """Connect scene signals."""
-        self.changed.connect(self.scene_changed)
         self.selectionChanged.connect(self.handle_selection_changed)
 
-    def resize_scene(self):
-        """Resize scene to be at least the size of items bounding rectangle.
-        Does not let the scene shrink."""
-        scene_rect = self.sceneRect()
-        items_rect = self.itemsBoundingRect()
-        union_rect = scene_rect | items_rect
-        self.setSceneRect(union_rect)
-
-    @Slot("QList<QRectF>", name="scene_changed")
-    def scene_changed(self, rects):
-        """Resize scene as it changes."""
-        scene_rect = self.sceneRect()
-        if all(scene_rect.contains(rect) for rect in rects):
-            return
-        self.resize_scene()
-
-    @Slot(name="handle_selection_changed")
+    @Slot()
     def handle_selection_changed(self):
         """Synchronize selection with the project tree."""
         if not self.sync_selection:
@@ -89,13 +142,23 @@ class CustomQGraphicsScene(ShrinkingScene):
         """
         self.bg_color = color
 
-    def set_bg_grid(self, bg):
-        """Enable or disable background grid.
+    def set_bg_choice(self, bg_choice):
+        """Set background choice when this is changed in Settings.
 
         Args:
-            bg (boolean): True to draw grid, False to fill background with a solid color
+            bg (str): "grid", "tree", or "solid"
         """
-        self.bg_grid = bg
+        self.bg_choice = bg_choice
+
+    @staticmethod
+    def _is_project_item_drag(source):
+        """Checks whether or not source corresponds to a project item being dragged into the scene.
+        """
+        if not hasattr(source, "model"):
+            return False
+        return callable(source.model) and isinstance(
+            source.model(), (ProjectItemFactoryModel, ProjectItemSpecFactoryModel)
+        )
 
     def dragLeaveEvent(self, event):
         """Accept event."""
@@ -103,27 +166,27 @@ class CustomQGraphicsScene(ShrinkingScene):
 
     def dragEnterEvent(self, event):
         """Accept event. Then call the super class method
-        only if drag source is not a DraggableWidget (from Add Item toolbar)."""
+        only if drag source is not a ProjectItemFactoryModel or ProjectItemSpecFactoryModel."""
         event.accept()
         source = event.source()
-        if not isinstance(source, DraggableWidget):
+        if not self._is_project_item_drag(source):
             super().dragEnterEvent(event)
 
     def dragMoveEvent(self, event):
         """Accept event. Then call the super class method
-        only if drag source is not a DraggableWidget (from Add Item toolbar)."""
+        only if drag source is not a ProjectItemFactoryModel or ProjectItemSpecFactoryModel."""
         event.accept()
         source = event.source()
-        if not isinstance(source, DraggableWidget):
+        if not self._is_project_item_drag(source):
             super().dragMoveEvent(event)
 
     def dropEvent(self, event):
         """Only accept drops when the source is an instance of
-        DraggableWidget (from Add Item toolbar).
+        ProjectItemFactoryModel or ProjectItemSpecFactoryModel.
         Capture text from event's mimedata and show the appropriate 'Add Item form.'
         """
         source = event.source()
-        if not isinstance(source, DraggableWidget):
+        if not self._is_project_item_drag(source):
             super().dropEvent(event)
             return
         if not self._toolbox.project():
@@ -131,15 +194,22 @@ class CustomQGraphicsScene(ShrinkingScene):
             event.ignore()
             return
         event.acceptProposedAction()
-        category = event.mimeData().text()
+        item_type, spec = event.mimeData().text().split(",")
         pos = event.scenePos()
-        w = 70
-        h = 70
-        x = pos.x() - w / 2
-        y = pos.y() - h / 2
-        icon_maker = self._toolbox.categories[category]["icon_maker"]
-        self.item_shadow = icon_maker(self._toolbox, x, y, w, h, None)
-        self._toolbox.show_add_project_item_form(category, pos.x(), pos.y())
+        x = pos.x()
+        y = pos.y()
+        factory = self._toolbox.item_factories[item_type]
+        self.item_shadow = factory.make_icon(self._toolbox, x, y, None)
+        self._toolbox.show_add_project_item_form(item_type, pos.x(), pos.y(), spec=spec)
+
+    def event(self, event):
+        """Accepts GraphicsSceneHelp events without doing anything, to not interfere with our usage of
+        QToolTip.showText in graphics_items.ExclamationIcon.
+        """
+        if event.type() == QEvent.GraphicsSceneHelp:
+            event.accept()
+            return True
+        return super().event(event)
 
     def drawBackground(self, painter, rect):
         """Reimplemented method to make a custom background.
@@ -148,26 +218,49 @@ class CustomQGraphicsScene(ShrinkingScene):
             painter (QPainter): Painter that is used to paint background
             rect (QRectF): The exposed (viewport) rectangle in scene coordinates
         """
-        scene_rect = self.sceneRect()
-        rect = rect.intersected(scene_rect)  # Limit to only draw background for the scene rectangle
-        if not self.bg_grid:
-            painter.fillRect(rect, QBrush(self.bg_color))
-            return
-        step = 20  # Grid step
-        painter.setPen(QPen(QColor(0, 0, 0, 40)))
-        # Draw horizontal grid
-        start = round(rect.top(), step)
-        if start > rect.top():
-            start -= step
-        y = start
-        while y < rect.bottom():
-            painter.drawLine(rect.left(), y, rect.right(), y)
-            y += step
-        # Now draw vertical grid
-        start = round(rect.left(), step)
-        if start > rect.left():
-            start -= step
-        x = start
-        while x < rect.right():
+        if self.bg_origin is None:
+            self.bg_origin = rect.center()
+        {"solid": self._draw_solid_bg, "grid": self._draw_grid_bg, "tree": self._draw_tree_bg}.get(
+            self.bg_choice, self._draw_solid_bg
+        )(painter, rect)
+
+    def _draw_solid_bg(self, painter, rect):
+        """Draws solid bg."""
+        painter.fillRect(rect, QBrush(self.bg_color))
+
+    def _draw_grid_bg(self, painter, rect):
+        """Draws grid bg."""
+        step = round(ProjectItemIcon.ITEM_EXTENT / 3)  # Grid step
+        painter.setPen(QPen(self.bg_color))
+        delta = rect.topLeft() - self.bg_origin
+        x_start = round(delta.x() / step)
+        y_start = round(delta.y() / step)
+        x_stop = x_start + round(rect.width() / step) + 1
+        y_stop = y_start + round(rect.height() / step) + 1
+        for i in range(x_start, x_stop):
+            x = step * i
             painter.drawLine(x, rect.top(), x, rect.bottom())
-            x += step
+        for j in range(y_start, y_stop):
+            y = step * j
+            painter.drawLine(rect.left(), y, rect.right(), y)
+        painter.setPen(QPen(self.bg_color.darker(110)))
+        painter.drawLine(self.bg_origin.x(), rect.top(), self.bg_origin.x(), rect.bottom())
+        painter.drawLine(rect.left(), self.bg_origin.y(), rect.right(), self.bg_origin.y())
+
+    def _draw_tree_bg(self, painter, rect):
+        """Draws 'tree of life' bg."""
+        painter.setPen(QPen(self.bg_color))
+        radius = ProjectItemIcon.ITEM_EXTENT
+        dx = math.sin(math.pi / 3) * radius
+        dy = math.cos(math.pi / 3) * radius
+        delta = rect.topLeft() - self.bg_origin
+        x_start = round(delta.x() / dx)
+        y_start = round(delta.y() / radius)
+        x_stop = x_start + round(rect.width() / dx) + 1
+        y_stop = y_start + round(rect.height() / radius) + 1
+        for i in range(x_start, x_stop):
+            ref = QPointF(i * dx, (i & 1) * dy)
+            for j in range(y_start, y_stop):
+                painter.drawEllipse(ref + QPointF(0, j * radius), radius, radius)
+        painter.setPen(QPen(self.bg_color.darker(110)))
+        painter.drawEllipse(self.bg_origin, 2 * radius, 2 * radius)

@@ -33,7 +33,7 @@ class AboutWidget(QWidget):
         Args:
             toolbox (ToolboxUI): QMainWindow instance
         """
-        from ..ui import about
+        from ..ui import about  # pylint: disable=import-outside-toplevel
 
         super().__init__(parent=toolbox, f=Qt.Popup)  # Setting the parent inherits the stylesheet
         self._toolbox = toolbox

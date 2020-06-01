@@ -38,7 +38,7 @@ class ParameterMergingSettingsWindow(QWidget):
             database_path (str): database URL
             parent (QWidget): a parent widget
         """
-        from ..ui.parameter_merging_settings_window import Ui_Form
+        from ..ui.parameter_merging_settings_window import Ui_Form  # pylint: disable=import-outside-toplevel
 
         super().__init__(parent, f=Qt.Window)
         self._merging_settings = merging_settings
@@ -184,7 +184,7 @@ def _gather_entity_class_infos(db_map):
         class_id = relationship_class.id
         parameter_definitions = db_map.parameter_definition_list(relationship_class_id=class_id).all()
         parameter_names = [definition.name for definition in parameter_definitions]
-        domain_names = [name.strip() for name in relationship_class.object_class_name_list.split(",")]
+        domain_names = relationship_class.object_class_name_list.split(",")
         infos.append(
             EntityClassInfo(relationship_class.name, class_id, domain_names, parameter_names, is_object_class=False)
         )
