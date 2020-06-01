@@ -346,6 +346,8 @@ class GraphViewMixin:
             set: selected object ids
             set: selected relationship ids
         """
+        if "root" in self.selected_tree_inds:
+            return set(x["id"] for x in self.db_mngr.get_items(self.db_map, "object")), set()
         selected_object_ids = set()
         selected_relationship_ids = set()
         for index in self.selected_tree_inds.get("object", {}):
@@ -367,7 +369,7 @@ class GraphViewMixin:
         return selected_object_ids, selected_relationship_ids
 
     def _get_all_relationships_for_graph(self, object_ids, relationship_ids):
-        cond = all if not self._full_relationship_expansion else any
+        cond = any if self._full_relationship_expansion else all
         return [
             x
             for x in self.db_mngr.get_items(self.db_map, "relationship")
