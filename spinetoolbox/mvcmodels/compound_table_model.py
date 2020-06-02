@@ -201,6 +201,7 @@ class CompoundTableModel(MinimalTableModel):
         self.beginInsertRows(parent, row, row + count - 1)
         sub_model.insertRows(sub_row, count, self.map_to_sub(parent))
         self.endInsertRows()
+        self.refresh()
         return True
 
     def removeRows(self, row, count, parent=QModelIndex()):
@@ -227,6 +228,8 @@ class CompoundTableModel(MinimalTableModel):
             finally:
                 sub_model.removeRows(sub_row, sub_count, self.map_to_sub(parent))
         self.endRemoveRows()
+        self.refresh()
+        return True
 
 
 class CompoundWithEmptyTableModel(CompoundTableModel):

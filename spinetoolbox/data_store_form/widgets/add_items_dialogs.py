@@ -712,6 +712,9 @@ class ManageRelationshipsDialog(AddRelationshipsDialogBase):
     def make_model(self):
         return CompoundTableModel(self)
 
+    def splitter_widgets(self):
+        return [self.splitter.widget(i) for i in range(self.splitter.count())]
+
     def connect_signals(self):
         """Connect signals to slots."""
         super().connect_signals()
@@ -735,9 +738,6 @@ class ManageRelationshipsDialog(AddRelationshipsDialogBase):
         self.new_items_model.insertRows(0, count)
         self.new_items_model._main_data[0:count] = to_add
         self.model.refresh()
-
-    def splitter_widgets(self):
-        return [self.splitter.widget(i) for i in range(self.splitter.count())]
 
     @Slot(int)
     def reset_model(self, index):
