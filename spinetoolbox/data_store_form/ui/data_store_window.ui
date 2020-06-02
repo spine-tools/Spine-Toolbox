@@ -89,6 +89,7 @@
     <addaction name="actionAdd_objects"/>
     <addaction name="actionAdd_relationship_classes"/>
     <addaction name="actionAdd_relationships"/>
+    <addaction name="actionManage_relationships"/>
     <addaction name="separator"/>
     <addaction name="actionEdit_selected"/>
     <addaction name="separator"/>
@@ -1189,6 +1190,15 @@
   <action name="actionRebuild_graph">
    <property name="text">
     <string>Rebuild graph</string>
+   </property>
+  </action>
+  <action name="actionManage_relationships">
+   <property name="icon">
+    <iconset resource="../../ui/resources/resources_icons.qrc">
+     <normaloff>:/icons/menu_icons/cubes_pen.svg</normaloff>:/icons/menu_icons/cubes_pen.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Manage relationships</string>
    </property>
   </action>
  </widget>

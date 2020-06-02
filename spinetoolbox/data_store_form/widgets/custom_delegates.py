@@ -435,7 +435,7 @@ class ManageObjectsDelegate(ManageItemsDelegate):
     def createEditor(self, parent, option, index):
         """Return editor."""
         header = index.model().horizontal_header_labels()
-        if header[index.column()] == 'object class name':
+        if header[index.column()] == 'object class':
             editor = SearchBarEditor(parent)
             object_class_name_list = self.parent().object_class_name_list(index.row())
             editor.set_data(index.data(Qt.EditRole), object_class_name_list)
@@ -458,7 +458,7 @@ class ManageRelationshipClassesDelegate(ManageItemsDelegate):
     def createEditor(self, parent, option, index):
         """Return editor."""
         header = index.model().horizontal_header_labels()
-        if header[index.column()] in ('relationship class name', 'description'):
+        if header[index.column()] in ('relationship class', 'description'):
             editor = CustomLineEditor(parent)
             editor.set_data(index.data(Qt.EditRole))
         elif header[index.column()] == 'databases':
@@ -481,7 +481,7 @@ class ManageRelationshipsDelegate(ManageItemsDelegate):
     def createEditor(self, parent, option, index):
         """Return editor."""
         header = index.model().horizontal_header_labels()
-        if header[index.column()] == 'relationship name':
+        if header[index.column()] == 'relationship':
             editor = CustomLineEditor(parent)
             data = index.data(Qt.EditRole)
             editor.set_data(data)

@@ -16,7 +16,6 @@ Contains a minimal table model.
 :date:   20.5.2018
 """
 
-import logging
 from PySide2.QtCore import Qt, QModelIndex, QAbstractTableModel
 
 
@@ -127,7 +126,6 @@ class MinimalTableModel(QAbstractTableModel):
         try:
             return self._main_data[index.row()][index.column()]
         except IndexError:
-            logging.error("Cannot access model data at index %s", index)
             return None
 
     def row_data(self, row, role=Qt.DisplayRole):
@@ -242,8 +240,7 @@ class MinimalTableModel(QAbstractTableModel):
         if row < 0 or count < 1 or row + count > self.rowCount():
             return False
         self.beginRemoveRows(parent, row, row + count - 1)
-        for i in reversed(range(row, row + count)):
-            self._main_data.pop(i)
+        self._main_data[row : row + count] = []
         self.endRemoveRows()
         return True
 
@@ -258,21 +255,12 @@ class MinimalTableModel(QAbstractTableModel):
         Returns:
             True if columns were removed successfully, False otherwise
         """
-        if column < 0 or column >= self.columnCount():
+        if column < 0 or count < 1 or column + count > self.columnCount():
             return False
-        if not count == 1:
-            logging.error("Remove 1 column at a time")
-            return False
-        self.beginRemoveColumns(parent, column, column)
+        self.beginRemoveColumns(parent, column, column + count - 1)
         # for loop all rows and remove the column from each
-        removing_last_column = False
-        if self.columnCount() == 1:
-            removing_last_column = True
-        for r in self._main_data:
-            r.pop(column)
-        if removing_last_column:
-            self._main_data = []
-        # logging.debug("{0} removed from column:{1}".format(removed_column, column))
+        for row in self._main_data:
+            row[column : column + count] = []
         self.endRemoveColumns()
         return True
 

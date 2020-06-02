@@ -13,7 +13,7 @@
 # Form implementation generated from reading ui file '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/data_store_form/ui/data_store_window.ui',
 # licensing of '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/data_store_form/ui/data_store_window.ui' applies.
 #
-# Created: Sun May 31 13:05:39 2020
+# Created: Mon Jun  1 18:55:35 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -459,6 +459,11 @@ class Ui_MainWindow(object):
         self.actionInput_type_index_expansion.setObjectName("actionInput_type_index_expansion")
         self.actionRebuild_graph = QtWidgets.QAction(MainWindow)
         self.actionRebuild_graph.setObjectName("actionRebuild_graph")
+        self.actionManage_relationships = QtWidgets.QAction(MainWindow)
+        icon15 = QtGui.QIcon()
+        icon15.addPixmap(QtGui.QPixmap(":/icons/menu_icons/cubes_pen.svg"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.actionManage_relationships.setIcon(icon15)
+        self.actionManage_relationships.setObjectName("actionManage_relationships")
         self.menuSession.addAction(self.actionRefresh)
         self.menuSession.addAction(self.actionCommit)
         self.menuSession.addAction(self.actionRollback)
@@ -471,6 +476,7 @@ class Ui_MainWindow(object):
         self.menuEdit.addAction(self.actionAdd_objects)
         self.menuEdit.addAction(self.actionAdd_relationship_classes)
         self.menuEdit.addAction(self.actionAdd_relationships)
+        self.menuEdit.addAction(self.actionManage_relationships)
         self.menuEdit.addSeparator()
         self.menuEdit.addAction(self.actionEdit_selected)
         self.menuEdit.addSeparator()
@@ -616,8 +622,9 @@ class Ui_MainWindow(object):
         self.actionInput_type_relationship.setText(QtWidgets.QApplication.translate("MainWindow", "Relationship", None, -1))
         self.actionInput_type_index_expansion.setText(QtWidgets.QApplication.translate("MainWindow", "Index expansion", None, -1))
         self.actionRebuild_graph.setText(QtWidgets.QApplication.translate("MainWindow", "Rebuild graph", None, -1))
+        self.actionManage_relationships.setText(QtWidgets.QApplication.translate("MainWindow", "Manage relationships", None, -1))
 
-from spinetoolbox.data_store_form.widgets.custom_qtableview import FrozenTableView, ObjectParameterValueTableView, ObjectParameterDefinitionTableView, RelationshipParameterValueTableView, PivotTableView, RelationshipParameterDefinitionTableView
+from spinetoolbox.data_store_form.widgets.custom_qtableview import RelationshipParameterValueTableView, FrozenTableView, RelationshipParameterDefinitionTableView, ObjectParameterValueTableView, ObjectParameterDefinitionTableView, PivotTableView
 from spinetoolbox.data_store_form.widgets.custom_qtreeview import ParameterValueListTreeView, ObjectTreeView, RelationshipTreeView
 from spinetoolbox.data_store_form.widgets.custom_qgraphicsviews import EntityQGraphicsView
 from spinetoolbox import resources_icons_rc

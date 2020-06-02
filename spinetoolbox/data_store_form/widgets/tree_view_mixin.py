@@ -22,6 +22,7 @@ from .add_items_dialogs import (
     AddObjectsDialog,
     AddRelationshipClassesDialog,
     AddRelationshipsDialog,
+    ManageRelationshipsDialog,
 )
 from .edit_or_remove_items_dialogs import (
     EditObjectClassesDialog,
@@ -69,6 +70,7 @@ class TreeViewMixin:
         self.ui.actionAdd_relationship_classes.triggered.connect(self.show_add_relationship_classes_form)
         self.ui.actionAdd_objects.triggered.connect(self.show_add_objects_form)
         self.ui.actionAdd_relationships.triggered.connect(self.show_add_relationships_form)
+        self.ui.actionManage_relationships.triggered.connect(self.show_manage_relationships_form)
         self._object_classes_added.connect(lambda: self.ui.treeView_object.resizeColumnToContents(0))
         self._object_classes_fetched.connect(lambda: self.ui.treeView_object.expand(self.object_tree_model.root_index))
         self._relationship_classes_added.connect(lambda: self.ui.treeView_relationship.resizeColumnToContents(0))
@@ -187,6 +189,11 @@ class TreeViewMixin:
             relationship_class_key=relationship_class_key,
             object_names_by_class_name=object_names_by_class_name
         )
+        dialog.show()
+
+    @Slot(bool)
+    def show_manage_relationships_form(self, checked=False):
+        dialog = ManageRelationshipsDialog(self, self.db_mngr, *self.db_maps)
         dialog.show()
 
     def edit_entity_tree_items(self, selected_indexes):

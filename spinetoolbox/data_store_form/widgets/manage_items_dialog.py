@@ -17,7 +17,7 @@ Classes for custom QDialogs to add edit and remove database items.
 """
 
 from functools import reduce
-from PySide2.QtWidgets import QDialog, QVBoxLayout, QDialogButtonBox, QHeaderView
+from PySide2.QtWidgets import QDialog, QGridLayout, QDialogButtonBox, QHeaderView
 from PySide2.QtCore import Slot, Qt
 from ...widgets.custom_editors import IconColorEditor
 from ...widgets.custom_qtableview import CopyPasteTableView
@@ -40,7 +40,7 @@ class ManageItemsDialogBase(QDialog):
         self.table_view.verticalHeader().setDefaultSectionSize(parent.default_row_height)
         self.button_box = QDialogButtonBox(self)
         self.button_box.setStandardButtons(QDialogButtonBox.Cancel | QDialogButtonBox.Ok)
-        layout = QVBoxLayout(self)
+        layout = QGridLayout(self)
         layout.addWidget(self.table_view)
         layout.addWidget(self.button_box)
         self.setAttribute(Qt.WA_DeleteOnClose)
@@ -85,7 +85,10 @@ class ManageItemsDialog(ManageItemsDialogBase):
     def connect_signals(self):
         """Connect signals to slots."""
         super().connect_signals()
-        self.table_view.itemDelegate().data_committed.connect(self.set_model_data)
+        try:
+            self.table_view.itemDelegate().data_committed.connect(self.set_model_data)
+        except AttributeError:
+            pass
         self.model.dataChanged.connect(self._handle_model_data_changed)
         self.model.modelReset.connect(self._handle_model_reset)
 

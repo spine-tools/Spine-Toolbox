@@ -187,7 +187,7 @@ class CompoundTableModel(MinimalTableModel):
         return True
 
     def insertRows(self, row, count, parent=QModelIndex()):
-        """Insert count rows after the given row under the given parent.
+        """Inserts count rows after the given row under the given parent.
         Localizes the appropriate submodel and calls insertRows on it.
         """
         if row < 0 or row > self.rowCount():
@@ -198,7 +198,35 @@ class CompoundTableModel(MinimalTableModel):
             sub_model, sub_row = self._row_map[row]
         except IndexError:
             sub_model, sub_row = self._row_map[-1]
-        return sub_model.insertRows(sub_row, count, self.map_to_sub(parent))
+        self.beginInsertRows(parent, row, row + count - 1)
+        sub_model.insertRows(sub_row, count, self.map_to_sub(parent))
+        self.endInsertRows()
+        return True
+
+    def removeRows(self, row, count, parent=QModelIndex()):
+        """Removes count rows starting with the given row under parent.
+        Localizes the appropriate submodels and calls removeRows on it.
+        """
+        if row < 0 or row > self.rowCount():
+            return False
+        if count < 1:
+            return False
+        first = row
+        last = row + count - 1
+        self.beginRemoveRows(parent, first, last)
+        while first <= last:
+            try:
+                sub_model, sub_row = self._row_map[first]
+                sub_count = min(sub_model.rowCount(), count)
+                first += sub_count
+                count -= sub_count
+            except IndexError:
+                sub_model, sub_row = self._row_map[-1]
+                sub_count = min(sub_model.rowCount(), count)
+                break
+            finally:
+                sub_model.removeRows(sub_row, sub_count, self.map_to_sub(parent))
+        self.endRemoveRows()
 
 
 class CompoundWithEmptyTableModel(CompoundTableModel):
