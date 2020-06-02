@@ -594,11 +594,15 @@ class TabularViewMixin:
         self.reload_frozen_table()
 
     def receive_objects_added_or_removed(self, db_map_data, action):
+        if not self.pivot_table_model:
+            return
         items = db_map_data.get(self.db_map, set())
         if self.pivot_table_model.receive_objects_added_or_removed(items, action):
             self.update_filter_menus(action)
 
     def receive_relationships_added_or_removed(self, db_map_data, action):
+        if not self.pivot_table_model:
+            return
         if self.current_class_type != "relationship class":
             return
         items = db_map_data.get(self.db_map, set())
@@ -609,6 +613,8 @@ class TabularViewMixin:
             self.update_filter_menus(action)
 
     def receive_parameter_definitions_added_or_removed(self, db_map_data, action):
+        if not self.pivot_table_model:
+            return
         items = db_map_data.get(self.db_map, set())
         parameters = [
             x for x in items if (x.get("object_class_id") or x.get("relationship_class_id")) == self.current_class_id
@@ -619,6 +625,8 @@ class TabularViewMixin:
             self.update_filter_menus(action)
 
     def receive_parameter_values_added_or_removed(self, db_map_data, action):
+        if not self.pivot_table_model:
+            return
         items = db_map_data.get(self.db_map, set())
         parameter_values = [
             x for x in items if (x.get("object_class_id") or x.get("relationship_class_id")) == self.current_class_id
@@ -629,6 +637,8 @@ class TabularViewMixin:
             self.update_filter_menus(action)
 
     def receive_db_map_data_updated(self, db_map_data, get_class_id):
+        if not self.pivot_table_model:
+            return
         items = db_map_data.get(self.db_map, set())
         for item in items:
             if get_class_id(item) == self.current_class_id:
@@ -638,6 +648,8 @@ class TabularViewMixin:
                 break
 
     def receive_classes_removed(self, db_map_data):
+        if not self.pivot_table_model:
+            return
         items = db_map_data.get(self.db_map, set())
         for item in items:
             if item["id"] == self.current_class_id:

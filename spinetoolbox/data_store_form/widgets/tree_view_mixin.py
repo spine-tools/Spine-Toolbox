@@ -120,7 +120,6 @@ class TreeViewMixin:
         parcel.push_relationship_ids(db_map_rel_ids)
         self.export_data(parcel.data)
 
-    @busy_effect
     def duplicate_object(self, index):
         """
         Duplicates the object at the given object tree model index.
@@ -141,17 +140,19 @@ class TreeViewMixin:
         parcel.push_inside_object_ids(db_map_obj_ids)
         data = self._make_data_for_export(parcel.data)
         data = {
-            "objects": [(cls_name, dup_name) for (cls_name, obj_name) in data["objects"]],
+            "objects": [
+                (cls_name, dup_name, description) for (cls_name, obj_name, description) in data.get("objects", [])
+            ],
             "relationships": [
-                (cls_name, _replace_name(obj_name_lst)) for (cls_name, obj_name_lst) in data["relationships"]
+                (cls_name, _replace_name(obj_name_lst)) for (cls_name, obj_name_lst) in data.get("relationships", [])
             ],
             "object_parameter_values": [
                 (cls_name, dup_name, param_name, val)
-                for (cls_name, obj_name, param_name, val) in data["object_parameter_values"]
+                for (cls_name, obj_name, param_name, val) in data.get("object_parameter_values", [])
             ],
             "relationship_parameter_values": [
                 (cls_name, _replace_name(obj_name_lst), param_name, val)
-                for (cls_name, obj_name_lst, param_name, val) in data["relationship_parameter_values"]
+                for (cls_name, obj_name_lst, param_name, val) in data.get("relationship_parameter_values", [])
             ],
         }
         self.db_mngr.import_data({db_map: data for db_map in object_item.db_maps}, command_text="Duplicate object")
