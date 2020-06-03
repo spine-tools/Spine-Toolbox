@@ -109,11 +109,8 @@ class GdxConnector(SourceConnection):
         if not table in self._gdx_file:
             return iter([]), [], 0
         symbol = self._gdx_file[table]
-        header = list(symbol.domain) if symbol.domain is not None else []
+        header = list(symbol.domain) if symbol.domain is not None else [f"dim{i}" for i in range(symbol.dimension)]
         if isinstance(symbol, GAMSSet):
-            if not header:
-                # It is domain, use generalized index '*'.
-                header.append("*")
             if symbol.elements and isinstance(symbol.elements[0], str):
 
                 def gdx_data():
