@@ -32,7 +32,7 @@ from spinedb_api import (
     SpineDBAPIError,
     SpineDBVersionError,
 )
-from ...config import MAINWINDOW_SS, APPLICATION_PATH, DOCUMENTATION_PATH
+from ...config import MAINWINDOW_SS, APPLICATION_PATH, ONLINE_DOCUMENTATION_URL
 from .select_db_items_dialogs import MassRemoveItemsDialog, GetItemsForExportDialog
 from .custom_qwidgets import OpenFileButton, OpenSQLiteFileButton, ShootingLabel, CustomInputDialog
 from .parameter_view_mixin import ParameterViewMixin
@@ -593,10 +593,9 @@ class DataStoreFormBase(QMainWindow):
     @Slot(bool)
     def show_user_guide(self, checked=False):
         """Opens Spine Toolbox documentation Data store form page in browser."""
-        doc_path = os.path.join(DOCUMENTATION_PATH, "data_store_form.html")
-        doc_url = "file:///" + doc_path
+        doc_url = f"{ONLINE_DOCUMENTATION_URL}/data_store_form/index.html"
         if not open_url(doc_url):
-            self.msg_error.emit("Unable to open file <b>{0}</b>".format(doc_path))
+            self.msg_error.emit("Unable to open url <b>{0}</b>".format(doc_url))
 
     def notify_items_changed(self, action, item_type, db_map_data):
         """Enables or disables actions and informs the user about what just happened."""
