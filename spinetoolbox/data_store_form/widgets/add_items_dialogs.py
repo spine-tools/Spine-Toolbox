@@ -71,12 +71,11 @@ class AddReadyRelationshipsDialog(ManageItemsDialogBase):
         self.relationship_class = relationships_class
         self.relationships = relationships
         self.db_maps = db_maps
-        frame = QFrame(self)
-        layout = QVBoxLayout(frame)
         label = QLabel("<p>Please check the relationships you want to add and press <b>Ok</b>.</p>")
         label.setWordWrap(True)
-        layout.addWidget(label)
-        self.layout().insertWidget(0, frame)
+        self.layout().addWidget(label, 0, 0)
+        self.layout().addWidget(self.table_view, 1, 0)
+        self.layout().addWidget(self.button_box, 2, 0, -1, -1)
         self.setWindowTitle("Add '{0}' relationships".format(self.relationship_class["name"]))
         self.populate_table_view()
         self.connect_signals()

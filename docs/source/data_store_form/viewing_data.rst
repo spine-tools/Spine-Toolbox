@@ -81,7 +81,7 @@ whenever *any* of the member objects are included.
 To do this, enable **Full relationship expansion** via the **Graph** menu,
 or via *Entity graph*'s context menu.
 
-.. note:: To *extend* the selection in *Object tree* or *Relationship tree*, press and hold the **Ctrl** key
+.. tip:: To *extend* the selection in *Object tree* or *Relationship tree*, press and hold the **Ctrl** key
    while clicking on additional items.
 
 .. tip:: *Object tree* and *Relationship tree* also support **Sticky selection**, i.e., 
@@ -121,6 +121,8 @@ To restore all prunned items at once, select **Graph -> Restore all prunned**.
 To zoom in and out, scroll your mouse wheel over *Entity graph* or use the buttons in **Graph -> Zoom**.
 To rotate clockwise or anti-clockwise, press and hold the **Shift** key while scrolling your mouse wheel,
 or use the buttons in **Graph -> Rotate**.
+
+To export the current graph as a PDF file, select **File -> Export graph as PDF**.
 
 Viewing parameter definitions and values
 ========================================
@@ -239,7 +241,7 @@ You can find parameter value lists from all databases in *Parameter value list*:
    :align: center
 
 To view the parameter value lists from each database, 
-expand the corresponding top-level item in *Parameter value list*.
+expand the corresponding top-level item.
 To view the values for each list, expand the corresponding list item.
 
 

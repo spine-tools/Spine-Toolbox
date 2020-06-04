@@ -60,6 +60,13 @@ To add an object to a specific class, bring the class to *Pivot table* using any
 (see :ref:`using_pivot_table_and_frozen_table`).
 Then, enter the object name in the last cell of the header corresponding to that class.
 
+Duplicating objects
+~~~~~~~~~~~~~~~~~~~
+
+To duplicate an existing object with all its relationships and parameter values,
+right-click over the corresponding object item in *Object tree* to display the context menu,
+and select **Duplicate object**. Enter a name for the duplicate and press **Ok**.
+
 Adding relationship classes
 ===========================
 
@@ -217,5 +224,4 @@ To add a new parameter value list, just enter the name of the list in the last r
 To add new values for the list, enter the values in the rows under the corresponding
 list item.
 
-.. note:: To be actually added to the database, a parameter value list must have at least two values.
-
+.. note:: To be actually added to the database, a parameter value list must have at least one value.

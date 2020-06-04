@@ -33,7 +33,7 @@ from spinedb_api import (
     SpineDBVersionError,
 )
 from ...config import MAINWINDOW_SS, APPLICATION_PATH, ONLINE_DOCUMENTATION_URL
-from .select_db_items_dialogs import MassRemoveItemsDialog, GetItemsForExportDialog
+from .select_db_items_dialogs import MassRemoveItemsDialog, MassExportItemsDialog
 from .custom_qwidgets import OpenFileButton, OpenSQLiteFileButton, ShootingLabel, CustomInputDialog
 from .parameter_view_mixin import ParameterViewMixin
 from .tree_view_mixin import TreeViewMixin
@@ -262,7 +262,7 @@ class DataStoreFormBase(QMainWindow):
 
     @Slot(bool)
     def import_file(self, checked=False):
-        """Import file. For now it only supports JSON."""
+        """Import file. It supports SQLite, JSON, and Excel."""
         self.qsettings.beginGroup(self.settings_group)
         file_path, selected_filter = get_open_file_name_in_last_dir(
             self.qsettings,
@@ -327,7 +327,7 @@ class DataStoreFormBase(QMainWindow):
     @Slot(bool)
     def show_get_items_for_export_dialog(self, checked=False):
         """Shows dialog for user to select dbs and items for export."""
-        dialog = GetItemsForExportDialog(self, self.db_mngr, *self.db_maps)
+        dialog = MassExportItemsDialog(self, self.db_mngr, *self.db_maps)
         dialog.data_submitted.connect(self.export_data)
         dialog.show()
 
@@ -374,7 +374,7 @@ class DataStoreFormBase(QMainWindow):
             self.qsettings,
             "exportDB",
             self,
-            "Export to file",
+            "Export file",
             self._get_base_dir(),
             "SQLite (*.sqlite);; JSON file (*.json);; Excel file (*.xlsx)",
         )

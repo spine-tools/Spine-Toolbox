@@ -2,11 +2,11 @@
 Updating data
 -------------
 
+This section describes the available tools to update existing data.
+
+
 .. contents::
    :local:
-
-
-This section describes the available tools to update existing data.
 
 Updating entities and classes
 =============================
@@ -28,8 +28,7 @@ and the tables will be filled with the current data of selected items. E.g.:
    :align: center
 
 Modify the field(s) you want under the corresponding column(s).
-Specify the databases where you want to apply the modifications for each item
-under the *databases* column.
+Specify the databases where you want to update each item under the *databases* column.
 When you're ready, press **Ok**.
 
 Using *Pivot table*
@@ -51,12 +50,12 @@ Using *Pivot table*
 ~~~~~~~~~~~~~~~~~~~
 
 To rename parameter definitions for a class,
-bring the corresponding class to *Pivot table* using the **Parameter** input type
+bring the corresponding class to *Pivot table* using the **Parameter value** input type
 (see :ref:`using_pivot_table_and_frozen_table`).
 Then, just edit the appropriate cell in the `parameter` header.
 
 To modify parameter values for an object or relationship,
-bring the corresponding class to *Pivot table* using the **Parameter** input type
+bring the corresponding class to *Pivot table* using the **Parameter value** input type
 (see :ref:`using_pivot_table_and_frozen_table`).
 Then, just edit the appropriate cell in the table body.
 
@@ -64,6 +63,6 @@ Then, just edit the appropriate cell in the table body.
 Updating parameter value lists
 ==============================
 
-To rename parameter value list, just edit the appropriate row in *Parameter value list.*
+To rename a parameter value list or any of its values, just edit the appropriate row in *Parameter value list*.
 
 

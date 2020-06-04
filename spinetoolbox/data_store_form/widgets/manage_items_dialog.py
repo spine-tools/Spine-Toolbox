@@ -56,9 +56,11 @@ class ManageItemsDialogBase(QDialog):
     def resize_window_to_columns(self, height=None):
         if height is None:
             height = self.sizeHint().height()
+        slack = 64
         margins = self.layout().contentsMargins()
         self.resize(
-            margins.left()
+            slack
+            + margins.left()
             + margins.right()
             + self.table_view.frameWidth() * 2
             + self.table_view.verticalHeader().width()
