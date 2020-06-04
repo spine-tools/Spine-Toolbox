@@ -126,7 +126,7 @@ What is included in the graph depends on the specific selection you make:
 - To include all relationships of a specific class involving a specific object,
   select the corresponding relationship class item under the corresponding object item in *Object tree*.
 - To include specific objects or relationships,
-  select the corresponding item in either *Object tree* or *Relationship tree*
+  select the corresponding item in either *Object tree* or *Relationship tree*.
 
 .. note:: In *Entity graph*, a small unnamed vertex represents a relationship,
    whereas a bigger named vertex represents an object. An arc between a relationship and an object
@@ -169,7 +169,7 @@ To prune the graph, select the items you want to prune and then choose **Graph -
 or **Prune selected classes**.
 To restore specific prunned items,
 go to **Graph -> Restore prunned** and select the items you want to restore from the popup menu.
-To restore all prunned items, select **Graph -> Restore all prunned**.
+To restore all prunned items at once, select **Graph -> Restore all prunned**.
 
 
 .. note:: *Entity graph* supports extended selection and rubber-band selection.
@@ -191,30 +191,33 @@ Using *Stacked tables*
 
 *Stacked tables* present object and relationship parameter data from all databases in the form of stacked tables:
 
-
 .. image:: img/data_store_form/object_parameter_value_table.png
    :align: center
 
 To filter *Stacked tables* by any entities and/or classes,
 select the corresponding items in either *Object tree*, *Relationship tree*, or *Entity graph*.
-To remove filters, select the root item in either *Object tree* or *Relationship tree*.
+To remove all these filters, select the root item in either *Object tree* or *Relationship tree*.
 
 To filter parameter definitions and values by certain parameter tags, 
 select those tags in the *Parameter tag toolbar*.
 
 To apply a custom filter on a *Stacked table*, click on any horizontal header.
-A menu will pop up listing the items in the corresponding column;
-check the ones you want to see and press **Ok**.
+A menu will pop up listing the items in the corresponding column:
+
+.. image:: img/data_store_form/object_name_filter_menu.png
+   :align: center
+
+Check the items you want to keep seeing in the table and press **Ok**.
 Additionally, you can type in the search bar at the top of the menu to filter the list of items.
 To remove the current filter, select **Remove filters**.
 
 To filter a *Stacked table* according to a selection of items,
 right-click on the selection to show the context menu,
 and then select **Filter by** or **Filter excluding**.
-To remove these filters, select *Remove filters* from the header menus of the filtered columns.
+To remove these filters, select **Remove filters** from the header menus of the filtered columns.
 
 .. tip:: You can rearrange columns in *Stacked tables* by dragging the headers with your mouse.
-   The ordering will be remembered the next time you open the Data store form.
+   The ordering will be remembered the next time you open the form.
 
 Viewing parameter values and relationships
 ==========================================
@@ -265,14 +268,18 @@ as well as rearrange headers vertically or horizontally.
 To freeze a dimension, drag the corresponding header block from *Pivot table* into *Frozen table*.
 To unfreeze a frozen dimension, just do the opposite.
 
-.. note:: Your pivoting and freezing selections for any class will be remember when switching to another class.
+.. note:: Your pivoting and freezing selections for any class will be remembered when switching to another class.
 
 Filtering
 *********
 
 To apply a custom filter on *Pivot table*, click on the arrow next to the name of any header block.
-A menu will pop up listing the items in the corresponding row or column;
-check the ones you want to see and press **Ok**.
+A menu will pop up listing the items in the corresponding row or column:
+
+.. image:: img/data_store_form/object_name_filter_menu.png
+   :align: center
+
+Check the items you want to keep seeing in the table and press **Ok**.
 Additionally, you can type in the search bar at the top of the menu to filter the list of items.
 To remove the current filter, select **Remove filters**.
 
@@ -280,7 +287,7 @@ To filter the pivot table by an individual vector across the frozen dimensions,
 select the corresponding row in *Frozen table*.
 
 
-.. note:: At the moment, *Pivot table* shows data for only one class at the time,
+.. note:: At the moment, *Pivot table* shows data for only one class at a time,
    and only for the first database open in the form.
 
 
