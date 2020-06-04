@@ -55,6 +55,9 @@ Using *Entity graph*
 .. image:: img/entity_graph.png
    :align: center
 
+
+.. tip:: To see it in action, check out `this video <https://youtu.be/pSdl9fogNaE>`_.
+
 Building the graph
 ******************
 
