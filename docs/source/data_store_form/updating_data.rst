@@ -11,17 +11,15 @@ This section describes the available tools to update existing data.
 Updating entities and classes
 =============================
 
-Using *Edit items* dialogs
+Using *Edit...* dialogs
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Select any number of entity and/or class items in *Object tree*
 or *Relationship tree*, or any number of object and/or relationship items in *Entity graph*.
-Then do one of the following:
+Then, either select **Edit -> Edit selected items** from the menu bar,
+or right-click on the selection and choose **Edit selected items** from the context menu.
 
-- Select **Edit -> Edit selected items** from the menu bar.
-- Right-click on the selection to bring the context menu, and select **Edit selected items**.
-
-One separate *Edit items* dialog will pop up for each selected entity or class type,
+One separate *Edit...* dialog will pop up for each selected entity or class type,
 and the tables will be filled with the current data of selected items. E.g.:
 
 .. image:: img/edit_object_classes_dialog.png

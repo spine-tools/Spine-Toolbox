@@ -2,7 +2,7 @@
 Managing data
 -------------
 
-This section describes the available tools to manage data, i.e., adding, updating or removing at the same time.
+This section describes the available tools to manage data, i.e., adding, updating or removing data at the same time.
 
 .. contents::
    :local:
@@ -19,13 +19,13 @@ The *Manage parameter tags* dialog will pop up:
 
 To add new parameter tags, just fill the last empty row in the table:
 Enter the tag under *parameter tag*, and optionally a description under *description*.
-Finally, select the databases where you want to add the tag to under *databases*.
+Finally, select the databases where you want to add the tag under *databases*.
 
 To update existing parameter tags, just edit the appropriate row in the table,
-and select the databases where you want to update the tag in under *databases*.
+and select the databases where you want the changes to be effective under *databases*.
 
 To remove parameter tags, just check the corresponding box under the *remove* column,
-and select the databases where you want to remove the tag from under *databases*.
+and select the databases from where you want to remove the tag under *databases*.
 
 When you're ready, press **Ok**.
 
@@ -51,13 +51,13 @@ To add multiple relationships at the same time,
 select multiple objects for one or more of the classes.
 
 .. tip:: To *extend* the selection of objects for a class, 
-   press and hold the **Ctrl** key while clicking on additional items.
+   press and hold the **Ctrl** key while clicking on more items.
 
 .. note:: The set of relationships to add is determined by applying the *product*
    operation over the objects selected for each class.
 
 To remove relationships, select the appropriate rows under *Existing relationships*
-and press the **Remove relationships** button on the left.
+and press the **Remove relationships** button on the right.
 
 When you're happy with your changes, press **Ok**.
 

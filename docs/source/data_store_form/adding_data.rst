@@ -2,12 +2,11 @@
 Adding data
 -----------
 
-This section describes the available tools to view data.
+This section describes the available tools to add new data.
 
 .. contents::
    :local:
 
-This section describes the available tools to add new data.
 
 Adding object classes
 =====================
@@ -15,10 +14,8 @@ Adding object classes
 Using *Add object classes* dialog
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Choose one:
-
-- Select **Edit -> Add object classes**.
-- Right-click on the root item in *Object tree* to display the context menu, and select **Add object classes**.
+Select **Edit -> Add object classes** from the menu bar,
+or right-click on the root item in *Object tree* to display the context menu, and select **Add object classes**.
 
 The *Add object classes* dialog will pop up:
 
@@ -37,11 +34,9 @@ Adding objects
 Using *Add objects* dialog
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Choose one:
-
-- Select **Edit -> Add objects**.
-- Right-click on an object class item in *Object tree* to display the context menu, 
-  and select **Add objects**.
+Select **Edit -> Add objects** from the menu bar,
+or right-click on an object class item in *Object tree* to display the context menu, 
+and select **Add objects**.
 
 The *Add objects* dialog will pop up:
 
@@ -73,13 +68,10 @@ Adding relationship classes
 Using *Add relationship classes* dialog
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Choose one:
-
-- Select **Edit -> Add relationship classes**. 
-- Right-click on an object class item in *Object tree* to display the context menu, 
-  and select **Add relationship classes**. 
-- Right-click on the root item in *Relationship tree* to display the context menu,
-  and select **Add relationship classes**. 
+From the menu bar, select **Edit -> Add relationship classes**.
+Alternatively, right-click on either the root item in *Relationship tree*,
+or on an object class item in *Object tree*,
+and select **Add relationship classes** from the context menu. 
 
 The *Add relationship classes* dialog will pop up:
 
@@ -87,7 +79,7 @@ The *Add relationship classes* dialog will pop up:
    :align: center
 
 Select the number of dimensions using the spinbox at the top;
-then, enter the names of the object classes for each dimension under *object class name (dim)*,
+then, enter the names of the object classes for each dimension under each *object class name* column,
 and the names of the relationship classes under *relationship class name*.
 To display a list of available object classes, 
 start typing or double click on any cell under the *object class name* columns.
@@ -102,11 +94,9 @@ Adding relationships
 Using *Add relationships* dialog
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Choose one:
-
-- Select **Edit -> Add relationships**. 
-- Right-click on a relationship class item in *Object tree* or *Relationship tree*
-  to display the context menu, and select **Add relationships**.
+Select **Edit -> Add relationships** from the menu bar,
+or right-click on a relationship class item in either *Object tree* or *Relationship tree*, 
+and select **Add relationships** from the context menu.
 
 The *Add relationships* dialog will pop up:
 
@@ -140,7 +130,7 @@ A menu will pop up showing the available relationship classes.
 Select the class you want; the mouse cursor will adopt a cross-hairs shape.
 Click on each of the remaining member objects one by one to make the relationships.
 
-.. tip:: All the dialogs to add items support pasting tabular (spreadsheet) data from the clipboard.
+.. tip:: All the *Add...* dialogs support pasting tabular (spreadsheet) data from the clipboard.
    Just select any cell in the table and press **Ctrl+V**. 
    If needed, the table will grow to accommodate the exceeding data.
    To paste data on multiple cells, select all the cells you want to paste on and press **Ctrl+V**.
@@ -155,11 +145,11 @@ To add new parameter definitions for an object class,
 just fill the last empty row of *Object parameter definition*.
 Enter the name of the class under *object_class_name*, and the name of the parameter under *parameter_name*.
 To display a list of available object classes, 
-start typing or double click on the cell under the *object_class_name* column.
+start typing or double click under the *object_class_name* column.
 Optionally, you can also specify a default value, a parameter value list, or any number of parameter tags
 under the appropriate columns.
-The parameter is added when the background of the *object_class_name*
-and *parameter_name* cells become gray.
+The parameter is added when the background of the cells under *object_class_name*
+and *parameter_name* become gray.
 
 To add new parameter definitions for a relationship class,
 just fill the last empty row of *Relationship parameter definition*,
@@ -170,10 +160,11 @@ Using *Pivot table*
 ~~~~~~~~~~~~~~~~~~~
 
 To add a new parameter definition for a class,
-bring the corresponding class to *Pivot table* using the **Parameter** input type
+bring the corresponding class to *Pivot table* using the **Parameter value** input type
 (see :ref:`using_pivot_table_and_frozen_table`).
-*Pivot table* will be populated with parameter value data for the class.
-Then, enter the name of the new parameter in the last cell of the *parameter* header.
+The *parameter* header of *Pivot table* will be populated
+with existing parameter definitions for the class.
+Enter a name for the new parameter in the last cell of that header.
 
 
 Adding parameter values
@@ -188,9 +179,9 @@ Enter the name of the class under *object_class_name*, the name of the object un
 and the name of the parameter under *parameter_name*.
 Optionally, you can also specify the parameter value right away under the *value* column.
 To display a list of available object classes, objects, or parameters,
-start typing or double click on the cell under the appropriate column.
-The parameter is added when the background of the *object_class_name*,
-*object_name*, and *parameter_name* cells become gray.
+start typing or double click under the appropriate column.
+The parameter value is added when the background of the cells under *object_class_name*,
+*object_name*, and *parameter_name* become gray.
 
 To add new parameter values for a relationship class,
 just fill the last empty row of *Relationship parameter value*,
@@ -206,7 +197,7 @@ Using *Pivot table*
 ~~~~~~~~~~~~~~~~~~~
 
 To add parameter value for any object or relationship,
-bring the corresponding class to *Pivot table* using the **Parameter** input type
+bring the corresponding class to *Pivot table* using the **Parameter value** input type
 (see :ref:`using_pivot_table_and_frozen_table`).
 Then, enter the parameter value in the corresponding cell in the table body.
 

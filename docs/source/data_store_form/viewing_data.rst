@@ -18,7 +18,7 @@ Using *Entity trees*
 .. image:: img/object_tree.png
    :align: center
 
-What is shown in the trees depends on the items you expand or collapse. In *Object tree*:
+In *Object tree*:
 
 - To view all object classes from all databases,
   expand the root item (automatically expanded when loading the form).
@@ -85,10 +85,10 @@ To do this, enable **Full relationship expansion** via the **Graph** menu,
 or via *Entity graph*'s context menu.
 
 .. tip:: To *extend* the selection in *Object tree* or *Relationship tree*, press and hold the **Ctrl** key
-   while clicking on additional items.
+   while clicking on the items.
 
 .. tip:: *Object tree* and *Relationship tree* also support **Sticky selection**, i.e., 
-   extending the selection by clicking on the items *without pressing Ctrl*.
+   extending the selection by clicking on items *without pressing Ctrl*.
    To enable **Sticky selection**, go to **File -> Settings** and check the corresponding box.
 
 .. note:: At the moment, *Entity graph* only shows data from the first database open in the form.
@@ -143,7 +143,7 @@ select the corresponding items in either *Object tree*, *Relationship tree*, or 
 To remove all these filters, select the root item in either *Object tree* or *Relationship tree*.
 
 To filter parameter definitions and values by certain parameter tags, 
-select those tags in the *Parameter tag toolbar*.
+select those tags in *Parameter tag toolbar*.
 
 To apply a custom filter on a *Stacked table*, click on any horizontal header.
 A menu will pop up listing the items in the corresponding column:
@@ -155,7 +155,7 @@ Uncheck the items you don't want to see in the table and press **Ok**.
 Additionally, you can type in the search bar at the top of the menu to filter the list of items.
 To remove the current filter, select **Remove filters**.
 
-To filter a *Stacked table* according to a selection of items,
+To filter a *Stacked table* according to a selection of items in the table itself,
 right-click on the selection to show the context menu,
 and then select **Filter by** or **Filter excluding**.
 To remove these filters, select **Remove filters** from the header menus of the filtered columns.
@@ -238,13 +238,13 @@ select the corresponding row in *Frozen table*.
 Viewing parameter value lists
 =============================
 
-You can find parameter value lists from all databases in *Parameter value list*:
+You can find parameter value lists from all databases under *Parameter value list*:
 
 .. image:: img/parameter_value_list.png
    :align: center
 
 To view the parameter value lists from each database, 
-expand the corresponding top-level item.
+expand the root item for that database.
 To view the values for each list, expand the corresponding list item.
 
 

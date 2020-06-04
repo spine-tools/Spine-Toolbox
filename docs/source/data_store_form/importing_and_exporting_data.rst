@@ -47,15 +47,15 @@ Each sheet can have one of four different formats:
 JSON format
 ~~~~~~~~~~~
 
-The JSON format has eight ``OPTIONAL`` keys:
+The JSON format has the following ``OPTIONAL`` keys:
 
 - **object_classes**: the value of this key ``MUST`` be a JSON array,
   representing a list of object classes.
   Each element in this array ``MUST`` be itself a JSON array and ``MUST`` have three elements:
 
   - The first element ``MUST`` be a JSON string, indicating the object class name.
-  - The second element ``MUST`` either be a JSON string, indicating the object class description, or null.
-  - The third element ``MUST`` either be a JSON number, indicating the object class icon code, or null.
+  - The second element ``MUST`` be either a JSON string, indicating the object class description, or null.
+  - The third element ``MUST`` be either a JSON integer, indicating the object class icon code, or null.
 
 - **relationship_classes**: the value of this key ``MUST`` be a JSON array,
   representing a list of relationships classes.
@@ -64,7 +64,7 @@ The JSON format has eight ``OPTIONAL`` keys:
   - The first element ``MUST`` be a JSON string, indicating the relationship class name.
   - The second element ``MUST`` be a JSON array, indicating the member object classes.
     Each element in this array ``MUST`` be a JSON string, indicating the object class name.
-  - The third element ``MUST`` either be a JSON string, indicating the object class description, or null.
+  - The third element ``MUST`` be either a JSON string, indicating the relationship class description, or null.
 
 - **parameter_value_lists**: the value of this key ``MUST`` be a JSON array,
   representing a list of parameter value lists.
@@ -72,7 +72,7 @@ The JSON format has eight ``OPTIONAL`` keys:
 
   - The first element ``MUST`` be a JSON string, indicating the parameter value list name.
   - The second element ``MUST`` be a JSON array, indicating the values in the list.
-    Each element in this array ``MUST`` either be a JSON object, number, or null,
+    Each element in this array ``MUST`` be either a JSON object, string, number, or null,
     indicating the value.
 
 - **object_parameters**: the value of this key ``MUST`` be a JSON array,
@@ -81,10 +81,10 @@ The JSON format has eight ``OPTIONAL`` keys:
 
   - The first element ``MUST`` be a JSON string, indicating the object class name.
   - The second element ``MUST`` be a JSON string, indicating the parameter name.
-  - The third element ``MUST`` either be a JSON object, number, or null,
+  - The third element ``MUST`` be either a JSON object, string, number, or null,
     indicating the parameter default value.
-  - The fourth element ``MUST`` be a JSON string, indicating the associated parameter value list, or null
-  - The last element ``MUST`` be a JSON string, indicating the parameter description, or null.
+  - The fourth element ``MUST`` be a JSON string, indicating the associated parameter value list, or null.
+  - The last element ``MUST`` be either a JSON string, indicating the parameter description, or null.
 
 - **relationship_parameters**: the value of this key ``MUST`` be a JSON array,
   representing a list of relationship parameter definitions.  
@@ -92,10 +92,10 @@ The JSON format has eight ``OPTIONAL`` keys:
 
   - The first element ``MUST`` be a JSON string, indicating the relationship class name.
   - The second element ``MUST`` be a JSON string, indicating the parameter name.
-  - The third element ``MUST`` either be a JSON object, number, or null,
+  - The third element ``MUST`` be either a JSON object, string, number, or null,
     indicating the parameter default value.
   - The fourth element ``MUST`` be a JSON string, indicating the associated parameter value list, or null
-  - The last element ``MUST`` be a JSON string, indicating the parameter description, or null.
+  - The last element ``MUST`` be either a JSON string, indicating the parameter description, or null.
 
 - **objects**: the value of this key ``MUST`` be a JSON array,
   representing a list of objects.
@@ -103,7 +103,7 @@ The JSON format has eight ``OPTIONAL`` keys:
 
   - The first element ``MUST`` be a JSON string, indicating the object class name.
   - The second element ``MUST`` be a JSON string, indicating the object name.
-  - The third element ``MUST`` either be a JSON string, indicating the object description, or null.
+  - The third element ``MUST`` be either a JSON string, indicating the object description, or null.
 
 - **relationships**: the value of this key ``MUST`` be a JSON array,
   representing a list of relationships.
@@ -120,7 +120,7 @@ The JSON format has eight ``OPTIONAL`` keys:
   - The first element ``MUST`` be a JSON string, indicating the object class name.
   - The second element ``MUST`` be a JSON string, indicating the object name.
   - The third element ``MUST`` be a JSON string, indicating the parameter name.
-  - The fourth element ``MUST`` either be a JSON object, number, or null,
+  - The fourth element ``MUST`` be either a JSON object, string, number, or null,
     indicating the parameter value.
 
 - **relationship_parameter_values**: the value of this key ``MUST`` be a JSON array,
@@ -131,7 +131,7 @@ The JSON format has eight ``OPTIONAL`` keys:
   - The second element ``MUST`` be a JSON array, indicating the relationship's member objects.
     Each element in this array ``MUST`` be a JSON string, indicating the object name.
   - The third element ``MUST`` be a JSON string, indicating the parameter name.
-  - The fourth element ``MUST`` either be a JSON object, number, or null,
+  - The fourth element ``MUST`` be either a JSON object, string, number, or null,
     indicating the parameter value.
 
 Example::
@@ -188,7 +188,7 @@ Importing
 
 To import a file, go to **File --> Import**.
 The *Import file* dialog will pop up.
-Select the file type (SQLite, JSON, or Excel), enter the path of the source file to import, and accept the dialog.
+Select the file type (SQLite, JSON, or Excel), enter the path of the file to import, and accept the dialog.
 
 .. note:: Changes from import operations are not committed immediately to any databases.
    You need to commit them separately (see :ref:`committing_and_rolling_back`).
@@ -210,7 +210,7 @@ The *Mass export items* dialog will pop up:
 Select the databases you want to export under *Databases*, and the type of items under *Items*,
 then press **Ok**.
 The *Export file* dialog will pop up now.
-Select the file type (SQLite, JSON, or Excel), enter the path of the file you want to export, and accept the dialog.
+Select the file type (SQLite, JSON, or Excel), enter the path of the file to export, and accept the dialog.
 
 
 Selective export
@@ -221,16 +221,16 @@ and *Relationship tree*, click on the selection to bring the context menu,
 and select **Export selected**.
 
 The *Export file* dialog will pop up.
-Select the file type (SQLite, JSON, or Excel), enter the path of the target file to export, and accept the dialog.
+Select the file type (SQLite, JSON, or Excel), enter the path of the file to export, and accept the dialog.
 
 
 Session export
 ~~~~~~~~~~~~~~
 
-To export only the changes made in the current session, go to **File --> Export session**.
+To export only uncommitted changes made in the current session, go to **File --> Export session**.
 
 The *Export file* dialog will pop up.
-Select the file type (SQLite, JSON, or Excel), enter the path of the target file for export, and accept the dialog.
+Select the file type (SQLite, JSON, or Excel), enter the path of the file to export, and accept the dialog.
 
 .. note:: Export operations include all uncommitted changes.
 
@@ -244,8 +244,9 @@ To open the file in your registered program, press that button.
 To open the containing folder, 
 click on the arrow next to the file name and select **Open containing folder** from the popup menu.
 
-To add en exported SQLite file to a *Data Store* in the current project,
+To add an exported SQLite file to a *Data Store* item in the current project,
 click on the arrow next to the file name and select **Add to project** from the popup menu.
-The *Add SQLite file to Project* will pop up.
-Select a Data Store from the list. You can create a new one by typing in the last row.
-When you're done, press **OK**. The selected Data Store will become the host of the exported file.
+The *Add SQLite file to Project* dialog will pop up.
+Select a *Data Store* item from the list to become the host of the exported file.
+Alternatively, you can create a new *Data Store* item by typing in the last row.
+When you're done, press **OK**.
