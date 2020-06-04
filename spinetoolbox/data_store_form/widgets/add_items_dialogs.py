@@ -181,29 +181,21 @@ class AddObjectClassesDialog(ShowIconColorEditorMixin, AddItemsDialog):
         self.setWindowTitle("Add object classes")
         self.model = EmptyRowModel(self)
         self.table_view.setModel(self.model)
-        self.combo_box = QComboBox(self)
-        self.layout().addWidget(self.combo_box, 0, 0)
-        self.layout().addWidget(self.table_view, 1, 0)
-        self.layout().addWidget(self.remove_rows_button, 2, 0)
-        self.layout().addWidget(self.button_box, 3, 0, -1, -1)
-        self.db_map_obj_cls_lookup = {
-            db_map: {x["name"]: x for x in self.db_mngr.get_items(db_map, "object class")} for db_map in self.db_maps
+        self.layout().addWidget(self.table_view, 0, 0)
+        self.layout().addWidget(self.remove_rows_button, 1, 0)
+        self.layout().addWidget(self.button_box, 2, 0, -1, -1)
+        self.display_order = {
+            db_map: max((x["display_order"] for x in self.db_mngr.get_items(db_map, "object class")), default=-1)
+            for db_map in self.db_maps
         }
         self.remove_rows_button.setIcon(QIcon(":/icons/menu_icons/cube_minus.svg"))
         self.table_view.setItemDelegate(ManageObjectClassesDelegate(self))
         self.connect_signals()
-        self.model.set_horizontal_header_labels(['object class', 'description', 'display icon', 'databases'])
+        self.model.set_horizontal_header_labels(['object class name', 'description', 'display icon', 'databases'])
         databases = ",".join(list(self.keyed_db_maps.keys()))
         self.default_display_icon = default_icon_id()
         self.model.set_default_row(**{'databases': databases, 'display icon': self.default_display_icon})
         self.model.clear()
-        insert_at_position_list = ['Insert new classes at the top']
-        object_class_names = {x: None for db_map in self.db_maps for x in self.db_map_obj_cls_lookup[db_map]}
-        self.object_class_names = list(object_class_names)
-        insert_at_position_list.extend(
-            ["Insert new classes after '{}'".format(name) for name in self.object_class_names]
-        )
-        self.combo_box.addItems(insert_at_position_list)
 
     def connect_signals(self):
         super().connect_signals()
@@ -222,9 +214,6 @@ class AddObjectClassesDialog(ShowIconColorEditorMixin, AddItemsDialog):
     def accept(self):
         """Collect info from dialog and try to add items."""
         db_map_data = dict()
-        # Display order
-        combo_index = self.combo_box.currentIndex()
-        after_obj_cls = self.object_class_names[combo_index - 1] if combo_index > 0 else None
         for i in range(self.model.rowCount() - 1):  # last row will always be empty
             row_data = self.model.row_data(i)
             name, description, display_icon, db_names = row_data
@@ -243,17 +232,9 @@ class AddObjectClassesDialog(ShowIconColorEditorMixin, AddItemsDialog):
                 display_icon = self.default_display_icon
             pre_item = {'name': name, 'description': description, 'display_icon': display_icon}
             for db_map in db_maps:
-                object_classes = self.db_map_obj_cls_lookup[db_map]
-                if not object_classes:
-                    # This happens when there's no object classes in the db
-                    display_order = 0
-                elif after_obj_cls is None:
-                    # At the top
-                    display_order = list(object_classes.values())[0]["display_order"] - 1
-                else:
-                    display_order = object_classes[after_obj_cls]["display_order"]
                 item = pre_item.copy()
-                item['display_order'] = display_order
+                self.display_order[db_map] += 1
+                item['display_order'] = self.display_order[db_map]
                 db_map_data.setdefault(db_map, []).append(item)
         if not db_map_data:
             self.parent().msg_error.emit("Nothing to add")
@@ -284,7 +265,7 @@ class AddObjectsDialog(GetObjectClassesMixin, AddItemsDialog):
         self.remove_rows_button.setIcon(QIcon(":/icons/menu_icons/cube_minus.svg"))
         self.table_view.setItemDelegate(ManageObjectsDelegate(self))
         self.connect_signals()
-        self.model.set_horizontal_header_labels(['object class', 'object', 'description', 'databases'])
+        self.model.set_horizontal_header_labels(['object class name', 'object name', 'description', 'databases'])
         self.db_map_obj_cls_lookup = self.make_db_map_obj_cls_lookup()
         if class_name:
             default_db_maps = [db_map for db_map, names in self.db_map_obj_cls_lookup.items() if class_name in names]
@@ -293,7 +274,7 @@ class AddObjectsDialog(GetObjectClassesMixin, AddItemsDialog):
             )
         else:
             db_names = ",".join(list(self.keyed_db_maps.keys()))
-        self.model.set_default_row(**{'object class': class_name, 'databases': db_names})
+        self.model.set_default_row(**{'object class name': class_name, 'databases': db_names})
         self.model.clear()
 
     @Slot()
@@ -364,7 +345,9 @@ class AddRelationshipClassesDialog(GetObjectClassesMixin, AddItemsDialog):
         self.table_view.setItemDelegate(ManageRelationshipClassesDelegate(self))
         self.number_of_dimensions = 1
         self.connect_signals()
-        self.model.set_horizontal_header_labels(['object class 1', 'relationship class', 'description', 'databases'])
+        self.model.set_horizontal_header_labels(
+            ['object class name (1)', 'relationship class name', 'description', 'databases']
+        )
         self.db_map_obj_cls_lookup = self.make_db_map_obj_cls_lookup()
         if object_class_one_name:
             default_db_maps = [
@@ -375,7 +358,7 @@ class AddRelationshipClassesDialog(GetObjectClassesMixin, AddItemsDialog):
             )
         else:
             db_names = ",".join(list(self.keyed_db_maps.keys()))
-        self.model.set_default_row(**{'object class 1': object_class_one_name, 'databases': db_names})
+        self.model.set_default_row(**{'object class name (1)': object_class_one_name, 'databases': db_names})
         self.model.clear()
 
     def connect_signals(self):
@@ -396,7 +379,7 @@ class AddRelationshipClassesDialog(GetObjectClassesMixin, AddItemsDialog):
     def insert_column(self):
         column = self.number_of_dimensions
         self.number_of_dimensions += 1
-        column_name = "object class {}".format(self.number_of_dimensions)
+        column_name = "object class name ({0})".format(self.number_of_dimensions)
         self.model.insertColumns(column, 1)
         self.model.insert_horizontal_header_labels(column, [column_name])
         self.table_view.resizeColumnToContents(column)
@@ -418,7 +401,7 @@ class AddRelationshipClassesDialog(GetObjectClassesMixin, AddItemsDialog):
         right = bottom_right.column()
         for row in range(top, bottom + 1):
             for column in range(left, right + 1):
-                if header[column] == 'relationship class':
+                if header[column] == 'relationship class name':
                     break
             else:
                 col_data = lambda j: self.model.index(row, j).data()  # pylint: disable=cell-var-from-loop
@@ -433,7 +416,7 @@ class AddRelationshipClassesDialog(GetObjectClassesMixin, AddItemsDialog):
     def accept(self):
         """Collect info from dialog and try to add items."""
         db_map_data = dict()
-        name_column = self.model.horizontal_header_labels().index("relationship class")
+        name_column = self.model.horizontal_header_labels().index("relationship class name")
         description_column = self.model.horizontal_header_labels().index("description")
         db_column = self.model.horizontal_header_labels().index("databases")
         for i in range(self.model.rowCount() - 1):  # last row will always be empty
@@ -551,6 +534,7 @@ class AddRelationshipsDialog(AddRelationshipsDialogBase):
         try:
             current_index = self.relationship_class_keys.index(relationship_class_key)
             self.reset_model(current_index)
+            self._handle_model_reset()
         except ValueError:
             current_index = -1
         self.rel_cls_combo_box.setCurrentIndex(current_index)
@@ -571,7 +555,7 @@ class AddRelationshipsDialog(AddRelationshipsDialogBase):
         ]
         object_class_name_list = self.object_class_name_list.split(",")
         db_names = ",".join([db_name for db_name, db_map in self.keyed_db_maps.items() if db_map in default_db_maps])
-        header = object_class_name_list + ['relationship', 'databases']
+        header = object_class_name_list + ['relationship name', 'databases']
         self.model.set_horizontal_header_labels(header)
         defaults = {'databases': db_names}
         if self.object_names_by_class_name:
@@ -590,7 +574,7 @@ class AddRelationshipsDialog(AddRelationshipsDialogBase):
         right = bottom_right.column()
         number_of_dimensions = self.model.columnCount() - 2
         for row in range(top, bottom + 1):
-            if header.index('relationship') not in range(left, right + 1):
+            if header.index('relationship name') not in range(left, right + 1):
                 col_data = lambda j: self.model.index(row, j).data()  # pylint: disable=cell-var-from-loop
                 obj_names = [col_data(j) for j in range(number_of_dimensions) if col_data(j)]
                 relationship_name = self.class_name + "_"
@@ -604,7 +588,7 @@ class AddRelationshipsDialog(AddRelationshipsDialogBase):
     def accept(self):
         """Collect info from dialog and try to add items."""
         db_map_data = dict()
-        name_column = self.model.horizontal_header_labels().index("relationship")
+        name_column = self.model.horizontal_header_labels().index("relationship name")
         db_column = self.model.horizontal_header_labels().index("databases")
         for i in range(self.model.rowCount() - 1):  # last row will always be empty
             row_data = self.model.row_data(i)

@@ -10,10 +10,10 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-# Form implementation generated from reading ui file 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\settings.ui',
-# licensing of 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\settings.ui' applies.
+# Form implementation generated from reading ui file '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/settings.ui',
+# licensing of '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/settings.ui' applies.
 #
-# Created: Wed May 27 09:59:00 2020
+# Created: Wed Jun  3 07:52:25 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -545,7 +545,7 @@ class Ui_SettingsForm(object):
         self.checkBox_object_tree_sticky_selection.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>Controls how selecting items in Object tree <span style=\" font-weight:600;\">using the left mouse button</span> works. </p><p>When unchecked [default], Single selection is enabled. Pressing the Ctrl-button down enables multiple selection.</p><p>When checked, Multiple selection is enabled. Pressing the Ctrl-button down enables single selection.</p></body></html>", None, -1))
         self.checkBox_object_tree_sticky_selection.setText(QtWidgets.QApplication.translate("SettingsForm", "Sticky selection in Entity trees", None, -1))
         self.checkBox_relationship_items_follow.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>When checked [default], moving Object items causes connected Relationship items to follow.</p></body></html>", None, -1))
-        self.checkBox_relationship_items_follow.setText(QtWidgets.QApplication.translate("SettingsForm", "Move relationships along with objects in the Entity graph", None, -1))
+        self.checkBox_relationship_items_follow.setText(QtWidgets.QApplication.translate("SettingsForm", "Move relationships along with objects in Entity graph", None, -1))
         self.checkBox_smooth_entity_graph_zoom.setText(QtWidgets.QApplication.translate("SettingsForm", "Smooth Entity graph zoom", None, -1))
         self.checkBox_smooth_entity_graph_rotation.setText(QtWidgets.QApplication.translate("SettingsForm", "Smooth Entity graph rotation", None, -1))
         self.pushButton_ok.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>Saves changes and closes the window</p></body></html>", None, -1))

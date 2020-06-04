@@ -323,7 +323,7 @@ class TabularViewMixin:
         return None
 
     @Slot(str)
-    def reload_pivot_table(self, current=None, text=""):
+    def reload_pivot_table(self, current=None):
         """Updates current class (type and id) and reloads pivot table for it."""
         if current is not None:
             self.current = current

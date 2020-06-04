@@ -1043,7 +1043,7 @@ p, li { white-space: pre-wrap; }
                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;When checked [default], moving Object items causes connected Relationship items to follow.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="text">
-               <string>Move relationships along with objects in the Entity graph</string>
+               <string>Move relationships along with objects in Entity graph</string>
               </property>
              </widget>
             </item>
