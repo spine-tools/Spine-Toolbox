@@ -33,7 +33,6 @@ from ..graphics_items import (
     CrossHairsArcItem,
     make_figure_graphics_item,
 )
-from .graph_view_demo import GraphViewDemo
 from .graph_layout_generator import GraphLayoutGenerator, make_heat_map
 from ...helpers import get_save_file_name_in_last_dir
 from .add_items_dialogs import AddReadyRelationshipsDialog
@@ -104,7 +103,6 @@ class GraphViewMixin:
         self.ui.actionPrune_selected_entities.triggered.connect(self.prune_selected_entities)
         self.ui.actionPrune_selected_classes.triggered.connect(self.prune_selected_classes)
         self.ui.actionRestore_all_pruned.triggered.connect(self.restore_all_pruned_items)
-        self.ui.actionLive_graph_demo.triggered.connect(self.show_demo)
         self.ui.actionSave_positions.triggered.connect(self.save_positions)
         self.ui.actionClear_positions.triggered.connect(self.clear_saved_positions)
         self.ui.actionExport_graph_as_pdf.triggered.connect(self.export_as_pdf)
@@ -532,20 +530,6 @@ class GraphViewMixin:
             action = next(iter(a for a in self.ui.menuRestore_pruned.actions() if a.text() == key))
             self.ui.menuRestore_pruned.removeAction(action)
             self.build_graph()
-
-    @Slot(bool)
-    def show_demo(self, checked=False):
-        demo = GraphViewDemo(self)
-        self.ui.actionLive_graph_demo.setEnabled(False)
-        demo.destroyed.connect(self._enable_live_graph_demo_action)
-        demo.show()
-
-    @Slot("QObject")
-    def _enable_live_graph_demo_action(self, obj=None):
-        try:
-            self.ui.actionLive_graph_demo.setEnabled(True)
-        except RuntimeError:
-            pass
 
     def edit_entity_graph_items(self):
         """Starts editing given indexes."""

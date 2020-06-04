@@ -32,7 +32,7 @@ from spinedb_api import (
     SpineDBAPIError,
     SpineDBVersionError,
 )
-from ...config import MAINWINDOW_SS, APPLICATION_PATH
+from ...config import MAINWINDOW_SS, APPLICATION_PATH, DOCUMENTATION_PATH
 from .select_db_items_dialogs import MassRemoveItemsDialog, GetItemsForExportDialog
 from .custom_qwidgets import OpenFileButton, OpenSQLiteFileButton, ShootingLabel, CustomInputDialog
 from .parameter_view_mixin import ParameterViewMixin
@@ -48,6 +48,7 @@ from ...helpers import (
     get_save_file_name_in_last_dir,
     get_open_file_name_in_last_dir,
     format_string_list,
+    open_url,
 )
 from .import_dialog import ImportDialog
 from ...widgets.parameter_value_editor import ParameterValueEditor
@@ -148,6 +149,7 @@ class DataStoreFormBase(QMainWindow):
         self.ui.actionManage_parameter_tags.triggered.connect(self.show_manage_parameter_tags_form)
         self.ui.actionMass_remove_items.triggered.connect(self.show_mass_remove_items_form)
         self.ui.dockWidget_exports.visibilityChanged.connect(self._handle_exports_visibility_changed)
+        self.ui.actionUser_guide.triggered.connect(self.show_user_guide)
 
     @Slot(int)
     def update_undo_redo_actions(self, index):
@@ -587,6 +589,14 @@ class DataStoreFormBase(QMainWindow):
         """
         editor = ParameterValueEditor(index, parent=self)
         editor.show()
+
+    @Slot(bool)
+    def show_user_guide(self, checked=False):
+        """Opens Spine Toolbox documentation Data store form page in browser."""
+        doc_path = os.path.join(DOCUMENTATION_PATH, "data_store_form.html")
+        doc_url = "file:///" + doc_path
+        if not open_url(doc_url):
+            self.msg_error.emit("Unable to open file <b>{0}</b>".format(doc_path))
 
     def notify_items_changed(self, action, item_type, db_map_data):
         """Enables or disables actions and informs the user about what just happened."""

@@ -13,7 +13,7 @@
 # Form implementation generated from reading ui file '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/data_store_form/ui/data_store_window.ui',
 # licensing of '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/data_store_form/ui/data_store_window.ui' applies.
 #
-# Created: Mon Jun  1 18:55:35 2020
+# Created: Wed Jun  3 21:07:13 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -388,8 +388,6 @@ class Ui_MainWindow(object):
         self.actionPrune_selected_entities.setObjectName("actionPrune_selected_entities")
         self.actionRestore_all_pruned = QtWidgets.QAction(MainWindow)
         self.actionRestore_all_pruned.setObjectName("actionRestore_all_pruned")
-        self.actionLive_graph_demo = QtWidgets.QAction(MainWindow)
-        self.actionLive_graph_demo.setObjectName("actionLive_graph_demo")
         self.actionStacked_style = QtWidgets.QAction(MainWindow)
         icon11 = QtGui.QIcon()
         icon11.addPixmap(QtGui.QPixmap(":/icons/menu_icons/table.svg"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
@@ -464,6 +462,11 @@ class Ui_MainWindow(object):
         icon15.addPixmap(QtGui.QPixmap(":/icons/menu_icons/cubes_pen.svg"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.actionManage_relationships.setIcon(icon15)
         self.actionManage_relationships.setObjectName("actionManage_relationships")
+        self.actionUser_guide = QtWidgets.QAction(MainWindow)
+        icon16 = QtGui.QIcon()
+        icon16.addPixmap(QtGui.QPixmap(":/icons/menu_icons/question-circle.svg"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.actionUser_guide.setIcon(icon16)
+        self.actionUser_guide.setObjectName("actionUser_guide")
         self.menuSession.addAction(self.actionRefresh)
         self.menuSession.addAction(self.actionCommit)
         self.menuSession.addAction(self.actionRollback)
@@ -516,7 +519,7 @@ class Ui_MainWindow(object):
         self.menuGraph.addAction(self.menuAdd_parameter_heat_map.menuAction())
         self.menuGraph.addAction(self.actionRebuild_graph)
         self.menuGraph.addSeparator()
-        self.menuHelp.addAction(self.actionLive_graph_demo)
+        self.menuHelp.addAction(self.actionUser_guide)
         self.menubar.addAction(self.menuFile.menuAction())
         self.menubar.addAction(self.menuEdit.menuAction())
         self.menubar.addAction(self.menuView.menuAction())
@@ -593,7 +596,6 @@ class Ui_MainWindow(object):
         self.actionShow_hidden.setText(QtWidgets.QApplication.translate("MainWindow", "Show hidden", None, -1))
         self.actionPrune_selected_entities.setText(QtWidgets.QApplication.translate("MainWindow", "Prune selected entities", None, -1))
         self.actionRestore_all_pruned.setText(QtWidgets.QApplication.translate("MainWindow", "Restore all pruned", None, -1))
-        self.actionLive_graph_demo.setText(QtWidgets.QApplication.translate("MainWindow", "Live graph demo", None, -1))
         self.actionStacked_style.setText(QtWidgets.QApplication.translate("MainWindow", "Stacked style", None, -1))
         self.actionStacked_style.setToolTip(QtWidgets.QApplication.translate("MainWindow", "Stacked-table style", None, -1))
         self.actionGraph_style.setText(QtWidgets.QApplication.translate("MainWindow", "Graph style", None, -1))
@@ -623,8 +625,10 @@ class Ui_MainWindow(object):
         self.actionInput_type_index_expansion.setText(QtWidgets.QApplication.translate("MainWindow", "Index expansion", None, -1))
         self.actionRebuild_graph.setText(QtWidgets.QApplication.translate("MainWindow", "Rebuild graph", None, -1))
         self.actionManage_relationships.setText(QtWidgets.QApplication.translate("MainWindow", "Manage relationships", None, -1))
+        self.actionUser_guide.setText(QtWidgets.QApplication.translate("MainWindow", "User guide", None, -1))
+        self.actionUser_guide.setShortcut(QtWidgets.QApplication.translate("MainWindow", "F2", None, -1))
 
-from spinetoolbox.data_store_form.widgets.custom_qtableview import RelationshipParameterValueTableView, FrozenTableView, RelationshipParameterDefinitionTableView, ObjectParameterValueTableView, ObjectParameterDefinitionTableView, PivotTableView
-from spinetoolbox.data_store_form.widgets.custom_qtreeview import ParameterValueListTreeView, ObjectTreeView, RelationshipTreeView
+from spinetoolbox.data_store_form.widgets.custom_qtreeview import ObjectTreeView, RelationshipTreeView, ParameterValueListTreeView
+from spinetoolbox.data_store_form.widgets.custom_qtableview import PivotTableView, ObjectParameterDefinitionTableView, RelationshipParameterValueTableView, RelationshipParameterDefinitionTableView, FrozenTableView, ObjectParameterValueTableView
 from spinetoolbox.data_store_form.widgets.custom_qgraphicsviews import EntityQGraphicsView
 from spinetoolbox import resources_icons_rc
