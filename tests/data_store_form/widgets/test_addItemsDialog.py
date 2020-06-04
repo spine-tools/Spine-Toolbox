@@ -76,8 +76,8 @@ class TestAddItemsDialog(unittest.TestCase):
         model = dialog.model
         header = model.header
         model.fetchMore()
-        self.assertEqual(header, ['object class', 'description', 'display icon', 'databases'])
-        indexes = [model.index(0, header.index(field)) for field in ('object class', 'databases')]
+        self.assertEqual(header, ['object class name', 'description', 'display icon', 'databases'])
+        indexes = [model.index(0, header.index(field)) for field in ('object class name', 'databases')]
         values = ['fish', 'mock_db']
         model.batch_set_data(indexes, values)
 
@@ -101,8 +101,8 @@ class TestAddItemsDialog(unittest.TestCase):
         model = dialog.model
         header = model.header
         model.fetchMore()
-        self.assertEqual(header, ['object class', 'description', 'display icon', 'databases'])
-        indexes = [model.index(0, header.index(field)) for field in ('object class', 'databases')]
+        self.assertEqual(header, ['object class name', 'description', 'display icon', 'databases'])
+        indexes = [model.index(0, header.index(field)) for field in ('object class name', 'databases')]
         values = ['fish', 'gibberish']
         model.batch_set_data(indexes, values)
         dialog.accept()
