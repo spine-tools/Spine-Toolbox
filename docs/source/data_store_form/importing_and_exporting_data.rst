@@ -47,7 +47,7 @@ Each sheet can have one of four different formats:
 JSON format
 ~~~~~~~~~~~
 
-The JSON format has the following ``OPTIONAL`` keys:
+The JSON format consists of a single JSON object with the following ``OPTIONAL`` keys:
 
 - **object_classes**: the value of this key ``MUST`` be a JSON array,
   representing a list of object classes.
@@ -136,7 +136,7 @@ The JSON format has the following ``OPTIONAL`` keys:
 
 Example::
 
-    {
+	{
 	    "object_classes": [
 	        ["connection", "An entity where an energy transfer takes place", 280378317271233],
 	        ["node", "An entity where an energy balance takes place", 280740554077951],
@@ -216,7 +216,7 @@ Select the file type (SQLite, JSON, or Excel), enter the path of the file to exp
 Selective export
 ~~~~~~~~~~~~~~~~
 
-To export a specific subset of items, select the correspoding items in either *Object tree*
+To export a specific subset of items, select the corresponding items in either *Object tree*
 and *Relationship tree*, click on the selection to bring the context menu,
 and select **Export selected**.
 
