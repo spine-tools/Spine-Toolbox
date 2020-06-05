@@ -19,6 +19,7 @@ Helper functions and classes.
 import os
 from spinetoolbox.config import PYTHON_EXECUTABLE
 from spinetoolbox.execution_managers import QProcessExecutionManager
+from spinetoolbox.helpers import deserialize_path, serialize_path
 
 
 def make_python_process(program, args, python_path, logger):
@@ -61,3 +62,39 @@ def python_exists(program, logger):
         logger.msg_error.emit("Couldn't execute Python. Please check the <b>Python interpreter</b> option in Settings.")
         return False
     return True
+
+
+def serialize_checked_states(files, project_path):
+    """Serializes file paths and adds a boolean value
+    for each, which indicates whether the path is
+    selected or not. Used in saving checked file states to
+    project.json.
+
+    Args:
+        files (list): List of absolute file paths
+        project_path (str): Absolute project directory path
+
+    Returns:
+        list: List of serialized paths with a boolean value
+    """
+    return [[serialize_path(item.label, project_path), item.selected] for item in files]
+
+
+def deserialize_checked_states(serialized, project_path):
+    """Reverse operation for serialize_checked_states above.
+    Returns absolute file paths with their check state as boolean.
+
+    Args:
+        serialized (list): List of serialized paths with a boolean value
+        project_path (str): Absolute project directory path
+
+    Returns:
+        dict: Dictionary with paths as keys and boolean check states as value
+    """
+    if not serialized:
+        return dict()
+    deserialized = dict()
+    for serialized_label, checked in serialized:
+        label = deserialize_path(serialized_label, project_path)
+        deserialized[label] = checked
+    return deserialized
