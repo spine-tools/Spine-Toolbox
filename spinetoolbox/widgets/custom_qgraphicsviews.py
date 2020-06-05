@@ -426,7 +426,7 @@ class DesignQGraphicsView(CustomQGraphicsView):
             src_ind = self._project_item_model.find_item(src_name)
             dst_ind = self._project_item_model.find_item(dst_name)
             if not src_ind or not dst_ind:
-                self._toolbox.msg_warning.emit("Restoring a connection failed")
+                self._toolbox.msg_warning.emit(f"Restoring connection <b>{src_name}->{dst_name}</b> failed")
                 continue
             src_item = self._project_item_model.item(src_ind).project_item
             src_connector = src_item.get_icon().conn_button(src_anchor)

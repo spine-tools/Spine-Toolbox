@@ -259,8 +259,10 @@ class SpineToolboxProject(MetaObject):
         """
         factory = self._toolbox.item_factories.get(item_type)
         if factory is None:
-            self._logger.msg_error.emit(f"No factory found for item type '{item_type}'")
-            return None, []
+            self._logger.msg_error.emit(f"Unknown item type <b>{item_type}</b>")
+            for item in items:
+                self._logger.msg_error.emit(f"Loading project item <b>{item['name']}</b> failed")
+            return {None: None}
         project_items_by_category = {}
         for item_dict in items:
             try:
@@ -306,7 +308,7 @@ class SpineToolboxProject(MetaObject):
             self.add_to_dag(project_item.name)
             if verbosity:
                 self._logger.msg.emit(
-                    "{0} <b>{1}</b> added to project.".format(project_item.item_type(), project_item.name)
+                    "{0} <b>{1}</b> added to project".format(project_item.item_type(), project_item.name)
                 )
         if set_selected:
             item = list(project_tree_items)[-1]
@@ -326,13 +328,14 @@ class SpineToolboxProject(MetaObject):
         """Adds items to project at loading.
 
         Args:
+            item_type (str): Item type e.g. "Tool"
             items (list): one or more dict of items to add
             set_selected (bool): Whether to set item selected after the item has been added to project
             verbosity (bool): If True, prints message
         """
         for category_ind, project_tree_items in self.make_project_tree_items(item_type, items).items():
-            if category_ind is None:
-                return False
+            if not category_ind:
+                continue
             self.do_add_project_tree_items(
                 category_ind, *project_tree_items, set_selected=set_selected, verbosity=verbosity
             )
