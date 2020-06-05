@@ -25,7 +25,8 @@ from spinetoolbox.project_item import ProjectItem
 from spinetoolbox.project_item_resource import ProjectItemResource
 from spinetoolbox.helpers import deserialize_path, serialize_url
 from spinetoolbox.spine_io.exporters import gdx
-from .commands import UpdateExporterOutFileNameCommand, UpdateExporterSettingsCommand, UpdateCancelOnErrorCommand
+from .commands import UpdateExporterOutFileNameCommand, UpdateExporterSettingsCommand
+from ..shared.commands import UpdateCancelOnErrorCommand
 from .db_utils import latest_database_commit_time_stamp
 from .executable_item import ExecutableItem
 from .item_info import ItemInfo

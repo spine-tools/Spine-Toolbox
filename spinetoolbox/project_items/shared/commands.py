@@ -20,8 +20,7 @@ from spinetoolbox.project_commands import SpineToolboxCommand
 
 class UpdateCancelOnErrorCommand(SpineToolboxCommand):
     def __init__(self, project_item, cancel_on_error):
-        """Command to update Importer or Combiner cancel on error setting.
-        # TODO: Make Exporter use this command as well
+        """Command to update Importer, Exporter, and Combiner cancel on error setting.
 
         Args:
             project_item (ProjectItem): Item
@@ -31,7 +30,7 @@ class UpdateCancelOnErrorCommand(SpineToolboxCommand):
         self._project_item = project_item
         self._redo_cancel_on_error = cancel_on_error
         self._undo_cancel_on_error = not cancel_on_error
-        self.setText(f"change cancel on error setting of {project_item.name}")
+        self.setText(f"change {project_item.name} cancel on error setting")
 
     def redo(self):
         self._project_item.set_cancel_on_error(self._redo_cancel_on_error)
