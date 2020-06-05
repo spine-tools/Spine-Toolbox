@@ -51,7 +51,7 @@ class FileListItem:
     def __init__(self, label, path, provider_name, is_pattern=False):
         self.label = label
         self.path = path
-        self.selected_for_import = True
+        self.selected = True
         self.provider_name = provider_name
         self.is_pattern = is_pattern
 
@@ -99,8 +99,8 @@ class FileListModel(QAbstractListModel):
     """A model for files to be shown in a file list view.
     Used by Importer."""
 
-    selected_for_import_state_changed = Signal(bool, str)
-    """Emitted when an item has been checked or unchecked for importing."""
+    selected_state_changed = Signal(bool, str)
+    """Emitted when a file check box state changes."""
 
     def __init__(self):
         super().__init__()
@@ -122,7 +122,7 @@ class FileListModel(QAbstractListModel):
         if role == Qt.DisplayRole:
             return self._files[index.row()].label
         if role == Qt.CheckStateRole:
-            return Qt.Checked if self._files[index.row()].selected_for_import else Qt.Unchecked
+            return Qt.Checked if self._files[index.row()].selected else Qt.Unchecked
         if role == Qt.DecorationRole:
             path = self._files[index.row()].path
             if path:
@@ -203,7 +203,7 @@ class FileListModel(QAbstractListModel):
         row = len(list(takewhile(lambda item: item.label != label, self._files)))
         if row < len(self._files):
             item = self._files[row]
-            item.selected_for_import = selected
+            item.selected = selected
             index = self.index(row, 0)
             self.dataChanged.emit(index, index, [Qt.CheckStateRole])
 
@@ -213,11 +213,11 @@ class FileListModel(QAbstractListModel):
             return False
         checked = value == Qt.Checked
         item = self._files[index.row()]
-        self.selected_for_import_state_changed.emit(checked, item.label)
+        self.selected_state_changed.emit(checked, item.label)
         return True
 
     def set_initial_state(self, selected_items):
         """Fills model with incomplete data; needs a call to :func:`update` to make the model usable."""
         for label, selected in selected_items.items():
             self._files.append(FileListItem(label, label, ""))
-            self._files[-1].selected_for_import = selected
+            self._files[-1].selected = selected

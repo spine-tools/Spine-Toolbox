@@ -101,7 +101,7 @@ class Importer(ProjectItem):
         else:
             mapping_selection = self.deserialize_checked_states(mapping_selection, self._project.project_dir)
         self._file_model.set_initial_state(mapping_selection)
-        self._file_model.selected_for_import_state_changed.connect(self._push_file_selection_change_to_undo_stack)
+        self._file_model.selected_state_changed.connect(self._push_file_selection_change_to_undo_stack)
         # connector class
         self._preview_widget = {}  # Key is the filepath, value is the ImportEditorWindow instance
 
@@ -120,7 +120,7 @@ class Importer(ProjectItem):
         selected_settings = dict()
         for file_item in self._file_model.existing_files():
             label = file_item.label
-            settings = self.settings.get(label) if file_item.selected_for_import else "deselected"
+            settings = self.settings.get(label) if file_item.selected else "deselected"
             if not settings:
                 continue
             selected_settings[label] = settings
@@ -457,7 +457,7 @@ class Importer(ProjectItem):
 
     def serialize_checked_states(self):
         return [
-            [serialize_path(item.label, self._project.project_dir), item.selected_for_import]
+            [serialize_path(item.label, self._project.project_dir), item.selected]
             for item in self._file_model.files
         ]
 
