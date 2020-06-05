@@ -30,8 +30,8 @@ from spinetoolbox.spine_io.importers.excel_reader import ExcelConnector
 from spinetoolbox.spine_io.importers.gdx_connector import GdxConnector
 from spinetoolbox.spine_io.importers.json_reader import JSONConnector
 from spinetoolbox.import_editor.widgets.import_editor_window import ImportEditorWindow
-from .commands import ChangeItemSelectionCommand, UpdateSettingsCommand
-from ..shared.commands import UpdateCancelOnErrorCommand
+from .commands import UpdateSettingsCommand
+from ..shared.commands import UpdateCancelOnErrorCommand, ChangeItemSelectionCommand
 from .executable_item import ExecutableItem
 from .item_info import ItemInfo
 from .utils import deserialize_mappings
