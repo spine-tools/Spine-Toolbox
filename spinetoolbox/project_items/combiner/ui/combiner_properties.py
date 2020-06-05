@@ -10,10 +10,10 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-# Form implementation generated from reading ui file 'C:\data\src\toolbox\bin\..\spinetoolbox\project_items\combiner\ui\combiner_properties.ui',
-# licensing of 'C:\data\src\toolbox\bin\..\spinetoolbox\project_items\combiner\ui\combiner_properties.ui' applies.
+# Form implementation generated from reading ui file 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\project_items\combiner\ui\combiner_properties.ui',
+# licensing of 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\project_items\combiner\ui\combiner_properties.ui' applies.
 #
-# Created: Wed May 27 09:58:55 2020
+# Created: Fri Jun  5 12:42:52 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -58,7 +58,7 @@ class Ui_Form(object):
         self.verticalLayout_18.setObjectName("verticalLayout_18")
         self.treeView_view = ReferencesTreeView(self.scrollAreaWidgetContents_4)
         font = QtGui.QFont()
-        font.setPointSize(10)
+        font.setPointSize(9)
         self.treeView_view.setFont(font)
         self.treeView_view.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.treeView_view.setAcceptDrops(True)

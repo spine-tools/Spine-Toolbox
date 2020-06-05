@@ -10,10 +10,10 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-# Form implementation generated from reading ui file '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/data_store_form/ui/data_store_window.ui',
-# licensing of '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/data_store_form/ui/data_store_window.ui' applies.
+# Form implementation generated from reading ui file 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\data_store_form\ui\data_store_window.ui',
+# licensing of 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\data_store_form\ui\data_store_window.ui' applies.
 #
-# Created: Wed Jun  3 21:07:13 2020
+# Created: Fri Jun  5 12:42:51 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -628,7 +628,7 @@ class Ui_MainWindow(object):
         self.actionUser_guide.setText(QtWidgets.QApplication.translate("MainWindow", "User guide", None, -1))
         self.actionUser_guide.setShortcut(QtWidgets.QApplication.translate("MainWindow", "F2", None, -1))
 
-from spinetoolbox.data_store_form.widgets.custom_qtreeview import ObjectTreeView, RelationshipTreeView, ParameterValueListTreeView
-from spinetoolbox.data_store_form.widgets.custom_qtableview import PivotTableView, ObjectParameterDefinitionTableView, RelationshipParameterValueTableView, RelationshipParameterDefinitionTableView, FrozenTableView, ObjectParameterValueTableView
+from spinetoolbox.data_store_form.widgets.custom_qtableview import RelationshipParameterDefinitionTableView, ObjectParameterValueTableView, FrozenTableView, PivotTableView, RelationshipParameterValueTableView, ObjectParameterDefinitionTableView
+from spinetoolbox.data_store_form.widgets.custom_qtreeview import ParameterValueListTreeView, ObjectTreeView, RelationshipTreeView
 from spinetoolbox.data_store_form.widgets.custom_qgraphicsviews import EntityQGraphicsView
 from spinetoolbox import resources_icons_rc
