@@ -247,7 +247,7 @@ class Exporter(ProjectItem):
         self._toolbox.update_window_modified(False)
         self._check_state()
 
-    @Slot(str, "QVariant", "QVariant")
+    @Slot(str, "QVariant")
     def _worker_failed(self, database_url, exception):
         """Clean up after a worker has failed fetching export settings."""
         worker = self._workers[database_url]
