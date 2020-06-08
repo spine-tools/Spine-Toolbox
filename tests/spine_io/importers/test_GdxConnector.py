@@ -73,6 +73,28 @@ class TestGdxConnector(unittest.TestCase):
         with self.assertRaises(StopIteration):
             next(data_iterator)
 
+
+    @unittest.skipIf(find_gams_directory() is None, "No working GAMS installation found.")
+    def test_get_data_iterator_for_multiple_universal_sets(self):
+        gams_directory = find_gams_directory()
+        connector_settings = {"gams_directory": gams_directory}
+        connector = GdxConnector(connector_settings)
+        with TemporaryDirectory() as temporary_dir:
+            path = os.path.join(temporary_dir, "test_get_data_iterator_for_domains.gdx")
+            with GdxFile(path, "w", gams_directory) as gdx_file:
+                set_ = GAMSSet([("i", "key1"), ("j", "key2")], [None, None])
+                gdx_file["almost_domain"] = set_
+            connector.connect_to_source(path)
+            data_iterator, header, column_count = connector.get_data_iterator("almost_domain", {})
+            connector.disconnect()
+        self.assertEqual(column_count, 2)
+        self.assertEqual(header, ["dim0", "dim1"])
+        self.assertEqual(next(data_iterator), ["i", "key1"])
+        self.assertEqual(next(data_iterator), ["j", "key2"])
+        with self.assertRaises(StopIteration):
+            next(data_iterator)
+
+
     @unittest.skipIf(find_gams_directory() is None, "No working GAMS installation found.")
     def test_get_data_iterator_for_mixed_universal_and_named_sets(self):
         gams_directory = find_gams_directory()

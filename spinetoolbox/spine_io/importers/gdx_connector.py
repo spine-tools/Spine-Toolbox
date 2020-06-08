@@ -111,7 +111,7 @@ class GdxConnector(SourceConnection):
         symbol = self._gdx_file[table]
         if isinstance(symbol, GAMSScalar):
             return iter([[float(symbol)]]), ["Value"], 1
-        domains = symbol.domain if symbol.domain is not None else [None]
+        domains = symbol.domain if symbol.domain is not None else symbol.dimension * [None]
         header = [domain if domain is not None else f"dim{i}" for i, domain in enumerate(domains)]
         if isinstance(symbol, GAMSSet):
             if symbol.elements and isinstance(symbol.elements[0], str):
