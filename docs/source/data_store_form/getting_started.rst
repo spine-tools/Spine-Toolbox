@@ -50,6 +50,6 @@ The form has the following main UI components:
 - *Parameter value list*: it presents parameter value lists available in the database.
 - *Parameter tag toolbar*: it presents parameter tags defined in the database.
 
-.. tip:: You can show or hide form components using the *View* menu,
-   or select among three predefined layout styles: Stacked style, Pivot style, and Graph style.
+.. tip:: You can show or hide form components using the **View** menu,
+   or select among three predefined layout styles: **Stacked style**, **Pivot style**, and **Graph style**.
 

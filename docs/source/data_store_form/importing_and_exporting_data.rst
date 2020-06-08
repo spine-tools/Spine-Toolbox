@@ -217,7 +217,7 @@ Selective export
 ~~~~~~~~~~~~~~~~
 
 To export a specific subset of items, select the corresponding items in either *Object tree*
-and *Relationship tree*, click on the selection to bring the context menu,
+and *Relationship tree*, right click on the selection to bring the context menu,
 and select **Export selected**.
 
 The *Export file* dialog will pop up.

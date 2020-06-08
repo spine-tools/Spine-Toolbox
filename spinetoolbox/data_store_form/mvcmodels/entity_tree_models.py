@@ -117,7 +117,7 @@ class ObjectTreeModel(EntityTreeModel):
             for item in items:
                 d.setdefault(item["class_id"], dict())[item["id"]] = None
             for class_id, ids in d.items():
-                # Find the parents corresponding the this class id and put them in the result
+                # Find the parents corresponding to this class id and put them in the result
                 for parent_item in self.find_items(db_map, (class_id,)):
                     result.setdefault(parent_item, {})[db_map] = list(ids.keys())
         return result
