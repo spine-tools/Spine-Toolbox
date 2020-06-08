@@ -256,7 +256,8 @@ class SpineDBManager(QObject):
         """
         db_map = self._db_maps.get(url)
         if db_map is not None:
-            db_map.codename = codename
+            if codename is not None:
+                db_map.codename = codename
             return db_map
         db_map = self._db_maps[url] = DiffDatabaseMapping(url, upgrade=upgrade, codename=codename)
         stack = self.undo_stack[db_map] = AgedUndoStack(self)
