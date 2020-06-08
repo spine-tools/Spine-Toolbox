@@ -106,44 +106,21 @@ class GdxConnector(SourceConnection):
         Returns:
             tuple: data iterator, list of column names, number of columns
         """
-        if not table in self._gdx_file:
+        if table not in self._gdx_file:
             return iter([]), [], 0
         symbol = self._gdx_file[table]
-        header = list(symbol.domain) if symbol.domain is not None else [f"dim{i}" for i in range(symbol.dimension)]
+        if isinstance(symbol, GAMSScalar):
+            return iter([[float(symbol)]]), ["Value"], 1
+        domains = symbol.domain if symbol.domain is not None else [None]
+        header = [domain if domain is not None else f"dim{i}" for i, domain in enumerate(domains)]
         if isinstance(symbol, GAMSSet):
             if symbol.elements and isinstance(symbol.elements[0], str):
-
-                def gdx_data():
-                    for key in symbol.elements:
-                        yield [key]
-
-            else:
-
-                def gdx_data():
-                    for keys in symbol.elements:
-                        yield list(keys)
-
-        elif isinstance(symbol, GAMSParameter):
+                return iter([[key] for key in symbol.elements]), header, len(header)
+            return iter(list(keys) for keys in symbol.elements), header, len(header)
+        if isinstance(symbol, GAMSParameter):
             header.append("Value")
             symbol_keys = list(symbol.keys())
             if symbol_keys and isinstance(symbol_keys[0], str):
-
-                def gdx_data():
-                    for keys, value in zip(symbol_keys, symbol.values()):
-                        yield [keys] + [value]
-
-            else:
-
-                def gdx_data():
-                    for keys, value in zip(symbol_keys, symbol.values()):
-                        yield list(keys) + [value]
-
-        elif isinstance(symbol, GAMSScalar):
-            header.append("Value")
-
-            def gdx_data():
-                yield [float(symbol)]
-
-        else:
-            raise RuntimeError("Unknown GAMS symbol type.")
-        return gdx_data(), header, len(header)
+                return iter([keys] + [value] for keys, value in zip(symbol_keys, symbol.values())), header, len(header)
+            return iter(list(keys) + [value] for keys, value in zip(symbol_keys, symbol.values())), header, len(header)
+        raise RuntimeError("Unknown GAMS symbol type.")
