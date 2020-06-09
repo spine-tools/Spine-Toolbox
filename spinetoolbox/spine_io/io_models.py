@@ -727,26 +727,10 @@ class MappingSpecModel(QAbstractTableModel):
                 mapping = ConstantMapping(reference=value)
             else:
                 return False
-        elif isinstance(mapping, (ConstantMapping, ColumnHeaderMapping)):
-            if not value:
-                mapping.reference = None
-            else:
-                mapping.reference = str(value)
-        elif isinstance(mapping, RowMapping) and isinstance(value, str) and value.lower() == "header":
-            mapping.reference = -1
-        elif isinstance(mapping, (RowMapping, ColumnMapping)):
-            if not value:
-                value = None
-            try:
-                if value is not None:
-                    value = int(value)
-                    if isinstance(mapping, RowMapping):
-                        value = max(-1, value)
-                    else:
-                        value = max(0, value)
-            except ValueError:
-                pass
+        try:
             mapping.reference = value
+        except ValueError:
+            return False
         return self.set_mapping_from_name(name, mapping)
 
     def set_append_str(self, name, value):
