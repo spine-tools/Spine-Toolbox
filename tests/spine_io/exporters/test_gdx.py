@@ -435,6 +435,18 @@ class TestGdx(unittest.TestCase):
                 self.assertEqual(gams_set.elements[0], "key")
 
     @unittest.skipIf(gdx_utils.find_gams_directory() is None, "No working GAMS installation found.")
+    def test_sets_to_gams_raises_with_duplicate_set_names(self):
+        domain = gdx.Set("domain")
+        domain.records.append(gdx.Record(("a_key",)))
+        duplicate = gdx.Set("DOMAIN")
+        duplicate.records.append(gdx.Record(("b_key",)))
+        gams_directory = gdx_utils.find_gams_directory()
+        with TemporaryDirectory() as temp_directory:
+            path_to_gdx = Path(temp_directory).joinpath("test_sets_to_gams_raises_with_duplicate_set_names.gdx")
+            with GdxFile(path_to_gdx, 'w', gams_directory) as gdx_file:
+                self.assertRaises(gdx.GdxExportException, gdx.sets_to_gams, gdx_file, [domain, duplicate])
+
+    @unittest.skipIf(gdx_utils.find_gams_directory() is None, "No working GAMS installation found.")
     def test_parameters_to_gams(self):
         parameters = {"scalar": gdx.Parameter(["domain"], [("key",)], [2.3])}
         gams_directory = gdx_utils.find_gams_directory()
@@ -451,6 +463,20 @@ class TestGdx(unittest.TestCase):
                     self.assertEqual(value, 2.3)
 
     @unittest.skipIf(gdx_utils.find_gams_directory() is None, "No working GAMS installation found.")
+    def test_parameters_to_gams_raises_with_duplicate_parameter_names(self):
+        parameters = {
+            "scalar": gdx.Parameter(["domain"], [("key",)], [2.3]),
+            "SCALAR": gdx.Parameter(["domain"], [("key",)], [23.0]),
+        }
+        gams_directory = gdx_utils.find_gams_directory()
+        with TemporaryDirectory() as temp_directory:
+            path_to_gdx = Path(temp_directory).joinpath(
+                "test_parameters_to_gams_raises_with_duplicate_parameter_names.gdx"
+            )
+            with GdxFile(path_to_gdx, 'w', gams_directory) as gdx_file:
+                self.assertRaises(gdx.GdxExportException, gdx.parameters_to_gams, gdx_file, parameters)
+
+    @unittest.skipIf(gdx_utils.find_gams_directory() is None, "No working GAMS installation found.")
     def test_domain_parameters_to_gams_scalars(self):
         domain = gdx.Set("object_class_name")
         record = gdx.Record(("mock_object_name",))
@@ -465,6 +491,25 @@ class TestGdx(unittest.TestCase):
                 self.assertEqual(len(gdx_file), 1)
                 gams_scalar = gdx_file["mock_parameter_name"]
                 self.assertEqual(float(gams_scalar), 2.3)
+
+    @unittest.skipIf(gdx_utils.find_gams_directory() is None, "No working GAMS installation found.")
+    def test_domain_parameters_to_gams_scalars_raises_with_duplicate_scalar_names(self):
+        domain = gdx.Set("domain")
+        record = gdx.Record(("key",))
+        domain.records.append(record)
+        parameters = {
+            "parameter": gdx.Parameter(["domain"], [("key",)], [2.3]),
+            "PARAMETER": gdx.Parameter(["domain"], [("key",)], [23.0]),
+        }
+        gams_directory = gdx_utils.find_gams_directory()
+        with TemporaryDirectory() as temp_directory:
+            path_to_gdx = Path(temp_directory).joinpath(
+                "test_domain_parameters_to_gams_scalars_raises_with_duplicate_scalar_names.gdx"
+            )
+            with GdxFile(path_to_gdx, 'w', gams_directory) as gdx_file:
+                self.assertRaises(
+                    gdx.GdxExportException, gdx.domain_parameters_to_gams_scalars, gdx_file, parameters, "domain"
+                )
 
     def test_IndexingSetting_construction(self):
         time_series = TimeSeriesFixedResolution("2019-12-05T01:01:00", "1h", [4.2, 5.3], False, False)
