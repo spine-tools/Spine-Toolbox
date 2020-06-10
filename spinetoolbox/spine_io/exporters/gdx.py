@@ -63,15 +63,7 @@ class GdxUnsupportedValueTypeException(GdxExportException):
 
 
 class Set:
-    """
-    Represents a GAMS domain, set or a subset.
-
-    Attributes:
-        description (str): set's explanatory text
-        domain_names (list): a list of superset (domain) names, None if the Set is a domain
-        name (str): set's name
-        records (list): set's elements as a list of Record objects
-    """
+    """Represents a GAMS domain, set or a subset."""
 
     def __init__(self, name, description="", domain_names=None):
         """
@@ -115,12 +107,7 @@ class Set:
 
 
 class Record:
-    """
-    Represents a GAMS set element in a :class:`Set`.
-
-    Attributes:
-        keys (tuple): a tuple of record's keys
-    """
+    """Represents a GAMS set element in a :class:`Set`."""
 
     def __init__(self, keys):
         """
@@ -160,13 +147,7 @@ class Record:
 
 
 class Parameter:
-    """
-    Represents a GAMS parameter.
-
-    Attributes:
-        domain_names (list): indexing domain names (currently Parameters can be indexed by domains only)
-        data (dict): a map from index tuples to parsed values
-    """
+    """Represents a GAMS parameter."""
 
     def __init__(self, domain_names, indexes, values):
         """
@@ -189,16 +170,16 @@ class Parameter:
 
     @property
     def indexes(self):
-        """list: indexing key tuples"""
+        """List of indexing key tuples."""
         return self.data.keys()
 
     @property
     def values(self):
-        """list: parsed values"""
+        """List of parsed values."""
         return self.data.values()
 
     def is_consistent(self):
-        """Checks that all values are :class:`IndexedValue`s or scalars."""
+        """Checks that all values are :class:'IndexedValue's or scalars."""
         if not self.data:
             return True
         if all(value is None or isinstance(value, IndexedValue) for value in self.data.values()):
@@ -253,13 +234,7 @@ class Parameter:
 
 
 class IndexingDomain:
-    """
-    This class holds the indexes that should be used for indexed parameter value expansion.
-
-    Attributes:
-        name (str): indexing domain's name
-        description (str): domain's description
-    """
+    """This class holds the indexes that should be used for indexed parameter value expansion."""
 
     def __init__(self, name, description, indexes, pick_list):
         """
@@ -279,7 +254,7 @@ class IndexingDomain:
 
     @property
     def indexes(self):
-        """a list of picked indexing key tuples"""
+        """List of picked indexing key tuples"""
         if self._picked_indexes is None:
             picked = list()
             for index, pick in zip(self._all_indexes, self._pick_list):
@@ -290,7 +265,7 @@ class IndexingDomain:
 
     @property
     def all_indexes(self):
-        """a list of all indexing key tuples"""
+        """List of all indexing key tuples"""
         return self._all_indexes
 
     @property
@@ -428,16 +403,7 @@ def expand_indexed_parameter_values(parameters, indexing_settings):
 
 
 class MergingSetting:
-    """
-    Holds settings needed to merge a single parameter.
-
-    Attributes:
-        parameter_names (list): parameters to merge
-        new_domain_name (str): name of the additional domain that contains the parameter names
-        new_domain_description (str): explanatory text for the additional domain
-        previous_set (str): name of the set containing the parameters before merging;
-            not needed for the actual merging but included here to make the parameters' origing traceable
-    """
+    """Holds settings needed to merge a single parameter."""
 
     def __init__(self, parameter_names, new_domain_name, new_domain_description, previous_set, previous_domain_names):
         """
@@ -501,6 +467,7 @@ def update_merging_settings(merging_settings, set_settings, db_map):
         merging_settings (dict): old merging settings
         set_settings (SetSettings): new set settings
         db_map (spinedb_api.DatabaseMapping): a database map
+
     Returns:
         dict: updated merging settings
     """
@@ -545,6 +512,7 @@ def merge_parameters(parameters, merging_settings):
     Args:
         parameters (dict): a mapping from existing parameter name to its Parameter object
         merging_settings (dict): a mapping from the merged parameter name to its merging settings
+
     Returns:
         dict: a mapping from merged parameter name to its Parameter object
     """
@@ -640,6 +608,7 @@ def domain_parameters_to_gams_scalars(gdx_file, parameters, domain_name):
         gdx_file (GdxFile): a target file
         parameters (dict): a map from parameter name to Parameter object
         domain_name (str): name of domain whose parameters to add
+
     Returns:
         a list of non-scalar parameters
     """
@@ -667,6 +636,7 @@ def object_classes_to_domains(db_map, domain_names):
     Args:
         db_map (DatabaseMapping or DiffDatabaseMapping): a database map
         domain_names (set): names of domains to convert
+
     Returns:
          dict: a map from object class id to corresponding :class:`Set`.
     """
@@ -691,6 +661,7 @@ def object_parameters(db_map, domains_with_ids, logger):
         domains_with_ids (dict): mapping from object class ids to corresponding :class:`Set`s
         logger (LoggingInterface, optional): a logger; if not None, some errors are logged and ignored instead of
             raising an exception
+
     Returns:
         dict: a map from parameter name to corresponding :class:`Parameter`
     """
@@ -720,6 +691,7 @@ def _object_parameter_default_values(db_map, domains_with_ids, classes_with_igno
         domains_with_ids (dict): mapping from object class ids to corresponding :class:`Set`s
         classes_with_ignored_parameters (set, optional): a set of problematic object class names; if not None,
             object class names are added to this set in case of errors instead of raising an exception
+
     Returns:
         dict: a map from parameter name to corresponding :class:`Parameter`
     """
@@ -786,6 +758,7 @@ def relationship_classes_to_sets(db_map, domain_names, set_names):
         db_map (DatabaseMapping or DiffDatabaseMapping): a database map
         domain_names (set): names of domains (a.k.a object classes) the relationships connect
         set_names (set): names of sets to convert
+
     Returns:
          dict: a map from relationship class ids to the corresponding :class:`Set`s
     """
@@ -814,6 +787,7 @@ def relationship_parameters(db_map, sets_with_ids, logger):
         sets_with_ids (dict): mapping from relationship class ids to corresponding :class:`Set`s
         logger (LoggingInterface, optional): a logger; if not None, some errors are logged and ignored instead of
             raising an exception
+
     Returns:
         dict: a map from parameter name to corresponding :class:`Parameter`
     """
@@ -843,6 +817,7 @@ def _relationship_parameter_default_values(db_map, sets_with_ids, classes_with_i
         sets_with_ids (dict): mapping from relationship class ids to corresponding :class:`Set`s
         classes_with_ignored_parameters (set, optional): a set of problematic relationship class names; if not None,
             relationship class names are added to this set in case of errors instead of raising an exception
+
     Returns:
         dict: a map from parameter name to corresponding :class:`Parameter`
     """
@@ -945,15 +920,7 @@ def set_names_and_records(db_map):
 
 
 class IndexingSetting:
-    """
-    Settings for indexed value expansion for a single Parameter.
-
-    Attributes:
-        parameter (Parameter): a parameter containing indexed values
-        indexing_domain (IndexingDomain): indexing info
-        index_position (int): where to insert the new index when expanding a parameter
-        set_name (str): name of the domain or set to which this parameter belongs
-    """
+    """Settings for indexed value expansion for a single Parameter."""
 
     def __init__(self, indexed_parameter, set_name):
         """
@@ -978,6 +945,7 @@ def make_indexing_settings(db_map, logger):
     Args:
         db_map (spinedb_api.DatabaseMapping or spinedb_api.DiffDatabaseMapping): a database mapping
         logger (LoggerInterface, optional): a logger
+
     Returns:
         dict: a mapping from parameter name to IndexingSetting
     """
@@ -993,6 +961,7 @@ def _object_indexing_settings(db_map, logger):
     Args:
         db_map (spinedb_api.DatabaseMapping or spinedb_api.DiffDatabaseMapping): a database mapping
         logger (LoggingInterface, optional): a logger
+
     Returns:
         dict: a mapping from parameter name to IndexingSetting
     """
@@ -1071,6 +1040,7 @@ def _relationship_indexing_settings(db_map, logger):
     Args:
         db_map (spinedb_api.DatabaseMapping or spinedb_api.DiffDatabaseMapping): a database mapping
         logger (LoggingInterface, optional): a logger
+
     Returns:
         dict: a mapping from parameter name to IndexingSetting
     """
@@ -1151,7 +1121,7 @@ def _add_to_indexing_settings(
     """
     Adds parameter to indexing settings.
 
-    Parameters:
+    Args:
         settings (dict): indexing settings
         parameter_name (str): parameter's name
         entity_class_name (str): name of the object or relationship class the parameter belongs to
@@ -1187,6 +1157,7 @@ def update_indexing_settings(old_indexing_settings, new_indexing_settings, set_s
         old_indexing_settings (dict): settings to be updated
         new_indexing_settings (dict): settings used for updating
         set_settings (SetSettings): new set settings
+
     Returns:
         dict: merged old and new indexing settings
     """
@@ -1218,6 +1189,7 @@ def indexing_settings_to_dict(settings):
 
     Args:
         settings (dict): a mapping from parameter name to IndexingSetting.
+
     Returns:
         dict: a JSON serializable dictionary
     """
@@ -1240,6 +1212,7 @@ def indexing_settings_from_dict(settings_dict, db_map, logger):
         settings_dict (dict): a JSON compatible dictionary representing parameter indexing settings.
         db_map (DatabaseMapping): database mapping
         logger (LoggerInterface, optional): a logger
+
     Returns:
         dict: a dictionary mapping parameter name to IndexingSetting.
     """
@@ -1348,6 +1321,7 @@ def sort_sets(sets, sorted_names):
     Args:
         sets (list): a list of :class:`Set`s to be sorted
         sorted_names (list): a list of set names in the sorted order
+
     Returns:
         list: sorted :class:`Set`s
     """
@@ -1561,6 +1535,7 @@ class SetSettings:
         Args:
             domain (Set): a domain to add/replace
             metadata (SetMetadata): domain's metadata
+
         Returns:
             True if a new domain was added, False if an existing domain was replaced
         """
@@ -1669,7 +1644,7 @@ class SetSettings:
         return new_names, new_metadatas
 
     def to_dict(self):
-        """Serializes the this object to a dict."""
+        """Serializes this object to a dict."""
         as_dictionary = {
             "domain_names": self._domain_names,
             "domain_metadatas": [metadata.to_dict() for metadata in self._domain_metadatas],
@@ -1715,13 +1690,7 @@ class ExportFlag(enum.Enum):
 
 
 class SetMetadata:
-    """
-    This class holds some additional configuration for Sets.
-
-    Attributes:
-        exportable (ExportFlag): set's export flag
-        is_additional (bool): True if the domain does not exist in the database but is supplied separately.
-    """
+    """This class holds some additional configuration for Sets."""
 
     def __init__(self, exportable=ExportFlag.EXPORTABLE, is_additional=False):
         """

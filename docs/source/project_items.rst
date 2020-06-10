@@ -77,7 +77,7 @@ View |view|
 ===========
 
 A View item is meant for inspecting data from multiple sources using the
-:ref:`Data store view <Data store view>`.
+:ref:`Data Store form <data_store_form/index>`.
 Note that the data is opened in read-only mode so modifications are not possible from the View item.
 
 Importer |importer|

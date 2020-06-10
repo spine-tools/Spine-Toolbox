@@ -705,7 +705,7 @@ class _ExecutionToken:
     def __init__(self, tool_executable, execution_dir):
         """
         Args:
-            tool_executable (ExecutableItem): the object that has initiated the execution
+            tool_executable (spinetoolbox.project_items.tool.executable_item.ExecutableItem): the object that has initiated the execution
             execution_dir (str): absolute path to the execution working directory
         """
         self._tool_executable = tool_executable
