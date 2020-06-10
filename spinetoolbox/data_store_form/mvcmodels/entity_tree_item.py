@@ -432,6 +432,16 @@ class RelationshipTreeRootItem(TreeRootItem):
 class EntityClassItem(MultiDBTreeItem):
     """An entity class item."""
 
+    @property
+    def display_icon(self):
+        """Returns class icon."""
+        return self._display_icon()
+
+    def _display_icon(self, for_group=False):
+        return self.db_mngr.entity_class_icon(
+            self.first_db_map, self.item_type, self.db_map_id(self.first_db_map), for_group=for_group
+        )
+
     def data(self, column, role=Qt.DisplayRole):
         """Returns data for given column and role."""
         if role == Qt.ToolTipRole:
@@ -456,11 +466,6 @@ class ObjectClassItem(EntityClassItem):
     item_type = "object class"
 
     @property
-    def display_icon(self):
-        """Returns the object class icon."""
-        return self.db_mngr.entity_class_icon(self.first_db_map, "object class", self.db_map_id(self.first_db_map))
-
-    @property
     def child_item_type(self):
         """Returns ObjectItem."""
         return ObjectItem
@@ -479,13 +484,6 @@ class RelationshipClassItem(EntityClassItem):
 
     visual_key = ["name", "object_class_name_list"]
     item_type = "relationship class"
-
-    @property
-    def display_icon(self):
-        """Returns relationship class icon."""
-        return self.db_mngr.entity_class_icon(
-            self.first_db_map, "relationship class", self.db_map_id(self.first_db_map)
-        )
 
     @property
     def child_item_type(self):
@@ -516,10 +514,39 @@ class RelationshipClassItem(EntityClassItem):
 class EntityItem(MultiDBTreeItem):
     """An entity item."""
 
+    @property
+    def display_icon(self):
+        """Returns corresponding class icon."""
+        return self.parent_item._display_icon(for_group=self.is_group())
+
+    def db_map_member_ids(self, db_map):
+        return set(x["member_id"] for x in self.db_map_group_entities(db_map))
+
+    def db_map_group_entities(self, db_map):
+        return self.db_mngr.get_items_by_field(db_map, "group entity", "entity_id", self.db_map_id(db_map))
+
+    @property
+    def member_ids(self):
+        return {db_map: self.db_map_member_ids(db_map) for db_map in self.db_maps}
+
+    @property
+    def member_rows(self):
+        return set(
+            row
+            for db_map in self.db_maps
+            for row in self.parent_item.find_rows_by_id(db_map, *self.db_map_member_ids(db_map))
+        )
+
+    def is_group(self):
+        return any(self.member_ids.values())
+
     def data(self, column, role=Qt.DisplayRole):
-        """Returns data for given column and role."""
         if role == Qt.ToolTipRole:
             return self.db_map_data_field(self.first_db_map, "description")
+        if role == Qt.BackgroundRole and column == 0 and self.model.is_active_member_index(self.index()):
+            color = qApp.palette().highlight().color()
+            color.setAlphaF(0.2)
+            return color
         return super().data(column, role)
 
     def _get_children_ids(self, db_map):
@@ -536,11 +563,6 @@ class ObjectItem(EntityItem):
     def child_item_type(self):
         """Returns RelationshipClassItem."""
         return RelationshipClassItem
-
-    @property
-    def display_icon(self):
-        """Returns the object class icon."""
-        return self.parent_item.display_icon
 
     def default_parameter_data(self):
         """Return data to put as default in a parameter table when this item is selected."""
@@ -586,11 +608,6 @@ class RelationshipItem(EntityItem):
     @property
     def edit_data(self):
         return self.object_name_list
-
-    @property
-    def display_icon(self):
-        """Returns relationship class icon."""
-        return self.parent_item.display_icon
 
     def has_children(self):
         """Returns false, this item never has children."""

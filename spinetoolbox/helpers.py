@@ -42,6 +42,8 @@ from PySide2.QtGui import (
     QStandardItemModel,
     QStandardItem,
     QDesktopServices,
+    QPainterPath,
+    QPen,
 )
 import spine_engine
 from .config import REQUIRED_SPINE_ENGINE_VERSION
@@ -498,9 +500,10 @@ class IconManager:
     ICON_SIZE = QSize(512, 512)
 
     def __init__(self):
-        self.obj_cls_icon_cache = {}  # A mapping from object class name to display icon
-        self.icon_pixmap_cache = {}  # A mapping from display_icon to associated pixmap
-        self.rel_cls_icon_cache = {}  # A mapping from object class name list to associated pixmap
+        self.obj_cls_icon_code_cache = {}  # A mapping from object class name to display icon code
+        self.icon_pixmap_cache = {}  # A mapping from display icon code to associated pixmap
+        self.rel_cls_pixmap_cache = {}  # A mapping from object class name list to associated pixmap
+        self.group_obj_pixmap_cache = {}  # A mapping from class name to associated group pixmap
         self.searchterms = {}
 
     def create_object_pixmap(self, display_icon):
@@ -516,19 +519,21 @@ class IconManager:
     def setup_object_pixmaps(self, object_classes):
         """Called after adding or updating object classes.
         Create the corresponding object pixmaps and clear obsolete entries
-        from the relationship class icon cache."""
+        from the relationship class and group entities pixmap caches."""
         for object_class in object_classes:
             self.create_object_pixmap(object_class["display_icon"])
-            self.obj_cls_icon_cache[object_class["name"]] = object_class["display_icon"]
+            self.obj_cls_icon_code_cache[object_class["name"]] = object_class["display_icon"]
         object_class_names = [x["name"] for x in object_classes]
-        dirty_keys = [k for k in self.rel_cls_icon_cache if any(x in object_class_names for x in k)]
+        dirty_keys = [k for k in self.rel_cls_pixmap_cache if any(x in object_class_names for x in k)]
         for k in dirty_keys:
-            del self.rel_cls_icon_cache[k]
+            del self.rel_cls_pixmap_cache[k]
+        for name in object_class_names:
+            del self.group_obj_pixmap_cache[name]
 
     def object_pixmap(self, object_class_name):
         """A pixmap for the given object class."""
-        if object_class_name in self.obj_cls_icon_cache:
-            display_icon = self.obj_cls_icon_cache[object_class_name]
+        if object_class_name in self.obj_cls_icon_code_cache:
+            display_icon = self.obj_cls_icon_code_cache[object_class_name]
             if display_icon in self.icon_pixmap_cache:
                 return self.icon_pixmap_cache[display_icon]
         engine = CharIconEngine("\uf1b2", 0)
@@ -545,8 +550,8 @@ class IconManager:
             engine = CharIconEngine("\uf1b3", 0)
             return engine.pixmap(self.ICON_SIZE)
         object_class_name_list = tuple(str_object_class_name_list.split(","))
-        if object_class_name_list in self.rel_cls_icon_cache:
-            return self.rel_cls_icon_cache[object_class_name_list]
+        if object_class_name_list in self.rel_cls_pixmap_cache:
+            return self.rel_cls_pixmap_cache[object_class_name_list]
         scene = QGraphicsScene()
         x = 0
         for j, object_class_name in enumerate(object_class_name_list):
@@ -565,12 +570,44 @@ class IconManager:
         painter.setRenderHint(QPainter.Antialiasing, True)
         scene.render(painter)
         painter.end()
-        self.rel_cls_icon_cache[object_class_name_list] = pixmap
+        self.rel_cls_pixmap_cache[object_class_name_list] = pixmap
         return pixmap
 
     def relationship_icon(self, str_object_class_name_list):
         """An icon for the given object class name list."""
         return QIcon(self.relationship_pixmap(str_object_class_name_list))
+
+    def group_object_pixmap(self, object_class_name):
+        if object_class_name in self.group_obj_pixmap_cache:
+            return self.group_obj_pixmap_cache[object_class_name]
+        object_pixmap = self.object_pixmap(object_class_name)
+        size = object_pixmap.size()
+        width, height = size.width(), size.height()
+        radius = width / 8
+        pen_width = width / 32
+        factor = 0.2
+        pen = QPen(QApplication.palette().shadow().color())
+        pen.setWidth(pen_width)
+        pixmap = QPixmap(size)
+        pixmap.fill(Qt.transparent)
+        path = QPainterPath()
+        path.addRoundedRect(pixmap.rect(), radius, radius)
+        painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.Antialiasing, True)
+        painter.fillPath(path, QApplication.palette().window())
+        painter.setPen(pen)
+        painter.drawRoundedRect(pixmap.rect().adjusted(pen_width, pen_width, -pen_width, -pen_width), radius, radius)
+        painter.drawPixmap(
+            pixmap.rect().adjusted(factor * width, factor * height, -factor * width, -factor * height),
+            object_pixmap,
+            object_pixmap.rect(),
+        )
+        painter.end()
+        self.group_obj_pixmap_cache[object_class_name] = pixmap
+        return pixmap
+
+    def group_object_icon(self, object_class_name):
+        return QIcon(self.group_object_pixmap(object_class_name))
 
 
 class CharIconEngine(QIconEngine):

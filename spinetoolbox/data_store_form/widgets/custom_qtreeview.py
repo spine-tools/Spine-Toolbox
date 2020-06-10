@@ -91,11 +91,22 @@ class EntityTreeView(CopyTreeView):
         for index in indexes:
             if not index.isValid() or index.column() != 0:
                 continue
-            item_type = model.item_from_index(index).item_type
-            self.selected_indexes.setdefault(item_type, {})[index] = None
+            item = model.item_from_index(index)
+            self.selected_indexes.setdefault(item.item_type, {})[index] = None
         if not indexes:
             return
+        self.refresh_active_member_indexes()
+        parents = set(ind.parent() for ind in deselected)
+        self.model().emit_data_changed_for_column(0, parents)
         self.tree_selection_changed.emit(self.selected_indexes)
+
+    def refresh_active_member_indexes(self):
+        active_member_indexes = set(
+            index.sibling(row, 0)
+            for index in self.selected_indexes.get("object", ())
+            for row in index.internalPointer().member_rows
+        )
+        self.model().set_active_member_indexes(active_member_indexes)
 
     @Slot("QModelIndex", "EditTrigger", "QEvent")
     def edit(self, index, trigger, event):
@@ -206,6 +217,7 @@ class ObjectTreeView(EntityTreeView):
         self.add_object_classes_action = None
         self.find_next_action = None
         self.duplicate_object_action = None
+        self.manage_group_action = None
 
     def update_actions_visibility(self, item):
         super().update_actions_visibility(item)
@@ -214,6 +226,9 @@ class ObjectTreeView(EntityTreeView):
         self.add_relationship_classes_action.setVisible(item.item_type == "object class")
         self.add_relationships_action.setVisible(item.item_type == "relationship class")
         self.duplicate_object_action.setVisible(item.item_type == "object")
+        self.manage_group_action.setVisible(item.item_type == "object")
+        if self.manage_group_action.isVisible():
+            self.manage_group_action.setText("Manage group" if item.is_group() else "Promote to group")
         self.find_next_action.setVisible(item.item_type == "relationship")
 
     def add_middle_actions(self):
@@ -238,6 +253,7 @@ class ObjectTreeView(EntityTreeView):
         self.duplicate_object_action = self._menu.addAction(
             self._data_store_form.ui.actionAdd_objects.icon(), "Duplicate object", self.duplicate_object
         )
+        self.manage_group_action = self._menu.addAction("Promote to group", self.manage_group)
         self._menu.addSeparator()
 
     def connect_signals(self):
@@ -282,6 +298,11 @@ class ObjectTreeView(EntityTreeView):
         """Duplicate the object at the current index using the connected data store form."""
         index = self.currentIndex()
         self._data_store_form.duplicate_object(index)
+
+    def manage_group(self):
+        index = self.currentIndex()
+        item = index.internalPointer()
+        self._data_store_form.show_manage_object_as_group_form(item)
 
 
 class RelationshipTreeView(EntityTreeView):

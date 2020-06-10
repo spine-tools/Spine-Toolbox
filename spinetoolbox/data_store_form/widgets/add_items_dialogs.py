@@ -24,10 +24,8 @@ from PySide2.QtWidgets import (
     QComboBox,
     QSpinBox,
     QToolButton,
-    QVBoxLayout,
     QTableWidget,
     QTableWidgetItem,
-    QFrame,
     QAbstractItemView,
     QTreeWidget,
     QTreeWidgetItem,
@@ -44,7 +42,7 @@ from .custom_delegates import (
     ManageRelationshipClassesDelegate,
     ManageRelationshipsDelegate,
 )
-from .manage_items_dialog import (
+from .manage_items_dialogs import (
     ShowIconColorEditorMixin,
     GetObjectClassesMixin,
     GetObjectsMixin,

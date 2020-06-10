@@ -35,6 +35,7 @@ class EntityTreeModel(MinimalTreeModel):
         self.db_mngr = db_mngr
         self.db_maps = db_maps
         self._root_item = None
+        self.active_member_indexes = dict()
 
     @property
     def root_item_type(self):
@@ -93,6 +94,21 @@ class EntityTreeModel(MinimalTreeModel):
                         self.fetchMore(parent)
         return parent_items
 
+    def is_active_member_index(self, index):
+        return index in self.active_member_indexes.get(index.parent(), set())
+
+    def set_active_member_indexes(self, indexes):
+        self.active_member_indexes.clear()
+        for ind in indexes:
+            self.active_member_indexes.setdefault(ind.parent(), set()).add(ind)
+        self.emit_data_changed_for_column(0, self.active_member_indexes)
+
+    def emit_data_changed_for_column(self, column, parents):
+        for parent in parents:
+            top_left = self.index(0, column, parent)
+            bottom_right = self.index(self.rowCount(parent), column, parent)
+            self.dataChanged.emit(top_left, bottom_right)
+
 
 class ObjectTreeModel(EntityTreeModel):
     """An 'object-oriented' tree model."""
@@ -101,14 +117,14 @@ class ObjectTreeModel(EntityTreeModel):
     def root_item_type(self):
         return ObjectTreeRootItem
 
-    def _group_object_data(self, db_map_data):
+    def _parent_object_data(self, db_map_data):
         """Takes given object data and returns the same data keyed by parent tree-item.
 
         Args:
             db_map_data (dict): maps DiffDatabaseMapping instances to list of items as dict
 
         Returns:
-            result (dict): maps parent tree-items to DiffDatabaseMapping instances to list of item ids
+            dict: maps parent tree-items to DiffDatabaseMapping instances to list of item ids
         """
         result = dict()
         for db_map, items in db_map_data.items():
@@ -122,14 +138,14 @@ class ObjectTreeModel(EntityTreeModel):
                     result.setdefault(parent_item, {})[db_map] = list(ids.keys())
         return result
 
-    def _group_relationship_class_data(self, db_map_data):
+    def _parent_relationship_class_data(self, db_map_data):
         """Takes given relationship class data and returns the same data keyed by parent tree-item.
 
         Args:
             db_map_data (dict): maps DiffDatabaseMapping instances to list of items as dict
 
         Returns:
-            result (dict): maps parent tree-items to DiffDatabaseMapping instances to list of item ids
+            dict: maps parent tree-items to DiffDatabaseMapping instances to list of item ids
         """
         result = dict()
         for db_map, items in db_map_data.items():
@@ -142,14 +158,14 @@ class ObjectTreeModel(EntityTreeModel):
                     result.setdefault(parent_item, {})[db_map] = list(ids.keys())
         return result
 
-    def _group_relationship_data(self, db_map_data):
+    def _parent_relationship_data(self, db_map_data):
         """Takes given relationship data and returns the same data keyed by parent tree-item.
 
         Args:
             db_map_data (dict): maps DiffDatabaseMapping instances to list of items as dict
 
         Returns:
-            result (dict): maps parent tree-items to DiffDatabaseMapping instances to list of item ids
+            dict: maps parent tree-items to DiffDatabaseMapping instances to list of item ids
         """
         result = dict()
         for db_map, items in db_map_data.items():
@@ -166,15 +182,15 @@ class ObjectTreeModel(EntityTreeModel):
         self.root_item.append_children_by_id(db_map_ids)
 
     def add_objects(self, db_map_data):
-        for parent_item, db_map_ids in self._group_object_data(db_map_data).items():
+        for parent_item, db_map_ids in self._parent_object_data(db_map_data).items():
             parent_item.append_children_by_id(db_map_ids)
 
     def add_relationship_classes(self, db_map_data):
-        for parent_item, db_map_ids in self._group_relationship_class_data(db_map_data).items():
+        for parent_item, db_map_ids in self._parent_relationship_class_data(db_map_data).items():
             parent_item.append_children_by_id(db_map_ids)
 
     def add_relationships(self, db_map_data):
-        for parent_item, db_map_ids in self._group_relationship_data(db_map_data).items():
+        for parent_item, db_map_ids in self._parent_relationship_data(db_map_data).items():
             parent_item.append_children_by_id(db_map_ids)
 
     def remove_object_classes(self, db_map_data):
@@ -182,15 +198,15 @@ class ObjectTreeModel(EntityTreeModel):
         self.root_item.remove_children_by_id(db_map_ids)
 
     def remove_objects(self, db_map_data):
-        for parent_item, db_map_ids in self._group_object_data(db_map_data).items():
+        for parent_item, db_map_ids in self._parent_object_data(db_map_data).items():
             parent_item.remove_children_by_id(db_map_ids)
 
     def remove_relationship_classes(self, db_map_data):
-        for parent_item, db_map_ids in self._group_relationship_class_data(db_map_data).items():
+        for parent_item, db_map_ids in self._parent_relationship_class_data(db_map_data).items():
             parent_item.remove_children_by_id(db_map_ids)
 
     def remove_relationships(self, db_map_data):
-        for parent_item, db_map_ids in self._group_relationship_data(db_map_data).items():
+        for parent_item, db_map_ids in self._parent_relationship_data(db_map_data).items():
             parent_item.remove_children_by_id(db_map_ids)
 
     def update_object_classes(self, db_map_data):
@@ -198,15 +214,15 @@ class ObjectTreeModel(EntityTreeModel):
         self.root_item.update_children_by_id(db_map_ids)
 
     def update_objects(self, db_map_data):
-        for parent_item, db_map_ids in self._group_object_data(db_map_data).items():
+        for parent_item, db_map_ids in self._parent_object_data(db_map_data).items():
             parent_item.update_children_by_id(db_map_ids)
 
     def update_relationship_classes(self, db_map_data):
-        for parent_item, db_map_ids in self._group_relationship_class_data(db_map_data).items():
+        for parent_item, db_map_ids in self._parent_relationship_class_data(db_map_data).items():
             parent_item.update_children_by_id(db_map_ids)
 
     def update_relationships(self, db_map_data):
-        for parent_item, db_map_ids in self._group_relationship_data(db_map_data).items():
+        for parent_item, db_map_ids in self._parent_relationship_data(db_map_data).items():
             parent_item.update_children_by_id(db_map_ids)
 
     def find_next_relationship_index(self, index):
@@ -250,14 +266,14 @@ class RelationshipTreeModel(EntityTreeModel):
     def root_item_type(self):
         return RelationshipTreeRootItem
 
-    def _group_relationship_data(self, db_map_data):
+    def _parent_relationship_data(self, db_map_data):
         """Takes given relationship data and returns the same data keyed by parent tree-item.
 
         Args:
             db_map_data (dict): maps DiffDatabaseMapping instances to list of items as dict
 
         Returns:
-            result (dict): maps parent tree-items to DiffDatabaseMapping instances to list of item ids
+            dict: maps parent tree-items to DiffDatabaseMapping instances to list of item ids
         """
         result = dict()
         for db_map, items in db_map_data.items():
@@ -274,7 +290,7 @@ class RelationshipTreeModel(EntityTreeModel):
         self.root_item.append_children_by_id(db_map_ids)
 
     def add_relationships(self, db_map_data):
-        for parent_item, db_map_ids in self._group_relationship_data(db_map_data).items():
+        for parent_item, db_map_ids in self._parent_relationship_data(db_map_data).items():
             parent_item.append_children_by_id(db_map_ids)
 
     def remove_relationship_classes(self, db_map_data):
@@ -282,7 +298,7 @@ class RelationshipTreeModel(EntityTreeModel):
         self.root_item.remove_children_by_id(db_map_ids)
 
     def remove_relationships(self, db_map_data):
-        for parent_item, db_map_ids in self._group_relationship_data(db_map_data).items():
+        for parent_item, db_map_ids in self._parent_relationship_data(db_map_data).items():
             parent_item.remove_children_by_id(db_map_ids)
 
     def update_relationship_classes(self, db_map_data):
@@ -290,5 +306,5 @@ class RelationshipTreeModel(EntityTreeModel):
         self.root_item.update_children_by_id(db_map_ids)
 
     def update_relationships(self, db_map_data):
-        for parent_item, db_map_ids in self._group_relationship_data(db_map_data).items():
+        for parent_item, db_map_ids in self._parent_relationship_data(db_map_data).items():
             parent_item.update_children_by_id(db_map_ids)
