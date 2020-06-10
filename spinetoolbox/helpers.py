@@ -585,22 +585,29 @@ class IconManager:
         width, height = size.width(), size.height()
         radius = width / 8
         pen_width = width / 32
-        factor = 0.2
+        margin = width / 16
         pen = QPen(QApplication.palette().shadow().color())
         pen.setWidth(pen_width)
+        path = QPainterPath()
+        path.addRoundedRect(0, 0, width, height, radius, radius)
         pixmap = QPixmap(size)
         pixmap.fill(Qt.transparent)
-        path = QPainterPath()
-        path.addRoundedRect(pixmap.rect(), radius, radius)
         painter = QPainter(pixmap)
         painter.setRenderHint(QPainter.Antialiasing, True)
         painter.fillPath(path, QApplication.palette().window())
         painter.setPen(pen)
         painter.drawRoundedRect(pixmap.rect().adjusted(pen_width, pen_width, -pen_width, -pen_width), radius, radius)
         painter.drawPixmap(
-            pixmap.rect().adjusted(factor * width, factor * height, -factor * width, -factor * height),
-            object_pixmap,
-            object_pixmap.rect(),
+            pixmap.rect().adjusted(margin, margin, -width / 2, -height / 2), object_pixmap, object_pixmap.rect()
+        )
+        painter.drawPixmap(
+            pixmap.rect().adjusted(width / 2, margin, -margin, -height / 2), object_pixmap, object_pixmap.rect()
+        )
+        painter.drawPixmap(
+            pixmap.rect().adjusted(width / 2, height / 2, -margin, -margin), object_pixmap, object_pixmap.rect()
+        )
+        painter.drawPixmap(
+            pixmap.rect().adjusted(margin, height / 2, -width / 2, -margin), object_pixmap, object_pixmap.rect()
         )
         painter.end()
         self.group_obj_pixmap_cache[object_class_name] = pixmap
