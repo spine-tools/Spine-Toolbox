@@ -10,55 +10,80 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-# Form implementation generated from reading ui file 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\time_series_variable_resolution_editor.ui',
-# licensing of 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\time_series_variable_resolution_editor.ui' applies.
-#
-# Created: Mon May 11 15:50:47 2020
-#      by: pyside2-uic  running on PySide2 5.11.2
-#
-# WARNING! All changes made in this file will be lost!
+################################################################################
+## Form generated from reading UI file 'time_series_variable_resolution_editor.ui'
+##
+## Created by: Qt User Interface Compiler version 5.14.2
+##
+## WARNING! All changes made in this file will be lost when recompiling UI file!
+################################################################################
 
-from PySide2 import QtCore, QtGui, QtWidgets
+from PySide2.QtCore import (QCoreApplication, QDate, QDateTime, QMetaObject,
+    QObject, QPoint, QRect, QSize, QTime, QUrl, Qt)
+from PySide2.QtGui import (QBrush, QColor, QConicalGradient, QCursor, QFont,
+    QFontDatabase, QIcon, QKeySequence, QLinearGradient, QPalette, QPainter,
+    QPixmap, QRadialGradient)
+from PySide2.QtWidgets import *
+
+from spinetoolbox.widgets.custom_qtableview import IndexedValueTableView
+from spinetoolbox.widgets.plot_widget import PlotWidget
+
 
 class Ui_TimeSeriesVariableResolutionEditor(object):
     def setupUi(self, TimeSeriesVariableResolutionEditor):
-        TimeSeriesVariableResolutionEditor.setObjectName("TimeSeriesVariableResolutionEditor")
+        if not TimeSeriesVariableResolutionEditor.objectName():
+            TimeSeriesVariableResolutionEditor.setObjectName(u"TimeSeriesVariableResolutionEditor")
         TimeSeriesVariableResolutionEditor.resize(718, 478)
-        self.verticalLayout = QtWidgets.QVBoxLayout(TimeSeriesVariableResolutionEditor)
-        self.verticalLayout.setObjectName("verticalLayout")
-        self.splitter = QtWidgets.QSplitter(TimeSeriesVariableResolutionEditor)
-        self.splitter.setOrientation(QtCore.Qt.Horizontal)
-        self.splitter.setObjectName("splitter")
-        self.verticalLayoutWidget = QtWidgets.QWidget(self.splitter)
-        self.verticalLayoutWidget.setObjectName("verticalLayoutWidget")
-        self.left_layout = QtWidgets.QVBoxLayout(self.verticalLayoutWidget)
+        self.verticalLayout = QVBoxLayout(TimeSeriesVariableResolutionEditor)
+        self.verticalLayout.setObjectName(u"verticalLayout")
+        self.splitter = QSplitter(TimeSeriesVariableResolutionEditor)
+        self.splitter.setObjectName(u"splitter")
+        self.splitter.setOrientation(Qt.Horizontal)
+        self.verticalLayoutWidget = QWidget(self.splitter)
+        self.verticalLayoutWidget.setObjectName(u"verticalLayoutWidget")
+        self.left_layout = QVBoxLayout(self.verticalLayoutWidget)
+        self.left_layout.setObjectName(u"left_layout")
         self.left_layout.setContentsMargins(0, 0, 0, 0)
-        self.left_layout.setObjectName("left_layout")
-        self.horizontalLayout_2 = QtWidgets.QHBoxLayout()
-        self.horizontalLayout_2.setObjectName("horizontalLayout_2")
-        self.ignore_year_check_box = QtWidgets.QCheckBox(self.verticalLayoutWidget)
-        self.ignore_year_check_box.setObjectName("ignore_year_check_box")
+        self.horizontalLayout_2 = QHBoxLayout()
+        self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
+        self.ignore_year_check_box = QCheckBox(self.verticalLayoutWidget)
+        self.ignore_year_check_box.setObjectName(u"ignore_year_check_box")
+
         self.horizontalLayout_2.addWidget(self.ignore_year_check_box)
-        self.repeat_check_box = QtWidgets.QCheckBox(self.verticalLayoutWidget)
-        self.repeat_check_box.setObjectName("repeat_check_box")
+
+        self.repeat_check_box = QCheckBox(self.verticalLayoutWidget)
+        self.repeat_check_box.setObjectName(u"repeat_check_box")
+
         self.horizontalLayout_2.addWidget(self.repeat_check_box)
-        spacerItem = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
-        self.horizontalLayout_2.addItem(spacerItem)
+
+        self.horizontalSpacer_3 = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+
+        self.horizontalLayout_2.addItem(self.horizontalSpacer_3)
+
+
         self.left_layout.addLayout(self.horizontalLayout_2)
+
         self.time_series_table = IndexedValueTableView(self.verticalLayoutWidget)
-        self.time_series_table.setObjectName("time_series_table")
+        self.time_series_table.setObjectName(u"time_series_table")
+
         self.left_layout.addWidget(self.time_series_table)
+
+        self.splitter.addWidget(self.verticalLayoutWidget)
         self.plot_widget = PlotWidget(self.splitter)
-        self.plot_widget.setObjectName("plot_widget")
+        self.plot_widget.setObjectName(u"plot_widget")
+        self.splitter.addWidget(self.plot_widget)
+
         self.verticalLayout.addWidget(self.splitter)
 
+
         self.retranslateUi(TimeSeriesVariableResolutionEditor)
-        QtCore.QMetaObject.connectSlotsByName(TimeSeriesVariableResolutionEditor)
+
+        QMetaObject.connectSlotsByName(TimeSeriesVariableResolutionEditor)
+    # setupUi
 
     def retranslateUi(self, TimeSeriesVariableResolutionEditor):
-        TimeSeriesVariableResolutionEditor.setWindowTitle(QtWidgets.QApplication.translate("TimeSeriesVariableResolutionEditor", "Form", None, -1))
-        self.ignore_year_check_box.setText(QtWidgets.QApplication.translate("TimeSeriesVariableResolutionEditor", "Ignore year", None, -1))
-        self.repeat_check_box.setText(QtWidgets.QApplication.translate("TimeSeriesVariableResolutionEditor", "Repeat", None, -1))
+        TimeSeriesVariableResolutionEditor.setWindowTitle(QCoreApplication.translate("TimeSeriesVariableResolutionEditor", u"Form", None))
+        self.ignore_year_check_box.setText(QCoreApplication.translate("TimeSeriesVariableResolutionEditor", u"Ignore year", None))
+        self.repeat_check_box.setText(QCoreApplication.translate("TimeSeriesVariableResolutionEditor", u"Repeat", None))
+    # retranslateUi
 
-from spinetoolbox.widgets.plot_widget import PlotWidget
-from spinetoolbox.widgets.custom_qtableview import IndexedValueTableView
