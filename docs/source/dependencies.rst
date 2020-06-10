@@ -12,8 +12,8 @@ must be installed for the application to start. Users can choose the SQL dialect
 pyodbc psycopg2, and cx_Oracle) they want to use. These can be installed in Spine Toolbox when
 needed. If you want to deploy the application by using the provided *setup.py* file,
 you need to install *cx_Freeze* package (6.0b1 version or newer is recommended).
-All version numbers are minimum versions except for pyside2, where the version should be less
-than 5.12, which is not supported (yet).
+All version numbers are minimum versions except for pyside2, where the version should be 5.14.
+Version 5.15 is not supported (yet).
 
 Required packages
 -----------------
@@ -24,7 +24,7 @@ or ``requirements.txt``
 +-------------------+---------------+---------------+
 | Package name      |    Version    |     License   |
 +===================+===============+===============+
-| pyside2           | <5.12         |     LGPL      |
+| pyside2           | >=5.14, <5.15 |     LGPL      |
 +-------------------+---------------+---------------+
 | datapackage       | 1.2.3         |     MIT       |
 +-------------------+---------------+---------------+
