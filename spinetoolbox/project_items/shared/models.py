@@ -48,6 +48,7 @@ class FileListItem:
         provider_name (str): Name of the project item providing the file
         is_pattern (bool): True if the file is actually a file name pattern
     """
+
     def __init__(self, label, path, provider_name, is_pattern=False):
         self.label = label
         self.path = path

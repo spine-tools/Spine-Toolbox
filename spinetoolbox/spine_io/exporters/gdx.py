@@ -588,7 +588,10 @@ def sets_to_gams(gdx_file, sets, omitted_set=None):
                 raise RuntimeError()
             record_keys.append(record.keys)
         gams_set = GAMSSet(record_keys, current_set.domain_names, expl_text=current_set.description)
-        gdx_file[current_set.name] = gams_set
+        try:
+            gdx_file[current_set.name] = gams_set
+        except NotImplementedError as error:
+            raise GdxExportException(f"Failed to write to .gdx file: {error}.")
 
 
 def parameters_to_gams(gdx_file, parameters):
@@ -621,7 +624,10 @@ def parameters_to_gams(gdx_file, parameters):
             gams_parameter = GAMSParameter(indexed_values, domain=parameter.domain_names)
         except ValueError as error:
             raise GdxExportException(f"Failed to create GAMS parameter: {error}")
-        gdx_file[parameter_name] = gams_parameter
+        try:
+            gdx_file[parameter_name] = gams_parameter
+        except NotImplementedError as error:
+            raise GdxExportException(f"Failed to write .gdx: {error}")
 
 
 def domain_parameters_to_gams_scalars(gdx_file, parameters, domain_name):
@@ -643,7 +649,10 @@ def domain_parameters_to_gams_scalars(gdx_file, parameters, domain_name):
             if len(parameter.data) != 1 or not parameter.is_scalar():
                 raise GdxExportException("Parameter {} is not suitable as GAMS scalar.")
             gams_scalar = GAMSScalar(next(iter(parameter.values)))
-            gdx_file[parameter_name] = gams_scalar
+            try:
+                gdx_file[parameter_name] = gams_scalar
+            except NotImplementedError as error:
+                raise GdxExportException(f"Failed to write to .gdx: {error}")
             erase_parameters.append(parameter_name)
     return erase_parameters
 
