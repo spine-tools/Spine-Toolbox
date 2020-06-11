@@ -489,6 +489,9 @@ class EntityClassItem(MultiDBTreeItem):
         Args:
             rows (set, list): collection of rows corresponding to newly inserted group children
         """
+        rows = [row for row in rows if row >= self._group_child_count]
+        if not rows:
+            return
         self.model.layoutAboutToBeChanged.emit()
         group_children = list(reversed([self.children.pop(row) for row in sorted(rows, reverse=True)]))
         self.insert_children(self._group_child_count, *group_children)
