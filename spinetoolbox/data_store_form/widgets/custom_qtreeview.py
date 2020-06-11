@@ -78,6 +78,12 @@ class EntityTreeView(CopyTreeView):
         self.collapsed.connect(self._resize_first_column_to_contents)
         self.selectionModel().selectionChanged.connect(self._handle_selection_changed)
 
+    def rowsInserted(self, parent, start, end):
+        self._refresh_selected_indexes()
+
+    def rowsRemoved(self, parent, start, end):
+        self._refresh_selected_indexes()
+
     @Slot("QModelIndex")
     def _resize_first_column_to_contents(self, _index=None):
         self.resizeColumnToContents(0)
@@ -85,6 +91,15 @@ class EntityTreeView(CopyTreeView):
     @Slot("QItemSelection", "QItemSelection")
     def _handle_selection_changed(self, selected, deselected):
         """Classifies selection by item type and emits signal."""
+        self._refresh_selected_indexes()
+        if not self.selectionModel().hasSelection():
+            return
+        self.refresh_active_member_indexes()
+        parents = set(ind.parent() for ind in deselected)
+        self.model().emit_data_changed_for_column(0, parents)
+        self.tree_selection_changed.emit(self.selected_indexes)
+
+    def _refresh_selected_indexes(self):
         self.selected_indexes.clear()
         model = self.model()
         indexes = self.selectionModel().selectedIndexes()
@@ -93,12 +108,6 @@ class EntityTreeView(CopyTreeView):
                 continue
             item = model.item_from_index(index)
             self.selected_indexes.setdefault(item.item_type, {})[index] = None
-        if not indexes:
-            return
-        self.refresh_active_member_indexes()
-        parents = set(ind.parent() for ind in deselected)
-        self.model().emit_data_changed_for_column(0, parents)
-        self.tree_selection_changed.emit(self.selected_indexes)
 
     def refresh_active_member_indexes(self):
         active_member_indexes = set(
