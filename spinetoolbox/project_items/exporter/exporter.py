@@ -265,7 +265,7 @@ class Exporter(ProjectItem):
             self._settings_packs[database_url].state = SettingsState.ERROR
             self._report_notifications()
 
-    @Slot(str, "QVariant")
+    @Slot(str)
     def _cancel_worker(self, database_url):
         """Cleans up after worker has given up fetching export settings."""
         worker = self._workers[database_url]
