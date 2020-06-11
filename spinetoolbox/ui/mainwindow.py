@@ -133,7 +133,7 @@ class Ui_MainWindow(object):
         self.actionAdd_Importer = QAction(MainWindow)
         self.actionAdd_Importer.setObjectName(u"actionAdd_Importer")
         icon15 = QIcon()
-        icon15.addFile(u":/icons/project_item_icons/map-solid.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon15.addFile(u":/icons/project_item_icons/database-import.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.actionAdd_Importer.setIcon(icon15)
         self.actionGetting_started = QAction(MainWindow)
         self.actionGetting_started.setObjectName(u"actionGetting_started")
