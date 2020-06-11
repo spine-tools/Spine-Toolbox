@@ -432,6 +432,11 @@ class RelationshipTreeRootItem(TreeRootItem):
 class EntityClassItem(MultiDBTreeItem):
     """An entity class item."""
 
+    def __init__(self, *args, **kwargs):
+        """Overridden method to declare group_child_count attribute."""
+        super().__init__(*args, **kwargs)
+        self._group_child_count = 0
+
     @property
     def display_icon(self):
         """Returns class icon."""
@@ -458,6 +463,49 @@ class EntityClassItem(MultiDBTreeItem):
     def _get_children_ids(self, db_map):
         """See base class"""
         raise NotImplementedError()
+
+    def fetch_more(self):
+        """Fetches children from all associated databases and raises group children.
+        """
+        super().fetch_more()
+        rows = [row for row, child in enumerate(self.children) if child.is_group()]
+        self._raise_group_children_by_row(rows)
+
+    def raise_group_children_by_id(self, db_map_ids):
+        """
+        Moves group children to the top of the list.
+
+        Args:
+            db_map_ids (dict): set of ids corresponding to newly inserted group children,
+                keyed by DiffDatabaseMapping
+        """
+        rows = set(row for db_map, ids in db_map_ids.items() for row in self.find_rows_by_id(db_map, *ids))
+        self._raise_group_children_by_row(rows)
+
+    def _raise_group_children_by_row(self, rows):
+        """
+        Moves group children to the top of the list.
+
+        Args:
+            rows (set, list): collection of rows corresponding to newly inserted group children
+        """
+        group_children = list(reversed([self.children.pop(row) for row in sorted(rows, reverse=True)]))
+        self.insert_children(self._group_child_count, *group_children)
+        self._group_child_count += len(group_children)
+        self._refresh_child_map()
+
+    def remove_children(self, position, count):
+        """
+        Overriden method to keep the group child count up to date.
+        """
+        if not super().remove_children(position, count):
+            return False
+        first_group_child = position
+        last_group_child = min(self._group_child_count - 1, position + count - 1)
+        removed_child_count = last_group_child - first_group_child + 1
+        if removed_child_count > 0:
+            self._group_child_count -= removed_child_count
+        return True
 
 
 class ObjectClassItem(EntityClassItem):

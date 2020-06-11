@@ -46,7 +46,7 @@ class SpineDBFetcher(QObject):
         self.listener = listener
         self.db_maps = db_maps
         self._thread = QThread()
-        # self.moveToThread(self._thread)
+        self.moveToThread(self._thread)
         self._thread.start()
         self.connect_signals()
 
@@ -116,7 +116,7 @@ class SpineDBFetcher(QObject):
     @Slot(object)
     def receive_entity_groups_fetched(self, db_map_data):
         self.db_mngr.cache_items("entity group", db_map_data)
-        # self.listener.receive_entity_groups_fetched(db_map_data)
+        self.listener.receive_entity_groups_fetched(db_map_data)
 
     @Slot(object)
     def receive_parameter_definitions_fetched(self, db_map_data):

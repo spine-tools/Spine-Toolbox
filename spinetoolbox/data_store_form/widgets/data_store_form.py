@@ -615,6 +615,9 @@ class DataStoreFormBase(QMainWindow):
     def receive_relationships_fetched(self, db_map_data):
         pass
 
+    def receive_entity_groups_fetched(self, db_map_data):
+        pass
+
     def receive_parameter_definitions_fetched(self, db_map_data):
         pass
 

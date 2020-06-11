@@ -295,6 +295,7 @@ class TreeViewMixin:
 
     def receive_entity_groups_added(self, db_map_data):
         super().receive_entity_groups_added(db_map_data)
+        self.object_tree_model.raise_entity_groups(db_map_data)
         self.ui.treeView_object.refresh_active_member_indexes()
 
     def receive_object_classes_updated(self, db_map_data):

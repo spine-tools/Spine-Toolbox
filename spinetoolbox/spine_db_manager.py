@@ -843,8 +843,7 @@ class SpineDBManager(QObject):
             list: dictionary items
         """
         return self.get_db_items(
-            self._make_query(db_map, "ext_object_sq", ids=ids),
-            key=lambda x: (x["entity_group_id_list"] is None, x["class_id"], x["name"]),
+            self._make_query(db_map, "ext_object_sq", ids=ids), key=lambda x: (x["class_id"], x["name"])
         )
 
     def get_relationship_classes(self, db_map, ids=()):
