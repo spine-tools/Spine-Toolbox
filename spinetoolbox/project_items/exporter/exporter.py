@@ -272,7 +272,7 @@ class Exporter(ProjectItem):
         if worker is None:
             return
         worker.thread.quit()
-        worker.wait()
+        worker.thread.wait()
         worker.deleteLater()
         del self._workers[database_url]
         self._settings_packs[database_url].state = SettingsState.ERROR
