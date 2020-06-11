@@ -10,45 +10,65 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-# Form implementation generated from reading ui file 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\datetime_editor.ui',
-# licensing of 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\datetime_editor.ui' applies.
-#
-# Created: Mon May 11 15:50:30 2020
-#      by: pyside2-uic  running on PySide2 5.11.2
-#
-# WARNING! All changes made in this file will be lost!
+################################################################################
+## Form generated from reading UI file 'datetime_editor.ui'
+##
+## Created by: Qt User Interface Compiler version 5.14.2
+##
+## WARNING! All changes made in this file will be lost when recompiling UI file!
+################################################################################
 
-from PySide2 import QtCore, QtGui, QtWidgets
+from PySide2.QtCore import (QCoreApplication, QDate, QDateTime, QMetaObject,
+    QObject, QPoint, QRect, QSize, QTime, QUrl, Qt)
+from PySide2.QtGui import (QBrush, QColor, QConicalGradient, QCursor, QFont,
+    QFontDatabase, QIcon, QKeySequence, QLinearGradient, QPalette, QPainter,
+    QPixmap, QRadialGradient)
+from PySide2.QtWidgets import *
+
 
 class Ui_DatetimeEditor(object):
     def setupUi(self, DatetimeEditor):
-        DatetimeEditor.setObjectName("DatetimeEditor")
+        if not DatetimeEditor.objectName():
+            DatetimeEditor.setObjectName(u"DatetimeEditor")
         DatetimeEditor.resize(400, 300)
-        self.verticalLayout = QtWidgets.QVBoxLayout(DatetimeEditor)
-        self.verticalLayout.setObjectName("verticalLayout")
-        self.layout = QtWidgets.QFormLayout()
-        self.layout.setObjectName("layout")
-        self.datetime_edit_label = QtWidgets.QLabel(DatetimeEditor)
-        self.datetime_edit_label.setObjectName("datetime_edit_label")
-        self.layout.setWidget(0, QtWidgets.QFormLayout.LabelRole, self.datetime_edit_label)
-        self.edit_layout = QtWidgets.QVBoxLayout()
-        self.edit_layout.setObjectName("edit_layout")
-        self.datetime_edit = QtWidgets.QDateTimeEdit(DatetimeEditor)
+        self.verticalLayout = QVBoxLayout(DatetimeEditor)
+        self.verticalLayout.setObjectName(u"verticalLayout")
+        self.layout = QFormLayout()
+        self.layout.setObjectName(u"layout")
+        self.datetime_edit_label = QLabel(DatetimeEditor)
+        self.datetime_edit_label.setObjectName(u"datetime_edit_label")
+
+        self.layout.setWidget(0, QFormLayout.LabelRole, self.datetime_edit_label)
+
+        self.edit_layout = QVBoxLayout()
+        self.edit_layout.setObjectName(u"edit_layout")
+        self.datetime_edit = QDateTimeEdit(DatetimeEditor)
+        self.datetime_edit.setObjectName(u"datetime_edit")
         self.datetime_edit.setCalendarPopup(True)
-        self.datetime_edit.setObjectName("datetime_edit")
+
         self.edit_layout.addWidget(self.datetime_edit)
-        self.format_label = QtWidgets.QLabel(DatetimeEditor)
-        self.format_label.setObjectName("format_label")
+
+        self.format_label = QLabel(DatetimeEditor)
+        self.format_label.setObjectName(u"format_label")
+
         self.edit_layout.addWidget(self.format_label)
-        self.layout.setLayout(0, QtWidgets.QFormLayout.FieldRole, self.edit_layout)
+
+
+        self.layout.setLayout(0, QFormLayout.FieldRole, self.edit_layout)
+
+
         self.verticalLayout.addLayout(self.layout)
 
+
         self.retranslateUi(DatetimeEditor)
-        QtCore.QMetaObject.connectSlotsByName(DatetimeEditor)
+
+        QMetaObject.connectSlotsByName(DatetimeEditor)
+    # setupUi
 
     def retranslateUi(self, DatetimeEditor):
-        DatetimeEditor.setWindowTitle(QtWidgets.QApplication.translate("DatetimeEditor", "Form", None, -1))
-        self.datetime_edit_label.setText(QtWidgets.QApplication.translate("DatetimeEditor", "Datetime", None, -1))
-        self.datetime_edit.setDisplayFormat(QtWidgets.QApplication.translate("DatetimeEditor", "yyyy-MM-ddTHH:mm:ss", None, -1))
-        self.format_label.setText(QtWidgets.QApplication.translate("DatetimeEditor", "Format: YYYY--MM-DDThh:mm:ss", None, -1))
+        DatetimeEditor.setWindowTitle(QCoreApplication.translate("DatetimeEditor", u"Form", None))
+        self.datetime_edit_label.setText(QCoreApplication.translate("DatetimeEditor", u"Datetime", None))
+        self.datetime_edit.setDisplayFormat(QCoreApplication.translate("DatetimeEditor", u"yyyy-MM-ddTHH:mm:ss", None))
+        self.format_label.setText(QCoreApplication.translate("DatetimeEditor", u"Format: YYYY--MM-DDThh:mm:ss", None))
+    # retranslateUi
 

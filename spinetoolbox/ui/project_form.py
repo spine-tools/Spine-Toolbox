@@ -10,107 +10,150 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-# Form implementation generated from reading ui file 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\ui\project_form.ui',
-# licensing of 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\ui\project_form.ui' applies.
-#
-# Created: Thu Feb 13 11:54:10 2020
-#      by: pyside2-uic  running on PySide2 5.11.2
-#
-# WARNING! All changes made in this file will be lost!
+################################################################################
+## Form generated from reading UI file 'project_form.ui'
+##
+## Created by: Qt User Interface Compiler version 5.14.2
+##
+## WARNING! All changes made in this file will be lost when recompiling UI file!
+################################################################################
 
-from PySide2 import QtCore, QtGui, QtWidgets
+from PySide2.QtCore import (QCoreApplication, QDate, QDateTime, QMetaObject,
+    QObject, QPoint, QRect, QSize, QTime, QUrl, Qt)
+from PySide2.QtGui import (QBrush, QColor, QConicalGradient, QCursor, QFont,
+    QFontDatabase, QIcon, QKeySequence, QLinearGradient, QPalette, QPainter,
+    QPixmap, QRadialGradient)
+from PySide2.QtWidgets import *
+
+from spinetoolbox import resources_icons_rc
 
 class Ui_Form(object):
     def setupUi(self, Form):
-        Form.setObjectName("Form")
-        Form.setWindowModality(QtCore.Qt.ApplicationModal)
+        if not Form.objectName():
+            Form.setObjectName(u"Form")
+        Form.setWindowModality(Qt.ApplicationModal)
         Form.resize(500, 400)
-        Form.setMinimumSize(QtCore.QSize(500, 400))
-        Form.setMaximumSize(QtCore.QSize(500, 400))
-        self.verticalLayout = QtWidgets.QVBoxLayout(Form)
-        self.verticalLayout.setObjectName("verticalLayout")
-        self.horizontalLayout_2 = QtWidgets.QHBoxLayout()
-        self.horizontalLayout_2.setObjectName("horizontalLayout_2")
-        self.lineEdit_project_dir = QtWidgets.QLineEdit(Form)
-        self.lineEdit_project_dir.setCursor(QtCore.Qt.ArrowCursor)
+        Form.setMinimumSize(QSize(500, 400))
+        Form.setMaximumSize(QSize(500, 400))
+        self.verticalLayout = QVBoxLayout(Form)
+        self.verticalLayout.setObjectName(u"verticalLayout")
+        self.horizontalLayout_2 = QHBoxLayout()
+        self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
+        self.lineEdit_project_dir = QLineEdit(Form)
+        self.lineEdit_project_dir.setObjectName(u"lineEdit_project_dir")
+        self.lineEdit_project_dir.setCursor(QCursor(Qt.ArrowCursor))
         self.lineEdit_project_dir.setReadOnly(True)
         self.lineEdit_project_dir.setClearButtonEnabled(True)
-        self.lineEdit_project_dir.setObjectName("lineEdit_project_dir")
+
         self.horizontalLayout_2.addWidget(self.lineEdit_project_dir)
-        self.toolButton_select_project_dir = QtWidgets.QToolButton(Form)
-        self.toolButton_select_project_dir.setMaximumSize(QtCore.QSize(22, 22))
-        self.toolButton_select_project_dir.setText("")
-        icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap(":/icons/menu_icons/folder-open-solid.svg"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+
+        self.toolButton_select_project_dir = QToolButton(Form)
+        self.toolButton_select_project_dir.setObjectName(u"toolButton_select_project_dir")
+        self.toolButton_select_project_dir.setMaximumSize(QSize(22, 22))
+        icon = QIcon()
+        icon.addFile(u":/icons/menu_icons/folder-open-solid.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.toolButton_select_project_dir.setIcon(icon)
-        self.toolButton_select_project_dir.setObjectName("toolButton_select_project_dir")
+
         self.horizontalLayout_2.addWidget(self.toolButton_select_project_dir)
+
+
         self.verticalLayout.addLayout(self.horizontalLayout_2)
-        self.lineEdit_project_name = QtWidgets.QLineEdit(Form)
+
+        self.lineEdit_project_name = QLineEdit(Form)
+        self.lineEdit_project_name.setObjectName(u"lineEdit_project_name")
         self.lineEdit_project_name.setClearButtonEnabled(True)
-        self.lineEdit_project_name.setObjectName("lineEdit_project_name")
+
         self.verticalLayout.addWidget(self.lineEdit_project_name)
-        self.textEdit_description = QtWidgets.QTextEdit(Form)
+
+        self.textEdit_description = QTextEdit(Form)
+        self.textEdit_description.setObjectName(u"textEdit_description")
         self.textEdit_description.setTabChangesFocus(True)
         self.textEdit_description.setAcceptRichText(False)
-        self.textEdit_description.setObjectName("textEdit_description")
+
         self.verticalLayout.addWidget(self.textEdit_description)
-        self.label = QtWidgets.QLabel(Form)
-        font = QtGui.QFont()
+
+        self.label = QLabel(Form)
+        self.label.setObjectName(u"label")
+        font = QFont()
         font.setPointSize(7)
         font.setItalic(True)
         self.label.setFont(font)
-        self.label.setAlignment(QtCore.Qt.AlignCenter)
-        self.label.setObjectName("label")
+        self.label.setAlignment(Qt.AlignCenter)
+
         self.verticalLayout.addWidget(self.label)
-        self.label_2 = QtWidgets.QLabel(Form)
-        font = QtGui.QFont()
-        font.setPointSize(7)
-        font.setItalic(True)
+
+        self.label_2 = QLabel(Form)
+        self.label_2.setObjectName(u"label_2")
         self.label_2.setFont(font)
-        self.label_2.setAlignment(QtCore.Qt.AlignCenter)
-        self.label_2.setObjectName("label_2")
+        self.label_2.setAlignment(Qt.AlignCenter)
+
         self.verticalLayout.addWidget(self.label_2)
-        self.horizontalLayout = QtWidgets.QHBoxLayout()
+
+        self.horizontalLayout = QHBoxLayout()
         self.horizontalLayout.setSpacing(0)
+        self.horizontalLayout.setObjectName(u"horizontalLayout")
         self.horizontalLayout.setContentsMargins(-1, 6, -1, 6)
-        self.horizontalLayout.setObjectName("horizontalLayout")
-        spacerItem = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
-        self.horizontalLayout.addItem(spacerItem)
-        self.pushButton_ok = QtWidgets.QPushButton(Form)
-        self.pushButton_ok.setDefault(True)
-        self.pushButton_ok.setObjectName("pushButton_ok")
+        self.horizontalSpacer = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+
+        self.horizontalLayout.addItem(self.horizontalSpacer)
+
+        self.pushButton_ok = QPushButton(Form)
+        self.pushButton_ok.setObjectName(u"pushButton_ok")
+
         self.horizontalLayout.addWidget(self.pushButton_ok)
-        spacerItem1 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
-        self.horizontalLayout.addItem(spacerItem1)
-        self.pushButton_cancel = QtWidgets.QPushButton(Form)
-        self.pushButton_cancel.setDefault(True)
-        self.pushButton_cancel.setObjectName("pushButton_cancel")
+
+        self.horizontalSpacer_3 = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+
+        self.horizontalLayout.addItem(self.horizontalSpacer_3)
+
+        self.pushButton_cancel = QPushButton(Form)
+        self.pushButton_cancel.setObjectName(u"pushButton_cancel")
+
         self.horizontalLayout.addWidget(self.pushButton_cancel)
-        spacerItem2 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
-        self.horizontalLayout.addItem(spacerItem2)
+
+        self.horizontalSpacer_2 = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+
+        self.horizontalLayout.addItem(self.horizontalSpacer_2)
+
+
         self.verticalLayout.addLayout(self.horizontalLayout)
 
+        QWidget.setTabOrder(self.toolButton_select_project_dir, self.lineEdit_project_name)
+        QWidget.setTabOrder(self.lineEdit_project_name, self.textEdit_description)
+        QWidget.setTabOrder(self.textEdit_description, self.pushButton_ok)
+        QWidget.setTabOrder(self.pushButton_ok, self.pushButton_cancel)
+        QWidget.setTabOrder(self.pushButton_cancel, self.lineEdit_project_dir)
+
         self.retranslateUi(Form)
-        QtCore.QMetaObject.connectSlotsByName(Form)
-        Form.setTabOrder(self.toolButton_select_project_dir, self.lineEdit_project_name)
-        Form.setTabOrder(self.lineEdit_project_name, self.textEdit_description)
-        Form.setTabOrder(self.textEdit_description, self.pushButton_ok)
-        Form.setTabOrder(self.pushButton_ok, self.pushButton_cancel)
-        Form.setTabOrder(self.pushButton_cancel, self.lineEdit_project_dir)
+
+        self.pushButton_ok.setDefault(True)
+        self.pushButton_cancel.setDefault(True)
+
+
+        QMetaObject.connectSlotsByName(Form)
+    # setupUi
 
     def retranslateUi(self, Form):
-        Form.setWindowTitle(QtWidgets.QApplication.translate("Form", "New Project", None, -1))
-        self.lineEdit_project_dir.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Project directory</p></body></html>", None, -1))
-        self.lineEdit_project_dir.setPlaceholderText(QtWidgets.QApplication.translate("Form", "Select project directory...", None, -1))
-        self.toolButton_select_project_dir.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Click here to select a directory for the new project</p></body></html>", None, -1))
-        self.lineEdit_project_name.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Project name (Required)</p></body></html>", None, -1))
-        self.lineEdit_project_name.setPlaceholderText(QtWidgets.QApplication.translate("Form", "Type project name here...", None, -1))
-        self.textEdit_description.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Project description (Optional)</p></body></html>", None, -1))
-        self.textEdit_description.setPlaceholderText(QtWidgets.QApplication.translate("Form", "Type project description here...", None, -1))
-        self.label.setText(QtWidgets.QApplication.translate("Form", "1. Select project directory", None, -1))
-        self.label_2.setText(QtWidgets.QApplication.translate("Form", "2. Type project name and description (optional)", None, -1))
-        self.pushButton_ok.setText(QtWidgets.QApplication.translate("Form", "Ok", None, -1))
-        self.pushButton_cancel.setText(QtWidgets.QApplication.translate("Form", "Cancel", None, -1))
+        Form.setWindowTitle(QCoreApplication.translate("Form", u"New Project", None))
+#if QT_CONFIG(tooltip)
+        self.lineEdit_project_dir.setToolTip(QCoreApplication.translate("Form", u"<html><head/><body><p>Project directory</p></body></html>", None))
+#endif // QT_CONFIG(tooltip)
+        self.lineEdit_project_dir.setPlaceholderText(QCoreApplication.translate("Form", u"Select project directory...", None))
+#if QT_CONFIG(tooltip)
+        self.toolButton_select_project_dir.setToolTip(QCoreApplication.translate("Form", u"<html><head/><body><p>Click here to select a directory for the new project</p></body></html>", None))
+#endif // QT_CONFIG(tooltip)
+        self.toolButton_select_project_dir.setText("")
+#if QT_CONFIG(tooltip)
+        self.lineEdit_project_name.setToolTip(QCoreApplication.translate("Form", u"<html><head/><body><p>Project name (Required)</p></body></html>", None))
+#endif // QT_CONFIG(tooltip)
+        self.lineEdit_project_name.setPlaceholderText(QCoreApplication.translate("Form", u"Type project name here...", None))
+#if QT_CONFIG(tooltip)
+        self.textEdit_description.setToolTip(QCoreApplication.translate("Form", u"<html><head/><body><p>Project description (Optional)</p></body></html>", None))
+#endif // QT_CONFIG(tooltip)
+        self.textEdit_description.setPlaceholderText(QCoreApplication.translate("Form", u"Type project description here...", None))
+        self.label.setText(QCoreApplication.translate("Form", u"1. Select project directory", None))
+        self.label_2.setText(QCoreApplication.translate("Form", u"2. Type project name and description (optional)", None))
+        self.pushButton_ok.setText(QCoreApplication.translate("Form", u"Ok", None))
+        self.pushButton_cancel.setText(QCoreApplication.translate("Form", u"Cancel", None))
+    # retranslateUi
 
-from spinetoolbox import resources_icons_rc

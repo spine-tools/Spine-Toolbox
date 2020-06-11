@@ -10,30 +10,43 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-# Form implementation generated from reading ui file 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\time_pattern_editor.ui',
-# licensing of 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\time_pattern_editor.ui' applies.
-#
-# Created: Mon May 11 15:50:43 2020
-#      by: pyside2-uic  running on PySide2 5.11.2
-#
-# WARNING! All changes made in this file will be lost!
+################################################################################
+## Form generated from reading UI file 'time_pattern_editor.ui'
+##
+## Created by: Qt User Interface Compiler version 5.14.2
+##
+## WARNING! All changes made in this file will be lost when recompiling UI file!
+################################################################################
 
-from PySide2 import QtCore, QtGui, QtWidgets
+from PySide2.QtCore import (QCoreApplication, QDate, QDateTime, QMetaObject,
+    QObject, QPoint, QRect, QSize, QTime, QUrl, Qt)
+from PySide2.QtGui import (QBrush, QColor, QConicalGradient, QCursor, QFont,
+    QFontDatabase, QIcon, QKeySequence, QLinearGradient, QPalette, QPainter,
+    QPixmap, QRadialGradient)
+from PySide2.QtWidgets import *
+
+from spinetoolbox.widgets.custom_qtableview import IndexedValueTableView
+
 
 class Ui_TimePatternEditor(object):
     def setupUi(self, TimePatternEditor):
-        TimePatternEditor.setObjectName("TimePatternEditor")
+        if not TimePatternEditor.objectName():
+            TimePatternEditor.setObjectName(u"TimePatternEditor")
         TimePatternEditor.resize(586, 443)
-        self.verticalLayout = QtWidgets.QVBoxLayout(TimePatternEditor)
-        self.verticalLayout.setObjectName("verticalLayout")
+        self.verticalLayout = QVBoxLayout(TimePatternEditor)
+        self.verticalLayout.setObjectName(u"verticalLayout")
         self.pattern_edit_table = IndexedValueTableView(TimePatternEditor)
-        self.pattern_edit_table.setObjectName("pattern_edit_table")
+        self.pattern_edit_table.setObjectName(u"pattern_edit_table")
+
         self.verticalLayout.addWidget(self.pattern_edit_table)
 
+
         self.retranslateUi(TimePatternEditor)
-        QtCore.QMetaObject.connectSlotsByName(TimePatternEditor)
+
+        QMetaObject.connectSlotsByName(TimePatternEditor)
+    # setupUi
 
     def retranslateUi(self, TimePatternEditor):
-        TimePatternEditor.setWindowTitle(QtWidgets.QApplication.translate("TimePatternEditor", "Form", None, -1))
+        TimePatternEditor.setWindowTitle(QCoreApplication.translate("TimePatternEditor", u"Form", None))
+    # retranslateUi
 
-from spinetoolbox.widgets.custom_qtableview import IndexedValueTableView

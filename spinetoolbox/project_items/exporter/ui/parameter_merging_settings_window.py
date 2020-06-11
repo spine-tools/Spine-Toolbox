@@ -10,53 +10,75 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-# Form implementation generated from reading ui file 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\project_items\exporter\ui\parameter_merging_settings_window.ui',
-# licensing of 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\project_items\exporter\ui\parameter_merging_settings_window.ui' applies.
-#
-# Created: Thu Mar 12 14:58:56 2020
-#      by: pyside2-uic  running on PySide2 5.11.2
-#
-# WARNING! All changes made in this file will be lost!
+################################################################################
+## Form generated from reading UI file 'parameter_merging_settings_window.ui'
+##
+## Created by: Qt User Interface Compiler version 5.14.2
+##
+## WARNING! All changes made in this file will be lost when recompiling UI file!
+################################################################################
 
-from PySide2 import QtCore, QtGui, QtWidgets
+from PySide2.QtCore import (QCoreApplication, QDate, QDateTime, QMetaObject,
+    QObject, QPoint, QRect, QSize, QTime, QUrl, Qt)
+from PySide2.QtGui import (QBrush, QColor, QConicalGradient, QCursor, QFont,
+    QFontDatabase, QIcon, QKeySequence, QLinearGradient, QPalette, QPainter,
+    QPixmap, QRadialGradient)
+from PySide2.QtWidgets import *
+
 
 class Ui_Form(object):
     def setupUi(self, Form):
-        Form.setObjectName("Form")
+        if not Form.objectName():
+            Form.setObjectName(u"Form")
         Form.resize(646, 496)
-        self.verticalLayout = QtWidgets.QVBoxLayout(Form)
-        self.verticalLayout.setObjectName("verticalLayout")
-        self.horizontalLayout = QtWidgets.QHBoxLayout()
-        self.horizontalLayout.setObjectName("horizontalLayout")
-        self.add_button = QtWidgets.QPushButton(Form)
-        self.add_button.setObjectName("add_button")
+        self.verticalLayout = QVBoxLayout(Form)
+        self.verticalLayout.setObjectName(u"verticalLayout")
+        self.horizontalLayout = QHBoxLayout()
+        self.horizontalLayout.setObjectName(u"horizontalLayout")
+        self.add_button = QPushButton(Form)
+        self.add_button.setObjectName(u"add_button")
+
         self.horizontalLayout.addWidget(self.add_button)
-        spacerItem = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
-        self.horizontalLayout.addItem(spacerItem)
+
+        self.horizontalSpacer = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+
+        self.horizontalLayout.addItem(self.horizontalSpacer)
+
+
         self.verticalLayout.addLayout(self.horizontalLayout)
-        self.setting_area = QtWidgets.QScrollArea(Form)
-        self.setting_area.setFrameShape(QtWidgets.QFrame.NoFrame)
+
+        self.setting_area = QScrollArea(Form)
+        self.setting_area.setObjectName(u"setting_area")
+        self.setting_area.setFrameShape(QFrame.NoFrame)
         self.setting_area.setWidgetResizable(True)
-        self.setting_area.setObjectName("setting_area")
-        self.setting_area_contents = QtWidgets.QWidget()
-        self.setting_area_contents.setGeometry(QtCore.QRect(0, 0, 628, 418))
-        self.setting_area_contents.setObjectName("setting_area_contents")
-        self.verticalLayout_3 = QtWidgets.QVBoxLayout(self.setting_area_contents)
-        self.verticalLayout_3.setObjectName("verticalLayout_3")
-        self.settings_area_layout = QtWidgets.QVBoxLayout()
-        self.settings_area_layout.setObjectName("settings_area_layout")
+        self.setting_area_contents = QWidget()
+        self.setting_area_contents.setObjectName(u"setting_area_contents")
+        self.setting_area_contents.setGeometry(QRect(0, 0, 628, 418))
+        self.verticalLayout_3 = QVBoxLayout(self.setting_area_contents)
+        self.verticalLayout_3.setObjectName(u"verticalLayout_3")
+        self.settings_area_layout = QVBoxLayout()
+        self.settings_area_layout.setObjectName(u"settings_area_layout")
+
         self.verticalLayout_3.addLayout(self.settings_area_layout)
+
         self.setting_area.setWidget(self.setting_area_contents)
+
         self.verticalLayout.addWidget(self.setting_area)
-        self.button_box = QtWidgets.QDialogButtonBox(Form)
-        self.button_box.setStandardButtons(QtWidgets.QDialogButtonBox.Cancel|QtWidgets.QDialogButtonBox.Ok)
-        self.button_box.setObjectName("button_box")
+
+        self.button_box = QDialogButtonBox(Form)
+        self.button_box.setObjectName(u"button_box")
+        self.button_box.setStandardButtons(QDialogButtonBox.Cancel|QDialogButtonBox.Ok)
+
         self.verticalLayout.addWidget(self.button_box)
 
+
         self.retranslateUi(Form)
-        QtCore.QMetaObject.connectSlotsByName(Form)
+
+        QMetaObject.connectSlotsByName(Form)
+    # setupUi
 
     def retranslateUi(self, Form):
-        Form.setWindowTitle(QtWidgets.QApplication.translate("Form", "Form", None, -1))
-        self.add_button.setText(QtWidgets.QApplication.translate("Form", "Add", None, -1))
+        Form.setWindowTitle(QCoreApplication.translate("Form", u"Form", None))
+        self.add_button.setText(QCoreApplication.translate("Form", u"Add", None))
+    # retranslateUi
 

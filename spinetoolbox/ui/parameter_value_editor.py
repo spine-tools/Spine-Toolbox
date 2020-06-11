@@ -10,29 +10,37 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-# Form implementation generated from reading ui file 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\parameter_value_editor.ui',
-# licensing of 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\parameter_value_editor.ui' applies.
-#
-# Created: Mon May 11 15:50:38 2020
-#      by: pyside2-uic  running on PySide2 5.11.2
-#
-# WARNING! All changes made in this file will be lost!
+################################################################################
+## Form generated from reading UI file 'parameter_value_editor.ui'
+##
+## Created by: Qt User Interface Compiler version 5.14.2
+##
+## WARNING! All changes made in this file will be lost when recompiling UI file!
+################################################################################
 
-from PySide2 import QtCore, QtGui, QtWidgets
+from PySide2.QtCore import (QCoreApplication, QDate, QDateTime, QMetaObject,
+    QObject, QPoint, QRect, QSize, QTime, QUrl, Qt)
+from PySide2.QtGui import (QBrush, QColor, QConicalGradient, QCursor, QFont,
+    QFontDatabase, QIcon, QKeySequence, QLinearGradient, QPalette, QPainter,
+    QPixmap, QRadialGradient)
+from PySide2.QtWidgets import *
+
 
 class Ui_ParameterValueEditor(object):
     def setupUi(self, ParameterValueEditor):
-        ParameterValueEditor.setObjectName("ParameterValueEditor")
+        if not ParameterValueEditor.objectName():
+            ParameterValueEditor.setObjectName(u"ParameterValueEditor")
         ParameterValueEditor.resize(700, 400)
-        self.verticalLayout = QtWidgets.QVBoxLayout(ParameterValueEditor)
-        self.verticalLayout.setObjectName("verticalLayout")
-        self.parameter_type_selector_layout = QtWidgets.QHBoxLayout()
-        self.parameter_type_selector_layout.setObjectName("parameter_type_selector_layout")
-        self.parameter_type_selector_label = QtWidgets.QLabel(ParameterValueEditor)
-        self.parameter_type_selector_label.setObjectName("parameter_type_selector_label")
+        self.verticalLayout = QVBoxLayout(ParameterValueEditor)
+        self.verticalLayout.setObjectName(u"verticalLayout")
+        self.parameter_type_selector_layout = QHBoxLayout()
+        self.parameter_type_selector_layout.setObjectName(u"parameter_type_selector_layout")
+        self.parameter_type_selector_label = QLabel(ParameterValueEditor)
+        self.parameter_type_selector_label.setObjectName(u"parameter_type_selector_label")
+
         self.parameter_type_selector_layout.addWidget(self.parameter_type_selector_label)
-        self.parameter_type_selector = QtWidgets.QComboBox(ParameterValueEditor)
-        self.parameter_type_selector.setObjectName("parameter_type_selector")
+
+        self.parameter_type_selector = QComboBox(ParameterValueEditor)
         self.parameter_type_selector.addItem("")
         self.parameter_type_selector.addItem("")
         self.parameter_type_selector.addItem("")
@@ -41,31 +49,48 @@ class Ui_ParameterValueEditor(object):
         self.parameter_type_selector.addItem("")
         self.parameter_type_selector.addItem("")
         self.parameter_type_selector.addItem("")
+        self.parameter_type_selector.setObjectName(u"parameter_type_selector")
+
         self.parameter_type_selector_layout.addWidget(self.parameter_type_selector)
-        spacerItem = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
-        self.parameter_type_selector_layout.addItem(spacerItem)
+
+        self.parameter_type_selector_spacer = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+
+        self.parameter_type_selector_layout.addItem(self.parameter_type_selector_spacer)
+
+
         self.verticalLayout.addLayout(self.parameter_type_selector_layout)
-        self.editor_stack = QtWidgets.QStackedWidget(ParameterValueEditor)
-        self.editor_stack.setObjectName("editor_stack")
+
+        self.editor_stack = QStackedWidget(ParameterValueEditor)
+        self.editor_stack.setObjectName(u"editor_stack")
+
         self.verticalLayout.addWidget(self.editor_stack)
-        self.button_box = QtWidgets.QDialogButtonBox(ParameterValueEditor)
-        self.button_box.setStandardButtons(QtWidgets.QDialogButtonBox.Cancel|QtWidgets.QDialogButtonBox.Ok)
-        self.button_box.setObjectName("button_box")
+
+        self.button_box = QDialogButtonBox(ParameterValueEditor)
+        self.button_box.setObjectName(u"button_box")
+        self.button_box.setStandardButtons(QDialogButtonBox.Cancel|QDialogButtonBox.Ok)
+
         self.verticalLayout.addWidget(self.button_box)
 
+
         self.retranslateUi(ParameterValueEditor)
+
         self.editor_stack.setCurrentIndex(-1)
-        QtCore.QMetaObject.connectSlotsByName(ParameterValueEditor)
+
+
+        QMetaObject.connectSlotsByName(ParameterValueEditor)
+    # setupUi
 
     def retranslateUi(self, ParameterValueEditor):
-        ParameterValueEditor.setWindowTitle(QtWidgets.QApplication.translate("ParameterValueEditor", "Edit parameter value", None, -1))
-        self.parameter_type_selector_label.setText(QtWidgets.QApplication.translate("ParameterValueEditor", "Parameter type", None, -1))
-        self.parameter_type_selector.setItemText(0, QtWidgets.QApplication.translate("ParameterValueEditor", "Plain value", None, -1))
-        self.parameter_type_selector.setItemText(1, QtWidgets.QApplication.translate("ParameterValueEditor", "Map", None, -1))
-        self.parameter_type_selector.setItemText(2, QtWidgets.QApplication.translate("ParameterValueEditor", "Time series - fixed resolution", None, -1))
-        self.parameter_type_selector.setItemText(3, QtWidgets.QApplication.translate("ParameterValueEditor", "Time series - variable resolution", None, -1))
-        self.parameter_type_selector.setItemText(4, QtWidgets.QApplication.translate("ParameterValueEditor", "Time pattern", None, -1))
-        self.parameter_type_selector.setItemText(5, QtWidgets.QApplication.translate("ParameterValueEditor", "Array", None, -1))
-        self.parameter_type_selector.setItemText(6, QtWidgets.QApplication.translate("ParameterValueEditor", "Datetime", None, -1))
-        self.parameter_type_selector.setItemText(7, QtWidgets.QApplication.translate("ParameterValueEditor", "Duration", None, -1))
+        ParameterValueEditor.setWindowTitle(QCoreApplication.translate("ParameterValueEditor", u"Edit parameter value", None))
+        self.parameter_type_selector_label.setText(QCoreApplication.translate("ParameterValueEditor", u"Parameter type", None))
+        self.parameter_type_selector.setItemText(0, QCoreApplication.translate("ParameterValueEditor", u"Plain value", None))
+        self.parameter_type_selector.setItemText(1, QCoreApplication.translate("ParameterValueEditor", u"Map", None))
+        self.parameter_type_selector.setItemText(2, QCoreApplication.translate("ParameterValueEditor", u"Time series - fixed resolution", None))
+        self.parameter_type_selector.setItemText(3, QCoreApplication.translate("ParameterValueEditor", u"Time series - variable resolution", None))
+        self.parameter_type_selector.setItemText(4, QCoreApplication.translate("ParameterValueEditor", u"Time pattern", None))
+        self.parameter_type_selector.setItemText(5, QCoreApplication.translate("ParameterValueEditor", u"Array", None))
+        self.parameter_type_selector.setItemText(6, QCoreApplication.translate("ParameterValueEditor", u"Datetime", None))
+        self.parameter_type_selector.setItemText(7, QCoreApplication.translate("ParameterValueEditor", u"Duration", None))
+
+    # retranslateUi
 

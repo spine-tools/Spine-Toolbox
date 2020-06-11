@@ -18,8 +18,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>862</width>
-    <height>791</height>
+    <width>860</width>
+    <height>602</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -126,8 +126,8 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>862</width>
-     <height>28</height>
+     <width>860</width>
+     <height>26</height>
     </rect>
    </property>
    <property name="nativeMenuBar">
