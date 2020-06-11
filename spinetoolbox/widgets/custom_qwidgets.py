@@ -74,7 +74,7 @@ class FilterWidgetBase(QWidget):
         self._filter_model = None
 
     def connect_signals(self):
-        self._ui_list.clicked.connect(self._filter_model.click_index)
+        self._ui_list.clicked.connect(self._filter_model._handle_index_clicked)
         self._search_timer.timeout.connect(self._filter_list)
         self._ui_edit.textChanged.connect(self._text_edited)
         self._ui_buttons.button(QDialogButtonBox.Ok).clicked.connect(self._apply_filter)
@@ -183,7 +183,7 @@ class TitleWidgetAction(CustomWidgetAction):
         layout.setSpacing(self.V_MARGIN)
         label = QLabel(title, widget)
         fm = QFontMetrics(label.font())
-        label.setFixedWidth(fm.width(title))
+        label.setFixedWidth(fm.horizontalAdvance(title))
         lines = QFrame(widget), QFrame(widget)
         for line in lines:
             line.setFrameShape(QFrame.HLine)

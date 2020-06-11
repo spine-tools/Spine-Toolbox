@@ -44,7 +44,7 @@ class SingleParameterModel(MinimalTableModel):
         self.db_mngr = db_mngr
         self.db_map = db_map
         self.entity_class_id = entity_class_id
-        self._auto_filter = dict()
+        self._auto_filter = dict()  # Maps field to accepted ids for that field
         self._filter_parameter_ids = dict()
 
     @property
@@ -95,6 +95,9 @@ class SingleParameterModel(MinimalTableModel):
     def insertRows(self, row, count, parent=QModelIndex()):
         """This model doesn't support row insertion."""
         return False
+
+    def item_id(self, row):
+        return self._main_data[row]
 
     def db_item(self, index):
         return self._db_item(index.row())
@@ -229,8 +232,8 @@ class SingleParameterModel(MinimalTableModel):
         if self._auto_filter is None:
             return False
         item_id = self._main_data[row]
-        for valid_ids in self._auto_filter.values():
-            if valid_ids and item_id not in valid_ids:
+        for accepted_ids in self._auto_filter.values():
+            if accepted_ids and item_id not in accepted_ids:
                 return False
         return True
 

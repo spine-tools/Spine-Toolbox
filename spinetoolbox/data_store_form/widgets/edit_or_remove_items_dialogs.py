@@ -17,7 +17,7 @@ Classes for custom QDialogs to edit items in databases.
 """
 
 from PySide2.QtCore import Slot
-from PySide2.QtWidgets import QCheckBox
+from PySide2.QtWidgets import QCheckBox, QWidget, QHBoxLayout
 from ...mvcmodels.minimal_table_model import MinimalTableModel
 from ...mvcmodels.empty_row_model import EmptyRowModel
 from ...mvcmodels.compound_table_model import CompoundWithEmptyTableModel
@@ -464,14 +464,21 @@ class ManageParameterTagsDialog(ManageItemsDialog):
         self.empty_model = EmptyRowModel(self, header=header)
         self.model.sub_models += [self.filled_model, self.empty_model]
         self.model.connect_model_signals()
-        self.empty_model.set_default_row(**{'databases': db_names})
         self.filled_model.reset_model(model_data)
+        self.empty_model.set_default_row(**{'databases': db_names})
         # Create checkboxes
         column = self.model.header.index('remove')
         for row in range(0, self.filled_model.rowCount()):
             index = self.model.index(row, column)
             check_box = QCheckBox(self)
-            self.table_view.setIndexWidget(index, check_box)
+            widget = QWidget(self)
+            layout = QHBoxLayout(widget)
+            layout.setContentsMargins(0, 0, 0, 0)
+            layout.addStretch()
+            layout.addWidget(check_box)
+            layout.addStretch()
+            self.table_view.setIndexWidget(index, widget)
+        self._handle_model_reset()
 
     def all_databases(self, row):
         """Returns a list of db names available for a given row.

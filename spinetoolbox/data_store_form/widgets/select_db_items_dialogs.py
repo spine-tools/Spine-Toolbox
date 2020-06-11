@@ -144,7 +144,7 @@ class MassRemoveItemsDialog(SelectDBItemsDialog):
         super().accept()
 
 
-class GetItemsForExportDialog(SelectDBItemsDialog):
+class MassExportItemsDialog(SelectDBItemsDialog):
     """A dialog to let users chose items for JSON export."""
 
     data_submitted = Signal(object)
@@ -158,7 +158,7 @@ class GetItemsForExportDialog(SelectDBItemsDialog):
             db_maps (DiffDatabaseMapping): the dbs to select items from
         """
         super().__init__(parent, db_mngr, *db_maps)
-        self.setWindowTitle("Select items for export")
+        self.setWindowTitle("Mass export items")
         for item_type in (
             "object class",
             "relationship class",

@@ -22,6 +22,7 @@ from .add_items_dialogs import (
     AddObjectsDialog,
     AddRelationshipClassesDialog,
     AddRelationshipsDialog,
+    ManageRelationshipsDialog,
 )
 from .edit_or_remove_items_dialogs import (
     EditObjectClassesDialog,
@@ -31,7 +32,6 @@ from .edit_or_remove_items_dialogs import (
     RemoveEntitiesDialog,
 )
 from ..mvcmodels.entity_tree_models import ObjectTreeModel, RelationshipTreeModel
-from ...helpers import busy_effect
 from ...spine_db_parcel import SpineDBParcel
 
 
@@ -69,6 +69,7 @@ class TreeViewMixin:
         self.ui.actionAdd_relationship_classes.triggered.connect(self.show_add_relationship_classes_form)
         self.ui.actionAdd_objects.triggered.connect(self.show_add_objects_form)
         self.ui.actionAdd_relationships.triggered.connect(self.show_add_relationships_form)
+        self.ui.actionManage_relationships.triggered.connect(self.show_manage_relationships_form)
         self._object_classes_added.connect(lambda: self.ui.treeView_object.resizeColumnToContents(0))
         self._object_classes_fetched.connect(lambda: self.ui.treeView_object.expand(self.object_tree_model.root_index))
         self._relationship_classes_added.connect(lambda: self.ui.treeView_relationship.resizeColumnToContents(0))
@@ -120,7 +121,6 @@ class TreeViewMixin:
         parcel.push_relationship_ids(db_map_rel_ids)
         self.export_data(parcel.data)
 
-    @busy_effect
     def duplicate_object(self, index):
         """
         Duplicates the object at the given object tree model index.
@@ -141,17 +141,19 @@ class TreeViewMixin:
         parcel.push_inside_object_ids(db_map_obj_ids)
         data = self._make_data_for_export(parcel.data)
         data = {
-            "objects": [(cls_name, dup_name) for (cls_name, obj_name) in data["objects"]],
+            "objects": [
+                (cls_name, dup_name, description) for (cls_name, obj_name, description) in data.get("objects", [])
+            ],
             "relationships": [
-                (cls_name, _replace_name(obj_name_lst)) for (cls_name, obj_name_lst) in data["relationships"]
+                (cls_name, _replace_name(obj_name_lst)) for (cls_name, obj_name_lst) in data.get("relationships", [])
             ],
             "object_parameter_values": [
                 (cls_name, dup_name, param_name, val)
-                for (cls_name, obj_name, param_name, val) in data["object_parameter_values"]
+                for (cls_name, obj_name, param_name, val) in data.get("object_parameter_values", [])
             ],
             "relationship_parameter_values": [
                 (cls_name, _replace_name(obj_name_lst), param_name, val)
-                for (cls_name, obj_name_lst, param_name, val) in data["relationship_parameter_values"]
+                for (cls_name, obj_name_lst, param_name, val) in data.get("relationship_parameter_values", [])
             ],
         }
         self.db_mngr.import_data({db_map: data for db_map in object_item.db_maps}, command_text="Duplicate object")
@@ -186,6 +188,11 @@ class TreeViewMixin:
             relationship_class_key=relationship_class_key,
             object_names_by_class_name=object_names_by_class_name
         )
+        dialog.show()
+
+    @Slot(bool)
+    def show_manage_relationships_form(self, checked=False):
+        dialog = ManageRelationshipsDialog(self, self.db_mngr, *self.db_maps)
         dialog.show()
 
     def edit_entity_tree_items(self, selected_indexes):

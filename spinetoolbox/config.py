@@ -20,7 +20,7 @@ import sys
 import os
 
 REQUIRED_SPINE_ENGINE_VERSION = "0.5.0"
-REQUIRED_SPINEDB_API_VERSION = "0.5.7"
+REQUIRED_SPINEDB_API_VERSION = "0.5.9"
 LATEST_PROJECT_VERSION = 1
 # SPINE GREEN HTML: #99cc33 RGBa: 153, 204, 51, 255
 # SPINE BLUE HTML: #004ac2 RGBa: 0, 74, 194, 255
@@ -42,6 +42,7 @@ if _frozen:
 else:
     DOCUMENTATION_PATH = os.path.abspath(os.path.join(_program_root, "docs", "build", "html"))
 PLUGINS_PATH = os.path.abspath(os.path.join(_program_root, "plugins"))
+ONLINE_DOCUMENTATION_URL = "https://spine-toolbox.readthedocs.io/en/latest"
 
 # Tool output directory name
 TOOL_OUTPUT_DIR = "output"

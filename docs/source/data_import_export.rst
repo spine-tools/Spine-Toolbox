@@ -66,41 +66,6 @@ Right clicking the column header also gives the opportunity to change the data t
 .. image:: img/import_editor_column_data_type_menu.png
    :align: center
 
-Exporting to Excel
-------------------
-
-To export a Spine database to an Excel file, select a **Data store** and open the **Data store view**.
-Then select **File -> Export** from the main menu.
-
-.. tip:: An easy way to get an Excel template is to export an existing Spine database to Excel.
-
-Format
-~~~~~~
-
-The exported Excel files are formatted in the following way:
-
-Object classes:
-
-.. image:: img/excel_object_sheet.png
-   :align: center
-
-Object timeseries:
-
-.. image:: img/excel_object_sheet_timeseries.png
-   :align: center
-
-Relationship classes:
-
-.. image:: img/excel_relationship_sheet.png
-   :align: center
-
-Relationship timeseries:
-
-.. image:: img/excel_relationship_sheet_timeseries.png
-   :align: center
-
-When exporting all object classes and relationship classes are exported.
-Only parameter values with time series data are exported in the time series format.
 
 Exporting to GAMS
 -----------------

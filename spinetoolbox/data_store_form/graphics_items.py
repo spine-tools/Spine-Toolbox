@@ -22,7 +22,7 @@ from PySide2.QtWidgets import (
     QGraphicsRectItem,
     QGraphicsEllipseItem,
     QGraphicsPixmapItem,
-    QGraphicsLineItem,
+    QGraphicsPathItem,
     QStyle,
     QApplication,
     QMenu,
@@ -35,6 +35,18 @@ from spinetoolbox.widgets.custom_qwidgets import TitleWidgetAction
 
 
 def make_figure_graphics_item(scene, z=0, static=True):
+    """Creates a FigureCanvas and adds it to the given scene.
+    Used for creating heatmaps and associated colorbars.
+
+    Args:
+        scene (QGraphicsScene)
+        z (int, optional): z value. Defaults to 0.
+        static (bool, optional): if True (the default) the figure canvas is not movable
+
+    Returns:
+        QGraphicsProxyWidget: the graphics item that represents the canvas
+        Figure: the figure in the canvas
+    """
     figure = Figure(tight_layout={"pad": 0})
     axes = figure.gca(xmargin=0, ymargin=0, frame_on=None)
     axes.get_xaxis().set_visible(False)
@@ -175,6 +187,7 @@ class EntityItem(QGraphicsPixmapItem):
             arc_item (ArcItem)
         """
         self.arc_items.append(arc_item)
+        arc_item.update_line()
 
     def apply_zoom(self, factor):
         """Applies zoom.
@@ -335,7 +348,7 @@ class RelationshipItem(EntityItem):
         self._bg_brush = QBrush(bg_color)
 
     def follow_object_by(self, dx, dy):
-        factor = 1.0 / len(self.arc_items)
+        factor = 1.0 / len(set(arc.obj_item for arc in self.arc_items))
         self.moveBy(factor * dx, factor * dy)
 
 
@@ -391,8 +404,9 @@ class ObjectItem(EntityItem):
         )
         if rel_items_follow == "false":
             return
-        for arc_item in self.arc_items:
-            arc_item.rel_item.follow_object_by(dx, dy)
+        rel_items = {arc_item.rel_item for arc_item in self.arc_items}
+        for rel_item in rel_items:
+            rel_item.follow_object_by(dx, dy)
 
     def _make_menu(self):
         menu = super()._make_menu()
@@ -441,7 +455,7 @@ class ObjectItem(EntityItem):
         self._data_store_form.start_relationship(self._relationship_class_per_action[action], self)
 
 
-class ArcItem(QGraphicsLineItem):
+class ArcItem(QGraphicsPathItem):
     """Connects a RelationshipItem to an ObjectItem."""
 
     def __init__(self, rel_item, obj_item, width):
@@ -456,13 +470,13 @@ class ArcItem(QGraphicsLineItem):
         self.rel_item = rel_item
         self.obj_item = obj_item
         self._width = float(width)
-        self.update_line()
         self._pen = self._make_pen()
         self.setPen(self._pen)
         self.setZValue(-2)
         rel_item.add_arc_item(self)
         obj_item.add_arc_item(self)
         self.setCursor(Qt.ArrowCursor)
+        self.update_line()
 
     def _make_pen(self):
         pen = QPen()
@@ -478,11 +492,22 @@ class ArcItem(QGraphicsLineItem):
         """Does nothing. This item is not moved the regular way, but follows the EntityItems it connects."""
 
     def update_line(self):
-        src_x = self.rel_item.x()
-        src_y = self.rel_item.y()
-        dst_x = self.obj_item.x()
-        dst_y = self.obj_item.y()
-        self.setLine(src_x, src_y, dst_x, dst_y)
+        overlapping_arcs = [arc for arc in self.rel_item.arc_items if arc.obj_item == self.obj_item]
+        count = len(overlapping_arcs)
+        path = QPainterPath(self.rel_item.pos())
+        if count == 1:
+            path.lineTo(self.obj_item.pos())
+        else:
+            rank = overlapping_arcs.index(self)
+            line = QLineF(self.rel_item.pos(), self.obj_item.pos())
+            line.setP1(line.center())
+            line = line.normalVector()
+            line.setLength(self._width * count)
+            line.setP1(2 * line.p1() - line.p2())
+            t = rank / (count - 1)
+            ctrl_point = line.pointAt(t)
+            path.quadTo(ctrl_point, self.obj_item.pos())
+        self.setPath(path)
 
     def mousePressEvent(self, event):
         """Accepts the event so it's not propagated."""
@@ -554,8 +579,9 @@ class CrossHairsItem(RelationshipItem):
 
     def block_move_by(self, dx, dy):
         self.moveBy(dx, dy)
-        for arc_item in self.arc_items:
-            arc_item.rel_item.follow_object_by(dx, dy)
+        rel_items = {arc_item.rel_item for arc_item in self.arc_items}
+        for rel_item in rel_items:
+            rel_item.follow_object_by(dx, dy)
 
     def contextMenuEvent(self, e):
         e.accept()

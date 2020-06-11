@@ -10,149 +10,223 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-# Form implementation generated from reading ui file 'C:\data\src\toolbox\bin\..\spinetoolbox\project_items\exporter\ui\parameter_index_settings.ui',
-# licensing of 'C:\data\src\toolbox\bin\..\spinetoolbox\project_items\exporter\ui\parameter_index_settings.ui' applies.
-#
-# Created: Wed May 27 09:58:58 2020
-#      by: pyside2-uic  running on PySide2 5.11.2
-#
-# WARNING! All changes made in this file will be lost!
+################################################################################
+## Form generated from reading UI file 'parameter_index_settings.ui'
+##
+## Created by: Qt User Interface Compiler version 5.14.2
+##
+## WARNING! All changes made in this file will be lost when recompiling UI file!
+################################################################################
 
-from PySide2 import QtCore, QtGui, QtWidgets
+from PySide2.QtCore import (QCoreApplication, QDate, QDateTime, QMetaObject,
+    QObject, QPoint, QRect, QSize, QTime, QUrl, Qt)
+from PySide2.QtGui import (QBrush, QColor, QConicalGradient, QCursor, QFont,
+    QFontDatabase, QIcon, QKeySequence, QLinearGradient, QPalette, QPainter,
+    QPixmap, QRadialGradient)
+from PySide2.QtWidgets import *
+
 
 class Ui_Form(object):
     def setupUi(self, Form):
-        Form.setObjectName("Form")
+        if not Form.objectName():
+            Form.setObjectName(u"Form")
         Form.resize(588, 433)
-        self.verticalLayout_5 = QtWidgets.QVBoxLayout(Form)
-        self.verticalLayout_5.setObjectName("verticalLayout_5")
-        self.box = QtWidgets.QGroupBox(Form)
-        self.box.setObjectName("box")
-        self.verticalLayout_3 = QtWidgets.QVBoxLayout(self.box)
-        self.verticalLayout_3.setObjectName("verticalLayout_3")
-        self.message_label = QtWidgets.QLabel(self.box)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed)
+        self.verticalLayout_5 = QVBoxLayout(Form)
+        self.verticalLayout_5.setObjectName(u"verticalLayout_5")
+        self.box = QGroupBox(Form)
+        self.box.setObjectName(u"box")
+        self.verticalLayout_3 = QVBoxLayout(self.box)
+        self.verticalLayout_3.setObjectName(u"verticalLayout_3")
+        self.message_label = QLabel(self.box)
+        self.message_label.setObjectName(u"message_label")
+        sizePolicy = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.message_label.sizePolicy().hasHeightForWidth())
         self.message_label.setSizePolicy(sizePolicy)
-        self.message_label.setTextFormat(QtCore.Qt.RichText)
-        self.message_label.setObjectName("message_label")
+        self.message_label.setTextFormat(Qt.RichText)
+
         self.verticalLayout_3.addWidget(self.message_label)
-        self.horizontalLayout_2 = QtWidgets.QHBoxLayout()
-        self.horizontalLayout_2.setObjectName("horizontalLayout_2")
-        self.label = QtWidgets.QLabel(self.box)
-        self.label.setObjectName("label")
+
+        self.horizontalLayout_2 = QHBoxLayout()
+        self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
+        self.label = QLabel(self.box)
+        self.label.setObjectName(u"label")
+
         self.horizontalLayout_2.addWidget(self.label)
-        self.indexing_domains_label = QtWidgets.QLabel(self.box)
-        self.indexing_domains_label.setTextFormat(QtCore.Qt.RichText)
-        self.indexing_domains_label.setObjectName("indexing_domains_label")
+
+        self.indexing_domains_label = QLabel(self.box)
+        self.indexing_domains_label.setObjectName(u"indexing_domains_label")
+        self.indexing_domains_label.setTextFormat(Qt.RichText)
+
         self.horizontalLayout_2.addWidget(self.indexing_domains_label)
-        self.move_domain_left_button = QtWidgets.QPushButton(self.box)
-        self.move_domain_left_button.setObjectName("move_domain_left_button")
+
+        self.move_domain_left_button = QPushButton(self.box)
+        self.move_domain_left_button.setObjectName(u"move_domain_left_button")
+
         self.horizontalLayout_2.addWidget(self.move_domain_left_button)
-        self.move_domain_right_button = QtWidgets.QPushButton(self.box)
-        self.move_domain_right_button.setObjectName("move_domain_right_button")
+
+        self.move_domain_right_button = QPushButton(self.box)
+        self.move_domain_right_button.setObjectName(u"move_domain_right_button")
+
         self.horizontalLayout_2.addWidget(self.move_domain_right_button)
-        spacerItem = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
-        self.horizontalLayout_2.addItem(spacerItem)
+
+        self.horizontalSpacer = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+
+        self.horizontalLayout_2.addItem(self.horizontalSpacer)
+
+
         self.verticalLayout_3.addLayout(self.horizontalLayout_2)
-        self.splitter = QtWidgets.QSplitter(self.box)
-        self.splitter.setOrientation(QtCore.Qt.Horizontal)
-        self.splitter.setObjectName("splitter")
-        self.verticalLayoutWidget_3 = QtWidgets.QWidget(self.splitter)
-        self.verticalLayoutWidget_3.setObjectName("verticalLayoutWidget_3")
-        self.verticalLayout_4 = QtWidgets.QVBoxLayout(self.verticalLayoutWidget_3)
+
+        self.splitter = QSplitter(self.box)
+        self.splitter.setObjectName(u"splitter")
+        self.splitter.setOrientation(Qt.Horizontal)
+        self.verticalLayoutWidget_3 = QWidget(self.splitter)
+        self.verticalLayoutWidget_3.setObjectName(u"verticalLayoutWidget_3")
+        self.verticalLayout_4 = QVBoxLayout(self.verticalLayoutWidget_3)
+        self.verticalLayout_4.setObjectName(u"verticalLayout_4")
         self.verticalLayout_4.setContentsMargins(0, 0, 0, 0)
-        self.verticalLayout_4.setObjectName("verticalLayout_4")
-        self.verticalLayout_6 = QtWidgets.QVBoxLayout()
-        self.verticalLayout_6.setObjectName("verticalLayout_6")
-        self.use_existing_domain_radio_button = QtWidgets.QRadioButton(self.verticalLayoutWidget_3)
+        self.verticalLayout_6 = QVBoxLayout()
+        self.verticalLayout_6.setObjectName(u"verticalLayout_6")
+        self.use_existing_domain_radio_button = QRadioButton(self.verticalLayoutWidget_3)
+        self.use_existing_domain_radio_button.setObjectName(u"use_existing_domain_radio_button")
         self.use_existing_domain_radio_button.setChecked(True)
-        self.use_existing_domain_radio_button.setObjectName("use_existing_domain_radio_button")
+
         self.verticalLayout_6.addWidget(self.use_existing_domain_radio_button)
-        self.horizontalLayout = QtWidgets.QHBoxLayout()
-        self.horizontalLayout.setObjectName("horizontalLayout")
-        self.existing_domains_combo = QtWidgets.QComboBox(self.verticalLayoutWidget_3)
-        self.existing_domains_combo.setObjectName("existing_domains_combo")
+
+        self.horizontalLayout = QHBoxLayout()
+        self.horizontalLayout.setObjectName(u"horizontalLayout")
+        self.existing_domains_combo = QComboBox(self.verticalLayoutWidget_3)
+        self.existing_domains_combo.setObjectName(u"existing_domains_combo")
+
         self.horizontalLayout.addWidget(self.existing_domains_combo)
+
+
         self.verticalLayout_6.addLayout(self.horizontalLayout)
-        self.formLayout_3 = QtWidgets.QFormLayout()
-        self.formLayout_3.setObjectName("formLayout_3")
-        self.pick_expression_label = QtWidgets.QLabel(self.verticalLayoutWidget_3)
-        self.pick_expression_label.setObjectName("pick_expression_label")
-        self.formLayout_3.setWidget(0, QtWidgets.QFormLayout.LabelRole, self.pick_expression_label)
-        self.pick_expression_edit = QtWidgets.QLineEdit(self.verticalLayoutWidget_3)
-        self.pick_expression_edit.setPlaceholderText("")
-        self.pick_expression_edit.setObjectName("pick_expression_edit")
-        self.formLayout_3.setWidget(0, QtWidgets.QFormLayout.FieldRole, self.pick_expression_edit)
+
+        self.formLayout_3 = QFormLayout()
+        self.formLayout_3.setObjectName(u"formLayout_3")
+        self.pick_expression_label = QLabel(self.verticalLayoutWidget_3)
+        self.pick_expression_label.setObjectName(u"pick_expression_label")
+
+        self.formLayout_3.setWidget(0, QFormLayout.LabelRole, self.pick_expression_label)
+
+        self.pick_expression_edit = QLineEdit(self.verticalLayoutWidget_3)
+        self.pick_expression_edit.setObjectName(u"pick_expression_edit")
+
+        self.formLayout_3.setWidget(0, QFormLayout.FieldRole, self.pick_expression_edit)
+
+
         self.verticalLayout_6.addLayout(self.formLayout_3)
+
+
         self.verticalLayout_4.addLayout(self.verticalLayout_6)
-        self.verticalLayout = QtWidgets.QVBoxLayout()
-        self.verticalLayout.setObjectName("verticalLayout")
-        self.create_domain_radio_button = QtWidgets.QRadioButton(self.verticalLayoutWidget_3)
-        self.create_domain_radio_button.setObjectName("create_domain_radio_button")
+
+        self.verticalLayout = QVBoxLayout()
+        self.verticalLayout.setObjectName(u"verticalLayout")
+        self.create_domain_radio_button = QRadioButton(self.verticalLayoutWidget_3)
+        self.create_domain_radio_button.setObjectName(u"create_domain_radio_button")
+
         self.verticalLayout.addWidget(self.create_domain_radio_button)
-        self.formLayout = QtWidgets.QFormLayout()
-        self.formLayout.setObjectName("formLayout")
-        self.domain_name_label = QtWidgets.QLabel(self.verticalLayoutWidget_3)
-        self.domain_name_label.setObjectName("domain_name_label")
-        self.formLayout.setWidget(0, QtWidgets.QFormLayout.LabelRole, self.domain_name_label)
-        self.domain_name_edit = QtWidgets.QLineEdit(self.verticalLayoutWidget_3)
-        self.domain_name_edit.setText("")
-        self.domain_name_edit.setObjectName("domain_name_edit")
-        self.formLayout.setWidget(0, QtWidgets.QFormLayout.FieldRole, self.domain_name_edit)
-        self.domain_description_label = QtWidgets.QLabel(self.verticalLayoutWidget_3)
-        self.domain_description_label.setObjectName("domain_description_label")
-        self.formLayout.setWidget(1, QtWidgets.QFormLayout.LabelRole, self.domain_description_label)
-        self.domain_description_edit = QtWidgets.QLineEdit(self.verticalLayoutWidget_3)
-        self.domain_description_edit.setObjectName("domain_description_edit")
-        self.formLayout.setWidget(1, QtWidgets.QFormLayout.FieldRole, self.domain_description_edit)
+
+        self.formLayout = QFormLayout()
+        self.formLayout.setObjectName(u"formLayout")
+        self.domain_name_label = QLabel(self.verticalLayoutWidget_3)
+        self.domain_name_label.setObjectName(u"domain_name_label")
+
+        self.formLayout.setWidget(0, QFormLayout.LabelRole, self.domain_name_label)
+
+        self.domain_name_edit = QLineEdit(self.verticalLayoutWidget_3)
+        self.domain_name_edit.setObjectName(u"domain_name_edit")
+
+        self.formLayout.setWidget(0, QFormLayout.FieldRole, self.domain_name_edit)
+
+        self.domain_description_label = QLabel(self.verticalLayoutWidget_3)
+        self.domain_description_label.setObjectName(u"domain_description_label")
+
+        self.formLayout.setWidget(1, QFormLayout.LabelRole, self.domain_description_label)
+
+        self.domain_description_edit = QLineEdit(self.verticalLayoutWidget_3)
+        self.domain_description_edit.setObjectName(u"domain_description_edit")
+
+        self.formLayout.setWidget(1, QFormLayout.FieldRole, self.domain_description_edit)
+
+
         self.verticalLayout.addLayout(self.formLayout)
-        self.verticalLayout_2 = QtWidgets.QVBoxLayout()
-        self.verticalLayout_2.setObjectName("verticalLayout_2")
-        self.formLayout_2 = QtWidgets.QFormLayout()
-        self.formLayout_2.setObjectName("formLayout_2")
-        self.generator_expression_label = QtWidgets.QLabel(self.verticalLayoutWidget_3)
-        self.generator_expression_label.setObjectName("generator_expression_label")
-        self.formLayout_2.setWidget(0, QtWidgets.QFormLayout.LabelRole, self.generator_expression_label)
-        self.generator_expression_edit = QtWidgets.QLineEdit(self.verticalLayoutWidget_3)
-        self.generator_expression_edit.setObjectName("generator_expression_edit")
-        self.formLayout_2.setWidget(0, QtWidgets.QFormLayout.FieldRole, self.generator_expression_edit)
+
+        self.verticalLayout_2 = QVBoxLayout()
+        self.verticalLayout_2.setObjectName(u"verticalLayout_2")
+        self.formLayout_2 = QFormLayout()
+        self.formLayout_2.setObjectName(u"formLayout_2")
+        self.generator_expression_label = QLabel(self.verticalLayoutWidget_3)
+        self.generator_expression_label.setObjectName(u"generator_expression_label")
+
+        self.formLayout_2.setWidget(0, QFormLayout.LabelRole, self.generator_expression_label)
+
+        self.generator_expression_edit = QLineEdit(self.verticalLayoutWidget_3)
+        self.generator_expression_edit.setObjectName(u"generator_expression_edit")
+
+        self.formLayout_2.setWidget(0, QFormLayout.FieldRole, self.generator_expression_edit)
+
+
         self.verticalLayout_2.addLayout(self.formLayout_2)
-        self.extract_indexes_button = QtWidgets.QPushButton(self.verticalLayoutWidget_3)
-        self.extract_indexes_button.setObjectName("extract_indexes_button")
+
+        self.extract_indexes_button = QPushButton(self.verticalLayoutWidget_3)
+        self.extract_indexes_button.setObjectName(u"extract_indexes_button")
+
         self.verticalLayout_2.addWidget(self.extract_indexes_button)
+
+
         self.verticalLayout.addLayout(self.verticalLayout_2)
+
+
         self.verticalLayout_4.addLayout(self.verticalLayout)
-        spacerItem1 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
-        self.verticalLayout_4.addItem(spacerItem1)
-        self.index_table_view = QtWidgets.QTableView(self.splitter)
-        self.index_table_view.setObjectName("index_table_view")
+
+        self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
+
+        self.verticalLayout_4.addItem(self.verticalSpacer)
+
+        self.splitter.addWidget(self.verticalLayoutWidget_3)
+        self.index_table_view = QTableView(self.splitter)
+        self.index_table_view.setObjectName(u"index_table_view")
+        self.splitter.addWidget(self.index_table_view)
         self.index_table_view.horizontalHeader().setVisible(True)
+
         self.verticalLayout_3.addWidget(self.splitter)
+
+
         self.verticalLayout_5.addWidget(self.box)
 
+
         self.retranslateUi(Form)
-        QtCore.QMetaObject.connectSlotsByName(Form)
+
+        QMetaObject.connectSlotsByName(Form)
+    # setupUi
 
     def retranslateUi(self, Form):
-        Form.setWindowTitle(QtWidgets.QApplication.translate("Form", "Form", None, -1))
-        self.box.setTitle(QtWidgets.QApplication.translate("Form", "Parameter name", None, -1))
-        self.message_label.setText(QtWidgets.QApplication.translate("Form", "TextLabel", None, -1))
-        self.label.setText(QtWidgets.QApplication.translate("Form", "Indexing domains:", None, -1))
-        self.indexing_domains_label.setText(QtWidgets.QApplication.translate("Form", "(<b>unnamed</b>)", None, -1))
-        self.move_domain_left_button.setText(QtWidgets.QApplication.translate("Form", "Move Left", None, -1))
-        self.move_domain_right_button.setText(QtWidgets.QApplication.translate("Form", "Move Right", None, -1))
-        self.use_existing_domain_radio_button.setText(QtWidgets.QApplication.translate("Form", "Use existing domain", None, -1))
-        self.pick_expression_label.setToolTip(QtWidgets.QApplication.translate("Form", "Select rows for which this Python expression evaluates to True. Use <i>i</i> as the row index.", None, -1))
-        self.pick_expression_label.setText(QtWidgets.QApplication.translate("Form", "Label picking expression:", None, -1))
-        self.create_domain_radio_button.setText(QtWidgets.QApplication.translate("Form", "Create new index domain", None, -1))
-        self.domain_name_label.setText(QtWidgets.QApplication.translate("Form", "Domain name:", None, -1))
-        self.domain_name_edit.setPlaceholderText(QtWidgets.QApplication.translate("Form", "Type domain\'s name here...", None, -1))
-        self.domain_description_label.setText(QtWidgets.QApplication.translate("Form", "Description:", None, -1))
-        self.domain_description_edit.setPlaceholderText(QtWidgets.QApplication.translate("Form", "Type explanatory text here...", None, -1))
-        self.generator_expression_label.setToolTip(QtWidgets.QApplication.translate("Form", "Generate index labels from Python expression. Use <i>i</i> as the row number.", None, -1))
-        self.generator_expression_label.setText(QtWidgets.QApplication.translate("Form", "Generator expression:", None, -1))
-        self.extract_indexes_button.setText(QtWidgets.QApplication.translate("Form", "Extract index from parameter", None, -1))
+        Form.setWindowTitle(QCoreApplication.translate("Form", u"Form", None))
+        self.box.setTitle(QCoreApplication.translate("Form", u"Parameter name", None))
+        self.message_label.setText(QCoreApplication.translate("Form", u"TextLabel", None))
+        self.label.setText(QCoreApplication.translate("Form", u"Indexing domains:", None))
+        self.indexing_domains_label.setText(QCoreApplication.translate("Form", u"(<b>unnamed</b>)", None))
+        self.move_domain_left_button.setText(QCoreApplication.translate("Form", u"Move Left", None))
+        self.move_domain_right_button.setText(QCoreApplication.translate("Form", u"Move Right", None))
+        self.use_existing_domain_radio_button.setText(QCoreApplication.translate("Form", u"Use existing domain", None))
+#if QT_CONFIG(tooltip)
+        self.pick_expression_label.setToolTip(QCoreApplication.translate("Form", u"Select rows for which this Python expression evaluates to True. Use <i>i</i> as the row index.", None))
+#endif // QT_CONFIG(tooltip)
+        self.pick_expression_label.setText(QCoreApplication.translate("Form", u"Label picking expression:", None))
+        self.pick_expression_edit.setPlaceholderText("")
+        self.create_domain_radio_button.setText(QCoreApplication.translate("Form", u"Create new index domain", None))
+        self.domain_name_label.setText(QCoreApplication.translate("Form", u"Domain name:", None))
+        self.domain_name_edit.setText("")
+        self.domain_name_edit.setPlaceholderText(QCoreApplication.translate("Form", u"Type domain's name here...", None))
+        self.domain_description_label.setText(QCoreApplication.translate("Form", u"Description:", None))
+        self.domain_description_edit.setPlaceholderText(QCoreApplication.translate("Form", u"Type explanatory text here...", None))
+#if QT_CONFIG(tooltip)
+        self.generator_expression_label.setToolTip(QCoreApplication.translate("Form", u"Generate index labels from Python expression. Use <i>i</i> as the row number.", None))
+#endif // QT_CONFIG(tooltip)
+        self.generator_expression_label.setText(QCoreApplication.translate("Form", u"Generator expression:", None))
+        self.extract_indexes_button.setText(QCoreApplication.translate("Form", u"Extract index from parameter", None))
+    # retranslateUi
 

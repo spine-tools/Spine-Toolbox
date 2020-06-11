@@ -117,7 +117,7 @@ class ObjectTreeModel(EntityTreeModel):
             for item in items:
                 d.setdefault(item["class_id"], dict())[item["id"]] = None
             for class_id, ids in d.items():
-                # Find the parents corresponding the this class id and put them in the result
+                # Find the parents corresponding to this class id and put them in the result
                 for parent_item in self.find_items(db_map, (class_id,)):
                     result.setdefault(parent_item, {})[db_map] = list(ids.keys())
         return result
@@ -155,11 +155,9 @@ class ObjectTreeModel(EntityTreeModel):
         for db_map, items in db_map_data.items():
             d = dict()
             for item in items:
-                for object_id in item["object_id_list"].split(","):
-                    key = (int(object_id), item["class_id"])
-                    d.setdefault(key, dict())[item["id"]] = None
-            for (object_id, class_id), ids in d.items():
-                for parent_item in self.find_items(db_map, (None, object_id, class_id)):
+                d.setdefault(item["class_id"], dict())[item["id"]] = None
+            for class_id, ids in d.items():
+                for parent_item in self.find_items(db_map, (None, None, class_id)):
                     result.setdefault(parent_item, {})[db_map] = list(ids.keys())
         return result
 

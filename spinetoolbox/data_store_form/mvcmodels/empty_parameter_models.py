@@ -43,6 +43,8 @@ class EmptyParameterModel(EmptyRowModel):
         """
         super().__init__(parent, header)
         self.db_mngr = db_mngr
+        self.db_map = None
+        self.entity_class_id = None
 
     @property
     def entity_class_type(self):
@@ -61,11 +63,6 @@ class EmptyParameterModel(EmptyRowModel):
             self.entity_class_type
         ]
 
-    def get_entity_class_id(self, index, db_map):
-        entity_class_name = index.sibling(index.row(), self.header.index(self.entity_class_name_key)).data()
-        entity_class = self.db_mngr.get_item_by_field(db_map, self.entity_class_type, "name", entity_class_name)
-        return entity_class.get("id")
-
     @property
     def can_be_filtered(self):
         return False
@@ -74,6 +71,9 @@ class EmptyParameterModel(EmptyRowModel):
         return list(range(self.rowCount()))
 
     def db_item(self, _index):  # pylint: disable=no-self-use
+        return None
+
+    def item_id(self, _row):  # pylint: disable=no-self-use
         return None
 
     def flags(self, index):

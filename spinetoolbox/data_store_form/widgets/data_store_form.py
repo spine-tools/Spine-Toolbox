@@ -32,8 +32,8 @@ from spinedb_api import (
     SpineDBAPIError,
     SpineDBVersionError,
 )
-from ...config import MAINWINDOW_SS, APPLICATION_PATH
-from .select_db_items_dialogs import MassRemoveItemsDialog, GetItemsForExportDialog
+from ...config import MAINWINDOW_SS, APPLICATION_PATH, ONLINE_DOCUMENTATION_URL
+from .select_db_items_dialogs import MassRemoveItemsDialog, MassExportItemsDialog
 from .custom_qwidgets import OpenFileButton, OpenSQLiteFileButton, ShootingLabel, CustomInputDialog
 from .parameter_view_mixin import ParameterViewMixin
 from .tree_view_mixin import TreeViewMixin
@@ -48,6 +48,7 @@ from ...helpers import (
     get_save_file_name_in_last_dir,
     get_open_file_name_in_last_dir,
     format_string_list,
+    open_url,
 )
 from .import_dialog import ImportDialog
 from ...widgets.parameter_value_editor import ParameterValueEditor
@@ -148,6 +149,7 @@ class DataStoreFormBase(QMainWindow):
         self.ui.actionManage_parameter_tags.triggered.connect(self.show_manage_parameter_tags_form)
         self.ui.actionMass_remove_items.triggered.connect(self.show_mass_remove_items_form)
         self.ui.dockWidget_exports.visibilityChanged.connect(self._handle_exports_visibility_changed)
+        self.ui.actionUser_guide.triggered.connect(self.show_user_guide)
 
     @Slot(int)
     def update_undo_redo_actions(self, index):
@@ -260,7 +262,7 @@ class DataStoreFormBase(QMainWindow):
 
     @Slot(bool)
     def import_file(self, checked=False):
-        """Import file. For now it only supports JSON."""
+        """Import file. It supports SQLite, JSON, and Excel."""
         self.qsettings.beginGroup(self.settings_group)
         file_path, selected_filter = get_open_file_name_in_last_dir(
             self.qsettings,
@@ -325,7 +327,7 @@ class DataStoreFormBase(QMainWindow):
     @Slot(bool)
     def show_get_items_for_export_dialog(self, checked=False):
         """Shows dialog for user to select dbs and items for export."""
-        dialog = GetItemsForExportDialog(self, self.db_mngr, *self.db_maps)
+        dialog = MassExportItemsDialog(self, self.db_mngr, *self.db_maps)
         dialog.data_submitted.connect(self.export_data)
         dialog.show()
 
@@ -372,7 +374,7 @@ class DataStoreFormBase(QMainWindow):
             self.qsettings,
             "exportDB",
             self,
-            "Export to file",
+            "Export file",
             self._get_base_dir(),
             "SQLite (*.sqlite);; JSON file (*.json);; Excel file (*.xlsx)",
         )
@@ -588,6 +590,13 @@ class DataStoreFormBase(QMainWindow):
         editor = ParameterValueEditor(index, parent=self)
         editor.show()
 
+    @Slot(bool)
+    def show_user_guide(self, checked=False):
+        """Opens Spine Toolbox documentation Data store form page in browser."""
+        doc_url = f"{ONLINE_DOCUMENTATION_URL}/data_store_form/index.html"
+        if not open_url(doc_url):
+            self.msg_error.emit("Unable to open url <b>{0}</b>".format(doc_url))
+
     def notify_items_changed(self, action, item_type, db_map_data):
         """Enables or disables actions and informs the user about what just happened."""
         count = sum(len(data) for data in db_map_data.values())
@@ -784,7 +793,7 @@ class DataStoreForm(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         self.init_models()
         self.add_menu_actions()
         self.connect_signals()
-        self.apply_tree_style()
+        self.apply_stacked_style()
         self.restore_ui()
         toc = time.process_time()
         self.msg.emit("Data store view created in {0:.2f} seconds".format(toc - tic))
@@ -792,9 +801,9 @@ class DataStoreForm(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
 
     def connect_signals(self):
         super().connect_signals()
-        self.ui.actionStacked_style.triggered.connect(self.apply_tree_style)
+        self.ui.actionStacked_style.triggered.connect(self.apply_stacked_style)
         self.ui.actionGraph_style.triggered.connect(self.apply_graph_style)
-        self.ui.actionPivot_style.triggered.connect(self.apply_tabular_style)
+        self.ui.actionPivot_style.triggered.connect(self.apply_pivot_style)
 
     def add_menu_actions(self):
         super().add_menu_actions()
@@ -824,8 +833,8 @@ class DataStoreForm(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         self.resize(self._size)
 
     @Slot(bool)
-    def apply_tree_style(self, checked=False):
-        """Applies the tree style, inspired in the former tree view."""
+    def apply_stacked_style(self, checked=False):
+        """Applies the stacked style, inspired in the former tree view."""
         self.begin_style_change()
         self.splitDockWidget(self.ui.dockWidget_object_tree, self.ui.dockWidget_object_parameter_value, Qt.Horizontal)
         self.splitDockWidget(
@@ -854,8 +863,8 @@ class DataStoreForm(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         self.end_style_change()
 
     @Slot(bool)
-    def apply_tabular_style(self, checked=False):
-        """Applies the tree style, inspired in the former tabular view."""
+    def apply_pivot_style(self, checked=False):
+        """Applies the pivot style, inspired in the former tabular view."""
         self.begin_style_change()
         self.splitDockWidget(self.ui.dockWidget_object_tree, self.ui.dockWidget_pivot_table, Qt.Horizontal)
         self.splitDockWidget(self.ui.dockWidget_pivot_table, self.ui.dockWidget_frozen_table, Qt.Horizontal)
@@ -874,7 +883,7 @@ class DataStoreForm(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
 
     @Slot(bool)
     def apply_graph_style(self, checked=False):
-        """Applies the tree style, inspired in the former graph view."""
+        """Applies the graph style, inspired in the former graph view."""
         self.begin_style_change()
         self.ui.dockWidget_parameter_value_list.hide()
         self.ui.dockWidget_pivot_table.hide()

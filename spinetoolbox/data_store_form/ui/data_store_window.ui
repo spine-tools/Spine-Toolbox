@@ -89,6 +89,7 @@
     <addaction name="actionAdd_objects"/>
     <addaction name="actionAdd_relationship_classes"/>
     <addaction name="actionAdd_relationships"/>
+    <addaction name="actionManage_relationships"/>
     <addaction name="separator"/>
     <addaction name="actionEdit_selected"/>
     <addaction name="separator"/>
@@ -161,7 +162,7 @@
     <property name="title">
      <string>Help</string>
     </property>
-    <addaction name="actionLive_graph_demo"/>
+    <addaction name="actionUser_guide"/>
    </widget>
    <widget class="QMenu" name="menuPivot_table">
     <property name="title">
@@ -1009,11 +1010,6 @@
     <string>Restore all pruned</string>
    </property>
   </action>
-  <action name="actionLive_graph_demo">
-   <property name="text">
-    <string>Live graph demo</string>
-   </property>
-  </action>
   <action name="actionStacked_style">
    <property name="icon">
     <iconset resource="../../ui/resources/resources_icons.qrc">
@@ -1189,6 +1185,27 @@
   <action name="actionRebuild_graph">
    <property name="text">
     <string>Rebuild graph</string>
+   </property>
+  </action>
+  <action name="actionManage_relationships">
+   <property name="icon">
+    <iconset resource="../../ui/resources/resources_icons.qrc">
+     <normaloff>:/icons/menu_icons/cubes_pen.svg</normaloff>:/icons/menu_icons/cubes_pen.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Manage relationships</string>
+   </property>
+  </action>
+  <action name="actionUser_guide">
+   <property name="icon">
+    <iconset resource="../../ui/resources/resources_icons.qrc">
+     <normaloff>:/icons/menu_icons/question-circle.svg</normaloff>:/icons/menu_icons/question-circle.svg</iconset>
+   </property>
+   <property name="text">
+    <string>User guide</string>
+   </property>
+   <property name="shortcut">
+    <string>F2</string>
    </property>
   </action>
  </widget>

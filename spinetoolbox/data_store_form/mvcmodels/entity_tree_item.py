@@ -253,6 +253,11 @@ class MultiDBTreeItem(TreeItem):
                 child.deep_remove_db_map(db_map)
         self._deep_refresh_children()
 
+    def is_valid(self):  # pylint: disable=no-self-use
+        """Checks if the item is still valid after an update operation.
+        """
+        return True
+
     def update_children_by_id(self, db_map_ids):
         """
         Updates children by id. Essentially makes sure all children have a valid display id
@@ -270,17 +275,27 @@ class MultiDBTreeItem(TreeItem):
         """
         if self.can_fetch_more():
             return
-        # Find updated rows
-        updated_rows = []
+        # Find rows to update and db_map ids to add
+        rows_to_update = set()
+        db_map_ids_to_add = dict()
         for db_map, ids in db_map_ids.items():
-            updated_rows += list(self.find_rows_by_id(db_map, *ids))
-        updated_rows = set(updated_rows)
+            for id_ in ids:
+                row = self._child_map.get(db_map, {}).get(id_, None)
+                if row is not None:
+                    rows_to_update.add(row)
+                else:
+                    db_map_ids_to_add.setdefault(db_map, set()).add(id_)
+        new_children = []  # List of new children to be inserted
+        for db_map, ids in db_map_ids_to_add.items():
+            new_children += self._create_new_children(db_map, ids)
         # Check display ids
         display_ids = [child.display_id for child in self.children if child.display_id]
-        new_children = []  # List of new children to be inserted for solving display id problems
-        for row in sorted(updated_rows, reverse=True):
+        for row in sorted(rows_to_update, reverse=True):
             child = self.child(row)
             if not child:
+                continue
+            if not child.is_valid():
+                self.remove_children(row, 1)
                 continue
             while not child.display_id:
                 # Split child until it recovers a valid display id
@@ -341,7 +356,7 @@ class MultiDBTreeItem(TreeItem):
     def _find_unsorted_rows_by_id(self, db_map, *ids):
         """Generates rows corresponding to children with the given ids in the given db_map.
         If the only id given is None, then generates rows corresponding to *all* children with the given db_map."""
-        if ids == (None,):
+        if len(ids) == 1 and ids[0] is None:
             d = self._child_map.get(db_map)
             if d:
                 yield from d.values()
@@ -545,7 +560,7 @@ class ObjectItem(EntityItem):
 
 
 class RelationshipItem(EntityItem):
-    """An object item."""
+    """A relationship item."""
 
     visual_key = ["name", "object_name_list"]
     item_type = "relationship"
@@ -595,3 +610,10 @@ class RelationshipItem(EntityItem):
     def _get_children_ids(self, db_map):
         """See base class"""
         raise NotImplementedError()
+
+    def is_valid(self):
+        """Checks that the grand parent object is still in the relationship."""
+        grand_parent = self.parent_item.parent_item
+        if grand_parent.display_data == "root":
+            return True
+        return grand_parent.display_data in self.object_name_list.split(",")

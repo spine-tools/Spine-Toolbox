@@ -88,7 +88,7 @@ from .configuration_assistants import spine_model
 class ToolboxUI(QMainWindow):
     """Class for application main GUI functions."""
 
-    # Signals to comply with the spinetoolbox.logger_interface.LoggerInteface interface.
+    # Signals to comply with the spinetoolbox.logger_interface.LoggerInterface interface.
     msg = Signal(str)
     msg_success = Signal(str)
     msg_error = Signal(str)
@@ -101,7 +101,7 @@ class ToolboxUI(QMainWindow):
     specification_model_changed = Signal()
 
     def __init__(self):
-        """ Initialize application and main window."""
+        """Initializes application and main window."""
         from .ui.mainwindow import Ui_MainWindow  # pylint: disable=import-outside-toplevel
 
         super().__init__(flags=Qt.Window)

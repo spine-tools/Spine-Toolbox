@@ -25,7 +25,8 @@ from spinetoolbox.project_item import ProjectItem
 from spinetoolbox.project_item_resource import ProjectItemResource
 from spinetoolbox.helpers import deserialize_path, serialize_url
 from spinetoolbox.spine_io.exporters import gdx
-from .commands import UpdateExporterOutFileNameCommand, UpdateExporterSettingsCommand, UpdateCancelOnErrorCommand
+from .commands import UpdateExporterOutFileNameCommand, UpdateExporterSettingsCommand
+from ..shared.commands import UpdateCancelOnErrorCommand
 from .db_utils import latest_database_commit_time_stamp
 from .executable_item import ExecutableItem
 from .item_info import ItemInfo
@@ -230,6 +231,7 @@ class Exporter(ProjectItem):
         if worker is None:
             return
         worker.thread.wait()
+        worker.deleteLater()
         del self._workers[database_url]
         pack = self._settings_packs.get(database_url)
         if pack is None:
@@ -246,7 +248,7 @@ class Exporter(ProjectItem):
         self._toolbox.update_window_modified(False)
         self._check_state()
 
-    @Slot(str, "QVariant", "QVariant")
+    @Slot(str, "QVariant")
     def _worker_failed(self, database_url, exception):
         """Clean up after a worker has failed fetching export settings."""
         worker = self._workers[database_url]
@@ -254,6 +256,7 @@ class Exporter(ProjectItem):
             return
         worker.thread.quit()
         worker.thread.wait()
+        worker.deleteLater()
         del self._workers[database_url]
         if database_url in self._settings_packs:
             self._logger.msg_error.emit(
@@ -262,14 +265,15 @@ class Exporter(ProjectItem):
             self._settings_packs[database_url].state = SettingsState.ERROR
             self._report_notifications()
 
-    @Slot(str, "QVariant")
+    @Slot(str)
     def _cancel_worker(self, database_url):
         """Cleans up after worker has given up fetching export settings."""
         worker = self._workers[database_url]
         if worker is None:
             return
         worker.thread.quit()
-        worker.wait()
+        worker.thread.wait()
+        worker.deleteLater()
         del self._workers[database_url]
         self._settings_packs[database_url].state = SettingsState.ERROR
 
@@ -523,6 +527,7 @@ class Exporter(ProjectItem):
             worker.thread.quit()
         for worker in self._workers.values():
             worker.thread.wait()
+            worker.deleteLater()
         self._workers.clear()
 
 

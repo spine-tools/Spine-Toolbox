@@ -288,32 +288,17 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
             if self._settattr_if_different(model, "_filter_parameter_ids", parameter_ids):
                 self._invalidate_filter()
 
-    @Slot(str, set, bool)
-    def set_auto_filter(self, field, valid_values, has_filter):
+    @Slot(str, dict)
+    def set_auto_filter(self, field, auto_filter):
         """Updates and applies the auto filter.
 
         Args:
             field (str): the field name
-            valid_values (list(str)): accepted values for the field
-            has_filter (bool)
+            auto_filter (dict): mapping db_map to entity class id to accepted values for the field
         """
-        field_menu_data = self._auto_filter_menus[field]._menu_data
-        auto_filter = self._build_auto_filter(field_menu_data, valid_values, has_filter)
         self.set_compound_auto_filter(field, auto_filter)
         for model in self.accepted_single_models():
             self.set_single_auto_filter(model, field)
-
-    @staticmethod
-    def _build_auto_filter(field_menu_data, valid_values, has_filter):
-        if not has_filter:
-            return {}  # All-pass
-        if not valid_values:
-            return None  # You shall not pass
-        auto_filter = {}
-        for value in valid_values:
-            for db_map, entity_class_id, item_id in field_menu_data[value]:
-                auto_filter.setdefault(db_map, {}).setdefault(entity_class_id, []).append(item_id)
-        return auto_filter
 
     def set_compound_auto_filter(self, field, auto_filter):
         """Sets the auto filter for given column in the compound model.
@@ -437,7 +422,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
             for class_items in items_per_class.values():
                 self._do_update_data_in_filter_menus(db_map, class_items)
         self._emit_data_changed_for_column("parameter_name")
-        # TODO: parameter definition names aren't refreshed unless we emit dataChanged,
+        # NOTE: parameter definition names aren't refreshed unless we emit dataChanged,
         # whereas entity and class names don't need it. Why?
 
     def receive_parameter_data_removed(self, db_map_data):
@@ -518,6 +503,22 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         entity_class_name = index.sibling(index.row(), self.header.index(entity_class_name_key)).data()
         entity_class = self.db_mngr.get_item_by_field(db_map, self.entity_class_type, "name", entity_class_name)
         return entity_class.get("id")
+
+    def filter_by(self, rows_per_column):
+        for column, rows in rows_per_column.items():
+            field = self.headerData(column)
+            menu = self._auto_filter_menus[field]
+            accepted_values = {self.index(row, column).data(Qt.EditRole) for row in rows}
+            menu.set_filter_accepted_values(accepted_values)
+            menu._filter._apply_filter()
+
+    def filter_excluding(self, rows_per_column):
+        for column, rows in rows_per_column.items():
+            field = self.headerData(column)
+            menu = self._auto_filter_menus[field]
+            rejected_values = {self.index(row, column).data(Qt.EditRole) for row in rows}
+            menu.set_filter_rejected_values(rejected_values)
+            menu._filter._apply_filter()
 
 
 class CompoundObjectParameterMixin:

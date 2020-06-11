@@ -124,6 +124,9 @@ class ParameterTableView(AutoFilterCopyPasteTableView):
         self._menu.addAction(self._data_store_form.ui.actionCopy)
         self._menu.addAction(self._data_store_form.ui.actionPaste)
         self._menu.addSeparator()
+        self._menu.addAction("Filter by", self.filter_by_selection)
+        self._menu.addAction("Filter excluding", self.filter_excluding_selection)
+        self._menu.addSeparator()
         self._menu.addAction(self._data_store_form.ui.actionRemove_selected)
 
     def contextMenuEvent(self, event):
@@ -145,6 +148,39 @@ class ParameterTableView(AutoFilterCopyPasteTableView):
         self._menu.exec_(event.globalPos())
         if is_value:
             plot_in_window_menu.deleteLater()
+
+    def _selected_rows_per_column(self):
+        """Computes selected rows per column.
+
+        Returns:
+            dict: Mapping columns to selected rows in that column.
+        """
+        selection = self.selectionModel().selection()
+        if not selection:
+            return {}
+        v_header = self.verticalHeader()
+        h_header = self.horizontalHeader()
+        rows_per_column = {}
+        for rng in sorted(selection, key=lambda x: h_header.visualIndex(x.left())):
+            for j in range(rng.left(), rng.right() + 1):
+                if h_header.isSectionHidden(j):
+                    continue
+                rows = rows_per_column.setdefault(j, set())
+                for i in range(rng.top(), rng.bottom() + 1):
+                    if v_header.isSectionHidden(i):
+                        continue
+                    rows.add(i)
+        return rows_per_column
+
+    @Slot(bool)
+    def filter_by_selection(self, checked=False):
+        rows_per_column = self._selected_rows_per_column()
+        self.model().filter_by(rows_per_column)
+
+    @Slot(bool)
+    def filter_excluding_selection(self, checked=False):
+        rows_per_column = self._selected_rows_per_column()
+        self.model().filter_excluding(rows_per_column)
 
     def remove_selected(self):
         """Removes selected indexes."""
@@ -255,9 +291,9 @@ class PivotTableView(CopyPasteTableView):
         self.plot_action = None
         self._plot_in_window_menu = None
         self.remove_values_action = None
-        self.delete_object_action = None
-        self.delete_relationship_action = None
-        self.delete_parameter_action = None
+        self.remove_objects_action = None
+        self.remove_relationships_action = None
+        self.remove_parameters_action = None
 
     @property
     def source_model(self):
@@ -291,9 +327,9 @@ class PivotTableView(CopyPasteTableView):
         self._plot_in_window_menu.triggered.connect(self._plot_in_window)
         self._menu.addSeparator()
         self.remove_values_action = self._menu.addAction("Remove selected parameter values", self.remove_values)
-        self.delete_object_action = self._menu.addAction(self._REMOVE_OBJECT, self.remove_objects)
-        self.delete_relationship_action = self._menu.addAction(self._REMOVE_RELATIONSHIP, self.remove_relationships)
-        self.delete_parameter_action = self._menu.addAction(self._REMOVE_PARAMETER, self.remove_parameters)
+        self.remove_objects_action = self._menu.addAction(self._REMOVE_OBJECT, self.remove_objects)
+        self.remove_relationships_action = self._menu.addAction(self._REMOVE_RELATIONSHIP, self.remove_relationships)
+        self.remove_parameters_action = self._menu.addAction(self._REMOVE_PARAMETER, self.remove_parameters)
 
     def remove_selected(self):
         self._find_selected_indexes()
@@ -322,6 +358,8 @@ class PivotTableView(CopyPasteTableView):
         self.db_mngr.remove_items(db_map_typed_data)
 
     def remove_relationships(self):
+        if self.model().sourceModel().item_type != "relationship":
+            return
         rels_by_object_ids = {rel["object_id_list"]: rel for rel in self._data_store_form._get_entities()}
         relationships = []
         for index in self._selected_entity_indexes:
@@ -390,32 +428,31 @@ class PivotTableView(CopyPasteTableView):
                     self._selected_entity_indexes.append(index)
 
     def _update_actions_availability(self):
-        # TODO: Set remove relationhips and parameters active depending on the underlying model
         self.open_in_editor_action.setEnabled(len(self._selected_value_indexes) == 1)
         self.plot_action.setEnabled(len(self._selected_value_indexes) > 0)
         self.remove_values_action.setEnabled(bool(self._selected_value_indexes))
-        self.delete_object_action.setEnabled(bool(self._selected_entity_indexes))
-        self.delete_relationship_action.setEnabled(
+        self.remove_objects_action.setEnabled(bool(self._selected_entity_indexes))
+        self.remove_relationships_action.setEnabled(
             bool(self._selected_entity_indexes) and self.model().sourceModel().item_type != "relationship"
         )
-        self.delete_parameter_action.setEnabled(bool(self._selected_parameter_indexes))
+        self.remove_parameters_action.setEnabled(bool(self._selected_parameter_indexes))
 
     def _update_actions_text(self):
-        self.delete_object_action.setText(self._REMOVE_OBJECT)
-        self.delete_relationship_action.setText(self._REMOVE_RELATIONSHIP)
-        self.delete_parameter_action.setText(self._REMOVE_PARAMETER)
+        self.remove_objects_action.setText(self._REMOVE_OBJECT)
+        self.remove_relationships_action.setText(self._REMOVE_RELATIONSHIP)
+        self.remove_parameters_action.setText(self._REMOVE_PARAMETER)
         if len(self._selected_entity_indexes) == 1:
             index = self._selected_entity_indexes[0]
             object_name = self.source_model.header_name(index)
-            self.delete_object_action.setText("Remove object: {}".format(object_name))
-            if self.delete_relationship_action.isEnabled():
+            self.remove_objects_action.setText("Remove object: {}".format(object_name))
+            if self.remove_relationships_action.isEnabled():
                 object_names, _ = self.source_model.object_and_parameter_names(index)
                 relationship_name = self.db_mngr._GROUP_SEP.join(object_names)
-                self.delete_relationship_action.setText("Remove relationship: {}".format(relationship_name))
+                self.remove_relationships_action.setText("Remove relationship: {}".format(relationship_name))
         if len(self._selected_parameter_indexes) == 1:
             index = self._selected_parameter_indexes[0]
             parameter_name = self.source_model.header_name(index)
-            self.delete_parameter_action.setText("Remove parameter definition: {}".format(parameter_name))
+            self.remove_parameters_action.setText("Remove parameter definition: {}".format(parameter_name))
 
     @Slot("QAction")
     def _plot_in_window(self, action):

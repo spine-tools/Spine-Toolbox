@@ -10,31 +10,53 @@
 ######################################################################################################################
 
 """
-Undo/redo commands for the Importer project item.
+Undo/redo commands that can be used by multiple project items.
 
-:authors: M. Marin (KTH)
+:authors: M. Marin (KTH), P. Savolainen (VTT)
 :date:   5.5.2020
 """
 from spinetoolbox.project_commands import SpineToolboxCommand
 
 
 class UpdateCancelOnErrorCommand(SpineToolboxCommand):
-    """Command to update Importer or Combiner cancel on error setting."""
-
     def __init__(self, project_item, cancel_on_error):
-        """
+        """Command to update Importer, Exporter, and Combiner cancel on error setting.
+
         Args:
-            project_item (ProjectItem): the item
-            cancel_on_error (bool): the new setting
+            project_item (ProjectItem): Item
+            cancel_on_error (bool): New setting
         """
         super().__init__()
         self._project_item = project_item
         self._redo_cancel_on_error = cancel_on_error
         self._undo_cancel_on_error = not cancel_on_error
-        self.setText(f"change cancel on error setting of {project_item.name}")
+        self.setText(f"change {project_item.name} cancel on error setting")
 
     def redo(self):
         self._project_item.set_cancel_on_error(self._redo_cancel_on_error)
 
     def undo(self):
         self._project_item.set_cancel_on_error(self._undo_cancel_on_error)
+
+
+class ChangeItemSelectionCommand(SpineToolboxCommand):
+    def __init__(self, project_item, selected, label):
+        """Command to change file item's selection status.
+        Used by Importers and Gimlets.
+
+        Args:
+            project_item (ProjectItem): Item
+            selected (bool): True if the item is selected, False otherwise
+            label (str): File label
+        """
+        super().__init__()
+        self._item = project_item
+        self._selected = selected
+        self._label = label
+        self.setText(f"change {project_item.name} file selection")
+
+    def redo(self):
+        self._item.set_file_selected(self._label, self._selected)
+
+    def undo(self):
+        self._item.set_file_selected(self._label, not self._selected)

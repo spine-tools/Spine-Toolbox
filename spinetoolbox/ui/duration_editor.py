@@ -10,43 +10,63 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-# Form implementation generated from reading ui file 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\ui\duration_editor.ui',
-# licensing of 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\ui\duration_editor.ui' applies.
-#
-# Created: Thu Feb 13 11:53:58 2020
-#      by: pyside2-uic  running on PySide2 5.11.2
-#
-# WARNING! All changes made in this file will be lost!
+################################################################################
+## Form generated from reading UI file 'duration_editor.ui'
+##
+## Created by: Qt User Interface Compiler version 5.14.2
+##
+## WARNING! All changes made in this file will be lost when recompiling UI file!
+################################################################################
 
-from PySide2 import QtCore, QtGui, QtWidgets
+from PySide2.QtCore import (QCoreApplication, QDate, QDateTime, QMetaObject,
+    QObject, QPoint, QRect, QSize, QTime, QUrl, Qt)
+from PySide2.QtGui import (QBrush, QColor, QConicalGradient, QCursor, QFont,
+    QFontDatabase, QIcon, QKeySequence, QLinearGradient, QPalette, QPainter,
+    QPixmap, QRadialGradient)
+from PySide2.QtWidgets import *
+
 
 class Ui_DurationEditor(object):
     def setupUi(self, DurationEditor):
-        DurationEditor.setObjectName("DurationEditor")
+        if not DurationEditor.objectName():
+            DurationEditor.setObjectName(u"DurationEditor")
         DurationEditor.resize(400, 300)
-        self.verticalLayout_2 = QtWidgets.QVBoxLayout(DurationEditor)
-        self.verticalLayout_2.setObjectName("verticalLayout_2")
-        self.layout = QtWidgets.QFormLayout()
-        self.layout.setObjectName("layout")
-        self.duration_edit_label = QtWidgets.QLabel(DurationEditor)
-        self.duration_edit_label.setObjectName("duration_edit_label")
-        self.layout.setWidget(0, QtWidgets.QFormLayout.LabelRole, self.duration_edit_label)
-        self.edit_layout = QtWidgets.QVBoxLayout()
-        self.edit_layout.setObjectName("edit_layout")
-        self.duration_edit = QtWidgets.QLineEdit(DurationEditor)
-        self.duration_edit.setObjectName("duration_edit")
+        self.verticalLayout_2 = QVBoxLayout(DurationEditor)
+        self.verticalLayout_2.setObjectName(u"verticalLayout_2")
+        self.layout = QFormLayout()
+        self.layout.setObjectName(u"layout")
+        self.duration_edit_label = QLabel(DurationEditor)
+        self.duration_edit_label.setObjectName(u"duration_edit_label")
+
+        self.layout.setWidget(0, QFormLayout.LabelRole, self.duration_edit_label)
+
+        self.edit_layout = QVBoxLayout()
+        self.edit_layout.setObjectName(u"edit_layout")
+        self.duration_edit = QLineEdit(DurationEditor)
+        self.duration_edit.setObjectName(u"duration_edit")
+
         self.edit_layout.addWidget(self.duration_edit)
-        self.units_hint = QtWidgets.QLabel(DurationEditor)
-        self.units_hint.setObjectName("units_hint")
+
+        self.units_hint = QLabel(DurationEditor)
+        self.units_hint.setObjectName(u"units_hint")
+
         self.edit_layout.addWidget(self.units_hint)
-        self.layout.setLayout(0, QtWidgets.QFormLayout.FieldRole, self.edit_layout)
+
+
+        self.layout.setLayout(0, QFormLayout.FieldRole, self.edit_layout)
+
+
         self.verticalLayout_2.addLayout(self.layout)
 
+
         self.retranslateUi(DurationEditor)
-        QtCore.QMetaObject.connectSlotsByName(DurationEditor)
+
+        QMetaObject.connectSlotsByName(DurationEditor)
+    # setupUi
 
     def retranslateUi(self, DurationEditor):
-        DurationEditor.setWindowTitle(QtWidgets.QApplication.translate("DurationEditor", "Form", None, -1))
-        self.duration_edit_label.setText(QtWidgets.QApplication.translate("DurationEditor", "Duration", None, -1))
-        self.units_hint.setText(QtWidgets.QApplication.translate("DurationEditor", "Units: s, m, h, D, M, Y", None, -1))
+        DurationEditor.setWindowTitle(QCoreApplication.translate("DurationEditor", u"Form", None))
+        self.duration_edit_label.setText(QCoreApplication.translate("DurationEditor", u"Duration", None))
+        self.units_hint.setText(QCoreApplication.translate("DurationEditor", u"Units: s, m, h, D, M, Y", None))
+    # retranslateUi
 

@@ -95,7 +95,7 @@ Python 3.6 or Python 3.7 is required.
 See file `setup.py` and `requirements.txt` for packages required to run Spinetoolbox.
 
 Additional packages needed for development are listed in `dev-requirements.txt`.
-To install the development requirements, run:
+To install the developer requirements, run:
 
     pip install -r dev-requirements.txt
 
@@ -170,6 +170,7 @@ Please make sure you are using Python 3.6 or Python 3.7 to install the requireme
 ### Installation fails on Linux
 If Python runs into errors while installing on Linux systems, running the 
 following commands in a terminal may help:
+
 ```shell
 sudo apt install libpq-dev
 sudo apt-get install unixodbc-dev
@@ -193,7 +194,8 @@ The required `qtconsole` package from the ***conda-forge*** channel also
 installs `qt` and `PyQt` packages. Since this is a `PySide2` application, those are 
 not needed and there is a chance of conflicts between the packages.
 
-**Note**: Spine Toolbox does not support PySide2 5.12 version (yet).
+**Note**: Supported PySide2 version is **5.14**. Spine Toolbox does not support PySide2 
+version 5.15 (yet).
 
 ## Contribution Guide
 

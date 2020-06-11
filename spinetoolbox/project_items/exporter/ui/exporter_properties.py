@@ -10,97 +10,129 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-# Form implementation generated from reading ui file 'C:\data\src\toolbox\bin\..\spinetoolbox\project_items\exporter\ui\exporter_properties.ui',
-# licensing of 'C:\data\src\toolbox\bin\..\spinetoolbox\project_items\exporter\ui\exporter_properties.ui' applies.
-#
-# Created: Mon May 11 15:50:19 2020
-#      by: pyside2-uic  running on PySide2 5.11.2
-#
-# WARNING! All changes made in this file will be lost!
+################################################################################
+## Form generated from reading UI file 'exporter_properties.ui'
+##
+## Created by: Qt User Interface Compiler version 5.14.2
+##
+## WARNING! All changes made in this file will be lost when recompiling UI file!
+################################################################################
 
-from PySide2 import QtCore, QtGui, QtWidgets
+from PySide2.QtCore import (QCoreApplication, QDate, QDateTime, QMetaObject,
+    QObject, QPoint, QRect, QSize, QTime, QUrl, Qt)
+from PySide2.QtGui import (QBrush, QColor, QConicalGradient, QCursor, QFont,
+    QFontDatabase, QIcon, QKeySequence, QLinearGradient, QPalette, QPainter,
+    QPixmap, QRadialGradient)
+from PySide2.QtWidgets import *
+
+from spinetoolbox import resources_icons_rc
 
 class Ui_Form(object):
     def setupUi(self, Form):
-        Form.setObjectName("Form")
+        if not Form.objectName():
+            Form.setObjectName(u"Form")
         Form.resize(294, 370)
-        self.verticalLayout = QtWidgets.QVBoxLayout(Form)
+        self.verticalLayout = QVBoxLayout(Form)
         self.verticalLayout.setSpacing(0)
+        self.verticalLayout.setObjectName(u"verticalLayout")
         self.verticalLayout.setContentsMargins(0, 0, 0, 0)
-        self.verticalLayout.setObjectName("verticalLayout")
-        self.item_name_label = QtWidgets.QLabel(Form)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed)
+        self.item_name_label = QLabel(Form)
+        self.item_name_label.setObjectName(u"item_name_label")
+        sizePolicy = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.item_name_label.sizePolicy().hasHeightForWidth())
         self.item_name_label.setSizePolicy(sizePolicy)
-        self.item_name_label.setMinimumSize(QtCore.QSize(0, 20))
-        self.item_name_label.setMaximumSize(QtCore.QSize(16777215, 20))
-        font = QtGui.QFont()
+        self.item_name_label.setMinimumSize(QSize(0, 20))
+        self.item_name_label.setMaximumSize(QSize(16777215, 20))
+        font = QFont()
         font.setPointSize(10)
-        font.setWeight(50)
         font.setBold(False)
+        font.setWeight(50)
         self.item_name_label.setFont(font)
-        self.item_name_label.setStyleSheet("background-color: #ecd8c6;")
-        self.item_name_label.setFrameShape(QtWidgets.QFrame.Box)
-        self.item_name_label.setFrameShadow(QtWidgets.QFrame.Sunken)
-        self.item_name_label.setAlignment(QtCore.Qt.AlignCenter)
+        self.item_name_label.setStyleSheet(u"background-color: #ecd8c6;")
+        self.item_name_label.setFrameShape(QFrame.Box)
+        self.item_name_label.setFrameShadow(QFrame.Sunken)
+        self.item_name_label.setAlignment(Qt.AlignCenter)
         self.item_name_label.setWordWrap(True)
-        self.item_name_label.setObjectName("item_name_label")
+
         self.verticalLayout.addWidget(self.item_name_label)
-        self.scrollArea_6 = QtWidgets.QScrollArea(Form)
+
+        self.scrollArea_6 = QScrollArea(Form)
+        self.scrollArea_6.setObjectName(u"scrollArea_6")
         self.scrollArea_6.setWidgetResizable(True)
-        self.scrollArea_6.setObjectName("scrollArea_6")
-        self.scrollAreaWidgetContents_5 = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents_5.setGeometry(QtCore.QRect(0, 0, 292, 348))
-        self.scrollAreaWidgetContents_5.setObjectName("scrollAreaWidgetContents_5")
-        self.verticalLayout_21 = QtWidgets.QVBoxLayout(self.scrollAreaWidgetContents_5)
-        self.verticalLayout_21.setObjectName("verticalLayout_21")
-        self.databases_list_layout = QtWidgets.QVBoxLayout()
-        self.databases_list_layout.setObjectName("databases_list_layout")
+        self.scrollAreaWidgetContents_5 = QWidget()
+        self.scrollAreaWidgetContents_5.setObjectName(u"scrollAreaWidgetContents_5")
+        self.scrollAreaWidgetContents_5.setGeometry(QRect(0, 0, 292, 348))
+        self.verticalLayout_21 = QVBoxLayout(self.scrollAreaWidgetContents_5)
+        self.verticalLayout_21.setObjectName(u"verticalLayout_21")
+        self.databases_list_layout = QVBoxLayout()
+        self.databases_list_layout.setObjectName(u"databases_list_layout")
+
         self.verticalLayout_21.addLayout(self.databases_list_layout)
-        spacerItem = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
-        self.verticalLayout_21.addItem(spacerItem)
-        self.horizontalLayout = QtWidgets.QHBoxLayout()
-        self.horizontalLayout.setObjectName("horizontalLayout")
-        self.cancel_on_error_check_box = QtWidgets.QCheckBox(self.scrollAreaWidgetContents_5)
+
+        self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
+
+        self.verticalLayout_21.addItem(self.verticalSpacer)
+
+        self.horizontalLayout = QHBoxLayout()
+        self.horizontalLayout.setObjectName(u"horizontalLayout")
+        self.cancel_on_error_check_box = QCheckBox(self.scrollAreaWidgetContents_5)
+        self.cancel_on_error_check_box.setObjectName(u"cancel_on_error_check_box")
         self.cancel_on_error_check_box.setChecked(True)
-        self.cancel_on_error_check_box.setObjectName("cancel_on_error_check_box")
+
         self.horizontalLayout.addWidget(self.cancel_on_error_check_box)
+
+
         self.verticalLayout_21.addLayout(self.horizontalLayout)
-        self.line_6 = QtWidgets.QFrame(self.scrollAreaWidgetContents_5)
-        self.line_6.setFrameShape(QtWidgets.QFrame.HLine)
-        self.line_6.setFrameShadow(QtWidgets.QFrame.Sunken)
-        self.line_6.setObjectName("line_6")
+
+        self.line_6 = QFrame(self.scrollAreaWidgetContents_5)
+        self.line_6.setObjectName(u"line_6")
+        self.line_6.setFrameShape(QFrame.HLine)
+        self.line_6.setFrameShadow(QFrame.Sunken)
+
         self.verticalLayout_21.addWidget(self.line_6)
-        self.horizontalLayout_13 = QtWidgets.QHBoxLayout()
-        self.horizontalLayout_13.setObjectName("horizontalLayout_13")
-        spacerItem1 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
-        self.horizontalLayout_13.addItem(spacerItem1)
-        self.open_directory_button = QtWidgets.QToolButton(self.scrollAreaWidgetContents_5)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.open_directory_button.sizePolicy().hasHeightForWidth())
-        self.open_directory_button.setSizePolicy(sizePolicy)
-        self.open_directory_button.setMinimumSize(QtCore.QSize(22, 22))
-        self.open_directory_button.setMaximumSize(QtCore.QSize(22, 22))
-        icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap(":/icons/menu_icons/folder-open-solid.svg"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+
+        self.horizontalLayout_13 = QHBoxLayout()
+        self.horizontalLayout_13.setObjectName(u"horizontalLayout_13")
+        self.horizontalSpacer_17 = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+
+        self.horizontalLayout_13.addItem(self.horizontalSpacer_17)
+
+        self.open_directory_button = QToolButton(self.scrollAreaWidgetContents_5)
+        self.open_directory_button.setObjectName(u"open_directory_button")
+        sizePolicy1 = QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        sizePolicy1.setHorizontalStretch(0)
+        sizePolicy1.setVerticalStretch(0)
+        sizePolicy1.setHeightForWidth(self.open_directory_button.sizePolicy().hasHeightForWidth())
+        self.open_directory_button.setSizePolicy(sizePolicy1)
+        self.open_directory_button.setMinimumSize(QSize(22, 22))
+        self.open_directory_button.setMaximumSize(QSize(22, 22))
+        icon = QIcon()
+        icon.addFile(u":/icons/menu_icons/folder-open-solid.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.open_directory_button.setIcon(icon)
-        self.open_directory_button.setObjectName("open_directory_button")
+
         self.horizontalLayout_13.addWidget(self.open_directory_button)
+
+
         self.verticalLayout_21.addLayout(self.horizontalLayout_13)
+
         self.scrollArea_6.setWidget(self.scrollAreaWidgetContents_5)
+
         self.verticalLayout.addWidget(self.scrollArea_6)
 
+
         self.retranslateUi(Form)
-        QtCore.QMetaObject.connectSlotsByName(Form)
+
+        QMetaObject.connectSlotsByName(Form)
+    # setupUi
 
     def retranslateUi(self, Form):
-        Form.setWindowTitle(QtWidgets.QApplication.translate("Form", "Form", None, -1))
-        self.item_name_label.setText(QtWidgets.QApplication.translate("Form", "Name", None, -1))
-        self.cancel_on_error_check_box.setText(QtWidgets.QApplication.translate("Form", "Cancel export on error", None, -1))
-        self.open_directory_button.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Open this Exporter\'s project directory in file browser</p></body></html>", None, -1))
+        Form.setWindowTitle(QCoreApplication.translate("Form", u"Form", None))
+        self.item_name_label.setText(QCoreApplication.translate("Form", u"Name", None))
+        self.cancel_on_error_check_box.setText(QCoreApplication.translate("Form", u"Cancel export on error", None))
+#if QT_CONFIG(tooltip)
+        self.open_directory_button.setToolTip(QCoreApplication.translate("Form", u"<html><head/><body><p>Open this Exporter's project directory in file browser</p></body></html>", None))
+#endif // QT_CONFIG(tooltip)
+    # retranslateUi
 
-from spinetoolbox import resources_icons_rc

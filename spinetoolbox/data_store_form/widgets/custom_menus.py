@@ -17,14 +17,14 @@ Classes for custom context menus and pop-up menus.
 """
 
 from PySide2.QtWidgets import QWidgetAction
-from PySide2.QtCore import QEvent, QPoint, Signal
+from PySide2.QtCore import QEvent, QPoint, Signal, Slot
 from .custom_qwidgets import LazyFilterWidget, DataToValueFilterWidget
 from ...widgets.custom_menus import FilterMenuBase
 
 
 class ParameterViewFilterMenu(FilterMenuBase):
 
-    filterChanged = Signal(str, set, bool)
+    filterChanged = Signal(str, dict)
 
     def __init__(self, parent, source_model, field, show_empty=True):
         """
@@ -34,24 +34,37 @@ class ParameterViewFilterMenu(FilterMenuBase):
             field (str): the field name
         """
         super().__init__(parent)
-        self._entity_class_id_key = source_model.entity_class_id_key
+        self._source_model = source_model
         self._field = field
         self._filter = LazyFilterWidget(self, source_model, show_empty=show_empty)
         self._filter_action = QWidgetAction(parent)
         self._filter_action.setDefaultWidget(self._filter)
         self.addAction(self._filter_action)
-        self._menu_data = dict()  # Maps value to list of (db map, entity id, item id)
-        self._inv_menu_data = dict()  # Maps tuple (db map, entity id, item id) to value
+        self._menu_data = dict()  # Maps value to set of (db map, entity class id, item id)
+        self._inv_menu_data = dict()  # Maps tuple (db map, entity class id, item id) to value
         self.connect_signals()
         self.aboutToShow.connect(self._filter.set_model)
+        self._source_model.refreshed.connect(self._handle_source_model_refreshed)
 
-    def emit_filter_changed(self, valid_values):
-        self.filterChanged.emit(self._field, valid_values, self._filter.has_filter())
+    @Slot()
+    def _handle_source_model_refreshed(self):
+        """Updates the menu to only present values that are actually shown in the source model."""
+        accepted_identifiers = {(m.db_map, m.entity_class_id, m.item_id(i)) for m, i in self._source_model._row_map}
+        accepted_values = {
+            value for value, identifiers in self._menu_data.items() if identifiers.intersection(accepted_identifiers)
+        }
+        self.set_filter_accepted_values(accepted_values)
+
+    def set_filter_accepted_values(self, accepted_values):
+        self._filter._filter_model.set_base_filter(lambda x: x in accepted_values)
+
+    def set_filter_rejected_values(self, rejected_values):
+        self._filter._filter_model.set_base_filter(lambda x: x not in rejected_values)
 
     def _get_value_to_remove(self, action, db_map, db_item):
         if action not in ("remove", "update"):
             return None
-        entity_class_id = db_item.get(self._entity_class_id_key)
+        entity_class_id = db_item.get(self._source_model.entity_class_id_key)
         item_id = db_item["id"]
         identifier = (db_map, entity_class_id, item_id)
         old_value = self._inv_menu_data.pop(identifier, None)
@@ -66,15 +79,15 @@ class ParameterViewFilterMenu(FilterMenuBase):
     def _get_value_to_add(self, action, db_map, db_item):
         if action not in ("add", "update"):
             return None
-        entity_class_id = db_item.get(self._entity_class_id_key)
+        entity_class_id = db_item.get(self._source_model.entity_class_id_key)
         item_id = db_item["id"]
         identifier = (db_map, entity_class_id, item_id)
         value = db_map.codename if self._field == "database" else db_item[self._field]
         self._inv_menu_data[identifier] = value
         if value not in self._menu_data:
-            self._menu_data[value] = [identifier]
+            self._menu_data[value] = {identifier}
             return value
-        self._menu_data[value].append(identifier)
+        self._menu_data[value].add(identifier)
 
     def modify_menu_data(self, action, db_map, db_items):
         """Modifies data in the menu.
@@ -97,6 +110,36 @@ class ParameterViewFilterMenu(FilterMenuBase):
             self.remove_items_from_filter_list(values_to_remove)
         if values_to_add:
             self.add_items_to_filter_list(values_to_add)
+
+    def _build_auto_filter(self, valid_values):
+        """
+        Builds the auto filter given valid values.
+
+        Args:
+            valid_values (Sequence): Values accepted by the filter.
+
+        Returns:
+            dict: mapping db_map, to entity_class_id, to set of accepted parameter value/definition ids
+        """
+        if not self._filter.has_filter():
+            return {}  # All-pass
+        if not valid_values:
+            return None  # You shall not pass
+        auto_filter = {}
+        for value in valid_values:
+            for db_map, entity_class_id, item_id in self._menu_data[value]:
+                auto_filter.setdefault(db_map, {}).setdefault(entity_class_id, set()).add(item_id)
+        return auto_filter
+
+    def emit_filter_changed(self, valid_values):
+        """
+        Builds auto filter and emits signal.
+
+        Args:
+            valid_values (Sequence): Values accepted by the filter.
+        """
+        auto_filter = self._build_auto_filter(valid_values)
+        self.filterChanged.emit(self._field, auto_filter)
 
 
 class TabularViewFilterMenu(FilterMenuBase):
