@@ -22,9 +22,10 @@ from .add_items_dialogs import (
     AddObjectsDialog,
     AddRelationshipClassesDialog,
     AddRelationshipsDialog,
+    AddObjectGroupDialog,
     ManageRelationshipsDialog,
+    ManageObjectGroupDialog,
 )
-from .manage_group_object_dialog import ManageGroupObjectDialog
 from .edit_or_remove_items_dialogs import (
     EditObjectClassesDialog,
     EditObjectsDialog,
@@ -171,9 +172,14 @@ class TreeViewMixin:
         dialog = AddObjectsDialog(self, self.db_mngr, *self.db_maps, class_name=class_name)
         dialog.show()
 
-    def show_manage_object_as_group_form(self, object_name):
-        """Shows dialog to manage an object as group."""
-        dialog = ManageGroupObjectDialog(self, object_name, self.db_mngr, *self.db_maps)
+    def show_add_object_group_form(self, object_class_item):
+        """Shows dialog to add new object group."""
+        dialog = AddObjectGroupDialog(self, object_class_item, self.db_mngr, *self.db_maps)
+        dialog.show()
+
+    def show_manage_object_group_form(self, object_item):
+        """Shows dialog to manage an object group."""
+        dialog = ManageObjectGroupDialog(self, object_item, self.db_mngr, *self.db_maps)
         dialog.show()
 
     @Slot(bool)
@@ -287,8 +293,8 @@ class TreeViewMixin:
         self.object_tree_model.add_relationships(db_map_data)
         self.relationship_tree_model.add_relationships(db_map_data)
 
-    def receive_group_entities_added(self, db_map_data):
-        super().receive_group_entities_added(db_map_data)
+    def receive_entity_groups_added(self, db_map_data):
+        super().receive_entity_groups_added(db_map_data)
         self.ui.treeView_object.refresh_active_member_indexes()
 
     def receive_object_classes_updated(self, db_map_data):
@@ -327,6 +333,6 @@ class TreeViewMixin:
         self.object_tree_model.remove_relationships(db_map_data)
         self.relationship_tree_model.remove_relationships(db_map_data)
 
-    def receive_group_entities_removed(self, db_map_data):
-        super().receive_group_entities_removed(db_map_data)
+    def receive_entity_groups_removed(self, db_map_data):
+        super().receive_entity_groups_removed(db_map_data)
         QTimer.singleShot(0, self.ui.treeView_object.refresh_active_member_indexes)

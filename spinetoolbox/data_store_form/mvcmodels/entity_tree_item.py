@@ -520,10 +520,10 @@ class EntityItem(MultiDBTreeItem):
         return self.parent_item._display_icon(for_group=self.is_group())
 
     def db_map_member_ids(self, db_map):
-        return set(x["member_id"] for x in self.db_map_group_entities(db_map))
+        return set(x["member_id"] for x in self.db_map_entity_groups(db_map))
 
-    def db_map_group_entities(self, db_map):
-        return self.db_mngr.get_items_by_field(db_map, "group entity", "entity_id", self.db_map_id(db_map))
+    def db_map_entity_groups(self, db_map):
+        return self.db_mngr.get_items_by_field(db_map, "entity group", "entity_id", self.db_map_id(db_map))
 
     @property
     def member_ids(self):

@@ -639,8 +639,8 @@ class DataStoreFormBase(QMainWindow):
     def receive_relationships_added(self, db_map_data):
         self.notify_items_changed("added", "relationship", db_map_data)
 
-    def receive_group_entities_added(self, db_map_data):
-        self.notify_items_changed("added", "group entity", db_map_data)
+    def receive_entity_groups_added(self, db_map_data):
+        self.notify_items_changed("added", "entity group", db_map_data)
 
     def receive_parameter_definitions_added(self, db_map_data):
         self.notify_items_changed("added", "parameter definition", db_map_data)
@@ -695,8 +695,8 @@ class DataStoreFormBase(QMainWindow):
     def receive_relationships_removed(self, db_map_data):
         self.notify_items_changed("removed", "relationship", db_map_data)
 
-    def receive_group_entities_removed(self, db_map_data):
-        self.notify_items_changed("removed", "group entity", db_map_data)
+    def receive_entity_groups_removed(self, db_map_data):
+        self.notify_items_changed("removed", "entity group", db_map_data)
 
     def receive_parameter_definitions_removed(self, db_map_data):
         self.notify_items_changed("removed", "parameter definition", db_map_data)

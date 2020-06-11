@@ -17,7 +17,7 @@ Classes for custom QDialogs to add edit and remove database items.
 """
 
 from functools import reduce
-from PySide2.QtWidgets import QDialog, QGridLayout, QDialogButtonBox, QHeaderView, QCheckBox, QWidget, QHBoxLayout
+from PySide2.QtWidgets import QDialog, QDialogButtonBox, QHeaderView, QCheckBox, QWidget, QGridLayout, QHBoxLayout
 from PySide2.QtCore import Slot, Qt
 from ...widgets.custom_editors import IconColorEditor
 from ...widgets.custom_qtableview import CopyPasteTableView
@@ -153,15 +153,6 @@ class GetObjectsMixin:
             for db_map in self.db_maps
         }
 
-    def make_db_map_rel_cls_lookup(self):
-        return {
-            db_map: {
-                (x["name"], x["object_class_name_list"]): x
-                for x in self.db_mngr.get_items(db_map, "relationship class")
-            }
-            for db_map in self.db_maps
-        }
-
     def object_name_list(self, row, column):
         """Return a list of object names present in all databases selected for given row.
         Used by `ManageRelationshipsDelegate`.
@@ -184,6 +175,20 @@ class GetObjectsMixin:
         if not object_name_lists:
             return []
         return list(reduce(lambda x, y: set(x) & set(y), object_name_lists))
+
+
+class GetRelationshipClassesMixin:
+    """Provides a method to retrieve relationships for AddRelationshipsDialog and EditRelationshipsDialog.
+    """
+
+    def make_db_map_rel_cls_lookup(self):
+        return {
+            db_map: {
+                (x["name"], x["object_class_name_list"]): x
+                for x in self.db_mngr.get_items(db_map, "relationship class")
+            }
+            for db_map in self.db_maps
+        }
 
 
 class ShowIconColorEditorMixin:

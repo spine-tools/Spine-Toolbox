@@ -521,7 +521,7 @@ class IconManager:
     def setup_object_pixmaps(self, object_classes):
         """Called after adding or updating object classes.
         Create the corresponding object pixmaps and clear obsolete entries
-        from the relationship class and group entities pixmap caches."""
+        from the relationship class and entity groups pixmap caches."""
         for object_class in object_classes:
             self.create_object_pixmap(object_class["display_icon"])
             self.obj_cls_icon_code_cache[object_class["name"]] = object_class["display_icon"]
@@ -530,7 +530,7 @@ class IconManager:
         for k in dirty_keys:
             del self.rel_cls_pixmap_cache[k]
         for name in object_class_names:
-            del self.group_obj_pixmap_cache[name]
+            self.group_obj_pixmap_cache.pop(name, None)
 
     def object_pixmap(self, object_class_name):
         """A pixmap for the given object class."""

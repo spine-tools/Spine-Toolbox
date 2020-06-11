@@ -25,7 +25,12 @@ from .custom_delegates import (
     ManageRelationshipsDelegate,
     RemoveEntitiesDelegate,
 )
-from .manage_items_dialogs import ShowIconColorEditorMixin, GetObjectsMixin, ManageItemsDialog
+from .manage_items_dialogs import (
+    ShowIconColorEditorMixin,
+    GetObjectsMixin,
+    GetRelationshipClassesMixin,
+    ManageItemsDialog,
+)
 from ...helpers import default_icon_id
 
 
@@ -256,7 +261,7 @@ class EditRelationshipClassesDialog(EditOrRemoveItemsDialog):
         super().accept()
 
 
-class EditRelationshipsDialog(GetObjectsMixin, EditOrRemoveItemsDialog):
+class EditRelationshipsDialog(GetRelationshipClassesMixin, GetObjectsMixin, EditOrRemoveItemsDialog):
     """A dialog to query user's preferences for updating relationships.
     """
 

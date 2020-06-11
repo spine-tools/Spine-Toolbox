@@ -27,7 +27,7 @@ class SpineDBFetcher(QObject):
     objects_fetched = Signal(object)
     relationship_classes_fetched = Signal(object)
     relationships_fetched = Signal(object)
-    group_entities_fetched = Signal(object)
+    entity_groups_fetched = Signal(object)
     parameter_definitions_fetched = Signal(object)
     parameter_values_fetched = Signal(object)
     parameter_value_lists_fetched = Signal(object)
@@ -46,7 +46,7 @@ class SpineDBFetcher(QObject):
         self.listener = listener
         self.db_maps = db_maps
         self._thread = QThread()
-        self.moveToThread(self._thread)
+        # self.moveToThread(self._thread)
         self._thread.start()
         self.connect_signals()
 
@@ -56,7 +56,7 @@ class SpineDBFetcher(QObject):
         self.objects_fetched.connect(self.receive_objects_fetched)
         self.relationship_classes_fetched.connect(self.receive_relationship_classes_fetched)
         self.relationships_fetched.connect(self.receive_relationships_fetched)
-        self.group_entities_fetched.connect(self.receive_group_entities_fetched)
+        self.entity_groups_fetched.connect(self.receive_entity_groups_fetched)
         self.parameter_definitions_fetched.connect(self.receive_parameter_definitions_fetched)
         self.parameter_values_fetched.connect(self.receive_parameter_values_fetched)
         self.parameter_value_lists_fetched.connect(self.receive_parameter_value_lists_fetched)
@@ -72,7 +72,7 @@ class SpineDBFetcher(QObject):
         parameter_definitions = {x: self.db_mngr.get_parameter_definitions(x) for x in self.db_maps}
         objects = {x: self.db_mngr.get_objects(x) for x in self.db_maps}
         relationships = {x: self.db_mngr.get_relationships(x) for x in self.db_maps}
-        group_entities = {x: self.db_mngr.get_group_entities(x) for x in self.db_maps}
+        entity_groups = {x: self.db_mngr.get_entity_groups(x) for x in self.db_maps}
         parameter_values = {x: self.db_mngr.get_parameter_values(x) for x in self.db_maps}
         parameter_value_lists = {x: self.db_mngr.get_parameter_value_lists(x) for x in self.db_maps}
         parameter_tags = {x: self.db_mngr.get_parameter_tags(x) for x in self.db_maps}
@@ -81,7 +81,7 @@ class SpineDBFetcher(QObject):
         self.parameter_definitions_fetched.emit(parameter_definitions)
         self.objects_fetched.emit(objects)
         self.relationships_fetched.emit(relationships)
-        self.group_entities_fetched.emit(group_entities)
+        self.entity_groups_fetched.emit(entity_groups)
         self.parameter_values_fetched.emit(parameter_values)
         self.parameter_value_lists_fetched.emit(parameter_value_lists)
         self.parameter_tags_fetched.emit(parameter_tags)
@@ -114,9 +114,9 @@ class SpineDBFetcher(QObject):
         self.listener.receive_relationships_fetched(db_map_data)
 
     @Slot(object)
-    def receive_group_entities_fetched(self, db_map_data):
-        self.db_mngr.cache_items("group entity", db_map_data)
-        # self.listener.receive_group_entities_fetched(db_map_data)
+    def receive_entity_groups_fetched(self, db_map_data):
+        self.db_mngr.cache_items("entity group", db_map_data)
+        # self.listener.receive_entity_groups_fetched(db_map_data)
 
     @Slot(object)
     def receive_parameter_definitions_fetched(self, db_map_data):

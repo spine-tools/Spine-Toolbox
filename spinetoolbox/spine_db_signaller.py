@@ -54,7 +54,7 @@ class SpineDBSignaller(QObject):
         self.db_mngr.objects_added.connect(self.receive_objects_added)
         self.db_mngr.relationship_classes_added.connect(self.receive_relationship_classes_added)
         self.db_mngr.relationships_added.connect(self.receive_relationships_added)
-        self.db_mngr.group_entities_added.connect(self.receive_group_entities_added)
+        self.db_mngr.entity_groups_added.connect(self.receive_entity_groups_added)
         self.db_mngr.parameter_definitions_added.connect(self.receive_parameter_definitions_added)
         self.db_mngr.parameter_values_added.connect(self.receive_parameter_values_added)
         self.db_mngr.parameter_value_lists_added.connect(self.receive_parameter_value_lists_added)
@@ -74,7 +74,7 @@ class SpineDBSignaller(QObject):
         self.db_mngr.objects_removed.connect(self.receive_objects_removed)
         self.db_mngr.relationship_classes_removed.connect(self.receive_relationship_classes_removed)
         self.db_mngr.relationships_removed.connect(self.receive_relationships_removed)
-        self.db_mngr.group_entities_removed.connect(self.receive_group_entities_removed)
+        self.db_mngr.entity_groups_removed.connect(self.receive_entity_groups_removed)
         self.db_mngr.parameter_definitions_removed.connect(self.receive_parameter_definitions_removed)
         self.db_mngr.parameter_values_removed.connect(self.receive_parameter_values_removed)
         self.db_mngr.parameter_value_lists_removed.connect(self.receive_parameter_value_lists_removed)
@@ -117,11 +117,11 @@ class SpineDBSignaller(QObject):
                 listener.receive_relationships_added(shared_db_map_data)
 
     @Slot(object)
-    def receive_group_entities_added(self, db_map_data):
+    def receive_entity_groups_added(self, db_map_data):
         for listener, db_maps in self.listeners.items():
             shared_db_map_data = self._shared_db_map_data(db_map_data, db_maps)
             if shared_db_map_data:
-                listener.receive_group_entities_added(shared_db_map_data)
+                listener.receive_entity_groups_added(shared_db_map_data)
 
     @Slot(object)
     def receive_parameter_definitions_added(self, db_map_data):
@@ -243,11 +243,11 @@ class SpineDBSignaller(QObject):
                 listener.receive_relationships_removed(shared_db_map_data)
 
     @Slot(object)
-    def receive_group_entities_removed(self, db_map_data):
+    def receive_entity_groups_removed(self, db_map_data):
         for listener, db_maps in self.listeners.items():
             shared_db_map_data = self._shared_db_map_data(db_map_data, db_maps)
             if shared_db_map_data:
-                listener.receive_group_entities_removed(shared_db_map_data)
+                listener.receive_entity_groups_removed(shared_db_map_data)
 
     @Slot(object)
     def receive_parameter_definitions_removed(self, db_map_data):
