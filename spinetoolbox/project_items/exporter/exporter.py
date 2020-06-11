@@ -231,6 +231,7 @@ class Exporter(ProjectItem):
         if worker is None:
             return
         worker.thread.wait()
+        worker.deleteLater()
         del self._workers[database_url]
         pack = self._settings_packs.get(database_url)
         if pack is None:
@@ -255,6 +256,7 @@ class Exporter(ProjectItem):
             return
         worker.thread.quit()
         worker.thread.wait()
+        worker.deleteLater()
         del self._workers[database_url]
         if database_url in self._settings_packs:
             self._logger.msg_error.emit(
@@ -271,6 +273,7 @@ class Exporter(ProjectItem):
             return
         worker.thread.quit()
         worker.wait()
+        worker.deleteLater()
         del self._workers[database_url]
         self._settings_packs[database_url].state = SettingsState.ERROR
 
@@ -524,6 +527,7 @@ class Exporter(ProjectItem):
             worker.thread.quit()
         for worker in self._workers.values():
             worker.thread.wait()
+            worker.deleteLater()
         self._workers.clear()
 
 
