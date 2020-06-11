@@ -198,7 +198,7 @@ class Parameter:
         return self.data.values()
 
     def is_consistent(self):
-        """Checks that all values are :class:`IndexedValue`s or scalars."""
+        """Checks that all values are :class:`IndexedValue` objects or scalars."""
         if not self.data:
             return True
         if all(value is None or isinstance(value, IndexedValue) for value in self.data.values()):
@@ -662,7 +662,7 @@ def object_classes_to_domains(db_map, domain_names):
     Converts object classes and objects from a database to the intermediate format.
 
     Object classes get converted to :class:`Set` objects
-    while objects are stored as :class:`Record`s in the :class:`Set`s.
+    while objects are stored as :class:`Record` objects in the :class:`Set` objects.
 
     Args:
         db_map (DatabaseMapping or DiffDatabaseMapping): a database map
@@ -684,11 +684,11 @@ def object_classes_to_domains(db_map, domain_names):
 
 def object_parameters(db_map, domains_with_ids, logger):
     """
-    Converts object parameters from database to :class:`Parameter`s.
+    Converts object parameters from database to :class:`Parameter` objects.
 
     Args:
         db_map (DatabaseMapping or DiffDatabaseMapping): a database map
-        domains_with_ids (dict): mapping from object class ids to corresponding :class:`Set`s
+        domains_with_ids (dict): mapping from object class ids to corresponding :class:`Set` objects
         logger (LoggingInterface, optional): a logger; if not None, some errors are logged and ignored instead of
             raising an exception
     Returns:
@@ -717,7 +717,7 @@ def _object_parameter_default_values(db_map, domains_with_ids, classes_with_igno
 
     Args:
         db_map (DatabaseMapping or DiffDatabaseMapping): a database map
-        domains_with_ids (dict): mapping from object class ids to corresponding :class:`Set`s
+        domains_with_ids (dict): mapping from object class ids to corresponding :class:`Set` objects
         classes_with_ignored_parameters (set, optional): a set of problematic object class names; if not None,
             object class names are added to this set in case of errors instead of raising an exception
     Returns:
@@ -753,9 +753,9 @@ def _update_using_existing_object_parameter_values(
     Updates an existing object parameter dict using actual parameter values.
 
     Args:
-        parameters (dict): a mapping from object parameter names to :class:`Parameter`s to update
+        parameters (dict): a mapping from object parameter names to :class:`Parameter` objects to update
         db_map (DatabaseMapping or DiffDatabaseMapping): a database map
-        domains_with_ids (dict): mapping from object class ids to corresponding :class:`Set`s
+        domains_with_ids (dict): mapping from object class ids to corresponding :class:`Set` objects
         classes_with_ignored_parameters (set, optional): a set of problematic object class names; if not None,
             object class names are added to this set in case of errors instead of raising an exception
     """
@@ -780,14 +780,14 @@ def relationship_classes_to_sets(db_map, domain_names, set_names):
     Converts relationship classes and relationships from a database to the intermediate format.
 
     Relationship classes get converted to :class:`Set` objects
-    while relationships are stored as :class:`Records` in corresponding :class:`Set`s.
+    while relationships are stored as :class:`Record` objects in corresponding :class:`Set` objects.
 
     Args:
         db_map (DatabaseMapping or DiffDatabaseMapping): a database map
         domain_names (set): names of domains (a.k.a object classes) the relationships connect
         set_names (set): names of sets to convert
     Returns:
-         dict: a map from relationship class ids to the corresponding :class:`Set`s
+         dict: a map from relationship class ids to the corresponding :class:`Set` objects
     """
     sets = dict()
     for relationship_class_row in db_map.wide_relationship_class_list():
@@ -807,11 +807,11 @@ def relationship_classes_to_sets(db_map, domain_names, set_names):
 
 def relationship_parameters(db_map, sets_with_ids, logger):
     """
-    Converts relationship parameters from database to :class:`Parameter`s.
+    Converts relationship parameters from database to :class:`Parameter` objects.
 
     Args:
         db_map (DatabaseMapping or DiffDatabaseMapping): a database map
-        sets_with_ids (dict): mapping from relationship class ids to corresponding :class:`Set`s
+        sets_with_ids (dict): mapping from relationship class ids to corresponding :class:`Set` objects
         logger (LoggingInterface, optional): a logger; if not None, some errors are logged and ignored instead of
             raising an exception
     Returns:
@@ -840,7 +840,7 @@ def _relationship_parameter_default_values(db_map, sets_with_ids, classes_with_i
 
     Args:
         db_map (DatabaseMapping or DiffDatabaseMapping): a database map
-        sets_with_ids (dict): mapping from relationship class ids to corresponding :class:`Set`s
+        sets_with_ids (dict): mapping from relationship class ids to corresponding :class:`Set` objects
         classes_with_ignored_parameters (set, optional): a set of problematic relationship class names; if not None,
             relationship class names are added to this set in case of errors instead of raising an exception
     Returns:
@@ -876,9 +876,9 @@ def _update_using_existing_relationship_parameter_values(
     Updates an existing relationship parameter dict using actual parameter values.
 
     Args:
-        parameters (dict): a mapping from relationship parameter names to :class:`Parameter`s to update
+        parameters (dict): a mapping from relationship parameter names to :class:`Parameter` objects to update
         db_map (DatabaseMapping or DiffDatabaseMapping): a database map
-        sets_with_ids (dict): mapping from relationship class ids to corresponding :class:`Set`s
+        sets_with_ids (dict): mapping from relationship class ids to corresponding :class:`Set` objects
         classes_with_ignored_parameters (set, optional): a set of problematic relationship class names; if not None,
             class names are added to this set in case of errors instead of raising an exception
     """
@@ -1346,10 +1346,11 @@ def sort_sets(sets, sorted_names):
     Sorts a list of sets according to ``sorted_names``
 
     Args:
-        sets (list): a list of :class:`Set`s to be sorted
+        sets (list): a list of :class:`Set` objects to be sorted
         sorted_names (list): a list of set names in the sorted order
+
     Returns:
-        list: sorted :class:`Set`s
+        list: sorted :class:`Set` objects
     """
     sort_indexes = {name: index for index, name in enumerate(sorted_names)}
     try:
@@ -1455,7 +1456,7 @@ def to_gdx_file(
 
 def make_set_settings(database_map):
     """
-    Builds a SetSettings object from given database.
+    Builds a :class:`SetSettings` object from given database.
 
     Args:
         database_map (spinedb_api.DatabaseMapping or spinedb_api.DiffDatabaseMapping): a database from which

@@ -10,35 +10,49 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-# Form implementation generated from reading ui file 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\ui\import_options.ui',
-# licensing of 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\ui\import_options.ui' applies.
-#
-# Created: Thu Feb 13 11:54:02 2020
-#      by: pyside2-uic  running on PySide2 5.11.2
-#
-# WARNING! All changes made in this file will be lost!
+################################################################################
+## Form generated from reading UI file 'import_options.ui'
+##
+## Created by: Qt User Interface Compiler version 5.14.2
+##
+## WARNING! All changes made in this file will be lost when recompiling UI file!
+################################################################################
 
-from PySide2 import QtCore, QtGui, QtWidgets
+from PySide2.QtCore import (QCoreApplication, QDate, QDateTime, QMetaObject,
+    QObject, QPoint, QRect, QSize, QTime, QUrl, Qt)
+from PySide2.QtGui import (QBrush, QColor, QConicalGradient, QCursor, QFont,
+    QFontDatabase, QIcon, QKeySequence, QLinearGradient, QPalette, QPainter,
+    QPixmap, QRadialGradient)
+from PySide2.QtWidgets import *
+
 
 class Ui_ImportOptions(object):
     def setupUi(self, ImportOptions):
-        ImportOptions.setObjectName("ImportOptions")
+        if not ImportOptions.objectName():
+            ImportOptions.setObjectName(u"ImportOptions")
         ImportOptions.resize(400, 300)
-        self.verticalLayout = QtWidgets.QVBoxLayout(ImportOptions)
-        self.verticalLayout.setObjectName("verticalLayout")
-        self.options_box = QtWidgets.QGroupBox(ImportOptions)
-        self.options_box.setObjectName("options_box")
-        self.verticalLayout_2 = QtWidgets.QVBoxLayout(self.options_box)
-        self.verticalLayout_2.setObjectName("verticalLayout_2")
-        self.options_layout = QtWidgets.QFormLayout()
-        self.options_layout.setObjectName("options_layout")
+        self.verticalLayout = QVBoxLayout(ImportOptions)
+        self.verticalLayout.setObjectName(u"verticalLayout")
+        self.options_box = QGroupBox(ImportOptions)
+        self.options_box.setObjectName(u"options_box")
+        self.verticalLayout_2 = QVBoxLayout(self.options_box)
+        self.verticalLayout_2.setObjectName(u"verticalLayout_2")
+        self.options_layout = QFormLayout()
+        self.options_layout.setObjectName(u"options_layout")
+
         self.verticalLayout_2.addLayout(self.options_layout)
+
+
         self.verticalLayout.addWidget(self.options_box)
 
+
         self.retranslateUi(ImportOptions)
-        QtCore.QMetaObject.connectSlotsByName(ImportOptions)
+
+        QMetaObject.connectSlotsByName(ImportOptions)
+    # setupUi
 
     def retranslateUi(self, ImportOptions):
-        ImportOptions.setWindowTitle(QtWidgets.QApplication.translate("ImportOptions", "Form", None, -1))
-        self.options_box.setTitle(QtWidgets.QApplication.translate("ImportOptions", "Options", None, -1))
+        ImportOptions.setWindowTitle(QCoreApplication.translate("ImportOptions", u"Form", None))
+        self.options_box.setTitle(QCoreApplication.translate("ImportOptions", u"Options", None))
+    # retranslateUi
 

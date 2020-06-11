@@ -10,94 +10,132 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-# Form implementation generated from reading ui file 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\ui\open_project_dialog.ui',
-# licensing of 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\ui\open_project_dialog.ui' applies.
-#
-# Created: Thu Feb 13 11:54:07 2020
-#      by: pyside2-uic  running on PySide2 5.11.2
-#
-# WARNING! All changes made in this file will be lost!
+################################################################################
+## Form generated from reading UI file 'open_project_dialog.ui'
+##
+## Created by: Qt User Interface Compiler version 5.14.2
+##
+## WARNING! All changes made in this file will be lost when recompiling UI file!
+################################################################################
 
-from PySide2 import QtCore, QtGui, QtWidgets
+from PySide2.QtCore import (QCoreApplication, QDate, QDateTime, QMetaObject,
+    QObject, QPoint, QRect, QSize, QTime, QUrl, Qt)
+from PySide2.QtGui import (QBrush, QColor, QConicalGradient, QCursor, QFont,
+    QFontDatabase, QIcon, QKeySequence, QLinearGradient, QPalette, QPainter,
+    QPixmap, QRadialGradient)
+from PySide2.QtWidgets import *
+
+from spinetoolbox import resources_icons_rc
 
 class Ui_Dialog(object):
     def setupUi(self, Dialog):
-        Dialog.setObjectName("Dialog")
+        if not Dialog.objectName():
+            Dialog.setObjectName(u"Dialog")
         Dialog.resize(400, 450)
-        self.verticalLayout = QtWidgets.QVBoxLayout(Dialog)
-        self.verticalLayout.setObjectName("verticalLayout")
-        self.horizontalLayout = QtWidgets.QHBoxLayout()
-        self.horizontalLayout.setObjectName("horizontalLayout")
-        self.toolButton_root = QtWidgets.QToolButton(Dialog)
-        icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap(":/icons/slash.svg"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.verticalLayout = QVBoxLayout(Dialog)
+        self.verticalLayout.setObjectName(u"verticalLayout")
+        self.horizontalLayout = QHBoxLayout()
+        self.horizontalLayout.setObjectName(u"horizontalLayout")
+        self.toolButton_root = QToolButton(Dialog)
+        self.toolButton_root.setObjectName(u"toolButton_root")
+        icon = QIcon()
+        icon.addFile(u":/icons/slash.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.toolButton_root.setIcon(icon)
-        self.toolButton_root.setObjectName("toolButton_root")
+
         self.horizontalLayout.addWidget(self.toolButton_root)
-        self.toolButton_home = QtWidgets.QToolButton(Dialog)
-        icon1 = QtGui.QIcon()
-        icon1.addPixmap(QtGui.QPixmap(":/icons/home.svg"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+
+        self.toolButton_home = QToolButton(Dialog)
+        self.toolButton_home.setObjectName(u"toolButton_home")
+        icon1 = QIcon()
+        icon1.addFile(u":/icons/home.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.toolButton_home.setIcon(icon1)
-        self.toolButton_home.setObjectName("toolButton_home")
+
         self.horizontalLayout.addWidget(self.toolButton_home)
-        self.toolButton_documents = QtWidgets.QToolButton(Dialog)
-        self.toolButton_documents.setText("")
-        icon2 = QtGui.QIcon()
-        icon2.addPixmap(QtGui.QPixmap(":/icons/book.svg"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+
+        self.toolButton_documents = QToolButton(Dialog)
+        self.toolButton_documents.setObjectName(u"toolButton_documents")
+        icon2 = QIcon()
+        icon2.addFile(u":/icons/book.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.toolButton_documents.setIcon(icon2)
-        self.toolButton_documents.setObjectName("toolButton_documents")
+
         self.horizontalLayout.addWidget(self.toolButton_documents)
-        self.toolButton_desktop = QtWidgets.QToolButton(Dialog)
-        icon3 = QtGui.QIcon()
-        icon3.addPixmap(QtGui.QPixmap(":/icons/desktop.svg"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+
+        self.toolButton_desktop = QToolButton(Dialog)
+        self.toolButton_desktop.setObjectName(u"toolButton_desktop")
+        icon3 = QIcon()
+        icon3.addFile(u":/icons/desktop.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.toolButton_desktop.setIcon(icon3)
-        self.toolButton_desktop.setObjectName("toolButton_desktop")
+
         self.horizontalLayout.addWidget(self.toolButton_desktop)
-        spacerItem = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
-        self.horizontalLayout.addItem(spacerItem)
+
+        self.horizontalSpacer = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+
+        self.horizontalLayout.addItem(self.horizontalSpacer)
+
+
         self.verticalLayout.addLayout(self.horizontalLayout)
-        self.comboBox_current_path = QtWidgets.QComboBox(Dialog)
-        self.comboBox_current_path.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+
+        self.comboBox_current_path = QComboBox(Dialog)
+        self.comboBox_current_path.setObjectName(u"comboBox_current_path")
+        self.comboBox_current_path.setContextMenuPolicy(Qt.CustomContextMenu)
         self.comboBox_current_path.setEditable(True)
-        self.comboBox_current_path.setObjectName("comboBox_current_path")
+
         self.verticalLayout.addWidget(self.comboBox_current_path)
-        self.treeView_file_system = QtWidgets.QTreeView(Dialog)
-        self.treeView_file_system.setVerticalScrollMode(QtWidgets.QAbstractItemView.ScrollPerPixel)
+
+        self.treeView_file_system = QTreeView(Dialog)
+        self.treeView_file_system.setObjectName(u"treeView_file_system")
+        self.treeView_file_system.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
         self.treeView_file_system.setUniformRowHeights(True)
         self.treeView_file_system.setSortingEnabled(True)
         self.treeView_file_system.setAnimated(False)
-        self.treeView_file_system.setObjectName("treeView_file_system")
+
         self.verticalLayout.addWidget(self.treeView_file_system)
-        self.label = QtWidgets.QLabel(Dialog)
-        font = QtGui.QFont()
+
+        self.label = QLabel(Dialog)
+        self.label.setObjectName(u"label")
+        font = QFont()
         font.setPointSize(7)
         font.setItalic(True)
         self.label.setFont(font)
-        self.label.setAlignment(QtCore.Qt.AlignCenter)
-        self.label.setObjectName("label")
+        self.label.setAlignment(Qt.AlignCenter)
+
         self.verticalLayout.addWidget(self.label)
-        self.buttonBox = QtWidgets.QDialogButtonBox(Dialog)
-        self.buttonBox.setOrientation(QtCore.Qt.Horizontal)
-        self.buttonBox.setStandardButtons(QtWidgets.QDialogButtonBox.Cancel|QtWidgets.QDialogButtonBox.Ok)
-        self.buttonBox.setObjectName("buttonBox")
+
+        self.buttonBox = QDialogButtonBox(Dialog)
+        self.buttonBox.setObjectName(u"buttonBox")
+        self.buttonBox.setOrientation(Qt.Horizontal)
+        self.buttonBox.setStandardButtons(QDialogButtonBox.Cancel|QDialogButtonBox.Ok)
+
         self.verticalLayout.addWidget(self.buttonBox)
 
+        QWidget.setTabOrder(self.comboBox_current_path, self.treeView_file_system)
+        QWidget.setTabOrder(self.treeView_file_system, self.toolButton_root)
+        QWidget.setTabOrder(self.toolButton_root, self.toolButton_home)
+        QWidget.setTabOrder(self.toolButton_home, self.toolButton_documents)
+        QWidget.setTabOrder(self.toolButton_documents, self.toolButton_desktop)
+
         self.retranslateUi(Dialog)
-        QtCore.QObject.connect(self.buttonBox, QtCore.SIGNAL("accepted()"), Dialog.accept)
-        QtCore.QObject.connect(self.buttonBox, QtCore.SIGNAL("rejected()"), Dialog.reject)
-        QtCore.QMetaObject.connectSlotsByName(Dialog)
-        Dialog.setTabOrder(self.comboBox_current_path, self.treeView_file_system)
-        Dialog.setTabOrder(self.treeView_file_system, self.toolButton_root)
-        Dialog.setTabOrder(self.toolButton_root, self.toolButton_home)
-        Dialog.setTabOrder(self.toolButton_home, self.toolButton_documents)
-        Dialog.setTabOrder(self.toolButton_documents, self.toolButton_desktop)
+        self.buttonBox.accepted.connect(Dialog.accept)
+        self.buttonBox.rejected.connect(Dialog.reject)
+
+        QMetaObject.connectSlotsByName(Dialog)
+    # setupUi
 
     def retranslateUi(self, Dialog):
-        Dialog.setWindowTitle(QtWidgets.QApplication.translate("Dialog", "Open project", None, -1))
-        self.toolButton_root.setToolTip(QtWidgets.QApplication.translate("Dialog", "<html><head/><body><p>Root</p></body></html>", None, -1))
-        self.toolButton_home.setToolTip(QtWidgets.QApplication.translate("Dialog", "<html><head/><body><p>Home</p></body></html>", None, -1))
-        self.toolButton_documents.setToolTip(QtWidgets.QApplication.translate("Dialog", "<html><head/><body><p>Documents</p></body></html>", None, -1))
-        self.toolButton_desktop.setToolTip(QtWidgets.QApplication.translate("Dialog", "<html><head/><body><p>Desktop</p></body></html>", None, -1))
-        self.label.setText(QtWidgets.QApplication.translate("Dialog", "Select Spine Toolbox project directory", None, -1))
+        Dialog.setWindowTitle(QCoreApplication.translate("Dialog", u"Open project", None))
+#if QT_CONFIG(tooltip)
+        self.toolButton_root.setToolTip(QCoreApplication.translate("Dialog", u"<html><head/><body><p>Root</p></body></html>", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.toolButton_home.setToolTip(QCoreApplication.translate("Dialog", u"<html><head/><body><p>Home</p></body></html>", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.toolButton_documents.setToolTip(QCoreApplication.translate("Dialog", u"<html><head/><body><p>Documents</p></body></html>", None))
+#endif // QT_CONFIG(tooltip)
+        self.toolButton_documents.setText("")
+#if QT_CONFIG(tooltip)
+        self.toolButton_desktop.setToolTip(QCoreApplication.translate("Dialog", u"<html><head/><body><p>Desktop</p></body></html>", None))
+#endif // QT_CONFIG(tooltip)
+        self.label.setText(QCoreApplication.translate("Dialog", u"Select Spine Toolbox project directory", None))
+    # retranslateUi
 
-from spinetoolbox import resources_icons_rc

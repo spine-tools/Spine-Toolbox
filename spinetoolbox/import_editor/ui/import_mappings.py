@@ -10,61 +10,88 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-# Form implementation generated from reading ui file 'C:\data\src\toolbox\bin\..\spinetoolbox\import_editor\ui\import_mappings.ui',
-# licensing of 'C:\data\src\toolbox\bin\..\spinetoolbox\import_editor\ui\import_mappings.ui' applies.
-#
-# Created: Thu May 14 14:19:52 2020
-#      by: pyside2-uic  running on PySide2 5.11.2
-#
-# WARNING! All changes made in this file will be lost!
+################################################################################
+## Form generated from reading UI file 'import_mappings.ui'
+##
+## Created by: Qt User Interface Compiler version 5.14.2
+##
+## WARNING! All changes made in this file will be lost when recompiling UI file!
+################################################################################
 
-from PySide2 import QtCore, QtGui, QtWidgets
+from PySide2.QtCore import (QCoreApplication, QDate, QDateTime, QMetaObject,
+    QObject, QPoint, QRect, QSize, QTime, QUrl, Qt)
+from PySide2.QtGui import (QBrush, QColor, QConicalGradient, QCursor, QFont,
+    QFontDatabase, QIcon, QKeySequence, QLinearGradient, QPalette, QPainter,
+    QPixmap, QRadialGradient)
+from PySide2.QtWidgets import *
+
+from spinetoolbox.import_editor.widgets.import_mapping_options import ImportMappingOptions
+
 
 class Ui_ImportMappings(object):
     def setupUi(self, ImportMappings):
-        ImportMappings.setObjectName("ImportMappings")
+        if not ImportMappings.objectName():
+            ImportMappings.setObjectName(u"ImportMappings")
         ImportMappings.resize(367, 536)
-        self.verticalLayout_3 = QtWidgets.QVBoxLayout(ImportMappings)
-        self.verticalLayout_3.setObjectName("verticalLayout_3")
-        self.mapping_splitter = QtWidgets.QSplitter(ImportMappings)
-        self.mapping_splitter.setOrientation(QtCore.Qt.Vertical)
-        self.mapping_splitter.setObjectName("mapping_splitter")
-        self.verticalLayoutWidget = QtWidgets.QWidget(self.mapping_splitter)
-        self.verticalLayoutWidget.setObjectName("verticalLayoutWidget")
-        self.top_layout = QtWidgets.QVBoxLayout(self.verticalLayoutWidget)
+        self.verticalLayout_3 = QVBoxLayout(ImportMappings)
+        self.verticalLayout_3.setObjectName(u"verticalLayout_3")
+        self.mapping_splitter = QSplitter(ImportMappings)
+        self.mapping_splitter.setObjectName(u"mapping_splitter")
+        self.mapping_splitter.setOrientation(Qt.Vertical)
+        self.verticalLayoutWidget = QWidget(self.mapping_splitter)
+        self.verticalLayoutWidget.setObjectName(u"verticalLayoutWidget")
+        self.top_layout = QVBoxLayout(self.verticalLayoutWidget)
+        self.top_layout.setObjectName(u"top_layout")
         self.top_layout.setContentsMargins(0, 0, 0, 0)
-        self.top_layout.setObjectName("top_layout")
-        self.button_layout = QtWidgets.QHBoxLayout()
-        self.button_layout.setObjectName("button_layout")
-        self.new_button = QtWidgets.QPushButton(self.verticalLayoutWidget)
-        self.new_button.setObjectName("new_button")
+        self.button_layout = QHBoxLayout()
+        self.button_layout.setObjectName(u"button_layout")
+        self.new_button = QPushButton(self.verticalLayoutWidget)
+        self.new_button.setObjectName(u"new_button")
+
         self.button_layout.addWidget(self.new_button)
-        self.remove_button = QtWidgets.QPushButton(self.verticalLayoutWidget)
-        self.remove_button.setObjectName("remove_button")
+
+        self.remove_button = QPushButton(self.verticalLayoutWidget)
+        self.remove_button.setObjectName(u"remove_button")
+
         self.button_layout.addWidget(self.remove_button)
+
+
         self.top_layout.addLayout(self.button_layout)
-        self.list_view = QtWidgets.QListView(self.verticalLayoutWidget)
-        self.list_view.setObjectName("list_view")
+
+        self.list_view = QListView(self.verticalLayoutWidget)
+        self.list_view.setObjectName(u"list_view")
+
         self.top_layout.addWidget(self.list_view)
-        self.verticalLayoutWidget_2 = QtWidgets.QWidget(self.mapping_splitter)
-        self.verticalLayoutWidget_2.setObjectName("verticalLayoutWidget_2")
-        self.bottom_layout = QtWidgets.QVBoxLayout(self.verticalLayoutWidget_2)
+
+        self.mapping_splitter.addWidget(self.verticalLayoutWidget)
+        self.verticalLayoutWidget_2 = QWidget(self.mapping_splitter)
+        self.verticalLayoutWidget_2.setObjectName(u"verticalLayoutWidget_2")
+        self.bottom_layout = QVBoxLayout(self.verticalLayoutWidget_2)
+        self.bottom_layout.setObjectName(u"bottom_layout")
         self.bottom_layout.setContentsMargins(0, 0, 0, 0)
-        self.bottom_layout.setObjectName("bottom_layout")
         self.options = ImportMappingOptions(self.verticalLayoutWidget_2)
-        self.options.setObjectName("options")
+        self.options.setObjectName(u"options")
+
         self.bottom_layout.addWidget(self.options)
-        self.table_view = QtWidgets.QTableView(self.verticalLayoutWidget_2)
-        self.table_view.setObjectName("table_view")
+
+        self.table_view = QTableView(self.verticalLayoutWidget_2)
+        self.table_view.setObjectName(u"table_view")
+
         self.bottom_layout.addWidget(self.table_view)
+
+        self.mapping_splitter.addWidget(self.verticalLayoutWidget_2)
+
         self.verticalLayout_3.addWidget(self.mapping_splitter)
 
+
         self.retranslateUi(ImportMappings)
-        QtCore.QMetaObject.connectSlotsByName(ImportMappings)
+
+        QMetaObject.connectSlotsByName(ImportMappings)
+    # setupUi
 
     def retranslateUi(self, ImportMappings):
-        ImportMappings.setWindowTitle(QtWidgets.QApplication.translate("ImportMappings", "Form", None, -1))
-        self.new_button.setText(QtWidgets.QApplication.translate("ImportMappings", "New", None, -1))
-        self.remove_button.setText(QtWidgets.QApplication.translate("ImportMappings", "Remove", None, -1))
+        ImportMappings.setWindowTitle(QCoreApplication.translate("ImportMappings", u"Form", None))
+        self.new_button.setText(QCoreApplication.translate("ImportMappings", u"New", None))
+        self.remove_button.setText(QCoreApplication.translate("ImportMappings", u"Remove", None))
+    # retranslateUi
 
-from spinetoolbox.import_editor.widgets.import_mapping_options import ImportMappingOptions

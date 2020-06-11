@@ -27,7 +27,7 @@ with open("spinetoolbox/version.py") as fp:
     exec(fp.read(), version)
 
 requirements = [
-    "pyside2 < 5.12",
+    "pyside2 >=5.14, <5.15",
     "datapackage >= 1.2.3",
     "jupyter-client < 5.3.2",
     "qtconsole >= 4.3.1",

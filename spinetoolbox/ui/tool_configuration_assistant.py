@@ -10,73 +10,91 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-# Form implementation generated from reading ui file 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\ui\tool_configuration_assistant.ui',
-# licensing of 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\ui\tool_configuration_assistant.ui' applies.
-#
-# Created: Thu Feb 13 11:54:16 2020
-#      by: pyside2-uic  running on PySide2 5.11.2
-#
-# WARNING! All changes made in this file will be lost!
+################################################################################
+## Form generated from reading UI file 'tool_configuration_assistant.ui'
+##
+## Created by: Qt User Interface Compiler version 5.14.2
+##
+## WARNING! All changes made in this file will be lost when recompiling UI file!
+################################################################################
 
-from PySide2 import QtCore, QtGui, QtWidgets
+from PySide2.QtCore import (QCoreApplication, QDate, QDateTime, QMetaObject,
+    QObject, QPoint, QRect, QSize, QTime, QUrl, Qt)
+from PySide2.QtGui import (QBrush, QColor, QConicalGradient, QCursor, QFont,
+    QFontDatabase, QIcon, QKeySequence, QLinearGradient, QPalette, QPainter,
+    QPixmap, QRadialGradient)
+from PySide2.QtWidgets import *
+
 
 class Ui_PackagesForm(object):
     def setupUi(self, PackagesForm):
-        PackagesForm.setObjectName("PackagesForm")
-        PackagesForm.setWindowModality(QtCore.Qt.ApplicationModal)
+        if not PackagesForm.objectName():
+            PackagesForm.setObjectName(u"PackagesForm")
+        PackagesForm.setWindowModality(Qt.ApplicationModal)
         PackagesForm.resize(685, 331)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
+        sizePolicy = QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(PackagesForm.sizePolicy().hasHeightForWidth())
         PackagesForm.setSizePolicy(sizePolicy)
-        PackagesForm.setMinimumSize(QtCore.QSize(0, 0))
-        PackagesForm.setMaximumSize(QtCore.QSize(16777215, 16777215))
+        PackagesForm.setMinimumSize(QSize(0, 0))
+        PackagesForm.setMaximumSize(QSize(16777215, 16777215))
         PackagesForm.setMouseTracking(False)
-        PackagesForm.setFocusPolicy(QtCore.Qt.StrongFocus)
-        PackagesForm.setContextMenuPolicy(QtCore.Qt.NoContextMenu)
+        PackagesForm.setFocusPolicy(Qt.StrongFocus)
+        PackagesForm.setContextMenuPolicy(Qt.NoContextMenu)
         PackagesForm.setAutoFillBackground(False)
-        self.verticalLayout = QtWidgets.QVBoxLayout(PackagesForm)
+        self.verticalLayout = QVBoxLayout(PackagesForm)
         self.verticalLayout.setSpacing(0)
+        self.verticalLayout.setObjectName(u"verticalLayout")
         self.verticalLayout.setContentsMargins(0, 0, 0, 0)
-        self.verticalLayout.setObjectName("verticalLayout")
-        self.verticalLayout_3 = QtWidgets.QVBoxLayout()
-        self.verticalLayout_3.setObjectName("verticalLayout_3")
-        self.scrollArea = QtWidgets.QScrollArea(PackagesForm)
+        self.verticalLayout_3 = QVBoxLayout()
+        self.verticalLayout_3.setObjectName(u"verticalLayout_3")
+        self.scrollArea = QScrollArea(PackagesForm)
+        self.scrollArea.setObjectName(u"scrollArea")
         self.scrollArea.setWidgetResizable(True)
-        self.scrollArea.setAlignment(QtCore.Qt.AlignLeading|QtCore.Qt.AlignLeft|QtCore.Qt.AlignTop)
-        self.scrollArea.setObjectName("scrollArea")
-        self.scrollAreaWidgetContents = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 681, 327))
-        self.scrollAreaWidgetContents.setObjectName("scrollAreaWidgetContents")
-        self.verticalLayout_2 = QtWidgets.QVBoxLayout(self.scrollAreaWidgetContents)
-        self.verticalLayout_2.setObjectName("verticalLayout_2")
-        self.groupBox_general = QtWidgets.QGroupBox(self.scrollAreaWidgetContents)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.groupBox_general.sizePolicy().hasHeightForWidth())
-        self.groupBox_general.setSizePolicy(sizePolicy)
-        self.groupBox_general.setMinimumSize(QtCore.QSize(0, 0))
-        self.groupBox_general.setMaximumSize(QtCore.QSize(16777215, 16777215))
+        self.scrollArea.setAlignment(Qt.AlignLeading|Qt.AlignLeft|Qt.AlignTop)
+        self.scrollAreaWidgetContents = QWidget()
+        self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
+        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 681, 327))
+        self.verticalLayout_2 = QVBoxLayout(self.scrollAreaWidgetContents)
+        self.verticalLayout_2.setObjectName(u"verticalLayout_2")
+        self.groupBox_general = QGroupBox(self.scrollAreaWidgetContents)
+        self.groupBox_general.setObjectName(u"groupBox_general")
+        sizePolicy1 = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        sizePolicy1.setHorizontalStretch(0)
+        sizePolicy1.setVerticalStretch(0)
+        sizePolicy1.setHeightForWidth(self.groupBox_general.sizePolicy().hasHeightForWidth())
+        self.groupBox_general.setSizePolicy(sizePolicy1)
+        self.groupBox_general.setMinimumSize(QSize(0, 0))
+        self.groupBox_general.setMaximumSize(QSize(16777215, 16777215))
         self.groupBox_general.setAutoFillBackground(False)
         self.groupBox_general.setFlat(False)
-        self.groupBox_general.setObjectName("groupBox_general")
-        self.verticalLayout_6 = QtWidgets.QVBoxLayout(self.groupBox_general)
+        self.verticalLayout_6 = QVBoxLayout(self.groupBox_general)
         self.verticalLayout_6.setSpacing(6)
-        self.verticalLayout_6.setObjectName("verticalLayout_6")
-        self.textBrowser_spine_model = QtWidgets.QTextBrowser(self.groupBox_general)
-        self.textBrowser_spine_model.setObjectName("textBrowser_spine_model")
+        self.verticalLayout_6.setObjectName(u"verticalLayout_6")
+        self.textBrowser_spine_model = QTextBrowser(self.groupBox_general)
+        self.textBrowser_spine_model.setObjectName(u"textBrowser_spine_model")
+
         self.verticalLayout_6.addWidget(self.textBrowser_spine_model)
+
+
         self.verticalLayout_2.addWidget(self.groupBox_general)
+
         self.scrollArea.setWidget(self.scrollAreaWidgetContents)
+
         self.verticalLayout_3.addWidget(self.scrollArea)
+
+
         self.verticalLayout.addLayout(self.verticalLayout_3)
 
+
         self.retranslateUi(PackagesForm)
-        QtCore.QMetaObject.connectSlotsByName(PackagesForm)
+
+        QMetaObject.connectSlotsByName(PackagesForm)
+    # setupUi
 
     def retranslateUi(self, PackagesForm):
-        PackagesForm.setWindowTitle(QtWidgets.QApplication.translate("PackagesForm", "Tool configuration assistant", None, -1))
-        self.groupBox_general.setTitle(QtWidgets.QApplication.translate("PackagesForm", "SpineModel.jl", None, -1))
+        PackagesForm.setWindowTitle(QCoreApplication.translate("PackagesForm", u"Tool configuration assistant", None))
+        self.groupBox_general.setTitle(QCoreApplication.translate("PackagesForm", u"SpineModel.jl", None))
+    # retranslateUi
 
