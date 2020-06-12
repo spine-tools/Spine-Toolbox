@@ -17,13 +17,12 @@ Contains Importer's executable item as well as support utilities.
 """
 import os
 import pathlib
-from PySide2.QtCore import QObject, QEventLoop, Signal, Slot
+from PySide2.QtCore import QObject, QEventLoop, Signal, Slot, QThread
 from spinetoolbox.executable_item_base import ExecutableItemBase
 from spinetoolbox.spine_io.gdx_utils import find_gams_directory
-from . import importer_program
+from .importer_worker import ImporterWorker
 from .item_info import ItemInfo
 from .utils import deserialize_mappings
-from ..shared.helpers import make_python_process
 
 
 class ExecutableItem(ExecutableItemBase, QObject):
@@ -50,8 +49,9 @@ class ExecutableItem(ExecutableItemBase, QObject):
         self._gams_path = gams_path
         self._cancel_on_error = cancel_on_error
         self._resources_from_downstream = list()
-        self._importer_process = None
-        self._importer_process_successful = None
+        self._worker = None
+        self._worker_thread = None
+        self._worker_succeded = None
 
     @staticmethod
     def item_type():
@@ -81,63 +81,46 @@ class ExecutableItem(ExecutableItemBase, QObject):
             if absolute_path is not None:
                 absolute_path_settings[absolute_path] = self._settings[label]
         source_settings = {"GdxConnector": {"gams_directory": self._gams_system_directory()}}
-        # Collect arguments for the importer_program
-        import_args = [
+        loop = QEventLoop()
+        self._destroy_current_worker()
+        self._worker = ImporterWorker(
             list(absolute_paths.values()),
             absolute_path_settings,
             source_settings,
             [r.url for r in self._resources_from_downstream if r.type_ == "database"],
             self._logs_dir,
             self._cancel_on_error,
-        ]
-        if not self._prepare_importer_program(import_args):
-            self._logger.msg_error.emit(f"Executing Importer {self.name} failed.")
-            return False
-        self._importer_process.start_execution()
-        loop = QEventLoop()
-        self.importing_finished.connect(loop.quit)
-        # Wait for finished right here
-        loop.exec_()
-        # This should be executed after the import process has finished
-        if not self._importer_process_successful:
+            self._logger,
+        )
+        self._worker_thread = QThread()
+        self._worker.moveToThread(self._worker_thread)
+        self._worker.finished.connect(self._handle_worker_finished)
+        self._worker.finished.connect(lambda _: loop.quit())
+        self._worker_thread.started.connect(loop.exec_)
+        self._worker_thread.started.connect(self._worker.do_work)
+        self._worker_thread.start()
+        if not self._worker_succeded:
             self._logger.msg_error.emit(f"Executing Importer {self.name} failed.")
         else:
             self._logger.msg_success.emit(f"Executing Importer {self.name} finished")
-        return self._importer_process_successful
-
-    def _prepare_importer_program(self, importer_args):
-        """Prepares an execution manager instance for running
-        importer_program.py in a QProcess.
-
-        Args:
-            importer_args (list): Arguments for the importer_program. Source file paths, their mapping specs,
-                URLs downstream, logs directory, cancel_on_error
-
-        Returns:
-            bool: True if preparing the program succeeded, False otherwise.
-
-        """
-        self._importer_process = make_python_process(
-            importer_program.__file__, importer_args, self._python_path, self._logger
-        )
-        if self._importer_process is None:
-            return False
-        self._importer_process.execution_finished.connect(self._handle_importer_program_process_finished)
-        return True
+        return self._worker_succeded
 
     @Slot(int)
-    def _handle_importer_program_process_finished(self, exit_code):
-        """Handles the return value from importer program when it has finished.
-        Emits a signal to indicate that this Importer has been executed.
+    def _handle_worker_finished(self, exit_code):
+        self._destroy_current_worker()
+        self._worker_succeded = exit_code == 0
 
-        Args:
-            exit_code (int): Process return value. 0: success, !0: failure
+    def _destroy_current_worker(self):
+        """Runs when starting execution and after worker finishes.
+        Destroys current worker and quits thread, if any.
         """
-        self._importer_process.execution_finished.disconnect()
-        self._importer_process.deleteLater()
-        self._importer_process = None
-        self._importer_process_successful = exit_code == 0
-        self.importing_finished.emit()
+        if self._worker:
+            self._worker.deleteLater()
+            self._worker = None
+        if self._worker_thread:
+            self._worker_thread.quit()
+            self._worker_thread.wait()
+            self._worker_thread = None
 
     def _gams_system_directory(self):
         """Returns GAMS system path or None if GAMS default is to be used."""
