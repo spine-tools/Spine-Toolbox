@@ -206,7 +206,7 @@
         </sizepolicy>
        </property>
        <property name="currentIndex">
-        <number>0</number>
+        <number>3</number>
        </property>
        <widget class="QWidget" name="General">
         <layout class="QVBoxLayout" name="verticalLayout_6">
@@ -1043,48 +1043,23 @@ p, li { white-space: pre-wrap; }
                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;When checked [default], moving Object items causes connected Relationship items to follow.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="text">
-               <string>Move relationships along with objects in the Entity graph</string>
+               <string>Move relationships along with objects in Entity graph</string>
               </property>
              </widget>
             </item>
             <item>
-             <widget class="QLabel" name="label_6">
-              <property name="font">
-               <font>
-                <pointsize>11</pointsize>
-               </font>
-              </property>
+             <widget class="QCheckBox" name="checkBox_smooth_entity_graph_zoom">
               <property name="text">
-               <string>Entity graph relationship expansion policy:</string>
+               <string>Smooth Entity graph zoom</string>
               </property>
              </widget>
             </item>
             <item>
-             <layout class="QHBoxLayout" name="horizontalLayout_3">
-              <property name="spacing">
-               <number>0</number>
+             <widget class="QCheckBox" name="checkBox_smooth_entity_graph_rotation">
+              <property name="text">
+               <string>Smooth Entity graph rotation</string>
               </property>
-              <item>
-               <widget class="QRadioButton" name="radioButton_relationship_at_least_one_selected">
-                <property name="toolTip">
-                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Whenever an object is included in the graph, the graph automatically includes all its relationships.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                </property>
-                <property name="text">
-                 <string>Maximum expansion</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QRadioButton" name="radioButton_relationship_only_selected">
-                <property name="toolTip">
-                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Whenever all the objects in a relationship are included in the graph, the graph automaticall includes the relationship.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                </property>
-                <property name="text">
-                 <string>Minimum expansion</string>
-                </property>
-               </widget>
-              </item>
-             </layout>
+             </widget>
             </item>
            </layout>
           </widget>

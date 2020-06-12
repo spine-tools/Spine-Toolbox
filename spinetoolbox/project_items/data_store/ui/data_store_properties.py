@@ -10,10 +10,10 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-# Form implementation generated from reading ui file '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/project_items/data_store/ui/data_store_properties.ui',
-# licensing of '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/project_items/data_store/ui/data_store_properties.ui' applies.
+# Form implementation generated from reading ui file 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\project_items\data_store\ui\data_store_properties.ui',
+# licensing of 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\project_items\data_store\ui\data_store_properties.ui' applies.
 #
-# Created: Sun May 17 10:40:20 2020
+# Created: Fri Jun  5 12:42:53 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -88,7 +88,7 @@ class Ui_Form(object):
         self.comboBox_dialect.setMinimumSize(QtCore.QSize(0, 24))
         self.comboBox_dialect.setMaximumSize(QtCore.QSize(16777215, 24))
         font = QtGui.QFont()
-        font.setPointSize(10)
+        font.setPointSize(8)
         self.comboBox_dialect.setFont(font)
         self.comboBox_dialect.setObjectName("comboBox_dialect")
         self.horizontalLayout_12.addWidget(self.comboBox_dialect)
@@ -103,7 +103,7 @@ class Ui_Form(object):
         self.comboBox_dsn.setMinimumSize(QtCore.QSize(0, 24))
         self.comboBox_dsn.setMaximumSize(QtCore.QSize(16777215, 24))
         font = QtGui.QFont()
-        font.setPointSize(10)
+        font.setPointSize(8)
         self.comboBox_dsn.setFont(font)
         self.comboBox_dsn.setObjectName("comboBox_dsn")
         self.gridLayout_3.addWidget(self.comboBox_dsn, 1, 2, 1, 2)

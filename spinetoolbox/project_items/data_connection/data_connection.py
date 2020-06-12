@@ -26,8 +26,8 @@ from PySide2.QtWidgets import QFileDialog, QStyle, QFileIconProvider, QInputDial
 from spinetoolbox.project_item import ProjectItem
 from spinetoolbox.project_item_resource import ProjectItemResource
 from spinetoolbox.widgets.spine_datapackage_widget import SpineDatapackageWidget
-from spinetoolbox.helpers import busy_effect, deserialize_path, serialize_path
-from spinetoolbox.config import APPLICATION_PATH, INVALID_FILENAME_CHARS
+from spinetoolbox.helpers import busy_effect, deserialize_path, serialize_path, open_url
+from spinetoolbox.config import INVALID_FILENAME_CHARS
 from .commands import AddDCReferencesCommand, RemoveDCReferencesCommand
 from .executable_item import ExecutableItem
 from .item_info import ItemInfo
@@ -158,7 +158,7 @@ class DataConnection(ProjectItem):
     def add_references(self, checked=False):
         """Let user select references to files for this data connection."""
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-        answer = QFileDialog.getOpenFileNames(self._toolbox, "Add file references", APPLICATION_PATH, "*.*")
+        answer = QFileDialog.getOpenFileNames(self._toolbox, "Add file references", self._project.project_dir, "*.*")
         file_paths = answer[0]
         if not file_paths:  # Cancel button clicked
             return

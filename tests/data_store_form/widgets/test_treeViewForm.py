@@ -23,9 +23,8 @@ import sys
 from PySide2.QtWidgets import QApplication
 from PySide2.QtCore import QItemSelectionModel
 import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
-from spinetoolbox.data_store_form.widgets.data_store_form import DataStoreForm
 from spinetoolbox.spine_db_manager import SpineDBManager
-from spinetoolbox.mvcmodels.compound_parameter_models import CompoundParameterModel
+from spinetoolbox.data_store_form.mvcmodels.compound_parameter_models import CompoundParameterModel
 from .test_treeViewFormAdd import TestTreeViewFormAddMixin
 from .test_treeViewFormUpdate import TestTreeViewFormUpdateMixin
 from .test_treeViewFormRemove import TestTreeViewFormRemoveMixin
@@ -281,6 +280,7 @@ class TestTreeViewForm(
             self.db_mngr.show_data_store_form({"mock_url": "mock_db"}, None)
             self.tree_view_form = self.db_mngr._ds_forms[("mock_url",)]
             self.mock_db_map = self.tree_view_form.db_map
+            self.tree_view_form.pivot_table_model = mock.MagicMock()
 
     def tearDown(self):
         """Overridden method. Runs after each test.

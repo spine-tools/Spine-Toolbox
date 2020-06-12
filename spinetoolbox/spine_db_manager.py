@@ -192,7 +192,7 @@ class SpineDBManager(QObject):
 
     def show_data_store_form(self, db_url_codenames, logger):
         """Creates a new DataStoreForm and shows it.
-        
+
         Args:
             db_url_codenames (dict): Mapping db urls to codenames.
             logger (LoggingInterface): Where to log SpineDBAPIError
@@ -263,16 +263,20 @@ class SpineDBManager(QObject):
         Returns:
             DiffDatabaseMapping
         """
-        if url not in self._db_maps:
-            self._db_maps[url] = db_map = DiffDatabaseMapping(url, upgrade=upgrade, codename=codename)
-            stack = self.undo_stack[db_map] = AgedUndoStack(self)
-            undo_action = self.undo_action[db_map] = stack.createUndoAction(self)
-            redo_action = self.redo_action[db_map] = stack.createRedoAction(self)
-            undo_action.setShortcuts(QKeySequence.Undo)
-            redo_action.setShortcuts(QKeySequence.Redo)
-            undo_action.setIcon(QIcon(":/icons/menu_icons/undo.svg"))
-            redo_action.setIcon(QIcon(":/icons/menu_icons/redo.svg"))
-        return self._db_maps[url]
+        db_map = self._db_maps.get(url)
+        if db_map is not None:
+            if codename is not None:
+                db_map.codename = codename
+            return db_map
+        db_map = self._db_maps[url] = DiffDatabaseMapping(url, upgrade=upgrade, codename=codename)
+        stack = self.undo_stack[db_map] = AgedUndoStack(self)
+        undo_action = self.undo_action[db_map] = stack.createUndoAction(self)
+        redo_action = self.redo_action[db_map] = stack.createRedoAction(self)
+        undo_action.setShortcuts(QKeySequence.Undo)
+        redo_action.setShortcuts(QKeySequence.Redo)
+        undo_action.setIcon(QIcon(":/icons/menu_icons/undo.svg"))
+        redo_action.setIcon(QIcon(":/icons/menu_icons/redo.svg"))
+        return db_map
 
     def register_listener(self, ds_form, *db_maps):
         """Register given ds_form as listener for all given db_map's signals.
@@ -828,34 +832,6 @@ class SpineDBManager(QObject):
             return parsed_value
         return None
 
-    def _expand_map(self, map_to_expand, preceding_indexes=None):
-        """
-        NOTE: Not in use at the moment.
-        Expands map iteratively.
-
-        Args:
-            map_to_expand (spinedb_api.Map): a map to expand.
-            preceding_indexes (list): a list of indexes indexing a nested map
-
-        Return:
-            dict: mapping each index string to the corresponding scalar value
-        """
-        current_indexes = map_to_expand.indexes
-        if not current_indexes:
-            return []
-        if preceding_indexes is None:
-            preceding_indexes = list()
-        values = dict()
-        for index, value in zip(current_indexes, map_to_expand.values):
-            index_list = preceding_indexes + [index]
-            if isinstance(value, Map):
-                nested_values = self._expand_map(value, index_list)
-                values.update(nested_values)
-            else:
-                index_as_string = ", ".join([str(i) for i in index_list])
-                values[index_as_string] = value
-        return values
-
     @staticmethod
     def get_db_items(query, order_by_fields):
         return sorted((x._asdict() for x in query), key=lambda x: tuple(x[f] for f in order_by_fields))
@@ -921,7 +897,7 @@ class SpineDBManager(QObject):
         Returns:
             list: dictionary items
         """
-        return self.get_db_items(self._make_query(db_map, "object_sq", ids=ids), ("class_id", "name"))
+        return self.get_db_items(self._make_query(db_map, "ext_object_sq", ids=ids), ("class_id", "name"))
 
     def get_relationship_classes(self, db_map, ids=()):
         """Returns relationship classes from database.

@@ -10,10 +10,10 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-# Form implementation generated from reading ui file 'C:\data\src\toolbox\bin\..\spinetoolbox\project_items\data_connection\ui\data_connection_properties.ui',
-# licensing of 'C:\data\src\toolbox\bin\..\spinetoolbox\project_items\data_connection\ui\data_connection_properties.ui' applies.
+# Form implementation generated from reading ui file 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\project_items\data_connection\ui\data_connection_properties.ui',
+# licensing of 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\project_items\data_connection\ui\data_connection_properties.ui' applies.
 #
-# Created: Mon May 11 15:50:15 2020
+# Created: Fri Jun  5 12:42:53 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -63,7 +63,7 @@ class Ui_Form(object):
         sizePolicy.setHeightForWidth(self.treeView_dc_references.sizePolicy().hasHeightForWidth())
         self.treeView_dc_references.setSizePolicy(sizePolicy)
         font = QtGui.QFont()
-        font.setPointSize(10)
+        font.setPointSize(9)
         self.treeView_dc_references.setFont(font)
         self.treeView_dc_references.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.treeView_dc_references.setAcceptDrops(True)
@@ -138,7 +138,7 @@ class Ui_Form(object):
         sizePolicy.setHeightForWidth(self.treeView_dc_data.sizePolicy().hasHeightForWidth())
         self.treeView_dc_data.setSizePolicy(sizePolicy)
         font = QtGui.QFont()
-        font.setPointSize(10)
+        font.setPointSize(9)
         self.treeView_dc_data.setFont(font)
         self.treeView_dc_data.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.treeView_dc_data.setAcceptDrops(True)

@@ -26,47 +26,20 @@ from ...mvcmodels.shared import PARSED_ROLE
 from ...widgets.custom_delegates import CheckBoxDelegate
 
 
-class GetObjectClassIdMixin:
-    """Allows getting the object class id from the name."""
+class RelationshipPivotTableDelegate(CheckBoxDelegate):
 
-    def _get_object_class_id(self, index, db_map):
-        h = index.model().header.index
-        object_class_name = index.sibling(index.row(), h("object_class_name")).data()
-        object_class = self.db_mngr.get_item_by_field(db_map, "object class", "name", object_class_name)
-        return object_class.get("id")
-
-
-class GetRelationshipClassIdMixin:
-    """Allows getting the relationship class id from the name."""
-
-    def _get_relationship_class_id(self, index, db_map):
-        h = index.model().header.index
-        relationship_class_name = index.sibling(index.row(), h("relationship_class_name")).data()
-        relationship_class = self.db_mngr.get_item_by_field(
-            db_map, "relationship class", "name", relationship_class_name
-        )
-        return relationship_class.get("id")
-
-
-class PivotTableDelegate(CheckBoxDelegate):
-
-    parameter_value_editor_requested = Signal("QModelIndex")
     data_committed = Signal("QModelIndex", "QVariant")
 
-    def setModelData(self, editor, model, index):
-        """Send signal."""
-        if self._is_relationship_index(index):
-            super().setModelData(self, editor, model, index)
-            return
-        data = editor.data()
-        if isinstance(editor, ParameterValueLineEditor):
-            data = to_database(data)
-        self.data_committed.emit(index, data)
+    def __init__(self, parent):
+        """
+        Args:
+            parent (DataStoreForm)
+        """
+        super().__init__(parent)
+        self.data_committed.connect(parent._set_model_data)
 
-    def setEditorData(self, editor, index):
-        """Do nothing. We're setting editor data right away in createEditor."""
-
-    def _is_relationship_index(self, index):
+    @staticmethod
+    def _is_relationship_index(index):
         """
         Checks whether or not the given index corresponds to a relationship,
         in which case we need to use the check box delegate.
@@ -74,10 +47,17 @@ class PivotTableDelegate(CheckBoxDelegate):
         Returns:
             bool
         """
-        parent = self.parent()
-        return not (
-            parent.is_value_input_type() or parent.is_index_expansion_input_type()
-        ) and index.model().sourceModel().index_in_data(index)
+        return index.model().sourceModel().index_in_data(index)
+
+    def setModelData(self, editor, model, index):
+        """Send signal."""
+        if self._is_relationship_index(index):
+            super().setModelData(self, editor, model, index)
+            return
+        self.data_committed.emit(index, editor.data())
+
+    def setEditorData(self, editor, index):
+        """Do nothing. We're setting editor data right away in createEditor."""
 
     def paint(self, painter, option, index):
         if self._is_relationship_index(index):
@@ -93,6 +73,34 @@ class PivotTableDelegate(CheckBoxDelegate):
     def createEditor(self, parent, option, index):
         if self._is_relationship_index(index):
             return super().createEditor(parent, option, index)
+        return CustomLineEditor(parent)
+
+
+class ParameterPivotTableDelegate(QItemDelegate):
+
+    parameter_value_editor_requested = Signal("QModelIndex")
+    data_committed = Signal("QModelIndex", "QVariant")
+
+    def __init__(self, parent):
+        """
+        Args:
+            parent (DataStoreForm)
+        """
+        super().__init__(parent)
+        self.data_committed.connect(parent._set_model_data)
+        self.parameter_value_editor_requested.connect(parent.show_parameter_value_editor)
+
+    def setModelData(self, editor, model, index):
+        """Send signal."""
+        data = editor.data()
+        if isinstance(editor, ParameterValueLineEditor):
+            data = to_database(data)
+        self.data_committed.emit(index, data)
+
+    def setEditorData(self, editor, index):
+        """Do nothing. We're setting editor data right away in createEditor."""
+
+    def createEditor(self, parent, option, index):
         if self.parent().pivot_table_model.index_in_data(index):
             value = index.model().mapToSource(index).data(PARSED_ROLE)
             if value is None or isinstance(value, (Number, str)) and not isinstance(value, bool):
@@ -194,15 +202,12 @@ class ParameterDefaultValueDelegate(ParameterValueOrDefaultValueDelegate):
 class ParameterValueDelegate(ParameterValueOrDefaultValueDelegate):
     """A delegate for the parameter value."""
 
-    def _get_entity_class_id(self, index, db_map):
-        raise NotImplementedError()
-
     def _get_value_list(self, index, db_map):
         """Returns a value list item for the given index and db_map."""
         h = index.model().header.index
         parameter_name = index.sibling(index.row(), h("parameter_name")).data()
         parameters = self.db_mngr.get_items_by_field(db_map, "parameter definition", "parameter_name", parameter_name)
-        entity_class_id = self._get_entity_class_id(index, db_map)
+        entity_class_id = index.model().get_entity_class_id(index, db_map)
         parameter_ids = {p["id"] for p in parameters if p["entity_class_id"] == entity_class_id}
         value_list_ids = {
             self.db_mngr.get_item(db_map, "parameter definition", id_).get("value_list_id") for id_ in parameter_ids
@@ -226,20 +231,6 @@ class ParameterValueDelegate(ParameterValueOrDefaultValueDelegate):
             editor.data_committed.connect(lambda editor=editor, index=index: self._close_editor(editor, index))
             return editor
         return self._create_or_request_parameter_value_editor(parent, option, index, db_map)
-
-
-class ObjectParameterValueDelegate(GetObjectClassIdMixin, ParameterValueDelegate):
-    """A delegate for the object parameter value."""
-
-    def _get_entity_class_id(self, index, db_map):
-        return self._get_object_class_id(index, db_map)
-
-
-class RelationshipParameterValueDelegate(GetRelationshipClassIdMixin, ParameterValueDelegate):
-    """A delegate for the relationship parameter value."""
-
-    def _get_entity_class_id(self, index, db_map):
-        return self._get_relationship_class_id(index, db_map)
 
 
 class TagListDelegate(ParameterDelegate):
@@ -306,7 +297,7 @@ class RelationshipClassNameDelegate(ParameterDelegate):
         return editor
 
 
-class ObjectParameterNameDelegate(GetObjectClassIdMixin, ParameterDelegate):
+class ParameterNameDelegate(ParameterDelegate):
     """A delegate for the object parameter name."""
 
     def createEditor(self, parent, option, index):
@@ -315,9 +306,9 @@ class ObjectParameterNameDelegate(GetObjectClassIdMixin, ParameterDelegate):
         if not db_map:
             return None
         editor = SearchBarEditor(self.parent(), parent)
-        object_class_id = self._get_object_class_id(index, db_map)
+        entity_class_id = index.model().get_entity_class_id(index, db_map)
         parameter_definitions = self.db_mngr.get_items_by_field(
-            db_map, "parameter definition", "object_class_id", object_class_id
+            db_map, "parameter definition", "entity_class_id", entity_class_id
         )
         name_list = [x["parameter_name"] for x in parameter_definitions]
         editor.set_data(index.data(Qt.EditRole), name_list)
@@ -325,26 +316,7 @@ class ObjectParameterNameDelegate(GetObjectClassIdMixin, ParameterDelegate):
         return editor
 
 
-class RelationshipParameterNameDelegate(GetRelationshipClassIdMixin, ParameterDelegate):
-    """A delegate for the relationship parameter name."""
-
-    def createEditor(self, parent, option, index):
-        """Returns editor."""
-        db_map = self._get_db_map(index)
-        if not db_map:
-            return None
-        editor = SearchBarEditor(self.parent(), parent)
-        relationship_class_id = self._get_relationship_class_id(index, db_map)
-        parameter_definitions = self.db_mngr.get_items_by_field(
-            db_map, "parameter definition", "relationship_class_id", relationship_class_id
-        )
-        name_list = [x["parameter_name"] for x in parameter_definitions]
-        editor.set_data(index.data(Qt.EditRole), name_list)
-        editor.data_committed.connect(lambda editor=editor, index=index: self._close_editor(editor, index))
-        return editor
-
-
-class ObjectNameDelegate(GetObjectClassIdMixin, ParameterDelegate):
+class ObjectNameDelegate(ParameterDelegate):
     """A delegate for the object name."""
 
     def createEditor(self, parent, option, index):
@@ -353,7 +325,7 @@ class ObjectNameDelegate(GetObjectClassIdMixin, ParameterDelegate):
         if not db_map:
             return None
         editor = SearchBarEditor(self.parent(), parent)
-        object_class_id = self._get_object_class_id(index, db_map)
+        object_class_id = index.model().get_entity_class_id(index, db_map)
         name_list = [x["name"] for x in self.db_mngr.get_items_by_field(db_map, "object", "class_id", object_class_id)]
         editor.set_data(index.data(Qt.EditRole), name_list)
         editor.data_committed.connect(lambda editor=editor, index=index: self._close_editor(editor, index))
@@ -375,7 +347,7 @@ class AlternativeNameDelegate(ParameterDelegate):
         return editor
 
 
-class ObjectNameListDelegate(GetRelationshipClassIdMixin, ParameterDelegate):
+class ObjectNameListDelegate(ParameterDelegate):
     """A delegate for the object name list."""
 
     object_name_list_editor_requested = Signal("QModelIndex", int, "QVariant")
@@ -385,7 +357,7 @@ class ObjectNameListDelegate(GetRelationshipClassIdMixin, ParameterDelegate):
         db_map = self._get_db_map(index)
         if not db_map:
             return None
-        relationship_class_id = self._get_relationship_class_id(index, db_map)
+        relationship_class_id = index.model().get_entity_class_id(index, db_map)
         if not relationship_class_id:
             editor = CustomLineEditor(parent)
             editor.set_data(index.data(Qt.EditRole))

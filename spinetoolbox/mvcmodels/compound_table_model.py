@@ -16,12 +16,14 @@ Models that vertically concatenate two or more table models.
 :date:   9.10.2019
 """
 
-from PySide2.QtCore import Qt, Slot, QModelIndex
+from PySide2.QtCore import Qt, Signal, Slot, QModelIndex
 from ..mvcmodels.minimal_table_model import MinimalTableModel
 
 
 class CompoundTableModel(MinimalTableModel):
     """A model that concatenates several sub table models vertically."""
+
+    refreshed = Signal()
 
     def __init__(self, parent=None, header=None):
         """Initializes model.
@@ -107,6 +109,7 @@ class CompoundTableModel(MinimalTableModel):
         for model in self.sub_models:
             row_map = self._row_map_for_model(model)
             self._append_row_map(row_map)
+        self.refreshed.emit()
 
     def _append_row_map(self, row_map):
         """Appends given row map to the tail of the model.
@@ -184,7 +187,7 @@ class CompoundTableModel(MinimalTableModel):
         return True
 
     def insertRows(self, row, count, parent=QModelIndex()):
-        """Insert count rows after the given row under the given parent.
+        """Inserts count rows after the given row under the given parent.
         Localizes the appropriate submodel and calls insertRows on it.
         """
         if row < 0 or row > self.rowCount():
@@ -195,7 +198,38 @@ class CompoundTableModel(MinimalTableModel):
             sub_model, sub_row = self._row_map[row]
         except IndexError:
             sub_model, sub_row = self._row_map[-1]
-        return sub_model.insertRows(sub_row, count, self.map_to_sub(parent))
+        self.beginInsertRows(parent, row, row + count - 1)
+        sub_model.insertRows(sub_row, count, self.map_to_sub(parent))
+        self.endInsertRows()
+        self.refresh()
+        return True
+
+    def removeRows(self, row, count, parent=QModelIndex()):
+        """Removes count rows starting with the given row under parent.
+        Localizes the appropriate submodels and calls removeRows on it.
+        """
+        if row < 0 or row > self.rowCount():
+            return False
+        if count < 1:
+            return False
+        first = row
+        last = row + count - 1
+        self.beginRemoveRows(parent, first, last)
+        while first <= last:
+            try:
+                sub_model, sub_row = self._row_map[first]
+                sub_count = min(sub_model.rowCount(), count)
+                first += sub_count
+                count -= sub_count
+            except IndexError:
+                sub_model, sub_row = self._row_map[-1]
+                sub_count = min(sub_model.rowCount(), count)
+                break
+            finally:
+                sub_model.removeRows(sub_row, sub_count, self.map_to_sub(parent))
+        self.endRemoveRows()
+        self.refresh()
+        return True
 
 
 class CompoundWithEmptyTableModel(CompoundTableModel):

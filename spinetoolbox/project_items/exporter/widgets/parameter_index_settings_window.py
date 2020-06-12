@@ -15,7 +15,6 @@ Parameter indexing settings window for .gdx export.
 :author: A. Soininen (VTT)
 :date:   25.11.2019
 """
-
 from PySide2.QtCore import Qt, Signal, Slot
 from PySide2.QtWidgets import QMessageBox, QWidget
 from .parameter_index_settings import IndexSettingsState, ParameterIndexSettings
@@ -46,7 +45,7 @@ class ParameterIndexSettingsWindow(QWidget):
         self._new_domains = list()
         self._ui = Ui_Form()
         self._ui.setupUi(self)
-        self.setWindowTitle("Gdx Parameter Indexing Settings    -- {} --".format(database_path))
+        self.setWindowTitle(f"Gdx Parameter Indexing Settings    -- {database_path} --")
         self.setAttribute(Qt.WA_DeleteOnClose, True)
         self._ui.button_box.accepted.connect(self._collect_and_hide)
         self._ui.button_box.rejected.connect(self._reject_and_close)
@@ -85,18 +84,27 @@ class ParameterIndexSettingsWindow(QWidget):
     @Slot()
     def _collect_and_hide(self):
         """Collects settings from individual ParameterIndexSettings widgets and hides the window."""
+        new_indexing_domains = list()
         for parameter_name, settings_widget in self._settings_widgets.items():
             if settings_widget.state != IndexSettingsState.OK:
                 self._ui.settings_area.ensureWidgetVisible(settings_widget)
-                message = "Parameter '{}' indexing not well-defined.".format(parameter_name)
+                message = f"Parameter '{parameter_name}' indexing not well-defined."
                 QMessageBox.warning(self, "Bad Parameter Indexing", message)
                 return
-            if settings_widget.new_domain_name in self._available_existing_domains:
+            new_domain_name = settings_widget.new_domain_name
+            if new_domain_name in self._available_existing_domains:
                 self._ui.settings_area.ensureWidgetVisible(settings_widget)
                 settings_widget.state = IndexSettingsState.DOMAIN_NAME_CLASH
-                message = "Parameter '{}' indexing domain name already exists.".format(parameter_name)
+                message = f"Parameter '{parameter_name}' indexing domain name already exists."
                 QMessageBox.warning(self, "Domain Name Clash", message)
                 return
+            if new_domain_name in new_indexing_domains:
+                self._ui.settings_area.ensureWidgetVisible(settings_widget)
+                settings_widget.state = IndexSettingsState.DOMAIN_NAME_CLASH
+                message = f"Another parameter already has an indexing domain called '{new_domain_name}'."
+                QMessageBox.warning(self, "Duplicate Domain Names", message)
+                return
+            new_indexing_domains.append(new_domain_name)
         self._new_domains.clear()
         for parameter_name, settings_widget in self._settings_widgets.items():
             indexing_domain, new_domain = settings_widget.indexing_domain()

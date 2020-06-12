@@ -25,7 +25,8 @@ from spinetoolbox.project_item import ProjectItem
 from spinetoolbox.project_item_resource import ProjectItemResource
 from spinetoolbox.helpers import deserialize_path, serialize_url
 from spinetoolbox.spine_io.exporters import gdx
-from .commands import UpdateExporterOutFileNameCommand, UpdateExporterSettingsCommand, UpdateCancelOnErrorCommand
+from .commands import UpdateExporterOutFileNameCommand, UpdateExporterSettingsCommand
+from ..shared.commands import UpdateCancelOnErrorCommand
 from .db_utils import latest_database_commit_time_stamp
 from .executable_item import ExecutableItem
 from .item_info import ItemInfo
@@ -94,7 +95,7 @@ class Exporter(ProjectItem):
             settings_pack.notifications.changed_due_to_settings_state.connect(self._report_notifications)
             self._settings_packs[url] = settings_pack
         for url, pack in self._settings_packs.items():
-            if pack.state != SettingsState.OK:
+            if pack.state not in (SettingsState.OK, SettingsState.INDEXING_PROBLEM):
                 self._start_worker(url)
             elif pack.last_database_commit != _latest_database_commit_time_stamp(url):
                 self._start_worker(url, update_settings=True)
@@ -246,7 +247,7 @@ class Exporter(ProjectItem):
         self._toolbox.update_window_modified(False)
         self._check_state()
 
-    @Slot(str, "QVariant", "QVariant")
+    @Slot(str, "QVariant")
     def _worker_failed(self, database_url, exception):
         """Clean up after a worker has failed fetching export settings."""
         worker = self._workers[database_url]

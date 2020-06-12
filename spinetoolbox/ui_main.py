@@ -247,8 +247,7 @@ class ToolboxUI(QMainWindow):
             self.project_item_factory_model.add_item(item_type, factory)
 
     def parse_assistant_modules(self):
-        """Makes actions to run assistants from assistant modules.
-        """
+        """Makes actions to run assistants from assistant modules."""
         menu = self.ui.menuTool_configuration_assistants
         for module in (spine_model,):  # NOTE: add others as needed
             action = menu.addAction(module.assistant_name)
@@ -516,6 +515,11 @@ class ToolboxUI(QMainWindow):
         if not self._project:
             self.msg.emit("Please open or create a project first")
             return
+        # Save specs
+        for spec in self.specification_model.specifications():
+            if not spec.save():
+                self.msg_error.emit("Project saving failed")
+                return
         # Put project's specification definition files into a list
         tool_spec_paths = [
             self.specification_model.specification(i).definition_file_path
@@ -976,7 +980,7 @@ class ToolboxUI(QMainWindow):
         Args:
             specification (ProjectItemSpecification)
         """
-        for item in self.project_item_model.items(specification.category):
+        for item in self.project_item_model.items(specification.item_category):
             project_item = item.project_item
             if project_item.specification() == specification:
                 yield project_item

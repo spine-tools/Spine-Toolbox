@@ -13,7 +13,7 @@
 # Form implementation generated from reading ui file 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\project_items\importer\ui\importer_properties.ui',
 # licensing of 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\project_items\importer\ui\importer_properties.ui' applies.
 #
-# Created: Thu Feb 13 11:53:52 2020
+# Created: Fri Jun  5 12:42:54 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -58,7 +58,7 @@ class Ui_Form(object):
         self.verticalLayout_21.setObjectName("verticalLayout_21")
         self.treeView_files = QtWidgets.QTreeView(self.scrollAreaWidgetContents_5)
         font = QtGui.QFont()
-        font.setPointSize(10)
+        font.setPointSize(9)
         self.treeView_files.setFont(font)
         self.treeView_files.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.treeView_files.setTextElideMode(QtCore.Qt.ElideLeft)

@@ -19,19 +19,26 @@ Contains TabularViewMixin class.
 from itertools import product
 from collections import namedtuple
 from PySide2.QtCore import Qt, Slot, QTimer
-from .custom_menus import TabularViewFilterMenu, PivotTableModelMenu, PivotTableHorizontalHeaderMenu
+from PySide2.QtWidgets import QActionGroup
+from .custom_menus import TabularViewFilterMenu
 from .tabular_view_header_widget import TabularViewHeaderWidget
-from .custom_delegates import PivotTableDelegate
 from ...helpers import fix_name_ambiguity, busy_effect
-from ...mvcmodels.pivot_table_models import IndexId, PivotTableSortFilterProxy, PivotTableModel
-from ...mvcmodels.frozen_table_model import FrozenTableModel
+from ...widgets.custom_qwidgets import TitleWidgetAction
+from ..mvcmodels.pivot_table_models import (
+    PivotTableSortFilterProxy,
+    ParameterValuePivotTableModel,
+    RelationshipPivotTableModel,
+    IndexExpansionPivotTableModel,
+)
+from ..mvcmodels.frozen_table_model import FrozenTableModel
+from .custom_delegates import RelationshipPivotTableDelegate, ParameterPivotTableDelegate
 
 
 class TabularViewMixin:
     """Provides the pivot table and its frozen table for the DS form."""
 
     _PARAMETER_VALUE = "Parameter value"
-    _INDEX_EXPANSION = "Indexed parameter expansion"
+    _INDEX_EXPANSION = "Index expansion"
     _RELATIONSHIP = "Relationship"
 
     _PARAMETER = "parameter"
@@ -41,37 +48,31 @@ class TabularViewMixin:
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # current state of ui
+        self.current = None  # Current QModelIndex selected in one of the entity tree views
         self.current_class_type = None
         self.current_class_id = None
         self.current_input_type = self._PARAMETER_VALUE
         self.filter_menus = {}
         self.class_pivot_preferences = {}
         self.PivotPreferences = namedtuple("PivotPreferences", ["index", "columns", "frozen", "frozen_value"])
-        self.ui.comboBox_pivot_table_input_type.addItems(
-            [self._PARAMETER_VALUE, self._INDEX_EXPANSION, self._RELATIONSHIP]
-        )
+        title_action = TitleWidgetAction("Input type", self)
+        self.ui.menuPivot_table.addAction(title_action)
+        self.input_type_action_group = QActionGroup(self)
+        actions = {
+            input_type: self.input_type_action_group.addAction(input_type)
+            for input_type in [self._PARAMETER_VALUE, self._INDEX_EXPANSION, self._RELATIONSHIP]
+        }
+        for action in actions.values():
+            action.setCheckable(True)
+            self.ui.menuPivot_table.addAction(action)
+        actions[self.current_input_type].setChecked(True)
         self.pivot_table_proxy = PivotTableSortFilterProxy()
-        self.pivot_table_model = PivotTableModel(self)
-        self.pivot_table_proxy.setSourceModel(self.pivot_table_model)
+        self.pivot_table_model = None
         self.frozen_table_model = FrozenTableModel(self)
         self.ui.pivot_table.setModel(self.pivot_table_proxy)
+        self.ui.pivot_table.connect_data_store_form(self)
         self.ui.frozen_table.setModel(self.frozen_table_model)
-        self.ui.pivot_table.setContextMenuPolicy(Qt.CustomContextMenu)
-        self.ui.pivot_table.verticalHeader().setDefaultSectionSize(self.default_row_height)
         self.ui.frozen_table.verticalHeader().setDefaultSectionSize(self.default_row_height)
-        self.ui.pivot_table.horizontalHeader().setResizeContentsPrecision(self.visible_rows)
-        self.pivot_table_menu = PivotTableModelMenu(self)
-        self._pivot_table_horizontal_header_menu = PivotTableHorizontalHeaderMenu(
-            self.pivot_table_proxy, self.ui.pivot_table
-        )
-
-    def setup_delegates(self):
-        """Sets delegates for tables."""
-        super().setup_delegates()
-        delegate = PivotTableDelegate(self)
-        self.ui.pivot_table.setItemDelegate(delegate)
-        delegate.parameter_value_editor_requested.connect(self.show_parameter_value_editor)
-        delegate.data_committed.connect(self._set_model_data)
 
     def add_menu_actions(self):
         """Adds toggle view actions to View menu."""
@@ -83,20 +84,13 @@ class TabularViewMixin:
     def connect_signals(self):
         """Connects signals to slots."""
         super().connect_signals()
-        self.ui.treeView_object.selectionModel().selectionChanged.connect(self._handle_entity_tree_selection_changed)
-        self.ui.treeView_relationship.selectionModel().selectionChanged.connect(
-            self._handle_entity_tree_selection_changed
-        )
-        self.ui.pivot_table.customContextMenuRequested.connect(self.pivot_table_menu.request_menu)
-        self.ui.pivot_table.horizontalHeader().customContextMenuRequested.connect(
-            self._pivot_table_horizontal_header_menu.request_menu
-        )
-        self.pivot_table_model.modelReset.connect(self.make_pivot_headers)
+        self.ui.treeView_object.selectionModel().currentChanged.connect(self._handle_entity_tree_current_changed)
+        self.ui.treeView_relationship.selectionModel().currentChanged.connect(self._handle_entity_tree_current_changed)
         self.ui.pivot_table.horizontalHeader().header_dropped.connect(self.handle_header_dropped)
         self.ui.pivot_table.verticalHeader().header_dropped.connect(self.handle_header_dropped)
         self.ui.frozen_table.header_dropped.connect(self.handle_header_dropped)
         self.ui.frozen_table.selectionModel().currentChanged.connect(self.change_frozen_value)
-        self.ui.comboBox_pivot_table_input_type.currentTextChanged.connect(self.do_reload_pivot_table)
+        self.input_type_action_group.triggered.connect(self.do_reload_pivot_table)
         self.ui.dockWidget_pivot_table.visibilityChanged.connect(self._handle_pivot_table_visibility_changed)
         self.ui.dockWidget_frozen_table.visibilityChanged.connect(self._handle_frozen_table_visibility_changed)
 
@@ -105,25 +99,18 @@ class TabularViewMixin:
         super().init_models()
         self.clear_pivot_table()
 
-    def is_value_input_type(self):
-        return self.current_input_type == self._PARAMETER_VALUE
-
-    def is_index_expansion_input_type(self):
-        return self.current_input_type == self._INDEX_EXPANSION
-
-    def is_relationship_input_type(self):
-        return self.current_input_type == self._RELATIONSHIP
-
     @Slot("QModelIndex", object)
     def _set_model_data(self, index, value):
         self.pivot_table_proxy.setData(index, value)
 
+    @property
     def current_object_class_id_list(self):
         if self.current_class_type == "object class":
             return [self.current_class_id]
         relationship_class = self.db_mngr.get_item(self.db_map, "relationship class", self.current_class_id)
         return [int(id_) for id_ in relationship_class["object_class_id_list"].split(",")]
 
+    @property
     def current_object_class_name_list(self):
         if self.current_class_type == "object class":
             return [self.db_mngr.get_item(self.db_map, "object class", self.current_class_id)["name"]]
@@ -131,16 +118,15 @@ class TabularViewMixin:
         return fix_name_ambiguity(relationship_class["object_class_name_list"].split(","))
 
     @staticmethod
-    def _is_class_index(index, class_type):
+    def _is_class_index(index):
         """Returns whether or not the given tree index is a class index.
 
         Args:
             index (QModelIndex): index from object or relationship tree
-            class_type (str)
         Returns:
             bool
         """
-        return index.column() == 0 and index.model().item_from_index(index).item_type == class_type
+        return index.column() == 0 and not index.parent().parent().isValid()
 
     @Slot(bool)
     def _handle_pivot_table_visibility_changed(self, visible):
@@ -154,10 +140,10 @@ class TabularViewMixin:
         if visible:
             self.ui.dockWidget_pivot_table.show()
 
-    @Slot("QItemSelection", "QItemSelection")
-    def _handle_entity_tree_selection_changed(self, selected, deselected):
+    @Slot("QModelIndex", "QModelIndex")
+    def _handle_entity_tree_current_changed(self, current, previous):
         if self.ui.dockWidget_pivot_table.isVisible():
-            self.reload_pivot_table()
+            self.reload_pivot_table(current=current)
             self.reload_frozen_table()
 
     def _get_entities(self, class_id=None, class_type=None):
@@ -192,7 +178,7 @@ class TabularViewMixin:
         if self.current_class_type == "object class":
             return {}
         object_id_sets = []
-        for obj_cls_id in self.current_object_class_id_list():
+        for obj_cls_id in self.current_object_class_id_list:
             objects = objects_per_class.get(obj_cls_id, None)
             if objects is None:
                 objects = self._get_entities(obj_cls_id, "object class")
@@ -210,10 +196,7 @@ class TabularViewMixin:
             return {}
         if relationships is None:
             relationships = self._get_entities()
-        if action == "add":
-            get_id = lambda x: x["id"]
-        else:
-            get_id = lambda x: None
+        get_id = {"add": lambda x: x["id"], "remove": lambda x: None}[action]
         return {tuple(int(id_) for id_ in x["object_id_list"].split(',')): get_id(x) for x in relationships}
 
     def load_relationship_data(self):
@@ -278,7 +261,7 @@ class TabularViewMixin:
         else:
             entity_ids = [(e["id"],) for e in entities]
         if not entity_ids:
-            entity_ids = [tuple(None for _ in self.current_object_class_id_list())]
+            entity_ids = [tuple(None for _ in self.current_object_class_id_list)]
         if not parameter_ids:
             parameter_ids = [None]
         return {
@@ -300,10 +283,7 @@ class TabularViewMixin:
         """
         if parameter_values is None:
             parameter_values = self._get_parameter_values_or_defs("parameter value")
-        if action == "add":
-            get_id = lambda x: x["id"]
-        else:
-            get_id = lambda x: None
+        get_id = {"add": lambda x: x["id"], "remove": lambda x: None}[action]
         if self.current_class_type == "object class":
             return {(x["object_id"], x["parameter_id"], x["alternative_id"]): get_id(x) for x in parameter_values}
         return {
@@ -336,97 +316,75 @@ class TabularViewMixin:
             for index in self.db_mngr.get_value_indexes(self.db_map, "parameter value", id_)
         }
 
-    def get_pivot_preferences(self, selection_key):
-        """Returns saved or default pivot preferences.
+    def get_pivot_preferences(self):
+        """Returns saved pivot preferences.
 
-        Args:
-            selection_key (tuple(int,str,str)): Tuple of class id, class type, and input type.
-
-        Returns
-            list: indexes in rows
-            list: indexes in columns
-            list: frozen indexes
-            tuple: selection in frozen table
+        Returns:
+            tuple, NoneType: pivot tuple, or None if no preference stored
         """
+        selection_key = (self.current_class_id, self.current_class_type, self.current_input_type)
         if selection_key in self.class_pivot_preferences:
-            # get previously used pivot
             rows = self.class_pivot_preferences[selection_key].index
             columns = self.class_pivot_preferences[selection_key].columns
             frozen = self.class_pivot_preferences[selection_key].frozen
             frozen_value = self.class_pivot_preferences[selection_key].frozen_value
-        else:
-            # use default pivot
-            length = len(self.current_object_class_id_list())
-            rows = list(range(length))
-            if self.current_input_type == self._INDEX_EXPANSION:
-                rows.append(IndexId.PARAMETER_INDEX)
-            columns = (
-                [IndexId.PARAMETER, IndexId.ALTERNATIVE]
-                if self.current_input_type in (self._PARAMETER_VALUE, self._INDEX_EXPANSION)
-                else []
-            )
-            frozen = []
-            frozen_value = ()
-        return rows, columns, frozen, frozen_value
+            return (rows, columns, frozen, frozen_value)
+        return None
 
     @Slot(str)
-    def reload_pivot_table(self, text=""):
+    def reload_pivot_table(self, current=None):
         """Updates current class (type and id) and reloads pivot table for it."""
-        if self.ui.treeView_object.selectionModel().hasSelection():
-            tree_view = self.ui.treeView_object
-            class_type = "object class"
-        elif self.ui.treeView_relationship.selectionModel().hasSelection():
-            tree_view = self.ui.treeView_relationship
-            class_type = "relationship class"
-        else:
+        if current is not None:
+            self.current = current
+        if self.current is None:
             return
-        selected = tree_view.selectionModel().currentIndex()
-        if self._is_class_index(selected, class_type):
-            class_id = selected.model().item_from_index(selected).db_map_id(self.db_map)
+        if self._is_class_index(self.current):
+            item = self.current.model().item_from_index(self.current)
+            class_id = item.db_map_id(self.db_map)
             if self.current_class_id == class_id:
                 return
-            self.current_class_type = class_type
+            self.current_class_type = item.item_type
             self.current_class_id = class_id
             self.do_reload_pivot_table()
 
     @busy_effect
-    @Slot("QString")
-    def do_reload_pivot_table(self, input_type=None):
+    @Slot("QAction")
+    def do_reload_pivot_table(self, action=None):
         """Reloads pivot table.
         """
         if self.current_class_id is None:
             return
         qApp.processEvents()  # pylint: disable=undefined-variable
-        if input_type is None:
-            input_type = self.ui.comboBox_pivot_table_input_type.currentText()
-        self.current_input_type = input_type
+        if action is None:
+            action = self.input_type_action_group.checkedAction()
+        self.current_input_type = action.text()
+        self.pivot_table_model = {
+            self._PARAMETER_VALUE: ParameterValuePivotTableModel,
+            self._RELATIONSHIP: RelationshipPivotTableModel,
+            self._INDEX_EXPANSION: IndexExpansionPivotTableModel,
+        }[self.current_input_type](self)
+        self.pivot_table_proxy.setSourceModel(self.pivot_table_model)
+        delegate = {
+            self._PARAMETER_VALUE: ParameterPivotTableDelegate,
+            self._RELATIONSHIP: RelationshipPivotTableDelegate,
+            self._INDEX_EXPANSION: ParameterPivotTableDelegate,
+        }[self.current_input_type](self)
+        self.ui.pivot_table.setItemDelegate(delegate)
+        self.pivot_table_model.modelReset.connect(self.make_pivot_headers)
         if self.current_input_type == self._RELATIONSHIP and self.current_class_type != "relationship class":
             self.clear_pivot_table()
             return
-        length = len(self.current_object_class_id_list())
-        index_ids = tuple(range(length))
-        if self.current_input_type == self._PARAMETER_VALUE:
-            data = self.load_parameter_value_data()
-            index_ids += (IndexId.PARAMETER, IndexId.ALTERNATIVE)
-        elif self.current_input_type == self._INDEX_EXPANSION:
-            data = self.load_expanded_parameter_value_data()
-            index_ids += (IndexId.PARAMETER_INDEX, IndexId.PARAMETER, IndexId.ALTERNATIVE)
-        else:
-            data = self.load_relationship_data()
-        # get pivot preference for current selection
-        selection_key = (self.current_class_id, self.current_class_type, self.current_input_type)
-        rows, columns, frozen, frozen_value = self.get_pivot_preferences(selection_key)
+        pivot = self.get_pivot_preferences()
         self.wipe_out_filter_menus()
-        self.pivot_table_model.reset_model(data, index_ids, rows, columns, frozen, frozen_value)
+        object_class_ids = dict(zip(self.current_object_class_name_list, self.current_object_class_id_list))
+        self.pivot_table_model.call_reset_model(object_class_ids, pivot)
         self.pivot_table_proxy.clear_filter()
-        if self.current_input_type == self._INDEX_EXPANSION:
-            x_column = self.pivot_table_model.headerColumnCount() - 2
-            self.pivot_table_model.set_plot_x_column(x_column, is_x=True)
 
     def clear_pivot_table(self):
         self.wipe_out_filter_menus()
-        self.pivot_table_model.clear_model()
-        self.pivot_table_proxy.clear_filter()
+        if self.pivot_table_model:
+            self.pivot_table_model.clear_model()
+            self.pivot_table_proxy.clear_filter()
 
     def wipe_out_filter_menus(self):
         while self.filter_menus:
@@ -474,28 +432,10 @@ class TabularViewMixin:
         Returns:
             TabularViewFilterMenu
         """
-
-        def alternative_id_to_name(id_):
-            return self.db_mngr.get_field(self.db_map, "alternative", id_, "name")
-
-        def object_id_to_name(id_):
-            return self.db_mngr.get_field(self.db_map, "object", id_, "name")
-
-        def parameter_id_to_name(id_):
-            return self.db_mngr.get_field(self.db_map, "parameter definition", id_, "parameter_name")
-
-        def parameter_index_to_value(index):
-            return str(index)
-
+        _get_field = lambda *args: self.db_mngr.get_field(self.db_map, *args)
         if identifier not in self.filter_menus:
-            if identifier == IndexId.PARAMETER:
-                data_to_value = parameter_id_to_name
-            elif identifier == IndexId.PARAMETER_INDEX:
-                data_to_value = parameter_index_to_value
-            elif identifier == IndexId.ALTERNATIVE:
-                data_to_value = alternative_id_to_name
-            else:
-                data_to_value = object_id_to_name
+            pivot_top_left_header = self.pivot_table_model.top_left_headers[identifier]
+            data_to_value = pivot_top_left_header.header_data
             self.filter_menus[identifier] = menu = TabularViewFilterMenu(
                 self, identifier, data_to_value, show_empty=False
             )
@@ -510,26 +450,15 @@ class TabularViewMixin:
         Returns a TabularViewHeaderWidget for given object class identifier.
 
         Args:
-            identifier (int)
+            identifier (str)
             area (str)
             with_menu (bool)
 
         Returns:
             TabularViewHeaderWidget
         """
-        if with_menu:
-            menu = self.create_filter_menu(identifier)
-        else:
-            menu = None
-        if identifier == IndexId.PARAMETER:
-            name = self._PARAMETER
-        elif identifier == IndexId.PARAMETER_INDEX:
-            name = self._INDEX
-        elif identifier == IndexId.ALTERNATIVE:
-            name = self._ALTERNATIVE
-        else:
-            name = self.current_object_class_name_list()[identifier]
-        widget = TabularViewHeaderWidget(identifier, name, area, menu=menu, parent=self)
+        menu = self.create_filter_menu(identifier) if with_menu else None
+        widget = TabularViewHeaderWidget(identifier, area, menu=menu, parent=self)
         widget.header_dropped.connect(self.handle_header_dropped)
         return widget
 
@@ -612,7 +541,7 @@ class TabularViewMixin:
             self.pivot_table_model.model.frozen_value,
         )
 
-    @Slot(int, set, bool)
+    @Slot(str, set, bool)
     def change_filter(self, identifier, valid_values, has_filter):
         if has_filter:
             self.pivot_table_proxy.set_filter(identifier, valid_values)
@@ -621,6 +550,8 @@ class TabularViewMixin:
 
     def reload_frozen_table(self):
         """Resets the frozen model according to new selection in entity trees."""
+        if not self.pivot_table_model:
+            return
         frozen = self.pivot_table_model.model.pivot_frozen
         frozen_value = self.pivot_table_model.model.frozen_value
         frozen_values = self.find_frozen_values(frozen)
@@ -649,6 +580,7 @@ class TabularViewMixin:
         """
         return list(dict.fromkeys(zip(*[self.pivot_table_model.model.index_values.get(k, []) for k in frozen])).keys())
 
+    # FIXME: Move this to the models
     @staticmethod
     def refresh_table_view(table_view):
         top_left = table_view.indexAt(table_view.rect().topLeft())
@@ -658,18 +590,8 @@ class TabularViewMixin:
             bottom_right = table_view.model().index(model.rowCount() - 1, model.columnCount() - 1)
         table_view.model().dataChanged.emit(top_left, bottom_right)
 
-    @staticmethod
-    def _group_by_class(items, get_class_id):
-        d = dict()
-        for item in items:
-            d.setdefault(get_class_id(item), []).append(item)
-        return d
-
-    def receive_data_added_or_removed(self, data, action):
-        if action == "add":
-            self.pivot_table_model.add_to_model(data)
-        elif action == "remove":
-            self.pivot_table_model.remove_from_model(data)
+    @Slot(str)
+    def update_filter_menus(self, action):
         for identifier, menu in self.filter_menus.items():
             index_values = dict.fromkeys(self.pivot_table_model.model.index_values.get(identifier, []))
             index_values.pop(None, None)
@@ -681,62 +603,51 @@ class TabularViewMixin:
         self.reload_frozen_table()
 
     def receive_objects_added_or_removed(self, db_map_data, action):
+        if not self.pivot_table_model:
+            return
         items = db_map_data.get(self.db_map, set())
-        if self.current_input_type == self._RELATIONSHIP and self.current_class_type == "relationship class":
-            objects_per_class = self._group_by_class(items, lambda x: x["class_id"])
-            if not set(objects_per_class.keys()).intersection(self.current_object_class_id_list()):
-                return
-            data = self.load_empty_relationship_data(objects_per_class=objects_per_class)
-            self.receive_data_added_or_removed(data, action)
-        elif self.current_input_type == self._PARAMETER_VALUE and self.current_class_type == "object class":
-            objects = [x for x in items if x["class_id"] == self.current_class_id]
-            if not objects:
-                return
-            data = self.load_empty_parameter_value_data(entities=objects)
-            self.receive_data_added_or_removed(data, action)
+        if self.pivot_table_model.receive_objects_added_or_removed(items, action):
+            self.update_filter_menus(action)
 
     def receive_relationships_added_or_removed(self, db_map_data, action):
-        items = db_map_data.get(self.db_map, set())
+        if not self.pivot_table_model:
+            return
         if self.current_class_type != "relationship class":
             return
+        items = db_map_data.get(self.db_map, set())
         relationships = [x for x in items if x["class_id"] == self.current_class_id]
         if not relationships:
             return
-        if self.current_input_type == self._RELATIONSHIP:
-            data = self.load_full_relationship_data(relationships=relationships, action=action)
-            self.pivot_table_model.update_model(data)
-            self.refresh_table_view(self.ui.pivot_table)
-        elif self.current_input_type == self._PARAMETER_VALUE:
-            data = self.load_empty_parameter_value_data(relationships)
-            self.receive_data_added_or_removed(data, action)
+        if self.pivot_table_model.receive_relationships_added_or_removed(relationships, action):
+            self.update_filter_menus(action)
 
     def receive_parameter_definitions_added_or_removed(self, db_map_data, action):
-        items = db_map_data.get(self.db_map, set())
-        if self.current_input_type != self._PARAMETER_VALUE:
+        if not self.pivot_table_model:
             return
+        items = db_map_data.get(self.db_map, set())
         parameters = [
             x for x in items if (x.get("object_class_id") or x.get("relationship_class_id")) == self.current_class_id
         ]
         if not parameters:
             return
-        parameter_ids = {x["id"] for x in parameters}
-        data = self.load_empty_parameter_value_data(parameter_ids=parameter_ids)
-        self.receive_data_added_or_removed(data, action)
+        if self.pivot_table_model.receive_parameter_definitions_added_or_removed(parameters, action):
+            self.update_filter_menus(action)
 
     def receive_parameter_values_added_or_removed(self, db_map_data, action):
-        items = db_map_data.get(self.db_map, set())
-        if self.current_input_type != self._PARAMETER_VALUE:
+        if not self.pivot_table_model:
             return
+        items = db_map_data.get(self.db_map, set())
         parameter_values = [
             x for x in items if (x.get("object_class_id") or x.get("relationship_class_id")) == self.current_class_id
         ]
         if not parameter_values:
             return
-        data = self.load_full_parameter_value_data(parameter_values=parameter_values, action=action)
-        self.pivot_table_model.update_model(data)
-        self.refresh_table_view(self.ui.pivot_table)
+        if self.pivot_table_model.receive_parameter_values_added_or_removed(parameter_values, action):
+            self.update_filter_menus(action)
 
     def receive_db_map_data_updated(self, db_map_data, get_class_id):
+        if not self.pivot_table_model:
+            return
         items = db_map_data.get(self.db_map, set())
         for item in items:
             if get_class_id(item) == self.current_class_id:
@@ -762,6 +673,8 @@ class TabularViewMixin:
         self.receive_data_added_or_removed(data, action)
 
     def receive_classes_removed(self, db_map_data):
+        if not self.pivot_table_model:
+            return
         items = db_map_data.get(self.db_map, set())
         for item in items:
             if item["id"] == self.current_class_id:

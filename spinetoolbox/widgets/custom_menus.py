@@ -181,12 +181,10 @@ class AddSpecificationPopupMenu(CustomPopupMenu):
         for item_type, factory in parent.item_factories.items():
             if not factory.supports_specifications():
                 continue
-            # Need to 'clone' item_type, otherwise show_specification_form() may be called with
-            # wrong item type as item_type is a cell variable.
-            specification_item_type = str(item_type)
+            # Pass item_type as keyword argument so it's not a cell variable
             self.add_action(
                 f"Create {item_type} Specification...",
-                lambda _: parent.show_specification_form(specification_item_type, specification=None),
+                lambda _, item_type=item_type: parent.show_specification_form(item_type, specification=None),
             )
 
 

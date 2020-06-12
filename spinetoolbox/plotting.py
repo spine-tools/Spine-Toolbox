@@ -12,7 +12,7 @@
 """
 Functions for plotting on PlotWidget.
 
-Currently plotting from the table views found in Graph, Tree and Tabular views are supported.
+Currently plotting from the table views found in the DataStoreForm are supported.
 
 The main entrance points to plotting are:
 - plot_selection() which plots selected cells on a table view returning a PlotWidget object
@@ -69,7 +69,7 @@ def plot_pivot_column(proxy_model, column, hints, plot_widget=None):
         needs_redraw = False
     else:
         needs_redraw = True
-    first_data_row = proxy_model.sourceModel().first_data_row()
+    first_data_row = proxy_model.sourceModel().headerRowCount()
     values, labels = _collect_column_values(proxy_model, column, range(first_data_row, proxy_model.rowCount()), hints)
     if values:
         if plot_widget.plot_type is None:

@@ -10,10 +10,10 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-# Form implementation generated from reading ui file '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/settings.ui',
-# licensing of '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/settings.ui' applies.
+# Form implementation generated from reading ui file 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\ui\settings.ui',
+# licensing of 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\ui\settings.ui' applies.
 #
-# Created: Mon May 18 18:58:03 2020
+# Created: Fri Jun  5 12:42:57 2020
 #      by: pyside2-uic  running on PySide2 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -400,22 +400,12 @@ class Ui_SettingsForm(object):
         self.checkBox_relationship_items_follow = QtWidgets.QCheckBox(self.groupBox_data_store)
         self.checkBox_relationship_items_follow.setObjectName("checkBox_relationship_items_follow")
         self.verticalLayout_4.addWidget(self.checkBox_relationship_items_follow)
-        self.label_6 = QtWidgets.QLabel(self.groupBox_data_store)
-        font = QtGui.QFont()
-        font.setPointSize(11)
-        self.label_6.setFont(font)
-        self.label_6.setObjectName("label_6")
-        self.verticalLayout_4.addWidget(self.label_6)
-        self.horizontalLayout_3 = QtWidgets.QHBoxLayout()
-        self.horizontalLayout_3.setSpacing(0)
-        self.horizontalLayout_3.setObjectName("horizontalLayout_3")
-        self.radioButton_relationship_at_least_one_selected = QtWidgets.QRadioButton(self.groupBox_data_store)
-        self.radioButton_relationship_at_least_one_selected.setObjectName("radioButton_relationship_at_least_one_selected")
-        self.horizontalLayout_3.addWidget(self.radioButton_relationship_at_least_one_selected)
-        self.radioButton_relationship_only_selected = QtWidgets.QRadioButton(self.groupBox_data_store)
-        self.radioButton_relationship_only_selected.setObjectName("radioButton_relationship_only_selected")
-        self.horizontalLayout_3.addWidget(self.radioButton_relationship_only_selected)
-        self.verticalLayout_4.addLayout(self.horizontalLayout_3)
+        self.checkBox_smooth_entity_graph_zoom = QtWidgets.QCheckBox(self.groupBox_data_store)
+        self.checkBox_smooth_entity_graph_zoom.setObjectName("checkBox_smooth_entity_graph_zoom")
+        self.verticalLayout_4.addWidget(self.checkBox_smooth_entity_graph_zoom)
+        self.checkBox_smooth_entity_graph_rotation = QtWidgets.QCheckBox(self.groupBox_data_store)
+        self.checkBox_smooth_entity_graph_rotation.setObjectName("checkBox_smooth_entity_graph_rotation")
+        self.verticalLayout_4.addWidget(self.checkBox_smooth_entity_graph_rotation)
         self.verticalLayout_9.addWidget(self.groupBox_data_store)
         spacerItem6 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
         self.verticalLayout_9.addItem(spacerItem6)
@@ -446,7 +436,7 @@ class Ui_SettingsForm(object):
 
         self.retranslateUi(SettingsForm)
         self.listWidget.setCurrentRow(-1)
-        self.stackedWidget.setCurrentIndex(0)
+        self.stackedWidget.setCurrentIndex(3)
         QtCore.QObject.connect(self.listWidget, QtCore.SIGNAL("currentRowChanged(int)"), self.stackedWidget.setCurrentIndex)
         QtCore.QMetaObject.connectSlotsByName(SettingsForm)
         SettingsForm.setTabOrder(self.listWidget, self.checkBox_open_previous_project)
@@ -555,12 +545,9 @@ class Ui_SettingsForm(object):
         self.checkBox_object_tree_sticky_selection.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>Controls how selecting items in Object tree <span style=\" font-weight:600;\">using the left mouse button</span> works. </p><p>When unchecked [default], Single selection is enabled. Pressing the Ctrl-button down enables multiple selection.</p><p>When checked, Multiple selection is enabled. Pressing the Ctrl-button down enables single selection.</p></body></html>", None, -1))
         self.checkBox_object_tree_sticky_selection.setText(QtWidgets.QApplication.translate("SettingsForm", "Sticky selection in Entity trees", None, -1))
         self.checkBox_relationship_items_follow.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>When checked [default], moving Object items causes connected Relationship items to follow.</p></body></html>", None, -1))
-        self.checkBox_relationship_items_follow.setText(QtWidgets.QApplication.translate("SettingsForm", "Move relationships along with objects in the Entity graph", None, -1))
-        self.label_6.setText(QtWidgets.QApplication.translate("SettingsForm", "Entity graph relationship expansion policy:", None, -1))
-        self.radioButton_relationship_at_least_one_selected.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>Whenever an object is included in the graph, the graph automatically includes all its relationships.</p></body></html>", None, -1))
-        self.radioButton_relationship_at_least_one_selected.setText(QtWidgets.QApplication.translate("SettingsForm", "Maximum expansion", None, -1))
-        self.radioButton_relationship_only_selected.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>Whenever all the objects in a relationship are included in the graph, the graph automaticall includes the relationship.</p></body></html>", None, -1))
-        self.radioButton_relationship_only_selected.setText(QtWidgets.QApplication.translate("SettingsForm", "Minimum expansion", None, -1))
+        self.checkBox_relationship_items_follow.setText(QtWidgets.QApplication.translate("SettingsForm", "Move relationships along with objects in Entity graph", None, -1))
+        self.checkBox_smooth_entity_graph_zoom.setText(QtWidgets.QApplication.translate("SettingsForm", "Smooth Entity graph zoom", None, -1))
+        self.checkBox_smooth_entity_graph_rotation.setText(QtWidgets.QApplication.translate("SettingsForm", "Smooth Entity graph rotation", None, -1))
         self.pushButton_ok.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>Saves changes and closes the window</p></body></html>", None, -1))
         self.pushButton_ok.setText(QtWidgets.QApplication.translate("SettingsForm", "Ok", None, -1))
         self.pushButton_cancel.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>Closes the window without saving changes</p></body></html>", None, -1))

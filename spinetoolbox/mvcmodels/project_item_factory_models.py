@@ -173,6 +173,10 @@ class ProjectItemSpecFactoryModel(QAbstractListModel):
         """
         return self._specs[row]
 
+    def specifications(self):
+        """Yields all specs."""
+        yield from self._specs
+
     def find_specification(self, name):
         """Returns specification with the given name.
 

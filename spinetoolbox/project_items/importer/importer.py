@@ -18,9 +18,8 @@ Contains Importer project item class.
 
 from collections import Counter
 import os
-from itertools import takewhile
-from PySide2.QtCore import QAbstractListModel, QFileInfo, QModelIndex, Qt, Signal, Slot
-from PySide2.QtWidgets import QFileIconProvider, QListWidget, QDialog, QVBoxLayout, QDialogButtonBox
+from PySide2.QtCore import Qt, Slot
+from PySide2.QtWidgets import QListWidget, QDialog, QVBoxLayout, QDialogButtonBox
 from spine_engine import ExecutionDirection
 from spinetoolbox.project_item import ProjectItem
 from spinetoolbox.helpers import create_dir, serialize_path
@@ -30,7 +29,10 @@ from spinetoolbox.spine_io.importers.excel_reader import ExcelConnector
 from spinetoolbox.spine_io.importers.gdx_connector import GdxConnector
 from spinetoolbox.spine_io.importers.json_reader import JSONConnector
 from spinetoolbox.import_editor.widgets.import_editor_window import ImportEditorWindow
-from .commands import ChangeItemSelectionCommand, UpdateSettingsCommand, UpdateCancelOnErrorCommand
+from .commands import UpdateSettingsCommand
+from ..shared.commands import UpdateCancelOnErrorCommand, ChangeItemSelectionCommand
+from ..shared.models import FileListModel
+from ..shared.helpers import deserialize_checked_states, serialize_checked_states
 from .executable_item import ExecutableItem
 from .item_info import ItemInfo
 from .utils import deserialize_mappings
@@ -59,7 +61,7 @@ class Importer(ProjectItem):
             x (float): Initial icon scene X coordinate
             y (float): Initial icon scene Y coordinate
             cancel_on_error (bool, optional): if True the item's execution will stop on import error
-            mapping_selection (list, optional): a list of booleans, one for each mapping marking the mappings
+            mapping_selection (list, optional): serialized checked states for each file item
                 either selected or unselected
        """
         super().__init__(name, description, x, y, project, logger)
@@ -90,13 +92,18 @@ class Importer(ProjectItem):
         self.settings = deserialize_mappings(mappings, self._project.project_dir)
         # self.settings is now a dictionary, where elements have the absolute path as the key and the mapping as value
         self.cancel_on_error = cancel_on_error
-        self._file_model = _FileListModel()
-        if mapping_selection is None:
-            mapping_selection = len(self.settings) * [True]
-        self._file_model.set_initial_state(self.settings.keys(), mapping_selection)
-        self._file_model.selected_for_import_state_changed.connect(self._push_file_selection_change_to_undo_stack)
+        self._file_model = FileListModel()
+        if not mapping_selection or isinstance(mapping_selection[0], bool):
+            # This is for legacy selections which either did not exist in the item dict
+            # or were just a list of booleans which caused problems with empty mappings.
+            # Consider removing this if in Toolbox 0.6
+            mapping_selection = {}
+        else:
+            mapping_selection = deserialize_checked_states(mapping_selection, self._project.project_dir)
+        self._file_model.set_initial_state(mapping_selection)
+        self._file_model.selected_state_changed.connect(self._push_file_selection_change_to_undo_stack)
         # connector class
-        self._preview_widget = {}  # Key is the filepath, value is the ImportPreviewWindow instance
+        self._preview_widget = {}  # Key is the filepath, value is the ImportEditorWindow instance
 
     @staticmethod
     def item_type():
@@ -113,15 +120,14 @@ class Importer(ProjectItem):
         selected_settings = dict()
         for file_item in self._file_model.existing_files():
             label = file_item.label
-            settings = self.settings.get(label) if file_item.selected_for_import else "deselected"
+            settings = self.settings.get(label) if file_item.selected else "deselected"
             if not settings:
                 continue
             selected_settings[label] = settings
         python_path = self._project.settings.value("appSettings/pythonPath", defaultValue="")
         gams_path = self._project.settings.value("appSettings/gamsPath", defaultValue=None)
-        cancel_on_error = self._properties_ui.cancel_on_error_checkBox.isChecked()
         executable = ExecutableItem(
-            self.name, selected_settings, self.logs_dir, python_path, gams_path, cancel_on_error, self._logger
+            self.name, selected_settings, self.logs_dir, python_path, gams_path, self.cancel_on_error, self._logger
         )
         return executable
 
@@ -135,7 +141,7 @@ class Importer(ProjectItem):
         for successor in successors:
             if successor.item_type() == "Data Store":
                 url = successor.sql_alchemy_url()
-                database_map = self._project.db_mngr.get_db_map(url)
+                database_map = self._project.db_mngr.get_db_map(url, self._logger)
                 if database_map is not None:
                     committed_db_maps.add(database_map)
         if committed_db_maps:
@@ -366,7 +372,7 @@ class Importer(ProjectItem):
         # Serialize mappings before saving
         d["mappings"] = self.serialize_mappings(self.settings, self._project.project_dir)
         d["cancel_on_error"] = self._properties_ui.cancel_on_error_checkBox.isChecked()
-        d["mapping_selection"] = [item.selected_for_import for item in self._file_model.files]
+        d["mapping_selection"] = serialize_checked_states(self._file_model.files, self._project.project_dir)
         return d
 
     def notify_destination(self, source_item):
@@ -510,211 +516,3 @@ def _fix_csv_connector_settings(settings):
     if len(selected_tables) == 1 and selected_tables[0] != "csv":
         selected_tables.pop(0)
         selected_tables.append("csv")
-
-
-def _file_label(resource):
-    """Picks a label for given file resource."""
-    if resource.type_ == "file":
-        return resource.path
-    elif resource.type_ in ("transient_file", "file_pattern"):
-        label = resource.metadata.get("label")
-        if label is None:
-            if resource.url is None:
-                raise RuntimeError("ProjectItemResource is missing a url and metadata 'label'.")
-            return resource.path
-        return label
-    raise RuntimeError(f"Unknown resource type '{resource.type_}'")
-
-
-class _FileListItem:
-    """
-    An item for FileListModel.
-
-    Attributes:
-        label (str): a file's label; a full path for 'permanent' files or just the basename
-            for 'transient' files like Tool's output.
-        path (str): absolute path to file, can be an empty string if file doesn't exist yet
-        selected_for_import (bool): if True, the file has been selected for importing
-        provider_name (str): name of the item providing the file
-        is_pattern (bool): True if the file is actually a file name pattern
-    """
-
-    def __init__(self, label, path, provider_name, is_pattern=False):
-        """
-        Args:
-            label (str): a file's label; a full path for 'permanent' files or just the basename
-                for 'transient' files like Tool's output.
-            path (str): absolute path to the file, empty if not known
-            provider_name (str): name of the project item providing the file
-            is_pattern (bool): True if the file is actually a file name pattern
-        """
-        self.label = label
-        self.path = path
-        self.selected_for_import = True
-        self.provider_name = provider_name
-        self.is_pattern = is_pattern
-
-    @classmethod
-    def from_resource(cls, resource):
-        """
-        Constructs a _FileListItem from ProjectItemResource.
-
-        Args:
-            resource (ProjectItemResource): a resource
-        Return:
-            _FileListItem: an item based on given resource
-        """
-        is_pattern = False
-        if resource.type_ == "file":
-            label = resource.path
-        elif resource.type_ == "transient_file":
-            label = _file_label(resource)
-        elif resource.type_ == "file_pattern":
-            label = _file_label(resource)
-            is_pattern = True
-        else:
-            raise RuntimeError(f"Unknown resource type '{resource.type_}'")
-        return cls(label, resource.path if resource.url else "", resource.provider.name, is_pattern)
-
-    def exists(self):
-        """Returns true if the file exists."""
-        return bool(self.path)
-
-    def update(self, resource):
-        """
-        Updates item information.
-
-        Args:
-            resource (ProjectItem): a fresh file resource
-        """
-        self.path = resource.path if resource.url else ""
-        self.provider_name = resource.provider.name
-        self.is_pattern = resource.type_ == "file_pattern"
-
-
-class _FileListModel(QAbstractListModel):
-    """A model for Importer's file list widget."""
-
-    selected_for_import_state_changed = Signal(bool, str)
-    """Emitted when an item has been checked or unchecked for importing."""
-
-    def __init__(self):
-        super().__init__()
-        self._files = list()
-
-    @property
-    def files(self):
-        """All model's file items."""
-        return self._files
-
-    def existing_files(self):
-        """Returns a list of items that exist."""
-        return [item for item in self._files if item.exists()]
-
-    def data(self, index, role=Qt.DisplayRole):
-        """Returns data associated with given role at given index."""
-        if not index.isValid():
-            return None
-        if role == Qt.DisplayRole:
-            return self._files[index.row()].label
-        if role == Qt.CheckStateRole:
-            return Qt.Checked if self._files[index.row()].selected_for_import else Qt.Unchecked
-        if role == Qt.DecorationRole:
-            path = self._files[index.row()].path
-            if path:
-                return QFileIconProvider().icon(QFileInfo(path))
-        if role == Qt.ToolTipRole:
-            item = self._files[index.row()]
-            if not item.exists():
-                if item.is_pattern:
-                    tooltip = f"These files will be generated by {item.provider_name} upon execution."
-                else:
-                    tooltip = f"This file will be generated by {item.provider_name} upon execution."
-            else:
-                tooltip = item.path
-            return tooltip
-        return None
-
-    def flags(self, index):
-        """Returns item's flags."""
-        if not index.isValid():
-            return Qt.NoItemFlags
-        item = self._files[index.row()]
-        if item.exists():
-            return Qt.ItemIsSelectable | Qt.ItemIsUserCheckable | Qt.ItemIsEnabled | Qt.ItemNeverHasChildren
-        return Qt.ItemNeverHasChildren
-
-    def headerData(self, section, orientation, role=Qt.DisplayRole):
-        """Returns header information."""
-        if role != Qt.DisplayRole or orientation != Qt.Horizontal:
-            return None
-        return "Source files"
-
-    def find_file(self, label):
-        """Returns a file item with given label."""
-        for item in self._files:
-            if item.label == label:
-                return item
-        raise RuntimeError(f"Could not find file with label '{label}'")
-
-    def labels(self):
-        """Returns a list of file labels."""
-        return [item.label for item in self._files]
-
-    def mark_as_nonexistent(self, index):
-        """Marks item at index as not existing."""
-        self._files[index.row()].path = ""
-        self.dataChanged.emit(index, index, [Qt.ToolTipRole])
-
-    def update(self, resources):
-        """Updates the model according to given list of resources."""
-        self.beginResetModel()
-        items = {item.label: item for item in self._files}
-        updated = list()
-        new = list()
-        for resource in resources:
-            if resource.type_ not in ("file", "transient_file", "file_pattern"):
-                continue
-            label = _file_label(resource)
-            item = items.get(label)
-            if item is not None:
-                item.update(resource)
-                updated.append(item)
-            else:
-                new.append(_FileListItem.from_resource(resource))
-        self._files = updated + new
-        self.endResetModel()
-
-    def rowCount(self, parent=QModelIndex()):
-        """Return the number of rows in the file list."""
-        return len(self._files)
-
-    def set_selected(self, label, selected):
-        """
-        Changes the given item's selection status.
-
-        Args:
-            label (str): item's label
-            selected (bool): True to select the item, False to deselect
-        """
-        row = len(list(takewhile(lambda item: item.label != label, self._files)))
-        if row < len(self._files):
-            item = self._files[row]
-            item.selected_for_import = selected
-            index = self.index(row, 0)
-            self.dataChanged.emit(index, index, [Qt.CheckStateRole])
-
-    def setData(self, index, value, role=Qt.EditRole):
-        """Sets data in the model."""
-        if role != Qt.CheckStateRole or not index.isValid():
-            return False
-        checked = value == Qt.Checked
-        item = self._files[index.row()]
-        self.selected_for_import_state_changed.emit(checked, item.label)
-        return True
-
-    def set_initial_state(self, labels, selected_list):
-        """Fills model with incomplete data; needs a call to :func:`update` to make the model usable."""
-        for label, selected in zip(labels, selected_list):
-            self._files.append(_FileListItem(label, label, ""))
-            self._files[-1].selected_for_import = selected

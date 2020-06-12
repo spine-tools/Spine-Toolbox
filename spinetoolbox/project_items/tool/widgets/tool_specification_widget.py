@@ -19,7 +19,6 @@ is filled with all the information from the specification being edited.
 """
 
 import os
-import json
 from PySide2.QtGui import QStandardItemModel, QStandardItem
 from PySide2.QtWidgets import QWidget, QStatusBar, QInputDialog, QFileDialog, QFileIconProvider, QMessageBox, QMenu
 from PySide2.QtCore import Slot, Qt, QFileInfo
@@ -545,8 +544,7 @@ class ToolSpecificationWidget(QWidget):
         row = self._toolbox.specification_model.specification_row(self.definition["name"])
         if row >= 0:
             old_tool = self._toolbox.specification_model.specification(row)
-            # FIXME: This test doesn't work because some attributes are set() and self.definition has lists
-            if all(old_tool.__dict__[k] == v for k, v in self.definition.items()):
+            if old_tool.is_equivalent(self.definition):
                 # Nothing changed
                 return True
             def_path = old_tool.definition_file_path
@@ -554,27 +552,17 @@ class ToolSpecificationWidget(QWidget):
             if not tool:
                 return False
             self._toolbox.update_specification(row, tool)
-        else:
-            # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-            answer = QFileDialog.getSaveFileName(
-                self, "Save Tool specification file", self.def_file_path, "JSON (*.json)"
-            )
-            if answer[0] == "":  # Cancel button clicked
-                return False
-            def_path = os.path.abspath(answer[0])
-            tool = self._make_tool_specification(def_path)
-            if not tool:
-                return False
-            self._toolbox.add_specification(tool)
-        # Save file descriptor
-        with open(def_path, "w") as fp:
-            try:
-                json.dump(self.definition, fp, indent=4)
-            except ValueError:
-                self.statusbar.showMessage("Error saving file", 3000)
-                self._toolbox.msg_error.emit("Saving Tool specification file failed. Path:{0}".format(def_path))
-                return False
-        return True
+            return True
+        # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
+        answer = QFileDialog.getSaveFileName(self, "Save Tool specification file", self.def_file_path, "JSON (*.json)")
+        if answer[0] == "":  # Cancel button clicked
+            return False
+        def_path = os.path.abspath(answer[0])
+        tool = self._make_tool_specification(def_path)
+        if not tool:
+            return False
+        self._toolbox.add_specification(tool)
+        return tool.save()
 
     def keyPressEvent(self, e):
         """Close Setup form when escape key is pressed.

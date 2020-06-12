@@ -28,7 +28,7 @@ class Worker(QObject):
     A worker to construct export settings for a database.
 
     Attributes:
-        signals: contains signals that the worker may emit during its execution
+        thread (QThread): the thread the worker executes in
     """
 
     database_unavailable = Signal(str)
@@ -55,12 +55,12 @@ class Worker(QObject):
         self._previous_indexing_settings = None
         self._previous_indexing_domains = None
         self._previous_merging_settings = None
-        self.thread.started.connect(self.fetch_settings)
+        self.thread.started.connect(self._fetch_settings)
         self.thread.finished.connect(self.deleteLater)
         self.thread.finished.connect(self.thread.deleteLater)
 
     @Slot()
-    def fetch_settings(self):
+    def _fetch_settings(self):
         """Constructs settings and parameter index settings."""
         result = _Result(*self._read_settings())
         if result.set_settings is None:
@@ -106,7 +106,7 @@ class Worker(QObject):
         try:
             database_map = DatabaseMapping(self._database_url)
         except SpineDBAPIError as error:
-            self.signals.database_unavailable.emit(self._database_url, self._cookie)
+            self.database_unavailable.emit(self._database_url)
             return None, None, None
         try:
             time_stamp = latest_database_commit_time_stamp(database_map)
@@ -114,7 +114,7 @@ class Worker(QObject):
             logger = _Logger(self._database_url, self)
             indexing_settings = gdx.make_indexing_settings(database_map, logger)
         except gdx.GdxExportException as error:
-            self.signals.errored.emit(self._database_url, self._cookie, error)
+            self.errored.emit(self._database_url, error)
             return None, None, None
         finally:
             database_map.connection.close()
@@ -142,14 +142,14 @@ class Worker(QObject):
         try:
             database_map = DatabaseMapping(self._database_url)
         except SpineDBAPIError as error:
-            self.signals.errored.emit(self._database_url, self._cookie, error)
+            self.errored.emit(self._database_url, error)
             return None, None
         try:
             updated_merging_settings = gdx.update_merging_settings(
                 self._previous_merging_settings, updated_settings, database_map
             )
         except gdx.GdxExportException as error:
-            self.signals.errored.emit(self._database_url, self._cookie, error)
+            self.errored.emit(self._database_url, error)
             return None, None
         finally:
             database_map.connection.close()

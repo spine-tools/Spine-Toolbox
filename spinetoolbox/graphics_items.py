@@ -345,7 +345,7 @@ class ConnectorButton(QGraphicsRectItem):
         return self._parent.name()
 
     def mousePressEvent(self, event):
-        """Connector button mouse press event. Starts drawing a link.
+        """Connector button mouse press event. Either starts or closes a link.
 
         Args:
             event (QGraphicsSceneMouseEvent): Event
@@ -354,16 +354,11 @@ class ConnectorButton(QGraphicsRectItem):
             event.accept()
             return
         self._parent.show_item_info()
-        self.start_link()
-
-    def start_link(self):
-        """Starts drawing a link using a LinkDrawer object.
-        Note that this is also called when the user selectes 'Take link' from the Link's context menu.
-
-        Returns:
-            LinkDrawer
-        """
-        return LinkDrawer(self._toolbox, self)
+        link_drawer = self.scene().link_drawer
+        if not link_drawer.isVisible():
+            link_drawer.wake_up(self)
+        elif event.button() == Qt.LeftButton:
+            link_drawer.add_link()
 
     def set_friend_connectors_enabled(self, enabled):
         """Enables or disables all connectors in the parent. This is called by LinkDrawer to disable invalid connectors
@@ -387,6 +382,10 @@ class ConnectorButton(QGraphicsRectItem):
             event (QGraphicsSceneMouseEvent): Event
         """
         self.setBrush(self.hover_brush)
+        link_drawer = self.scene().link_drawer
+        if link_drawer.isVisible():
+            link_drawer.dst_connector = self
+            link_drawer.update_geometry()
 
     def hoverLeaveEvent(self, event):
         """Restore original brush when mouse leaves connector button boundaries.
@@ -395,6 +394,10 @@ class ConnectorButton(QGraphicsRectItem):
             event (QGraphicsSceneMouseEvent): Event
         """
         self.setBrush(self.brush)
+        link_drawer = self.scene().link_drawer
+        if link_drawer.isVisible():
+            link_drawer.dst_connector = None
+            link_drawer.update_geometry()
 
 
 class ExclamationIcon(QGraphicsSvgItem):
@@ -509,7 +512,11 @@ class LinkBase(QGraphicsPathItem):
         super().__init__()
         self._toolbox = toolbox
         self.arrow_angle = pi / 4
-        self.magic_number = None
+        self.setCursor(Qt.PointingHandCursor)
+
+    @property
+    def magic_number(self):
+        return 0.625 * self.src_rect.width()
 
     @property
     def src_rect(self):
@@ -744,7 +751,6 @@ class Link(LinkBase):
         self.src_icon = src_connector._parent
         self.dst_icon = dst_connector._parent
         # Path parameters
-        self.magic_number = 0.625 * self.src_rect.width()
         self.setToolTip(
             "<html><p>Connection from <b>{0}</b>'s output "
             "to <b>{1}</b>'s input</html>".format(self.src_icon.name(), self.dst_icon.name())
@@ -755,7 +761,6 @@ class Link(LinkBase):
         self.parallel_link = None
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
         self.setFlag(QGraphicsItem.ItemIsFocusable, enabled=True)
-        self.setCursor(Qt.PointingHandCursor)
         self.setZValue(0.5)  # This makes links appear on top of items because item zValue == 0.0
         self.update_geometry()
 
@@ -808,17 +813,8 @@ class Link(LinkBase):
         Args:
             e (QGraphicsSceneMouseEvent): Mouse event
         """
-        if e.button() != Qt.LeftButton:
-            e.ignore()
-        elif any(isinstance(x, ConnectorButton) for x in self.scene().items(e.scenePos())):
-            e.ignore()
-
-    def mouseDoubleClickEvent(self, e):
-        """Accepts event if there's a connector button underneath,
-        to prevent unwanted creation of feedback links.
-        """
         if any(isinstance(x, ConnectorButton) for x in self.scene().items(e.scenePos())):
-            e.accept()
+            e.ignore()
 
     def contextMenuEvent(self, e):
         """Selects the link and shows context menu.
@@ -865,35 +861,25 @@ class Link(LinkBase):
 class LinkDrawer(LinkBase):
     """An item for drawing links between project items."""
 
-    def __init__(self, toolbox, src_connector):
+    def __init__(self, toolbox):
         """Init class.
 
         Args:
             toolbox (ToolboxUI): main UI class instance
-            src_connector (ConnectorButton)
         """
         super().__init__(toolbox)
-        self.src_connector = src_connector
-        self.src_connector.scene().addItem(self)
-        self.src_connector.set_friend_connectors_enabled(False)
-        self.tip = src_connector.sceneBoundingRect().center()
-        self.magic_number = 0.625 * self.src_rect.width()
+        self.src_connector = None
+        self.dst_connector = None
+        self.tip = None
         self.setBrush(QBrush(QColor(255, 0, 255, 204)))
         self.setPen(QPen(Qt.black, 0.5))
-        self.setFlags(self.flags() | QGraphicsItem.ItemIsFocusable)
         self.setZValue(1)  # LinkDrawer should be on top of every other item
-        self.update_geometry()
-        self.show()
-        self.grabMouse()
-        self.setFocus()
 
     @property
-    def dst_connector(self):
-        # Now that feedback loops are disabled, we don't want the tip to 'snap' to any of the src
-        # connector buttons.
-        src_connectors = self.src_connector._parent.connectors.values()
-        items = (x for x in self.scene().items(self.tip) if isinstance(x, ConnectorButton) and x not in src_connectors)
-        return next(iter(items), None)
+    def src_rect(self):
+        if not self.src_connector:
+            return QRectF()
+        return self.src_connector.sceneBoundingRect()
 
     @property
     def dst_rect(self):
@@ -909,58 +895,30 @@ class LinkDrawer(LinkBase):
         # the tip 'snap' to the center of the connector button
         return self.dst_rect.center()
 
-    def emit_unable_to_make_connection_message(self):
-        self._toolbox.msg_warning.emit("Unable to make connection. Try landing the connection onto a connector button.")
+    def add_link(self):
+        """Makes link between source and destination connectors."""
+        self._toolbox.ui.graphicsView.add_link(self.src_connector, self.dst_connector)
+        self.sleep()
 
-    def mousePressEvent(self, event):
-        """
-        Makes link if the left mouse button is pressed on a valid connector button.
-        """
-        self.tip = event.pos()
-        dst_connector = self.dst_connector
-        self.wipe_out()
-        if event.button() != Qt.LeftButton:
-            return
-        if not dst_connector:
-            self.emit_unable_to_make_connection_message()
-            return
-        self._toolbox.ui.graphicsView.add_link(self.src_connector, dst_connector)
-
-    def mouseMoveEvent(self, event):
-        """Update tip and geometry.
+    def wake_up(self, src_connector):
+        """Sets the source connector, shows this item and adds it to the scene.
+        After calling this, the scene is in link drawing mode.
 
         Args:
-            event (QGraphicsSceneMouseEvent): Mouse event
+            src_connector (ConnectorButton)
         """
-        self.tip = event.pos()
+        src_connector.scene().addItem(self)
+        self.src_connector = src_connector
+        self.src_connector.set_friend_connectors_enabled(False)
+        self.tip = src_connector.sceneBoundingRect().center()
         self.update_geometry()
+        self.show()
 
-    def mouseReleaseEvent(self, event):
+    def sleep(self):
+        """Removes this drawer from the scene, clears its source and destination connectors, and hides it.
+        After calling this, the scene is no longer in link drawing mode.
         """
-        Makes link if the mouse is released on a valid connector. This allows users to also draw links
-        with a single mouse drag.
-        """
-
-        self.tip = event.pos()
-        dst_connector = self.dst_connector
-        if dst_connector:
-            self._toolbox.ui.graphicsView.add_link(self.src_connector, dst_connector)
-            self.wipe_out()
-        elif not self.src_connector.isUnderMouse():
-            self.emit_unable_to_make_connection_message()
-            self.wipe_out()
-
-    def keyPressEvent(self, event):
-        """Wipes this item out if user presses ESC."""
-        if event.key() == Qt.Key_Escape:
-            self.wipe_out()
-
-    def wipe_out(self):
-        """Wipes this item out, which means hiding it, removing it from the scene, and reenabling connectors
-        disabled because of it.
-        """
+        self.scene().removeItem(self)
         self.src_connector.set_friend_connectors_enabled(True)
-        scene = self.scene()
-        scene.removeItem(self)
-        scene.item_removed.emit(self)
+        self.src_connector = self.dst_connector = self.tip = None
         self.hide()

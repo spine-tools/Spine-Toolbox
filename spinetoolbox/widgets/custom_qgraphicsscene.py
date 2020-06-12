@@ -17,10 +17,10 @@ Custom QGraphicsScene used in the Design View.
 """
 
 import math
-from PySide2.QtCore import Signal, Slot, QItemSelectionModel, QEvent, QPointF
+from PySide2.QtCore import Qt, Signal, Slot, QItemSelectionModel, QPointF, QEvent
 from PySide2.QtWidgets import QGraphicsScene
 from PySide2.QtGui import QColor, QPen, QBrush
-from ..graphics_items import ProjectItemIcon
+from ..graphics_items import ProjectItemIcon, LinkDrawer
 from ..mvcmodels.project_item_factory_models import ProjectItemFactoryModel, ProjectItemSpecFactoryModel
 
 
@@ -71,7 +71,48 @@ class DesignGraphicsScene(CustomGraphicsScene):
         bg_color = settings.value("appSettings/bgColor", defaultValue="false")
         self.bg_color = QColor("#f5f5f5") if bg_color == "false" else bg_color
         self.bg_origin = None
+        self.link_drawer = LinkDrawer(toolbox)
+        self.link_drawer.hide()
         self.connect_signals()
+
+    def mouseMoveEvent(self, event):
+        """Moves link drawer."""
+        if self.link_drawer.isVisible():
+            self.link_drawer.tip = event.scenePos()
+            self.link_drawer.update_geometry()
+            event.setButtons(0)  # this is so super().mouseMoveEvent sends hover events to connector buttons
+        super().mouseMoveEvent(event)
+
+    def mousePressEvent(self, event):
+        """Puts link drawer to sleep and log message if it looks like the user doesn't know what they're doing."""
+        was_drawing = self.link_drawer.isVisible()
+        super().mousePressEvent(event)
+        if was_drawing and self.link_drawer.isVisible():
+            self.link_drawer.sleep()
+            if event.button() == Qt.LeftButton:
+                self.emit_connection_failed()
+
+    def mouseReleaseEvent(self, event):
+        """Makes link if drawer is released over a valid connector button."""
+        super().mouseReleaseEvent(event)
+        if not self.link_drawer.isVisible() or self.link_drawer.src_connector.isUnderMouse():
+            return
+        if self.link_drawer.dst_connector is None:
+            self.link_drawer.sleep()
+            self.emit_connection_failed()
+            return
+        self.link_drawer.add_link()
+
+    def emit_connection_failed(self):
+        self._toolbox.msg_warning.emit(
+            "Unable to make connection. Try landing the connection onto a valid connector button."
+        )
+
+    def keyPressEvent(self, event):
+        """Puts link drawer to sleep if user presses ESC."""
+        super().keyPressEvent(event)
+        if self.link_drawer.isVisible() and event.key() == Qt.Key_Escape:
+            self.link_drawer.sleep()
 
     def connect_signals(self):
         """Connect scene signals."""

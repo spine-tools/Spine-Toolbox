@@ -22,7 +22,7 @@ please check the :ref:`Terminology` section. If you want to contribute to this p
    tool_specification_editor
    executing_projects
    settings
-   data_store_view
+   Data store form <data_store_form/index>
    plotting
    parameter_value_editor
    data_import_export

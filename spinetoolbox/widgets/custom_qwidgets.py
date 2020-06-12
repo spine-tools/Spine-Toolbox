@@ -29,9 +29,11 @@ from PySide2.QtWidgets import (
     QLineEdit,
     QDialogButtonBox,
     QWidgetAction,
+    QLabel,
+    QFrame,
 )
 from PySide2.QtCore import QTimer, Signal, Slot
-from PySide2.QtGui import QPainter
+from PySide2.QtGui import QPainter, QFontMetrics
 from ..mvcmodels.filter_checkbox_list_model import SimpleFilterCheckboxListModel
 
 
@@ -72,7 +74,7 @@ class FilterWidgetBase(QWidget):
         self._filter_model = None
 
     def connect_signals(self):
-        self._ui_list.clicked.connect(self._filter_model.click_index)
+        self._ui_list.clicked.connect(self._filter_model._handle_index_clicked)
         self._search_timer.timeout.connect(self._filter_list)
         self._ui_edit.textChanged.connect(self._text_edited)
         self._ui_buttons.button(QDialogButtonBox.Ok).clicked.connect(self._apply_filter)
@@ -143,8 +145,58 @@ class SimpleFilterWidget(FilterWidgetBase):
         self.connect_signals()
 
 
-class ZoomWidgetAction(QWidgetAction):
-    """A zoom widget action."""
+class CustomWidgetAction(QWidgetAction):
+    def __init__(self, parent=None):
+        """Class constructor.
+
+        Args:
+            parent (QWidget): the widget's parent
+        """
+        super().__init__(parent)
+        self.hovered.connect(self._handle_hovered)
+
+    @Slot()
+    def _handle_hovered(self):
+        """Hides other menus that might be shown in the parent widget and repaints it.
+        This is to emulate the behavior of QAction."""
+        for menu in self.parentWidget().findChildren(QMenu):
+            if menu.isVisible():
+                menu.hide()
+        self.parentWidget().update(self.parentWidget().geometry())
+
+
+class TitleWidgetAction(CustomWidgetAction):
+    """
+    A widget action for adding titled sections to menus.
+    """
+
+    # NOTE: I'm aware of QMenu.addSection(), but it doesn't seem to work on all platforms?
+
+    H_MARGIN = 6
+    V_MARGIN = 2
+
+    def __init__(self, title, parent=None):
+        super().__init__(parent)
+        widget = QWidget()
+        layout = QHBoxLayout(widget)
+        layout.setContentsMargins(self.H_MARGIN, self.V_MARGIN, self.H_MARGIN, self.V_MARGIN)
+        layout.setSpacing(self.V_MARGIN)
+        label = QLabel(title, widget)
+        fm = QFontMetrics(label.font())
+        label.setFixedWidth(fm.width(title))
+        lines = QFrame(widget), QFrame(widget)
+        for line in lines:
+            line.setFrameShape(QFrame.HLine)
+            line.setFrameShadow(QFrame.Sunken)
+            layout.addWidget(line)
+        layout.insertWidget(1, label)
+        self.setDefaultWidget(widget)
+
+
+class ZoomWidgetAction(CustomWidgetAction):
+    """A widget action with plus, minus, and reset buttons.
+    Used to create zoom actions for menus.
+    """
 
     minus_pressed = Signal()
     plus_pressed = Signal()
@@ -157,30 +209,46 @@ class ZoomWidgetAction(QWidgetAction):
             parent (QWidget): the widget's parent
         """
         super().__init__(parent)
-        zoom_widget = ZoomWidget(parent)
-        self.setDefaultWidget(zoom_widget)
-        zoom_widget.minus_pressed.connect(self.minus_pressed)
-        zoom_widget.plus_pressed.connect(self.plus_pressed)
-        zoom_widget.reset_pressed.connect(self.reset_pressed)
-        self.hovered.connect(self._handle_hovered)
+        actions = {"-": "Zoom out", "Reset": "Reset zoom", "+": "Zoom in"}
+        widget = ActionToolbarWidget("Zoom", actions, parent)
+        self.setDefaultWidget(widget)
+        widget.action_triggered.connect(self._handle_action_triggered)
 
-    @Slot()
-    def _handle_hovered(self):
-        """Runs when the zoom widget action is hovered. Hides other menus under the parent widget
-        which are being shown. This is the default behavior for hovering QAction,
-        but for some reason it's not the case for hovering QWidgetAction."""
-        for menu in self.parentWidget().findChildren(QMenu):
-            if menu.isVisible():
-                menu.hide()
+    @Slot(str)
+    def _handle_action_triggered(self, name):
+        {"+": self.plus_pressed, "-": self.minus_pressed, "Reset": self.reset_pressed}[name].emit()
 
 
-class ZoomWidget(QWidget):
+class RotateWidgetAction(CustomWidgetAction):
+    """A widget action with rotate left and right buttons.
+    Used to create rotate actions for menus.
+    """
 
-    minus_pressed = Signal()
-    plus_pressed = Signal()
-    reset_pressed = Signal()
+    clockwise_pressed = Signal()
+    anticlockwise_pressed = Signal()
 
     def __init__(self, parent=None):
+        """Class constructor.
+
+        Args:
+            parent (QWidget): the widget's parent
+        """
+        super().__init__(parent)
+        actions = {"\u2b6f": "Rotate counter-clockwise", "\u2b6e": "Rotate clockwise"}
+        widget = ActionToolbarWidget("Rotate", actions, parent)
+        self.setDefaultWidget(widget)
+        widget.action_triggered.connect(self._handle_action_triggered)
+
+    @Slot(str)
+    def _handle_action_triggered(self, name):
+        {"\u2b6f": self.anticlockwise_pressed, "\u2b6e": self.clockwise_pressed}[name].emit()
+
+
+class ActionToolbarWidget(QWidget):
+
+    action_triggered = Signal(str)
+
+    def __init__(self, text, actions, parent=None):
         """Class constructor.
 
         Args:
@@ -188,24 +256,20 @@ class ZoomWidget(QWidget):
         """
         super().__init__(parent)
         self.option = QStyleOptionMenuItem()
-        zoom_action = QAction("Zoom")
-        QMenu(parent).initStyleOption(self.option, zoom_action)
+        action = QAction(text)
+        QMenu(parent).initStyleOption(self.option, action)
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
         tool_bar = QToolBar(self)
         tool_bar.setFixedHeight(self.option.rect.height())
-        minus_action = tool_bar.addAction("-")
-        reset_action = tool_bar.addAction("Reset")
-        plus_action = tool_bar.addAction("+")
         layout.addSpacing(self.option.rect.width())
+        layout.addStretch()
         layout.addWidget(tool_bar)
-        minus_action.setToolTip("Zoom out")
-        reset_action.setToolTip("Reset zoom")
-        plus_action.setToolTip("Zoom in")
-        minus_action.triggered.connect(lambda x: self.minus_pressed.emit())
-        plus_action.triggered.connect(lambda x: self.plus_pressed.emit())
-        reset_action.triggered.connect(lambda x: self.reset_pressed.emit())
+        for name, tool_tip in actions.items():
+            action = tool_bar.addAction(name)
+            action.setToolTip(tool_tip)
+            action.triggered.connect(lambda x=False, name=name: self.action_triggered.emit(name))
 
     def paintEvent(self, event):
         """Overridden method."""

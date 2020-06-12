@@ -10,7 +10,7 @@
 ######################################################################################################################
 
 """
-Contains Importer project item class.
+Contains importer_program script.
 
 :authors: P. Savolainen (VTT), P. Vennström (VTT), A. Soininen (VTT)
 :date:   10.6.2019
@@ -135,7 +135,7 @@ def _import(all_data, url, logs_dir, cancel_on_error):
             if db_map.has_pending_changes():
                 db_map.rollback_session()
         elif import_num:
-            db_map.commit_session("imported with mapper")
+            db_map.commit_session("Import data by Spine Toolbox Importer")
             print("Inserted {0} data with {1} errors into {2}".format(import_num, len(import_errors), url))
     db_map.connection.close()
     if all_import_errors:

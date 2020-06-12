@@ -20,12 +20,12 @@ import datetime
 import glob
 import json
 import logging
-import matplotlib
 import itertools
 import os
 import shutil
 import sys
 import urllib.parse
+import matplotlib
 from PySide2.QtCore import Qt, Slot, QFile, QIODevice, QSize, QRect, QPoint, QUrl
 from PySide2.QtCore import __version__ as qt_version
 from PySide2.QtCore import __version_info__ as qt_version_info

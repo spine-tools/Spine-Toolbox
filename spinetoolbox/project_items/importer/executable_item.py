@@ -18,13 +18,12 @@ Contains Importer's executable item as well as support utilities.
 import os
 import pathlib
 from PySide2.QtCore import QObject, QEventLoop, Signal, Slot
-from spinetoolbox.config import PYTHON_EXECUTABLE
 from spinetoolbox.executable_item_base import ExecutableItemBase
-from spinetoolbox.execution_managers import QProcessExecutionManager
 from spinetoolbox.spine_io.gdx_utils import find_gams_directory
 from . import importer_program
 from .item_info import ItemInfo
 from .utils import deserialize_mappings
+from ..shared.helpers import make_python_process
 
 
 class ExecutableItem(ExecutableItemBase, QObject):
@@ -40,7 +39,7 @@ class ExecutableItem(ExecutableItemBase, QObject):
             logs_dir (str): path to the directory where logs should be stored
             python_path (str): path to the system's python executable
             gams_path (str): path to system's GAMS executable or empty string for the default path
-            cancel_on_error (bool): if True, quit execution on import error
+            cancel_on_error (bool): if True, revert changes on error and quit
             logger (LoggerInterface): a logger
         """
         ExecutableItemBase.__init__(self, name, logger)
@@ -118,34 +117,12 @@ class ExecutableItem(ExecutableItemBase, QObject):
             bool: True if preparing the program succeeded, False otherwise.
 
         """
-        program_path = os.path.abspath(importer_program.__file__)
-        python_cmd = self._python_path if self._python_path else PYTHON_EXECUTABLE
-        if not self._python_exists(python_cmd):
+        self._importer_process = make_python_process(
+            importer_program.__file__, importer_args, self._python_path, self._logger
+        )
+        if self._importer_process is None:
             return False
-        self._importer_process = QProcessExecutionManager(self._logger, python_cmd, [program_path])
         self._importer_process.execution_finished.connect(self._handle_importer_program_process_finished)
-        self._importer_process.data_to_inject = importer_args
-        return True
-
-    def _python_exists(self, program):
-        """Checks that Python is set up correctly in Settings.
-        This executes 'python -V' in a QProcess and if the process
-        finishes successfully, the python is ready to be used.
-
-        Args:
-            program (str): Python executable that is currently set in Settings
-
-        Returns:
-            bool: True if Python is found, False otherwise
-        """
-        args = ["-V"]
-        python_check_process = QProcessExecutionManager(self._logger, program, args, silent=True)
-        python_check_process.start_execution()
-        if not python_check_process.wait_for_process_finished(msecs=3000):
-            self._logger.msg_error.emit(
-                "Couldn't execute Python. Please check the <b>Python interpreter</b> option in Settings."
-            )
-            return False
         return True
 
     @Slot(int)

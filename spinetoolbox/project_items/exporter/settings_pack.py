@@ -75,7 +75,7 @@ class SettingsPack(QObject):
         d["output_file_name"] = self.output_file_name
         # Override ERROR by FETCHING so we'll retry reading the database when reopening the project.
         d["state"] = self.state.value
-        if self.state != SettingsState.OK:
+        if self.state not in (SettingsState.OK, SettingsState.INDEXING_PROBLEM):
             return d
         d["settings"] = self.settings.to_dict()
         d["indexing_settings"] = gdx.indexing_settings_to_dict(self.indexing_settings)
@@ -94,7 +94,7 @@ class SettingsPack(QObject):
         """Restores the settings pack from a dictionary."""
         pack = SettingsPack(pack_dict["output_file_name"])
         pack.state = SettingsState(pack_dict["state"])
-        if pack.state != SettingsState.OK:
+        if pack.state not in (SettingsState.OK, SettingsState.INDEXING_PROBLEM):
             return pack
         pack.settings = gdx.SetSettings.from_dict(pack_dict["settings"])
         try:

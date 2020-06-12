@@ -16,7 +16,7 @@ This module defines the project item categories available in the Toolbox.
 :date:   6.5.2020
 """
 # The categories will appear in the main window in the same order they are declared here.
-CATEGORIES = ("Data Stores", "Data Connections", "Tools", "Views", "Importers", "Exporters")
+CATEGORIES = ("Data Stores", "Data Connections", "Tools", "Views", "Importers", "Exporters", "Manipulators")
 
 
 CATEGORY_DESCRIPTIONS = {
@@ -26,4 +26,5 @@ CATEGORY_DESCRIPTIONS = {
     "Importers": "Data conversion from an external format to Spine",
     "Tools": "Custom data processing",
     "Views": "Data visualization",
+    "Manipulators": "Data conversion from Spine to Spine",
 }

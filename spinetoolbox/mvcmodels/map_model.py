@@ -94,7 +94,7 @@ class MapModel(QAbstractTableModel):
             return to_database(data if data is not None else "")
         if isinstance(data, DateTime):
             return str(data.value)
-        elif isinstance(data, Duration):
+        if isinstance(data, Duration):
             return str(data)
         return data
 

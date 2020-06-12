@@ -21,7 +21,31 @@ import numpy as np
 from numpy import atleast_1d as arr
 from scipy.sparse.csgraph import dijkstra
 from PySide2.QtCore import Signal, Slot, QObject, QThread, Qt
-from PySide2.QtWidgets import QProgressBar, QDialogButtonBox, QLabel, QWidget, QVBoxLayout
+from PySide2.QtWidgets import QProgressBar, QDialogButtonBox, QLabel, QWidget, QVBoxLayout, QHBoxLayout
+from PySide2.QtGui import QPainter, QColor
+from spinetoolbox.helpers import busy_effect
+
+
+@busy_effect
+def make_heat_map(x, y, values):
+    values = np.array(values)
+    min_x, min_y, max_x, max_y = min(x), min(y), max(x), max(y)
+    tick_count = round(len(values) ** 2)
+    xticks = np.linspace(min_x, max_x, tick_count)
+    yticks = np.linspace(min_y, max_y, tick_count)
+    xv, yv = np.meshgrid(xticks, yticks)
+    try:
+        import scipy.interpolate
+
+        points = np.column_stack((x, y))
+        heat_map = scipy.interpolate.griddata(points, values, (xv, yv), method="cubic")
+    except ImportError:
+        import matplotlib.tri as tri
+
+        triang = tri.Triangulation(x, y)
+        interpolator = tri.CubicTriInterpolator(triang, values)
+        heat_map = interpolator(xv, yv)
+    return heat_map, xv, yv, min_x, min_y, max_x, max_y
 
 
 class _State(enum.Enum):
@@ -29,7 +53,43 @@ class _State(enum.Enum):
 
     ACTIVE = enum.auto()
     STOPPED = enum.auto()
-    RUSHED_OUT = enum.auto()
+    CANCELLED = enum.auto()
+
+
+class ProgressBarWidget(QWidget):
+    def __init__(self, layout_generator, parent):
+        super().__init__(parent)
+        self.setAttribute(Qt.WA_DeleteOnClose)
+        inner_widget = QWidget(self)
+        layout = QHBoxLayout(self)
+        layout.addStretch()
+        layout.addWidget(inner_widget)
+        layout.addStretch()
+        inner_layout = QVBoxLayout(inner_widget)
+        label = QLabel("Generating layout...")
+        label.setStyleSheet("QLabel{color:white; font-weight: bold; font-size:18px;}")
+        label.setAlignment(Qt.AlignHCenter)
+        progress_bar = QProgressBar()
+        progress_bar.setRange(0, layout_generator.iterations - 1)
+        progress_bar.setTextVisible(False)
+        button_box = QDialogButtonBox()
+        button_box.setCenterButtons(True)
+        button = button_box.addButton("Cancel", QDialogButtonBox.NoRole)
+        button.clicked.connect(layout_generator.cancel)
+        inner_layout.addStretch()
+        inner_layout.addWidget(label)
+        inner_layout.addWidget(progress_bar)
+        inner_layout.addWidget(button_box)
+        inner_layout.addStretch()
+        self.setFixedSize(parent.size())
+        layout_generator.done.connect(self.close)
+        layout_generator.progressed.connect(progress_bar.setValue)
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.fillRect(event.rect(), QColor(0, 0, 0, 96))
+        super().paintEvent(event)
+        painter.end()
 
 
 class GraphLayoutGenerator(QObject):
@@ -42,6 +102,8 @@ class GraphLayoutGenerator(QObject):
 
     def __init__(self, vertex_count, src_inds, dst_inds, spread, heavy_positions=None, iterations=10, weight_exp=-2):
         super().__init__()
+        if vertex_count == 0:
+            vertex_count = 1
         if heavy_positions is None:
             heavy_positions = dict()
         self.vertex_count = vertex_count
@@ -49,9 +111,9 @@ class GraphLayoutGenerator(QObject):
         self.dst_inds = dst_inds
         self.spread = spread
         self.heavy_positions = heavy_positions
-        self.iterations = iterations
+        self.iterations = max(3, round(iterations * (1 - len(heavy_positions) / self.vertex_count)))
         self.weight_exp = weight_exp
-        self.initial_diameter = self.vertex_count * self.spread
+        self.initial_diameter = (self.vertex_count ** (0.5)) * self.spread
         self._state = _State.ACTIVE
         self._thread = QThread()
         self.moveToThread(self._thread)
@@ -60,24 +122,9 @@ class GraphLayoutGenerator(QObject):
         self.started.connect(self.get_coordinates)
         self.finished.connect(self.clean_up)
 
-    def create_progress_widget(self):
-        widget = QWidget()
-        widget.setAttribute(Qt.WA_NoSystemBackground)
-        widget.setAttribute(Qt.WA_TranslucentBackground)
-        layout = QVBoxLayout(widget)
-        label = QLabel("Generating layout...")
-        progress_bar = QProgressBar()
-        progress_bar.setRange(0, self.iterations - 1)
-        progress_bar.setTextVisible(False)
-        button_box = QDialogButtonBox()
-        button_box.setCenterButtons(True)
-        button = button_box.addButton("Can't wait", QDialogButtonBox.NoRole)
-        button.clicked.connect(lambda checked=False: self.rush_out())
-        self.progressed.connect(progress_bar.setValue)
-        layout.addWidget(label)
-        layout.addWidget(progress_bar)
-        layout.addWidget(button_box)
-        return widget
+    def show_progress_widget(self, parent):
+        widget = ProgressBarWidget(self, parent)
+        widget.show()
 
     def clean_up(self):
         self._thread.quit()
@@ -86,8 +133,8 @@ class GraphLayoutGenerator(QObject):
     def stop(self):
         self._state = _State.STOPPED
 
-    def rush_out(self, checked=False):
-        self._state = _State.RUSHED_OUT
+    def cancel(self, checked=False):
+        self._state = _State.CANCELLED
 
     def start(self):
         self.started.emit()
@@ -95,6 +142,11 @@ class GraphLayoutGenerator(QObject):
     def shortest_path_matrix(self):
         """Returns the shortest-path matrix.
         """
+        if not self.src_inds:
+            # Introduce fake pair of links to help 'spreadness'
+            self.src_inds = [self.vertex_count, self.vertex_count]
+            self.dst_inds = [np.random.randint(0, self.vertex_count), np.random.randint(0, self.vertex_count)]
+            self.vertex_count += 1
         dist = np.zeros((self.vertex_count, self.vertex_count))
         src_inds = arr(self.src_inds)
         dst_inds = arr(self.dst_inds)
@@ -104,7 +156,7 @@ class GraphLayoutGenerator(QObject):
             pass
         matrix = dijkstra(dist, directed=False)
         # Remove infinites and zeros
-        matrix[matrix == np.inf] = self.spread * 3
+        matrix[matrix == np.inf] = self.spread * self.vertex_count ** (0.5)
         matrix[matrix == 0] = self.spread * 1e-6
         return matrix
 
@@ -166,12 +218,12 @@ class GraphLayoutGenerator(QObject):
                 self.vertex_count
             )  # we don't want to use the same pair order each iteration
             for s in sets:
-                if self._state in (_State.STOPPED, _State.RUSHED_OUT):
+                if self._state in (_State.STOPPED, _State.CANCELLED):
                     break
                 v1, v2 = rand_order[s[:, 0]], rand_order[s[:, 1]]  # arrays of vertex1 and vertex2
                 # current distance (possibly accounting for system rescaling)
                 dist = ((layout[v1, 0] - layout[v2, 0]) ** 2 + (layout[v1, 1] - layout[v2, 1]) ** 2) ** 0.5
-                r = (matrix[v1, v2] - dist)[:, None] / 2 * (layout[v1] - layout[v2]) / dist[:, None]  # desired change
+                r = (matrix[v1, v2] - dist)[:, None] * (layout[v1] - layout[v2]) / dist[:, None] / 2  # desired change
                 dx1 = r * np.minimum(1, weights[v1, v2] * step)[:, None]
                 dx2 = -dx1
                 layout[v1, :] += dx1  # update position

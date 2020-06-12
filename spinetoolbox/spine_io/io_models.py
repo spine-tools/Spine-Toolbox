@@ -633,8 +633,7 @@ class MappingSpecModel(QAbstractTableModel):
                 index = int(mapping_number) - 1
                 if mapping_name == "Object class names":
                     return self._model.object_class_names_issues(index)
-                else:
-                    return self._model.object_names_issues(index)
+                return self._model.object_names_issues(index)
             extra_relationship_rows = 2 * dimensions - 1
         if row == 2 + extra_relationship_rows:
             return self._model.parameters.names_issues()
@@ -728,26 +727,10 @@ class MappingSpecModel(QAbstractTableModel):
                 mapping = ConstantMapping(reference=value)
             else:
                 return False
-        elif isinstance(mapping, (ConstantMapping, ColumnHeaderMapping)):
-            if not value:
-                mapping.reference = None
-            else:
-                mapping.reference = str(value)
-        elif isinstance(mapping, RowMapping) and isinstance(value, str) and value.lower() == "header":
-            mapping.reference = -1
-        elif isinstance(mapping, (RowMapping, ColumnMapping)):
-            if not value:
-                value = None
-            try:
-                if value is not None:
-                    value = int(value)
-                    if isinstance(mapping, RowMapping):
-                        value = max(-1, value)
-                    else:
-                        value = max(0, value)
-            except ValueError:
-                pass
+        try:
             mapping.reference = value
+        except ValueError:
+            return False
         return self.set_mapping_from_name(name, mapping)
 
     def set_append_str(self, name, value):
