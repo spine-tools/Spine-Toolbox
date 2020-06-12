@@ -18,7 +18,7 @@ Classes for handling models in PySide2's model/view framework.
 from collections import namedtuple
 from collections.abc import Iterable
 from PySide2.QtCore import Qt, Slot
-from PySide2.QtGui import QFont
+from PySide2.QtGui import QCursor, QFont
 from PySide2.QtWidgets import QHeaderView, QMenu, QTableView, QToolButton
 from ..spine_io.io_api import TYPE_STRING_TO_CLASS
 from ..spine_io.type_conversion import value_to_convert_spec, NewIntegerSequenceDateTimeConvertSpecDialog
@@ -141,7 +141,6 @@ class _HeaderWithButton(QHeaderView):
         self._render_button.setFont(self._font)
         self._render_button.hide()
 
-        self._button_logical_index = None
         self.setMinimumSectionSize(self.minimumSectionSize() + self.widget_width())
 
     @property
@@ -165,8 +164,9 @@ class _HeaderWithButton(QHeaderView):
     @Slot("QAction")
     def _menu_pressed(self, action):
         """Sets the data type of a row or column according to menu action."""
+        logical_index = self.logicalIndexAt(self._button.pos())
         type_str = action.text()
-        self.set_data_types(self._button_logical_index, type_str, update_viewport=False)
+        self.set_data_types(logical_index, type_str, update_viewport=True)
 
     def set_data_types(self, sections, type_str, update_viewport=True):
         """
@@ -197,7 +197,7 @@ class _HeaderWithButton(QHeaderView):
         """Width of widget
 
         Returns:
-            [int] -- Width of widget
+            int: Width of widget
         """
         if self.orientation() == Qt.Horizontal:
             return self.height()
@@ -207,7 +207,7 @@ class _HeaderWithButton(QHeaderView):
         """Height of widget
 
         Returns:
-            [int] -- Height of widget
+            int: Height of widget
         """
         if self.orientation() == Qt.Horizontal:
             return self.height()
@@ -216,39 +216,28 @@ class _HeaderWithButton(QHeaderView):
     def mouseMoveEvent(self, mouse_event):
         """Moves the button to the correct section so that interacting with the button works.
         """
-        log_index = self.logicalIndexAt(mouse_event.x(), mouse_event.y())
-        if not self._display_all and log_index not in self._display_sections:
-            self._button_logical_index = None
+        logical_index = self.logicalIndexAt(mouse_event.x(), mouse_event.y())
+        if not self._display_all and logical_index not in self._display_sections:
             self._button.hide()
-            super().mouseMoveEvent(mouse_event)
-            return
-
-        if self._button_logical_index != log_index:
-            self._button_logical_index = log_index
-            self._set_button_geometry(self._button, log_index)
+        elif self._button.isHidden():
+            self._set_button_geometry(self._button, logical_index)
             self._button.show()
         super().mouseMoveEvent(mouse_event)
 
     def mousePressEvent(self, mouse_event):
         """Move the button to the pressed location and show or hide it if button should not be shown.
         """
-        log_index = self.logicalIndexAt(mouse_event.x(), mouse_event.y())
-        if not self._display_all and log_index not in self._display_sections:
-            self._button_logical_index = None
+        logical_index = self.logicalIndexAt(mouse_event.x(), mouse_event.y())
+        if not self._display_all and logical_index not in self._display_sections:
             self._button.hide()
-            super().mousePressEvent(mouse_event)
-            return
-
-        if self._button_logical_index != log_index:
-            self._button_logical_index = log_index
-            self._set_button_geometry(self._button, log_index)
+        elif self._button.isHidden():
+            self._set_button_geometry(self._button, logical_index)
             self._button.show()
         super().mousePressEvent(mouse_event)
 
     def leaveEvent(self, event):
         """Hide button
         """
-        self._button_logical_index = None
         self._button.hide()
         super().leaveEvent(event)
 
@@ -256,8 +245,8 @@ class _HeaderWithButton(QHeaderView):
         """Sets a buttons geometry depending on the index.
 
         Arguments:
-            button {QWidget} -- QWidget that geometry should be set
-            index {int} -- logical_index to set position and geometry to.
+            button (QWidget): QWidget that geometry should be set
+            index (int): logical_index to set position and geometry to.
         """
         margin = self._margin
         if self.orientation() == Qt.Horizontal:
@@ -279,11 +268,13 @@ class _HeaderWithButton(QHeaderView):
         """When a section is resized.
 
         Arguments:
-            i {int} -- logical index to section being resized
+            i (int): logical index to section being resized
         """
         self._button.hide()
-        if i == self._button_logical_index:
-            self._set_button_geometry(self._button, self._button_logical_index)
+        mouse_position = self.mapFromGlobal(QCursor.pos())
+        logical_index = self.logicalIndexAt(mouse_position)
+        if i == logical_index:
+            self._set_button_geometry(self._button, logical_index)
 
     def paintSection(self, painter, rect, logical_index):
         """Paints a section of the QHeader view.
@@ -324,32 +315,34 @@ class _HeaderWithButton(QHeaderView):
         """Add the button width to the section so it displays right.
 
         Arguments:
-            logical_index {int} -- logical index of section
+            logical_index (int): logical index of section
 
         Returns:
-            [QSize] -- Size of section
+            QSize: Size of section
         """
         org_size = super().sectionSizeFromContents(logical_index)
         org_size.setWidth(org_size.width() + self.widget_width())
         return org_size
 
     def _section_move(self, logical, old_visual_index, new_visual_index):
-        """Section beeing moved.
+        """Section being moved.
 
         Arguments:
-            logical {int} -- logical index of section beeing moved.
-            old_visual_index {int} -- old visual index of section
-            new_visual_index {int} -- new visual index of section
+            logical (int): logical index of section beeing moved.
+            old_visual_index (int): old visual index of section
+            new_visual_index (int): new visual index of section
         """
         self._button.hide()
-        if self._button_logical_index is not None:
-            self._set_button_geometry(self._button, self._button_logical_index)
+        mouse_position = self.mapFromGlobal(QCursor.pos())
+        logical_index = self.logicalIndexAt(mouse_position)
+        self._set_button_geometry(self._button, logical_index)
 
     def fix_widget_positions(self):
         """Update position of interaction button
         """
-        if self._button_logical_index is not None:
-            self._set_button_geometry(self._button, self._button_logical_index)
+        mouse_position = self.mapFromGlobal(QCursor.pos())
+        logical_index = self.logicalIndexAt(mouse_position)
+        self._set_button_geometry(self._button, logical_index)
 
     def set_margins(self, margins):
         """Sets the header margins."""
