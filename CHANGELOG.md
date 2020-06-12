@@ -22,6 +22,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - Moving object items in the graph view also causes relationship icons to follow. This behaviour can be disabled in the
   Settings form.
 - Required PySide2 version is now 5.14. The version is checked at startup.
+- Import editor now supports multidimensional maps. The number of dimensions can be set using the 
+  *Map dimensions* spin box in mappings options.
 
 ### Deprecated
 ### Removed

@@ -205,7 +205,7 @@ class TestMappingSpecModel(unittest.TestCase):
         index = model.index(3, 0)
         self.assertEqual(index.data(), "Parameter values")
         index = model.index(4, 0)
-        self.assertEqual(index.data(), "Parameter map index")
+        self.assertEqual(index.data(), "Parameter index 1")
         for row in range(5):
             index = model.index(row, 1)
             self.assertEqual(index.data(), "None")
@@ -284,7 +284,7 @@ class TestMappingSpecModel(unittest.TestCase):
         index = model.index(3, 0)
         self.assertEqual(index.data(), "Parameter values")
         index = model.index(4, 0)
-        self.assertEqual(index.data(), "Parameter map index")
+        self.assertEqual(index.data(), "Parameter index 1")
         index = model.index(0, 1)
         self.assertEqual(index.data(), "Constant")
         index = model.index(1, 1)
@@ -313,6 +313,75 @@ class TestMappingSpecModel(unittest.TestCase):
         self.assertEqual(index.data(), 23)
         index = model.index(4, 2)
         self.assertEqual(index.data(), "fifth column")
+        self.assertEqual(index.data(Qt.BackgroundColorRole), None)
+        self.assertFalse(index.data(Qt.ToolTipRole))
+
+    def test_data_when_valid_object_class_with_nested_map(self):
+        indexed_parameter_mapping_dict = {
+            "map_type": "parameter",
+            "name": {'map_type': 'column', 'reference': 99},
+            "parameter_type": "map",
+            "value": {"reference": 23, "map_type": "column"},
+            "extra_dimensions": [
+                {"reference": "fifth column", "map_type": "column"},
+                {"reference": "sixth column", "map_type": "column"},
+            ],
+        }
+        mapping_dict = {
+            "map_type": "ObjectClass",
+            "parameters": indexed_parameter_mapping_dict,
+            "name": {"reference": "class_name", "map_type": "constant"},
+            "objects": {"reference": "object_name", "map_type": "constant"},
+        }
+        model = MappingSpecModel(dict_to_map(mapping_dict), "connector's name")
+        self.assertEqual(model.rowCount(), 6)
+        self.assertEqual(model.columnCount(), 3)
+        index = model.index(0, 0)
+        self.assertEqual(index.data(), "Object class names")
+        index = model.index(1, 0)
+        self.assertEqual(index.data(), "Object names")
+        index = model.index(2, 0)
+        self.assertEqual(index.data(), "Parameter names")
+        index = model.index(3, 0)
+        self.assertEqual(index.data(), "Parameter values")
+        index = model.index(4, 0)
+        self.assertEqual(index.data(), "Parameter index 1")
+        index = model.index(5, 0)
+        self.assertEqual(index.data(), "Parameter index 2")
+        index = model.index(0, 1)
+        self.assertEqual(index.data(), "Constant")
+        index = model.index(1, 1)
+        self.assertEqual(index.data(), "Constant")
+        index = model.index(2, 1)
+        self.assertEqual(index.data(), "Column")
+        index = model.index(3, 1)
+        self.assertEqual(index.data(), "Column")
+        index = model.index(4, 1)
+        self.assertEqual(index.data(), "Column")
+        index = model.index(5, 1)
+        self.assertEqual(index.data(), "Column")
+        index = model.index(0, 2)
+        self.assertEqual(index.data(), "class_name")
+        self.assertEqual(index.data(Qt.BackgroundColorRole), None)
+        self.assertFalse(index.data(Qt.ToolTipRole))
+        index = model.index(1, 2)
+        self.assertEqual(index.data(Qt.BackgroundColorRole), None)
+        self.assertFalse(index.data(Qt.ToolTipRole))
+        self.assertEqual(index.data(), "object_name")
+        index = model.index(2, 2)
+        self.assertEqual(index.data(Qt.BackgroundColorRole), None)
+        self.assertFalse(index.data(Qt.ToolTipRole))
+        self.assertEqual(index.data(), 99)
+        index = model.index(3, 2)
+        self.assertEqual(index.data(Qt.BackgroundColorRole), None)
+        self.assertFalse(index.data(Qt.ToolTipRole))
+        self.assertEqual(index.data(), 23)
+        index = model.index(4, 2)
+        self.assertEqual(index.data(), "fifth column")
+        self.assertEqual(index.data(Qt.BackgroundColorRole), None)
+        self.assertFalse(index.data(Qt.ToolTipRole))
+        index = model.index(5, 2)
+        self.assertEqual(index.data(), "sixth column")
         self.assertEqual(index.data(Qt.BackgroundColorRole), None)
         self.assertFalse(index.data(Qt.ToolTipRole))
 
@@ -377,7 +446,7 @@ class TestMappingSpecModel(unittest.TestCase):
         index = model.index(4, 0)
         self.assertEqual(index.data(), "Parameter values")
         index = model.index(5, 0)
-        self.assertEqual(index.data(), "Parameter map index")
+        self.assertEqual(index.data(), "Parameter index 1")
         for row in range(6):
             index = model.index(row, 1)
             self.assertEqual(index.data(), "None")
@@ -422,7 +491,7 @@ class TestMappingSpecModel(unittest.TestCase):
         index = model.index(6, 0)
         self.assertEqual(index.data(), "Parameter values")
         index = model.index(7, 0)
-        self.assertEqual(index.data(), "Parameter map index")
+        self.assertEqual(index.data(), "Parameter index 1")
         index = model.index(0, 1)
         self.assertEqual(index.data(), "Constant")
         index = model.index(1, 1)
