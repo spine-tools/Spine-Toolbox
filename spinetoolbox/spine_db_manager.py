@@ -322,7 +322,8 @@ class SpineDBManager(QObject):
         """
         fetcher = SpineDBFetcher(self, listener, *db_maps)
         self.fetchers.append(fetcher)
-        fetcher.run()
+        fetcher.done.connect(lambda fetcher=fetcher: self.fetchers.remove(fetcher))
+        fetcher.start()
 
     def refresh_session(self, *db_maps):
         refreshed_db_maps = set()

@@ -21,7 +21,8 @@ from PySide2.QtGui import QCursor
 
 
 class SpineDBFetcher(QObject):
-    """Handles signals from DB manager and channels them to listeners."""
+    """Fecthes content from a Spine database and 'sends' them to another thread (via a signal-slot mechanism of course),
+    so contents can be processed in that thread without affecting the UI."""
 
     object_classes_fetched = Signal(object)
     objects_fetched = Signal(object)
@@ -32,6 +33,7 @@ class SpineDBFetcher(QObject):
     parameter_values_fetched = Signal(object)
     parameter_value_lists_fetched = Signal(object)
     parameter_tags_fetched = Signal(object)
+    done = Signal()
 
     def __init__(self, db_mngr, listener, *db_maps):
         """Initializes the fetcher object.
@@ -47,6 +49,7 @@ class SpineDBFetcher(QObject):
         self.db_maps = db_maps
         self._thread = QThread()
         self.moveToThread(self._thread)
+        # NOTE: by moving this to another thread, all the slots defined below are called on that thread too
         self._thread.start()
         self.connect_signals()
 
@@ -64,7 +67,9 @@ class SpineDBFetcher(QObject):
         self.destroyed.connect(lambda: self.clean_up())  # pylint: disable=unnecessary-lambda
         qApp.aboutToQuit.connect(self._thread.quit)  # pylint: disable=undefined-variable
 
-    def run(self):
+    def start(self):
+        """Fetches items from the database and emit fetched signals.
+        """
         self.listener.setCursor(QCursor(Qt.BusyCursor))
         self.listener.silenced = True
         object_classes = {x: self.db_mngr.get_object_classes(x) for x in self.db_maps}
@@ -85,6 +90,7 @@ class SpineDBFetcher(QObject):
         self.parameter_values_fetched.emit(parameter_values)
         self.parameter_value_lists_fetched.emit(parameter_value_lists)
         self.parameter_tags_fetched.emit(parameter_tags)
+        self.done.emit()
         self.deleteLater()
 
     def clean_up(self):
