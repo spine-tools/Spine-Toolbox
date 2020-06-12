@@ -30,7 +30,7 @@ class Ui_ImportMappingOptions(object):
     def setupUi(self, ImportMappingOptions):
         if not ImportMappingOptions.objectName():
             ImportMappingOptions.setObjectName(u"ImportMappingOptions")
-        ImportMappingOptions.resize(400, 204)
+        ImportMappingOptions.resize(506, 204)
         self.verticalLayout = QVBoxLayout(ImportMappingOptions)
         self.verticalLayout.setObjectName(u"verticalLayout")
         self.options_group = QGroupBox(ImportMappingOptions)
@@ -114,6 +114,17 @@ class Ui_ImportMappingOptions(object):
 
         self.time_series_options_layout.setWidget(0, QFormLayout.FieldRole, self.time_series_repeat_check_box)
 
+        self.map_dimension_spin_box = QSpinBox(self.options_group)
+        self.map_dimension_spin_box.setObjectName(u"map_dimension_spin_box")
+        self.map_dimension_spin_box.setMinimum(1)
+
+        self.time_series_options_layout.setWidget(1, QFormLayout.FieldRole, self.map_dimension_spin_box)
+
+        self.map_dimensions_label = QLabel(self.options_group)
+        self.map_dimensions_label.setObjectName(u"map_dimensions_label")
+
+        self.time_series_options_layout.setWidget(1, QFormLayout.LabelRole, self.map_dimensions_label)
+
 
         self.horizontalLayout.addLayout(self.time_series_options_layout)
 
@@ -151,5 +162,6 @@ class Ui_ImportMappingOptions(object):
         self.time_series_repeat_check_box.setToolTip(QCoreApplication.translate("ImportMappingOptions", u"Set the repeat flag for all imported time series", None))
 #endif // QT_CONFIG(tooltip)
         self.time_series_repeat_check_box.setText(QCoreApplication.translate("ImportMappingOptions", u"Repeat time series", None))
+        self.map_dimensions_label.setText(QCoreApplication.translate("ImportMappingOptions", u"Map dimensions:", None))
     # retranslateUi
 
